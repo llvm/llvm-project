@@ -292,7 +292,6 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TripleName,
   MRI.reset(RegisterInfo);
 
   // Assembler properties and features.
-  MCTargetOptions MCOptions;
   MCAsmInfo *AsmInfo(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
     return createStringError(errc::invalid_argument,

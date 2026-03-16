@@ -72,8 +72,8 @@ class CustomJBInterpreter : public Interpreter {
 
 public:
   CustomJBInterpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &ErrOut,
-                      std::unique_ptr<llvm::orc::LLJITBuilder> JB)
-      : Interpreter(std::move(CI), ErrOut, std::move(JB)) {}
+                      std::unique_ptr<clang::IncrementalExecutorBuilder> IEB)
+      : Interpreter(std::move(CI), ErrOut, std::move(IEB)) {}
 
   ~CustomJBInterpreter() override {
     // Skip cleanUp() because it would trigger LLJIT default dtors
@@ -124,9 +124,10 @@ TEST_F(InterpreterExtensionsTest, CustomCrossJIT) {
     JIT = &J;
     return llvm::Error::success();
   });
-
+  auto IEB = std::make_unique<IncrementalExecutorBuilder>();
+  IEB->JITBuilder = std::move(JB);
   llvm::Error ErrOut = llvm::Error::success();
-  CustomJBInterpreter Interp(std::move(CI), ErrOut, std::move(JB));
+  CustomJBInterpreter Interp(std::move(CI), ErrOut, std::move(IEB));
   cantFail(std::move(ErrOut));
 
   EXPECT_EQ(0U, Objs.size());
@@ -135,6 +136,68 @@ TEST_F(InterpreterExtensionsTest, CustomCrossJIT) {
   ExecutorAddr Addr = cantFail(JIT->lookup("a"));
   EXPECT_NE(0U, Addr.getValue());
   EXPECT_EQ(1U, Objs.size());
+}
+
+TEST_F(InterpreterExtensionsTest, CustomIncrementalExecutor) {
+  struct RecordingIncrementalExecutor : public clang::IncrementalExecutor {
+    mutable unsigned RanCtors = false;
+    unsigned Added = 0;
+    unsigned Removed = 0;
+
+    // Default ctor is fine; builder.create() will just return this IE.
+    RecordingIncrementalExecutor() = default;
+
+    llvm::Error addModule(clang::PartialTranslationUnit &PTU) override {
+      Added++;
+      return llvm::Error::success();
+    }
+
+    llvm::Error removeModule(clang::PartialTranslationUnit &PTU) override {
+      Removed++;
+      return llvm::Error::success();
+    }
+
+    llvm::Error runCtors() const override {
+      RanCtors++;
+      return llvm::Error::success();
+    }
+
+    llvm::Error cleanUp() override { return llvm::Error::success(); }
+
+    llvm::Expected<llvm::orc::ExecutorAddr>
+    getSymbolAddress(llvm::StringRef /*Name*/,
+                     SymbolNameKind /*NameKind*/) const override {
+      // Return an error here; test doesn't need a real address.
+      return llvm::make_error<llvm::StringError>(
+          "not implemented in test", llvm::inconvertibleErrorCode());
+    }
+
+    llvm::Error LoadDynamicLibrary(const char * /*name*/) override {
+      return llvm::Error::success();
+    }
+  };
+
+  // Prepare a builder that hands out our recording executor.
+  auto B = std::make_unique<IncrementalExecutorBuilder>();
+  B->IE = std::make_unique<RecordingIncrementalExecutor>();
+
+  IncrementalCompilerBuilder CB;
+  auto CI = cantFail(CB.CreateCpp());
+
+  auto I = cantFail(Interpreter::create(std::move(CI), std::move(B)));
+  ASSERT_TRUE(I);
+
+  const auto &Rec = static_cast<RecordingIncrementalExecutor &>(
+      cantFail(I->getExecutionEngine()));
+  unsigned NumInitAdded = Rec.Added;
+  unsigned NumInitRanCtors = Rec.RanCtors;
+  unsigned NumInitRemoved = Rec.Removed;
+
+  cantFail(I->ParseAndExecute("int a = 1;"));
+
+  EXPECT_TRUE(Rec.Added == NumInitAdded + 1);
+  EXPECT_TRUE(Rec.RanCtors == NumInitRanCtors + 1);
+  EXPECT_TRUE(Rec.Removed == NumInitRemoved);
 }
 
 } // end anonymous namespace

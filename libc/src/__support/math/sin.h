@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_SIN_H
-#define LIBC_SRC___SUPPORT_MATH_SIN_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SIN_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_SIN_H
 
 #include "range_reduction_double_common.h"
 #include "sincos_eval.h"
@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr double sin(double x) {
+LIBC_INLINE constexpr double sin(double x) {
   using namespace math::range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
@@ -178,4 +178,4 @@ LIBC_INLINE static constexpr double sin(double x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_SIN_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SIN_H

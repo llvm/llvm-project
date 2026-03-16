@@ -66,7 +66,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // Similarly we want enable-prt-strict-null to be on by default and not to
   // unset everything else if it is disabled
 
-  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,");
+  SmallString<256> FullFS("+load-store-opt,+enable-ds128,");
 
   // Turn on features that HSA ABI requires. Also turn on FlatForGlobal by
   // default
@@ -119,15 +119,15 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // that do not support ADDR64 variants of MUBUF instructions. Such targets
   // cannot use a 64 bit offset with a MUBUF instruction to access the global
   // address space
-  if (!hasAddr64() && !FS.contains("flat-for-global") && !FlatForGlobal) {
-    ToggleFeature(AMDGPU::FeatureFlatForGlobal);
-    FlatForGlobal = true;
+  if (!hasAddr64() && !FS.contains("flat-for-global") && !UseFlatForGlobal) {
+    ToggleFeature(AMDGPU::FeatureUseFlatForGlobal);
+    UseFlatForGlobal = true;
   }
   // Unless +-flat-for-global is specified, use MUBUF instructions for global
   // address space access if flat operations are not available.
-  if (!hasFlat() && !FS.contains("flat-for-global") && FlatForGlobal) {
-    ToggleFeature(AMDGPU::FeatureFlatForGlobal);
-    FlatForGlobal = false;
+  if (!hasFlat() && !FS.contains("flat-for-global") && UseFlatForGlobal) {
+    ToggleFeature(AMDGPU::FeatureUseFlatForGlobal);
+    UseFlatForGlobal = false;
   }
 
   // Set defaults if needed.
@@ -140,10 +140,22 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
+  if (FlatOffsetBitWidth == 0)
+    FlatOffsetBitWidth = 13;
+
   LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(this);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
+
+  // InstCacheLineSize is set from TableGen subtarget features
+  // (FeatureInstCacheLineSize64 / FeatureInstCacheLineSize128).
+  // Fall back to 64 if no feature was specified (e.g. generic targets).
+  if (InstCacheLineSize == 0)
+    InstCacheLineSize = 64;
+
+  assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
+         "InstCacheLineSize must be a power of 2");
 
   TargetID.setTargetIDFromFeaturesString(FS);
 
@@ -576,7 +588,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 
   unsigned MaxNumVGPRs = MaxVectorRegs;
   unsigned MaxNumAGPRs = 0;
-  unsigned NumArchVGPRs = has1024AddressableVGPRs() ? 1024 : 256;
+  unsigned NumArchVGPRs = getAddressableNumArchVGPRs();
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
   // a wave may have up to 512 total vector registers combining together both
@@ -644,6 +656,8 @@ void GCNSubtarget::adjustSchedDependency(
     MachineBasicBlock::const_instr_iterator E(DefI->getParent()->instr_end());
     unsigned Lat = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
+      if (I->isMetaInstruction())
+        continue;
       if (I->modifiesRegister(Reg, TRI))
         Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *I);
       else if (Lat)
@@ -657,6 +671,8 @@ void GCNSubtarget::adjustSchedDependency(
     MachineBasicBlock::const_instr_iterator E(UseI->getParent()->instr_end());
     unsigned Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *DefI);
     for (++I; I != E && I->isBundledWithPred() && Lat; ++I) {
+      if (I->isMetaInstruction())
+        continue;
       if (I->readsRegister(Reg, TRI))
         break;
       --Lat;
@@ -698,7 +714,7 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
     KernargSegmentPtr = true;
 
   bool IsAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
-  if (IsAmdHsaOrMesa && !ST.enableFlatScratch())
+  if (IsAmdHsaOrMesa && !ST.hasFlatScratchEnabled())
     PrivateSegmentBuffer = true;
   else if (ST.isMesaGfxShader(F))
     ImplicitBufferPtr = true;
@@ -716,13 +732,13 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   }
 
   if (ST.hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(CC) &&
-      (IsAmdHsaOrMesa || ST.enableFlatScratch()) &&
-      // FlatScratchInit cannot be true for graphics CC if enableFlatScratch()
-      // is false.
-      (ST.enableFlatScratch() ||
+      (IsAmdHsaOrMesa || ST.hasFlatScratchEnabled()) &&
+      // FlatScratchInit cannot be true for graphics CC if
+      // hasFlatScratchEnabled() is false.
+      (ST.hasFlatScratchEnabled() ||
        (!AMDGPU::isGraphics(CC) &&
         !F.hasFnAttribute("amdgpu-no-flat-scratch-init"))) &&
-      !ST.flatScratchIsArchitected()) {
+      !ST.hasArchitectedFlatScratch()) {
     FlatScratchInit = true;
   }
 

@@ -45,9 +45,7 @@ class DeadMachineInstructionElim : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  DeadMachineInstructionElim() : MachineFunctionPass(ID) {
-    initializeDeadMachineInstructionElimPass(*PassRegistry::getPassRegistry());
-  }
+  DeadMachineInstructionElim() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))

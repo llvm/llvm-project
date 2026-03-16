@@ -514,7 +514,8 @@ protected:
   bool visitInsertValue(InsertValueInst &I);
   bool visitCallBase(CallBase &Call);
   bool visitReturnInst(ReturnInst &RI);
-  bool visitBranchInst(BranchInst &BI);
+  bool visitUncondBrInst(UncondBrInst &BI);
+  bool visitCondBrInst(CondBrInst &BI);
   bool visitSelectInst(SelectInst &SI);
   bool visitSwitchInst(SwitchInst &SI);
   bool visitIndirectBrInst(IndirectBrInst &IBI);
@@ -996,12 +997,10 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     for (auto &BB : F) {
       APInt CurrentSavings(128, 0);
       for (auto &I : BB) {
-        if (BranchInst *BI = dyn_cast<BranchInst>(&I)) {
+        if (CondBrInst *BI = dyn_cast<CondBrInst>(&I)) {
           // Count a conditional branch as savings if it becomes unconditional.
-          if (BI->isConditional() &&
-              getSimplifiedValue<ConstantInt>(BI->getCondition())) {
+          if (getSimplifiedValue<ConstantInt>(BI->getCondition()))
             CurrentSavings += InstrCost;
-          }
         } else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I)) {
           if (getSimplifiedValue<ConstantInt>(SI->getCondition()))
             CurrentSavings += InstrCost;
@@ -1602,19 +1601,20 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
     }
   }
 
-  // Accumulate the allocated size.
   if (I.isStaticAlloca()) {
-    Type *Ty = I.getAllocatedType();
-    AllocatedSize = SaturatingAdd(DL.getTypeAllocSize(Ty).getKnownMinValue(),
-                                  AllocatedSize);
-  }
-
-  // FIXME: This is overly conservative. Dynamic allocas are inefficient for
-  // a variety of reasons, and so we would like to not inline them into
-  // functions which don't currently have a dynamic alloca. This simply
-  // disables inlining altogether in the presence of a dynamic alloca.
-  if (!I.isStaticAlloca())
+    // Accumulate the allocated size if constant and executed once.
+    // Note: if AllocSize is a vscale value, this is an underestimate of the
+    // allocated size, and it also requires some of the cost of a dynamic
+    // alloca, but is recorded here as a constant size alloca.
+    TypeSize AllocSize = I.getAllocationSize(DL).value_or(TypeSize::getZero());
+    AllocatedSize = SaturatingAdd(AllocSize.getKnownMinValue(), AllocatedSize);
+  } else {
+    // FIXME: This is overly conservative. Dynamic allocas are inefficient for
+    // a variety of reasons, and so we would like to not inline them into
+    // functions which don't currently have a dynamic alloca. This simply
+    // disables inlining altogether in the presence of a dynamic alloca.
     HasDynamicAlloca = true;
+  }
 
   return false;
 }
@@ -1702,7 +1702,7 @@ bool CallAnalyzer::visitPHI(PHINode &I) {
 
   // Check if we can map phi to a pointer with constant offset.
   if (FirstBaseAndOffset.first) {
-    ConstantOffsetPtrs[&I] = FirstBaseAndOffset;
+    ConstantOffsetPtrs[&I] = std::move(FirstBaseAndOffset);
 
     if (auto *SROAArg = getSROAArgForValueOrNull(FirstV))
       SROAArgValues[&I] = SROAArg;
@@ -1728,7 +1728,7 @@ bool CallAnalyzer::canFoldInboundsGEP(GetElementPtrInst &I) {
     return false;
 
   // Add the result as a new mapping to Base + Offset.
-  ConstantOffsetPtrs[&I] = BaseAndOffset;
+  ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
 
   return true;
 }
@@ -1779,8 +1779,8 @@ bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
   if (!Predecessor)
     return false;
   // Check if the callsite is guarded by the same Cmp instruction:
-  auto *Br = dyn_cast<BranchInst>(Predecessor->getTerminator());
-  if (!Br || Br->isUnconditional() || Br->getCondition() != &Cmp)
+  auto *Br = dyn_cast<CondBrInst>(Predecessor->getTerminator());
+  if (!Br || Br->getCondition() != &Cmp)
     return false;
 
   // Check if there is any arg of the recursive callsite is affecting the cmp
@@ -1878,7 +1878,7 @@ bool CallAnalyzer::visitBitCast(BitCastInst &I) {
       ConstantOffsetPtrs.lookup(I.getOperand(0));
   // Casts don't change the offset, just wrap it up.
   if (BaseAndOffset.first)
-    ConstantOffsetPtrs[&I] = BaseAndOffset;
+    ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
 
   // Also look for SROA candidates here.
   if (auto *SROAArg = getSROAArgForValueOrNull(I.getOperand(0)))
@@ -1901,7 +1901,7 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
     std::pair<Value *, APInt> BaseAndOffset =
         ConstantOffsetPtrs.lookup(I.getOperand(0));
     if (BaseAndOffset.first)
-      ConstantOffsetPtrs[&I] = BaseAndOffset;
+      ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
   }
 
   // This is really weird. Technically, ptrtoint will disable SROA. However,
@@ -1930,7 +1930,7 @@ bool CallAnalyzer::visitIntToPtr(IntToPtrInst &I) {
   if (IntegerSize <= DL.getPointerTypeSizeInBits(I.getType())) {
     std::pair<Value *, APInt> BaseAndOffset = ConstantOffsetPtrs.lookup(Op);
     if (BaseAndOffset.first)
-      ConstantOffsetPtrs[&I] = BaseAndOffset;
+      ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
   }
 
   // "Propagate" SROA here in the same manner as we do for ptrtoint above.
@@ -2562,13 +2562,16 @@ bool CallAnalyzer::visitReturnInst(ReturnInst &RI) {
   return Free;
 }
 
-bool CallAnalyzer::visitBranchInst(BranchInst &BI) {
+bool CallAnalyzer::visitUncondBrInst(UncondBrInst &BI) {
   // We model unconditional branches as essentially free -- they really
   // shouldn't exist at all, but handling them makes the behavior of the
-  // inliner more regular and predictable. Interestingly, conditional branches
-  // which will fold away are also free.
-  return BI.isUnconditional() ||
-         getDirectOrSimplifiedValue<ConstantInt>(BI.getCondition()) ||
+  // inliner more regular and predictable.
+  return true;
+}
+
+bool CallAnalyzer::visitCondBrInst(CondBrInst &BI) {
+  // Conditional branches which will fold away are free.
+  return getDirectOrSimplifiedValue<ConstantInt>(BI.getCondition()) ||
          BI.getMetadata(LLVMContext::MD_make_implicit);
 }
 
@@ -2596,7 +2599,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
     std::pair<Value *, APInt> FalseBaseAndOffset =
         ConstantOffsetPtrs.lookup(FalseVal);
     if (TrueBaseAndOffset == FalseBaseAndOffset && TrueBaseAndOffset.first) {
-      ConstantOffsetPtrs[&SI] = TrueBaseAndOffset;
+      ConstantOffsetPtrs[&SI] = std::move(TrueBaseAndOffset);
 
       if (auto *SROAArg = getSROAArgForValueOrNull(TrueVal))
         SROAArgValues[&SI] = SROAArg;
@@ -2635,7 +2638,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
   std::pair<Value *, APInt> BaseAndOffset =
       ConstantOffsetPtrs.lookup(SelectedV);
   if (BaseAndOffset.first) {
-    ConstantOffsetPtrs[&SI] = BaseAndOffset;
+    ConstantOffsetPtrs[&SI] = std::move(BaseAndOffset);
 
     if (auto *SROAArg = getSROAArgForValueOrNull(SelectedV))
       SROAArgValues[&SI] = SROAArg;
@@ -2980,7 +2983,7 @@ InlineResult CallAnalyzer::analyze() {
 
     onBlockStart(BB);
 
-    // Disallow inlining a blockaddress with uses other than strictly callbr.
+    // Disallow inlining a blockaddress.
     // A blockaddress only has defined behavior for an indirect branch in the
     // same function, and we do not currently support inlining indirect
     // branches.  But, the inliner may not see an indirect branch that ends up
@@ -2989,9 +2992,7 @@ InlineResult CallAnalyzer::analyze() {
     // invalid cross-function reference.
     // FIXME: pr/39560: continue relaxing this overt restriction.
     if (BB->hasAddressTaken())
-      for (User *U : BlockAddress::get(&*BB)->users())
-        if (!isa<CallBrInst>(*U))
-          return InlineResult::failure("blockaddress used outside of callbr");
+      return InlineResult::failure("blockaddress used");
 
     // Analyze the cost of this block. If we blow through the threshold, this
     // returns false, and we can bail on out.
@@ -3003,16 +3004,14 @@ InlineResult CallAnalyzer::analyze() {
 
     // Add in the live successors by first checking whether we have terminator
     // that may be simplified based on the values simplified by this call.
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-      if (BI->isConditional()) {
-        Value *Cond = BI->getCondition();
-        if (ConstantInt *SimpleCond = getSimplifiedValue<ConstantInt>(Cond)) {
-          BasicBlock *NextBB = BI->getSuccessor(SimpleCond->isZero() ? 1 : 0);
-          BBWorklist.insert(NextBB);
-          KnownSuccessors[BB] = NextBB;
-          findDeadBlocks(BB, NextBB);
-          continue;
-        }
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
+      Value *Cond = BI->getCondition();
+      if (ConstantInt *SimpleCond = getSimplifiedValue<ConstantInt>(Cond)) {
+        BasicBlock *NextBB = BI->getSuccessor(SimpleCond->isZero() ? 1 : 0);
+        BBWorklist.insert(NextBB);
+        KnownSuccessors[BB] = NextBB;
+        findDeadBlocks(BB, NextBB);
+        continue;
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
       Value *Cond = SI->getCondition();
@@ -3320,12 +3319,9 @@ InlineResult llvm::isInlineViable(Function &F) {
     if (isa<IndirectBrInst>(BB.getTerminator()))
       return InlineResult::failure("contains indirect branches");
 
-    // Disallow inlining of blockaddresses which are used by non-callbr
-    // instructions.
+    // Disallow inlining of blockaddresses.
     if (BB.hasAddressTaken())
-      for (User *U : BlockAddress::get(&BB)->users())
-        if (!isa<CallBrInst>(*U))
-          return InlineResult::failure("blockaddress used outside of callbr");
+      return InlineResult::failure("blockaddress used");
 
     for (auto &II : BB) {
       CallBase *Call = dyn_cast<CallBase>(&II);

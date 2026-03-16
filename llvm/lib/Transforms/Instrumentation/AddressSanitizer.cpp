@@ -446,8 +446,7 @@ static SmallSet<unsigned, 8> SrcAddrSpaces;
 static cl::list<unsigned> ClAddrSpaces(
     "asan-instrument-address-spaces",
     cl::desc("Only instrument variables in the specified address spaces."),
-    cl::Hidden, cl::CommaSeparated, cl::ZeroOrMore,
-    cl::callback([](const unsigned &AddrSpace) {
+    cl::Hidden, cl::CommaSeparated, cl::callback([](const unsigned &AddrSpace) {
       SrcAddrSpaces.insert(AddrSpace);
     }));
 
@@ -549,9 +548,10 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   } else {  // LongSize == 64
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
-    if (IsFuchsia)
-      Mapping.Offset = 0;
-    else if (IsPPC64)
+    if (IsFuchsia) {
+      // kDynamicShadowSentinel tells instrumentation to use the dynamic shadow.
+      Mapping.Offset = kDynamicShadowSentinel;
+    } else if (IsPPC64)
       Mapping.Offset = kPPC64_ShadowOffset64;
     else if (IsSystemZ)
       Mapping.Offset = kSystemZ_ShadowOffset64;
@@ -575,7 +575,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
       else
         Mapping.Offset = (kSmallX86_64ShadowOffsetBase &
                           (kSmallX86_64ShadowOffsetAlignMask << Mapping.Scale));
-    } else if (IsWindows && IsX86_64) {
+    } else if (IsWindows && (IsX86_64 || IsAArch64)) {
       Mapping.Offset = kWindowsShadowOffset64;
     } else if (IsMIPS64)
       Mapping.Offset = kMIPS64_ShadowOffset64;
@@ -1997,8 +1997,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     // path is rarely taken. This seems to be the case for SPEC benchmarks.
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
         Cmp, InsertBefore, false, MDBuilder(*C).createUnlikelyBranchWeights());
-    assert(cast<BranchInst>(CheckTerm)->isUnconditional());
-    BasicBlock *NextBB = CheckTerm->getSuccessor(0);
+    BasicBlock *NextBB = cast<UncondBrInst>(CheckTerm)->getSuccessor();
     IRB.SetInsertPoint(CheckTerm);
     Value *Cmp2 = createSlowPathCmp(IRB, AddrLong, ShadowValue, TypeStoreSize);
     if (Recover) {
@@ -2007,7 +2006,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
       BasicBlock *CrashBlock =
         BasicBlock::Create(*C, "", NextBB->getParent(), NextBB);
       CrashTerm = new UnreachableInst(*C, CrashBlock);
-      BranchInst *NewTerm = BranchInst::Create(CrashBlock, NextBB, Cmp2);
+      CondBrInst *NewTerm = CondBrInst::Create(Cmp2, CrashBlock, NextBB);
       ReplaceInstWithInst(CheckTerm, NewTerm);
     }
   } else {
@@ -2673,12 +2672,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     // zero so we can copy the metadata over as is.
     NewGlobal->copyMetadata(G, 0);
 
-    Value *Indices2[2];
-    Indices2[0] = IRB.getInt32(0);
-    Indices2[1] = IRB.getInt32(0);
-
-    G->replaceAllUsesWith(
-        ConstantExpr::getGetElementPtr(NewTy, NewGlobal, Indices2, true));
+    G->replaceAllUsesWith(NewGlobal);
     NewGlobal->takeName(G);
     G->eraseFromParent();
     NewGlobals[i] = NewGlobal;
@@ -3837,11 +3831,7 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   // redzones, and OldSize is number of allocated blocks with
   // ElementSize size, get allocated memory size in bytes by
   // OldSize * ElementSize.
-  const unsigned ElementSize =
-      F.getDataLayout().getTypeAllocSize(AI->getAllocatedType());
-  Value *OldSize =
-      IRB.CreateMul(IRB.CreateIntCast(AI->getArraySize(), IntptrTy, false),
-                    ConstantInt::get(IntptrTy, ElementSize));
+  Value *OldSize = IRB.CreateAllocationSize(IntptrTy, AI);
 
   // PartialSize = OldSize % 32
   Value *PartialSize = IRB.CreateAnd(OldSize, AllocaRzMask);

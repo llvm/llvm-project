@@ -302,6 +302,7 @@ public:
     Opts["cl_clang_storage_class_specifiers"] = true;
     Opts["__cl_clang_variadic_functions"] = true;
     Opts["__cl_clang_function_pointers"] = true;
+    Opts["__cl_clang_function_scope_local_variables"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
     Opts["__cl_clang_bitfields"] = true;
 
@@ -445,11 +446,13 @@ public:
   // address space has value 0 but in private and local address space has
   // value ~0.
   uint64_t getNullPointerValue(LangAS AS) const override {
-    // FIXME: Also should handle region.
-    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
-            AS == LangAS::sycl_local || AS == LangAS::sycl_private)
-               ? ~0
-               : 0;
+    // Check language-specific address spaces
+    if (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
+        AS == LangAS::sycl_local || AS == LangAS::sycl_private)
+      return ~0;
+    if (isTargetAddressSpace(AS))
+      return llvm::AMDGPU::getNullPointerValue(toTargetAddressSpace(AS));
+    return 0;
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;

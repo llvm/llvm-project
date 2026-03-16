@@ -390,6 +390,72 @@ TEST(FormatVariadicTest, IntegralHexFormatting) {
   EXPECT_EQ(" 000255", formatv("{0,7:6}", 255).str());
 }
 
+template <typename FormatTy>
+static std::string printToString(FormatTy &&Fmt, unsigned MaxN = 100) {
+  std::vector<char> Dst(MaxN + 2);
+  int N = Fmt.snprint(Dst.data(), Dst.size());
+  Dst.back() = 0;
+  return N < 0 ? "" : Dst.data();
+}
+
+TEST(FormatAndFormatvTest, EquivalentHexFormatting) {
+  uint8_t HexDigits = 10;
+  uint64_t N = 255;
+
+  // Here's the old format() way of printing a hex number with
+  // dynamic width and precision, both being the same.
+  EXPECT_EQ("0x00000000ff",
+            printToString(format("0x%*.*" PRIx64, HexDigits, HexDigits, N)));
+
+  // Now, do the same with formatv()
+  EXPECT_EQ("0x00000000ff",
+            formatv("0x{0:x-}", fmt_align(N, AlignStyle::Right, HexDigits, '0'))
+                .str());
+}
+
+TEST(FormatAndFormatvTest, NonNegativePlusInteger) {
+  EXPECT_EQ("-255", printToString(format("%+d", -255)));
+  EXPECT_EQ("+255", printToString(format("%+d", 255)));
+  EXPECT_EQ("+0", printToString(format("%+d", 0)));
+  EXPECT_EQ("-7", printToString(format("%+d", -7)));
+
+  // Check that +d works for signed and unsigned integral values.
+  // Ensure the default is not changed (a + is not added without requesting it).
+  EXPECT_EQ("+1", formatv("{0:+d}", static_cast<unsigned int>(1)).str());
+  EXPECT_EQ("+2", formatv("{0:+d}", static_cast<int>(2)).str());
+  EXPECT_EQ("+3", formatv("{0:+d}", static_cast<unsigned long>(3)).str());
+  EXPECT_EQ("+4", formatv("{0:+d}", static_cast<long>(4)).str());
+  EXPECT_EQ("+5", formatv("{0:+d}", static_cast<unsigned long long>(5)).str());
+  EXPECT_EQ("+6", formatv("{0:+d}", static_cast<long long>(6)).str());
+  EXPECT_EQ("-7", formatv("{0:+d}", static_cast<int>(-7)).str());
+  EXPECT_EQ("-8", formatv("{0:+d}", static_cast<long>(-8)).str());
+  EXPECT_EQ("-9", formatv("{0:+d}", static_cast<long long>(-9)).str());
+
+  EXPECT_EQ("11", formatv("{0:d}", static_cast<unsigned int>(11)).str());
+  EXPECT_EQ("22", formatv("{0:d}", static_cast<int>(22)).str());
+  EXPECT_EQ("33", formatv("{0:d}", static_cast<unsigned long>(33)).str());
+  EXPECT_EQ("44", formatv("{0:d}", static_cast<long>(44)).str());
+  EXPECT_EQ("55", formatv("{0:d}", static_cast<unsigned long long>(55)).str());
+  EXPECT_EQ("66", formatv("{0:d}", static_cast<long long>(66)).str());
+  EXPECT_EQ("-77", formatv("{0:d}", static_cast<int>(-77)).str());
+  EXPECT_EQ("-88", formatv("{0:d}", static_cast<long>(-88)).str());
+  EXPECT_EQ("-99", formatv("{0:d}", static_cast<long long>(-99)).str());
+
+  // Ensure that 0 is also prefixed with + (old behaviour from format(), see
+  // above).
+  EXPECT_EQ("+0", formatv("{0:+d}", 0).str());
+  EXPECT_EQ("0", formatv("{0:d}", 0).str());
+
+  // Ensure that an empty or otherwise empty format string is also working as
+  // expected
+  EXPECT_EQ("+333", formatv("{0:+}", 333).str());
+  EXPECT_EQ("444", formatv("{0:}", 444).str());
+
+  // Try with width modifier as well, to ensure that the + is still present and
+  // that the width is correct.
+  EXPECT_EQ("  -1", formatv("{0,4:+d}", -1).str());
+  EXPECT_EQ("  +1", formatv("{0,4:+d}", 1).str());
+}
 TEST(FormatVariadicTest, PointerFormatting) {
   // 1. Trivial cases.  Hex is default.  Default Precision is pointer width.
   if (sizeof(void *) == 4) {

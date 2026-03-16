@@ -408,7 +408,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  DITypeRefArray Elements = STy->getTypeArray();
+  DITypeArray Elements = STy->getTypeArray();
   auto RetType = tryRemoveAtomicType(Elements[0]);
   BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
   BTFType.NameOff = 0;
@@ -626,7 +626,7 @@ void BTFDebug::visitSubroutineType(
     const DISubroutineType *STy, bool ForSubprog,
     const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
     uint32_t &TypeId) {
-  DITypeRefArray Elements = STy->getTypeArray();
+  DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN)
     return;
@@ -1125,7 +1125,7 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
     for (line_iterator I(*Buf, false), E; I != E; ++I)
       Content.push_back(std::string(*I));
 
-  FileContent[FileName] = Content;
+  FileContent[FileName] = std::move(Content);
   return FileName;
 }
 
@@ -1615,7 +1615,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
 
     // Calculate symbol size
     const DataLayout &DL = Global.getDataLayout();
-    uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
+    uint32_t Size = Global.getGlobalSize(DL);
 
     It->second->addDataSecEntry(VarId, Asm->getSymbol(&Global), Size);
 

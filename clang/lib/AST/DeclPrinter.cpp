@@ -257,7 +257,7 @@ static DeclPrinter::AttrPosAsWritten getPosAsWritten(const Attr *A,
 std::optional<std::string>
 DeclPrinter::prettyPrintAttributes(const Decl *D,
                                    AttrPosAsWritten Pos /*=Default*/) {
-  if (!D->hasAttrs())
+  if (Policy.SuppressDeclAttributes || !D->hasAttrs())
     return std::nullopt;
 
   std::string AttrStr;
@@ -1100,8 +1100,6 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
 
   Out << D->getKindName() << ' ';
 
-  // FIXME: Move before printing the decl kind to match the behavior of the
-  // attribute printing for variables and function where they are printed first.
   if (std::optional<std::string> Attrs =
           prettyPrintAttributes(D, AttrPosAsWritten::Left))
     Out << *Attrs << ' ';

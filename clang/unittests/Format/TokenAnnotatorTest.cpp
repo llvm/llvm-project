@@ -416,6 +416,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[16], tok::star, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 
+  Tokens = annotate("Foo foo{bar, bar * bar};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::star, TT_BinaryOperator);
+  // Not TT_StartOfName.
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_Unknown);
+
   Tokens = annotate("NSError *__autoreleasing *foo;",
                     getLLVMStyle(FormatStyle::LK_ObjC));
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -962,6 +968,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[9], tok::identifier, TT_TypeName);
   EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
+}
+
+TEST_F(TokenAnnotatorTest, CompoundLiteral) {
+  auto Tokens =
+      annotate("return (struct foo){};", getLLVMStyle(FormatStyle::LK_C));
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  // Not TT_CastRParen.
+  EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsDynamicExceptionSpecifier) {
@@ -3943,6 +3957,10 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   // Not TT_FunctionDeclarationName.
   EXPECT_TOKEN(Tokens[6], tok::kw_operator, TT_Unknown);
   EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
+
+  Tokens = annotate("&(type){v}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
@@ -4000,6 +4018,15 @@ TEST_F(TokenAnnotatorTest, SwitchExpression) {
   EXPECT_TOKEN(Tokens[16], tok::arrow, TT_CaseLabelArrow);
   EXPECT_TOKEN(Tokens[19], tok::kw_default, TT_SwitchExpressionLabel);
   EXPECT_TOKEN(Tokens[20], tok::arrow, TT_CaseLabelArrow);
+}
+
+TEST_F(TokenAnnotatorTest, TextBlock) {
+  auto Tokens = annotate("String foo = \"\"\"\n"
+                         "    bar\n"
+                         "    \\\\\"\"\";",
+                         getLLVMStyle(FormatStyle::LK_Java));
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_StringInConcatenation);
 }
 
 TEST_F(TokenAnnotatorTest, JavaRecord) {

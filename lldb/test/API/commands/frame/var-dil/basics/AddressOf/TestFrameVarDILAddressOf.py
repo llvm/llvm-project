@@ -21,7 +21,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
 
     def test_frame_var(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
@@ -36,3 +36,10 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect_var_path("&globalVar", True, type="int *")
         self.expect_var_path("&s_str", True, type="const char **")
         self.expect_var_path("&argc", True, type="int *")
+
+        # Check that '&' is not allowed in simple mode, but allowed in legacy mode
+        frame = thread.GetFrameAtIndex(0)
+        simple = frame.GetValueForVariablePath("&x", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePath("&x", lldb.eDILModeLegacy)
+        self.assertFailure(simple.GetError())
+        self.assertSuccess(legacy.GetError())

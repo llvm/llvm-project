@@ -18,4 +18,4 @@ A B::foo(A x) {
   return x;
 }
 
-// CHECK-LABEL: define{{.*}} void @"?foo@B@@QEAA?AUA@@U2@@Z"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.A) align 4 %agg.result, ptr dead_on_return noundef %x)
+// CHECK-LABEL: define{{.*}} void @"?foo@B@@QEAA?AUA@@U2@@Z"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.A) align 4 %agg.result, ptr noundef dead_on_return %x)

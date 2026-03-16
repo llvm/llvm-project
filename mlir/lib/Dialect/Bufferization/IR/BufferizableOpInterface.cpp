@@ -18,6 +18,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 //===----------------------------------------------------------------------===//
 // BufferizableOpInterface
@@ -122,6 +123,10 @@ void AnalysisState::resetCache() {
 }
 
 SymbolTableCollection &BufferizationState::getSymbolTables() {
+  return symbolTables;
+}
+
+SymbolTableCollection &BufferizationState::getSymbolTables() const {
   return symbolTables;
 }
 
@@ -291,8 +296,8 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
         bufferizationState, copiedOpValues.count(value));
     if (failed(copy))
       return failure();
-    SmallVector<OpOperand *> uses = llvm::to_vector(
-        llvm::map_range(value.getUses(), [](OpOperand &use) { return &use; }));
+    SmallVector<OpOperand *> uses = llvm::map_to_vector(
+        value.getUses(), [](OpOperand &use) { return &use; });
     for (OpOperand *use : uses) {
       // Do not update the alloc_tensor op that we just created.
       if (use->getOwner() == copy->getDefiningOp())

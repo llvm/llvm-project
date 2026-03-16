@@ -103,6 +103,50 @@ class NamePrefix<string spelling> {
   string Spelling = spelling;
 }
 
+// Documentation
+// =============
+
+class DocumentationCategory<string name> {
+  string Name = name;
+  code Content = [{}];
+}
+
+// This category is for builtins which have not yet been properly documented,
+// but should be.
+def DocCatUndocumented : DocumentationCategory<"Undocumented"> {
+  let Content = [{
+This section lists builtins which are recognized by Clang, but which are
+currently missing documentation.
+}];
+}
+
+// Builtins listed under the InternalOnly category do not generate any entry
+// in the documentation. This category should be used only when we _want_
+// to not document the builtin, e.g. if the builtin is for internal use only.
+def DocCatInternalOnly : DocumentationCategory<"InternalOnly">;
+
+// Specifies the documentation to be associated with the given category.
+class Documentation {
+  DocumentationCategory Category;
+  code Content = [{}];
+
+  // If the heading is empty, one may be picked automatically. If the builtin
+  // only has one spelling, no heading is required as the builtin's sole
+  // spelling is sufficient.
+  string Heading = "";
+}
+
+// Specifies that the builtin is explicitly omitted from the documentation,
+// because it is not intended to be user-facing.
+def InternalOnly : Documentation { let Category = DocCatInternalOnly; }
+
+// Specifies that the builtin is undocumented, but that it _should_ have
+// documentation.
+def Undocumented : Documentation {
+  let Category = DocCatUndocumented;
+  let Content = [{No documentation.}];
+}
+
 // Builtin kinds
 // =============
 
@@ -119,6 +163,12 @@ class Builtin {
   // Requires a common prefix to be prepended. Each generated set of builtins
   // can optionally extract one common prefix that is handled separately.
   NamePrefix RequiredNamePrefix;
+  // Documentation associated with this builtin.
+  list<Documentation> Documentation = [Undocumented];
+  // Optional argument names for documentation. When provided, these are
+  // interleaved with the parameter types from the Prototype field to produce
+  // a human-readable prototype in the generated documentation.
+  list<string> ArgNames = [];
 }
 
 class AtomicBuiltin : Builtin;

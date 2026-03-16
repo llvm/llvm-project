@@ -817,6 +817,11 @@ private:
     if (llvm::any_of(getAttributes(N),
                      [](const Attr *A) { return !A->isImplicit(); }))
       return false;
+    // Attributes themselves also often have bad source ranges.
+    if (const auto *A = N.get<Attr>()) {
+      if (!A->isImplicit())
+        return false;
+    }
     if (!SelChecker.mayHit(S)) {
       dlog("{2}skip: {0} {1}", printNodeToString(N, PrintPolicy),
            S.printToString(SM), indent());
@@ -952,6 +957,10 @@ private:
       }
       if (auto PTL = TL->getAs<PointerTypeLoc>()) {
         claimRange(PTL.getStarLoc(), Result);
+        return;
+      }
+      if (auto MPTL = TL->getAs<MemberPointerTypeLoc>()) {
+        claimRange(MPTL.getLocalSourceRange(), Result);
         return;
       }
       if (auto FTL = TL->getAs<FunctionTypeLoc>()) {

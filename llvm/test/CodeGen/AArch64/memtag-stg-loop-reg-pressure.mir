@@ -1,0 +1,190 @@
+# RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prologepilog %s -o - | FileCheck %s
+
+# This test ensures that when register pressure is extremely high, the compiler
+# does not attempt to merge ST2Gi instructions into an STGloop. STGloop requires
+# two scratch locations (either free GPRs or emergency spill slots) which the
+# scavenger cannot provide without crashing.
+#
+# We test the 4 possible combinations of (Free GPRs) + (Emergency Spill Slots)
+# to ensure the loop is only formed when the sum is >= 2.
+#
+# CHECK-LABEL: name: test_zero_csr_zero_caller
+# CHECK-NOT: STGloop
+# CHECK-LABEL: name: test_one_csr_zero_caller
+# CHECK-NOT: STGloop
+# CHECK-LABEL: name: test_one_csr_one_caller
+# CHECK: STGloop
+# CHECK-LABEL: name: test_zero_csr_one_caller
+# CHECK: STGloop
+
+--- |
+  define void @test_zero_csr_zero_caller() {
+  entry:
+    ret void
+  }
+  define void @test_one_csr_zero_caller() {
+  entry:
+    ret void
+  }
+  define void @test_one_csr_one_caller() {
+  entry:
+    ret void
+  }
+  define void @test_zero_csr_one_caller() {
+  entry:
+    ret void
+  }
+...
+---
+name:            test_zero_csr_zero_caller
+tracksRegLiveness: true
+calleeSavedRegisters: [ '$fp', '$lr', '$x19', '$x20', '$x21', '$x22', '$x23', '$x24', '$x25', '$x26', '$x27', '$x28' ]
+stack:
+  - { id: 0, size: 8192, alignment: 16 }
+  - { id: 1, size: 32, alignment: 16 }
+  - { id: 2, size: 32, alignment: 16 }
+  - { id: 3, size: 32, alignment: 16 }
+  - { id: 4, size: 32, alignment: 16 }
+  - { id: 5, size: 32, alignment: 16 }
+  - { id: 6, size: 32, alignment: 16 }
+  - { id: 7, size: 32, alignment: 16 }
+  - { id: 8, size: 32, alignment: 16 }
+  - { id: 9, size: 32, alignment: 16 }
+  - { id: 10, size: 32, alignment: 16 }
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp, $lr
+    ; STG loop trigger
+    ST2Gi $sp, %stack.1, 0 :: (store (s256))
+    ST2Gi $sp, %stack.2, 0 :: (store (s256))
+    ST2Gi $sp, %stack.3, 0 :: (store (s256))
+    ST2Gi $sp, %stack.4, 0 :: (store (s256))
+    ST2Gi $sp, %stack.5, 0 :: (store (s256))
+    ST2Gi $sp, %stack.6, 0 :: (store (s256))
+    ST2Gi $sp, %stack.7, 0 :: (store (s256))
+    ST2Gi $sp, %stack.8, 0 :: (store (s256))
+    ST2Gi $sp, %stack.9, 0 :: (store (s256))
+    ST2Gi $sp, %stack.10, 0 :: (store (s256))
+
+    ; Explicitly use them on the RET instruction so they are kept alive across the ST2Gi.
+    KILL implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27, implicit $x28, implicit $fp, implicit $lr
+    RET_ReallyLR
+...
+---
+name:            test_one_csr_zero_caller
+alignment:       4
+tracksRegLiveness: true
+calleeSavedRegisters: [ '$fp', '$lr', '$x19', '$x20', '$x21', '$x22', '$x23', '$x24', '$x25', '$x26', '$x27', '$x28' ]
+frameInfo:
+  maxAlignment:    16
+stack:
+  - { id: 0, size: 8192, alignment: 16 }
+  - { id: 1, size: 32, alignment: 16 }
+  - { id: 2, size: 32, alignment: 16 }
+  - { id: 3, size: 32, alignment: 16 }
+  - { id: 4, size: 32, alignment: 16 }
+  - { id: 5, size: 32, alignment: 16 }
+  - { id: 6, size: 32, alignment: 16 }
+  - { id: 7, size: 32, alignment: 16 }
+  - { id: 8, size: 32, alignment: 16 }
+  - { id: 9, size: 32, alignment: 16 }
+  - { id: 10, size: 32, alignment: 16 }
+body:             |
+  bb.0.entry:
+    ; Intentionally omitting $x28 from liveins and the RET instruction to use as scratch register
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $fp, $lr
+
+    ST2Gi $sp, %stack.1, 0 :: (store (s256))
+    ST2Gi $sp, %stack.2, 0 :: (store (s256))
+    ST2Gi $sp, %stack.3, 0 :: (store (s256))
+    ST2Gi $sp, %stack.4, 0 :: (store (s256))
+    ST2Gi $sp, %stack.5, 0 :: (store (s256))
+    ST2Gi $sp, %stack.6, 0 :: (store (s256))
+    ST2Gi $sp, %stack.7, 0 :: (store (s256))
+    ST2Gi $sp, %stack.8, 0 :: (store (s256))
+    ST2Gi $sp, %stack.9, 0 :: (store (s256))
+    ST2Gi $sp, %stack.10, 0 :: (store (s256))
+
+    KILL implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27, implicit $fp, implicit $lr
+    RET_ReallyLR
+...
+---
+name:            test_one_csr_one_caller
+alignment:       4
+tracksRegLiveness: true
+calleeSavedRegisters: [ '$fp', '$lr', '$x19', '$x20', '$x21', '$x22', '$x23', '$x24', '$x25', '$x26', '$x27', '$x28' ]
+frameInfo:
+  maxAlignment:    16
+stack:
+  - { id: 0, size: 8192, alignment: 16 }
+  - { id: 1, size: 32, alignment: 16 }
+  - { id: 2, size: 32, alignment: 16 }
+  - { id: 3, size: 32, alignment: 16 }
+  - { id: 4, size: 32, alignment: 16 }
+  - { id: 5, size: 32, alignment: 16 }
+  - { id: 6, size: 32, alignment: 16 }
+  - { id: 7, size: 32, alignment: 16 }
+  - { id: 8, size: 32, alignment: 16 }
+  - { id: 9, size: 32, alignment: 16 }
+  - { id: 10, size: 32, alignment: 16 }
+body:             |
+  bb.0.entry:
+    ; Intentionally omitting:
+    ; $x28 (csr) to be used as scratch register
+    ; $x0 (caller saved) to be scavenged
+    liveins: $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $fp, $lr
+
+    ST2Gi $sp, %stack.1, 0 :: (store (s256))
+    ST2Gi $sp, %stack.2, 0 :: (store (s256))
+    ST2Gi $sp, %stack.3, 0 :: (store (s256))
+    ST2Gi $sp, %stack.4, 0 :: (store (s256))
+    ST2Gi $sp, %stack.5, 0 :: (store (s256))
+    ST2Gi $sp, %stack.6, 0 :: (store (s256))
+    ST2Gi $sp, %stack.7, 0 :: (store (s256))
+    ST2Gi $sp, %stack.8, 0 :: (store (s256))
+    ST2Gi $sp, %stack.9, 0 :: (store (s256))
+    ST2Gi $sp, %stack.10, 0 :: (store (s256))
+
+    KILL implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27, implicit $fp, implicit $lr
+    RET_ReallyLR
+...
+---
+name:            test_zero_csr_one_caller
+alignment:       4
+tracksRegLiveness: true
+calleeSavedRegisters: [ '$fp', '$lr', '$x19', '$x20', '$x21', '$x22', '$x23', '$x24', '$x25', '$x26', '$x27', '$x28' ]
+frameInfo:
+  maxAlignment:    16
+stack:
+  - { id: 0, size: 8192, alignment: 16 }
+  - { id: 1, size: 32, alignment: 16 }
+  - { id: 2, size: 32, alignment: 16 }
+  - { id: 3, size: 32, alignment: 16 }
+  - { id: 4, size: 32, alignment: 16 }
+  - { id: 5, size: 32, alignment: 16 }
+  - { id: 6, size: 32, alignment: 16 }
+  - { id: 7, size: 32, alignment: 16 }
+  - { id: 8, size: 32, alignment: 16 }
+  - { id: 9, size: 32, alignment: 16 }
+  - { id: 10, size: 32, alignment: 16 }
+body:             |
+  bb.0.entry:
+    ; Intentionally omitting:
+    ; No CSRs: determineCalleeSaves allocates a spill slot
+    ; $x0 (caller saved) to be scavenged
+    liveins: $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp, $lr
+
+    ST2Gi $sp, %stack.1, 0 :: (store (s256))
+    ST2Gi $sp, %stack.2, 0 :: (store (s256))
+    ST2Gi $sp, %stack.3, 0 :: (store (s256))
+    ST2Gi $sp, %stack.4, 0 :: (store (s256))
+    ST2Gi $sp, %stack.5, 0 :: (store (s256))
+    ST2Gi $sp, %stack.6, 0 :: (store (s256))
+    ST2Gi $sp, %stack.7, 0 :: (store (s256))
+    ST2Gi $sp, %stack.8, 0 :: (store (s256))
+    ST2Gi $sp, %stack.9, 0 :: (store (s256))
+    ST2Gi $sp, %stack.10, 0 :: (store (s256))
+
+    KILL implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $x18, implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27, implicit $x28, implicit $fp, implicit $lr
+    RET_ReallyLR
+...

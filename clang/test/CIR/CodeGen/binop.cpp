@@ -17,18 +17,18 @@ void b0(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z2b0ii(
-// CIR: %{{.+}} = cir.binop(mul, %{{.+}}, %{{.+}}) nsw : !s32i
-// CIR: %{{.+}} = cir.binop(div, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(rem, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(add, %{{.+}}, %{{.+}}) nsw : !s32i
-// CIR: %{{.+}} = cir.binop(sub, %{{.+}}, %{{.+}}) nsw : !s32i
-// CIR: %{{.+}} = cir.binop(and, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(xor, %{{.+}}, %{{.+}}) : !s32i
-// CIR: %{{.+}} = cir.binop(or, %{{.+}}, %{{.+}}) : !s32i
+// CIR: %{{.+}} = cir.mul nsw %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.div %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.rem %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.add nsw %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.sub nsw %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.and %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.xor %{{.+}}, %{{.+}} : !s32i
+// CIR: %{{.+}} = cir.or %{{.+}}, %{{.+}} : !s32i
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z2b0ii(
-// LLVM-SAME: i32 %[[A:.*]], i32 %[[B:.*]])
+// LLVM-SAME: i32 {{.*}} %[[A:.*]], i32 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
 // LLVM:         %[[X:.*]] = alloca i32
@@ -127,65 +127,75 @@ void b0(int a, int b) {
 // OGCG:         ret void
 
 void testFloatingPointBinOps(float a, float b) {
-  a * b;
-  a / b;
-  a + b;
-  a - b;
+  float x = a * b;
+  x = x / b;
+  x = x + b;
+  x = x - b;
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z23testFloatingPointBinOpsff(
-// CIR: cir.binop(mul, %{{.+}}, %{{.+}}) : !cir.float
-// CIR: cir.binop(div, %{{.+}}, %{{.+}}) : !cir.float
-// CIR: cir.binop(add, %{{.+}}, %{{.+}}) : !cir.float
-// CIR: cir.binop(sub, %{{.+}}, %{{.+}}) : !cir.float
+// CIR: cir.mul %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.div %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.add %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.sub %{{.+}}, %{{.+}} : !cir.float
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(
-// LLVM-SAME: float %[[A:.*]], float %[[B:.*]])
+// LLVM-SAME: float {{.*}} %[[A:.*]], float {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca float, i64 1
 // LLVM:         %[[B_ADDR:.*]] = alloca float, i64 1
+// LLVM:         %[[X_ADDR:.*]] = alloca float, i64 1
 // LLVM:         store float %[[A]], ptr %[[A_ADDR]]
 // LLVM:         store float %[[B]], ptr %[[B_ADDR]]
 
 // LLVM:         %[[A1:.*]] = load float, ptr %[[A_ADDR]]
 // LLVM:         %[[B1:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fmul float %[[A1]], %[[B1]]
+// LLVM:         %[[MUL:.*]] = fmul float %[[A1]], %[[B1]]
+// LLVM:         store float %[[MUL]], ptr %[[X_ADDR]]
 
-// LLVM:         %[[A2:.*]] = load float, ptr %[[A_ADDR]]
+// LLVM:         %[[X1:.*]] = load float, ptr %[[X_ADDR]]
 // LLVM:         %[[B2:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fdiv float %[[A2]], %[[B2]]
+// LLVM:         %[[DIV:.*]] = fdiv float %[[X1]], %[[B2]]
+// LLVM:         store float %[[DIV]], ptr %[[X_ADDR]]
 
-// LLVM:         %[[A3:.*]] = load float, ptr %[[A_ADDR]]
+// LLVM:         %[[X2:.*]] = load float, ptr %[[X_ADDR]]
 // LLVM:         %[[B3:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fadd float %[[A3]], %[[B3]]
+// LLVM:         %[[ADD:.*]] = fadd float %[[X2]], %[[B3]]
+// LLVM:         store float %[[ADD]], ptr %[[X_ADDR]]
 
-// LLVM:         %[[A4:.*]] = load float, ptr %[[A_ADDR]]
+// LLVM:         %[[X3:.*]] = load float, ptr %[[X_ADDR]]
 // LLVM:         %[[B4:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fsub float %[[A4]], %[[B4]]
+// LLVM:         %[[SUB:.*]] = fsub float %[[X3]], %[[B4]]
+// LLVM:         store float %[[SUB]], ptr %[[X_ADDR]]
 
 // LLVM:         ret void
 
 // OGCG-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(float {{.*}} %a, float {{.*}} %b)
 // OGCG:         %a.addr = alloca float
 // OGCG:         %b.addr = alloca float
+// OGCG:         %x = alloca float
 // OGCG:         store float %a, ptr %a.addr
 // OGCG:         store float %b, ptr %b.addr
 
 // OGCG:         %[[A1:.*]] = load float, ptr %a.addr
 // OGCG:         %[[B1:.*]] = load float, ptr %b.addr
-// OGCG:         fmul float %[[A1]], %[[B1]]
+// OGCG:         %[[MUL:.*]] = fmul float %[[A1]], %[[B1]]
+// OGCG:         store float %[[MUL]], ptr %x
 
-// OGCG:         %[[A2:.*]] = load float, ptr %a.addr
+// OGCG:         %[[X1:.*]] = load float, ptr %x
 // OGCG:         %[[B2:.*]] = load float, ptr %b.addr
-// OGCG:         fdiv float %[[A2]], %[[B2]]
+// OGCG:         %[[DIV:.*]] = fdiv float %[[X1]], %[[B2]]
+// OGCG:         store float %[[DIV]], ptr %x
 
-// OGCG:         %[[A3:.*]] = load float, ptr %a.addr
+// OGCG:         %[[X2:.*]] = load float, ptr %x
 // OGCG:         %[[B3:.*]] = load float, ptr %b.addr
-// OGCG:         fadd float %[[A3]], %[[B3]]
+// OGCG:         %[[ADD:.*]] = fadd float %[[X2]], %[[B3]]
+// OGCG:         store float %[[ADD]], ptr %x
 
-// OGCG:         %[[A4:.*]] = load float, ptr %a.addr
+// OGCG:         %[[X3:.*]] = load float, ptr %x
 // OGCG:         %[[B4:.*]] = load float, ptr %b.addr
-// OGCG:         fsub float %[[A4]], %[[B4]]
+// OGCG:         %[[SUB:.*]] = fsub float %[[X3]], %[[B4]]
+// OGCG:         store float %[[SUB]], ptr %x
 
 // OGCG:         ret void
 
@@ -216,7 +226,7 @@ void signed_shift(int a, int b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z12signed_shiftii
-// LLVM-SAME: (i32 %[[A:.*]], i32 %[[B:.*]])
+// LLVM-SAME: (i32 {{.*}} %[[A:.*]], i32 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
 // LLVM:         %[[X:.*]] = alloca i32
@@ -282,7 +292,7 @@ void unsigned_shift(unsigned a, unsigned b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z14unsigned_shiftjj
-// LLVM-SAME: (i32 %[[A:.*]], i32 %[[B:.*]])
+// LLVM-SAME: (i32 {{.*}} %[[A:.*]], i32 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
 // LLVM:         %[[X:.*]] = alloca i32
@@ -350,7 +360,7 @@ void zext_shift_example(int a, unsigned char b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z18zext_shift_exampleih
-// LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
+// LLVM-SAME: (i32 {{.*}} %[[A:.*]], i8 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i8
 // LLVM:         %[[X:.*]] = alloca i32
@@ -422,7 +432,7 @@ void sext_shift_example(int a, signed char b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z18sext_shift_exampleia
-// LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
+// LLVM-SAME: (i32 {{.*}} %[[A:.*]], i8 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i8
 // LLVM:         %[[X:.*]] = alloca i32
@@ -494,7 +504,7 @@ void long_shift_example(long long a, short b) {
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z18long_shift_examplexs
-// LLVM-SAME: (i64 %[[A:.*]], i16 %[[B:.*]])
+// LLVM-SAME: (i64 {{.*}} %[[A:.*]], i16 {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i64
 // LLVM:         %[[B_ADDR:.*]] = alloca i16
 // LLVM:         %[[X:.*]] = alloca i64
@@ -575,7 +585,7 @@ void b1(bool a, bool b) {
 
 
 // LLVM-LABEL: define{{.*}} void @_Z2b1bb(
-// LLVM-SAME: i1 %[[ARG0:.+]], i1 %[[ARG1:.+]])
+// LLVM-SAME: i1 {{.*}} %[[ARG0:.+]], i1 {{.*}} %[[ARG1:.+]])
 // LLVM: %[[A_ADDR:.*]] = alloca i8
 // LLVM: %[[B_ADDR:.*]] = alloca i8
 // LLVM: %[[X:.*]] = alloca i8
@@ -663,11 +673,11 @@ void b3(int a, int b, int c, int d) {
 // CIR: cir.store %[[ARG3]], [[D]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[AVAL1:%[0-9]+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[BVAL1:%[0-9]+]] = cir.load align(4) [[B]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP1:%[0-9]+]] = cir.cmp(eq, [[AVAL1]], [[BVAL1]]) : !s32i, !cir.bool
+// CIR: [[CMP1:%[0-9]+]] = cir.cmp eq [[AVAL1]], [[BVAL1]] : !s32i
 // CIR: [[AND_RESULT:%[0-9]+]] = cir.ternary([[CMP1]], true {
 // CIR: [[CVAL1:%[0-9]+]] = cir.load align(4) [[C]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[DVAL1:%[0-9]+]] = cir.load align(4) [[D]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP2:%[0-9]+]] = cir.cmp(eq, [[CVAL1]], [[DVAL1]]) : !s32i, !cir.bool
+// CIR: [[CMP2:%[0-9]+]] = cir.cmp eq [[CVAL1]], [[DVAL1]] : !s32i
 // CIR: cir.yield [[CMP2]] : !cir.bool
 // CIR: }, false {
 // CIR: [[FALSE:%[0-9]+]] = cir.const #false
@@ -676,14 +686,14 @@ void b3(int a, int b, int c, int d) {
 // CIR: cir.store align(1) [[AND_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: [[AVAL2:%[0-9]+]] = cir.load align(4) [[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[BVAL2:%[0-9]+]] = cir.load align(4) [[B]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP3:%[0-9]+]] = cir.cmp(eq, [[AVAL2]], [[BVAL2]]) : !s32i, !cir.bool
+// CIR: [[CMP3:%[0-9]+]] = cir.cmp eq [[AVAL2]], [[BVAL2]] : !s32i
 // CIR: [[OR_RESULT:%[0-9]+]] = cir.ternary([[CMP3]], true {
 // CIR: [[TRUE:%[0-9]+]] = cir.const #true
 // CIR: cir.yield [[TRUE]] : !cir.bool
 // CIR: }, false {
 // CIR: [[CVAL2:%[0-9]+]] = cir.load align(4) [[C]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[DVAL2:%[0-9]+]] = cir.load align(4) [[D]] : !cir.ptr<!s32i>, !s32i
-// CIR: [[CMP4:%[0-9]+]] = cir.cmp(eq, [[CVAL2]], [[DVAL2]]) : !s32i, !cir.bool
+// CIR: [[CMP4:%[0-9]+]] = cir.cmp eq [[CVAL2]], [[DVAL2]] : !s32i
 // CIR: cir.yield [[CMP4]] : !cir.bool
 // CIR: }) : (!cir.bool) -> !cir.bool
 // CIR: cir.store align(1) [[OR_RESULT]], [[X]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -691,7 +701,7 @@ void b3(int a, int b, int c, int d) {
 
 
 // LLVM-LABEL: define{{.*}} void @_Z2b3iiii(
-// LLVM-SAME: i32 %[[ARG0:.+]], i32 %[[ARG1:.+]], i32 %[[ARG2:.+]], i32 %[[ARG3:.+]])
+// LLVM-SAME: i32 {{.*}} %[[ARG0:.+]], i32 {{.*}} %[[ARG1:.+]], i32 {{.*}} %[[ARG2:.+]], i32 {{.*}} %[[ARG3:.+]])
 // LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1
 // LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1
 // LLVM: %[[C_ADDR:.*]] = alloca i32, i64 1

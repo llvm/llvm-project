@@ -137,34 +137,20 @@ define amdgpu_ps void @fpext_f16_to_f64_div(half %a, ptr addrspace(1) %ptr) {
 }
 
 define amdgpu_ps <2 x float> @fpext_v2f16_to_v2f32_uniform(<2 x half> inreg %a) {
-; GFX11-FAKE16-LABEL: fpext_v2f16_to_v2f32_uniform:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; GFX11-FAKE16-NEXT:    v_cvt_f32_f16_e32 v1, s1
-; GFX11-FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: fpext_v2f16_to_v2f32_uniform:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; GFX11-NEXT:    v_cvt_f32_f16_e32 v1, s1
+; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX11-TRUE16-LABEL: fpext_v2f16_to_v2f32_uniform:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, v0
-; GFX11-TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-FAKE16-LABEL: fpext_v2f16_to_v2f32_uniform:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_cvt_f32_f16 s1, s0
-; GFX12-FAKE16-NEXT:    s_cvt_hi_f32_f16 s0, s0
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
-; GFX12-FAKE16-NEXT:    ; return to shader part epilog
-;
-; GFX12-TRUE16-LABEL: fpext_v2f16_to_v2f32_uniform:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_cvt_f32_f16 s0, s0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s0
-; GFX12-TRUE16-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: fpext_v2f16_to_v2f32_uniform:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_cvt_f32_f16 s1, s0
+; GFX12-NEXT:    s_cvt_hi_f32_f16 s0, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-NEXT:    ; return to shader part epilog
   %result = fpext <2 x half> %a to <2 x float>
   ret <2 x float> %result
 }

@@ -20,7 +20,6 @@
 namespace nb = nanobind;
 
 using namespace nanobind::literals;
-using namespace llvm;
 using namespace mlir;
 using namespace mlir::python::nanobind_adaptors;
 
@@ -43,8 +42,8 @@ struct StructType : PyConcreteType<StructType> {
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_literal",
-        [](const std::vector<PyType> &elements, bool packed, MlirLocation loc,
-           DefaultingPyMlirContext context) {
+        [](const std::vector<PyType> &elements, bool packed,
+           DefaultingPyLocation loc, DefaultingPyMlirContext context) {
           python::CollectDiagnosticsToStringScope scope(
               mlirLocationGetContext(loc));
           std::vector<MlirType> elements_(elements.size());
@@ -129,14 +128,13 @@ struct StructType : PyConcreteType<StructType> {
         "name"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
         "context"_a = nb::none());
 
-    c.def_prop_ro(
-        "name", [](const StructType &type) -> std::optional<std::string> {
-          if (mlirLLVMStructTypeIsLiteral(type))
-            return std::nullopt;
+    c.def_prop_ro("name",
+                  [](const StructType &type) -> std::optional<MlirStringRef> {
+                    if (mlirLLVMStructTypeIsLiteral(type))
+                      return std::nullopt;
 
-          MlirStringRef stringRef = mlirLLVMStructTypeGetIdentifier(type);
-          return StringRef(stringRef.data, stringRef.length).str();
-        });
+                    return mlirLLVMStructTypeGetIdentifier(type);
+                  });
 
     c.def_prop_ro("body", [](const StructType &type) -> nb::object {
       // Don't crash in absence of a body.
@@ -157,6 +155,35 @@ struct StructType : PyConcreteType<StructType> {
 
     c.def_prop_ro("opaque", [](const StructType &type) {
       return mlirLLVMStructTypeIsOpaque(type);
+    });
+  }
+};
+
+//===--------------------------------------------------------------------===//
+// ArrayType
+//===--------------------------------------------------------------------===//
+
+struct ArrayType : PyConcreteType<ArrayType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsALLVMArrayType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLLVMArrayTypeGetTypeID;
+  static constexpr const char *pyClassName = "ArrayType";
+  static inline const MlirStringRef name = mlirLLVMArrayTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyType &elementType, unsigned numElements) {
+          return ArrayType(elementType.getContext(),
+                           mlirLLVMArrayTypeGet(elementType, numElements));
+        },
+        "element_type"_a, "num_elements"_a);
+    c.def_prop_ro("element_type", [](const ArrayType &type) {
+      return mlirLLVMArrayTypeGetElementType(type);
+    });
+    c.def_prop_ro("num_elements", [](const ArrayType &type) {
+      return mlirLLVMArrayTypeGetNumElements(type);
     });
   }
 };
@@ -197,6 +224,7 @@ struct PointerType : PyConcreteType<PointerType> {
 
 static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
   StructType::bind(m);
+  ArrayType::bind(m);
   PointerType::bind(m);
 
   m.def(

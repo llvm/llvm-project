@@ -34,7 +34,6 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -66,6 +65,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -73,6 +73,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AVRTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -291,13 +292,6 @@ private:
 
 #define DEBUG_TYPE "objdump"
 
-enum class ColorOutput {
-  Auto,
-  Enable,
-  Disable,
-  Invalid,
-};
-
 static uint64_t AdjustVMA;
 static bool AllHeaders;
 static std::string ArchName;
@@ -310,7 +304,7 @@ bool objdump::SymbolDescription;
 bool objdump::TracebackTable;
 static std::vector<std::string> DisassembleSymbols;
 static bool DisassembleZeroes;
-static ColorOutput DisassemblyColor;
+ColorOutput objdump::DisassemblyColor;
 DIDumpType objdump::DwarfDumpType;
 static bool DynamicRelocations;
 static bool FaultMapSection;
@@ -340,6 +334,7 @@ static uint64_t StopAddress = UINT64_MAX;
 static bool HasStopAddressFlag;
 
 bool objdump::SymbolTable;
+static std::optional<bool> SymbolizeOperandsOption;
 static bool SymbolizeOperands;
 static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
@@ -1614,7 +1609,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   const bool isX86 = STI->getTargetTriple().isX86();
   const bool isAArch64 = STI->getTargetTriple().isAArch64();
   const bool isBPF = STI->getTargetTriple().isBPF();
-  if (!isPPC && !isX86 && !isAArch64 && !isBPF)
+  const bool isRISCV = STI->getTargetTriple().isRISCV();
+  if (!isPPC && !isX86 && !isAArch64 && !isBPF && !isRISCV)
     return;
 
   if (MIA)
@@ -1648,7 +1644,7 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                 ((Target == 0 && isXCOFF) || (Target == Index && !isXCOFF))))
             Targets.insert(Target);
         }
-        MIA->updateState(Inst, Index);
+        MIA->updateState(Inst, STI, Index);
       } else
         MIA->resetState();
     }
@@ -2619,7 +2615,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 *TargetOS << "\n";
             }
 
-            DT->InstrAnalysis->updateState(Inst, SectionAddr + Index);
+            DT->InstrAnalysis->updateState(Inst, DT->SubtargetInfo.get(),
+                                           SectionAddr + Index);
           } else if (!Disassembled && DT->InstrAnalysis) {
             DT->InstrAnalysis->resetState();
           }
@@ -2679,6 +2676,11 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
 
   const Target *TheTarget = getTarget(Obj);
 
+  // Default --symbolize-operands to on for BPF, since BPF users expect to see
+  // basic block labels in disassembly.
+  SymbolizeOperands =
+      SymbolizeOperandsOption.value_or(Obj->makeTriple().isBPF());
+
   // Package up features to be passed to target/subtarget
   Expected<SubtargetFeatures> FeaturesValue = Obj->getFeatures();
   if (!FeaturesValue)
@@ -2689,6 +2691,21 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
       Features.AddFeature(MAttrs[I]);
   } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
     Features.AddFeature("+all");
+  } else if (MCPU.empty() && Obj->makeTriple().isAVR()) {
+    if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
+      if (Expected<std::string> VersionOrErr = AVR::getFeatureSetFromEFlag(
+              Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK)) {
+        Features.AddFeature('+' + *VersionOrErr);
+      } else {
+        // If the architecture version cannot be determined from ELF flags,
+        // fall back to the baseline "avr0" ISA. The AVR disassembler
+        // requires a valid feature specification to function correctly.
+        reportWarning(toString(VersionOrErr.takeError()) +
+                          ": defaulting to avr0",
+                      Obj->getFileName());
+        Features.AddFeature("+avr0");
+      }
+    }
   }
 
   if (MCPU.empty())
@@ -3642,6 +3659,8 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   PrintImmHex = true;
 
   ArchName = InputArgs.getLastArgValue(OTOOL_arch).str();
+  if (!ArchName.empty())
+    ArchFlags.push_back(ArchName);
   LinkOptHints = InputArgs.hasArg(OTOOL_C);
   if (InputArgs.hasArg(OTOOL_d))
     FilterSections.push_back("__DATA,__data");
@@ -3734,9 +3753,12 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   parseIntArg(InputArgs, OBJDUMP_stop_address_EQ, StopAddress);
   HasStopAddressFlag = InputArgs.hasArg(OBJDUMP_stop_address_EQ);
   SymbolTable = InputArgs.hasArg(OBJDUMP_syms);
-  SymbolizeOperands = InputArgs.hasArg(OBJDUMP_symbolize_operands);
+  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_symbolize_operands,
+                                               OBJDUMP_no_symbolize_operands))
+    SymbolizeOperandsOption =
+        A->getOption().matches(OBJDUMP_symbolize_operands);
   PrettyPGOAnalysisMap = InputArgs.hasArg(OBJDUMP_pretty_pgo_analysis_map);
-  if (PrettyPGOAnalysisMap && !SymbolizeOperands)
+  if (PrettyPGOAnalysisMap && !SymbolizeOperandsOption.value_or(false))
     reportCmdLineWarning("--symbolize-operands must be enabled for "
                          "--pretty-pgo-analysis-map to have an effect");
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
@@ -3852,6 +3874,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
            (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
   };
   if (Is("otool")) {
+    IsOtool = true;
     T = std::make_unique<OtoolOptTable>();
     Unknown = OTOOL_UNKNOWN;
     HelpFlag = OTOOL_help;

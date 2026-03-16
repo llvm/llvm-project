@@ -144,7 +144,8 @@ public:
 
   /// Metadata IDs that may generate poison.
   constexpr static const unsigned PoisonGeneratingIDs[] = {
-      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align};
+      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align,
+      LLVMContext::MD_nofpclass};
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -734,6 +735,7 @@ public:
   static MDString *get(LLVMContext &Context, const char *Str) {
     return get(Context, Str ? StringRef(Str) : StringRef());
   }
+  LLVM_ABI static MDString *getIfExists(LLVMContext &Context, StringRef Str);
 
   LLVM_ABI StringRef getString() const;
 
@@ -1472,6 +1474,7 @@ public:
   LLVM_ABI static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A,
                                                                    MDNode *B);
+  LLVM_ABI static MDNode *getMostGenericNoFPClass(MDNode *A, MDNode *B);
   /// Merge !prof metadata from two instructions.
   /// Currently only implemented with direct callsites with branch weights.
   LLVM_ABI static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,

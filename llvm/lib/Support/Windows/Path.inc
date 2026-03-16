@@ -60,6 +60,34 @@ static bool is_separator(const wchar_t value) {
   }
 }
 
+// Long path path prefix constants (UTF-8).
+static constexpr llvm::StringLiteral LongPathPrefix8 = R"(\\?\)";
+static constexpr llvm::StringLiteral LongPathUNCPrefix8 = R"(\\?\UNC\)";
+
+// Long path prefix constants (UTF-16).
+static constexpr wchar_t LongPathPrefix16[] = LR"(\\?\)";
+static constexpr wchar_t LongPathUNCPrefix16[] = LR"(\\?\UNC\)";
+
+static constexpr DWORD LongPathPrefix16Len =
+    static_cast<DWORD>(std::size(LongPathPrefix16) - 1);
+static constexpr DWORD LongPathUNCPrefix16Len =
+    static_cast<DWORD>(std::size(LongPathUNCPrefix16) - 1);
+
+static void stripLongPathPrefix(wchar_t *&Data, DWORD &CountChars) {
+  if (CountChars >= LongPathUNCPrefix16Len &&
+      ::wmemcmp(Data, LongPathUNCPrefix16, LongPathUNCPrefix16Len) == 0) {
+    // Convert \\?\UNC\foo\bar to \\foo\bar
+    CountChars -= 6;
+    Data += 6;
+    Data[0] = L'\\';
+  } else if (CountChars >= LongPathPrefix16Len &&
+             ::wmemcmp(Data, LongPathPrefix16, LongPathPrefix16Len) == 0) {
+    // Convert \\?\C:\foo to C:\foo
+    CountChars -= 4;
+    Data += 4;
+  }
+}
+
 namespace llvm {
 namespace sys {
 namespace windows {
@@ -95,10 +123,8 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
       return mapWindowsError(::GetLastError());
   }
 
-  const char *const LongPathPrefix = "\\\\?\\";
-
   if ((Path16.size() + CurPathLen) < MaxPathLen ||
-      Path8Str.starts_with(LongPathPrefix))
+      Path8Str.starts_with(LongPathPrefix8))
     return std::error_code();
 
   if (!IsAbsolute) {
@@ -116,15 +142,60 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   assert(!RootName.empty() &&
          "Root name cannot be empty for an absolute path!");
 
-  SmallString<2 * MAX_PATH> FullPath(LongPathPrefix);
+  SmallString<2 * MAX_PATH> FullPath;
   if (RootName[1] != ':') { // Check if UNC.
-    FullPath.append("UNC\\");
+    FullPath.append(LongPathUNCPrefix8);
     FullPath.append(Path8Str.begin() + 2, Path8Str.end());
   } else {
+    FullPath.append(LongPathPrefix8);
     FullPath.append(Path8Str);
   }
 
   return UTF8ToUTF16(FullPath, Path16);
+}
+
+std::error_code makeLongFormPath(const Twine &Path8,
+                                 llvm::SmallVectorImpl<char> &Result8) {
+  SmallString<128> PathStorage;
+  StringRef PathStr = Path8.toStringRef(PathStorage);
+  bool HadPrefix = PathStr.starts_with(LongPathPrefix8);
+
+  SmallVector<wchar_t, 128> Path16;
+  if (std::error_code EC = widenPath(PathStr, Path16))
+    return EC;
+
+  // Start with a buffer equal to input.
+  llvm::SmallVector<wchar_t, 128> Long16;
+  DWORD Len = static_cast<DWORD>(Path16.size());
+
+  // Loop instead of a double call to be defensive against TOCTOU races.
+  do {
+    Long16.resize_for_overwrite(Len);
+
+    Len = ::GetLongPathNameW(Path16.data(), Long16.data(), Len);
+
+    // A zero return value indicates a failure other than insufficient space.
+    if (Len == 0)
+      return mapWindowsError(::GetLastError());
+
+    // If there's insufficient space, the return value is the required size in
+    // characters *including* the null terminator, and therefore greater than
+    // the buffer size we provided. Equality would imply success with no room
+    // for the terminator and should not occur for this API.
+    assert(Len != Long16.size());
+  } while (Len > Long16.size());
+
+  // On success, GetLongPathNameW returns the number of characters not
+  // including the null-terminator.
+  Long16.truncate(Len);
+
+  // Strip \\?\ or \\?\UNC\ long length prefix if it wasn't part of the
+  // original path.
+  wchar_t *Data = Long16.data();
+  if (!HadPrefix)
+    stripLongPathPrefix(Data, Len);
+
+  return sys::windows::UTF16ToUTF8(Data, Len, Result8);
 }
 
 } // end namespace windows
@@ -407,16 +478,7 @@ static std::error_code realPathFromHandle(HANDLE H,
   // paths don't get canonicalized by file APIs.
   wchar_t *Data = Buffer.data();
   DWORD CountChars = Buffer.size();
-  if (CountChars >= 8 && ::memcmp(Data, L"\\\\?\\UNC\\", 16) == 0) {
-    // Convert \\?\UNC\foo\bar to \\foo\bar
-    CountChars -= 6;
-    Data += 6;
-    Data[0] = '\\';
-  } else if (CountChars >= 4 && ::memcmp(Data, L"\\\\?\\", 8) == 0) {
-    // Convert \\?\c:\foo to c:\foo
-    CountChars -= 4;
-    Data += 4;
-  }
+  stripLongPathPrefix(Data, CountChars);
 
   // Convert the result from UTF-16 to UTF-8.
   if (std::error_code EC = UTF16ToUTF8(Data, CountChars, RealPath))
@@ -607,10 +669,12 @@ std::error_code rename(const Twine &From, const Twine &To) {
   for (unsigned Retry = 0; Retry != 200; ++Retry) {
     if (Retry != 0)
       ::Sleep(10);
+    // `FILE_FLAG_BACKUP_SEMANTICS` must be used to create a handle to a
+    // directory.
     FromHandle =
         ::CreateFileW(WideFrom.begin(), GENERIC_READ | DELETE,
                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                      NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (FromHandle)
       break;
 

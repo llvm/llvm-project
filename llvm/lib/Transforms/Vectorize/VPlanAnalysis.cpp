@@ -59,7 +59,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   // other operands match and cache them.
   auto SetResultTyFromOp = [this, R]() {
     Type *ResTy = inferScalarType(R->getOperand(0));
-    for (unsigned Op = 1; Op != R->getNumOperands(); ++Op) {
+    unsigned NumOperands = R->getNumOperandsWithoutMask();
+    for (unsigned Op = 1; Op != NumOperands; ++Op) {
       VPValue *OtherV = R->getOperand(Op);
       assert(inferScalarType(OtherV) == ResTy &&
              "different types inferred for different operands");
@@ -77,11 +78,12 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::Freeze:
   case Instruction::PHI:
   case VPInstruction::Broadcast:
-  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ExtractLastPart:
+  case VPInstruction::ExtractLastActive:
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::ReductionStartVector:
@@ -122,14 +124,32 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::LogicalAnd:
+  case VPInstruction::LogicalOr:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
-           "LogicalAnd operands should be bool");
+           "LogicalAnd/Or operands should be bool");
+    return IntegerType::get(Ctx, 1);
+  case VPInstruction::MaskedCond:
+    assert(inferScalarType(R->getOperand(0))->isIntegerTy(1));
     return IntegerType::get(Ctx, 1);
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
+  case Instruction::Store:
     return Type::getVoidTy(Ctx);
+  case Instruction::Load:
+    return cast<LoadInst>(R->getUnderlyingValue())->getType();
+  case Instruction::Alloca:
+    return cast<AllocaInst>(R->getUnderlyingValue())->getType();
+  case Instruction::Call: {
+    unsigned CallIdx = R->getNumOperandsWithoutMask() - 1;
+    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
+        ->getReturnType();
+  }
+  case Instruction::GetElementPtr:
+    return inferScalarType(R->getOperand(0));
+  case Instruction::ExtractValue:
+    return cast<ExtractValueInst>(R->getUnderlyingValue())->getType();
   default:
     break;
   }
@@ -162,11 +182,17 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   case Instruction::ExtractValue: {
     assert(R->getNumOperands() == 2 && "expected single level extractvalue");
     auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
-    auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
-    return StructTy->getTypeAtIndex(CI->getZExtValue());
+    return StructTy->getTypeAtIndex(
+        cast<VPConstantInt>(R->getOperand(1))->getZExtValue());
   }
-  case Instruction::Select:
-    return inferScalarType(R->getOperand(1));
+  case Instruction::Select: {
+    Type *ResTy = inferScalarType(R->getOperand(1));
+    VPValue *OtherV = R->getOperand(2);
+    assert(inferScalarType(OtherV) == ResTy &&
+           "different types inferred for different operands");
+    CachedTypes[OtherV] = ResTy;
+    return ResTy;
+  }
   default:
     break;
   }
@@ -263,7 +289,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
           .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
                 VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
-                VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe>(
+                VPWidenPointerInductionRecipe, VPCurrentIterationPHIRecipe>(
               [this](const auto *R) {
                 // Handle header phi recipes, except VPWidenIntOrFpInduction
                 // which needs special handling due it being possibly truncated.
@@ -286,17 +312,17 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                 VPWidenCallRecipe, VPWidenMemoryRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case<VPInterleaveBase>([V](const auto *R) {
+          .Case([V](const VPInterleaveBase *R) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
+          .Case([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })
-          .Case<VPReductionRecipe>([this](const auto *R) {
+          .Case([this](const VPReductionRecipe *R) {
             return inferScalarType(R->getChainOp());
           })
-          .Case<VPExpressionRecipe>([this](const auto *R) {
+          .Case([this](const VPExpressionRecipe *R) {
             return inferScalarType(R->getOperandOfResultType());
           });
 
@@ -410,7 +436,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   // the loop (not including non-recipe values such as arguments and
   // constants).
   SmallSetVector<VPValue *, 8> LoopInvariants;
-  LoopInvariants.insert(&Plan.getVectorTripCount());
+  if (Plan.getVectorTripCount().getNumUsers() > 0)
+    LoopInvariants.insert(&Plan.getVectorTripCount());
 
   // We scan the loop in a topological order in order and assign a number to
   // each recipe. We use RPO to ensure that defs are met before their users. We
@@ -428,25 +455,21 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
       // Save the end location of each USE.
       for (VPValue *U : R.operands()) {
-        auto *DefR = U->getDefiningRecipe();
-
-        // Ignore non-recipe values such as arguments, constants, etc.
-        // FIXME: Might need some motivation why these values are ignored. If
-        // for example an argument is used inside the loop it will increase the
-        // register pressure (so shouldn't we add it to LoopInvariants).
-        auto *IRV = dyn_cast<VPIRValue>(U);
-        if (!DefR && (!IRV || !isa<Instruction>(IRV->getValue())))
-          continue;
-
-        // If this recipe is outside the loop then record it and continue.
-        if (!DefR) {
+        if (isa<VPRecipeValue>(U)) {
+          // Overwrite previous end points.
+          EndPoint[U] = Idx2Recipe.size();
+          Ends.insert(U);
+        } else if (auto *IRV = dyn_cast<VPIRValue>(U)) {
+          // Ignore non-recipe values such as arguments, constants, etc.
+          // FIXME: Might need some motivation why these values are ignored. If
+          // for example an argument is used inside the loop it will increase
+          // the register pressure (so shouldn't we add it to LoopInvariants).
+          if (!isa<Instruction>(IRV->getValue()))
+            continue;
+          // This recipe is outside the loop, record it and continue.
           LoopInvariants.insert(U);
-          continue;
         }
-
-        // Overwrite previous end points.
-        EndPoint[U] = Idx2Recipe.size();
-        Ends.insert(U);
+        // Other types of VPValue are currently not tracked.
       }
     }
     if (VPBB == LoopRegion->getExiting()) {
@@ -536,7 +559,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
-                VPEVLBasedIVPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
+                VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&
              (cast<VPReductionPHIRecipe>(VPV))->isInLoop())) {

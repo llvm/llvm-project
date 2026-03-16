@@ -461,7 +461,7 @@ void TailDuplicator::duplicateInstruction(
       Register NewReg = MRI->createVirtualRegister(OrigRC);
       BuildMI(*PredBB, NewMI, NewMI.getDebugLoc(), TII->get(TargetOpcode::COPY),
               NewReg)
-          .addReg(VI->second.Reg, 0, VI->second.SubReg);
+          .addReg(VI->second.Reg, {}, VI->second.SubReg);
       LocalVRMap.erase(VI);
       LocalVRMap.try_emplace(Reg, NewReg, 0);
       MO.setReg(NewReg);
@@ -1072,7 +1072,7 @@ void TailDuplicator::appendCopies(MachineBasicBlock *MBB,
   const MCInstrDesc &CopyD = TII->get(TargetOpcode::COPY);
   for (auto &CI : CopyInfos) {
     auto C = BuildMI(*MBB, Loc, DebugLoc(), CopyD, CI.first)
-                .addReg(CI.second.Reg, 0, CI.second.SubReg);
+                 .addReg(CI.second.Reg, {}, CI.second.SubReg);
     Copies.push_back(C);
   }
 }

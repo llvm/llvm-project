@@ -4,7 +4,7 @@
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 | FileCheck --check-prefixes=GFX11 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-enable-prt-strict-null | FileCheck --check-prefixes=NOPRT %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 | FileCheck --check-prefixes=GFX12,GFX12-SDAG %s
-;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 | FileCheck --check-prefixes=GFX12,GFX12-GISEL %s
+;RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 | FileCheck --check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(<4 x i32> inreg) {
 ; GFX6-LABEL: buffer_load:
@@ -183,25 +183,62 @@ define amdgpu_ps <4 x float> @buffer_load_immoffs_large(<4 x i32> inreg) {
 ; NOPRT-NEXT:    v_add_f32_e32 v2, v10, v2
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: buffer_load_immoffs_large:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v8, 0
-; GFX12-NEXT:    s_mov_b32 s4, 60
-; GFX12-NEXT:    s_movk_i32 s5, 0x7ffc
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v8, s[0:3], s4 idxen offset:4092
-; GFX12-NEXT:    buffer_load_format_xyzw v[4:7], v8, s[0:3], s5 idxen offset:4092
-; GFX12-NEXT:    s_mov_b32 s4, 0x8ffc
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_add_f32_e32 v1, v1, v5
-; GFX12-NEXT:    buffer_load_format_xyzw v[8:11], v8, s[0:3], s4 idxen offset:4
-; GFX12-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v3, v3, v7
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_dual_add_f32 v2, v2, v6 :: v_dual_add_f32 v1, v9, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_dual_add_f32 v0, v8, v0 :: v_dual_add_f32 v3, v11, v3
-; GFX12-NEXT:    v_add_f32_e32 v2, v10, v2
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: buffer_load_immoffs_large:
+; GFX12-SDAG:       ; %bb.0: ; %main_body
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v8, 0
+; GFX12-SDAG-NEXT:    s_mov_b32 s4, 60
+; GFX12-SDAG-NEXT:    s_movk_i32 s5, 0x7ffc
+; GFX12-SDAG-NEXT:    s_clause 0x1
+; GFX12-SDAG-NEXT:    buffer_load_format_xyzw v[0:3], v8, s[0:3], s4 idxen offset:4092
+; GFX12-SDAG-NEXT:    buffer_load_format_xyzw v[4:7], v8, s[0:3], s5 idxen offset:4092
+; GFX12-SDAG-NEXT:    s_mov_b32 s4, 0x8ffc
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    v_add_f32_e32 v1, v1, v5
+; GFX12-SDAG-NEXT:    buffer_load_format_xyzw v[8:11], v8, s[0:3], s4 idxen offset:4
+; GFX12-SDAG-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v3, v3, v7
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    v_dual_add_f32 v2, v2, v6 :: v_dual_add_f32 v1, v9, v1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_dual_add_f32 v0, v8, v0 :: v_dual_add_f32 v3, v11, v3
+; GFX12-SDAG-NEXT:    v_add_f32_e32 v2, v10, v2
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: buffer_load_immoffs_large:
+; GFX12-GISEL:       ; %bb.0: ; %main_body
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v8, 0
+; GFX12-GISEL-NEXT:    s_mov_b32 s4, 60
+; GFX12-GISEL-NEXT:    buffer_load_format_xyzw v[0:3], v8, s[0:3], s4 idxen offset:4092
+; GFX12-GISEL-NEXT:    s_movk_i32 s4, 0x7ffc
+; GFX12-GISEL-NEXT:    buffer_load_format_xyzw v[4:7], v8, s[0:3], s4 idxen offset:4092
+; GFX12-GISEL-NEXT:    s_mov_b32 s4, 0x8ffc
+; GFX12-GISEL-NEXT:    buffer_load_format_xyzw v[8:11], v8, s[0:3], s4 idxen offset:4
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x1
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v4
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v5
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s6, v6
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s7, v7
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s8, v8
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s9, v9
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s10, v10
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s11, v11
+; GFX12-GISEL-NEXT:    s_add_f32 s0, s0, s4
+; GFX12-GISEL-NEXT:    s_add_f32 s1, s1, s5
+; GFX12-GISEL-NEXT:    s_add_f32 s2, s2, s6
+; GFX12-GISEL-NEXT:    s_add_f32 s3, s3, s7
+; GFX12-GISEL-NEXT:    s_add_f32 s0, s8, s0
+; GFX12-GISEL-NEXT:    s_add_f32 s1, s9, s1
+; GFX12-GISEL-NEXT:    s_add_f32 s2, s10, s2
+; GFX12-GISEL-NEXT:    s_add_f32 s3, s11, s3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_2)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %d.0 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %0, i32 0, i32 4092, i32 60, i32 0)
   %d.1 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %0, i32 0, i32 4092, i32 32764, i32 0)
@@ -837,17 +874,36 @@ define amdgpu_cs float @buffer_load_v4i32_tfe(<4 x i32> inreg %rsrc, ptr addrspa
 ; NOPRT-NEXT:    v_mov_b32_e32 v0, v6
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: buffer_load_v4i32_tfe:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v7, 2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
-; GFX12-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v2
-; GFX12-NEXT:    buffer_load_format_xyzw v[2:6], v7, s[0:3], null idxen tfe
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX12-NEXT:    v_mov_b32_e32 v0, v6
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: buffer_load_v4i32_tfe:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v7, 2
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v2
+; GFX12-SDAG-NEXT:    buffer_load_format_xyzw v[2:6], v7, s[0:3], null idxen tfe
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v6
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: buffer_load_v4i32_tfe:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v7, 2
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v2
+; GFX12-GISEL-NEXT:    buffer_load_format_xyzw v[2:6], v7, s[0:3], null idxen tfe
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s3 :: v_dual_mov_b32 v2, s0
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v4, s2
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v6
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %load = call { <4 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4i32i32s(<4 x i32> %rsrc, i32 2, i32 0, i32 0, i32 0)
   %data = extractvalue { <4 x i32>, i32 } %load, 0
   store <4 x i32> %data, ptr addrspace(1) %out
@@ -912,17 +968,36 @@ define amdgpu_cs float @buffer_load_v4f32_tfe(<4 x i32> inreg %rsrc, ptr addrspa
 ; NOPRT-NEXT:    v_mov_b32_e32 v0, v6
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: buffer_load_v4f32_tfe:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
-; GFX12-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v2
-; GFX12-NEXT:    buffer_load_format_xyzw v[2:6], v2, s[0:3], null idxen tfe
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX12-NEXT:    v_mov_b32_e32 v0, v6
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: buffer_load_v4f32_tfe:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v2
+; GFX12-SDAG-NEXT:    buffer_load_format_xyzw v[2:6], v2, s[0:3], null idxen tfe
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v6
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: buffer_load_v4f32_tfe:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v2
+; GFX12-GISEL-NEXT:    buffer_load_format_xyzw v[2:6], v2, s[0:3], null idxen tfe
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s3 :: v_dual_mov_b32 v2, s0
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v4, s2
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v6
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %load = call { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <4 x float>, i32 } %load, 0
   store <4 x float> %data, ptr addrspace(1) %out
@@ -985,17 +1060,35 @@ define amdgpu_cs float @buffer_load_v3i32_tfe(<4 x i32> inreg %rsrc, ptr addrspa
 ; NOPRT-NEXT:    v_mov_b32_e32 v0, v5
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: buffer_load_v3i32_tfe:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
-; GFX12-NEXT:    v_mov_b32_e32 v5, v2
-; GFX12-NEXT:    buffer_load_format_xyz v[2:5], v2, s[0:3], null idxen tfe
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b96 v[0:1], v[2:4], off
-; GFX12-NEXT:    v_mov_b32_e32 v0, v5
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: buffer_load_v3i32_tfe:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v5, v2
+; GFX12-SDAG-NEXT:    buffer_load_format_xyz v[2:5], v2, s[0:3], null idxen tfe
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_store_b96 v[0:1], v[2:4], off
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v5
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: buffer_load_v3i32_tfe:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v5, v2
+; GFX12-GISEL-NEXT:    buffer_load_format_xyz v[2:5], v2, s[0:3], null idxen tfe
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v4, s2
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
+; GFX12-GISEL-NEXT:    global_store_b96 v[0:1], v[2:4], off
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v5
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %load = call { <3 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <3 x i32>, i32 } %load, 0
   store <3 x i32> %data, ptr addrspace(1) %out
@@ -1058,17 +1151,35 @@ define amdgpu_cs float @buffer_load_v3f32_tfe(<4 x i32> inreg %rsrc, ptr addrspa
 ; NOPRT-NEXT:    v_mov_b32_e32 v0, v5
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: buffer_load_v3f32_tfe:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
-; GFX12-NEXT:    v_mov_b32_e32 v5, v2
-; GFX12-NEXT:    buffer_load_format_xyz v[2:5], v2, s[0:3], null idxen tfe
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b96 v[0:1], v[2:4], off
-; GFX12-NEXT:    v_mov_b32_e32 v0, v5
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: buffer_load_v3f32_tfe:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v5, v2
+; GFX12-SDAG-NEXT:    buffer_load_format_xyz v[2:5], v2, s[0:3], null idxen tfe
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_store_b96 v[0:1], v[2:4], off
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v5
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: buffer_load_v3f32_tfe:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v5, v2
+; GFX12-GISEL-NEXT:    buffer_load_format_xyz v[2:5], v2, s[0:3], null idxen tfe
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v4, s2
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
+; GFX12-GISEL-NEXT:    global_store_b96 v[0:1], v[2:4], off
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v5
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %load = call { <3 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3f32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <3 x float>, i32 } %load, 0
   store <3 x float> %data, ptr addrspace(1) %out
@@ -1128,16 +1239,30 @@ define amdgpu_cs float @buffer_load_v2i32_tfe(<4 x i32> inreg %rsrc, ptr addrspa
 ; NOPRT-NEXT:    v_mov_b32_e32 v0, v4
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: buffer_load_v2i32_tfe:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
-; GFX12-NEXT:    buffer_load_format_xy v[2:4], v2, s[0:3], null idxen tfe
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX12-NEXT:    v_mov_b32_e32 v0, v4
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: buffer_load_v2i32_tfe:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-SDAG-NEXT:    buffer_load_format_xy v[2:4], v2, s[0:3], null idxen tfe
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v4
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: buffer_load_v2i32_tfe:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-GISEL-NEXT:    buffer_load_format_xy v[2:4], v2, s[0:3], null idxen tfe
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v4
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %load = call { <2 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v2i32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <2 x i32>, i32 } %load, 0
   store <2 x i32> %data, ptr addrspace(1) %out
@@ -1197,16 +1322,30 @@ define amdgpu_cs float @buffer_load_v2f32_tfe(<4 x i32> inreg %rsrc, ptr addrspa
 ; NOPRT-NEXT:    v_mov_b32_e32 v0, v4
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: buffer_load_v2f32_tfe:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
-; GFX12-NEXT:    buffer_load_format_xy v[2:4], v2, s[0:3], null idxen tfe
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
-; GFX12-NEXT:    v_mov_b32_e32 v0, v4
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: buffer_load_v2f32_tfe:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-SDAG-NEXT:    buffer_load_format_xy v[2:4], v2, s[0:3], null idxen tfe
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, v4
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: buffer_load_v2f32_tfe:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v4, v2
+; GFX12-GISEL-NEXT:    buffer_load_format_xy v[2:4], v2, s[0:3], null idxen tfe
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
+; GFX12-GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v4
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %load = call { <2 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v2f32i32s(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
   %data = extractvalue { <2 x float>, i32 } %load, 0
   store <2 x float> %data, ptr addrspace(1) %out

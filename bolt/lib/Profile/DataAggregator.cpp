@@ -233,6 +233,8 @@ void DataAggregator::start() {
 
   launchPerfProcess("task events", TaskEventsPPI,
                     "script --show-task-events --no-itrace");
+
+  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
 }
 
 void DataAggregator::abort() {
@@ -303,8 +305,6 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
   };
 
-  PerfProcessInfo BuildIDProcessInfo;
-  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
   if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
     return;
 
@@ -1729,10 +1729,10 @@ std::error_code DataAggregator::parseMemEvents() {
     if (std::error_code EC = Sample.getError())
       return EC;
 
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
+    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC)) {
       BF->setHasProfileAvailable();
-
-    MemSamples.emplace_back(std::move(Sample.get()));
+      MemSamples.emplace_back(std::move(Sample.get()));
+    }
   }
 
   return std::error_code();

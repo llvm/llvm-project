@@ -191,6 +191,84 @@ struct SoftmaxOpInterface
     return success();
   }
 };
+
+struct PackOpInterface
+    : public DstBufferizableOpInterfaceExternalModel<PackOpInterface,
+                                                     linalg::PackOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    auto packOp = cast<linalg::PackOp>(op);
+    return !packOp.isDpsInit(&opOperand);
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
+    auto packOp = cast<linalg::PackOp>(op);
+    assert(!packOp.hasPureBufferSemantics() && "expected op with tensors");
+    if (!packOp.hasPureTensorSemantics())
+      return packOp.emitError()
+             << "mixed tensor/buffer semantic op not supported yet";
+    FailureOr<Value> sourceBuffer =
+        getBuffer(rewriter, packOp.getSource(), options, state);
+    if (failed(sourceBuffer))
+      return failure();
+    FailureOr<Value> destBuffer =
+        getBuffer(rewriter, packOp.getDest(), options, state);
+    if (failed(destBuffer))
+      return failure();
+
+    SmallVector<Value> operands;
+    operands.push_back(*sourceBuffer);
+    operands.push_back(*destBuffer);
+    if (auto val = packOp.getPaddingValue())
+      operands.push_back(val);
+    llvm::append_range(operands, packOp.getInnerTiles());
+
+    linalg::PackOp::create(rewriter, packOp.getLoc(), TypeRange{}, operands,
+                           op->getAttrs());
+    replaceOpWithBufferizedValues(rewriter, op, *destBuffer);
+    return success();
+  }
+};
+
+struct UnPackOpInterface
+    : public DstBufferizableOpInterfaceExternalModel<UnPackOpInterface,
+                                                     linalg::UnPackOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    auto unPackOp = cast<linalg::UnPackOp>(op);
+    return !unPackOp.isDpsInit(&opOperand);
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
+    auto unPackOp = cast<linalg::UnPackOp>(op);
+    assert(!unPackOp.hasPureBufferSemantics() && "expected op with tensors");
+    if (!unPackOp.hasPureTensorSemantics())
+      return unPackOp.emitError()
+             << "mixed tensor/buffer semantic op not supported yet";
+    FailureOr<Value> sourceBuffer =
+        getBuffer(rewriter, unPackOp.getSource(), options, state);
+    if (failed(sourceBuffer))
+      return failure();
+    FailureOr<Value> destBuffer =
+        getBuffer(rewriter, unPackOp.getDest(), options, state);
+    if (failed(destBuffer))
+      return failure();
+
+    SmallVector<Value> operands;
+    operands.push_back(*sourceBuffer);
+    operands.push_back(*destBuffer);
+    llvm::append_range(operands, unPackOp.getInnerTiles());
+
+    linalg::UnPackOp::create(rewriter, unPackOp.getLoc(), TypeRange{}, operands,
+                             op->getAttrs());
+    replaceOpWithBufferizedValues(rewriter, op, *destBuffer);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
@@ -206,5 +284,7 @@ void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
         >::registerOpInterface(ctx);
 
     SoftmaxOp::attachInterface<SoftmaxOpInterface>(*ctx);
+    PackOp::attachInterface<PackOpInterface>(*ctx);
+    UnPackOp::attachInterface<UnPackOpInterface>(*ctx);
   });
 }

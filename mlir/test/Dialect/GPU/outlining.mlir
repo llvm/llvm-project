@@ -485,6 +485,7 @@ func.func @launch_cluster() {
 // CHECK-NEXT: gpu.func @launch_cluster_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
 // CHECK-SAME: known_block_size = array<i32: 20, 24, 28>
+// CHECK-SAME: known_cluster_size = array<i32: 1, 2, 1>
 // CHECK-SAME: known_grid_size = array<i32: 8, 12, 16>
 // CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
 // CHECK-NEXT: = gpu.block_id y
@@ -633,6 +634,30 @@ func.func @testNoAttributes() {
     gpu.terminator
   }
   return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/185357.
+// A gpu.launch whose body contains a gpu.launch_func referencing a symbol in a
+// nested gpu.module must not crash when the leaf reference cannot be found in
+// the parent symbol table.
+
+// CHECK-LABEL: func.func @launch_with_launch_func_body(
+module attributes {gpu.container_module} {
+  gpu.module @some_kernels {
+    gpu.func @some_kernel() kernel {
+      gpu.return
+    }
+  }
+  func.func @launch_with_launch_func_body(%sz : index) {
+    gpu.launch blocks(%bx, %by, %bz) in (%gx = %sz, %gy = %sz, %gz = %sz)
+               threads(%tx, %ty, %tz) in (%bsx = %sz, %bsy = %sz, %bsz = %sz) {
+      "test.use_nested"()  {uses = [@public_module::@nested_function]} : () -> ()
+      gpu.terminator
+    }
+    return
+  }
 }
 
 // -----

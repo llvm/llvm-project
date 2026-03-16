@@ -49,6 +49,7 @@
 #include "RedundantMemberInitCheck.h"
 #include "RedundantParenthesesCheck.h"
 #include "RedundantPreprocessorCheck.h"
+#include "RedundantQualifiedAliasCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
@@ -60,6 +61,7 @@
 #include "StaticDefinitionInAnonymousNamespaceCheck.h"
 #include "StringCompareCheck.h"
 #include "SuspiciousCallArgumentCheck.h"
+#include "TrailingCommaCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
@@ -147,6 +149,8 @@ public:
         "readability-redundant-parentheses");
     CheckFactories.registerCheck<RedundantPreprocessorCheck>(
         "readability-redundant-preprocessor");
+    CheckFactories.registerCheck<RedundantQualifiedAliasCheck>(
+        "readability-redundant-qualified-alias");
     CheckFactories.registerCheck<RedundantTypenameCheck>(
         "readability-redundant-typename");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
@@ -177,6 +181,8 @@ public:
         "readability-simplify-boolean-expr");
     CheckFactories.registerCheck<SuspiciousCallArgumentCheck>(
         "readability-suspicious-call-argument");
+    CheckFactories.registerCheck<TrailingCommaCheck>(
+        "readability-trailing-comma");
     CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(
         "readability-uniqueptr-delete-release");
     CheckFactories.registerCheck<UppercaseLiteralSuffixCheck>(

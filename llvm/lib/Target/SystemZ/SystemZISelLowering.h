@@ -64,6 +64,12 @@ public:
     //
     // (c) there are no multiplication instructions for the widest integer
     //     type (v2i64).
+
+    // Expand (narrow) f16 vectors during type legalization to avoid
+    // operations for all elements as with expansion after widening.
+    if (VT.getScalarType() == MVT::f16)
+      return VT.getVectorElementCount().isScalar() ? TypeScalarizeVector
+                                                   : TypeSplitVector;
     if (VT.getScalarSizeInBits() % 8 == 0)
       return TypeWidenVector;
     return TargetLoweringBase::getPreferredVectorAction(VT);
@@ -76,15 +82,16 @@ public:
       return 1;
     return TargetLowering::getNumRegisters(Context, VT);
   }
+  unsigned
+  getVectorTypeBreakdownForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                       EVT VT, EVT &IntermediateVT,
+                                       unsigned &NumIntermediates,
+                                       MVT &RegisterVT) const override;
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
-                                    EVT VT) const override {
-    // 128-bit single-element vector types are passed like other vectors,
-    // not like their element type.
-    if (VT.isVector() && VT.getSizeInBits() == 128 &&
-        VT.getVectorNumElements() == 1)
-      return MVT::v16i8;
-    return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
-  }
+                                    EVT VT) const override;
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                         CallingConv::ID CC,
+                                         EVT VT) const override;
   bool isCheapToSpeculateCtlz(Type *) const override { return true; }
   bool isCheapToSpeculateCttz(Type *) const override { return true; }
   bool preferZeroCompareBranch() const override { return true; }
@@ -116,7 +123,7 @@ public:
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
@@ -125,11 +132,11 @@ public:
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
                                       MachineMemOperand::Flags Flags,
                                       unsigned *Fast) const override;
-  bool
-  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
-                           unsigned Limit, const MemOp &Op, unsigned DstAS,
-                           unsigned SrcAS,
-                           const AttributeList &FuncAttributes) const override;
+  bool findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                                unsigned Limit, const MemOp &Op, unsigned DstAS,
+                                unsigned SrcAS,
+                                const AttributeList &FuncAttributes,
+                                EVT *LargestVT = nullptr) const override;
   EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
@@ -220,8 +227,9 @@ public:
 
   /// Override to support customized stack guard loading.
   bool useLoadStackGuardNode(const Module &M) const override { return true; }
-  void insertSSPDeclarations(Module &M) const override {
-  }
+  void
+  insertSSPDeclarations(Module &M,
+                        const LibcallLoweringInfo &Libcalls) const override {}
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
