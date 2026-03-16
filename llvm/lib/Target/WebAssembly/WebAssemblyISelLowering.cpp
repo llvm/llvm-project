@@ -3320,7 +3320,7 @@ static SDValue performBitmaskCombine(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN);
   using namespace llvm::SDPatternMatch;
 
-  if (N->getConstantOperandVal(0) != Intrinsic::wasm_bitmask) 
+  if (N->getConstantOperandVal(0) != Intrinsic::wasm_bitmask)
     return SDValue();
 
   SDValue LHS;
