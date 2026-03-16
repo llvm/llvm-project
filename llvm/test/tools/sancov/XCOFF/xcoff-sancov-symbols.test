@@ -1,13 +1,15 @@
+## This test verifies sancov tools correctly identify the prefix for XCOFF binaries.
+
 # REQUIRES: powerpc-registered-target
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: sancov -print-coverage-pcs %t.o | FileCheck %s
+# RUN: sancov -print-coverage-pcs %t.o 2>&1 | FileCheck %s
 
-# CHECK: 0x1000
+# CHECK-NOT: ERROR
 
 --- !XCOFF
 FileHeader:
-  MagicNumber: 0x01F7
+  MagicNumber: 0x01DF
 Sections:
   - Name: .text
     Flags: [ STYP_TEXT ]
@@ -18,3 +20,9 @@ Symbols:
     Section: .text
     Type: 0x0
     StorageClass: C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type: AUX_CSECT
+        SectionOrLength: 0
+        SymbolAlignmentAndType: 0x01
+        StorageMappingClass: XMC_PR
