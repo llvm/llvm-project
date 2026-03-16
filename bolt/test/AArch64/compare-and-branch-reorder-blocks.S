@@ -1,5 +1,6 @@
 # This test checks that reordering blocks which contain short range
-# conditional branches may break if the target goes out of range.
+# conditional branches works even if the target is beyond 1KB and
+# the branch cannot be inverted.
 
 # REQUIRES: system-linux, asserts
 
@@ -18,7 +19,7 @@
 reorder_blocks:
 .entry:
 # FDATA: 1 reorder_blocks #.entry# 10
-    cbgt x0, #0, .cold_exit
+    cbgt x0, #63, .cold_exit
 .fall_through:
 # FDATA: 1 reorder_blocks #.fall_through# 10
     b .hot_exit
@@ -40,7 +41,7 @@ reorder_blocks:
 # CHECK: Disassembly of section .text:
 
 # CHECK:      <reorder_blocks>:
-# CHECK-NEXT:           {{.*}} cbgt x0, #0x0, 0x[[ADDR:[0-9a-f]+]] <{{.*}}>
+# CHECK-NEXT:           {{.*}} cbgt x0, #0x3f, 0x[[ADDR:[0-9a-f]+]] <{{.*}}>
 # CHECK:      <.hot_exit>:
 # CHECK-NEXT:           {{.*}} mov  x0, #0x2 // =2
 # CHECK-NEXT:           {{.*}} ret
@@ -51,12 +52,13 @@ reorder_blocks:
 # BEYOND-1KB: Disassembly of section .text:
 
 # BEYOND-1KB:      <reorder_blocks>:
-# BEYOND-1KB-NEXT:            {{.*}} cblt x0, #0x1, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
-# BEYOND-1KB-NEXT:            {{.*}} b              0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
+# BEYOND-1KB-NEXT:            {{.*}} cbgt x0, #0x3f, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
+# BEYOND-1KB-NEXT:            {{.*}} b               0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
+# BEYOND-1KB-NEXT: [[ADDR0]]: {{.*}} b               0x[[ADDR2:[0-9a-f]+]] <{{.*}}>
 # BEYOND-1KB:      <.hot_exit>:
-# BEYOND-1KB-NEXT: [[ADDR0]]: {{.*}} nop
+# BEYOND-1KB-NEXT: [[ADDR1]]: {{.*}} nop
 # BEYOND-1KB:                 {{.*}} mov  x0, #0x2 // =2
 # BEYOND-1KB-NEXT:            {{.*}} ret
 # BEYOND-1KB:      <.cold_exit>:
-# BEYOND-1KB-NEXT: [[ADDR1]]: {{.*}} mov  x0, #0x1 // =1
+# BEYOND-1KB-NEXT: [[ADDR2]]: {{.*}} mov  x0, #0x1 // =1
 # BEYOND-1KB-NEXT:            {{.*}} ret

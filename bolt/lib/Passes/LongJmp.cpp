@@ -818,13 +818,24 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF) {
         return;
       }
 
+      // If the other successor is a fall-through, invert the condition code.
+      BinaryBasicBlock *const NextBB =
+          BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
+      const uint64_t NextCount = BB->getBranchInfo(*NextBB).Count;
+      bool IsReversibleBranch = MIB->isReversibleBranch(Inst);
+      bool HasFallThrough = BB->getConditionalSuccessor(false) == NextBB;
+
+      // An additional trampoline may be needed if the branch is irreversible.
+      if (HasFallThrough && !IsReversibleBranch) {
+        BinaryBasicBlock *FallThrough =
+            addTrampolineAfter(BB, NextBB, NextCount);
+        BB->replaceSuccessor(NextBB, FallThrough, NextCount);
+      }
+
       // Insert a new block after the current one and use it as a trampoline.
       TrampolineBB = addTrampolineAfter(BB, TargetBB, Count);
 
-      // If the other successor is a fall-through, invert the condition code.
-      const BinaryBasicBlock *const NextBB =
-          BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
-      if (BB->getConditionalSuccessor(false) == NextBB) {
+      if (HasFallThrough && IsReversibleBranch) {
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
         MIB->reverseBranchCondition(Inst, NextBB->getLabel(), BC.Ctx.get());
