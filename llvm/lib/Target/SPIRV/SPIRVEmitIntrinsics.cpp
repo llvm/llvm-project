@@ -423,10 +423,11 @@ static bool isMemInstrToReplace(Instruction *I) {
 }
 
 static bool isAggrConstForceInt32(const Value *V) {
+  bool IsUndefAggregate = isa<UndefValue>(V) && V->getType()->isAggregateType();
   return isa<ConstantArray>(V) || isa<ConstantStruct>(V) ||
          isa<ConstantDataArray>(V) ||
          (isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy()) ||
-         (isa<UndefValue>(V) && V->getType()->isAggregateType());
+         IsUndefAggregate;
 }
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
@@ -2273,18 +2274,26 @@ shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
 
 Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
                                                    IRBuilder<> &B) {
-  unsigned NumElems = isa<StructType>(AggrTy)
-                          ? cast<StructType>(AggrTy)->getNumElements()
-                          : cast<ArrayType>(AggrTy)->getNumElements();
-  SmallVector<Value *, 4> Elems(NumElems);
-  for (unsigned I = 0; I < NumElems; ++I) {
-    Type *ElemTy = isa<StructType>(AggrTy)
-                       ? AggrTy->getContainedType(I)
-                       : cast<ArrayType>(AggrTy)->getElementType();
+  SmallVector<Value *, 4> Elems;
+  if (auto *ArrTy = dyn_cast<ArrayType>(AggrTy)) {
+    Type *ElemTy = ArrTy->getElementType();
     auto *UI = B.CreateIntrinsic(Intrinsic::spv_undef, {});
     AggrConsts[UI] = PoisonValue::get(ElemTy);
     AggrConstTypes[UI] = ElemTy;
-    Elems[I] = UI;
+    Elems.assign(ArrTy->getNumElements(), UI);
+  } else {
+    auto *StructTy = cast<StructType>(AggrTy);
+    DenseMap<Type *, Instruction *> UndefByType;
+    for (unsigned I = 0; I < StructTy->getNumElements(); ++I) {
+      Type *ElemTy = StructTy->getContainedType(I);
+      auto &Entry = UndefByType[ElemTy];
+      if (!Entry) {
+        Entry = B.CreateIntrinsic(Intrinsic::spv_undef, {});
+        AggrConsts[Entry] = PoisonValue::get(ElemTy);
+        AggrConstTypes[Entry] = ElemTy;
+      }
+      Elems.push_back(Entry);
+    }
   }
   auto *Composite = B.CreateIntrinsic(Intrinsic::spv_const_composite,
                                       {B.getInt32Ty()}, Elems);
