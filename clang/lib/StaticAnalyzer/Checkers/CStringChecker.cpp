@@ -867,9 +867,9 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
 }
 
 ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
-                                                     ProgramStateRef state,
-                                                     NonLoc left,
-                                                     NonLoc right) const {
+                                                      ProgramStateRef state,
+                                                      NonLoc left,
+                                                      NonLoc right) const {
   // If a previous check has failed, propagate the failure.
   if (!state)
     return nullptr;
