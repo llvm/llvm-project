@@ -1209,7 +1209,6 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
     TSI = S.Context.getTrivialTypeSourceInfo(T, AL.getLoc());
 
   if (!T.hasQualifiers() && T->isTypedefNameType()) {
-    // Find the template name, if this type names a template specialization.
     const TemplateDecl *Template = nullptr;
     if (const auto *CTSD = dyn_cast_if_present<ClassTemplateSpecializationDecl>(
             T->getAsCXXRecordDecl())) {
@@ -1222,7 +1221,19 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
 
     if (Template && declaresSameEntity(Template, CTD)) {
-      D->addAttr(::new (S.Context) PreferredNameAttr(S.Context, AL, TSI));
+      auto *PNA = ::new (S.Context) PreferredNameAttr(S.Context, AL, TSI);
+      D->addAttr(PNA);
+
+      for (auto *Spec : CTD->specializations()) {
+        const TypeDecl *TD = static_cast<const TypeDecl *>(Spec);
+        if (S.Context.hasSameType(S.Context.getTypeDeclType(TD),
+                                  TSI->getType())) {
+          for (auto *R : Spec->redecls()) {
+            if (!R->hasAttr<PreferredNameAttr>())
+              R->addAttr(PNA->clone(S.Context));
+          }
+        }
+      }
       return;
     }
   }
@@ -1233,7 +1244,6 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(TT->getDecl()->getLocation(), diag::note_entity_declared_at)
         << TT->getDecl();
 }
-
 static void handleNoSpecializations(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Message;
   if (AL.getNumArgs() != 0)
