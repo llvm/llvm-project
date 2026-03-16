@@ -96,17 +96,17 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = sub i64 1023, [[TMP7]]
+; RV64-UF2-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP5]], 1
+; RV64-UF2-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP10]], -1
+; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul i64 -1, [[TMP5]]
+; RV64-UF2-NEXT:    [[TMP11:%.*]] = add i64 [[TMP15]], [[TMP12]]
 ; RV64-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64-UF2:       [[VECTOR_BODY]]:
 ; RV64-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-UF2-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; RV64-UF2-NEXT:    [[TMP8:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP8]]
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP5]], 1
-; RV64-UF2-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP10]], -1
 ; RV64-UF2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 [[TMP15]]
-; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul i64 -1, [[TMP5]]
-; RV64-UF2-NEXT:    [[TMP11:%.*]] = add i64 [[TMP15]], [[TMP12]]
 ; RV64-UF2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 [[TMP11]]
 ; RV64-UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP18]], align 4
 ; RV64-UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP19]], align 4
@@ -306,6 +306,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP48:%.*]] = sub i64 [[TMP0]], [[TMP20]]
 ; RV64-UF2-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[TMP20]] to i32
 ; RV64-UF2-NEXT:    [[TMP21:%.*]] = sub i32 [[N]], [[DOTCAST]]
+; RV64-UF2-NEXT:    [[TMP26:%.*]] = sub nuw nsw i64 [[TMP18]], 1
+; RV64-UF2-NEXT:    [[TMP30:%.*]] = mul i64 [[TMP26]], -1
+; RV64-UF2-NEXT:    [[TMP27:%.*]] = mul i64 -1, [[TMP18]]
+; RV64-UF2-NEXT:    [[TMP25:%.*]] = add i64 [[TMP30]], [[TMP27]]
 ; RV64-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64-UF2:       [[VECTOR_BODY]]:
 ; RV64-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -314,11 +318,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP22:%.*]] = add nsw i32 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
 ; RV64-UF2-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP23]]
-; RV64-UF2-NEXT:    [[TMP26:%.*]] = sub nuw nsw i64 [[TMP18]], 1
-; RV64-UF2-NEXT:    [[TMP30:%.*]] = mul i64 [[TMP26]], -1
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 [[TMP30]]
-; RV64-UF2-NEXT:    [[TMP27:%.*]] = mul i64 -1, [[TMP18]]
-; RV64-UF2-NEXT:    [[TMP25:%.*]] = add i64 [[TMP30]], [[TMP27]]
 ; RV64-UF2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 [[TMP25]]
 ; RV64-UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP33]], align 4
 ; RV64-UF2-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x i32>, ptr [[TMP34]], align 4
@@ -531,6 +531,10 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP48:%.*]] = sub i64 [[TMP0]], [[TMP20]]
 ; RV64-UF2-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[TMP20]] to i32
 ; RV64-UF2-NEXT:    [[TMP21:%.*]] = sub i32 [[N]], [[DOTCAST]]
+; RV64-UF2-NEXT:    [[TMP26:%.*]] = sub nuw nsw i64 [[TMP18]], 1
+; RV64-UF2-NEXT:    [[TMP30:%.*]] = mul i64 [[TMP26]], -1
+; RV64-UF2-NEXT:    [[TMP27:%.*]] = mul i64 -1, [[TMP18]]
+; RV64-UF2-NEXT:    [[TMP25:%.*]] = add i64 [[TMP30]], [[TMP27]]
 ; RV64-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64-UF2:       [[VECTOR_BODY]]:
 ; RV64-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -539,11 +543,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP22:%.*]] = add nsw i32 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
 ; RV64-UF2-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP23]]
-; RV64-UF2-NEXT:    [[TMP26:%.*]] = sub nuw nsw i64 [[TMP18]], 1
-; RV64-UF2-NEXT:    [[TMP30:%.*]] = mul i64 [[TMP26]], -1
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 [[TMP30]]
-; RV64-UF2-NEXT:    [[TMP27:%.*]] = mul i64 -1, [[TMP18]]
-; RV64-UF2-NEXT:    [[TMP25:%.*]] = add i64 [[TMP30]], [[TMP27]]
 ; RV64-UF2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 [[TMP25]]
 ; RV64-UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP33]], align 4
 ; RV64-UF2-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 4 x float>, ptr [[TMP34]], align 4
@@ -681,17 +681,17 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = sub i64 1023, [[TMP7]]
+; RV64-UF2-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP5]], 1
+; RV64-UF2-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP10]], -1
+; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul i64 -1, [[TMP5]]
+; RV64-UF2-NEXT:    [[TMP11:%.*]] = add i64 [[TMP15]], [[TMP12]]
 ; RV64-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; RV64-UF2:       [[VECTOR_BODY]]:
 ; RV64-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-UF2-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; RV64-UF2-NEXT:    [[TMP8:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV64-UF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP8]]
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = sub nuw nsw i64 [[TMP5]], 1
-; RV64-UF2-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP10]], -1
 ; RV64-UF2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[TMP15]]
-; RV64-UF2-NEXT:    [[TMP12:%.*]] = mul i64 -1, [[TMP5]]
-; RV64-UF2-NEXT:    [[TMP11:%.*]] = add i64 [[TMP15]], [[TMP12]]
 ; RV64-UF2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[TMP11]]
 ; RV64-UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP18]], align 4
 ; RV64-UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP19]], align 4
