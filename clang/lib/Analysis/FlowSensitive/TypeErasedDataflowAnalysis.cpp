@@ -493,10 +493,10 @@ size_t NumBlockVisitsIfVisitEachReachableOnce(const CFG &CFG) {
   while (const CFGBlock *Block = Worklist.dequeue()) {
     if (VisitedBlocks[Block->getBlockID()])
       continue;
+    VisitedBlocks[Block->getBlockID()] = true;
     // Do not add unreachable successor blocks to `Worklist`.
     if (Block->hasNoReturnElement())
       continue;
-    VisitedBlocks[Block->getBlockID()] = true;
     Worklist.enqueueSuccessors(Block);
   }
   return VisitedBlocks.count();
