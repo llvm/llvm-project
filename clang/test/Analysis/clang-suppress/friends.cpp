@@ -46,7 +46,7 @@ struct [[clang::suppress]] A2_Suppressed {
   friend void a2_suppressed(A2_Suppressed);
 };
 void a2_suppressed(A2_Suppressed) {
-  // Out-of-line: lexical parent is the namespace, NOT the class.
+  // Out-of-line: lexical parent is the translation unit, NOT the class.
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 struct A2_Unsuppressed {

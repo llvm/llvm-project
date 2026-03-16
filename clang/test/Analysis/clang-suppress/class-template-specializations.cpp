@@ -29,7 +29,7 @@ public:
 
 template <typename T>
 void A_Primary<T>::outline_method() {
-  // Out-of-line: lexical context is namespace.
+  // Out-of-line: lexical context is the translation unit.
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
