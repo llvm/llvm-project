@@ -30,7 +30,7 @@ int test_convert_bool_to_int() {
 // CIR: cir.func {{.*}} @test_convert_bool_to_int()
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:   %[[BOOL:.*]] = cir.cast int_to_bool %[[ONE]] : !s32i -> !cir.bool
-// CIR:   %[[NOT:.*]] = cir.unary(not, %[[BOOL]]) : !cir.bool, !cir.bool
+// CIR:   %[[NOT:.*]] = cir.not %[[BOOL]] : !cir.bool
 // CIR:   cir.if %[[NOT]] {
 // CIR:     %[[NEG_ONE:.*]] = cir.const #cir.int<-1> : !s32i
 // CIR:     cir.store %[[NEG_ONE]], %[[RETVAL:.*]]

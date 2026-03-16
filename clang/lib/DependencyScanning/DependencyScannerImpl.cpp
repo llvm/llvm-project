@@ -150,8 +150,7 @@ public:
   /// Check the header search options for a given module when considering
   /// if the module comes from stable directories.
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override {
 
     auto PrebuiltMapEntry = PrebuiltModulesASTMap.try_emplace(CurrentFile);

@@ -9327,14 +9327,18 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
     Register SrcReg0, SrcReg1;
     if (!Src0.isReg() || !RI.isVGPR(MRI, Src0.getReg())) {
       SrcReg0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg0).add(Src0);
+      BuildMI(*MBB, Inst, DL,
+              get(Src0.isImm() ? AMDGPU::V_MOV_B32_e32 : AMDGPU::COPY), SrcReg0)
+          .add(Src0);
     } else {
       SrcReg0 = Src0.getReg();
     }
 
     if (!Src1.isReg() || !RI.isVGPR(MRI, Src1.getReg())) {
       SrcReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg1).add(Src1);
+      BuildMI(*MBB, Inst, DL,
+              get(Src1.isImm() ? AMDGPU::V_MOV_B32_e32 : AMDGPU::COPY), SrcReg1)
+          .add(Src1);
     } else {
       SrcReg1 = Src1.getReg();
     }
@@ -10268,7 +10272,8 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX10:
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
-    return ST.isGFX1170() ? SIEncodingFamily::GFX1170 : SIEncodingFamily::GFX11;
+    return ST.hasGFX11_7Insts() ? SIEncodingFamily::GFX1170
+                                : SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
     return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
@@ -10368,7 +10373,7 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
 
   int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
-  if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.isGFX1170())
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX11_7Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX1250Insts())

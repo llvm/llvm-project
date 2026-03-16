@@ -2880,8 +2880,8 @@ public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
   void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                          const Expr *MovedExpr, SourceLocation FreeLoc,
-                          Confidence) override {
+                          const Expr *MovedExpr,
+                          SourceLocation FreeLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
                      : diag::warn_lifetime_safety_use_after_scope)
@@ -2895,8 +2895,8 @@ public:
   }
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            const Expr *MovedExpr, SourceLocation ExpiryLoc,
-                            Confidence) override {
+                            const Expr *MovedExpr,
+                            SourceLocation ExpiryLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
                      : diag::warn_lifetime_safety_return_stack_addr)

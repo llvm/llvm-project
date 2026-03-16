@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
     def _set_up_inferior(self):
         self._exe_to_attach = "%s_%d" % (self.testMethodName, os.getpid())

@@ -2706,7 +2706,6 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("memory"),
     StringLiteral("minsize"),
     StringLiteral("no_caller_saved_registers"),
-    StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
     StringLiteral("no-builtins"),
     StringLiteral("nocallback"),
@@ -2903,10 +2902,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
 
-  if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
-      attr.isStringAttribute())
-    funcOp.setNoNansFpMath(attr.getValueAsBool());
-
   if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
       attr.isStringAttribute())
     funcOp.setInstrumentFunctionEntry(
@@ -3053,6 +3048,7 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setOptsize(
       callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
   op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setBuiltin(callAttrs.getFnAttr(llvm::Attribute::Builtin).isValid());
   op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
   op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());
 
