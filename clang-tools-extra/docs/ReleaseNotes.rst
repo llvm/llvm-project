@@ -154,6 +154,12 @@ New checks
   Suggests insertion of ``std::move(...)`` to turn copy assignment operator
   calls into move assignment ones, when deemed valid and profitable.
 
+- New :doc:`readability-redundant-qualified-alias
+  <clang-tidy/checks/readability/redundant-qualified-alias>` check.
+
+  Finds redundant identity type aliases that re-expose a qualified name and can
+  be replaced with a ``using`` declaration.
+
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.
 
@@ -315,6 +321,11 @@ Changes in existing checks
 
   - Fixes false negatives when using ``std::set`` from ``libstdc++``.
 
+- Improved :doc:`performance-inefficient-string-concatenation
+  <clang-tidy/checks/performance/inefficient-string-concatenation>` check by
+  adding support for detecting inefficient string concatenation in ``do-while``
+  loops.
+
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` check by
   correctly handling vector-like classes when ``push_back``/``emplace_back`` are
@@ -337,6 +348,9 @@ Changes in existing checks
 
   - Fixed missed diagnostics when ``if`` statements appear in unbraced
     ``switch`` case labels.
+
+  - Fixed a false positive involving ``if`` statements which contain
+    a ``return``, ``break``, etc., jumped over by a ``goto``.
 
   - Added support for handling attributed ``if`` then-branches such as
     ``[[likely]]`` and ``[[unlikely]]``.
