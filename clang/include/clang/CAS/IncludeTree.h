@@ -463,11 +463,12 @@ public:
     bool InferExplicitSubmodules : 1;
     bool InferExportWildcard : 1;
     bool UseExportAsModuleLinkName: 1;
+    bool ModuleMapIsPrivate : 1;
     ModuleFlags()
         : IsFramework(false), IsExplicit(false), IsExternC(false),
           IsSystem(false), InferSubmodules(false),
           InferExplicitSubmodules(false), InferExportWildcard(false),
-          UseExportAsModuleLinkName(false) {}
+          UseExportAsModuleLinkName(false), ModuleMapIsPrivate(false) {}
   };
 
   ModuleFlags getFlags() const;

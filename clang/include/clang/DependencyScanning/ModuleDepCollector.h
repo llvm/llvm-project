@@ -158,6 +158,10 @@ struct ModuleDeps {
   /// Whether this is a "system" module.
   bool IsSystem;
 
+  /// Whether this module is defined in a private module map
+  /// (i.e. a module.private.modulemap file).
+  bool ModuleMapIsPrivate;
+
   /// Whether this module is fully composed of file & module inputs from
   /// locations likely to stay the same across the active development and build
   /// cycle. For example, when all those input paths only resolve in Sysroot.
