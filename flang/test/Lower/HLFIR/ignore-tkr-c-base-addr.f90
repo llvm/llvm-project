@@ -6,7 +6,7 @@
 
 module m_ignore_tkr_c_base_addr
   interface
-    subroutine pass_assumed_size(a) bind(c, name="pass_assumed_size")
+    subroutine pass_assumed_size(a)
       !dir$ ignore_tkr(c) a
       real :: a(*)
     end subroutine
@@ -20,7 +20,7 @@ contains
     ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
     ! CHECK: %[[CONV:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-    ! CHECK: fir.call @pass_assumed_size(%[[CONV]]) {{.*}} : (!fir.ref<!fir.array<?xf32>>) -> ()
+    ! CHECK: fir.call @_QPpass_assumed_size(%[[CONV]]) {{.*}} : (!fir.ref<!fir.array<?xf32>>) -> ()
     call pass_assumed_size(arr)
   end subroutine
 
@@ -32,9 +32,9 @@ contains
     ! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
     ! CHECK: %[[CONV:.*]] = fir.convert %[[ADDR]] : (!fir.ptr<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-    ! CHECK: fir.call @pass_assumed_size(%[[CONV]]) {{.*}} : (!fir.ref<!fir.array<?xf32>>) -> ()
+    ! CHECK: fir.call @_QPpass_assumed_size(%[[CONV]]) {{.*}} : (!fir.ref<!fir.array<?xf32>>) -> ()
     call pass_assumed_size(arr)
   end subroutine
 
-  ! CHECK: func.func private @pass_assumed_size(!fir.ref<!fir.array<?xf32>>)
+  ! CHECK: func.func private @_QPpass_assumed_size(!fir.ref<!fir.array<?xf32>>)
 end module
