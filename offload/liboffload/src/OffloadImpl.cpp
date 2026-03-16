@@ -854,14 +854,6 @@ Error olSyncEvent_impl(ol_event_handle_t Event) {
 Error olGetEventElapsedTime_impl(ol_event_handle_t StartEvent,
                                  ol_event_handle_t EndEvent,
                                  float *ElapsedTime) {
-  if (!StartEvent || !EndEvent)
-    return createOffloadError(ErrorCode::INVALID_NULL_HANDLE,
-                              "olGetEventElapsedTime was given a NULL event");
-
-  if (!ElapsedTime)
-    return createOffloadError(ErrorCode::INVALID_NULL_POINTER,
-                              "ElapsedTime is null");
-
   if (StartEvent->Device != EndEvent->Device)
     return createOffloadError(
         ErrorCode::INVALID_DEVICE,
