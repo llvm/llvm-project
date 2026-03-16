@@ -366,7 +366,7 @@ Error SimpleNativeMemoryMap::recordDeallocActions(
   return Error::success();
 }
 
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
+void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
     orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
     orc_rt_WrapperFunctionBuffer ArgBytes) {
   using Sig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSSize);
@@ -375,8 +375,7 @@ ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
       WrapperFunction::handleWithAsyncMethod(&SimpleNativeMemoryMap::reserve));
 }
 
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
+void orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
     orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
     orc_rt_WrapperFunctionBuffer ArgBytes) {
   using Sig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
@@ -385,7 +384,7 @@ orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
                                       &SimpleNativeMemoryMap::releaseMultiple));
 }
 
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
+void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
     orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
     orc_rt_WrapperFunctionBuffer ArgBytes) {
   using Sig = SPSExpected<SPSExecutorAddr>(
@@ -395,8 +394,7 @@ ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
                                       &SimpleNativeMemoryMap::initialize));
 }
 
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper(
+void orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper(
     orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
     orc_rt_WrapperFunctionBuffer ArgBytes) {
   using Sig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);

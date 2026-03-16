@@ -18,8 +18,6 @@
 #include "orc-rt/SimplePackedSerialization.h"
 #include "orc-rt/WrapperFunction.h"
 
-#define ORC_RT_SPS_INTERFACE ORC_RT_INTERFACE
-
 namespace orc_rt {
 namespace detail {
 
