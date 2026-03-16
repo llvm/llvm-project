@@ -271,9 +271,9 @@ Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     LookupModuleOutputCallback LookupModuleOutput,
     DiagnosticConsumer &DiagsConsumer) {
-  GetIncludeTree Consumer(*Worker.getCAS());
-  auto Controller = createIncludeTreeActionController(
-      LookupModuleOutput, getCASOpts(), *Worker.getCAS());
+  GetIncludeTree Consumer(*getCAS());
+  auto Controller = createIncludeTreeActionController(LookupModuleOutput,
+                                                      getCASOpts(), *getCAS());
   if (!computeDependencies(Worker, CWD, CommandLine, Consumer, *Controller,
                            DiagsConsumer))
     return llvm::make_error<AlreadyReportedDiagnosticError>();
@@ -286,9 +286,9 @@ DependencyScanningTool::getIncludeTreeFromCompilerInvocation(
     LookupModuleOutputCallback LookupModuleOutput,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
     bool DiagGenerationAsCompilation) {
-  GetIncludeTree Consumer(*Worker.getCAS());
-  auto Controller = createIncludeTreeActionController(
-      LookupModuleOutput, getCASOpts(), *Worker.getCAS());
+  GetIncludeTree Consumer(*getCAS());
+  auto Controller = createIncludeTreeActionController(LookupModuleOutput,
+                                                      getCASOpts(), *getCAS());
   Worker.computeDependenciesFromCompilerInvocation(
       std::move(Invocation), CWD, Consumer, *Controller, DiagsConsumer,
       VerboseOS, DiagGenerationAsCompilation);
@@ -442,7 +442,7 @@ DependencyScanningTool::getTranslationUnitDependencies(
   if (TUBuffer) {
     std::tie(OverlayFS, CommandLineWithTUBufferInput) =
         initVFSForTUBufferScanning(&Worker.getVFS(), CommandLine, CWD,
-                                   *TUBuffer, Worker.getCAS());
+                                   *TUBuffer, getCAS());
     CommandLine = CommandLineWithTUBufferInput;
   }
 
@@ -494,7 +494,7 @@ CompilerInstanceWithContext::initializeFromCommandline(
     ArrayRef<std::string> CommandLine, DependencyActionController &Controller,
     DiagnosticConsumer &DC) {
   auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
-      &Tool.Worker.getVFS(), CommandLine, CWD, Tool.Worker.getCAS());
+      &Tool.Worker.getVFS(), CommandLine, CWD, Tool.getCAS());
 
   auto DiagEngineWithCmdAndOpts =
       std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
@@ -569,8 +569,9 @@ DependencyScanningTool::createActionController(
     DependencyScanningWorker &Worker,
     LookupModuleOutputCallback LookupModuleOutput) {
   if (Worker.getScanningFormat() == ScanningOutputFormat::FullIncludeTree)
-    return createIncludeTreeActionController(
-        LookupModuleOutput, Worker.getCASOpts(), *Worker.getCAS());
+    return createIncludeTreeActionController(LookupModuleOutput,
+                                             Worker.getService().getCASOpts(),
+                                             *Worker.getService().getCAS());
   return std::make_unique<CallbackActionController>(LookupModuleOutput);
 }
 

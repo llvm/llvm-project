@@ -109,7 +109,6 @@ static void reportOptRecordError(Error E, DiagnosticsEngine &Diags,
 
 BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
                                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-				 const CASOptions &CASOpts,
                                  LLVMContext &C,
                                  SmallVector<LinkModule, 4> LinkModules,
                                  StringRef InFile,
@@ -119,7 +118,7 @@ BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
                                  llvm::Module *CurLinkModule)
     : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CI.getCodeGenOpts()),
       TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
-      CASOpts(CASOpts), AsmOutStream(std::move(OS)),
+      AsmOutStream(std::move(OS)),
       CasIDStream(std::move(CasIDOS)), FS(VFS), Action(Action),
       Gen(CreateLLVMCodeGen(CI, InFile, C, CoverageInfo)),
       LinkModules(std::move(LinkModules)), CurLinkModule(CurLinkModule) {
@@ -312,7 +311,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   EmbedBitcode(getModule(), CodeGenOpts, llvm::MemoryBufferRef());
 
-  emitBackendOutput(CI, CI.getCodeGenOpts(), CASOpts,
+  emitBackendOutput(CI, CI.getCodeGenOpts(),
                     C.getTargetInfo().getDataLayoutString(), getModule(),
                     Action, FS, std::move(AsmOutStream), std::move(CasIDStream),
                     this);
@@ -991,9 +990,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         CI.getPreprocessor());
 
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
-      CI, BA, CI.getVirtualFileSystemPtr(),
-      CI.getCASOpts(), // MCCAS
-      *VMContext, std::move(LinkModules),
+      CI, BA, CI.getVirtualFileSystemPtr(), *VMContext, std::move(LinkModules),
       InFile, std::move(OS), CoverageInfo, std::move(CasIDOS)));
   BEConsumer = Result.get();
 
@@ -1172,10 +1169,9 @@ void CodeGenAction::ExecuteAction() {
 
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.
-  BackendConsumer Result(CI, BA, CI.getVirtualFileSystemPtr(), CI.getCASOpts(),
-                         *VMContext,
-                         std::move(LinkModules), "", nullptr, nullptr,
-                         nullptr, TheModule.get());
+  BackendConsumer Result(CI, BA, CI.getVirtualFileSystemPtr(), *VMContext,
+                         std::move(LinkModules), "", nullptr, nullptr, nullptr,
+                         TheModule.get());
 
   // Link in each pending link module.
   if (!CodeGenOpts.LinkBitcodePostopt && Result.LinkInModules(&*TheModule))
@@ -1203,7 +1199,6 @@ void CodeGenAction::ExecuteAction() {
   LLVMRemarkFileHandle OptRecordFile = std::move(*OptRecordFileOrErr);
 
   emitBackendOutput(CI, CI.getCodeGenOpts(),
-                    CI.getCASOpts(), // MCCAS
                     CI.getTarget().getDataLayoutString(), TheModule.get(), BA,
                     CI.getFileManager().getVirtualFileSystemPtr(),
                     std::move(OS));

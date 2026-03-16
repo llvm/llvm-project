@@ -140,7 +140,10 @@ public:
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
 
-  CASOptions getCASOpts() const { return Worker.getCASOpts(); }
+  std::shared_ptr<cas::ObjectStore> getCAS() const {
+    return Worker.getService().getCAS();
+  }
+  CASOptions getCASOpts() const { return Worker.getService().getCASOpts(); }
 
   static std::unique_ptr<clang::dependencies::DependencyActionController>
   createActionController(

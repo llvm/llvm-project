@@ -1473,8 +1473,11 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
                 bool UserFilesAreVolatile) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(false));
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
+  if (CI->getFrontendOpts().needsCAS())
+    std::tie(AST->CAS, AST->ActionCache) = CI->getCASOpts().createDatabases(
+        *Diags, /*CreateEmptyDBsOnFailure=*/true);
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-      createVFSFromCompilerInvocation(*CI, *Diags);
+      createVFSFromCompilerInvocation(*CI, *Diags, AST->CAS);
   AST->DiagOpts = std::move(DiagOpts);
   AST->Diagnostics = std::move(Diags);
   AST->FileSystemOpts = CI->getFileSystemOpts();
@@ -1539,6 +1542,9 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   // Create the compiler instance to use for building the AST.
   auto Clang = std::make_unique<CompilerInstance>(std::move(CI),
                                                   std::move(PCHContainerOps));
+
+  if (AST->CAS && AST->ActionCache)
+    Clang->setCASDatabases(AST->CAS, AST->ActionCache);
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>

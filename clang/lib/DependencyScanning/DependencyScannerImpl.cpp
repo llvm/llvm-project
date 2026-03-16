@@ -520,6 +520,11 @@ void dependencies::initializeScanCompilerInstance(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS) {
+  // Pre-set the shared CAS databases on the scan instance so that code which
+  // calls getOrCreateObjectStore()/getOrCreateActionCache() before
+  // createVirtualFileSystem() gets the correct shared instance.
+  ScanInstance.setCASDatabases(Service.getCAS(), Service.getActionCache());
+
   ScanInstance.setBuildingModule(false);
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
   ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
@@ -800,8 +805,10 @@ struct AsyncModuleCompile : PPCallbacks {
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
         llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
             Service, Service.getOpts().MakeVFS());
-    VFS = createVFSFromCompilerInvocation(CI.getInvocation(),
-                                          CI.getDiagnostics(), std::move(VFS));
+
+    VFS =
+        createVFSFromCompilerInvocation(CI.getInvocation(), CI.getDiagnostics(),
+                                        std::move(VFS), Service.getCAS());
     auto DC = std::make_unique<DiagnosticConsumer>();
     auto MC = makeInProcessModuleCache(Service.getModuleCacheEntries());
     CompilerInstance::ThreadSafeCloneConfig CloneConfig(std::move(VFS), *DC,

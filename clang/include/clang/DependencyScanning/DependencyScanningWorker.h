@@ -196,20 +196,6 @@ public:
     return Service.getOpts().Format;
   }
 
-  CASOptions getCASOpts() const {
-    if (auto *IncludeTree =
-            std::get_if<IncludeTreeCompilation>(&Service.getOpts().Compilation))
-      return IncludeTree->CASOpts;
-    return {};
-  }
-
-  std::shared_ptr<cas::ObjectStore> getCAS() const {
-    if (auto *IncludeTree =
-            std::get_if<IncludeTreeCompilation>(&Service.getOpts().Compilation))
-      return IncludeTree->CAS;
-    return nullptr;
-  }
-
   llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
 
 private:
