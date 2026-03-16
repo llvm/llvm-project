@@ -349,6 +349,41 @@ define i1 @pow2_umin(i32 %x, i32 %y) {
   ret i1 %r
 }
 
+define i32 @pow2_umin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
+; CHECK-LABEL: pow2_umin_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    pslld $23, %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,4294967295,4294967295,4294967295]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    pxor %xmm0, %xmm1
+; CHECK-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    pandn %xmm0, %xmm2
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    por %xmm2, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rsi)
+; CHECK-NEXT:    movd %xmm1, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    retq
+  %yy = shl <4 x i32> <i32 1, i32 -1, i32 -1, i32 -1>, %x
+  %d = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
+  store <4 x i32> %d, ptr %p
+  %elt = extractelement <4 x i32> %d, i32 0
+  %r = urem i32 %z, %elt
+  ret i32 %r
+}
+
 define i1 @pow2_umin_fail0(i32 %x, i32 %y) {
 ; CHECK-LABEL: pow2_umin_fail0:
 ; CHECK:       # %bb.0:
@@ -412,6 +447,46 @@ define i1 @pow2_umax(i32 %x, i32 %y, i32 %z) {
   %and = and i32 %x, %d
   %r = icmp eq i32 %and, %d
   ret i1 %r
+}
+
+define i32 @pow2_umax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
+; CHECK-LABEL: pow2_umax_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4096,4294967295,4294967295,4294967295]
+; CHECK-NEXT:    movdqa %xmm2, %xmm3
+; CHECK-NEXT:    psrld %xmm1, %xmm3
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    movdqa %xmm2, %xmm4
+; CHECK-NEXT:    psrld %xmm1, %xmm4
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm3[0]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    movdqa %xmm2, %xmm3
+; CHECK-NEXT:    psrld %xmm1, %xmm3
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    psrld %xmm0, %xmm2
+; CHECK-NEXT:    punpckhqdq {{.*#+}} xmm2 = xmm2[1],xmm3[1]
+; CHECK-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,3],xmm2[0,3]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    xorps %xmm4, %xmm0
+; CHECK-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    andps %xmm0, %xmm4
+; CHECK-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    orps %xmm4, %xmm0
+; CHECK-NEXT:    movaps %xmm0, (%rsi)
+; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    retq
+  %yy = lshr <4 x i32> <i32 4096, i32 -1, i32 -1, i32 -1>, %x
+  %d = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
+  store <4 x i32> %d, ptr %p
+  %elt = extractelement <4 x i32> %d, i32 0
+  %r = urem i32 %z, %elt
+  ret i32 %r
 }
 
 define i1 @pow2_umax_fail0(i32 %x, i32 %y, i32 %z) {
@@ -482,6 +557,40 @@ define i1 @pow2_smin(i32 %x, i32 %y) {
   ret i1 %r
 }
 
+define i32 @pow2_smin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
+; CHECK-LABEL: pow2_smin_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    pslld $23, %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,4294967295,4294967295,4294967295]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [256,256,256,256]
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    pandn %xmm1, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, (%rsi)
+; CHECK-NEXT:    movd %xmm2, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    retq
+  %yy = shl <4 x i32> <i32 1, i32 -1, i32 -1, i32 -1>, %x
+  %d = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
+  store <4 x i32> %d, ptr %p
+  %elt = extractelement <4 x i32> %d, i32 0
+  %r = urem i32 %z, %elt
+  ret i32 %r
+}
+
 define i1 @pow2_smin_fail0(i32 %x, i32 %y) {
 ; CHECK-LABEL: pow2_smin_fail0:
 ; CHECK:       # %bb.0:
@@ -545,6 +654,46 @@ define i1 @pow2_smax(i32 %x, i32 %y, i32 %z) {
   %and = and i32 %x, %d
   %r = icmp eq i32 %and, %d
   ret i1 %r
+}
+
+define i32 @pow2_smax_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
+; CHECK-LABEL: pow2_smax_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4096,4294967295,4294967295,4294967295]
+; CHECK-NEXT:    movdqa %xmm2, %xmm3
+; CHECK-NEXT:    psrld %xmm1, %xmm3
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    movdqa %xmm2, %xmm4
+; CHECK-NEXT:    psrld %xmm1, %xmm4
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm3[0]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[2,3,3,3,4,5,6,7]
+; CHECK-NEXT:    movdqa %xmm2, %xmm3
+; CHECK-NEXT:    psrld %xmm1, %xmm3
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,1,4,5,6,7]
+; CHECK-NEXT:    psrld %xmm0, %xmm2
+; CHECK-NEXT:    punpckhqdq {{.*#+}} xmm2 = xmm2[1],xmm3[1]
+; CHECK-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,3],xmm2[0,3]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [256,256,256,256]
+; CHECK-NEXT:    movaps %xmm4, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    andps %xmm1, %xmm4
+; CHECK-NEXT:    pandn %xmm0, %xmm1
+; CHECK-NEXT:    por %xmm4, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rsi)
+; CHECK-NEXT:    movd %xmm1, %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divl %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    retq
+  %yy = lshr <4 x i32> <i32 4096, i32 -1, i32 -1, i32 -1>, %x
+  %d = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %yy, <4 x i32> splat (i32 256))
+  store <4 x i32> %d, ptr %p
+  %elt = extractelement <4 x i32> %d, i32 0
+  %r = urem i32 %z, %elt
+  ret i32 %r
 }
 
 define i1 @pow2_smax_fail0(i32 %x, i32 %y, i32 %z) {

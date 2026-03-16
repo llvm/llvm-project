@@ -233,7 +233,7 @@ static bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
           isa<BinaryConditionalOperator>(S))
         return true;
       if (isa<ParenExpr>(S) || isa<ImplicitCastExpr>(S) ||
-          isUnaryLogicalNotOperator(S) ||
+          isa<ExprWithCleanups>(S) || isUnaryLogicalNotOperator(S) ||
           (isa<BinaryOperator>(S) && cast<BinaryOperator>(S)->isLogicalOp())) {
         Q.push(S);
       } else {
