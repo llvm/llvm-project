@@ -21,8 +21,8 @@ namespace llvm {
 class FunctionType;
 class raw_ostream;
 
-/// Utility class that appends detail lines to diagnostics emitted when an
-/// intrinsic is called or declared with an incorrect signature.
+/// Utility class that formats detail for intrinsic signature mismatch
+/// diagnostics.
 class IntrinsicDiagnosticsProvider {
 public:
   /// Appends detail for a call-site signature mismatch.
@@ -30,15 +30,6 @@ public:
                                               FunctionType *DeclFTy,
                                               FunctionType *CallFTy,
                                               raw_ostream &OS);
-
-  /// Appends detail for a verifier return-type mismatch.
-  LLVM_ABI static void queryReturnTypeMismatch(StringRef IntrName,
-                                               FunctionType *IFTy,
-                                               raw_ostream &OS);
-
-  /// Appends detail for a verifier argument-type mismatch.
-  LLVM_ABI static void
-  queryArgTypeMismatch(StringRef IntrName, FunctionType *IFTy, raw_ostream &OS);
 
   /// Appends detail for a parser-level signature mismatch.
   /// \p ExpectedFTy is the canonical intrinsic type, or null for overloaded

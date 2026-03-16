@@ -287,6 +287,13 @@ LLVM_ABI bool isSignatureValid(Function *F,
                                SmallVectorImpl<Type *> &OverloadTys,
                                raw_ostream &OS = nulls());
 
+/// Returns a human-readable description of a signature mismatch for the
+/// given intrinsic ID and function type. For non-overloaded intrinsics the
+/// canonical signature is included; for overloaded intrinsics only the
+/// declared signature is shown.
+LLVM_ABI std::string getIntrinsicSignatureMismatch(Intrinsic::ID,
+                                                     FunctionType *FT);
+
 // Checks if the intrinsic name matches with its signature and if not
 // returns the declaration with the same signature and remangled name.
 // An existing GlobalValue with the wanted name but with a wrong prototype

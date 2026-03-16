@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -34,6 +35,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -1152,6 +1154,46 @@ bool Intrinsic::isSignatureValid(Function *F,
                                  raw_ostream &OS) {
   return isSignatureValid(F->getIntrinsicID(), F->getFunctionType(),
                           OverloadTys, OS);
+}
+
+std::string Intrinsic::getIntrinsicSignatureMismatch(Intrinsic::ID ID,
+                                                     FunctionType *FT) {
+  SmallVector<Intrinsic::IITDescriptor, 8> Table;
+  getIntrinsicInfoTableEntries(ID, Table);
+  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
+
+  SmallVector<Type *, 4> ArgTys;
+  MatchIntrinsicTypesResult Res =
+      Intrinsic::matchIntrinsicSignature(FT, TableRef, ArgTys);
+
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  FunctionType *CanonFT =
+      isOverloaded(ID) ? nullptr : getType(FT->getContext(), ID);
+  if (Res == MatchIntrinsicTypes_NoMatchRet) {
+    OS << "Intrinsic has incorrect return type! declared return type is '";
+    FT->getReturnType()->print(OS);
+    OS << "'";
+    if (CanonFT) {
+      OS << ", expected '";
+      CanonFT->getReturnType()->print(OS);
+      OS << "' in canonical signature '";
+      CanonFT->print(OS);
+      OS << "'";
+    }
+  } else if (Res == MatchIntrinsicTypes_NoMatchArg) {
+    OS << "Intrinsic has incorrect argument type! declared signature is '";
+    FT->print(OS);
+    OS << "'";
+    if (CanonFT) {
+      OS << ", canonical signature is '";
+      CanonFT->print(OS);
+      OS << "'";
+    }
+  } else {
+    llvm_unreachable("unexpected MatchIntrinsicTypesResult");
+  }
+  return Msg;
 }
 
 std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
