@@ -1400,8 +1400,6 @@ private:
 // Create scopes for OpenACC constructs
 class AccVisitor : public virtual DeclarationVisitor {
 public:
-  explicit AccVisitor(SemanticsContext &context) : context_{context} {}
-
   void AddAccSourceRange(const parser::CharBlock &);
 
   static bool NeedsScope(const parser::OpenACCBlockConstruct &);
@@ -1472,9 +1470,6 @@ public:
   }
 
   void CopySymbolWithDevice(const parser::Name *name);
-
-private:
-  SemanticsContext &context_;
 };
 
 bool AccVisitor::NeedsScope(const parser::OpenACCBlockConstruct &x) {
@@ -2172,8 +2167,7 @@ public:
 
   ResolveNamesVisitor(
       SemanticsContext &context, ImplicitRulesMap &rules, Scope &top)
-      : BaseVisitor{context, *this, rules}, AccVisitor(context),
-        topScope_{top} {
+      : BaseVisitor{context, *this, rules}, topScope_{top} {
     PushScope(top);
   }
 
