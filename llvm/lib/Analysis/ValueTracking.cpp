@@ -3002,8 +3002,6 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
           }
 
         if (const CondBrInst *BI = dyn_cast<CondBrInst>(Curr)) {
-          if (BI->getSuccessor(0) == BI->getSuccessor(1))
-            continue;
           BasicBlock *NonNullSuccessor =
               BI->getSuccessor(NonNullIfTrue ? 0 : 1);
           BasicBlockEdge Edge(BI->getParent(), NonNullSuccessor);
@@ -7530,8 +7528,6 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
   }
 
   auto AllUsesGuardedByBranch = [&](const CondBrInst *BI) {
-    if (BI->getSuccessor(0) == BI->getSuccessor(1))
-      return false;
     BasicBlockEdge NoWrapEdge(BI->getParent(), BI->getSuccessor(1));
 
     // Check if all users of the add are provably no-wrap.

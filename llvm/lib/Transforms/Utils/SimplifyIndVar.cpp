@@ -2237,8 +2237,6 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
 
     auto *TrueSuccessor = BI->getSuccessor(0);
     auto *FalseSuccessor = BI->getSuccessor(1);
-    if (TrueSuccessor == FalseSuccessor)
-      continue;
 
     if (DT->dominates(BasicBlockEdge(BB, TrueSuccessor), NarrowUserBB))
       UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/true);

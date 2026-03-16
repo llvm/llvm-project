@@ -6035,8 +6035,6 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
 // match.
 static bool BrPHIToSelect(DominatorTree &DT, CondBrInst *BI, PHINode *Merge,
                           Value *&C, Value *&LHS, Value *&RHS) {
-  if (BI->getSuccessor(0) == BI->getSuccessor(1))
-    return false;
   C = BI->getCondition();
 
   BasicBlockEdge LeftEdge(BI->getParent(), BI->getSuccessor(0));
