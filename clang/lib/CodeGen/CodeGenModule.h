@@ -2105,7 +2105,6 @@ private:
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.
   void emitPFPFieldsWithEvaluatedOffset();
-
 };
 
 }  // end namespace CodeGen
