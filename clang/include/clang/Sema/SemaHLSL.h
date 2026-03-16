@@ -203,6 +203,9 @@ public:
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
 
+  QualType ActOnTemplateShorthand(TemplateDecl *Template,
+                                  SourceLocation NameLoc);
+
   // Diagnose whether the input ID is uint/unit2/uint3 type.
   bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
   bool diagnosePositionType(QualType T, const ParsedAttr &AL);

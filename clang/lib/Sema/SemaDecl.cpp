@@ -553,6 +553,17 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     }
     return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
   }
+
+  if (getLangOpts().HLSL) {
+    if (auto *TD = dyn_cast_or_null<TemplateDecl>(
+            getAsTemplateNameDecl(IIDecl, /*AllowFunctionTemplates=*/false,
+                                  /*AllowDependent=*/false))) {
+      QualType ShorthandTy = HLSL().ActOnTemplateShorthand(TD, NameLoc);
+      if (!ShorthandTy.isNull())
+        return ParsedType::make(ShorthandTy);
+    }
+  }
+
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(IIDecl)) {
     (void)DiagnoseUseOfDecl(IDecl, NameLoc);
     if (!HasTrailingDot) {
@@ -2970,6 +2981,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.OpenACC().mergeRoutineDeclAttr(*RD);
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
+  else if (const auto *PA = dyn_cast<PersonalityAttr>(Attr))
+    NewAttr = S.mergePersonalityAttr(D, PA->getRoutine(), *PA);
 
   if (NewAttr) {
     NewAttr->setInherited(true);
@@ -15125,7 +15138,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // If this variable must be emitted, add it as an initializer for the current
   // module.
-  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
+  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty() &&
+      (ModuleScopes.back().Module->isHeaderLikeModule() ||
+       // For named modules, we may only emit non discardable variables.
+       !isDiscardableGVALinkage(Context.GetGVALinkageForVariable(var))))
     Context.addModuleInitializer(ModuleScopes.back().Module, var);
 
   // Build the bindings if this is a structured binding declaration.
@@ -15851,7 +15867,11 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       // WebAssembly allows reference types as parameters. Funcref in particular
       // lives in a different address space.
       !(T->isFunctionPointerType() &&
-        T.getAddressSpace() == LangAS::wasm_funcref)) {
+        T.getAddressSpace() == LangAS::wasm_funcref) &&
+      // HLSL allows function arguments to be qualified with an address space
+      // if the groupshared annotation is used.
+      !(getLangOpts().HLSL &&
+        T.getAddressSpace() == LangAS::hlsl_groupshared)) {
     Diag(NameLoc, diag::err_arg_with_address_space);
     New->setInvalidDecl();
   }
@@ -21086,16 +21106,14 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
                                                      bool Final) {
   assert(FD && "Expected non-null FunctionDecl");
 
-  // SYCL functions can be template, so we check if they have appropriate
-  // attribute prior to checking if it is a template.
+  // Templates are emitted when they're instantiated.
+  if (FD->isDependentContext())
+    return FunctionEmissionStatus::TemplateDiscarded;
+
   if (LangOpts.SYCLIsDevice && (FD->hasAttr<SYCLKernelAttr>() ||
                                 FD->hasAttr<SYCLKernelEntryPointAttr>() ||
                                 FD->hasAttr<SYCLExternalAttr>()))
     return FunctionEmissionStatus::Emitted;
-
-  // Templates are emitted when they're instantiated.
-  if (FD->isDependentContext())
-    return FunctionEmissionStatus::TemplateDiscarded;
 
   // Check whether this function is an externally visible definition.
   auto IsEmittedForExternalSymbol = [this, FD]() {

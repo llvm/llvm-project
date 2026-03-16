@@ -5585,11 +5585,19 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
   Constant *One = ConstantInt::get(InternalIVTy, 1);
 
   Function *F = CLI->getFunction();
+  // Blocks must have terminators.
+  // FIXME: Don't run analyses on incomplete/invalid IR.
+  SmallVector<Instruction *> UIs;
+  for (BasicBlock &BB : *F)
+    if (!BB.getTerminator())
+      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
   FunctionAnalysisManager FAM;
   FAM.registerPass([]() { return DominatorTreeAnalysis(); });
   FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
   LoopAnalysis LIA;
   LoopInfo &&LI = LIA.run(*F, FAM);
+  for (Instruction *I : UIs)
+    I->eraseFromParent();
   Loop *L = LI.getLoopFor(CLI->getHeader());
   SmallVector<Metadata *> LoopMDList;
   if (ChunkSize || DistScheduleChunkSize)
@@ -6874,6 +6882,13 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 
   Function *F = CanonicalLoop->getFunction();
 
+  // Blocks must have terminators.
+  // FIXME: Don't run analyses on incomplete/invalid IR.
+  SmallVector<Instruction *> UIs;
+  for (BasicBlock &BB : *F)
+    if (!BB.getTerminator())
+      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
+
   // TODO: We should not rely on pass manager. Currently we use pass manager
   // only for getting llvm::Loop which corresponds to given CanonicalLoopInfo
   // object. We should have a method  which returns all blocks between
@@ -6885,6 +6900,9 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 
   LoopAnalysis LIA;
   LoopInfo &&LI = LIA.run(*F, FAM);
+
+  for (Instruction *I : UIs)
+    I->eraseFromParent();
 
   Loop *L = LI.getLoopFor(CanonicalLoop->getHeader());
   if (AlignedVars.size()) {
@@ -7003,6 +7021,13 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   CodeGenOptLevel OptLevel = CodeGenOptLevel::Aggressive;
   std::unique_ptr<TargetMachine> TM = createTargetMachine(F, OptLevel);
 
+  // Blocks must have terminators.
+  // FIXME: Don't run analyses on incomplete/invalid IR.
+  SmallVector<Instruction *> UIs;
+  for (BasicBlock &BB : *F)
+    if (!BB.getTerminator())
+      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
+
   FunctionAnalysisManager FAM;
   FAM.registerPass([]() { return TargetLibraryAnalysis(); });
   FAM.registerPass([]() { return AssumptionAnalysis(); });
@@ -7026,6 +7051,9 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   AssumptionAnalysis ACT;
   AssumptionCache &&AC = ACT.run(*F, FAM);
   OptimizationRemarkEmitter ORE{F};
+
+  for (Instruction *I : UIs)
+    I->eraseFromParent();
 
   Loop *L = LI.getLoopFor(CLI->getHeader());
   assert(L && "Expecting CanonicalLoopInfo to be recognized as a loop");
@@ -7801,7 +7829,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
           ? KernelEnvironmentGV
           : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
                                            KernelEnvironmentPtr);
-  Value *KernelLaunchEnvironment = DebugKernelWrapper->getArg(0);
+  Value *KernelLaunchEnvironment =
+      DebugKernelWrapper->getArg(DebugKernelWrapper->arg_size() - 1);
   Type *KernelLaunchEnvParamTy = Fn->getFunctionType()->getParamType(1);
   KernelLaunchEnvironment =
       KernelLaunchEnvironment->getType() == KernelLaunchEnvParamTy
@@ -8330,11 +8359,13 @@ static void FixupDebugInfoForOutlinedFunction(
     DIBuilder DB(*M, true, CU);
     DIType *VoidPtrTy =
         DB.createQualifiedType(dwarf::DW_TAG_pointer_type, nullptr);
+    unsigned ArgNo = Func->arg_size();
     DILocalVariable *Var = DB.createParameterVariable(
-        NewSP, "dyn_ptr", /*ArgNo*/ 1, NewSP->getFile(), /*LineNo=*/0,
-        VoidPtrTy, /*AlwaysPreserve=*/false, DINode::DIFlags::FlagArtificial);
+        NewSP, "dyn_ptr", ArgNo, NewSP->getFile(), /*LineNo=*/0, VoidPtrTy,
+        /*AlwaysPreserve=*/false, DINode::DIFlags::FlagArtificial);
     auto Loc = DILocation::get(Func->getContext(), 0, 0, NewSP, 0);
-    DB.insertDeclare(&(*Func->arg_begin()), Var, DB.createExpression(), Loc,
+    Argument *LastArg = Func->getArg(Func->arg_size() - 1);
+    DB.insertDeclare(LastArg, Var, DB.createExpression(), Loc,
                      &(*Func->begin()));
   }
 }
@@ -8353,11 +8384,6 @@ static Expected<Function *> createOutlinedFunction(
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
   SmallVector<Type *> ParameterTypes;
   if (OMPBuilder.Config.isTargetDevice()) {
-    // Add the "implicit" runtime argument we use to provide launch specific
-    // information for target devices.
-    auto *Int8PtrTy = PointerType::getUnqual(Builder.getContext());
-    ParameterTypes.push_back(Int8PtrTy);
-
     // All parameters to target devices are passed as pointers
     // or i64. This assumes 64-bit address spaces/pointers.
     for (auto &Arg : Inputs)
@@ -8368,6 +8394,11 @@ static Expected<Function *> createOutlinedFunction(
     for (auto &Arg : Inputs)
       ParameterTypes.push_back(Arg->getType());
   }
+
+  // The implicit dyn_ptr argument is always the last parameter on both host
+  // and device so the argument counts match without runtime manipulation.
+  auto *PtrTy = PointerType::getUnqual(Builder.getContext());
+  ParameterTypes.push_back(PtrTy);
 
   auto BB = Builder.GetInsertBlock();
   auto M = BB->getModule();
@@ -8437,11 +8468,8 @@ static Expected<Function *> createOutlinedFunction(
 
   Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
 
-  // Skip the artificial dyn_ptr on the device.
-  const auto &ArgRange =
-      OMPBuilder.Config.isTargetDevice()
-          ? make_range(Func->arg_begin() + 1, Func->arg_end())
-          : Func->args();
+  // Do not include the artificial dyn_ptr argument.
+  const auto &ArgRange = make_range(Func->arg_begin(), Func->arg_end() - 1);
 
   DenseMap<Value *, std::tuple<Value *, unsigned>> ValueReplacementMap;
 
@@ -9155,7 +9183,11 @@ static void emitTargetCall(
   auto &&EmitTargetCallFallbackCB = [&](OpenMPIRBuilder::InsertPointTy IP)
       -> OpenMPIRBuilder::InsertPointOrErrorTy {
     Builder.restoreIP(IP);
-    OMPBuilder.createRuntimeFunctionCall(OutlinedFn, Args);
+    // Ensure the host fallback has the same dyn_ptr ABI as the device.
+    SmallVector<Value *> FallbackArgs(Args.begin(), Args.end());
+    FallbackArgs.push_back(
+        Constant::getNullValue(PointerType::getUnqual(Builder.getContext())));
+    OMPBuilder.createRuntimeFunctionCall(OutlinedFn, FallbackArgs);
     return Builder.saveIP();
   };
 
@@ -9222,6 +9254,7 @@ static void emitTargetCall(
           OpenMPIRBuilder::InsertPointTy CodeGenIP) -> Error {
     Info.HasNoWait = HasNoWait;
     OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(Builder.saveIP());
+
     OpenMPIRBuilder::TargetDataRTArgs RTArgs;
     if (Error Err = OMPBuilder.emitOffloadingArraysAndArgs(
             AllocaIP, Builder.saveIP(), Info, RTArgs, MapInfo, CustomMapperCB,
@@ -9945,16 +9978,24 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
                                      ConstantInt::get(Int64Ty, 0));
   SmallBitVector RuntimeSizes(CombinedInfo.Sizes.size());
   for (unsigned I = 0, E = CombinedInfo.Sizes.size(); I < E; ++I) {
+    bool IsNonContigEntry =
+        IsNonContiguous &&
+        (static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+             CombinedInfo.Types[I] &
+             OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG) != 0);
+    // For NON_CONTIG entries, ArgSizes stores the dimension count (number of
+    // descriptor_dim records), not the byte size.
+    if (IsNonContigEntry) {
+      assert(I < CombinedInfo.NonContigInfo.Dims.size() &&
+             "Index must be in-bounds for NON_CONTIG Dims array");
+      const uint64_t DimCount = CombinedInfo.NonContigInfo.Dims[I];
+      assert(DimCount > 0 && "NON_CONTIG DimCount must be > 0");
+      ConstSizes[I] = ConstantInt::get(Int64Ty, DimCount);
+      continue;
+    }
     if (auto *CI = dyn_cast<Constant>(CombinedInfo.Sizes[I])) {
       if (!isa<ConstantExpr>(CI) && !isa<GlobalValue>(CI)) {
-        if (IsNonContiguous &&
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                CombinedInfo.Types[I] &
-                OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG))
-          ConstSizes[I] =
-              ConstantInt::get(Int64Ty, CombinedInfo.NonContigInfo.Dims[I]);
-        else
-          ConstSizes[I] = CI;
+        ConstSizes[I] = CI;
         continue;
       }
     }

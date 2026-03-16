@@ -708,7 +708,7 @@ bool Neg(InterpState &S, CodePtr OpPC) {
       return true;
     }
 
-    assert(isIntegralType(Name) &&
+    assert(isIntegerType(Name) &&
            "don't expect other types to fail at constexpr negation");
     S.Stk.push<T>(Result);
 
@@ -2310,7 +2310,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     if (N > 1)
       S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
           << N << /*non-array*/ true << 0;
-    return Pointer(Ptr.asFunctionPointer().getFunction(), N);
+    return Pointer(Ptr.asFunctionPointer().Func, N);
   } else if (!Ptr.isBlockPointer()) {
     return std::nullopt;
   }

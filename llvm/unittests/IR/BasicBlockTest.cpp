@@ -32,9 +32,9 @@ TEST(BasicBlockTest, PhiRange) {
 
   // Create some predecessors of it.
   std::unique_ptr<BasicBlock> BB1(BasicBlock::Create(Context));
-  BranchInst::Create(BB.get(), BB1.get());
+  UncondBrInst::Create(BB.get(), BB1.get());
   std::unique_ptr<BasicBlock> BB2(BasicBlock::Create(Context));
-  BranchInst::Create(BB.get(), BB2.get());
+  UncondBrInst::Create(BB.get(), BB2.get());
 
   // Make sure this doesn't crash if there are no phis.
   int PhiCount = 0;
@@ -45,7 +45,7 @@ TEST(BasicBlockTest, PhiRange) {
   ASSERT_EQ(PhiCount, 0) << "empty block should have no phis";
 
   // Make it a cycle.
-  auto *BI = BranchInst::Create(BB.get(), BB.get());
+  auto *BI = UncondBrInst::Create(BB.get(), BB.get());
 
   // Now insert some PHI nodes.
   auto *Int32Ty = Type::getInt32Ty(Context);

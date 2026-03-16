@@ -189,7 +189,7 @@ private:
   bool selectBitCast(const Instruction *I);
   bool selectLoad(const Instruction *I);
   bool selectStore(const Instruction *I);
-  bool selectBr(const Instruction *I);
+  bool selectCondBr(const Instruction *I);
   bool selectRet(const Instruction *I);
   bool selectUnreachable(const Instruction *I);
 
@@ -1309,12 +1309,73 @@ static unsigned getSExtLoadOpcode(unsigned Opc, bool A64) {
   return Opc;
 }
 
+static unsigned getZExtLoadOpcodeFromAnd(MachineInstr *MI,
+                                         MachineRegisterInfo &MRI,
+                                         const LoadInst *LI, bool A64) {
+  uint64_t Mask = 0;
+  bool IsConstant = false;
+  for (unsigned I = 1; I <= 2; ++I) {
+    Register Reg = MI->getOperand(I).getReg();
+    MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
+    if (DefMI && (DefMI->getOpcode() == WebAssembly::CONST_I32 ||
+                  DefMI->getOpcode() == WebAssembly::CONST_I64)) {
+      Mask = DefMI->getOperand(1).getImm();
+      IsConstant = true;
+      break;
+    }
+  }
+
+  if (!IsConstant)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  if (Mask != llvm::maskTrailingOnes<uint64_t>(LoadSize))
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  if (MI->getOpcode() == WebAssembly::AND_I32) {
+    if (LoadSize == 8)
+      return A64 ? WebAssembly::LOAD8_U_I32_A64 : WebAssembly::LOAD8_U_I32_A32;
+    if (LoadSize == 16)
+      return A64 ? WebAssembly::LOAD16_U_I32_A64
+                 : WebAssembly::LOAD16_U_I32_A32;
+  } else if (MI->getOpcode() == WebAssembly::AND_I64) {
+    if (LoadSize == 8)
+      return A64 ? WebAssembly::LOAD8_U_I64_A64 : WebAssembly::LOAD8_U_I64_A32;
+    if (LoadSize == 16)
+      return A64 ? WebAssembly::LOAD16_U_I64_A64
+                 : WebAssembly::LOAD16_U_I64_A32;
+    if (LoadSize == 32)
+      return A64 ? WebAssembly::LOAD32_U_I64_A64
+                 : WebAssembly::LOAD32_U_I64_A32;
+  }
+
+  return WebAssembly::INSTRUCTION_LIST_END;
+}
+
+static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
+                                    const LoadInst *LI, bool A64) {
+  switch (MI->getOpcode()) {
+  case WebAssembly::I32_EXTEND8_S_I32:
+  case WebAssembly::I32_EXTEND16_S_I32:
+  case WebAssembly::I64_EXTEND8_S_I64:
+  case WebAssembly::I64_EXTEND16_S_I64:
+  case WebAssembly::I64_EXTEND32_S_I64:
+  case WebAssembly::I64_EXTEND_S_I32:
+    return getSExtLoadOpcode(MI->getOpcode(), A64);
+  case WebAssembly::AND_I32:
+  case WebAssembly::AND_I64:
+    return getZExtLoadOpcodeFromAnd(MI, MRI, LI, A64);
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  }
+}
+
 bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                               const LoadInst *LI) {
   bool A64 = Subtarget->hasAddr64();
-  unsigned NewOpc;
-  if ((NewOpc = getSExtLoadOpcode(MI->getOpcode(), A64)) ==
-      WebAssembly::INSTRUCTION_LIST_END)
+  MachineRegisterInfo &MRI = FuncInfo.MF->getRegInfo();
+  unsigned NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64);
+  if (NewOpc == WebAssembly::INSTRUCTION_LIST_END)
     return false;
 
   Register ResultReg = MI->getOperand(0).getReg();
@@ -1437,13 +1498,8 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
   return true;
 }
 
-bool WebAssemblyFastISel::selectBr(const Instruction *I) {
-  const auto *Br = cast<BranchInst>(I);
-  if (Br->isUnconditional()) {
-    MachineBasicBlock *MSucc = FuncInfo.getMBB(Br->getSuccessor(0));
-    fastEmitBranch(MSucc, Br->getDebugLoc());
-    return true;
-  }
+bool WebAssemblyFastISel::selectCondBr(const Instruction *I) {
+  const auto *Br = cast<CondBrInst>(I);
 
   MachineBasicBlock *TBB = FuncInfo.getMBB(Br->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(Br->getSuccessor(1));
@@ -1553,8 +1609,8 @@ bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
     return selectLoad(I);
   case Instruction::Store:
     return selectStore(I);
-  case Instruction::Br:
-    return selectBr(I);
+  case Instruction::CondBr:
+    return selectCondBr(I);
   case Instruction::Ret:
     return selectRet(I);
   case Instruction::Unreachable:

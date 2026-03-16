@@ -2686,8 +2686,10 @@ path of execution, but that can be confusing:
 .. code-block:: c++
 
   if (b) {
-    [[unlikely]] --b; // In the path of execution,
-                      // this branch is considered unlikely.
+    [[unlikely]] --b; // Per the standard this is in the path of
+                      // execution, so this branch should be considered
+                      // unlikely. However, Clang ignores the attribute
+                      // here since it is not on the substatement.
   }
 
   if (b) {
@@ -9874,5 +9876,23 @@ The primary difference is for bitfields, where the MS variant only packs
 adjacent fields into the same allocation unit if they have integral types
 of the same size, while the GCC/Itanium variant packs all fields in a bitfield
 tightly.
+  }];
+}
+
+def PersonalityDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+``__attribute__((personality(<routine>)))`` is used to specify a personality
+routine that is different from the language that is being used to implement the
+function. This is a targeted, low-level feature aimed at language runtime
+implementors who write runtime support code in C/C++ but need that code to
+participate in a foreign language's exception-handling or unwinding model.
+
+A personality routine is a language-specific callback attached to each stack
+frame that the unwinder invokes to determine whether that frame handles a given
+exception and what cleanup actions to perform. It effectively colors the
+language-agnostic unwinding mechanism with language-specific semantics, enabling
+different languages to coexist on the same call stack while each interpreting
+exceptions according to their own rules.
   }];
 }
