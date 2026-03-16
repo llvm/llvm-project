@@ -34,28 +34,11 @@ __all__ = [
     "Region",
     "Type",
     "Attribute",
-    "register_dialect",
-    "register_operation",
 ]
 
 Operand = ir.Value
 Result = ir.OpResult
 Region = ir.Region
-
-register_dialect = _cext.register_dialect
-
-
-def register_operation(
-    dialect_cls: type, *, replace: bool = False
-) -> Callable[[type], type]:
-    register = _cext.register_operation(dialect_cls, replace=replace)
-
-    def decorator(op_cls: type) -> type:
-        register(op_cls)
-        _cext.register_op_adaptor(op_cls, replace=replace)(op_cls.Adaptor)
-        return op_cls
-
-    return decorator
 
 
 def construct_instance(origin, args):
@@ -816,11 +799,14 @@ class Dialect(ir.Dialect):
     def load(
         cls,
         *,
-        register: bool = True,
         reload: bool = False,
-        replace: bool = False,
     ) -> None:
         if hasattr(cls, "_mlir_module") and not reload:
+            if cls._mlir_module.context is not ir.Context.current:
+                raise RuntimeError(
+                    "This dialect was loaded in a different context. "
+                    "Please set reload=True to reload the dialect in the current context."
+                )
             return
 
         cls._mlir_module = cls._emit_module()
@@ -833,17 +819,16 @@ class Dialect(ir.Dialect):
         for op in cls.operations:
             op._attach_traits()
 
+        _cext.globals._register_dialect_impl(cls.DIALECT_NAMESPACE, cls, replace=reload)
+
         for type_ in cls.types:
             typeid = ir.DynamicType.lookup_typeid(type_.type_name)
-            _cext.register_type_caster(typeid, replace=replace)(type_)
+            _cext.register_type_caster(typeid, replace=reload)(type_)
 
         for attr in cls.attributes:
             typeid = ir.DynamicAttr.lookup_typeid(attr.attr_name)
-            _cext.register_type_caster(typeid, replace=replace)(attr)
+            _cext.register_type_caster(typeid, replace=reload)(attr)
 
-        if register:
-            register_dialect(cls)
-
-            register_dialect_operation = register_operation(cls, replace=replace)
-            for op in cls.operations:
-                register_dialect_operation(op)
+        for op in cls.operations:
+            _cext.register_operation(cls, replace=reload)(op)
+            _cext.register_op_adaptor(op, replace=reload)(op.Adaptor)
