@@ -47,6 +47,8 @@ RT_API_ATTRS std::size_t Component::GetElementByteSize(
       return kind_ * *value;
     }
     break;
+  case TypeCategory::Enumeration:
+    break;
   case TypeCategory::Derived:
     if (const auto *type{derivedType()}) {
       return type->sizeInBytes();

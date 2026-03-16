@@ -921,6 +921,8 @@ common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
   case TypeCategory::Logical:
     return WrapperHelper<TypeCategory::Logical, WRAPPER, WRAPPED>(
         dyType.kind(), std::move(x));
+  case TypeCategory::Enumeration:
+    CRASH_NO_CASE;
   case TypeCategory::Derived:
     return AsGenericExpr(Expr<SomeDerived>{WRAPPER<SomeDerived>{std::move(x)}});
   }
