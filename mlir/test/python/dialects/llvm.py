@@ -240,13 +240,13 @@ def testMetadataAttrs():
 
     # MDNodeAttr - empty
     md_empty = llvm.MDNodeAttr.get([])
-    # CHECK: #llvm.md_node<[]>
+    # CHECK: #llvm.md_node<>
     print(md_empty)
     assert len(md_empty) == 0
 
     # MDNodeAttr - with operands
     md_node = llvm.MDNodeAttr.get([md_const, md_str])
-    # CHECK: #llvm.md_node<[#llvm.md_const<42 : i32>, #llvm.md_string<"foo.buffer">]>
+    # CHECK: #llvm.md_node<#llvm.md_const<42 : i32>, #llvm.md_string<"foo.buffer">>
     print(md_node)
     assert len(md_node) == 2
 
@@ -260,7 +260,7 @@ def testMetadataAttrs():
 
     # MDNodeAttr - nested
     md_nested = llvm.MDNodeAttr.get([md_node, md_empty])
-    # CHECK: #llvm.md_node<[#llvm.md_node<[#llvm.md_const<42 : i32>, #llvm.md_string<"foo.buffer">]>, #llvm.md_node<[]>]>
+    # CHECK: #llvm.md_node<#llvm.md_node<#llvm.md_const<42 : i32>, #llvm.md_string<"foo.buffer">>, #llvm.md_node<>>
     print(md_nested)
     assert len(md_nested) == 2
 
@@ -284,7 +284,7 @@ def testNamedMetadata():
             ]
         ),
     )
-    # CHECK: llvm.named_metadata "foo.version" [#llvm.md_node<[#llvm.md_const<1 : i32>, #llvm.md_const<0 : i32>, #llvm.md_const<0 : i32>]>]
+    # CHECK: llvm.named_metadata "foo.version" [#llvm.md_node<#llvm.md_const<1 : i32>, #llvm.md_const<0 : i32>, #llvm.md_const<0 : i32>>]
 
     llvm.NamedMetadataOp(
         metadata_name="foo.language_version",
@@ -301,7 +301,7 @@ def testNamedMetadata():
             ]
         ),
     )
-    # CHECK: llvm.named_metadata "foo.language_version" [#llvm.md_node<[#llvm.md_string<"Bar">, #llvm.md_const<1 : i32>, #llvm.md_const<2 : i32>, #llvm.md_const<3 : i32>]>]
+    # CHECK: llvm.named_metadata "foo.language_version" [#llvm.md_node<#llvm.md_string<"Bar">, #llvm.md_const<1 : i32>, #llvm.md_const<2 : i32>, #llvm.md_const<3 : i32>>]
 
     buf0 = llvm.MDNodeAttr.get(
         [
@@ -335,10 +335,10 @@ def testNamedMetadata():
         ),
     )
     # CHECK:       llvm.named_metadata "foo.kernel" [
-    # CHECK-SAME:  #llvm.md_node<[
+    # CHECK-SAME:  #llvm.md_node<
     # CHECK-SAME:      #llvm.md_func<@my_kernel>,
-    # CHECK-SAME:      #llvm.md_node<[]>,
-    # CHECK-SAME:      #llvm.md_node<[
+    # CHECK-SAME:      #llvm.md_node<>,
+    # CHECK-SAME:      #llvm.md_node<
     # CHECK-SAME:          #llvm.md_const<0 : i32>,
     # CHECK-SAME:          #llvm.md_string<"foo.buffer">,
     # CHECK-SAME:          #llvm.md_string<"foo.idx">,
@@ -350,7 +350,5 @@ def testNamedMetadata():
     # CHECK-SAME:          #llvm.md_string<"foo.size">,
     # CHECK-SAME:          #llvm.md_const<4 : i32>,
     # CHECK-SAME:          #llvm.md_string<"foo.align_size">,
-    # CHECK-SAME:          #llvm.md_const<4 : i32>
-    # CHECK-SAME:      ]>
-    # CHECK-SAME:    ]>
-    # CHECK-SAME:  ]
+    # CHECK-SAME:          #llvm.md_const<4 : i32>>
+    # CHECK-SAME:    >]

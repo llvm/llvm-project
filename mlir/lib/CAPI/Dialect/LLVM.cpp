@@ -595,9 +595,8 @@ MlirAttribute mlirLLVMMDNodeAttrGet(MlirContext ctx, intptr_t nOperands,
                                     MlirAttribute const *operands) {
   SmallVector<Attribute> attrStorage;
   attrStorage.reserve(nOperands);
-  return wrap(MDNodeAttr::get(
-      unwrap(ctx), ArrayAttr::get(unwrap(ctx), unwrapList(nOperands, operands,
-                                                          attrStorage))));
+  return wrap(MDNodeAttr::get(unwrap(ctx),
+                              unwrapList(nOperands, operands, attrStorage)));
 }
 
 bool mlirLLVMAttrIsAMDNodeAttr(MlirAttribute attr) {

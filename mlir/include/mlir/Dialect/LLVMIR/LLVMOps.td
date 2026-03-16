@@ -2591,18 +2591,21 @@ def LLVM_NamedMetadataOp
     Example:
     ```mlir
     llvm.named_metadata "foo.version" [
-      #llvm.md_node<[#llvm.md_const<2 : i32>, #llvm.md_const<9 : i32>,
-                      #llvm.md_const<0 : i32>]>
+      #llvm.md_node<#llvm.md_const<2 : i32>,
+                    #llvm.md_const<9 : i32>,
+                    #llvm.md_const<0 : i32>
+      >
     ]
     llvm.named_metadata "foo.kernel" [
-      #llvm.md_node<[
+      #llvm.md_node<
         #llvm.md_func<@my_kernel>,
-        #llvm.md_node<[]>,
-        #llvm.md_node<[
-          #llvm.md_node<[#llvm.md_const<0 : i32>,
-                          #llvm.md_string<"foo.buffer">]>
-        ]>
-      ]>
+        #llvm.md_node<>,
+        #llvm.md_node<
+          #llvm.md_node<#llvm.md_const<0 : i32>,
+                        #llvm.md_string<"foo.buffer">
+          >
+        >
+      >
     ]
     ```
   }];

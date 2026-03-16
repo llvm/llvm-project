@@ -1749,12 +1749,12 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
 
     Example:
     ```mlir
-    #llvm.md_node<[#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">]>
-    #llvm.md_node<[]>
+    #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>
+    #llvm.md_node<>
     ```
   }];
-  let parameters = (ins "ArrayAttr":$operands);
-  let assemblyFormat = "`<` $operands `>`";
+  let parameters = (ins OptionalArrayRefParameter<"Attribute">:$operands);
+  let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
 }
 
 #endif // LLVMIR_ATTRDEFS
