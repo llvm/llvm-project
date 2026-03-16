@@ -1568,6 +1568,12 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
   return syncEventImpl(EventPtr);
 }
 
+Error GenericDeviceTy::getEventElapsedTime(void *StartEventPtr,
+                                           void *EndEventPtr,
+                                           float *ElapsedTime) {
+  return getEventElapsedTimeImpl(StartEventPtr, EndEventPtr, ElapsedTime);
+}
+
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
 
 Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
@@ -2081,6 +2087,21 @@ int32_t GenericPluginTy::sync_event(int32_t DeviceId, void *EventPtr) {
   if (Err) {
     REPORT() << "Failure to synchronize event " << EventPtr << ": "
              << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t GenericPluginTy::get_event_elapsed_time(int32_t DeviceId,
+                                                void *StartEventPtr,
+                                                void *EndEventPtr,
+                                                float *ElapsedTime) {
+  auto Err = getDevice(DeviceId).getEventElapsedTime(StartEventPtr, EndEventPtr,
+                                                     ElapsedTime);
+  if (Err) {
+    REPORT() << "Failure to get elapsed time between events " << StartEventPtr
+             << " and " << EndEventPtr << ": " << toString(std::move(Err));
     return OFFLOAD_FAIL;
   }
 

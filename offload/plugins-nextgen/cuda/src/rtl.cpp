@@ -1086,6 +1086,16 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuEventSynchronize: %s");
   }
 
+  /// Get the elapsed time in milliseconds between two events.
+  Error getEventElapsedTimeImpl(void *StartEventPtr, void *EndEventPtr,
+                                float *ElapsedTime) override {
+    CUevent StartEvent = reinterpret_cast<CUevent>(StartEventPtr);
+    CUevent EndEvent = reinterpret_cast<CUevent>(EndEventPtr);
+
+    CUresult Res = cuEventElapsedTime(ElapsedTime, StartEvent, EndEvent);
+    return Plugin::check(Res, "error in cuEventElapsedTime: %s");
+  }
+
   /// Print information about the device.
   Expected<InfoTreeNode> obtainInfoImpl() override {
     char TmpChar[1000];

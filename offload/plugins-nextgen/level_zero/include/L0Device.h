@@ -626,6 +626,12 @@ public:
                          __func__);
   }
 
+  Error getEventElapsedTimeImpl(void *StartEventPtr, void *EndEventPtr,
+                                float *ElapsedTime) override {
+    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
+                         __func__);
+  }
+
   Expected<InfoTreeNode> obtainInfoImpl() override;
   uint64_t getClockFrequency() const override { return getClockRate(); }
   uint64_t getHardwareParallelism() const override { return getTotalThreads(); }

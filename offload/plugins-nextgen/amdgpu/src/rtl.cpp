@@ -2871,6 +2871,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Event->sync();
   }
 
+  /// Get the elapsed time in milliseconds between two events.
+  Error getEventElapsedTimeImpl(void *StartEventPtr, void *EndEventPtr,
+                                float *ElapsedTime) override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED, "%s not implemented yet",
+                         __func__);
+  }
+
   /// Print information about the device.
   Expected<InfoTreeNode> obtainInfoImpl() override {
     char TmpChar[1000];
