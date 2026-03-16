@@ -33,7 +33,8 @@
 
 static llvm::cl::opt<bool> enableGPUHeapAlloc(
     "enable-gpu-heap-alloc",
-    llvm::cl::desc("Allow to use heap alloc for adjustable arrays on GPU"),
+    llvm::cl::desc(
+        "Allow the use of heap allocation for dynamically sized arrays on GPU"),
     llvm::cl::init(false));
 
 static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
