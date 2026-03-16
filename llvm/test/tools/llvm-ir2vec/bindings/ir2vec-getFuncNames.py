@@ -16,4 +16,4 @@ for name in sorted(func_names):
 # CHECK: FUNC: add
 # CHECK: FUNC: conditional
 # CHECK: FUNC: multiply
-# CHECK-NOT:  Function: external_func
+# CHECK-NOT:  FUNC: external_func

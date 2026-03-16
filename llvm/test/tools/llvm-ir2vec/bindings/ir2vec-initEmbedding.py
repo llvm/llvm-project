@@ -32,6 +32,13 @@ except ValueError:
     print("ERROR: Invalid file")
 # CHECK: ERROR: Invalid file
 
+# Error: Empty filename
+try:
+    ir2vec.initEmbedding(filename="", mode="sym", vocabPath=vocab_path)
+except ValueError:
+    print("ERROR: Empty filename")
+# CHECK: ERROR: Empty filename
+
 # Error: Invalid vocab file
 try:
     ir2vec.initEmbedding(filename=ll_file, mode="sym", vocabPath="/bad.json")
