@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __CLC_SCALAR
+typedef struct __CLC_XCONCAT(__clc_ep_pair_, __CLC_GENTYPE) {
+  __CLC_GENTYPE lo, hi;
+} __CLC_XCONCAT(__clc_ep_pair_, __CLC_GENTYPE);
 
-#define __CLC_EP_PAIR __CLC_XCONCAT(__CLC_GENTYPE, 2)
+#define __CLC_EP_PAIR __CLC_XCONCAT(__clc_ep_pair_, __CLC_GENTYPE)
 
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_absv(__CLC_EP_PAIR a);
+
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_neg(__CLC_EP_PAIR a);
 
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
 __clc_ep_conditional_sign_match(__CLC_EP_PAIR a, __CLC_EP_PAIR b);
@@ -127,5 +131,3 @@ _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_sqr(__CLC_EP_PAIR a);
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_sqrt(__CLC_GENTYPE a);
 
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_sqrt(__CLC_EP_PAIR a);
-
-#endif

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __CLC_SCALAR
-
 #if __CLC_FPSIZE == 16
 #define __CLC_EP_USE_FMA true
 #elif __CLC_FPSIZE == 32
@@ -27,24 +25,69 @@
 
 #pragma OPENCL FP_CONTRACT OFF
 
+#if __CLC_FPSIZE == 16
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST static __CLC_GENTYPE
+ep_high_fp_bits(__CLC_GENTYPE x) {
+  return __CLC_AS_GENTYPE(__CLC_CONVERT_U_GENTYPE(
+      (__CLC_AS_U_GENTYPE(x) & (__CLC_U_GENTYPE)0xffc0U)));
+}
+
+#elif __CLC_FPSIZE == 32
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST static __CLC_GENTYPE
+ep_high_fp_bits(__CLC_GENTYPE x) {
+  return __CLC_AS_GENTYPE(__CLC_AS_U_GENTYPE(x) & 0xfffff000U);
+}
+
+#elif __CLC_FPSIZE == 64
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST static __CLC_GENTYPE
+ep_high_fp_bits(__CLC_GENTYPE x) {
+  return __CLC_AS_GENTYPE(__CLC_AS_U_GENTYPE(x) & 0xfffffffff8000000UL);
+}
+
+#endif
+
+typedef struct __CLC_XCONCAT(__clc_ep_int_pair_, __CLC_GENTYPE) {
+  __CLC_INTN lo, hi;
+} __CLC_XCONCAT(__clc_ep_int_pair_, __CLC_GENTYPE);
+
+#define __CLC_EP_INT_PAIR __CLC_XCONCAT(__clc_ep_int_pair_, __CLC_GENTYPE)
+
 _CLC_OVERLOAD
-static bool samesign(__CLC_GENTYPE x, __CLC_GENTYPE y) {
+static __CLC_S_GENTYPE samesign(__CLC_GENTYPE x, __CLC_GENTYPE y) {
   return __clc_signbit(x) == __clc_signbit(y);
 }
 
 _CLC_DEF
 _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_absv(__CLC_EP_PAIR a) {
-  return __clc_signbit(a.hi) ? -a : a;
+  __CLC_EP_PAIR ret;
+  __CLC_EP_PAIR neg_a = __clc_ep_neg(a);
+  ret.lo = __clc_signbit(a.hi) ? neg_a.lo : a.lo;
+  ret.hi = __clc_signbit(a.hi) ? neg_a.hi : a.hi;
+  return ret;
+}
+
+_CLC_DEF
+_CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_neg(__CLC_EP_PAIR a) {
+  a.lo = -a.lo;
+  a.hi = -a.hi;
+  return a;
 }
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
 __clc_ep_conditional_sign_match(__CLC_EP_PAIR a, __CLC_EP_PAIR b) {
-  return samesign(a.hi, b.hi) ? a : -a;
+  __CLC_S_GENTYPE ss = samesign(a.hi, b.hi);
+  __CLC_EP_PAIR neg_a = __clc_ep_neg(a);
+
+  __CLC_EP_PAIR ret = {ss ? a.lo : neg_a.lo, ss ? a.hi : neg_a.hi};
+  return ret;
 }
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
 __clc_ep_make_pair(__CLC_GENTYPE a, __CLC_GENTYPE b) {
-  return (__CLC_EP_PAIR)(b, a);
+  __CLC_EP_PAIR ret = {b, a};
+  return ret;
 }
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
@@ -388,4 +431,3 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_sqrt(__CLC_EP_PAIR a) {
 }
 
 #undef __CLC_EP_USE_FMA
-#endif
