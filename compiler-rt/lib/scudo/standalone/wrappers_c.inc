@@ -76,7 +76,8 @@ INTERFACE WEAK void SCUDO_PREFIX(free_sized)(void *ptr, size_t size) {
 INTERFACE WEAK void
 SCUDO_PREFIX(free_aligned_sized)(void *ptr, size_t alignment, size_t size) {
   reportDeallocation(ptr);
-  SCUDO_ALLOCATOR.deallocateSizedAligned(ptr, scudo::Chunk::Origin::Malloc, size, alignment);
+  SCUDO_ALLOCATOR.deallocateSizedAligned(ptr, scudo::Chunk::Origin::Malloc,
+                                         size, alignment);
 }
 
 INTERFACE WEAK struct SCUDO_MALLINFO SCUDO_PREFIX(mallinfo)(void) {
