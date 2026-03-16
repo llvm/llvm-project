@@ -931,9 +931,9 @@ void SwiftASTContext::ConfigureCASStorage(const SymbolContext &sc) {
   }
   SetCASStorage(std::move(cas->object_store), std::move(cas->action_cache));
   swift::CASOptions &cas_options = GetCASOptions();
-  cas_options.CASOpts.CASPath = cas->configuration.CASPath;
-  cas_options.CASOpts.PluginPath = cas->configuration.PluginPath;
-  cas_options.CASOpts.PluginOptions = cas->configuration.PluginOptions;
+  cas_options.Config.CASPath = cas->configuration.CASPath;
+  cas_options.Config.PluginPath = cas->configuration.PluginPath;
+  cas_options.Config.PluginOptions = cas->configuration.PluginOptions;
   m_cas_initialized = true;
   LOG_PRINTF(GetLog(LLDBLog::Types),
              "Setup CAS from module list properties with CAS path: %s",
@@ -2068,10 +2068,10 @@ void SwiftASTContext::AddExtraClangCC1Args(
   bool use_cas_module = m_cas && m_action_cache;
   if (use_cas_module) {
     // Load from CAS.
-    invocation.getCASOpts().CASPath = GetCASOptions().CASOpts.CASPath;
-    invocation.getCASOpts().PluginPath = GetCASOptions().CASOpts.PluginPath;
+    invocation.getCASOpts().CASPath = GetCASOptions().Config.CASPath;
+    invocation.getCASOpts().PluginPath = GetCASOptions().Config.PluginPath;
     invocation.getCASOpts().PluginOptions =
-        GetCASOptions().CASOpts.PluginOptions;
+        GetCASOptions().Config.PluginOptions;
 
     use_cas_module = llvm::all_of(
         invocation.getFrontendOpts().ModuleCacheKeys, [&](const auto &entry) {
