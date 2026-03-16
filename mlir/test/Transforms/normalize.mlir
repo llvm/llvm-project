@@ -22,20 +22,17 @@ func.func @multiple_memref_store(%arg0: index, %arg1 : memref<?xf32>) {
 
 // -----
 
-// CHECK-LABEL: func @normalize_return
-// CHECK-SAME:      %[[ARG0:.*]]: index,
-// CHECK-SAME:      %[[ARG1:.*]]: memref<?xf32>
-func.func @normalize_return(%arg0: index, %arg1 : memref<?xf32>) -> index {
-  %f0 = arith.constant 0.0 : f32
-  %add = arith.addi %arg0, %arg0 : index
-  %sub = arith.subi %arg0, %arg0 : index
-  memref.store %f0, %arg1[%add] : memref<?xf32>
-  return %sub : index
+// CHECK-LABEL: func @return_multiple_operands
+//  CHECK-SAME:   %[[ARG0:.*]]: index
+func.func @return_multiple_operands (%arg0: index) -> (index, index) {
+  %0 = arith.addi %arg0, %arg0 : index
+  %1 = arith.subi %arg0, %arg0 : index
+  return %1, %0 : index, index
 }
 
-//      CHECK: memref.store
 // CHECK-NEXT: %[[SUB:.*]] = arith.subi %[[ARG0]], %[[ARG0]] : index
-// CHECK-NEXT: return %[[SUB]] : index
+// CHECK-NEXT: %[[ADD:.*]] = arith.addi %[[ARG0]], %[[ARG0]] : index
+// CHECK-NEXT: return %[[SUB]], %[[ADD]] : index, index
 
 // -----
 
@@ -61,10 +58,14 @@ func.func @cross_region(%arg0: f32, %arg1 : memref<10xf32>) {
 
 // -----
 
+// This test verifies the reordering of scf.for ops.
+// The memref.store within the scf.for causes the loop to have side effects.
+// The lower bound of the scf.for remains in its original position
+// because the upper bound depends on it, but the step has been reordered.
 
-// CHECK-LABEL: func @side_effect_for_op
+// CHECK-LABEL: func @side_effect_loop_op
 //  CHECK-SAME:   %[[ARG0:.*]]: memref<?xf32>
-func.func @side_effect_for_op(%arg1 : memref<?xf32>) {
+func.func @side_effect_loop_op(%arg1 : memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %upper = memref.dim %arg1, %c0 : memref<?xf32>
