@@ -56,6 +56,7 @@ add_llvm_component_library(LLVMCore
   ModuleSummaryIndex.cpp
   Operator.cpp
   OptBisect.cpp
+  PatternMatch.cpp
   Pass.cpp
   PassInstrumentation.cpp
   PassManager.cpp
