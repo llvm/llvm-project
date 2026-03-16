@@ -17,7 +17,6 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -544,10 +543,6 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
 } // namespace format
 } // namespace clang
 
-static void PrintVersion(raw_ostream &OS) {
-  OS << clang::getClangToolFullVersion("clang-format") << '\n';
-}
-
 // Dump the configuration.
 static int dumpConfig() {
   std::unique_ptr<llvm::MemoryBuffer> Code;
@@ -669,7 +664,6 @@ int main(int argc, const char **argv) {
 
   cl::HideUnrelatedOptions(ClangFormatCategory);
 
-  cl::SetVersionPrinter(PrintVersion);
   cl::ParseCommandLineOptions(
       argc, argv,
       "A tool to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# "
