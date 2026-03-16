@@ -1555,8 +1555,7 @@ bool Module::IsLoadedInTarget(Target *target) {
   return false;
 }
 
-bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
-                                           Stream &feedback_stream) {
+bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
   if (!target) {
     error = Status::FromErrorString("invalid destination Target");
     return false;
@@ -1580,8 +1579,12 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
     return false;
   }
 
+  StreamString feedback_stream;
   FileSpecList file_specs = platform_sp->LocateExecutableScriptingResources(
       target, *this, feedback_stream);
+
+  if (!feedback_stream.Empty())
+    debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
   const uint32_t num_specs = file_specs.GetSize();
   if (num_specs == 0)
@@ -1599,8 +1602,10 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
       continue;
 
     if (should_load == eLoadScriptFromSymFileWarn) {
-      feedback_stream.Format(R"(
-warning: '{0}' contains a debug script. To run this script in this debug session:
+      // clang-format off
+      debugger.ReportWarning(
+          llvm::formatv(
+R"('{0}' contains a debug script. To run this script in this debug session:
 
     command script import "{1}"
 
@@ -1608,8 +1613,10 @@ To run all discovered debug scripts in this session:
 
     settings set target.load-script-from-symbol-file true
 )",
-                             GetFileSpec().GetFileNameStrippingExtension(),
-                             scripting_fspec.GetPath());
+              GetFileSpec().GetFileNameStrippingExtension(),
+              scripting_fspec.GetPath()),
+          debugger.GetID());
+      // clang-format on
 
       return false;
     }
