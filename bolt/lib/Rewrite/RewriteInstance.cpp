@@ -5595,13 +5595,13 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   if (DynSymSection) {
     updateELFSymbolTable(
         File,
-        /*IsDynSym=*/true,
-        *DynSymSection,
-        NewSectionIndex,
+        /*IsDynSym=*/true, *DynSymSection, NewSectionIndex,
         [&](size_t Offset, const ELFSymTy &Sym) {
-          Out->os().pwrite(reinterpret_cast<const char *>(&Sym),
-                           sizeof(ELFSymTy),
-                           DynSymSection->sh_offset + Offset);
+          raw_fd_ostream &OS = Out->os();
+          uint64_t SavedPos = OS.tell();
+          OS.seek(DynSymSection->sh_offset + Offset);
+          OS.write(reinterpret_cast<const char *>(&Sym), sizeof(ELFSymTy));
+          OS.seek(SavedPos);
         },
         [](StringRef) -> size_t { return 0; });
   }
