@@ -1431,6 +1431,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_s_getreg}).Any({{}, {{Sgpr32}, {IntrId, Imm}}});
 
+  addRulesForIOpcs({amdgcn_s_setreg})
+      .Any({{_, _, S32}, {{}, {IntrId, Imm, SgprB32_ReadAnyLane}}});
+
   addRulesForIOpcs({amdgcn_groupstaticsize}).Any({{S32}, {{Sgpr32}, {IntrId}}});
   addRulesForIOpcs({amdgcn_endpgm}).Any({{}, {{}, {}}});
 
