@@ -80,22 +80,114 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     return
   }
 }
-// CHECK: fir.call @_QMprifPprif_change_team(%[[VAL_3:.*]], %[[VAL_1:.*]], %[[VAL_2:.*]], %[[VAL_2:.*]]) : (!fir.box<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
 
-// Just to show that we can handle operations with body inside change_team
-// CHECK: fir.if %[[COND:.*]] {
-// CHECK: } else {
-// CHECK: }
-
-// We can handle also another change_team operation inside.
-// CHECK: %[[VAL_4:.*]] = fir.absent !fir.ref<i32>
-// CHECK: %[[VAL_5:.*]] = fir.absent !fir.box<!fir.char<1,?>>
-// CHECK: %[[VAL_6:.*]] = fir.convert %[[TEAM2:.*]] : ({{.*}}) -> !fir.box<none>
-// CHECK: fir.call @_QMprifPprif_change_team(%[[VAL_6]], %[[VAL_4]], %[[VAL_5]], %[[VAL_5]]) : (!fir.box<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
-
-// CHECK: %[[VAL_7:.*]] = fir.absent !fir.ref<i32>
-// CHECK: %[[VAL_8:.*]] = fir.absent !fir.box<!fir.char<1,?>>
-// CHECK: fir.call @_QMprifPprif_end_team(%[[VAL_7]], %[[VAL_8]], %[[VAL_8]]) : (!fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
-// CHECK: %[[VAL_9:.*]] = fir.absent !fir.ref<i32>
-// CHECK: %[[VAL_10:.*]] = fir.absent !fir.box<!fir.char<1,?>>
-// CHECK: fir.call @_QMprifPprif_end_team(%[[VAL_9]], %[[VAL_10]], %[[VAL_10]]) : (!fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK:   %[[VAL_0:.*]] = fir.alloca i64
+// CHECK:   %[[VAL_1:.*]] = fir.alloca i64
+// CHECK:   %[[VAL_2:.*]] = fir.alloca i32
+// CHECK:   %[[VAL_3:.*]] = fir.alloca i32
+// CHECK:   %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:   %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "me", uniq_name = "_QFEme"}
+// CHECK:   %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFEme"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "ni", uniq_name = "_QFEni"}
+// CHECK:   %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFEni"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   %[[VAL_9:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}> {bindc_name = "team_global", uniq_name = "_QFEteam_global"}
+// CHECK:   %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_9:.*]] {uniq_name = "_QFEteam_global"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>)
+// CHECK:   %[[VAL_11:.*]] = fir.address_of(@_QQ_QM__fortran_builtinsT__builtin_team_type.DerivedInit) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
+// CHECK:   fir.copy %[[VAL_11:.*]] to %[[VAL_10:.*]]#0 no_overlap : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
+// CHECK:   %[[VAL_12:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}> {bindc_name = "team_sub", uniq_name = "_QFEteam_sub"}
+// CHECK:   %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12:.*]] {uniq_name = "_QFEteam_sub"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>)
+// CHECK:   %[[VAL_14:.*]] = fir.address_of(@_QQ_QM__fortran_builtinsT__builtin_team_type.DerivedInit) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
+// CHECK:   fir.copy %[[VAL_14]] to %[[VAL_13]]#0 no_overlap : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
+// CHECK:   %[[VAL_15:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
+// CHECK:   %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:   %[[VAL_17:.*]] = fir.absent !fir.box<none>
+// CHECK:   fir.call @_QMprifPprif_this_image_no_coarray(%[[VAL_17]], %[[VAL_3]]) : (!fir.box<none>, !fir.ref<i32>) -> ()
+// CHECK:   %[[VAL_18:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
+// CHECK:   hlfir.assign %[[VAL_18]] to %[[VAL_6]]#0 : i32, !fir.ref<i32>
+// CHECK:   fir.call @_QMprifPprif_num_images(%[[VAL_2]]) : (!fir.ref<i32>) -> ()
+// CHECK:   %[[VAL_19:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
+// CHECK:   hlfir.assign %[[VAL_19]] to %[[VAL_8]]#0 : i32, !fir.ref<i32>
+// CHECK:   %[[C1_I32:.*]] = arith.constant 1 : i32
+// CHECK:   %[[VAL_20:.*]] = fir.embox %[[VAL_10]]#0 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> !fir.box<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
+// CHECK:   %[[VAL_21:.*]] = fir.convert %[[C1_I32]] : (i32) -> i64
+// CHECK:   fir.store %[[VAL_21]] to %[[VAL_1]] : !fir.ref<i64>
+// CHECK:   %[[VAL_22:.*]] = fir.absent !fir.ref<i32>
+// CHECK:   %[[VAL_23:.*]] = fir.absent !fir.ref<i32>
+// CHECK:   %[[VAL_24:.*]] = fir.absent !fir.box<!fir.char<1,?>>
+// CHECK:   %[[VAL_25:.*]] = fir.convert %[[VAL_20]] : (!fir.box<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> !fir.box<none>
+// CHECK:   fir.call @_QMprifPprif_form_team(%[[VAL_1]], %[[VAL_25]], %[[VAL_22]], %[[VAL_23]], %[[VAL_24]], %[[VAL_24]]) : (!fir.ref<i64>, !fir.box<none>, !fir.ref<i32>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK:   %[[C2_I32:.*]] = arith.constant 2 : i32
+// CHECK:   %[[VAL_26:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
+// CHECK:   %[[VAL_27:.*]] = arith.remsi %[[VAL_26]], %[[C2_I32]] : i32
+// CHECK:   %[[C1_I32_0:.*]] = arith.constant 1 : i32
+// CHECK:   %[[VAL_28:.*]] = arith.addi %[[VAL_27]], %[[C1_I32_0]] : i32
+// CHECK:   %[[VAL_29:.*]] = fir.embox %[[VAL_13]]#0 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> !fir.box<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
+// CHECK:   %[[VAL_30:.*]] = fir.convert %[[VAL_28]] : (i32) -> i64
+// CHECK:   fir.store %[[VAL_30]] to %[[VAL_0]] : !fir.ref<i64>
+// CHECK:   %[[VAL_31:.*]] = fir.absent !fir.ref<i32>
+// CHECK:   %[[VAL_32:.*]] = fir.absent !fir.ref<i32>
+// CHECK:   %[[VAL_33:.*]] = fir.absent !fir.box<!fir.char<1,?>>
+// CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_29]] : (!fir.box<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> !fir.box<none>
+// CHECK:   fir.call @_QMprifPprif_form_team(%[[VAL_0]], %[[VAL_34]], %[[VAL_31]], %[[VAL_32]], %[[VAL_33]], %[[VAL_33]]) : (!fir.ref<i64>, !fir.box<none>, !fir.ref<i32>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK:   %[[VAL_35:.*]] = fir.embox %[[VAL_10]]#0 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> !fir.box<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
+// CHECK:   %[[VAL_36:.*]] = fir.absent !fir.ref<i32>
+// CHECK:   %[[VAL_37:.*]] = fir.absent !fir.box<!fir.char<1,?>>
+// CHECK:   %[[VAL_38:.*]] = fir.convert %[[VAL_35]] : (!fir.box<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> !fir.box<none>
+// CHECK:   fir.call @_QMprifPprif_change_team(%[[VAL_38]], %[[VAL_36]], %[[VAL_37]], %[[VAL_37]]) : (!fir.box<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK:   cf.br ^bb1
+// CHECK: ^bb1:  // pred: ^bb0
+// CHECK:   %[[C6_I32:.*]] = arith.constant 6 : i32
+// CHECK:   %[[VAL_39:.*]] = fir.address_of(@_QQclX662561532848a47f9eb7ab919b187d63) : !fir.ref<!fir.char<1,49>>
+// CHECK:   %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (!fir.ref<!fir.char<1,49>>) -> !fir.ref<i8>
+// CHECK:   %[[C15_I32:.*]] = arith.constant 15 : i32
+// CHECK:   %[[VAL_41:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[C6_I32]], %[[VAL_40]], %[[C15_I32]]) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:   %[[VAL_42:.*]] = fir.address_of(@_QQclX44616E73206C61207465616D20676C6F62616C65) : !fir.ref<!fir.char<1,20>>
+// CHECK:   %[[C20:.*]] = arith.constant 20 : index
+// CHECK:   %[[VAL_43:.*]]:2 = hlfir.declare %[[VAL_42]] typeparams %[[C20]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX44616E73206C61207465616D20676C6F62616C65"} : (!fir.ref<!fir.char<1,20>>, index) -> (!fir.ref<!fir.char<1,20>>, !fir.ref<!fir.char<1,20>>)
+// CHECK:   %[[VAL_44:.*]] = fir.convert %[[VAL_43]]#0 : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<i8>
+// CHECK:   %[[VAL_45:.*]] = fir.convert %[[C20]] : (index) -> i64
+// CHECK:   %[[VAL_46:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_41]], %[[VAL_44]], %[[VAL_45]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:   %[[VAL_47:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_41]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+// CHECK:   %[[VAL_48:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
+// CHECK:   %[[C2_I32_1:.*]] = arith.constant 2 : i32
+// CHECK:   %[[VAL_49:.*]] = arith.cmpi eq, %[[VAL_48]], %[[C2_I32_1]] : i32
+// CHECK:   fir.if %49 {
+// CHECK:     %[[VAL_67:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
+// CHECK:     %[[C0_I32:.*]] = arith.constant 0 : i32
+// CHECK:     hlfir.assign %[[VAL_67]] to %[[VAL_16]]#0 : i32, !fir.ref<i32>
+// CHECK:   } else {
+// CHECK:     %[[C2_I32_3:.*]] = arith.constant 2 : i32
+// CHECK:     %[[VAL_67:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
+// CHECK:     %[[VAL_68:.*]] = arith.muli %[[VAL_67]], %[[C2_I32_3]] : i32
+// CHECK:     hlfir.assign %[[VAL_68]] to %[[VAL_16]]#0 : i32, !fir.ref<i32>
+// CHECK:   }
+// CHECK:   %[[VAL_50:.*]] = fir.embox %[[VAL_13]]#0 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> !fir.box<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>
+// CHECK:   %[[VAL_51:.*]] = fir.absent !fir.ref<i32>
+// CHECK:   %[[VAL_52:.*]] = fir.absent !fir.box<!fir.char<1,?>>
+// CHECK:   %[[VAL_53:.*]] = fir.convert %[[VAL_50]] : (!fir.box<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> !fir.box<none>
+// CHECK:   fir.call @_QMprifPprif_change_team(%[[VAL_53]], %[[VAL_51]], %[[VAL_52]], %[[VAL_52]]) : (!fir.box<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK:   cf.br ^bb2
+// CHECK: ^bb2:  // pred: ^bb1
+// CHECK:   %[[C6_I32_2:.*]] = arith.constant 6 : i32
+// CHECK:   %[[VAL_54:.*]] = fir.address_of(@_QQclX662561532848a47f9eb7ab919b187d63) : !fir.ref<!fir.char<1,49>>
+// CHECK:   %[[VAL_55:.*]] = fir.convert %[[VAL_54]] : (!fir.ref<!fir.char<1,49>>) -> !fir.ref<i8>
+// CHECK:   %[[C23_I32:.*]] = arith.constant 23 : i32
+// CHECK:   %[[VAL_56:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[C6_I32_2]], %[[VAL_55]], %[[C23_I32]]) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+// CHECK:   %[[VAL_57:.*]] = fir.address_of(@_QQclX327beca4c668cfd5c48dd70a28c39c6d) : !fir.ref<!fir.char<1,36>>
+// CHECK:   %[[C36:.*]] = arith.constant 36 : index
+// CHECK:   %[[VAL_58:.*]]:2 = hlfir.declare %[[VAL_57]] typeparams %[[C36]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX327beca4c668cfd5c48dd70a28c39c6d"} : (!fir.ref<!fir.char<1,36>>, index) -> (!fir.ref<!fir.char<1,36>>, !fir.ref<!fir.char<1,36>>)
+// CHECK:   %[[VAL_59:.*]] = fir.convert %[[VAL_58]]#0 : (!fir.ref<!fir.char<1,36>>) -> !fir.ref<i8>
+// CHECK:   %[[VAL_60:.*]] = fir.convert %[[C36]] : (index) -> i64
+// CHECK:   %[[VAL_61:.*]] = fir.call @_FortranAioOutputAscii(%[[VAL_56]], %[[VAL_59]], %[[VAL_60]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
+// CHECK:   %[[VAL_62:.*]] = fir.call @_FortranAioEndIoStatement(%56) fastmath<contract> : (!fir.ref<i8>) -> i32
+// CHECK:   %[[VAL_63:.*]] = fir.absent !fir.ref<i32>
+// CHECK:   %[[VAL_64:.*]] = fir.absent !fir.box<!fir.char<1,?>>
+// CHECK:   fir.call @_QMprifPprif_end_team(%[[VAL_63]], %[[VAL_64]], %[[VAL_64]]) : (!fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK:   cf.br ^bb3
+// CHECK: ^bb3:  // pred: ^bb2
+// CHECK:   %[[VAL_65:.*]] = fir.absent !fir.ref<i32>
+// CHECK:   %[[VAL_66:.*]] = fir.absent !fir.box<!fir.char<1,?>>
+// CHECK:   fir.call @_QMprifPprif_end_team(%[[VAL_65]], %[[VAL_66]], %[[VAL_66]]) : (!fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK:   cf.br ^bb4
+// CHECK: ^bb4:  // pred: ^bb3
+// CHECK:   return
