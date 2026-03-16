@@ -658,8 +658,7 @@ TEST_P(PlatformDarwinLocateWithSpecialCharsTestFixture,
   EXPECT_EQ(fspecs.GetSize(), 0u);
 
   std::string expected =
-      llvm::formatv("please rename '{0}/../Python/{1}' to '{0}/../Python/{2}'",
-                    m_tmp_dsym_dwarf_dir, script_name, recommended_script_name);
+      llvm::formatv("please rename it to '{0}'", recommended_script_name);
   EXPECT_TRUE(ss.GetString().contains(expected));
 }
 
