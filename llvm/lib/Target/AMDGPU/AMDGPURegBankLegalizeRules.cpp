@@ -607,6 +607,21 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}});
 
+  addRulesForGOpcs({G_BSWAP}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16}})
+      .Div(S16, {{Vgpr16}, {Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32}})
+      .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16}})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16}});
+
+  addRulesForGOpcs({G_AMDGPU_CVT_F32_UBYTE0, G_AMDGPU_CVT_F32_UBYTE1,
+                    G_AMDGPU_CVT_F32_UBYTE2, G_AMDGPU_CVT_F32_UBYTE3,
+                    G_AMDGPU_RCP_IFLAG},
+                   Standard)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32}});
+
   addRulesForGOpcs({G_FRAME_INDEX}).Any({{UniP5, _}, {{SgprP5}, {None}}});
 
   addRulesForGOpcs({G_UBFX, G_SBFX}, Standard)
