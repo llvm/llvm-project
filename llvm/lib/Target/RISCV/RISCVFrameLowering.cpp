@@ -1100,7 +1100,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // Iterate over list of callee-saved registers and emit .cfi_offset
   // directives.
   if (NeedsDwarfCFI) {
-    for (const CalleeSavedInfo &CS : getUnmanagedCSI(MF, CSI, ReverseCSRSpill)) {
+    for (const CalleeSavedInfo &CS :
+         getUnmanagedCSI(MF, CSI, ReverseCSRSpill)) {
       MCRegister Reg = CS.getReg();
       int64_t Offset = MFI.getObjectOffset(CS.getFrameIdx());
       // Emit CFI for both sub-registers. The even register is at the base
@@ -1369,7 +1370,8 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Recover callee-saved registers.
   if (NeedsDwarfCFI) {
-    for (const CalleeSavedInfo &CS : getUnmanagedCSI(MF, CSI, ReverseCSRSpill)) {
+    for (const CalleeSavedInfo &CS :
+         getUnmanagedCSI(MF, CSI, ReverseCSRSpill)) {
       MCRegister Reg = CS.getReg();
       // Emit CFI for both sub-registers.
       if (RISCV::GPRPairRegClass.contains(Reg)) {
@@ -1440,9 +1442,8 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   // Callee-saved registers should be referenced relative to the stack
   // pointer (positive offset), otherwise use the frame pointer (negative
   // offset).
-  const auto &CSI =
-      getUnmanagedCSI(MF, MFI.getCalleeSavedInfo(),
-                      STI.hasAscendingCSRSpillOrder());
+  const auto &CSI = getUnmanagedCSI(MF, MFI.getCalleeSavedInfo(),
+                                    STI.hasAscendingCSRSpillOrder());
   int MinCSFI = 0;
   int MaxCSFI = -1;
   StackOffset Offset;

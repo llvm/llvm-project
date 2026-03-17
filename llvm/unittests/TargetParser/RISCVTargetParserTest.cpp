@@ -45,18 +45,26 @@ TEST(RISCVTuneFeature, AllTuneFeatures) {
   // Only allowed subtarget features that are explicitly marked by
   // special TableGen class.
   EXPECT_EQ(AllTuneFeatures.size(), 20U);
-  for (auto F :
-       {"ascending-csr-spill-order", "conditional-cmv-fusion",
-        "disable-latency-sched-heuristic",
-        "disable-misched-load-clustering", "disable-misched-store-clustering",
-        "disable-postmisched-load-clustering",
-        "disable-postmisched-store-clustering", "single-element-vec-fp64",
-        "no-default-unroll", "no-sink-splat-operands", "use-postra-scheduler",
-        "predictable-select-expensive", "prefer-vsetvli-over-read-vlenb",
-        "prefer-w-inst", "short-forward-branch-ialu",
-        "short-forward-branch-iminmax", "short-forward-branch-imul",
-        "short-forward-branch-iload", "vl-dependent-latency",
-        "vxrm-pipeline-flush"})
+  for (auto F : {"ascending-csr-spill-order",
+                 "conditional-cmv-fusion",
+                 "disable-latency-sched-heuristic",
+                 "disable-misched-load-clustering",
+                 "disable-misched-store-clustering",
+                 "disable-postmisched-load-clustering",
+                 "disable-postmisched-store-clustering",
+                 "single-element-vec-fp64",
+                 "no-default-unroll",
+                 "no-sink-splat-operands",
+                 "use-postra-scheduler",
+                 "predictable-select-expensive",
+                 "prefer-vsetvli-over-read-vlenb",
+                 "prefer-w-inst",
+                 "short-forward-branch-ialu",
+                 "short-forward-branch-iminmax",
+                 "short-forward-branch-imul",
+                 "short-forward-branch-iload",
+                 "vl-dependent-latency",
+                 "vxrm-pipeline-flush"})
     EXPECT_TRUE(is_contained(AllTuneFeatures, F));
 }
 
