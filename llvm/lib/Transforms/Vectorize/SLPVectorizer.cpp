@@ -953,15 +953,15 @@ class BinOpSameOpcodeHelper {
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
                 "SupportedOp is not sorted.");
   enum : MaskType {
-    ShlBIT = 0b1,
-    AShrBIT = 0b10,
-    MulBIT = 0b100,
-    AddBIT = 0b1000,
-    SubBIT = 0b10000,
-    AndBIT = 0b100000,
-    OrBIT = 0b1000000,
-    XorBIT = 0b10000000,
-    MainOpBIT = 0b100000000,
+    ShlBIT = 1,
+    AShrBIT = 1 << 1,
+    MulBIT = 1 << 2,
+    AddBIT = 1 << 3,
+    SubBIT = 1 << 4,
+    AndBIT = 1 << 5,
+    OrBIT = 1 << 6,
+    XorBIT = 1 << 7,
+    MainOpBIT = 1 << 8,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
   /// Return a non-nullptr if either operand of I is a ConstantInt.
