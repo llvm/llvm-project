@@ -18,17 +18,17 @@ entry:
   ret i64 %conv
 }
 
-; Test commutative smin pattern: a - smin(a, b) should also optimize
+; Test commutative smin pattern: b - smin(a, b) should also optimize
 define i64 @smin_commutative(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i64 @smin_commutative(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], [[MIN]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[B]], [[MIN]]
 ; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SUB]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT]]
 ;
   %min = call i32 @llvm.smin.i32(i32 %a, i32 %b)
-  %sub = sub nsw i32 %a, %min
+  %sub = sub nsw i32 %b, %min
   %ext = sext i32 %sub to i64
   ret i64 %ext
 }
