@@ -22,16 +22,17 @@
 using namespace llvm;
 using namespace dwarf;
 
-static cl::opt<bool> EnableAArch64DebugTLSLocation(
-    "enable-debug-tls-location", cl::Hidden,
-    cl::desc("Enable emitting TLS DWARF location with DTPREL relocation"),
-    cl::init(false));
+static cl::opt<bool> EmitAArch64DebugTLSLocation(
+    "aarch64-emit-debug-tls-location",
+    cl::desc("Emit the TLS DWARF location with DTPREL relocation for AArch64"),
+    cl::init(false), cl::Hidden);
 
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   PLTPCRelativeSpecifier = AArch64::S_PLT;
   SupportIndirectSymViaGOTPCRel = true;
+  SupportDebugThreadLocalLocation = EmitAArch64DebugTLSLocation;
 
   // Make sure the implicitly created empty .text section has the
   // SHF_AARCH64_PURECODE flag set if the "+execute-only" target feature is
@@ -191,7 +192,5 @@ MCSection *AArch64_ELFTargetObjectFile::SelectSectionForGlobal(
 
 const MCExpr *AArch64_ELFTargetObjectFile::getDebugThreadLocalSymbol(
     const MCSymbol *Sym) const {
-  if (!EnableAArch64DebugTLSLocation)
-    return nullptr;
   return MCSpecifierExpr::create(Sym, AArch64::S_DTPREL, getContext());
 }

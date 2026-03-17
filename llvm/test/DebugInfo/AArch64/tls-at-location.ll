@@ -1,14 +1,24 @@
-; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu -enable-debug-tls-location -filetype=obj < %s \
-; RUN:     | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu --aarch64-emit-debug-tls-location -filetype=obj < %s \
+; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=TLS
 
-; CHECK: .debug_info contents:
-; CHECK: DW_TAG_variable
-; CHECK:   DW_AT_name      ("var")
-; CHECK-NEXT:   DW_AT_type      (0x{{.*}} "int")
-; CHECK-NEXT:   DW_AT_external  (true)
-; CHECK-NEXT:   DW_AT_decl_file ("{{.*}}tls-at-location.c")
-; CHECK-NEXT:   DW_AT_decl_line (1)
-; CHECK-NEXT:   DW_AT_location  (DW_OP_const8u 0x0, DW_OP_GNU_push_tls_address)
+; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu --aarch64-emit-debug-tls-location=0 -filetype=obj < %s \
+; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=NO-TLS
+
+; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu -filetype=obj < %s \
+; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=NO-TLS
+
+; TLS: .debug_info contents:
+; TLS: DW_TAG_variable
+; TLS:   DW_AT_name      ("var")
+; TLS-NEXT:   DW_AT_type      (0x{{.*}} "int")
+; TLS-NEXT:   DW_AT_external  (true)
+; TLS-NEXT:   DW_AT_decl_file ("{{.*}}tls-at-location.c")
+; TLS-NEXT:   DW_AT_decl_line (1)
+; TLS-NEXT:   DW_AT_location  (DW_OP_const8u 0x0, DW_OP_GNU_push_tls_address)
+
+; NO-TLS: .debug_info contents:
+; NO-TLS: DW_TAG_variable
+; NO-TLS-NOT: DW_AT_location
 
 @var = thread_local global i32 0, align 4, !dbg !0
 
