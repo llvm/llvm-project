@@ -9172,7 +9172,7 @@ public:
     auto TST = state.getDeclarator().getDeclSpec().getTypeSpecType();
     if (TST == TST_auto || TST == TST_decltype_auto || TST == TST_auto_type ||
         TST == TST_unspecified)
-      Res = Ctx.getAutoType(Res, TL.getAutoKeyword(), false);
+      Res = Ctx.getAutoType(DeducedKind::Deduced, Res, TL.getAutoKeyword());
     return Res;
   }
 
