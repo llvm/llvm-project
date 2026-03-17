@@ -130,7 +130,7 @@ bool lldb_private::formatters::swift::SwiftURL_SummaryProvider(
     return false;
 
   std::string base;
-  ValueObjectSP base_url_sp(valobj.GetChildMemberWithName(g__baseURL));
+  ValueObjectSP base_url_sp(valobj.GetChildAtNamePath({g__baseURL}));
   if (base_url_sp) {
     // `GetSyntheticValue()` + `HasChildren()` checks for non-nil Optional.
     if (ValueObjectSP synth = base_url_sp->GetSyntheticValue()) {
@@ -145,16 +145,10 @@ bool lldb_private::formatters::swift::SwiftURL_SummaryProvider(
   if (!rel_str_sp->GetSummaryAsCString(summary, options))
     return false;
 
-  auto unquoted = [](llvm::StringRef s) {
-    if (s.front() == '"' and s.back() == '"')
-      return s.drop_front().drop_back();
-    return s;
-  };
-
   // This format matches the implementation of _SwiftURL.description.
-  stream << unquoted(summary);
+  stream << summary;
   if (!base.empty())
-    stream << " -- " << unquoted(base);
+    stream << " -- " << base;
   return true;
 }
 

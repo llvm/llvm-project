@@ -56,14 +56,18 @@ class TestCase(TestBase):
             substrs=[
                 f"({foundation}.URL?)",
                 "relativeURL",
-                "relative -- https://www.example.com/",
+                "relative",
+                "--",
+                "https://www.example.com/",
             ],
         )
         self.expect(
             "expression -d run -- relativeURL",
             substrs=[
                 f"({foundation}.URL?)",
-                "relative -- https://www.example.com/",
+                "relative",
+                "--",
+                "https://www.example.com/",
             ],
         )
 
