@@ -7,6 +7,7 @@
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
 ; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
+; CHECK-NEXT:   ascending-csr-spill-order        - Reverse CSR spill order for ascending address LD/ST fusion.
 ; CHECK-NEXT:   b                                - 'B' (the collection of the Zba, Zbb, Zbs extensions).
 ; CHECK-NEXT:   c                                - 'C' (Compressed Instructions).
 ; CHECK-NEXT:   conditional-cmv-fusion           - Enable branch+c.mv fusion.

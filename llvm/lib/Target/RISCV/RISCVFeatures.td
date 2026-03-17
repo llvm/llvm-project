@@ -2038,6 +2038,12 @@ def TuneVXRMPipelineFlush
     : RISCVSimpleTuneFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
                              "true", "VXRM writes causes pipeline flush">;
 
+def TuneAscendingCSRSpillOrder
+    : RISCVSimpleTuneFeature<"ascending-csr-spill-order",
+                             "HasAscendingCSRSpillOrder", "true",
+                             "Reverse CSR spill order for ascending address "
+                             "LD/ST fusion">;
+
 def TunePreferVsetvliOverReadVLENB
     : RISCVSimpleTuneFeature<
           "prefer-vsetvli-over-read-vlenb", "PreferVsetvliOverReadVLENB",
