@@ -1261,7 +1261,7 @@ public:
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
-            ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
+            Opcode == Instruction::ZExt ? ISD::ZEXTLOAD : ISD::SEXTLOAD;
         if (I) {
           if (auto *LI = dyn_cast<LoadInst>(I->getOperand(0))) {
             if (DstLT.first == SrcLT.first &&

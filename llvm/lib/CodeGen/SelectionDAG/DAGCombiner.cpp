@@ -9918,17 +9918,15 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     return SDValue();
   auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->Src.value());
 
-  // Before legalize we can introduce too wide illegal loads which will be later
-  // split into legal sized loads. This enables us to combine i64 load by i8
-  // patterns to a couple of i32 loads on 32 bit targets.
-  if (LegalOperations) {
-    if (!TLI.isLoadLegal(VT, MemVT, FirstLoad->getAlign(),
-                         FirstLoad->getAddressSpace(),
-                         NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, false)) {
-
-      return SDValue();
-    }
-  }
+  // Before legalization we allow introducing loads that are wider than legal,
+  // which will later be split into legally sized loads. This enables us to
+  // combine, for example, i8 loads forming an i64 into an i64 load, which get
+  // then gets split up into couple of i32 loads on 32 bit targets.
+  if (LegalOperations &&
+      !TLI.isLoadLegal(VT, MemVT, FirstLoad->getAlign(),
+                       FirstLoad->getAddressSpace(),
+                       NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, false))
+    return SDValue();
 
   // The node we are looking at matches with the pattern, check if we can
   // replace it with a single (possibly zero-extended) load and bswap + shift if
