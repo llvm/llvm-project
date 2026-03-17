@@ -116,6 +116,8 @@ Attribute Parser::parseAttribute(Type type) {
   // Parse an extended attribute, i.e. alias or dialect attribute.
   case Token::hash_identifier: {
     const char *tokenEnd = getTokenSpelling().end();
+    // Keep plain `#loc` aliases on the extended-attribute path; only `#loc(`
+    // denotes builtin location syntax in attribute position.
     if (getTokenSpelling() == "#loc" && tokenEnd != state.lex.getBufferEnd() &&
         *tokenEnd == '(') {
       consumeToken(Token::hash_identifier);
