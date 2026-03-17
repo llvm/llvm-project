@@ -1,0 +1,9 @@
+## Test reading a z/OS archive.
+
+# RUN: llvm-ar t %p/Inputs/zos-archive-test.a | FileCheck %s --check-prefix=LIST
+# RUN: llvm-nm --print-armap %p/Inputs/zos-archive-test.a | FileCheck %s --check-prefix=SYMS
+
+# LIST: foo.o
+
+# SYMS: Archive map
+# SYMS-NEXT: foo in foo.o
