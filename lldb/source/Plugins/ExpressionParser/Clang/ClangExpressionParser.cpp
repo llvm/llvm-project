@@ -776,18 +776,15 @@ ClangExpressionParser::ClangExpressionParser(
   if (auto *target_info = TargetInfo::CreateTargetInfo(
           m_compiler->getDiagnostics(),
           m_compiler->getInvocation().getTargetOpts())) {
-    if (log) {
-      LLDB_LOGF(log, "Target datalayout string: '%s'",
-                target_info->getDataLayoutString());
-      LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
-      LLDB_LOGF(log, "Target vector alignment: %d",
-                target_info->getMaxVectorAlign());
-    }
+    LLDB_LOGF(log, "Target datalayout string: '%s'",
+              target_info->getDataLayoutString());
+    LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
+    LLDB_LOGF(log, "Target vector alignment: %d",
+              target_info->getMaxVectorAlign());
     m_compiler->setTarget(target_info);
   } else {
-    if (log)
-      LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
-                m_compiler->getTargetOpts().Triple.c_str());
+    LLDB_LOGF(log, "Failed to create TargetInfo for '%s'",
+              m_compiler->getTargetOpts().Triple.c_str());
 
     lldbassert(false && "Failed to create TargetInfo.");
   }

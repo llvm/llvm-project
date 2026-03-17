@@ -655,7 +655,7 @@ std::optional<lldb_private::Address> DynamicLoaderDarwin::GetStartAddress() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
   auto log_err = [log](llvm::StringLiteral err_msg) -> std::nullopt_t {
-    LLDB_LOGV(log, "{}", err_msg);
+    LLDB_LOG_VERBOSE(log, "{}", err_msg);
     return std::nullopt;
   };
 
@@ -846,17 +846,14 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
 // Dump a Segment to the file handle provided.
 void DynamicLoaderDarwin::Segment::PutToLog(Log *log,
                                             lldb::addr_t slide) const {
-  if (log) {
-    if (slide == 0)
-      LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
-                name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
-    else
-      LLDB_LOGF(log,
-                "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64
-                ") slide = 0x%" PRIx64,
-                name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize,
-                slide);
-  }
+  if (slide == 0)
+    LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
+              name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
+  else
+    LLDB_LOGF(
+        log,
+        "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ") slide = 0x%" PRIx64,
+        name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize, slide);
 }
 
 lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {

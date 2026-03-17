@@ -118,11 +118,9 @@ uint32_t StackFrameList::GetCurrentInlinedDepth() {
     if (cur_pc != m_current_inlined_pc) {
       m_current_inlined_pc = LLDB_INVALID_ADDRESS;
       m_current_inlined_depth = UINT32_MAX;
-      Log *log = GetLog(LLDBLog::Step);
-      if (log && log->GetVerbose())
-        LLDB_LOGF(
-            log,
-            "GetCurrentInlinedDepth: invalidating current inlined depth.\n");
+      LLDB_LOGF_VERBOSE(
+          GetLog(LLDBLog::Step),
+          "GetCurrentInlinedDepth: invalidating current inlined depth.\n");
     }
     return m_current_inlined_depth;
   } else {
@@ -147,19 +145,16 @@ void StackFrameList::ResetCurrentInlinedDepth() {
     m_current_inlined_depth = *inline_depth;
     m_current_inlined_pc = m_thread.GetRegisterContext()->GetPC();
 
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log,
-                "ResetCurrentInlinedDepth: setting inlined "
-                "depth: %d 0x%" PRIx64 ".\n",
-                m_current_inlined_depth, m_current_inlined_pc);
+    LLDB_LOGF_VERBOSE(log,
+                      "ResetCurrentInlinedDepth: setting inlined "
+                      "depth: %d 0x%" PRIx64 ".\n",
+                      m_current_inlined_depth, m_current_inlined_pc);
   } else {
     std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
     m_current_inlined_pc = LLDB_INVALID_ADDRESS;
     m_current_inlined_depth = UINT32_MAX;
-    if (log && log->GetVerbose())
-      LLDB_LOGF(
-          log,
-          "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
+    LLDB_LOGF_VERBOSE(
+        log, "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
   }
 }
 
