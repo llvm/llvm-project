@@ -58265,10 +58265,6 @@ static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::FP_TO_UINT_SAT, DL, MVT::v2i64, NewSrc);
   }
 
-  // Scalar/scalar or vector/vector only.
-  if (SrcVT.isVector() != DstVT.isVector())
-    return SDValue();
-
   bool IsVector = SrcVT.isVector();
   if (IsVector &&
       (!SrcVT.isFixedLengthVector() || !DstVT.isFixedLengthVector() ||
