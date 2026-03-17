@@ -532,10 +532,27 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
   const bool IsFP = OldVal->getType()->isFloatingPointTy();
 
   if (IsFP) {
-    llvm::Intrinsic::ID IID = (Op == AtomicExpr::AO__atomic_max_fetch ||
-                               Op == AtomicExpr::AO__scoped_atomic_max_fetch)
-                                  ? llvm::Intrinsic::maxnum
-                                  : llvm::Intrinsic::minnum;
+    llvm::Intrinsic::ID IID;
+    if (Op == AtomicExpr::AO__atomic_max_fetch ||
+        Op == AtomicExpr::AO__scoped_atomic_max_fetch)
+      IID = llvm::Intrinsic::maxnum;
+    else if (Op == AtomicExpr::AO__atomic_min_fetch ||
+             Op == AtomicExpr::AO__scoped_atomic_min_fetch)
+      IID = llvm::Intrinsic::minnum;
+    else if (Op == AtomicExpr::AO__atomic_fmaximum_fetch ||
+             Op == AtomicExpr::AO__scoped_atomic_fmaximum_fetch)
+      IID = llvm::Intrinsic::maximum;
+    else if (Op == AtomicExpr::AO__atomic_fminimum_fetch ||
+             Op == AtomicExpr::AO__scoped_atomic_fminimum_fetch)
+      IID = llvm::Intrinsic::minimum;
+    else if (Op == AtomicExpr::AO__atomic_fmaximum_num_fetch ||
+             Op == AtomicExpr::AO__scoped_atomic_fmaximum_num_fetch)
+      IID = llvm::Intrinsic::maximumnum;
+    else if (Op == AtomicExpr::AO__atomic_fminimum_num_fetch ||
+             Op == AtomicExpr::AO__scoped_atomic_fminimum_num_fetch)
+      IID = llvm::Intrinsic::minimumnum;
+    else
+      llvm_unreachable("Unexpected atomic FP min/max operation");
 
     return Builder.CreateBinaryIntrinsic(IID, OldVal, RHS, llvm::FMFSource(),
                                          "newval");
@@ -547,10 +564,18 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
     llvm_unreachable("Unexpected min/max operation");
   case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
+  case AtomicExpr::AO__atomic_fmaximum_fetch:
+  case AtomicExpr::AO__scoped_atomic_fmaximum_fetch:
+  case AtomicExpr::AO__atomic_fmaximum_num_fetch:
+  case AtomicExpr::AO__scoped_atomic_fmaximum_num_fetch:
     Pred = IsSigned ? llvm::CmpInst::ICMP_SGT : llvm::CmpInst::ICMP_UGT;
     break;
   case AtomicExpr::AO__atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
+  case AtomicExpr::AO__atomic_fminimum_fetch:
+  case AtomicExpr::AO__scoped_atomic_fminimum_fetch:
+  case AtomicExpr::AO__atomic_fminimum_num_fetch:
+  case AtomicExpr::AO__scoped_atomic_fminimum_num_fetch:
     Pred = IsSigned ? llvm::CmpInst::ICMP_SLT : llvm::CmpInst::ICMP_ULT;
     break;
   }
@@ -707,6 +732,28 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
                     : llvm::AtomicRMWInst::UMin);
     break;
 
+  case AtomicExpr::AO__atomic_fminimum_fetch:
+  case AtomicExpr::AO__scoped_atomic_fminimum_fetch:
+    PostOpMinMax = true;
+    [[fallthrough]];
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+    assert(E->getValueType()->isFloatingType() &&
+           "fminimum operations only support floating-point types");
+    Op = llvm::AtomicRMWInst::FMinimum;
+    break;
+
+  case AtomicExpr::AO__atomic_fminimum_num_fetch:
+  case AtomicExpr::AO__scoped_atomic_fminimum_num_fetch:
+    PostOpMinMax = true;
+    [[fallthrough]];
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+    assert(E->getValueType()->isFloatingType() &&
+           "fminimum_num operations only support floating-point types");
+    Op = llvm::AtomicRMWInst::FMinimumNum;
+    break;
+
   case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
     PostOpMinMax = true;
@@ -721,6 +768,28 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
              : (E->getValueType()->isSignedIntegerType()
                     ? llvm::AtomicRMWInst::Max
                     : llvm::AtomicRMWInst::UMax);
+    break;
+
+  case AtomicExpr::AO__atomic_fmaximum_fetch:
+  case AtomicExpr::AO__scoped_atomic_fmaximum_fetch:
+    PostOpMinMax = true;
+    [[fallthrough]];
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+    assert(E->getValueType()->isFloatingType() &&
+           "fmaximum operations only support floating-point types");
+    Op = llvm::AtomicRMWInst::FMaximum;
+    break;
+
+  case AtomicExpr::AO__atomic_fmaximum_num_fetch:
+  case AtomicExpr::AO__scoped_atomic_fmaximum_num_fetch:
+    PostOpMinMax = true;
+    [[fallthrough]];
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
+    assert(E->getValueType()->isFloatingType() &&
+           "fmaximum_num operations only support floating-point types");
+    Op = llvm::AtomicRMWInst::FMaximumNum;
     break;
 
   case AtomicExpr::AO__atomic_and_fetch:
@@ -1049,10 +1118,18 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
   case AtomicExpr::AO__scoped_atomic_add_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
+  case AtomicExpr::AO__scoped_atomic_fminimum_fetch:
+  case AtomicExpr::AO__scoped_atomic_fmaximum_fetch:
+  case AtomicExpr::AO__scoped_atomic_fminimum_num_fetch:
+  case AtomicExpr::AO__scoped_atomic_fmaximum_num_fetch:
     [[fallthrough]];
 
   case AtomicExpr::AO__atomic_fetch_and:
@@ -1095,6 +1172,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_exchange_n:
   case AtomicExpr::AO__scoped_atomic_fetch_uinc:
   case AtomicExpr::AO__scoped_atomic_fetch_udec:
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__atomic_fminimum_fetch:
+  case AtomicExpr::AO__atomic_fmaximum_fetch:
+  case AtomicExpr::AO__atomic_fminimum_num_fetch:
+  case AtomicExpr::AO__atomic_fmaximum_num_fetch:
     Val1 = EmitValToTemp(*this, E->getVal1());
     break;
   }
@@ -1294,6 +1379,22 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__opencl_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_max_fetch:
+    case AtomicExpr::AO__atomic_fetch_fminimum:
+    case AtomicExpr::AO__atomic_fetch_fmaximum:
+    case AtomicExpr::AO__atomic_fetch_fminimum_num:
+    case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+    case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+    case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+    case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+    case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
+    case AtomicExpr::AO__atomic_fminimum_fetch:
+    case AtomicExpr::AO__atomic_fmaximum_fetch:
+    case AtomicExpr::AO__atomic_fminimum_num_fetch:
+    case AtomicExpr::AO__atomic_fmaximum_num_fetch:
+    case AtomicExpr::AO__scoped_atomic_fminimum_fetch:
+    case AtomicExpr::AO__scoped_atomic_fmaximum_fetch:
+    case AtomicExpr::AO__scoped_atomic_fminimum_num_fetch:
+    case AtomicExpr::AO__scoped_atomic_fmaximum_num_fetch:
     case AtomicExpr::AO__scoped_atomic_fetch_uinc:
     case AtomicExpr::AO__scoped_atomic_fetch_udec:
     case AtomicExpr::AO__atomic_test_and_set:
