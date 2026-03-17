@@ -38,17 +38,17 @@
 // CHECK-DAG: tensor<32x!test_ui8>
 "test.op"() : () -> tensor<32x!test.int<unsigned, 8>>
 
-// CHECK-DAG: #[[LOC_NESTED:.+]] = loc("nested")
-// CHECK-DAG: #[[LOC_RAW:.+]] = loc("test.mlir":10:8)
-// CHECK-DAG: = loc(fused<#[[LOC_NESTED]]>[#[[LOC_RAW]]])
-"test.op"() {alias_test = loc(fused<loc("nested")>["test.mlir":10:8])} : () -> ()
+// CHECK-DAG: #[[LOC_NESTED:.+]] = #loc("nested")
+// CHECK-DAG: #[[LOC_RAW:.+]] = #loc("test.mlir":10:8)
+// CHECK-DAG: = #loc(fused<#[[LOC_NESTED]]>[#[[LOC_RAW]]])
+"test.op"() {alias_test = #loc(fused<#loc("nested")>["test.mlir":10:8])} : () -> ()
 
 // -----
 
 // Check proper ordering of intermixed attribute/type aliases.
 // CHECK: !tuple = tuple<
-// CHECK: = loc(fused<!tuple
-"test.op"() {alias_test = loc(fused<tuple<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>>["test.mlir":10:8])} : () -> ()
+// CHECK: = #loc(fused<!tuple
+"test.op"() {alias_test = #loc(fused<tuple<i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>>["test.mlir":10:8])} : () -> ()
 
 // -----
 
@@ -60,9 +60,9 @@
 // -----
 
 // Check that we don't print aliases for things that aren't printed.
-// CHECK: = loc(fused<memref<1xi32>
+// CHECK: = #loc(fused<memref<1xi32>
 // CHECK-NOT: #map
-"test.op"() {alias_test = loc(fused<memref<1xi32, affine_map<(d0) -> (d0)>>>["test.mlir":10:8])} : () -> ()
+"test.op"() {alias_test = #loc(fused<memref<1xi32, affine_map<(d0) -> (d0)>>>["test.mlir":10:8])} : () -> ()
 
 // -----
 
@@ -84,7 +84,7 @@
 
 #keep_aliased = "alias_test:dot_in_name"
 #cond_alias = #test.conditional_alias<#keep_aliased>
-#no_alias = loc(fused<#cond_alias>["test.mlir":1:1])
+#no_alias = #loc(fused<#cond_alias>["test.mlir":1:1])
 
 // CHECK: #[[TEST_ALIAS:.+]] = "alias_test:dot_in_name"
 // CHECK: fused<#test.conditional_alias<#[[TEST_ALIAS]]>

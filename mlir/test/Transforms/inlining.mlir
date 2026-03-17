@@ -79,8 +79,8 @@ func.func @inline_with_multi_return() -> i32 {
 
 // Check that location information is updated for inlined instructions.
 
-#inline_stack1 = loc(callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6 at "mysource3.cc":16:2)))
-#inline_stack2 = loc(callsite("mysource4.cc":55:4 at callsite("mysource5.cc":25:8 at "mysource6.cc":32:4)))
+#inline_stack1 = #loc(callsite("mysource1.cc":10:8 at callsite("mysource2.cc":13:6 at "mysource3.cc":16:2)))
+#inline_stack2 = #loc(callsite("mysource4.cc":55:4 at callsite("mysource5.cc":25:8 at "mysource6.cc":32:4)))
 
 // INLINE-LOC-LABEL: func @func_with_file_locations
 func.func @func_with_file_locations(%c : i32) -> i32 {

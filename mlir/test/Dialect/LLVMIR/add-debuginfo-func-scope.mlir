@@ -6,7 +6,7 @@
 // CHECK: loc(#loc[[LOC:[0-9]+]])
 // CHECK: #di_file = #llvm.di_file<"<unknown>" in "">
 // CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "func_no_debug", linkageName = "func_no_debug", file = #di_file, line = 1, scopeLine = 1, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
-// CHECK: #loc[[LOC]] = loc(fused<#di_subprogram>
+// CHECK: #loc[[LOC]] = #loc(fused<#di_subprogram>
 module {
   llvm.func @func_no_debug() {
     llvm.return loc(unknown)
@@ -31,7 +31,7 @@ module {
 // CHECK: loc(#loc[[LOC:[0-9]+]])
 // CHECK: #di_file = #llvm.di_file<"<unknown>" in "">
 // CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "func_with_debug", linkageName = "func_with_debug", file = #di_file, line = 42, scopeLine = 42, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
-// CHECK: #loc[[LOC]] = loc(fused<#di_subprogram>
+// CHECK: #loc[[LOC]] = #loc(fused<#di_subprogram>
 // CHECK_OTHER_KIND: emissionKind = DebugDirectivesOnly
 module {
   llvm.func @func_with_debug() {
@@ -40,11 +40,11 @@ module {
 } loc(#loc)
 #di_file = #llvm.di_file<"<unknown>" in "">
 #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
-#loc = loc("foo":0:0)
-#loc1 = loc(unknown)
+#loc = #loc("foo":0:0)
+#loc1 = #loc(unknown)
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
 #di_subprogram = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_compile_unit, scope = #di_file, name = "func_with_debug", linkageName = "func_with_debug", file = #di_file, line = 42, scopeLine = 42, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
-#loc2 = loc(fused<#di_subprogram>[#loc1])
+#loc2 = #loc(fused<#di_subprogram>[#loc1])
 
 // -----
 
@@ -55,11 +55,11 @@ module {
 // CHECK: loc(#loc[[MODULELOC:[0-9]+]])
 // CHECK-DAG: #[[DI_FILE_MODULE:.+]] = #llvm.di_file<"bar.mlir" in "baz">
 // CHECK-DAG: #[[DI_FILE_FUNC:.+]] = #llvm.di_file<"file.mlir" in "">
-// CHECK-DAG: #loc[[FUNCFILELOC:[0-9]+]] = loc("file.mlir":9:8)
+// CHECK-DAG: #loc[[FUNCFILELOC:[0-9]+]] = #loc("file.mlir":9:8)
 // CHECK-DAG: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C, file = #[[DI_FILE_MODULE]], producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
 // CHECK-DAG: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #[[DI_FILE_FUNC]], name = "propagate_compile_unit", linkageName = "propagate_compile_unit", file = #[[DI_FILE_FUNC]], line = 9, scopeLine = 9, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
-// CHECK-DAG: #loc[[MODULELOC]] = loc(fused<#di_compile_unit>[#loc])
-// CHECK-DAG: #loc[[FUNCLOC]] = loc(fused<#di_subprogram>[#loc[[FUNCFILELOC]]
+// CHECK-DAG: #loc[[MODULELOC]] = #loc(fused<#di_compile_unit>[#loc])
+// CHECK-DAG: #loc[[FUNCLOC]] = #loc(fused<#di_subprogram>[#loc[[FUNCFILELOC]]
 module {
   llvm.func @propagate_compile_unit() {
     llvm.return loc(unknown)
@@ -67,7 +67,7 @@ module {
 } loc(#loc)
 #di_file = #llvm.di_file<"bar.mlir" in "baz">
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
-#loc = loc(fused<#di_compile_unit>["foo.mlir":2:1])
+#loc = #loc(fused<#di_compile_unit>["foo.mlir":2:1])
 
 // -----
 
@@ -91,16 +91,16 @@ module @multiple_funcs {
 // CHECK: #di_file1 = #llvm.di_file<"gpu_test.py" in "">
 // CHECK: #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 // CHECK: #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
-// CHECK: #loc3 = loc(callsite(#loc1 at #loc2))
+// CHECK: #loc3 = #loc(callsite(#loc1 at #loc2))
 // CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_compile_unit, scope = #di_file1, name = "func_inlined", linkageName = "func_inlined", file = #di_file1, line = 1150, scopeLine = 1150, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 // CHECK: #di_lexical_block_file = #llvm.di_lexical_block_file<scope = #di_subprogram, file = #di_file, discriminator = 0>
 
 
-#loc = loc("gpu_test.py":1150:34 to :43)
-#loc1 = loc("testing/parameterized.py":321:17 to :53)
-#loc2 = loc("testing/base.py":2904:19 to :56)
-#loc_1 = loc(callsite(#loc at #loc1))
-#loc21 = loc(callsite(#loc2 at #loc_1))
+#loc = #loc("gpu_test.py":1150:34 to :43)
+#loc1 = #loc("testing/parameterized.py":321:17 to :53)
+#loc2 = #loc("testing/base.py":2904:19 to :56)
+#loc_1 = #loc(callsite(#loc at #loc1))
+#loc21 = #loc(callsite(#loc2 at #loc_1))
 
 module {
   llvm.func @func_inlined() {
@@ -151,8 +151,8 @@ module {
 // CHECK: #di_subprogram = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_compile_unit, scope = #di_file1, name = "func_cross_file_op", linkageName = "func_cross_file_op", file = #di_file1, line = 5, scopeLine = 5, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
 // CHECK: #di_lexical_block_file = #llvm.di_lexical_block_file<scope = #di_subprogram, file = #di_file2, discriminator = 0>
 
-#loc = loc("caller.py":5:1)
-#loc1 = loc("callee.py":10:5)
+#loc = #loc("caller.py":5:1)
+#loc1 = #loc("callee.py":10:5)
 
 module {
   llvm.func @func_cross_file_op() {
@@ -169,10 +169,9 @@ func.func @test_func() {
   return
 } loc(#loc2)
 
-#loc = loc("a.py":1150:34)
-#loc1 = loc("b.py":321:17)
-#loc2 = loc(callsite(#loc at #loc1))
-
+#loc = #loc("a.py":1150:34)
+#loc1 = #loc("b.py":321:17)
+#loc2 = #loc(callsite(#loc at #loc1))
 
 // -----
 
@@ -181,6 +180,6 @@ llvm.func @callsite_unknown_callee() {
   llvm.return loc(#loc_cuc2)
 } loc(#loc_cuc0)
 
-#loc_cuc0 = loc("a.py":1:1)
-#loc_cuc1 = loc(unknown)
-#loc_cuc2 = loc(callsite(#loc_cuc1 at #loc_cuc0))
+#loc_cuc0 = #loc("a.py":1:1)
+#loc_cuc1 = #loc(unknown)
+#loc_cuc2 = #loc(callsite(#loc_cuc1 at #loc_cuc0))

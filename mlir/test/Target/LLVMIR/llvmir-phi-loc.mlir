@@ -20,10 +20,10 @@ llvm.func @test_phi_locations(%arg0: !llvm.ptr)  {
  name = "test_phi_locations", file = #file, subprogramFlags = Definition,
  type = #sp_ty>
 
-#loc1 = loc("test.f90":15:22)
-#loc2 = loc("test.f90":8:2)
-#loc3 = loc("test.f90":9:5)
-#loc4 = loc(fused<#sp>[#loc1])
+#loc1 = #loc("test.f90":15:22)
+#loc2 = #loc("test.f90":8:2)
+#loc3 = #loc("test.f90":9:5)
+#loc4 = #loc(fused<#sp>[#loc1])
 
 // CHECK-LABEL: define void @test_phi_locations
 // CHECK: phi i32{{.*}}!dbg ![[LOC1:[0-9]+]]

@@ -5,7 +5,7 @@
 // CHECK-NEXT: mysource2:1:0: error: test diagnostic
 // CHECK-NEXT: mysource3:2:0: note: called from
 func.func private @test1() attributes {
-  test.loc = loc(callsite("foo"("mysource1":0:0) at callsite("mysource2":1:0 at "mysource3":2:0)))
+  test.loc = #loc(callsite("foo"("mysource1":0:0) at callsite("mysource2":1:0 at "mysource3":2:0)))
 }
 
 // -----
@@ -13,5 +13,5 @@ func.func private @test1() attributes {
 // CHECK-LABEL: Test 'test2'
 // CHECK-NEXT: mysource1:0:0: error: test diagnostic
 func.func private @test2() attributes {
-  test.loc = loc("mysource1":0:0)
+  test.loc = #loc("mysource1":0:0)
 }

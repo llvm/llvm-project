@@ -2567,7 +2567,9 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
     printResourceHandle(resourceAttr.getRawHandle());
     os << ">";
   } else if (auto locAttr = llvm::dyn_cast<LocationAttr>(attr)) {
-    printLocation(locAttr);
+    os << "#loc(";
+    printLocationInternal(locAttr, /*pretty=*/false, /*isTopLevel=*/true);
+    os << ')';
   } else {
     llvm::report_fatal_error("Unknown builtin attribute");
   }

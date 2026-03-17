@@ -37,9 +37,9 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_gpu =
   name = "target", file = #di_file, subprogramFlags = "Definition",
   type = #di_subroutine_type>
 
-#loc1 = loc("test.f90":7:15)
-#loc2 = loc("test.f90":1:7)
-#loc3 = loc("test.f90":3:7)
-#loc4 = loc("test.f90":16:7)
-#loc6 = loc(fused<#di_subprogram>[#loc1])
-#loc7 = loc(fused<#di_subprogram1>[#loc3])
+#loc1 = #loc("test.f90":7:15)
+#loc2 = #loc("test.f90":1:7)
+#loc3 = #loc("test.f90":3:7)
+#loc4 = #loc("test.f90":16:7)
+#loc6 = #loc(fused<#di_subprogram>[#loc1])
+#loc7 = #loc(fused<#di_subprogram1>[#loc3])

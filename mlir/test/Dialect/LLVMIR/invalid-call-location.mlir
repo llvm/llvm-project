@@ -18,11 +18,11 @@
   name = "invalid_call_debug_locs", file = #di_file,
   subprogramFlags = "Definition|Optimized"
 >
-#loc = loc(unknown)
-#loc1 = loc("file.cpp":24:0)
-#loc2 = loc(fused<#di_subprogram>[#loc1])
-#loc3 = loc("file.cpp":42:0)
-#loc4 = loc(fused<#di_subprogram1>[#loc3])
+#loc = #loc(unknown)
+#loc1 = #loc("file.cpp":24:0)
+#loc2 = #loc(fused<#di_subprogram>[#loc1])
+#loc3 = #loc("file.cpp":42:0)
+#loc4 = #loc(fused<#di_subprogram1>[#loc3])
 
 llvm.func @missing_debug_loc() {
   llvm.return

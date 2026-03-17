@@ -18,4 +18,4 @@ llvm.func @test_byval() {
   llvm.return
 }
 
-// CHECK: #[[LOC]] = loc("inlining-debuginfo.mlir":14:2)
+// CHECK: #[[LOC]] = #loc("inlining-debuginfo.mlir":14:2)

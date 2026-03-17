@@ -18,10 +18,10 @@ module attributes {omp.is_target_device = false} {
 #sp1 = #llvm.di_subprogram<id = distinct[2]<>, compileUnit = #cu, scope = #file,
  name = "__omp_offloading_target", file = #file, subprogramFlags = "Definition",
  type = #sp_ty>
-#loc1 = loc("target.f90":1:1)
-#loc2 = loc("target.f90":46:3)
-#loc3 = loc(fused<#sp>[#loc1])
-#loc4 = loc(fused<#sp1>[#loc2])
+#loc1 = #loc("target.f90":1:1)
+#loc2 = #loc("target.f90":46:3)
+#loc3 = #loc(fused<#sp>[#loc1])
+#loc4 = #loc(fused<#sp1>[#loc2])
 
 // CHECK: ![[SP:.*]] = {{.*}}!DISubprogram(name: "__omp_offloading_target"{{.*}})
 

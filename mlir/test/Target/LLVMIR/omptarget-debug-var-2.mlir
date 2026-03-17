@@ -53,11 +53,11 @@ module attributes {omp.is_target_device = false} {
   llvm.mlir.global internal @_QFEarr() {addr_space = 0 : i32, dbg_exprs = [#g_var_expr]} : !llvm.array<10 x i32> {
   } loc(#loc4)
 }
-#loc1 = loc("target.f90":4:7)
-#loc2 = loc("target.f90":11:7)
-#loc3 = loc(fused<#sp>[#loc2])
-#loc4 = loc(fused<#g_var>[#loc1])
-#loc5 = loc(fused<#sp1>[#loc2])
+#loc1 = #loc("target.f90":4:7)
+#loc2 = #loc("target.f90":11:7)
+#loc3 = #loc(fused<#sp>[#loc2])
+#loc4 = #loc(fused<#g_var>[#loc1])
+#loc5 = #loc(fused<#sp1>[#loc2])
 
 // CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "target"{{.*}})
 // CHECK: !DILocalVariable(name: "x", arg: 1, scope: ![[SP]]{{.*}})

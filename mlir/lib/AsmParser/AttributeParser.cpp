@@ -43,6 +43,7 @@ using namespace mlir::detail;
 ///                      `:` (tensor-type | vector-type)
 ///                    | `strided` `<` `[` comma-separated-int-or-question `]`
 ///                      (`,` `offset` `:` integer-literal)? `>`
+///                    | `#loc` `(` location-instance `)`
 ///                    | distinct-attribute
 ///                    | extended-attribute
 ///
@@ -113,8 +114,21 @@ Attribute Parser::parseAttribute(Type type) {
   }
 
   // Parse an extended attribute, i.e. alias or dialect attribute.
-  case Token::hash_identifier:
+  case Token::hash_identifier: {
+    const char *tokenEnd = getTokenSpelling().end();
+    if (getTokenSpelling() == "#loc" && tokenEnd != state.lex.getBufferEnd() &&
+        *tokenEnd == '(') {
+      consumeToken(Token::hash_identifier);
+
+      LocationAttr locAttr;
+      if (parseToken(Token::l_paren, "expected '(' in location attribute") ||
+          parseLocationInstance(locAttr) ||
+          parseToken(Token::r_paren, "expected ')' in location attribute"))
+        return Attribute();
+      return locAttr;
+    }
     return parseExtendedAttr(type);
+  }
 
   // Parse floating point and integer attributes.
   case Token::floatliteral:
@@ -131,18 +145,6 @@ Attribute Parser::parseAttribute(Type type) {
     return (emitWrongTokenError(
                 "expected constant integer or floating point value"),
             nullptr);
-  }
-
-  // Parse a location attribute.
-  case Token::kw_loc: {
-    consumeToken(Token::kw_loc);
-
-    LocationAttr locAttr;
-    if (parseToken(Token::l_paren, "expected '(' in inline location") ||
-        parseLocationInstance(locAttr) ||
-        parseToken(Token::r_paren, "expected ')' in inline location"))
-      return Attribute();
-    return locAttr;
   }
 
   // Parse a sparse elements attribute.

@@ -24,10 +24,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 #sp1 = #llvm.di_subprogram<id = distinct[2]<>, compileUnit = #cu, scope = #file,
  name = "__omp_offloading_target", file = #file, subprogramFlags = "Definition",
  type = #sp_ty>
-#loc1 = loc("target.f90":1:1)
-#loc2 = loc("target.f90":46:3)
-#loc3 = loc(fused<#sp>[#loc1])
-#loc4 = loc(fused<#sp1>[#loc1])
+#loc1 = #loc("target.f90":1:1)
+#loc2 = #loc("target.f90":46:3)
+#loc3 = #loc(fused<#sp>[#loc1])
+#loc4 = #loc(fused<#sp1>[#loc1])
 
 // CHECK-DAG: ![[SP:.*]] = {{.*}}!DISubprogram(name: "__omp_offloading_target"{{.*}})
 // CHECK-DAG: !DILocation(line: 46, column: 3, scope: ![[SP]])

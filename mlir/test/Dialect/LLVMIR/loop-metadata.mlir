@@ -85,19 +85,19 @@ llvm.func @loop_annotation() {
 
 #di_file = #llvm.di_file<"metadata-loop.ll" in "/">
 
-// CHECK-DAG: #[[START_LOC:.*]] = loc("loop-metadata.mlir":42:4)
-#loc1 = loc("loop-metadata.mlir":42:4)
-// CHECK-DAG: #[[END_LOC:.*]] = loc("loop-metadata.mlir":52:4)
-#loc2 = loc("loop-metadata.mlir":52:4)
+// CHECK-DAG: #[[START_LOC:.*]] = #loc("loop-metadata.mlir":42:4)
+#loc1 = #loc("loop-metadata.mlir":42:4)
+// CHECK-DAG: #[[END_LOC:.*]] = #loc("loop-metadata.mlir":52:4)
+#loc2 = #loc("loop-metadata.mlir":52:4)
 
 #di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
 // CHECK-DAG: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<
 #di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "loop_locs", file = #di_file, subprogramFlags = Definition>
 
-// CHECK-DAG: #[[START_LOC_FUSED:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[START_LOC]]]
-#start_loc_fused = loc(fused<#di_subprogram>[#loc1])
-// CHECK-DAG: #[[END_LOC_FUSED:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[END_LOC]]]
-#end_loc_fused= loc(fused<#di_subprogram>[#loc2])
+// CHECK-DAG: #[[START_LOC_FUSED:.*]] = #loc(fused<#[[SUBPROGRAM]]>[#[[START_LOC]]]
+#start_loc_fused = #loc(fused<#di_subprogram>[#loc1])
+// CHECK-DAG: #[[END_LOC_FUSED:.*]] = #loc(fused<#[[SUBPROGRAM]]>[#[[END_LOC]]]
+#end_loc_fused= #loc(fused<#di_subprogram>[#loc2])
 
 // CHECK-DAG: #[[GROUP1:.*]] = #llvm.access_group<id = {{.*}}>
 // CHECK-DAG: #[[GROUP2:.*]] = #llvm.access_group<id = {{.*}}>

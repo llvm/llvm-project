@@ -230,8 +230,8 @@ llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.m
 #di_local_variable1 = #llvm.di_local_variable<scope = #di_lexical_block_file, name = "b", file = #di_file, type = #di_basic_type>
 #di_label = #llvm.di_label<scope = #di_lexical_block_file, name = "label", file = #di_file, line = 42>
 
-#loc0 = loc("foo.mlir":0:0)
-#loc1 = loc(callsite(fused<#di_lexical_block_file>[#loc0] at fused<#di_subprogram>["foo.mlir":4:2]))
+#loc0 = #loc("foo.mlir":0:0)
+#loc1 = #loc(callsite(fused<#di_lexical_block_file>[#loc0] at fused<#di_subprogram>["foo.mlir":4:2]))
 
 // CHECK-LABEL: define i32 @func_with_inlined_dbg_value(
 // CHECK-SAME: i32 %[[ARG:.*]]) !dbg ![[OUTER_FUNC:[0-9]+]]
@@ -266,7 +266,7 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
   file = #di_file, subprogramFlags = Definition>
 #di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "a", file = #di_file, type = #di_basic_type>
 
-#loc = loc("foo.mlir":0:0)
+#loc = #loc("foo.mlir":0:0)
 
 // CHECK-LABEL: define void @func_without_subprogram(
 // CHECK-SAME: i32 %[[ARG:.*]])
@@ -395,8 +395,8 @@ llvm.func @imp_fn() {
   compileUnit = #di_compile_unit, scope = #di_file, name = "imp_fn",
   file = #di_file, subprogramFlags = Definition, type = #di_subroutine_type,
   retainedNodes = #di_imported_entity_1, #di_imported_entity_2>
-#loc1 = loc("test.f90":12:14)
-#loc2 = loc(fused<#di_subprogram>[#loc1])
+#loc1 = #loc("test.f90":12:14)
+#loc2 = #loc(fused<#di_subprogram>[#loc1])
 
 // CHECK-DAG: ![[SP:[0-9]+]] = {{.*}}!DISubprogram(name: "imp_fn"{{.*}}retainedNodes: ![[NODES:[0-9]+]])
 // CHECK-DAG: ![[NODES]] = !{![[NODE1:[0-9]+]], ![[NODE2:[0-9]+]]}
@@ -486,7 +486,7 @@ llvm.func @func_debug_directives() {
   subprogramFlags = Definition,
   type = #di_subroutine_outer>
 
-#loc3 = loc(fused<#di_subprogram_outer>["test.mlir":1:1])
+#loc3 = #loc(fused<#di_subprogram_outer>["test.mlir":1:1])
 
 // CHECK: @class_method
 // CHECK: ret void, !dbg ![[LOC:.*]]
@@ -627,8 +627,8 @@ llvm.func @fn_with_composite() {
  #llvm.di_generic_subrange<count = #lvar, lowerBound = #gv, stride = #gv>>
 #lvar2 = #llvm.di_local_variable<scope = #sp, name = "var", type = #comp_ty3>
 #lvar3 = #llvm.di_local_variable<scope = #sp, name = "var1", type = #comp_ty4>
-#loc1 = loc("test.f90": 1:1)
-#loc2 = loc(fused<#sp>[#loc1])
+#loc1 = #loc("test.f90": 1:1)
+#loc2 = #loc(fused<#sp>[#loc1])
 
 llvm.mlir.global external @gv() {dbg_exprs = [#gve]} : i64
 
@@ -680,8 +680,8 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
   llvm.return
 } loc(#loc2)
 
-#loc1 = loc("test.f90":1:1)
-#loc2 = loc(fused<#sp>[#loc1])
+#loc1 = #loc("test.f90":1:1)
+#loc2 = #loc(fused<#sp>[#loc1])
 
 // CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
 // CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)
@@ -710,8 +710,8 @@ llvm.func @test() {
   llvm.return
 } loc(#loc2)
 
-#loc1 = loc("test.f90":1:0)
-#loc2 = loc(fused<#sp>[#loc1])
+#loc1 = #loc("test.f90":1:0)
+#loc2 = #loc(fused<#sp>[#loc1])
 
 // CHECK: !DICommonBlock(scope: ![[SCOPE:[0-9]+]], declaration: null, name: "block", file: ![[FILE:[0-9]+]], line: 3)
 // CHECK: ![[SCOPE]] = {{.*}}!DISubprogram(name: "test"{{.*}})

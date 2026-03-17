@@ -17,7 +17,7 @@ module attributes {transform.with_named_sequence} {
     // CHECK-LABEL{LITERAL}: [[[ IR printer: START top-level ]]]
     // CHECK-NEXT:  module {
     // CHECK-LOC-LABEL{LITERAL}: [[[ IR printer: START top-level ]]]
-    // CHECK-LOC-NEXT:  #{{.+}} = loc(
+    // CHECK-LOC-NEXT:  #{{.+}} = #loc(
     // CHECK-LOC-NEXT:  module {
     transform.print {name = "START"}
 

@@ -9,7 +9,7 @@ func.func @merge_constants() -> (index, index, index, index) {
   %3 = arith.constant 42 : index loc("merge_constants":2:0)
   return %0, %1, %2, %3 : index, index, index, index
 }
-// CHECK: #[[UnknownLoc]] = loc(unknown)
+// CHECK: #[[UnknownLoc]] = #loc(unknown)
 
 // -----
 
@@ -26,9 +26,9 @@ func.func @simple_hoist(%arg0: memref<8xi32>) -> i32 {
 
   return %2 : i32
 }
-// CHECK-DAG: #[[ConstLoc0]] = loc("simple_hoist":0:0)
-// CHECK-DAG: #[[ConstLoc1]] = loc("simple_hoist":1:0)
-// CHECK-DAG: #[[ConstLoc2]] = loc("simple_hoist":2:0)
+// CHECK-DAG: #[[ConstLoc0]] = #loc("simple_hoist":0:0)
+// CHECK-DAG: #[[ConstLoc1]] = #loc("simple_hoist":1:0)
+// CHECK-DAG: #[[ConstLoc2]] = #loc("simple_hoist":2:0)
 
 // -----
 
@@ -43,4 +43,4 @@ func.func @hoist_and_merge(%arg0: memref<8xi32>) {
   }
   return
 } loc("hoist_and_merge":2:0)
-// CHECK: #[[UnknownLoc]] = loc(unknown)
+// CHECK: #[[UnknownLoc]] = #loc(unknown)

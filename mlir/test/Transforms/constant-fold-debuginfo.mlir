@@ -11,7 +11,7 @@ func.func @fold_and_merge() -> (i32, i32) {
 
   return %2, %3: i32, i32
 }
-// CHECK: #[[UnknownLoc]] = loc(unknown)
+// CHECK: #[[UnknownLoc]] = #loc(unknown)
 
 // -----
 
@@ -24,7 +24,7 @@ func.func @materialize_different_dialect() -> (f32, f32) {
 
   return %1, %2: f32, f32
 }
-// CHECK: #[[UnknownLoc]] = loc(unknown)
+// CHECK: #[[UnknownLoc]] = #loc(unknown)
 
 // -----
 
@@ -39,4 +39,4 @@ func.func @materialize_in_front(%arg0: memref<8xi32>) {
   }
   return
 } loc("materialize_in_front":3:0)
-// CHECK: #[[UnknownLoc]] = loc(unknown)
+// CHECK: #[[UnknownLoc]] = #loc(unknown)

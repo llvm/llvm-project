@@ -145,8 +145,8 @@ module @TestDistinct attributes {
 
 // CHECK-LABEL: @TestLocCallSite
 module @TestLocCallSite attributes {
-  // CHECK: bytecode.loc = loc(callsite("foo" at "mysource.cc":10:8))
-  bytecode.loc = loc(callsite("foo" at "mysource.cc":10:8))
+  // CHECK: bytecode.loc = #loc(callsite("foo" at "mysource.cc":10:8))
+  bytecode.loc = #loc(callsite("foo" at "mysource.cc":10:8))
 } {}
 
 //===----------------------------------------------------------------------===//
@@ -155,8 +155,8 @@ module @TestLocCallSite attributes {
 
 // CHECK-LABEL: @TestLocFileLineCol
 module @TestLocFileLineCol attributes {
-  // CHECK: bytecode.loc = loc("mysource.cc":10:8)
-  bytecode.loc = loc("mysource.cc":10:8)
+  // CHECK: bytecode.loc = #loc("mysource.cc":10:8)
+  bytecode.loc = #loc("mysource.cc":10:8)
 } {}
 
 //===----------------------------------------------------------------------===//
@@ -165,10 +165,10 @@ module @TestLocFileLineCol attributes {
 
 // CHECK-LABEL: @TestLocFused
 module @TestLocFused attributes {
-  // CHECK: bytecode.loc = loc(fused["foo", "mysource.cc":10:8])
-  // CHECK: bytecode.loc2 = loc(fused<"myPass">["foo", "foo2"])
-  bytecode.loc = loc(fused["foo", "mysource.cc":10:8]),
-  bytecode.loc2 = loc(fused<"myPass">["foo", "foo2"])
+  // CHECK: bytecode.loc = #loc(fused["foo", "mysource.cc":10:8])
+  // CHECK: bytecode.loc2 = #loc(fused<"myPass">["foo", "foo2"])
+  bytecode.loc = #loc(fused["foo", "mysource.cc":10:8]),
+  bytecode.loc2 = #loc(fused<"myPass">["foo", "foo2"])
 } {}
 
 //===----------------------------------------------------------------------===//
@@ -177,10 +177,10 @@ module @TestLocFused attributes {
 
 // CHECK-LABEL: @TestLocName
 module @TestLocName attributes {
-  // CHECK: bytecode.loc = loc("foo")
-  // CHECK: bytecode.loc2 = loc("foo"("mysource.cc":10:8))
-  bytecode.loc = loc("foo"),
-  bytecode.loc2 = loc("foo"("mysource.cc":10:8))
+  // CHECK: bytecode.loc = #loc("foo")
+  // CHECK: bytecode.loc2 = #loc("foo"("mysource.cc":10:8))
+  bytecode.loc = #loc("foo"),
+  bytecode.loc2 = #loc("foo"("mysource.cc":10:8))
 } {}
 
 //===----------------------------------------------------------------------===//
@@ -189,6 +189,6 @@ module @TestLocName attributes {
 
 // CHECK-LABEL: @TestLocUnknown
 module @TestLocUnknown attributes {
-  // CHECK: bytecode.loc = loc(unknown)
-  bytecode.loc = loc(unknown)
+  // CHECK: bytecode.loc = #loc(unknown)
+  bytecode.loc = #loc(unknown)
 } {}

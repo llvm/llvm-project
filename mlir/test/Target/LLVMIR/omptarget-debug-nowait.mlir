@@ -37,7 +37,7 @@ module attributes {omp.is_target_device = false} {
 #sp1 = #llvm.di_subprogram<compileUnit = #cu, name = "target", file=#file,
  subprogramFlags = "Definition", type = #sp_ty>
 
-#loc1 = loc("test.f90":6:7)
-#loc2 = loc(fused<#sp>[#loc1])
-#loc3 = loc(fused<#sp1>[#loc1])
+#loc1 = #loc("test.f90":6:7)
+#loc2 = #loc(fused<#sp>[#loc1])
+#loc3 = #loc(fused<#sp1>[#loc1])
 

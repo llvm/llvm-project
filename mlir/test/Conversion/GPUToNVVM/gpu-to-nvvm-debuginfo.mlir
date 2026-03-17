@@ -10,8 +10,8 @@
   file = #di_file, subprogramFlags = "Definition"
 >
 
-// CHECK-DAG: [[LOC:#[a-zA-Z0-9_]+]] = loc("foo.mlir":0:0)
-#loc = loc("foo.mlir":0:0)
+// CHECK-DAG: [[LOC:#[a-zA-Z0-9_]+]] = #loc("foo.mlir":0:0)
+#loc = #loc("foo.mlir":0:0)
 
 // Check that debug info metadata from the function is removed from the global location.
 gpu.module @test_module_1 {

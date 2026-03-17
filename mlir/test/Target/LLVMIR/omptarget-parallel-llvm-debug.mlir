@@ -30,11 +30,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i32 = dense<32> : vector<2xi64>,
     llvm.return
   } loc(#loc10)
 }
-#loc1 = loc("target.f90":1:7)
-#loc2 = loc("target.f90":3:18)
-#loc3 = loc("target.f90":6:18)
-#loc4 = loc(fused<#sp1>[#loc3])
-#loc10 = loc(fused<#sp>[#loc1])
+#loc1 = #loc("target.f90":1:7)
+#loc2 = #loc("target.f90":3:18)
+#loc3 = #loc("target.f90":6:18)
+#loc4 = #loc(fused<#sp1>[#loc3])
+#loc10 = #loc(fused<#sp>[#loc1])
 
 
 // CHECK: define internal void @__omp_offloading{{.*}}omp_par{{.*}} !dbg ![[FN:[0-9]+]] {
