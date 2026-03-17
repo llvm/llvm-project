@@ -22,6 +22,16 @@
 using namespace clang;
 using namespace clang::targets;
 
+namespace {
+static constexpr StringRef UniqueExtensions[] = {
+#define DECL_REQUIRED_EXTENSIONS
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
+#include "clang/Basic/riscv_sifive_vector_builtins.inc"
+#include "clang/Basic/riscv_vector_builtins.inc"
+#undef DECL_REQUIRED_EXTENSIONS
+};
+} // namespace
+
 ArrayRef<const char *> RISCVTargetInfo::getGCCRegNames() const {
   // clang-format off
   static const char *const GCCRegNames[] = {
@@ -224,6 +234,42 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // Currently we support the v1.0 RISC-V V intrinsics.
   Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
+
+  // These macros indicate which extensions have intrinsics supported by the
+  // toolchain, regardless of whether they are currently enabled.
+  for (llvm::StringRef Ext : UniqueExtensions) {
+    if (Ext == "64bit")
+      continue;
+    Builder.defineMacro("__riscv_v_intrinsic_" + Twine(Ext));
+  }
+
+  // Define macros for intrinsics that are not explicitly listed in
+  // RequiredFeatures in td files.
+  const char *ImplicitList[] = {"v",      "zve32x", "zve32f",
+                                "zve64x", "zve64f", "zve64d"};
+  for (const auto *Ext : ImplicitList)
+    Builder.defineMacro(Twine("__riscv_v_intrinsic_") + Ext);
+
+  // Define macros for shorthand extensions when all of intrinsics of its
+  // extensions are presented.
+  auto DefineSuperExt = [&](const char *Name, ArrayRef<const char *> Required) {
+    assert(Required.size() > 0);
+    std::string Condition =
+        std::string("#if defined(__riscv_v_intrinsic_") + Required[0] + ")";
+    for (size_t i = 1; i < Required.size(); ++i)
+      Condition +=
+          std::string(" && defined(__riscv_v_intrinsic_") + Required[i] + ")";
+    Builder.append(Condition);
+    Builder.defineMacro(Twine("__riscv_v_intrinsic_") + Name);
+    Builder.append("#endif");
+  };
+
+  DefineSuperExt("zvkn", {"zvkned", "zvknhb", "zvkb"});
+  DefineSuperExt("zvknc", {"zvkn", "zvbc"});
+  DefineSuperExt("zvkng", {"zvkn", "zvkg"});
+  DefineSuperExt("zvks", {"zvksed", "zvksh", "zvkb"});
+  DefineSuperExt("zvksc", {"zvks", "zvbc"});
+  DefineSuperExt("zvksg", {"zvks", "zvkg"});
 
   auto VScale = getVScaleRange(Opts, ArmStreamingKind::NotStreaming);
   if (VScale && VScale->first && VScale->first == VScale->second)

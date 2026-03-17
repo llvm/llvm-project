@@ -118,7 +118,8 @@ public:
 private:
   /// Create all intrinsics and add them to \p Out and SemaRecords.
   void createRVVIntrinsics(std::vector<std::unique_ptr<RVVIntrinsic>> &Out,
-                           std::vector<SemaRecord> *SemaRecords = nullptr);
+                           std::vector<SemaRecord> *SemaRecords = nullptr,
+                           std::set<StringRef> *UniqueExtensions = nullptr);
   /// Create all intrinsic records and SemaSignatureTable from SemaRecords.
   void createRVVIntrinsicRecords(std::vector<RVVIntrinsicRecord> &Out,
                                  SemaSignatureTable &SST,
@@ -504,7 +505,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
 
 void RVVEmitter::createBuiltins(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
-  createRVVIntrinsics(Defs);
+  std::set<StringRef> UniqueExtensions;
+  createRVVIntrinsics(Defs, nullptr, &UniqueExtensions);
 
   llvm::StringToOffsetTable Table;
   // Ensure offset zero is the empty string.
@@ -568,6 +570,12 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
     OS << "HeaderDesc::NO_HEADER, ALL_LANGUAGES},\n";
   }
   OS << "#endif // GET_RISCVV_BUILTIN_INFOS\n\n";
+
+  // Collect all unique required extensions for vector intrinsics
+  OS << "#ifdef DECL_REQUIRED_EXTENSIONS\n";
+  for (const auto &UE : UniqueExtensions)
+    OS << "  \"" << UE << "\",\n";
+  OS << "#endif // DECL_REQUIRED_EXTENSIONS\n\n";
 }
 
 void RVVEmitter::createCodeGen(raw_ostream &OS) {
@@ -626,7 +634,8 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
 
 void RVVEmitter::createRVVIntrinsics(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Out,
-    std::vector<SemaRecord> *SemaRecords) {
+    std::vector<SemaRecord> *SemaRecords,
+    std::set<StringRef> *UniqueExtensions) {
   for (const Record *R : Records.getAllDerivedDefinitions("RVVBuiltin")) {
     StringRef Name = R->getValueAsString("Name");
     StringRef SuffixProto = R->getValueAsString("Suffix");
@@ -675,6 +684,10 @@ void RVVEmitter::createRVVIntrinsics(
     SmallVector<PrototypeDescriptor> SuffixDesc = parsePrototypes(SuffixProto);
     SmallVector<PrototypeDescriptor> OverloadedSuffixDesc =
         parsePrototypes(OverloadedSuffixProto);
+
+    if (UniqueExtensions)
+      UniqueExtensions->insert(RequiredFeatures.begin(),
+                               RequiredFeatures.end());
 
     // Compute Builtin types
     auto Prototype = RVVIntrinsic::computeBuiltinTypes(
