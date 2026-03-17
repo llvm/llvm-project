@@ -24644,6 +24644,8 @@ public:
   // Record vectorization of the provided range
   void markRangeVectorized(unsigned StartIdx, unsigned Length,
                            unsigned &FirstUnvecStore, unsigned &MaxSliceEnd);
+  bool checkTreeSizes(const unsigned SliceStartIdx,
+                      const unsigned VF) const;
 
 private:
   bool isNotVectorized(const SizePair &P) const {
@@ -24858,11 +24860,11 @@ std::optional<unsigned> StoreChainContext::getCurrentVF() const {
     return std::nullopt;
   return CandidateVFs.front();
 }
-} // namespace
 
 /// Checks if the quadratic mean deviation is less than 90% of the mean size.
-static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes,
-                           const SmallVector<unsigned> &RangeSizesByIdx) {
+bool StoreChainContext::checkTreeSizes(const unsigned SliceStartIdx,
+                                       const unsigned VF) const {
+  auto Sizes = RangeSizes.slice(SliceStartIdx, VF);
   unsigned Num = 0;
   uint64_t Sum = std::accumulate(
       Sizes.begin(), Sizes.end(), static_cast<uint64_t>(0),
@@ -24894,8 +24896,6 @@ static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes,
                  Num;
   return Dev * 96 / (Mean * Mean) == 0;
 }
-
-namespace {
 
 /// A group of stores that we'll try to bundle together using vector ops.
 /// They are ordered using the signed distance of their address operand to the
@@ -25053,8 +25053,7 @@ bool SLPVectorizerPass::vectorizeStores(
                 FirstVecStore >= Context.End ? Context.End : FirstVecStore;
             for (unsigned SliceStartIdx = FirstUnvecStore;
                  SliceStartIdx + VF <= MaxSliceEnd;) {
-              if (!checkTreeSizes(Context.RangeSizes.slice(SliceStartIdx, VF),
-                                  RangeSizesByIdx)) {
+              if (!Context.checkTreeSizes(SliceStartIdx, VF)) {
                 ++SliceStartIdx;
                 continue;
               }
