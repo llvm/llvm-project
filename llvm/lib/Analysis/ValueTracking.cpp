@@ -9422,6 +9422,36 @@ enum PatternKind {
   MATCH_NONE  // Match none
 };
 
+std::optional<APFloat> getCompareAPFloat(const APFloat &C,
+                                         const DenormalMode Mode) {
+  if (!C.isDenormal())
+    return C;
+  DenormalMode::DenormalModeKind InMode = Mode.Input;
+  if (InMode == DenormalMode::DenormalModeKind::IEEE)
+    return C;
+  if (InMode == DenormalMode::DenormalModeKind::Dynamic)
+    return std::nullopt;
+  assert(InMode != DenormalMode::DenormalModeKind::Invalid &&
+         InMode != DenormalMode::DenormalModeKind::Dynamic &&
+         "Expected a concrete denormal input mode");
+  // flush denormal input
+  return APFloat::getZero(C.getSemantics(),
+                          InMode == DenormalMode::DenormalModeKind::PreserveSign
+                              ? C.isNegative()
+                              : false);
+}
+
+// If LHS Pred RHS is alwasy true, return true.
+// This function = FCmpInst::compare + DenormalMode
+bool compareFloat(const FCmpInst::Predicate Pred, const APFloat &LHS,
+                  const APFloat &RHS, const Function *CxtF) {
+  DenormalMode Mode = CxtF ? CxtF->getDenormalMode(LHS.getSemantics())
+                           : DenormalMode::getDynamic();
+  auto L = getCompareAPFloat(LHS, Mode);
+  auto R = getCompareAPFloat(RHS, Mode);
+  return L && R && FCmpInst::compare(*L, *R, Pred);
+}
+
 /// Classify a comparison into one of the simple operand-sharing patterns used
 /// by isTrueIntPredicate()/isTrueFPPredicate(), and optionally replace a
 /// constant side with a stronger constant operand found on the opposite side.
@@ -9436,13 +9466,15 @@ enum PatternKind {
 ///             supported constant.
 /// \param CRHS Parsed constant for the original RHS, or null if it is not a
 ///             supported constant.
+/// \param CxtF Context function to extract DenormalMode for float computing.
 ///
 /// Returns The recognized PatternKind, or MATCH_NONE if this helper cannot
 ///          normalize the comparison into a supported shape.
 template <typename ConstantT>
 PatternKind classifyCmpPatternAndAnchorConstants(
     CmpInst::Predicate Pred, const Value *&X, const Value *&LHS,
-    const Value *&RHS, const ConstantT *CLHS, const ConstantT *CRHS) {
+    const Value *&RHS, const ConstantT *CLHS, const ConstantT *CRHS,
+    const Function *CxtF = nullptr) {
   static_assert(std::is_same_v<ConstantT, APInt> ||
                     std::is_same_v<ConstantT, APFloat>,
                 "Only APInt and APFloat are supported");
@@ -9494,8 +9526,8 @@ PatternKind classifyCmpPatternAndAnchorConstants(
       } else {
         if (!match(Op, m_APFloat(C)))
           return false;
-        return IsConstLHS ? FCmpInst::compare(*CLHS, *C, Pred)
-                          : FCmpInst::compare(*C, *CRHS, Pred);
+        return IsConstLHS ? compareFloat(Pred, *CLHS, *C, CxtF)
+                          : compareFloat(Pred, *C, *CRHS, CxtF);
       }
     });
     if (It == Ops.end())
@@ -9791,7 +9823,7 @@ bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
 
 /// Return true if "fcmp Pred LHS RHS" is always true.
 bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
-                       const Value *RHS) {
+                       const Value *RHS, const Instruction *ContextI = nullptr) {
   if (Pred == CmpInst::FCMP_TRUE)
     return true;
 
@@ -9809,12 +9841,13 @@ bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
   const APFloat *CLHS = nullptr, *CRHS = nullptr;
   match(LHS, m_APFloat(CLHS));
   match(RHS, m_APFloat(CRHS));
+  const Function *CxtF = ContextI ? ContextI->getFunction() : nullptr;
   if (CLHS && CRHS)
-    return FCmpInst::compare(*CLHS, *CRHS, Pred);
+    return compareFloat(Pred, *CLHS, *CRHS, CxtF);
 
   const Value *X = nullptr;
   PatternKind PK =
-      classifyCmpPatternAndAnchorConstants(Pred, X, LHS, RHS, CLHS, CRHS);
+      classifyCmpPatternAndAnchorConstants(Pred, X, LHS, RHS, CLHS, CRHS, CxtF);
   if (PK == MATCH_NONE)
     return false;
 
@@ -9904,11 +9937,11 @@ bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
       // (X + CA) u<= (X + CB) if CA u<= CB
       if (match(LHS, m_c_FAdd(m_Specific(X), m_APFloat(CLHS))) &&
           match(RHS, m_c_FAdd(m_Specific(X), m_APFloat(CRHS))))
-        return FCmpInst::compare(*CLHS, *CRHS, FCmpInst::FCMP_ULE);
+        return compareFloat(FCmpInst::FCMP_ULE, *CLHS, *CRHS, CxtF);
       // (X - CA) u<= (X - CB) if CA u>= CB
       if (match(LHS, m_FSub(m_Specific(X), m_APFloat(CLHS))) &&
           match(RHS, m_FSub(m_Specific(X), m_APFloat(CRHS))))
-        return FCmpInst::compare(*CLHS, *CRHS, FCmpInst::FCMP_UGE);
+        return compareFloat(FCmpInst::FCMP_UGE, *CLHS, *CRHS, CxtF);
 
       // LHS u<= X u<= RHS --> LHS u<= RHS
       if (isTrueFPPredicate(CmpInst::FCMP_ULE, LHS, X) &&
@@ -9924,11 +9957,11 @@ bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
 /// Return true if "cmp Pred LHS RHS" is always true.
 /// This function only matches simple patterns and does not use Known* APIs.
 bool isTruePredicate(CmpInst::Predicate Pred, const Value *LHS,
-                     const Value *RHS) {
+                     const Value *RHS, const Instruction *ContextI = nullptr) {
   if (CmpInst::isIntPredicate(Pred))
     return isTrueIntPredicate(Pred, LHS, RHS);
   if (CmpInst::isFPPredicate(Pred))
-    return isTrueFPPredicate(Pred, LHS, RHS);
+    return isTrueFPPredicate(Pred, LHS, RHS, ContextI);
   return false;
 }
 
@@ -10382,9 +10415,9 @@ std::optional<bool> llvm::isImpliedByDomCondition(CmpPredicate Pred,
                                                   const Instruction *ContextI,
                                                   const DataLayout &DL) {
   // Check Pred, LHS, RHS just by data relation, e.g., x < max(x, y)
-  if (isTruePredicate(Pred, LHS, RHS))
+  if (isTruePredicate(Pred, LHS, RHS, ContextI))
     return true;
-  if (isTruePredicate(CmpInst::getInversePredicate(Pred), LHS, RHS))
+  if (isTruePredicate(CmpInst::getInversePredicate(Pred), LHS, RHS, ContextI))
     return false;
 
   // Check Pred, LHS, RHS by dom condtion.
