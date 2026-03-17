@@ -230,7 +230,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
-/// Collect either Loads or Stores grouped by their address SCEV.
+/// Collect either replicated Loads or Stores grouped by their address SCEV.
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectGroupedReplicateMemOps(
