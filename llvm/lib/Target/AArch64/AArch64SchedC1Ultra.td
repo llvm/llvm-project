@@ -1952,7 +1952,7 @@ def : InstRW<[C1UWrite_5c_1V_1M0], (instregex "^INSR_ZR_[BHSD]")>;
 // Logical
 def : InstRW<[C1UWrite_2c_1V],
              (instregex "^(AND|EOR|ORR)_ZI",
-                        "^(AND|BIC|EOR|ORR)_ZZZ",
+                        "^(AND|BIC|EOR|ORR|EON|NAND|NOR)_ZZZ",
                         "^EOR(BT|TB)_ZZZ_[BHSD]",
                         "^(AND|BIC|EOR|NOT|ORR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^NOT_ZPmZ_[BHSD]")>;
