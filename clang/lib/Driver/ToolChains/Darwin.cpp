@@ -2484,6 +2484,10 @@ std::optional<DarwinSDKInfo> parseSDKSettings(llvm::vfs::FileSystem &VFS,
 
 void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const OptTable &Opts = getDriver().getOpts();
+  // TryXcselect keeps track of whether we use xcselect to find the SDK
+  // when CLANG_USE_XCSELECT is enabled. Currently, we do this when we
+  // do not have a sysroot from -isysroot, --sysroot, or SDKROOT, and
+  // we do not have --no-xcselect.
   bool TryXcselect = false;
   (void)TryXcselect;
 
@@ -2645,8 +2649,6 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   // Set the tool chain target information.
   if (Platform == MacOS) {
 #ifdef CLANG_USE_XCSELECT
-    // If we don't have an SDK yet and are on macOS, try to inject one using
-    // xcselect, except when passed --no-xcselect.
     if (TryXcselect && !SDKInfo) {
       char *p;
       if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
