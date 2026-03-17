@@ -907,8 +907,12 @@ NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
   auto Scope = getOperationScope(N, InstructionOrdering);
 
   // Singlethread scope has no inter-thread synchronization requirements, so
-  // the operation is lowered as plain and the fence is skipped.
-  if (Scope == NVPTX::Scope::Thread)
+  // the atomic operation is lowered as plain and the fence is skipped.
+  // NotAtomic and Volatile operations naturally have Thread scope and must
+  // preserve their ordering.
+  if (Scope == NVPTX::Scope::Thread &&
+      InstructionOrdering != NVPTX::Ordering::NotAtomic &&
+      InstructionOrdering != NVPTX::Ordering::Volatile)
     return {NVPTX::Ordering::NotAtomic, Scope};
 
   // If a fence is required before the operation, insert it:
