@@ -260,7 +260,13 @@ void FunctionInfo::parseStatistics(
     // Include the 8 bytes for InfoType and InfoLength.
     FuncInfoStats[InfoType] += InfoLength + 8;
     // If this is a MergedFunctionsInfo section, parse the inner FunctionInfos
-    // to collect per-InfoType sub-statistics.
+    // to collect per-InfoType sub-statistics. A MergedFunctionsInfo should
+    // never be nested inside another MergedFunctionsInfo.
+    if (InfoType == InfoType::MergedFunctionsInfo && !MergedFuncInfoStats) {
+      errs()
+          << "error: MergedFunctionsInfo found inside a MergedFunctionsInfo, "
+             "which is not supported\n";
+    }
     if (InfoType == InfoType::MergedFunctionsInfo && MergedFuncInfoStats) {
       (*MergedFuncInfoStats)[9] += 8; // MergedFunctionsInfo TLV header
       DataExtractor MergedData(Data.getData().substr(Offset, InfoLength),
