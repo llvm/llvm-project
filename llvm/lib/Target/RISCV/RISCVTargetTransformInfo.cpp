@@ -780,9 +780,10 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
           SlideCost.isValid())
         return SlideCost;
 
-      // 2 x (vrgather + cost of generating the mask constant) + cost of mask
+      // 2 x vrgather + cost of generating the mask constant + cost of mask
       // register for the second vrgather. We model this for an unknown
       // (shuffle) mask.
+      // Mask constant can be reused between the two vrgathers
       if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
                             LT.second.getVectorNumElements() <= 256)) {
         auto &C = SrcTy->getContext();
@@ -791,7 +792,7 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
         VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
         InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
-        return 2 * IndexCost +
+        return IndexCost +
                getRISCVInstructionCost({RISCV::VRGATHER_VV, RISCV::VRGATHER_VV},
                                        LT.second, CostKind) +
                MaskCost;

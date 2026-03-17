@@ -6793,15 +6793,24 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   // As a backup, shuffles can be lowered via a vrgather instruction, possibly
   // merged with a second vrgather.
-  SmallVector<int> ShuffleMaskLHS, ShuffleMaskRHS;
+  SmallVector<int> ShuffleMaskLHS, ShuffleMaskRHS, UnifiedMask;
+  unsigned LHSCnt = 0, RHSCnt = 0;
 
   // Now construct the mask that will be used by the blended vrgather operation.
   // Construct the appropriate indices into each vector.
   for (int MaskIndex : Mask) {
     bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
-    ShuffleMaskLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
-                             ? MaskIndex : -1);
-    ShuffleMaskRHS.push_back(IsLHSOrUndefIndex ? -1 : (MaskIndex - NumElts));
+    bool IsUndef = MaskIndex < 0;
+    if (!IsUndef) {
+      if (IsLHSOrUndefIndex)
+        ++LHSCnt;
+      else
+        ++RHSCnt;
+    }
+    int OffsetAdjMask = IsLHSOrUndefIndex ? MaskIndex : MaskIndex - NumElts;
+    ShuffleMaskLHS.push_back(IsLHSOrUndefIndex && !IsUndef ? MaskIndex : -1);
+    ShuffleMaskRHS.push_back(IsLHSOrUndefIndex ? -1 : OffsetAdjMask);
+    UnifiedMask.push_back(IsUndef ? -1 : OffsetAdjMask);
   }
 
   // If the mask indices are disjoint between the two sources, we can lower it
@@ -6828,8 +6837,19 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // independent single source shuffles, and then combine the result via a
   // vselect.  Note that the vselect will likely be folded back into the
   // second permute (vrgather, or other) by the post-isel combine.
-  V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), ShuffleMaskLHS);
-  V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), ShuffleMaskRHS);
+  // Use the same mask for both shuffles to avoid an extra constant load
+  if (!DAG.isSplatValue(V2) && !DAG.isSplatValue(V1) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskLHS) &&
+      !ShuffleVectorSDNode::isSplatMask(ShuffleMaskRHS) &&
+      !ShuffleVectorInst::isIdentityMask(ShuffleMaskLHS, NumElts) &&
+      !ShuffleVectorInst::isIdentityMask(ShuffleMaskRHS, NumElts) &&
+      RHSCnt > 2 && LHSCnt > 2) {
+    V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), UnifiedMask);
+    V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), UnifiedMask);
+  } else {
+    V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), ShuffleMaskLHS);
+    V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), ShuffleMaskRHS);
+  }
 
   SmallVector<SDValue> MaskVals;
   for (int MaskIndex : Mask) {
