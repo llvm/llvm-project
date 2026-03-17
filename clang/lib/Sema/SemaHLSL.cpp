@@ -4746,7 +4746,7 @@ static void createGlobalResourceDeclForStruct(Sema &S, VarDecl *ParentVD,
   const HLSLAttributedResourceType *ResHandleTy = nullptr;
   if (const auto *AT = dyn_cast<ArrayType>(ResTy.getTypePtr())) {
     const auto *CAT = dyn_cast<ConstantArrayType>(AT);
-    Range = CAT ? CAT->getSize().getZExtValue() : ~0U;
+    Range = CAT ? CAT->getSize().getZExtValue() : 0;
     ResHandleTy = getResourceArrayHandleType(ResTy);
   } else {
     ResHandleTy = HLSLAttributedResourceType::findHandleTypeOnResource(
