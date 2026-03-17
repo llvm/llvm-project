@@ -4609,8 +4609,8 @@
 // RUN:     -target nvptx64-unknown-unknown \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_NVPTX,CHECK_ARCH_UNSET
 // CHECK_ARCH_SM_75: #define __CUDA_ARCH__ 750
-// CHECK_ARCH_SM_90: #define __CUDA_ARCH__ 900
 // CHECK_ARCH_SM_90: #define _CG_CLUSTER_INTRINSICS_AVAILABLE 1
+// CHECK_ARCH_SM_90: #define __CUDA_ARCH__ 900
 // CHECK_ARCH_UNSET-NOT: #define __CUDA_ARCH__
 // CHECK_ARCH_UNSET-NOT: #define _CG_CLUSTER_INTRINSICS_AVAILABLE
 // CHECK_NVPTX: #define __NVPTX__ 1
