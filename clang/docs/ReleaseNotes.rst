@@ -182,6 +182,10 @@ New Compiler Flags
 Deprecated Compiler Flags
 -------------------------
 
+- ``-parallel-jobs=`` has been deprecated. Use ``--offload-jobs=`` instead, which
+  controls the number of threads used for device offloading tasks during
+  compilation.
+
 Modified Compiler Flags
 -----------------------
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.

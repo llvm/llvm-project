@@ -9760,6 +9760,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   addOffloadCompressArgs(Args, CmdArgs);
 
+  if (Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ))
+    if (StringRef(Args.getArgString(A->getIndex()))
+            .starts_with("-parallel-jobs="))
+      C.getDriver().Diag(diag::warn_drv_deprecated_arg)
+          << A->getAsString(Args) << /*hasReplacement=*/true
+          << "--offload-jobs=<N>";
+
   if (Arg *A = Args.getLastArg(options::OPT_offload_jobs_EQ)) {
     StringRef Val = A->getValue();
 

@@ -261,3 +261,10 @@
 // RUN:   FileCheck -check-prefix=JOBSV %s
 // JOBSV: clang-linker-wrapper{{.*}} "--wrapper-jobs=jobserver"
 
+// Check -parallel-jobs= emits deprecation warning and forwards to --wrapper-jobs.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --offload-arch=gfx1100 --offload-new-driver -parallel-jobs=4 %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=PJOBS %s
+// PJOBS: warning: argument '-parallel-jobs=4' is deprecated, use '--offload-jobs=<N>' instead
+// PJOBS: clang-linker-wrapper{{.*}} "--wrapper-jobs=4"
+
