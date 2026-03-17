@@ -19,4 +19,4 @@ class TestSwiftExpressionNoDebugInfo(TestBase):
         self.expect('expr -l Swift -- 1')
         self.filecheck_log(types_log, __file__)
         # CHECK: No Swift debug info: prefer target triple.
-        # CHECK: Using SDK: {{.*}}MacOSX
+        # CHECK: Using SDK: {{.*}}.sdk
