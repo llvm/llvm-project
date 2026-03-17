@@ -1438,7 +1438,30 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_s_getreg}).Any({{}, {{Sgpr32}, {IntrId, Imm}}});
 
   addRulesForIOpcs({amdgcn_groupstaticsize}).Any({{S32}, {{Sgpr32}, {IntrId}}});
-  addRulesForIOpcs({amdgcn_endpgm}).Any({{}, {{}, {}}});
+
+  // Intrinsics with no register operands.
+  addRulesForIOpcs({amdgcn_endpgm,
+                    amdgcn_s_barrier,
+                    amdgcn_s_barrier_signal,
+                    amdgcn_s_barrier_wait,
+                    amdgcn_s_nop,
+                    amdgcn_s_sethalt,
+                    amdgcn_s_setprio,
+                    amdgcn_s_sleep,
+                    amdgcn_s_wait_asynccnt,
+                    amdgcn_s_wait_bvhcnt,
+                    amdgcn_s_wait_dscnt,
+                    amdgcn_s_wait_event,
+                    amdgcn_s_wait_event_export_ready,
+                    amdgcn_s_wait_expcnt,
+                    amdgcn_s_wait_kmcnt,
+                    amdgcn_s_wait_loadcnt,
+                    amdgcn_s_wait_samplecnt,
+                    amdgcn_s_wait_storecnt,
+                    amdgcn_s_wait_tensorcnt,
+                    amdgcn_s_waitcnt,
+                    amdgcn_wave_barrier})
+      .Any({{}, {{}, {}}});
 
   // This is "intrinsic lane mask" it was set to i32/i64 in llvm-ir.
   addRulesForIOpcs({amdgcn_end_cf})
@@ -1470,24 +1493,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       // this should not exist in the first place, it is from call lowering
       // readfirstlaning just in case register is not in sgpr.
       .Any({{UniS32, _, UniS32}, {{}, {Sgpr32, None, Vgpr32}}});
-
-  addRulesForIOpcs({amdgcn_s_setprio, amdgcn_s_sethalt, amdgcn_s_nop})
-      .Any({{}, {{}, {IntrId, Imm}}});
-
-  addRulesForIOpcs({amdgcn_s_sleep}).Any({{_, _}, {{}, {IntrId, Imm}}});
-
-  addRulesForIOpcs({amdgcn_s_barrier, amdgcn_s_barrier_signal,
-                    amdgcn_s_barrier_wait, amdgcn_wave_barrier})
-      .Any({{}, {{}, {IntrId}}});
-
-  addRulesForIOpcs({amdgcn_s_wait_event_export_ready}).Any({{}, {{}, {}}});
-
-  addRulesForIOpcs({amdgcn_s_waitcnt, amdgcn_s_wait_event, amdgcn_s_wait_bvhcnt,
-                    amdgcn_s_wait_dscnt, amdgcn_s_wait_expcnt,
-                    amdgcn_s_wait_kmcnt, amdgcn_s_wait_loadcnt,
-                    amdgcn_s_wait_samplecnt, amdgcn_s_wait_storecnt,
-                    amdgcn_s_wait_asynccnt, amdgcn_s_wait_tensorcnt})
-      .Any({{}, {{}, {IntrId, Imm}}});
 
   addRulesForIOpcs({amdgcn_bitop3}, Standard)
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
@@ -1605,14 +1610,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}});
 
-  addRulesForIOpcs({amdgcn_ds_read_tr4_b64})
+  addRulesForIOpcs({amdgcn_ds_read_tr4_b64, amdgcn_ds_read_tr8_b64})
       .Any({{DivV2S32}, {{VgprV2S32}, {IntrId, VgprP3}}});
 
   addRulesForIOpcs({amdgcn_ds_read_tr6_b96})
       .Any({{DivV3S32}, {{VgprV3S32}, {IntrId, VgprP3}}});
-
-  addRulesForIOpcs({amdgcn_ds_read_tr8_b64})
-      .Any({{DivV2S32}, {{VgprV2S32}, {IntrId, VgprP3}}});
 
   addRulesForIOpcs({amdgcn_ds_read_tr16_b64})
       .Any({{DivV4S16}, {{VgprV4S16}, {IntrId, VgprP3}}});
