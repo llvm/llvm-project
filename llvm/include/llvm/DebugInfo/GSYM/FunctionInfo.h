@@ -208,11 +208,16 @@ struct FunctionInfo {
   /// \param Data The binary stream to read the data from.
   ///
   /// \param FuncInfoStats A map that will be updated with the size of each
-  /// InfoType found in the data. The sizes include only the data payload,
-  /// not the InfoType/InfoLength header.
+  /// InfoType found in the data. The sizes include the InfoType/InfoLength
+  /// header (8 bytes) plus the data payload.
+  ///
+  /// \param MergedFuncInfoStats If non-null, this map will be updated with
+  /// the per-InfoType sizes of the inner FunctionInfos within any
+  /// MergedFunctionsInfo sections.
   LLVM_ABI static void
   parseStatistics(DataExtractor &Data,
-                  std::map<uint32_t, uint64_t> &FuncInfoStats);
+                  std::map<uint32_t, uint64_t> &FuncInfoStats,
+                  std::map<uint32_t, uint64_t> *MergedFuncInfoStats = nullptr);
 
   uint64_t startAddress() const { return Range.start(); }
   uint64_t endAddress() const { return Range.end(); }

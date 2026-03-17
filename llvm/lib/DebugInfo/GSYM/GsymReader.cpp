@@ -474,11 +474,6 @@ void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS) {
       static_cast<uint64_t>(Hdr.StrtabOffset) + Hdr.StrtabSize;
   const uint64_t FuncInfoSize = FileSize - FuncInfoStart;
 
-  // Padding between sections due to alignment.
-  const uint64_t Padding =
-      (AddrTableStart - HeaderSize) +
-      (AddrInfoOffsetsStart - AddrTableStart - AddrTableSize);
-
   // Helper for comma-separated number and right-justify formatting
   auto Format = [](uint64_t Value) {
     std::string Num = std::to_string(Value);
@@ -491,38 +486,60 @@ void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS) {
     return std::string(std::max((size_t)0, 14 - Num.length()), ' ') + Num;
   };
 
+  // Helper for percentage formatting relative to total file size.
+  auto Pct = [&](uint64_t Value) -> std::string {
+    char Buf[16];
+    snprintf(Buf, sizeof(Buf), "(%5.2f%%)", 100.0 * Value / FileSize);
+    return Buf;
+  };
+
   OS << "GSYM statistics for \"" << GSYMPath << "\":\n";
-  OS << "  File size:          " << Format(FileSize) << " bytes\n";
-  OS << "  Header:             " << Format(HeaderSize) << " bytes\n";
-  OS << "  Address table:      " << Format(AddrTableSize) << " bytes\n";
-  OS << "  Addr info offsets:  " << Format(AddrInfoOffsetsSize) << " bytes\n";
-  OS << "  File table:         " << Format(FileTableSize) << " bytes\n";
-  OS << "  String table:       " << Format(StrtabSize) << " bytes\n";
-  OS << "  Function info data: " << Format(FuncInfoSize) << " bytes\n";
+  OS << "  File size:           " << Format(FileSize) << " bytes\n";
+  OS << "  Header:              " << Format(HeaderSize) << " bytes "
+     << Pct(HeaderSize) << "\n";
+  OS << "  Address table:       " << Format(AddrTableSize) << " bytes "
+     << Pct(AddrTableSize) << "\n";
+  OS << "  Addr info offsets:   " << Format(AddrInfoOffsetsSize) << " bytes "
+     << Pct(AddrInfoOffsetsSize) << "\n";
+  OS << "  File table:          " << Format(FileTableSize) << " bytes "
+     << Pct(FileTableSize) << "\n";
+  OS << "  String table:        " << Format(StrtabSize) << " bytes "
+     << Pct(StrtabSize) << "\n";
+  OS << "  Function info data:  " << Format(FuncInfoSize) << " bytes "
+     << Pct(FuncInfoSize) << "\n";
 
   // Collect per-InfoType statistics across all functions.
   std::map<uint32_t, uint64_t> InfoTypeStats;
+  std::map<uint32_t, uint64_t> MergedInfoTypeStats;
   for (uint32_t I = 0; I < Hdr.NumAddresses; ++I) {
     uint64_t FuncStartAddr = 0;
     if (auto ExpData = getFunctionInfoDataAtIndex(I, FuncStartAddr)) {
       DataExtractor Data = *ExpData;
-      FunctionInfo::parseStatistics(Data, InfoTypeStats);
+      FunctionInfo::parseStatistics(Data, InfoTypeStats, &MergedInfoTypeStats);
     } else {
       consumeError(ExpData.takeError());
     }
   }
-  auto PrintInfoType = [&](const char *Name, uint32_t Type) {
-    auto It = InfoTypeStats.find(Type);
-    if (It != InfoTypeStats.end())
-      OS << "    " << Name << Format(It->second) << " bytes\n";
+  auto PrintInfoType = [&](const char *Indent, const char *Name,
+                           uint32_t Type,
+                           const std::map<uint32_t, uint64_t> &Stats) {
+    auto It = Stats.find(Type);
+    if (It != Stats.end())
+      OS << Indent << Name << Format(It->second) << " bytes "
+         << Pct(It->second) << "\n";
   };
-  PrintInfoType("Line table info:  ", 1);
-  PrintInfoType("Inline info:      ", 2);
-  PrintInfoType("Merged func info: ", 3);
-  PrintInfoType("Call site info:   ", 4);
+  PrintInfoType("    ", "Line table info:   ", 1, InfoTypeStats);
+  PrintInfoType("    ", "Inline info:       ", 2, InfoTypeStats);
+  PrintInfoType("    ", "Call site info:    ", 4, InfoTypeStats);
+  PrintInfoType("    ", "Overhead:          ", 9, InfoTypeStats);
+  PrintInfoType("    ", "Merged func info:  ", 3, InfoTypeStats);
+  PrintInfoType("      ", "Line table info: ", 1, MergedInfoTypeStats);
+  PrintInfoType("      ", "Inline info:     ", 2, MergedInfoTypeStats);
+  PrintInfoType("      ", "Merged func info:", 3, MergedInfoTypeStats);
+  PrintInfoType("      ", "Call site info:  ", 4, MergedInfoTypeStats);
+  PrintInfoType("      ", "Overhead:        ", 9, MergedInfoTypeStats);
 
-  OS << "  Padding:            " << Format(Padding) << " bytes\n";
-  OS << "  Number of addresses:" << Format(Hdr.NumAddresses) << "\n";
+  OS << "  Number of addresses: " << Format(Hdr.NumAddresses) << "\n";
 }
 
 void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,

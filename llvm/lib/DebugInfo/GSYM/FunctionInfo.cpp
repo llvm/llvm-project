@@ -236,23 +236,53 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
 }
 
 void FunctionInfo::parseStatistics(
-    DataExtractor &Data, std::map<uint32_t, uint64_t> &FuncInfoStats) {
+    DataExtractor &Data, std::map<uint32_t, uint64_t> &FuncInfoStats,
+    std::map<uint32_t, uint64_t> *MergedFuncInfoStats) {
   uint64_t Offset = 0;
-  // Skip Size and Name (two uint32_t fields).
+  // Size and Name (two uint32_t fields).
   if (!Data.isValidOffsetForDataOfSize(Offset, 8))
     return;
+  // Overhead includes: FunctionInfo's Size and Name fields,
+  // EndOfList terminator, and MergedFunctionsInfo's Count and FnSize fields.
+  FuncInfoStats[9] += 8; // FunctionInfo header: Size + Name
   Offset += 8;
   while (true) {
     if (!Data.isValidOffsetForDataOfSize(Offset, 8))
       return;
     const uint32_t InfoType = Data.getU32(&Offset);
     const uint32_t InfoLength = Data.getU32(&Offset);
-    if (InfoType == InfoType::EndOfList)
+    if (InfoType == InfoType::EndOfList) {
+      FuncInfoStats[9] += 8; // FunctionInfo EndOfList terminator
       return;
+    }
     if (!Data.isValidOffsetForDataOfSize(Offset, InfoLength))
       return;
     // Include the 8 bytes for InfoType and InfoLength.
     FuncInfoStats[InfoType] += InfoLength + 8;
+    // If this is a MergedFunctionsInfo section, parse the inner FunctionInfos
+    // to collect per-InfoType sub-statistics.
+    if (InfoType == InfoType::MergedFunctionsInfo && MergedFuncInfoStats) {
+      DataExtractor MergedData(Data.getData().substr(Offset, InfoLength),
+                               Data.isLittleEndian(), Data.getAddressSize());
+      uint64_t MOffset = 0;
+      if (MergedData.isValidOffsetForDataOfSize(MOffset, 4)) {
+        uint32_t Count = MergedData.getU32(&MOffset);
+        (*MergedFuncInfoStats)[9] += 4; // MergedFunctionsInfo Count field
+        for (uint32_t I = 0; I < Count; ++I) {
+          if (!MergedData.isValidOffsetForDataOfSize(MOffset, 4))
+            break;
+          uint32_t FnSize = MergedData.getU32(&MOffset);
+          (*MergedFuncInfoStats)[9] += 4; // MergedFunctionsInfo FnSize field
+          if (!MergedData.isValidOffsetForDataOfSize(MOffset, FnSize))
+            break;
+          DataExtractor FuncData(
+              MergedData.getData().substr(MOffset, FnSize),
+              MergedData.isLittleEndian(), MergedData.getAddressSize());
+          parseStatistics(FuncData, *MergedFuncInfoStats, nullptr);
+          MOffset += FnSize;
+        }
+      }
+    }
     Offset += InfoLength;
   }
 }
