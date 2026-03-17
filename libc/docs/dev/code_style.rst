@@ -289,7 +289,3 @@ Example usage:
 Having hidden visibility on the namespace ensures extern declarations in a given TU
 have known visibility and never generate GOT indirections. The attribute guarantees
 this independently of global compile options and build systems.
-
-..
-  TODO(97655): We should have a clang-tidy check to enforce this and a
-  fixit implementation.
