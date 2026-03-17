@@ -162,7 +162,7 @@ BinaryHolder::ObjectEntry::getObject(const Triple &T) const {
       llvm::Triple ObjTriple = MachO->getArchTriple();
       if (ObjTriple.str() == T.str())
         return *MachO;
-      if (ObjTriple.isCompatibleWith(T) && !CompatibleMatch)
+      if (!CompatibleMatch && ObjTriple.isCompatibleWith(T))
         CompatibleMatch = MachO;
     } else {
       llvm::Triple ObjTriple = Obj->makeTriple();
