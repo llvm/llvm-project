@@ -58269,7 +58269,7 @@ static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
   if (IsVector && !SrcVT.isFixedLengthVector())
     return SDValue();
 
-  EVT SrcEltVT = IsVector ? SrcVT.getVectorElementType() : SrcVT;
+  EVT SrcEltVT = SrcVT.getScalarType();
   if (SrcEltVT != MVT::f32 && SrcEltVT != MVT::f64)
     return SDValue();
 
