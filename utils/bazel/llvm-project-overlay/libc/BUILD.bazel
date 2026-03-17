@@ -4316,6 +4316,16 @@ libc_support_library(
     hdrs = ["src/__support/math/fma.h"],
     deps = [
         ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaf",
+    hdrs = ["src/__support/math/fmaf.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_macros_config",
     ],
 )
 
@@ -7092,7 +7102,7 @@ libc_math_function(
 
 libc_math_function(
     name = "fmaf",
-    additional_deps = [":__support_fputil_fma"],
+    additional_deps = [":__support_math_fmaf"],
 )
 
 libc_math_function(
