@@ -9,7 +9,7 @@ define void @test_as_arg_smin(i8 %a, i8 %b) {
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[A]])
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[A]], [[M]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[SUB]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[SUB]] to i16
 ; CHECK-NEXT:    call void @subroutine(i16 [[CONV]])
 ; CHECK-NEXT:    ret void
 ;
@@ -25,7 +25,7 @@ define i16 @test_as_retval_smin(i8 %a, i8 %b) {
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[A]])
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[A]], [[M]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[SUB]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[SUB]] to i16
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
   %m = call i8 @llvm.smin.i8(i8 %b, i8 %a)
@@ -39,7 +39,7 @@ define void @test_as_arg_smax(i8 %a, i8 %b) {
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[M]], [[A]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[SUB]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[SUB]] to i16
 ; CHECK-NEXT:    call void @subroutine(i16 [[CONV]])
 ; CHECK-NEXT:    ret void
 ;
@@ -55,7 +55,7 @@ define i16 @test_as_retval_smax(i8 %a, i8 %b) {
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[M]], [[A]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[SUB]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[SUB]] to i16
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
   %m = call i8 @llvm.smax.i8(i8 %a, i8 %b)

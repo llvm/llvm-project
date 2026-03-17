@@ -385,8 +385,7 @@ define i64 @sdiv_shl_nonneg_from_sub_smin(i64 %a, i64 %b) {
 ; CHECK-LABEL: @sdiv_shl_nonneg_from_sub_smin(
 ; CHECK-NEXT:    [[M:%.*]] = call i64 @llvm.smin.i64(i64 [[B:%.*]], i64 [[A:%.*]])
 ; CHECK-NEXT:    [[X:%.*]] = sub nsw i64 [[A]], [[M]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i64 [[X]], 4
-; CHECK-NEXT:    [[R:%.*]] = shl nsw i64 [[D]], 2
+; CHECK-NEXT:    [[R:%.*]] = and i64 [[X]], -4
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %m = call i64 @llvm.smin.i64(i64 %b, i64 %a)
@@ -400,8 +399,7 @@ define i64 @sdiv_shl_nonneg_from_sub_smax(i64 %a, i64 %b) {
 ; CHECK-LABEL: @sdiv_shl_nonneg_from_sub_smax(
 ; CHECK-NEXT:    [[M:%.*]] = call i64 @llvm.smax.i64(i64 [[A:%.*]], i64 [[B:%.*]])
 ; CHECK-NEXT:    [[X:%.*]] = sub nsw i64 [[M]], [[A]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i64 [[X]], 4
-; CHECK-NEXT:    [[R:%.*]] = shl nsw i64 [[D]], 2
+; CHECK-NEXT:    [[R:%.*]] = and i64 [[X]], -4
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %m = call i64 @llvm.smax.i64(i64 %a, i64 %b)

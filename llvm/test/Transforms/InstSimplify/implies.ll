@@ -626,9 +626,7 @@ define i1 @slt_nsw_add_pos(i8 %x) {
 
 define i1 @sle_nsw_sub_neg(i8 %x) {
 ; CHECK-LABEL: @sle_nsw_sub_neg(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[SUB]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nsw i8 %x, 5
   %cmp = icmp sle i8 %sub, %x
@@ -637,9 +635,7 @@ define i1 @sle_nsw_sub_neg(i8 %x) {
 
 define i1 @slt_nsw_sub_neg(i8 %x) {
 ; CHECK-LABEL: @slt_nsw_sub_neg(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SUB]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nsw i8 %x, 5
   %cmp = icmp slt i8 %sub, %x
@@ -648,9 +644,7 @@ define i1 @slt_nsw_sub_neg(i8 %x) {
 
 define i1 @sle_nsw_nuw_shl(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sle_nsw_nuw_shl(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X]], [[SHL]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %shl = shl nsw nuw i8 %x, %y
   %cmp = icmp sle i8 %x, %shl
@@ -659,9 +653,7 @@ define i1 @sle_nsw_nuw_shl(i8 %x, i8 %y) {
 
 define i1 @sle_nsw_sub_nonpos_rhs(i8 %x) {
 ; CHECK-LABEL: @sle_nsw_sub_nonpos_rhs(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[X]], [[SUB]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nsw i8 %x, -5
   %cmp = icmp sle i8 %x, %sub
@@ -670,9 +662,7 @@ define i1 @sle_nsw_sub_nonpos_rhs(i8 %x) {
 
 define i1 @slt_nsw_sub_neg_rhs(i8 %x) {
 ; CHECK-LABEL: @slt_nsw_sub_neg_rhs(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], [[SUB]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nsw i8 %x, -5
   %cmp = icmp slt i8 %x, %sub
@@ -728,9 +718,7 @@ define i1 @sle_nsw_add_neg_to_x(i8 %x) {
 
 define i1 @sle_nsw_sub_pos_to_x(i8 %x) {
 ; CHECK-LABEL: @sle_nsw_sub_pos_to_x(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[SUB]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nsw i8 %x, 5
   %cmp = icmp sle i8 %sub, %x
@@ -739,9 +727,7 @@ define i1 @sle_nsw_sub_pos_to_x(i8 %x) {
 
 define i1 @sle_and_neg_to_x(i8 %x) {
 ; CHECK-LABEL: @sle_and_neg_to_x(
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[AND]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %and = and i8 %x, -5
   %cmp = icmp sle i8 %and, %x
@@ -790,10 +776,7 @@ define i1 @slt_nsw_add_add(i8 %x) {
 
 define i1 @sle_nsw_sub_sub(i8 %x) {
 ; CHECK-LABEL: @sle_nsw_sub_sub(
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[SUB2:%.*]] = sub nsw i8 [[X]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[SUB1]], [[SUB2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub1 = sub nsw i8 %x, 7
   %sub2 = sub nsw i8 %x, 3
@@ -803,10 +786,7 @@ define i1 @sle_nsw_sub_sub(i8 %x) {
 
 define i1 @sle_nsw_nuw_shl_shl(i8 %x) {
 ; CHECK-LABEL: @sle_nsw_nuw_shl_shl(
-; CHECK-NEXT:    [[SHL1:%.*]] = shl nuw nsw i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[SHL2:%.*]] = shl nuw nsw i8 [[X]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[SHL1]], [[SHL2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %shl1 = shl nsw nuw i8 %x, 2
   %shl2 = shl nsw nuw i8 %x, 5
@@ -816,10 +796,7 @@ define i1 @sle_nsw_nuw_shl_shl(i8 %x) {
 
 define i1 @sle_lshr_lshr_signed(i8 %x) {
 ; CHECK-LABEL: @sle_lshr_lshr_signed(
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[SHR2:%.*]] = lshr i8 [[X]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[SHR1]], [[SHR2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %shr1 = lshr i8 %x, 5
   %shr2 = lshr i8 %x, 2
@@ -829,10 +806,7 @@ define i1 @sle_lshr_lshr_signed(i8 %x) {
 
 define i1 @sle_transitive_through_x(i8 %x) {
 ; CHECK-LABEL: @sle_transitive_through_x(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[SUB]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nsw i8 %x, 1
   %add = add nsw i8 %x, 1
@@ -880,9 +854,7 @@ define i1 @ule_or(i8 %x, i8 %y) {
 
 define i1 @ule_nuw_shl(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ule_nuw_shl(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[X]], [[SHL]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %shl = shl nuw i8 %x, %y
   %cmp = icmp ule i8 %x, %shl
@@ -891,9 +863,7 @@ define i1 @ule_nuw_shl(i8 %x, i8 %y) {
 
 define i1 @ult_nuw_shl_const(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ult_nuw_shl_const(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 3, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], [[SHL]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %shl = shl nuw i8 3, %x
   %cmp = icmp ult i8 %x, %shl
@@ -902,9 +872,7 @@ define i1 @ult_nuw_shl_const(i8 %x, i8 %y) {
 
 define i1 @ult_disjoint_or(i8 %x) {
 ; CHECK-LABEL: @ult_disjoint_or(
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], [[OR]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %or = or disjoint i8 %x, 5
   %cmp = icmp ult i8 %x, %or
@@ -924,9 +892,7 @@ define i1 @ule_umax(i8 %x, i8 %y) {
 
 define i1 @ule_nuw_sub_to_x(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ule_nuw_sub_to_x(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[SUB]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nuw i8 %x, %y
   %cmp = icmp ule i8 %sub, %x
@@ -935,9 +901,7 @@ define i1 @ule_nuw_sub_to_x(i8 %x, i8 %y) {
 
 define i1 @ult_nuw_sub_to_x_const(i8 %x) {
 ; CHECK-LABEL: @ult_nuw_sub_to_x_const(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SUB]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nuw i8 %x, 5
   %cmp = icmp ult i8 %sub, %x
@@ -1023,10 +987,7 @@ define i1 @ult_nuw_add_add(i8 %x) {
 
 define i1 @ule_nuw_mul_mul(i8 %x) {
 ; CHECK-LABEL: @ule_nuw_mul_mul(
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw i8 [[X]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[MUL1]], [[MUL2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul1 = mul nuw i8 %x, 3
   %mul2 = mul nuw i8 %x, 7
@@ -1036,10 +997,7 @@ define i1 @ule_nuw_mul_mul(i8 %x) {
 
 define i1 @ule_nuw_shl_shl(i8 %x) {
 ; CHECK-LABEL: @ule_nuw_shl_shl(
-; CHECK-NEXT:    [[SHL1:%.*]] = shl nuw i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[SHL2:%.*]] = shl nuw i8 [[X]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[SHL1]], [[SHL2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %shl1 = shl nuw i8 %x, 2
   %shl2 = shl nuw i8 %x, 5
@@ -1049,10 +1007,7 @@ define i1 @ule_nuw_shl_shl(i8 %x) {
 
 define i1 @ule_nuw_sub_sub(i8 %x) {
 ; CHECK-LABEL: @ule_nuw_sub_sub(
-; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[SUB2:%.*]] = sub nuw i8 [[X]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[SUB1]], [[SUB2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub1 = sub nuw i8 %x, 7
   %sub2 = sub nuw i8 %x, 3
@@ -1062,10 +1017,7 @@ define i1 @ule_nuw_sub_sub(i8 %x) {
 
 define i1 @ule_udiv_udiv(i8 %x) {
 ; CHECK-LABEL: @ule_udiv_udiv(
-; CHECK-NEXT:    [[DIV1:%.*]] = udiv i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[DIV2:%.*]] = udiv i8 [[X]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV1]], [[DIV2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %div1 = udiv i8 %x, 7
   %div2 = udiv i8 %x, 3
@@ -1075,10 +1027,7 @@ define i1 @ule_udiv_udiv(i8 %x) {
 
 define i1 @ule_lshr_lshr(i8 %x) {
 ; CHECK-LABEL: @ule_lshr_lshr(
-; CHECK-NEXT:    [[SHR1:%.*]] = lshr i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[SHR2:%.*]] = lshr i8 [[X]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[SHR1]], [[SHR2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %shr1 = lshr i8 %x, 5
   %shr2 = lshr i8 %x, 2
@@ -1088,10 +1037,7 @@ define i1 @ule_lshr_lshr(i8 %x) {
 
 define i1 @ule_transitive_through_x(i8 %x) {
 ; CHECK-LABEL: @ule_transitive_through_x(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[SUB]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub nuw i8 %x, 1
   %add = add nuw i8 %x, 1
@@ -1106,9 +1052,7 @@ define i1 @ule_transitive_through_x(i8 %x) {
 
 define i1 @fp_ule_fadd_pos(float %x) {
 ; CHECK-LABEL: @fp_ule_fadd_pos(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 5.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %add = fadd float %x, 5.000000e+00
   %cmp = fcmp ule float %x, %add
@@ -1117,9 +1061,7 @@ define i1 @fp_ule_fadd_pos(float %x) {
 
 define i1 @fp_uge_fsub_pos(float %x) {
 ; CHECK-LABEL: @fp_uge_fsub_pos(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[X:%.*]], 5.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[X]], [[SUB]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = fsub float %x, 5.000000e+00
   %cmp = fcmp uge float %x, %sub
@@ -1128,9 +1070,7 @@ define i1 @fp_uge_fsub_pos(float %x) {
 
 define i1 @fp_ule_maximumnum(float %x, float %y) {
 ; CHECK-LABEL: @fp_ule_maximumnum(
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X]], [[MAX]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call float @llvm.maximumnum.f32(float %x, float %y)
   %cmp = fcmp ule float %x, %max
@@ -1139,9 +1079,7 @@ define i1 @fp_ule_maximumnum(float %x, float %y) {
 
 define i1 @fp_ule_maxnum(float %x, float %y) {
 ; CHECK-LABEL: @fp_ule_maxnum(
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X]], [[MAX]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call float @llvm.maxnum.f32(float %x, float %y)
   %cmp = fcmp ule float %x, %max
@@ -1150,9 +1088,7 @@ define i1 @fp_ule_maxnum(float %x, float %y) {
 
 define i1 @fp_ule_maximum(float %x, float %y) {
 ; CHECK-LABEL: @fp_ule_maximum(
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X]], [[MAX]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call float @llvm.maximum.f32(float %x, float %y)
   %cmp = fcmp ule float %x, %max
@@ -1161,9 +1097,7 @@ define i1 @fp_ule_maximum(float %x, float %y) {
 
 define i1 @fp_uge_minimumnum(float %x, float %y) {
 ; CHECK-LABEL: @fp_uge_minimumnum(
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[X]], [[MIN]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %min = call float @llvm.minimumnum.f32(float %x, float %y)
   %cmp = fcmp uge float %x, %min
@@ -1172,9 +1106,7 @@ define i1 @fp_uge_minimumnum(float %x, float %y) {
 
 define i1 @fp_uge_minnum(float %x, float %y) {
 ; CHECK-LABEL: @fp_uge_minnum(
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[X]], [[MIN]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %min = call float @llvm.minnum.f32(float %x, float %y)
   %cmp = fcmp uge float %x, %min
@@ -1183,9 +1115,7 @@ define i1 @fp_uge_minnum(float %x, float %y) {
 
 define i1 @fp_uge_minimum(float %x, float %y) {
 ; CHECK-LABEL: @fp_uge_minimum(
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[X]], [[MIN]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %min = call float @llvm.minimum.f32(float %x, float %y)
   %cmp = fcmp uge float %x, %min
@@ -1194,9 +1124,7 @@ define i1 @fp_uge_minimum(float %x, float %y) {
 
 define i1 @fp_ole_const_maximumnum(float %y) {
 ; CHECK-LABEL: @fp_ole_const_maximumnum(
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maximumnum.f32(float 4.000000e+00, float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float 4.000000e+00, [[MAX]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call float @llvm.maximumnum.f32(float 4.000000e+00, float %y)
   %cmp = fcmp ole float 4.000000e+00, %max
@@ -1205,9 +1133,7 @@ define i1 @fp_ole_const_maximumnum(float %y) {
 
 define i1 @fp_ole_const_maxnum(float %y) {
 ; CHECK-LABEL: @fp_ole_const_maxnum(
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float 4.000000e+00, float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float 4.000000e+00, [[MAX]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call float @llvm.maxnum.f32(float 4.000000e+00, float %y)
   %cmp = fcmp ole float 4.000000e+00, %max
@@ -1216,9 +1142,7 @@ define i1 @fp_ole_const_maxnum(float %y) {
 
 define i1 @fp_ole_smaller_const_maxnum(float %y) {
 ; CHECK-LABEL: @fp_ole_smaller_const_maxnum(
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float 3.000000e+00, float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float 2.000000e+00, [[MAX]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %max = call float @llvm.maxnum.f32(float 3.000000e+00, float %y)
   %cmp = fcmp ole float 2.000000e+00, %max
@@ -1239,9 +1163,7 @@ define i1 @fp_ole_const_maximum_neg(float %y) {
 
 define i1 @fp_oge_const_minnum(float %y) {
 ; CHECK-LABEL: @fp_oge_const_minnum(
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float 4.000000e+00, float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float 4.000000e+00, [[MIN]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %min = call float @llvm.minnum.f32(float 4.000000e+00, float %y)
   %cmp = fcmp oge float 4.000000e+00, %min
@@ -1250,9 +1172,7 @@ define i1 @fp_oge_const_minnum(float %y) {
 
 define i1 @fp_oge_larger_const_minnum(float %y) {
 ; CHECK-LABEL: @fp_oge_larger_const_minnum(
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float 3.000000e+00, float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float 4.000000e+00, [[MIN]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %min = call float @llvm.minnum.f32(float 3.000000e+00, float %y)
   %cmp = fcmp oge float 4.000000e+00, %min
@@ -1261,9 +1181,7 @@ define i1 @fp_oge_larger_const_minnum(float %y) {
 
 define i1 @fp_oge_const_minimumnum(float %y) {
 ; CHECK-LABEL: @fp_oge_const_minimumnum(
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minimumnum.f32(float 4.000000e+00, float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float 4.000000e+00, [[MIN]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %min = call float @llvm.minimumnum.f32(float 4.000000e+00, float %y)
   %cmp = fcmp oge float 4.000000e+00, %min
