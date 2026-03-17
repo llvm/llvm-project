@@ -43430,6 +43430,15 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
 
     return SDValue();
   }
+  case X86ISD::COMPRESS: {
+    SDValue CmpVec = N.getOperand(0);
+    SDValue PassThru = N.getOperand(1);
+    // If CmpVec is splat value and identical to PassThru, then all elements are
+    // already in place.
+    if (CmpVec == PassThru && DAG.isSplatValue(CmpVec, /*AllowUndefs=*/false))
+      return CmpVec;
+    return SDValue();
+  }
   case X86ISD::EXPAND: {
     SDValue ExpVec = N.getOperand(0);
     SDValue PassThru = N.getOperand(1);
