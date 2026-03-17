@@ -844,12 +844,16 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __table_.find(__k); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __table_.find(__k); }
 #  if _LIBCPP_STD_VER >= 20
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI iterator find(const _K2& __k) {
     return __table_.find(__k);
   }
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator find(const _K2& __k) const {
     return __table_.find(__k);
@@ -860,7 +864,9 @@ public:
     return __table_.__count_unique(__k);
   }
 #  if _LIBCPP_STD_VER >= 20
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_type count(const _K2& __k) const {
     return __table_.__count_unique(__k);
@@ -870,7 +876,9 @@ public:
 #  if _LIBCPP_STD_VER >= 20
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __k) const { return find(__k) != end(); }
 
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool contains(const _K2& __k) const {
     return find(__k) != end();
@@ -884,12 +892,16 @@ public:
     return __table_.__equal_range_unique(__k);
   }
 #  if _LIBCPP_STD_VER >= 20
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) {
     return __table_.__equal_range_unique(__k);
   }
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const {
     return __table_.__equal_range_unique(__k);
@@ -1449,12 +1461,16 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __table_.find(__k); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __table_.find(__k); }
 #  if _LIBCPP_STD_VER >= 20
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator find(const _K2& __k) {
     return __table_.find(__k);
   }
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator find(const _K2& __k) const {
     return __table_.find(__k);
@@ -1465,7 +1481,9 @@ public:
     return __table_.__count_multi(__k);
   }
 #  if _LIBCPP_STD_VER >= 20
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type count(const _K2& __k) const {
     return __table_.__count_multi(__k);
@@ -1475,7 +1493,9 @@ public:
 #  if _LIBCPP_STD_VER >= 20
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __k) const { return find(__k) != end(); }
 
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const _K2& __k) const {
     return find(__k) != end();
@@ -1489,12 +1509,16 @@ public:
     return __table_.__equal_range_multi(__k);
   }
 #  if _LIBCPP_STD_VER >= 20
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) {
     return __table_.__equal_range_multi(__k);
   }
-  template <class _K2, class _Hasher = hasher, class _Comp = key_equal,
+  template <class _K2,
+            class _Hasher                                                          = hasher,
+            class _Comp                                                            = key_equal,
             enable_if_t<__is_transparent_v<_Hasher> && __is_transparent_v<_Comp>>* = nullptr>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const {
     return __table_.__equal_range_multi(__k);
