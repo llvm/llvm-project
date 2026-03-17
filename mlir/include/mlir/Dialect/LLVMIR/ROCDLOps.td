@@ -230,11 +230,22 @@ class ROCDL_SpecialIdRegisterOp<string mnemonic> :
 // ROCDL vector types definitions
 //===----------------------------------------------------------------------===//
 
+class ROCDL_NamedType<string name> {
+  string typeName = name;
+}
+
 class ROCDL_ConcreteVector<Type elem, int length> :
   FixedVectorOfLengthAndType<[length], [elem]>,
   BuildableType<
     "::mlir::VectorType::get({" # length # "} ,"
-      # elem.builderCall # ")">;
+      # elem.builderCall # ")">,
+  ROCDL_NamedType<"vector<" # length # "x"
+    # !tolower(!cast<string>(elem)) # ">">;
+
+class ROCDL_Scalar<Type elem> :
+  Type<elem.predicate, elem.summary>,
+  BuildableType<elem.builderCall>,
+  ROCDL_NamedType<!tolower(!cast<string>(elem))>;
 
 def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
 def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
@@ -925,7 +936,7 @@ def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
 
-class ROCDL_Mfma_IntrOp<string mnemonic, Type ABType, Type CDType> :
+class ROCDL_Mfma_IntrOp<string mnemonic, ROCDL_NamedType ABType, ROCDL_NamedType CDType> :
   ROCDL_IntrOp<mnemonic, [], [], [], 1, 0, 0, 0, [3, 4, 5], ["cbsz", "abid", "blgp"]>,
   Arguments<(ins
              ABType:$a,
@@ -945,19 +956,10 @@ class ROCDL_Mfma_IntrOp<string mnemonic, Type ABType, Type CDType> :
 
     Example:
     ```mlir
-    // MFMA with f32 inputs and 32-wide f32 accumulator.
-    %r0 = rocdl.mfma.f32.32x32x1f32 %a0, %b0, %c0, 0, 0, 0 :
-      (f32, f32, vector<32xf32>) -> vector<32xf32>
-
-    // MFMA with i8 inputs and 32-wide i32 accumulator.
-    %r1 = rocdl.mfma.i32.32x32x4i8 %a1, %a1, %c1, 0, 0, 0 :
-      (i32, i32, vector<32xi32>) -> vector<32xi32>
-
-    // MFMA with bf16 inputs and 32-wide f32 accumulator.
-    %r2 = rocdl.mfma.f32.32x32x2bf16 %a2, %a2, %c0, 0, 0, 0 :
-      (vector<2xi16>, vector<2xi16>, vector<32xf32>) -> vector<32xf32>
-    ```
-  }];
+    %r0 = }] # mnemonic # [{ %a0, %b0, %c0, 0, 0, 0 : (}] # ABType.typeName
+    # [{, }] # ABType.typeName # [{, }] # CDType.typeName # [{) -> }]
+    # CDType.typeName # [{
+    ```}];
 }
 
 class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
@@ -1038,21 +1040,21 @@ class ROCDL_Smfmac_IntrOp<string mnemonic, Type AType, Type BType, Type CDType> 
 }
 
 // Available on all CDNA.
-def ROCDL_mfma_f32_32x32x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x1f32", /*Type AB=*/F32, /*Type CD=*/ROCDL_ConcreteVector<F32, 32>>;
-def ROCDL_mfma_f32_16x16x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x1f32", F32, ROCDL_ConcreteVector<F32, 16>>;
-def ROCDL_mfma_f32_4x4x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x1f32", F32, ROCDL_ConcreteVector<F32, 4>>;
-def ROCDL_mfma_f32_32x32x2f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2f32", F32, ROCDL_ConcreteVector<F32, 16>>;
-def ROCDL_mfma_f32_16x16x4f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f32", F32, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x1f32", /*Type AB=*/ROCDL_Scalar<F32>, /*Type CD=*/ROCDL_ConcreteVector<F32, 32>>;
+def ROCDL_mfma_f32_16x16x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x1f32", ROCDL_Scalar<F32>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_4x4x1f32 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x1f32", ROCDL_Scalar<F32>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x2f32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2f32", ROCDL_Scalar<F32>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_16x16x4f32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f32", ROCDL_Scalar<F32>, ROCDL_ConcreteVector<F32, 4>>;
 def ROCDL_mfma_f32_32x32x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 32>>;
 def ROCDL_mfma_f32_16x16x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x4f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 16>>;
 def ROCDL_mfma_f32_4x4x4f16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x4f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 4>>;
 def ROCDL_mfma_f32_32x32x8f16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 16>>;
 def ROCDL_mfma_f32_16x16x16f16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16f16", ROCDL_ConcreteVector<F16, 4>, ROCDL_ConcreteVector<F32, 4>>;
-def ROCDL_mfma_i32_32x32x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x4i8", I32, ROCDL_ConcreteVector<I32, 32>>;
-def ROCDL_mfma_i32_16x16x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x4i8", I32, ROCDL_ConcreteVector<I32, 16>>;
-def ROCDL_mfma_i32_4x4x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.4x4x4i8", I32, ROCDL_ConcreteVector<I32, 4>>;
-def ROCDL_mfma_i32_32x32x8i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x8i8", I32, ROCDL_ConcreteVector<I32, 16>>;
-def ROCDL_mfma_i32_16x16x16i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x16i8", I32, ROCDL_ConcreteVector<I32, 4>>;
+def ROCDL_mfma_i32_32x32x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x4i8", ROCDL_Scalar<I32>, ROCDL_ConcreteVector<I32, 32>>;
+def ROCDL_mfma_i32_16x16x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x4i8", ROCDL_Scalar<I32>, ROCDL_ConcreteVector<I32, 16>>;
+def ROCDL_mfma_i32_4x4x4i8 : ROCDL_Mfma_IntrOp<"mfma.i32.4x4x4i8", ROCDL_Scalar<I32>, ROCDL_ConcreteVector<I32, 4>>;
+def ROCDL_mfma_i32_32x32x8i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x8i8", ROCDL_Scalar<I32>, ROCDL_ConcreteVector<I32, 16>>;
+def ROCDL_mfma_i32_16x16x16i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x16i8", ROCDL_Scalar<I32>, ROCDL_ConcreteVector<I32, 4>>;
 def ROCDL_mfma_f32_32x32x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x2bf16", ROCDL_ConcreteVector<I16, 2>, ROCDL_ConcreteVector<F32, 32>>;
 def ROCDL_mfma_f32_16x16x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x2bf16", ROCDL_ConcreteVector<I16, 2>, ROCDL_ConcreteVector<F32, 16>>;
 def ROCDL_mfma_f32_4x4x2bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.4x4x2bf16", ROCDL_ConcreteVector<I16, 2>, ROCDL_ConcreteVector<F32, 4>>;
@@ -1066,21 +1068,21 @@ def ROCDL_mfma_f32_32x32x8bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x8bf16.1k",
 def ROCDL_mfma_f32_16x16x16bf16_1k : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x16bf16.1k", ROCDL_ConcreteVector<I16, 4>, ROCDL_ConcreteVector<F32, 4>>;
 // Note: in gfx94x, unlike in gfx90a, the f64 xdlops use the "blgp" argument as
 // a NEG bitfield. See IntrinsicsAMDGPU.td for more info.
-def ROCDL_mfma_f64_16x16x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.16x16x4f64", F64, ROCDL_ConcreteVector<F64, 4>>;
-def ROCDL_mfma_f64_4x4x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.4x4x4f64", F64, F64>;
+def ROCDL_mfma_f64_16x16x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.16x16x4f64", ROCDL_Scalar<F64>, ROCDL_ConcreteVector<F64, 4>>;
+def ROCDL_mfma_f64_4x4x4f64 : ROCDL_Mfma_IntrOp<"mfma.f64.4x4x4f64", ROCDL_Scalar<F64>, ROCDL_Scalar<F64>>;
 // New in gfx94x.
-def ROCDL_mfma_i32_16x16x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x32.i8", I64, ROCDL_ConcreteVector<I32, 4>>;
-def ROCDL_mfma_i32_32x32x16_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x16.i8", I64, ROCDL_ConcreteVector<I32, 16>>;
+def ROCDL_mfma_i32_16x16x32_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x32.i8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<I32, 4>>;
+def ROCDL_mfma_i32_32x32x16_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.32x32x16.i8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<I32, 16>>;
 def ROCDL_mfma_f32_16x16x8_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x8.xf32", ROCDL_ConcreteVector<F32, 2>, ROCDL_ConcreteVector<F32, 4>>;
 def ROCDL_mfma_f32_32x32x4_xf32 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x4.xf32", ROCDL_ConcreteVector<F32, 2>, ROCDL_ConcreteVector<F32, 16>>;
-def ROCDL_mfma_f32_16x16x32_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.bf8", I64, ROCDL_ConcreteVector<F32, 4>>;
-def ROCDL_mfma_f32_16x16x32_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.fp8", I64, ROCDL_ConcreteVector<F32, 4>>;
-def ROCDL_mfma_f32_16x16x32_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.bf8", I64, ROCDL_ConcreteVector<F32, 4>>;
-def ROCDL_mfma_f32_16x16x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.fp8", I64, ROCDL_ConcreteVector<F32, 4>>;
-def ROCDL_mfma_f32_32x32x16_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.bf8", I64, ROCDL_ConcreteVector<F32, 16>>;
-def ROCDL_mfma_f32_32x32x16_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.fp8", I64, ROCDL_ConcreteVector<F32, 16>>;
-def ROCDL_mfma_f32_32x32x16_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.bf8", I64, ROCDL_ConcreteVector<F32, 16>>;
-def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.fp8", I64, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_16x16x32_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.bf8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_16x16x32_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf8.fp8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_16x16x32_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.bf8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_16x16x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.fp8.fp8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<F32, 4>>;
+def ROCDL_mfma_f32_32x32x16_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.bf8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_32x32x16_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.fp8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_32x32x16_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.bf8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<F32, 16>>;
+def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.fp8", ROCDL_Scalar<I64>, ROCDL_ConcreteVector<F32, 16>>;
 // New in gfx950.
 def ROCDL_mfma_f32_16x16x32_bf16 : ROCDL_Mfma_IntrOp<"mfma.f32.16x16x32.bf16", ROCDL_ConcreteVector<BF16, 8>, ROCDL_ConcreteVector<F32, 4>>;
 def ROCDL_mfma_i32_16x16x64_i8 : ROCDL_Mfma_IntrOp<"mfma.i32.16x16x64.i8", ROCDL_ConcreteVector<I32, 4>, ROCDL_ConcreteVector<I32, 4>>;
