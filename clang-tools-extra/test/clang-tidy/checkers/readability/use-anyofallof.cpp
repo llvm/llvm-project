@@ -189,6 +189,8 @@ bool good_all_of() {
 std::vector<int> get_dummy_vec();
 
 bool good_any_of_temporary_vector() {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::any_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:16: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
   for (int i : get_dummy_vec())
     if (i)
       return true;
@@ -196,6 +198,8 @@ bool good_any_of_temporary_vector() {
 }
 
 bool all_of_temporary_vector() {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::all_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:16: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
   for (int i : get_dummy_vec())
     if (i)
       return false;
@@ -203,6 +207,8 @@ bool all_of_temporary_vector() {
 }
 
 bool any_of_initializer_list(int a, int b, int c) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::any_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
   for (const auto i : {a, b, c})
     if (i == 0)
       return true;
@@ -210,6 +216,8 @@ bool any_of_initializer_list(int a, int b, int c) {
 }
 
 bool all_of_initializer_list(int a, int b, int c) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::all_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
   for (const auto i : {a, b, c})
     if (i == 0)
       return false;

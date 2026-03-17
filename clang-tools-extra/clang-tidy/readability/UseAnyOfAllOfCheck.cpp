@@ -36,7 +36,7 @@ AST_MATCHER_P(Stmt, nextStmt, ast_matchers::internal::Matcher<Stmt>,
   return InnerMatcher.matches(**I, Finder, Builder);
 }
 
-AST_MATCHER(Expr, isUnsupportedRangeInit) {
+AST_MATCHER(Expr, isUnsafeTemporaryRangeInit) {
   const Expr *E = Node.IgnoreParenImpCasts();
   if (Finder->getASTContext().getLangOpts().CPlusPlus20)
     return isa<CXXStdInitializerListExpr>(E);
@@ -55,7 +55,8 @@ void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(true)))));
   const auto ReturnsButNotFalse =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(false)))));
-  const auto RangeInitMatcher = expr(unless(isUnsupportedRangeInit()));
+  const auto RangeInitMatcher = anyOf(
+      expr(isUnsafeTemporaryRangeInit()).bind("unsafe_range_init"), expr());
 
   Finder->addMatcher(
       cxxForRangeStmt(
@@ -95,19 +96,24 @@ static bool isViableLoop(const CXXForRangeStmt &S, ASTContext &Context) {
 }
 
 void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *S = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop")) {
-    if (!isViableLoop(*S, *Result.Context))
-      return;
+  const auto *AnyOfS = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop");
+  const auto *AllOfS = Result.Nodes.getNodeAs<CXXForRangeStmt>("all_of_loop");
+  const CXXForRangeStmt *S = AnyOfS ? AnyOfS : AllOfS;
 
-    diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::any_of()'")
-        << getLangOpts().CPlusPlus20;
-  } else if (const auto *S =
-                 Result.Nodes.getNodeAs<CXXForRangeStmt>("all_of_loop")) {
-    if (!isViableLoop(*S, *Result.Context))
-      return;
+  if (!S || !isViableLoop(*S, *Result.Context))
+    return;
 
-    diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::all_of()'")
-        << getLangOpts().CPlusPlus20;
+  bool IsAnyOf = (AnyOfS != nullptr);
+
+  diag(S->getForLoc(),
+       "replace loop by 'std%select{|::ranges}0::%select{all_of|any_of}1()'")
+      << getLangOpts().CPlusPlus20 << IsAnyOf;
+
+  if (const auto *Init = Result.Nodes.getNodeAs<Expr>("unsafe_range_init")) {
+    diag(Init->getExprLoc(),
+         "reusing the temporary range directly in the replacement may be "
+         "unsafe; consider materializing it in a local variable first",
+         DiagnosticIDs::Note);
   }
 }
 

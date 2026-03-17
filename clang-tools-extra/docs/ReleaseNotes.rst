@@ -352,8 +352,9 @@ Changes in existing checks
   crash from invalid ``Abbreviations`` option.
 
 - Improved :doc:`readability-use-anyofallof
-  <clang-tidy/checks/readability/use-anyofallof>` check by avoiding false
-  positives in pre-C++20 mode when iterating over temporary range expressions.
+  <clang-tidy/checks/readability/use-anyofallof>` check by emitting a diagnostic
+  note to suggest materializing the temporary range when iterating over temporary
+  range expressions or initializer lists, as reusing them directly could be unsafe.
 
 Removed checks
 ^^^^^^^^^^^^^^

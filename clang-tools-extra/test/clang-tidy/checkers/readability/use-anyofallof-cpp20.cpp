@@ -40,6 +40,8 @@ bool good_all_of_temporary_vector() {
 }
 
 bool any_of_initializer_list(int a, int b, int c) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::ranges::any_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
   for (const auto i : {a, b, c})
     if (i == 0)
       return true;
@@ -47,6 +49,8 @@ bool any_of_initializer_list(int a, int b, int c) {
 }
 
 bool all_of_initializer_list(int a, int b, int c) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::ranges::all_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
   for (const auto i : {a, b, c})
     if (i == 0)
       return false;
