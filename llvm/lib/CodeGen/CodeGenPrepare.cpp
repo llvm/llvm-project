@@ -1144,6 +1144,7 @@ static void replaceAllUsesWith(Value *Old, Value *New,
 
 /// Eliminate a basic block that has only phi's and an unconditional branch in
 /// it.
+/// Indicate that the LoopInfo was modified only if it wasn't updated.
 bool CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
   UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
   BasicBlock *DestBB = BI->getSuccessor();
