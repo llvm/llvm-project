@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCResourceInfo.h"
-#include "AMDGPUTargetMachine.h"
+#include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -318,9 +318,27 @@ void MCResourceInfo::gatherResourceInfo(
     }
   };
 
+  auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext, IsLocal);
+    LLVM_DEBUG(
+        dbgs() << "MCResUse:   " << Sym->getName() << ": Adding " << LocalValue
+               << ", no further propagation as indirect callee found within\n");
+    Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
+  };
+
+  // When DynamicVGPR is enabled do not propagate VGPR counts from callees.
+  bool SkipVGPRPropagation =
+      MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() &&
+      MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS_Chain;
+
   LLVM_DEBUG(dbgs() << "MCResUse: " << FnSym->getName() << '\n');
-  SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
-  SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
+  if (SkipVGPRPropagation) {
+    SetToLocal(FRI.NumVGPR, RIK_NumVGPR);
+    SetToLocal(FRI.NumAGPR, RIK_NumAGPR);
+  } else {
+    SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
+    SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
+  }
   SetMaxReg(MaxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
   SetMaxReg(MaxNamedBarrierSym, FRI.NumNamedBarrier, RIK_NumNamedBarrier);
 
