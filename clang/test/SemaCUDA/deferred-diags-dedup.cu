@@ -16,7 +16,7 @@ __host__ void hf(); // expected-note 3{{'hf' declared here}}
 // Lambda calling a host function. Its deferred diagnostics should be
 // emitted only once even when multiple device functions call it.
 __device__ auto l =
-  [] {
+  [] { // expected-note 2{{in HD-promoted function 'operator()'}}
     hf(); // expected-error {{reference to __host__ function 'hf' in __host__ __device__ function}}
     hf(); // expected-error {{reference to __host__ function 'hf' in __host__ __device__ function}}
   };
@@ -35,7 +35,7 @@ __device__ void df3() {
 
 // Test with shared call chains: two chains reaching the same function
 // through different intermediate callers.
-inline __host__ __device__ void hdf() {
+inline __host__ __device__ void hdf() { // expected-note {{in HD-promoted function 'hdf'}}
   hf(); // expected-error {{reference to __host__ function 'hf' in __host__ __device__ function}}
 }
 

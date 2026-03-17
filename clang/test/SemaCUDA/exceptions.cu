@@ -46,6 +46,7 @@ inline __host__ __device__ void hd3() {
 #ifdef __CUDA_ARCH__
   // expected-error@-3 {{cannot use 'throw' in __host__ __device__ function}}
   // expected-error@-3 {{cannot use 'try' in __host__ __device__ function}}
+  // expected-note@-6 2{{in HD-promoted function 'hd3'}}
 #endif
 }
 

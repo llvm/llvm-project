@@ -12,7 +12,7 @@
 __host__ void hf(); // expected-note 2{{'hf' declared here}}
 
 __device__ auto l =
-  [] {
+  [] { // expected-note 2{{in HD-promoted function 'operator()'}}
     hf(); // expected-error {{reference to __host__ function 'hf' in __host__ __device__ function}}
     hf(); // expected-error {{reference to __host__ function 'hf' in __host__ __device__ function}}
   };

@@ -8,7 +8,7 @@
 //
 // Compare to no-call-stack-for-deferred-err.cu.
 
-inline __host__ __device__ void hd_fn(int n);
+inline __host__ __device__ void hd_fn(int n); // expected-note {{in HD-promoted function 'hd_fn'}}
 inline __device__ void device_fn2() { hd_fn(42); } // expected-note {{called by 'device_fn2'}}
 
 __global__ void kernel() { device_fn2(); } // expected-note {{called by 'kernel'}}

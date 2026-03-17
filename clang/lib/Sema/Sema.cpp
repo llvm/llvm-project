@@ -2035,8 +2035,13 @@ public:
         DiagnosticBuilder Builder(S.Diags.Report(Loc, PD.getDiagID()));
         PD.Emit(Builder);
       }
-      if (IsWarningOrError)
+      if (IsWarningOrError) {
+        if (FD->hasAttr<CUDAHostAttr>() && FD->hasAttr<CUDADeviceAttr>())
+          S.Diags.Report(FD->getLocation(),
+                         diag::note_in_hd_promoted_function)
+              << FD;
         emitCallStackNotes(S, FD);
+      }
     }
   }
 

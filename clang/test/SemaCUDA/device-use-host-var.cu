@@ -198,7 +198,7 @@ inline __host__ __device__ void inline_host_dev_fun(int *out) {
 
 void dev_lambda_capture_by_ref(int *out) {
   int &ref_host_var = global_host_var;
-  kernel<<<1,1>>>([&]() {
+  kernel<<<1,1>>>([&]() { // dev-note 3{{in HD-promoted function 'operator()'}}
   int &ref_dev_var = global_dev_var;
   int &ref_constant_var = global_constant_var;
   int &ref_shared_var = global_shared_var;
@@ -224,7 +224,7 @@ void dev_lambda_capture_by_ref(int *out) {
 
 void dev_lambda_capture_by_copy(int *out) {
   int &ref_host_var = global_host_var;
-  kernel<<<1,1>>>([=]() {
+  kernel<<<1,1>>>([=]() { // dev-note {{in HD-promoted function 'operator()'}}
   int &ref_dev_var = global_dev_var;
   int &ref_constant_var = global_constant_var;
   int &ref_shared_var = global_shared_var;

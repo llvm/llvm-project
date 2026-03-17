@@ -26,7 +26,7 @@ struct Selector<double> {
 };
 
 template <typename T>
-inline __host__ __device__ void hd() {
+inline __host__ __device__ void hd() { // expected-note 2{{in HD-promoted function 'hd<}}
   Selector<T>().f();
   // expected-error@-1 2 {{reference to __device__ function}}
 }
