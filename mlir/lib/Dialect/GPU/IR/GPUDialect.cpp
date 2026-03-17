@@ -1324,11 +1324,15 @@ LogicalResult LaunchFuncOp::verify() {
 LogicalResult
 LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   LaunchFuncOp launchOp = *this;
-  ModuleOp module = (*this)->getParentOfType<ModuleOp>();
+  Operation *table = SymbolTable::getNearestSymbolTable(launchOp);
+  // GPU modules cannot be nested within each other, escape to resolve the name.
+  if (isa<GPUModuleOp>(table))
+    table = SymbolTable::getNearestSymbolTable(table->getParentOp());
+
   // Ignore launches that are nested more or less deep than functions in the
   // module we are currently checking.
   if (!launchOp->getParentOp() ||
-      launchOp->getParentOp()->getParentOp() != module)
+      launchOp->getParentOp()->getParentOp() != table)
     return success();
 
   // Ignore launch ops with missing attributes here. The errors will be
@@ -1340,7 +1344,7 @@ LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that `launch_func` refers to a well-formed GPU kernel container.
   StringAttr kernelContainerName = launchOp.getKernelModuleName();
   Operation *kernelContainer =
-      symbolTable.lookupNearestSymbolFrom(module, kernelContainerName);
+      symbolTable.lookupNearestSymbolFrom(table, kernelContainerName);
   if (!kernelContainer)
     return launchOp.emitOpError()
            << "kernel container '" << kernelContainerName.getValue()
