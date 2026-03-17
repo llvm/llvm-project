@@ -54,6 +54,7 @@ using namespace clang::hlsl;
 using namespace llvm;
 
 using llvm::hlsl::CBufferRowSizeInBytes;
+using EmbeddedResourceNameBuilder = clang::hlsl::EmbeddedResourceNameBuilder;
 
 namespace {
 
@@ -96,16 +97,105 @@ void addRootSignatureMD(llvm::dxbc::RootSignatureVersion RootSigVer,
   RootSignatureValMD->addOperand(MDVals);
 }
 
+// Gived a MemberExpr of a resource or resource array type, find the parent
+// VarDecl of the struct or class instance that contains this resource and
+// build the full resource name based on the member access path.
+//
+// For example, for a member access like "myStructArray[0].memberA",
+// this function will find the VarDecl of "myStructArray" and use the
+// EmbeddedResourceNameBuilder to build the resource name
+// "myStructArray.0.memberA".
+static const VarDecl *getStructResourceParentDeclAndBuildName(
+    const MemberExpr *ME, EmbeddedResourceNameBuilder &NameBuilder) {
+
+  SmallVector<const Expr *> WorkList;
+  const VarDecl *VD = nullptr;
+  const Expr *E = ME;
+
+  while (!VD) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      assert(isa<VarDecl>(DRE->getDecl()) &&
+             "member expr base is not a var decl");
+      VD = cast<VarDecl>(DRE->getDecl());
+      NameBuilder.pushName(VD->getName());
+      break;
+    }
+
+    WorkList.push_back(E);
+    if (const auto *ME = dyn_cast<MemberExpr>(E))
+      E = ME->getBase();
+    else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+      E = ICE->getSubExpr();
+    else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+      E = ASE->getBase();
+    else
+      llvm_unreachable("unexpected expr type in resource member access");
+  }
+
+  while (!WorkList.empty()) {
+    E = WorkList.pop_back_val();
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      NameBuilder.pushName(
+          ME->getMemberNameInfo().getName().getAsIdentifierInfo()->getName());
+    } else if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      if (ICE->getCastKind() == CK_UncheckedDerivedToBase) {
+        CXXRecordDecl *DerivedRD =
+            ICE->getSubExpr()->getType()->getAsCXXRecordDecl();
+        CXXRecordDecl *BaseRD = ICE->getType()->getAsCXXRecordDecl();
+        NameBuilder.pushBaseNameHierarchy(DerivedRD, BaseRD);
+      }
+    } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      const Expr *IdxExpr = ASE->getIdx();
+      std::optional<llvm::APSInt> Value =
+          IdxExpr->getIntegerConstantExpr(VD->getASTContext());
+      assert(Value &&
+             "expected constant index in struct with resource array access");
+      NameBuilder.pushArrayIndex(Value->getZExtValue());
+    } else {
+      llvm_unreachable("unexpected expr type in resource member access");
+    }
+  }
+  return VD;
+}
+
+// Given a MemberExpr of a resource or resource array type, find the
+// corresponding global resource declaration associated with the owning struct
+// or class instance via HLSLAssociatedResourceDeclAttr.
+static const VarDecl *
+findAssociatedResourceDeclForStruct(ASTContext &AST, const MemberExpr *ME) {
+
+  EmbeddedResourceNameBuilder NameBuilder;
+  const VarDecl *ParentVD =
+      getStructResourceParentDeclAndBuildName(ME, NameBuilder);
+
+  if (!ParentVD->hasGlobalStorage())
+    return nullptr;
+
+  IdentifierInfo *II = NameBuilder.getNameAsIdentifier(AST);
+  for (const Attr *A : ParentVD->getAttrs()) {
+    const auto *ADA = dyn_cast<HLSLAssociatedResourceDeclAttr>(A);
+    if (!ADA)
+      continue;
+    VarDecl *AssocResVD = dyn_cast<VarDecl>(ADA->getResDecl());
+    if (AssocResVD->getIdentifier() == II)
+      return AssocResVD;
+  }
+  return nullptr;
+}
+
 // Find array variable declaration from DeclRef expression
-static const ValueDecl *getArrayDecl(const Expr *E) {
-  if (const DeclRefExpr *DRE =
-          dyn_cast_or_null<DeclRefExpr>(E->IgnoreImpCasts()))
+static const ValueDecl *getArrayDecl(ASTContext &AST, const Expr *E) {
+  E = E->IgnoreImpCasts();
+  if (const auto *DRE = dyn_cast_or_null<DeclRefExpr>(E))
     return DRE->getDecl();
+  if (isa<MemberExpr>(E))
+    return findAssociatedResourceDeclForStruct(AST, cast<MemberExpr>(E));
   return nullptr;
 }
 
 // Find array variable declaration from nested array subscript AST nodes
-static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
+static const ValueDecl *getArrayDecl(ASTContext &AST,
+                                     const ArraySubscriptExpr *ASE) {
   const Expr *E = nullptr;
   while (ASE != nullptr) {
     E = ASE->getBase()->IgnoreImpCasts();
@@ -113,7 +203,7 @@ static const ValueDecl *getArrayDecl(const ArraySubscriptExpr *ASE) {
       return nullptr;
     ASE = dyn_cast<ArraySubscriptExpr>(E);
   }
-  return getArrayDecl(E);
+  return getArrayDecl(AST, E);
 }
 
 // Get the total size of the array, or -1 if the array is unbounded.
@@ -1227,8 +1317,8 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // Let clang codegen handle local and static resource array subscripts,
   // or when the subscript references on opaque expression (as part of
   // ArrayInitLoopExpr AST node).
-  const VarDecl *ArrayDecl =
-      dyn_cast_or_null<VarDecl>(getArrayDecl(ArraySubsExpr));
+  const VarDecl *ArrayDecl = dyn_cast_or_null<VarDecl>(
+      getArrayDecl(CGF.CGM.getContext(), ArraySubsExpr));
   if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
       ArrayDecl->getStorageClass() == SC_Static)
     return std::nullopt;
@@ -1325,7 +1415,8 @@ bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
   assert(ResultTy->isHLSLResourceRecordArray() && "expected resource array");
 
   // Let Clang codegen handle local and static resource array copies.
-  const VarDecl *ArrayDecl = dyn_cast_or_null<VarDecl>(getArrayDecl(RHSExpr));
+  const VarDecl *ArrayDecl =
+      dyn_cast_or_null<VarDecl>(getArrayDecl(CGF.CGM.getContext(), RHSExpr));
   if (!ArrayDecl || !ArrayDecl->hasGlobalStorage() ||
       ArrayDecl->getStorageClass() == SC_Static)
     return false;
@@ -1446,6 +1537,37 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
                                            Indices, "cbufferidx");
   Addr = Address(GEP, Addr.getElementType(), RowAlignedSize, KnownNonNull);
   return CGF.MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
+}
+
+std::optional<LValue>
+CGHLSLRuntime::emitResourceMemberExpr(CodeGenFunction &CGF,
+                                      const MemberExpr *ME) {
+  assert((ME->getType()->isHLSLResourceRecord() ||
+          ME->getType()->isHLSLResourceRecordArray()) &&
+         "expected resource member expression");
+
+  if (ME->getType()->isHLSLResourceRecordArray()) {
+    // FIXME: Handle member access of the whole array of resources
+    // (llvm/llvm-project#187087). Access to individual resource array elements
+    // is already handled in emitResourceArraySubscriptExpr.
+    return std::nullopt;
+  }
+
+  const VarDecl *ResourceVD =
+      findAssociatedResourceDeclForStruct(CGF.CGM.getContext(), ME);
+  if (!ResourceVD)
+    return std::nullopt;
+
+  GlobalVariable *ResGV =
+      cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(ResourceVD));
+  const DataLayout &DL = CGM.getDataLayout();
+  llvm::Type *Ty = ResGV->getValueType();
+  CharUnits Align = CharUnits::fromQuantity(DL.getABITypeAlign(Ty));
+  Address Addr = Address(ResGV, Ty, Align);
+  LValue LV = LValue::MakeAddr(Addr, ME->getType(), CGM.getContext(),
+                               LValueBaseInfo(AlignmentSource::Type),
+                               CGM.getTBAAAccessInfo(ME->getType()));
+  return LV;
 }
 
 namespace {

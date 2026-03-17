@@ -128,6 +128,7 @@ public:
   void pushName(llvm::StringRef N) { pushName(N, FieldDelim); }
   void pushBaseName(llvm::StringRef N);
   void pushArrayIndex(uint64_t Index);
+  void pushBaseNameHierarchy(CXXRecordDecl *DerivedRD, CXXRecordDecl *BaseRD);
 
   void pop() {
     assert(!Offsets.empty() && "no name to pop");

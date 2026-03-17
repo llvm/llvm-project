@@ -42,5 +42,19 @@ void EmbeddedResourceNameBuilder::pushArrayIndex(uint64_t Index) {
   OS << Index;
 }
 
+void EmbeddedResourceNameBuilder::pushBaseNameHierarchy(
+    CXXRecordDecl *DerivedRD, CXXRecordDecl *BaseRD) {
+  Offsets.push_back(Name.size());
+  Name.append(FieldDelim);
+  while (BaseRD != DerivedRD) {
+    assert(DerivedRD->getNumBases() == 1 &&
+           "HLSL does not support multiple inheritance");
+    DerivedRD = DerivedRD->bases_begin()->getType()->getAsCXXRecordDecl();
+    assert(DerivedRD && "base class not found");
+    Name.append(DerivedRD->getName());
+    Name.append(BaseClassDelim);
+  }
+}
+
 } // namespace hlsl
 } // namespace clang
