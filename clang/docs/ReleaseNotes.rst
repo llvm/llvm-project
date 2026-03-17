@@ -286,6 +286,9 @@ Improvements to Clang's diagnostics
   when parsing alias declarations involving a token-split ``>>`` sequence
   (for example, ``using A = X<int>>;``). (#GH184425)
 
+- Fixed incorrect ``implicitly deleted`` diagnostic for explicitly deleted
+  candidate function. (#GH185693)
+
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
@@ -327,6 +330,7 @@ Bug Fixes in This Version
 - Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
 - Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
 - Fixed a crash caused by accessing dependent diagnostics of a non-dependent context.
+- Fixed a crash when substituting into a non-type template parameter that has a type containing an undeduced placeholder type.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
