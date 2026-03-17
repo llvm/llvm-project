@@ -49,7 +49,7 @@ stages:
               archflag: --arch x64
         pool:
             name: NetCore1ESPool-Internal-XL
-            demands: ImageOverride -equals build.ubuntu.2204.amd64
+            demands: ImageOverride -equals build.azurelinux.3.amd64
         container:
           image: $(imagename)
         steps:

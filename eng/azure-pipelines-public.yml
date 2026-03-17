@@ -73,7 +73,7 @@ stages:
               archflag: --arch arm
         pool:
           name: $(DncEngPublicBuildPool)
-          demands: ImageOverride -equals build.ubuntu.2204.amd64.open
+          demands: ImageOverride -equals build.azurelinux.3.amd64.open
         container:
           image: $(imagename)
         steps:
@@ -117,7 +117,7 @@ stages:
               archflag: --arch arm64
         pool:
           name: $(DncEngPublicBuildPool)
-          demands: ImageOverride -equals build.ubuntu.2204.amd64.open
+          demands: ImageOverride -equals build.azurelinux.3.amd64.open
         container:
           image: $(imagename)
         steps:
