@@ -15,10 +15,8 @@
 // RUN:               -DRESOURCE=%S/Inputs/resource_dir \
 // RUN:               --check-prefix=CHECK-SYSTEM %s
 //
-// Pass --no-xcselect to ensure xcselect does not inject an -isysroot flag.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
-// RUN:     --no-xcselect \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot %S/Inputs/basic_darwin_sdk_usr_and_usr_local \
@@ -93,10 +91,8 @@
 
 // Check search paths without -isysroot
 //
-// Pass --no-xcselect to ensure xcselect does not inject an -isysroot flag.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
-// RUN:     --no-xcselect \
 // RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot="" \

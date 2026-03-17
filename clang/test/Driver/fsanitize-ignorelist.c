@@ -25,8 +25,8 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=nullability -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=alignment -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
-// The driver injects -fdepfile-entry=/path/to/SDKSettings.json when xcselect is active.
-// RUN: %clang --target=%itanium_abi_triple --no-xcselect -fsanitize=float-divide-by-zero -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
+// Pass `--no-sysroot` to prevent the driver injecting -fdepfile-entry=<sysroot>/SDKSettings.json when xcselect is active.
+// RUN: %clang --target=%itanium_abi_triple --no-sysroot -fsanitize=float-divide-by-zero -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
 // CHECK-DEFAULT-UBSAN-IGNORELIST: -fsanitize-system-ignorelist={{.*}}ubsan_ignorelist.txt
 
 // Check that combining ubsan and another sanitizer results in both ignorelists being used.
