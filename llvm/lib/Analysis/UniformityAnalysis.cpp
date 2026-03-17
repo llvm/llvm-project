@@ -66,56 +66,6 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
   return markDivergent(cast<Value>(&Instr));
 }
 
-template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
-  for (auto &I : instructions(F)) {
-    InstructionUniformity IU = TTI->getInstructionUniformity(&I);
-    switch (IU) {
-    case InstructionUniformity::AlwaysUniform:
-      addUniformOverride(I);
-      break;
-    case InstructionUniformity::NeverUniform:
-      markDivergent(I);
-      break;
-    case InstructionUniformity::Custom:
-      addCustomUniformityCandidate(&I);
-      break;
-    case InstructionUniformity::Default:
-      break;
-    }
-  }
-  for (auto &Arg : F.args()) {
-    if (TTI->getInstructionUniformity(&Arg) ==
-        InstructionUniformity::NeverUniform)
-      markDivergent(&Arg);
-  }
-}
-
-template <>
-void llvm::GenericUniformityAnalysisImpl<SSAContext>::finalizeUniformValues() {
-  // Populate UniformValues with all values that were NOT marked divergent.
-  // This enables safe uniformity queries where unknown values (e.g., newly
-  // created instructions) are conservatively treated as divergent.
-  for (const Argument &Arg : F.args()) {
-    if (!DivergentValues.count(&Arg))
-      UniformValues.insert(&Arg);
-  }
-  for (const BasicBlock &BB : F) {
-    for (const Instruction &I : BB) {
-      if (!DivergentValues.count(&I))
-        UniformValues.insert(&I);
-    }
-  }
-
-  // Register CallbackVH for each uniform value so we remove them on deletion.
-  // Prevents stale pointers when addresses are reused.
-  auto Manager = std::make_unique<IRUniformValueCallbackManager>(UniformValues);
-  for (const Value *V : UniformValues)
-    Manager->registerValue(V);
-  UniformValueCallbacks = std::move(Manager);
-
-  DivergentValues.clear();
-}
-
 template <>
 void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
     const Value *V) {
@@ -133,6 +83,52 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
   if (Instr.isTerminator())
     return;
   pushUsers(cast<Value>(&Instr));
+}
+
+template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
+  // Pre-populate UniformValues with all values, then seed divergence.
+  // Values are removed from UniformValues as divergence is propagated.
+  SmallVector<const Value *, 4> DivergentArgs;
+  for (auto &Arg : F.args()) {
+    UniformValues.insert(&Arg);
+    if (TTI->getInstructionUniformity(&Arg) ==
+        InstructionUniformity::NeverUniform) {
+      markDivergent(&Arg);
+      DivergentArgs.push_back(&Arg);
+    }
+  }
+  for (auto &I : instructions(F)) {
+    UniformValues.insert(&I);
+    InstructionUniformity IU = TTI->getInstructionUniformity(&I);
+    switch (IU) {
+    case InstructionUniformity::AlwaysUniform:
+      addUniformOverride(I);
+      continue;
+    case InstructionUniformity::NeverUniform:
+      markDivergent(I);
+      continue;
+    case InstructionUniformity::Custom:
+      addCustomUniformityCandidate(&I);
+      continue;
+    case InstructionUniformity::Default:
+      break;
+    }
+  }
+  // Push users of divergent arguments after all instructions are in
+  // UniformValues, so markDivergent (called inside pushUsers) can
+  // successfully erase the user instruction from the set.
+  for (const Value *Arg : DivergentArgs)
+    pushUsers(Arg);
+}
+
+template <>
+void llvm::GenericUniformityAnalysisImpl<SSAContext>::registerCallbacks() {
+  // Register CallbackVH for each uniform value so we remove them on deletion.
+  // Prevents stale pointers when addresses are reused.
+  auto Manager = std::make_unique<IRUniformValueCallbackManager>(UniformValues);
+  for (const Value *V : UniformValues)
+    Manager->registerValue(V);
+  UniformValueCallbacks = std::move(Manager);
 }
 
 template <>

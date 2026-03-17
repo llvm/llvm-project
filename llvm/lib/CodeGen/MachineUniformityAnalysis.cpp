@@ -48,6 +48,20 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::markDefsDivergent(
 
 template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
+  // Pre-populate UniformValues with all register defs. Physical register defs
+  // are included because they are never analyzed for divergence (initialize
+  // and markDefsDivergent skip them), so they must be in UniformValues to
+  // avoid being falsely reported as divergent.
+  for (const MachineBasicBlock &BB : F) {
+    for (const MachineInstr &MI : BB.instrs()) {
+      for (const MachineOperand &Op : MI.all_defs()) {
+        Register Reg = Op.getReg();
+        if (Reg)
+          UniformValues.insert(Reg);
+      }
+    }
+  }
+
   const auto &InstrInfo = *F.getSubtarget().getInstrInfo();
 
   for (const MachineBasicBlock &block : F) {
@@ -72,30 +86,12 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
 
 template <>
 void llvm::GenericUniformityAnalysisImpl<
-    MachineSSAContext>::finalizeUniformValues() {
-  // Populate UniformValues with all register defs that were NOT marked
-  // divergent. This enables safe uniformity queries where unknown registers
-  // are conservatively treated as divergent. Physical register defs are
-  // included because they are never tracked in DivergentValues (initialize
-  // and markDefsDivergent skip them), so they must be in UniformValues to
-  // avoid being falsely reported as divergent.
-  for (const MachineBasicBlock &BB : F) {
-    for (const MachineInstr &MI : BB.instrs()) {
-      for (const MachineOperand &Op : MI.all_defs()) {
-        Register Reg = Op.getReg();
-        if (Reg && !DivergentValues.count(Reg))
-          UniformValues.insert(Reg);
-      }
-    }
-  }
-
-  DivergentValues.clear();
-}
+    MachineSSAContext>::registerCallbacks() {}
 
 template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
     Register Reg) {
-  assert(isDivergentUnderConstruction(Reg));
+  assert(isDivergent(Reg));
   const auto &RegInfo = F.getRegInfo();
   for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
     markDivergent(UserInstr);
@@ -110,7 +106,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
     return;
   for (const MachineOperand &op : Instr.all_defs()) {
     auto Reg = op.getReg();
-    if (isDivergentUnderConstruction(Reg))
+    if (isDivergent(Reg))
       pushUsers(Reg);
   }
 }

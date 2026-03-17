@@ -369,8 +369,9 @@ public:
   /// \brief Examine \p I for divergent outputs and add to the worklist.
   void markDivergent(const InstructionT &I);
 
-  /// \brief Mark \p DivVal as a divergent value.
-  /// \returns Whether the tracked divergence state of \p DivVal changed.
+  /// \brief Mark \p DivVal as a divergent value by removing it from
+  /// UniformValues. \returns Whether the tracked divergence state of
+  /// \p DivVal changed.
   bool markDivergent(ConstValueRefT DivVal);
 
   /// \brief Mark outputs of \p Instr as divergent.
@@ -381,9 +382,9 @@ public:
   /// Divergence is seeded by calls to \p markDivergent.
   void compute();
 
-  /// \brief Populate UniformValues set after divergence analysis completes.
-  /// This enables safe uniformity queries for transformation passes.
-  void finalizeUniformValues();
+  /// \brief Register callbacks (e.g., CallbackVH for IR) to keep
+  /// UniformValues in sync when values are deleted after analysis.
+  void registerCallbacks();
 
   /// \brief Whether any value was marked or analyzed to be divergent.
   bool hasDivergence() const { return HasDivergence; }
@@ -434,13 +435,6 @@ public:
   void addCustomUniformityCandidate(const InstructionT *I);
 
 protected:
-  /// \brief Whether \p Val was marked divergent during internal uniformity
-  /// computation. Used by the divergence propagation worklist, not by
-  /// external consumers of the analysis.
-  bool isDivergentUnderConstruction(ConstValueRefT V) const {
-    return DivergentValues.contains(V);
-  }
-
   const ContextT &Context;
   const FunctionT &F;
   const CycleInfoT &CI;
@@ -453,13 +447,11 @@ protected:
   // isDivergent() returns false for all values.
   bool HasBranchDivergence = false;
 
-  // Values detected as divergent during internal uniformity computation.
-  // Cleared after finalizeUniformValues() populates UniformValues.
-  DenseSet<ConstValueRefT> DivergentValues;
   SmallPtrSet<const BlockT *, 32> DivergentTermBlocks;
 
-  // Known uniform values (populated after analysis by finalizeUniformValues).
-  // Used by isDivergent() to conservatively treat unknown values as divergent.
+  // Values known to be uniform. Populated in initialize() with all values,
+  // then values are removed as divergence is propagated. After analysis,
+  // values not in this set are conservatively treated as divergent.
   DenseSet<ConstValueRefT> UniformValues;
 
   // For IR: callbacks to remove from UniformValues on value deletion,
@@ -861,7 +853,8 @@ void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
 template <typename ContextT>
 bool GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     ConstValueRefT Val) {
-  if (DivergentValues.insert(Val).second) {
+  if (UniformValues.erase(Val)) {
+    HasDivergence = true;
     LLVM_DEBUG(dbgs() << "marked divergent: " << Context.print(Val) << "\n");
     return true;
   }
@@ -1172,14 +1165,6 @@ template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::compute() {
   HasBranchDivergence = true;
 
-  // Initialize worklist.
-  auto DivValuesCopy = DivergentValues;
-  for (const auto DivVal : DivValuesCopy) {
-    assert(isDivergentUnderConstruction(DivVal) &&
-           "Worklist invariant violated!");
-    pushUsers(DivVal);
-  }
-
   // All values on the Worklist are divergent.
   // Their users may not have been updated yet.
   while (!Worklist.empty()) {
@@ -1197,9 +1182,6 @@ void GenericUniformityAnalysisImpl<ContextT>::compute() {
     assert(isDivergent(*I) && "Worklist invariant violated!");
     pushUsers(*I);
   }
-
-  // Record before DivergentValues is cleared in finalizeUniformValues().
-  HasDivergence = !DivergentValues.empty();
 }
 
 template <typename ContextT>
