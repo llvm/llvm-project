@@ -24572,8 +24572,8 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 
 namespace {
 /// A group of related stores which we are in the process of vectorizing,
-/// a subset of which may already vectorized. Stores context information
-/// about the group as a whole as well as information about what VF's need
+/// a subset of which may already be vectorized. Stores context information
+/// about the group as a whole as well as information about what VFs need
 /// to be attempted still.
 struct StoreChainContext {
   using SizePair = std::pair<unsigned, unsigned>;
