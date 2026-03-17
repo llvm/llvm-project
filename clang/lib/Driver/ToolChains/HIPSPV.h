@@ -52,8 +52,7 @@ public:
                   const llvm::opt::ArgList &Args);
 
   const llvm::Triple *getAuxTriple() const override {
-    assert(HostTC);
-    return &HostTC->getTriple();
+    return HostTC ? &HostTC->getTriple() : nullptr;
   }
 
   void
