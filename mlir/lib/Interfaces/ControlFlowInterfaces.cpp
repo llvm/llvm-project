@@ -631,6 +631,16 @@ static bool isDefinedBefore(Operation *regionBranchOp, Value a, Value b) {
 /// Compute all non-successor-input values that a successor input could have
 /// based on the given successor input to successor operand mapping.
 ///
+/// Starting with the given value, trace back all predecessor values (i.e.,
+/// preceding successor operands) and add them to the set of reachable values.
+/// If the successor operand is again a successor input, do not add it to the
+/// result set, but instead continue the traversal.
+///
+/// If `maxReachableValues` is set, the traversal is aborted early and
+/// `failure` is returned as soon as the number of reachable values exceeds
+/// the limit. Otherwise, `success` is returned and the result set contains
+/// all reachable values.
+///
 /// Example 1:
 /// %r = scf.if ... {
 ///   scf.yield %a : ...
@@ -653,14 +663,11 @@ static bool isDefinedBefore(Operation *regionBranchOp, Value a, Value b) {
 /// }
 /// reachableValues(%arg0) = {%0, %1}
 /// reachableValues(%r) = {%0, %1}
-static llvm::SmallDenseSet<Value> computeReachableValuesFromSuccessorInput(
-    Value value, const RegionBranchInverseSuccessorMapping &inputToOperands) {
+static LogicalResult computeReachableValuesFromSuccessorInput(
+    llvm::SmallDenseSet<Value> &result, Value value,
+    const RegionBranchInverseSuccessorMapping &inputToOperands,
+    std::optional<unsigned> maxReachableValues = std::nullopt) {
   assert(inputToOperands.contains(value) && "value must be a successor input");
-  // Starting with the given value, trace back all predecessor values (i.e.,
-  // preceding successor operands) and add them to the set of reachable values.
-  // If the successor operand is again a successor input, do not add it to
-  // result set, but instead continue the traversal.
-  llvm::SmallDenseSet<Value> reachableValues;
   llvm::SmallDenseSet<Value> visited;
   SmallVector<Value> worklist;
   worklist.push_back(value);
@@ -668,7 +675,9 @@ static llvm::SmallDenseSet<Value> computeReachableValuesFromSuccessorInput(
     Value next = worklist.pop_back_val();
     auto it = inputToOperands.find(next);
     if (it == inputToOperands.end()) {
-      reachableValues.insert(next);
+      result.insert(next);
+      if (maxReachableValues && result.size() > *maxReachableValues)
+        return failure();
       continue;
     }
     for (OpOperand *operand : it->second)
@@ -677,7 +686,7 @@ static llvm::SmallDenseSet<Value> computeReachableValuesFromSuccessorInput(
   }
   // Note: The result does not contain any successor inputs. (Therefore,
   // `value` is also guaranteed to be excluded.)
-  return reachableValues;
+  return success();
 }
 
 namespace {
@@ -729,9 +738,11 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
         continue;
       // Nothing to do for successor inputs that may have multiple reachable
       // values.
-      llvm::SmallDenseSet<Value> reachableValues =
-          computeReachableValuesFromSuccessorInput(value, inputToOperands);
-      if (reachableValues.size() != 1)
+      llvm::SmallDenseSet<Value> reachableValues;
+      if (failed(computeReachableValuesFromSuccessorInput(
+              reachableValues, value, inputToOperands,
+              /*maxReachableValues=*/1)) ||
+          reachableValues.empty())
         continue;
       assert(*reachableValues.begin() != value &&
              "successor inputs are supposed to be excluded");

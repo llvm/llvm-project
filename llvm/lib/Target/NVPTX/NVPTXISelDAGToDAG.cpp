@@ -545,12 +545,17 @@ NVPTX::Ordering NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
   llvm_unreachable("Invalid atomic ordering");
 }
 
+// Clusters contain exactly 1 block on targets without cluster support.
+static NVPTX::Scope resolveScope(NVPTX::Scope S, const NVPTXSubtarget *T) {
+  if (S == NVPTX::Scope::Cluster && !T->hasClusters())
+    return NVPTX::Scope::Block;
+  return S;
+}
+
 NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
-  // No "scope" modifier for SM/PTX versions which do not support scoped atomics
-  // Functionally, these atomics are at device scope
   if (!Subtarget->hasAtomScope())
     return NVPTX::Scope::DefaultDevice;
-  return Scopes[N->getSyncScopeID()];
+  return resolveScope(Scopes[N->getSyncScopeID()], Subtarget);
 }
 
 namespace {
@@ -773,14 +778,7 @@ NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
   case NVPTX::Ordering::SequentiallyConsistent:
     auto S = Scopes[N->getSyncScopeID()];
 
-    // Atomic operations must have a scope greater than thread.
-    if (S == NVPTX::Scope::Thread)
-      report_fatal_error(
-          formatv("Atomics need scope > \"{}\".", ScopeToString(S)));
-
-    // If scope is cluster, clusters must be supported.
-    if (S == NVPTX::Scope::Cluster)
-      Subtarget->failIfClustersUnsupported("cluster scope");
+    S = resolveScope(S, Subtarget);
 
     // If operation is volatile, then its scope is system.
     return N->isVolatile() ? NVPTX::Scope::System : S;
@@ -798,8 +796,7 @@ static bool canLowerToLDG(const MemSDNode &N, const NVPTXSubtarget &Subtarget,
 
 static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
                                NVPTXSubtarget const *T) {
-  if (S == NVPTX::Scope::Cluster)
-    T->failIfClustersUnsupported(".cluster scope fence");
+  S = resolveScope(S, T);
 
   // Fall back to .acq_rel if .acquire, .release is not supported.
   if (!T->hasSplitAcquireAndReleaseFences() &&
@@ -908,6 +905,15 @@ NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
   auto [InstructionOrdering, FenceOrdering] =
       getOperationOrderings(N, Subtarget);
   auto Scope = getOperationScope(N, InstructionOrdering);
+
+  // Singlethread scope has no inter-thread synchronization requirements, so
+  // the atomic operation is lowered as plain and the fence is skipped.
+  // NotAtomic and Volatile operations naturally have Thread scope and must
+  // preserve their ordering.
+  if (Scope == NVPTX::Scope::Thread &&
+      InstructionOrdering != NVPTX::Ordering::NotAtomic &&
+      InstructionOrdering != NVPTX::Ordering::Volatile)
+    return {NVPTX::Ordering::NotAtomic, Scope};
 
   // If a fence is required before the operation, insert it:
   switch (NVPTX::Ordering(FenceOrdering)) {
@@ -1857,9 +1863,19 @@ void NVPTXDAGToDAGISel::SelectI128toV2I64(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryFence(SDNode *N) {
   SDLoc DL(N);
   assert(N->getOpcode() == ISD::ATOMIC_FENCE);
-  unsigned int FenceOp =
-      getFenceOp(NVPTX::Ordering(N->getConstantOperandVal(1)),
-                 Scopes[N->getConstantOperandVal(2)], Subtarget);
+  auto Scope = Scopes[N->getConstantOperandVal(2)];
+
+  // Singlethread fences have no inter-thread synchronization requirements.
+  // Note: std::atomic_signal_fence lowers to singlethread LLVM IR fences;
+  // this intentionally drops these before emitting PTX.
+  if (Scope == NVPTX::Scope::Thread) {
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), N->getOperand(0));
+    CurDAG->RemoveDeadNode(N);
+    return true;
+  }
+
+  unsigned int FenceOp = getFenceOp(
+      NVPTX::Ordering(N->getConstantOperandVal(1)), Scope, Subtarget);
   SDValue Chain = N->getOperand(0);
   SDNode *FenceNode = CurDAG->getMachineNode(FenceOp, DL, MVT::Other, Chain);
   ReplaceNode(N, FenceNode);
