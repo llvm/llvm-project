@@ -2860,7 +2860,8 @@ void populateRoot(nb::module_ &m) {
           },
           "dialect_namespace"_a)
       .def("_register_dialect_impl", &PyGlobals::registerDialectImpl,
-           "dialect_namespace"_a, "dialect_class"_a,
+           "dialect_namespace"_a, "dialect_class"_a, nb::kw_only(),
+           "replace"_a = false,
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
            "operation_name"_a, "operation_class"_a, nb::kw_only(),

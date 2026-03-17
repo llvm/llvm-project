@@ -1659,6 +1659,25 @@ void foo() { call(""); }
 
 }
 
+namespace GH186624 {
+
+template <class T>
+concept C = __is_unsigned(T);
+
+template <C T>
+struct encoder_interface {};
+
+template <template <C> class CodecInterface, C T>
+CodecInterface<T>* create_codec() {
+  return nullptr;
+}
+
+encoder_interface<unsigned>* create_encoder() {
+  return create_codec<encoder_interface, unsigned>();
+}
+
+}
+
 namespace GH170856 {
 
 template <unsigned N, unsigned M> struct symbol_text {

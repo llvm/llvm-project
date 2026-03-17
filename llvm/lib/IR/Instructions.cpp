@@ -1218,8 +1218,8 @@ CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
                  AllocMarker, InsertBefore) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = Cond;
-  Op<-2>() = IfFalse;
-  Op<-1>() = IfTrue;
+  Op<-2>() = IfTrue;
+  Op<-1>() = IfFalse;
 #ifndef NDEBUG
   AssertOK();
 #endif
@@ -3242,7 +3242,16 @@ CastInst::getCastOpcode(
       DestTy->getPrimitiveSizeInBits().getFixedValue(); // 0 for ptr
 
   // Run through the possibilities ...
-  if (DestTy->isIntegerTy()) {                      // Casting to integral
+  if (DestTy->isByteTy()) {     // Casting to byte
+    if (SrcTy->isIntegerTy()) { // Casting from integral
+      assert(DestBits == SrcBits && "Illegal cast from integer to byte type");
+      return BitCast;
+    } else if (SrcTy->isPointerTy()) { // Casting from pointer
+      assert(DestBits == SrcBits && "Illegal cast from pointer to byte type");
+      return BitCast;
+    }
+    llvm_unreachable("Illegal cast to byte type");
+  } else if (DestTy->isIntegerTy()) {               // Casting to integral
     if (SrcTy->isIntegerTy()) {                     // Casting from integral
       if (DestBits < SrcBits)
         return Trunc;                               // int -> smaller int
@@ -3374,7 +3383,10 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
     PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
 
     // BitCast implies a no-op cast of type only. No bits change.
-    // However, you can't cast pointers to anything but pointers.
+    // However, you can't cast pointers to anything but pointers/bytes.
+    if ((SrcPtrTy && DstTy->isByteOrByteVectorTy()) ||
+        (SrcTy->isByteOrByteVectorTy() && DstPtrTy))
+      return true;
     if (!SrcPtrTy != !DstPtrTy)
       return false;
 
@@ -3807,22 +3819,6 @@ CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
     return getStrictPredicate(pred);
 
   llvm_unreachable("Unknown predicate!");
-}
-
-bool CmpInst::isUnsigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_ULE: case ICmpInst::ICMP_UGT:
-    case ICmpInst::ICMP_UGE: return true;
-  }
-}
-
-bool CmpInst::isSigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_SLE: case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE: return true;
-  }
 }
 
 bool ICmpInst::compare(const APInt &LHS, const APInt &RHS,

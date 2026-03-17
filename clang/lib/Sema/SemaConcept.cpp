@@ -2575,7 +2575,15 @@ bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
   }
 
   SubsumptionChecker SC(*this);
-  std::optional<bool> Subsumes = SC.Subsumes(D1, AC1, D2, AC2);
+  // Associated declarations are used as a cache key in the event they were
+  // normalized earlier during concept checking. However we cannot reuse these
+  // cached results if any of the template depths have been adjusted.
+  const NamedDecl *DeclAC1 = D1, *DeclAC2 = D2;
+  if (Depth2 > Depth1)
+    DeclAC1 = nullptr;
+  else if (Depth1 > Depth2)
+    DeclAC2 = nullptr;
+  std::optional<bool> Subsumes = SC.Subsumes(DeclAC1, AC1, DeclAC2, AC2);
   if (!Subsumes) {
     // Normalization failed
     return true;

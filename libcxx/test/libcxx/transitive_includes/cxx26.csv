@@ -354,7 +354,6 @@ format cctype
 format cerrno
 format climits
 format clocale
-format cmath
 format compare
 format cstddef
 format cstdint
@@ -508,7 +507,6 @@ iostream cctype
 iostream cerrno
 iostream climits
 iostream clocale
-iostream cmath
 iostream compare
 iostream cstddef
 iostream cstdint
@@ -694,7 +692,6 @@ ostream cctype
 ostream cerrno
 ostream climits
 ostream clocale
-ostream cmath
 ostream compare
 ostream cstddef
 ostream cstdint
@@ -724,7 +721,6 @@ print cctype
 print cerrno
 print climits
 print clocale
-print cmath
 print compare
 print cstddef
 print cstdint
@@ -995,7 +991,6 @@ syncstream cctype
 syncstream cerrno
 syncstream climits
 syncstream clocale
-syncstream cmath
 syncstream compare
 syncstream cstddef
 syncstream cstdint
