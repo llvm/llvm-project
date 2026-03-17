@@ -5656,6 +5656,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   case Instruction::FRem: {
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
 
+    if (Op->getOpcode() == Instruction::FRem)
+      Known.knownNot(fcInf);
+
     if (Op->getOperand(0) == Op->getOperand(1) &&
         isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
       if (Op->getOpcode() == Instruction::FDiv) {

@@ -6701,6 +6701,13 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "\n"
                "#define FGHIJK",
                Style);
+
+  verifyFormat("#ifndef FOO_H\n"
+               "#define FOO_H\n"
+               "#include <iostream>\n"
+               "#endif\n"
+               "// comment",
+               Style);
 }
 
 TEST_F(FormatTest, FormatAlignInsidePreprocessorElseBlock) {
@@ -17343,6 +17350,16 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
   verifyFormat("int aaaaaaaaaa = bbbbbbbbbbbbbbbbbbbb\n"
                "               + cccccccccccccccccccc;",
                Tab);
+
+  Tab.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Tab.BraceWrapping.BeforeLambdaBody = true;
+  verifyNoChange("example(\n"
+                 "\t[]\n"
+                 "\t{\n"
+                 "\t\t// foo\n"
+                 "\t\t// bar\n"
+                 "\t});",
+                 Tab);
 }
 
 TEST_F(FormatTest, ZeroTabWidth) {

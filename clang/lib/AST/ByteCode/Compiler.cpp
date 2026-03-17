@@ -6115,11 +6115,13 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
-  {
-    LocalScope<Emitter> CondScope(this);
-    if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl))
-        return false;
+  // Start of the loop body {
+  LocalScope<Emitter> CondScope(this);
+
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt()) {
+    if (!visitDeclStmt(CondDecl))
+      return false;
+  }
 
     if (!this->visitBool(Cond))
       return false;
@@ -6135,12 +6137,14 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
 
     if (!CondScope.destroyLocals())
       return false;
-  }
-  if (!this->jump(CondLabel))
-    return false;
-  this->fallthrough(EndLabel);
-  this->emitLabel(EndLabel);
-  return WholeLoopScope.destroyLocals();
+    // } End of loop body.
+
+    if (!this->jump(CondLabel))
+      return false;
+    this->fallthrough(EndLabel);
+    this->emitLabel(EndLabel);
+
+    return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {

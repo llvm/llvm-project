@@ -106,14 +106,14 @@ public:
 
     if (script_interpreter &&
         script_interpreter->IsReservedWord(m_sanitized_name.c_str())) {
+      m_conflicting_keyword = m_sanitized_name;
       m_sanitized_name.insert(m_sanitized_name.begin(), '_');
-      m_name_is_keyword = true;
     }
   }
 
   /// Returns \c true if this name is a keyword in the associated scripting
   /// language.
-  bool IsKeyword() const { return m_name_is_keyword; }
+  bool IsKeyword() const { return !m_conflicting_keyword.empty(); }
 
   /// Returns \c true if the original name has been sanitized (i.e., required
   /// changes).
@@ -123,14 +123,52 @@ public:
 
   llvm::StringRef GetSanitizedName() const { return m_sanitized_name; }
   llvm::StringRef GetOriginalName() const { return m_original_name; }
+  llvm::StringRef GetConflictingKeyword() const {
+    return m_conflicting_keyword;
+  }
+
+  /// If we did some replacements of reserved characters, and a
+  /// file with the untampered name exists, then warn the user
+  /// that the file as-is shall not be loaded.
+  void WarnIfInvalidUnsanitizedScriptExists(Stream &os,
+                                            const FileSpec &original_fspec,
+                                            const FileSpec &fspec) const {
+    if (!RequiredSanitization())
+      return;
+
+    // Path to unsanitized script name doesn't exist. Nothing to warn about.
+    if (!FileSystem::Instance().Exists(original_fspec))
+      return;
+
+    std::string reason_for_complaint =
+        IsKeyword() ? llvm::formatv("conflicts with the keyword '{0}'",
+                                    GetConflictingKeyword())
+                          .str()
+                    : "contains reserved characters";
+
+    if (FileSystem::Instance().Exists(fspec))
+       os.Format(
+            "debug script '{0}' cannot be loaded because '{1}' {2}. "
+            "Ignoring '{1}' and loading '{3}' instead.\n",
+            original_fspec.GetPath(), original_fspec.GetFilename(),
+            std::move(reason_for_complaint), fspec.GetFilename());
+    else
+      os.Format(
+            "debug script '{0}' cannot be loaded because '{1}' {2}. "
+            "If you intend to have this script loaded, please rename it to "
+            "'{3}' and retry.\n",
+            original_fspec.GetPath(), original_fspec.GetFilename(),
+            std::move(reason_for_complaint), fspec.GetFilename());
+  }
 
 private:
   llvm::StringRef m_original_name;
   std::string m_sanitized_name;
 
-  /// \c true if m_sanitized_name is a keyword for the ScriptInterpreter
-  /// language associated with this SanitizedScriptingModuleName.
-  bool m_name_is_keyword = false;
+  /// If the m_sanitized_name conflicts with a keyword for the ScriptInterpreter
+  /// language associated with this SanitizedScriptingModuleName, is set to the
+  /// conflicting keyword. Empty otherwise.
+  std::string m_conflicting_keyword;
 };
 } // namespace
 
@@ -277,34 +315,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     FileSpec orig_script_fspec(original_path_string.GetString());
     FileSystem::Instance().Resolve(orig_script_fspec);
 
-    // if we did some replacements of reserved characters, and a
-    // file with the untampered name exists, then warn the user
-    // that the file as-is shall not be loaded
-    if (sanitized_name.RequiredSanitization() &&
-        FileSystem::Instance().Exists(orig_script_fspec)) {
-      const char *reason_for_complaint = sanitized_name.IsKeyword()
-                                             ? "conflicts with a keyword"
-                                             : "contains reserved characters";
-      if (FileSystem::Instance().Exists(script_fspec))
-        feedback_stream.Format(
-            "the symbol file '{0}' contains a debug "
-            "script. However, its name"
-            " '{1}' {2} and as such cannot be loaded. LLDB will"
-            " load '{3}' instead. Consider removing the file with "
-            "the malformed name to"
-            " eliminate this warning.\n",
-            symfile_spec.GetPath(), original_path_string.GetString(),
-            reason_for_complaint, path_string.GetString());
-      else
-        feedback_stream.Format(
-            "the symbol file '{0}' contains a debug "
-            "script. However, its name"
-            " {1} and as such cannot be loaded. If you intend"
-            " to have this script loaded, please rename '{2}' to "
-            "'{3}' and retry.\n",
-            symfile_spec.GetPath(), reason_for_complaint,
-            original_path_string.GetString(), path_string.GetString());
-    }
+    sanitized_name.WarnIfInvalidUnsanitizedScriptExists(
+        feedback_stream, orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
       file_list.Append(script_fspec);
