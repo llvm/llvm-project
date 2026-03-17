@@ -2,7 +2,7 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 define i64 @test(i64 %x) {
-; CHECK-LABEL: define i64 @foo(
+; CHECK-LABEL: define i64 @test(
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[X]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X]], [[TMP1]]
