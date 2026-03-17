@@ -109,6 +109,7 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
               ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+
             """
         )
         self.assertEqual(report_str, expected_report)
@@ -160,7 +161,6 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                   <clang-tidy/checks/readability/redundant-parentheses>` check.
 
                   Detect redundant parentheses.
-
 
                 """
             )
@@ -228,7 +228,6 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                   <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
                   exceptions from captures are now diagnosed, exceptions in the bodies of
                   lambdas that aren't actually invoked are not.
-
 
                 """
             )
@@ -353,7 +352,6 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
               - ``for`` loops are supported.
 
-
            """
         )
         self.assertEqual(out, expected_out)
@@ -395,7 +393,6 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
               :doc:`performance-faster-string-operation
               <clang-tidy/checks/performance/faster-string-operation>`.
               The `performance-faster-string-find` name is kept as an alias.
-
 
             """
         )

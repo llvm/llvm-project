@@ -294,16 +294,24 @@ def _find_section_bounds(
         if (h_end := find_heading(lines, next_title)) is None:
             # Scan forward to the next heading-like underline.
             h_end = sec_start
-            while h_end + 1 < len(lines):
-                if lines[h_end].strip() and set(lines[h_end + 1].rstrip("\n")) == {"^"}:
+            while h_end < len(lines):
+                if (
+                    h_end + 1 < len(lines)
+                    and lines[h_end].strip()
+                    and set(lines[h_end + 1].rstrip("\n")) == {"^"}
+                ):
                     break
                 h_end += 1
         sec_end = h_end
     else:
         # Scan to end or until a heading underline is found.
         h_end = sec_start
-        while h_end + 1 < len(lines):
-            if lines[h_end].strip() and set(lines[h_end + 1].rstrip("\n")) == {"^"}:
+        while h_end < len(lines):
+            if (
+                h_end + 1 < len(lines)
+                and lines[h_end].strip()
+                and set(lines[h_end + 1].rstrip("\n")) == {"^"}
+            ):
                 break
             h_end += 1
         sec_end = h_end
