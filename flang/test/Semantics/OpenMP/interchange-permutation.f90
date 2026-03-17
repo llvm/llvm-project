@@ -60,7 +60,8 @@ subroutine insufficient_loops
   implicit none
   integer i
 
-  !ERROR: The PERMUTATION clause has more entries than there are nested canonical loops.
+  !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
+  !ERROR: PERMUTATION clause was specified with 2 arguments
   !$omp interchange permutation(2, 1)
   do i = 1, 5
     print *, i
