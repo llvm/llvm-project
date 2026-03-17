@@ -4335,7 +4335,7 @@ libc_support_library(
     deps = [
         ":__support_fputil_fma",
         ":__support_macros_config",
-        ":llvm_libc_types_float16",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -7107,7 +7107,7 @@ libc_math_function(
 
 libc_math_function(
     name = "fma",
-    additional_deps = [":__support_fputil_fma"],
+    additional_deps = [":__support_math_fma"],
 )
 
 libc_math_function(
