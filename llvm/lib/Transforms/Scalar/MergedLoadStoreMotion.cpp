@@ -137,8 +137,8 @@ BasicBlock *MergedLoadStoreMotion::getDiamondTail(BasicBlock *BB) {
 bool MergedLoadStoreMotion::isDiamondHead(BasicBlock *BB) {
   if (!BB)
     return false;
-  auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
 
   BasicBlock *Succ0 = BI->getSuccessor(0);

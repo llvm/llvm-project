@@ -591,6 +591,11 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return "histogram";
 
+  case ISD::CTTZ_ELTS:
+    return "cttz_elts";
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    return "cttz_elts_zero_poison";
+
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     return "find_last_active";
 

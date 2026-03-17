@@ -17,7 +17,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
-#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/raw_ostream.h"
@@ -25,32 +24,6 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
-
-// Create a call to ROCm-Device-Library function that returns an ID.
-// This is intended to specifically call device functions that fetch things like
-// block or grid dimensions, and so is limited to functions that take one
-// integer parameter.
-static llvm::Value *createDimGetterFunctionCall(llvm::IRBuilderBase &builder,
-                                                Operation *op, StringRef fnName,
-                                                int parameter) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::FunctionType *functionType = llvm::FunctionType::get(
-      llvm::Type::getInt64Ty(module->getContext()), // return type.
-      llvm::Type::getInt32Ty(module->getContext()), // parameter type.
-      false);                                       // no variadic arguments.
-  llvm::Function *fn = dyn_cast<llvm::Function>(
-      module->getOrInsertFunction(fnName, functionType).getCallee());
-  llvm::Value *fnOp0 = llvm::ConstantInt::get(
-      llvm::Type::getInt32Ty(module->getContext()), parameter);
-  auto *call = builder.CreateCall(fn, ArrayRef<llvm::Value *>(fnOp0));
-  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
-    // Zero-extend to 64 bits because the GPU dialect uses 32-bit bounds but
-    // these ockl functions are defined to be 64-bits
-    call->addRangeRetAttr(llvm::ConstantRange(rangeAttr.getLower().zext(64),
-                                              rangeAttr.getUpper().zext(64)));
-  }
-  return call;
-}
 
 namespace {
 /// Implementation of the dialect interface that converts operations belonging

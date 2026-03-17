@@ -817,7 +817,7 @@ void AArch64PassConfig::addMachineSSAOptimization() {
 
 bool AArch64PassConfig::addILPOpts() {
   if (EnableCondOpt)
-    addPass(createAArch64ConditionOptimizerPass());
+    addPass(createAArch64ConditionOptimizerLegacyPass());
   if (EnableCCMP)
     addPass(createAArch64ConditionalCompares());
   if (EnableMCR)

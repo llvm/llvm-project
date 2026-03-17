@@ -49,7 +49,7 @@ FunctionPass *createAArch64LoadStoreOptLegacyPass();
 ModulePass *createAArch64LowerHomogeneousPrologEpilogPass();
 FunctionPass *createAArch64SIMDInstrOptPass();
 ModulePass *createAArch64PromoteConstantPass();
-FunctionPass *createAArch64ConditionOptimizerPass();
+FunctionPass *createAArch64ConditionOptimizerLegacyPass();
 FunctionPass *createAArch64A57FPLoadBalancing();
 FunctionPass *createAArch64A53Fix835769LegacyPass();
 FunctionPass *createFalkorHWPFFixPass();

@@ -15,6 +15,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace acc {
@@ -54,12 +55,14 @@ std::optional<DataLayout> getDataLayout(Operation *op, bool allowDefault) {
   return std::nullopt;
 }
 
-ComputeRegionOp
-buildComputeRegion(Location loc, ValueRange launchArgs, ValueRange inputArgs,
-                   llvm::StringRef origin, Region &regionToClone,
-                   RewriterBase &rewriter, IRMapping &mapping,
-                   ValueRange output, FlatSymbolRefAttr kernelFuncName,
-                   FlatSymbolRefAttr kernelModuleName, Value stream) {
+ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
+                                   ValueRange inputArgs, llvm::StringRef origin,
+                                   Region &regionToClone,
+                                   RewriterBase &rewriter, IRMapping &mapping,
+                                   ValueRange output,
+                                   FlatSymbolRefAttr kernelFuncName,
+                                   FlatSymbolRefAttr kernelModuleName,
+                                   Value stream, ValueRange inputArgsToMap) {
   SmallVector<Type> resultTypes;
   for (auto val : output)
     resultTypes.push_back(val.getType());
@@ -71,6 +74,10 @@ buildComputeRegion(Location loc, ValueRange launchArgs, ValueRange inputArgs,
          "empty region for acc.compute_region");
   OpBuilder::InsertionGuard guard(rewriter);
 
+  ValueRange mapKeys = inputArgsToMap.empty() ? inputArgs : inputArgsToMap;
+  assert(mapKeys.size() == inputArgs.size() &&
+         "inputArgsToMap must have same size as inputArgs when provided");
+
   auto parWidthType = ParWidthType::get(rewriter.getContext());
   Block *entryBlock = rewriter.createBlock(&computeRegion.getRegion());
   for (size_t i = 0; i < launchArgs.size(); ++i)
@@ -78,7 +85,7 @@ buildComputeRegion(Location loc, ValueRange launchArgs, ValueRange inputArgs,
   for (Value input : inputArgs)
     entryBlock->addArgument(input.getType(), loc);
   for (size_t i = 0; i < inputArgs.size(); ++i)
-    mapping.map(inputArgs[i], entryBlock->getArgument(launchArgs.size() + i));
+    mapping.map(mapKeys[i], entryBlock->getArgument(launchArgs.size() + i));
   rewriter.setInsertionPointToStart(entryBlock);
   if (regionToClone.getBlocks().size() == 1) {
     for (auto &op : regionToClone.front().getOperations()) {
@@ -86,20 +93,37 @@ buildComputeRegion(Location loc, ValueRange launchArgs, ValueRange inputArgs,
         break;
       rewriter.clone(op, mapping);
     }
+    SmallVector<Value> yieldOperands;
+    for (auto val : output)
+      yieldOperands.push_back(mapping.lookup(val));
+    rewriter.setInsertionPointToEnd(entryBlock);
+    YieldOp::create(rewriter, loc, yieldOperands);
   } else {
     auto exeRegion = mlir::acc::wrapMultiBlockRegionWithSCFExecuteRegion(
-        regionToClone, mapping, loc, rewriter);
+        regionToClone, mapping, loc, rewriter, /*convertFuncReturn=*/true);
     if (!exeRegion) {
       rewriter.eraseOp(computeRegion);
       return nullptr;
     }
+    SmallVector<scf::YieldOp> yieldOps(
+        llvm::to_vector(exeRegion.getOps<scf::YieldOp>()));
+    assert(!yieldOps.empty() &&
+           "multi-block region must contain at least one scf.yield");
+    assert(llvm::all_of(yieldOps,
+                        [&output](scf::YieldOp yieldOp) {
+                          return yieldOp.getNumOperands() ==
+                                     static_cast<int64_t>(output.size()) &&
+                                 llvm::all_of(
+                                     llvm::zip(yieldOp.getOperands(), output),
+                                     [](auto pair) {
+                                       return std::get<0>(pair).getType() ==
+                                              std::get<1>(pair).getType();
+                                     });
+                        }) &&
+           "each scf.yield operand count and types must match output");
+    rewriter.setInsertionPointToEnd(entryBlock);
+    YieldOp::create(rewriter, loc, exeRegion.getResults());
   }
-
-  SmallVector<Value> yieldOperands;
-  for (auto val : output)
-    yieldOperands.push_back(mapping.lookup(val));
-  rewriter.setInsertionPointToEnd(entryBlock);
-  YieldOp::create(rewriter, loc, yieldOperands);
 
   return computeRegion;
 }

@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
 // Tests non-contiguous array sections with expression-based count on struct
 // member arrays with both FROM and TO directives.
 

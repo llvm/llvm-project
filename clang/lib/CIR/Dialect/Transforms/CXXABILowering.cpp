@@ -15,6 +15,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
@@ -327,7 +328,9 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   mlir::Value loweredAddress = adaptor.getAddress();
 
   cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
-  bool sizeNeeded = deleteParams.getSize();
+  bool cookieRequired = deleteParams.getSize();
+  assert((deleteParams.getSize() || !op.getElementDtorAttr()) &&
+         "Expected size parameter when dtor fn is provided!");
 
   if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
       deleteParams.getAlignment())
@@ -339,7 +342,7 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   mlir::Value deletePtr;
   llvm::SmallVector<mlir::Value> callArgs;
 
-  if (sizeNeeded) {
+  if (cookieRequired) {
     mlir::Value numElements;
     clang::CharUnits cookieSize;
     auto ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
@@ -347,6 +350,23 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
 
     cxxABI.readArrayCookie(loc, loweredAddress, dl, cirBuilder, numElements,
                            deletePtr, cookieSize);
+
+    // If a dtor function is provided, create an array dtor operation.
+    // This will get expanded during LoweringPrepare.
+    mlir::FlatSymbolRefAttr dtorFn = op.getElementDtorAttr();
+    if (dtorFn) {
+      auto eltPtrTy = cir::PointerType::get(ptrTy.getPointee());
+      cir::ArrayDtor::create(
+          rewriter, loc, loweredAddress, numElements,
+          [&](mlir::OpBuilder &b, mlir::Location l) {
+            auto arg = b.getInsertionBlock()->addArgument(eltPtrTy, l);
+            cir::CallOp::create(b, l, dtorFn, cir::VoidType(),
+                                mlir::ValueRange{arg});
+            cir::YieldOp::create(b, l);
+          });
+    }
+
+    // Compute the total allocation size and add it to the call arguments.
     callArgs.push_back(deletePtr);
     uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
     unsigned ptrWidth =
