@@ -198,6 +198,12 @@ protected:
   ResolveVarDeclFromAddress(const lldb_private::plugin::dwarf::DWARFDIE &die,
                             uint64_t file_address);
 
+  /// Given a DW_TAG_template_value_parameter DIE whose type is a member
+  /// function pointer (with no value attribute), extract the method name
+  /// from the parent struct's DW_AT_name and resolve to a CXXMethodDecl.
+  clang::CXXMethodDecl *
+  ResolveMethodDeclFromName(const lldb_private::plugin::dwarf::DWARFDIE &die);
+
   bool ParseTemplateParameterInfos(
       const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos

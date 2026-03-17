@@ -13,6 +13,8 @@
 struct S {
   int x;
   int y;
+  void foo() {}
+  void bar() {}
 };
 
 // --- Member data pointer NTTP ---
@@ -37,6 +39,13 @@ template <int *P> struct MaybeNull {
 };
 MaybeNull<nullptr> mn1;
 MaybeNull<&g1> mn2;
+
+// --- Member function pointer NTTP ---
+template <void (S::*F)()> struct MemFn {
+  void call(S &s) { (s.*F)(); }
+};
+MemFn<&S::foo> mf1;
+MemFn<&S::bar> mf2;
 
 int main() {
   S s{1, 2};

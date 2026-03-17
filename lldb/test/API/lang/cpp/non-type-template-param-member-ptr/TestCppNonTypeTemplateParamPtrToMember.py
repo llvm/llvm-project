@@ -41,3 +41,13 @@ class TestCase(TestBase):
         # different TemplateArgument kinds, so they are naturally distinct.
         self.expect_expr("mn1")
         self.expect_expr("mn2")
+
+    @no_debug_info_test
+    def test_member_function_pointer(self):
+        """Member function pointer NTTPs: MemFn<&S::foo> vs MemFn<&S::bar>"""
+        self.build()
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        # DWARF emits no value attribute for member function pointer NTTPs.
+        # Without the fix, mf2 fails with "undeclared identifier".
+        self.expect_expr("mf1", result_type="MemFn<&S::foo>")
+        self.expect_expr("mf2", result_type="MemFn<&S::bar>")

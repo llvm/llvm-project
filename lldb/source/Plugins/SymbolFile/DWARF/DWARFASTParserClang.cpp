@@ -2145,6 +2145,71 @@ DWARFASTParserClang::ResolveVarDeclFromAddress(const DWARFDIE &die,
   return nullptr;
 }
 
+clang::CXXMethodDecl *
+DWARFASTParserClang::ResolveMethodDeclFromName(const DWARFDIE &die) {
+  // Member function pointer NTTPs have no DW_AT_const_value or DW_AT_location.
+  // Extract the method name from the parent struct's DW_AT_name instead.
+
+  // 1. Follow DW_AT_type → DW_TAG_ptr_to_member_type → DW_AT_containing_type
+  DWARFDIE type_die = die.GetReferencedDIE(DW_AT_type);
+  if (!type_die || type_die.Tag() != DW_TAG_ptr_to_member_type)
+    return nullptr;
+
+  DWARFDIE containing_die = type_die.GetReferencedDIE(DW_AT_containing_type);
+  if (!containing_die)
+    return nullptr;
+
+  const char *class_name = containing_die.GetName();
+  if (!class_name)
+    return nullptr;
+
+  // 2. Get the parent struct name (e.g., "MemFn<&S::foo>")
+  DWARFDIE parent_die = die.GetParent();
+  if (!parent_die)
+    return nullptr;
+
+  const char *parent_name = parent_die.GetName();
+  if (!parent_name)
+    return nullptr;
+
+  // 3. Extract the method name by searching for "&ClassName::" in the name
+  llvm::StringRef name_ref(parent_name);
+  std::string prefix = std::string("&") + class_name + "::";
+  size_t pos = name_ref.find(prefix);
+  if (pos == llvm::StringRef::npos)
+    return nullptr;
+
+  llvm::StringRef method_name = name_ref.substr(pos + prefix.size());
+  // Trim trailing '>' or ','
+  method_name = method_name.split('>').first;
+  method_name = method_name.split(',').first;
+  method_name = method_name.trim();
+  if (method_name.empty())
+    return nullptr;
+
+  // 4. Resolve and complete the containing class
+  Type *containing_type = die.ResolveTypeUID(containing_die);
+  if (!containing_type)
+    return nullptr;
+
+  CompilerType containing_ct = containing_type->GetFullCompilerType();
+  auto *record_decl =
+      m_ast.GetAsCXXRecordDecl(containing_ct.GetOpaqueQualType());
+  if (!record_decl)
+    return nullptr;
+
+  // 5. Find the method by name
+  clang::ASTContext &ast = m_ast.getASTContext();
+  clang::IdentifierInfo &II = ast.Idents.get(method_name);
+  clang::DeclarationName decl_name = ast.DeclarationNames.getIdentifier(&II);
+  for (auto *decl : record_decl->lookup(decl_name)) {
+    if (auto *method = llvm::dyn_cast<clang::CXXMethodDecl>(decl))
+      return method;
+  }
+
+  return nullptr;
+}
+
 bool DWARFASTParserClang::ParseTemplateDIE(
     const DWARFDIE &die,
     TypeSystemClang::TemplateParameterInfos &template_param_infos) {
@@ -2275,6 +2340,20 @@ bool DWARFASTParserClang::ParseTemplateDIE(
               name, clang::TemplateArgument(
                         ast, ClangUtil::GetQualType(clang_type),
                         std::move(*value), is_default_template_arg));
+          return true;
+        }
+      }
+
+      // Handle member function pointer NTTPs with no value attribute.
+      // DWARF doesn't emit DW_AT_const_value or DW_AT_location for these,
+      // so we extract the method name from the parent struct's DW_AT_name.
+      if (tag == DW_TAG_template_value_parameter && !uval64_valid &&
+          clang_type.IsMemberFunctionPointerType()) {
+        if (auto *method = ResolveMethodDeclFromName(die)) {
+          template_param_infos.InsertArg(
+              name, clang::TemplateArgument(method,
+                                            ClangUtil::GetQualType(clang_type),
+                                            is_default_template_arg));
           return true;
         }
       }
