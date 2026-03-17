@@ -47,20 +47,20 @@ func.func @entry() {
 
   // Set up idx vector.
   %i0 = arith.constant 0: i32
-  %i1 = arith.constant 11: i32
-  %i2 = arith.constant 22: i32
-  %i3 = arith.constant 33: i32
-  %i4 = arith.constant 44: i32
-  %i5 = arith.constant 5: i32
-  %i6 = arith.constant 16: i32
-  %i9 = arith.constant 19: i32
   %0 = vector.broadcast %i0 : i32 to vector<8xi32>
+  %i6 = arith.constant 16: i32
   %1 = vector.insert %i6, %0[1] : i32 into vector<8xi32>
+  %i1 = arith.constant 11: i32
   %2 = vector.insert %i1, %1[2] : i32 into vector<8xi32>
+  %i3 = arith.constant 33: i32
   %3 = vector.insert %i3, %2[3] : i32 into vector<8xi32>
+  %i5 = arith.constant 5: i32
   %4 = vector.insert %i5, %3[4] : i32 into vector<8xi32>
+  %i4 = arith.constant 44: i32
   %5 = vector.insert %i4, %4[5] : i32 into vector<8xi32>
+  %i9 = arith.constant 19: i32
   %6 = vector.insert %i9, %5[6] : i32 into vector<8xi32>
+  %i2 = arith.constant 22: i32
   %idx = vector.insert %i2, %6[7] : i32 into vector<8xi32>
 
   // Set up pass thru vector.
@@ -81,28 +81,24 @@ func.func @entry() {
   %g1 = call @gather8(%A, %idx, %all, %pass)
     : (memref<?x?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
-  vector.print %idx : vector<8xi32>
   vector.print %g1 : vector<8xf32>
   // CHECK: ( 0, 31, 21, 63, 10, 84, 34, 42 )
 
   %g2 = call @gather8(%A, %idx, %none, %pass)
     : (memref<?x?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
-  vector.print %idx : vector<8xi32>
   vector.print %g2 : vector<8xf32>
   // CHECK: ( -7, -7, -7, -7, -7, -7, -7, -7 )
 
   %g3 = call @gather8(%A, %idx, %some, %pass)
     : (memref<?x?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
-  vector.print %idx : vector<8xi32>
   vector.print %g3 : vector<8xf32>
   // CHECK: ( 0, 31, 21, 63, -7, -7, -7, -7 )
 
   %g4 = call @gather8(%A, %idx, %more, %pass)
     : (memref<?x?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
-  vector.print %idx : vector<8xi32>
   vector.print %g4 : vector<8xf32>
   // CHECK: ( 0, 31, 21, 63, -7, -7, -7, 42 )
 
