@@ -949,9 +949,6 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   SDLoc SL(Op);
   EVT VT = Op.getValueType();
 
-  const R600TargetMachine &TM =
-      static_cast<const R600TargetMachine &>(getTargetMachine());
-
   const AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(Op);
   unsigned SrcAS = ASC->getSrcAddressSpace();
   unsigned DestAS = ASC->getDestAddressSpace();
