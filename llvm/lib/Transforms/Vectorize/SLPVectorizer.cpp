@@ -24577,7 +24577,6 @@ namespace {
 /// to be attempted still.
 struct StoreChainContext {
   using SizePair = std::pair<unsigned, unsigned>;
-  using SizePairArrayRef = MutableArrayRef<SizePair>;
 
   /// For the StoreTy/Stride in the given group, what is the smallest VF
   /// that can be used
@@ -24613,7 +24612,7 @@ struct StoreChainContext {
   /// vectorization of elements that belong to multiple chains
   /// - second: contains cached TreeSize value for that element
   SmallVector<SizePair> RangeSizesStorage;
-  SizePairArrayRef RangeSizes;
+  MutableArrayRef<SizePair> RangeSizes;
   /// Store information about failed vectorization attempts due to scheduling
   SmallDenseMap<Value *, SizePair> NonSchedulable;
   /// Type of the Stores in `Operands`
