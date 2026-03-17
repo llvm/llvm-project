@@ -36,13 +36,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     return
   } loc(#loc7)
 }
-#loc1 = loc("test.f90":1:1)
-#loc2 = loc("test.f90":3:1)
-#loc3 = loc("test.f90":7:1)
-#loc4 = loc("test.f90":8:1)
-#loc5 = loc("test.f90":6:1)
-#loc6 = loc("test.f90":16:1)
-#loc7 = loc("test.f90":26:1)
+#loc1 = #loc("test.f90":1:1)
+#loc2 = #loc("test.f90":3:1)
+#loc3 = #loc("test.f90":7:1)
+#loc4 = #loc("test.f90":8:1)
+#loc5 = #loc("test.f90":6:1)
+#loc6 = #loc("test.f90":16:1)
+#loc7 = #loc("test.f90":26:1)
 
 
 // Test that variable size arrays inside target regions get their own

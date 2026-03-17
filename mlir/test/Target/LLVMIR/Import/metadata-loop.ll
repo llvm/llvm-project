@@ -342,11 +342,11 @@ end:
 
 ; // -----
 
-; CHECK: #[[start_loc:.*]] = loc("metadata-loop.ll":1:2)
-; CHECK: #[[end_loc:.*]] = loc("metadata-loop.ll":2:2)
+; CHECK: #[[start_loc:.*]] = #loc("metadata-loop.ll":1:2)
+; CHECK: #[[end_loc:.*]] = #loc("metadata-loop.ll":2:2)
 ; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<
-; CHECK: #[[start_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[start_loc]]])
-; CHECK: #[[end_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[end_loc]]])
+; CHECK: #[[start_loc_fused:.*]] = #loc(fused<#[[SUBPROGRAM]]>[#[[start_loc]]])
+; CHECK: #[[end_loc_fused:.*]] = #loc(fused<#[[SUBPROGRAM]]>[#[[end_loc]]])
 ; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<
 ; CHECK-SAME: mustProgress = true
 ; CHECK-SAME: startLoc = #[[start_loc_fused]]

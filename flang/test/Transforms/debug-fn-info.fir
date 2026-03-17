@@ -58,10 +58,10 @@ module {
     return
   } loc(#loc4)
 }
-#loc1 = loc("test.f90":15:1)
-#loc2 = loc("test.f90":26:22)
-#loc3 = loc("test2.f90":43:22)
-#loc4 = loc("test2.f90":53:22)
+#loc1 = #loc("test.f90":15:1)
+#loc2 = #loc("test.f90":26:22)
+#loc3 = #loc("test2.f90":43:22)
+#loc4 = #loc("test2.f90":53:22)
 
 
 // CHECK-DAG: #[[INT8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=8)", sizeInBits = 64, encoding = DW_ATE_signed>

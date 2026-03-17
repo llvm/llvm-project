@@ -166,8 +166,8 @@ def testRunPipelineError():
         except MLIRError as e:
             # CHECK: Exception: <
             # CHECK:   Failure while executing pass pipeline:
-            # CHECK:   error: "-":1:1: 'test.op' op trying to schedule a pass on an unregistered operation
-            # CHECK:    note: "-":1:1: see current operation: "test.op"() : () -> ()
+            # CHECK:   "-":1:1: 'test.op' op trying to schedule a pass on an unregistered operation
+            # CHECK:   "-":1:1: see current operation: "test.op"() : () -> ()
             # CHECK: >
             log(f"Exception: <{e}>")
 

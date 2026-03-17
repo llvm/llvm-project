@@ -29,11 +29,11 @@ module {
   } loc(#loc1)
 }
 
-#loc1 = loc("test.f90":5:1)
-#loc2 = loc("test.f90":6:11)
-#loc3 = loc("test.f90":7:11)
-#loc4 = loc("test.f90":2:8)
-#loc5 = loc("test.f90":8:11)
+#loc1 = #loc("test.f90":5:1)
+#loc2 = #loc("test.f90":6:11)
+#loc3 = #loc("test.f90":7:11)
+#loc4 = #loc("test.f90":2:8)
+#loc5 = #loc("test.f90":8:11)
 
 // CHECK-DAG: #[[VAR0:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFfooEa3"{{.*}}flags = Artificial>
 // CHECK-DAG: #[[VAR1:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFfooEa1"{{.*}}flags = Artificial>

@@ -12,7 +12,7 @@
 
 module {
 } loc(#loc)
-#loc = loc("simple.f90":0:0)
+#loc = #loc("simple.f90":0:0)
 
 // CHECK-DWARF5: llvm.module_flags [#llvm.mlir.module_flag<max, "Dwarf Version", 5 : i32>]
 // CHECK-DWARF4: llvm.module_flags [#llvm.mlir.module_flag<max, "Dwarf Version", 4 : i32>]

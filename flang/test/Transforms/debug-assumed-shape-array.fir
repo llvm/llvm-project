@@ -10,9 +10,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     return
   } loc(#loc2)
 }
-#loc1 = loc("test1.f90":1:1)
-#loc2 = loc("test1.f90":3:16)
-#loc3 = loc("test1.f90":4:16)
+#loc1 = #loc("test1.f90":1:1)
+#loc2 = #loc("test1.f90":3:16)
+#loc3 = #loc("test1.f90":4:16)
 
 // CHECK: #[[TY1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type
 // CHECK-SAME: dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>

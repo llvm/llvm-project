@@ -36,12 +36,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     fir.has_value %c2_i32 : i32
   } loc(#loc3)
 }
-#loc1 = loc("test.f90":21:1)
-#loc2 = loc("test.f90":22:1)
-#loc3 = loc("test.f90":23:1)
-#loc4 = loc("test.f90":5:1)
-#loc5 = loc("test.f90":12:1)
-#loc6 = loc("test.f90":10:1)
+#loc1 = #loc("test.f90":21:1)
+#loc2 = #loc("test.f90":22:1)
+#loc3 = #loc("test.f90":23:1)
+#loc4 = #loc("test.f90":5:1)
+#loc5 = #loc("test.f90":12:1)
+#loc6 = #loc("test.f90":10:1)
 
 // CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<{{.*}}>
 // CHECK-DAG: #[[MOD:.*]] = #llvm.di_module<{{.*}}scope = #[[CU]]{{.*}}name = "example"{{.*}}>

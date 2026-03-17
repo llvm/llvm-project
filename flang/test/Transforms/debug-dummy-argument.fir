@@ -18,8 +18,8 @@
 //   integer :: expected
 // end subroutine test
 
-#loc1 = loc("debug-dummy-argument.f90":1:1)
-#loc4 = loc("debug-dummy-argument.f90":2:14)
+#loc1 = #loc("debug-dummy-argument.f90":1:1)
+#loc4 = #loc("debug-dummy-argument.f90":2:14)
 module attributes {dlti.dl_spec = #dlti.dl_spec<i128 = dense<128> : vector<2xi64>, f80 = dense<128> : vector<2xi64>, i1 = dense<8> : vector<2xi64>, !llvm.ptr<271> = dense<32> : vector<4xi64>, !llvm.ptr = dense<64> : vector<4xi64>, i64 = dense<64> : vector<2xi64>, !llvm.ptr<272> = dense<64> : vector<4xi64>, i32 = dense<32> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, !llvm.ptr<270> = dense<32> : vector<4xi64>, i8 = dense<8> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, "dlti.stack_alignment" = 128 : i64, "dlti.mangling_mode" = "e", "dlti.endianness" = "little">, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", fir.target_cpu = "x86-64", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.ident = "flang", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
   func.func @test_(%arg0: !fir.ref<i32> {fir.bindc_name = "expected"} loc("debug-dummy-argument.f90":1:1), %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x"} loc("debug-dummy-argument.f90":1:1)) attributes {fir.internal_name = "_QPtest"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
@@ -33,6 +33,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i128 = dense<128> : vector<2xi64
     return loc(#loc5)
   } loc(#loc1)
 } loc(#loc)
-#loc = loc("debug-dummy-argument.f90":0:0)
-#loc3 = loc("debug-dummy-argument.f90":3:14)
-#loc5 = loc("debug-dummy-argument.f90":4:1)
+#loc = #loc("debug-dummy-argument.f90":0:0)
+#loc3 = #loc("debug-dummy-argument.f90":3:14)
+#loc5 = #loc("debug-dummy-argument.f90":4:1)

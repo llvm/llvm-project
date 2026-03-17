@@ -22,11 +22,11 @@ module {
   } loc(#loc4)
 }
 
-#loc1 = loc("test.f90":5:1)
-#loc2 = loc("test.f90":6:11)
-#loc3 = loc("test.f90":7:11)
-#loc4 = loc("test.f90":2:8)
-#loc5 = loc("test.f90":8:11)
+#loc1 = #loc("test.f90":5:1)
+#loc2 = #loc("test.f90":6:11)
+#loc3 = #loc("test.f90":7:11)
+#loc4 = #loc("test.f90":2:8)
+#loc5 = #loc("test.f90":8:11)
 
 
 // CHECK-DAG: #[[INT:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>

@@ -19,10 +19,10 @@ module {
   } loc(#loc2)
 }
 
-#loc1 = loc("./simple.f90":2:1)
-#loc2 = loc("./simple.f90":10:1)
-#loc3 = loc("./simple.f90":15:1)
-#loc4 = loc("./simple.f90":22:1)
+#loc1 = #loc("./simple.f90":2:1)
+#loc2 = #loc("./simple.f90":10:1)
+#loc3 = #loc("./simple.f90":15:1)
+#loc4 = #loc("./simple.f90":22:1)
 
 // CHECK-DAG: #[[TY1:.*]] = #llvm.di_composite_type<{{.*}}name = "test_type"{{.*}}>
 // CHECK-DAG: #[[TY2:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "", baseType = #[[TY1]]{{.*}}>

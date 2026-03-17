@@ -5,7 +5,7 @@
   "uri":"test:///foo.mlir",
   "languageId":"mlir",
   "version":1,
-  "text":"#attr = 1 : index\n!type = index\nfunc.func @foo(%arg0: !type) -> i1 attributes {attr = #attr} {\n%value = arith.constant true\n%result = call @foo(%arg0) : (!type) -> i1\nreturn %value : i1 loc(#loc)\n}\n#loc = loc(\"foo.mlir\":1:2)"
+  "text":"#attr = 1 : index\n!type = index\nfunc.func @foo(%arg0: !type) -> i1 attributes {attr = #attr} {\n%value = arith.constant true\n%result = call @foo(%arg0) : (!type) -> i1\nreturn %value : i1 loc(#site)\n}\n#site = #loc(\"foo.mlir\":1:2)"
 }}}
 // -----
 {"jsonrpc":"2.0","id":1,"method":"textDocument/references","params":{
@@ -176,7 +176,7 @@
 // CHECK-NEXT:    {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:        "end": {
-// CHECK-NEXT:          "character": 4,
+// CHECK-NEXT:          "character": 5,
 // CHECK-NEXT:          "line": 7
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "start": {
@@ -189,7 +189,7 @@
 // CHECK-NEXT:    {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:        "end": {
-// CHECK-NEXT:          "character": 27,
+// CHECK-NEXT:          "character": 28,
 // CHECK-NEXT:          "line": 5
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "start": {

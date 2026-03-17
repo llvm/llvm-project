@@ -3,7 +3,7 @@
 module {
   func.func private @_FortranAioBeginExternalListOutput(i8) -> !fir.ref<i8> loc(#loc1)
 }
-#loc1 = loc("test.f90":5:1)
+#loc1 = #loc("test.f90":5:1)
 
 // CHECK: #[[INT8_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=1)", sizeInBits = 8, encoding = DW_ATE_signed>
 // CHECK: #[[REF_TY:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "", baseType = #[[INT8_TY]]{{.*}}>

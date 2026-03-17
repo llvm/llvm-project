@@ -19,10 +19,10 @@ module {
     return
   } loc(#loc3)
 }
-#loc1 = loc("test.f90":2:14)
-#loc2 = loc("test.f90":6:1)
-#loc3 = loc("test.f90":10:1)
-#loc4 = loc("test.f90":13:1)
+#loc1 = #loc("test.f90":2:14)
+#loc2 = #loc("test.f90":6:1)
+#loc3 = #loc("test.f90":10:1)
+#loc4 = #loc("test.f90":13:1)
 
 // CHECK: #[[MOD:.+]] = #llvm.di_module<{{.*}}name = "foo"{{.*}}>
 // CHECK: #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct[[[REC_ID:[0-9]+]]]<>, isRecSelf = true{{.*}}>

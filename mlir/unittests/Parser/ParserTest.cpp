@@ -80,7 +80,8 @@ TEST(MLIRParser, ParseAttr) {
     });
     size_t numRead = 0;
     EXPECT_FALSE(parseAttribute("dense<>", &context, Type(), &numRead));
-    EXPECT_THAT(diagnostics, ElementsAre("loc(\"dense<>\":1:7): expected ':'"));
+    EXPECT_THAT(diagnostics,
+                ElementsAre("#loc(\"dense<>\":1:7): expected ':'"));
     EXPECT_EQ(numRead, size_t(0));
   }
   { // Parse with trailing characters
@@ -92,7 +93,8 @@ TEST(MLIRParser, ParseAttr) {
     EXPECT_FALSE(parseAttribute("10  foo", &context));
     EXPECT_THAT(
         diagnostics,
-        ElementsAre("loc(\"10  foo\":1:5): found trailing characters: 'foo'"));
+        ElementsAre(
+            "#loc(\"10  foo\":1:5): found trailing characters: 'foo'"));
 
     size_t numRead = 0;
     EXPECT_EQ(parseAttribute("10  foo", &context, Type(), &numRead),

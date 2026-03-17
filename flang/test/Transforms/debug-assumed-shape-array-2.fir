@@ -15,9 +15,9 @@ module {
     return
   } loc(#loc3)
 }
-#loc1 = loc("test1.f90":1:1)
-#loc2 = loc("test1.f90":3:16)
-#loc3 = loc("test1.f90":4:16)
+#loc1 = #loc("test1.f90":1:1)
+#loc2 = #loc("test1.f90":3:16)
+#loc3 = #loc("test1.f90":4:16)
 
 // CHECK: #[[VAR:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFFfnEb1"{{.*}}flags = Artificial>
 // CHECK: #llvm.di_composite_type<tag = DW_TAG_array_type

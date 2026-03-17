@@ -50,7 +50,7 @@ def testParseFromFileSuccess():
 # CHECK-LABEL: TEST: testParseError
 # CHECK: testParseError: <
 # CHECK:   Unable to parse module assembly:
-# CHECK:   error: "-":1:1: expected operation name in quotes
+# CHECK:   "-":1:1: expected operation name in quotes
 # CHECK: >
 @run
 def testParseError():

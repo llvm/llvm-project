@@ -14,9 +14,9 @@ module {
   } loc(#loc3)
 }
 
-#loc1 = loc("test.f90":3:3)
-#loc2 = loc("test.f90":4:3)
-#loc3 = loc("test.f90":1:3)
+#loc1 = #loc("test.f90":3:3)
+#loc2 = #loc("test.f90":4:3)
+#loc3 = #loc("test.f90":1:3)
 
 // CHECK-DAG: #[[TY1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real"{{.*}}>
 // CHECK-DAG: #[[TY2:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}allocated = <[DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne]>{{.*}}elements = #llvm.di_subrange{{.*}}#llvm.di_subrange

@@ -7,8 +7,8 @@
 // subroutine test()
 //   real :: a, b, c
 //   pointer(p, a)
-//   p = loc(b)
-//   p = loc(c)
+//   p = #loc(b)
+//   p = #loc(c)
 //   a = 1.0
 // end subroutine
 

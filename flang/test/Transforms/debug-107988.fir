@@ -10,8 +10,8 @@ module {
   } loc(#loc2)
 }
 
-#loc1 = loc("test.f90":5:1)
-#loc2 = loc("test.f90":15:1)
+#loc1 = #loc("test.f90":5:1)
+#loc2 = #loc("test.f90":15:1)
 
 // CHECK: #[[VAR:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFtestEstr{{.*}}flags = Artificial>
 // CHECK: func.func @test

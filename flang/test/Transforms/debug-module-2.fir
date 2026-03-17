@@ -23,10 +23,10 @@ module {
 #di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable>
 #di_global_variable_expression1 = #llvm.di_global_variable_expression<var = #di_global_variable1>
 
-#loc1 = loc("test.f90":12:11)
-#loc2 = loc("test.f90":15:8)
-#loc3 = loc(fused<[#di_global_variable_expression]>[#loc1])
-#loc4 = loc(fused<[#di_global_variable_expression1]>[#loc2])
+#loc1 = #loc("test.f90":12:11)
+#loc2 = #loc("test.f90":15:8)
+#loc3 = #loc(fused<[#di_global_variable_expression]>[#loc1])
+#loc4 = #loc(fused<[#di_global_variable_expression1]>[#loc2])
 
 
 // CHECK-DAG: #[[GLI:.*]] = #llvm.di_global_variable<{{.*}}name = "gli", linkageName = "_QMhelperEgli"{{.*}}>

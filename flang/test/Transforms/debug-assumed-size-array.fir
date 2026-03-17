@@ -12,9 +12,9 @@ module {
     return
   } loc(#loc3)
 }
-#loc3 = loc("test.f90":1:1)
-#loc1 = loc("test.f90":3:1)
-#loc2 = loc("test.f90":4:1)
+#loc3 = #loc("test.f90":1:1)
+#loc1 = #loc("test.f90":3:1)
+#loc2 = #loc("test.f90":4:1)
 
 // CHECK-DAG: #[[TY1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<count = 5 : i64>, #llvm.di_subrange<>>
 // CHECK-DAG: #[[TY2:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<lowerBound = 2 : i64>>

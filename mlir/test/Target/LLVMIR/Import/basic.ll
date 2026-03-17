@@ -1,7 +1,7 @@
 ; RUN: mlir-translate -import-llvm %s | FileCheck %s
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-DBG
 
-; CHECK-DBG: #[[UNKNOWN_LOC:.+]] = loc(unknown)
+; CHECK-DBG: #[[UNKNOWN_LOC:.+]] = #loc(unknown)
 
 @global = external global double, align 8
 

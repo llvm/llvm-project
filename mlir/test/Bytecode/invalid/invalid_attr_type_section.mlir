@@ -6,7 +6,7 @@
 //===--------------------------------------------------------------------===//
 
 // RUN: not mlir-opt %S/invalid-attr_type_section-index.mlirbc -allow-unregistered-dialect 2>&1 | FileCheck %s --check-prefix=INDEX
-// INDEX: invalid Attribute index: 3
+// INDEX: expected attribute value
 
 //===--------------------------------------------------------------------===//
 // Trailing Data

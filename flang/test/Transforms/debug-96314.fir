@@ -15,10 +15,10 @@ module {
   } loc(#loc4)
 }
 
-#loc1 = loc("test.f90":5:1)
-#loc2 = loc("test.f90":15:1)
-#loc3 = loc("test.f90":25:1)
-#loc4 = loc("test.f90":35:1)
+#loc1 = #loc("test.f90":5:1)
+#loc2 = #loc("test.f90":15:1)
+#loc3 = #loc("test.f90":25:1)
+#loc4 = #loc("test.f90":35:1)
 
 // CHECK-DAG: #[[SP1:.*]] = #llvm.di_subprogram<{{.*}}name = "mod_sub"{{.*}}>
 // CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[SP1]], name = "child1"{{.*}}>

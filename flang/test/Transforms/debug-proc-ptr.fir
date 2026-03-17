@@ -16,10 +16,10 @@ module {
     return
   } loc(#loc)
 }
-#loc = loc("test.f90":1:1)
-#loc1 = loc("test.f90":2:30)
-#loc2 = loc("test.f90":3:30)
-#loc3 = loc("test.f90":4:30)
+#loc = #loc("test.f90":1:1)
+#loc1 = #loc("test.f90":2:30)
+#loc2 = #loc("test.f90":3:30)
+#loc3 = #loc("test.f90":4:30)
 
 // CHECK-DAG: #[[INT:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
 // CHECK-DAG: #[[REAL32:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>

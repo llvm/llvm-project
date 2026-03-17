@@ -10,7 +10,7 @@ module {
     fir.has_value %0 : !fir.char<1,4>
   } loc(#loc1)
 }
-#loc1 = loc("derived.f90":24:1)
+#loc1 = #loc("derived.f90":24:1)
 
 // Test that no di_global_variable gets created for these compile generated
 // globals.

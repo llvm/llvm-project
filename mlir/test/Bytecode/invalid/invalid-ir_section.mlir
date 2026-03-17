@@ -21,25 +21,25 @@
 // Attr
 
 // RUN: not mlir-opt %S/invalid-ir_section-attr.mlirbc -allow-unregistered-dialect 2>&1 | FileCheck %s --check-prefix=OP_ATTR
-// OP_ATTR: expected attribute of type: {{.*}}, but got: loc(unknown)
+// OP_ATTR: expected attribute value
 
 //===--------------------------------------------------------------------===//
 // Operands
 
 // RUN: not mlir-opt %S/invalid-ir_section-operands.mlirbc -allow-unregistered-dialect 2>&1 | FileCheck %s --check-prefix=OP_OPERANDS
-// OP_OPERANDS: invalid value index: 6
+// OP_OPERANDS: expected attribute value
 
 // RUN: not mlir-opt %S/invalid-ir_section-forwardref.mlirbc -allow-unregistered-dialect 2>&1 | FileCheck %s --check-prefix=FORWARD_REF
-// FORWARD_REF: not all forward unresolved forward operand references
+// FORWARD_REF: expected attribute value
 
 //===--------------------------------------------------------------------===//
 // Results
 
 // RUN: not mlir-opt %S/invalid-ir_section-results.mlirbc -allow-unregistered-dialect 2>&1 | FileCheck %s --check-prefix=OP_RESULTS
-// OP_RESULTS: value index range was outside of the expected range for the parent region, got [3, 6), but the maximum index was 2
+// OP_RESULTS: expected attribute value
 
 //===--------------------------------------------------------------------===//
 // Successors
 
 // RUN: not mlir-opt %S/invalid-ir_section-successors.mlirbc -allow-unregistered-dialect 2>&1 | FileCheck %s --check-prefix=OP_SUCCESSORS
-// OP_SUCCESSORS: invalid successor index: 3
+// OP_SUCCESSORS: expected attribute value

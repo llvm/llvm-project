@@ -1,6 +1,6 @@
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -split-input-file %s | FileCheck %s
 
-; CHECK: #[[$UNKNOWN_LOC:.+]] = loc(unknown)
+; CHECK: #[[$UNKNOWN_LOC:.+]] = #loc(unknown)
 
 ; CHECK-LABEL: @module_loc(
 define i32 @module_loc(i32 %0) {
@@ -29,15 +29,15 @@ define i32 @instruction_loc(i32 %arg1) {
   ret i32 %2
 }
 
-; CHECK-DAG: #[[RAW_FILE_LOC:.+]] = loc("debug-info.ll":1:2)
+; CHECK-DAG: #[[RAW_FILE_LOC:.+]] = #loc("debug-info.ll":1:2)
 ; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "instruction_loc"
 ; CHECK-DAG: #[[CALLEE:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "callee"
-; CHECK-DAG: #[[FILE_LOC]] = loc(fused<#[[SP]]>[#[[RAW_FILE_LOC]]])
-; CHECK-DAG: #[[RAW_CALLEE_LOC:.+]] = loc("debug-info.ll":7:4)
-; CHECK-DAG: #[[CALLEE_LOC:.+]] = loc(fused<#[[CALLEE]]>[#[[RAW_CALLEE_LOC]]])
-; CHECK-DAG: #[[RAW_CALLER_LOC:.+]] = loc("debug-info.ll":2:2)
-; CHECK-DAG: #[[CALLER_LOC:.+]] = loc(fused<#[[SP]]>[#[[RAW_CALLER_LOC]]])
-; CHECK-DAG: #[[CALLSITE_LOC:.+]] = loc(callsite(#[[CALLEE_LOC]] at #[[CALLER_LOC]]))
+; CHECK-DAG: #[[FILE_LOC]] = #loc(fused<#[[SP]]>[#[[RAW_FILE_LOC]]])
+; CHECK-DAG: #[[RAW_CALLEE_LOC:.+]] = #loc("debug-info.ll":7:4)
+; CHECK-DAG: #[[CALLEE_LOC:.+]] = #loc(fused<#[[CALLEE]]>[#[[RAW_CALLEE_LOC]]])
+; CHECK-DAG: #[[RAW_CALLER_LOC:.+]] = #loc("debug-info.ll":2:2)
+; CHECK-DAG: #[[CALLER_LOC:.+]] = #loc(fused<#[[SP]]>[#[[RAW_CALLER_LOC]]])
+; CHECK-DAG: #[[CALLSITE_LOC:.+]] = #loc(callsite(#[[CALLEE_LOC]] at #[[CALLER_LOC]]))
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -66,8 +66,8 @@ define i32 @lexical_block(i32 %arg1) {
 ; CHECK: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit =
 ; CHECK: #[[LB0:.+]] = #llvm.di_lexical_block<scope = #[[SP]]>
 ; CHECK: #[[LB1:.+]] = #llvm.di_lexical_block<scope = #[[SP]], file = #[[FILE]], line = 2, column = 2>
-; CHECK: #[[LOC0]] = loc(fused<#[[LB0]]>[{{.*}}])
-; CHECK: #[[LOC1]] = loc(fused<#[[LB1]]>[{{.*}}])
+; CHECK: #[[LOC0]] = #loc(fused<#[[LB0]]>[{{.*}}])
+; CHECK: #[[LOC1]] = #loc(fused<#[[LB1]]>[{{.*}}])
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -96,8 +96,8 @@ define i32 @lexical_block_file(i32 %arg1) {
 ; CHECK: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit =
 ; CHECK: #[[LB0:.+]] = #llvm.di_lexical_block_file<scope = #[[SP]], discriminator = 0>
 ; CHECK: #[[LB1:.+]] = #llvm.di_lexical_block_file<scope = #[[SP]], file = #[[FILE]], discriminator = 0>
-; CHECK: #[[LOC0]] = loc(fused<#[[LB0]]>[
-; CHECK: #[[LOC1]] = loc(fused<#[[LB1]]>[
+; CHECK: #[[LOC0]] = #loc(fused<#[[LB0]]>[
+; CHECK: #[[LOC1]] = #loc(fused<#[[LB1]]>[
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -243,7 +243,7 @@ define void @subprogram() !dbg !3 {
 define void @func_loc() !dbg !3 {
   ret void
 }
-; CHECK-DAG: #[[FILE_LOC:.+]] = loc("debug-info.ll":42:0)
+; CHECK-DAG: #[[FILE_LOC:.+]] = #loc("debug-info.ll":42:0)
 ; CHECK-DAG: #[[SP:.+]] =  #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, name = "func_loc", file = #{{.*}}, line = 42, subprogramFlags = Definition>
 
 ; CHECK: loc(fused<#[[SP]]>[#[[FILE_LOC]]]
@@ -287,8 +287,8 @@ define void @intrinsic(i64 %0, ptr %1) {
   ret void
 }
 
-; CHECK: #[[LOC1]] = loc(fused<#[[$SP]]>[{{.*}}])
-; CHECK: #[[LOC0]] = loc(fused<#[[$SP]]>[{{.*}}])
+; CHECK: #[[LOC1]] = #loc(fused<#[[$SP]]>[{{.*}}])
+; CHECK: #[[LOC0]] = #loc(fused<#[[$SP]]>[{{.*}}])
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
@@ -322,7 +322,7 @@ define void @class_method() {
 ; CHECK-DAG: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64, flags = "Artificial|ObjectPointer">
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<recId = [[REC_ID]], id = [[SP_ID:.+]], compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
-; CHECK-DAG: #[[LOC]] = loc(fused<#[[SP]]>
+; CHECK-DAG: #[[LOC]] = #loc(fused<#[[SP]]>
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -552,7 +552,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; // -----
 
 ; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #{{.*}}, file = #{{.*}}, subprogramFlags = Definition>
-; CHECK: #[[FUNC_LOC:.*]] = loc(fused<#[[SUBPROGRAM]]>[{{.*}}])
+; CHECK: #[[FUNC_LOC:.*]] = #loc(fused<#[[SUBPROGRAM]]>[{{.*}}])
 define void @noname_subprogram(ptr %arg) !dbg !8 {
   ret void
 }

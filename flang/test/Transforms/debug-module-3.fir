@@ -8,6 +8,6 @@ module {
   } loc(#loc1)
   fir.global @_QMmodEvar1 : i32 loc(#loc1)
 }
-#loc1 = loc("test1.f90":1:0)
+#loc1 = #loc("test1.f90":1:0)
 
 // CHECK: #llvm.di_module<name = "mod", isDecl = true>

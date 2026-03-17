@@ -4,7 +4,7 @@
 // subroutine test()
 //   real :: a, b
 //   pointer(p, a)
-//   p = loc(b)
+//   p = #loc(b)
 //   b = 2
 // end subroutine
 

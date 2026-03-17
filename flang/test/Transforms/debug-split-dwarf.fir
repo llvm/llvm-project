@@ -6,7 +6,7 @@ module {
     return
   } loc(#loc1)
 }
-#loc1 = loc("test.f90":15:1)
+#loc1 = #loc("test.f90":15:1)
 
 // CHECK: llvm.di_compile_unit
 // CHECK-SAME: splitDebugFilename = "test.dwo"

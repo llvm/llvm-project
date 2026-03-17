@@ -36,7 +36,7 @@ def testParseError():
         except MLIRError as e:
             # CHECK: testParseError: <
             # CHECK:   Unable to parse attribute:
-            # CHECK:   error: "BAD_ATTR_DOES_NOT_EXIST":1:1: expected attribute value
+            # CHECK:   "BAD_ATTR_DOES_NOT_EXIST":1:1: expected attribute value
             # CHECK: >
             print(f"testParseError: <{e}>")
         else:
@@ -201,7 +201,7 @@ def testFloatAttr():
             fattr_invalid = FloatAttr.get(IntegerType.get_signless(32), 42)
         except MLIRError as e:
             # CHECK: Invalid attribute:
-            # CHECK: error: unknown: expected floating point type
+            # CHECK: unknown: expected floating point type
             print(e)
         else:
             print("Exception not produced")

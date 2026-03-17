@@ -18,9 +18,9 @@ module {
 }
 
 
-#loc1 = loc("test.f90":18:1)
-#loc2 = loc("test.f90":17:1)
-#loc3 = loc("test.f90":15:1)
+#loc1 = #loc("test.f90":18:1)
+#loc2 = #loc("test.f90":17:1)
+#loc3 = #loc("test.f90":15:1)
 
 // CHECK: #[[VAR:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFfooEstr1{{.*}}flags = Artificial>
 // CHECK: func.func @foo

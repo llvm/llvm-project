@@ -18,9 +18,9 @@ def testUnknown():
     assert loc.context is ctx
     ctx = None
     gc.collect()
-    # CHECK: unknown str: loc(unknown)
+    # CHECK: unknown str: #loc(unknown)
     print("unknown str:", str(loc))
-    # CHECK: unknown repr: loc(unknown)
+    # CHECK: unknown repr: #loc(unknown)
     print("unknown repr:", repr(loc))
 
 
@@ -34,9 +34,9 @@ def testLocationAttr():
         attr = loc.attr
         clone = Location.from_attr(attr)
     gc.collect()
-    # CHECK: loc: loc(unknown)
+    # CHECK: loc: #loc(unknown)
     print("loc:", str(loc))
-    # CHECK: clone: loc(unknown)
+    # CHECK: clone: #loc(unknown)
     print("clone:", str(clone))
     assert loc == clone
 
@@ -53,13 +53,13 @@ def testFileLineCol():
     ctx = None
     gc.collect()
 
-    # CHECK: file str: loc("foo1.txt":123:56)
+    # CHECK: file str: #loc("foo1.txt":123:56)
     print("file str:", str(loc))
-    # CHECK: file repr: loc("foo1.txt":123:56)
+    # CHECK: file repr: #loc("foo1.txt":123:56)
     print("file repr:", repr(loc))
-    # CHECK: file range str: loc("foo2.txt":123:56 to 124:100)
+    # CHECK: file range str: #loc("foo2.txt":123:56 to 124:100)
     print("file range str:", str(range))
-    # CHECK: file range repr: loc("foo2.txt":123:56 to 124:100)
+    # CHECK: file range repr: #loc("foo2.txt":123:56 to 124:100)
     print("file range repr:", repr(range))
 
     assert loc.is_a_file()
@@ -98,7 +98,7 @@ def testFileLineCol():
             module = Module.create()
             with InsertionPoint(module.body):
                 new_value = Operation.create("custom.op1", results=[i32]).result
-                # CHECK: new_value location: loc("foo3.txt":127:61)
+                # CHECK: new_value location: #loc("foo3.txt":127:61)
                 print("new_value location: ", new_value.location)
 
 
@@ -114,25 +114,25 @@ def testName():
     ctx = None
     gc.collect()
 
-    # CHECK: name str: loc("nombre")
+    # CHECK: name str: #loc("nombre")
     print("name str:", str(loc))
-    # CHECK: name repr: loc("nombre")
+    # CHECK: name repr: #loc("nombre")
     print("name repr:", repr(loc))
-    # CHECK: name str: loc("naam"("nombre"))
+    # CHECK: name str: #loc("naam"("nombre"))
     print("name str:", str(loc_with_child_loc))
-    # CHECK: name repr: loc("naam"("nombre"))
+    # CHECK: name repr: #loc("naam"("nombre"))
     print("name repr:", repr(loc_with_child_loc))
 
     assert loc.is_a_name()
     # CHECK: name name_str: nombre
     print("name name_str:", loc.name_str)
-    # CHECK: name child_loc: loc(unknown)
+    # CHECK: name child_loc: #loc(unknown)
     print("name child_loc:", loc.child_loc)
 
     assert loc_with_child_loc.is_a_name()
     # CHECK: name name_str: naam
     print("name name_str:", loc_with_child_loc.name_str)
-    # CHECK: name child_loc_with_child_loc: loc("nombre")
+    # CHECK: name child_loc_with_child_loc: #loc("nombre")
     print("name child_loc_with_child_loc:", loc_with_child_loc.child_loc)
 
 
@@ -147,16 +147,16 @@ def testCallSite():
             [Location.file("util.foo", 379, 21), Location.file("main.foo", 100, 63)],
         )
     ctx = None
-    # CHECK: callsite str: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
+    # CHECK: callsite str: #loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
     print("callsite str:", str(loc))
-    # CHECK: callsite repr: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
+    # CHECK: callsite repr: #loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
     print("callsite repr:", repr(loc))
 
     assert loc.is_a_callsite()
 
-    # CHECK: callsite callee: loc("foo.text":123:45)
+    # CHECK: callsite callee: #loc("foo.text":123:45)
     print("callsite callee:", loc.callee)
-    # CHECK: callsite caller: loc(callsite("util.foo":379:21 at "main.foo":100:63))
+    # CHECK: callsite caller: #loc(callsite("util.foo":379:21 at "main.foo":100:63))
     print("callsite caller:", loc.caller)
 
 
@@ -179,51 +179,51 @@ def testFused():
     ctx = None
 
     assert not loc_single.is_a_fused()
-    # CHECK: fused str: loc("apple")
+    # CHECK: fused str: #loc("apple")
     print("fused str:", str(loc_single))
-    # CHECK: fused repr: loc("apple")
+    # CHECK: fused repr: #loc("apple")
     print("fused repr:", repr(loc_single))
     # # CHECK: fused locations: []
     print("fused locations:", loc_single.locations)
 
     assert loc.is_a_fused()
-    # CHECK: fused str: loc(fused["apple", "banana"])
+    # CHECK: fused str: #loc(fused["apple", "banana"])
     print("fused str:", str(loc))
-    # CHECK: fused repr: loc(fused["apple", "banana"])
+    # CHECK: fused repr: #loc(fused["apple", "banana"])
     print("fused repr:", repr(loc))
-    # CHECK: fused locations: [loc("apple"), loc("banana")]
+    # CHECK: fused locations: [#loc("apple"), #loc("banana")]
     print("fused locations:", loc.locations)
 
     assert loc_attr.is_a_fused()
-    # CHECK: fused str: loc(fused<"sauteed">["carrot", "potatoes"])
+    # CHECK: fused str: #loc(fused<"sauteed">["carrot", "potatoes"])
     print("fused str:", str(loc_attr))
-    # CHECK: fused repr: loc(fused<"sauteed">["carrot", "potatoes"])
+    # CHECK: fused repr: #loc(fused<"sauteed">["carrot", "potatoes"])
     print("fused repr:", repr(loc_attr))
-    # CHECK: fused locations: [loc("carrot"), loc("potatoes")]
+    # CHECK: fused locations: [#loc("carrot"), #loc("potatoes")]
     print("fused locations:", loc_attr.locations)
 
     assert not loc_empty.is_a_fused()
-    # CHECK: fused str: loc(unknown)
+    # CHECK: fused str: #loc(unknown)
     print("fused str:", str(loc_empty))
-    # CHECK: fused repr: loc(unknown)
+    # CHECK: fused repr: #loc(unknown)
     print("fused repr:", repr(loc_empty))
     # CHECK: fused locations: []
     print("fused locations:", loc_empty.locations)
 
     assert loc_empty_attr.is_a_fused()
-    # CHECK: fused str: loc(fused<"sauteed">[unknown])
+    # CHECK: fused str: #loc(fused<"sauteed">[unknown])
     print("fused str:", str(loc_empty_attr))
-    # CHECK: fused repr: loc(fused<"sauteed">[unknown])
+    # CHECK: fused repr: #loc(fused<"sauteed">[unknown])
     print("fused repr:", repr(loc_empty_attr))
-    # CHECK: fused locations: [loc(unknown)]
+    # CHECK: fused locations: [#loc(unknown)]
     print("fused locations:", loc_empty_attr.locations)
 
     assert loc_single_attr.is_a_fused()
-    # CHECK: fused str: loc(fused<"sauteed">["apple"])
+    # CHECK: fused str: #loc(fused<"sauteed">["apple"])
     print("fused str:", str(loc_single_attr))
-    # CHECK: fused repr: loc(fused<"sauteed">["apple"])
+    # CHECK: fused repr: #loc(fused<"sauteed">["apple"])
     print("fused repr:", repr(loc_single_attr))
-    # CHECK: fused locations: [loc("apple")]
+    # CHECK: fused locations: [#loc("apple")]
     print("fused locations:", loc_single_attr.locations)
 
 

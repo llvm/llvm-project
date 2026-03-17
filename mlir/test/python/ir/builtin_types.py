@@ -37,7 +37,7 @@ def testParseError():
     except MLIRError as e:
         # CHECK: testParseError: <
         # CHECK:   Unable to parse type:
-        # CHECK:   error: "BAD_TYPE_DOES_NOT_EXIST":1:1: expected non-function type
+        # CHECK:   "BAD_TYPE_DOES_NOT_EXIST":1:1: expected non-function type
         # CHECK: >
         print(f"testParseError: <{e}>")
     else:
@@ -401,7 +401,7 @@ def testVectorType():
             VectorType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: failed to verify 'elementType': VectorElementTypeInterface instance
+            # CHECK: unknown: failed to verify 'elementType': VectorElementTypeInterface instance
             print(e)
         else:
             print("Exception not produced")
@@ -462,7 +462,7 @@ def testRankedTensorType():
             tensor_invalid = RankedTensorType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: invalid tensor element type: 'none'
+            # CHECK: unknown: invalid tensor element type: 'none'
             print(e)
         else:
             print("Exception not produced")
@@ -511,7 +511,7 @@ def testUnrankedTensorType():
             tensor_invalid = UnrankedTensorType.get(none)
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: invalid tensor element type: 'none'
+            # CHECK: unknown: invalid tensor element type: 'none'
             print(e)
         else:
             print("Exception not produced")
@@ -550,7 +550,7 @@ def testMemRefType():
             memref_invalid = MemRefType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: invalid memref element type
+            # CHECK: unknown: invalid memref element type
             print(e)
         else:
             print("Exception not produced")
@@ -596,7 +596,7 @@ def testUnrankedMemRefType():
             memref_invalid = UnrankedMemRefType.get(none, Attribute.parse("2"))
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: invalid memref element type
+            # CHECK: unknown: invalid memref element type
             print(e)
         else:
             print("Exception not produced")

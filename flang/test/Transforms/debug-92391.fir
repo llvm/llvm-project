@@ -13,6 +13,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
     return %6 : i32
   } loc(#loc1)
 }
-#loc1 = loc("92391.f90":15:1)
+#loc1 = #loc("92391.f90":15:1)
 
 // CHECK: #di_subprogram = #llvm.di_subprogram<{{.*}}name = "my_square", linkageName = "my_square_"{{.*}}>

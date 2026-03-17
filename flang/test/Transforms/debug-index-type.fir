@@ -3,7 +3,7 @@
 module {
   func.func private @str(%arg0: index) -> i32 loc(#loc1)
 }
-#loc1 = loc("test.f90":5:1)
+#loc1 = #loc("test.f90":5:1)
 
 // CHECK: #[[INT32_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
 // CHECK: #[[INT64_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>

@@ -37,10 +37,10 @@ module {
   } loc(#loc_main)
 }
 
-#loc_b = loc("test.f90":4:26)
-#loc_c = loc("test.f90":4:38)
-#loc_y = loc("test.f90":8:24)
-#loc_main = loc("test.f90":11:1)
+#loc_b = #loc("test.f90":4:26)
+#loc_c = #loc("test.f90":4:38)
+#loc_y = #loc("test.f90":8:24)
+#loc_main = #loc("test.f90":11:1)
 
 // CHECK-DAG: #[[MOD_TESTMOD:.+]] = #llvm.di_module<{{.*}}name = "testmod"{{.*}}>
 // CHECK-DAG: #[[MOD_TESTMOD2:.+]] = #llvm.di_module<{{.*}}name = "testmod2"{{.*}}>

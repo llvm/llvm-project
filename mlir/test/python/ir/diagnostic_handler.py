@@ -78,7 +78,7 @@ def testDiagnosticCallback():
     ctx = Context()
 
     def callback(d):
-        # CHECK: DIAGNOSTIC: message='foobar', severity=DiagnosticSeverity.ERROR, loc=loc(unknown)
+        # CHECK: DIAGNOSTIC: message='foobar', severity=DiagnosticSeverity.ERROR, loc=#loc(unknown)
         print(
             f"DIAGNOSTIC: message='{d.message}', severity={d.severity}, loc={d.location}"
         )

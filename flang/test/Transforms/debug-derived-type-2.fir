@@ -7,7 +7,7 @@ module {
     fir.dt_component "elm2" lbs [1, 3]
   } loc(#loc1)
 }
-#loc1 = loc("derived.f90":24:1)
+#loc1 = #loc("derived.f90":24:1)
 
 
 // CHECK-DAG: #[[TY1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, {{.*}} = #{{.*}}, elements = #llvm.di_subrange<count = 5 : i64, lowerBound = 2 : i64>>

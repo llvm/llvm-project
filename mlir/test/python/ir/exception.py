@@ -31,18 +31,18 @@ def test_exception():
     except MLIRError as e:
         # CHECK: Exception: <
         # CHECK:   Unable to parse operation assembly:
-        # CHECK:   error: "use": operand #0 does not dominate this use
-        # CHECK:    note: "use": see current operation: "test.use"(%0) : (i64) -> ()
-        # CHECK:    note: "def": operand defined here (op in the same block)
+        # CHECK:   "use": operand #0 does not dominate this use
+        # CHECK:   "use": see current operation: "test.use"(%0) : (i64) -> ()
+        # CHECK:   "def": operand defined here (op in the same block)
         # CHECK: >
         print(f"Exception: <{e}>")
 
         # CHECK: message: Unable to parse operation assembly
         print(f"message: {e.message}")
 
-        # CHECK: error_diagnostics[0]:           loc("use") operand #0 does not dominate this use
-        # CHECK: error_diagnostics[0].notes[0]:  loc("use") see current operation: "test.use"(%0) : (i64) -> ()
-        # CHECK: error_diagnostics[0].notes[1]:  loc("def") operand defined here (op in the same block)
+        # CHECK: error_diagnostics[0]:           #loc("use") operand #0 does not dominate this use
+        # CHECK: error_diagnostics[0].notes[0]:  #loc("use") see current operation: "test.use"(%0) : (i64) -> ()
+        # CHECK: error_diagnostics[0].notes[1]:  #loc("def") operand defined here (op in the same block)
         print(
             "error_diagnostics[0]:          ",
             e.error_diagnostics[0].location,

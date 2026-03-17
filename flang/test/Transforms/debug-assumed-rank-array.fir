@@ -7,8 +7,8 @@ module {
     return
   } loc(#loc1)
 }
-#loc1 = loc("test1.f90":1:1)
-#loc2 = loc("test1.f90":3:16)
+#loc1 = #loc("test1.f90":1:1)
+#loc2 = #loc("test1.f90":3:16)
 
 // CHECK: #[[TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type
 // CHECK-SAME: dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>, rank = <[DW_OP_push_object_address, DW_OP_plus_uconst(20), DW_OP_deref_size(1)]>

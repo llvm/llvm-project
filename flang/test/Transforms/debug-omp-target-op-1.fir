@@ -22,11 +22,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     return
   }
 }
-#loc1 = loc("test.f90":1:1)
-#loc2 = loc("test.f90":3:1)
-#loc3 = loc("test.f90":7:1)
-#loc4 = loc("test.f90":8:1)
-#loc5 = loc("test.f90":6:1)
+#loc1 = #loc("test.f90":1:1)
+#loc2 = #loc("test.f90":3:1)
+#loc3 = #loc("test.f90":7:1)
+#loc4 = #loc("test.f90":8:1)
+#loc5 = #loc("test.f90":6:1)
 
 // CHECK: #[[SP:.*]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
 // CHECK: #[[SP1:.*]] = #llvm.di_subprogram<{{.*}}name = "__omp_offloading_{{.*}}_QQmain_l6"{{.*}}line = 6{{.*}}subprogramFlags = "LocalToUnit|Definition"{{.*}}>

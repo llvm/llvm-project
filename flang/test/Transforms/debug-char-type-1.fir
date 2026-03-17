@@ -16,7 +16,7 @@ module {
     fir.has_value %1 : !fir.box<!fir.heap<!fir.char<1,?>>>
   } loc(#loc1)
 }
-#loc1 = loc("string.f90":1:1)
+#loc1 = #loc("string.f90":1:1)
 
 // CHECK-DAG: #[[TY1:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", sizeInBits = 320, encoding = DW_ATE_ASCII>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "str1"{{.*}}type = #[[TY1]]{{.*}}>

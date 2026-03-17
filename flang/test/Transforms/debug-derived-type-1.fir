@@ -30,18 +30,18 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
     return
   } loc(#loc10)
 }
-#loc1 = loc("derived1.f90":24:1)
-#loc2 = loc("derived1.f90":35:25)
-#loc3 = loc("derived1.f90":17:1)
-#loc4 = loc("derived1.f90":46:1)
-#loc5 = loc("derived1.f90":50:3)
-#loc6 = loc("derived1.f90":62:3)
-#loc7 = loc("derived1.f90":70:3)
-#loc8 = loc("derived1.f90":85:3)
-#loc9 = loc("derived1.f90":77:3)
-#loc10 = loc("derived1.f90":75:3)
-#loc11 = loc("derived1.f90":95:3)
-#loc12 = loc("derived1.f90":105:3)
+#loc1 = #loc("derived1.f90":24:1)
+#loc2 = #loc("derived1.f90":35:25)
+#loc3 = #loc("derived1.f90":17:1)
+#loc4 = #loc("derived1.f90":46:1)
+#loc5 = #loc("derived1.f90":50:3)
+#loc6 = #loc("derived1.f90":62:3)
+#loc7 = #loc("derived1.f90":70:3)
+#loc8 = #loc("derived1.f90":85:3)
+#loc9 = #loc("derived1.f90":77:3)
+#loc10 = #loc("derived1.f90":75:3)
+#loc11 = #loc("derived1.f90":95:3)
+#loc12 = #loc("derived1.f90":105:3)
 
 
 // CHECK-DAG: #[[INT_TY:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>

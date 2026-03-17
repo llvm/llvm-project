@@ -21,10 +21,10 @@ module {
   return %1 : complex<f128>
   }loc(#loc4)
 }
-#loc1 = loc("./simple.f90":2:1)
-#loc2 = loc("./simple.f90":5:1)
-#loc3 = loc("./simple.f90":8:1)
-#loc4 = loc("./simple.f90":11:1)
+#loc1 = #loc("./simple.f90":2:1)
+#loc2 = #loc("./simple.f90":5:1)
+#loc3 = #loc("./simple.f90":8:1)
+#loc4 = #loc("./simple.f90":11:1)
 
 // CHECK-DAG: #[[CMPX8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "complex(kind=8)", sizeInBits = 128, encoding = DW_ATE_complex_float>
 // CHECK-DAG: #[[CMPX4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "complex", sizeInBits = 64, encoding = DW_ATE_complex_float>
