@@ -1,6 +1,5 @@
 import os
 import shutil
-import tempfile
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -97,6 +96,7 @@ class SymStoreLocalTests(TestBase):
         exe, sym = self.build_inferior()
         with MockedSymStore(self, exe, sym):
             self.try_breakpoint(exe, should_have_loc=False)
+            self.runCmd("exit")
 
     def test_external_lookup_off(self):
         """
@@ -108,6 +108,7 @@ class SymStoreLocalTests(TestBase):
                 f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
             )
             self.try_breakpoint(exe, ext_lookup=False, should_have_loc=False)
+            self.runCmd("exit")
 
     def test_local_dir(self):
         """
@@ -119,3 +120,4 @@ class SymStoreLocalTests(TestBase):
                 f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
             )
             self.try_breakpoint(exe, should_have_loc=True)
+            self.runCmd("exit")
