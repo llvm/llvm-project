@@ -348,6 +348,7 @@ Bug Fixes to C++ Support
 - Fixed an incorrect template argument deduction when matching packs of template
   template parameters when one of its parameters is also a pack. (#GH181166)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
+- Fixed an alias template CTAD crash.
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
