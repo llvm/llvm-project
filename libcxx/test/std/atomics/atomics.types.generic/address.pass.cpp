@@ -121,6 +121,96 @@ do_test()
     assert((obj -= std::ptrdiff_t(3)) == T(2*sizeof(X)));
     assert(obj == T(2*sizeof(X)));
 
+#if TEST_STD_VER >= 26
+    // Test store_add with various offsets and memory orders
+    {
+      X a[20] = {};
+
+      // Test with default memory order (seq_cst)
+      obj.store(&a[0]);
+      obj.store_add(5);
+      assert(obj == &a[5]);
+
+      // Test with memory_order_relaxed
+      obj.store(&a[2]);
+      obj.store_add(3, std::memory_order_relaxed);
+      assert(obj == &a[5]);
+
+      // Test with memory_order_release
+      obj.store(&a[1]);
+      obj.store_add(7, std::memory_order_release);
+      assert(obj == &a[8]);
+
+      // Test with zero offset
+      obj.store(&a[10]);
+      obj.store_add(0);
+      assert(obj == &a[10]);
+
+      // Test with negative offset
+      obj.store(&a[15]);
+      obj.store_add(-5);
+      assert(obj == &a[10]);
+
+      // Test chaining multiple store_add operations
+      obj.store(&a[0]);
+      obj.store_add(2);
+      obj.store_add(3);
+      obj.store_add(4);
+      assert(obj == &a[9]);
+    }
+
+    // Test store_sub with various offsets and memory orders
+    {
+      X a[20] = {};
+
+      // Test with default memory order (seq_cst)
+      obj.store(&a[10]);
+      obj.store_sub(5);
+      assert(obj == &a[5]);
+
+      // Test with memory_order_relaxed
+      obj.store(&a[15]);
+      obj.store_sub(3, std::memory_order_relaxed);
+      assert(obj == &a[12]);
+
+      // Test with memory_order_release
+      obj.store(&a[18]);
+      obj.store_sub(7, std::memory_order_release);
+      assert(obj == &a[11]);
+
+      // Test with zero offset
+      obj.store(&a[10]);
+      obj.store_sub(0);
+      assert(obj == &a[10]);
+
+      // Test with negative offset (moves forward)
+      obj.store(&a[5]);
+      obj.store_sub(-5);
+      assert(obj == &a[10]);
+
+      // Test chaining multiple store_sub operations
+      obj.store(&a[19]);
+      obj.store_sub(2);
+      obj.store_sub(3);
+      obj.store_sub(4);
+      assert(obj == &a[10]);
+    }
+
+    // Test mixing store_add and store_sub
+    {
+      X a[20] = {};
+      obj.store(&a[10]);
+      obj.store_add(5);
+      assert(obj == &a[15]);
+      obj.store_sub(3);
+      assert(obj == &a[12]);
+      obj.store_add(-2);
+      assert(obj == &a[10]);
+      obj.store_sub(-4);
+      assert(obj == &a[14]);
+    }
+#endif
+
     {
         TEST_ALIGNAS_TYPE(A) char storage[sizeof(A)] = {23};
         A& zero = *new (storage) A();

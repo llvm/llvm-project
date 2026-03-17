@@ -442,6 +442,57 @@ template<class T>
   T atomic_fetch_xor_explicit(atomic<T>*, atomic<T>::value_type,
                               memory_order) noexcept;
 
+template<class T>                                                                     // since C++26
+  void atomic_store_add(volatile atomic<T>*, atomic<T>::difference_type) noexcept;   // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_add(atomic<T>*, atomic<T>::difference_type) noexcept;            // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_add_explicit(volatile atomic<T>*, atomic<T>::difference_type,    // since C++26
+                                 memory_order) noexcept;                             // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_add_explicit(atomic<T>*, atomic<T>::difference_type,             // since C++26
+                                 memory_order) noexcept;                             // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_sub(volatile atomic<T>*, atomic<T>::difference_type) noexcept;   // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_sub(atomic<T>*, atomic<T>::difference_type) noexcept;            // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_sub_explicit(volatile atomic<T>*, atomic<T>::difference_type,    // since C++26
+                                 memory_order) noexcept;                             // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_sub_explicit(atomic<T>*, atomic<T>::difference_type,             // since C++26
+                                 memory_order) noexcept;                             // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_and(volatile atomic<T>*, atomic<T>::value_type) noexcept;        // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_and(atomic<T>*, atomic<T>::value_type) noexcept;                 // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_and_explicit(volatile atomic<T>*, atomic<T>::value_type,         // since C++26
+                                 memory_order) noexcept;                             // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_and_explicit(atomic<T>*, atomic<T>::value_type,                  // since C++26
+                                 memory_order) noexcept;                             // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_or(volatile atomic<T>*, atomic<T>::value_type) noexcept;         // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_or(atomic<T>*, atomic<T>::value_type) noexcept;                  // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_or_explicit(volatile atomic<T>*, atomic<T>::value_type,          // since C++26
+                                memory_order) noexcept;                              // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_or_explicit(atomic<T>*, atomic<T>::value_type,                   // since C++26
+                                memory_order) noexcept;                              // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_xor(volatile atomic<T>*, atomic<T>::value_type) noexcept;        // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_xor(atomic<T>*, atomic<T>::value_type) noexcept;                 // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_xor_explicit(volatile atomic<T>*, atomic<T>::value_type,         // since C++26
+                                 memory_order) noexcept;                             // since C++26
+template<class T>                                                                     // since C++26
+  void atomic_store_xor_explicit(atomic<T>*, atomic<T>::value_type,                  // since C++26
+                                 memory_order) noexcept;                             // since C++26
+
 template<class T>
   void atomic_wait(const volatile atomic<T>*, atomic<T>::value_type) noexcept; // since C++20
 template<class T>
