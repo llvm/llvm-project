@@ -609,7 +609,7 @@ define half @test_ui_ui_i16_mul_fail_no_promotion(i16 noundef %x_in, i16 noundef
 ; CHECK-NEXT:    [[Y:%.*]] = and i16 [[Y_IN:%.*]], 3
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i16 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = uitofp nneg i16 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %x = and i16 %x_in, 4095
@@ -645,7 +645,7 @@ define half @test_si_si_i16_mul_fail_overflow(i16 noundef %x_in, i16 noundef %y_
 ; CHECK-NEXT:    [[Y:%.*]] = or i16 [[Y_IN:%.*]], -257
 ; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg i16 [[X]] to half
 ; CHECK-NEXT:    [[YF:%.*]] = sitofp i16 [[Y]] to half
-; CHECK-NEXT:    [[R:%.*]] = fmul half [[XF]], [[YF]]
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[XF]], [[YF]]
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %xx = and i16 %x_in, 126

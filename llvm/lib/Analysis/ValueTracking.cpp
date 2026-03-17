@@ -5768,18 +5768,30 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Integers cannot be subnormal
     Known.knownNot(fcSubnormal);
 
+    KnownBits IntKnown =
+        computeKnownBits(Op->getOperand(0), DemandedElts, Q, Depth + 1);
+
     // sitofp and uitofp turn into +0.0 for zero.
     Known.knownNot(fcNegZero);
-    if (Op->getOpcode() == Instruction::UIToFP)
+
+    // If the integer is non-zero, the result cannot be +0.0
+    if (IntKnown.isNonZero())
+      Known.knownNot(fcPosZero);
+
+    // If UIToFP, or SIToFP with a known non-negative value,
+    // it can't be negative
+    if (Op->getOpcode() == Instruction::UIToFP || IntKnown.isNonNegative())
       Known.signBitMustBeZero();
 
     if (InterestedClasses & fcInf) {
-      // Get width of largest magnitude integer (remove a bit if signed).
+      // Get width of largest magnitude integer known.
       // This still works for a signed minimum value because the largest FP
       // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
-      int IntSize = Op->getOperand(0)->getType()->getScalarSizeInBits();
-      if (Op->getOpcode() == Instruction::SIToFP)
-        --IntSize;
+      unsigned IntSize = IntKnown.getBitWidth();
+      if (Op->getOpcode() == Instruction::UIToFP)
+        IntSize -= IntKnown.countMinLeadingZeros();
+      else if (Op->getOpcode() == Instruction::SIToFP)
+        IntSize -= IntKnown.countMinSignBits();
 
       // If the exponent of the largest finite FP value can hold the largest
       // integer, the result of the cast must be finite.

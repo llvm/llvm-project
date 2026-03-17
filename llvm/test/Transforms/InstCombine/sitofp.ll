@@ -415,3 +415,30 @@ define <2 x i1> @i8_vec_sitofp_test4(<2 x i8> %A) {
   %C = fcmp ult <2 x double> %B, <double 127.0, double 127.0>
   ret <2 x i1> %C
 }
+
+; Mask 98 = PosZero (64) | NegZero (32) | QNan (2)
+define i1 @test_sitofp_nonzero(i32 %a) {
+; CHECK-LABEL: @test_sitofp_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %or = or i32 %a, 1
+  %f = sitofp i32 %or to float
+  %is.zero = call i1 @llvm.is.fpclass.f32(float %f, i32 98)
+  ret i1 %is.zero
+}
+
+; Mask 516 = PosInf (512) | NegInf (4)
+define i1 @test_uitofp_no_inf(i64 %a) {
+; CHECK-LABEL: @test_uitofp_no_inf(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %and = and i64 %a, 32767
+  %f = uitofp i64 %and to half
+  ; 516 checks for +Inf or -Inf
+  %is.inf = call i1 @llvm.is.fpclass.f16(half %f, i32 516)
+  ret i1 %is.inf
+}
