@@ -343,8 +343,8 @@ def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", []> {
   let autogenSerialization = 0;
 
   let builders = [OpBuilder<(ins "spirv::FuncOp":$function,
-                                "spirv::ExecutionMode":$executionMode,
-                                "ArrayRef<Attribute>":$params),
+                                 "spirv::ExecutionMode":$executionMode,
+                                 "ArrayRef<Attribute>":$params),
                             [{
       build($_builder, $_state,
             SymbolRefAttr::get(function),
