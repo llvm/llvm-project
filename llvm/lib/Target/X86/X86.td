@@ -371,6 +371,8 @@ def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
                                  "Support zero-upper SETcc/IMUL">;
+def FeatureJMPABS : SubtargetFeature<"jmpabs", "HasJMPABS", "true",
+                                     "Support 64-bit absolute JMP">;
 def FeatureUseGPR32InInlineAsm
     : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
                        "Enable use of GPR32 in inline assembly for APX">;
@@ -776,6 +778,14 @@ def TuningUseSLMArithCosts
 def TuningUseGLMDivSqrtCosts
     : SubtargetFeature<"use-glm-div-sqrt-costs", "UseGLMDivSqrtCosts", "true",
         "Use Goldmont specific floating point div/sqrt costs">;
+
+def TuningNDDImm
+    : SubtargetFeature<"prefer-ndd-imm", "HasNDDI",
+          "true", "Prefer NDD immediate variant">;
+
+def TuningNDDMem
+    : SubtargetFeature<"prefer-ndd-mem", "HasNDDM",
+          "true", "Prefer NDD memory addressing">;
 
 // Starting with Redwood Cove architecture, the branch has branch taken hint
 // (i.e., instruction prefix 3EH).
@@ -1188,6 +1198,7 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
+                                                  FeatureJMPABS,
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
@@ -1361,6 +1372,7 @@ def ProcessorFeatures {
                                                   FeatureNF,
                                                   FeatureNDD,
                                                   FeatureZU,
+                                                  FeatureJMPABS,
                                                   FeatureCCMP,
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =

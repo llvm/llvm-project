@@ -49,7 +49,7 @@ class AllocaInst;
 class AssumptionCache;
 class BlockFrequencyInfo;
 class DominatorTree;
-class BranchInst;
+class CondBrInst;
 class Function;
 class GlobalValue;
 class InstCombiner;
@@ -105,7 +105,7 @@ struct HardwareLoopInfo {
   LLVM_ABI HardwareLoopInfo(Loop *L);
   Loop *L = nullptr;
   BasicBlock *ExitBlock = nullptr;
-  BranchInst *ExitBranch = nullptr;
+  CondBrInst *ExitBranch = nullptr;
   const SCEV *ExitCount = nullptr;
   IntegerType *CountType = nullptr;
   Value *LoopDecrement = nullptr; // Decrement the loop counter by this
@@ -877,7 +877,7 @@ public:
 
   /// Return true if the target can save a compare for loop count, for example
   /// hardware loop saves a compare.
-  LLVM_ABI bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
+  LLVM_ABI bool canSaveCmp(Loop *L, CondBrInst **BI, ScalarEvolution *SE,
                            LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                            TargetLibraryInfo *LibInfo) const;
 

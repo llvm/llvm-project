@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#pragma OPENCL FP_CONTRACT OFF
+
 _CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_sinf_piby4(__CLC_FLOATN x,
                                                      __CLC_FLOATN y) {
   // Taylor series for sin(x) is x - x^3/3! + x^5/5! - x^7/7! ...
@@ -197,8 +199,11 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionSmallS(
 
 _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
     private __CLC_FLOATN *r, private __CLC_FLOATN *rr, __CLC_FLOATN x) {
-  __CLC_INTN xe = __CLC_AS_INTN((__CLC_AS_UINTN(x) >> 23) - 127);
-  __CLC_UINTN xm = 0x00800000U | (__CLC_AS_UINTN(x) & 0x7fffffU);
+  __CLC_INTN xe;
+  __CLC_FLOATN m = __clc_frexp(x, &xe);
+  --xe;
+
+  __CLC_UINTN xm = __CLC_CONVERT_UINTN(__clc_ldexp(m, 24));
 
   // 224 bits of 2/PI: . A2F9836E 4E441529 FC2757D1 F534DDC0 DB629599 3C439041
   // FE5163AB
@@ -210,15 +215,38 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   const __CLC_UINTN b1 = 0x3C439041U;
   const __CLC_UINTN b0 = 0xFE5163ABU;
 
-  __CLC_UINTN p0, p1, p2, p3, p4, p5, p6, p7, c0, c1;
+  __CLC_UINTN p0, p1, p2, p3, p4, p5, p6, p7;
+  __CLC_ULONGN a;
 
-  __CLC_FULL_MUL(xm, b0, c0, p0);
-  __CLC_FULL_MAD(xm, b1, c0, c1, p1);
-  __CLC_FULL_MAD(xm, b2, c1, c0, p2);
-  __CLC_FULL_MAD(xm, b3, c0, c1, p3);
-  __CLC_FULL_MAD(xm, b4, c1, c0, p4);
-  __CLC_FULL_MAD(xm, b5, c0, c1, p5);
-  __CLC_FULL_MAD(xm, b6, c1, p7, p6);
+  __CLC_ULONGN xm_u64 = __CLC_CONVERT_ULONGN(xm);
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b0);
+  p0 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b1) + a;
+  p1 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b2) + a;
+  p2 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b3) + a;
+  p3 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b4) + a;
+  p4 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b5) + a;
+  p5 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b6) + a;
+  p6 = __CLC_CONVERT_UINTN(a);
+  p7 = __CLC_CONVERT_UINTN(a >> 32);
 
   __CLC_UINTN fbits = (__CLC_UINTN)224 + (__CLC_UINTN)23 - __CLC_AS_UINTN(xe);
 
@@ -227,15 +255,14 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   __CLC_UINTN shift = 256U - 2 - fbits;
 
   // Shift by up to 134/32 = 4 words
-  __CLC_INTN c = shift > 31;
-  p7 = c ? p6 : p7;
-  p6 = c ? p5 : p6;
-  p5 = c ? p4 : p5;
-  p4 = c ? p3 : p4;
-  p3 = c ? p2 : p3;
-  p2 = c ? p1 : p2;
-  p1 = c ? p0 : p1;
-  shift -= (c ? 32U : 0U);
+  __CLC_INTN c = shift > 63;
+  p7 = c ? p5 : p7;
+  p6 = c ? p4 : p6;
+  p5 = c ? p3 : p5;
+  p4 = c ? p2 : p4;
+  p3 = c ? p1 : p3;
+  p2 = c ? p0 : p2;
+  shift -= __CLC_CONVERT_UINTN((-c) & (__CLC_INTN)64);
 
   c = shift > 31;
   p7 = c ? p6 : p7;
@@ -243,23 +270,14 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   p5 = c ? p4 : p5;
   p4 = c ? p3 : p4;
   p3 = c ? p2 : p3;
-  p2 = c ? p1 : p2;
-  shift -= (c ? 32U : 0U);
+  shift -= __CLC_CONVERT_UINTN((-c) & (__CLC_INTN)32);
 
   c = shift > 31;
   p7 = c ? p6 : p7;
   p6 = c ? p5 : p6;
   p5 = c ? p4 : p5;
   p4 = c ? p3 : p4;
-  p3 = c ? p2 : p3;
-  shift -= (c ? 32U : 0U);
-
-  c = shift > 31;
-  p7 = c ? p6 : p7;
-  p6 = c ? p5 : p6;
-  p5 = c ? p4 : p5;
-  p4 = c ? p3 : p4;
-  shift -= (c ? 32U : 0U);
+  shift -= __CLC_CONVERT_UINTN((-c) & (__CLC_INTN)32);
 
   // bitalign cannot handle a shift of 32
   c = shift > 0;
@@ -275,9 +293,9 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   __CLC_INTN i = __CLC_AS_INTN(p7 >> 29U);
 
   // Scoot up 2 more bits so only fraction remains
-  p7 = bitalign(p7, p6, 30);
-  p6 = bitalign(p6, p5, 30);
-  p5 = bitalign(p5, p4, 30);
+  p7 = bitalign(p7, p6, (__CLC_UINTN)30u);
+  p6 = bitalign(p6, p5, (__CLC_UINTN)30u);
+  p5 = bitalign(p5, p4, (__CLC_UINTN)30u);
 
   // Subtract 1 if msb of fraction is 1, i.e. fraction >= 0.5
   __CLC_UINTN flip = (i & 1) != 0 ? 0xFFFFFFFFU : 0U;
@@ -297,12 +315,12 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
       __CLC_AS_FLOATN(sign | ((127U - __CLC_AS_UINTN(xe)) << 23U) | p7 >> 9);
 
   // Shift out bits we captured on q1
-  p7 = bitalign(p7, p6, 32 - 23);
+  p7 = bitalign(p7, p6, (__CLC_UINTN)(32u - 23u));
 
   // Get 24 more bits of fraction in another float, there are not long strings
   // of zeroes here
   __CLC_INTN xxe = __CLC_AS_INTN(__clc_clz(p7)) + 1;
-  p7 = bitalign(p7, p6, 32 - xxe);
+  p7 = bitalign(p7, p6, __CLC_CONVERT_UINTN(32 - xxe));
   __CLC_FLOATN q0 = __CLC_AS_FLOATN(
       sign | ((127U - __CLC_AS_UINTN(xe + 23 + xxe)) << 23U) | p7 >> 9);
 
@@ -343,18 +361,17 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
 _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionS(private __CLC_FLOATN *r,
                                                       private __CLC_FLOATN *rr,
                                                       __CLC_FLOATN x) {
-  __CLC_INTN is_small = x < (__CLC_FLOATN)0x1.0p+23f;
+  __CLC_INTN is_large = x >= (__CLC_FLOATN)0x1.0p+23f;
 #ifdef __CLC_SCALAR
-  if (is_small)
-    return __clc_argReductionSmallS(r, rr, x);
-  else
+  if (is_large)
     return __clc_argReductionLargeS(r, rr, x);
+  return __clc_argReductionSmallS(r, rr, x);
 #else
   __CLC_FLOATN r1, rr1, r2, rr2;
   __CLC_INTN ret1 = __clc_argReductionSmallS(&r1, &rr1, x);
   __CLC_INTN ret2 = __clc_argReductionLargeS(&r2, &rr2, x);
-  *r = is_small ? r1 : r2;
-  *rr = is_small ? rr1 : rr2;
-  return is_small ? ret1 : ret2;
+  *r = is_large ? r2 : r1;
+  *rr = is_large ? rr2 : rr1;
+  return is_large ? ret2 : ret1;
 #endif
 }

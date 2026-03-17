@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/relational/clc_isinf.h"
+#include <clc/relational/clc_isinf.h>
 
 #define __CLC_FUNCTION isinf
-#define __CLC_BODY "unary_def.inc"
+#define __CLC_BODY "relational_unary_def.inc"
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

@@ -340,7 +340,7 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
                                        const LangOptions &Opts) {
 #ifndef NDEBUG
   // Don't verify non-standard ABI configurations.
-  if (Opts.AlignDouble || Opts.OpenCL || Opts.HLSL)
+  if (Opts.AlignDouble || Opts.OpenCL)
     return;
 
   llvm::Triple Triple = Target.getTriple();
@@ -393,6 +393,15 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
 
   Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
+
+  if (Target.vectorsAreElementAligned() != DL.vectorsAreElementAligned()) {
+    llvm::errs() << "Datalayout for target " << Triple.str()
+                 << " sets element-aligned vectors to '"
+                 << Target.vectorsAreElementAligned()
+                 << "' but clang specifies '" << DL.vectorsAreElementAligned()
+                 << "'\n";
+    abort();
+  }
 #endif
 }
 
@@ -3267,8 +3276,12 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 
 void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
                                                      llvm::CallBase *CB) {
-  // Only if needed for call graph section and only for indirect calls.
-  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall())
+  // Only if needed for call graph section and only for indirect calls that are
+  // visible externally.
+  // TODO: Handle local linkage symbols so they are not left out of call graph
+  // reducing precision.
+  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall() ||
+      !isExternallyVisible(QT->getLinkage()))
     return;
 
   llvm::Metadata *TypeIdMD = CreateMetadataIdentifierGeneralized(QT);
@@ -4407,13 +4420,15 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
           bool UnifiedMemoryEnabled =
               getOpenMPRuntime().hasRequiresUnifiedSharedMemory();
           if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-               *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+               *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+               *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
               !UnifiedMemoryEnabled) {
             (void)GetAddrOfGlobalVar(VD);
           } else {
             assert(((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
                     ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                      *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+                      *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+                      *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
                      UnifiedMemoryEnabled)) &&
                    "Link clause or to clause with unified memory expected.");
             (void)getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
@@ -8524,4 +8539,56 @@ std::string CodeGenModule::getPFPFieldName(const FieldDecl *FD) {
       getContext().getCanonicalTagType(FD->getParent()), Out, false);
   Out << "." << FD->getName();
   return OutName;
+}
+
+bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
+  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
+    return false;
+  CXXDestructorDecl *Dtor = RD->getDestructor();
+  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
+  // so just force vector deleting destructor emission if dllexport is present.
+  // This matches MSVC behavior.
+  if (Dtor && Dtor->isVirtual() && Dtor->hasAttr<DLLExportAttr>())
+    return true;
+
+  return RequireVectorDeletingDtor.count(RD);
+}
+
+void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
+  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
+    return;
+  RequireVectorDeletingDtor.insert(RD);
+
+  // To reduce code size in general case we lazily emit scalar deleting
+  // destructor definition and an alias from vector deleting destructor to
+  // scalar deleting destructor. It may happen that we first emitted the scalar
+  // deleting destructor definition and the alias and then discovered that the
+  // definition of the vector deleting destructor is required. Then we need to
+  // remove the alias and the scalar deleting destructor and queue vector
+  // deleting destructor body for emission. Check if that is the case.
+  CXXDestructorDecl *DtorD = RD->getDestructor();
+  GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
+  StringRef MangledName = getMangledName(ScalarDtorGD);
+  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+  GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
+  if (Entry && !Entry->isDeclaration()) {
+    StringRef VDName = getMangledName(VectorDtorGD);
+    llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
+    // It exists and it should be an alias.
+    assert(VDEntry && isa<llvm::GlobalAlias>(VDEntry));
+    auto *NewFn = llvm::Function::Create(
+        cast<llvm::FunctionType>(VDEntry->getValueType()),
+        llvm::Function::ExternalLinkage, VDName, &getModule());
+    SetFunctionAttributes(VectorDtorGD, NewFn, /*IsIncompleteFunction*/ false,
+                          /*IsThunk*/ false);
+    NewFn->takeName(VDEntry);
+    VDEntry->replaceAllUsesWith(NewFn);
+    VDEntry->eraseFromParent();
+    Entry->replaceAllUsesWith(NewFn);
+    Entry->eraseFromParent();
+  }
+  // Always add a deferred decl to emit once we confirmed that vector deleting
+  // destructor definition is required. That helps to enforse its generation
+  // even if destructor is only declared.
+  addDeferredDeclToEmit(VectorDtorGD);
 }

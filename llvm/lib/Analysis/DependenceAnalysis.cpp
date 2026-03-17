@@ -1629,14 +1629,16 @@ inferDomainOfAffine(OverflowSafeSignedAPInt A, OverflowSafeSignedAPInt B,
 // This is a modified version of the original Banerjee algorithm. The original
 // only tested whether Dst depends on Src. This algorithm extends that and
 // returns all the dependencies that exist between Dst and Src.
-bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                                  const SCEV *SrcConst, const SCEV *DstConst,
-                                  const Loop *CurSrcLoop,
-                                  const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
+                                  const SCEVAddRecExpr *Dst, unsigned Level,
                                   FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::ExactSIV))
     return false;
 
+  const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
+  const SCEV *SrcConst = Src->getStart();
+  const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
+  const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
@@ -1674,7 +1676,7 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   std::optional<APInt> UM;
   // UM is perhaps unavailable, let's check
   if (const SCEVConstant *CUB =
-          collectConstantUpperBound(CurSrcLoop, Delta->getType())) {
+          collectConstantUpperBound(Src->getLoop(), Delta->getType())) {
     UM = CUB->getAPInt();
     LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
   }
@@ -1813,11 +1815,9 @@ static bool isRemainderZero(const SCEVConstant *Dividend,
 // (see also weakZeroDstSIVtest)
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
-                                        const SCEV *SrcConst,
-                                        const SCEV *DstConst,
-                                        const Loop *CurSrcLoop,
-                                        const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *SrcConst,
+                                        const SCEVAddRecExpr *Dst,
+                                        unsigned Level,
                                         FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
     return false;
@@ -1825,6 +1825,8 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   // For the WeakSIV test, it's possible the loop isn't common to
   // the Src and Dst loops. If it isn't, then there's no need to
   // record a direction.
+  const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
+  const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (src) SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1858,7 +1860,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
   if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
+          collectUpperBound(Dst->getLoop(), Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
     if (SE->isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
@@ -1924,17 +1926,16 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
 // (see also weakZeroSrcSIVtest)
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
-                                        const SCEV *SrcConst,
-                                        const SCEV *DstConst,
-                                        const Loop *CurSrcLoop,
-                                        const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
+                                        const SCEV *DstConst, unsigned Level,
                                         FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
     return false;
 
   // For the WeakSIV test, it's possible the loop isn't common to the
   // Src and Dst loops. If it isn't, then there's no need to record a direction.
+  const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
+  const SCEV *SrcConst = Src->getStart();
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1968,7 +1969,7 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
   if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
+          collectUpperBound(Src->getLoop(), Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
     if (SE->isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
@@ -2299,30 +2300,21 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
                                       CurDstLoop, Level, Result);
     else
-      disproven = exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst,
-                               CurSrcLoop, CurDstLoop, Level, Result);
+      disproven = exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
     return disproven || gcdMIVtest(Src, Dst, Result) ||
            symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurSrcLoop,
                             CurDstLoop);
   }
   if (SrcAddRec) {
-    const SCEV *SrcConst = SrcAddRec->getStart();
-    const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
-    const SCEV *DstConst = Dst;
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurSrcLoop);
-    return weakZeroDstSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
-                              CurSrcLoop, Level, Result) ||
+    return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result) ||
            gcdMIVtest(Src, Dst, Result);
   }
   if (DstAddRec) {
-    const SCEV *DstConst = DstAddRec->getStart();
-    const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
-    const SCEV *SrcConst = Src;
     const Loop *CurDstLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurDstLoop);
-    return weakZeroSrcSIVtest(DstCoeff, SrcConst, DstConst, CurDstLoop,
-                              CurDstLoop, Level, Result) ||
+    return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result) ||
            gcdMIVtest(Src, Dst, Result);
   }
   llvm_unreachable("SIV test expected at least one AddRec");

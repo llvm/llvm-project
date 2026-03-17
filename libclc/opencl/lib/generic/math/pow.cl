@@ -11,3 +11,11 @@
 #define __CLC_FUNCTION pow
 #define __CLC_BODY "clc/shared/binary_def.inc"
 #include "clc/math/gentype.inc"
+#undef __CLC_FUNCTION
+#undef __CLC_IMPL_FUNCTION
+
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION __pow_fast
+#define __CLC_IMPL_FUNCTION(x) __clc_pow_fast
+#define __CLC_BODY "clc/shared/binary_def.inc"
+#include "clc/math/gentype.inc"

@@ -4628,7 +4628,8 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //       given the typical code patterns.
   if (Opcode == AMDGPU::S_SENDMSG || Opcode == AMDGPU::S_SENDMSGHALT ||
       isEXP(Opcode) || Opcode == AMDGPU::DS_ORDERED_COUNT ||
-      Opcode == AMDGPU::S_TRAP || Opcode == AMDGPU::S_WAIT_EVENT)
+      Opcode == AMDGPU::S_TRAP || Opcode == AMDGPU::S_WAIT_EVENT ||
+      Opcode == AMDGPU::S_SETHALT)
     return true;
 
   if (MI.isCall() || MI.isInlineAsm())
@@ -9327,14 +9328,18 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
     Register SrcReg0, SrcReg1;
     if (!Src0.isReg() || !RI.isVGPR(MRI, Src0.getReg())) {
       SrcReg0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg0).add(Src0);
+      BuildMI(*MBB, Inst, DL,
+              get(Src0.isImm() ? AMDGPU::V_MOV_B32_e32 : AMDGPU::COPY), SrcReg0)
+          .add(Src0);
     } else {
       SrcReg0 = Src0.getReg();
     }
 
     if (!Src1.isReg() || !RI.isVGPR(MRI, Src1.getReg())) {
       SrcReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg1).add(Src1);
+      BuildMI(*MBB, Inst, DL,
+              get(Src1.isImm() ? AMDGPU::V_MOV_B32_e32 : AMDGPU::COPY), SrcReg1)
+          .add(Src1);
     } else {
       SrcReg1 = Src1.getReg();
     }

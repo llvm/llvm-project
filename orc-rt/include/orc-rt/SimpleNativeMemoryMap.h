@@ -16,8 +16,7 @@
 #include "orc-rt/AllocAction.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/MemoryFlags.h"
-#include "orc-rt/ResourceManager.h"
-#include "orc-rt/SPSWrapperFunction.h"
+#include "orc-rt/Service.h"
 #include "orc-rt/move_only_function.h"
 
 #include <map>
@@ -40,7 +39,7 @@ namespace orc_rt {
 /// 4. Release address space, deinitializing any remaining initialized
 ///    regions, and returning the address space to the system for reuse (if
 ///    the system permits).
-class SimpleNativeMemoryMap : public ResourceManager {
+class SimpleNativeMemoryMap : public Service {
 public:
   /// Reserves a slab of contiguous address space for allocation.
   ///
@@ -86,8 +85,8 @@ public:
   void deinitializeMultiple(OnDeinitializeCompleteFn &&OnComplete,
                             std::vector<void *> Bases);
 
-  void onDetach(ResourceManager::OnCompleteFn OnComplete) override;
-  void onShutdown(ResourceManager::OnCompleteFn OnComplete) override;
+  void onDetach(Service::OnCompleteFn OnComplete) override;
+  void onShutdown(Service::OnCompleteFn OnComplete) override;
 
 private:
   struct SlabInfo {
@@ -112,23 +111,5 @@ private:
 };
 
 } // namespace orc_rt
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes);
-
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes);
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes);
-
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes);
 
 #endif // ORC_RT_SIMPLENATIVEMEMORYMAP_H

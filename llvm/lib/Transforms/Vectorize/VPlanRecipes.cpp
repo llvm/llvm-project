@@ -1107,7 +1107,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     }
 
     Type *CondTy = Ctx.Types.inferScalarType(getOperand(0));
-    if (!IsScalarCond)
+    if (!IsScalarCond && VF.isVector())
       CondTy = VectorType::get(CondTy, VF);
 
     llvm::CmpPredicate Pred;
@@ -1321,6 +1321,12 @@ void VPInstruction::execute(VPTransformState &State) {
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
+  if (getOpcode() == VPInstruction::ResumeForEpilogue) {
+    // FIXME: This is a workaround to enable reliable updates of the scalar loop
+    // resume phis, when vectorizing the epilogue. Must be removed once epilogue
+    // vectorization explicitly connects VPlans.
+    setUnderlyingValue(GeneratedValue);
+  }
 }
 
 bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
@@ -2704,9 +2710,8 @@ void VPVectorEndPointerRecipe::materializeOffset(unsigned Part) {
   VPlan &Plan = *getParent()->getPlan();
   VPValue *VFVal = getVFValue();
   VPTypeAnalysis TypeInfo(Plan);
-  const DataLayout &DL =
-      Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(getPointer()));
+  const DataLayout &DL = Plan.getDataLayout();
+  Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(this));
   VPValue *Stride =
       Plan.getConstantInt(IndexTy, getStride(), /*IsSigned=*/true);
   Type *VFTy = TypeInfo.inferScalarType(VFVal);
@@ -3615,6 +3620,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::UIToFP:
   case Instruction::Trunc:
   case Instruction::FPTrunc:
+  case Instruction::Select:
   case Instruction::AddrSpaceCast: {
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
