@@ -1,6 +1,5 @@
 import os
 import shutil
-import tempfile
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -51,7 +50,7 @@ class MockedSymStore:
         self._test.assertIsNotNone(key)
         self._tmp = self._test.getBuildArtifact("tmp")
         pdb_dir = os.path.join(self._tmp, self._pdb, key)
-        os.makedirs(pdb_dir)
+        os.makedirs(pdb_dir, exist_ok=True)
         shutil.move(
             self._test.getBuildArtifact(self._pdb),
             os.path.join(pdb_dir, self._pdb),
@@ -97,6 +96,7 @@ class SymStoreLocalTests(TestBase):
         exe, sym = self.build_inferior()
         with MockedSymStore(self, exe, sym):
             self.try_breakpoint(exe, should_have_loc=False)
+            self.runCmd("quit", check=False)
 
     def test_external_lookup_off(self):
         """
@@ -108,6 +108,7 @@ class SymStoreLocalTests(TestBase):
                 f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
             )
             self.try_breakpoint(exe, ext_lookup=False, should_have_loc=False)
+            self.runCmd("quit", check=False)
 
     def test_local_dir(self):
         """
@@ -119,3 +120,4 @@ class SymStoreLocalTests(TestBase):
                 f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
             )
             self.try_breakpoint(exe, should_have_loc=True)
+            self.runCmd("quit", check=False)

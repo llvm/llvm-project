@@ -8,6 +8,8 @@
 
 #include "gtest/gtest.h"
 
+#include "TestUtils.h"
+
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
@@ -16,7 +18,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Interpreter/ScriptInterpreter.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -27,54 +28,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-namespace {
-class MockScriptInterpreterPython : public ScriptInterpreter {
-public:
-  MockScriptInterpreterPython(Debugger &debugger)
-      : ScriptInterpreter(debugger,
-                          lldb::ScriptLanguage::eScriptLanguagePython) {}
-
-  ~MockScriptInterpreterPython() override = default;
-
-  bool ExecuteOneLine(llvm::StringRef command, CommandReturnObject *,
-                      const ExecuteScriptOptions &) override {
-    return false;
-  }
-
-  void ExecuteInterpreterLoop() override {}
-
-  static void Initialize() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguagePython, CreateInstance);
-  }
-
-  static void Terminate() { PluginManager::UnregisterPlugin(CreateInstance); }
-
-  bool IsReservedWord(const char *word) override {
-    return llvm::is_contained({"import", "mykeyword_1_1_1"},
-                              llvm::StringRef(word));
-  }
-
-  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger) {
-    return std::make_shared<MockScriptInterpreterPython>(debugger);
-  }
-
-  static llvm::StringRef GetPluginNameStatic() {
-    return "MockScriptInterpreterPython";
-  }
-
-  static llvm::StringRef GetPluginDescriptionStatic() {
-    return "MockScriptInterpreterPython";
-  }
-
-  // PluginInterface protocol
-  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
-};
-
-LLDB_PLUGIN_DEFINE(MockScriptInterpreterPython)
-} // namespace
 
 struct PlatformDarwinLocateTest : public testing::Test {
 protected:
@@ -143,18 +96,6 @@ protected:
                 MockScriptInterpreterPython>
       subsystems;
 };
-
-static std::string CreateFile(llvm::StringRef filename,
-                              llvm::SmallString<128> parent_dir) {
-  llvm::SmallString<128> path(parent_dir);
-  llvm::sys::path::append(path, filename);
-  int fd;
-  std::error_code ret = llvm::sys::fs::openFileForWrite(path, fd);
-  assert(!ret && "Failed to create test file.");
-  ::close(fd);
-
-  return path.c_str();
-}
 
 TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
   llvm::VersionTuple V;
@@ -340,7 +281,8 @@ TEST_F(PlatformDarwinLocateTest,
 
   // Keywords are not permitted in module names.
   // See MockScriptInterpreterPython::IsReservedWord
-  CreateFile("import.py", m_tmp_dsym_python_dir);
+  FileSpec script_fspec(CreateFile("import.py", m_tmp_dsym_python_dir));
+  ASSERT_TRUE(script_fspec);
 
   StreamString ss;
   FileSpecList fspecs =
@@ -349,13 +291,11 @@ TEST_F(PlatformDarwinLocateTest,
               ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 0u);
 
-  std::string orig_script =
-      (m_tmp_dsym_dwarf_dir + "/../Python/import.py").str();
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'import.py' "
       "conflicts with the keyword 'import'. If you intend to have this script "
       "loaded, please rename it to '_import.py' and retry.\n",
-      orig_script);
+      script_fspec.GetPath());
   EXPECT_EQ(ss.GetString(), expected);
 }
 
@@ -376,7 +316,9 @@ TEST_F(PlatformDarwinLocateTest,
   // Keywords are not permitted in module names.
   // See MockScriptInterpreterPython::IsReservedWord
   CreateFile("_import.py", m_tmp_dsym_python_dir);
-  CreateFile("import.py", m_tmp_dsym_python_dir);
+
+  FileSpec orig_fspec(CreateFile("import.py", m_tmp_dsym_python_dir));
+  ASSERT_TRUE(orig_fspec);
 
   StreamString ss;
   FileSpecList fspecs =
@@ -386,13 +328,11 @@ TEST_F(PlatformDarwinLocateTest,
   EXPECT_EQ(fspecs.GetSize(), 1u);
   EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_import.py");
 
-  std::string orig_script =
-      (m_tmp_dsym_dwarf_dir + "/../Python/import.py").str();
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'import.py' "
       "conflicts with the keyword 'import'. Ignoring 'import.py' and loading "
       "'_import.py' instead.\n",
-      orig_script);
+      orig_fspec.GetPath());
   EXPECT_EQ(ss.GetString(), expected);
 }
 
@@ -441,7 +381,9 @@ TEST_F(
       CreateFile("TestModule-1.1 1.o", m_tmp_dsym_dwarf_dir));
   ASSERT_TRUE(dsym_module_fpec);
 
-  CreateFile("TestModule-1.1 1.py", m_tmp_dsym_python_dir);
+  FileSpec script_fspec(
+      CreateFile("TestModule-1.1 1.py", m_tmp_dsym_python_dir));
+  ASSERT_TRUE(script_fspec);
 
   StreamString ss;
   FileSpecList fspecs =
@@ -450,13 +392,11 @@ TEST_F(
               ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 0u);
 
-  std::string orig_script =
-      (m_tmp_dsym_dwarf_dir + "/../Python/TestModule-1.1 1.py").str();
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'TestModule-1.1 1.py' "
       "contains reserved characters. If you intend to have this script "
       "loaded, please rename it to 'TestModule_1_1_1.py' and retry.\n",
-      orig_script);
+      script_fspec.GetPath());
   EXPECT_EQ(ss.GetString(), expected);
 }
 
@@ -477,7 +417,9 @@ TEST_F(
       CreateFile("TestModule-1.1 1.o", m_tmp_dsym_dwarf_dir));
   ASSERT_TRUE(dsym_module_fpec);
 
-  CreateFile("TestModule-1.1 1.py", m_tmp_dsym_python_dir);
+  FileSpec orig_fspec(CreateFile("TestModule-1.1 1.py", m_tmp_dsym_python_dir));
+  ASSERT_TRUE(orig_fspec);
+
   CreateFile("TestModule_1_1_1.py", m_tmp_dsym_python_dir);
 
   StreamString ss;
@@ -488,13 +430,11 @@ TEST_F(
   EXPECT_EQ(fspecs.GetSize(), 1u);
   EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "TestModule_1_1_1.py");
 
-  std::string orig_script =
-      (m_tmp_dsym_dwarf_dir + "/../Python/TestModule-1.1 1.py").str();
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because"
       " 'TestModule-1.1 1.py' contains reserved characters. Ignoring"
       " 'TestModule-1.1 1.py' and loading 'TestModule_1_1_1.py' instead.\n",
-      orig_script);
+      orig_fspec.GetPath());
   EXPECT_EQ(ss.GetString(), expected);
 }
 
