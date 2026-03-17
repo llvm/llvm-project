@@ -8234,7 +8234,6 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   } else {
     // If we cannot split in two halves, look for a smaller chunk width W
     // such that (1 << W) % Divisor == 1.
-    const APInt &Divisor = CN->getAPIntValue();
     unsigned BitWidth = VT.getScalarSizeInBits();
     unsigned BestChunkWidth = 0;
 
@@ -8243,19 +8242,22 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     unsigned LegalWidth = LegalVT.getScalarSizeInBits();
     unsigned MaxChunk = std::min<unsigned>(LegalWidth, BitWidth);
 
+    // We want to search for a chunk width 'I' such that 2^I % Divisor == 1.
+    // To do this efficiently, we first calculated 2^MaxChunk % Divisor and
+    // "step down" to 2^(I-1) % Divisor by multiplying by the modular inverse
+    // of 2.
+
     // Precompute 2^MaxChunk mod Divisor
-    APInt Mod(Divisor.getBitWidth(), 1);
-    for (unsigned K = 0; K != MaxChunk; ++K)
-      Mod = Mod.shl(1).urem(Divisor);
+    APInt Mod =
+        APInt::getOneBitSet(Divisor.getBitWidth(), MaxChunk).urem(Divisor);
 
     // Since Divisor is odd, modular inverse of 2 is (Divisor + 1) / 2
     APInt Inv2 = (Divisor + 1).lshr(1);
 
-    // Search for W where 2^W % Divisor == 1
+    // Search for I where 2^I % Divisor == 1
     for (unsigned I = MaxChunk, E = MaxChunk / 2; I > E; --I) {
       if (Mod.isOne()) {
-        // Safety Check: Ensure (NumChunks * MaxChunkValue) doesn't overflow
-        // LegalVT
+        // Ensure (NumChunks * MaxChunkValue) doesn't overflow LegalVT
         unsigned NumChunks = divideCeil(BitWidth, I);
         // if the ChunkWidth (I) plus the Potential Carry Bits is less than the
         // Register Width, we have enough "slack" at the top of the
@@ -8277,9 +8279,20 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
     SDValue In =
         LL ? DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH) : N->getOperand(0);
+    if (TrailingZeros) {
+      // Save the shifted off bits if we need the remainder.
+      if (Opcode != ISD::UDIV) {
+        APInt Mask = APInt::getLowBitsSet(BitWidth, TrailingZeros);
+        PartialRem =
+            DAG.getNode(ISD::AND, dl, VT, In, DAG.getConstant(Mask, dl, VT));
+      }
+      EVT ShiftVT = getShiftAmountTy(VT, DAG.getDataLayout());
+      In = DAG.getNode(ISD::SRL, dl, VT, In,
+                       DAG.getShiftAmountConstant(TrailingZeros, ShiftVT, dl));
+    }
     SDValue TotalSum = DAG.getConstant(0, dl, LegalVT);
-    APInt MaskVal = APInt::getLowBitsSet(LegalWidth, BestChunkWidth);
-    SDValue Mask = DAG.getConstant(MaskVal, dl, LegalVT);
+    SDValue Mask = DAG.getConstant(
+        APInt::getLowBitsSet(LegalWidth, BestChunkWidth), dl, LegalVT);
 
     for (unsigned I = 0; I < BitWidth; I += BestChunkWidth) {
       SDValue Shift = DAG.getShiftAmountConstant(I, VT, dl);
@@ -8332,7 +8345,9 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     if (TrailingZeros) {
       RemL = DAG.getNode(ISD::SHL, dl, HiLoVT, RemL,
                          DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
-      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRem);
+
+      SDValue PartialRemLo = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, PartialRem);
+      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRemLo);
     }
     Result.push_back(RemL);
     Result.push_back(DAG.getConstant(0, dl, HiLoVT));
