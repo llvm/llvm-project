@@ -9,4 +9,4 @@ end subroutine
 ! CHECK:   func.func @_QPsb1() {
 ! CHECK:   }
 ! CHECK: } loc(#[[MODULE_LOC:.*]])
-! CHECK: #[[MODULE_LOC]] = loc("{{.*}}module-debug-file-loc.f90":0:0)
+! CHECK: #[[MODULE_LOC]] = #loc("{{.*}}module-debug-file-loc.f90":0:0)

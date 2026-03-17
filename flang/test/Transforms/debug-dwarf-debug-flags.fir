@@ -7,8 +7,8 @@ module {
     return loc(#loc_s)
   } loc(#loc_s)
 } loc(#loc_module)
-#loc_module = loc("simple.f90":1:1)
-#loc_s = loc("simple.f90":2:1)
+#loc_module = #loc("simple.f90":1:1)
+#loc_s = #loc("simple.f90":2:1)
 
 // CHECK-FLAGS: #llvm.di_compile_unit<
 // CHECK-FLAGS: producer = "{{.*}} -grecord-command-line -O2"

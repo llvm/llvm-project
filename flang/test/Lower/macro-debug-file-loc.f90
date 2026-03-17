@@ -23,5 +23,5 @@ subroutine test2()
   IVAR = ifoo()
 end subroutine
 
-! CHECK: #[[CALL_LOC]] = loc("{{.*}}macro-debug-file-loc.f90":11:3)
-! CHECK: #[[IFOO_CALL_LOC]] = loc("{{.*}}macro-debug-file-loc.f90":23:3)
+! CHECK: #[[CALL_LOC]] = #loc("{{.*}}macro-debug-file-loc.f90":11:3)
+! CHECK: #[[IFOO_CALL_LOC]] = #loc("{{.*}}macro-debug-file-loc.f90":23:3)

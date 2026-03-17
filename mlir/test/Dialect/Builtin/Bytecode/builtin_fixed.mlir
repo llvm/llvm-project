@@ -218,33 +218,33 @@ module @TestDistinctAttr attributes {
 // CHECK-LABEL: @TestLocationAttrs
 module @TestLocationAttrs attributes {
   // CallSiteLoc
-  // CHECK-DAG: bytecode.callsite = loc(callsite("callee" at "caller.cc":5:3))
-  bytecode.callsite = loc(callsite("callee" at "caller.cc":5:3)),
+  // CHECK-DAG: bytecode.callsite = #loc(callsite("callee" at "caller.cc":5:3))
+  bytecode.callsite = #loc(callsite("callee" at "caller.cc":5:3)),
   // FileLineColLoc
-  // CHECK-DAG: bytecode.flc = loc("source.cc":10:8)
-  bytecode.flc = loc("source.cc":10:8),
+  // CHECK-DAG: bytecode.flc = #loc("source.cc":10:8)
+  bytecode.flc = #loc("source.cc":10:8),
   // FileLineColRange
-  // CHECK-DAG: bytecode.flc_range1 = loc("source.cc":10:8 to 12:4)
-  // CHECK-DAG: bytecode.flc_range2 = loc("source.cc":10:8 to :12)
-  // CHECK-DAG: bytecode.flc_range3 = loc("source.cc":10:8 to 12:8)
-  bytecode.flc_range1 = loc("source.cc":10:8 to 12:4),
-  bytecode.flc_range2 = loc("source.cc":10:8 to :12),
-  bytecode.flc_range3 = loc("source.cc":10:8 to 12:8),
+  // CHECK-DAG: bytecode.flc_range1 = #loc("source.cc":10:8 to 12:4)
+  // CHECK-DAG: bytecode.flc_range2 = #loc("source.cc":10:8 to :12)
+  // CHECK-DAG: bytecode.flc_range3 = #loc("source.cc":10:8 to 12:8)
+  bytecode.flc_range1 = #loc("source.cc":10:8 to 12:4),
+  bytecode.flc_range2 = #loc("source.cc":10:8 to :12),
+  bytecode.flc_range3 = #loc("source.cc":10:8 to 12:8),
   // FusedLoc (without metadata)
-  // CHECK-DAG: bytecode.fused = loc(fused["a", "b":1:2])
-  bytecode.fused = loc(fused["a", "b":1:2]),
+  // CHECK-DAG: bytecode.fused = #loc(fused["a", "b":1:2])
+  bytecode.fused = #loc(fused["a", "b":1:2]),
   // FusedLoc (with metadata)
-  // CHECK-DAG: bytecode.fused_meta = loc(fused<"myPass">["x", "y"])
-  bytecode.fused_meta = loc(fused<"myPass">["x", "y"]),
+  // CHECK-DAG: bytecode.fused_meta = #loc(fused<"myPass">["x", "y"])
+  bytecode.fused_meta = #loc(fused<"myPass">["x", "y"]),
   // NameLoc (without child)
-  // CHECK-DAG: bytecode.name = loc("named")
-  bytecode.name = loc("named"),
+  // CHECK-DAG: bytecode.name = #loc("named")
+  bytecode.name = #loc("named"),
   // NameLoc (with child)
-  // CHECK-DAG: bytecode.name_child = loc("named"("child.cc":1:1))
-  bytecode.name_child = loc("named"("child.cc":1:1)),
+  // CHECK-DAG: bytecode.name_child = #loc("named"("child.cc":1:1))
+  bytecode.name_child = #loc("named"("child.cc":1:1)),
   // UnknownLoc
-  // CHECK-DAG: bytecode.unknown = loc(unknown)
-  bytecode.unknown = loc(unknown)
+  // CHECK-DAG: bytecode.unknown = #loc(unknown)
+  bytecode.unknown = #loc(unknown)
 } {} loc(unknown)
 
 //===----------------------------------------------------------------------===//
@@ -422,4 +422,3 @@ module @TestDenseStringElementsAttr attributes {
     }
   }
 #-}
-
