@@ -10708,16 +10708,20 @@ genAlternativeShldSequence(MachineInstr &Root, const TargetInstrInfo &TII,
     unsigned ShrOpc = (BW == 64) ? X86::SHR64ri : X86::SHR32ri;
     unsigned OrOpc = (BW == 64) ? X86::OR64rr : X86::OR32rr;
     int64_t Imm = Root.getOperand(3).getImm();
-    MachineInstr *Shl = BuildMI(*MF, MIMetadata(Root), TII.get(ShlOpc), ShlReg)
-                            .addReg(Root.getOperand(1).getReg())
-                            .addImm(Imm);
-    MachineInstr *Shr = BuildMI(*MF, MIMetadata(Root), TII.get(ShrOpc), ShrReg)
-                            .addReg(Root.getOperand(2).getReg())
-                            .addImm(BW - Imm);
+    MachineInstr *Shl =
+        BuildMI(*MF, MIMetadata(Root), TII.get(ShlOpc), ShlReg)
+            .addReg(Root.getOperand(1).getReg(),
+                    getKillRegState(Root.getOperand(1).isKill()))
+            .addImm(Imm);
+    MachineInstr *Shr =
+        BuildMI(*MF, MIMetadata(Root), TII.get(ShrOpc), ShrReg)
+            .addReg(Root.getOperand(2).getReg(),
+                    getKillRegState(Root.getOperand(2).isKill()))
+            .addImm(BW - Imm);
     MachineInstr *Or = BuildMI(*MF, MIMetadata(Root), TII.get(OrOpc),
                                Root.getOperand(0).getReg())
-                           .addReg(ShlReg)
-                           .addReg(ShrReg);
+                           .addReg(ShlReg, RegState::Kill)
+                           .addReg(ShrReg, RegState::Kill);
     InstrIdxForVirtReg.insert({ShlReg, 0});
     InstrIdxForVirtReg.insert({ShrReg, 1});
     InsInstrs.push_back(Shl);
@@ -10741,16 +10745,18 @@ genAlternativeShldSequence(MachineInstr &Root, const TargetInstrInfo &TII,
                             .add(Root.getOperand(0 + X86::AddrDisp))
                             .add(Root.getOperand(0 + X86::AddrSegmentReg))
                             .addImm(Imm);
-    MachineInstr *Shr = BuildMI(*MF, MIMetadata(Root), TII.get(ShrOpc), ShrReg)
-                            .addReg(Root.getOperand(5).getReg())
-                            .addImm(BW - Imm);
+    MachineInstr *Shr =
+        BuildMI(*MF, MIMetadata(Root), TII.get(ShrOpc), ShrReg)
+            .addReg(Root.getOperand(5).getReg(),
+                    getKillRegState(Root.getOperand(5).isKill()))
+            .addImm(BW - Imm);
     MachineInstr *Or = BuildMI(*MF, MIMetadata(Root), TII.get(OrOpc))
                            .add(Root.getOperand(0 + X86::AddrBaseReg))
                            .add(Root.getOperand(0 + X86::AddrScaleAmt))
                            .add(Root.getOperand(0 + X86::AddrIndexReg))
                            .add(Root.getOperand(0 + X86::AddrDisp))
                            .add(Root.getOperand(0 + X86::AddrSegmentReg))
-                           .addReg(ShrReg);
+                           .addReg(ShrReg, RegState::Kill);
     InstrIdxForVirtReg.insert({ShrReg, 1});
     InsInstrs.push_back(Shl);
     InsInstrs.push_back(Shr);
