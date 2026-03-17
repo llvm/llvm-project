@@ -12,10 +12,12 @@ Examples:
 .. code-block:: c++
 
   str.find("A");
+  str.contains(foo ? "0" : "1");
 
   // becomes
 
   str.find('A');
+  str.contains(foo ? '0' : '1');
 
 Options
 -------

@@ -46,6 +46,22 @@ void StringFind() {
   // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
   // CHECK-FIXES: Str.find('\'');
 
+  // Works with arbitrarily complex ternary operators.
+  Str.find(true ? "a" : "b");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more effective overload accepting a character [performance-faster-string-find]
+  // CHECK-FIXES: Str.find(true ? 'a' : 'b');
+
+  Str.find(true ? (false ? "a" : "b") : "c");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more effective overload accepting a character [performance-faster-string-find]
+  // CHECK-FIXES: Str.find(true ? (false ? 'a' : 'b') : 'c');
+
+  Str.find(true ? "a" : true ? "b" : true ? "c" : "d");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more effective overload accepting a character [performance-faster-string-find]
+  // CHECK-FIXES: Str.find(true ? 'a' : true ? 'b' : true ? 'c' : 'd');
+
+  Str.find(true ? "a" : true ? "b" : true ? "c" : "not one character");
+  Str.find("x" ?: "y");
+
   // Other methods that can also be replaced
   Str.rfind("a");
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: 'rfind' called with a string literal
