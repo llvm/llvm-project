@@ -285,40 +285,44 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
   auto &Plugin = getPlugin();
 
   AsyncQueueTy *AsyncQueue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo.Queue);
-  {
-    L0DeviceQueueGuard Guard(AsyncQueue, this);
-    if (!AsyncQueue->WaitEvents.empty()) {
-      const auto &WaitEvents = AsyncQueue->WaitEvents;
-      if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
-        // Only need to wait for the last event.
-        CALL_ZE_RET_ERROR(zeEventHostSynchronize, WaitEvents.back(),
-                          L0DefaultTimeout);
-        // Synchronize on kernel event to support printf().
-        auto KE = AsyncQueue->KernelEvent;
-        if (KE && KE != WaitEvents.back()) {
-          CALL_ZE_RET_ERROR(zeEventHostSynchronize, KE, L0DefaultTimeout);
+
+  Error SyncErrors = Error::success();
+  auto addError = [&](Error Err) {
+    SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
+  };
+  if (!AsyncQueue->WaitEvents.empty()) {
+    const auto &WaitEvents = AsyncQueue->WaitEvents;
+    if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
+      // Only need to wait for the last event.
+      CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, WaitEvents.back(),
+                           L0DefaultTimeout);
+      // Synchronize on kernel event to support printf().
+      auto KE = AsyncQueue->KernelEvent;
+      if (KE && KE != WaitEvents.back()) {
+        CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, KE,
+                             L0DefaultTimeout);
+      }
+      for (auto &Event : WaitEvents) {
+        if (auto Err = releaseEvent(Event))
+          addError(std::move(Err));
+      }
+    } else {
+      // Async case.
+      // Wait for all events. We should wait and reset events in reverse order
+      // to avoid premature event reset. If we have a kernel event in the
+      // queue, it is the last event to wait for since all wait events of the
+      // kernel are signaled before the kernel is invoked. We always invoke
+      // synchronization on kernel event to support printf().
+      bool WaitDone = false;
+      for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
+        if (!WaitDone) {
+          CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, *Itr,
+                               L0DefaultTimeout);
+          if (*Itr == AsyncQueue->KernelEvent)
+            WaitDone = true;
         }
-        for (auto &Event : WaitEvents) {
-          if (auto Err = releaseEvent(Event))
-            return Err;
-        }
-      } else {
-        // Async case.
-        // Wait for all events. We should wait and reset events in reverse order
-        // to avoid premature event reset. If we have a kernel event in the
-        // queue, it is the last event to wait for since all wait events of the
-        // kernel are signaled before the kernel is invoked. We always invoke
-        // synchronization on kernel event to support printf().
-        bool WaitDone = false;
-        for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
-          if (!WaitDone) {
-            CALL_ZE_RET_ERROR(zeEventHostSynchronize, *Itr, L0DefaultTimeout);
-            if (*Itr == AsyncQueue->KernelEvent)
-              WaitDone = true;
-          }
-          if (auto Err = releaseEvent(*Itr))
-            return Err;
-        }
+        if (auto Err = releaseEvent(*Itr))
+          addError(std::move(Err));
       }
       // In either case, all the events are now reset and released
       // back into the pool. We need to clear them from the queue.
@@ -342,7 +346,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
     AsyncInfo.Queue = nullptr;
   }
 
-  return Plugin::success();
+  return SyncErrors;
 }
 
 Expected<bool>
