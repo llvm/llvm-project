@@ -432,6 +432,10 @@ struct MemberArrayReturn {
   int* getFirst() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
     return &arr[0]; // expected-note {{param returned here}}
   }
+
+  int* getData() { // expected-warning {{implicit this in intra-TU function should be marked [[clang::lifetimebound]]}}
+    return arr;    // expected-note {{param returned here}}
+  }
 };
 
 } // namespace array

@@ -2011,7 +2011,7 @@ void element_reassigned_safe() {
     int a[10]{};
     p = &a[0];
   }
-  p = &safe[0]; // rescued
+  p = &safe[0]; // Rescued.
   (void)*p;
 }
 
@@ -2040,8 +2040,7 @@ void member_array_element_use_after_scope() {
 void array_of_pointers_use_after_scope() {
   int** p;
   {
-    int x = 0;
-    int* a[10] = {&x};
+    int* a[10]{};
     p = a;  // expected-warning {{object whose reference is captured does not live long enough}}
   }         // expected-note {{destroyed here}}
   (void)*p; // expected-note {{later used here}}
@@ -2078,19 +2077,28 @@ void pointer_arithmetic_use_after_scope() {
     int a[10]{};
     p = a + 5;
   }
-  (void)*p; // should warn
+  (void)*p; // Should warn.
 }
 
-// FIXME: Reading a pointer value stored inside an array element
-// is not yet tracked.
-void read_pointer_from_array_element_use_after_scope() {
+// FIXME: Copying a pointer value out of an array element is not tracked.
+void copy_pointer_from_array_use_after_scope() {
   int* q;
   {
     int x = 0;
     int* arr[10] = {&x};
     q = arr[0];
   }
-  (void)*q; // should warn
+  (void)*q; // Should warn.
+}
+
+// FIXME: A pointer inside an array becoming dangling is not detected.
+void pointer_in_array_use_after_scope() {
+  int* arr[10];
+  {
+    int x = 0;
+    arr[0] = &x;
+  }
+  (void)*arr[0]; // Should warn.
 }
 
 } // namespace array
