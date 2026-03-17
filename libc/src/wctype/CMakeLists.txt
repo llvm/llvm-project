@@ -115,6 +115,7 @@ add_entrypoint_object(
   HDRS
     iswpunct.h
   DEPENDS
+    libc.src.__support.common
     libc.hdr.types.wint_t
     libc.src.__support.wctype_utils
 )
