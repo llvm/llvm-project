@@ -2501,18 +2501,6 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
           nullptr, Opts.getOption(options::OPT_isysroot), env));
     }
   }
-#ifdef CLANG_USE_XCSELECT
-  // FIXME: This should check for `getTriple().isMacOSX()`, but this breaks
-  // many tests. See https://github.com/llvm/llvm-project/pull/119670.
-  else if (getTriple().getOS() == llvm::Triple::MacOSX) {
-    char *p;
-    if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
-      Args.append(Args.MakeSeparateArg(
-          nullptr, Opts.getOption(options::OPT_isysroot), p));
-      ::free(p);
-    }
-  }
-#endif
 
   // Read the SDKSettings.json file for more information, like the SDK version
   // that we can pass down to the compiler.
@@ -2651,6 +2639,21 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const std::string OSVersionStr = OSVersion.getAsString();
   // Set the tool chain target information.
   if (Platform == MacOS) {
+#ifdef CLANG_USE_XCSELECT
+    // If we don't have an SDK yet and are on macOS, try to inject one using
+    // xcselect, except when passed --no-xcselect.
+    if (!Args.hasArg(options::OPT_no_xcselect) &&
+        !Args.getLastArg(options::OPT_isysroot) && !::getenv("SDKROOT") &&
+        !SDKInfo) {
+      char *p;
+      if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
+        Args.append(Args.MakeSeparateArg(
+            nullptr, Opts.getOption(options::OPT_isysroot), p));
+        ::free(p);
+        SDKInfo = parseSDKSettings(getVFS(), Args, getDriver());
+      }
+    }
+#endif
     if (!Driver::GetReleaseVersion(OSVersionStr, Major, Minor, Micro,
                                    HadExtra) ||
         HadExtra || Major < 10 || Major >= MajorVersionLimit || Minor >= 100 ||
