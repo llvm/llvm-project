@@ -268,6 +268,10 @@ static unsigned getInvertedBranchOp(unsigned BrOp) {
     return RISCV::BNE;
   case RISCV::PseudoLongBNE:
     return RISCV::BEQ;
+  case RISCV::PseudoLongBEQI:
+    return RISCV::BNEI;
+  case RISCV::PseudoLongBNEI:
+    return RISCV::BEQI;
   case RISCV::PseudoLongBLT:
     return RISCV::BGE;
   case RISCV::PseudoLongBGE:
@@ -309,8 +313,9 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
                                           SmallVectorImpl<char> &CB,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
-  MCRegister SrcReg1 = MI.getOperand(0).getReg();
-  MCRegister SrcReg2 = MI.getOperand(1).getReg();
+  MCOperand Src1 = MI.getOperand(0);
+  MCRegister SrcReg1 = Src1.getReg();
+  MCOperand Src2 = MI.getOperand(1);
   MCOperand SrcSymbol = MI.getOperand(2);
   unsigned Opcode = MI.getOpcode();
   bool IsEqTest =
@@ -318,6 +323,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
 
   bool UseCompressedBr = false;
   if (IsEqTest && STI.hasFeature(RISCV::FeatureStdExtZca)) {
+    MCRegister SrcReg2 = Src2.getReg();
     if (RISCV::X8 <= SrcReg1.id() && SrcReg1.id() <= RISCV::X15 &&
         SrcReg2.id() == RISCV::X0) {
       UseCompressedBr = true;
@@ -339,7 +345,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   } else {
     unsigned InvOpc = getInvertedBranchOp(Opcode);
     MCInst TmpInst =
-        MCInstBuilder(InvOpc).addReg(SrcReg1).addReg(SrcReg2).addImm(8);
+        MCInstBuilder(InvOpc).addReg(SrcReg1).addOperand(Src2).addImm(8);
     uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
     support::endian::write(CB, Binary, llvm::endianness::little);
     Offset = 4;
@@ -442,6 +448,8 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
     return;
   case RISCV::PseudoLongBEQ:
   case RISCV::PseudoLongBNE:
+  case RISCV::PseudoLongBEQI:
+  case RISCV::PseudoLongBNEI:
   case RISCV::PseudoLongBLT:
   case RISCV::PseudoLongBGE:
   case RISCV::PseudoLongBLTU:
