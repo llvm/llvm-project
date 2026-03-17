@@ -124,15 +124,19 @@ LLVM_ABI MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 // returned.
 LLVM_ABI MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name);
 
-struct UnrollPragmaInfo {
-  UnrollPragmaInfo(const Loop *L);
-  const bool UserUnrollCount;
-  const bool PragmaFullUnroll;
-  const unsigned PragmaCount;
-  const bool PragmaEnableUnroll;
-  const bool PragmaRuntimeUnrollDisable;
-  const bool ExplicitUnroll;
-};
+// Returns true if the loop has an unroll(full) pragma.
+LLVM_ABI bool hasUnrollFullPragma(const Loop *L);
+
+// Returns true if the loop has an unroll(enable) pragma. This metadata is used
+// for both "#pragma unroll" and "#pragma clang loop unroll(enable)" directives.
+LLVM_ABI bool hasUnrollEnablePragma(const Loop *L);
+
+// Returns true if the loop has an runtime unroll(disable) pragma.
+LLVM_ABI bool hasRuntimeUnrollDisablePragma(const Loop *L);
+
+// If loop has an unroll_count pragma return the (necessarily
+// positive) value from the pragma.  Otherwise return 0.
+LLVM_ABI unsigned unrollCountPragmaValue(const Loop *L);
 
 LLVM_ABI TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
@@ -172,7 +176,7 @@ public:
                       unsigned CountOverwrite = 0) const;
 };
 
-LLVM_ABI void
+LLVM_ABI bool
 computeUnrollCount(Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
                    LoopInfo *LI, AssumptionCache *AC, ScalarEvolution &SE,
                    const SmallPtrSetImpl<const Value *> &EphValues,
