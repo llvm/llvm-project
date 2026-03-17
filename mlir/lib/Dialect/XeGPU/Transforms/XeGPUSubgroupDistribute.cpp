@@ -1091,33 +1091,69 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
+    LLVM_DEBUG(DBGS() << "LoadDistribution: attempting to match warpOp: "
+                      << warpOp << "\n");
+
+    Operation *lastNode = warpOp.getTerminator()->getPrevNode();
+    LLVM_DEBUG(DBGS() << "LoadDistribution: warpOp.getTerminator() = "
+                      << warpOp.getTerminator() << "\n");
+    LLVM_DEBUG(
+        DBGS() << "LoadDistribution: warpOp.getTerminator()->getPrevNode() = "
+               << lastNode << "\n");
+
+    auto loadGatherOp1 = dyn_cast_or_null<xegpu::LoadGatherOp>(lastNode);
+    // print loadGatherOp and its operands
+    if (loadGatherOp1) {
+      LLVM_DEBUG(DBGS() << "LoadDistribution: found LoadGatherOp: "
+                        << loadGatherOp1 << "\n");
+    } else {
+      LLVM_DEBUG(DBGS() << "LoadDistribution: no LoadGatherOp found as last op "
+                           "in warp region\n");
+    }
+
     OpOperand *producedByLastLoad = getWarpResult(warpOp, [&](Operation *op) {
       // Check if the yield operand that was produced by the *last* scattered
       // load op to avoid sinking it before barriers (maintain memory order).
       return isa<xegpu::LoadGatherOp>(op) &&
              warpOp.getTerminator()->getPrevNode() == op;
     });
-    if (!producedByLastLoad)
+    if (!producedByLastLoad) {
+      LLVM_DEBUG(DBGS() << "LoadDistribution: no LoadGatherOp as last op in "
+                           "warp region, bailing out\n");
       return rewriter.notifyMatchFailure(
           warpOp, "The last op is not xegpu::LoadGatherOp");
+    }
 
     auto loadGatherOp =
         producedByLastLoad->get().getDefiningOp<xegpu::LoadGatherOp>();
+    LLVM_DEBUG(DBGS() << "LoadDistribution: found LoadGatherOp: "
+                      << loadGatherOp << "\n");
     auto offsets = loadGatherOp.getOffsets();
     if (!offsets || !isa<VectorType>(offsets.getType()) ||
-        !isa<VectorType>(loadGatherOp.getMask().getType()))
+        !isa<VectorType>(loadGatherOp.getMask().getType())) {
+      LLVM_DEBUG(DBGS() << "LoadDistribution: offsets or mask are not vector "
+                           "types, bailing out\n");
       return rewriter.notifyMatchFailure(
           loadGatherOp,
           "Load op must have a vector arguments for offsets and mask");
+    }
     VectorType offsetsTy = cast<VectorType>(offsets.getType());
     VectorType maskTy = cast<VectorType>(loadGatherOp.getMask().getType());
     VectorType resultVecTy =
         cast<VectorType>(loadGatherOp.getResult().getType());
+    LLVM_DEBUG(DBGS() << "LoadDistribution: offsetsTy=" << offsetsTy
+                      << ", maskTy=" << maskTy
+                      << ", resultVecTy=" << resultVecTy << "\n");
     // add handling leading unit dimensions support
     int chunkSize = loadGatherOp.getChunkSize().value_or(1);
     int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
+    LLVM_DEBUG(DBGS() << "LoadDistribution: chunkSize=" << chunkSize
+                      << ", effectiveVecRank=" << effectiveVecRank << "\n");
     for (int i = 0; i < resultVecTy.getRank() - effectiveVecRank; i++) {
       if (resultVecTy.getShape()[i] != 1) {
+        LLVM_DEBUG(DBGS() << "LoadDistribution: non-unit leading dim at index "
+                          << i << " (size=" << resultVecTy.getShape()[i]
+                          << "), bailing out\n");
         return rewriter.notifyMatchFailure(
             loadGatherOp, "Only unit dimensions allowed for the leading "
                           "dimensions of the load vector!");
@@ -1127,6 +1163,8 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
     auto layoutOffsets =
         xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(1));
     auto layoutMask = xegpu::getTemporaryLayout(loadGatherOp->getOpOperand(2));
+    LLVM_DEBUG(DBGS() << "LoadDistribution: layoutOffsets=" << layoutOffsets
+                      << ", layoutMask=" << layoutMask << "\n");
 
     FailureOr<VectorType> distOffsetsByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutOffsets, offsetsTy);
@@ -1134,6 +1172,9 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
         getDistVecTypeBasedOnLaneLayout(layoutMask, maskTy);
     if (failed(distOffsetsByWarpOpOrFailure) ||
         failed(distMaskByWarpOpOrFailure)) {
+      LLVM_DEBUG(
+          DBGS() << "LoadDistribution: failed to compute distributed types "
+                    "for offsets or mask, bailing out\n");
       return rewriter.notifyMatchFailure(
           loadGatherOp,
           "Some vector operands have no layouts, using defaults instead.");
@@ -1147,12 +1188,24 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     VectorType distOffsetsTy = distOffsetsByWarpOpOrFailure.value();
     VectorType distMaskTy = distMaskByWarpOpOrFailure.value();
+    LLVM_DEBUG(DBGS() << "LoadDistribution: operandIdx=" << operandIdx
+                      << ", distResultTy=" << distResultTy
+                      << ", distOffsetsTy=" << distOffsetsTy
+                      << ", distMaskTy=" << distMaskTy << "\n");
 
     SmallVector<Type> operandTypesToYield = {operands[0].getType(),
                                              distOffsetsTy, distMaskTy};
 
+    LLVM_DEBUG(DBGS() << "LoadDistribution: creating new warp op with "
+                      << operands.size() << " operands and "
+                      << operandTypesToYield.size() << " types to yield\n");
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
+    LLVM_DEBUG({
+      DBGS() << "LoadDistribution: newRetIndices=[";
+      llvm::interleaveComma(newRetIndices, llvm::dbgs());
+      llvm::dbgs() << "]\n";
+    });
 
     rewriter.setInsertionPointAfter(newWarpOp);
 
@@ -1166,24 +1219,36 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
     VectorType distMaskTy1D =
         VectorType::get({distMaskByWarpOpOrFailure.value().getNumElements()},
                         distMaskByWarpOpOrFailure.value().getElementType());
+    LLVM_DEBUG(DBGS() << "LoadDistribution: 1D types: loadVecTy1D="
+                      << loadVecTy1D << ", distOffsetsTy1D=" << distOffsetsTy1D
+                      << ", distMaskTy1D=" << distMaskTy1D << "\n");
 
     Value distOffsetVal = resolveDistributedTy(
         newWarpOp.getResult(newRetIndices[1]), distOffsetsTy1D, rewriter);
     Value distmaskVal = resolveDistributedTy(
         newWarpOp.getResult(newRetIndices[2]), distMaskTy1D, rewriter);
+    LLVM_DEBUG(DBGS() << "LoadDistribution: resolved distOffsetVal="
+                      << distOffsetVal << ", distmaskVal=" << distmaskVal
+                      << "\n");
 
     SmallVector<Value> newLoadGatherOperands = {
         newWarpOp.getResult(newRetIndices[0]), distOffsetVal, distmaskVal};
 
+    LLVM_DEBUG(DBGS() << "LoadDistribution: creating distributed "
+                         "LoadGatherOp with result type "
+                      << loadVecTy1D << "\n");
     xegpu::LoadGatherOp newOp = xegpu::LoadGatherOp::create(
         rewriter, newWarpOp.getLoc(), loadVecTy1D, newLoadGatherOperands,
         loadGatherOp->getAttrs());
     xegpu::removeLayoutAttrs(newOp);
+    LLVM_DEBUG(DBGS() << "LoadDistribution: created new op: " << newOp << "\n");
     Value distributedVal = newWarpOp.getResult(operandIdx);
     // Resolve the output type and replace all uses.
     rewriter.replaceAllUsesWith(
         distributedVal,
         resolveDistributedTy(newOp.getResult(), distResultTy, rewriter));
+    LLVM_DEBUG(DBGS() << "LoadDistribution: successfully distributed "
+                         "LoadGatherOp\n");
     return success();
   }
 };

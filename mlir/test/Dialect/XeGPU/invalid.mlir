@@ -758,8 +758,8 @@ func.func @tensor_desc_invalid_sg_data(%src: ui64, %offsets: vector<16xindex>) {
   %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
       !xegpu.tensor_desc<16x2xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 2>,
-        // expected-error@+1 {{expected sg_layout being used with sg_data}}
-        #xegpu.layout<sg_data = [16, 2], lane_layout = [8, 1], lane_data = [1, 2]>>
+        // expected-error@+1 {{sg_layout and sg_data must be used together}}
+        #xegpu.layout<sg_layout = [2, 1], lane_layout = [8, 1], lane_data = [1, 2]>>
   return
 }
 
@@ -768,8 +768,8 @@ func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
   %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
       !xegpu.tensor_desc<16x2xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 2>,
-        // expected-error@+1 {{expected lane_layout being used with lane_data}}
-        #xegpu.layout<inst_data = [16, 2], lane_data = [1, 2]>>
+        // expected-error@+1 {{lane_layout and lane_data must be used together}}
+        #xegpu.layout<inst_data = [16, 2], lane_layout = [16, 1]>>
   return
 }
 
