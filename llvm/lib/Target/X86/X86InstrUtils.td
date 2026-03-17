@@ -1340,10 +1340,28 @@ class UnaryOpR_R<bits<8> o, Format f, string m, X86TypeInfo t,
   : UnaryOpR<o, f, m, !if(!eq(ndd, 0), unaryop_args, unaryop_ndd_args), t,
              (outs t.RegClass:$dst),
              [(set t.RegClass:$dst, (node t.RegClass:$src1))]>, NDD<ndd>;
+
+// UnaryOpR_R_1 - Instructions that read "reg" and write "reg" with explicit $1.
+class UnaryOpR_R_1<bits<8> o, Format f, string m, X86TypeInfo t,
+                  SDPatternOperator node = null_frag, bit ndd = 0>
+  : UnaryOpR<o, f, m, !if(!eq(ndd, 0), unaryop_args, "{$$1, $src1, $dst|$dst, $src1, 1}"), t,
+             (outs t.RegClass:$dst),
+             [(set t.RegClass:$dst, (node t.RegClass:$src1))]>, NDD<ndd>;
+
+
+
 // UnaryOpR_RF - Instructions that read "reg" and write "reg"/EFLAGS.
 class UnaryOpR_RF<bits<8> o, Format f, string m, X86TypeInfo t,
                   SDPatternOperator node = null_frag, bit ndd = 0>
   : UnaryOpR<o, f, m, !if(!eq(ndd, 0), unaryop_args, unaryop_ndd_args), t,
+             (outs t.RegClass:$dst),
+             [(set t.RegClass:$dst, (node t.RegClass:$src1))]>,
+    DefEFLAGS, NDD<ndd>;
+
+// UnaryOpR_RF_1 - Instructions that read "reg" and write "reg"/EFLAGS with explicit $1.
+class UnaryOpR_RF_1<bits<8> o, Format f, string m, X86TypeInfo t,
+                  SDPatternOperator node = null_frag, bit ndd = 0>
+  : UnaryOpR<o, f, m, !if(!eq(ndd, 0), unaryop_args, "{$$1, $src1, $dst|$dst, $src1, 1}"), t,
              (outs t.RegClass:$dst),
              [(set t.RegClass:$dst, (node t.RegClass:$src1))]>,
     DefEFLAGS, NDD<ndd>;
@@ -1364,6 +1382,20 @@ class UnaryOpM_R<bits<8> o, Format f, string m, X86TypeInfo t,
 class UnaryOpM_RF<bits<8> o, Format f, string m, X86TypeInfo t,
                   SDPatternOperator node = null_frag>
   : UnaryOpM<o, f, m, unaryop_ndd_args, t, (outs t.RegClass:$dst),
+             [(set t.RegClass:$dst, EFLAGS, (node (t.LoadNode addr:$src1)))]>,
+    Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, DefEFLAGS, NDD<1>;
+
+// UnaryOpM_R_1 - Instructions that read "[mem]" and writes "reg" with explicit $1.
+class UnaryOpM_R_1<bits<8> o, Format f, string m, X86TypeInfo t,
+                  SDPatternOperator node = null_frag>
+  : UnaryOpM<o, f, m, "{$$1, $src1, $dst|$dst, $src1, 1}", t, (outs t.RegClass:$dst),
+             [(set t.RegClass:$dst, (node (t.LoadNode addr:$src1)))]>,
+    Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, NDD<1>;
+
+// UnaryOpM_RF_1 - Instructions that read "[mem]" and writes "reg"/EFLAGS with explicit $1.
+class UnaryOpM_RF_1<bits<8> o, Format f, string m, X86TypeInfo t,
+                  SDPatternOperator node = null_frag>
+  : UnaryOpM<o, f, m, "{$$1, $src1, $dst|$dst, $src1, 1}", t, (outs t.RegClass:$dst),
              [(set t.RegClass:$dst, EFLAGS, (node (t.LoadNode addr:$src1)))]>,
     Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, DefEFLAGS, NDD<1>;
 // UnaryOpM_M - Instructions that read "[mem]" and writes "[mem]".

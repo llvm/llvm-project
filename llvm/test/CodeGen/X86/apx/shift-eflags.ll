@@ -124,7 +124,7 @@ define i32 @shl_const1(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i32 @ashr_const1_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_const1_self_select:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sarl %edi, %eax
+; CHECK-NEXT:    sarl $1, %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %eax
 ; CHECK-NEXT:    retq
   %s = ashr i32 %a0, 1
@@ -137,7 +137,7 @@ define i32 @ashr_const1_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 define i32 @lshr_const1_self_select(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: lshr_const1_self_select:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl %edi, %eax
+; CHECK-NEXT:    shrl $1, %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %eax
 ; CHECK-NEXT:    retq
   %s = lshr i32 %a0, 1
