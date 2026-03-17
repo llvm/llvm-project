@@ -24575,8 +24575,15 @@ namespace {
 /// a subset of which may already be vectorized. Stores context information
 /// about the group as a whole as well as information about what VFs need
 /// to be attempted still.
-struct StoreChainContext {
+class StoreChainContext {
+public:
   using SizePair = std::pair<unsigned, unsigned>;
+
+  /// In RangeSizes, element has not been vectorized, but due to the elements
+  /// around it being vectorized, it does not have enough neighboring elements
+  /// to make a chain longer than MinVF as part of the current Context
+  inline static const unsigned LocallyUnvectorizable =
+      std::numeric_limits<unsigned>::max();
 
   /// For the StoreTy/Stride in the given group, what is the smallest VF
   /// that can be used
@@ -24584,8 +24591,6 @@ struct StoreChainContext {
   /// Maximum number of instructions that can be vectorized, either
   /// constrained by register width or operands size.
   unsigned MaxVF = 0;
-  /// The largest VF checked in the current Repeat
-  unsigned ProbeVF = 0;
   /// MaxRegVF represents the number of instructions (scalar, or vector in
   /// case of revec) that can be vectorized to naturally fit in a vector
   /// register.
@@ -24601,31 +24606,11 @@ struct StoreChainContext {
   /// What element index is the end of the to be vectorized Operands
   /// i.e. Operands.size() == 16, and 12-15 were vectorized, then End == 12
   unsigned End = 0;
-
   /// Stores that compose this chain
   BoUpSLP::ValueList Operands;
-  /// Which VFs do we want to attempt for this chain
-  std::queue<unsigned> CandidateVFs;
-  /// Track the TreeSizes of prior vectorization attempts using each element,
-  /// to help us find early exit cases
-  /// - first: contains pointer into RangeSizesByIdx to help us track
-  /// vectorization of elements that belong to multiple chains
-  /// - second: contains cached TreeSize value for that element
-  SmallVector<SizePair> RangeSizesStorage;
   MutableArrayRef<SizePair> RangeSizes;
   /// Store information about failed vectorization attempts due to scheduling
   SmallDenseMap<Value *, SizePair> NonSchedulable;
-  /// Type of the Stores in `Operands`
-  Type *StoreTy = nullptr;
-
-  /// RangeSize information for all elements in any chain
-  /// Needed since may be overlap between chains
-  SmallVector<unsigned> &RangeSizesByIdx;
-  /// Element has not been vectorized, but due to the elements around it being
-  /// vectorized, it does not have enough neighboring elements to make a chain
-  /// longer than MinVF as part of the current Context
-  inline static const unsigned LocallyUnvectorizable =
-      std::numeric_limits<unsigned>::max();
 
   explicit StoreChainContext(ArrayRef<Value *> Ops,
                              ArrayRef<SizePair> RangeSizes,
@@ -24633,6 +24618,37 @@ struct StoreChainContext {
       : Operands(Ops), RangeSizesStorage(RangeSizes),
         RangeSizesByIdx(RangeSizesByIdx) {}
 
+  // Set up initial values using the already set Operands
+  bool initializeContext(BoUpSLP &R, const DataLayout &DL,
+                         const TargetTransformInfo &TTI);
+  // Return the index of the first unvectorized store after \p StartIdx
+  unsigned getFirstUnvecStore(unsigned StartIdx = 0) const;
+  // Return the index of the first vectorized store after \p StartIdx
+  unsigned getFirstVecStoreAfter(unsigned StartIdx) const;
+  // Return true if all stores have been vectorized
+  bool allVectorized() const;
+  // Return true if all elements in the given range match \p TreeSize
+  bool isFirstSizeSameRange(unsigned StartIdx, unsigned Length,
+                            unsigned TreeSize) const;
+  // Return true if the \p TreeSize is profitable for all elements in the range
+  bool allOfRangeProfitable(unsigned StartIdx, unsigned Length,
+                            unsigned TreeSize) const;
+  // Update the live (first) range sizes from the cached values (second)
+  void updateRangeSizesFromCache();
+  // Update the cached (second) range sizes with the given \p TreeSize
+  void updateCachedRangeSizes(unsigned StartIdx, unsigned Length,
+                              unsigned TreeSize);
+  // Update CandidateVFs for secondary iterations
+  bool updateCandidateVFs(const TargetTransformInfo &TTI);
+  // Get the current VF
+  std::optional<unsigned> getCurrentVF() const;
+  // Remove the current VF from the queue
+  void incrementVF() { CandidateVFs.pop(); }
+  // Record vectorization of the provided range
+  void markRangeVectorized(unsigned StartIdx, unsigned Length,
+                           unsigned &FirstUnvecStore, unsigned &MaxSliceEnd);
+
+private:
   bool isNotVectorized(const SizePair &P) const {
     return P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] > 0;
   }
@@ -24653,101 +24669,21 @@ struct StoreChainContext {
     return Size == RangeSizesByIdx[P.first];
   }
 
-  // Return the index of the first unvectorized store after \p StartIdx
-  unsigned getFirstUnvecStore(unsigned StartIdx = 0) const {
-    return std::distance(
-        RangeSizes.begin(),
-        find_if(RangeSizes.drop_front(StartIdx), [this](const SizePair &P) {
-          return this->isNotVectorized(P);
-        }));
-  }
-
-  // Return the index of the first vectorized store after \p StartIdx
-  unsigned getFirstVecStoreAfter(unsigned StartIdx) const {
-    return std::distance(
-        RangeSizes.begin(),
-        find_if(RangeSizes.drop_front(StartIdx),
-                [this](const SizePair &P) { return this->isVectorized(P); }));
-  }
-
-  // Return true if all stores have been vectorized
-  bool allVectorized() const {
-    return all_of(RangeSizes,
-                  [this](const SizePair &P) { return this->isVectorized(P); });
-  }
-
-  // Return true if all elements in the given range match \p TreeSize
-  bool isFirstSizeSameRange(unsigned StartIdx, unsigned Length,
-                            unsigned TreeSize) const {
-    return all_of(RangeSizes.slice(StartIdx, Length),
-                  [TreeSize, this](const SizePair &P) {
-                    return firstSizeSame(TreeSize, P);
-                  });
-  }
-
-  // Return true if the \p TreeSize is profitable for all elements in the range
-  bool allOfRangeProfitable(unsigned StartIdx, unsigned Length,
-                            unsigned TreeSize) const {
-    return all_of(RangeSizes.slice(StartIdx, Length),
-                  [TreeSize, this](const SizePair &P) {
-                    return vfIsProfitable(TreeSize, P);
-                  });
-  }
-
-  // Update the live (first) range sizes from the cached values (second)
-  void updateRangeSizesFromCache() {
-    for (SizePair &P : RangeSizes) {
-      if (P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] != 0)
-        RangeSizesByIdx[P.first] = std::max(P.second, RangeSizesByIdx[P.first]);
-    }
-  }
-
-  // Update the cached (second) range sizes with the given \p TreeSize
-  void updateCachedRangeSizes(unsigned StartIdx, unsigned Length,
-                              unsigned TreeSize) {
-    for (SizePair &P : RangeSizes.slice(StartIdx, Length))
-      P.second = std::max(P.second, TreeSize);
-  }
-
-  // Update CandidateVFs for secondary iterations
-  bool updateCandidateVFs(const TargetTransformInfo &TTI) {
-    assert(CandidateVFs.empty() && "Did not use all VFs before refilling");
-    constexpr unsigned StoresLimit = 64;
-    const unsigned MaxTotalNum = std::min<unsigned>(
-        Operands.size(), static_cast<unsigned>(End - getFirstUnvecStore()));
-    unsigned VF = bit_ceil(ProbeVF) * 2;
-    if (VF > MaxTotalNum || VF >= StoresLimit)
-      return false;
-    // Attempt again to vectorize even larger chains if all previous
-    // attempts were unsuccessful because of the cost issues.
-    unsigned Limit =
-        getFloorFullVectorNumberOfElements(TTI, StoreTy, MaxTotalNum);
-    if (bit_floor(Limit) == VF && Limit != VF)
-      CandidateVFs.push(Limit);
-    CandidateVFs.push(VF);
-    ProbeVF = CandidateVFs.front();
-    ++Repeat;
-    RepeatChanged = false;
-    return true;
-  }
-
-  // Get the current VF
-  std::optional<unsigned> getCurrentVF() const {
-    if (Done || CandidateVFs.empty())
-      return std::nullopt;
-    return CandidateVFs.front();
-  }
-
-  // Increment the VF-Index counter, return false if at end of CandidateVFs
-  void incrementVF() { CandidateVFs.pop(); }
-
-  // Set up initial values using the already set Operands
-  bool initializeContext(BoUpSLP &R, const DataLayout &DL,
-                         const TargetTransformInfo &TTI);
-
-  // Record vectorization of the provided range
-  void markRangeVectorized(unsigned StartIdx, unsigned Length,
-                           unsigned &FirstUnvecStore, unsigned &MaxSliceEnd);
+  /// The largest VF checked in the current Repeat
+  unsigned ProbeVF = 0;
+  /// Type of the Stores in `Operands`
+  Type *StoreTy = nullptr;
+  /// Which VFs do we want to attempt for this chain
+  std::queue<unsigned> CandidateVFs;
+  /// Track the TreeSizes of prior vectorization attempts using each element,
+  /// to help us find early exit cases
+  /// - first: contains pointer into RangeSizesByIdx to help us track
+  /// vectorization of elements that belong to multiple chains
+  /// - second: contains cached TreeSize value for that element
+  SmallVector<SizePair> RangeSizesStorage;
+  /// RangeSize information for all elements in any chain
+  /// Needed since may be overlap between chains
+  SmallVector<unsigned> &RangeSizesByIdx;
 };
 
 void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
@@ -24842,6 +24778,90 @@ bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
   End = Operands.size();
   ProbeVF = MaxVF;
   return true;
+}
+
+// Return the index of the first unvectorized store after \p StartIdx
+unsigned StoreChainContext::getFirstUnvecStore(unsigned StartIdx) const {
+  return std::distance(
+      RangeSizes.begin(),
+      find_if(RangeSizes.drop_front(StartIdx),
+              [this](const SizePair &P) { return this->isNotVectorized(P); }));
+}
+
+// Return the index of the first vectorized store after \p StartIdx
+unsigned StoreChainContext::getFirstVecStoreAfter(unsigned StartIdx) const {
+  return std::distance(
+      RangeSizes.begin(),
+      find_if(RangeSizes.drop_front(StartIdx),
+              [this](const SizePair &P) { return this->isVectorized(P); }));
+}
+
+// Return true if all stores have been vectorized
+bool StoreChainContext::allVectorized() const {
+  return all_of(RangeSizes,
+                [this](const SizePair &P) { return this->isVectorized(P); });
+}
+
+// Return true if all elements in the given range match \p TreeSize
+bool StoreChainContext::isFirstSizeSameRange(unsigned StartIdx, unsigned Length,
+                                             unsigned TreeSize) const {
+  return all_of(RangeSizes.slice(StartIdx, Length),
+                [TreeSize, this](const SizePair &P) {
+                  return firstSizeSame(TreeSize, P);
+                });
+}
+
+// Return true if the \p TreeSize is profitable for all elements in the range
+bool StoreChainContext::allOfRangeProfitable(unsigned StartIdx, unsigned Length,
+                                             unsigned TreeSize) const {
+  return all_of(RangeSizes.slice(StartIdx, Length),
+                [TreeSize, this](const SizePair &P) {
+                  return vfIsProfitable(TreeSize, P);
+                });
+}
+
+// Update the live (first) range sizes from the cached values (second)
+void StoreChainContext::updateRangeSizesFromCache() {
+  for (SizePair &P : RangeSizes) {
+    if (P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] != 0)
+      RangeSizesByIdx[P.first] = std::max(P.second, RangeSizesByIdx[P.first]);
+  }
+}
+
+// Update the cached (second) range sizes with the given \p TreeSize
+void StoreChainContext::updateCachedRangeSizes(unsigned StartIdx,
+                                               unsigned Length,
+                                               unsigned TreeSize) {
+  for (SizePair &P : RangeSizes.slice(StartIdx, Length))
+    P.second = std::max(P.second, TreeSize);
+}
+
+bool StoreChainContext::updateCandidateVFs(const TargetTransformInfo &TTI) {
+  assert(CandidateVFs.empty() && "Did not use all VFs before refilling");
+  constexpr unsigned StoresLimit = 64;
+  const unsigned MaxTotalNum = std::min<unsigned>(
+      Operands.size(), static_cast<unsigned>(End - getFirstUnvecStore()));
+  unsigned VF = bit_ceil(ProbeVF) * 2;
+  if (VF > MaxTotalNum || VF >= StoresLimit)
+    return false;
+  // Attempt again to vectorize even larger chains if all previous
+  // attempts were unsuccessful because of the cost issues.
+  unsigned Limit =
+      getFloorFullVectorNumberOfElements(TTI, StoreTy, MaxTotalNum);
+  if (bit_floor(Limit) == VF && Limit != VF)
+    CandidateVFs.push(Limit);
+  CandidateVFs.push(VF);
+  ProbeVF = CandidateVFs.front();
+  ++Repeat;
+  RepeatChanged = false;
+  return true;
+}
+
+// Get the current VF
+std::optional<unsigned> StoreChainContext::getCurrentVF() const {
+  if (Done || CandidateVFs.empty())
+    return std::nullopt;
+  return CandidateVFs.front();
 }
 } // namespace
 
