@@ -28,6 +28,7 @@
 namespace clang::ssaf {
 
 class AnalysisDriver;
+class AnalysisRegistry;
 
 /// Type-erased base for derived analyses. Known to AnalysisDriver.
 ///
@@ -81,12 +82,13 @@ class DerivedAnalysis : public DerivedAnalysisBase {
   static_assert((HasAnalysisName<DepResultTs>::value && ...),
                 "Every DepResultT must have a static analysisName() method");
 
+  friend class AnalysisRegistry;
+  using ResultType = ResultT;
+
   std::unique_ptr<ResultT> Result;
 
 public:
   DerivedAnalysis() : Result(std::make_unique<ResultT>()) {}
-
-  using ResultType = ResultT;
 
   /// Used by AnalysisRegistry::Add to derive the registry entry name.
   AnalysisName analysisName() const final { return ResultT::analysisName(); }

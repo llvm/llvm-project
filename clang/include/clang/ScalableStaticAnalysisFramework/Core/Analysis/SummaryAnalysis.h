@@ -27,6 +27,7 @@
 namespace clang::ssaf {
 
 class AnalysisDriver;
+class AnalysisRegistry;
 
 /// Type-erased base for summary analyses. Known to AnalysisDriver.
 ///
@@ -78,12 +79,13 @@ class SummaryAnalysis : public SummaryAnalysisBase {
   static_assert(std::is_base_of_v<EntitySummary, EntitySummaryT>,
                 "EntitySummaryT must derive from EntitySummary");
 
+  friend class AnalysisRegistry;
+  using ResultType = ResultT;
+
   std::unique_ptr<ResultT> Result;
 
 public:
   SummaryAnalysis() : Result(std::make_unique<ResultT>()) {}
-
-  using ResultType = ResultT;
 
   /// Used by AnalysisRegistry::Add to derive the registry entry name.
   AnalysisName analysisName() const final { return ResultT::analysisName(); }

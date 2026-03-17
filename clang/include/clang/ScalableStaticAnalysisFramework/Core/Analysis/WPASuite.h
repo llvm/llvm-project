@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // The value returned by AnalysisDriver::run(). Bundles the EntityIdTable
-// (moved from the LUSummary) with the analysis results keyed by AnalysisName.
+// with the analysis results keyed by AnalysisName.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,7 +42,7 @@ class WPASuite {
 
 public:
   /// Returns the EntityIdTable that maps EntityId values to their symbolic
-  /// names. Moved from the LUSummary during AnalysisDriver::run().
+  /// names.
   const EntityIdTable &idTable() const { return IdTable; }
 
   /// Returns true if a result for \p ResultT is present.
