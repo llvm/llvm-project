@@ -2679,9 +2679,8 @@ static void licm(VPlan &Plan) {
 #ifndef NDEBUG
   VPDominatorTree VPDT(Plan);
 #endif
-  // Sink recipes with no users inside the vector loop region if all users are
-  // in the same exit block of the region.
-  // TODO: Extend to sink recipes from inner loops.
+  // Sink recipes with in the vector loop region to successors of the loop
+  // region.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_post_order_shallow(LoopRegion->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
@@ -2703,43 +2702,47 @@ static void licm(VPlan &Plan) {
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads).
       auto *Def = cast<VPSingleDefRecipe>(&R);
-      // Skip recipes without users as we cannot determine a sink block.
-      // TODO: Clone sinkable recipes without users to all exit blocks to reduce
-      // their execution frequency.
-      if (Def->getNumUsers() == 0)
-        continue;
 
-      VPBasicBlock *SinkBB = nullptr;
-      // Cannot sink the recipe if any user
-      //  * is defined in any loop region, or
-      //  * is a phi, or
-      //  * multiple users in different blocks.
-      if (any_of(Def->users(), [&SinkBB](VPUser *U) {
+      // Cannot sink the recipe if the user is defined in a loop region or a
+      // non-successor of the vector loop region. Cannot sink if user is a phi
+      // either.
+      if (any_of(Def->users(), [&LoopRegion](VPUser *U) {
             auto *UserR = cast<VPRecipeBase>(U);
             VPBasicBlock *Parent = UserR->getParent();
             // TODO: If the user is a PHI node, we should check the block of
             // incoming value. Support PHI node users if needed.
-            if (UserR->isPhi() || Parent->getEnclosingLoopRegion())
-              return true;
-            // TODO: Support sinking when users are in multiple blocks.
-            if (SinkBB && SinkBB != Parent)
-              return true;
-            SinkBB = Parent;
-            return false;
+            return UserR->isPhi() || Parent->getEnclosingLoopRegion() ||
+                   Parent->getSinglePredecessor() != LoopRegion;
           }))
         continue;
 
-      // Only sink to dedicated exit blocks of the loop region.
-      if (SinkBB->getSinglePredecessor() != LoopRegion)
-        continue;
+      // Compute the users' parent blocks if there are users. Otherwise, sink to
+      // all successor blocks.
+      SmallVector<VPBasicBlock *> SinkBlocks;
+      if (Def->users().empty())
+        append_range(SinkBlocks, map_range(LoopRegion->successors(),
+                                           [](VPBlockBase *SuccBB) {
+                                             return cast<VPBasicBlock>(SuccBB);
+                                           }));
+      else
+        append_range(SinkBlocks, map_range(Def->users(), [](VPUser *U) {
+                       return cast<VPRecipeBase>(U)->getParent();
+                     }));
 
-      // TODO: This will need to be a check instead of a assert after
-      // conditional branches in vectorized loops are supported.
-      assert(VPDT.properlyDominates(VPBB, SinkBB) &&
-             "Defining block must dominate sink block");
-      // TODO: Clone the recipe if users are on multiple exit paths, instead of
-      // just moving.
-      Def->moveBefore(*SinkBB, SinkBB->getFirstNonPhi());
+      for (auto *SinkTo : SinkBlocks) {
+        // This will need to be a check instead of a assert after conditional
+        // branches in vectorized loops are supported.
+        assert(VPDT.properlyDominates(VPBB, SinkTo) &&
+               "Defining block must dominate sink block");
+        auto *Clone = Def->clone();
+        Clone->insertBefore(*SinkTo, SinkTo->getFirstNonPhi());
+        Def->replaceUsesWithIf(Clone, [&SinkTo](VPUser &U, unsigned) {
+          return cast<VPRecipeBase>(U).getParent() == SinkTo;
+        });
+      }
+      // Avoid erroneously bailing on the already-sunk recipe when we get to the
+      // next recipe in post-order and query its users.
+      Def->eraseFromParent();
     }
   }
 }

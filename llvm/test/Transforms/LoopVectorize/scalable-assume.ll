@@ -24,10 +24,6 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x float>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD1]], i32 0
-; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp ogt float [[TMP10]], 1.000000e+02
-; CHECK-NEXT:    [[FCMP2:%.*]] = fcmp ogt float [[TMP12]], 1.000000e+02
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP1]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP2]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
@@ -38,6 +34,10 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP17:%.*]] = fcmp ogt float [[TMP10]], 1.000000e+02
+; CHECK-NEXT:    [[TMP18:%.*]] = fcmp ogt float [[TMP12]], 1.000000e+02
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP17]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP18]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1600, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
