@@ -24753,10 +24753,10 @@ struct StoreChainContext {
 void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
                                             unsigned &FirstUnvecStore,
                                             unsigned &MaxSliceEnd) {
-  for (StoreChainContext::SizePair &P : RangeSizes.slice(StartIdx, Length))
+  for (SizePair &P : RangeSizes.slice(StartIdx, Length))
     RangeSizesByIdx[P.first] = P.second = 0;
   if (StartIdx < FirstUnvecStore + MinVF) {
-    for (StoreChainContext::SizePair &P :
+    for (SizePair &P :
          RangeSizes.slice(FirstUnvecStore, StartIdx - FirstUnvecStore)) {
       P.first = LocallyUnvectorizable;
       P.second = 0;
@@ -24764,7 +24764,7 @@ void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
     FirstUnvecStore = StartIdx + Length;
   }
   if (StartIdx + Length > MaxSliceEnd - MinVF) {
-    for (StoreChainContext::SizePair &P : RangeSizes.slice(
+    for (SizePair &P : RangeSizes.slice(
              StartIdx + Length, MaxSliceEnd - (StartIdx + Length))) {
       P.first = LocallyUnvectorizable;
       P.second = 0;
