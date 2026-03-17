@@ -121,6 +121,7 @@ struct Reason {
     return *this;
   };
   operator bool() const { return !msgs.empty(); }
+  parser::Message &AttachTo(parser::Message &msg);
 };
 
 std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
