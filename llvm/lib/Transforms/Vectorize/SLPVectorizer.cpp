@@ -24622,7 +24622,7 @@ struct StoreChainContext {
 
   /// RangeSize information for all elements in any chain
   /// Needed since may be overlap between chains
-  inline static SmallVector<unsigned> RangeSizesByIdx;
+  SmallVector<unsigned> &RangeSizesByIdx;
   /// Element has not been vectorized, but due to the elements around it being
   /// vectorized, it does not have enough neighboring elements to make a chain
   /// longer than MinVF as part of the current Context
@@ -24631,24 +24631,26 @@ struct StoreChainContext {
 
   explicit StoreChainContext(const TargetTransformInfo &TTI,
                              ArrayRef<Value *> Ops,
-                             ArrayRef<SizePair> RangeSizes)
-      : TTI(TTI), Operands(Ops), RangeSizesStorage(RangeSizes) {}
+                             ArrayRef<SizePair> RangeSizes,
+                             SmallVector<unsigned> &RangeSizesByIdx)
+      : TTI(TTI), Operands(Ops), RangeSizesStorage(RangeSizes),
+        RangeSizesByIdx(RangeSizesByIdx) {}
 
-  static bool isNotVectorized(const SizePair &P) {
+  bool isNotVectorized(const SizePair &P) const {
     return P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] > 0;
   }
 
-  static bool isVectorized(const SizePair &P) {
+  bool isVectorized(const SizePair &P) const {
     return P.first == LocallyUnvectorizable || RangeSizesByIdx[P.first] == 0;
   }
 
-  static bool vfIsProfitable(unsigned Size, const SizePair &P) {
+  bool vfIsProfitable(unsigned Size, const SizePair &P) const {
     assert(P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] &&
            "Cannot check profitability of vectorized element");
     return Size >= RangeSizesByIdx[P.first];
   }
 
-  static bool firstSizeSame(unsigned Size, const SizePair &P) {
+  bool firstSizeSame(unsigned Size, const SizePair &P) const {
     assert(P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] &&
            "Cannot check profitability of vectorized element");
     return Size == RangeSizesByIdx[P.first];
@@ -24658,33 +24660,41 @@ struct StoreChainContext {
   unsigned getFirstUnvecStore(unsigned StartIdx = 0) const {
     return std::distance(
         RangeSizes.begin(),
-        find_if(RangeSizes.drop_front(StartIdx), isNotVectorized));
+        find_if(RangeSizes.drop_front(StartIdx), [this](const SizePair &P) {
+          return this->isNotVectorized(P);
+        }));
   }
 
   // Return the index of the first vectorized store after \p StartIdx
   unsigned getFirstVecStoreAfter(unsigned StartIdx) const {
     return std::distance(
         RangeSizes.begin(),
-        find_if(RangeSizes.drop_front(StartIdx), isVectorized));
+        find_if(RangeSizes.drop_front(StartIdx),
+                [this](const SizePair &P) { return this->isVectorized(P); }));
   }
 
   // Return true if all stores have been vectorized
-  bool allVectorized() const { return all_of(RangeSizes, isVectorized); }
+  bool allVectorized() const {
+    return all_of(RangeSizes,
+                  [this](const SizePair &P) { return this->isVectorized(P); });
+  }
 
   // Return true if all elements in the given range match \p TreeSize
   bool isFirstSizeSameRange(unsigned StartIdx, unsigned Length,
                             unsigned TreeSize) const {
-    return all_of(
-        RangeSizes.slice(StartIdx, Length),
-        [TreeSize](const SizePair &P) { return firstSizeSame(TreeSize, P); });
+    return all_of(RangeSizes.slice(StartIdx, Length),
+                  [TreeSize, this](const SizePair &P) {
+                    return firstSizeSame(TreeSize, P);
+                  });
   }
 
   // Return true if the \p TreeSize is profitable for all elements in the range
   bool allOfRangeProfitable(unsigned StartIdx, unsigned Length,
                             unsigned TreeSize) const {
-    return all_of(
-        RangeSizes.slice(StartIdx, Length),
-        [TreeSize](const SizePair &P) { return vfIsProfitable(TreeSize, P); });
+    return all_of(RangeSizes.slice(StartIdx, Length),
+                  [TreeSize, this](const SizePair &P) {
+                    return vfIsProfitable(TreeSize, P);
+                  });
   }
 
   // Update the live (first) range sizes from the cached values (second)
@@ -24837,14 +24847,15 @@ bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL) {
 } // namespace
 
 /// Checks if the quadratic mean deviation is less than 90% of the mean size.
-static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes) {
+static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes,
+                           const SmallVector<unsigned> &RangeSizesByIdx) {
   unsigned Num = 0;
   uint64_t Sum = std::accumulate(
       Sizes.begin(), Sizes.end(), static_cast<uint64_t>(0),
       [&](uint64_t V, const std::pair<unsigned, unsigned> &Val) {
         unsigned Size = Val.first == StoreChainContext::LocallyUnvectorizable
                             ? 0
-                            : StoreChainContext::RangeSizesByIdx[Val.first];
+                            : RangeSizesByIdx[Val.first];
         if (Size == 1)
           return V;
         ++Num;
@@ -24861,7 +24872,7 @@ static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes) {
                        unsigned P =
                            Val.first == StoreChainContext::LocallyUnvectorizable
                                ? 0
-                               : StoreChainContext::RangeSizesByIdx[Val.first];
+                               : RangeSizesByIdx[Val.first];
                        if (P == 1)
                          return V;
                        return V + (P - Mean) * (P - Mean);
@@ -24967,7 +24978,7 @@ bool SLPVectorizerPass::vectorizeStores(
   auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
     int64_t PrevDist = -1;
     unsigned GlobalMaxVF = 0;
-    StoreChainContext::RangeSizesByIdx.assign(StoreSeq.size(), 1);
+    SmallVector<unsigned> RangeSizesByIdx(StoreSeq.size(), 1);
     SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
     BoUpSLP::ValueList Operands;
     SmallVector<StoreChainContext::SizePair> RangeSizes;
@@ -24989,8 +25000,8 @@ bool SLPVectorizerPass::vectorizeStores(
                        cast<StoreInst>(Operands.back())->getValueOperand(),
                        Operands.size()})
               .second) {
-        AllContexts.emplace_back(
-            std::make_unique<StoreChainContext>(*TTI, Operands, RangeSizes));
+        AllContexts.emplace_back(std::make_unique<StoreChainContext>(
+            *TTI, Operands, RangeSizes, RangeSizesByIdx));
         if (!AllContexts.back()->initializeContext(R, *DL))
           AllContexts.pop_back();
         else
@@ -25026,8 +25037,8 @@ bool SLPVectorizerPass::vectorizeStores(
                 FirstVecStore >= Context.End ? Context.End : FirstVecStore;
             for (unsigned SliceStartIdx = FirstUnvecStore;
                  SliceStartIdx + VF <= MaxSliceEnd;) {
-              if (!checkTreeSizes(
-                      Context.RangeSizes.slice(SliceStartIdx, VF))) {
+              if (!checkTreeSizes(Context.RangeSizes.slice(SliceStartIdx, VF),
+                                  RangeSizesByIdx)) {
                 ++SliceStartIdx;
                 continue;
               }
@@ -25134,7 +25145,6 @@ bool SLPVectorizerPass::vectorizeStores(
         }
       }
     }
-    StoreChainContext::RangeSizesByIdx.clear();
   };
 
   /// Groups of stores to vectorize
