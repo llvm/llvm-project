@@ -553,11 +553,14 @@ static bool isConstReg(MachineRegisterInfo *MRI, MachineInstr *OpDef) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_INTRINSIC:
     case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
-      if (cast<GIntrinsic>(*OpDef).getIntrinsicID() !=
-          Intrinsic::spv_const_composite)
+    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS: {
+      GIntrinsic *GIntr = cast<GIntrinsic>(MI);
+      unsigned IntrID = GIntr->getIntrinsicID();
+      if (IntrID != Intrinsic::spv_const_composite &&
+          IntrID != Intrinsic::spv_undef)
         return false;
       continue;
+    }
     case TargetOpcode::G_BUILD_VECTOR:
     case TargetOpcode::G_SPLAT_VECTOR:
       for (unsigned i = OpDef->getNumExplicitDefs();
@@ -1760,11 +1763,11 @@ bool SPIRVInstructionSelector::selectMaskedGather(Register ResVReg,
   // 3: alignment (i32 immediate)
   // 4: mask (vector of i1)
   // 5: passthru/fill value
-  Register PtrsReg = I.getOperand(2).getReg();
-  uint32_t Alignment = I.getOperand(3).getImm();
-  Register MaskReg = I.getOperand(4).getReg();
-  Register PassthruReg = I.getOperand(5).getReg();
-  Register AlignmentReg = buildI32Constant(Alignment, I);
+  const Register PtrsReg = I.getOperand(2).getReg();
+  const uint32_t Alignment = I.getOperand(3).getImm();
+  const Register MaskReg = I.getOperand(4).getReg();
+  const Register PassthruReg = I.getOperand(5).getReg();
+  const Register AlignmentReg = buildI32Constant(Alignment, I);
 
   MachineBasicBlock &BB = *I.getParent();
   auto MIB =
@@ -1787,11 +1790,11 @@ bool SPIRVInstructionSelector::selectMaskedScatter(MachineInstr &I) const {
   // 2: vector of pointers
   // 3: alignment (i32 immediate)
   // 4: mask (vector of i1)
-  Register ValuesReg = I.getOperand(1).getReg();
-  Register PtrsReg = I.getOperand(2).getReg();
-  uint32_t Alignment = I.getOperand(3).getImm();
-  Register MaskReg = I.getOperand(4).getReg();
-  Register AlignmentReg = buildI32Constant(Alignment, I);
+  const Register ValuesReg = I.getOperand(1).getReg();
+  const Register PtrsReg = I.getOperand(2).getReg();
+  const uint32_t Alignment = I.getOperand(3).getImm();
+  const Register MaskReg = I.getOperand(4).getReg();
+  const Register AlignmentReg = buildI32Constant(Alignment, I);
   MachineBasicBlock &BB = *I.getParent();
 
   auto MIB =
@@ -6014,6 +6017,10 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     VarType = GR.getPointeeType(ResType);
     SC = GR.getPointerStorageClass(ResType);
   }
+
+  if (ResType->getOpcode() == SPIRV::OpTypeImage && ArraySize == 0)
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::RuntimeDescriptorArrayEXT);
 
   Register VarReg =
       buildPointerToResource(SPIRVTypeInst(VarType), SC, Set, Binding,

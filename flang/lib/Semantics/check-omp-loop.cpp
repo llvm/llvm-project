@@ -28,6 +28,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <cinttypes>
@@ -37,10 +38,6 @@
 #include <string>
 #include <tuple>
 #include <variant>
-
-namespace Fortran::semantics {
-static std::optional<int64_t> GetNumGeneratedNests(const parser::Block &block);
-} // namespace Fortran::semantics
 
 namespace {
 using namespace Fortran;
@@ -245,19 +242,10 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   }
 }
 
-static std::optional<int64_t> GetNumGeneratedNests(const parser::Block &block) {
-  // Count the number of loops in the associated block. If there are any
-  // malformed construct in there, getting the number may be meaningless.
-  // These issues will be diagnosed elsewhere, and we should not emit any
-  // messages about a potentially incorrect loop count.
-  // In such cases reset the count to nullopt. Once it becomes nullopt,
-  // keep it that way.
-  return LoopSequence(block, true).length();
-}
-
 void OmpStructureChecker::CheckNestedConstruct(
     const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  unsigned version{context_.langOptions().OpenMPVersion};
 
   // End-directive is not allowed in such cases:
   //   do 100 i = ...
@@ -299,9 +287,11 @@ void OmpStructureChecker::CheckNestedConstruct(
     }
   }
 
+  LoopSequence sequence(body, version, true);
+
   // Check if a loop-nest-associated construct has only one top-level loop
   // in it.
-  if (std::optional<int64_t> numLoops{GetNumGeneratedNests(body)}) {
+  if (std::optional<int64_t> numLoops{sequence.length()}) {
     if (*numLoops == 0) {
       context_.Say(beginSpec.DirName().source,
           "This construct should contain a DO-loop or a loop-nest-generating OpenMP construct"_err_en_US);
@@ -516,22 +506,22 @@ void OmpStructureChecker::CheckDistLinear(
 
 void OmpStructureChecker::CheckLooprangeBounds(
     const parser::OpenMPLoopConstruct &x) {
+  unsigned version{context_.langOptions().OpenMPVersion};
   if (auto *clause{parser::omp::FindClause(
           x.BeginDir(), llvm::omp::Clause::OMPC_looprange)}) {
     auto *lrClause{parser::Unwrap<parser::OmpLooprangeClause>(clause)};
     auto first{GetIntValue(std::get<0>(lrClause->t))};
     auto count{GetIntValue(std::get<1>(lrClause->t))};
-    if (!first || !count || *first <= 0 || *count <= 0) {
-      return;
-    }
-    int64_t requiredCount{*first + *count - 1};
-    if (auto loopCount{GetNumGeneratedNests(std::get<parser::Block>(x.t))}) {
-      if (*loopCount < requiredCount) {
-        context_.Say(clause->source,
-            "The specified loop range requires %" PRId64
-            " loops, but the loop sequence has a length of %" PRId64
-            ""_err_en_US,
-            requiredCount, *loopCount);
+    if (auto requiredCount{GetRequiredCount(first, count)}) {
+      LoopSequence sequence(std::get<parser::Block>(x.t), version, true);
+      if (auto loopCount{sequence.length()}) {
+        if (*loopCount < *requiredCount) {
+          context_.Say(clause->source,
+              "The specified loop range requires %" PRId64
+              " loops, but the loop sequence has a length of %" PRId64
+              ""_err_en_US,
+              *requiredCount, *loopCount);
+        }
       }
     }
   }
@@ -767,6 +757,40 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
   for (const parser::Cosubscript &v : c.v)
     RequiresPositiveParameter(llvm::omp::Clause::OMPC_sizes, v,
         /*paramName=*/"parameter", /*allowZero=*/false);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Permutation &c) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Clause clause = llvm::omp::Clause::OMPC_permutation;
+  CheckAllowedClause(clause);
+  if (c.v.size() < 2)
+    context_.Say(GetContext().clauseSource,
+        "The %s clause must have a length of at least two"_err_en_US,
+        parser::omp::GetUpperName(clause, version));
+
+  llvm::BitVector found(c.v.size(), false);
+  bool cont = true;
+  for (const auto &val : c.v) {
+    if (const auto v{GetIntValue(val)}) {
+      if (*v <= 0) {
+        cont = false;
+        context_.Say(GetContext().clauseSource,
+            "The parameter of the %s clause must be a constant positive integer expression"_err_en_US,
+            parser::omp::GetUpperName(clause, version));
+      } else if ((unsigned)*v - 1 < c.v.size()) {
+        found.set(*v - 1);
+      }
+    } else
+      cont = false;
+  }
+
+  if (!cont)
+    return;
+  if (!found.all()) {
+    context_.Say(GetContext().clauseSource,
+        "Every integer from 1 must appear in the %s clause"_err_en_US,
+        parser::omp::GetUpperName(clause, version));
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {

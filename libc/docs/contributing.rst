@@ -38,10 +38,11 @@ a list of open projects that one can start with:
    implemented.
 
 #. **Update the clang-tidy lint rules and use them in the build and/or CI** -
-   Currently, the :ref:`clang_tidy_checks` have gone stale and are mostly unused
-   by the developers and on the CI builders. This project is about updating
-   them and reintegrating them back with the build and running them on the
-   CI builders.
+   The libc project has a set of clang-tidy checks (see :ref:`clang_tidy_checks`)
+   but they are not enabled by default. They can be enabled by configuring with
+   ``-DLLVM_LIBC_ENABLE_LINTING=ON`` (or by setting ``LLVM_LIBC_CLANG_TIDY``) and
+   running the ``libc-lint`` build target. This project is about keeping the
+   checks up to date and reintegrating them into the build and CI.
 
 #. **double and higher precision math functions** - These are under active
    development but you can take a shot at those not yet implemented. See

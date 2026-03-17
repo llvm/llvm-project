@@ -702,12 +702,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
     const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
-  // Retrieve the header manually from the intial plain-CFG VPlan.
-  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
-      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
-  assert(VPDominatorTree(Plan).dominates(HeaderVPBB,
-                                         HeaderVPBB->getPredecessors()[1]) &&
-         "header must dominate its latch");
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
 
   auto CreateHeaderPhiRecipe = [&](VPPhi *PhiR) -> VPHeaderPHIRecipe * {
     // TODO: Gradually replace uses of underlying instruction by analyses on
@@ -751,9 +746,9 @@ void VPlanTransforms::createHeaderPhiRecipes(
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
-  for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
+  assert(isa<VPCanonicalIVPHIRecipe>(HeaderVPBB->front()) &&
+         "first recipe must be canonical IV phi");
+  for (VPRecipeBase &R : make_early_inc_range(drop_begin(HeaderVPBB->phis()))) {
     auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
