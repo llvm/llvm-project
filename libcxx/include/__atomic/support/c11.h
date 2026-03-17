@@ -268,7 +268,7 @@ __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, mem
   _Tp __new;
   do {
     __new = __old < __val ? __old : __val;
-  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__old), __new, __order, memory_order_relaxed));
   return __old;
 }
 template <class _Tp>
@@ -278,7 +278,7 @@ __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order
   _Tp __new;
   do {
     __new = __old < __val ? __old : __val;
-  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__old), __new, __order, memory_order_relaxed));
   return __old;
 }
 
@@ -289,7 +289,7 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, mem
   _Tp __new;
   do {
     __new = __old > __val ? __old : __val;
-  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__old), __new, __order, memory_order_relaxed));
   return __old;
 }
 template <class _Tp>
@@ -299,7 +299,7 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order
   _Tp __new;
   do {
     __new = __old > __val ? __old : __val;
-  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__old), __new, __order, memory_order_relaxed));
   return __old;
 }
 
