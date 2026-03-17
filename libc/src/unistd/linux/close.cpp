@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, close, (int fd)) {
-  auto result = internal::close(fd);
+  auto result = linux_syscalls::close(fd);
 
   if (!result.has_value()) {
     libc_errno = result.error();

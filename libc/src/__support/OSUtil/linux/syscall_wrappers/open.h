@@ -18,7 +18,7 @@
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
-namespace internal {
+namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> open(const char *path, int flags, mode_t mode_flags) {
 #ifdef SYS_open
@@ -31,7 +31,7 @@ LIBC_INLINE ErrorOr<int> open(const char *path, int flags, mode_t mode_flags) {
   return fd;
 }
 
-} // namespace internal
+} // namespace linux_syscalls
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_OPEN_H

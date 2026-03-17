@@ -17,7 +17,7 @@
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
-namespace internal {
+namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> getrandom(void *buf, size_t buflen,
                                        unsigned int flags) {
@@ -27,7 +27,7 @@ LIBC_INLINE ErrorOr<ssize_t> getrandom(void *buf, size_t buflen,
   return ret;
 }
 
-} // namespace internal
+} // namespace linux_syscalls
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_GETRANDOM_H

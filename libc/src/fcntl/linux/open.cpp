@@ -29,7 +29,7 @@ LLVM_LIBC_FUNCTION(int, open, (const char *path, int flags, ...)) {
     va_end(varargs);
   }
 
-  auto result = internal::open(path, flags, mode_flags);
+  auto result = linux_syscalls::open(path, flags, mode_flags);
 
   if (!result.has_value()) {
     libc_errno = result.error();

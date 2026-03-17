@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, read, (int fd, void *buf, size_t count)) {
-  auto result = internal::read(fd, buf, count);
+  auto result = linux_syscalls::read(fd, buf, count);
   if (!result.has_value()) {
     libc_errno = result.error();
     return -1;

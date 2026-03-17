@@ -17,7 +17,7 @@
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
-namespace internal {
+namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> read(int fd, void *buf, size_t count) {
   ssize_t ret = syscall_impl<ssize_t>(SYS_read, fd, buf, count);
@@ -26,7 +26,7 @@ LIBC_INLINE ErrorOr<ssize_t> read(int fd, void *buf, size_t count) {
   return ret;
 }
 
-} // namespace internal
+} // namespace linux_syscalls
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_READ_H

@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, write, (int fd, const void *buf, size_t count)) {
-  auto result = internal::write(fd, buf, count);
+  auto result = linux_syscalls::write(fd, buf, count);
   if (!result.has_value()) {
     libc_errno = result.error();
     return -1;
