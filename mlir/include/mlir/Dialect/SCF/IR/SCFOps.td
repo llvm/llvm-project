@@ -51,12 +51,13 @@ class SCF_Op<string mnemonic, list<Trait> traits = []> :
 // ConditionOp
 //===----------------------------------------------------------------------===//
 
-def ConditionOp : SCF_Op<"condition", [HasParent<"WhileOp">,
-                                       DeclareOpInterfaceMethods<
-                                           RegionBranchTerminatorOpInterface,
-                                           ["getSuccessorRegions",
-                                            "getMutableSuccessorOperands"]>,
-                                       Pure, Terminator]> {
+def ConditionOp : SCF_Op<"condition", [
+  HasParent<"WhileOp">,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+    ["getSuccessorRegions", "getMutableSuccessorOperands"]>,
+  Pure,
+  Terminator
+]> {
   let summary = "loop continuation condition";
   let description = [{
     This operation accepts the continuation (i.e., inverse of exit) condition
@@ -901,11 +902,10 @@ def ParallelOp : SCF_Op<"parallel",
 // ReduceOp
 //===----------------------------------------------------------------------===//
 
-def ReduceOp
-    : SCF_Op<"reduce",
-             [Terminator, HasParent<"ParallelOp">, RecursiveMemoryEffects,
-              DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
-                                        ["getMutableSuccessorOperands"]>]> {
+def ReduceOp : SCF_Op<"reduce", [
+    Terminator, HasParent<"ParallelOp">, RecursiveMemoryEffects,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+                              ["getMutableSuccessorOperands"]>]> {
   let summary = "reduce operation for scf.parallel";
   let description = [{
     The `scf.reduce` operation is the terminator for `scf.parallel` operations. It can model

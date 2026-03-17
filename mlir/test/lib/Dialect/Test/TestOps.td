@@ -2243,11 +2243,10 @@ def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
 // When 'valid' unit-attr is absent the op is malformed; its verifier
 // emits an error, but getMutableSuccessorOperands() calls report_fatal_error
 // to expose the fact that FuncOp::verify() runs before the region is checked.
-def TestCrashingReturnOp
-    : TEST_Op<"crashing_return", [DeclareOpInterfaceMethods<
-                                      RegionBranchTerminatorOpInterface,
-                                      ["getMutableSuccessorOperands"]>,
-                                  Terminator]> {
+def TestCrashingReturnOp : TEST_Op<"crashing_return", [
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+       ["getMutableSuccessorOperands"]>,
+    Terminator]> {
   let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
   let assemblyFormat = "($args^ `:` type($args))? attr-dict";
   let hasVerifier = 1;
@@ -2304,11 +2303,14 @@ def TestSignatureConversionNoConverterOp
 
 // A return-like operation with override on the successor operand getter
 // interface method.
-def TestReturnWithIgnoredValueOp
-    : TEST_Op<"return_with_ignored_value",
-              [Pure, ReturnLike, Terminator,
-               DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
-                                         ["getMutableSuccessorOperands"]>]> {
+def TestReturnWithIgnoredValueOp : TEST_Op<"return_with_ignored_value", [
+    Pure,
+    ReturnLike,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+      "getMutableSuccessorOperands"
+    ]>,
+    Terminator
+]> {
   let arguments = (ins Variadic<AnyType>:$values, AnyType:$unwanted_value);
 }
 
@@ -2718,11 +2720,10 @@ def LoopBlockOp : TEST_Op<"loop_block",
   }];
 }
 
-def LoopBlockTerminatorOp
-    : TEST_Op<"loop_block_term", [DeclareOpInterfaceMethods<
-                                      RegionBranchTerminatorOpInterface,
-                                      ["getMutableSuccessorOperands"]>,
-                                  Pure, Terminator]> {
+def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>,
+     Pure, Terminator]> {
   let arguments = (ins I32:$nextIterArg, F32:$exitArg);
 
   let assemblyFormat = [{

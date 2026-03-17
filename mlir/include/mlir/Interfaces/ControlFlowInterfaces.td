@@ -426,19 +426,19 @@ def RegionBranchTerminatorOpInterface :
   }];
   let cppNamespace = "::mlir";
 
-  let methods =
-      [InterfaceMethod<[{
+  let methods = [
+    InterfaceMethod<[{
         Returns a mutable range of operands that are semantically "returned" by
         passing them to the region successor indicated by `point`.
       }],
-                       "::mlir::MutableOperandRange",
-                       "getMutableSuccessorOperands",
-                       (ins "::mlir::RegionSuccessor":$point), [{}],
-                       /*defaultImplementation=*/[{
+      "::mlir::MutableOperandRange", "getMutableSuccessorOperands",
+      (ins "::mlir::RegionSuccessor":$point),
+      [{}],
+      /*defaultImplementation=*/[{
         return ::mlir::MutableOperandRange($_op);
-      }]>,
-       InterfaceMethod<
-           [{
+      }]
+    >,
+    InterfaceMethod<[{
         Returns the potential region successors that are branched to after this
         terminator based on the given constant operands.
 
@@ -449,15 +449,15 @@ def RegionBranchTerminatorOpInterface :
         The default implementation simply dispatches to the parent
         `RegionBranchOpInterface`'s `getSuccessorRegions` implementation.
       }],
-           "void", "getSuccessorRegions",
-           (ins "::llvm::ArrayRef<::mlir::Attribute>":$operands,
-               "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions),
-           [{}],
-           /*defaultImplementation=*/[{
+      "void", "getSuccessorRegions",
+      (ins "::llvm::ArrayRef<::mlir::Attribute>":$operands,
+           "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions), [{}],
+      /*defaultImplementation=*/[{
         ::mlir::Operation *op = $_op;
         ::llvm::cast<::mlir::RegionBranchOpInterface>(op->getParentOp())
           .getSuccessorRegions(::llvm::cast<::mlir::RegionBranchTerminatorOpInterface>(op), regions);
-      }]>,
+      }]
+    >,
   ];
 
   let verify = [{
@@ -634,8 +634,8 @@ def WeightedRegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
 // Op is "return-like".
-def ReturnLike
-    : TraitList<[DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
-                 NativeOpTrait</*name=*/"ReturnLike">]>;
+def ReturnLike : TraitList<[
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+    NativeOpTrait</*name=*/"ReturnLike">]>;
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES
