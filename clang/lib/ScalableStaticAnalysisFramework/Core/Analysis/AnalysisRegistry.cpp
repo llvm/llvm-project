@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
@@ -26,12 +27,14 @@ const std::vector<AnalysisName> &AnalysisRegistry::names() {
   return analysisNames;
 }
 
-std::optional<std::unique_ptr<AnalysisBase>>
+llvm::Expected<std::unique_ptr<AnalysisBase>>
 AnalysisRegistry::instantiate(llvm::StringRef Name) {
   for (const auto &Entry : RegistryT::entries()) {
     if (Entry.getName() == Name) {
       return std::unique_ptr<AnalysisBase>(Entry.instantiate());
     }
   }
-  return std::nullopt;
+  return ErrorBuilder::create(std::errc::invalid_argument,
+                              "no analysis registered for '{0}'", Name)
+      .build();
 }

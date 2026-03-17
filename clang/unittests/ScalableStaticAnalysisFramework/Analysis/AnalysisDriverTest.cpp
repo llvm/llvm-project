@@ -234,11 +234,14 @@ TEST(AnalysisRegistryTest, AnalysisIsRegistered) {
 }
 
 TEST(AnalysisRegistryTest, AnalysisCanBeInstantiated) {
-  EXPECT_FALSE(
-      AnalysisRegistry::instantiate("AnalysisNonExisting").has_value());
-  EXPECT_TRUE(AnalysisRegistry::instantiate("Analysis1").has_value());
-  EXPECT_TRUE(AnalysisRegistry::instantiate("Analysis2").has_value());
-  EXPECT_TRUE(AnalysisRegistry::instantiate("Analysis4").has_value());
+  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("AnalysisNonExisting"),
+                       llvm::Failed());
+  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis1"),
+                       llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis2"),
+                       llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis4"),
+                       llvm::Succeeded());
 }
 
 // run() — processes all registered analyses present in the LUSummary.

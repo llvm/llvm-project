@@ -23,58 +23,44 @@ AnalysisDriver::AnalysisDriver(std::unique_ptr<LUSummary> LU)
     : LU(std::move(LU)) {}
 
 llvm::Expected<std::vector<std::unique_ptr<AnalysisBase>>>
-AnalysisDriver::sortTopologically(llvm::ArrayRef<AnalysisName> Roots) {
+AnalysisDriver::sort(llvm::ArrayRef<AnalysisName> Roots) {
   struct Visitor {
     enum class State { Unvisited, Visiting, Visited };
 
     std::map<AnalysisName, State> Marks;
-    std::map<AnalysisName, std::unique_ptr<AnalysisBase>> Analyses;
     std::vector<std::unique_ptr<AnalysisBase>> Result;
 
-    State getState(const AnalysisName &Name) {
-      auto MarkIt = Marks.find(Name);
-      return MarkIt != Marks.end() ? MarkIt->second : State::Unvisited;
-    }
-
-    void setState(const AnalysisName &Name, State S) { Marks[Name] = S; }
-
     llvm::Error visit(const AnalysisName &Name) {
-      State S = getState(Name);
-
-      if (S == State::Visited) {
+      auto It = Marks.find(Name);
+      switch (It != Marks.end() ? It->second : State::Unvisited) {
+      case State::Visited:
         return llvm::Error::success();
-      }
 
-      if (S == State::Visiting) {
+      case State::Visiting:
         return ErrorBuilder::create(std::errc::invalid_argument,
                                     "cycle detected involving analysis '{0}'",
                                     Name)
             .build();
-      }
 
-      if (S == State::Unvisited) {
-        setState(Name, State::Visiting);
+      case State::Unvisited: {
+        Marks[Name] = State::Visiting;
 
         auto V = AnalysisRegistry::instantiate(Name.str());
         if (!V) {
-          return ErrorBuilder::create(std::errc::invalid_argument,
-                                      "no analysis registered for '{0}'", Name)
-              .build();
+          return V.takeError();
         }
 
-        const auto &Deps = (*V)->dependencyNames();
-        Analyses[Name] = std::move(*V);
-
-        for (const auto &Dep : Deps) {
+        auto Analysis = std::move(*V);
+        for (const auto &Dep : Analysis->dependencyNames()) {
           if (auto Err = visit(Dep)) {
             return Err;
           }
         }
 
-        setState(Name, State::Visited);
-        Result.push_back(std::move(Analyses[Name]));
-        Analyses.erase(Name);
+        Marks[Name] = State::Visited;
+        Result.push_back(std::move(Analysis));
         return llvm::Error::success();
+      }
       }
       llvm_unreachable("unhandled State");
     }
@@ -165,18 +151,23 @@ AnalysisDriver::execute(EntityIdTable IdTable,
   Suite.IdTable = std::move(IdTable);
 
   for (auto &V : Sorted) {
-    if (V->TheKind == AnalysisBase::Kind::Summary) {
+    switch (V->TheKind) {
+    case AnalysisBase::Kind::Summary: {
       auto SA = std::unique_ptr<SummaryAnalysisBase>(
           static_cast<SummaryAnalysisBase *>(V.release()));
       if (auto Err = executeSummaryAnalysis(std::move(SA), Suite)) {
         return std::move(Err);
       }
-    } else {
+      break;
+    }
+    case AnalysisBase::Kind::Derived: {
       auto DA = std::unique_ptr<DerivedAnalysisBase>(
           static_cast<DerivedAnalysisBase *>(V.release()));
       if (auto Err = executeDerivedAnalysis(std::move(DA), Suite)) {
         return std::move(Err);
       }
+      break;
+    }
     }
   }
 
@@ -184,12 +175,16 @@ AnalysisDriver::execute(EntityIdTable IdTable,
 }
 
 llvm::Expected<WPASuite> AnalysisDriver::run() && {
-  return run(AnalysisRegistry::names());
+  auto ExpectedSorted = sort(AnalysisRegistry::names());
+  if (!ExpectedSorted) {
+    return ExpectedSorted.takeError();
+  }
+  return execute(std::move(LU->IdTable), std::move(*ExpectedSorted));
 }
 
 llvm::Expected<WPASuite>
 AnalysisDriver::run(llvm::ArrayRef<AnalysisName> Names) {
-  auto ExpectedSorted = sortTopologically(Names);
+  auto ExpectedSorted = sort(Names);
   if (!ExpectedSorted) {
     return ExpectedSorted.takeError();
   }

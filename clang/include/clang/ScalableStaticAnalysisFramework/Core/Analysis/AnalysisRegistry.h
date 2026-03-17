@@ -26,9 +26,9 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/DerivedAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/SummaryAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Registry.h"
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -81,9 +81,9 @@ public:
   /// Returns the names of all registered analyses.
   static const std::vector<AnalysisName> &names();
 
-  /// Instantiates the analysis registered under \p Name, or returns
-  /// std::nullopt if no such analysis is registered.
-  static std::optional<std::unique_ptr<AnalysisBase>>
+  /// Instantiates the analysis registered under \p Name, or returns an error
+  /// if no such analysis is registered.
+  static llvm::Expected<std::unique_ptr<AnalysisBase>>
   instantiate(llvm::StringRef Name);
 
 private:

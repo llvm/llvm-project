@@ -15,7 +15,6 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISDRIVER_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISDRIVER_H
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/WPASuite.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummary.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -25,13 +24,18 @@
 
 namespace clang::ssaf {
 
+class AnalysisBase;
+class SummaryAnalysisBase;
+class DerivedAnalysisBase;
+
 /// Orchestrates whole-program analysis over an LUSummary.
 ///
 /// Three run() patterns are supported:
-///   - run() &&        -- all registered analyses; silently skips any whose
-///                        entity data is absent or whose dependency was
-///                        skipped. Requires an rvalue driver because this
-///                        exhausts the LUSummary.
+///   - run() &&        -- all registered analyses in topological dependency
+///                        order. Returns an error if any registered analysis
+///                        has no matching entity data in the LUSummary.
+///                        Requires an rvalue driver because this exhausts the
+///                        LUSummary.
 ///   - run(names)      -- named subset plus transitive dependencies; returns
 ///                        Expected and fails if any listed name has no
 ///                        registered analysis or missing entity data.
@@ -41,7 +45,8 @@ public:
   explicit AnalysisDriver(std::unique_ptr<LUSummary> LU);
 
   /// Runs all registered analyses in topological dependency order.
-  /// Silently skips analyses with absent entity data or skipped dependencies.
+  /// Returns an error if any registered analysis has no matching entity data
+  /// in the LUSummary.
   ///
   /// Requires an rvalue driver (std::move(Driver).run()) because this
   /// exhausts all remaining LUSummary data.
@@ -69,7 +74,7 @@ private:
   /// dependencies) and returns them in topological order via a single DFS.
   /// Reports an error on unregistered names or cycles.
   static llvm::Expected<std::vector<std::unique_ptr<AnalysisBase>>>
-  sortTopologically(llvm::ArrayRef<AnalysisName> Roots);
+  sort(llvm::ArrayRef<AnalysisName> Roots);
 
   /// Executes a topologically-sorted analysis list and returns a WPASuite.
   /// \p IdTable is moved into the returned WPASuite.
