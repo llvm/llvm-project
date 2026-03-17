@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -744,6 +745,85 @@ struct SgToWiVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
   }
 };
 
+/// Distributes a subgroup-level vector.create_mask or vector.constant_mask op
+/// to workitem-level. Each lane computes its own mask bounds based on its
+/// lane coordinates. For each dimension i, the new mask bound is:
+///   new_bound[i] = original_bound[i] - lane_coord[i] * dist_shape[i]
+/// vector.create_mask implicitly clamps to [0, vector_size].
+/// For constant_mask, the constant dim sizes are first materialized as
+/// Values, then the same logic applies, producing a vector.create_mask.
+template <typename OpType,
+          typename = std::enable_if_t<llvm::is_one_of<
+              OpType, vector::CreateMaskOp, vector::ConstantMaskOp>::value>>
+struct SgToWiCreateMask : public OpConversionPattern<OpType> {
+  using OpConversionPattern<OpType>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!layout || !layout.isForSubgroup())
+      return rewriter.notifyMatchFailure(
+          op, "operation result does not have subgroup distribute layout");
+
+    VectorType origType = op.getType();
+    FailureOr<VectorType> distTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(layout, origType);
+    if (failed(distTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "unable to compute workitem vector type from the layout");
+
+    VectorType distType = distTypeOrFailure.value();
+    Location loc = op.getLoc();
+
+    // Materialize the original mask operands as Values.
+    SmallVector<Value> origOperands;
+    if constexpr (std::is_same_v<OpType, vector::CreateMaskOp>) {
+      origOperands.append(op.getOperands().begin(), op.getOperands().end());
+    } else {
+      auto dimSizes = op.getMaskDimSizesAttr().asArrayRef();
+      for (auto dimSize : dimSizes)
+        origOperands.push_back(
+            arith::ConstantIndexOp::create(rewriter, loc, dimSize).getResult());
+    }
+
+    ArrayRef<int64_t> origShape = origType.getShape();
+    ArrayRef<int64_t> distShape = distType.getShape();
+
+    // Delinearize lane ID using the layout.
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                         /*upperBound=*/mlir::IntegerAttr());
+    auto maybeIds = layout.delinearizeId(rewriter, loc, laneId);
+    if (failed(maybeIds))
+      return rewriter.notifyMatchFailure(
+          op, "failed to delinearize lane ID from layout");
+    SmallVector<Value> laneIds = maybeIds.value();
+
+    // Compute new mask operands.
+    AffineExpr s0, s1;
+    bindSymbols(rewriter.getContext(), s0, s1);
+    SmallVector<Value> newOperands;
+    for (int i = 0, e = distShape.size(); i < e; ++i) {
+      if (origShape[i] == distShape[i]) {
+        // Dimension is not distributed, keep the original operand.
+        newOperands.push_back(origOperands[i]);
+      } else {
+        // new_bound = original_bound - lane_coord * dist_size
+        Value maskDimIdx = affine::makeComposedAffineApply(
+            rewriter, loc, s1 - s0 * distShape[i],
+            {laneIds[i], origOperands[i]});
+        newOperands.push_back(maskDimIdx);
+      }
+    }
+
+    auto newMask =
+        vector::CreateMaskOp::create(rewriter, loc, distType, newOperands);
+    rewriter.replaceOp(op, newMask.getResult());
+    return success();
+  }
+};
+
 /// This pattern distributes a subgroup-level StoreMatrix op to workitem-level.
 struct SgToWiStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
   using OpConversionPattern<xegpu::StoreMatrixOp>::OpConversionPattern;
@@ -1120,6 +1200,16 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       [=](vector::MultiDimReductionOp op) -> bool {
         return !isValidSubgroupMultiReductionOp(op);
       });
+  // vector::CreateMaskOp is legal only if it has no result layout attribute.
+  target.addDynamicallyLegalOp<vector::CreateMaskOp>(
+      [=](vector::CreateMaskOp op) -> bool {
+        return !xegpu::getTemporaryLayout(op->getOpResult(0));
+      });
+  // vector::ConstantMaskOp is legal only if it has no result layout attribute.
+  target.addDynamicallyLegalOp<vector::ConstantMaskOp>(
+      [=](vector::ConstantMaskOp op) -> bool {
+        return !xegpu::getTemporaryLayout(op->getOpResult(0));
+      });
   // vector::TransposeOp is legal only if it has no result layout attribute.
   target.addDynamicallyLegalOp<vector::TransposeOp>(
       [=](vector::TransposeOp op) -> bool {
@@ -1135,6 +1225,8 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
                SgToWiLoadGather, SgToWiStoreScatter, SgToWiVectorReduction,
                SgToWiMultiDimReduction, SgToWiLoadMatrix, SgToWiStoreMatrix,
-               SgToWiConvertLayout, SgToWiVectorTranspose, SgToWiVectorBitcast>(
-      typeConverter, patterns.getContext());
+               SgToWiConvertLayout, SgToWiVectorTranspose, SgToWiVectorBitcast,
+               SgToWiCreateMask<vector::CreateMaskOp>,
+               SgToWiCreateMask<vector::ConstantMaskOp>>(typeConverter,
+                                                         patterns.getContext());
 }

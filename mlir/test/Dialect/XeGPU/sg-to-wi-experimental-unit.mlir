@@ -497,6 +497,54 @@ gpu.func @vector_bitcast() {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @create_mask_1d
+//  CHECK-SAME: (%[[M0:.*]]: index)
+//       CHECK:   %[[LANE:.*]] = gpu.lane_id
+//       CHECK:   %[[NEW_BOUND:.*]] = affine.apply
+//       CHECK:   %[[MASK:.*]] = vector.create_mask %[[NEW_BOUND]] : vector<1xi1>
+//       CHECK:   gpu.return
+gpu.func @create_mask_1d(%m0: index) {
+  %mask = vector.create_mask %m0
+    {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+    : vector<16xi1>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @constant_mask_1d
+//       CHECK:   %[[LANE:.*]] = gpu.lane_id
+//       CHECK:   %[[NEW_BOUND:.*]] = affine.apply
+//       CHECK:   %[[MASK:.*]] = vector.create_mask %[[NEW_BOUND]] : vector<1xi1>
+//       CHECK:   gpu.return
+gpu.func @constant_mask_1d() {
+  %mask = vector.constant_mask [4]
+    {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+    : vector<16xi1>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @create_mask_2d
+//  CHECK-SAME: (%[[M0:.*]]: index, %[[M1:.*]]: index)
+//       CHECK:   %[[LANE:.*]] = gpu.lane_id
+//       CHECK:   vector.create_mask {{.*}} : vector<1x2xi1>
+//       CHECK:   gpu.return
+gpu.func @create_mask_2d(%m0: index, %m1: index) {
+  %mask = vector.create_mask %m0, %m1
+    {layout_result_0 = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>}
+    : vector<8x4xi1>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @constant_mask_2d
+//       CHECK:   %[[LANE:.*]] = gpu.lane_id
+//       CHECK:   vector.create_mask {{.*}} : vector<1x2xi1>
+//       CHECK:   gpu.return
+gpu.func @constant_mask_2d() {
+  %mask = vector.constant_mask [2, 3]
+    {layout_result_0 = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>}
+    : vector<8x4xi1>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @convert_layout_removed_when_compatible
 // CHECK-NOT: xegpu.convert_layout
 gpu.func @convert_layout_removed_when_compatible() {
