@@ -62,7 +62,7 @@ void testVariadicityAttributes(MlirContext ctx) {
   MlirAttribute variadicityArray =
       mlirIRDLVariadicityArrayAttrGet(ctx, 3, variadicities);
 
-  // CHECK: #irdl<variadicity_array[ single, optional,  variadic]>
+  // CHECK: #irdl<variadicity_array[single, optional, variadic]>
   mlirAttributeDump(variadicityArray);
 }
 

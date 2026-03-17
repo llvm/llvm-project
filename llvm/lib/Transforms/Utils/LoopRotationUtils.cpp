@@ -183,8 +183,7 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
 // This means that rotating the loop can remove the phi.
 static bool profitableToRotateLoopExitingLatch(Loop *L) {
   BasicBlock *Header = L->getHeader();
-  BranchInst *BI = dyn_cast<BranchInst>(Header->getTerminator());
-  assert(BI && BI->isConditional() && "need header with conditional exit");
+  CondBrInst *BI = dyn_cast<CondBrInst>(Header->getTerminator());
   BasicBlock *HeaderExit = BI->getSuccessor(0);
   if (L->contains(HeaderExit))
     HeaderExit = BI->getSuccessor(1);
@@ -200,7 +199,7 @@ static bool profitableToRotateLoopExitingLatch(Loop *L) {
   return false;
 }
 
-static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
+static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
                                 bool HasConditionalPreHeader,
                                 bool SuccsSwapped) {
   MDNode *WeightMD = getBranchWeightMDNode(PreHeaderBI);
@@ -346,8 +345,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   BasicBlock *OrigHeader = L->getHeader();
   BasicBlock *OrigLatch = L->getLoopLatch();
 
-  BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
-  if (!BI || BI->isUnconditional())
+  CondBrInst *BI = dyn_cast<CondBrInst>(OrigHeader->getTerminator());
+  if (!BI)
     return Rotated;
 
   // If the loop header is not one of the loop exiting blocks then
@@ -741,8 +740,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // then we fold away the cond branch to an uncond branch.  This simplifies the
   // loop in cases important for nested loops, and it also means we don't have
   // to split as many edges.
-  BranchInst *PHBI = cast<BranchInst>(OrigPreheader->getTerminator());
-  assert(PHBI->isConditional() && "Should be clone of BI condbr!");
+  CondBrInst *PHBI = cast<CondBrInst>(OrigPreheader->getTerminator());
   const Value *Cond = PHBI->getCondition();
   const bool HasConditionalPreHeader =
       !isa<ConstantInt>(Cond) ||
@@ -787,7 +785,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // We can fold the conditional branch in the preheader, this makes things
     // simpler. The first step is to remove the extra edge to the Exit block.
     Exit->removePredecessor(OrigPreheader, true /*preserve LCSSA*/);
-    BranchInst *NewBI = BranchInst::Create(NewHeader, PHBI->getIterator());
+    UncondBrInst *NewBI = UncondBrInst::Create(NewHeader, PHBI->getIterator());
     NewBI->setDebugLoc(PHBI->getDebugLoc());
     PHBI->eraseFromParent();
 
@@ -903,16 +901,15 @@ bool LoopRotate::simplifyLoopLatch(Loop *L) {
   if (!Latch || Latch->hasAddressTaken())
     return false;
 
-  BranchInst *Jmp = dyn_cast<BranchInst>(Latch->getTerminator());
-  if (!Jmp || !Jmp->isUnconditional())
+  UncondBrInst *Jmp = dyn_cast<UncondBrInst>(Latch->getTerminator());
+  if (!Jmp)
     return false;
 
   BasicBlock *LastExit = Latch->getSinglePredecessor();
   if (!LastExit || !L->isLoopExiting(LastExit))
     return false;
 
-  BranchInst *BI = dyn_cast<BranchInst>(LastExit->getTerminator());
-  if (!BI)
+  if (!isa<UncondBrInst, CondBrInst>(LastExit->getTerminator()))
     return false;
 
   if (!shouldSpeculateInstrs(Latch->begin(), Jmp->getIterator(), L))

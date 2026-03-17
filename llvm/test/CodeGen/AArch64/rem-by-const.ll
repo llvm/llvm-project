@@ -306,13 +306,11 @@ entry:
 define i32 @ui32_7(i32 %a, i32 %b) {
 ; CHECK-SD-LABEL: ui32_7:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #18725 // =0x4925
-; CHECK-SD-NEXT:    movk w8, #9362, lsl #16
-; CHECK-SD-NEXT:    umull x8, w0, w8
-; CHECK-SD-NEXT:    lsr x8, x8, #32
-; CHECK-SD-NEXT:    sub w9, w0, w8
-; CHECK-SD-NEXT:    add w8, w8, w9, lsr #1
-; CHECK-SD-NEXT:    lsr w8, w8, #2
+; CHECK-SD-NEXT:    mov x8, #2684354560 // =0xa0000000
+; CHECK-SD-NEXT:    mov w9, w0
+; CHECK-SD-NEXT:    movk x8, #18724, lsl #32
+; CHECK-SD-NEXT:    movk x8, #9362, lsl #48
+; CHECK-SD-NEXT:    umulh x8, x9, x8
 ; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
 ; CHECK-SD-NEXT:    add w0, w0, w8
 ; CHECK-SD-NEXT:    ret
@@ -925,7 +923,7 @@ define <4 x i8> @sv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-NEXT:    mov v3.b[3], w8
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    neg v2.8b, v3.8b
-; CHECK-GI-NEXT:    dup v3.4h, w9
+; CHECK-GI-NEXT:    movi v3.4h, #7
 ; CHECK-GI-NEXT:    sshl v1.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    neg v2.8b, v4.8b
 ; CHECK-GI-NEXT:    ushl v2.8b, v1.8b, v2.8b
@@ -976,10 +974,9 @@ define <4 x i8> @sv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-NEXT:    mov v3.b[2], w8
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    mov v3.b[3], w8
-; CHECK-GI-NEXT:    mov w8, #100 // =0x64
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    neg v2.8b, v3.8b
-; CHECK-GI-NEXT:    dup v3.4h, w8
+; CHECK-GI-NEXT:    movi v3.4h, #100
 ; CHECK-GI-NEXT:    sshl v1.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    neg v2.8b, v4.8b
 ; CHECK-GI-NEXT:    ushl v2.8b, v1.8b, v2.8b
@@ -1410,12 +1407,11 @@ define <4 x i8> @uv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-NEXT:    ushl v2.8b, v2.8b, v3.8b
 ; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-GI-NEXT:    mov v4.b[3], w8
-; CHECK-GI-NEXT:    mov w8, #7 // =0x7
 ; CHECK-GI-NEXT:    usra v2.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    neg v2.8b, v4.8b
 ; CHECK-GI-NEXT:    ushl v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    dup v2.4h, w8
+; CHECK-GI-NEXT:    movi v2.4h, #7
 ; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-GI-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    ret
@@ -1453,11 +1449,10 @@ define <4 x i8> @uv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-GI-NEXT:    mov v3.b[2], w8
 ; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
 ; CHECK-GI-NEXT:    mov v3.b[3], w8
-; CHECK-GI-NEXT:    mov w8, #100 // =0x64
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    neg v2.8b, v3.8b
 ; CHECK-GI-NEXT:    ushl v1.8b, v1.8b, v2.8b
-; CHECK-GI-NEXT:    dup v2.4h, w8
+; CHECK-GI-NEXT:    movi v2.4h, #100
 ; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-GI-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    ret
@@ -1591,10 +1586,9 @@ define <2 x i16> @sv2i16_7(<2 x i16> %d, <2 x i16> %e) {
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    mov v3.h[1], w8
 ; CHECK-GI-NEXT:    neg v2.4h, v2.4h
-; CHECK-GI-NEXT:    mov w8, #7 // =0x7
 ; CHECK-GI-NEXT:    sshl v1.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    neg v2.4h, v3.4h
-; CHECK-GI-NEXT:    dup v3.2s, w8
+; CHECK-GI-NEXT:    movi v3.2s, #7
 ; CHECK-GI-NEXT:    ushl v2.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
@@ -1640,10 +1634,9 @@ define <2 x i16> @sv2i16_100(<2 x i16> %d, <2 x i16> %e) {
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    mov v3.h[1], w8
 ; CHECK-GI-NEXT:    neg v2.4h, v2.4h
-; CHECK-GI-NEXT:    mov w8, #100 // =0x64
 ; CHECK-GI-NEXT:    sshl v1.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    neg v2.4h, v3.4h
-; CHECK-GI-NEXT:    dup v3.2s, w8
+; CHECK-GI-NEXT:    movi v3.2s, #100
 ; CHECK-GI-NEXT:    ushl v2.4h, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
@@ -1933,12 +1926,11 @@ define <2 x i16> @uv2i16_7(<2 x i16> %d, <2 x i16> %e) {
 ; CHECK-GI-NEXT:    fmov s3, w8
 ; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    mov v3.h[1], w8
-; CHECK-GI-NEXT:    mov w8, #7 // =0x7
 ; CHECK-GI-NEXT:    usra v2.2s, v1.2s, #16
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v2.4h, v0.4h
 ; CHECK-GI-NEXT:    neg v2.4h, v3.4h
 ; CHECK-GI-NEXT:    ushl v1.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    dup v2.2s, w8
+; CHECK-GI-NEXT:    movi v2.2s, #7
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    ret
@@ -1978,12 +1970,11 @@ define <2 x i16> @uv2i16_100(<2 x i16> %d, <2 x i16> %e) {
 ; CHECK-GI-NEXT:    mul v1.2s, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    fmov s2, w8
 ; CHECK-GI-NEXT:    mov v2.h[1], w8
-; CHECK-GI-NEXT:    mov w8, #100 // =0x64
 ; CHECK-GI-NEXT:    ushr v1.2s, v1.2s, #16
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    neg v2.4h, v2.4h
 ; CHECK-GI-NEXT:    ushl v1.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    dup v2.2s, w8
+; CHECK-GI-NEXT:    movi v2.2s, #100
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    mls v0.2s, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    ret
@@ -2554,20 +2545,19 @@ define <3 x i32> @uv3i32_7(<3 x i32> %d, <3 x i32> %e) {
 ; CHECK-SD-LABEL: uv3i32_7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #18725 // =0x4925
-; CHECK-SD-NEXT:    mov w9, v0.s[2]
+; CHECK-SD-NEXT:    mov x9, #2684354560 // =0xa0000000
 ; CHECK-SD-NEXT:    movk w8, #9362, lsl #16
+; CHECK-SD-NEXT:    movk x9, #18724, lsl #32
 ; CHECK-SD-NEXT:    dup v1.2s, w8
-; CHECK-SD-NEXT:    umull x8, w9, w8
+; CHECK-SD-NEXT:    mov w8, v0.s[2]
+; CHECK-SD-NEXT:    movk x9, #9362, lsl #48
 ; CHECK-SD-NEXT:    umull v1.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    lsr x8, x8, #32
-; CHECK-SD-NEXT:    sub w10, w9, w8
+; CHECK-SD-NEXT:    umulh x9, x8, x9
 ; CHECK-SD-NEXT:    shrn v1.2s, v1.2d, #32
-; CHECK-SD-NEXT:    add w8, w8, w10, lsr #1
-; CHECK-SD-NEXT:    lsr w8, w8, #2
+; CHECK-SD-NEXT:    sub w9, w9, w9, lsl #3
 ; CHECK-SD-NEXT:    sub v2.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-SD:         add w8, w8, w9
 ; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    add w8, w9, w8
 ; CHECK-SD-NEXT:    shrn v2.2s, v2.2d, #1
 ; CHECK-SD-NEXT:    add v1.2s, v2.2s, v1.2s
 ; CHECK-SD-NEXT:    movi v2.2s, #7

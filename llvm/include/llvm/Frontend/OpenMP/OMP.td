@@ -829,6 +829,7 @@ def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
     VersionedClause<OMPC_Enter, 52>,
     VersionedClause<OMPC_Indirect, 51>,
     VersionedClause<OMPC_Link>,
+    VersionedClause<OMPC_Local, 60>,
     VersionedClause<OMPC_To>,
   ];
   let allowedOnceClauses = [
@@ -928,6 +929,16 @@ def OMP_Error : Directive<[Spelling<"error">]> {
   ];
   let association = AS_None;
   let category = CA_Utility;
+}
+def OMP_Flatten : Directive<[Spelling<"flatten">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Depth, 61>,
+  ];
+  let association = AS_LoopNest;
+  let category = CA_Executable;
 }
 def OMP_Flush : Directive<[Spelling<"flush">]> {
   let allowedOnceClauses = [
@@ -1191,6 +1202,16 @@ def OMP_EndSingle : Directive<[Spelling<"end single">]> {
   let association = OMP_Single.association;
   let category = OMP_Single.category;
   let languages = [L_Fortran];
+}
+def OMP_Split : Directive<[Spelling<"split">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Counts, 60>,
+  ];
+  let association = AS_LoopNest;
+  let category = CA_Executable;
 }
 def OMP_Target : Directive<[Spelling<"target">]> {
   let allowedClauses = [

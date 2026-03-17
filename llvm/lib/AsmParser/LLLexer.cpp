@@ -487,20 +487,26 @@ lltok::Kind LLLexer::LexHash() {
   return lltok::hash;
 }
 
-/// Lex a label, integer type, keyword, or hexadecimal integer constant.
+/// Lex a label, integer or byte types, keyword, or hexadecimal integer
+/// constant.
 ///    Label           [-a-zA-Z$._0-9]+:
+///    ByteType        b[0-9]+
 ///    IntegerType     i[0-9]+
 ///    Keyword         sdiv, float, ...
 ///    HexIntConstant  [us]0x[0-9A-Fa-f]+
 lltok::Kind LLLexer::LexIdentifier() {
   const char *StartChar = CurPtr;
-  const char *IntEnd = CurPtr[-1] == 'i' ? nullptr : StartChar;
+  const char IntOrByteIdentifier = CurPtr[-1];
+  const char *IntOrByteEnd =
+      (IntOrByteIdentifier == 'i' || IntOrByteIdentifier == 'b') ? nullptr
+                                                                 : StartChar;
   const char *KeywordEnd = nullptr;
 
   for (; isLabelChar(*CurPtr); ++CurPtr) {
-    // If we decide this is an integer, remember the end of the sequence.
-    if (!IntEnd && !isdigit(static_cast<unsigned char>(*CurPtr)))
-      IntEnd = CurPtr;
+    // If we decide this is a byte or an integer, remember the end of the
+    // sequence.
+    if (!IntOrByteEnd && !isdigit(static_cast<unsigned char>(*CurPtr)))
+      IntOrByteEnd = CurPtr;
     if (!KeywordEnd && !isalnum(static_cast<unsigned char>(*CurPtr)) &&
         *CurPtr != '_')
       KeywordEnd = CurPtr;
@@ -513,18 +519,23 @@ lltok::Kind LLLexer::LexIdentifier() {
     return lltok::LabelStr;
   }
 
-  // Otherwise, this wasn't a label.  If this was valid as an integer type,
-  // return it.
-  if (!IntEnd) IntEnd = CurPtr;
-  if (IntEnd != StartChar) {
-    CurPtr = IntEnd;
+  // Otherwise, this wasn't a label. If this was valid as a byte or an integer
+  // type, return it.
+  if (!IntOrByteEnd)
+    IntOrByteEnd = CurPtr;
+  if (IntOrByteEnd != StartChar) {
+    CurPtr = IntOrByteEnd;
     uint64_t NumBits = atoull(StartChar, CurPtr);
     if (NumBits < IntegerType::MIN_INT_BITS ||
         NumBits > IntegerType::MAX_INT_BITS) {
-      LexError("bitwidth for integer type out of range");
+      LexError("bitwidth for integer or byte type out of range");
       return lltok::Error;
     }
-    TyVal = IntegerType::get(Context, NumBits);
+    if (IntOrByteIdentifier == 'i')
+      TyVal = IntegerType::get(Context, NumBits);
+    else
+      TyVal = ByteType::get(Context, NumBits);
+
     return lltok::Type;
   }
 
@@ -543,6 +554,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(true);    KEYWORD(false);
   KEYWORD(declare); KEYWORD(define);
   KEYWORD(global);  KEYWORD(constant);
+  KEYWORD(br);
 
   KEYWORD(dso_local);
   KEYWORD(dso_preemptable);
@@ -809,6 +821,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(importType);
   KEYWORD(definition);
   KEYWORD(declaration);
+  KEYWORD(noRenameOnPromotion);
   KEYWORD(function);
   KEYWORD(insts);
   KEYWORD(funcFlags);
@@ -950,7 +963,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(select,      Select);
   INSTKEYWORD(va_arg,      VAArg);
   INSTKEYWORD(ret,         Ret);
-  INSTKEYWORD(br,          Br);
   INSTKEYWORD(switch,      Switch);
   INSTKEYWORD(indirectbr,  IndirectBr);
   INSTKEYWORD(invoke,      Invoke);

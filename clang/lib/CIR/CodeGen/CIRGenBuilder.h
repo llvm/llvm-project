@@ -43,7 +43,8 @@ public:
   /// Note: This is different from what is returned by
   /// mlir::Builder::getStringAttr() which is an mlir::StringAttr.
   mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
-                            std::optional<size_t> size) {
+                            std::optional<size_t> size,
+                            bool ensureNullTerm = true) {
     size_t finalSize = size.value_or(str.size());
 
     size_t lastNonZeroPos = str.find_last_not_of('\0');
@@ -53,18 +54,24 @@ public:
       auto arrayTy = cir::ArrayType::get(eltTy, finalSize);
       return cir::ZeroAttr::get(arrayTy);
     }
-    // We emit trailing zeros only if there are multiple trailing zeros.
-    size_t trailingZerosNum = 0;
-    if (finalSize > lastNonZeroPos + 2)
-      trailingZerosNum = finalSize - lastNonZeroPos - 1;
+
+    // We emit trailing zeros for all trailing zeros, so the null-terminator in
+    // a constant is always in trailing zeros, and the null-terminator is
+    // skipped in the CIR representation.
+    size_t trailingZerosNum = finalSize - lastNonZeroPos - 1;
     auto truncatedArrayTy =
         cir::ArrayType::get(eltTy, finalSize - trailingZerosNum);
+    auto strAttr = mlir::StringAttr::get(str.drop_back(trailingZerosNum),
+                                         truncatedArrayTy);
+
+    // Most C strings are null terminated, so if we are ensuring there is one,
+    // grow the array size by 1 to add a trailing zero if necessary. The 'auto'
+    // calculation of trailing zeros (the difference between the provided string
+    // and the type) will ensure we get the count correct.
+    finalSize += (ensureNullTerm && trailingZerosNum == 0);
+
     auto fullArrayTy = cir::ArrayType::get(eltTy, finalSize);
-    return cir::ConstArrayAttr::get(
-        fullArrayTy,
-        mlir::StringAttr::get(str.drop_back(trailingZerosNum),
-                              truncatedArrayTy),
-        trailingZerosNum);
+    return cir::ConstArrayAttr::get(fullArrayTy, strAttr);
   }
 
   cir::ConstArrayAttr getConstArray(mlir::Attribute attrs,
@@ -240,10 +247,22 @@ public:
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
   }
 
+  cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
+                               mlir::Value src, mlir::Value len) {
+    return cir::MemMoveOp::create(*this, loc, dst, src, len);
+  }
+
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
                              mlir::Value val, mlir::Value len) {
     assert(val.getType() == getUInt8Ty());
-    return cir::MemSetOp::create(*this, loc, dst, val, len);
+    return cir::MemSetOp::create(*this, loc, dst, {}, val, len);
+  }
+
+  cir::MemSetOp createMemSet(mlir::Location loc, Address dst, mlir::Value val,
+                             mlir::Value len) {
+    mlir::IntegerAttr align = getAlignmentAttr(dst.getAlignment());
+    assert(val.getType() == getUInt8Ty());
+    return cir::MemSetOp::create(*this, loc, dst.getPointer(), align, val, len);
   }
   // ---------------------------
 
@@ -422,8 +441,7 @@ public:
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
-      return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
-                                  cir::UnaryOpKind::Minus, value);
+      return createMinus(value.getLoc(), value);
     }
 
     llvm_unreachable("negation for the given type is NYI");
@@ -437,8 +455,7 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
-                                cir::UnaryOpKind::Minus, value);
+    return createMinus(value.getLoc(), value);
   }
 
   //===--------------------------------------------------------------------===//
@@ -449,7 +466,7 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Sub, lhs, rhs);
+    return cir::SubOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
@@ -457,7 +474,7 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Add, lhs, rhs);
+    return cir::AddOp::create(*this, loc, lhs, rhs);
   }
 
   mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
@@ -465,14 +482,14 @@ public:
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Mul, lhs, rhs);
+    return cir::MulOp::create(*this, loc, lhs, rhs);
   }
   mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::fastMathFlags());
 
-    return cir::BinOp::create(*this, loc, cir::BinOpKind::Div, lhs, rhs);
+    return cir::DivOp::create(*this, loc, lhs, rhs);
   }
 
   //===--------------------------------------------------------------------===//

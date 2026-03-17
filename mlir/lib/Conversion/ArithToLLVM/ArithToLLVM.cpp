@@ -307,15 +307,23 @@ LogicalResult IndexCastOpLowering<OpTy, ExtCastTy>::matchAndRewrite(
     return success();
   }
 
+  bool isNonNeg = false;
+  if constexpr (std::is_same_v<ExtCastTy, LLVM::ZExtOp>)
+    isNonNeg = op.getNonNeg();
+
   // Handle the scalar and 1D vector cases.
   Type operandType = adaptor.getIn().getType();
   if (!isa<LLVM::LLVMArrayType>(operandType)) {
     Type targetType = this->typeConverter->convertType(resultType);
-    if (targetBits < sourceBits)
+    if (targetBits < sourceBits) {
       rewriter.replaceOpWithNewOp<LLVM::TruncOp>(op, targetType,
                                                  adaptor.getIn());
-    else
-      rewriter.replaceOpWithNewOp<ExtCastTy>(op, targetType, adaptor.getIn());
+    } else {
+      auto extOp = rewriter.replaceOpWithNewOp<ExtCastTy>(op, targetType,
+                                                          adaptor.getIn());
+      if constexpr (std::is_same_v<ExtCastTy, LLVM::ZExtOp>)
+        extOp.setNonNeg(isNonNeg);
+    }
     return success();
   }
 
@@ -330,8 +338,13 @@ LogicalResult IndexCastOpLowering<OpTy, ExtCastTy>::matchAndRewrite(
           return LLVM::TruncOp::create(rewriter, op.getLoc(), llvm1DVectorTy,
                                        adaptor.getIn());
         }
-        return ExtCastTy::create(rewriter, op.getLoc(), llvm1DVectorTy,
-                                 adaptor.getIn());
+        auto extOp = ExtCastTy::create(rewriter, op.getLoc(), llvm1DVectorTy,
+                                       adaptor.getIn());
+        if constexpr (std::is_same_v<ExtCastTy, LLVM::ZExtOp>) {
+          if (isNonNeg)
+            extOp.setNonNeg(true);
+        }
+        return extOp;
       },
       rewriter);
 }
