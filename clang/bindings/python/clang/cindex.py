@@ -3564,7 +3564,7 @@ class TranslationUnit(ClangObject):
 
     @classmethod
     def from_ast_file(
-        cls, filename: StrPath, index: Index | None = None
+        cls, filename: StrBytesPath, index: Index | None = None
     ) -> TranslationUnit:
         """Create a TranslationUnit instance from a saved AST file.
 
