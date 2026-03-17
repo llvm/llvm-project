@@ -780,7 +780,37 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
 #endif // LIBC_TYPES_HAS_FLOAT128
 
 TEST(LlvmLibcFPBitsTest, Float128WrapperInstantiation) {
-  LIBC_NAMESPACE::fputil::Float128 x;
-  LIBC_NAMESPACE::fputil::FPBits<LIBC_NAMESPACE::fputil::Float128> bits(x);
+  using LIBC_NAMESPACE::fputil::Float128;
+  using Float128Bits = LIBC_NAMESPACE::fputil::FPBits<Float128>;
+
+  Float128 x;
+  Float128Bits bits(x);
+
   EXPECT_TRUE(bits.is_zero());
+}
+
+TEST(LlvmLibcFPBitsTest, Float128BitsStorage) {
+  using LIBC_NAMESPACE::fputil::Float128;
+
+  UInt128 raw(123);
+  Float128 x(raw);
+
+  EXPECT_EQ(x.get_bits(), raw);
+}
+
+TEST(LlvmLibcFPBitsTest, Float128GetFPType) {
+  using LIBC_NAMESPACE::fputil::Float128;
+
+  constexpr auto type =
+      LIBC_NAMESPACE::fputil::get_fp_type<Float128>();
+
+  EXPECT_EQ(type,
+            LIBC_NAMESPACE::fputil::FPType::IEEE754_Binary128);
+}
+
+TEST(LlvmLibcFPBitsTest, Float128IsFloatingPoint) {
+  using LIBC_NAMESPACE::fputil::Float128;
+
+  EXPECT_TRUE(
+      LIBC_NAMESPACE::cpp::is_floating_point<Float128>::value);
 }
