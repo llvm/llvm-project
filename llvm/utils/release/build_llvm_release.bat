@@ -149,6 +149,14 @@ if "%skip-checkout%" == "true" (
 curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
 tar zxf libxml2-v2.9.12.tar.gz
 
+REM FIXME: It would be preferrable to use zlib-ng here since it is better
+REM        maintained and performs better than zlib, but lld tests currently
+REM        assume the original zlib is used. They need to be fixed first:
+REM        https://github.com/llvm/llvm-project/pull/186630#discussion_r2939953952
+set zlib_version=1.3.2
+curl -LO https://github.com/madler/zlib/releases/download/v%zlib_version%/zlib-%zlib_version%.tar.gz || exit /b 1
+tar zxf zlib-%zlib_version%.tar.gz
+
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
 REM Common flags for all builds.
 set common_compiler_flags=-DLIBXML_STATIC
@@ -163,6 +171,7 @@ set common_cmake_flags=^
   -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: " ^
   -DLLVM_ENABLE_LIBXML2=FORCE_ON ^
   -DCLANG_ENABLE_LIBXML2=OFF ^
+  -DLLVM_ENABLE_ZLIB=FORCE_ON ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
@@ -213,6 +222,7 @@ call "%vsdevcmd%" -arch=x86 || exit /b 1
 mkdir build32_stage0
 cd build32_stage0
 call :do_build_libxml || exit /b 1
+call :do_build_zlib || exit /b 1
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
@@ -221,7 +231,9 @@ set cmake_flags=^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
-  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
+  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
+  -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
+  -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
@@ -274,6 +286,7 @@ call "%vsdevcmd%" -arch=%arch% || exit /b 1
 mkdir build_%arch%_stage0
 cd build_%arch%_stage0
 call :do_build_libxml || exit /b 1
+call :do_build_zlib || exit /b 1
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build_%arch%_stage0/bin"
@@ -282,6 +295,8 @@ set cmake_flags=^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
+  -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
+  -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
   -DCLANG_DEFAULT_LINKER=lld
 if "%arch%"=="arm64" (
   set cmake_flags=%cmake_flags% ^
@@ -404,6 +419,22 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
 ninja install || exit /b 1
 set libxmldir=%cd%\install
 set "libxmldir=%libxmldir:\=/%"
+cd ..
+exit /b 0
+
+::==============================================================================
+:: Build zlib.
+::==============================================================================
+:do_build_zlib
+mkdir zlibbuild
+cd zlibbuild
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
+  -DZLIB_BUILD_TESTING=OFF -DZLIB_BUILD_SHARED=OFF -DZLIB_BUILD_STATIC=ON ^
+  -DZLIB_INSTALL=ON -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+  ../../zlib-%zlib_version% || exit /b 1
+ninja install || exit /b 1
+set zlibdir=%cd%\install
+set "zlibdir=%zlibdir:\=/%"
 cd ..
 exit /b 0
 

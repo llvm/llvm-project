@@ -611,3 +611,18 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 256>>} {
 // LOWLIMIT-NEXT: memref.alloc() {alignment = 64 : i64, custom_attr}
 // RANK-NEXT: memref.alloca() {alignment = 64 : i64, custom_attr}
 // CHECK-NEXT: return
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/64638.
+// A memref whose static element count overflows int64_t must not trigger an
+// assertion in ShapedType::getNumElements().  The allocation is too large to
+// promote to the stack, so it must remain as a heap allocation.
+
+// CHECK-LABEL: func @huge_static_memref
+// CHECK:         memref.alloc
+// CHECK-NOT:     memref.alloca
+func.func @huge_static_memref() {
+  %alloc = memref.alloc() : memref<3090540x3090540x3090540xi32>
+  return
+}

@@ -177,6 +177,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasNF = false;
   bool HasCF = false;
   bool HasZU = false;
+  bool HasJMPABS = false;
   bool HasInlineAsmUseGPR32 = false;
   bool HasBranchHint = false;
 

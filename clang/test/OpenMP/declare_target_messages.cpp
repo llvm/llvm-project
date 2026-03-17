@@ -13,7 +13,7 @@
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp5,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host5,host-5-and-51,no-host5-and-51  %{openmp50} %{target_mac} %{limit} -o - %s
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp60,omp52-or-later,ompvar,omp5-or-later,omp5-or-later-var  %{openmp60} %{target_mac} %{limit} -o - %s
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp5,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host-5-and-51,no-host5-and-51,dev5  %{openmp50} -fopenmp-is-target-device %{target_mac} %{aux_triple} %{limit} -o - %s
-// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp60,omp52-or-later,ompvar,omp5-or-later,omp5-or-later-var %{openmp60} -fopenmp-is-target-device %{target_mac} %{aux_triple} %{limit} -o - %s
+// RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp60,dev60,omp52-or-later,ompvar,omp5-or-later,omp5-or-later-var %{openmp60} -fopenmp-is-target-device %{target_mac} %{aux_triple} %{limit} -o - %s
 
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp5,ompvar,omp45-to-51,omp5-and-51,omp5-or-later,omp5-or-later-var,omp45-to-51-var,omp45-to-51-clause,host5,host-5-and-51,no-host5-and-51 %{openmp50_simd} %{target_mac} %{limit} -o - %s
 // RUN: %clang_cc1 %{common_opts_mac} -verify=expected,omp60,omp52-or-later,ompvar,omp5-or-later,omp5-or-later-var %{openmp60_simd} %{target_mac} %{limit} -o - %s
@@ -61,8 +61,8 @@ void f();
 // omp45-to-51-warning@+1 {{extra tokens at the end of '#pragma omp end declare target' are ignored}}
 #pragma omp end declare target shared(a) 
 
-// omp60-error@+10 {{unexpected 'map' clause, only 'enter', 'link', 'device_type' or 'indirect' clauses expected}}
-// omp60-error@+9 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp60-error@+10 {{unexpected 'map' clause, only 'enter', 'link', 'device_type', 'indirect' or 'local' clauses expected}}
+// omp60-error@+9 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-error@+8 {{unexpected 'map' clause, only 'enter', 'link', 'device_type' or 'indirect' clauses expected}}
 // omp52-error@+7 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp51-error@+6 {{unexpected 'map' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}} 
@@ -74,7 +74,7 @@ void f();
 #pragma omp declare target map(a)
 
 // omp60-error@+5 {{unexpected 'to' clause, use 'enter' instead}}
-// omp60-error@+4 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp60-error@+4 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-error@+3 {{unexpected 'to' clause, use 'enter' instead}}
 // omp52-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp45-to-51-error@+1 {{use of undeclared identifier 'foo1'}}
@@ -83,8 +83,13 @@ void f();
 // expected-error@+1 {{use of undeclared identifier 'foo2'}}
 #pragma omp declare target link(foo2) 
 
+#if _OPENMP == 202411
+// omp60-error@+1 {{use of undeclared identifier 'foo3'}}
+#pragma omp declare target local(foo3) 
+#endif // _OPENMP
+
 // omp60-error@+6 {{unexpected 'to' clause, use 'enter' instead}}
-// omp60-error@+5 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp60-error@+5 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
 // omp52-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // dev5-note@+2 {{marked as 'device_type(host)' here}}
@@ -92,8 +97,10 @@ void f();
 #pragma omp declare target to(f) device_type(host)
 
 void q();
-// omp52-or-later-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp60-error@+6 {{unexpected 'to' clause, use 'enter' instead}}
+// omp60-error@+5 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
+// omp52-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
+// omp52-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp5-and-51-warning@+2 {{more than one 'device_type' clause is specified}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target to(q) device_type(any) device_type(any) device_type(host) 
@@ -133,12 +140,23 @@ void c();
 // expected-note@+1 {{'func' defined here}}
 void func() {} 
 
-// omp52-or-later-error@+5 {{unexpected 'allocate' clause, only 'enter', 'link', 'device_type' or 'indirect' clauses expected}}
+// omp60-error@+6 {{unexpected 'allocate' clause, only 'enter', 'link', 'device_type', 'indirect' or 'local' clauses expected}}
+// omp52-error@+5 {{unexpected 'allocate' clause, only 'enter', 'link', 'device_type' or 'indirect' clauses expected}}
 // omp51-error@+4 {{unexpected 'allocate' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}}
 // omp5-error@+3 {{unexpected 'allocate' clause, only 'to', 'link' or 'device_type' clauses expected}}
 // expected-error@+2 {{function name is not allowed in 'link' clause}}
 // omp45-error@+1 {{unexpected 'allocate' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target link(func) allocate(a)
+
+#if _OPENMP == 202411
+// expected-note@+1 {{'func_local' defined here}}
+void func_local() {} 
+
+// dev60-warning@+3 {{'local' clause on 'declare_target' directive is not yet fully implemented; variable will be treated as 'enter'}}
+// omp60-error@+2 {{unexpected 'allocate' clause, only 'enter', 'link', 'device_type', 'indirect' or 'local' clauses expected}}
+// expected-error@+1 {{function name is not allowed in 'local' clause}}
+#pragma omp declare target local(func_local) allocate(a)
+#endif // _OPENMP
 
 void bar();
 void baz() {bar();}
@@ -282,11 +300,13 @@ int main (int argc, char **argv) {
 #pragma omp end declare target 
   foo(v);
 
-  // omp52-or-later-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+  // omp60-error@+3 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
+  // omp52-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
   // omp52-or-later-error@+1 {{unexpected 'to' clause, use 'enter' instead}}
 #pragma omp declare target to(foo3) link(w)
+  // omp60-error@+4 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
   // omp52-or-later-error@+3 {{unexpected 'to' clause, use 'enter' instead}}
-  // omp52-or-later-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+  // omp52-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
   // omp45-to-51-var-error@+1 {{local variable 'a' should not be used in 'declare target' directive}}
 #pragma omp declare target to(a) 
   return (0);
@@ -301,50 +321,114 @@ namespace {
 // expected-error@+1 {{'S' used in declare target directive is not a variable or a function name}}
 #pragma omp declare target link(S) 
 
+#if _OPENMP == 202411
+// omp60-error@+1 {{'S' used in declare target directive is not a variable or a function name}}
+#pragma omp declare target local(S)
+
+int x_local;
+// expected-error@+1 {{'x_local' appears multiple times in clauses on the same declare target directive}}
+#pragma omp declare target enter(x_local) local(x_local)
+
+int y_enter_local;
+#pragma omp declare target enter(y_enter_local)
+// expected-error@+1 {{'y_enter_local' must not appear in both clauses 'enter' and 'local'}}
+#pragma omp declare target local(y_enter_local)
+
+int y_local_enter;
+// dev60-warning@+1 {{'local' clause on 'declare_target' directive is not yet fully implemented; variable will be treated as 'enter'}}
+#pragma omp declare target local(y_local_enter)
+// expected-error@+1 {{'y_local_enter' must not appear in both clauses 'local' and 'enter'}}
+#pragma omp declare target enter(y_local_enter)
+
+int y_link_local;
+#pragma omp declare target link(y_link_local)
+// expected-error@+1 {{'y_link_local' must not appear in both clauses 'link' and 'local'}}
+#pragma omp declare target local(y_link_local)
+
+int y_local_link;
+// dev60-warning@+1 {{'local' clause on 'declare_target' directive is not yet fully implemented; variable will be treated as 'enter'}}
+#pragma omp declare target local(y_local_link)
+// expected-error@+1 {{'y_local_link' must not appear in both clauses 'local' and 'link'}}
+#pragma omp declare target link(y_local_link)
+
+int y_local_dev;
+// omp60-error@+1 {{'local' clause is incompatible with 'device_type(host)'; local variables exist only on the device}}
+#pragma omp declare_target local(y_local_dev) device_type(host)
+#endif // _OPENMP
+
 // expected-error@+1 {{'x' appears multiple times in clauses on the same declare target directive}}
 #pragma omp declare target (x, x) 
+
+// omp52-or-later-error@+2 {{unexpected clause after an implicit 'enter' clause}}
+// omp45-to-51-error@+1 {{unexpected clause after an implicit 'to' clause}}
+#pragma omp declare target (x) local(x)
+
+// omp60-error@+4 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+3 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp45-to-51-clause-error@+1 {{'x' appears multiple times in clauses on the same declare target directive}}
 #pragma omp declare target to(x) to(x)
 // expected-error@+1 {{'x' must not appear in both clauses 'to' and 'link'}}
 #pragma omp declare target link(x) 
 
+#if defined(_OPENMP) && _OPENMP < 202111
+int y_link_to;
+#pragma omp declare target link(y_link_to)
+// omp45-to-51-error@+1 {{'y_link_to' must not appear in both clauses 'link' and 'to'}}
+#pragma omp declare target to(y_link_to)
+#elif defined(_OPENMP) && _OPENMP >= 202111
+int y_link_enter;
+#pragma omp declare target link(y_link_enter)
+// omp52-or-later-error@+1 {{'y_link_enter' must not appear in both clauses 'link' and 'enter'}}
+#pragma omp declare target enter(y_link_enter)
+
+int y_enter_link;
+#pragma omp declare target enter(y_enter_link)
+// omp52-or-later-error@+1 {{'y_enter_link' must not appear in both clauses 'enter' and 'link'}}
+#pragma omp declare target link(y_enter_link)
+#endif
+
 void bazz() {}
+// omp60-error@+5 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // host5-note@+2 3 {{marked as 'device_type(nohost)' here}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} 
 #pragma omp declare target to(bazz) device_type(nohost)
 void bazzz() {bazz();}
+// omp60-error@+4 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+3 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target to(bazzz) device_type(nohost) 
 // host5-error@+1 {{function with 'device_type(nohost)' is not available on host}}
 void any() {bazz();} 
 // host5-error@+1 {{function with 'device_type(nohost)' is not available on host}}
 void host1() {bazz();}
+// omp60-error@+5 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // dev5-note@+2 3 {{marked as 'device_type(host)' here}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target to(host1) device_type(host)
 //host5-error@+1 {{function with 'device_type(nohost)' is not available on host}}
 void host2() {bazz();}
+// omp60-error@+3 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+2 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+1 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+1 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 #pragma omp declare target to(host2) 
 // dev5-error@+1 {{function with 'device_type(host)' is not available on device}}
 void device() {host1();}
+// omp60-error@+5 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // host5-note@+2 2 {{marked as 'device_type(nohost)' here}} 
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target to(device) device_type(nohost)
 void host3() {host1();} // dev5-error {{function with 'device_type(host)' is not available on device}}
+// omp60-error@+3 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+2 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+1 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+1 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 #pragma omp declare target to(host3)
 
 #pragma omp begin declare target
@@ -363,20 +447,35 @@ void any7() {device();}
 void any8() {any2();}
 
 int MultiDevTy;
+// omp60-error@+4 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+3 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+2 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target to(MultiDevTy) device_type(any)
+// omp60-error@+5 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // host-5-and-51-error@+2 {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target to(MultiDevTy) device_type(host)
+// omp60-error@+5 {{expected at least one 'enter', 'link', 'indirect' or 'local' clause}}
 // omp52-or-later-error@+4 {{unexpected 'to' clause, use 'enter' instead}}
-// omp52-or-later-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp52-error@+3 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // no-host5-and-51-error@+2 {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}}
 // omp45-error@+1 {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 #pragma omp declare target to(MultiDevTy) device_type(nohost)
+
+int counter = 0;
+// dev60-warning@+9 {{'local' clause on 'declare_target' directive is not yet fully implemented; variable will be treated as 'enter'}}
+// omp52-error@+8 {{unexpected 'local' clause, only 'enter', 'link', 'device_type' or 'indirect' clauses expected}}
+// omp52-error@+7 {{expected at least one 'enter', 'link' or 'indirect' clause}}
+// omp51-error@+6 {{unexpected 'local' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}}
+// omp51-error@+5 {{expected at least one 'to', 'link' or 'indirect' clause}}
+// omp5-error@+4 {{expected at least one 'to' or 'link' clause}} 
+// omp5-error@+3 {{unexpected 'local' clause, only 'to', 'link' or 'device_type' clauses expected}}
+// omp45-error@+2 {{expected at least one 'to' or 'link' clause}} 
+// omp45-error@+1 {{unexpected 'local' clause, only 'to' or 'link' clauses expected}}
+#pragma omp declare target local(counter)
 
 // expected-warning@+1 {{declaration is not declared in any declare target region}}
 static int variable = 100; 

@@ -652,7 +652,7 @@ Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
   llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   if (Kind == OFK_OpenMP && Triple.isSPIRV() &&
       Triple.getVendor() == llvm::Triple::Intel)
-    return offloading::intel::containerizeOpenMPSPIRVImage(Img);
+    return offloading::intel::containerizeOpenMPSPIRVImage(Img, Triple);
   return Error::success();
 }
 

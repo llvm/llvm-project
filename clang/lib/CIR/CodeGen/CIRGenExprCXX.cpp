@@ -667,7 +667,12 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   ///   to a replaceable global allocation function.
   ///
   /// We model such elidable calls with the 'builtin' attribute.
-  assert(!cir::MissingFeatures::attributeBuiltin());
+  if (calleeDecl->isReplaceableGlobalAllocationFunction() && calleePtr &&
+      calleePtr->hasAttr(cir::CIRDialect::getNoBuiltinAttrName())) {
+    callOrTryCall->setAttr(cir::CIRDialect::getBuiltinAttrName(),
+                           mlir::UnitAttr::get(callOrTryCall->getContext()));
+  }
+
   return rv;
 }
 
@@ -1177,11 +1182,6 @@ static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
     cgf.cgm.errorNYI(de->getSourceRange(), "emitObjectDelete: ObjCLifetime");
   }
 
-  // In traditional LLVM codegen null checks are emitted to save a delete call.
-  // In CIR we optimize for size by default, the null check should be added into
-  // this function callers.
-  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
-
   cgf.popCleanupBlock();
 }
 
@@ -1196,10 +1196,21 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // unconditionally perform the operator delete call in that case. For now, we
   // assume that deleted pointers are null rarely enough that it's better to
   // keep the branch. This might be worth revisiting for a -O0 code size win.
-  //
-  // CIR note: emit the code size friendly by default for now, such as mentioned
-  // in `emitObjectDelete`.
   assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
+  cir::YieldOp thenYield;
+  mlir::Value notNull = builder.createPtrIsNotNull(ptr.getPointer());
+  cir::IfOp::create(builder, getLoc(e->getExprLoc()), notNull,
+                    /*withElseRegion=*/false,
+                    /*thenBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      thenYield = builder.createYield(loc);
+                    });
+
+  // Emit the rest of the CIR inside the if-op's then region, but restore the
+  // insertion point to the point after the if when this function returns.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(thenYield);
+
   QualType deleteTy = e->getDestroyedType();
 
   // A destroying operator delete overrides the entire operation of the
@@ -1222,13 +1233,6 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   }
 
   if (e->isArrayForm()) {
-    // To handle this for cases that require array cookie, we will need to
-    // add target-specific handling during the lowering of delete_array in
-    // CXXABILowering, but we can emit a better diagnostic here.
-    if (e->doesUsualArrayDeleteWantSize() || deleteTy.isDestructedType()) {
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXDeleteExpr: array delete requires cookies");
-    }
     const FunctionDecl *operatorDelete = e->getOperatorDelete();
     cir::FuncOp operatorDeleteFn = cgm.getAddrOfFunction(operatorDelete);
     auto deleteFn =
@@ -1237,8 +1241,24 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
     auto deleteParams = cir::UsualDeleteParamsAttr::get(
         builder.getContext(), udp.Size, isAlignedAllocation(udp.Alignment),
         isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+
+    mlir::FlatSymbolRefAttr elementDtor;
+    if (const auto *rd = deleteTy->getAsCXXRecordDecl()) {
+      if (rd->hasDefinition() && !rd->hasTrivialDestructor()) {
+        const CXXDestructorDecl *dtor = rd->getDestructor();
+        if (dtor->getType()->castAs<FunctionProtoType>()->canThrow())
+          cgm.errorNYI(e->getSourceRange(),
+                       "emitCXXDeleteExpr: throwing destructor");
+        cir::FuncOp dtorFn =
+            cgm.getAddrOfCXXStructor(GlobalDecl(dtor, Dtor_Complete));
+        elementDtor = mlir::FlatSymbolRefAttr::get(builder.getContext(),
+                                                   dtorFn.getSymNameAttr());
+      }
+    }
+
     cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
-                               ptr.getPointer(), deleteFn, deleteParams);
+                               ptr.getPointer(), deleteFn, deleteParams,
+                               elementDtor);
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }
