@@ -1,43 +1,26 @@
-// RUN: %clang_analyze_cc1 -verify %s \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=unix.cstring \
-// RUN:   -analyzer-checker=unix.Malloc \
-// RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-config eagerly-assume=false
+// DEFINE: %{analyzer} = %clang_analyze_cc1 \
+// DEFINE:     -analyzer-checker=core \
+// DEFINE:     -analyzer-checker=unix.cstring \
+// DEFINE:     -analyzer-checker=unix.Malloc \
+// DEFINE:     -analyzer-checker=debug.ExprInspection \
+// DEFINE:     -analyzer-config eagerly-assume=false \
+// DEFINE:     -verify %s
 
-// RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=unix.cstring \
-// RUN:   -analyzer-checker=unix.Malloc \
-// RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-config eagerly-assume=false
+// RUN: %{analyzer} \
+// RUN:     -analyzer-checker=alpha.unix.cstring
 
-// RUN: %clang_analyze_cc1 -verify %s -DVARIANT \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=unix.cstring \
-// RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-checker=unix.Malloc \
-// RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-config eagerly-assume=false
+// RUN: %{analyzer} -DUSE_BUILTINS \
+// RUN:     -analyzer-checker=alpha.unix.cstring
 
-// RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS -DVARIANT \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=unix.cstring \
-// RUN:   -analyzer-checker=alpha.unix.cstring \
-// RUN:   -analyzer-checker=unix.Malloc \
-// RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-config eagerly-assume=false
+// RUN: %{analyzer} -DVARIANT \
+// RUN:     -analyzer-checker=alpha.unix.cstring
 
-// RUN: %clang_analyze_cc1 -verify %s -DSUPPRESS_OUT_OF_BOUND \
-// RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=unix.cstring \
-// RUN:   -analyzer-checker=unix.Malloc \
-// RUN:   -analyzer-checker=alpha.unix.cstring.BufferOverlap \
-// RUN:   -analyzer-checker=unix.cstring.NotNullTerminated \
-// RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-config eagerly-assume=false
+// RUN: %{analyzer} -DUSE_BUILTINS -DVARIANT \
+// RUN:     -analyzer-checker=alpha.unix.cstring
+
+// RUN: %{analyzer} -DSUPPRESS_OUT_OF_BOUND \
+// RUN:     -analyzer-checker=alpha.unix.cstring.BufferOverlap \
+// RUN:     -analyzer-checker=unix.cstring.NotNullTerminated
 
 #include "Inputs/system-header-simulator-cxx.h"
 #include "Inputs/system-header-simulator-for-malloc.h"
