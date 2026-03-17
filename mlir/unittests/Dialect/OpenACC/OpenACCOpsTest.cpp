@@ -43,8 +43,8 @@ protected:
 };
 
 template <typename Op>
-void testAsyncOnly(OpBuilder &b, MLIRContext &context, Location loc,
-                   llvm::SmallVector<DeviceType> &dtypes) {
+static void testAsyncOnly(OpBuilder &b, MLIRContext &context, Location loc,
+                          llvm::SmallVector<DeviceType> &dtypes) {
   OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
   EXPECT_FALSE(op->hasAsyncOnly());
   for (auto d : dtypes)
@@ -78,8 +78,9 @@ TEST_F(OpenACCOpsTest, asyncOnlyTest) {
 }
 
 template <typename Op>
-void testAsyncOnlyDataEntry(OpBuilder &b, MLIRContext &context, Location loc,
-                            llvm::SmallVector<DeviceType> &dtypes) {
+static void testAsyncOnlyDataEntry(OpBuilder &b, MLIRContext &context,
+                                   Location loc,
+                                   llvm::SmallVector<DeviceType> &dtypes) {
   auto memrefTy = MemRefType::get({}, b.getI32Type());
   OwningOpRef<memref::AllocaOp> varPtrOp =
       memref::AllocaOp::create(b, loc, memrefTy);
@@ -126,8 +127,8 @@ TEST_F(OpenACCOpsTest, asyncOnlyTestDataEntry) {
 }
 
 template <typename Op>
-void testAsyncValue(OpBuilder &b, MLIRContext &context, Location loc,
-                    llvm::SmallVector<DeviceType> &dtypes) {
+static void testAsyncValue(OpBuilder &b, MLIRContext &context, Location loc,
+                           llvm::SmallVector<DeviceType> &dtypes) {
   OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
 
   mlir::Value empty;
@@ -154,8 +155,9 @@ TEST_F(OpenACCOpsTest, asyncValueTest) {
 }
 
 template <typename Op>
-void testAsyncValueDataEntry(OpBuilder &b, MLIRContext &context, Location loc,
-                             llvm::SmallVector<DeviceType> &dtypes) {
+static void testAsyncValueDataEntry(OpBuilder &b, MLIRContext &context,
+                                    Location loc,
+                                    llvm::SmallVector<DeviceType> &dtypes) {
   auto memrefTy = MemRefType::get({}, b.getI32Type());
   OwningOpRef<memref::AllocaOp> varPtrOp =
       memref::AllocaOp::create(b, loc, memrefTy);
@@ -194,9 +196,10 @@ TEST_F(OpenACCOpsTest, asyncValueTestDataEntry) {
 }
 
 template <typename Op>
-void testNumGangsValues(OpBuilder &b, MLIRContext &context, Location loc,
-                        llvm::SmallVector<DeviceType> &dtypes,
-                        llvm::SmallVector<DeviceType> &dtypesWithoutNone) {
+static void
+testNumGangsValues(OpBuilder &b, MLIRContext &context, Location loc,
+                   llvm::SmallVector<DeviceType> &dtypes,
+                   llvm::SmallVector<DeviceType> &dtypesWithoutNone) {
   OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
   EXPECT_EQ(op->getNumGangsValues().begin(), op->getNumGangsValues().end());
 
@@ -262,8 +265,8 @@ TEST_F(OpenACCOpsTest, numGangsValuesTest) {
 }
 
 template <typename Op>
-void testVectorLength(OpBuilder &b, MLIRContext &context, Location loc,
-                      llvm::SmallVector<DeviceType> &dtypes) {
+static void testVectorLength(OpBuilder &b, MLIRContext &context, Location loc,
+                             llvm::SmallVector<DeviceType> &dtypes) {
   OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
 
   mlir::Value empty;
@@ -289,9 +292,9 @@ TEST_F(OpenACCOpsTest, vectorLengthTest) {
 }
 
 template <typename Op>
-void testWaitOnly(OpBuilder &b, MLIRContext &context, Location loc,
-                  llvm::SmallVector<DeviceType> &dtypes,
-                  llvm::SmallVector<DeviceType> &dtypesWithoutNone) {
+static void testWaitOnly(OpBuilder &b, MLIRContext &context, Location loc,
+                         llvm::SmallVector<DeviceType> &dtypes,
+                         llvm::SmallVector<DeviceType> &dtypesWithoutNone) {
   OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
   EXPECT_FALSE(op->hasWaitOnly());
   for (auto d : dtypes)
@@ -329,9 +332,9 @@ TEST_F(OpenACCOpsTest, waitOnlyTest) {
 }
 
 template <typename Op>
-void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
-                    llvm::SmallVector<DeviceType> &dtypes,
-                    llvm::SmallVector<DeviceType> &dtypesWithoutNone) {
+static void testWaitValues(OpBuilder &b, MLIRContext &context, Location loc,
+                           llvm::SmallVector<DeviceType> &dtypes,
+                           llvm::SmallVector<DeviceType> &dtypesWithoutNone) {
   OwningOpRef<Op> op = Op::create(b, loc, TypeRange{}, ValueRange{});
   EXPECT_EQ(op->getWaitValues().begin(), op->getWaitValues().end());
 
@@ -560,8 +563,8 @@ TEST_F(OpenACCOpsTest, routineOpTest) {
 }
 
 template <typename Op>
-void testShortDataEntryOpBuilders(OpBuilder &b, MLIRContext &context,
-                                  Location loc, DataClause dataClause) {
+static void testShortDataEntryOpBuilders(OpBuilder &b, MLIRContext &context,
+                                         Location loc, DataClause dataClause) {
   auto memrefTy = MemRefType::get({}, b.getI32Type());
   OwningOpRef<memref::AllocaOp> varPtrOp =
       memref::AllocaOp::create(b, loc, memrefTy);
@@ -633,8 +636,8 @@ TEST_F(OpenACCOpsTest, shortDataEntryOpBuilder) {
 }
 
 template <typename Op>
-void testShortDataExitOpBuilders(OpBuilder &b, MLIRContext &context,
-                                 Location loc, DataClause dataClause) {
+static void testShortDataExitOpBuilders(OpBuilder &b, MLIRContext &context,
+                                        Location loc, DataClause dataClause) {
   auto memrefTy = MemRefType::get({}, b.getI32Type());
   OwningOpRef<memref::AllocaOp> varPtrOp =
       memref::AllocaOp::create(b, loc, memrefTy);
@@ -685,8 +688,9 @@ TEST_F(OpenACCOpsTest, shortDataExitOpBuilder) {
 }
 
 template <typename Op>
-void testShortDataExitNoVarPtrOpBuilders(OpBuilder &b, MLIRContext &context,
-                                         Location loc, DataClause dataClause) {
+static void
+testShortDataExitNoVarPtrOpBuilders(OpBuilder &b, MLIRContext &context,
+                                    Location loc, DataClause dataClause) {
   auto memrefTy = MemRefType::get({}, b.getI32Type());
   OwningOpRef<memref::AllocaOp> varPtrOp =
       memref::AllocaOp::create(b, loc, memrefTy);
@@ -736,9 +740,9 @@ TEST_F(OpenACCOpsTest, shortDataExitOpNoVarPtrBuilder) {
 }
 
 template <typename Op>
-void testShortDataEntryOpBuildersMappableVar(OpBuilder &b, MLIRContext &context,
-                                             Location loc,
-                                             DataClause dataClause) {
+static void
+testShortDataEntryOpBuildersMappableVar(OpBuilder &b, MLIRContext &context,
+                                        Location loc, DataClause dataClause) {
   auto int64Ty = b.getI64Type();
   auto memrefTy = MemRefType::get({}, int64Ty);
   OwningOpRef<memref::AllocaOp> varPtrOp =

@@ -247,10 +247,6 @@ def ConversionChecker : Checker<"Conversion">,
   HelpText<"Loss of sign/precision in implicit conversions">,
   Documentation<HasDocumentation>;
 
-def FixedAddressChecker : Checker<"FixedAddr">,
-  HelpText<"Check for assignment of a fixed address to a pointer">,
-  Documentation<HasDocumentation>;
-
 def PointerArithChecker : Checker<"PointerArithm">,
   HelpText<"Check for pointer arithmetic on locations other than array "
            "elements">,
@@ -424,6 +420,11 @@ def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
 def FixedAddressDereferenceChecker
     : Checker<"FixedAddressDereference">,
       HelpText<"Check for dereferences of fixed addresses">,
+      Documentation<HasDocumentation>;
+
+def UnconditionalVAArgChecker
+    : Checker<"UnconditionalVAArg">,
+      HelpText<"Check variadic functions unconditionally using va_arg">,
       Documentation<HasDocumentation>;
 
 } // end "optin.core"

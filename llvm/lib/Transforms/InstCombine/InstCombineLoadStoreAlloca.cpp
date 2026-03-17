@@ -210,7 +210,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
   }
 
   if (isa<UndefValue>(AI.getArraySize()))
-    return IC.replaceInstUsesWith(AI, Constant::getNullValue(AI.getType()));
+    return IC.replaceInstUsesWith(AI, PoisonValue::get(AI.getType()));
 
   // Ensure that the alloca array size argument has type equal to the offset
   // size of the alloca() pointer, which, in the tyical case, is intptr_t,
@@ -1571,10 +1571,9 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   if (StoreBB == DestBB || OtherBB == DestBB)
     return false;
 
-  // Verify that the other block ends in a branch and is not otherwise empty.
+  // Verify that the other block is not empty apart from the terminator.
   BasicBlock::iterator BBI(OtherBB->getTerminator());
-  BranchInst *OtherBr = dyn_cast<BranchInst>(BBI);
-  if (!OtherBr || BBI == OtherBB->begin())
+  if (BBI == OtherBB->begin())
     return false;
 
   auto OtherStoreIsMergeable = [&](StoreInst *OtherStore) -> bool {
@@ -1591,7 +1590,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // If the other block ends in an unconditional branch, check for the 'if then
   // else' case. There is an instruction before the branch.
   StoreInst *OtherStore = nullptr;
-  if (OtherBr->isUnconditional()) {
+  if (isa<UncondBrInst>(BBI)) {
     --BBI;
     // Skip over debugging info and pseudo probes.
     while (BBI->isDebugOrPseudoInst()) {
@@ -1604,7 +1603,7 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
     OtherStore = dyn_cast<StoreInst>(BBI);
     if (!OtherStoreIsMergeable(OtherStore))
       return false;
-  } else {
+  } else if (auto *OtherBr = dyn_cast<CondBrInst>(BBI)) {
     // Otherwise, the other block ended with a conditional branch. If one of the
     // destinations is StoreBB, then we have the if/then case.
     if (OtherBr->getSuccessor(0) != StoreBB &&
@@ -1634,7 +1633,8 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
       if (I->mayReadFromMemory() || I->mayThrow() || I->mayWriteToMemory())
         return false;
     }
-  }
+  } else
+    return false;
 
   // Insert a PHI node now if we need it.
   Value *MergedVal = OtherStore->getValueOperand();

@@ -12,14 +12,14 @@
 define void @memset_pattern_i128_1_dynvalue(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1_dynvalue(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i128, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT:.*]]
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -40,14 +40,14 @@ define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
 define void @memset_pattern_i128_1_nz_as(ptr addrspace(1) %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1_nz_as(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i128, ptr addrspace(1) [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr addrspace(1) [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT:.*]]
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -89,8 +89,8 @@ define void @memset_pattern_i128_x(ptr %a, i64 %x) nounwind {
 define void @memset_pattern_i128_x_nonzero_as(ptr addrspace(10) %a, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_x_nonzero_as(
 ; CHECK-SAME: ptr addrspace(10) [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i128, ptr addrspace(10) [[A]], i64 [[TMP2]]
@@ -195,8 +195,8 @@ define void @memset_pattern_i64_x_fromptr(ptr %a, i64 %x) nounwind {
 define void @memset_pattern_i64_x_fromnonconstptr(ptr %a, i64 %x, ptr %p) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i64_x_fromnonconstptr(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[TMP3]]

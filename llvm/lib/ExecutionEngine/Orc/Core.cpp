@@ -1590,12 +1590,15 @@ ExecutionSession::~ExecutionSession() {
 Error ExecutionSession::endSession() {
   LLVM_DEBUG(dbgs() << "Ending ExecutionSession " << this << "\n");
 
+  WaitingOnGraph::OpRecorder *GOpRecorderToEnd = nullptr;
   auto JDsToRemove = runSessionLocked([&] {
 
 #ifdef EXPENSIVE_CHECKS
     verifySessionState("Entering ExecutionSession::endSession");
 #endif
 
+    if (SessionOpen)
+      GOpRecorderToEnd = GOpRecorder;
     SessionOpen = false;
     return JDs;
   });
@@ -1605,6 +1608,9 @@ Error ExecutionSession::endSession() {
   auto Err = removeJITDylibs(std::move(JDsToRemove));
 
   Err = joinErrors(std::move(Err), EPC->disconnect());
+
+  if (GOpRecorderToEnd)
+    GOpRecorderToEnd->recordEnd();
 
   return Err;
 }
@@ -2988,7 +2994,7 @@ Error ExecutionSession::OL_notifyEmitted(
           std::move(Residual), WaitingOnGraph::ContainerElementsMap()));
   }
 
-  auto SR = WaitingOnGraph::simplify(std::move(SNs));
+  auto SR = WaitingOnGraph::simplify(std::move(SNs), GOpRecorder);
 
   LLVM_DEBUG({
     dbgs() << "  Simplified dependencies:\n";
@@ -3106,6 +3112,10 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
   verifySessionState("entering ExecutionSession::IL_failSymbols");
 #endif
 
+  // Early out in the easy case.
+  if (SymbolsToFail.empty())
+    return {};
+
   JITDylib::AsynchronousSymbolQuerySet FailedQueries;
   auto Fail = [&](JITDylib *FailJD, NonOwningSymbolStringPtr FailSym) {
     auto I = FailJD->Symbols.find_as(FailSym);
@@ -3134,7 +3144,7 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
   for (auto &Sym : SymbolsToFail)
     JDToFail.insert(NonOwningSymbolStringPtr(Sym));
 
-  auto FailedSNs = G.fail(ToFail);
+  auto FailedSNs = G.fail(ToFail, GOpRecorder);
 
   for (auto &SN : FailedSNs) {
     for (auto &[FailJD, Defs] : SN->defs()) {

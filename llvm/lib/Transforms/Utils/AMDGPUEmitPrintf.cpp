@@ -119,7 +119,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   Builder.SetInsertPoint(Prev);
   auto CmpNull =
       Builder.CreateICmpEQ(Str, Constant::getNullValue(Str->getType()));
-  BranchInst::Create(Join, While, CmpNull, Prev);
+  Builder.CreateCondBr(CmpNull, Join, While);
 
   // Entry to the while loop.
   Builder.SetInsertPoint(While);
@@ -141,7 +141,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   Len = Builder.CreateAdd(Len, One);
 
   // Final join.
-  BranchInst::Create(Join, WhileDone);
+  UncondBrInst::Create(Join, WhileDone);
   Builder.SetInsertPoint(Join, Join->begin());
   auto LenPhi = Builder.CreatePHI(Len->getType(), 2);
   LenPhi->addIncoming(Len, WhileDone);
@@ -459,7 +459,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     BasicBlock *ArgPush = BasicBlock::Create(
         Ctx, "argpush.block", Builder.GetInsertBlock()->getParent());
 
-    BranchInst::Create(ArgPush, End, Cmp, Builder.GetInsertBlock());
+    CondBrInst::Create(Cmp, ArgPush, End, Builder.GetInsertBlock());
     Builder.SetInsertPoint(ArgPush);
 
     // Create controlDWord and store as the first entry, format as follows
@@ -512,7 +512,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
                               IsConstFmtStr);
 
     // End block, returns -1 on failure
-    BranchInst::Create(End, ArgPush);
+    UncondBrInst::Create(End, ArgPush);
     Builder.SetInsertPoint(End);
     return Builder.CreateSExt(Builder.CreateNot(Cmp), Int32Ty, "printf_result");
   }

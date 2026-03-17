@@ -348,6 +348,16 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
 }
 
 LogicalResult ForOp::verify() {
+  // Check that the body block has at least the induction variable argument.
+  // This must be checked before verifyRegions() and before any region trait
+  // verifiers (e.g. LoopLikeOpInterface) that call getRegionIterArgs(), to
+  // avoid crashing with an out-of-bounds drop_front on an empty arg list.
+  if (getBody()->getNumArguments() < getNumInductionVars())
+    return emitOpError("expected body to have at least ")
+           << getNumInductionVars()
+           << " argument(s) for the induction variable, but got "
+           << getBody()->getNumArguments();
+
   // Check that the number of init args and op results is the same.
   if (getInitArgs().size() != getNumResults())
     return emitOpError(
@@ -357,6 +367,12 @@ LogicalResult ForOp::verify() {
 }
 
 LogicalResult ForOp::verifyRegions() {
+  // Check that the body block has at least the induction variable argument.
+  if (getBody()->getNumArguments() < getNumInductionVars())
+    return emitOpError("expected body to have at least ")
+           << getNumInductionVars() << " argument(s) for the induction "
+           << "variable, but got " << getBody()->getNumArguments();
+
   // Check that the body defines as single block argument for the induction
   // variable.
   if (getInductionVar().getType() != getLowerBound().getType())

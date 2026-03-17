@@ -795,9 +795,9 @@ bool ForLoopIndexUseVisitor::VisitDeclStmt(DeclStmt *S) {
     AliasDecl = S;
     if (CurrStmtParent) {
       if (isa<IfStmt>(CurrStmtParent) || isa<WhileStmt>(CurrStmtParent) ||
-          isa<SwitchStmt>(CurrStmtParent))
+          isa<SwitchStmt>(CurrStmtParent)) {
         ReplaceWithAliasUse = true;
-      else if (isa<ForStmt>(CurrStmtParent)) {
+      } else if (isa<ForStmt>(CurrStmtParent)) {
         if (cast<ForStmt>(CurrStmtParent)->getConditionVariableDeclStmt() == S)
           ReplaceWithAliasUse = true;
         else

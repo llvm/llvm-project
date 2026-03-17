@@ -863,6 +863,10 @@ protected:
   llvm::DenseMap<const ObjCMethodDecl *, DirectMethodInfo>
       DirectMethodDefinitions;
 
+  /// MethodSelectorStubs - Map from (selector,class) to stub function.
+  llvm::DenseMap<std::pair<Selector, StringRef>, llvm::Function *>
+      MethodSelectorStubs;
+
   /// PropertyNames - uniqued method variable names.
   llvm::DenseMap<IdentifierInfo *, llvm::GlobalVariable *> PropertyNames;
 
@@ -1081,6 +1085,10 @@ public:
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
                                     const ObjCContainerDecl *CD) override;
+
+  llvm::Function *
+  GenerateMethodSelectorStub(Selector Sel, StringRef ClassName,
+                             const ObjCCommonTypesHelper &ObjCTypes);
 
   void GenerateProtocol(const ObjCProtocolDecl *PD) override;
 
@@ -2075,12 +2083,14 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
     const ObjCCommonTypesHelper &ObjCTypes) {
   CodeGenTypes &Types = CGM.getTypes();
   auto selTy = CGF.getContext().getObjCSelType();
+  llvm::Value *ReceiverValue =
+      llvm::PoisonValue::get(Types.ConvertType(Arg0Ty));
   llvm::Value *SelValue = llvm::UndefValue::get(Types.ConvertType(selTy));
 
   CallArgList ActualArgs;
   if (!IsSuper)
     Arg0 = CGF.Builder.CreateBitCast(Arg0, ObjCTypes.ObjectPtrTy);
-  ActualArgs.add(RValue::get(Arg0), Arg0Ty);
+  ActualArgs.add(RValue::get(ReceiverValue), Arg0Ty);
   if (!Method || !Method->isDirectMethod())
     ActualArgs.add(RValue::get(SelValue), selTy);
   ActualArgs.addFrom(CallArgs);
@@ -2097,6 +2107,7 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
       canMessageReceiverBeNull(CGF, Method, IsSuper, ClassReceiver, Arg0);
 
   bool RequiresNullCheck = false;
+  bool RequiresReceiverValue = true;
   bool RequiresSelValue = true;
 
   llvm::FunctionCallee Fn = nullptr;
@@ -2123,8 +2134,32 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
     // must be made for it.
     if (ReceiverCanBeNull && CGM.ReturnTypeUsesSRet(MSI.CallInfo))
       RequiresNullCheck = true;
-    Fn = (ObjCABI == 2) ? ObjCTypes.getSendFn2(IsSuper)
-                        : ObjCTypes.getSendFn(IsSuper);
+    // The class name that's used to create the class msgSend stub declaration.
+    StringRef ClassName;
+
+    // We cannot use class msgSend stubs in the following cases:
+    // 1. The class is annotated with `objc_class_stub` or
+    //    `objc_runtime_visible`.
+    // 2. The selector name contains a '$'.
+    if (CGM.getCodeGenOpts().ObjCMsgSendClassSelectorStubs && ClassReceiver &&
+        Method && Method->isClassMethod() &&
+        !ClassReceiver->hasAttr<ObjCClassStubAttr>() &&
+        !ClassReceiver->hasAttr<ObjCRuntimeVisibleAttr>() &&
+        Sel.getAsString().find('$') == std::string::npos)
+      ClassName = ClassReceiver->getObjCRuntimeNameAsString();
+
+    bool UseClassStub = ClassName.data();
+    // Try to use a selector stub declaration instead of objc_msgSend.
+    if (!IsSuper &&
+        (CGM.getCodeGenOpts().ObjCMsgSendSelectorStubs || UseClassStub)) {
+      Fn = GenerateMethodSelectorStub(Sel, ClassName, ObjCTypes);
+      // Selector stubs synthesize `_cmd` in the stub, so we don't have to.
+      RequiresReceiverValue = !UseClassStub;
+      RequiresSelValue = false;
+    } else {
+      Fn = (ObjCABI == 2) ? ObjCTypes.getSendFn2(IsSuper)
+                          : ObjCTypes.getSendFn(IsSuper);
+    }
   }
 
   // Cast function to proper signature
@@ -2144,6 +2179,10 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   if (RequiresNullCheck) {
     nullReturn.init(CGF, Arg0);
   }
+
+  // Pass the receiver value if it's needed.
+  if (RequiresReceiverValue)
+    ActualArgs[0] = CallArg(RValue::get(Arg0), Arg0Ty);
 
   // If a selector value needs to be passed, emit the load before the call.
   if (RequiresSelValue) {
@@ -2773,7 +2812,7 @@ llvm::Constant *CGObjCCommonMac::getBitmapBlockLayout(bool ComputeByrefLayout) {
     }
   }
 
-  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::ClassName,
+  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::LayoutBitMap,
                                      /*ForceNonFragileABI=*/true,
                                      /*NullTerminate=*/false);
   return getConstantGEP(VMContext, Entry, 0, 0);
@@ -4047,6 +4086,35 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
   }
 }
 
+llvm::Function *CGObjCCommonMac::GenerateMethodSelectorStub(
+    Selector Sel, StringRef ClassName, const ObjCCommonTypesHelper &ObjCTypes) {
+  assert((!ClassName.data() || !ClassName.empty()) &&
+         "class name cannot be an empty string");
+  auto Key = std::make_pair(Sel, ClassName);
+  auto I = MethodSelectorStubs.find(Key);
+
+  if (I != MethodSelectorStubs.end())
+    return I->second;
+
+  auto *FnTy = llvm::FunctionType::get(
+      ObjCTypes.ObjectPtrTy, {ObjCTypes.ObjectPtrTy, ObjCTypes.SelectorPtrTy},
+      /*IsVarArg=*/true);
+  std::string FnName;
+
+  if (ClassName.data())
+    FnName = ("objc_msgSendClass$" + Sel.getAsString() + "$_OBJC_CLASS_$_" +
+              llvm::Twine(ClassName))
+                 .str();
+  else
+    FnName = "objc_msgSend$" + Sel.getAsString();
+
+  auto *Fn =
+      cast<llvm::Function>(CGM.CreateRuntimeFunction(FnTy, FnName).getCallee());
+
+  MethodSelectorStubs.insert(std::make_pair(Key, Fn));
+  return Fn;
+}
+
 llvm::GlobalVariable *
 CGObjCCommonMac::CreateMetadataVar(Twine Name, ConstantStructBuilder &Init,
                                    StringRef Section, CharUnits Align,
@@ -4353,7 +4421,7 @@ void FragileHazards::emitHazardsInNewBlocks() {
   if (Locals.empty())
     return;
 
-  CGBuilderTy Builder(CGF, CGF.getLLVMContext());
+  CGBuilderTy Builder(CGF.CGM, CGF.getLLVMContext());
 
   // Iterate through all blocks, skipping those prior to the try.
   for (llvm::BasicBlock &BB : *CGF.CurFn) {
@@ -6374,6 +6442,8 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassObject(
   if (!CGM.getTriple().isOSBinFormatCOFF())
     if (HiddenVisibility)
       GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  if (CGM.getCodeGenOpts().ObjCMsgSendClassSelectorStubs && !isMetaclass)
+    CGM.addUsedGlobal(GV);
   return GV;
 }
 

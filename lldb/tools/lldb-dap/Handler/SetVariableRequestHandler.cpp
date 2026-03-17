@@ -67,7 +67,7 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   // is_permanent is false because debug console does not support
   // setVariable request.
   const var_ref_t new_var_ref =
-      dap.reference_storage.InsertVariable(variable, /*is_permanent=*/false);
+      dap.reference_storage.Insert(variable, /*is_permanent=*/false);
   if (variable.MightHaveChildren()) {
     body.variablesReference = new_var_ref;
     if (desc.type_obj.IsArrayType())
@@ -81,7 +81,7 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
     body.memoryReference = addr;
 
   if (ValuePointsToCode(variable))
-    body.valueLocationReference = new_var_ref.AsUInt32();
+    body.valueLocationReference = PackLocation(new_var_ref.AsUInt32(), true);
 
   // Also send invalidated event to signal client that some variables
   // (e.g. references) can be changed.

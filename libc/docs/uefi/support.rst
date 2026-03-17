@@ -6,10 +6,6 @@ Supported Functions
 
 .. include:: ../check.rst
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 The follow functions and headers are supported at least partially in
 UEFI. Some functions are implemented fully for UEFI.
 

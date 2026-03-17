@@ -435,6 +435,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_BF16_TO_FP:          return "strict_bf16_to_fp";
   case ISD::FP_TO_BF16:                 return "fp_to_bf16";
   case ISD::STRICT_FP_TO_BF16:          return "strict_fp_to_bf16";
+  case ISD::CONVERT_FROM_ARBITRARY_FP:  return "convert_from_arbitrary_fp";
   case ISD::LROUND:                     return "lround";
   case ISD::STRICT_LROUND:              return "strict_lround";
   case ISD::LLROUND:                    return "llround";
@@ -589,6 +590,11 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return "histogram";
+
+  case ISD::CTTZ_ELTS:
+    return "cttz_elts";
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    return "cttz_elts_zero_poison";
 
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     return "find_last_active";

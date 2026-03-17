@@ -72,24 +72,13 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
   size_t num_synthetic_frames = 0;
   // Use the provider to generate frames lazily.
   if (m_provider) {
-    // Get starting index under lock.
-    uint32_t start_idx = 0;
-    {
-      std::shared_lock<std::shared_mutex> guard(m_list_mutex);
-      start_idx = m_frames.size();
-    }
-
     // Keep fetching until we reach end_idx or the provider returns an error.
-    for (uint32_t idx = start_idx; idx <= end_idx; idx++) {
+    for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
       if (allow_interrupt &&
           m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
         return true;
 
-      // Call Python WITHOUT holding lock - prevents deadlock.
       auto frame_or_err = m_provider->GetFrameAtIndex(idx);
-
-      // Acquire lock to modify m_frames.
-      std::unique_lock<std::shared_mutex> guard(m_list_mutex);
 
       if (!frame_or_err) {
         // Provider returned error - we've reached the end.
@@ -424,10 +413,6 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
     FetchOnlyConcreteFramesUpTo(end_idx);
     return false;
   }
-
-  // Release lock before FetchFramesUpTo which may call Python.
-  // FetchFramesUpTo will acquire locks as needed.
-  guard.unlock();
 
   // We're adding concrete and inlined frames now:
   was_interrupted = FetchFramesUpTo(end_idx, allow_interrupt);

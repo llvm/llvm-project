@@ -6,17 +6,17 @@
 
 #include "Inputs/cuda.h"
 
-// CHECK: cir.func {{.*}} @[[CSTUB:__device_stub__ckernel]]()
+// CHECK: cir.func {{.*}} @[[CSTUB:__device_stub__ckernel]]() attributes {cu.kernel_name = #cir.cu.kernel_name<ckernel>}
 // CHECK: cir.return
 // CHECK-NEXT: }
 extern "C" __global__ void ckernel() {}
 
-// CHECK: cir.func {{.*}} @_ZN2ns23__device_stub__nskernelEv()
+// CHECK: cir.func {{.*}} @_ZN2ns23__device_stub__nskernelEv() attributes {cu.kernel_name = #cir.cu.kernel_name<_ZN2ns8nskernelEv>}
 namespace ns {
 __global__ void nskernel() {}
 } // namespace ns
 
-// CHECK: cir.func {{.*}} @_Z25__device_stub__kernelfuncIiEvv()
+// CHECK: cir.func {{.*}} @_Z25__device_stub__kernelfuncIiEvv() attributes {cu.kernel_name = #cir.cu.kernel_name<_Z10kernelfuncIiEvv>}
 template <class T>
 __global__ void kernelfunc() {}
 template __global__ void kernelfunc<int>();

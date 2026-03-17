@@ -541,36 +541,6 @@ static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
   }
 }
 
-// Do a preorder traversal of the CFG starting from the BB |Start|.
-// point. Calls |op| on each basic block encountered during the traversal.
-void visit(MachineFunction &MF, MachineBasicBlock &Start,
-           std::function<void(MachineBasicBlock *)> op) {
-  std::stack<MachineBasicBlock *> ToVisit;
-  SmallPtrSet<MachineBasicBlock *, 8> Seen;
-
-  ToVisit.push(&Start);
-  Seen.insert(ToVisit.top());
-  while (ToVisit.size() != 0) {
-    MachineBasicBlock *MBB = ToVisit.top();
-    ToVisit.pop();
-
-    op(MBB);
-
-    for (auto Succ : MBB->successors()) {
-      if (Seen.contains(Succ))
-        continue;
-      ToVisit.push(Succ);
-      Seen.insert(Succ);
-    }
-  }
-}
-
-// Do a preorder traversal of the CFG starting from the given function's entry
-// point. Calls |op| on each basic block encountered during the traversal.
-void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
-  visit(MF, *MF.begin(), std::move(op));
-}
-
 bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();

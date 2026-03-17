@@ -1180,7 +1180,7 @@ void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
         // which is the last def.
         // Incoming value can only change if there is a block def, and in that
         // case, it's the last block def in the list.
-        if (auto *BlockDefs = getWritableBlockDefs(BB))
+        if (auto *BlockDefs = getBlockDefs(BB))
           IncomingVal = &*BlockDefs->rbegin();
       } else
         IncomingVal = renameBlock(BB, IncomingVal, RenameAllUses);
@@ -1357,7 +1357,7 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     DenseMap<MemoryLocOrCall, MemlocStackInfo> &LocStackInfo) {
 
   /// If no accesses, nothing to do.
-  MemorySSA::AccessList *Accesses = MSSA->getWritableBlockAccesses(BB);
+  MemorySSA::AccessList *Accesses = MSSA->getBlockAccesses(BB);
   if (Accesses == nullptr)
     return;
 
@@ -1649,7 +1649,7 @@ void MemorySSA::insertIntoListsForBlock(MemoryAccess *NewAccess,
 
 void MemorySSA::insertIntoListsBefore(MemoryAccess *What, const BasicBlock *BB,
                                       AccessList::iterator InsertPt) {
-  auto *Accesses = getWritableBlockAccesses(BB);
+  auto *Accesses = getBlockAccesses(BB);
   bool WasEnd = InsertPt == Accesses->end();
   Accesses->insert(AccessList::iterator(InsertPt), What);
   if (!isa<MemoryUse>(What)) {

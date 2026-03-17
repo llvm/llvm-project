@@ -297,7 +297,8 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
       continue;
 
     Type *NewTy = legalizeType(GV.getValueType());
-    Constant *LegalizedInitializer = legalizeConstant(GV.getInitializer());
+    Constant *LegalizedInitializer =
+        GV.hasInitializer() ? legalizeConstant(GV.getInitializer()) : nullptr;
 
     // Use an empty name for now, we will update it in the
     // following step.
