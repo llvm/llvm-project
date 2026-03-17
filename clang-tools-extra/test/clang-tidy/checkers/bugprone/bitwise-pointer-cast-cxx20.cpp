@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s bugprone-bitwise-pointer-cast %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s bugprone-bitwise-pointer-cast %t
 
 void memcpy(void* to, void* dst, unsigned long long size)
 {

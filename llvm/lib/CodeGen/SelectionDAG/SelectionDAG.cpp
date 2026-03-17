@@ -4743,17 +4743,21 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
   case ISD::SRL: {
     // A logical right-shift of a constant sign-bit will have exactly
     // one bit set.
-    auto *C = isConstOrConstSplat(Val.getOperand(0));
+    auto *C = isConstOrConstSplat(Val.getOperand(0), DemandedElts);
     if (C && C->getAPIntValue().isSignMask())
       return true;
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
-                                  Depth + 1) &&
-           isKnownNeverZero(Val, Depth);
+    return (OrZero || isKnownNeverZero(Val, DemandedElts, Depth)) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
+                                  Depth + 1);
   }
 
   case ISD::ROTL:
   case ISD::ROTR:
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
+                                  Depth + 1);
+  case ISD::BSWAP:
+  case ISD::BITREVERSE:
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
                                   Depth + 1);
 
   case ISD::SMIN:
@@ -4780,6 +4784,30 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     // vscale(power-of-two) is a power-of-two
     return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
                                   Depth + 1);
+
+  case ISD::VECTOR_SHUFFLE: {
+    assert(!Val.getValueType().isScalableVector());
+    // Demanded elements with undef shuffle mask elements are unknown
+    // - we cannot guarantee they are a power of two, so return false.
+    APInt DemandedLHS, DemandedRHS;
+    const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Val);
+    assert(NumElts == SVN->getMask().size() && "Unexpected vector size");
+    if (!getShuffleDemandedElts(NumElts, SVN->getMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS))
+      return false;
+
+    // All demanded elements from LHS must be known power of two.
+    if (!!DemandedLHS && !isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedLHS,
+                                                 OrZero, Depth + 1))
+      return false;
+
+    // All demanded elements from RHS must be known power of two.
+    if (!!DemandedRHS && !isKnownToBeAPowerOfTwo(Val.getOperand(1), DemandedRHS,
+                                                 OrZero, Depth + 1))
+      return false;
+
+    return true;
+  }
   }
 
   // More could be done here, though the above checks are enough
@@ -5964,7 +5992,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
   assert(!DemandedElts.isZero() && "No demanded elements");
 
   // If we're told that NaNs won't happen, assume they won't.
-  if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
+  if (Op->getFlags().hasNoNaNs())
     return true;
 
   if (Depth >= MaxRecursionDepth)
@@ -6252,13 +6280,15 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
 
   case ISD::SHL: {
     if (Op->getFlags().hasNoSignedWrap() || Op->getFlags().hasNoUnsignedWrap())
-      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
+    KnownBits ValKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // 1 << X is never zero.
     if (ValKnown.One[0])
       return true;
     // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1)
+                       .getMaxValue();
     if (MaxCnt.ult(ValKnown.getBitWidth()) &&
         !ValKnown.One.shl(MaxCnt).isZero())
       return true;
@@ -6313,7 +6343,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   case ISD::BSWAP:
   case ISD::CTPOP:
   case ISD::ABS:
-    return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
   case ISD::SRA:
   case ISD::SRL: {
@@ -6341,19 +6371,19 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
 
   case ISD::ADD:
     if (Op->getFlags().hasNoUnsignedWrap())
-      if (isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
-          isKnownNeverZero(Op.getOperand(0), Depth + 1))
+      if (isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
+          isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1))
         return true;
     // TODO: There are a lot more cases we can prove for add.
     break;
 
   case ISD::SUB: {
     if (isNullConstant(Op.getOperand(0)))
-      return isKnownNeverZero(Op.getOperand(1), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1);
 
-    std::optional<bool> ne =
-        KnownBits::ne(computeKnownBits(Op.getOperand(0), Depth + 1),
-                      computeKnownBits(Op.getOperand(1), Depth + 1));
+    std::optional<bool> ne = KnownBits::ne(
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1),
+        computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1));
     return ne && *ne;
   }
 

@@ -272,7 +272,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
 
   // Check scheduled(), setScheduled().
   EXPECT_FALSE(N0->scheduled());
-  N0->setScheduled(true);
+  N0->setScheduled();
   EXPECT_TRUE(N0->scheduled());
 }
 
@@ -867,7 +867,7 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
     sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
     DAG.extend({S2, S2});
     auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
-    S2N->setScheduled(true);
+    S2N->setScheduled();
 
     DAG.extend({S1, S1});
     auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
@@ -1017,7 +1017,7 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %arg) {
   EXPECT_EQ(S1MemN->getNumUnscheduledSuccs(), 1u);
   EXPECT_EQ(S2MemN->getNumUnscheduledSuccs(), 0u);
   // Mark S2 as scheduled and erase it.
-  S2MemN->setScheduled(true);
+  S2MemN->setScheduled();
   S2->eraseFromParent();
   EXPECT_EQ(DAG.getNode(S2), nullptr);
   // Check that we did not update S1's UnscheduledSuccs
@@ -1189,4 +1189,98 @@ define void @foo(i8 %v0, i8 %v1) {
   // Restore it: %add0 is now used by %add1.
   Add1->setOperand(0, Add0);
   EXPECT_EQ(N0->getNumUnscheduledSuccs(), 1u);
+}
+
+// Make sure we maintain the unscheduled succs when the use-def edges cross the
+// DAG boundaries, i.e., when have an external user.
+TEST_F(DependencyGraphTest, MaintainUnscheduledSuccsExtUser) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, %v1
+  %add1 = add i8 %add0, %v1
+  %extUser = add i8 %v0, 0   ; This is not in the DAG
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *Arg0 = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *ExtUser = cast<sandboxir::BinaryOperator>(&*It++);
+  // DAG does not contain extUser
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Add0, Add1});
+  auto *Add0N = DAG.getNode(Add0);
+  EXPECT_EQ(DAG.getNode(ExtUser), nullptr);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+
+  // Adding the use Add0->ExtUser shouldn't change Add's unscheduled succs.
+  ExtUser->setOperand(0, Add0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  ExtUser->setOperand(0, Arg0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+
+  // Same with RUOW.
+  ExtUser->replaceUsesOfWith(Arg0, Add0);
+  EXPECT_EQ(ExtUser->getOperand(0), Add0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  ExtUser->setOperand(0, Arg0);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+}
+
+// Don't udpate the unscheduled succs if nodes have already been scheduled.
+TEST_F(DependencyGraphTest, MaintainUnscheduledSuccsWhenScheduled) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0) {
+  %add0 = add i8 %v0, 0
+  %add1 = add i8 %v0, 1
+  %modify = add i8 %add0, 1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Modify = cast<sandboxir::BinaryOperator>(&*It++);
+  // DAG contains all Add0, Add1 and Modify
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Add0, Add1, Modify});
+  auto *Add0N = DAG.getNode(Add0);
+  auto *Add1N = DAG.getNode(Add1);
+  // Mark Add0N and Add1N as scheduled.
+#ifndef NDEBUG
+  EXPECT_TRUE(Add0N->validUnscheduledSuccs());
+#endif
+  Add0N->setScheduled();
+#ifndef NDEBUG
+  EXPECT_FALSE(Add0N->validUnscheduledSuccs());
+  EXPECT_DEATH(Add0N->getNumUnscheduledSuccs(), ".*");
+#endif
+
+#ifndef NDEBUG
+  EXPECT_TRUE(Add1N->validUnscheduledSuccs());
+#endif
+  Add1N->setScheduled();
+#ifndef NDEBUG
+  EXPECT_FALSE(Add1N->validUnscheduledSuccs());
+  EXPECT_DEATH(Add1N->getNumUnscheduledSuccs(), ".*");
+#endif
+
+  // Change Modify's operand and make sure we won't update Add0N's or Add1N's
+  // unscheduled succs.
+  Modify->setOperand(0, Add1);
+#ifndef NDEBUG
+  EXPECT_FALSE(Add0N->validUnscheduledSuccs());
+  EXPECT_DEATH(Add0N->getNumUnscheduledSuccs(), ".*");
+  EXPECT_FALSE(Add1N->validUnscheduledSuccs());
+  EXPECT_DEATH(Add1N->getNumUnscheduledSuccs(), ".*");
+#endif
 }

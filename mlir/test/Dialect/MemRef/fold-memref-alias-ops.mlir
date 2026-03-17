@@ -171,10 +171,31 @@ func.func @fold_rank_reducing_subview_with_load
 // CHECK-SAME:   %[[ARG15:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG16:[a-zA-Z0-9_]+]]: index
 //  CHECK-DAG:   %[[I0:.+]] = affine.apply #[[MAP]]()[%[[ARG1]], %[[ARG13]], %[[ARG7]]]
-//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG3]], %[[ARG14]], %[[ARG9]]]
-//  CHECK-DAG:   %[[I3:.+]] = affine.apply #[[MAP]]()[%[[ARG4]], %[[ARG15]], %[[ARG10]]]
-//  CHECK-DAG:   %[[I4:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG16]], %[[ARG11]]]
-//      CHECK:   memref.load %[[ARG0]][%[[I0]], %[[ARG2]], %[[I2]], %[[I3]], %[[I4]], %[[ARG6]]]
+//  CHECK-DAG:   %[[I1:.+]] = affine.apply #[[MAP]]()[%[[ARG2]], %[[ARG14]], %[[ARG8]]]
+//  CHECK-DAG:   %[[I2:.+]] = affine.apply #[[MAP]]()[%[[ARG4]], %[[ARG15]], %[[ARG10]]]
+//  CHECK-DAG:   %[[I3:.+]] = affine.apply #[[MAP]]()[%[[ARG5]], %[[ARG16]], %[[ARG11]]]
+//      CHECK:   memref.load %[[ARG0]][%[[I0]], %[[I1]], %[[ARG3]], %[[I2]], %[[I3]], %[[ARG6]]]
+
+// -----
+
+func.func @fold_rank_reducing_subview_1x8x1x3_to_1x8x3_drop_middle_unit_dim(
+    %arg0 : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>,
+    %arg1 : index, %arg2 : index, %arg3 : index, %arg4 : index) -> f32 {
+  %c0 = arith.constant 0 : index
+  %0 = memref.subview %arg0[0, 0, 0, 0][1, 8, 1, 3][1, 1, 1, 1]
+      : memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>> to
+        memref<1x8x3xf32, strided<[?, ?, ?], offset: ?>>
+  %1 = memref.load %0[%c0, %arg1, %arg2] : memref<1x8x3xf32, strided<[?, ?, ?], offset: ?>>
+  return %1 : f32
+}
+//      CHECK: func @fold_rank_reducing_subview_1x8x1x3_to_1x8x3_drop_middle_unit_dim
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?x?x?xf32, strided<[?, ?, ?, ?], offset: ?>>
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG4:[a-zA-Z0-9_]+]]: index
+//  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
+//      CHECK:   memref.load %[[ARG0]][%[[C0]], %[[ARG1]], %[[C0]], %[[ARG2]]]
 
 // -----
 

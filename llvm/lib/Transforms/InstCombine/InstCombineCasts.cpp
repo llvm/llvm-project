@@ -1077,6 +1077,11 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       if (match(Src, m_Xor(m_Value(X), m_Value(Y))))
         return new ICmpInst(ICmpInst::ICMP_NE, X, Y);
     }
+
+    if (match(Src,
+              m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(m_One(), m_Value(X)))))
+      return new ICmpInst(ICmpInst::ICMP_EQ, X,
+                          ConstantInt::getNullValue(SrcTy));
   }
 
   Value *A, *B;

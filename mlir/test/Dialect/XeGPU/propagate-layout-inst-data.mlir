@@ -238,9 +238,9 @@ func.func @scatter_ops_chunksize_slice(%src: memref<1024xf32>) {
 gpu.module @test {
 // CHECK-LABEL: func.func @insert_strided_slice_inst_data_no_packing(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x32xf32>) {
-// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 16]>} dense<1.000000e+00> : vector<4x16xf32>
-// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 16]>} dense<0.000000e+00> : vector<8x32xf32>
-// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [1, 16]>, offsets = [0, 0], strides = [1, 1]} : vector<4x16xf32> into vector<8x32xf32>
+// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [4, 16]>} dense<1.000000e+00> : vector<4x16xf32>
+// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [4, 16]>} dense<0.000000e+00> : vector<8x32xf32>
+// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [4, 16]>, offsets = [0, 0], strides = [1, 1]} : vector<4x16xf32> into vector<8x32xf32>
 // CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]][{{.*}}] : memref<8x32xf32> -> !xegpu.tensor_desc<8x32xf32, #xegpu.layout<inst_data = [8, 16]>>
 // CHECK: xegpu.store_nd %[[INSERT]], %[[TDESC]] <{layout = #xegpu.layout<inst_data = [8, 16]>}> : vector<8x32xf32>, !xegpu.tensor_desc<8x32xf32, #xegpu.layout<inst_data = [8, 16]>>
 func.func @insert_strided_slice_inst_data_no_packing(%arg0: memref<8x32xf32>) {
@@ -258,9 +258,9 @@ func.func @insert_strided_slice_inst_data_no_packing(%arg0: memref<8x32xf32>) {
 gpu.module @test {
 // CHECK-LABEL: func.func @insert_strided_slice_inst_data_with_packing(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x64xi8>) {
-// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 64]>} dense<1> : vector<4x64xi8>
-// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 64]>} dense<0> : vector<8x64xi8>
-// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [1, 64]>, offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
+// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [4, 64]>} dense<1> : vector<4x64xi8>
+// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [4, 64]>} dense<0> : vector<8x64xi8>
+// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [4, 64]>, offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
 func.func @insert_strided_slice_inst_data_with_packing(%arg0: memref<8x64xi8>) {
   %c0 = arith.constant 0 : index
   %cst_small = arith.constant dense<1> : vector<4x64xi8>
@@ -332,5 +332,26 @@ gpu.module @test{
       xegpu.store_matrix %0, %arg0[%c0, %c0] : vector<2x1xf32>, !xegpu.mem_desc<64x128xf32>, index, index
     }
     return
+  }
+}
+
+// -----
+gpu.module @test{
+  // CHECK-LABEL: broadcast_both_leadingdims_innerdims
+  // CHECK: arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 1, 16]>} dense<true> : vector<2x2x6x32xi1>
+  // CHECK: arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 1, 16]>} dense<1.000000e+00> : vector<2x2x6x32xf32>
+  // CHECK: vector.step {layout_result_0 = #xegpu.slice<#xegpu.slice<#xegpu.layout<inst_data = [1, 1, 1, 1]>, dims = [0, 1]>, dims = [1]>} : vector<6xindex>
+  // CHECK: vector.shape_cast {{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 1, 1]>, dims = [0, 1]>} : vector<6xindex> to vector<6x1xindex>
+  // CHECK: vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 1, 16]>} : vector<6x1xindex> to vector<2x2x6x32xindex>
+  gpu.func @broadcast_both_leadingdims_innerdims(%arg0: memref<32x2x192xf32>, %arg1: memref<32x2x192xf32>, %arg2: memref<32x2x192xf32>) kernel attributes {known_block_size = array<i32: 768, 1, 1>, known_grid_size = array<i32: 16, 1, 1>} {
+    %cst = arith.constant dense<true> : vector<2x2x6x32xi1>
+    %cst_0 = arith.constant dense<1.000000e+00> : vector<2x2x6x32xf32>
+    %intptr = memref.extract_aligned_pointer_as_index %arg2 : memref<32x2x192xf32> -> index
+    %0 = arith.index_cast %intptr : index to i64
+    %1 = vector.step : vector<6xindex>
+    %2 = vector.shape_cast %1 : vector<6xindex> to vector<6x1xindex>
+    %3 = vector.broadcast %2 : vector<6x1xindex> to vector<2x2x6x32xindex>
+    xegpu.store %cst_0, %0[%3], %cst <{layout = #xegpu.layout<inst_data = [1, 1, 1, 16]>}> : vector<2x2x6x32xf32>, i64, vector<2x2x6x32xindex>, vector<2x2x6x32xi1>
+    gpu.return
   }
 }

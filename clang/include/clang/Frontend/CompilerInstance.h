@@ -197,6 +197,14 @@ class CompilerInstance : public ModuleLoader {
   /// Force an output buffer.
   std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
 
+  using GenModuleActionWrapperFunc =
+      std::function<std::unique_ptr<FrontendAction>(
+          const FrontendOptions &, std::unique_ptr<FrontendAction>)>;
+
+  /// An optional callback function used to wrap all FrontendActions
+  /// produced to generate imported modules before they are executed.
+  GenModuleActionWrapperFunc GenModuleActionWrapper;
+
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
 public:
@@ -738,11 +746,6 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  std::string getSpecificModuleCachePath(StringRef ContextHash);
-  std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(getInvocation().computeContextHash());
-  }
-
   /// Create the AST context.
   void createASTContext();
 
@@ -957,6 +960,14 @@ public:
   GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override;
 
   bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override;
+
+  void setGenModuleActionWrapper(GenModuleActionWrapperFunc Wrapper) {
+    GenModuleActionWrapper = Wrapper;
+  }
+
+  GenModuleActionWrapperFunc getGenModuleActionWrapper() const {
+    return GenModuleActionWrapper;
+  }
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));

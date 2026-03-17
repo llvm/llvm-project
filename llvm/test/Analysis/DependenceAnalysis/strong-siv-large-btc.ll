@@ -29,7 +29,7 @@ define void @strong_siv_large_btc(ptr %A) {
 ; CHECK-STRONG-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-STRONG-SIV-NEXT:    da analyze - none!
 ; CHECK-STRONG-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-STRONG-SIV-NEXT:    da analyze - consistent output [-1]!
+; CHECK-STRONG-SIV-NEXT:    da analyze - output [-1]!
 ; CHECK-STRONG-SIV-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
 ; CHECK-STRONG-SIV-NEXT:    da analyze - none!
 ;

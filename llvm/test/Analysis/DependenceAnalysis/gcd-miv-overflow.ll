@@ -24,7 +24,7 @@
 define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-ALL-LABEL: 'gcdmiv_coef_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-ALL-NEXT:    da analyze - consistent output [0]!
+; CHECK-ALL-NEXT:    da analyze - output [0]!
 ; CHECK-ALL-NEXT:    Runtime Assumptions:
 ; CHECK-ALL-NEXT:    Compare predicate: (3 * %m) ne) 0
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
@@ -34,11 +34,11 @@ define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ;
 ; CHECK-GCD-MIV-LABEL: 'gcdmiv_coef_ovfl'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*|<]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   %step = mul i64 3, %m
@@ -89,11 +89,11 @@ define void @gcdmiv_delta_ovfl(ptr %A) {
 ;
 ; CHECK-GCD-MIV-LABEL: 'gcdmiv_delta_ovfl'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*|<]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   br label %loop.header
@@ -150,11 +150,11 @@ define void @gcdmiv_const_ovfl(ptr %A, i64 %m) {
 ;
 ; CHECK-GCD-MIV-LABEL: 'gcdmiv_const_ovfl'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*|<]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-GCD-MIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   %m.3 = mul nsw i64 -3, %m

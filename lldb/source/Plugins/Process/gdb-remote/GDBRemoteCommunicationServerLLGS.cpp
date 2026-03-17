@@ -41,6 +41,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -800,8 +801,7 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
     struct ThreadStopInfo tid_stop_info;
     std::string description;
     if (!thread.GetStopReason(tid_stop_info, description))
-      return llvm::make_error<llvm::StringError>(
-          "failed to get stop reason", llvm::inconvertibleErrorCode());
+      return llvm::createStringError("failed to get stop reason");
 
     const int signum = tid_stop_info.signo;
     if (log) {
@@ -2450,8 +2450,7 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   auto pid_tid = packet.GetPidTid(default_process ? default_process->GetID()
                                                   : LLDB_INVALID_PROCESS_ID);
   if (!pid_tid)
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(), "Malformed thread-id"));
+    return SendErrorResponse(llvm::createStringError("Malformed thread-id"));
 
   lldb::pid_t pid = pid_tid->first;
   lldb::tid_t tid = pid_tid->second;
@@ -2459,15 +2458,14 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   if (pid == StringExtractorGDBRemote::AllProcesses)
     return SendUnimplementedResponse("Selecting all processes not supported");
   if (pid == LLDB_INVALID_PROCESS_ID)
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(), "No current process and no PID provided"));
+    return SendErrorResponse(
+        llvm::createStringError("No current process and no PID provided"));
 
   // Check the process ID and find respective process instance.
   auto new_process_it = m_debugged_processes.find(pid);
   if (new_process_it == m_debugged_processes.end())
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(),
-        llvm::formatv("No process with PID {0} debugged", pid)));
+    return SendErrorResponse(
+        llvm::createStringErrorV("No process with PID {0} debugged", pid));
 
   // Ensure we have the given thread when not specifying -1 (all threads) or 0
   // (any thread).
@@ -4133,8 +4131,7 @@ GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
   auto pid_tid = packet.GetPidTid(m_current_process ? m_current_process->GetID()
                                                     : LLDB_INVALID_PROCESS_ID);
   if (!pid_tid)
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(), "Malformed thread-id"));
+    return SendErrorResponse(llvm::createStringError("Malformed thread-id"));
 
   lldb::pid_t pid = pid_tid->first;
   lldb::tid_t tid = pid_tid->second;
@@ -4142,8 +4139,8 @@ GDBRemoteCommunicationServerLLGS::Handle_T(StringExtractorGDBRemote &packet) {
   // Technically, this would also be caught by the PID check but let's be more
   // explicit about the error.
   if (pid == LLDB_INVALID_PROCESS_ID)
-    return SendErrorResponse(llvm::make_error<StringError>(
-        inconvertibleErrorCode(), "No current process and no PID provided"));
+    return SendErrorResponse(
+        llvm::createStringError("No current process and no PID provided"));
 
   // Check the process ID and find respective process instance.
   auto new_process_it = m_debugged_processes.find(pid);

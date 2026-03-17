@@ -13,14 +13,14 @@
 
 define void @memset_1(ptr %a, i128 %value) nounwind {
 ; RV32-BOTH-LABEL: memset_1:
-; RV32-BOTH:       # %bb.0: # %loadstoreloop.preheader
+; RV32-BOTH:       # %bb.0:
 ; RV32-BOTH-NEXT:    li a2, 0
 ; RV32-BOTH-NEXT:    lw a3, 0(a1)
 ; RV32-BOTH-NEXT:    lw a4, 4(a1)
 ; RV32-BOTH-NEXT:    lw a5, 8(a1)
 ; RV32-BOTH-NEXT:    lw a1, 12(a1)
 ; RV32-BOTH-NEXT:    li a6, 0
-; RV32-BOTH-NEXT:  .LBB0_1: # %loadstoreloop
+; RV32-BOTH-NEXT:  .LBB0_1: # %memset.pattern-expansion-main-body
 ; RV32-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-BOTH-NEXT:    slli a7, a2, 4
 ; RV32-BOTH-NEXT:    addi a2, a2, 1
@@ -33,19 +33,19 @@ define void @memset_1(ptr %a, i128 %value) nounwind {
 ; RV32-BOTH-NEXT:    sw a5, 8(a7)
 ; RV32-BOTH-NEXT:    sw a1, 12(a7)
 ; RV32-BOTH-NEXT:    beqz t0, .LBB0_1
-; RV32-BOTH-NEXT:  # %bb.2: # %split
+; RV32-BOTH-NEXT:  # %bb.2: # %memset.pattern-post-expansion
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: memset_1:
-; RV64-BOTH:       # %bb.0: # %loadstoreloop.preheader
+; RV64-BOTH:       # %bb.0:
 ; RV64-BOTH-NEXT:    addi a3, a0, 16
-; RV64-BOTH-NEXT:  .LBB0_1: # %loadstoreloop
+; RV64-BOTH-NEXT:  .LBB0_1: # %memset.pattern-expansion-main-body
 ; RV64-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-BOTH-NEXT:    sd a1, 0(a0)
 ; RV64-BOTH-NEXT:    sd a2, 8(a0)
 ; RV64-BOTH-NEXT:    addi a0, a0, 16
 ; RV64-BOTH-NEXT:    bne a0, a3, .LBB0_1
-; RV64-BOTH-NEXT:  # %bb.2: # %split
+; RV64-BOTH-NEXT:  # %bb.2: # %memset.pattern-post-expansion
 ; RV64-BOTH-NEXT:    ret
   tail call void @llvm.experimental.memset.pattern(ptr align 8 %a, i128 %value, i64 1, i1 0)
   ret void
@@ -53,7 +53,7 @@ define void @memset_1(ptr %a, i128 %value) nounwind {
 
 define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-LABEL: memset_1_noalign:
-; RV32:       # %bb.0: # %loadstoreloop.preheader
+; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
 ; RV32-NEXT:    sw s0, 28(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 24(sp) # 4-byte Folded Spill
@@ -79,7 +79,7 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    srli s1, a1, 24
 ; RV32-NEXT:    srli s2, a1, 16
 ; RV32-NEXT:    srli s3, a1, 8
-; RV32-NEXT:  .LBB1_1: # %loadstoreloop
+; RV32-NEXT:  .LBB1_1: # %memset.pattern-expansion-main-body
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    slli s4, a2, 4
 ; RV32-NEXT:    addi a2, a2, 1
@@ -104,7 +104,7 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    sb s2, 14(s4)
 ; RV32-NEXT:    sb s1, 15(s4)
 ; RV32-NEXT:    beqz s5, .LBB1_1
-; RV32-NEXT:  # %bb.2: # %split
+; RV32-NEXT:  # %bb.2: # %memset.pattern-post-expansion
 ; RV32-NEXT:    lw s0, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s2, 20(sp) # 4-byte Folded Reload
@@ -115,7 +115,7 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: memset_1_noalign:
-; RV64:       # %bb.0: # %loadstoreloop.preheader
+; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -32
 ; RV64-NEXT:    sd s0, 24(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s1, 16(sp) # 8-byte Folded Spill
@@ -135,7 +135,7 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-NEXT:    srli s0, a2, 24
 ; RV64-NEXT:    srli s1, a2, 16
 ; RV64-NEXT:    srli s2, a2, 8
-; RV64-NEXT:  .LBB1_1: # %loadstoreloop
+; RV64-NEXT:  .LBB1_1: # %memset.pattern-expansion-main-body
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    sb a7, 4(a0)
 ; RV64-NEXT:    sb a6, 5(a0)
@@ -155,7 +155,7 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-NEXT:    sb s0, 11(a0)
 ; RV64-NEXT:    addi a0, a0, 16
 ; RV64-NEXT:    bne a0, a3, .LBB1_1
-; RV64-NEXT:  # %bb.2: # %split
+; RV64-NEXT:  # %bb.2: # %memset.pattern-post-expansion
 ; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
@@ -163,14 +163,14 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-NEXT:    ret
 ;
 ; RV32-FAST-LABEL: memset_1_noalign:
-; RV32-FAST:       # %bb.0: # %loadstoreloop.preheader
+; RV32-FAST:       # %bb.0:
 ; RV32-FAST-NEXT:    li a2, 0
 ; RV32-FAST-NEXT:    lw a3, 0(a1)
 ; RV32-FAST-NEXT:    lw a4, 4(a1)
 ; RV32-FAST-NEXT:    lw a5, 8(a1)
 ; RV32-FAST-NEXT:    lw a1, 12(a1)
 ; RV32-FAST-NEXT:    li a6, 0
-; RV32-FAST-NEXT:  .LBB1_1: # %loadstoreloop
+; RV32-FAST-NEXT:  .LBB1_1: # %memset.pattern-expansion-main-body
 ; RV32-FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-FAST-NEXT:    slli a7, a2, 4
 ; RV32-FAST-NEXT:    addi a2, a2, 1
@@ -183,19 +183,19 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV32-FAST-NEXT:    sw a5, 8(a7)
 ; RV32-FAST-NEXT:    sw a1, 12(a7)
 ; RV32-FAST-NEXT:    beqz t0, .LBB1_1
-; RV32-FAST-NEXT:  # %bb.2: # %split
+; RV32-FAST-NEXT:  # %bb.2: # %memset.pattern-post-expansion
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: memset_1_noalign:
-; RV64-FAST:       # %bb.0: # %loadstoreloop.preheader
+; RV64-FAST:       # %bb.0:
 ; RV64-FAST-NEXT:    addi a3, a0, 16
-; RV64-FAST-NEXT:  .LBB1_1: # %loadstoreloop
+; RV64-FAST-NEXT:  .LBB1_1: # %memset.pattern-expansion-main-body
 ; RV64-FAST-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-FAST-NEXT:    sd a1, 0(a0)
 ; RV64-FAST-NEXT:    sd a2, 8(a0)
 ; RV64-FAST-NEXT:    addi a0, a0, 16
 ; RV64-FAST-NEXT:    bne a0, a3, .LBB1_1
-; RV64-FAST-NEXT:  # %bb.2: # %split
+; RV64-FAST-NEXT:  # %bb.2: # %memset.pattern-post-expansion
 ; RV64-FAST-NEXT:    ret
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 %value, i64 1, i1 0)
   ret void
@@ -203,14 +203,14 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 
 define void @memset_4(ptr %a, i128 %value) nounwind {
 ; RV32-BOTH-LABEL: memset_4:
-; RV32-BOTH:       # %bb.0: # %loadstoreloop.preheader
+; RV32-BOTH:       # %bb.0:
 ; RV32-BOTH-NEXT:    li a2, 0
 ; RV32-BOTH-NEXT:    lw a3, 0(a1)
 ; RV32-BOTH-NEXT:    lw a4, 4(a1)
 ; RV32-BOTH-NEXT:    lw a5, 8(a1)
 ; RV32-BOTH-NEXT:    lw a1, 12(a1)
 ; RV32-BOTH-NEXT:    li a6, 0
-; RV32-BOTH-NEXT:  .LBB2_1: # %loadstoreloop
+; RV32-BOTH-NEXT:  .LBB2_1: # %memset.pattern-expansion-main-body
 ; RV32-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-BOTH-NEXT:    slli a7, a2, 4
 ; RV32-BOTH-NEXT:    addi a2, a2, 1
@@ -225,19 +225,19 @@ define void @memset_4(ptr %a, i128 %value) nounwind {
 ; RV32-BOTH-NEXT:    sw a5, 8(a7)
 ; RV32-BOTH-NEXT:    sw a1, 12(a7)
 ; RV32-BOTH-NEXT:    bnez t0, .LBB2_1
-; RV32-BOTH-NEXT:  # %bb.2: # %split
+; RV32-BOTH-NEXT:  # %bb.2: # %memset.pattern-post-expansion
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: memset_4:
-; RV64-BOTH:       # %bb.0: # %loadstoreloop.preheader
+; RV64-BOTH:       # %bb.0:
 ; RV64-BOTH-NEXT:    addi a3, a0, 64
-; RV64-BOTH-NEXT:  .LBB2_1: # %loadstoreloop
+; RV64-BOTH-NEXT:  .LBB2_1: # %memset.pattern-expansion-main-body
 ; RV64-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-BOTH-NEXT:    sd a1, 0(a0)
 ; RV64-BOTH-NEXT:    sd a2, 8(a0)
 ; RV64-BOTH-NEXT:    addi a0, a0, 16
 ; RV64-BOTH-NEXT:    bne a0, a3, .LBB2_1
-; RV64-BOTH-NEXT:  # %bb.2: # %split
+; RV64-BOTH-NEXT:  # %bb.2: # %memset.pattern-post-expansion
 ; RV64-BOTH-NEXT:    ret
   tail call void @llvm.experimental.memset.pattern(ptr align 8 %a, i128 %value, i64 4, i1 0)
   ret void
@@ -248,7 +248,7 @@ define void @memset_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; RV32-BOTH:       # %bb.0:
 ; RV32-BOTH-NEXT:    or a4, a2, a3
 ; RV32-BOTH-NEXT:    beqz a4, .LBB3_5
-; RV32-BOTH-NEXT:  # %bb.1: # %loadstoreloop.preheader
+; RV32-BOTH-NEXT:  # %bb.1: # %memset.pattern-expansion-main-body.preheader
 ; RV32-BOTH-NEXT:    li a4, 0
 ; RV32-BOTH-NEXT:    lw a5, 0(a1)
 ; RV32-BOTH-NEXT:    lw a6, 4(a1)
@@ -256,11 +256,11 @@ define void @memset_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; RV32-BOTH-NEXT:    lw a1, 12(a1)
 ; RV32-BOTH-NEXT:    li t0, 0
 ; RV32-BOTH-NEXT:    j .LBB3_3
-; RV32-BOTH-NEXT:  .LBB3_2: # %loadstoreloop
+; RV32-BOTH-NEXT:  .LBB3_2: # %memset.pattern-expansion-main-body
 ; RV32-BOTH-NEXT:    # in Loop: Header=BB3_3 Depth=1
 ; RV32-BOTH-NEXT:    sltu t1, t0, a3
 ; RV32-BOTH-NEXT:    beqz t1, .LBB3_5
-; RV32-BOTH-NEXT:  .LBB3_3: # %loadstoreloop
+; RV32-BOTH-NEXT:  .LBB3_3: # %memset.pattern-expansion-main-body
 ; RV32-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-BOTH-NEXT:    slli t1, a4, 4
 ; RV32-BOTH-NEXT:    addi a4, a4, 1
@@ -275,22 +275,22 @@ define void @memset_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; RV32-BOTH-NEXT:  # %bb.4: # in Loop: Header=BB3_3 Depth=1
 ; RV32-BOTH-NEXT:    sltu t1, a4, a2
 ; RV32-BOTH-NEXT:    bnez t1, .LBB3_3
-; RV32-BOTH-NEXT:  .LBB3_5: # %split
+; RV32-BOTH-NEXT:  .LBB3_5: # %memset.pattern-post-expansion
 ; RV32-BOTH-NEXT:    ret
 ;
 ; RV64-BOTH-LABEL: memset_x:
 ; RV64-BOTH:       # %bb.0:
 ; RV64-BOTH-NEXT:    beqz a3, .LBB3_3
-; RV64-BOTH-NEXT:  # %bb.1: # %loadstoreloop.preheader
+; RV64-BOTH-NEXT:  # %bb.1: # %memset.pattern-expansion-main-body.preheader
 ; RV64-BOTH-NEXT:    li a4, 0
-; RV64-BOTH-NEXT:  .LBB3_2: # %loadstoreloop
+; RV64-BOTH-NEXT:  .LBB3_2: # %memset.pattern-expansion-main-body
 ; RV64-BOTH-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-BOTH-NEXT:    sd a1, 0(a0)
 ; RV64-BOTH-NEXT:    sd a2, 8(a0)
 ; RV64-BOTH-NEXT:    addi a4, a4, 1
 ; RV64-BOTH-NEXT:    addi a0, a0, 16
 ; RV64-BOTH-NEXT:    bltu a4, a3, .LBB3_2
-; RV64-BOTH-NEXT:  .LBB3_3: # %split
+; RV64-BOTH-NEXT:  .LBB3_3: # %memset.pattern-post-expansion
 ; RV64-BOTH-NEXT:    ret
   tail call void @llvm.experimental.memset.pattern(ptr align 8 %a, i128 %value, i64 %x, i1 0)
   ret void

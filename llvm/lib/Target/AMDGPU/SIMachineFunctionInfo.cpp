@@ -93,20 +93,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     MinNumAGPRs = MinNumAGPRAttr;
   }
 
-  if (AMDGPU::isChainCC(CC)) {
-    // Chain functions don't receive an SP from their caller, but are free to
-    // set one up. For now, we can use s32 to match what amdgpu_gfx functions
-    // would use if called, but this can be revisited.
-    // FIXME: Only reserve this if we actually need it.
-    StackPtrOffsetReg = AMDGPU::SGPR32;
-
-    ScratchRSrcReg = AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51;
-
-    ArgInfo.PrivateSegmentBuffer =
-        ArgDescriptor::createRegister(ScratchRSrcReg);
-
-    ImplicitArgPtr = false;
-  } else if (!isEntryFunction()) {
+  if (!isEntryFunction()) {
     if (CC != CallingConv::AMDGPU_Gfx &&
         CC != CallingConv::AMDGPU_Gfx_WholeWave)
       ArgInfo = AMDGPUFunctionArgInfo::FixedABIFunctionInfo;
@@ -117,13 +104,16 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (!ST.hasFlatScratchEnabled()) {
       // Non-entry functions have no special inputs for now, other registers
       // required for scratch access.
-      ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+      ScratchRSrcReg = AMDGPU::isChainCC(CC)
+                           ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                           : ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
 
       ArgInfo.PrivateSegmentBuffer =
         ArgDescriptor::createRegister(ScratchRSrcReg);
     }
 
-    if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr"))
+    if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr") &&
+        !AMDGPU::isChainCC(CC))
       ImplicitArgPtr = true;
   } else {
     ImplicitArgPtr = false;

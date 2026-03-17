@@ -68,6 +68,7 @@ def CIR_Dialect : Dialect {
     // difference, but one that reflects Classic Codegen.
     static llvm::StringRef getNoBuiltinsAttrName() { return "nobuiltins"; }
     static llvm::StringRef getNoBuiltinAttrName() { return "nobuiltin"; }
+    static llvm::StringRef getBuiltinAttrName() { return "builtin"; }
     static llvm::StringRef getTrapFuncNameAttrName() { return "trap_func_name"; }
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }

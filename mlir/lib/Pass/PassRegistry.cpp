@@ -1022,7 +1022,9 @@ LogicalResult PassPipelineCLParser::addToPipeline(
   for (auto &passIt : impl->passList) {
     if (failed(passIt.registryEntry->addToPipeline(pm, passIt.options,
                                                    errorHandler)))
-      return failure();
+      return errorHandler("failed to add `" +
+                          passIt.registryEntry->getPassArgument() +
+                          "` with options `" + passIt.options + "`");
   }
   return success();
 }

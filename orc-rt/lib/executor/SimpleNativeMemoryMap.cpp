@@ -14,8 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/SimpleNativeMemoryMap.h"
-#include "orc-rt/SPSAllocAction.h"
-#include "orc-rt/SPSMemoryFlags.h"
 #include <sstream>
 
 #if defined(__APPLE__) || defined(__linux__)
@@ -25,47 +23,6 @@
 #endif
 
 namespace orc_rt {
-
-struct SPSSimpleNativeMemoryMapSegment;
-
-template <>
-class SPSSerializationTraits<
-    SPSSimpleNativeMemoryMapSegment,
-    SimpleNativeMemoryMap::InitializeRequest::Segment> {
-  using SPSType =
-      SPSTuple<SPSAllocGroup, SPSExecutorAddr, uint64_t, SPSSequence<char>>;
-
-public:
-  static bool
-  deserialize(SPSInputBuffer &IB,
-              SimpleNativeMemoryMap::InitializeRequest::Segment &S) {
-    AllocGroup AG;
-    ExecutorAddr Address;
-    uint64_t Size;
-    span<const char> Content;
-    if (!SPSType::AsArgList::deserialize(IB, AG, Address, Size, Content))
-      return false;
-    if (Size > std::numeric_limits<size_t>::max())
-      return false;
-    S = {AG, Address.toPtr<char *>(), static_cast<size_t>(Size), Content};
-    return true;
-  }
-};
-
-struct SPSSimpleNativeMemoryMapInitializeRequest;
-
-template <>
-class SPSSerializationTraits<SPSSimpleNativeMemoryMapInitializeRequest,
-                             SimpleNativeMemoryMap::InitializeRequest> {
-  using SPSType = SPSTuple<SPSSequence<SPSSimpleNativeMemoryMapSegment>,
-                           SPSSequence<SPSAllocActionPair>>;
-
-public:
-  static bool deserialize(SPSInputBuffer &IB,
-                          SimpleNativeMemoryMap::InitializeRequest &FR) {
-    return SPSType::AsArgList::deserialize(IB, FR.Segments, FR.AAPs);
-  }
-};
 
 void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
                                     size_t Size) {
@@ -222,14 +179,13 @@ void SimpleNativeMemoryMap::deinitializeMultiple(
                    Error::success());
 }
 
-void SimpleNativeMemoryMap::onDetach(ResourceManager::OnCompleteFn OnComplete) {
+void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete) {
   // Detach is a noop for now: we just retain all actions to run at shutdown
   // time.
-  OnComplete(Error::success());
+  OnComplete();
 }
 
-void SimpleNativeMemoryMap::onShutdown(
-    ResourceManager::OnCompleteFn OnComplete) {
+void SimpleNativeMemoryMap::onShutdown(Service::OnCompleteFn OnComplete) {
   // TODO: Establish a clear order to run deallocate actions across slabs,
   // object boundaries.
 
@@ -302,10 +258,10 @@ void SimpleNativeMemoryMap::deinitializeNext(
       NextAddr);
 }
 
-void SimpleNativeMemoryMap::shutdownNext(
-    ResourceManager::OnCompleteFn OnComplete, std::vector<void *> Bases) {
+void SimpleNativeMemoryMap::shutdownNext(Service::OnCompleteFn OnComplete,
+                                         std::vector<void *> Bases) {
   if (Bases.empty())
-    return OnComplete(Error::success());
+    return OnComplete();
 
   auto *Base = Bases.back();
   Bases.pop_back();
@@ -365,46 +321,6 @@ Error SimpleNativeMemoryMap::recordDeallocActions(
 
   SI->DeallocActions[Base] = std::move(DeallocActions);
   return Error::success();
-}
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes) {
-  using Sig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSSize);
-  SPSWrapperFunction<Sig>::handle(
-      S, CallId, Return, ArgBytes,
-      WrapperFunction::handleWithAsyncMethod(&SimpleNativeMemoryMap::reserve));
-}
-
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes) {
-  using Sig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
-  SPSWrapperFunction<Sig>::handle(S, CallId, Return, ArgBytes,
-                                  WrapperFunction::handleWithAsyncMethod(
-                                      &SimpleNativeMemoryMap::releaseMultiple));
-}
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes) {
-  using Sig = SPSExpected<SPSExecutorAddr>(
-      SPSExecutorAddr, SPSSimpleNativeMemoryMapInitializeRequest);
-  SPSWrapperFunction<Sig>::handle(S, CallId, Return, ArgBytes,
-                                  WrapperFunction::handleWithAsyncMethod(
-                                      &SimpleNativeMemoryMap::initialize));
-}
-
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes) {
-  using Sig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
-  SPSWrapperFunction<Sig>::handle(
-      S, CallId, Return, ArgBytes,
-      WrapperFunction::handleWithAsyncMethod(
-          &SimpleNativeMemoryMap::deinitializeMultiple));
 }
 
 } // namespace orc_rt
