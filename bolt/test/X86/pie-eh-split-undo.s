@@ -6,6 +6,7 @@
 # RUN: ld.lld --pie %t.o -o %t.exe -q
 # RUN: llvm-bolt %t.exe -o %t.out --data %t.fdata --split-functions --split-eh \
 # RUN:   --split-all-cold --print-after-lowering  --print-only=_start 2>&1 \
+# RUN:   --reorder-functions=exec-count \
 # RUN:   | FileCheck %s
 
 ## _start has two landing pads: one hot and one cold. Hence, BOLT will introduce

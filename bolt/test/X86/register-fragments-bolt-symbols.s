@@ -8,6 +8,7 @@
 ## Check warm fragment name matching (produced by cdsplit)
 # RUN: %clang %cflags %t.main.o -o %t.warm.exe -Wl,-q
 # RUN: llvm-bolt %t.warm.exe -o %t.warm.bolt --split-functions --split-strategy=cdsplit \
+# RUN:   --reorder-functions=exec-count \
 # RUN:   --call-scale=2 --data=%t.fdata --reorder-blocks=ext-tsp --enable-bat
 # RUN: link_fdata %s %t.warm.bolt %t.preagg.warm PREAGGWARM
 # PREAGGWARM: B X:0 #chain.warm# 1 0
@@ -24,7 +25,8 @@
 # RUN: llvm-objcopy --localize-symbol=chain %t.main.o
 # RUN: %clang %cflags %t.chain.o %t.main.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --split-strategy=randomN \
-# RUN:   --reorder-blocks=ext-tsp --enable-bat --bolt-seed=7 --data=%t.fdata
+# RUN:   --reorder-blocks=ext-tsp --enable-bat --bolt-seed=7 --data=%t.fdata \
+# RUN:   --reorder-functions=exec-count
 # RUN: llvm-objdump --syms %t.bolt | FileCheck %s --check-prefix=CHECK-SYMS
 
 # RUN: link_fdata %s %t.bolt %t.preagg PREAGG

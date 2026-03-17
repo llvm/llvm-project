@@ -3356,6 +3356,8 @@ void RewriteInstance::selectFunctionsToProcess() {
     std::vector<const BinaryFunction *> TopFunctions;
     for (auto &BFI : BC->getBinaryFunctions()) {
       const BinaryFunction &Function = BFI.second;
+      if (Function.isPLTFunction())
+        continue;
       if (ProfileReader->mayHaveProfileData(Function))
         TopFunctions.push_back(&Function);
     }
@@ -3486,7 +3488,7 @@ void RewriteInstance::selectFunctionsToProcess() {
   // - if the parent is processed, process the fragment(s) as well.
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
-    if (!Function.isFragment())
+    if (!Function.isFragment() || Function.isPLTFunction())
       continue;
     if (mustSkip(Function)) {
       for (BinaryFunction *Parent : Function.ParentFragments) {

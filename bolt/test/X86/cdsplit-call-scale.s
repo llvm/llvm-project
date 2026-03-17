@@ -15,10 +15,12 @@
 # RUN:         --data=%t.fdata --reorder-blocks=ext-tsp \
 # RUN:     2>&1 | FileCheck --check-prefix=LOWINCENTIVE %s
 # RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --split-strategy=cdsplit \
+# RUN:         --reorder-functions=exec-count \
 # RUN:         --call-scale=1.0 --print-split --print-only=chain \
 # RUN:         --data=%t.fdata --reorder-blocks=ext-tsp \
 # RUN:     2>&1 | FileCheck --check-prefix=MEDINCENTIVE %s
 # RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --split-strategy=cdsplit \
+# RUN:         --reorder-functions=exec-count \
 # RUN:         --call-scale=1000.0 --print-split --print-only=chain \
 # RUN:         --data=%t.fdata --reorder-blocks=ext-tsp \
 # RUN:     2>&1 | FileCheck --check-prefix=HIGHINCENTIVE %s
