@@ -133,7 +133,7 @@ protected:
   void spsReserve(OnCompleteFn &&OnComplete, size_t Size) {
     using SPSSig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSSize);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper"),
+        caller("orc_rt_sps_ci_SimpleNativeMemoryMap_reserve_sps_wrapper"),
         std::forward<OnCompleteFn>(OnComplete), SNMM.get(), Size);
   }
 
@@ -141,7 +141,8 @@ protected:
   void spsReleaseMultiple(OnCompleteFn &&OnComplete, span<void *> Addrs) {
     using SPSSig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper"),
+        caller(
+            "orc_rt_sps_ci_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper"),
         std::forward<OnCompleteFn>(OnComplete), SNMM.get(), Addrs);
   }
 
@@ -150,7 +151,7 @@ protected:
     using SPSSig = SPSExpected<SPSExecutorAddr>(
         SPSExecutorAddr, SPSSimpleNativeMemoryMapInitializeRequest);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper"),
+        caller("orc_rt_sps_ci_SimpleNativeMemoryMap_initialize_sps_wrapper"),
         std::forward<OnCompleteFn>(OnComplete), SNMM.get(), std::move(IR));
   }
 
@@ -158,7 +159,8 @@ protected:
   void spsDeinitializeMultiple(OnCompleteFn &&OnComplete, span<void *> Bases) {
     using SPSSig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddr>);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper"),
+        caller("orc_rt_sps_ci_SimpleNativeMemoryMap_deinitializeMultiple_sps_"
+               "wrapper"),
         std::forward<OnCompleteFn>(OnComplete), SNMM.get(), Bases);
   }
 
@@ -167,12 +169,14 @@ protected:
 };
 
 TEST_F(SimpleNativeMemoryMapSPSCITest, Registration) {
-  EXPECT_TRUE(CI.count("orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper"));
   EXPECT_TRUE(
-      CI.count("orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper"));
+      CI.count("orc_rt_sps_ci_SimpleNativeMemoryMap_reserve_sps_wrapper"));
   EXPECT_TRUE(CI.count(
-      "orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper"));
+      "orc_rt_sps_ci_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper"));
+  EXPECT_TRUE(
+      CI.count("orc_rt_sps_ci_SimpleNativeMemoryMap_initialize_sps_wrapper"));
+  EXPECT_TRUE(CI.count(
+      "orc_rt_sps_ci_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper"));
 }
 
 TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveAndRelease) {
