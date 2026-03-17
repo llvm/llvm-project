@@ -4,12 +4,12 @@
 define void @PR123333(ptr %in0, ptr %in1, ptr %in2, ptr %out0, ptr %out1) {
 ; CHECK-LABEL: PR123333:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    kmovq (%rsi), %k0
-; CHECK-NEXT:    kmovq (%rdi), %k1
-; CHECK-NEXT:    korq %k1, %k0, %k2
+; CHECK-NEXT:    kmovq (%rdi), %k0
+; CHECK-NEXT:    kmovq (%rsi), %k1
+; CHECK-NEXT:    korq %k0, %k1, %k2
 ; CHECK-NEXT:    vmovdqu8 (%rdx), %zmm0 {%k2} {z}
 ; CHECK-NEXT:    vmovdqu64 %zmm0, (%rcx)
-; CHECK-NEXT:    kandnq %k0, %k1, %k0
+; CHECK-NEXT:    kandnq %k1, %k0, %k0
 ; CHECK-NEXT:    knotq %k0, %k1
 ; CHECK-NEXT:    vmovdqu8 {{.*#+}} zmm0 {%k1} {z} = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; CHECK-NEXT:    vmovdqu64 %zmm0, (%r8)

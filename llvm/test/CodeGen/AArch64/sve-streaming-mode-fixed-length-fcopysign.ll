@@ -1026,19 +1026,19 @@ define void @test_copysign_v4f32_v4f64(ptr %ap, ptr %bp) {
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #64
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
-; NONEON-NOSVE-NEXT:    ldp q1, q0, [x1]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    ldr q2, [x0]
 ; NONEON-NOSVE-NEXT:    str q2, [sp]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr s0, [sp, #12]
-; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldp x10, x11, [sp, #32]
 ; NONEON-NOSVE-NEXT:    fabs s0, s0
-; NONEON-NOSVE-NEXT:    tst x9, #0x8000000000000000
+; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp, #16]
+; NONEON-NOSVE-NEXT:    tst x11, #0x8000000000000000
 ; NONEON-NOSVE-NEXT:    fneg s1, s0
 ; NONEON-NOSVE-NEXT:    fcsel s2, s1, s0, ne
 ; NONEON-NOSVE-NEXT:    ldr s0, [sp, #8]
-; NONEON-NOSVE-NEXT:    tst x8, #0x8000000000000000
-; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp, #16]
+; NONEON-NOSVE-NEXT:    tst x10, #0x8000000000000000
 ; NONEON-NOSVE-NEXT:    fabs s0, s0
 ; NONEON-NOSVE-NEXT:    fneg s1, s0
 ; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
@@ -1168,18 +1168,18 @@ define void @test_copysign_v4f64_v4f32(ptr %ap, ptr %bp) {
 ; NONEON-NOSVE-NEXT:    ldp q1, q2, [x0]
 ; NONEON-NOSVE-NEXT:    ldr q0, [x1]
 ; NONEON-NOSVE-NEXT:    stp q0, q2, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldp d0, d2, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldp d2, d0, [sp, #16]
 ; NONEON-NOSVE-NEXT:    str q1, [sp]
-; NONEON-NOSVE-NEXT:    stp d2, d0, [sp, #48]
+; NONEON-NOSVE-NEXT:    stp d0, d2, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #40]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldp w10, w11, [sp, #48]
 ; NONEON-NOSVE-NEXT:    fabs d0, d0
-; NONEON-NOSVE-NEXT:    tst w9, #0x80000000
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #56]
+; NONEON-NOSVE-NEXT:    tst w11, #0x80000000
 ; NONEON-NOSVE-NEXT:    fneg d1, d0
 ; NONEON-NOSVE-NEXT:    fcsel d2, d1, d0, ne
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #32]
-; NONEON-NOSVE-NEXT:    tst w8, #0x80000000
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #56]
+; NONEON-NOSVE-NEXT:    tst w10, #0x80000000
 ; NONEON-NOSVE-NEXT:    fabs d0, d0
 ; NONEON-NOSVE-NEXT:    fneg d1, d0
 ; NONEON-NOSVE-NEXT:    fcsel d0, d1, d0, ne
@@ -1244,14 +1244,14 @@ define void @test_copysign_v4f16_v4f32(ptr %ap, ptr %bp) {
 ; NONEON-NOSVE-NEXT:    str d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #14]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #24]
+; NONEON-NOSVE-NEXT:    ldp w10, w11, [sp, #24]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    tst w9, #0x80000000
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #16]
+; NONEON-NOSVE-NEXT:    tst w11, #0x80000000
 ; NONEON-NOSVE-NEXT:    fabs s0, s0
 ; NONEON-NOSVE-NEXT:    fneg s1, s0
 ; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
-; NONEON-NOSVE-NEXT:    tst w8, #0x80000000
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #16]
+; NONEON-NOSVE-NEXT:    tst w10, #0x80000000
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #12]
@@ -1331,19 +1331,19 @@ define void @test_copysign_v4f16_v4f64(ptr %ap, ptr %bp) {
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #64
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
-; NONEON-NOSVE-NEXT:    ldp q1, q0, [x1]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    ldr d2, [x0]
 ; NONEON-NOSVE-NEXT:    str d2, [sp, #8]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #14]
-; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldp x10, x11, [sp, #32]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    tst x9, #0x8000000000000000
+; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp, #16]
+; NONEON-NOSVE-NEXT:    tst x11, #0x8000000000000000
 ; NONEON-NOSVE-NEXT:    fabs s0, s0
 ; NONEON-NOSVE-NEXT:    fneg s1, s0
 ; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
-; NONEON-NOSVE-NEXT:    tst x8, #0x8000000000000000
-; NONEON-NOSVE-NEXT:    ldp x8, x9, [sp, #16]
+; NONEON-NOSVE-NEXT:    tst x10, #0x8000000000000000
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #12]
@@ -1421,19 +1421,21 @@ define void @test_copysign_v8f16_v8f32(ptr %ap, ptr %bp) {
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #64
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
-; NONEON-NOSVE-NEXT:    ldp q1, q0, [x1]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [x1]
 ; NONEON-NOSVE-NEXT:    ldr q2, [x0]
 ; NONEON-NOSVE-NEXT:    str q2, [sp]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #16]
+; NONEON-NOSVE-NEXT:    stp q0, q1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #14]
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #40]
+; NONEON-NOSVE-NEXT:    ldp w14, w15, [sp, #40]
 ; NONEON-NOSVE-NEXT:    fcvt s0, h0
-; NONEON-NOSVE-NEXT:    tst w9, #0x80000000
+; NONEON-NOSVE-NEXT:    ldp w12, w13, [sp, #32]
+; NONEON-NOSVE-NEXT:    tst w15, #0x80000000
+; NONEON-NOSVE-NEXT:    ldp w10, w11, [sp, #24]
 ; NONEON-NOSVE-NEXT:    fabs s0, s0
+; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #16]
 ; NONEON-NOSVE-NEXT:    fneg s1, s0
 ; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
-; NONEON-NOSVE-NEXT:    tst w8, #0x80000000
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #32]
+; NONEON-NOSVE-NEXT:    tst w14, #0x80000000
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #12]
@@ -1441,7 +1443,7 @@ define void @test_copysign_v8f16_v8f32(ptr %ap, ptr %bp) {
 ; NONEON-NOSVE-NEXT:    fabs s0, s0
 ; NONEON-NOSVE-NEXT:    fneg s1, s0
 ; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
-; NONEON-NOSVE-NEXT:    tst w9, #0x80000000
+; NONEON-NOSVE-NEXT:    tst w13, #0x80000000
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #60]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #10]
@@ -1449,8 +1451,7 @@ define void @test_copysign_v8f16_v8f32(ptr %ap, ptr %bp) {
 ; NONEON-NOSVE-NEXT:    fabs s0, s0
 ; NONEON-NOSVE-NEXT:    fneg s1, s0
 ; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
-; NONEON-NOSVE-NEXT:    tst w8, #0x80000000
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #24]
+; NONEON-NOSVE-NEXT:    tst w12, #0x80000000
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #58]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #8]
@@ -1458,7 +1459,7 @@ define void @test_copysign_v8f16_v8f32(ptr %ap, ptr %bp) {
 ; NONEON-NOSVE-NEXT:    fabs s0, s0
 ; NONEON-NOSVE-NEXT:    fneg s1, s0
 ; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
-; NONEON-NOSVE-NEXT:    tst w9, #0x80000000
+; NONEON-NOSVE-NEXT:    tst w11, #0x80000000
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #56]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #6]
@@ -1466,8 +1467,7 @@ define void @test_copysign_v8f16_v8f32(ptr %ap, ptr %bp) {
 ; NONEON-NOSVE-NEXT:    fabs s0, s0
 ; NONEON-NOSVE-NEXT:    fneg s1, s0
 ; NONEON-NOSVE-NEXT:    fcsel s0, s1, s0, ne
-; NONEON-NOSVE-NEXT:    tst w8, #0x80000000
-; NONEON-NOSVE-NEXT:    ldp w8, w9, [sp, #16]
+; NONEON-NOSVE-NEXT:    tst w10, #0x80000000
 ; NONEON-NOSVE-NEXT:    fcvt h0, s0
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #54]
 ; NONEON-NOSVE-NEXT:    ldr h0, [sp, #4]

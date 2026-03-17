@@ -17,8 +17,8 @@ define <16 x i16> @combine_vpermt2var_16i16_identity(<16 x i16> %x0, <16 x i16> 
 define <16 x i16> @combine_vpermt2var_16i16_identity_mask(<16 x i16> %x0, <16 x i16> %x1, i16 %m) {
 ; X86-LABEL: combine_vpermt2var_16i16_identity_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    vpermt2w %ymm0, %ymm1, %ymm0 {%k1} {z}
 ; X86-NEXT:    vpermw %ymm0, %ymm1, %ymm0 {%k1} {z}
 ; X86-NEXT:    retl

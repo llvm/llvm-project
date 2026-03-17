@@ -91,26 +91,25 @@ define <2 x i64> @pmullq_broadcast_128(<2 x i64> %a0, ptr %p1) {
 define <2 x i64> @pmullq_maskz_128(<2 x i64> %a0, <2 x i64> %a1, ptr %pmask) {
 ; ENABLE-LABEL: pmullq_maskz_128:
 ; ENABLE:       # %bb.0:
-; ENABLE-NEXT:    vpmullq %xmm1, %xmm0, %xmm2
-; ENABLE-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    kmovb (%rdi), %k1
+; ENABLE-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; ENABLE-NEXT:    vpmullq %xmm1, %xmm0, %xmm2
 ; ENABLE-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; ENABLE-NEXT:    vpaddq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 {%k1} # 16-byte Folded Reload
+; ENABLE-NEXT:    vpaddq %xmm2, %xmm0, %xmm0 {%k1}
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: pmullq_maskz_128:
 ; DISABLE:       # %bb.0:
-; DISABLE-NEXT:    vpmullq %xmm1, %xmm0, %xmm2
-; DISABLE-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    kmovb (%rdi), %k1
+; DISABLE-NEXT:    vpmullq %xmm1, %xmm0, %xmm2
 ; DISABLE-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; DISABLE-NEXT:    vpaddq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 {%k1} # 16-byte Folded Reload
+; DISABLE-NEXT:    vpaddq %xmm2, %xmm0, %xmm0 {%k1}
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %mask = load i8, ptr %pmask
@@ -211,26 +210,25 @@ define <4 x i64> @pmullq_broadcast_256(<4 x i64> %a0, ptr %p1) {
 define <4 x i64> @pmullq_maskz_256(<4 x i64> %a0, <4 x i64> %a1, ptr %pmask) {
 ; ENABLE-LABEL: pmullq_maskz_256:
 ; ENABLE:       # %bb.0:
-; ENABLE-NEXT:    vpmullq %ymm1, %ymm0, %ymm2
-; ENABLE-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    kmovb (%rdi), %k1
+; ENABLE-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; ENABLE-NEXT:    vpmullq %ymm1, %ymm0, %ymm2
 ; ENABLE-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
-; ENABLE-NEXT:    vpaddq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 {%k1} # 32-byte Folded Reload
+; ENABLE-NEXT:    vpaddq %ymm2, %ymm0, %ymm0 {%k1}
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: pmullq_maskz_256:
 ; DISABLE:       # %bb.0:
-; DISABLE-NEXT:    vpmullq %ymm1, %ymm0, %ymm2
-; DISABLE-NEXT:    vmovdqu %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    kmovb (%rdi), %k1
+; DISABLE-NEXT:    vpmullq %ymm1, %ymm0, %ymm2
 ; DISABLE-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
-; DISABLE-NEXT:    vpaddq {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 {%k1} # 32-byte Folded Reload
+; DISABLE-NEXT:    vpaddq %ymm2, %ymm0, %ymm0 {%k1}
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %mask = load i8, ptr %pmask
@@ -331,26 +329,25 @@ define <8 x i64> @pmullq_broadcast_512(<8 x i64> %a0, ptr %p1) {
 define <8 x i64> @pmullq_maskz_512(<8 x i64> %a0, <8 x i64> %a1, ptr %pmask) {
 ; ENABLE-LABEL: pmullq_maskz_512:
 ; ENABLE:       # %bb.0:
-; ENABLE-NEXT:    vpmullq %zmm1, %zmm0, %zmm2
-; ENABLE-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    kmovb (%rdi), %k1
+; ENABLE-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; ENABLE-NEXT:    vpmullq %zmm1, %zmm0, %zmm2
 ; ENABLE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
-; ENABLE-NEXT:    vpaddq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
+; ENABLE-NEXT:    vpaddq %zmm2, %zmm0, %zmm0 {%k1}
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: pmullq_maskz_512:
 ; DISABLE:       # %bb.0:
-; DISABLE-NEXT:    vpmullq %zmm1, %zmm0, %zmm2
-; DISABLE-NEXT:    vmovdqu64 %zmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    kmovb (%rdi), %k1
+; DISABLE-NEXT:    vpmullq %zmm1, %zmm0, %zmm2
 ; DISABLE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
-; DISABLE-NEXT:    vpaddq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
+; DISABLE-NEXT:    vpaddq %zmm2, %zmm0, %zmm0 {%k1}
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %mask = load i8, ptr %pmask

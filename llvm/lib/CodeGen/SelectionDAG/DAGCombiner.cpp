@@ -17323,7 +17323,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   // fold (conv (load x)) -> (load (conv*)x)
   // fold (conv (freeze (load x))) -> (freeze (load (conv*)x))
   // If the resultant load doesn't need a higher alignment than the original!
-  auto CastLoad = [this, &VT](SDValue N0, const SDLoc &DL) {
+  auto CastLoad = [this, &VT](SDValue N0) {
     if (N0.getOpcode() == ISD::AssertNoFPClass)
       N0 = N0.getOperand(0);
     if (!ISD::isNormalLoad(N0.getNode()) || !N0.hasOneUse())
@@ -17356,20 +17356,18 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
         LN0->getMemOperand()->clearRanges();
       }
     }
-    SDValue Load = DAG.getLoad(VT, DL, LN0->getChain(), LN0->getBasePtr(),
-                               LN0->getMemOperand());
-    // Preserve the original load's debug location, since the new load is
-    // semantically the same memory operation.
-    Load.getNode()->setDebugLoc(LN0->getDebugLoc());
+    SDValue Load =
+        DAG.getLoad(VT, SDLoc(LN0), LN0->getChain(), LN0->getBasePtr(),
+                    LN0->getMemOperand());
     DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
     return Load;
   };
 
-  if (SDValue NewLd = CastLoad(N0, SDLoc(N)))
+  if (SDValue NewLd = CastLoad(N0))
     return NewLd;
 
   if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse())
-    if (SDValue NewLd = CastLoad(N0.getOperand(0), SDLoc(N)))
+    if (SDValue NewLd = CastLoad(N0.getOperand(0)))
       return DAG.getFreeze(NewLd);
 
   if (SDValue V = foldBitcastedFPLogic(N, DAG, TLI))

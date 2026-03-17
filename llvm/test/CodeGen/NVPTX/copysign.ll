@@ -44,9 +44,9 @@ define float @fcopysign_f_d(float %a, double %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [fcopysign_f_d_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [fcopysign_f_d_param_1];
 ; CHECK-NEXT:    abs.f32 %r2, %r1;
 ; CHECK-NEXT:    neg.f32 %r3, %r2;
-; CHECK-NEXT:    ld.param.b64 %rd1, [fcopysign_f_d_param_1];
 ; CHECK-NEXT:    shr.u64 %rd2, %rd1, 63;
 ; CHECK-NEXT:    and.b64 %rd3, %rd2, 1;
 ; CHECK-NEXT:    setp.ne.b64 %p1, %rd3, 0;
@@ -67,9 +67,9 @@ define float @fcopysign_f_h(float %a, half %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [fcopysign_f_h_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_f_h_param_1];
 ; CHECK-NEXT:    abs.f32 %r2, %r1;
 ; CHECK-NEXT:    neg.f32 %r3, %r2;
-; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_f_h_param_1];
 ; CHECK-NEXT:    shr.u16 %rs2, %rs1, 15;
 ; CHECK-NEXT:    and.b16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs3, 0;
@@ -90,9 +90,9 @@ define double @fcopysign_d_f(double %a, float %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [fcopysign_d_f_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [fcopysign_d_f_param_1];
 ; CHECK-NEXT:    abs.f64 %rd2, %rd1;
 ; CHECK-NEXT:    neg.f64 %rd3, %rd2;
-; CHECK-NEXT:    ld.param.b32 %r1, [fcopysign_d_f_param_1];
 ; CHECK-NEXT:    shr.u32 %r2, %r1, 31;
 ; CHECK-NEXT:    and.b32 %r3, %r2, 1;
 ; CHECK-NEXT:    setp.ne.b32 %p1, %r3, 0;
@@ -113,9 +113,9 @@ define double @fcopysign_d_h(double %a, half %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [fcopysign_d_h_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_d_h_param_1];
 ; CHECK-NEXT:    abs.f64 %rd2, %rd1;
 ; CHECK-NEXT:    neg.f64 %rd3, %rd2;
-; CHECK-NEXT:    ld.param.b16 %rs1, [fcopysign_d_h_param_1];
 ; CHECK-NEXT:    shr.u16 %rs2, %rs1, 15;
 ; CHECK-NEXT:    and.b16 %rs3, %rs2, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs3, 0;

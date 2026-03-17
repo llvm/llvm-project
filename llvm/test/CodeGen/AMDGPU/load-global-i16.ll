@@ -542,9 +542,7 @@ define amdgpu_kernel void @global_load_v16i16(ptr addrspace(1) %out, ptr addrspa
 ; GCN-HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-HSA-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    s_add_u32 s4, s0, 16
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
-; GCN-HSA-NEXT:    s_addc_u32 s5, s1, 0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
 ; GCN-HSA-NEXT:    s_add_u32 s2, s2, 16
 ; GCN-HSA-NEXT:    s_addc_u32 s3, s3, 0
@@ -552,10 +550,12 @@ define amdgpu_kernel void @global_load_v16i16(ptr addrspace(1) %out, ptr addrspa
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-HSA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; GCN-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v11, s5
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v9, s1
-; GCN-HSA-NEXT:    v_mov_b32_e32 v10, s4
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v8, s0
+; GCN-HSA-NEXT:    s_add_u32 s0, s0, 16
+; GCN-HSA-NEXT:    s_addc_u32 s1, s1, 0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v11, s1
+; GCN-HSA-NEXT:    v_mov_b32_e32 v10, s0
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[10:11], v[0:3]
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(1)
@@ -584,52 +584,42 @@ define amdgpu_kernel void @global_load_v16i16(ptr addrspace(1) %out, ptr addrspa
 ;
 ; EG-LABEL: global_load_v16i16:
 ; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 0, @12, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 0 @8
-; EG-NEXT:    ALU 1, @13, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T2.X, 0
-; EG-NEXT:    TEX 0 @10
-; EG-NEXT:    ALU 3, @15, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
+; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 1 @6
+; EG-NEXT:    ALU 4, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T3.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T2.X, 1
 ; EG-NEXT:    CF_END
-; EG-NEXT:    Fetch clause starting at 8:
+; EG-NEXT:    Fetch clause starting at 6:
 ; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 0, #1
-; EG-NEXT:    Fetch clause starting at 10:
 ; EG-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 16, #1
-; EG-NEXT:    ALU clause starting at 12:
+; EG-NEXT:    ALU clause starting at 10:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
-; EG-NEXT:    ALU clause starting at 13:
-; EG-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:    ALU clause starting at 15:
-; EG-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
+; EG-NEXT:    ALU clause starting at 11:
+; EG-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR * T1.X, PV.W, literal.x,
+; EG-NEXT:     LSHR T2.X, PV.W, literal.x,
+; EG-NEXT:     LSHR * T3.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CM-LABEL: global_load_v16i16:
 ; CM:       ; %bb.0: ; %entry
-; CM-NEXT:    ALU 0, @12, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    TEX 0 @8
-; CM-NEXT:    ALU 1, @13, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    TEX 1 @6
+; CM-NEXT:    ALU 4, @11, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T3.X
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T2.X
-; CM-NEXT:    TEX 0 @10
-; CM-NEXT:    ALU 3, @15, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
 ; CM-NEXT:    CF_END
-; CM-NEXT:    Fetch clause starting at 8:
+; CM-NEXT:    Fetch clause starting at 6:
 ; CM-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 0, #1
-; CM-NEXT:    Fetch clause starting at 10:
 ; CM-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 16, #1
-; CM-NEXT:    ALU clause starting at 12:
+; CM-NEXT:    ALU clause starting at 10:
 ; CM-NEXT:     MOV * T0.X, KC0[2].Z,
-; CM-NEXT:    ALU clause starting at 13:
-; CM-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CM-NEXT:    ALU clause starting at 15:
-; CM-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.x,
-; CM-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; CM-NEXT:     LSHR * T1.X, PV.W, literal.x,
+; CM-NEXT:    ALU clause starting at 11:
+; CM-NEXT:     LSHR T2.X, KC0[2].Y, literal.x,
+; CM-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.y,
+; CM-NEXT:    2(2.802597e-45), 16(2.242078e-44)
+; CM-NEXT:     LSHR * T3.X, PV.W, literal.x,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   %ld = load <16 x i16>, ptr addrspace(1) %in
@@ -695,9 +685,7 @@ define amdgpu_kernel void @global_load_v16i16_align2(ptr addrspace(1) %in, ptr a
 ; GCN-HSA-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-HSA-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    s_add_u32 s4, s2, 16
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-HSA-NEXT:    s_addc_u32 s5, s3, 0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s0
 ; GCN-HSA-NEXT:    s_add_u32 s0, s0, 16
 ; GCN-HSA-NEXT:    s_addc_u32 s1, s1, 0
@@ -705,9 +693,11 @@ define amdgpu_kernel void @global_load_v16i16_align2(ptr addrspace(1) %in, ptr a
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-HSA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; GCN-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v11, s5
+; GCN-HSA-NEXT:    s_add_u32 s0, s2, 16
+; GCN-HSA-NEXT:    s_addc_u32 s1, s3, 0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v11, s1
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v9, s3
-; GCN-HSA-NEXT:    v_mov_b32_e32 v10, s4
+; GCN-HSA-NEXT:    v_mov_b32_e32 v10, s0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v8, s2
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[10:11], v[0:3]

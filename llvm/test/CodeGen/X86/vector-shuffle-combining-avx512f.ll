@@ -301,8 +301,8 @@ define <16 x float> @combine_vpermt2var_16f32_identity(<16 x float> %x0, <16 x f
 define <16 x float> @combine_vpermt2var_16f32_identity_mask(<16 x float> %x0, <16 x float> %x1, i16 %m) {
 ; X86-LABEL: combine_vpermt2var_16f32_identity_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    vpermt2ps %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    vpermps %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -587,8 +587,8 @@ define <16 x i32> @combine_vpermt2var_16i32_identity(<16 x i32> %x0, <16 x i32> 
 define <16 x i32> @combine_vpermt2var_16i32_identity_mask(<16 x i32> %x0, <16 x i32> %x1, i16 %m) {
 ; X86-LABEL: combine_vpermt2var_16i32_identity_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    vpermt2d %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    vpermd %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl

@@ -735,57 +735,57 @@ define void @uitofp_ld4_v32i16_to_v8f64(ptr nocapture noundef readonly %x, ptr n
 ; CHECK-NEXT:  LBB11_1: ; %vector.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x0, x8
-; CHECK-NEXT:    ldp q5, q4, [x9, #32]
-; CHECK-NEXT:    ldp q7, q6, [x9]
+; CHECK-NEXT:    ldp q4, q5, [x9, #32]
+; CHECK-NEXT:    ldp q6, q7, [x9]
 ; CHECK-NEXT:    add x9, x1, x8
 ; CHECK-NEXT:    add x8, x8, #64
-; CHECK-NEXT:    tbl.16b v16, { v4 }, v0
-; CHECK-NEXT:    tbl.16b v17, { v5 }, v0
-; CHECK-NEXT:    tbl.16b v21, { v4 }, v1
-; CHECK-NEXT:    tbl.16b v18, { v6 }, v0
-; CHECK-NEXT:    tbl.16b v19, { v7 }, v0
-; CHECK-NEXT:    tbl.16b v20, { v7 }, v1
-; CHECK-NEXT:    tbl.16b v22, { v5 }, v1
-; CHECK-NEXT:    tbl.16b v23, { v5 }, v2
-; CHECK-NEXT:    tbl.16b v24, { v4 }, v2
-; CHECK-NEXT:    tbl.16b v25, { v7 }, v2
-; CHECK-NEXT:    tbl.16b v5, { v5 }, v3
+; CHECK-NEXT:    tbl.16b v16, { v5 }, v0
+; CHECK-NEXT:    tbl.16b v17, { v4 }, v0
+; CHECK-NEXT:    tbl.16b v21, { v5 }, v1
+; CHECK-NEXT:    tbl.16b v18, { v7 }, v0
+; CHECK-NEXT:    tbl.16b v19, { v6 }, v0
+; CHECK-NEXT:    tbl.16b v20, { v6 }, v1
+; CHECK-NEXT:    tbl.16b v22, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v23, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v24, { v5 }, v2
+; CHECK-NEXT:    tbl.16b v25, { v6 }, v2
 ; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
-; CHECK-NEXT:    tbl.16b v7, { v7 }, v3
-; CHECK-NEXT:    tbl.16b v26, { v6 }, v1
-; CHECK-NEXT:    tbl.16b v27, { v6 }, v2
+; CHECK-NEXT:    tbl.16b v5, { v5 }, v3
 ; CHECK-NEXT:    tbl.16b v6, { v6 }, v3
+; CHECK-NEXT:    tbl.16b v26, { v7 }, v1
+; CHECK-NEXT:    tbl.16b v27, { v7 }, v2
+; CHECK-NEXT:    tbl.16b v7, { v7 }, v3
 ; CHECK-NEXT:    ucvtf.2d v17, v17
 ; CHECK-NEXT:    ucvtf.2d v16, v16
 ; CHECK-NEXT:    ucvtf.2d v19, v19
 ; CHECK-NEXT:    ucvtf.2d v18, v18
 ; CHECK-NEXT:    ucvtf.2d v22, v22
 ; CHECK-NEXT:    ucvtf.2d v23, v23
-; CHECK-NEXT:    ucvtf.2d v5, v5
+; CHECK-NEXT:    ucvtf.2d v4, v4
 ; CHECK-NEXT:    ucvtf.2d v21, v21
 ; CHECK-NEXT:    ucvtf.2d v24, v24
-; CHECK-NEXT:    ucvtf.2d v4, v4
+; CHECK-NEXT:    ucvtf.2d v5, v5
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 ; =8192
 ; CHECK-NEXT:    ucvtf.2d v20, v20
 ; CHECK-NEXT:    ucvtf.2d v25, v25
-; CHECK-NEXT:    ucvtf.2d v7, v7
+; CHECK-NEXT:    ucvtf.2d v6, v6
 ; CHECK-NEXT:    ucvtf.2d v26, v26
 ; CHECK-NEXT:    ucvtf.2d v27, v27
-; CHECK-NEXT:    ucvtf.2d v6, v6
+; CHECK-NEXT:    ucvtf.2d v7, v7
 ; CHECK-NEXT:    fadd.2d v17, v22, v17
-; CHECK-NEXT:    fadd.2d v5, v23, v5
+; CHECK-NEXT:    fadd.2d v4, v23, v4
 ; CHECK-NEXT:    fadd.2d v16, v21, v16
-; CHECK-NEXT:    fadd.2d v4, v24, v4
+; CHECK-NEXT:    fadd.2d v5, v24, v5
 ; CHECK-NEXT:    fadd.2d v19, v20, v19
-; CHECK-NEXT:    fadd.2d v7, v25, v7
+; CHECK-NEXT:    fadd.2d v6, v25, v6
 ; CHECK-NEXT:    fadd.2d v18, v26, v18
-; CHECK-NEXT:    fadd.2d v6, v27, v6
-; CHECK-NEXT:    fadd.2d v5, v17, v5
-; CHECK-NEXT:    fadd.2d v4, v16, v4
-; CHECK-NEXT:    fadd.2d v7, v19, v7
-; CHECK-NEXT:    fadd.2d v6, v18, v6
-; CHECK-NEXT:    stp q5, q4, [x9, #32]
-; CHECK-NEXT:    stp q7, q6, [x9]
+; CHECK-NEXT:    fadd.2d v7, v27, v7
+; CHECK-NEXT:    fadd.2d v4, v17, v4
+; CHECK-NEXT:    fadd.2d v5, v16, v5
+; CHECK-NEXT:    fadd.2d v6, v19, v6
+; CHECK-NEXT:    fadd.2d v7, v18, v7
+; CHECK-NEXT:    stp q4, q5, [x9, #32]
+; CHECK-NEXT:    stp q6, q7, [x9]
 ; CHECK-NEXT:    b.ne LBB11_1
 ; CHECK-NEXT:  ; %bb.2: ; %for.cond.cleanup
 ; CHECK-NEXT:    ret

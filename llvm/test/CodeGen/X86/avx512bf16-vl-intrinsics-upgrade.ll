@@ -78,8 +78,8 @@ entry:
 define <4 x i64> @test_mm256_maskz_cvtne2ps2bf16_256(<8 x float> %A, <8 x float> %B, i16 zeroext %U) local_unnamed_addr #1 {
 ; X86-LABEL: test_mm256_maskz_cvtne2ps2bf16_256:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vcvtne2ps2bf16 %ymm1, %ymm0, %ymm0 # encoding: [0x62,0xf2,0x7f,0x28,0x72,0xc1]
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vcvtne2ps2bf16 %ymm1, %ymm0, %ymm0 # encoding: [0x62,0xf2,0x7f,0x28,0x72,0xc1]
 ; X86-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf1,0xff,0xa9,0x6f,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -100,8 +100,8 @@ entry:
 define <4 x i64> @test_mm256_mask_cvtne2ps2bf16_256(<4 x i64> %C, i16 zeroext %U, <8 x float> %A, <8 x float> %B) local_unnamed_addr #1 {
 ; X86-LABEL: test_mm256_mask_cvtne2ps2bf16_256:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vcvtne2ps2bf16 %ymm2, %ymm1, %ymm1 # encoding: [0x62,0xf2,0x77,0x28,0x72,0xca]
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vcvtne2ps2bf16 %ymm2, %ymm1, %ymm1 # encoding: [0x62,0xf2,0x77,0x28,0x72,0xca]
 ; X86-NEXT:    vmovdqu16 %ymm1, %ymm0 {%k1} # encoding: [0x62,0xf1,0xff,0x29,0x6f,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;

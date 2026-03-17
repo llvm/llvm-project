@@ -146,9 +146,9 @@ define <4 x i64> @permq_maskz_256(<4 x i64> %a0, <4 x i64> %idx, ptr %mask) {
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
+; ENABLE-NEXT:    kmovb (%rdi), %k1
 ; ENABLE-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; ENABLE-NEXT:    vpermq %ymm0, %ymm1, %ymm2
-; ENABLE-NEXT:    kmovb (%rdi), %k1
 ; ENABLE-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; ENABLE-NEXT:    vpaddq %ymm2, %ymm0, %ymm0 {%k1}
 ; ENABLE-NEXT:    retq
@@ -158,8 +158,8 @@ define <4 x i64> @permq_maskz_256(<4 x i64> %a0, <4 x i64> %idx, ptr %mask) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vpermq %ymm0, %ymm1, %ymm2
 ; DISABLE-NEXT:    kmovb (%rdi), %k1
+; DISABLE-NEXT:    vpermq %ymm0, %ymm1, %ymm2
 ; DISABLE-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    vpaddq %ymm2, %ymm0, %ymm0 {%k1}
 ; DISABLE-NEXT:    retq
@@ -270,9 +270,9 @@ define <8 x i64> @permq_maskz_512(<8 x i64> %a0, <8 x i64> %idx, ptr %mask) {
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
+; ENABLE-NEXT:    kmovb (%rdi), %k1
 ; ENABLE-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; ENABLE-NEXT:    vpermq %zmm0, %zmm1, %zmm2
-; ENABLE-NEXT:    kmovb (%rdi), %k1
 ; ENABLE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; ENABLE-NEXT:    vpaddq %zmm2, %zmm0, %zmm0 {%k1}
 ; ENABLE-NEXT:    retq
@@ -282,8 +282,8 @@ define <8 x i64> @permq_maskz_512(<8 x i64> %a0, <8 x i64> %idx, ptr %mask) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vpermq %zmm0, %zmm1, %zmm2
 ; DISABLE-NEXT:    kmovb (%rdi), %k1
+; DISABLE-NEXT:    vpermq %zmm0, %zmm1, %zmm2
 ; DISABLE-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    vpaddq %zmm2, %zmm0, %zmm0 {%k1}
 ; DISABLE-NEXT:    retq
@@ -394,9 +394,9 @@ define <8 x i32> @permd_maskz_256(<8 x i32> %a0, <8 x i32> %idx, ptr %mask) {
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
+; ENABLE-NEXT:    kmovb (%rdi), %k1
 ; ENABLE-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; ENABLE-NEXT:    vpermd %ymm0, %ymm1, %ymm2
-; ENABLE-NEXT:    kmovb (%rdi), %k1
 ; ENABLE-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; ENABLE-NEXT:    vpaddd %ymm2, %ymm0, %ymm0 {%k1}
 ; ENABLE-NEXT:    retq
@@ -406,8 +406,8 @@ define <8 x i32> @permd_maskz_256(<8 x i32> %a0, <8 x i32> %idx, ptr %mask) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vpermd %ymm0, %ymm1, %ymm2
 ; DISABLE-NEXT:    kmovb (%rdi), %k1
+; DISABLE-NEXT:    vpermd %ymm0, %ymm1, %ymm2
 ; DISABLE-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    vpaddd %ymm2, %ymm0, %ymm0 {%k1}
 ; DISABLE-NEXT:    retq
@@ -517,9 +517,9 @@ define <16 x i32> @permd_maskz_512(<16 x i32> %a0, <16 x i32> %idx, ptr %mask) {
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
+; ENABLE-NEXT:    kmovw (%rdi), %k1
 ; ENABLE-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; ENABLE-NEXT:    vpermd %zmm0, %zmm1, %zmm2
-; ENABLE-NEXT:    kmovw (%rdi), %k1
 ; ENABLE-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; ENABLE-NEXT:    vpaddd %zmm2, %zmm0, %zmm0 {%k1}
 ; ENABLE-NEXT:    retq
@@ -529,8 +529,8 @@ define <16 x i32> @permd_maskz_512(<16 x i32> %a0, <16 x i32> %idx, ptr %mask) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vpermd %zmm0, %zmm1, %zmm2
 ; DISABLE-NEXT:    kmovw (%rdi), %k1
+; DISABLE-NEXT:    vpermd %zmm0, %zmm1, %zmm2
 ; DISABLE-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    vpaddd %zmm2, %zmm0, %zmm0 {%k1}
 ; DISABLE-NEXT:    retq

@@ -5838,30 +5838,30 @@ define <2 x bfloat> @low16hi16bits_v2bf16(ptr addrspace(1) %x0, ptr addrspace(1)
 ; GX900-LABEL: low16hi16bits_v2bf16:
 ; GX900:       ; %bb.0: ; %entry
 ; GX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GX900-NEXT:    global_load_dword v4, v[2:3], off
-; GX900-NEXT:    global_load_dword v5, v[0:1], off
+; GX900-NEXT:    global_load_dword v4, v[0:1], off
+; GX900-NEXT:    global_load_dword v5, v[2:3], off
 ; GX900-NEXT:    s_mov_b32 s4, 0xffff
 ; GX900-NEXT:    s_waitcnt vmcnt(0)
-; GX900-NEXT:    v_bfi_b32 v0, s4, v5, v4
+; GX900-NEXT:    v_bfi_b32 v0, s4, v4, v5
 ; GX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: low16hi16bits_v2bf16:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    global_load_dword v4, v[2:3], off
-; GFX942-NEXT:    global_load_dword v5, v[0:1], off
+; GFX942-NEXT:    global_load_dword v4, v[0:1], off
+; GFX942-NEXT:    global_load_dword v5, v[2:3], off
 ; GFX942-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_bfi_b32 v0, s0, v5, v4
+; GFX942-NEXT:    v_bfi_b32 v0, s0, v4, v5
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: low16hi16bits_v2bf16:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    global_load_dword v4, v[2:3], off
-; GFX10-NEXT:    global_load_dword v5, v[0:1], off
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_bfi_b32 v0, 0xffff, v5, v4
+; GFX10-NEXT:    v_bfi_b32 v0, 0xffff, v4, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: low16hi16bits_v2bf16:
@@ -5876,10 +5876,10 @@ define <2 x bfloat> @low16hi16bits_v2bf16(ptr addrspace(1) %x0, ptr addrspace(1)
 ; GFX11-FAKE16-LABEL: low16hi16bits_v2bf16:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    global_load_b32 v2, v[2:3], off
 ; GFX11-FAKE16-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-FAKE16-NEXT:    global_load_b32 v1, v[2:3], off
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_bfi_b32 v0, 0xffff, v0, v2
+; GFX11-FAKE16-NEXT:    v_bfi_b32 v0, 0xffff, v0, v1
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = load <2 x bfloat>, ptr addrspace(1) %x0, align 4

@@ -730,16 +730,15 @@ define <8 x float> @insertelement_v8f32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #64
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    mov w8, #1084227584 // =0x40a00000
-; NONEON-NOSVE-NEXT:    ldr q1, [x0, #16]
+; NONEON-NOSVE-NEXT:    ldp q0, q2, [x0]
 ; NONEON-NOSVE-NEXT:    str w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    ldr q0, [sp, #48]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [sp]
-; NONEON-NOSVE-NEXT:    ldr s1, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldr q1, [sp, #48]
+; NONEON-NOSVE-NEXT:    stp q2, q1, [sp]
+; NONEON-NOSVE-NEXT:    ldr s2, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr x8, [sp]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldr s1, [sp, #16]
 ; NONEON-NOSVE-NEXT:    str x8, [sp, #32]
-; NONEON-NOSVE-NEXT:    stp s1, s0, [sp, #40]
-; NONEON-NOSVE-NEXT:    ldr q0, [x0]
+; NONEON-NOSVE-NEXT:    stp s2, s1, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
@@ -818,14 +817,13 @@ define <4 x double> @insertelement_v4f64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #64
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    mov x8, #4617315517961601024 // =0x4014000000000000
-; NONEON-NOSVE-NEXT:    ldr q1, [x0, #16]
+; NONEON-NOSVE-NEXT:    ldp q0, q2, [x0]
 ; NONEON-NOSVE-NEXT:    str x8, [sp, #48]
-; NONEON-NOSVE-NEXT:    ldr q0, [sp, #48]
-; NONEON-NOSVE-NEXT:    stp q1, q0, [sp]
-; NONEON-NOSVE-NEXT:    ldr d1, [sp]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #16]
-; NONEON-NOSVE-NEXT:    stp d1, d0, [sp, #32]
-; NONEON-NOSVE-NEXT:    ldr q0, [x0]
+; NONEON-NOSVE-NEXT:    ldr q1, [sp, #48]
+; NONEON-NOSVE-NEXT:    stp q2, q1, [sp]
+; NONEON-NOSVE-NEXT:    ldr d2, [sp]
+; NONEON-NOSVE-NEXT:    ldr d1, [sp, #16]
+; NONEON-NOSVE-NEXT:    stp d2, d1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret

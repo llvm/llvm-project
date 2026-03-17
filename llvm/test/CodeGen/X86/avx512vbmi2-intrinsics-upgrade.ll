@@ -199,8 +199,8 @@ declare <64 x i8> @llvm.x86.avx512.mask.expand.b.512(<64 x i8> %data, <64 x i8> 
 define void @test_mask_compress_store_w_512(ptr %addr, <32 x i16> %data, i32 %mask) {
 ; X86-LABEL: test_mask_compress_store_w_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-NEXT:    vpcompressw %zmm0, (%eax) {%k1} # encoding: [0x62,0xf2,0xfd,0x49,0x63,0x00]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X86-NEXT:    retl # encoding: [0xc3]

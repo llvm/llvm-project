@@ -230,10 +230,10 @@ define dso_local void @qpCpsgn(ptr nocapture readonly %a, ptr nocapture readonly
 ;
 ; CHECK-P8-LABEL: qpCpsgn:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-P8-NEXT:    addi r4, r1, -16
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    addi r3, r1, -16
+; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    addi r3, r1, -32
 ; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    lbz r4, -1(r1)

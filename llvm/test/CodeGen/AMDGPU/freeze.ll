@@ -5409,21 +5409,21 @@ define void @freeze_i256(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-LABEL: freeze_i256:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[0:1]
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v2
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX8-NEXT:    s_waitcnt vmcnt(1)
-; GFX8-NEXT:    flat_store_dwordx4 v[2:3], v[4:7]
-; GFX8-NEXT:    s_waitcnt vmcnt(1)
-; GFX8-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-GISEL-LABEL: freeze_i256:
+; GFX8-GISEL:       ; %bb.0:
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GISEL-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GFX8-GISEL-NEXT:    flat_load_dwordx4 v[8:11], v[0:1]
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v0, vcc, 16, v2
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[4:7]
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: freeze_i256:
 ; GFX9-GISEL:       ; %bb.0:
