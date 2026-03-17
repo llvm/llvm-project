@@ -1,5 +1,6 @@
 set(files
   AllocAction.cpp
+  ControllerInterface.cpp
   Error.cpp
   QueueingTaskDispatcher.cpp
   RTTI.cpp
