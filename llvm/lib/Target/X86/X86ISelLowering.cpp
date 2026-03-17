@@ -54317,41 +54317,22 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // Pattern: store(trunc(load vXiY) to vXiZ) optimization
   SDValue Src;
   if (!St->isTruncatingStore() && Subtarget.hasAVX512()) {
-    // v4i16 -> v4i8
-    if (VT == MVT::v4i8 && TLI.isTruncStoreLegal(MVT::v4i32, MVT::v4i8) &&
-        sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(
-                                m_Value(Src, m_SpecificVT(MVT::v4i16)))))) &&
+    EVT SrcVT;
+    if (sd_match(StoredVal,
+                 m_OneUse(m_Trunc(m_OneUse(m_Value(Src, m_VT(SrcVT)))))) &&
         ISD::isNormalLoad(Src.getNode())) {
-      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v4i32, Src);
-      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
-                               MVT::v4i8, St->getMemOperand());
-    }
-    // v2i32 -> v2i8
-    if (VT == MVT::v2i8 && TLI.isTruncStoreLegal(MVT::v2i64, MVT::v2i8) &&
-        sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(
-                                m_Value(Src, m_SpecificVT(MVT::v2i32)))))) &&
-        ISD::isNormalLoad(Src.getNode())) {
-      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v2i64, Src);
-      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
-                               MVT::v2i8, St->getMemOperand());
-    }
-    // v2i32 -> v2i16
-    if (VT == MVT::v2i16 && TLI.isTruncStoreLegal(MVT::v2i64, MVT::v2i16) &&
-        sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(
-                                m_Value(Src, m_SpecificVT(MVT::v2i32)))))) &&
-        ISD::isNormalLoad(Src.getNode())) {
-      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v2i64, Src);
-      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
-                               MVT::v2i16, St->getMemOperand());
-    }
-    // v2i16 -> v2i8
-    if (VT == MVT::v2i8 && TLI.isTruncStoreLegal(MVT::v2i64, MVT::v2i8) &&
-        sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(
-                                m_Value(Src, m_SpecificVT(MVT::v2i16)))))) &&
-        ISD::isNormalLoad(Src.getNode())) {
-      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v2i64, Src);
-      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
-                               MVT::v2i8, St->getMemOperand());
+      MVT ExtVT;
+      if ((SrcVT == MVT::v4i16 && VT == MVT::v4i8) ||
+          (SrcVT == MVT::v2i32 && VT == MVT::v2i8) ||
+          (SrcVT == MVT::v2i32 && VT == MVT::v2i16) ||
+          (SrcVT == MVT::v2i16 && VT == MVT::v2i8)) {
+        ExtVT = SrcVT == MVT::v4i16 ? MVT::v4i32 : MVT::v2i64;
+        if (TLI.isTruncStoreLegal(ExtVT, VT)) {
+          SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, ExtVT, Src);
+          return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
+                                   VT, St->getMemOperand());
+        }
+      }
     }
   }
 
