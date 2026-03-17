@@ -467,7 +467,8 @@ TEST_F(AnalysisDriverTest, RunByNameErrorMissingData) {
 
   EXPECT_THAT_EXPECTED(
       Driver.run({AnalysisName("Analysis1")}),
-      llvm::FailedWithMessage("no data for analysis 'Analysis1' in LUSummary"));
+      llvm::FailedWithMessage(
+          "no data for analysis 'AnalysisName(Analysis1)' in LUSummary"));
 }
 
 // run(names) — error when a requested name has no registered analysis.
@@ -518,7 +519,8 @@ TEST_F(AnalysisDriverTest, RunByTypeErrorMissingData) {
 
   EXPECT_THAT_EXPECTED(
       Driver.run<Analysis1Result>(),
-      llvm::FailedWithMessage("no data for analysis 'Analysis1' in LUSummary"));
+      llvm::FailedWithMessage(
+          "no data for analysis 'AnalysisName(Analysis1)' in LUSummary"));
 }
 
 // contains() — present entries return true; absent entries return false.
