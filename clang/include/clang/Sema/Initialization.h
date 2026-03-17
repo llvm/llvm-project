@@ -143,11 +143,7 @@ public:
     UnknownLength,
   };
 
-  enum class ImplicitFieldInitKind { No, Yes };
-
-  enum class DefaultMemberInitKind { No, Yes };
-
-  enum class ParenAggInitKind { No, Yes };
+  enum class FieldInitKind { Normal, ImplicitField, DefaultMember, ParenAgg };
 
 private:
   /// The kind of entity being initialized.
@@ -184,14 +180,14 @@ private:
     /// initialized.
     NamedDecl *VariableOrMember;
 
-    /// When Kind == EK_Member, whether this is an implicit member
-    /// initialization in a copy or move constructor. These can perform array
-    /// copies.
-    ImplicitFieldInitKind IsImplicitFieldInit;
-
-    /// When Kind == EK_Member, whether this is the initial initialization
-    /// check for a default member initializer.
-    DefaultMemberInitKind IsDefaultMemberInit;
+    /// When Kind == EK_Member or EK_ParenAggInitMember, whether this is:
+    /// - ImplicitField: an implicit member initialization in a copy or move
+    ///   constructor. These can perform array copies.
+    /// - DefaultMember: the initial initialization check for a default member
+    ///   initialize.
+    /// - ParenAgg: aggregate initialization with a parenthesized list.
+    /// - Normal: simple member initialization.
+    FieldInitKind FieldKind;
   };
 
   struct C {
@@ -238,8 +234,7 @@ private:
 
   /// Create the initialization entity for a variable.
   InitializedEntity(VarDecl *Var, EntityKind EK = EK_Variable)
-      : Kind(EK), Type(Var->getType()),
-        Variable{Var, ImplicitFieldInitKind::No, DefaultMemberInitKind::No} {}
+      : Kind(EK), Type(Var->getType()), Variable{Var, FieldInitKind::Normal} {}
 
   /// Create the initialization entity for the result of a
   /// function, throwing an object, performing an explicit cast, or
@@ -254,13 +249,10 @@ private:
 
   /// Create the initialization entity for a member subobject.
   InitializedEntity(FieldDecl *Member, const InitializedEntity *Parent,
-                    ImplicitFieldInitKind Implicit,
-                    DefaultMemberInitKind DefaultMemberInit,
-                    ParenAggInitKind IsParenAggInit)
-      : Kind(IsParenAggInit == ParenAggInitKind::Yes ? EK_ParenAggInitMember
-                                                     : EK_Member),
-        Parent(Parent), Type(Member->getType()),
-        Variable{Member, Implicit, DefaultMemberInit} {}
+                    FieldInitKind FieldKind)
+      : Kind(Kind == FieldInitKind::ParenAgg ? EK_ParenAggInitMember
+                                             : EK_Member),
+        Parent(Parent), Type(Member->getType()), Variable{Member, FieldKind} {}
 
   /// Create the initialization entity for an array element.
   InitializedEntity(ASTContext &Context, unsigned Index,
@@ -320,8 +312,7 @@ public:
     Entity.Kind = EK_TemplateParameter;
     Entity.Type = T;
     Entity.Parent = nullptr;
-    Entity.Variable = {Param, ImplicitFieldInitKind::No,
-                       DefaultMemberInitKind::No};
+    Entity.Variable = {Param, FieldInitKind::Normal};
     return Entity;
   }
 
@@ -407,34 +398,44 @@ public:
 
   /// Create the initialization entity for a member subobject.
   static InitializedEntity
-  InitializeMember(FieldDecl *Member, const InitializedEntity *Parent = nullptr,
-                   ImplicitFieldInitKind Implicit = ImplicitFieldInitKind::No) {
-    return InitializedEntity(Member, Parent, Implicit,
-                             DefaultMemberInitKind::No, ParenAggInitKind::No);
+  InitializeMember(FieldDecl *Member,
+                   const InitializedEntity *Parent = nullptr) {
+    return InitializedEntity(Member, Parent, FieldInitKind::Normal);
   }
 
   /// Create the initialization entity for a member subobject.
   static InitializedEntity
   InitializeMember(IndirectFieldDecl *Member,
-                   const InitializedEntity *Parent = nullptr,
-                   ImplicitFieldInitKind Implicit = ImplicitFieldInitKind::No) {
-    return InitializedEntity(Member->getAnonField(), Parent, Implicit,
-                             DefaultMemberInitKind::No, ParenAggInitKind::No);
+                   const InitializedEntity *Parent = nullptr) {
+    return InitializedEntity(Member->getAnonField(), Parent,
+                             FieldInitKind::Normal);
+  }
+
+  /// Create the initialization entity for a member subobject with implicit
+  /// field initializer.
+  static InitializedEntity InitializeMemberImplicit(FieldDecl *Member) {
+    return InitializedEntity(Member, /*Parent=*/nullptr,
+                             FieldInitKind::ImplicitField);
+  }
+
+  /// Create the initialization entity for a member subobject with implicit
+  /// field initializer.
+  static InitializedEntity InitializeMemberImplicit(IndirectFieldDecl *Member) {
+    return InitializedEntity(Member->getAnonField(), /*Parent=*/nullptr,
+                             FieldInitKind::ImplicitField);
   }
 
   /// Create the initialization entity for a member subobject initialized via
   /// parenthesized aggregate init.
   static InitializedEntity InitializeMemberFromParenAggInit(FieldDecl *Member) {
     return InitializedEntity(Member, /*Parent=*/nullptr,
-                             ImplicitFieldInitKind::No,
-                             DefaultMemberInitKind::No, ParenAggInitKind::Yes);
+                             FieldInitKind::ParenAgg);
   }
 
   /// Create the initialization entity for a default member initializer.
   static InitializedEntity
   InitializeMemberFromDefaultMemberInitializer(FieldDecl *Member) {
-    return InitializedEntity(Member, nullptr, ImplicitFieldInitKind::No,
-                             DefaultMemberInitKind::Yes, ParenAggInitKind::No);
+    return InitializedEntity(Member, nullptr, FieldInitKind::DefaultMember);
   }
 
   /// Create the initialization entity for an array element.
@@ -538,14 +539,14 @@ public:
   /// a defaulted constructor?
   bool isImplicitMemberInitializer() const {
     return getKind() == EK_Member &&
-           Variable.IsImplicitFieldInit == ImplicitFieldInitKind::Yes;
+           Variable.FieldKind == FieldInitKind::ImplicitField;
   }
 
   /// Is this the default member initializer of a member (specified inside
   /// the class definition)?
   bool isDefaultMemberInitializer() const {
     return getKind() == EK_Member &&
-           Variable.IsDefaultMemberInit == DefaultMemberInitKind::Yes;
+           Variable.FieldKind == FieldInitKind::DefaultMember;
   }
 
   /// Determine the location of the 'return' keyword when initializing
