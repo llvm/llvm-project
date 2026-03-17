@@ -3466,6 +3466,22 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(nxv2f64 (vector_insert nxv2f64:$vec, (f64 FPR64:$src), 0)),
             (SEL_ZPZZ_D (PTRUE_D 1), (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$src, dsub), ZPR:$vec)>;
 
+  // Prefer FMOV when the vector is zero.
+  let Predicates = [HasFullFP16] in
+    def : Pat<(nxv8i16 (vector_insert (SVEDup0), (i32 GPR32:$src), 0)),
+              (SUBREG_TO_REG (FMOVWHr GPR32:$src), hsub)>;
+  let Predicates = [HasFPARMv8] in {
+    def : Pat<(nxv4i32 (vector_insert (SVEDup0), (i32 GPR32:$src), 0)),
+              (SUBREG_TO_REG (FMOVWSr GPR32:$src), ssub)>;
+    def : Pat<(nxv2i64 (vector_insert (SVEDup0), (i64 GPR64:$src), 0)),
+              (SUBREG_TO_REG (FMOVXDr GPR64:$src), dsub)>;
+
+    def : Pat<(nxv4f32 (vector_insert (SVEDup0), (f32 FPR32:$src), 0)),
+              (SUBREG_TO_REG (FMOVSr FPR32:$src), ssub)>;
+    def : Pat<(nxv2f64 (vector_insert (SVEDup0), (f64 FPR64:$src), 0)),
+              (SUBREG_TO_REG (FMOVDr FPR64:$src), dsub)>;
+  }
+
   // Insert scalar into vector with scalar index
   def : Pat<(nxv16i8 (vector_insert nxv16i8:$vec, GPR32:$src, GPR64:$index)),
             (CPY_ZPmR_B ZPR:$vec,

@@ -628,9 +628,7 @@ define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, 
 define <vscale x 8 x i16> @test_insert_first_into_zero_nxv8i16(i16 %x) {
 ; CHECK-LABEL: test_insert_first_into_zero_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.h, vl1
-; CHECK-NEXT:    mov z0.h, p0/m, w0
+; CHECK-NEXT:    fmov h0, w0
 ; CHECK-NEXT:    ret
   %res = insertelement <vscale x 8 x i16> zeroinitializer, i16 %x, i64 0
   ret <vscale x 8 x i16> %res
@@ -639,9 +637,7 @@ define <vscale x 8 x i16> @test_insert_first_into_zero_nxv8i16(i16 %x) {
 define <vscale x 4 x i32> @test_insert_first_into_zero_nxv4i32(i32 %x) {
 ; CHECK-LABEL: test_insert_first_into_zero_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.s, vl1
-; CHECK-NEXT:    mov z0.s, p0/m, w0
+; CHECK-NEXT:    fmov s0, w0
 ; CHECK-NEXT:    ret
   %res = insertelement <vscale x 4 x i32> zeroinitializer, i32 %x, i64 0
   ret <vscale x 4 x i32> %res
@@ -650,9 +646,7 @@ define <vscale x 4 x i32> @test_insert_first_into_zero_nxv4i32(i32 %x) {
 define <vscale x 2 x i64> @test_insert_first_into_zero_nxv2i64(i64 %x) {
 ; CHECK-LABEL: test_insert_first_into_zero_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    mov z0.d, p0/m, x0
+; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    ret
   %res = insertelement <vscale x 2 x i64> zeroinitializer, i64 %x, i64 0
   ret <vscale x 2 x i64> %res
@@ -661,10 +655,7 @@ define <vscale x 2 x i64> @test_insert_first_into_zero_nxv2i64(i64 %x) {
 define <vscale x 4 x float> @test_insert_first_into_zero_nxv4f32(float %x) {
 ; CHECK-LABEL: test_insert_first_into_zero_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.s, vl1
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    fmov s0, s0
 ; CHECK-NEXT:    ret
   %res = insertelement <vscale x 4 x float> zeroinitializer, float %x, i64 0
   ret <vscale x 4 x float> %res
@@ -673,10 +664,7 @@ define <vscale x 4 x float> @test_insert_first_into_zero_nxv4f32(float %x) {
 define <vscale x 2 x double> @test_insert_first_into_zero_nxv2f64(double %x) {
 ; CHECK-LABEL: test_insert_first_into_zero_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
   %res = insertelement <vscale x 2 x double> zeroinitializer, double %x, i64 0
   ret <vscale x 2 x double> %res

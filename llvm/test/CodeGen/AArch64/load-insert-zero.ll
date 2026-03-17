@@ -921,10 +921,8 @@ define void @predictor_4x4_neon_new(ptr nocapture noundef writeonly %0, i64 noun
 define <vscale x 8 x i8> @loadnxv8i8(ptr %p) {
 ; CHECK-LABEL: loadnxv8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl1
-; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    fmov h0, w8
 ; CHECK-NEXT:    ret
   %l = load i8, ptr %p
   %v = insertelement <vscale x 8 x i8> zeroinitializer, i8 %l, i32 0
@@ -944,10 +942,8 @@ define <vscale x 16 x i8> @loadnxv16i8(ptr %p) {
 define <vscale x 4 x i16> @loadnxv4i16(ptr %p) {
 ; CHECK-LABEL: loadnxv4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl1
-; CHECK-NEXT:    mov z0.s, p0/m, w8
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret
   %l = load i16, ptr %p
   %v = insertelement <vscale x 4 x i16> zeroinitializer, i16 %l, i32 0
@@ -967,10 +963,8 @@ define <vscale x 8 x i16> @loadnxv8i16(ptr %p) {
 define <vscale x 2 x i32> @loadnxv2i32(ptr %p) {
 ; CHECK-LABEL: loadnxv2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    mov z0.d, p0/m, x8
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %l = load i32, ptr %p
   %v = insertelement <vscale x 2 x i32> zeroinitializer, i32 %l, i32 0
@@ -1095,10 +1089,8 @@ define <vscale x 2 x double> @loadnxv2f64(ptr %p) {
 define <vscale x 8 x i8> @loadnxv8i8_offset(ptr %p) {
 ; CHECK-LABEL: loadnxv8i8_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldrb w8, [x0, #1]
-; CHECK-NEXT:    ptrue p0.h, vl1
-; CHECK-NEXT:    mov z0.h, p0/m, w8
+; CHECK-NEXT:    fmov h0, w8
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i8, ptr %g
@@ -1120,10 +1112,8 @@ define <vscale x 16 x i8> @loadnxv16i8_offset(ptr %p) {
 define <vscale x 4 x i16> @loadnxv4i16_offset(ptr %p) {
 ; CHECK-LABEL: loadnxv4i16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldurh w8, [x0, #1]
-; CHECK-NEXT:    ptrue p0.s, vl1
-; CHECK-NEXT:    mov z0.s, p0/m, w8
+; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i16, ptr %g
@@ -1145,10 +1135,8 @@ define <vscale x 8 x i16> @loadnxv8i16_offset(ptr %p) {
 define <vscale x 2 x i32> @loadnxv2i32_offset(ptr %p) {
 ; CHECK-LABEL: loadnxv2i32_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldur w8, [x0, #1]
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    mov z0.d, p0/m, x8
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i32, ptr %g
