@@ -16,7 +16,7 @@
 
 // SDK: "-isysroot" "{{.*}}/SDKs/MacOSX{{([0-9]+(\.[0-9]+)?)?}}.sdk"
 
-// RUN: %clang -target arm64-apple-macosx -c --no-sysroot -### %s 2>&1 | \
+// RUN: %clang -target arm64-apple-macosx -c --no-xcselect -### %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=NO-SDK %s
 // RUN: %clang -target armv7-apple-darwin10 -c -### %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=NO-SDK %s

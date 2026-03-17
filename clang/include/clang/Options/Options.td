@@ -6798,7 +6798,7 @@ def _help_hidden : Flag<["--"], "help-hidden">,
   HelpText<"Display help for hidden options">;
 def _sysroot_EQ : Joined<["--"], "sysroot=">, Visibility<[ClangOption, FlangOption]>;
 def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
-def no_sysroot : Flag<["--"], "no-sysroot">,
+def no_xcselect : Flag<["--"], "no-xcselect">,
   HelpText<"Disable xcselect SDK injection on macOS">;
 
 //===----------------------------------------------------------------------===//

@@ -2504,7 +2504,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     }
   } else {
     TryXcselect = !Args.getLastArg(options::OPT__sysroot_EQ) &&
-                  !Args.getLastArg(options::OPT_no_sysroot);
+                  !Args.getLastArg(options::OPT_no_xcselect);
   }
 
   // Read the SDKSettings.json file for more information, like the SDK version
@@ -2646,7 +2646,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   if (Platform == MacOS) {
 #ifdef CLANG_USE_XCSELECT
     // If we don't have an SDK yet and are on macOS, try to inject one using
-    // xcselect, except when passed --no-sysroot.
+    // xcselect, except when passed --no-xcselect.
     if (TryXcselect && !SDKInfo) {
       char *p;
       if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
