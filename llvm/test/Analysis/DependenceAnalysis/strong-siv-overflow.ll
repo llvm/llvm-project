@@ -12,8 +12,7 @@
 ;     A[2*i - 4] = 2;
 ; }
 ;
-; FIXME: DependenceAnalysis fails to detect the dependency between the two
-; stores, and the issue is not caused by the Strong SIV.
+; There is a dependency with distance 1 between the two stores.
 define void @strongsiv_const_ovfl(ptr %A) {
 ; CHECK-LABEL: 'strongsiv_const_ovfl'
 ; CHECK-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1

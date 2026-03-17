@@ -16,6 +16,7 @@
 ; }
 ;
 ; FIXME: Both `A[i0] = 0` and `A[i1] = 0` must be executed, so there is a
+; Both `A[i0] = 0` and `A[i1] = 0` must be executed, so there is a
 ; dependency between them.
 ;
 define void @rdiv_large_btc(ptr %A) {

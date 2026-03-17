@@ -2167,7 +2167,6 @@ bool DependenceInfo::symbolicRDIVtest(const SCEVAddRecExpr *Src,
 
   ++SymbolicRDIVapplications;
   LLVM_DEBUG(dbgs() << "\ttry symbolic RDIV test\n");
-  // First try to prove independence based on the ranges of the two subscripts.
   ConstantRange SrcRange = SE->getSignedRange(Src);
   ConstantRange DstRange = SE->getSignedRange(Dst);
   LLVM_DEBUG(dbgs() << "\n SrcRange: " << SrcRange << "\n");

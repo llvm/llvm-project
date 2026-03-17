@@ -70,7 +70,7 @@ exit:
 ; }
 ;
 ; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist. For example,
+; There is a bidirectional dependency between the two stores, for example,
 ;
 ;  memory access       | i == 1 | i == (max_i + 1) / 2 | i == max_i
 ; ---------------------|--------|----------------------|-------------------

@@ -19,7 +19,6 @@
 ;  A[32*i + 2^62] |        | A[0]             | A[2^60 - 32]                |
 ;
 ; FIXME: DependenceAnalysis fails to detect the dependency between the two
-; stores.
 ;
 define void @symbolic_rdiv_addrec_wrap(ptr %A) {
 ; CHECK-ALL-LABEL: 'symbolic_rdiv_addrec_wrap'
