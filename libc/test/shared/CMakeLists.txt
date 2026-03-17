@@ -136,6 +136,7 @@ add_fp_unittest(
     libc.src.__support.math.floorl
     libc.src.__support.math.fma
     libc.src.__support.math.fmaf
+    libc.src.__support.math.fmaf16
     libc.src.__support.math.fmabf16
     libc.src.__support.math.fmax
     libc.src.__support.math.fmaxbf16
