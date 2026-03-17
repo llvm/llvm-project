@@ -1545,17 +1545,46 @@ hsa_status_t asan_hsa_amd_ipc_memory_attach(const hsa_amd_ipc_memory_t *handle,
   hsa_status_t status = REAL(hsa_amd_ipc_memory_attach)(
     handle, len_, num_agents, mapping_agents, mapped_ptr);
   if (status == HSA_STATUS_SUCCESS && mapped_ptr) {
-    *mapped_ptr = reinterpret_cast<void *>(reinterpret_cast<uptr>(*mapped_ptr) +
-                                           kPageSize_);
+    uptr mapped_base = reinterpret_cast<uptr>(*mapped_ptr);
+    uptr user_beg = mapped_base + kPageSize_;
+    uptr tail_beg = RoundUpTo(user_beg + len, ASAN_SHADOW_GRANULARITY);
+    uptr mapped_end = mapped_base + kPageSize_ + RoundUpTo(len, kPageSize_);
+
+    PoisonShadow(mapped_base, kPageSize_, kAsanHeapLeftRedzoneMagic);
+
+    if (mapped_end > tail_beg)
+      PoisonShadow(tail_beg, mapped_end - tail_beg, kAsanHeapLeftRedzoneMagic);
+
+    uptr size_rounded_down = RoundDownTo(len, ASAN_SHADOW_GRANULARITY);
+    if (size_rounded_down)
+      PoisonShadow(user_beg, size_rounded_down, 0);
+
+    if (len != size_rounded_down && CanPoisonMemory()) {
+      u8 *shadow = (u8 *)MemToShadow(user_beg + size_rounded_down);
+      *shadow = flags()->poison_partial
+                    ? static_cast<u8>(len & (ASAN_SHADOW_GRANULARITY - 1))
+                    : 0;
+    }
+
+    *mapped_ptr = reinterpret_cast<void *>(user_beg);
   }
   return status;
 }
 
 hsa_status_t asan_hsa_amd_ipc_memory_detach(void *mapped_ptr) {
   static_assert(AP_.kMetadataSize == 0, "Expression below requires this");
-  void *mapped_ptr_ =
-      reinterpret_cast<void *>(reinterpret_cast<uptr>(mapped_ptr) - kPageSize_);
-  return REAL(hsa_amd_ipc_memory_detach)(mapped_ptr_);
+  uptr mapped_base = reinterpret_cast<uptr>(mapped_ptr) - kPageSize_;
+
+  hsa_amd_pointer_info_t info;
+  info.size = sizeof(hsa_amd_pointer_info_t);
+  if (REAL(hsa_amd_pointer_info)(reinterpret_cast<void *>(mapped_base), &info,
+                                 nullptr, nullptr, nullptr) ==
+      HSA_STATUS_SUCCESS) {
+    PoisonShadow(mapped_base, info.sizeInBytes, 0);
+    FlushUnneededASanShadowMemory(mapped_base, info.sizeInBytes);
+  }
+
+  return REAL(hsa_amd_ipc_memory_detach)(reinterpret_cast<void *>(mapped_base));
 }
 
 hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
