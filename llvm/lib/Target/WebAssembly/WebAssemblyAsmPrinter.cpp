@@ -197,10 +197,9 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (!Sym->getType()) {
     SmallVector<MVT, 1> VTs;
     Type *GlobalVT = GV->getValueType();
-    // Global emission can happen when the AsmPrinter's current Subtarget is
-    // unset or corresponds to the last emitted function. For WebAssembly we
-    // coalesce module features before isel, so use the TargetMachine's
-    // module-wide subtarget here to compute legal value types.
+    // Function-specific subtargets are not needed here: WebAssembly
+    // coalesces features before isel, so use the TargetMachine's
+    // module-wide subtarget to compute legal value types.
     auto &WasmTM = static_cast<const WebAssemblyTargetMachine &>(TM);
     const WebAssemblySubtarget *ST = WasmTM.getSubtargetImpl();
     const WebAssemblyTargetLowering &TLI = *ST->getTargetLowering();
