@@ -2711,13 +2711,15 @@ def fir_CallOp : fir_Op<"call",
         return;
       }
       // Switching to indirect call: unset attribute, then either insert
-      // operand 0 (was direct, had no operands) or set it (was already indirect).
+      // operand 0 (was direct: rest of operands are arguments) or set it
+      // (was already indirect: operand 0 is the callee).
+      bool wasIndirect = llvm::isa<mlir::Value>(getCallableForCallee());
       (*this)->removeAttr(getCalleeAttrNameStr());
       mlir::Value calleeVal = llvm::cast<mlir::Value>(callee);
-      if (getNumOperands() == 0)
-        (*this)->insertOperands(0, calleeVal);
-      else
+      if (wasIndirect)
         setOperand(0, calleeVal);
+      else
+        (*this)->insertOperands(0, calleeVal);
     }
   }];
 }

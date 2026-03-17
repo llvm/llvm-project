@@ -23,12 +23,30 @@
 
 using namespace mlir;
 
+namespace {
+
 static bool isSymbolRef(mlir::CallInterfaceCallable callable) {
   return llvm::isa<SymbolRefAttr>(callable);
 }
 static bool isValue(mlir::CallInterfaceCallable callable) {
   return llvm::isa<Value>(callable);
 }
+
+/// Creates a module and a function with entry block. Builder insertion point is
+/// set to the block start. Returns (func, block) so tests can create calls in
+/// the block and use block arguments as callee/args.
+std::pair<func::FuncOp, Block *> createModuleWithFunction(
+    OpBuilder &builder, Location loc, StringRef name, FunctionType funcType) {
+  ModuleOp module = ModuleOp::create(builder, loc);
+  builder.setInsertionPointToStart(module.getBody());
+  auto func = func::FuncOp::create(builder, loc, name, funcType);
+  func.setPrivate();
+  Block *block = func.addEntryBlock();
+  builder.setInsertionPointToStart(block);
+  return {func, block};
+}
+
+} // namespace
 
 struct FIRCallInterfaceTest : public testing::Test {
   void SetUp() override { fir::support::loadDialects(context); }
@@ -39,16 +57,8 @@ struct FIRCallInterfaceTest : public testing::Test {
 TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_directToDirect) {
   OpBuilder builder(&context);
   auto loc = builder.getUnknownLoc();
-  ModuleOp module = ModuleOp::create(builder, loc);
-  builder.setInsertionPointToStart(module.getBody());
-
   auto funcType = builder.getFunctionType({}, {});
-  auto func = func::FuncOp::create(builder, loc, "target", funcType);
-  func.setPrivate();
-  func.getBody().push_back(new Block);
-  builder.setInsertionPointToStart(&func.getBody().front());
-  func::ReturnOp::create(builder, loc);
-  builder.setInsertionPointToStart(module.getBody());
+  (void)createModuleWithFunction(builder, loc, "target", funcType);
 
   // Direct call: fir.call @target()
   auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
@@ -73,16 +83,10 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_directToDirect) {
 TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_indirectToDirect) {
   OpBuilder builder(&context);
   auto loc = builder.getUnknownLoc();
-  ModuleOp module = ModuleOp::create(builder, loc);
-  builder.setInsertionPointToStart(module.getBody());
-
   auto funcType = builder.getFunctionType({}, {});
-  // Container has one argument: procedure pointer () -> ()
   auto containerType = builder.getFunctionType({funcType}, {});
-  auto func = func::FuncOp::create(builder, loc, "container", containerType);
-  func.setPrivate();
-  Block *block = func.addEntryBlock();
-  builder.setInsertionPointToStart(block);
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
 
   // Indirect call: fir.call %arg0()
   Value callTargetValue = block->getArgument(0);
@@ -108,15 +112,10 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_indirectToDirect) {
 TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_directToIndirect) {
   OpBuilder builder(&context);
   auto loc = builder.getUnknownLoc();
-  ModuleOp module = ModuleOp::create(builder, loc);
-  builder.setInsertionPointToStart(module.getBody());
-
   auto funcType = builder.getFunctionType({}, {});
   auto containerType = builder.getFunctionType({funcType}, {});
-  auto func = func::FuncOp::create(builder, loc, "container", containerType);
-  func.setPrivate();
-  Block *block = func.addEntryBlock();
-  builder.setInsertionPointToStart(block);
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
 
   // Direct call first
   auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
@@ -138,16 +137,10 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_directToIndirect) {
 TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_indirectToIndirect) {
   OpBuilder builder(&context);
   auto loc = builder.getUnknownLoc();
-  ModuleOp module = ModuleOp::create(builder, loc);
-  builder.setInsertionPointToStart(module.getBody());
-
   auto funcType = builder.getFunctionType({}, {});
-  // Container has two arguments: procedure pointers () -> ()
   auto containerType = builder.getFunctionType({funcType, funcType}, {});
-  auto func = func::FuncOp::create(builder, loc, "container", containerType);
-  func.setPrivate();
-  Block *block = func.addEntryBlock();
-  builder.setInsertionPointToStart(block);
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
 
   Value callTarget0 = block->getArgument(0);
   Value callTarget1 = block->getArgument(1);
@@ -166,5 +159,94 @@ TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_indirectToIndirect) {
   EXPECT_TRUE(isValue(callOp.getCallableForCallee()));
   EXPECT_EQ(callOp.getNumOperands(), 1u);
   EXPECT_EQ(callOp.getOperand(0), callTarget1);
+  EXPECT_FALSE(callOp->getAttr(fir::CallOp::getCalleeAttrNameStr()));
+}
+
+TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_directToIndirect_withArgs) {
+  OpBuilder builder(&context);
+  auto loc = builder.getUnknownLoc();
+  auto i32Ty = builder.getI32Type();
+  auto funcType = builder.getFunctionType({i32Ty}, {});
+  auto containerType = builder.getFunctionType({funcType, i32Ty}, {});
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
+  Value calleeVal = block->getArgument(0);
+  Value argVal = block->getArgument(1);
+
+  // Direct call with one argument: fir.call @target(%arg)
+  auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
+  auto callOp = fir::CallOp::create(builder, loc, callTargetRef,
+      llvm::ArrayRef<mlir::Type>{}, ValueRange{argVal});
+  ASSERT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 1u);
+  EXPECT_EQ(callOp.getOperand(0), argVal);
+
+  // Switch to indirect; callee must be inserted at 0, arg preserved.
+  callOp.setCalleeFromCallable(calleeVal);
+
+  EXPECT_TRUE(isValue(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 2u);
+  EXPECT_EQ(callOp.getOperand(0), calleeVal);
+  EXPECT_EQ(callOp.getOperand(1), argVal);
+  EXPECT_FALSE(callOp->getAttr(fir::CallOp::getCalleeAttrNameStr()));
+}
+
+TEST_F(FIRCallInterfaceTest, setCalleeFromCallable_indirectToDirect_withArgs) {
+  OpBuilder builder(&context);
+  auto loc = builder.getUnknownLoc();
+  auto i32Ty = builder.getI32Type();
+  auto funcType = builder.getFunctionType({i32Ty}, {});
+  auto containerType = builder.getFunctionType({funcType, i32Ty}, {});
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
+  Value calleeVal = block->getArgument(0);
+  Value argVal = block->getArgument(1);
+
+  // Indirect call with one argument: fir.call %callee(%arg)
+  auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
+      llvm::ArrayRef<mlir::Type>{}, ValueRange{calleeVal, argVal});
+  ASSERT_TRUE(isValue(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 2u);
+  EXPECT_EQ(callOp.getOperand(0), calleeVal);
+  EXPECT_EQ(callOp.getOperand(1), argVal);
+
+  // Switch to direct; callee operand must be removed, arg preserved.
+  auto callTargetRef = FlatSymbolRefAttr::get(&context, "direct_target");
+  callOp.setCalleeFromCallable(callTargetRef);
+
+  EXPECT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 1u);
+  EXPECT_EQ(callOp.getOperand(0), argVal);
+  EXPECT_TRUE(callOp->getAttr(fir::CallOp::getCalleeAttrNameStr()));
+}
+
+TEST_F(
+    FIRCallInterfaceTest, setCalleeFromCallable_indirectToIndirect_withArgs) {
+  OpBuilder builder(&context);
+  auto loc = builder.getUnknownLoc();
+  auto i32Ty = builder.getI32Type();
+  auto funcType = builder.getFunctionType({i32Ty}, {});
+  auto containerType = builder.getFunctionType({funcType, funcType, i32Ty}, {});
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
+  Value callee0 = block->getArgument(0);
+  Value callee1 = block->getArgument(1);
+  Value argVal = block->getArgument(2);
+
+  // Indirect call with one argument: fir.call %callee0(%arg)
+  auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
+      llvm::ArrayRef<mlir::Type>{}, ValueRange{callee0, argVal});
+  ASSERT_TRUE(isValue(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 2u);
+  EXPECT_EQ(callOp.getOperand(0), callee0);
+  EXPECT_EQ(callOp.getOperand(1), argVal);
+
+  // Switch to other indirect callee; operand 0 updated, arg preserved.
+  callOp.setCalleeFromCallable(callee1);
+
+  EXPECT_TRUE(isValue(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 2u);
+  EXPECT_EQ(callOp.getOperand(0), callee1);
+  EXPECT_EQ(callOp.getOperand(1), argVal);
   EXPECT_FALSE(callOp->getAttr(fir::CallOp::getCalleeAttrNameStr()));
 }
