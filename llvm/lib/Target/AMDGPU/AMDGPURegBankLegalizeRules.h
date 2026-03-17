@@ -231,8 +231,8 @@ enum RegBankLLTMappingApplyID {
   // readfirstlane to SGPR. The result can then be copied to M0 in ISel.
   SgprB32_M0,
 
-  // Src only modifiers: operand must be SGPR, if in VGPR, insert readanylane to
-  // move to SGPR.
+  // Src only modifiers: operand must be SGPR, if in VGPR, insert readfirstlane
+  // to move to SGPR.
   SgprB32_ReadAnyLane,
 
   // Src only modifiers: extends
