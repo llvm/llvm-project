@@ -95,7 +95,6 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
   bool isLifetimeMarker = kind & LifetimeMarker;
   bool skipCleanupScope = false;
 
-  assert(!cir::MissingFeatures::innermostEHScope());
   cir::CleanupKind cleanupKind = cir::CleanupKind::All;
   if (isEHCleanup && cgf->getLangOpts().Exceptions) {
     cleanupKind =
@@ -160,6 +159,7 @@ void EHScopeStack::popCleanup() {
   assert(isa<EHCleanupScope>(*begin()));
   EHCleanupScope &cleanup = cast<EHCleanupScope>(*begin());
   innermostNormalCleanup = cleanup.getEnclosingNormalCleanup();
+  innermostEHScope = cleanup.getEnclosingEHScope();
   deallocate(cleanup.getAllocatedSize());
 
   cir::CleanupScopeOp cleanupScope = cleanup.getCleanupScopeOp();
@@ -190,6 +190,25 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
     return true;
   }
   return false;
+}
+
+/// Deactive a cleanup that was created in an active state.
+void CIRGenFunction::deactivateCleanupBlock(EHScopeStack::stable_iterator c,
+                                            mlir::Operation *dominatingIP) {
+  assert(c != ehStack.stable_end() && "deactivating bottom of stack?");
+  EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.find(c));
+  assert(scope.isActive() && "double deactivation");
+
+  // If it's the top of the stack, just pop it, but do so only if it belongs
+  // to the current RunCleanupsScope.
+  if (c == ehStack.stable_begin() &&
+      currentCleanupStackDepth.strictlyEncloses(c)) {
+    popCleanupBlock();
+    return;
+  }
+
+  // Otherwise, follow the general case.
+  cgm.errorNYI("deactivateCleanupBlock: setupCleanupBlockActivation");
 }
 
 static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
@@ -244,10 +263,11 @@ void CIRGenFunction::popCleanupBlock() {
   bool hasFallthrough = fallthroughSource != nullptr && isActive;
 
   bool requiresNormalCleanup = scope.isNormalCleanup() && hasFallthrough;
+  bool requiresEHCleanup = scope.isEHCleanup() && hasFallthrough;
 
   // If we don't need the cleanup at all, we're done.
   assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
-  if (!requiresNormalCleanup) {
+  if (!requiresNormalCleanup && !requiresEHCleanup) {
     ehStack.popCleanup();
     return;
   }
@@ -389,10 +409,49 @@ void CIRGenFunction::popCleanupBlock() {
 
 /// Pops cleanup blocks until the given savepoint is reached.
 void CIRGenFunction::popCleanupBlocks(
-    EHScopeStack::stable_iterator oldCleanupStackDepth) {
+    EHScopeStack::stable_iterator oldCleanupStackDepth,
+    ArrayRef<mlir::Value *> valuesToReload) {
+  // If the current stack depth is the same as the cleanup stack depth,
+  // we won't be exiting any cleanup scopes, so we don't need to reload
+  // any values.
+  bool requiresCleanup = false;
+  for (auto it = ehStack.begin(), ie = ehStack.find(oldCleanupStackDepth);
+       it != ie; ++it) {
+    if (isa<EHCleanupScope>(&*it)) {
+      requiresCleanup = true;
+      break;
+    }
+  }
+
+  // If there are values that we need to keep live, spill them now before
+  // we pop the cleanup blocks. These are passed as pointers to mlir::Value
+  // because we're going to replace them with the reloaded value.
+  SmallVector<Address> tempAllocas;
+  if (requiresCleanup) {
+    for (mlir::Value *valPtr : valuesToReload) {
+      mlir::Value val = *valPtr;
+      if (!val)
+        continue;
+
+      // TODO(cir): Check for static allocas.
+
+      Address temp = createDefaultAlignTempAlloca(val.getType(), val.getLoc(),
+                                                  "tmp.exprcleanup");
+      tempAllocas.push_back(temp);
+      builder.createStore(val.getLoc(), val, temp);
+    }
+  }
+
   // Pop cleanup blocks until we reach the base stack depth for the
   // current scope.
-  while (ehStack.stable_begin() != oldCleanupStackDepth) {
+  while (ehStack.stable_begin() != oldCleanupStackDepth)
     popCleanupBlock();
+
+  // Reload the values that we spilled, if necessary.
+  if (requiresCleanup) {
+    for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
+      mlir::Location loc = valPtr->getLoc();
+      *valPtr = builder.createLoad(loc, addr);
+    }
   }
 }

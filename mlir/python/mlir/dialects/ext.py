@@ -22,6 +22,7 @@ from . import irdl
 from ._ods_common import _cext, segmented_accessor
 from .irdl import Variadicity
 from ..passmanager import PassManager
+from contextlib import nullcontext
 
 ir = _cext.ir
 
@@ -32,26 +33,12 @@ __all__ = [
     "Result",
     "Region",
     "Type",
-    "register_dialect",
-    "register_operation",
+    "Attribute",
 ]
 
 Operand = ir.Value
 Result = ir.OpResult
 Region = ir.Region
-
-register_dialect = _cext.register_dialect
-
-
-def register_operation(dialect_cls: type) -> Callable[[type], type]:
-    register = _cext.register_operation(dialect_cls)
-
-    def decorator(op_cls: type) -> type:
-        register(op_cls)
-        _cext.register_op_adaptor(op_cls)(op_cls.Adaptor)
-        return op_cls
-
-    return decorator
 
 
 def construct_instance(origin, args):
@@ -103,6 +90,11 @@ class ConstraintLoweringContext:
             t = construct_instance(origin, get_args(type_))
             return irdl.is_(ir.TypeAttr.get(t))
         elif origin and issubclass(origin, ir.Attribute):
+            if issubclass(origin, Attribute):
+                return irdl.parametric(
+                    base_type=[origin._dialect_name, origin._name],
+                    args=[self.lower(arg) for arg in get_args(type_)],
+                )
             attr = construct_instance(origin, get_args(type_))
             return irdl.is_(attr)
         elif issubclass(type_, ir.Type):
@@ -110,6 +102,8 @@ class ConstraintLoweringContext:
                 return irdl.base(base_ref=[type_._dialect_name, type_._name])
             return irdl.base(base_name=f"!{type_.type_name}")
         elif issubclass(type_, ir.Attribute):
+            if issubclass(type_, Attribute):
+                return irdl.base(base_ref=[type_._dialect_name, type_._name])
             return irdl.base(base_name=f"#{type_.attr_name}")
 
         raise TypeError(f"unsupported type in constraints: {type_}")
@@ -647,6 +641,92 @@ class Type(ir.DynamicType):
             )
 
 
+class Attribute(ir.DynamicAttr):
+    """
+    Base class of Python-defined attributes.
+
+    The following example shows two ways to define attributes via this class:
+    ```python
+    class MyAttr(MyDialect.Attribute, name=..):
+      ...
+
+    class MyAttr(Attribute, dialect=MyDialect, name=..):
+      ...
+    ```
+    """
+
+    @classmethod
+    def __init_subclass__(
+        cls,
+        *,
+        name: str | None = None,
+        dialect: type | None = None,
+        **kwargs,
+    ):
+        super().__init_subclass__(**kwargs)
+
+        fields = []
+
+        for base in cls.__bases__:
+            if hasattr(base, "_fields"):
+                fields.extend(base._fields)
+        for key, value in cls.__annotations__.items():
+            field = ParamDef(key, value)
+            fields.append(field)
+
+        cls._fields = fields
+
+        if dialect:
+            if hasattr(cls, "_dialect_obj"):
+                raise RuntimeError(
+                    f"This attribute has already been attached to dialect '{cls._dialect_obj.DIALECT_NAMESPACE}'."
+                )
+            cls._dialect_obj = dialect
+
+        # for subclasses without "name" parameter,
+        # just treat them as normal classes
+        if not name:
+            return
+
+        if not hasattr(cls, "_dialect_obj"):
+            raise RuntimeError(
+                "Attribute subclasses must either inherit from a Dialect's Attribute subclass "
+                "or provide the dialect as a class keyword argument."
+            )
+
+        cls._name = name
+        cls._dialect_name = cls._dialect_obj.DIALECT_NAMESPACE
+        cls.attr_name = f"{cls._dialect_name}.{name}"
+
+        for i, field in enumerate(cls._fields):
+            setattr(
+                cls,
+                field.name,
+                property(lambda self, i=i: self.params[i]),
+            )
+
+        cls._dialect_obj.attributes.append(cls)
+
+    @classmethod
+    def get(cls, *args, context=None):
+        args = [
+            ir.TypeAttr.get(arg, context) if isinstance(arg, ir.Type) else arg
+            for arg in args
+        ]
+        return cls(ir.DynamicAttr.get(cls.attr_name, args, context=context))
+
+    @classmethod
+    def _emit_attr(cls) -> None:
+        ctx = ConstraintLoweringContext()
+
+        t = irdl.attribute(cls._name)
+        with ir.InsertionPoint(t.body):
+            irdl.parameters(
+                [ctx.lower(f.constraint) for f in cls._fields],
+                [f.name for f in cls._fields],
+            )
+
+
 class Dialect(ir.Dialect):
     """
     Base class of a Python-defined dialect.
@@ -687,6 +767,13 @@ class Dialect(ir.Dialect):
             dict(),
             dialect=cls,
         )
+        cls.attributes = []
+        cls.Attribute = type(
+            "Attribute",
+            (Attribute,),
+            dict(),
+            dialect=cls,
+        )
 
     @classmethod
     def _emit_dialect(cls) -> None:
@@ -694,20 +781,32 @@ class Dialect(ir.Dialect):
         with ir.InsertionPoint(d.body):
             for type_ in cls.types:
                 type_._emit_type()
+            for attr in cls.attributes:
+                attr._emit_attr()
             for op in cls.operations:
                 op._emit_operation()
 
     @classmethod
     def _emit_module(cls) -> ir.Module:
-        m = ir.Module.create()
-        with ir.InsertionPoint(m.body):
-            cls._emit_dialect()
+        with ir.Location.unknown() if not ir.Location.current else nullcontext():
+            m = ir.Module.create()
+            with ir.InsertionPoint(m.body):
+                cls._emit_dialect()
 
         return m
 
     @classmethod
-    def load(cls, register=True, reload=False) -> None:
+    def load(
+        cls,
+        *,
+        reload: bool = False,
+    ) -> None:
         if hasattr(cls, "_mlir_module") and not reload:
+            if cls._mlir_module.context is not ir.Context.current:
+                raise RuntimeError(
+                    "This dialect was loaded in a different context. "
+                    "Please set reload=True to reload the dialect in the current context."
+                )
             return
 
         cls._mlir_module = cls._emit_module()
@@ -720,13 +819,16 @@ class Dialect(ir.Dialect):
         for op in cls.operations:
             op._attach_traits()
 
-        if register:
-            register_dialect(cls)
+        _cext.globals._register_dialect_impl(cls.DIALECT_NAMESPACE, cls, replace=reload)
 
-            register_dialect_operation = register_operation(cls)
-            for op in cls.operations:
-                register_dialect_operation(op)
+        for type_ in cls.types:
+            typeid = ir.DynamicType.lookup_typeid(type_.type_name)
+            _cext.register_type_caster(typeid, replace=reload)(type_)
 
-            for type_ in cls.types:
-                typeid = ir.DynamicType.lookup_typeid(type_.type_name)
-                _cext.register_type_caster(typeid)(type_)
+        for attr in cls.attributes:
+            typeid = ir.DynamicAttr.lookup_typeid(attr.attr_name)
+            _cext.register_type_caster(typeid, replace=reload)(attr)
+
+        for op in cls.operations:
+            _cext.register_operation(cls, replace=reload)(op)
+            _cext.register_op_adaptor(op, replace=reload)(op.Adaptor)

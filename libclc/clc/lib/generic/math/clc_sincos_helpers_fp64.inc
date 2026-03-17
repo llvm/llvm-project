@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#pragma OPENCL FP_CONTRACT OFF
+
 _CLC_DEF _CLC_OVERLOAD void __clc_sincos_piby4(__CLC_DOUBLEN x,
                                                __CLC_DOUBLEN xx,
                                                private __CLC_DOUBLEN *sinval,
@@ -212,7 +214,6 @@ __clc_remainder_piby2_large(__CLC_DOUBLEN x, private __CLC_DOUBLEN *r,
   __CLC_UINTN q4s1 = __CLC_CONVERT_UINTN(q4 >> 32);
 
   __CLC_INTN k = (j >> 2) & 0x3;
-  __CLC_INTN c0 = k == 0;
   __CLC_INTN c1 = k == 1;
   __CLC_INTN c2 = k == 2;
   __CLC_INTN c3 = k == 3;

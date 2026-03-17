@@ -67,3 +67,8 @@ Options
 
 :doc:`cert-err33-c <../cert/err33-c>` is an alias of this check that checks a
 fixed and large set of standard library functions.
+
+:doc:`hicpp-ignored-remove-result <../hicpp/ignored-remove-result>` is an
+alias of this check that checks a restricted set of functions:
+``std::remove``, ``std::remove_if``, and ``std::unique``.
+The `AllowCastToVoid` option is set to `true` by default.

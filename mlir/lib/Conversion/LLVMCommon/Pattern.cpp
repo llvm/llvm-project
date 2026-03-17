@@ -12,6 +12,8 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "llvm/Support/CheckedArithmetic.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
@@ -107,19 +109,29 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
 
   // Strides: iterate sizes in reverse order and multiply.
   int64_t stride = 1;
+  bool overflowed = false;
   Value runningStride = createIndexAttrConstant(rewriter, loc, indexType, 1);
   strides.resize(memRefType.getRank());
   for (auto i = memRefType.getRank(); i-- > 0;) {
-    strides[i] = runningStride;
+    strides[i] = overflowed ? LLVM::PoisonOp::create(rewriter, loc, indexType)
+                            : runningStride;
 
     int64_t staticSize = memRefType.getShape()[i];
     bool useSizeAsStride = stride == 1;
     if (staticSize == ShapedType::kDynamic)
       stride = ShapedType::kDynamic;
-    if (stride != ShapedType::kDynamic)
-      stride *= staticSize;
+    if (stride != ShapedType::kDynamic) {
+      std::optional<int64_t> res = llvm::checkedMul(stride, staticSize);
 
-    if (useSizeAsStride)
+      if (!res)
+        overflowed = true;
+      else
+        stride = res.value();
+    }
+
+    if (overflowed)
+      runningStride = LLVM::PoisonOp::create(rewriter, loc, indexType);
+    else if (useSizeAsStride)
       runningStride = sizes[i];
     else if (stride == ShapedType::kDynamic)
       runningStride =
@@ -458,11 +470,19 @@ static void decomposeValueImpl(OpBuilder &builder, Location loc, Value src,
     result.push_back(res);
     return;
   }
-  assert(srcBitWidth % dstBitWidth == 0 &&
-         "src bit width must be a multiple of dst bit width");
-  int64_t numElements = srcBitWidth / dstBitWidth;
-  auto vecType = VectorType::get(numElements, dstType);
+  int64_t numElements = llvm::divideCeil(srcBitWidth, dstBitWidth);
+  int64_t roundedBitWidth = numElements * dstBitWidth;
 
+  // Pad out values that don't decompose evenly before creating a vector.
+  if (roundedBitWidth != srcBitWidth) {
+    auto srcInt = builder.getIntegerType(srcBitWidth);
+    if (srcType != srcInt)
+      src = LLVM::BitcastOp::create(builder, loc, srcInt, src);
+    auto roundedInt = builder.getIntegerType(roundedBitWidth);
+    src = LLVM::ZExtOp::create(builder, loc, roundedInt, src);
+  }
+
+  auto vecType = VectorType::get(numElements, dstType);
   src = LLVM::BitcastOp::create(builder, loc, vecType, src);
 
   for (auto i : llvm::seq(numElements)) {
@@ -544,9 +564,9 @@ static Value composeValueImpl(OpBuilder &builder, Location loc, ValueRange src,
 
   // Multiple elements narrower than dst: gather into a vector and bitcast.
   unsigned elemBitWidth = getBitWidth(front.getType());
-  assert(dstBitWidth % elemBitWidth == 0 &&
-         "dst bit width must be a multiple of element bit width");
-  int64_t numElements = dstBitWidth / elemBitWidth;
+  int64_t numElements = llvm::divideCeil(dstBitWidth, elemBitWidth);
+  int64_t roundedBitWidth = numElements * elemBitWidth;
+
   auto vecType = VectorType::get(numElements, front.getType());
   Value res = LLVM::PoisonOp::create(builder, loc, vecType);
   for (auto i : llvm::seq(numElements)) {
@@ -555,8 +575,18 @@ static Value composeValueImpl(OpBuilder &builder, Location loc, ValueRange src,
                                         src[offset++], idx);
   }
 
-  if (res.getType() != dstType)
-    res = LLVM::BitcastOp::create(builder, loc, dstType, res);
+  // Undo any padding decomposition might have introduced.
+  if (roundedBitWidth != dstBitWidth) {
+    auto roundedInt = builder.getIntegerType(roundedBitWidth);
+    res = LLVM::BitcastOp::create(builder, loc, roundedInt, res);
+    auto dstInt = builder.getIntegerType(dstBitWidth);
+    res = LLVM::TruncOp::create(builder, loc, dstInt, res);
+    if (dstType != dstInt)
+      res = LLVM::BitcastOp::create(builder, loc, dstType, res);
+  } else {
+    if (res.getType() != dstType)
+      res = LLVM::BitcastOp::create(builder, loc, dstType, res);
+  }
 
   return res;
 }

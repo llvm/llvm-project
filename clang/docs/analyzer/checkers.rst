@@ -1482,6 +1482,13 @@ For a more detailed description of configuration options, please see the
    advanced users can fully customize their taint configuration model.
    Default: ``true``.
 
+* If the analyzer option ``assume-controlled-environment`` is set to ``false``,
+  it is assumed that the command line arguments and the environment
+  variables of the program are attacker controlled.
+  In particular, the ``argv``, ``argc`` and ``envp`` arguments of the
+  ``main`` function and the return value of the ``getenv()``
+  function are assumed to hold tainted values.
+
 **Related Guidelines**
 
 * `CWE Data Neutralization Issues
@@ -3788,7 +3795,7 @@ Check that ``[[clang::annotate_type("webkit.nodelete")]]`` annotation does not a
  Foo [[clang::annotate_type("webkit.nodelete")]] trivialFunction(RefCountable* obj) {
    return obj->anotherTrivialFunction();
  };
- 
+
 ``[[clang::annotate_type("webkit.nodelete")]]`` annotation makes the function ignored for the purpose of other WebKit smart pointer checkers.
 For example, ``alpha.webkit.UncountedCallArgsChecker`` will ignore a function call with this annotation.
 

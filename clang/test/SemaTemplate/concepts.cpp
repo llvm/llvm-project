@@ -1659,6 +1659,25 @@ void foo() { call(""); }
 
 }
 
+namespace GH186624 {
+
+template <class T>
+concept C = __is_unsigned(T);
+
+template <C T>
+struct encoder_interface {};
+
+template <template <C> class CodecInterface, C T>
+CodecInterface<T>* create_codec() {
+  return nullptr;
+}
+
+encoder_interface<unsigned>* create_encoder() {
+  return create_codec<encoder_interface, unsigned>();
+}
+
+}
+
 namespace GH170856 {
 
 template <unsigned N, unsigned M> struct symbol_text {
@@ -1701,6 +1720,43 @@ auto zeroth_kelvin = absolute_zero;
 struct : named_unit<"", thermodynamic_temperature, zeroth_kelvin> {
 } kelvin;
 struct ice_point : relative_point_origin<point<kelvin>> {};
+
+}
+
+namespace GH184047 {
+
+template <typename T, int N>
+concept decomposable = requires {
+    []<template <typename...> class U, typename... Args> // #decomposable_lambda
+        requires(sizeof...(Args) >= N)
+    (U<Args...>*) {}(static_cast<T*>(nullptr));
+};
+
+template<typename T>
+struct foo {};
+
+template<typename T>
+concept decomposable_fails = decomposable<T, 2>; // #decomposable_fails
+
+template<typename T>
+concept decomposable_works = requires {
+    requires decomposable<T, 1>;
+};
+
+static_assert(decomposable<foo<int>, 1>);
+
+static_assert(decomposable<foo<int>, 200>);
+// expected-error@-1 {{static assertion failed}}
+// expected-note@-2 {{evaluated to false}}
+// expected-note@#decomposable_lambda {{invalid}}
+
+static_assert(decomposable_works<foo<int>>);
+
+static_assert(decomposable_fails<foo<int>>);
+// expected-error@-1 {{static assertion failed}}
+// expected-note@-2 {{'foo<int>' does not satisfy 'decomposable_fails'}}
+// expected-note@#decomposable_fails {{evaluated to false}}
+// expected-note@#decomposable_lambda {{invalid}}
 
 }
 

@@ -11,11 +11,11 @@
 
 #include "include/llvm-libc-macros/float16-macros.h"
 #include "include/llvm-libc-types/float128.h"
-#include "shared/libc_common.h"
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "shared/libc_common.h"
 #include "src/__support/math/f16sqrtf128.h"
 
 namespace LIBC_NAMESPACE_DECL {

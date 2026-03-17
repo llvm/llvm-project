@@ -62,6 +62,95 @@ namespace llvm::SPIRV {
 } // namespace llvm::SPIRV
 
 namespace {
+// This class keeps track of which functions reference which global variables.
+class GlobalVariableUsers {
+  template <typename T1, typename T2>
+  using OneToManyMapTy = DenseMap<T1, SmallPtrSet<T2, 4>>;
+
+  OneToManyMapTy<const GlobalVariable *, const Function *> GlobalIsUsedByFun;
+
+  void collectGlobalUsers(
+      const GlobalVariable *GV,
+      OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
+          &GlobalIsUsedByGlobal) {
+    SmallVector<const Value *> Stack = {GV->user_begin(), GV->user_end()};
+    while (!Stack.empty()) {
+      const Value *V = Stack.pop_back_val();
+
+      if (const Instruction *I = dyn_cast<Instruction>(V)) {
+        GlobalIsUsedByFun[GV].insert(I->getFunction());
+        continue;
+      }
+
+      if (const GlobalVariable *UserGV = dyn_cast<GlobalVariable>(V)) {
+        GlobalIsUsedByGlobal[GV].insert(UserGV);
+        continue;
+      }
+
+      if (const Constant *C = dyn_cast<Constant>(V))
+        Stack.append(C->user_begin(), C->user_end());
+    }
+  }
+
+  bool propagateGlobalToGlobalUsers(
+      OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
+          &GlobalIsUsedByGlobal) {
+    SmallVector<const GlobalVariable *> OldUsersGlobals;
+    bool Changed = false;
+    for (auto &[GV, UserGlobals] : GlobalIsUsedByGlobal) {
+      OldUsersGlobals.assign(UserGlobals.begin(), UserGlobals.end());
+      for (const GlobalVariable *UserGV : OldUsersGlobals) {
+        auto It = GlobalIsUsedByGlobal.find(UserGV);
+        if (It == GlobalIsUsedByGlobal.end())
+          continue;
+        Changed |= set_union(UserGlobals, It->second);
+      }
+    }
+    return Changed;
+  }
+
+  void propagateGlobalToFunctionReferences(
+      OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
+          &GlobalIsUsedByGlobal) {
+    for (auto &[GV, UserGlobals] : GlobalIsUsedByGlobal) {
+      auto &UserFunctions = GlobalIsUsedByFun[GV];
+      for (const GlobalVariable *UserGV : UserGlobals) {
+        auto It = GlobalIsUsedByFun.find(UserGV);
+        if (It == GlobalIsUsedByFun.end())
+          continue;
+        set_union(UserFunctions, It->second);
+      }
+    }
+  }
+
+public:
+  void init(Module &M) {
+    // Collect which global variables are referenced by which global variables
+    // and which functions reference each global variables.
+    OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
+        GlobalIsUsedByGlobal;
+    GlobalIsUsedByFun.clear();
+    for (GlobalVariable &GV : M.globals())
+      collectGlobalUsers(&GV, GlobalIsUsedByGlobal);
+
+    // Compute indirect references by iterating until a fixed point is reached.
+    while (propagateGlobalToGlobalUsers(GlobalIsUsedByGlobal))
+      (void)0;
+
+    propagateGlobalToFunctionReferences(GlobalIsUsedByGlobal);
+  }
+
+  using FunctionSetType = typename decltype(GlobalIsUsedByFun)::mapped_type;
+  const FunctionSetType &
+  getTransitiveUserFunctions(const GlobalVariable &GV) const {
+    auto It = GlobalIsUsedByFun.find(&GV);
+    if (It != GlobalIsUsedByFun.end())
+      return It->second;
+
+    static const FunctionSetType Empty{};
+    return Empty;
+  }
+};
 
 static bool isaGEP(const Value *V) {
   return isa<StructuredGEPInst>(V) || isa<GetElementPtrInst>(V);
@@ -78,6 +167,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
+  GlobalVariableUsers GVUsers;
   std::unordered_set<Value *> Named;
 
   // map of function declarations to <pointer arg index => element type>
@@ -208,8 +298,9 @@ class SPIRVEmitIntrinsics
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
-
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
+  bool processMaskedMemIntrinsic(IntrinsicInst &I);
+  bool convertMaskedMemIntrinsics(Module &M);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
 
@@ -1820,7 +1911,8 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
       return;
     } else if (isTodoType(Pointer)) {
       eraseTodoType(Pointer);
-      if (!isa<CallInst>(Pointer) && !isaGEP(Pointer)) {
+      if (!isa<CallInst>(Pointer) && !isaGEP(Pointer) &&
+          !isa<AllocaInst>(Pointer)) {
         //  If this wouldn't be the first spv_ptrcast but existing type info is
         //  uncomplete, update spv_assign_ptr_type arguments.
         if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(Pointer)) {
@@ -2150,13 +2242,37 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   return &I;
 }
 
-void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
-                                             IRBuilder<> &B) {
+static bool
+shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
+                                   const GlobalVariable &GV,
+                                   const Function *F) {
   // Skip special artificial variables.
   static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
                                              "llvm.compiler.used", "llvm.used"};
 
   if (ArtificialGlobals.contains(GV.getName()))
+    return false;
+
+  auto &UserFunctions = GVUsers.getTransitiveUserFunctions(GV);
+  if (UserFunctions.contains(F))
+    return true;
+
+  // Do not emit the intrinsics in this function, it's going to be emitted on
+  // the functions that reference it.
+  if (!UserFunctions.empty())
+    return false;
+
+  // Emit definitions for globals that are not referenced by any function on the
+  // first function definition.
+  const Module &M = *F->getParent();
+  const Function &FirstDefinition = *M.getFunctionDefs().begin();
+  return F == &FirstDefinition;
+}
+
+void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
+                                             IRBuilder<> &B) {
+
+  if (!shouldEmitIntrinsicsForGlobalValue(GVUsers, GV, CurrF))
     return;
 
   Constant *Init = nullptr;
@@ -2595,7 +2711,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       continue;
     unsigned OpNo = Op.getOperandNo();
     if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
-               (II->paramHasAttr(OpNo, Attribute::ImmArg))))
+               (!II->isBundleOperand(OpNo) &&
+                II->paramHasAttr(OpNo, Attribute::ImmArg))))
       continue;
 
     if (!BPrepared) {
@@ -2814,15 +2931,8 @@ bool SPIRVEmitIntrinsics::processFunctionPointers(Module &M) {
   if (Worklist.empty())
     return false;
 
-  std::string ServiceFunName = SPIRV_BACKEND_SERVICE_FUN_NAME;
-  if (!getVacantFunctionName(M, ServiceFunName))
-    report_fatal_error(
-        "cannot allocate a name for the internal service function");
   LLVMContext &Ctx = M.getContext();
-  Function *SF =
-      Function::Create(FunctionType::get(Type::getVoidTy(Ctx), {}, false),
-                       GlobalValue::PrivateLinkage, ServiceFunName, M);
-  SF->addFnAttr(SPIRV_BACKEND_SERVICE_FUN_NAME, "");
+  Function *SF = getOrCreateBackendServiceFunction(M);
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", SF);
   IRBuilder<> IRB(BB);
 
@@ -3175,11 +3285,104 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
   }
 }
 
+bool SPIRVEmitIntrinsics::processMaskedMemIntrinsic(IntrinsicInst &I) {
+  const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(*I.getFunction());
+
+  if (I.getIntrinsicID() == Intrinsic::masked_gather) {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      I.getContext().emitError(
+          &I, "llvm.masked.gather requires SPV_INTEL_masked_gather_scatter "
+              "extension");
+      // Replace with poison to allow compilation to continue and report error.
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+      I.eraseFromParent();
+      return true;
+    }
+
+    IRBuilder<> B(&I);
+
+    Value *Ptrs = I.getArgOperand(0);
+    Value *Mask = I.getArgOperand(1);
+    Value *Passthru = I.getArgOperand(2);
+
+    // Alignment is stored as a parameter attribute, not as a regular parameter.
+    uint32_t Alignment = I.getParamAlign(0).valueOrOne().value();
+
+    SmallVector<Value *, 4> Args = {Ptrs, B.getInt32(Alignment), Mask,
+                                    Passthru};
+    SmallVector<Type *, 4> Types = {I.getType(), Ptrs->getType(),
+                                    Mask->getType(), Passthru->getType()};
+
+    auto *NewI = B.CreateIntrinsic(Intrinsic::spv_masked_gather, Types, Args);
+    I.replaceAllUsesWith(NewI);
+    I.eraseFromParent();
+    return true;
+  }
+
+  if (I.getIntrinsicID() == Intrinsic::masked_scatter) {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      I.getContext().emitError(
+          &I, "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter "
+              "extension");
+      // Erase the intrinsic to allow compilation to continue and report error.
+      I.eraseFromParent();
+      return true;
+    }
+
+    IRBuilder<> B(&I);
+
+    Value *Values = I.getArgOperand(0);
+    Value *Ptrs = I.getArgOperand(1);
+    Value *Mask = I.getArgOperand(2);
+
+    // Alignment is stored as a parameter attribute on the ptrs parameter (arg
+    // 1).
+    uint32_t Alignment = I.getParamAlign(1).valueOrOne().value();
+
+    SmallVector<Value *, 4> Args = {Values, Ptrs, B.getInt32(Alignment), Mask};
+    SmallVector<Type *, 3> Types = {Values->getType(), Ptrs->getType(),
+                                    Mask->getType()};
+
+    B.CreateIntrinsic(Intrinsic::spv_masked_scatter, Types, Args);
+    I.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
+bool SPIRVEmitIntrinsics::convertMaskedMemIntrinsics(Module &M) {
+  bool Changed = false;
+
+  for (Function &F : make_early_inc_range(M)) {
+    if (!F.isIntrinsic())
+      continue;
+    Intrinsic::ID IID = F.getIntrinsicID();
+    if (IID != Intrinsic::masked_gather && IID != Intrinsic::masked_scatter)
+      continue;
+
+    for (User *U : make_early_inc_range(F.users())) {
+      if (auto *II = dyn_cast<IntrinsicInst>(U))
+        Changed |= processMaskedMemIntrinsic(*II);
+    }
+
+    if (F.use_empty())
+      F.eraseFromParent();
+  }
+
+  return Changed;
+}
+
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
 
+  Changed |= convertMaskedMemIntrinsics(M);
+
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
+  GVUsers.init(M);
 
   TodoType.clear();
   for (auto &F : M)

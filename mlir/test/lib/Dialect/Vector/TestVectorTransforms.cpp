@@ -686,8 +686,8 @@ struct TestVectorDistribution
     }
     WarpExecuteOnLane0LoweringOptions options;
     options.warpAllocationFn = allocateGlobalSharedMemory;
-    options.warpSyncronizationFn = [](Location loc, OpBuilder &builder,
-                                      gpu::WarpExecuteOnLane0Op warpOp) {
+    options.warpSynchronizationFn = [](Location loc, OpBuilder &builder,
+                                       gpu::WarpExecuteOnLane0Op warpOp) {
       gpu::BarrierOp::create(builder, loc, gpu::AddressSpace::Workgroup);
     };
     // Test on one pattern in isolation.
@@ -783,8 +783,8 @@ struct TestVectorGatherLowering
            "loads";
   }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<arith::ArithDialect, func::FuncDialect,
-                    memref::MemRefDialect, scf::SCFDialect,
+    registry.insert<affine::AffineDialect, arith::ArithDialect,
+                    func::FuncDialect, memref::MemRefDialect, scf::SCFDialect,
                     tensor::TensorDialect, vector::VectorDialect>();
   }
 

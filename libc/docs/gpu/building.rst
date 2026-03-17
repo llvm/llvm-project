@@ -4,10 +4,6 @@
 Building libs for GPUs
 ======================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Building the GPU C library
 ==========================
 

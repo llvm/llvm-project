@@ -423,8 +423,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
       std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(*DL);
-      if (!Size)
-        continue; // Skip dynamic allocas
+      assert(Size); // Expected to succeed on non-array alloca.
       const unsigned AllocaCost = Size->getFixedValue() * 8;
       // First, check if we have enough budget to vectorize this alloca.
       if (AllocaCost <= VectorizationBudget) {

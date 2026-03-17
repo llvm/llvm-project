@@ -63,6 +63,7 @@ enum CondCode {
 };
 
 CondCode getInverseBranchCondition(CondCode);
+unsigned getInverseBranchOpcode(unsigned BCC);
 unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 
 } // end of namespace RISCVCC
@@ -329,6 +330,14 @@ public:
   /// Return true if \p MI is a COPY to a vector register of a specific \p LMul,
   /// or any kind of vector registers when \p LMul is zero.
   bool isVRegCopy(const MachineInstr *MI, unsigned LMul = 0) const;
+
+  /// Return true if the instruction requires an NTL hint to be emitted.
+  bool requiresNTLHint(const MachineInstr &MI) const;
+
+  /// Return true if moving \p From down to \p To won't cause any physical
+  /// register reads or writes to be clobbered and no visible side effects are
+  /// affected. From and To must be in the same block.
+  static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To);
 
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInstOpc(unsigned Opc);

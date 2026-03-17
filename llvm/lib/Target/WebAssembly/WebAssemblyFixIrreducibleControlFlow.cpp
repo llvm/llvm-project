@@ -235,10 +235,12 @@ void ReachabilityGraph::calculate() {
     ++CurrSCCIdx;
   }
 
+#ifndef NDEBUG
   // Make sure all nodes have been processed
   for (auto &Node : Nodes) {
     assert(Node.SCCId != std::numeric_limits<unsigned>::max());
   }
+#endif
 }
 
 class WebAssemblyFixIrreducibleControlFlow final : public MachineFunctionPass {

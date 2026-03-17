@@ -22,6 +22,7 @@ add_orc_rt_unittest(CoreTests
   ExecutorAddressTest.cpp
   IntervalMapTest.cpp
   IntervalSetTest.cpp
+  LockedAccessTest.cpp
   MathTest.cpp
   MemoryFlagsTest.cpp
   QueueingTaskDispatcherTest.cpp
@@ -38,6 +39,7 @@ add_orc_rt_unittest(CoreTests
   WrapperFunctionBufferTest.cpp
   bind-test.cpp
   bit-test.cpp
+  iterator_range-test.cpp
   move_only_function-test.cpp
   span-test.cpp
   DISABLE_LLVM_LINK_LLVM_DYLIB

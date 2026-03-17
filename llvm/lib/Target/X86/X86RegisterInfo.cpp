@@ -515,6 +515,20 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Set the Shadow Stack Pointer as reserved.
   Reserved.set(X86::SSP);
 
+  auto &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.is64Bit() && ST.hasUserReservedRegisters()) {
+    // Set r# as reserved register if user required
+    for (unsigned Reg = X86::R8; Reg <= X86::R15; ++Reg)
+      if (ST.isRegisterReservedByUser(Reg))
+        for (const MCPhysReg &SubReg : subregs_inclusive(Reg))
+          Reserved.set(SubReg);
+    if (ST.hasEGPR())
+      for (unsigned Reg = X86::R16; Reg <= X86::R31; ++Reg)
+        if (ST.isRegisterReservedByUser(Reg))
+          for (const MCPhysReg &SubReg : subregs_inclusive(Reg))
+            Reserved.set(SubReg);
+  }
+
   // Set the instruction pointer register and its aliases as reserved.
   for (const MCPhysReg &SubReg : subregs_inclusive(X86::RIP))
     Reserved.set(SubReg);
