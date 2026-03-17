@@ -103,7 +103,7 @@ void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
   if (!S || !isViableLoop(*S, *Result.Context))
     return;
 
-  bool IsAnyOf = (AnyOfS != nullptr);
+  const bool IsAnyOf = (AnyOfS != nullptr);
 
   diag(S->getForLoc(),
        "replace loop by 'std%select{|::ranges}0::%select{all_of|any_of}1()'")
