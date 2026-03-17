@@ -1420,11 +1420,6 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   // Enhance/cleanup vector code.
   FPM.addPass(VectorCombinePass());
 
-  LoopPassManager LPM;
-  // Try to sink ReduceCall out of loop
-  LPM.addPass(LoopReduceMotionPass());
-  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
-
   if (!IsFullLTO) {
     FPM.addPass(InstCombinePass());
     // Unroll small loops to hide loop backedge latency and saturate any
@@ -1450,6 +1445,11 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
     FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
   }
+
+  LoopPassManager LPM;
+  // Try to sink ReduceCall out of loop
+  LPM.addPass(LoopReduceMotionPass());
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
 
   FPM.addPass(InferAlignmentPass());
   FPM.addPass(InstCombinePass());
