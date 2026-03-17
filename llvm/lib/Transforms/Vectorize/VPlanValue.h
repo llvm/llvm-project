@@ -246,25 +246,51 @@ struct VPConstantInt : public VPIRValue {
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
 /// VFxUF.
 struct VPSymbolicValue : public VPValue {
-  VPSymbolicValue() : VPValue(VPVSymbolicSC, nullptr) {}
+  enum ID : uint8_t {
+    /// Represents the vectorization factor of the loop.
+    VF,
+    /// Represents the unroll factor of the loop.
+    UF,
+    /// Represents the loop-invariant VF * UF of the vector loop region.
+    VFxUF,
+    /// Represents the vector trip count.
+    VectorTripCount,
+    /// Represents the backedge taken count of the original loop, for folding
+    /// the tail. It equals TripCount - 1.
+    BackedgeTakenCount,
+    /// Represents a placeholder value.
+    Placeholder,
+    /// Marks a VPSymbolicValue as materialized.
+    Materialized,
+  };
+
+  VPSymbolicValue() : VPSymbolicValue(Placeholder) {}
+  VPSymbolicValue(ID ID) : VPValue(VPVSymbolicSC, nullptr), ValueID{ID} {}
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSymbolicSC;
   }
 
   /// Returns true if this symbolic value has been materialized.
-  bool isMaterialized() const { return Materialized; }
+  bool isMaterialized() const { return ValueID == Materialized; }
 
   /// Mark this symbolic value as materialized.
   void markMaterialized() {
-    assert(!Materialized && "VPSymbolicValue already materialized");
-    Materialized = true;
+    assert(ValueID != Materialized && "VPSymbolicValue already materialized");
+    ValueID = Materialized;
   }
 
+  /// Returns the name for this symbolic value.
+  StringRef getName() const;
+
+  /// Returns the value ID for this symbolic value.
+  VPSymbolicValue::ID getID() const { return VPSymbolicValue::ID(ValueID); }
+
 private:
-  /// Track whether this symbolic value has been materialized (replaced).
-  /// After materialization, accessing users should trigger an assertion.
-  bool Materialized = false;
+  /// The value ID for this symbolic value. This is set to "Materialized" after
+  /// the value has been materialized (replaced). After materialization,
+  /// accessing users should trigger an assertion.
+  VPSymbolicValue::ID ValueID;
 };
 
 /// A VPValue defined by a recipe that produces one or more values.

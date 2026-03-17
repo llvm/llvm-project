@@ -4587,22 +4587,6 @@ class VPlan {
   /// the tail.
   VPValue *TripCount = nullptr;
 
-  /// Represents the backedge taken count of the original loop, for folding
-  /// the tail. It equals TripCount - 1.
-  VPSymbolicValue *BackedgeTakenCount = nullptr;
-
-  /// Represents the vector trip count.
-  VPSymbolicValue VectorTripCount;
-
-  /// Represents the vectorization factor of the loop.
-  VPSymbolicValue VF;
-
-  /// Represents the unroll factor of the loop.
-  VPSymbolicValue UF;
-
-  /// Represents the loop-invariant VF * UF of the vector loop region.
-  VPSymbolicValue VFxUF;
-
   /// Contains all the external definitions created for this VPlan, as a mapping
   /// from IR Values to VPIRValues.
   SmallMapVector<Value *, VPIRValue *, 16> LiveIns;
@@ -4610,6 +4594,10 @@ class VPlan {
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
   /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;
+
+  /// Contains all the symbolic values created for this plan. Mapping from the
+  /// Value ID to the symbolic value.
+  SmallDenseMap<VPSymbolicValue::ID, VPSymbolicValue *, 4> SymbolicValues;
 
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
@@ -4724,26 +4712,43 @@ public:
     TripCount = NewTripCount;
   }
 
+  VPSymbolicValue &getOrCreateSymbolicValue(VPSymbolicValue::ID ID) {
+    auto [It, Inserted] = SymbolicValues.try_emplace(ID);
+    if (Inserted)
+      It->second = new VPSymbolicValue(ID);
+    return *It->second;
+  }
+
   /// The backedge taken count of the original loop.
   VPValue *getOrCreateBackedgeTakenCount() {
-    if (!BackedgeTakenCount)
-      BackedgeTakenCount = new VPSymbolicValue();
-    return BackedgeTakenCount;
+    return &getOrCreateSymbolicValue(VPSymbolicValue::BackedgeTakenCount);
   }
-  VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
+  VPValue *getBackedgeTakenCount() const {
+    return SymbolicValues.lookup(VPSymbolicValue::BackedgeTakenCount);
+  }
 
   /// The vector trip count.
-  VPSymbolicValue &getVectorTripCount() { return VectorTripCount; }
+  VPSymbolicValue &getVectorTripCount() {
+    return getOrCreateSymbolicValue(VPSymbolicValue::VectorTripCount);
+  }
 
   /// Returns the VF of the vector loop region.
-  VPSymbolicValue &getVF() { return VF; };
-  const VPSymbolicValue &getVF() const { return VF; };
+  VPSymbolicValue &getVF() {
+    return getOrCreateSymbolicValue(VPSymbolicValue::VF);
+  }
+  const VPSymbolicValue &getVF() const {
+    return const_cast<VPlan &>(*this).getVF();
+  }
 
   /// Returns the UF of the vector loop region.
-  VPSymbolicValue &getUF() { return UF; };
+  VPSymbolicValue &getUF() {
+    return getOrCreateSymbolicValue(VPSymbolicValue::UF);
+  }
 
   /// Returns VF * UF of the vector loop region.
-  VPSymbolicValue &getVFxUF() { return VFxUF; }
+  VPSymbolicValue &getVFxUF() {
+    return getOrCreateSymbolicValue(VPSymbolicValue::VFxUF);
+  }
 
   LLVMContext &getContext() const {
     return getScalarHeader()->getIRBasicBlock()->getContext();
@@ -4752,6 +4757,8 @@ public:
   const DataLayout &getDataLayout() const {
     return getScalarHeader()->getIRBasicBlock()->getDataLayout();
   }
+
+  auto getSymbolicValues() const { return SymbolicValues.values(); }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
 

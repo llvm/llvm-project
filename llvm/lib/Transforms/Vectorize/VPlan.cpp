@@ -904,7 +904,8 @@ VPlan::~VPlan() {
   }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
-  delete BackedgeTakenCount;
+  for (VPSymbolicValue *SV : getSymbolicValues())
+    delete SV;
 }
 
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
@@ -1076,38 +1077,25 @@ const VPRegionBlock *VPlan::getVectorLoopRegion() const {
   return nullptr;
 }
 
+static SmallVector<VPSymbolicValue *> sortedSymbolicValues(const VPlan &Plan) {
+  // Sort symbolic values by their ID (enum order in VPSymbolicValue::ID).
+  SmallVector<VPSymbolicValue *> SortedValues(Plan.getSymbolicValues());
+  sort(SortedValues, [](VPSymbolicValue *A, VPSymbolicValue *B) {
+    return A->getID() < B->getID();
+  });
+  return SortedValues;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  if (VF.getNumUsers() > 0) {
-    O << "\nLive-in ";
-    VF.printAsOperand(O, SlotTracker);
-    O << " = VF";
-  }
-
-  if (UF.getNumUsers() > 0) {
-    O << "\nLive-in ";
-    UF.printAsOperand(O, SlotTracker);
-    O << " = UF";
-  }
-
-  if (VFxUF.getNumUsers() > 0) {
-    O << "\nLive-in ";
-    VFxUF.printAsOperand(O, SlotTracker);
-    O << " = VF * UF";
-  }
-
-  if (VectorTripCount.getNumUsers() > 0) {
-    O << "\nLive-in ";
-    VectorTripCount.printAsOperand(O, SlotTracker);
-    O << " = vector-trip-count";
-  }
-
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    O << "\nLive-in ";
-    BackedgeTakenCount->printAsOperand(O, SlotTracker);
-    O << " = backedge-taken count";
+  for (VPSymbolicValue *SV : sortedSymbolicValues(*this)) {
+    if (SV->getNumUsers() > 0) {
+      O << "\nLive-in ";
+      SV->printAsOperand(O, SlotTracker);
+      O << " = " << SV->getName();
+    }
   }
 
   O << "\n";
@@ -1230,14 +1218,8 @@ VPlan *VPlan::duplicate() {
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
-  Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
-  Old2NewVPValues[&VF] = &NewPlan->VF;
-  Old2NewVPValues[&UF] = &NewPlan->UF;
-  Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
-  if (BackedgeTakenCount) {
-    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
-    Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
-  }
+  for (VPSymbolicValue *SV : getSymbolicValues())
+    Old2NewVPValues[SV] = &NewPlan->getOrCreateSymbolicValue(SV->getID());
   if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
     Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);
   // else NewTripCount will be created and inserted into Old2NewVPValues when
@@ -1522,16 +1504,33 @@ void VPSlotTracker::assignName(const VPValue *V) {
   }
 }
 
+StringRef VPSymbolicValue::getName() const {
+  switch (ValueID) {
+  case VPSymbolicValue::VF:
+    return "VF";
+  case VPSymbolicValue::UF:
+    return "UF";
+  case VPSymbolicValue::VFxUF:
+    return "VF * UF";
+  case VPSymbolicValue::VectorTripCount:
+    return "vector-trip-count";
+  case VPSymbolicValue::BackedgeTakenCount:
+    return "backedge-taken count";
+  default:
+    llvm_unreachable("unamed symbolic value");
+  }
+}
+
 void VPSlotTracker::assignNames(const VPlan &Plan) {
-  if (Plan.VF.getNumUsers() > 0)
-    assignName(&Plan.VF);
-  if (Plan.UF.getNumUsers() > 0)
-    assignName(&Plan.UF);
-  if (Plan.VFxUF.getNumUsers() > 0)
-    assignName(&Plan.VFxUF);
-  assignName(&Plan.VectorTripCount);
-  if (Plan.BackedgeTakenCount)
-    assignName(Plan.BackedgeTakenCount);
+  for (VPSymbolicValue *SV : sortedSymbolicValues(Plan))
+    if (SV->getNumUsers() > 0)
+      assignName(SV);
+
+  // FIXME: Remove this and update the test expectations in
+  // llvm/unittests/Transforms/Vectorize. There is a lot of hardcoded
+  // expectations that assume the first slot starts at 1.
+  NextSlot = std::max(NextSlot, 1U);
+
   for (VPValue *LI : Plan.getLiveIns())
     assignName(LI);
 
