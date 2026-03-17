@@ -650,5 +650,6 @@ public:
                                          int32_t NumPrefers,
                                          interop_spec_t *Prefers) override;
 };
+
 } // namespace llvm::omp::target::plugin
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEVICE_H
