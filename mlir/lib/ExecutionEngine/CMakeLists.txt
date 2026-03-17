@@ -34,6 +34,7 @@ add_mlir_library(MLIRExecutionEngineUtils
 
   DEPENDS
   intrinsics_gen
+  analysis_gen
 
   LINK_COMPONENTS
   Analysis
@@ -73,6 +74,7 @@ add_mlir_library(MLIRExecutionEngine
 
   DEPENDS
   intrinsics_gen
+  analysis_gen
 
   LINK_COMPONENTS
   Core
