@@ -10,9 +10,9 @@ define { <4 x i32>, <4 x i1> } @load_ff_v4i32(ptr %p, <4 x i1> %mask) {
 ; NEON-NEXT:    umov w8, v0.h[0]
 ; NEON-NEXT:    tbz w8, #0, .LBB0_2
 ; NEON-NEXT:  // %bb.1: // %load.ff.first.lane
-; NEON-NEXT:    adrp x8, .LCPI0_0
+; NEON-NEXT:    mov w8, #1 // =0x1
 ; NEON-NEXT:    ldr s0, [x0]
-; NEON-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
+; NEON-NEXT:    fmov d1, x8
 ; NEON-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; NEON-NEXT:    ret
 ; NEON-NEXT:  .LBB0_2:
@@ -27,9 +27,9 @@ define { <4 x i32>, <4 x i1> } @load_ff_v4i32(ptr %p, <4 x i1> %mask) {
 ; SVE-NEXT:    umov w8, v0.h[0]
 ; SVE-NEXT:    tbz w8, #0, .LBB0_2
 ; SVE-NEXT:  // %bb.1: // %load.ff.first.lane
-; SVE-NEXT:    adrp x8, .LCPI0_0
+; SVE-NEXT:    mov w8, #1 // =0x1
 ; SVE-NEXT:    ldr s0, [x0]
-; SVE-NEXT:    ldr d1, [x8, :lo12:.LCPI0_0]
+; SVE-NEXT:    fmov d1, x8
 ; SVE-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; SVE-NEXT:    ret
 ; SVE-NEXT:  .LBB0_2:
@@ -60,9 +60,9 @@ define { <4 x i32>, <4 x i1> } @load_ff_v4i32(ptr %p, <4 x i1> %mask) {
 define { <2 x double>, <2 x i1> } @load_ff_v2f64_all_true_fully_aligned(ptr %p) {
 ; NEON-LABEL: load_ff_v2f64_all_true_fully_aligned:
 ; NEON:       // %bb.0: // %load.ff.first.lane
-; NEON-NEXT:    adrp x8, .LCPI1_0
+; NEON-NEXT:    mov w8, #1 // =0x1
 ; NEON-NEXT:    ldr d0, [x0]
-; NEON-NEXT:    ldr d1, [x8, :lo12:.LCPI1_0]
+; NEON-NEXT:    fmov d1, x8
 ; NEON-NEXT:    ret
 ;
 ; SVE-LABEL: load_ff_v2f64_all_true_fully_aligned:
@@ -85,9 +85,9 @@ define { <2 x double>, <2 x i1> } @load_ff_v2f64_all_true_fully_aligned(ptr %p) 
 define { <2 x double>, <2 x i1> } @load_ff_v2f64_all_true_partially_aligned(ptr %p) {
 ; NEON-LABEL: load_ff_v2f64_all_true_partially_aligned:
 ; NEON:       // %bb.0: // %load.ff.first.lane
-; NEON-NEXT:    adrp x8, .LCPI2_0
+; NEON-NEXT:    mov w8, #1 // =0x1
 ; NEON-NEXT:    ldr d0, [x0]
-; NEON-NEXT:    ldr d1, [x8, :lo12:.LCPI2_0]
+; NEON-NEXT:    fmov d1, x8
 ; NEON-NEXT:    ret
 ;
 ; SVE-LABEL: load_ff_v2f64_all_true_partially_aligned:
