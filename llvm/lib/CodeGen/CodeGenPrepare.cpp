@@ -7834,13 +7834,13 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   UncondBrInst *TrueBranch = nullptr;
   UncondBrInst *FalseBranch = nullptr;
   if (TrueInstrs.size() == 0) {
-    FalseBranch = cast<UncondBrInst>(SplitBlockAndInsertIfElse(
-        CondFr, SplitPt, false, nullptr, DTU, LI));
+    FalseBranch = cast<UncondBrInst>(
+        SplitBlockAndInsertIfElse(CondFr, SplitPt, false, nullptr, DTU, LI));
     FalseBlock = FalseBranch->getParent();
     EndBlock = cast<BasicBlock>(FalseBranch->getOperand(0));
   } else if (FalseInstrs.size() == 0) {
-    TrueBranch = cast<UncondBrInst>(SplitBlockAndInsertIfThen(
-        CondFr, SplitPt, false, nullptr, DTU, LI));
+    TrueBranch = cast<UncondBrInst>(
+        SplitBlockAndInsertIfThen(CondFr, SplitPt, false, nullptr, DTU, LI));
     TrueBlock = TrueBranch->getParent();
     EndBlock = TrueBranch->getSuccessor();
   } else {
