@@ -134,10 +134,6 @@ std::pair<std::optional<int64_t>, Reason> GetNumArgumentsWithReason(
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
 
-std::optional<int64_t> GetNumGeneratedNestsFrom(
-    const parser::ExecutionPartConstruct &epc,
-    std::optional<int64_t> nestedCount);
-
 // Return the depth of the affected nests:
 //   {affected-depth, must-be-perfect-nest, reason}.
 std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
