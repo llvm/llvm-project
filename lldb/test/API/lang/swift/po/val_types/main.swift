@@ -13,8 +13,8 @@ struct CustomMirror : CustomReflectable {
 }
 
 struct CustomSummary : CustomStringConvertible, CustomDebugStringConvertible {
-  var a = 12
-  var b = 24
+  var abc = 12
+  var def = 24
   
   var description: String {
     return "CustomStringConvertible"
