@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -xc++ %s -verify
 // RUN: %clang_cc1 -xc++ %s -verify -DUSE_BUILTINS
 
-typedef unsigned long size_t;
+typedef __SIZE_TYPE__ size_t;
 
 #ifdef __cplusplus
 extern "C" {
