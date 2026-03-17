@@ -438,8 +438,6 @@ protected:
   /// computation. Used by the divergence propagation worklist, not by
   /// external consumers of the analysis.
   bool isDivergentUnderConstruction(ConstValueRefT V) const {
-    if (ContextT::isNeverDivergent(V))
-      return false;
     return DivergentValues.contains(V);
   }
 
