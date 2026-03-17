@@ -12463,9 +12463,10 @@ bool ScalarEvolution::isImpliedCondOperandsViaAddRecStart(
   // Make sure AR varies in the context block.
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(FoundLHS)) {
     const Loop *L = AR->getLoop();
+    const auto *Latch = L->getLoopLatch();
     // Make sure that context belongs to the loop and executes on 1st iteration
     // (if it ever executes at all).
-    if (!L->contains(ContextBB) || !DT.dominates(ContextBB, L->getLoopLatch()))
+    if (!L->contains(ContextBB) || !Latch || !DT.dominates(ContextBB, Latch))
       return false;
     if (!isAvailableAtLoopEntry(FoundRHS, AR->getLoop()))
       return false;
@@ -12474,9 +12475,10 @@ bool ScalarEvolution::isImpliedCondOperandsViaAddRecStart(
 
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(FoundRHS)) {
     const Loop *L = AR->getLoop();
+    const auto *Latch = L->getLoopLatch();
     // Make sure that context belongs to the loop and executes on 1st iteration
     // (if it ever executes at all).
-    if (!L->contains(ContextBB) || !DT.dominates(ContextBB, L->getLoopLatch()))
+    if (!L->contains(ContextBB) || !Latch || !DT.dominates(ContextBB, Latch))
       return false;
     if (!isAvailableAtLoopEntry(FoundLHS, AR->getLoop()))
       return false;
