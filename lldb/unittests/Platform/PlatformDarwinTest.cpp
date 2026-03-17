@@ -18,7 +18,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Platform.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
