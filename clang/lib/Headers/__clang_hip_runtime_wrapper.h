@@ -48,9 +48,7 @@ extern "C" {
   }
 }
 
-#if __GLIBC__ < 3 && __GLIBC__MINOR__ < 39
 #undef _GLIBCXX_USE_C99_INTTYPES_TR1
-#endif
 
 #endif //__cplusplus
 
@@ -116,7 +114,6 @@ __attribute__((weak)) inline __device__ void free(void *__ptr) {
 #endif //__cplusplus
 
 #if !defined(__HIPCC_RTC__)
-#if __GLIBC__ < 3 && __GLIBC__MINOR__ < 39
 namespace std
 {
   typedef unsigned long int size_t;
@@ -127,7 +124,6 @@ typedef unsigned int uint32_t;
 typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
 #define __SIZE_TYPE__ size_t
-#endif
 #include <cmath>
 #include <stdlib.h>
 #if __has_include("hip/hip_version.h")
@@ -164,7 +160,6 @@ typedef unsigned char uint8_t;
 #include <__clang_hip_cmath.h>
 #include <__clang_cuda_complex_builtins.h>
 #include <algorithm>
-#if __GLIBC__ < 3 && __GLIBC__MINOR__ < 39
 #define int_least8_t __int_least8_t
 #define int_least16_t __int_least16_t
 #define int_least32_t __int_least32_t
@@ -192,7 +187,6 @@ typedef unsigned char uint8_t;
 #define SCNu64 "lu"
 #include <complex>
 #include <new>
-#endif
 
 #endif // __HIPCC_RTC__
 
