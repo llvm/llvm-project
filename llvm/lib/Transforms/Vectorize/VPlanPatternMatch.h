@@ -72,7 +72,7 @@ struct specificval_ty {
 
   specificval_ty(const VPValue *V) : Val(V) {}
 
-  bool match(VPValue *VPV) const { return VPV == Val; }
+  bool match(const VPValue *VPV) const { return VPV == Val; }
 };
 
 inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
@@ -84,7 +84,7 @@ struct deferredval_ty {
 
   deferredval_ty(VPValue *const &V) : Val(V) {}
 
-  bool match(VPValue *const V) const { return V == Val; }
+  bool match(const VPValue *const V) const { return V == Val; }
 };
 
 /// Like m_Specific(), but works if the specific value to match is determined
@@ -104,7 +104,7 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
   int_pred_ty(Pred P) : P(std::move(P)) {}
   int_pred_ty() : P() {}
 
-  bool match(VPValue *VPV) const {
+  bool match(const VPValue *VPV) const {
     auto *VPI = dyn_cast<VPInstruction>(VPV);
     if (VPI && VPI->getOpcode() == VPInstruction::Broadcast)
       VPV = VPI->getOperand(0);
@@ -184,7 +184,7 @@ struct bind_apint {
 
   bind_apint(const APInt *&Res) : Res(Res) {}
 
-  bool match(VPValue *VPV) const {
+  bool match(const VPValue *VPV) const {
     auto *CI = dyn_cast<VPConstantInt>(VPV);
     if (!CI)
       return false;
@@ -200,7 +200,7 @@ struct bind_const_int {
 
   bind_const_int(uint64_t &Res) : Res(Res) {}
 
-  bool match(VPValue *VPV) const {
+  bool match(const VPValue *VPV) const {
     const APInt *APConst;
     if (!bind_apint(APConst).match(VPV))
       return false;
@@ -213,7 +213,7 @@ struct bind_const_int {
 };
 
 struct match_poison {
-  bool match(VPValue *V) const {
+  bool match(const VPValue *V) const {
     return isa<VPIRValue>(V) &&
            isa<PoisonValue>(cast<VPIRValue>(V)->getValue());
   }
