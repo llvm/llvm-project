@@ -64,7 +64,7 @@ public:
       if (contains(Name)) {
         ErrorBuilder::fatal("duplicate analysis registration for '{0}'", Name);
       }
-      analysisNames.push_back(AnalysisT::ResultType::analysisName());
+      getAnalysisNames().push_back(AnalysisT::ResultType::analysisName());
     }
 
     Add(const Add &) = delete;
@@ -87,7 +87,12 @@ public:
   instantiate(llvm::StringRef Name);
 
 private:
-  static std::vector<AnalysisName> analysisNames;
+  /// Returns the global list of registered analysis names.
+  ///
+  /// Uses a function-local static to avoid static initialization order
+  /// fiasco: Add<T> objects in other translation units may push names before
+  /// a plain static data member could be constructed.
+  static std::vector<AnalysisName> &getAnalysisNames();
 };
 
 } // namespace clang::ssaf

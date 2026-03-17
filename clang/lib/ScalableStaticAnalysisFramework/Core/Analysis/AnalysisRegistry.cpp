@@ -17,14 +17,18 @@ using RegistryT = llvm::Registry<AnalysisBase>;
 
 LLVM_INSTANTIATE_REGISTRY(RegistryT)
 
-std::vector<AnalysisName> AnalysisRegistry::analysisNames;
+std::vector<AnalysisName> &AnalysisRegistry::getAnalysisNames() {
+  static std::vector<AnalysisName> Names;
+  return Names;
+}
 
 bool AnalysisRegistry::contains(llvm::StringRef Name) {
-  return llvm::is_contained(analysisNames, AnalysisName(std::string(Name)));
+  return llvm::is_contained(getAnalysisNames(),
+                            AnalysisName(std::string(Name)));
 }
 
 const std::vector<AnalysisName> &AnalysisRegistry::names() {
-  return analysisNames;
+  return getAnalysisNames();
 }
 
 llvm::Expected<std::unique_ptr<AnalysisBase>>
