@@ -286,6 +286,21 @@ public:
     });
   }
 
+  /// A variant of blocksOnly that only returns blocks between \p FirstBB and \p
+  /// LastBB.
+  template <typename BlockTy, typename T>
+  static SmallVector<VPBasicBlock *>
+  blocksOnly(const T &Range, VPBasicBlock *FirstBB, VPBasicBlock *LastBB) {
+    auto Blocks = to_vector(blocksOnly<BlockTy, T>(Range));
+    auto *FirstIt = find(Blocks, FirstBB);
+    auto *LastIt = find(Blocks, LastBB);
+    assert(FirstIt != Blocks.end() && LastIt != Blocks.end() &&
+           "FirstBB and LastBB don't correspond to Range");
+    Blocks.erase(Blocks.begin(), FirstIt);
+    Blocks.erase(LastIt, Blocks.end());
+    return Blocks;
+  }
+
   /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
   /// \p From's successor to \p To to point to \p BlockPtr and \p To's
   /// predecessor from \p From to \p BlockPtr. \p From and \p To are added to \p
