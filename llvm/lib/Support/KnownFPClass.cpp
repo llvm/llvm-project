@@ -14,6 +14,7 @@
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
 
@@ -341,19 +342,41 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
     return Known;
 
-  if (KnownLHS.SignBit && KnownRHS.SignBit) {
-    if (*KnownLHS.SignBit == *KnownRHS.SignBit)
-      Known.signBitMustBeZero();
-    else
-      Known.signBitMustBeOne();
-  }
-
   // If 0 * +/-inf produces NaN.
   if ((KnownRHS.isKnownNeverInfinity() ||
        KnownLHS.isKnownNeverLogicalZero(Mode)) &&
       (KnownLHS.isKnownNeverInfinity() ||
        KnownRHS.isKnownNeverLogicalZero(Mode)))
     Known.knownNot(fcNan);
+
+  return Known;
+}
+
+// TODO: This generalizes to known ranges
+KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
+                                const APFloat &CRHS, DenormalMode Mode) {
+  // Match denormal scaling pattern, similar to the case in ldexp. If the
+  // constant's exponent is sufficiently large, the result cannot be subnormal.
+
+  const fltSemantics &Flt = CRHS.getSemantics();
+  unsigned Precision = APFloat::semanticsPrecision(Flt);
+  const int MantissaBits = Precision - 1;
+
+  int MinKnownExponent = ilogb(CRHS);
+  bool CannotBeSubnormal = (MinKnownExponent >= MantissaBits);
+
+  KnownFPClass Known = KnownFPClass::fmul(KnownLHS, KnownFPClass(CRHS), Mode);
+  if (CannotBeSubnormal)
+    Known.knownNot(fcSubnormal);
+
+  // Multiply of values <= 1 cannot introduce overflow.
+  if (KnownLHS.isKnownNever(fcInf)) {
+    if (MinKnownExponent < 0)
+      Known.knownNot(fcInf);
+    else if (MinKnownExponent == 0 && CRHS.compareAbsoluteValue(APFloat::getOne(
+                                          Flt)) == APFloat::cmpEqual)
+      Known.knownNot(fcInf);
+  }
 
   return Known;
 }
@@ -624,5 +647,89 @@ KnownFPClass KnownFPClass::frexp_mant(const KnownFPClass &KnownSrc,
   }
 
   Known.propagateNaN(KnownSrc);
+  return Known;
+}
+
+KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
+                                 const KnownBits &ExpBits,
+                                 const fltSemantics &Flt, DenormalMode Mode) {
+  KnownFPClass Known;
+  Known.propagateNaN(KnownSrc, /*PropagateSign=*/true);
+
+  // Sign is preserved, but underflows may produce zeroes.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+  else if (KnownSrc.cannotBeOrderedLessThanZero())
+    Known.knownNot(OrderedLessThanZeroMask);
+
+  if (KnownSrc.isKnownNever(fcPositive))
+    Known.knownNot(fcPositive);
+  else if (KnownSrc.cannotBeOrderedGreaterThanZero())
+    Known.knownNot(OrderedGreaterThanZeroMask);
+
+  unsigned Precision = APFloat::semanticsPrecision(Flt);
+  const int MantissaBits = Precision - 1;
+
+  if (ExpBits.getSignedMinValue().sge(static_cast<int64_t>(MantissaBits)))
+    Known.knownNot(fcSubnormal);
+
+  if (ExpBits.isConstant() && ExpBits.getConstant().isZero()) {
+    // ldexp(x, 0) -> x, so propagate everything.
+    Known.propagateCanonicalizingSrc(KnownSrc, Mode);
+  } else if (ExpBits.isNegative()) {
+    // If we know the power is <= 0, can't introduce inf
+    if (KnownSrc.isKnownNeverPosInfinity())
+      Known.knownNot(fcPosInf);
+    if (KnownSrc.isKnownNeverNegInfinity())
+      Known.knownNot(fcNegInf);
+  } else if (ExpBits.isNonNegative()) {
+    // If we know the power is >= 0, can't introduce subnormal or zero
+    if (KnownSrc.isKnownNeverPosSubnormal())
+      Known.knownNot(fcPosSubnormal);
+    if (KnownSrc.isKnownNeverNegSubnormal())
+      Known.knownNot(fcNegSubnormal);
+    if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+      Known.knownNot(fcPosZero);
+    if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+      Known.knownNot(fcNegZero);
+  }
+
+  return Known;
+}
+
+// TODO: Detect no-infinity cases
+KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
+                                const KnownBits &ExponentKnownBits) {
+  KnownFPClass Known;
+  Known.propagateNaN(KnownSrc);
+
+  if (ExponentKnownBits.isZero()) {
+    // powi(QNaN, 0) returns 1.0, and powi(SNaN, 0) may non-deterministically
+    // return 1.0 or a NaN.
+    if (KnownSrc.isKnownNever(fcSNan)) {
+      Known.knownNot(~fcPosNormal);
+      return Known;
+    }
+
+    Known.knownNot(~(fcPosNormal | fcNan));
+    return Known;
+  }
+
+  if (ExponentKnownBits.isEven()) {
+    Known.knownNot(fcNegative);
+    return Known;
+  }
+
+  // Given that exp is an integer, here are the
+  // ways that pow can return a negative value:
+  //
+  //   pow(-x, exp)   --> negative if exp is odd and x is negative.
+  //   pow(-0, exp)   --> -inf if exp is negative odd.
+  //   pow(-0, exp)   --> -0 if exp is positive odd.
+  //   pow(-inf, exp) --> -0 if exp is negative odd.
+  //   pow(-inf, exp) --> -inf if exp is positive odd.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
   return Known;
 }

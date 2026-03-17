@@ -138,6 +138,7 @@ struct TransferrableTargetInfo {
   unsigned short NewAlign;
   unsigned MaxVectorAlign;
   unsigned MaxTLSAlign;
+  bool VectorsAreElementAligned;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
       *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format;
@@ -869,6 +870,9 @@ public:
             llvm::isPowerOf2_64(AtomicSizeInBits / getCharWidth()));
   }
 
+  /// True if vectors are element-aligned for this target.
+  bool vectorsAreElementAligned() const { return VectorsAreElementAligned; }
+
   /// Return the maximum vector alignment supported for the given target.
   unsigned getMaxVectorAlign() const { return MaxVectorAlign; }
 
@@ -1578,6 +1582,9 @@ public:
       return true;
     if (getTriple().getArch() == llvm::Triple::ArchType::avr)
       return true;
+    if (getTriple().isOSAIX())
+      return getTriple().getOSMajorVersion() == 0 ||
+             getTriple().getOSVersion() >= VersionTuple(7, 2);
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());

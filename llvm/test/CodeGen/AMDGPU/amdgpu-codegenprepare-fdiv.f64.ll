@@ -767,8 +767,8 @@ define double @rsq_f64_assume_nonzero(double %x) {
   ret double %fdiv
 }
 
-attributes #0 = { "denormal-fp-math"="ieee,dynamic" }
-attributes #1 = { "denormal-fp-math"="ieee,preserve-sign" }
+attributes #0 = { denormal_fpenv(ieee|dynamic) }
+attributes #1 = { denormal_fpenv(ieee|preservesign) }
 
 !0 = !{float 2.500000e+00}
 ;.

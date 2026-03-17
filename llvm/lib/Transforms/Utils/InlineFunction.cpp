@@ -240,7 +240,7 @@ void LandingPadInliningInfo::forwardResume(
   BasicBlock *Dest = getInnerResumeDest();
   BasicBlock *Src = RI->getParent();
 
-  auto *BI = BranchInst::Create(Dest, Src);
+  auto *BI = UncondBrInst::Create(Dest, Src);
   BI->setDebugLoc(RI->getDebugLoc());
 
   // Update the PHIs in the destination. They were inserted in an order which
@@ -1543,14 +1543,16 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
     Valid.addAlignmentAttr(CB.getRetAlign());
   if (std::optional<ConstantRange> Range = CB.getRange())
     Valid.addRangeAttr(*Range);
+  if (CB.hasRetAttr(Attribute::NoFPClass))
+    Valid.addNoFPClassAttr(CB.getRetNoFPClass());
   return Valid;
 }
 
 static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
                                 ClonedCodeInfo &InlinedFunctionInfo) {
-  AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
-  AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
-  if (!ValidUB.hasAttributes() && !ValidPG.hasAttributes())
+  AttrBuilder CallSiteValidUB = IdentifyValidUBGeneratingAttributes(CB);
+  AttrBuilder CallSiteValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
+  if (!CallSiteValidUB.hasAttributes() && !CallSiteValidPG.hasAttributes())
     return;
   auto *CalledFunction = CB.getCalledFunction();
   auto &Context = CalledFunction->getContext();
@@ -1598,6 +1600,8 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
     // with a differing value, the AttributeList's merge API honours the already
     // existing attribute value (i.e. attributes such as dereferenceable,
     // dereferenceable_or_null etc). See AttrBuilder::merge for more details.
+    AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
+    AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
     AttributeList AL = NewRetVal->getAttributes();
     if (ValidUB.getDereferenceableBytes() < AL.getRetDereferenceableBytes())
       ValidUB.removeAttribute(Attribute::Dereferenceable);
@@ -1648,6 +1652,14 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
               CBRange.getRange().intersectWith(NewRange.getRange()));
         }
       }
+
+      Attribute CBNoFPClass = ValidPG.getAttribute(Attribute::NoFPClass);
+      if (CBNoFPClass.isValid() && AL.hasRetAttr(Attribute::NoFPClass)) {
+        ValidPG.addNoFPClassAttr(
+            CBNoFPClass.getNoFPClass() |
+            AL.getRetAttr(Attribute::NoFPClass).getNoFPClass());
+      }
+
       // Three checks.
       // If the callsite has `noundef`, then a poison due to violating the
       // return attribute will create UB anyways so we can always propagate.
@@ -3226,7 +3238,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // If the call site was an invoke instruction, add a branch to the normal
     // destination.
     if (InvokeInst *II = dyn_cast<InvokeInst>(&CB)) {
-      BranchInst *NewBr = BranchInst::Create(II->getNormalDest(), CB.getIterator());
+      UncondBrInst *NewBr =
+          UncondBrInst::Create(II->getNormalDest(), CB.getIterator());
       NewBr->setDebugLoc(Returns[0]->getDebugLoc());
     }
 
@@ -3259,11 +3272,12 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // "starter" and "ender" blocks.  How we accomplish this depends on whether
   // this is an invoke instruction or a call instruction.
   BasicBlock *AfterCallBB;
-  BranchInst *CreatedBranchToNormalDest = nullptr;
+  UncondBrInst *CreatedBranchToNormalDest = nullptr;
   if (InvokeInst *II = dyn_cast<InvokeInst>(&CB)) {
 
     // Add an unconditional branch to make this look like the CallInst case...
-    CreatedBranchToNormalDest = BranchInst::Create(II->getNormalDest(), CB.getIterator());
+    CreatedBranchToNormalDest =
+        UncondBrInst::Create(II->getNormalDest(), CB.getIterator());
     // We intend to replace this DebugLoc with another later.
     CreatedBranchToNormalDest->setDebugLoc(DebugLoc::getTemporary());
 
@@ -3291,10 +3305,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // Change the branch that used to go to AfterCallBB to branch to the first
   // basic block of the inlined function.
   //
-  Instruction *Br = OrigBB->getTerminator();
-  assert(Br && Br->getOpcode() == Instruction::Br &&
-         "splitBasicBlock broken!");
-  Br->setOperand(0, &*FirstNewBlock);
+  UncondBrInst *Br = cast<UncondBrInst>(OrigBB->getTerminator());
+  Br->setSuccessor(&*FirstNewBlock);
 
   // Now that the function is correct, make it a little bit nicer.  In
   // particular, move the basic blocks inserted from the end of the function
@@ -3331,7 +3343,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // Add a branch to the merge points and remove return instructions.
     DebugLoc Loc;
     for (ReturnInst *RI : Returns) {
-      BranchInst *BI = BranchInst::Create(AfterCallBB, RI->getIterator());
+      UncondBrInst *BI = UncondBrInst::Create(AfterCallBB, RI->getIterator());
       Loc = RI->getDebugLoc();
       BI->setDebugLoc(Loc);
       RI->eraseFromParent();
@@ -3388,8 +3400,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
   // We should always be able to fold the entry block of the function into the
   // single predecessor of the block...
-  assert(cast<BranchInst>(Br)->isUnconditional() && "splitBasicBlock broken!");
-  BasicBlock *CalleeEntry = cast<BranchInst>(Br)->getSuccessor(0);
+  BasicBlock *CalleeEntry = Br->getSuccessor();
 
   // Splice the code entry block into calling block, right before the
   // unconditional branch.

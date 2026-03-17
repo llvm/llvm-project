@@ -19,6 +19,7 @@
 #include "mlir/Target/LLVM/ROCDL/Utils.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
+#include "llvm/Config/Targets.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -112,7 +113,7 @@ void SerializeGPUModuleBase::init() {
   static llvm::once_flag initializeBackendOnce;
   llvm::call_once(initializeBackendOnce, []() {
   // If the `AMDGPU` LLVM target was built, initialize it.
-#if MLIR_ENABLE_ROCM_CONVERSIONS
+#if LLVM_HAS_AMDGPU_TARGET
     LLVMInitializeAMDGPUTarget();
     LLVMInitializeAMDGPUTargetInfo();
     LLVMInitializeAMDGPUTargetMC();
@@ -336,7 +337,7 @@ mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
 }
 
 FailureOr<SmallVector<char, 0>>
-mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
+mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef lldPath,
                             function_ref<InFlightDiagnostic()> emitError) {
   // Save the ISA binary to a temp file.
   int tempIsaBinaryFd = -1;
@@ -361,8 +362,6 @@ mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
 
   llvm::FileRemover cleanupHsaco(tempHsacoFilename);
 
-  llvm::SmallString<128> lldPath(toolkitPath);
-  llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
   int lldResult = llvm::sys::ExecuteAndWait(
       lldPath,
       {"ld.lld", "-shared", tempIsaBinaryFilename, "-o", tempHsacoFilename});
@@ -392,8 +391,10 @@ SerializeGPUModuleBase::compileToBinary(StringRef serializedISA) {
     return failure();
 
   // Link the object code.
+  llvm::SmallString<128> lldPath(toolkitPath);
+  llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
   FailureOr<SmallVector<char, 0>> linkedCode =
-      ROCDL::linkObjectCode(*isaBinary, toolkitPath, errCallback);
+      ROCDL::linkObjectCode(*isaBinary, lldPath, errCallback);
   if (failed(linkedCode))
     return failure();
 
@@ -446,7 +447,7 @@ FailureOr<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
   return compileToBinary(*serializedISA);
 }
 
-#if MLIR_ENABLE_ROCM_CONVERSIONS
+#if LLVM_HAS_AMDGPU_TARGET
 namespace {
 class AMDGPUSerializer : public SerializeGPUModuleBase {
 public:
@@ -471,7 +472,7 @@ FailureOr<SmallVector<char, 0>>
 AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule) {
   return moduleToObjectImpl(targetOptions, llvmModule);
 }
-#endif // MLIR_ENABLE_ROCM_CONVERSIONS
+#endif // LLVM_HAS_AMDGPU_TARGET
 
 std::optional<mlir::gpu::SerializedObject>
 ROCDLTargetAttrImpl::serializeToObject(
@@ -484,7 +485,7 @@ ROCDLTargetAttrImpl::serializeToObject(
     module->emitError("module must be a GPU module");
     return std::nullopt;
   }
-#if MLIR_ENABLE_ROCM_CONVERSIONS
+#if LLVM_HAS_AMDGPU_TARGET
   AMDGPUSerializer serializer(*module, cast<ROCDLTargetAttr>(attribute),
                               options);
   serializer.init();
@@ -496,7 +497,7 @@ ROCDLTargetAttrImpl::serializeToObject(
   module->emitError("the `AMDGPU` target was not built. Please enable it when "
                     "building LLVM");
   return std::nullopt;
-#endif // MLIR_ENABLE_ROCM_CONVERSIONS
+#endif // LLVM_HAS_AMDGPU_TARGET
 }
 
 Attribute

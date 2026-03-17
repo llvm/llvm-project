@@ -65,7 +65,7 @@ private:
                                            const Expr *MovingCall,
                                            const ValueDecl *MovedVariable);
   void getUsesAndReinits(const CFGBlock *Block, const ValueDecl *MovedVariable,
-                         llvm::SmallVectorImpl<const DeclRefExpr *> *Uses,
+                         SmallVectorImpl<const DeclRefExpr *> *Uses,
                          llvm::SmallPtrSetImpl<const Stmt *> *Reinits);
   void getDeclRefs(const CFGBlock *Block, const Decl *MovedVariable,
                    llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs);
@@ -133,9 +133,9 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                                            StandardResettableOwnerTypeMatcher)),
                                    callee(cxxMethodDecl(hasName("reset")))),
                  // Methods that have the [[clang::reinitializes]] attribute.
-                 cxxMemberCallExpr(on(DeclRefMatcher),
-                                   callee(cxxMethodDecl(
-                                       hasAttr(clang::attr::Reinitializes)))),
+                 cxxMemberCallExpr(
+                     on(DeclRefMatcher),
+                     callee(cxxMethodDecl(hasAttr(attr::Reinitializes)))),
                  // Functions that are specified in ReinitializationFunctions
                  // option.
                  callExpr(
@@ -243,7 +243,7 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
     Visited.insert(Block);
 
   // Get all uses and reinits in the block.
-  llvm::SmallVector<const DeclRefExpr *, 1> Uses;
+  SmallVector<const DeclRefExpr *, 1> Uses;
   llvm::SmallPtrSet<const Stmt *, 1> Reinits;
   getUsesAndReinits(Block, MovedVariable, &Uses, &Reinits);
 
@@ -251,7 +251,7 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
   // reinit.
   // If `Reinit` is identical to `MovingCall`, we're looking at a move-to-self
   // (e.g. `a = std::move(a)`). Count these as reinitializations.
-  llvm::SmallVector<const Stmt *, 1> ReinitsToDelete;
+  SmallVector<const Stmt *, 1> ReinitsToDelete;
   for (const Stmt *Reinit : Reinits)
     if (MovingCall && Reinit != MovingCall &&
         Sequence->potentiallyAfter(MovingCall, Reinit))
@@ -303,7 +303,7 @@ UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
 
 void UseAfterMoveFinder::getUsesAndReinits(
     const CFGBlock *Block, const ValueDecl *MovedVariable,
-    llvm::SmallVectorImpl<const DeclRefExpr *> *Uses,
+    SmallVectorImpl<const DeclRefExpr *> *Uses,
     llvm::SmallPtrSetImpl<const Stmt *> *Reinits) {
   llvm::SmallPtrSet<const DeclRefExpr *, 1> DeclRefs;
   llvm::SmallPtrSet<const DeclRefExpr *, 1> ReinitDeclRefs;
@@ -550,7 +550,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Collect all code blocks that could use the arg after move.
-  llvm::SmallVector<Stmt *> CodeBlocks{};
+  SmallVector<Stmt *> CodeBlocks{};
   if (ContainingCtor) {
     CodeBlocks.push_back(ContainingCtor->getBody());
     if (ContainingCtorInit) {

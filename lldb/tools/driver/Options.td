@@ -240,9 +240,4 @@ def arch : Separate<["--", "-"], "arch">,
                     "starting and running the program.">;
 def : Separate<["-"], "a">, Alias<arch>, HelpText<"Alias for --arch">;
 
-def debug : F<"debug">,
-            HelpText<"Tells the debugger to print out extra information for "
-                     "debugging itself.">;
-def : Flag<["-"], "d">, Alias<debug>, HelpText<"Alias for --debug">;
-
 def REM : R<["--"], "">;

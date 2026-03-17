@@ -496,6 +496,62 @@ func.func @loop_yield(%count : i32) -> () {
 
 // -----
 
+func.func @loop_yield_result_type_mismatch(%count : i32) -> () {
+  %zero = spirv.Constant 0: i32
+  %one = spirv.Constant 1: i32
+
+  // expected-error@+1{{result types do not match types yielded with `spirv.mlir.merge`}}
+  %final_i = spirv.mlir.loop -> f32 {
+    spirv.Branch ^header(%zero: i32)
+
+  ^header(%i : i32):
+    %cmp = spirv.SLessThan %i, %count : i32
+    spirv.BranchConditional %cmp, ^body, ^merge
+
+  ^body:
+    spirv.Branch ^continue
+
+  ^continue:
+    %new_i = spirv.IAdd %i, %one : i32
+    spirv.Branch ^header(%new_i: i32)
+
+  ^merge:
+    spirv.mlir.merge %i : i32
+  }
+
+  return
+}
+
+// -----
+
+func.func @loop_yield_result_count_mismatch(%count : i32) -> () {
+  %zero = spirv.Constant 0: i32
+  %one = spirv.Constant 1: i32
+
+  // expected-error@+1{{result types do not match types yielded with `spirv.mlir.merge`}}
+  %final_i = spirv.mlir.loop -> i32 {
+    spirv.Branch ^header(%zero: i32)
+
+  ^header(%i : i32):
+    %cmp = spirv.SLessThan %i, %count : i32
+    spirv.BranchConditional %cmp, ^body, ^merge
+
+  ^body:
+    spirv.Branch ^continue
+
+  ^continue:
+    %new_i = spirv.IAdd %i, %one : i32
+    spirv.Branch ^header(%new_i: i32)
+
+  ^merge:
+    spirv.mlir.merge %i, %i : i32, i32
+  }
+
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.mlir.merge
 //===----------------------------------------------------------------------===//
@@ -921,6 +977,57 @@ func.func @selection_yield(%cond: i1) -> () {
 }
 
 // -----
+
+func.func @selection_yield_result_type_mismatch(%cond: i1) -> () {
+  %zero = spirv.Constant 0: i32
+
+  // expected-error@+1{{result types do not match types yielded with `spirv.mlir.merge`}}
+  %yield:2 = spirv.mlir.selection -> f32, f32 {
+    spirv.BranchConditional %cond, ^then, ^else
+
+  ^then:
+    %one = spirv.Constant 1: i32
+    %three = spirv.Constant 3: i32
+    spirv.Branch ^merge(%one, %three : i32, i32)
+
+  ^else:
+    %two = spirv.Constant 2: i32
+    %four = spirv.Constant 4 : i32
+    spirv.Branch ^merge(%two, %four : i32, i32)
+
+  ^merge(%merged_1_2: i32, %merged_3_4: i32):
+    spirv.mlir.merge %merged_1_2, %merged_3_4 : i32, i32
+  }
+
+  spirv.Return
+}
+
+// -----
+
+func.func @selection_yield_result_count_mismatch(%cond: i1) -> () {
+  %zero = spirv.Constant 0: i32
+
+  // expected-error@+1{{result types do not match types yielded with `spirv.mlir.merge`}}
+  %yield:2 = spirv.mlir.selection -> f32, f32 {
+    spirv.BranchConditional %cond, ^then, ^else
+
+  ^then:
+    %one = spirv.Constant 1: i32
+    spirv.Branch ^merge(%one :i32)
+
+  ^else:
+    %two = spirv.Constant 2: i32
+    spirv.Branch ^merge(%two : i32)
+
+  ^merge(%merged_1_2: i32):
+    spirv.mlir.merge %merged_1_2 : i32
+  }
+
+  spirv.Return
+}
+
+// -----
+
 
 //===----------------------------------------------------------------------===//
 // spirv.Unreachable

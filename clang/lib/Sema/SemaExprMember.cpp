@@ -14,11 +14,13 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
@@ -1615,6 +1617,21 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 
     return new (S.Context)
         ExtVectorElementExpr(ret, VK, BaseExpr.get(), *Member, MemberLoc);
+  }
+
+  if (S.getLangOpts().HLSL && BaseType->isConstantMatrixType()) {
+    IdentifierInfo *Member = MemberName.getAsIdentifierInfo();
+    ExprValueKind VK = BaseExpr.get()->getValueKind();
+    QualType Ret = S.HLSL().checkMatrixComponent(S, BaseType, VK, OpLoc, Member,
+                                                 MemberLoc);
+    if (Ret.isNull())
+      return ExprError();
+    Qualifiers BaseQ =
+        S.Context.getCanonicalType(BaseExpr.get()->getType()).getQualifiers();
+    Ret = S.Context.getQualifiedType(Ret, BaseQ);
+
+    return new (S.Context)
+        MatrixElementExpr(Ret, VK, BaseExpr.get(), *Member, MemberLoc);
   }
 
   // Adjust builtin-sel to the appropriate redefinition type if that's

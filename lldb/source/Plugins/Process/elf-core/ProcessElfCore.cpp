@@ -9,7 +9,6 @@
 #include <cstdlib>
 
 #include <memory>
-#include <mutex>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -26,7 +25,6 @@
 #include "lldb/Utility/State.h"
 
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Support/Threading.h"
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
@@ -282,9 +280,14 @@ Status ProcessElfCore::DoLoadCore() {
               break;
             }
           }
-          if (exe_header_addr.has_value())
-            exe_module_sp = ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
-                                                 *exe_header_addr);
+          if (exe_header_addr) {
+            if (llvm::Expected<lldb::ModuleSP> module_sp_or_err =
+                    ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
+                                         *exe_header_addr))
+              exe_module_sp = *module_sp_or_err;
+            else
+              llvm::consumeError(module_sp_or_err.takeError());
+          }
         }
         if (exe_module_sp)
           GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
@@ -523,12 +526,8 @@ void ProcessElfCore::Clear() {
 }
 
 void ProcessElfCore::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 lldb::addr_t ProcessElfCore::GetImageInfoAddress() {
@@ -598,15 +597,13 @@ static llvm::Error ParseNetBSDProcInfo(const DataExtractor &data,
 
   uint32_t version = data.GetU32(&offset);
   if (version != 1)
-    return llvm::make_error<llvm::StringError>(
-        "Error parsing NetBSD core(5) notes: Unsupported procinfo version",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Error parsing NetBSD core(5) notes: Unsupported procinfo version");
 
   uint32_t cpisize = data.GetU32(&offset);
   if (cpisize != NETBSD::NT_PROCINFO_SIZE)
-    return llvm::make_error<llvm::StringError>(
-        "Error parsing NetBSD core(5) notes: Unsupported procinfo size",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Error parsing NetBSD core(5) notes: Unsupported procinfo size");
 
   cpi_signo = data.GetU32(&offset); /* killing signal */
 
@@ -653,8 +650,7 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
   while (offset < segment.GetByteSize()) {
     ELFNote note = ELFNote();
     if (!note.Parse(segment, &offset))
-      return llvm::make_error<llvm::StringError>(
-          "Unable to parse note segment", llvm::inconvertibleErrorCode());
+      return llvm::createStringError("Unable to parse note segment");
 
     size_t note_start = offset;
     size_t note_size = llvm::alignTo(note.n_descsz, 4);
@@ -669,7 +665,6 @@ ProcessElfCore::parseSegment(const DataExtractor &segment) {
 llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   ArchSpec arch = GetArchitecture();
   bool lp64 = (arch.GetMachine() == llvm::Triple::aarch64 ||
-               arch.GetMachine() == llvm::Triple::mips64 ||
                arch.GetMachine() == llvm::Triple::ppc64 ||
                arch.GetMachine() == llvm::Triple::x86_64);
   bool have_prstatus = false;
@@ -713,9 +708,8 @@ llvm::Error ProcessElfCore::parseFreeBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     }
   }
   if (!have_prstatus) {
-    return llvm::make_error<llvm::StringError>(
-        "Could not find NT_PRSTATUS note in core file.",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Could not find NT_PRSTATUS note in core file.");
   }
   m_thread_data.push_back(thread_data);
   return llvm::Error::success();
@@ -770,10 +764,9 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     } else if (name.consume_front("NetBSD-CORE@")) {
       lldb::tid_t tid;
       if (name.getAsInteger(10, tid))
-        return llvm::make_error<llvm::StringError>(
+        return llvm::createStringError(
             "Error parsing NetBSD core(5) notes: Cannot convert LWP ID "
-            "to integer",
-            llvm::inconvertibleErrorCode());
+            "to integer");
 
       switch (GetArchitecture().GetMachine()) {
       case llvm::Triple::aarch64: {
@@ -789,16 +782,14 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
           thread_data.gpregset = note.data;
           thread_data.tid = tid;
           if (thread_data.gpregset.GetByteSize() == 0)
-            return llvm::make_error<llvm::StringError>(
-                "Could not find general purpose registers note in core file.",
-                llvm::inconvertibleErrorCode());
+            return llvm::createStringError(
+                "Could not find general purpose registers note in core file.");
           had_nt_regs = true;
         } else if (note.info.n_type == NETBSD::AARCH64::NT_FPREGS) {
           if (!had_nt_regs || tid != thread_data.tid)
-            return llvm::make_error<llvm::StringError>(
+            return llvm::createStringError(
                 "Error parsing NetBSD core(5) notes: Unexpected order "
-                "of NOTEs PT_GETFPREG before PT_GETREG",
-                llvm::inconvertibleErrorCode());
+                "of NOTEs PT_GETFPREG before PT_GETREG");
           thread_data.notes.push_back(note);
         }
       } break;
@@ -815,16 +806,14 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
           thread_data.gpregset = note.data;
           thread_data.tid = tid;
           if (thread_data.gpregset.GetByteSize() == 0)
-            return llvm::make_error<llvm::StringError>(
-                "Could not find general purpose registers note in core file.",
-                llvm::inconvertibleErrorCode());
+            return llvm::createStringError(
+                "Could not find general purpose registers note in core file.");
           had_nt_regs = true;
         } else if (note.info.n_type == NETBSD::I386::NT_FPREGS) {
           if (!had_nt_regs || tid != thread_data.tid)
-            return llvm::make_error<llvm::StringError>(
+            return llvm::createStringError(
                 "Error parsing NetBSD core(5) notes: Unexpected order "
-                "of NOTEs PT_GETFPREG before PT_GETREG",
-                llvm::inconvertibleErrorCode());
+                "of NOTEs PT_GETFPREG before PT_GETREG");
           thread_data.notes.push_back(note);
         }
       } break;
@@ -841,16 +830,14 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
           thread_data.gpregset = note.data;
           thread_data.tid = tid;
           if (thread_data.gpregset.GetByteSize() == 0)
-            return llvm::make_error<llvm::StringError>(
-                "Could not find general purpose registers note in core file.",
-                llvm::inconvertibleErrorCode());
+            return llvm::createStringError(
+                "Could not find general purpose registers note in core file.");
           had_nt_regs = true;
         } else if (note.info.n_type == NETBSD::AMD64::NT_FPREGS) {
           if (!had_nt_regs || tid != thread_data.tid)
-            return llvm::make_error<llvm::StringError>(
+            return llvm::createStringError(
                 "Error parsing NetBSD core(5) notes: Unexpected order "
-                "of NOTEs PT_GETFPREG before PT_GETREG",
-                llvm::inconvertibleErrorCode());
+                "of NOTEs PT_GETFPREG before PT_GETREG");
           thread_data.notes.push_back(note);
         }
       } break;
@@ -865,17 +852,15 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     m_thread_data.push_back(thread_data);
 
   if (m_thread_data.empty())
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         "Error parsing NetBSD core(5) notes: No threads information "
-        "specified in notes",
-        llvm::inconvertibleErrorCode());
+        "specified in notes");
 
   if (m_thread_data.size() != nlwps)
-    return llvm::make_error<llvm::StringError>(
+    return llvm::createStringError(
         "Error parsing NetBSD core(5) notes: Mismatch between the number "
         "of LWPs in netbsd_elfcore_procinfo and the number of LWPs specified "
-        "by MD notes",
-        llvm::inconvertibleErrorCode());
+        "by MD notes");
 
   // Signal targeted at the whole process.
   if (siglwp == 0) {
@@ -895,9 +880,8 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     }
 
     if (!passed)
-      return llvm::make_error<llvm::StringError>(
-          "Error parsing NetBSD core(5) notes: Signal passed to unknown LWP",
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError(
+          "Error parsing NetBSD core(5) notes: Signal passed to unknown LWP");
   }
 
   return llvm::Error::success();
@@ -927,9 +911,8 @@ llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
     }
   }
   if (thread_data.gpregset.GetByteSize() == 0) {
-    return llvm::make_error<llvm::StringError>(
-        "Could not find general purpose registers note in core file.",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Could not find general purpose registers note in core file.");
   }
   m_thread_data.push_back(thread_data);
   return llvm::Error::success();
@@ -1053,9 +1036,8 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   case llvm::Triple::OpenBSD:
     return parseOpenBSDNotes(*notes_or_error);
   default:
-    return llvm::make_error<llvm::StringError>(
-        "Don't know how to parse core file. Unsupported OS.",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Don't know how to parse core file. Unsupported OS.");
   }
 }
 

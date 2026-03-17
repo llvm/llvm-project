@@ -16,6 +16,15 @@ namespace orc_rt {
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
+Session::Session(std::unique_ptr<TaskDispatcher> Dispatcher,
+                 ErrorReporterFn ReportError)
+    : Dispatcher(std::move(Dispatcher)), ReportError(std::move(ReportError)) {
+  std::pair<const char *, void *> InitialSymbols[] = {
+      {"orc_rt_SessionInstance", static_cast<void *>(this)}};
+
+  cantFail(CI.addSymbolsUnique(InitialSymbols));
+}
+
 Session::~Session() { waitForShutdown(); }
 
 void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
@@ -40,7 +49,7 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
       // callbacks, then call shutdownNext below (outside the lock).
       SI = std::make_unique<ShutdownInfo>();
       SI->OnCompletes.push_back(std::move(OnShutdownComplete));
-      std::swap(SI->ResourceMgrs, ResourceMgrs);
+      std::swap(SI->Services, Services);
     }
   }
 
@@ -53,19 +62,14 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
   // OnShutdownComplete is _not_ set (i.e. was moved into the list of pending
   // handlers), and we didn't return under the lock above, so we must be
   // responsible for the shutdown. Call shutdownNext.
-  shutdownNext(Error::success());
+  shutdownNext();
 }
 
 void Session::waitForShutdown() {
-  shutdown([]() {});
-  std::unique_lock<std::mutex> Lock(M);
-  SI->CompleteCV.wait(Lock, [&]() { return SI->Complete; });
-}
-
-void Session::addResourceManager(std::unique_ptr<ResourceManager> RM) {
-  std::scoped_lock<std::mutex> Lock(M);
-  assert(!SI && "addResourceManager called after shutdown");
-  ResourceMgrs.push_back(std::move(RM));
+  std::promise<void> P;
+  auto F = P.get_future();
+  shutdown([P = std::move(P)]() mutable { P.set_value(); });
+  F.get();
 }
 
 void Session::setController(std::shared_ptr<ControllerAccess> CA) {
@@ -83,24 +87,21 @@ void Session::detachFromController() {
   }
 }
 
-void Session::shutdownNext(Error Err) {
-  if (Err)
-    reportError(std::move(Err));
-
-  if (SI->ResourceMgrs.empty())
+void Session::shutdownNext() {
+  if (SI->Services.empty())
     return shutdownComplete();
 
-  // Get the next ResourceManager to shut down.
-  auto NextRM = std::move(SI->ResourceMgrs.back());
-  SI->ResourceMgrs.pop_back();
-  NextRM->shutdown([this](Error Err) { shutdownNext(std::move(Err)); });
+  // Get the next Service to shut down.
+  auto NextSrv = std::move(SI->Services.back());
+  SI->Services.pop_back();
+  NextSrv->onShutdown([this]() { shutdownNext(); });
 }
 
 void Session::shutdownComplete() {
 
   std::unique_ptr<TaskDispatcher> TmpDispatcher;
   {
-    std::lock_guard<std::mutex> Lock(M);
+    std::scoped_lock<std::mutex> Lock(M);
     TmpDispatcher = std::move(Dispatcher);
   }
 
@@ -108,15 +109,13 @@ void Session::shutdownComplete() {
 
   std::vector<OnShutdownCompleteFn> OnCompletes;
   {
-    std::lock_guard<std::mutex> Lock(M);
+    std::scoped_lock<std::mutex> Lock(M);
     SI->Complete = true;
     OnCompletes = std::move(SI->OnCompletes);
   }
 
   for (auto &OnShutdownComplete : OnCompletes)
     OnShutdownComplete();
-
-  SI->CompleteCV.notify_all();
 }
 
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,

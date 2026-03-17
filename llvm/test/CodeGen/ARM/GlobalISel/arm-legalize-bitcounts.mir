@@ -145,14 +145,12 @@ body:             |
     liveins: $r0
 
     ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY $r0
-    ; CHECK: [[BITMASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[X]], [[BITMASK]]
     %0(s32) = COPY $r0
     %1(s8) = G_TRUNC %0(s32)
 
     ; Check that the operation is performed for 32 bits
     ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK: [[R32:%[0-9]+]]:_(s32) = G_SHL [[X32]], [[BITDIFF]]
+    ; CHECK: [[R32:%[0-9]+]]:_(s32) = G_SHL [[X]], [[BITDIFF]]
     ; LIBCALLS-NOT: G_CTLZ
     ; LIBCALLS: ADJCALLSTACKDOWN
     ; LIBCALLS: $r0 = COPY [[R32]]

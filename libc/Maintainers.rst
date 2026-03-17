@@ -8,10 +8,6 @@ LLVM-libc. The following people are the active maintainers for the project.
 Please reach out to them for code reviews, questions about their area of
 expertise, or other assistance.
 
-.. contents::
-   :depth: 1
-   :local:
-
 Lead Maintainer
 ---------------
 | Michael Jones
@@ -41,6 +37,7 @@ Math
 ----
 | Tue Ly
 | lntue\@google.com (email), `lntue <https://github.com/lntue>`_ (github)
+
 | Nicolas Celik
 | its.overmighty\@gmail.com (email), `OverMighty <https://github.com/overmighty>`_ (github)
 
@@ -48,6 +45,11 @@ Threading
 ---------
 | Yifan Zhu
 | yifanzhu\@rochester.edu (email), `Schrodinger ZHU Yifan <https://github.com/schrodingerzhu>`_ (github)
+
+Runtime Safety, Threading, Math
+-------------------------------
+| Muhammad Bassiouni
+| muhammad.m.bassiouni\@gmail.com (email), `bassiounix <https://github.com/bassiounix>`_ (github)
 
 RISC-V
 ------

@@ -64,7 +64,6 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
-        "libclc",
         "openmp",
     },
 }
@@ -72,7 +71,9 @@ DEPENDENTS_TO_TEST = {
 # This mapping describes runtimes that should be enabled for a specific project,
 # but not necessarily run for testing. The only case of this currently is lldb
 # which needs some runtimes enabled for tests.
-DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
+DEPENDENT_RUNTIMES_TO_BUILD = {
+    "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
+}
 
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
@@ -80,10 +81,11 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt"},
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
+    "libclc": {"libclc"},
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
-    ".ci": {"compiler-rt", "libc", "flang-rt"},
+    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
@@ -145,6 +147,7 @@ PROJECT_CHECK_TARGETS = {
     "flang": "check-flang",
     "flang-rt": "check-flang-rt",
     "libc": "check-libc",
+    "libclc": "check-libclc",
     "lld": "check-lld",
     "lldb": "check-lldb",
     "mlir": "check-mlir",
@@ -153,7 +156,15 @@ PROJECT_CHECK_TARGETS = {
     "lit": "check-lit",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt"}
+RUNTIMES = {
+    "libcxx",
+    "libcxxabi",
+    "libunwind",
+    "compiler-rt",
+    "libc",
+    "flang-rt",
+    "libclc",
+}
 
 # Meta projects are projects that need explicit handling but do not reside
 # in their own top level folder. To add a meta project, the start of the path

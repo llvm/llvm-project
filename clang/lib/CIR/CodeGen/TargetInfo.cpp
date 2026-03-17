@@ -1,6 +1,7 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
 #include "CIRGenFunction.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
@@ -43,6 +44,21 @@ bool clang::CIRGen::isEmptyFieldForLayout(const ASTContext &context,
 
 namespace {
 
+class AMDGPUABIInfo : public ABIInfo {
+public:
+  AMDGPUABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+};
+
+} // namespace
+
+namespace {
+
 class X8664ABIInfo : public ABIInfo {
 public:
   X8664ABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
@@ -55,6 +71,30 @@ public:
 };
 
 } // namespace
+
+namespace {
+
+class NVPTXABIInfo : public ABIInfo {
+public:
+  NVPTXABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+};
+} // namespace
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<AMDGPUTargetCIRGenInfo>(cgt);
+}
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<NVPTXTargetCIRGenInfo>(cgt);
+}
 
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
@@ -72,13 +112,11 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   return false;
 }
 
-mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
-    CIRGenFunction &cgf, mlir::Value v, cir::TargetAddressSpaceAttr srcAddr,
-    mlir::Type destTy, bool isNonNull) const {
-  // Since target may map different address spaces in AST to the same address
-  // space, an address space conversion may end up as a bitcast.
-  if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())
-    cgf.cgm.errorNYI("Global op addrspace cast");
-  // Try to preserve the source's name to make IR more readable.
-  return cgf.getBuilder().createAddrSpaceCast(v, destTy);
+clang::LangAS
+TargetCIRGenInfo::getGlobalVarAddressSpace(CIRGenModule &cgm,
+                                           const clang::VarDecl *d) const {
+  assert(!cgm.getLangOpts().OpenCL &&
+         !(cgm.getLangOpts().CUDA && cgm.getLangOpts().CUDAIsDevice) &&
+         "Address space agnostic languages only");
+  return d ? d->getType().getAddressSpace() : LangAS::Default;
 }

@@ -132,9 +132,9 @@ void Process::GetTimeUsage(TimePoint<> &elapsed,
 #include <mach/mach.h>
 #endif
 
-// Some LLVM programs such as bugpoint produce core files as a normal part of
-// their operation. To prevent the disk from filling up, this function
-// does what's necessary to prevent their generation.
+// Some LLVM programs such as llvm-reduce produce core files as a normal part of
+// their operation. To prevent the disk from filling up, this function does
+// what's necessary to prevent their generation.
 void Process::PreventCoreFiles() {
   struct rlimit rlim;
   getrlimit(RLIMIT_CORE, &rlim);

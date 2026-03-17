@@ -47,6 +47,8 @@ class Instruction;
 class Type;
 class raw_ostream;
 enum FPClassTest : unsigned;
+struct DenormalFPEnv;
+struct DenormalMode;
 
 enum class AllocFnKind : uint64_t {
   Unknown = 0,
@@ -340,6 +342,9 @@ public:
 
   /// Returns memory effects.
   LLVM_ABI MemoryEffects getMemoryEffects() const;
+
+  /// Returns denormal_fpenv.
+  LLVM_ABI struct DenormalFPEnv getDenormalFPEnv() const;
 
   /// Returns information from captures attribute.
   LLVM_ABI CaptureInfo getCaptureInfo() const;
@@ -1343,6 +1348,9 @@ public:
 
   /// Add captures attribute.
   LLVM_ABI AttrBuilder &addCapturesAttr(CaptureInfo CI);
+
+  /// Add denormal_fpenv attribute.
+  LLVM_ABI AttrBuilder &addDenormalFPEnvAttr(DenormalFPEnv Mode);
 
   // Add nofpclass attribute
   LLVM_ABI AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);

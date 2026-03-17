@@ -104,8 +104,8 @@ static cl::opt<unsigned int> MaxLoopNestDepth(
 
 // We prefer cache cost to vectorization by default.
 static cl::list<RuleTy> Profitabilities(
-    "loop-interchange-profitabilities", cl::ZeroOrMore,
-    cl::MiscFlags::CommaSeparated, cl::Hidden,
+    "loop-interchange-profitabilities", cl::MiscFlags::CommaSeparated,
+    cl::Hidden,
     cl::desc("List of profitability heuristics to be used. They are applied in "
              "the given order"),
     cl::list_init<RuleTy>({RuleTy::PerLoopCacheAnalysis,
@@ -816,12 +816,7 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   // A perfectly nested loop will not have any branch in between the outer and
   // inner block i.e. outer header will branch to either inner preheader and
   // outerloop latch.
-  BranchInst *OuterLoopHeaderBI =
-      dyn_cast<BranchInst>(OuterLoopHeader->getTerminator());
-  if (!OuterLoopHeaderBI)
-    return false;
-
-  for (BasicBlock *Succ : successors(OuterLoopHeaderBI))
+  for (BasicBlock *Succ : successors(OuterLoopHeader))
     if (Succ != InnerLoopPreHeader && Succ != InnerLoop->getHeader() &&
         Succ != OuterLoopLatch)
       return false;
@@ -901,9 +896,9 @@ bool LoopInterchangeLegality::isLoopStructureUnderstood() {
   //      for(int i=0;i<N;i++)
   //        for(int j=0;j*i<N;j++)
   BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
-  BranchInst *InnerLoopLatchBI =
-      dyn_cast<BranchInst>(InnerLoopLatch->getTerminator());
-  if (!InnerLoopLatchBI->isConditional())
+  CondBrInst *InnerLoopLatchBI =
+      dyn_cast<CondBrInst>(InnerLoopLatch->getTerminator());
+  if (!InnerLoopLatchBI)
     return false;
   if (CmpInst *InnerLoopCmp =
           dyn_cast<CmpInst>(InnerLoopLatchBI->getCondition())) {
@@ -1256,8 +1251,8 @@ bool LoopInterchangeLegality::currentLimitations() {
   // blocks.
   if (InnerLoop->getExitingBlock() != InnerLoopLatch ||
       OuterLoop->getExitingBlock() != OuterLoop->getLoopLatch() ||
-      !isa<BranchInst>(InnerLoopLatch->getTerminator()) ||
-      !isa<BranchInst>(OuterLoop->getLoopLatch()->getTerminator())) {
+      !isa<CondBrInst>(InnerLoopLatch->getTerminator()) ||
+      !isa<CondBrInst>(OuterLoop->getLoopLatch()->getTerminator())) {
     LLVM_DEBUG(
         dbgs() << "Loops where the latch is not the exiting block are not"
                << " supported currently.\n");
@@ -1999,7 +1994,7 @@ bool LoopInterchangeTransform::transform(
 
     // FIXME: Should we interchange when we have a constant condition?
     Instruction *CondI = dyn_cast<Instruction>(
-        cast<BranchInst>(InnerLoop->getLoopLatch()->getTerminator())
+        cast<CondBrInst>(InnerLoop->getLoopLatch()->getTerminator())
             ->getCondition());
     if (CondI)
       WorkList.insert(CondI);
@@ -2076,14 +2071,14 @@ static void swapBBContents(BasicBlock *BB1, BasicBlock *BB2) {
 // Update BI to jump to NewBB instead of OldBB. Records updates to the
 // dominator tree in DTUpdates. If \p MustUpdateOnce is true, assert that
 // \p OldBB  is exactly once in BI's successor list.
-static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
+static void updateSuccessor(Instruction *Term, BasicBlock *OldBB,
                             BasicBlock *NewBB,
                             std::vector<DominatorTree::UpdateType> &DTUpdates,
                             bool MustUpdateOnce = true) {
-  assert((!MustUpdateOnce || llvm::count(successors(BI), OldBB) == 1) &&
+  assert((!MustUpdateOnce || llvm::count(successors(Term), OldBB) == 1) &&
          "BI must jump to OldBB exactly once.");
   bool Changed = false;
-  for (Use &Op : BI->operands())
+  for (Use &Op : Term->operands())
     if (Op == OldBB) {
       Op.set(NewBB);
       Changed = true;
@@ -2091,9 +2086,9 @@ static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
 
   if (Changed) {
     DTUpdates.push_back(
-        {DominatorTree::UpdateKind::Insert, BI->getParent(), NewBB});
+        {DominatorTree::UpdateKind::Insert, Term->getParent(), NewBB});
     DTUpdates.push_back(
-        {DominatorTree::UpdateKind::Delete, BI->getParent(), OldBB});
+        {DominatorTree::UpdateKind::Delete, Term->getParent(), OldBB});
   }
   assert(Changed && "Expected a successor to be updated");
 }
@@ -2274,24 +2269,21 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   BasicBlock *InnerLoopLatchSuccessor;
   BasicBlock *OuterLoopLatchSuccessor;
 
-  BranchInst *OuterLoopLatchBI =
-      dyn_cast<BranchInst>(OuterLoopLatch->getTerminator());
-  BranchInst *InnerLoopLatchBI =
-      dyn_cast<BranchInst>(InnerLoopLatch->getTerminator());
-  BranchInst *OuterLoopHeaderBI =
-      dyn_cast<BranchInst>(OuterLoopHeader->getTerminator());
-  BranchInst *InnerLoopHeaderBI =
-      dyn_cast<BranchInst>(InnerLoopHeader->getTerminator());
+  CondBrInst *OuterLoopLatchBI =
+      dyn_cast<CondBrInst>(OuterLoopLatch->getTerminator());
+  CondBrInst *InnerLoopLatchBI =
+      dyn_cast<CondBrInst>(InnerLoopLatch->getTerminator());
+  Instruction *OuterLoopHeaderBI = OuterLoopHeader->getTerminator();
+  Instruction *InnerLoopHeaderBI = InnerLoopHeader->getTerminator();
 
   if (!OuterLoopPredecessor || !InnerLoopLatchPredecessor ||
       !OuterLoopLatchBI || !InnerLoopLatchBI || !OuterLoopHeaderBI ||
       !InnerLoopHeaderBI)
     return false;
 
-  BranchInst *InnerLoopLatchPredecessorBI =
-      dyn_cast<BranchInst>(InnerLoopLatchPredecessor->getTerminator());
-  BranchInst *OuterLoopPredecessorBI =
-      dyn_cast<BranchInst>(OuterLoopPredecessor->getTerminator());
+  Instruction *InnerLoopLatchPredecessorBI =
+      InnerLoopLatchPredecessor->getTerminator();
+  Instruction *OuterLoopPredecessorBI = OuterLoopPredecessor->getTerminator();
 
   if (!OuterLoopPredecessorBI || !InnerLoopLatchPredecessorBI)
     return false;
@@ -2307,7 +2299,7 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
                   InnerLoopPreHeader, DTUpdates, /*MustUpdateOnce=*/false);
   // The outer loop header might or might not branch to the outer latch.
   // We are guaranteed to branch to the inner loop preheader.
-  if (llvm::is_contained(OuterLoopHeaderBI->successors(), OuterLoopLatch)) {
+  if (llvm::is_contained(successors(OuterLoopHeaderBI), OuterLoopLatch)) {
     // In this case the outerLoopHeader should branch to the InnerLoopLatch.
     updateSuccessor(OuterLoopHeaderBI, OuterLoopLatch, InnerLoopLatch,
                     DTUpdates,

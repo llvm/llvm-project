@@ -30,14 +30,14 @@ void test_lvalue_cast() {
 // CIR:         %[[S0:.+]] = {{.*}}@f : !cir.ptr<!cir.func<()>>{{.*}}
 // CIR:         %[[S1:.+]] = cir.cast{{.*}}%[[S0]] : !cir.ptr<!cir.func<()>>{{.*}}
 // CIR:         %[[S2:.+]] = cir.const #cir.int<42> : !s32i
-// CIR:         cir.call %[[S1]](%[[S2]]) : (!cir.ptr<!cir.func<(!s32i)>>, !s32i) -> ()
+// CIR:         cir.call %[[S1]](%[[S2]]) : (!cir.ptr<!cir.func<(!s32i)>>, !s32i {llvm.noundef}) -> ()
 
 // LLVM-LABEL:  define{{.*}} void @f1()
 // LLVM:        ret void
 // LLVM:        define{{.*}} void @f2()
 // LLVM:        call void @f()
 // LLVM:        define{{.*}} void @test_lvalue_cast()
-// LLVM:        call void @f(i32 42)
+// LLVM:        call void @f(i32 noundef 42)
 
 // OGCG-LABEL:  define{{.*}} void @f1()
 // OGCG:        ret void

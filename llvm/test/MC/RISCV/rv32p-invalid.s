@@ -102,8 +102,7 @@ maccsu.w00 a4, s2, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the fol
 pmaccsu.w.h11 a0, a2, t3 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 maccsu.w11 t5, a4, s2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 
-ppaire.h t5, a2, a4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-
+ppaire.w t5, s0, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 ppaireo.w t5, s0, t5 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 ppairoe.w t5, t1, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
 ppairo.w t3, a0, s2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set

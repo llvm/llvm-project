@@ -199,7 +199,7 @@ bool ObjectContainerMachOFileset::ParseHeader() {
 
   std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-  std::optional<mach_header> header = ParseMachOHeader(*m_extractor_sp.get());
+  std::optional<mach_header> header = ParseMachOHeader(*m_extractor_sp);
   if (!header)
     return false;
 
@@ -216,7 +216,7 @@ bool ObjectContainerMachOFileset::ParseHeader() {
     m_extractor_sp->SetData(data_sp);
   }
 
-  return ParseFileset(*m_extractor_sp.get(), *header, m_entries, m_memory_addr);
+  return ParseFileset(*m_extractor_sp, *header, m_entries, m_memory_addr);
 }
 
 size_t ObjectContainerMachOFileset::GetModuleSpecifications(
@@ -227,8 +227,8 @@ size_t ObjectContainerMachOFileset::GetModuleSpecifications(
   if (!extractor_sp)
     return initial_count;
 
-  DataExtractorSP data_extractor_sp = extractor_sp->GetSubsetExtractorSP(
-      data_offset, extractor_sp->GetByteSize());
+  DataExtractorSP data_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
   if (!data_extractor_sp)
     return initial_count;
   if (MagicBytesMatch(*data_extractor_sp)) {
