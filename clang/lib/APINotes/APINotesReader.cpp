@@ -369,11 +369,8 @@ void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   if (Payload & 0x01)
     Info.setNoEscape(Payload & 0x02);
   Payload >>= 2;
-  if (Payload & 0x01) {
-    BoundsSafetyInfo BSI;
-    ReadBoundsSafetyInfo(Data, BSI);
-    Info.BoundsSafety = BSI;
-  }
+  if (Payload & 0x01)
+    ReadBoundsSafetyInfo(Data, Info.BoundsSafety.emplace());
 }
 
 /// Read serialized FunctionInfo.

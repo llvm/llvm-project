@@ -78,7 +78,6 @@ LLVM_DUMP_METHOD void ObjCPropertyInfo::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void BoundsSafetyInfo::dump(llvm::raw_ostream &OS) const {
   if (KindAudited) {
-    assert(static_cast<BoundsSafetyKind>(Kind) <= BoundsSafetyKind::EndedBy);
     switch (static_cast<BoundsSafetyKind>(Kind)) {
     case BoundsSafetyKind::CountedBy:
       OS << "[counted_by] ";
