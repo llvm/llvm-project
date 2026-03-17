@@ -169,10 +169,11 @@ mlir::LogicalResult CIRCastOpABILowering::matchAndRewrite(
   return mlir::failure();
 }
 // Helper function to lower a value for things like an initializer.
-static mlir::TypedAttr lowerValue(const LowerModule *lowerModule,
-                                  const mlir::DataLayout &layout,
-                                  const mlir::TypeConverter &tc, mlir::Type ty,
-                                  mlir::Attribute initVal) {
+static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
+                                         const mlir::DataLayout &layout,
+                                         const mlir::TypeConverter &tc,
+                                         mlir::Type ty,
+                                         mlir::Attribute initVal) {
   if (mlir::isa<cir::DataMemberType>(ty)) {
     auto dataMemberVal = mlir::cast_if_present<cir::DataMemberAttr>(initVal);
     return lowerModule->getCXXABI().lowerDataMemberConstant(dataMemberVal,
@@ -196,8 +197,8 @@ static mlir::TypedAttr lowerValue(const LowerModule *lowerModule,
     loweredElements.reserve(arrTy.getSize());
     for (const mlir::Attribute &attr : arrayElts) {
       auto typedAttr = cast<mlir::TypedAttr>(attr);
-      loweredElements.push_back(
-          lowerValue(lowerModule, layout, tc, typedAttr.getType(), typedAttr));
+      loweredElements.push_back(lowerInitialValue(
+          lowerModule, layout, tc, typedAttr.getType(), typedAttr));
     }
 
     return cir::ConstArrayAttr::get(
@@ -214,7 +215,7 @@ mlir::LogicalResult CIRConstantOpABILowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
 
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
-  mlir::TypedAttr newValue = lowerValue(
+  mlir::TypedAttr newValue = lowerInitialValue(
       lowerModule, layout, *getTypeConverter(), op.getType(), op.getValue());
   rewriter.replaceOpWithNewOp<ConstantOp>(op, newValue);
   return mlir::success();
@@ -285,7 +286,7 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
 
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
 
-  mlir::Attribute loweredInit = lowerValue(
+  mlir::Attribute loweredInit = lowerInitialValue(
       lowerModule, layout, *getTypeConverter(), ty, op.getInitialValueAttr());
 
   auto newOp = mlir::cast<cir::GlobalOp>(rewriter.clone(*op.getOperation()));
