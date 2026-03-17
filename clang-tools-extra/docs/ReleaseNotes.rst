@@ -238,8 +238,8 @@ Changes in existing checks
     custom invalidation function is used (via the `InvalidationFunctions`
     option).
 
-  - Add support to annotate user-defined types as having the same moved-from
-    semantics as standard smart pointers.
+  - Add support for annotation of user-defined types as having the same
+    moved-from semantics as standard smart pointers.
 
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
