@@ -117,6 +117,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
     libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
