@@ -61,13 +61,13 @@ constexpr inline auto buildEntityPointerLevel =
 class UnsafeBufferUsageTest : public testing::Test {
 protected:
   TUSummary TUSum;
-  TUSummaryBuilder TUSummaryBuilder;
+  TUSummaryBuilder Builder;
   UnsafeBufferUsageTUSummaryExtractor Extractor;
   std::unique_ptr<ASTUnit> AST;
 
   UnsafeBufferUsageTest()
       : TUSum(BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
-        TUSummaryBuilder(TUSum), Extractor(TUSummaryBuilder) {}
+        Builder(TUSum), Extractor(Builder) {}
 
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
   setUpTest(StringRef Code, StringRef ContributorName) {
