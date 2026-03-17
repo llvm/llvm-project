@@ -95,13 +95,7 @@ LIBC_INLINE float16 atanpif16(float16 x) {
     return signed_result(0.5);
   }
 
-  if (LIBC_UNLIKELY(xbits.is_zero()))
-    return x;
-
   double x_abs = fputil::cast<double>(xbits.abs().get_val());
-
-  if (LIBC_UNLIKELY(x_abs == 1.0))
-    return signed_result(0.25);
 
   // evaluate atan(x)/pi using polynomial approximation, valid for |x| <= 0.5
   constexpr auto atanpi_eval = [](double x) -> double {
@@ -125,14 +119,34 @@ LIBC_INLINE float16 atanpif16(float16 x) {
 
   // case 1: |x| <= 0.5 - direct polynomial evaluation
   if (LIBC_LIKELY(x_abs <= 0.5)) {
+
+    if (LIBC_UNLIKELY(xbits.is_zero()))
+      return x;
+
+    if (LIBC_UNLIKELY(xbits.abs().uintval() == 0x0a48)) {
+      int rounding = fputil::quick_get_round();
+      if (!is_neg) {
+        if (rounding == FE_UPWARD)
+          return fputil::cast<float16>(0x1p-14f);
+        return fputil::cast<float16>(0x1.ffd7ap-15f);
+      } else {
+        if (rounding == FE_DOWNWARD)
+          return fputil::cast<float16>(-0x1p-14f);
+        return fputil::cast<float16>(-0x1.ffd7ap-15f);
+      }
+    }
     double result = atanpi_eval(x_abs);
-    return signed_result(result);
+    float16 s_result = signed_result(result);
+    return s_result;
   }
+
+  if (LIBC_UNLIKELY(x_abs == 1.0))
+    return signed_result(0.25);
 
   // case 2: 0.5 < |x| <= 1 - use double-angle reduction
   // atan(x) = 2 * atan(x / (1 + sqrt(1 + x^2)))
   // so atanpi(x) = 2 * atanpi(x') where x' = x / (1 + sqrt(1 + x^2))
-  if (x_abs <= 1.0) {
+  if (x_abs < 1.0) {
     double x_abs_sq = x_abs * x_abs;
     double sqrt_term = fputil::sqrt<double>(1.0 + x_abs_sq);
     double x_prime = x_abs / (1.0 + sqrt_term);
