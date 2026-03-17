@@ -252,21 +252,16 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   // mem_is_zero on the corresponding shadow.
   if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(last)) {
     uptr aligned_b = RoundUpTo(beg, ASAN_SHADOW_GRANULARITY);
-    uptr aligned_l = RoundDownTo(last, ASAN_SHADOW_GRANULARITY);
-    // aligned_b may cross a memory range boundary (Low/Mid/HighMemEnd)
-    // or even wrap on 32-bit. In that case MemToShadow(aligned_b) would be
-    // invalid and the shadow region could span ShadowGap, causing
-    // mem_is_zero() to access unmapped memory.
-    // If the aligned inner region is empty (including the case when aligned_b
-    // is wrapped), skip the rest of the fast check.
-    if (aligned_l <= aligned_b ||
-        UNLIKELY(aligned_b < beg))  // address space overflow?
+    uptr aligned_e = RoundDownTo(last, ASAN_SHADOW_GRANULARITY);
+    if (aligned_e <= aligned_b)
+      return 0;
+    if (UNLIKELY(aligned_b < beg))  // address space overflow.
       return 0;
     uptr shadow_beg = MemToShadow(aligned_b);
-    uptr shadow_last = MemToShadow(aligned_l);
-    CHECK_LT(shadow_beg, shadow_last);
+    uptr shadow_end = MemToShadow(aligned_e);
+    CHECK_LT(shadow_beg, shadow_end);
     if (__sanitizer::mem_is_zero((const char*)shadow_beg,
-                                 shadow_last - shadow_beg))
+                                 shadow_end - shadow_beg))
       return 0;
   }
   // The fast check failed, so we have a poisoned byte somewhere.
