@@ -18,8 +18,6 @@
 ;  A[i]           | A[0]   |                  |                             | A[2^60 - 32]
 ;  A[32*i + 2^62] |        | A[0]             | A[2^60 - 32]                |
 ;
-; FIXME: DependenceAnalysis fails to detect the dependency between the two
-;
 define void @symbolic_rdiv_addrec_wrap(ptr %A) {
 ; CHECK-ALL-LABEL: 'symbolic_rdiv_addrec_wrap'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1

@@ -9,9 +9,8 @@
 ;;   if (i)
 ;;     A[3*i - 2] = 1;
 ;; }
-;;
-;; FIXME: DependencyAnalsysis currently detects no dependency between
-;; `A[-6*i + INT64_MAX]` and `A[3*i - 2]`, but it does exist. For example,
+;; There is a bidirectional dependency between `A[-6*i + INT64_MAX]`
+;; and `A[3*i - 2]`, for example,
 ;;
 ;; | memory location        | -6*i + INT64_MAX       | 3*i - 2
 ;; |------------------------|------------------------|-----------

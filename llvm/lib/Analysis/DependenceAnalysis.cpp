@@ -2160,9 +2160,6 @@ bool DependenceInfo::symbolicRDIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::SymbolicRDIV))
     return false;
 
-  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
-    return false;
-
   ++SymbolicRDIVapplications;
   LLVM_DEBUG(dbgs() << "\ttry symbolic RDIV test\n");
   ConstantRange SrcRange = SE->getSignedRange(Src);

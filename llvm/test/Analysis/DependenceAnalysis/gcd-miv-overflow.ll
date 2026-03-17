@@ -69,7 +69,6 @@ exit:
 ;     A[3*i - 2] = 1;
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between the two
 ; There is a bidirectional dependency between the two stores, for example,
 ;
 ;  memory access       | i == 1 | i == (max_i + 1) / 2 | i == max_i
