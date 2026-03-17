@@ -9,7 +9,7 @@
 #if __CLC_FPSIZE == 32
 
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_tan(__CLC_GENTYPE x) {
-  x = __clc_isinf(x) ? __CLC_GENTYPE_NAN : x;
+  x = __clc_select(x, __CLC_GENTYPE_NAN, __clc_isinf(x));
 
   __CLC_GENTYPE absx = __clc_fabs(x);
   __CLC_UINTN x_signbit = __CLC_AS_UINTN(x) & SIGNBIT_SP32;
@@ -24,7 +24,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_tan(__CLC_GENTYPE x) {
 #elif __CLC_FPSIZE == 64
 
 _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_tan(__CLC_GENTYPE x) {
-  x = __clc_isinf(x) ? __CLC_GENTYPE_NAN : x;
+  x = __clc_select(x, __CLC_GENTYPE_NAN,
+                   __CLC_CONVERT_S_GENTYPE(__clc_isinf(x)));
 
   __CLC_GENTYPE y = __clc_fabs(x);
 

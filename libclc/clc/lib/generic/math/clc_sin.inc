@@ -9,7 +9,7 @@
 #if __CLC_FPSIZE == 32
 
 _CLC_OVERLOAD _CLC_DEF __CLC_FLOATN __clc_sin(__CLC_FLOATN x) {
-  x = __clc_isinf(x) ? __CLC_GENTYPE_NAN : x;
+  x = __clc_select(x, __CLC_GENTYPE_NAN, __clc_isinf(x));
 
   __CLC_FLOATN absx = __clc_fabs(x);
 
@@ -33,7 +33,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_sin(__CLC_GENTYPE x) {
 #elif __CLC_FPSIZE == 64
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_sin(__CLC_GENTYPE x) {
-  x = __clc_isinf(x) ? __CLC_GENTYPE_NAN : x;
+  x = __clc_select(x, __CLC_GENTYPE_NAN,
+                   __CLC_CONVERT_S_GENTYPE(__clc_isinf(x)));
 
   __CLC_GENTYPE absx = __clc_fabs(x);
 
