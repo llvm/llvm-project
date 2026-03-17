@@ -4228,10 +4228,13 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
   // Trace back through load operations and generate load instructions
   auto materializeValue = [&](mlir::Value val) -> llvm::Value * {
     if (auto loadOp = val.getDefiningOp<LLVM::LoadOp>()) {
-      llvm::Value *loadAddr = moduleTranslation.lookupValue(loadOp.getAddr());
-      llvm::Type *loadType =
-          moduleTranslation.convertType(loadOp.getResult().getType());
-      return builder.CreateLoad(loadType, loadAddr);
+      if (loadOp->getParentRegion() == &region) {
+        llvm::Value *loadAddr =
+            moduleTranslation.lookupValue(loadOp.getAddr());
+        llvm::Type *loadType =
+            moduleTranslation.convertType(loadOp.getResult().getType());
+        return builder.CreateLoad(loadType, loadAddr);
+      }
     }
     return moduleTranslation.lookupValue(val);
   };

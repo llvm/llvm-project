@@ -489,9 +489,8 @@ genAtomicOperation(lower::AbstractConverter &converter,
 /// Reverse a relational operator as if the operands were swapped.
 /// e.g. LT becomes GT, LE becomes GE. Symmetric operators (EQ, NE)
 /// are returned unchanged.
-static Fortran::common::RelationalOperator
-reverseRelOp(Fortran::common::RelationalOperator op) {
-  using RO = Fortran::common::RelationalOperator;
+static common::RelationalOperator reverseRelOp(common::RelationalOperator op) {
+  using RO = common::RelationalOperator;
   switch (op) {
   case RO::LT:
     return RO::GT;
@@ -556,22 +555,21 @@ void Fortran::lower::omp::lowerAtomic(
       TODO(loc, "Compound clauses of OpenMP ATOMIC COMPARE");
     }
 
-    Fortran::common::RelationalOperator relOpr =
-        Fortran::common::RelationalOperator::EQ;
+    common::RelationalOperator relOpr = common::RelationalOperator::EQ;
     std::optional<semantics::SomeExpr> expectedExprStorage;
 
-    if (const auto *rel = Fortran::evaluate::UnwrapExpr<
-            Fortran::evaluate::Relational<Fortran::evaluate::SomeType>>(
-            *cond)) {
+    if (const auto *rel =
+            evaluate::UnwrapExpr<evaluate::Relational<evaluate::SomeType>>(
+                *cond)) {
       std::visit(
           [&](const auto &relImpl) {
             relOpr = relImpl.opr;
             using Operand = typename std::decay_t<decltype(relImpl)>::Operand;
-            auto leftExpr = Fortran::evaluate::AsGenericExpr(
-                Fortran::evaluate::Expr<Operand>{relImpl.left()});
-            auto rightExpr = Fortran::evaluate::AsGenericExpr(
-                Fortran::evaluate::Expr<Operand>{relImpl.right()});
-            if (Fortran::evaluate::IsSameOrConvertOf(rightExpr, atom)) {
+            auto leftExpr = evaluate::AsGenericExpr(
+                evaluate::Expr<Operand>{relImpl.left()});
+            auto rightExpr = evaluate::AsGenericExpr(
+                evaluate::Expr<Operand>{relImpl.right()});
+            if (evaluate::IsSameOrConvertOf(rightExpr, atom)) {
               // e.g. e == x  (atom is on the right)
               // left operand is expected value (e)
               // reverse the operator so that the comparison becomes
@@ -591,29 +589,29 @@ void Fortran::lower::omp::lowerAtomic(
       return;
     }
 
-    mlir::UnitAttr weakAttr = nullptr;
-    mlir::Operation *atomicOp = mlir::omp::AtomicCompareOp::create(
-        builder, loc, atomAddr, weakAttr, hint,
-        makeMemOrderAttr(converter, memOrder));
     mlir::Type elemTypeOfX = fir::unwrapRefType(atomAddr.getType());
-    mlir::Block *block = builder.createBlock(&atomicOp->getRegion(0));
-    mlir::Value blockArg = block->addArgument(elemTypeOfX, loc);
-    builder.setInsertionPointToEnd(block);
-
     mlir::Value expectedVal = fir::getBase(
         converter.genExprValue(*expectedExprStorage, stmtCtx, &loc));
     if (expectedVal.getType() != elemTypeOfX) {
       expectedVal = builder.createConvert(loc, elemTypeOfX, expectedVal);
     }
 
+    mlir::UnitAttr weakAttr = nullptr;
+    mlir::Operation *atomicOp = mlir::omp::AtomicCompareOp::create(
+        builder, loc, atomAddr, weakAttr, hint,
+        makeMemOrderAttr(converter, memOrder));
+    mlir::Block *block = builder.createBlock(&atomicOp->getRegion(0));
+    mlir::Value blockArg = block->addArgument(elemTypeOfX, loc);
+    builder.setInsertionPointToEnd(block);
+
     // Generate comparison: e.g. x == e
     mlir::Value cmpResult;
     if (mlir::isa<mlir::IntegerType>(elemTypeOfX)) {
-      auto pred = Fortran::lower::translateSignedRelational(relOpr);
+      auto pred = lower::translateSignedRelational(relOpr);
       cmpResult = mlir::arith::CmpIOp::create(builder, loc, pred, blockArg,
                                               expectedVal);
     } else if (mlir::isa<mlir::FloatType>(elemTypeOfX)) {
-      auto pred = Fortran::lower::translateFloatRelational(relOpr);
+      auto pred = lower::translateFloatRelational(relOpr);
       cmpResult = mlir::arith::CmpFOp::create(builder, loc, pred, blockArg,
                                               expectedVal);
     } else {

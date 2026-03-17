@@ -701,39 +701,39 @@ using namespace Fortran::common;
 FOR_EACH_SPECIFIC_TYPE(template class Fortran::lower::TypeBuilder, )
 
 /// Convert parser's INTEGER relational operators to MLIR.
-mlir::arith::CmpIPredicate Fortran::lower::translateSignedRelational(
-    Fortran::common::RelationalOperator rop) {
+mlir::arith::CmpIPredicate
+Fortran::lower::translateSignedRelational(RelationalOperator rop) {
   switch (rop) {
-  case Fortran::common::RelationalOperator::LT:
+  case RelationalOperator::LT:
     return mlir::arith::CmpIPredicate::slt;
-  case Fortran::common::RelationalOperator::LE:
+  case RelationalOperator::LE:
     return mlir::arith::CmpIPredicate::sle;
-  case Fortran::common::RelationalOperator::EQ:
+  case RelationalOperator::EQ:
     return mlir::arith::CmpIPredicate::eq;
-  case Fortran::common::RelationalOperator::NE:
+  case RelationalOperator::NE:
     return mlir::arith::CmpIPredicate::ne;
-  case Fortran::common::RelationalOperator::GT:
+  case RelationalOperator::GT:
     return mlir::arith::CmpIPredicate::sgt;
-  case Fortran::common::RelationalOperator::GE:
+  case RelationalOperator::GE:
     return mlir::arith::CmpIPredicate::sge;
   }
   llvm_unreachable("unhandled INTEGER relational operator");
 }
 
-mlir::arith::CmpIPredicate Fortran::lower::translateUnsignedRelational(
-    Fortran::common::RelationalOperator rop) {
+mlir::arith::CmpIPredicate
+Fortran::lower::translateUnsignedRelational(RelationalOperator rop) {
   switch (rop) {
-  case Fortran::common::RelationalOperator::LT:
+  case RelationalOperator::LT:
     return mlir::arith::CmpIPredicate::ult;
-  case Fortran::common::RelationalOperator::LE:
+  case RelationalOperator::LE:
     return mlir::arith::CmpIPredicate::ule;
-  case Fortran::common::RelationalOperator::EQ:
+  case RelationalOperator::EQ:
     return mlir::arith::CmpIPredicate::eq;
-  case Fortran::common::RelationalOperator::NE:
+  case RelationalOperator::NE:
     return mlir::arith::CmpIPredicate::ne;
-  case Fortran::common::RelationalOperator::GT:
+  case RelationalOperator::GT:
     return mlir::arith::CmpIPredicate::ugt;
-  case Fortran::common::RelationalOperator::GE:
+  case RelationalOperator::GE:
     return mlir::arith::CmpIPredicate::uge;
   }
   llvm_unreachable("unhandled UNSIGNED relational operator");
@@ -747,20 +747,20 @@ mlir::arith::CmpIPredicate Fortran::lower::translateUnsignedRelational(
 /// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
 /// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
 /// whether the comparison will signal or not in case of quiet NaN argument.
-mlir::arith::CmpFPredicate Fortran::lower::translateFloatRelational(
-    Fortran::common::RelationalOperator rop) {
+mlir::arith::CmpFPredicate
+Fortran::lower::translateFloatRelational(RelationalOperator rop) {
   switch (rop) {
-  case Fortran::common::RelationalOperator::LT:
+  case RelationalOperator::LT:
     return mlir::arith::CmpFPredicate::OLT;
-  case Fortran::common::RelationalOperator::LE:
+  case RelationalOperator::LE:
     return mlir::arith::CmpFPredicate::OLE;
-  case Fortran::common::RelationalOperator::EQ:
+  case RelationalOperator::EQ:
     return mlir::arith::CmpFPredicate::OEQ;
-  case Fortran::common::RelationalOperator::NE:
+  case RelationalOperator::NE:
     return mlir::arith::CmpFPredicate::UNE;
-  case Fortran::common::RelationalOperator::GT:
+  case RelationalOperator::GT:
     return mlir::arith::CmpFPredicate::OGT;
-  case Fortran::common::RelationalOperator::GE:
+  case RelationalOperator::GE:
     return mlir::arith::CmpFPredicate::OGE;
   }
   llvm_unreachable("unhandled REAL relational operator");
