@@ -8942,14 +8942,41 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   Constant *RHSC;
   if (match(Op0, m_Instruction(LHSI)) && match(Op1, m_Constant(RHSC))) {
     switch (LHSI->getOpcode()) {
-    case Instruction::Select:
+    case Instruction::Select: {
       // fcmp eq (cond ? x : -x), 0 --> fcmp eq x, 0
       if (FCmpInst::isEquality(Pred) && match(RHSC, m_AnyZeroFP()) &&
           match(LHSI, m_c_Select(m_FNeg(m_Value(X)), m_Deferred(X))))
         return replaceOperand(I, 0, X);
+
+      // Fold: fcmp ogt/oge (max(X, C1)), C2 --> fcmp ogt/oge X, C2
+      //   when C2 > C1
+      // Fold: fcmp olt/ole (min(X, C1)), C2 --> fcmp olt/ole X, C2
+      //   when C2 < C1
+      //
+      // The max/min is a select+fcmp idiom with ordered or unordered
+      // predicates. This is valid for ordered outer predicates because
+      // they always return false for NaN, matching the simplified form.
+      {
+        const APFloat *InnerC, *OuterC;
+        if (match(RHSC, m_APFloat(OuterC))) {
+          if (match(LHSI,
+                    m_OrdOrUnordFMax(m_Value(X), m_APFloat(InnerC)))) {
+            if ((Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE) &&
+                OuterC->compare(*InnerC) == APFloat::cmpGreaterThan)
+              return new FCmpInst(Pred, X, RHSC);
+          } else if (match(LHSI, m_OrdOrUnordFMin(m_Value(X),
+                                                   m_APFloat(InnerC)))) {
+            if ((Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE) &&
+                OuterC->compare(*InnerC) == APFloat::cmpLessThan)
+              return new FCmpInst(Pred, X, RHSC);
+          }
+        }
+      }
+
       if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
         return NV;
       break;
+    }
     case Instruction::FSub:
       if (LHSI->hasOneUse())
         if (Instruction *NV = foldFCmpFSubIntoFCmp(I, LHSI, RHSC, *this))

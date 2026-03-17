@@ -5,9 +5,7 @@
 
 define i1 @fcmp_ogt_select_ogt(float %x) {
 ; CHECK-LABEL: @fcmp_ogt_select_ogt(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X1:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[CMP1]], float [[X1]], float 0.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 1.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ogt float %x, 0.0
@@ -19,9 +17,7 @@ define i1 @fcmp_ogt_select_ogt(float %x) {
 ; oge variant with C2 > C1
 define i1 @fcmp_oge_select_ogt(float %x) {
 ; CHECK-LABEL: @fcmp_oge_select_ogt(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X1:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[CMP1]], float [[X1]], float 0.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp oge float [[X]], 1.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp oge float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ogt float %x, 0.0
@@ -33,9 +29,7 @@ define i1 @fcmp_oge_select_ogt(float %x) {
 ; min variant: fcmp olt (select (fcmp olt x, C1), x, C1), C2 --> fcmp olt x, C2 when C2 < C1
 define i1 @fcmp_olt_select_olt(float %x) {
 ; CHECK-LABEL: @fcmp_olt_select_olt(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X1:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[CMP1]], float [[X1]], float 0.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[X]], -1.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[X:%.*]], -1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp olt float %x, 0.0
@@ -47,9 +41,7 @@ define i1 @fcmp_olt_select_olt(float %x) {
 ; ole variant with C2 < C1
 define i1 @fcmp_ole_select_olt(float %x) {
 ; CHECK-LABEL: @fcmp_ole_select_olt(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X1:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[CMP1]], float [[X1]], float 0.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ole float [[X]], -1.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ole float [[X:%.*]], -1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp olt float %x, 0.0
@@ -61,9 +53,7 @@ define i1 @fcmp_ole_select_olt(float %x) {
 ; Inner oge, outer ogt
 define i1 @fcmp_ogt_select_oge(float %x) {
 ; CHECK-LABEL: @fcmp_ogt_select_oge(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp oge float [[X1:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[CMP1]], float [[X1]], float 0.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 1.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp oge float %x, 0.0
@@ -75,9 +65,7 @@ define i1 @fcmp_ogt_select_oge(float %x) {
 ; Unordered inner, ordered outer
 define i1 @fcmp_ogt_select_ugt(float %x) {
 ; CHECK-LABEL: @fcmp_ogt_select_ugt(
-; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp ole float [[X1:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[CMP1_INV]], float 0.000000e+00, float [[X1]]
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 1.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ugt float %x, 0.0
@@ -89,9 +77,7 @@ define i1 @fcmp_ogt_select_ugt(float %x) {
 ; Negative constants
 define i1 @fcmp_ogt_select_ogt_neg(float %x) {
 ; CHECK-LABEL: @fcmp_ogt_select_ogt_neg(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X1:%.*]], -5.000000e+00
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[CMP1]], float [[X1]], float -5.000000e+00
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], -1.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X:%.*]], -1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ogt float %x, -5.0
@@ -103,9 +89,7 @@ define i1 @fcmp_ogt_select_ogt_neg(float %x) {
 ; Swapped select arms: select (fcmp olt x, C1), C1, x = max(x, C1)
 define i1 @fcmp_ogt_select_swapped(float %x) {
 ; CHECK-LABEL: @fcmp_ogt_select_swapped(
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X1:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[CMP1]], float 0.000000e+00, float [[X1]]
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 1.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp olt float %x, 0.0
@@ -120,7 +104,7 @@ define i1 @fcmp_ogt_select_multiuse(float %x, ptr %p) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], float [[X]], float 0.000000e+00
 ; CHECK-NEXT:    store float [[SEL]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[SEL]], 1.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[X]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ogt float %x, 0.0
