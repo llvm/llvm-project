@@ -659,6 +659,7 @@ struct L0DeviceQueueGuard {
       auto Err = device->releaseEvent(Event);
     queue->WaitEvents.clear();
   }
+
 private:
   AsyncQueueTy *queue;
   L0DeviceTy *device;
