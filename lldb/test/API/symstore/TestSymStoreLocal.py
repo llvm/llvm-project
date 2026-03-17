@@ -50,7 +50,7 @@ class MockedSymStore:
         self._test.assertIsNotNone(key)
         self._tmp = self._test.getBuildArtifact("tmp")
         pdb_dir = os.path.join(self._tmp, self._pdb, key)
-        os.makedirs(pdb_dir)
+        os.makedirs(pdb_dir, exists_ok=True)
         shutil.move(
             self._test.getBuildArtifact(self._pdb),
             os.path.join(pdb_dir, self._pdb),
