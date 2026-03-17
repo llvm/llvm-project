@@ -1434,6 +1434,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   // Save loop properties before it is transformed.
   MDNode *OrigLoopID = L->getLoopID();
+  UnrollPragmaInfo PInfo(L);
 
   // Unroll the loop.
   Loop *RemainderLoop = nullptr;
@@ -1476,8 +1477,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   // If loop has an unroll count pragma or unrolled by explicitly set count
   // mark loop as unrolled to prevent unrolling beyond that requested.
-  if (UnrollResult != LoopUnrollResult::FullyUnrolled &&
-      UnrollPragmaInfo(L).ExplicitUnroll)
+  if (UnrollResult != LoopUnrollResult::FullyUnrolled && PInfo.ExplicitUnroll)
     L->setLoopAlreadyUnrolled();
 
   return UnrollResult;
