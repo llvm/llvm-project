@@ -382,6 +382,10 @@ template <bool IS_MAX>
 static mlir::Value
 genMinMaxComparison(mlir::Location loc, fir::FirOpBuilder &builder,
                     mlir::Value elem, mlir::Value reduction) {
+  // TODO: there is some opportunity to generalize this code with
+  // IntrinsicLibrary::genExtremum(), but one have to be careful
+  // to preserve the NaNs behavior (when needed) that is handled
+  // here with the three FP comparisons.
   if (mlir::isa<mlir::FloatType>(reduction.getType())) {
     // For FP reductions we want the first smallest value to be used, that
     // is not NaN. A OGL/OLT condition will usually work for this unless all
