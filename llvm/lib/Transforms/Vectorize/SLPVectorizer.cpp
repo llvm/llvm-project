@@ -24579,8 +24579,6 @@ struct StoreChainContext {
   using SizePair = std::pair<unsigned, unsigned>;
   using SizePairArrayRef = MutableArrayRef<SizePair>;
 
-  const TargetTransformInfo &TTI;
-
   /// For the StoreTy/Stride in the given group, what is the smallest VF
   /// that can be used
   unsigned MinVF = 0;
@@ -24629,11 +24627,10 @@ struct StoreChainContext {
   inline static const unsigned LocallyUnvectorizable =
       std::numeric_limits<unsigned>::max();
 
-  explicit StoreChainContext(const TargetTransformInfo &TTI,
-                             ArrayRef<Value *> Ops,
+  explicit StoreChainContext(ArrayRef<Value *> Ops,
                              ArrayRef<SizePair> RangeSizes,
                              SmallVector<unsigned> &RangeSizesByIdx)
-      : TTI(TTI), Operands(Ops), RangeSizesStorage(RangeSizes),
+      : Operands(Ops), RangeSizesStorage(RangeSizes),
         RangeSizesByIdx(RangeSizesByIdx) {}
 
   bool isNotVectorized(const SizePair &P) const {
@@ -24713,7 +24710,7 @@ struct StoreChainContext {
   }
 
   // Update CandidateVFs for secondary iterations
-  bool updateCandidateVFs() {
+  bool updateCandidateVFs(const TargetTransformInfo &TTI) {
     assert(CandidateVFs.empty() && "Did not use all VFs before refilling");
     constexpr unsigned StoresLimit = 64;
     const unsigned MaxTotalNum = std::min<unsigned>(
@@ -24745,7 +24742,8 @@ struct StoreChainContext {
   void incrementVF() { CandidateVFs.pop(); }
 
   // Set up initial values using the already set Operands
-  bool initializeContext(BoUpSLP &R, const DataLayout &DL);
+  bool initializeContext(BoUpSLP &R, const DataLayout &DL,
+                         const TargetTransformInfo &TTI);
 
   // Record vectorization of the provided range
   void markRangeVectorized(unsigned StartIdx, unsigned Length,
@@ -24777,7 +24775,8 @@ void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
   }
 }
 
-bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL) {
+bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
+                                          const TargetTransformInfo &TTI) {
   // Initialize range tracking in context.
   RangeSizes = MutableArrayRef(RangeSizesStorage);
 
@@ -25001,8 +25000,8 @@ bool SLPVectorizerPass::vectorizeStores(
                        Operands.size()})
               .second) {
         AllContexts.emplace_back(std::make_unique<StoreChainContext>(
-            *TTI, Operands, RangeSizes, RangeSizesByIdx));
-        if (!AllContexts.back()->initializeContext(R, *DL))
+            Operands, RangeSizes, RangeSizesByIdx));
+        if (!AllContexts.back()->initializeContext(R, *DL, *TTI))
           AllContexts.pop_back();
         else
           GlobalMaxVF = std::max(GlobalMaxVF, AllContexts.back()->MaxVF);
@@ -25136,7 +25135,7 @@ bool SLPVectorizerPass::vectorizeStores(
               break;
             }
 
-            if (!Context.updateCandidateVFs()) {
+            if (!Context.updateCandidateVFs(*TTI)) {
               Context.Done = true;
               break;
             }
