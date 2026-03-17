@@ -34480,10 +34480,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     if (auto *SrcC = dyn_cast<ConstantSDNode>(Src)) {
       // SHL(1,Amt) --> SELECT(1<<(Amt/64), SPLAT(1<<(Amt%64)), 0)
+      // SHL(-1,Amt)
+      // --> SELECT(1<<(Amt/64), SPLAT(-1<<(Amt%64)), (i512)-1<<(Amt&~63))
       // SRL(MSB,Amt) --> SELECT(MSB8>>u(Amt/64), SPLAT(MSB64>>u(Amt%64)), 0)
-      if ((Opc == ISD::SHL && SrcC->getAPIntValue() == 1) ||
-          (Opc == ISD::SRL && SrcC->getAPIntValue().isSignMask())) {
-        APInt EltBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 63);
+      // SRL(-1,Amt)
+      // --> SELECT(MSB8>>u(Amt/64), SPLAT(-1>>u(Amt%64)), (i512)-1>>(Amt&~63))
+      const APInt &SrcVal = SrcC->getAPIntValue();
+      bool IsAllBits = SrcVal.isAllOnes();
+      if ((Opc == ISD::SHL && (IsAllBits || SrcVal == 1)) ||
+          (Opc == ISD::SRL && (IsAllBits || SrcVal.isSignMask()))) {
+        APInt EltBitVal =
+            IsAllBits ? APInt::getAllOnes(64)
+                      : APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 63);
         APInt LaneBitVal =
             APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : (NumElts - 1));
         SDValue EltBit = DAG.getConstant(EltBitVal, dl, MVT::i64);
@@ -34491,13 +34499,27 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         SDValue AmtMod = DAG.getNode(ISD::AND, dl, MVT::i64,
                                      DAG.getZExtOrTrunc(Amt, dl, MVT::i64),
                                      DAG.getConstant(63, dl, MVT::i64));
+
+        SDValue Res = DAG.getConstant(0, dl, VecVT);
+        if (IsAllBits) {
+          APInt AllBitsVal = Opc == ISD::SHL
+                                 ? APInt::getAllOnes(64)
+                                 : APInt::getLowBitsSet(64, NumElts);
+          SDValue AllBitsMask =
+              DAG.getNode(Opc, dl, MVT::i64,
+                          DAG.getConstant(AllBitsVal, dl, MVT::i64), AmtLane);
+          AllBitsMask = DAG.getBitcast(
+              BoolVT, DAG.getZExtOrTrunc(AllBitsMask, dl, MVT::i8));
+          Res = DAG.getSelect(dl, VecVT, AllBitsMask,
+                              DAG.getAllOnesConstant(dl, VecVT), Res);
+        }
+
         SDValue LaneMask = DAG.getNode(Opc, dl, MVT::i64, LaneBit, AmtLane);
         LaneMask =
             DAG.getBitcast(BoolVT, DAG.getZExtOrTrunc(LaneMask, dl, MVT::i8));
         SDValue Elt = DAG.getNode(Opc, dl, MVT::i64, EltBit, AmtMod);
-        SDValue Res =
-            DAG.getSelect(dl, VecVT, LaneMask, DAG.getSplat(VecVT, dl, Elt),
-                          DAG.getConstant(0, dl, VecVT));
+        Res = DAG.getSelect(dl, VecVT, LaneMask, DAG.getSplat(VecVT, dl, Elt),
+                            Res);
         Results.push_back(DAG.getBitcast(VT, Res));
         return;
       }
@@ -43408,6 +43430,15 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
 
     return SDValue();
   }
+  case X86ISD::COMPRESS: {
+    SDValue CmpVec = N.getOperand(0);
+    SDValue PassThru = N.getOperand(1);
+    // If CmpVec is splat value and identical to PassThru, then all elements are
+    // already in place.
+    if (CmpVec == PassThru && DAG.isSplatValue(CmpVec, /*AllowUndefs=*/false))
+      return CmpVec;
+    return SDValue();
+  }
   case X86ISD::EXPAND: {
     SDValue ExpVec = N.getOperand(0);
     SDValue PassThru = N.getOperand(1);
@@ -48263,137 +48294,60 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
   SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
   SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
 
-  unsigned Opcode = 0;
   // Check for x CC y ? x : y.
-  if (DAG.isEqualTo(LHS, Op0) && DAG.isEqualTo(RHS, Op1)) {
-    switch (CC) {
-    default:
-      break;
-    case ISD::SETULT:
-      // Converting this to a min would handle NaNs incorrectly, and swapping
-      // the operands would cause it to handle comparisons between positive
-      // and negative zero incorrectly.
-      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-        if (!N->getFlags().hasNoSignedZeros() &&
-            !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
-          break;
-        std::swap(LHS, RHS);
-      }
-      Opcode = X86ISD::FMIN;
-      break;
-    case ISD::SETOLE:
-      // Converting this to a min would handle comparisons between positive
-      // and negative zero incorrectly.
-      if (!N->getFlags().hasNoSignedZeros() &&
-          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
-        break;
-      Opcode = X86ISD::FMIN;
-      break;
-    case ISD::SETULE:
-      // Converting this to a min would handle both negative zeros and NaNs
-      // incorrectly, but we can swap the operands to fix both.
-      std::swap(LHS, RHS);
-      [[fallthrough]];
-    case ISD::SETOLT:
-    case ISD::SETLT:
-    case ISD::SETLE:
-      Opcode = X86ISD::FMIN;
-      break;
+  if (!DAG.isEqualTo(LHS, Op0) || !DAG.isEqualTo(RHS, Op1)) {
+    if (!DAG.isEqualTo(LHS, Op1) || !DAG.isEqualTo(RHS, Op0))
+      return SDValue();
 
-    case ISD::SETOGE:
-      // Converting this to a max would handle comparisons between positive
-      // and negative zero incorrectly.
-      if (!N->getFlags().hasNoSignedZeros() &&
-          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
-        break;
-      Opcode = X86ISD::FMAX;
-      break;
-    case ISD::SETUGT:
-      // Converting this to a max would handle NaNs incorrectly, and swapping
-      // the operands would cause it to handle comparisons between positive
-      // and negative zero incorrectly.
-      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-        if (!N->getFlags().hasNoSignedZeros() &&
-            !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
-          break;
-        std::swap(LHS, RHS);
-      }
-      Opcode = X86ISD::FMAX;
-      break;
-    case ISD::SETUGE:
-      // Converting this to a max would handle both negative zeros and NaNs
-      // incorrectly, but we can swap the operands to fix both.
-      std::swap(LHS, RHS);
-      [[fallthrough]];
-    case ISD::SETOGT:
-    case ISD::SETGT:
-    case ISD::SETGE:
-      Opcode = X86ISD::FMAX;
-      break;
-    }
-    // Check for x CC y ? y : x -- a min/max with reversed arms.
-  } else if (DAG.isEqualTo(LHS, Op1) && DAG.isEqualTo(RHS, Op0)) {
-    switch (CC) {
-    default:
-      break;
-    case ISD::SETOGE:
-      // Converting this to a min would handle comparisons between positive
-      // and negative zero incorrectly, and swapping the operands would
-      // cause it to handle NaNs incorrectly.
-      if (!N->getFlags().hasNoSignedZeros() &&
-          !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS))) {
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-          break;
-        std::swap(LHS, RHS);
-      }
-      Opcode = X86ISD::FMIN;
-      break;
-    case ISD::SETUGT:
-      // Converting this to a min would handle NaNs incorrectly.
-      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-        break;
-      Opcode = X86ISD::FMIN;
-      break;
-    case ISD::SETUGE:
-      // Converting this to a min would handle both negative zeros and NaNs
-      // incorrectly, but we can swap the operands to fix both.
-      std::swap(LHS, RHS);
-      [[fallthrough]];
-    case ISD::SETOGT:
-    case ISD::SETGT:
-    case ISD::SETGE:
-      Opcode = X86ISD::FMIN;
-      break;
+    // Convert x CC y ? y : x to x inv(CC) y ? x : y.
+    CC = ISD::getSetCCInverse(CC, VT);
+    std::swap(LHS, RHS);
+  }
 
-    case ISD::SETULT:
-      // Converting this to a max would handle NaNs incorrectly.
-      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-        break;
-      Opcode = X86ISD::FMAX;
+  // Convert x CC y ? x : y to y swap(inv(CC)) x ? y : x
+  // to convert an unordered into an ordered comparison.
+  if (ISD::getUnorderedFlavor(CC) == 1) {
+    CC = ISD::getSetCCSwappedOperands(ISD::getSetCCInverse(CC, VT));
+    std::swap(LHS, RHS);
+  }
+
+  unsigned Opcode = 0;
+  switch (CC) {
+  default:
+    break;
+  case ISD::SETOLE:
+    // Converting this to a min would handle comparisons between positive
+    // and negative zero incorrectly.
+    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
+        !DAG.isKnownNeverZeroFloat(RHS))
       break;
-    case ISD::SETOLE:
-      // Converting this to a max would handle comparisons between positive
-      // and negative zero incorrectly, and swapping the operands would
-      // cause it to handle NaNs incorrectly.
-      if (!N->getFlags().hasNoSignedZeros() &&
-          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS)) {
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-          break;
-        std::swap(LHS, RHS);
-      }
-      Opcode = X86ISD::FMAX;
+    Opcode = X86ISD::FMIN;
+    break;
+  case ISD::SETLE:
+    // Convert setle to setlt via inv+swap.
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ISD::SETOLT:
+  case ISD::SETLT:
+    Opcode = X86ISD::FMIN;
+    break;
+
+  case ISD::SETOGE:
+    // Converting this to a max would handle comparisons between positive
+    // and negative zero incorrectly.
+    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
+        !DAG.isKnownNeverZeroFloat(RHS))
       break;
-    case ISD::SETULE:
-      // Converting this to a max would handle both negative zeros and NaNs
-      // incorrectly, but we can swap the operands to fix both.
-      std::swap(LHS, RHS);
-      [[fallthrough]];
-    case ISD::SETOLT:
-    case ISD::SETLT:
-    case ISD::SETLE:
-      Opcode = X86ISD::FMAX;
-      break;
-    }
+    Opcode = X86ISD::FMAX;
+    break;
+  case ISD::SETGE:
+    // Convert setge to setgt via inv+swap.
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ISD::SETOGT:
+  case ISD::SETGT:
+    Opcode = X86ISD::FMAX;
+    break;
   }
 
   if (!Opcode)

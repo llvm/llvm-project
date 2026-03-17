@@ -494,8 +494,10 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
                            SDNPMemOperand]>;
 
 // Define X86-specific addressing mode.
-let WantsParent = true in
-def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
+let WantsParent = true in {
+  def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
+  def ndd_addr  : ComplexPattern<iPTR, 5, "selectNDDAddr">;
+}
 def gi_addr   : GIComplexOperandMatcher<s32, "selectAddr">,
                 GIComplexPatternEquiv<addr>;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
