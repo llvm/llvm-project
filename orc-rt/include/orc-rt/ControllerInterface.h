@@ -19,6 +19,8 @@
 #include <unordered_map>
 #include <vector>
 
+#define ORC_RT_SYMTAB_PAIR(sym) {{#sym}, reinterpret_cast<const void *>(&sym)}
+
 namespace orc_rt {
 
 /// A symbol table defining the interface exposed by the ORC runtime to the

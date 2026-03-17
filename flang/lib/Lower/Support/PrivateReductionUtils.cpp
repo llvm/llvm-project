@@ -14,6 +14,7 @@
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
+#include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -435,9 +436,13 @@ fir::IfOp PopulateInitAndCleanupRegionsHelper::handleNullAllocatable() {
   // right rank. This returns an empty value if the types don't match.
   mlir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
 
-  mlir::Value nullBox =
-      fir::EmboxOp::create(builder, loc, valType, addr, shape,
-                           /*slice=*/mlir::Value{}, lenParams);
+  auto nullBox = fir::EmboxOp::create(builder, loc, valType, addr, shape,
+                                      /*slice=*/mlir::Value{}, lenParams);
+  if (sym) {
+    unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
+    if (idx != kDefaultAllocator)
+      nullBox.setAllocatorIdx(idx);
+  }
   fir::StoreOp::create(builder, loc, nullBox, allocatedPrivVarArg);
   return ifOp;
 }

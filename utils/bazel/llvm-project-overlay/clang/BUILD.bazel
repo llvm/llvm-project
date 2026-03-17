@@ -1615,6 +1615,8 @@ cc_library(
         ":lex",
         ":options",
         ":parse",
+        ":scalable_static_analysis_core",
+        ":scalable_static_analysis_frontend",
         ":serialization",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
