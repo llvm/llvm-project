@@ -2472,19 +2472,16 @@ define i256 @isolate_msb_i256(i256 %a0, i256 %idx) nounwind {
 ; AVX2-NEXT:    movq %rcx, %rax
 ; AVX2-NEXT:    movq %rdx, %r9
 ; AVX2-NEXT:    orq %r8, %r9
-; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    lzcntq %rsi, %rcx
-; AVX2-NEXT:    orq %rax, %rsi
-; AVX2-NEXT:    lzcntq %r8, %r10
-; AVX2-NEXT:    lzcntq %rax, %r11
-; AVX2-NEXT:    addq $64, %r11
-; AVX2-NEXT:    testq %r8, %r8
-; AVX2-NEXT:    cmovneq %r10, %r11
-; AVX2-NEXT:    xorl %r10d, %r10d
-; AVX2-NEXT:    lzcntq %rdx, %r10
+; AVX2-NEXT:    lzcntq %rsi, %r10
+; AVX2-NEXT:    orq %rcx, %rsi
+; AVX2-NEXT:    lzcntq %rcx, %rcx
 ; AVX2-NEXT:    addq $64, %rcx
-; AVX2-NEXT:    testq %rdx, %rdx
-; AVX2-NEXT:    cmovneq %r10, %rcx
+; AVX2-NEXT:    lzcntq %r8, %r11
+; AVX2-NEXT:    cmovbq %rcx, %r11
+; AVX2-NEXT:    addq $64, %r10
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    lzcntq %rdx, %rcx
+; AVX2-NEXT:    cmovbq %r10, %rcx
 ; AVX2-NEXT:    subq $-128, %rcx
 ; AVX2-NEXT:    orq %r8, %rax
 ; AVX2-NEXT:    cmovneq %r11, %rcx
@@ -2526,17 +2523,15 @@ define i256 @isolate_msb_i256(i256 %a0, i256 %idx) nounwind {
 ; AVX512F-NEXT:    movq %rcx, %rax
 ; AVX512F-NEXT:    movq %rdx, %r9
 ; AVX512F-NEXT:    orq %r8, %r9
-; AVX512F-NEXT:    lzcntq %rsi, %rcx
-; AVX512F-NEXT:    orq %rax, %rsi
-; AVX512F-NEXT:    lzcntq %r8, %r10
-; AVX512F-NEXT:    lzcntq %rax, %r11
-; AVX512F-NEXT:    addq $64, %r11
-; AVX512F-NEXT:    testq %r8, %r8
-; AVX512F-NEXT:    cmovneq %r10, %r11
-; AVX512F-NEXT:    lzcntq %rdx, %r10
+; AVX512F-NEXT:    lzcntq %rsi, %r10
+; AVX512F-NEXT:    orq %rcx, %rsi
+; AVX512F-NEXT:    lzcntq %rcx, %rcx
 ; AVX512F-NEXT:    addq $64, %rcx
-; AVX512F-NEXT:    testq %rdx, %rdx
-; AVX512F-NEXT:    cmovneq %r10, %rcx
+; AVX512F-NEXT:    lzcntq %r8, %r11
+; AVX512F-NEXT:    cmovbq %rcx, %r11
+; AVX512F-NEXT:    addq $64, %r10
+; AVX512F-NEXT:    lzcntq %rdx, %rcx
+; AVX512F-NEXT:    cmovbq %r10, %rcx
 ; AVX512F-NEXT:    subq $-128, %rcx
 ; AVX512F-NEXT:    orq %r8, %rax
 ; AVX512F-NEXT:    cmovneq %r11, %rcx
@@ -2575,17 +2570,15 @@ define i256 @isolate_msb_i256(i256 %a0, i256 %idx) nounwind {
 ; AVX512VL-NEXT:    movq %rcx, %rax
 ; AVX512VL-NEXT:    movq %rdx, %r9
 ; AVX512VL-NEXT:    orq %r8, %r9
-; AVX512VL-NEXT:    lzcntq %rsi, %rcx
-; AVX512VL-NEXT:    orq %rax, %rsi
-; AVX512VL-NEXT:    lzcntq %r8, %r10
-; AVX512VL-NEXT:    lzcntq %rax, %r11
-; AVX512VL-NEXT:    addq $64, %r11
-; AVX512VL-NEXT:    testq %r8, %r8
-; AVX512VL-NEXT:    cmovneq %r10, %r11
-; AVX512VL-NEXT:    lzcntq %rdx, %r10
+; AVX512VL-NEXT:    lzcntq %rsi, %r10
+; AVX512VL-NEXT:    orq %rcx, %rsi
+; AVX512VL-NEXT:    lzcntq %rcx, %rcx
 ; AVX512VL-NEXT:    addq $64, %rcx
-; AVX512VL-NEXT:    testq %rdx, %rdx
-; AVX512VL-NEXT:    cmovneq %r10, %rcx
+; AVX512VL-NEXT:    lzcntq %r8, %r11
+; AVX512VL-NEXT:    cmovbq %rcx, %r11
+; AVX512VL-NEXT:    addq $64, %r10
+; AVX512VL-NEXT:    lzcntq %rdx, %rcx
+; AVX512VL-NEXT:    cmovbq %r10, %rcx
 ; AVX512VL-NEXT:    subq $-128, %rcx
 ; AVX512VL-NEXT:    orq %r8, %rax
 ; AVX512VL-NEXT:    cmovneq %r11, %rcx
@@ -2627,17 +2620,15 @@ define i256 @isolate_msb_i256(i256 %a0, i256 %idx) nounwind {
 ; AVX512VBMI-NEXT:    movq %rcx, %rax
 ; AVX512VBMI-NEXT:    movq %rdx, %r9
 ; AVX512VBMI-NEXT:    orq %r8, %r9
-; AVX512VBMI-NEXT:    lzcntq %rsi, %rcx
-; AVX512VBMI-NEXT:    orq %rax, %rsi
-; AVX512VBMI-NEXT:    lzcntq %r8, %r10
-; AVX512VBMI-NEXT:    lzcntq %rax, %r11
-; AVX512VBMI-NEXT:    addq $64, %r11
-; AVX512VBMI-NEXT:    testq %r8, %r8
-; AVX512VBMI-NEXT:    cmovneq %r10, %r11
-; AVX512VBMI-NEXT:    lzcntq %rdx, %r10
+; AVX512VBMI-NEXT:    lzcntq %rsi, %r10
+; AVX512VBMI-NEXT:    orq %rcx, %rsi
+; AVX512VBMI-NEXT:    lzcntq %rcx, %rcx
 ; AVX512VBMI-NEXT:    addq $64, %rcx
-; AVX512VBMI-NEXT:    testq %rdx, %rdx
-; AVX512VBMI-NEXT:    cmovneq %r10, %rcx
+; AVX512VBMI-NEXT:    lzcntq %r8, %r11
+; AVX512VBMI-NEXT:    cmovbq %rcx, %r11
+; AVX512VBMI-NEXT:    addq $64, %r10
+; AVX512VBMI-NEXT:    lzcntq %rdx, %rcx
+; AVX512VBMI-NEXT:    cmovbq %r10, %rcx
 ; AVX512VBMI-NEXT:    subq $-128, %rcx
 ; AVX512VBMI-NEXT:    orq %r8, %rax
 ; AVX512VBMI-NEXT:    cmovneq %r11, %rcx
@@ -2806,24 +2797,23 @@ define i256 @isolate_msb_i256_vector(<4 x i64> %v0, i256 %idx) nounwind {
 ;
 ; AVX2-LABEL: isolate_msb_i256_vector:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX2-NEXT:    vmovq %xmm0, %rcx
 ; AVX2-NEXT:    vmovq %xmm1, %rsi
-; AVX2-NEXT:    vpextrq $1, %xmm1, %r8
-; AVX2-NEXT:    lzcntq %r8, %rcx
-; AVX2-NEXT:    lzcntq %rsi, %r9
-; AVX2-NEXT:    addq $64, %r9
-; AVX2-NEXT:    testq %r8, %r8
-; AVX2-NEXT:    cmovneq %rcx, %r9
-; AVX2-NEXT:    lzcntq %rdx, %r10
+; AVX2-NEXT:    lzcntq %rsi, %r8
+; AVX2-NEXT:    addq $64, %r8
+; AVX2-NEXT:    lzcntq %rdx, %r9
+; AVX2-NEXT:    cmovbq %r8, %r9
+; AVX2-NEXT:    xorl %r8d, %r8d
+; AVX2-NEXT:    lzcntq %rcx, %r8
+; AVX2-NEXT:    addq $64, %r8
 ; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    lzcntq %rax, %rcx
-; AVX2-NEXT:    addq $64, %rcx
-; AVX2-NEXT:    testq %rdx, %rdx
-; AVX2-NEXT:    cmovneq %r10, %rcx
+; AVX2-NEXT:    cmovbq %r8, %rcx
 ; AVX2-NEXT:    subq $-128, %rcx
-; AVX2-NEXT:    orq %r8, %rsi
+; AVX2-NEXT:    orq %rdx, %rsi
 ; AVX2-NEXT:    cmovneq %r9, %rcx
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovdqu %ymm1, -{{[0-9]+}}(%rsp)
@@ -3104,22 +3094,19 @@ define i256 @isolate_msb_i256_load(ptr %p0, i256 %idx) nounwind {
 ;
 ; AVX2-LABEL: isolate_msb_i256_load:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movq 16(%rsi), %rax
-; AVX2-NEXT:    movq 24(%rsi), %rdx
+; AVX2-NEXT:    movq 24(%rsi), %rax
+; AVX2-NEXT:    movq 16(%rsi), %rdx
 ; AVX2-NEXT:    lzcntq %rdx, %rcx
-; AVX2-NEXT:    lzcntq %rax, %r8
-; AVX2-NEXT:    addq $64, %r8
-; AVX2-NEXT:    testq %rdx, %rdx
-; AVX2-NEXT:    cmovneq %rcx, %r8
-; AVX2-NEXT:    movq 8(%rsi), %r9
-; AVX2-NEXT:    lzcntq %r9, %r10
-; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    lzcntq (%rsi), %rcx
 ; AVX2-NEXT:    addq $64, %rcx
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovneq %r10, %rcx
+; AVX2-NEXT:    lzcntq %rax, %r8
+; AVX2-NEXT:    cmovbq %rcx, %r8
+; AVX2-NEXT:    lzcntq (%rsi), %r9
+; AVX2-NEXT:    addq $64, %r9
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    lzcntq 8(%rsi), %rcx
+; AVX2-NEXT:    cmovbq %r9, %rcx
 ; AVX2-NEXT:    subq $-128, %rcx
-; AVX2-NEXT:    orq %rdx, %rax
+; AVX2-NEXT:    orq %rax, %rdx
 ; AVX2-NEXT:    cmovneq %r8, %rcx
 ; AVX2-NEXT:    vmovdqu (%rsi), %ymm0
 ; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1

@@ -344,17 +344,14 @@ define i64 @ctlo_i64(i64 %x) nounwind {
 ; X86-CLZ:       # %bb.0:
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notl %eax
-; X86-CLZ-NEXT:    testl %eax, %eax
-; X86-CLZ-NEXT:    jne .LBB6_1
-; X86-CLZ-NEXT:  # %bb.2:
+; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:    jae .LBB6_2
+; X86-CLZ-NEXT:  # %bb.1:
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notl %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
 ; X86-CLZ-NEXT:    addl $32, %eax
-; X86-CLZ-NEXT:    xorl %edx, %edx
-; X86-CLZ-NEXT:    retl
-; X86-CLZ-NEXT:  .LBB6_1:
-; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:  .LBB6_2:
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
 ;
@@ -416,17 +413,14 @@ define i64 @ctlo_i64_undef(i64 %x) {
 ; X86-CLZ:       # %bb.0:
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notl %eax
-; X86-CLZ-NEXT:    testl %eax, %eax
-; X86-CLZ-NEXT:    jne .LBB7_1
-; X86-CLZ-NEXT:  # %bb.2:
+; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:    jae .LBB7_2
+; X86-CLZ-NEXT:  # %bb.1:
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notl %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
 ; X86-CLZ-NEXT:    addl $32, %eax
-; X86-CLZ-NEXT:    xorl %edx, %edx
-; X86-CLZ-NEXT:    retl
-; X86-CLZ-NEXT:  .LBB7_1:
-; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:  .LBB7_2:
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
 ;
