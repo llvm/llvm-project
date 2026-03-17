@@ -2276,7 +2276,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
     return;
 
   Constant *Init = nullptr;
-  if (hasInitializer(&GV)) {
+  if (hasInitializer(&GV) && !GV.hasCommonLinkage()) {
     // Deduce element type and store results in Global Registry.
     // Result is ignored, because TypedPointerType is not supported
     // by llvm IR general logic.

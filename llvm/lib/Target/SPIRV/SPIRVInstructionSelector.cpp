@@ -5710,7 +5710,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
 
   // Skip empty declaration for GVs with initializers till we get the decl with
   // passed initializer.
-  if (hasInitializer(GlobalVar) && !Init)
+  if (hasInitializer(GlobalVar) && !Init && !GlobalVar->hasCommonLinkage())
     return true;
 
   const std::optional<SPIRV::LinkageType::LinkageType> LnkType =

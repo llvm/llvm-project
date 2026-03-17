@@ -14,10 +14,8 @@
 ; CHECK-DAG: %[[TyF16Vec2Ptr:[0-9]+]] = OpTypePointer {{[a-zA-Z]+}} %[[TyF16Vec2]]
 ; CHECK-DAG: %[[TyInt32:[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[ConstF16:[0-9]+]] = OpConstant %[[TyF16]] 20800{{$}}
-; CHECK-DAG: %[[Const0F16Vec2:[0-9]+]] = OpConstantNull %[[TyF16Vec2]]
-; CHECK-DAG: %[[f:[0-9]+]] = OpVariable %[[TyF16Vec2Ptr]] CrossWorkgroup %[[Const0F16Vec2]]
-; CHECK-DAG: %[[Const0F16Vec4:[0-9]+]] = OpConstantNull %[[TyF16Vec4]]
-; CHECK-DAG: %[[g:[0-9]+]] = OpVariable %[[TyF16Vec4Ptr]] CrossWorkgroup %[[Const0F16Vec4]]
+; CHECK-DAG: %[[f:[0-9]+]] = OpVariable %[[TyF16Vec2Ptr]] CrossWorkgroup
+; CHECK-DAG: %[[g:[0-9]+]] = OpVariable %[[TyF16Vec4Ptr]] CrossWorkgroup
 ; CHECK-DAG: %[[ConstF16Vec2:[0-9]+]] = OpConstantComposite %[[TyF16Vec2]] %[[ConstF16]] %[[ConstF16]]
 ; CHECK-DAG: %[[ScopeAllSvmDevices:[0-9]+]] = OpConstantNull %[[TyInt32]]
 ; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 16{{$}}

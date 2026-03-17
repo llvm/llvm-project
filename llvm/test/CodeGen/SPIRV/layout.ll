@@ -26,14 +26,14 @@
 ; CHECK: %[[#FUNC_TYPE1:]] = OpTypeFunction %[[#VOID]] %[[#PTR_CW_I8]]
 ; CHECK: %[[#VEC3:]] = OpTypeVector %[[#I32]] 3
 ; CHECK: %[[#FUNC_TYPE2:]] = OpTypeFunction %[[#VOID]] %[[#PTR_CW_I8]] %[[#VEC3]]
-; CHECK: %[[#PTR_GEN_I8:]] = OpTypePointer Generic %[[#I8]]
-; CHECK: %[[#STRUCT_B:]] = OpTypeStruct %[[#I32]] %[[#PTR_GEN_I8]]
-; CHECK: %[[#STRUCT_C:]] = OpTypeStruct %[[#I32]] %[[#STRUCT_B]]
-; CHECK: %[[#STRUCT_A:]] = OpTypeStruct %[[#I32]] %[[#STRUCT_C]]
 ; CHECK: %[[#F32:]] = OpTypeFloat 32
 ; CHECK: %[[#CONST_2:]] = OpConstant %[[#I32]] 2
 ; CHECK: %[[#ARRAY_F:]] = OpTypeArray %[[#F32]] %[[#CONST_2]]
 ; CHECK: %[[#ARRAY_I:]] = OpTypeArray %[[#I32]] %[[#CONST_2]]
+; CHECK: %[[#PTR_GEN_I8:]] = OpTypePointer Generic %[[#I8]]
+; CHECK: %[[#STRUCT_B:]] = OpTypeStruct %[[#I32]] %[[#PTR_GEN_I8]]
+; CHECK: %[[#STRUCT_C:]] = OpTypeStruct %[[#I32]] %[[#STRUCT_B]]
+; CHECK: %[[#STRUCT_A:]] = OpTypeStruct %[[#I32]] %[[#STRUCT_C]]
 ; CHECK: %[[#PTR_CW_STRUCT_A:]] = OpTypePointer CrossWorkgroup %[[#STRUCT_A]]
 ; CHECK: %[[#PTR_UC_VEC4:]] = OpTypePointer UniformConstant %[[#VEC4]]
 ; CHECK: %[[#PTR_UC_ARRAY_F:]] = OpTypePointer UniformConstant %[[#ARRAY_F]]
@@ -51,8 +51,7 @@
 ; CHECK: %[[#VAR_S:]] = OpVariable %[[#PTR_CW_PTR_CW_I8]] CrossWorkgroup %[[#SPECCONSTOP]]
 ; CHECK: %[[#NULL_ARRAY_F:]] = OpConstantNull %[[#ARRAY_F]]
 ; CHECK: %[[#VAR_F:]] = OpVariable %[[#PTR_UC_ARRAY_F]] UniformConstant %[[#NULL_ARRAY_F]]
-; CHECK: %[[#NULL_STRUCT_A:]] = OpConstantNull %[[#STRUCT_A]]
-; CHECK: %[[#VAR_A:]] = OpVariable %[[#PTR_CW_STRUCT_A]] CrossWorkgroup %[[#NULL_STRUCT_A]]
+; CHECK: %[[#VAR_A:]] = OpVariable %[[#PTR_CW_STRUCT_A]] CrossWorkgroup
 
 ; CHECK: %[[#FN_BAR1:]] = OpFunction %[[#VOID]] None %[[#FUNC_TYPE1]]
 ; CHECK: %[[#P_BAR1:]] = OpFunctionParameter %[[#PTR_CW_I8]]
