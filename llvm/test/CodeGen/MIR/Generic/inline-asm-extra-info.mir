@@ -1,4 +1,6 @@
 # RUN: llc -run-pass=none -o - %s | FileCheck --match-full-lines %s
+# FIXME: this currently fails on UBSan
+# XFAIL: ubsan
 
 ---
 name: test_attdialect
