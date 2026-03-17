@@ -218,7 +218,7 @@ public:
           if (!VMap.empty())
             NewInst = cast<Instruction>(VMap[NewInst]);
 
-          assert(!isa<BranchInst>(NewInst) &&
+          assert((!isa<UncondBrInst, CondBrInst>(NewInst)) &&
                  "Branches are marked used early on");
           Unused.push_back(NewInst);
         }

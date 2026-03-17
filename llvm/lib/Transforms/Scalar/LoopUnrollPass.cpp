@@ -609,16 +609,14 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
       // Add in the live successors by first checking whether we have terminator
       // that may be simplified based on the values simplified by this call.
       BasicBlock *KnownSucc = nullptr;
-      if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-        if (BI->isConditional()) {
-          if (auto *SimpleCond = getSimplifiedConstant(BI->getCondition())) {
-            // Just take the first successor if condition is undef
-            if (isa<UndefValue>(SimpleCond))
-              KnownSucc = BI->getSuccessor(0);
-            else if (ConstantInt *SimpleCondVal =
-                         dyn_cast<ConstantInt>(SimpleCond))
-              KnownSucc = BI->getSuccessor(SimpleCondVal->isZero() ? 1 : 0);
-          }
+      if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
+        if (auto *SimpleCond = getSimplifiedConstant(BI->getCondition())) {
+          // Just take the first successor if condition is undef
+          if (isa<UndefValue>(SimpleCond))
+            KnownSucc = BI->getSuccessor(0);
+          else if (ConstantInt *SimpleCondVal =
+                       dyn_cast<ConstantInt>(SimpleCond))
+            KnownSucc = BI->getSuccessor(SimpleCondVal->isZero() ? 1 : 0);
         }
       } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
         if (auto *SimpleCond = getSimplifiedConstant(SI->getCondition())) {

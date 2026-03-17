@@ -189,7 +189,7 @@ private:
   bool selectBitCast(const Instruction *I);
   bool selectLoad(const Instruction *I);
   bool selectStore(const Instruction *I);
-  bool selectBr(const Instruction *I);
+  bool selectCondBr(const Instruction *I);
   bool selectRet(const Instruction *I);
   bool selectUnreachable(const Instruction *I);
 
@@ -1498,7 +1498,7 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
   return true;
 }
 
-bool WebAssemblyFastISel::selectBr(const Instruction *I) {
+bool WebAssemblyFastISel::selectCondBr(const Instruction *I) {
   const auto *Br = cast<CondBrInst>(I);
 
   MachineBasicBlock *TBB = FuncInfo.getMBB(Br->getSuccessor(0));
@@ -1610,7 +1610,7 @@ bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
   case Instruction::Store:
     return selectStore(I);
   case Instruction::CondBr:
-    return selectBr(I);
+    return selectCondBr(I);
   case Instruction::Ret:
     return selectRet(I);
   case Instruction::Unreachable:
