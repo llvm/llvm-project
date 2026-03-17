@@ -34487,7 +34487,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       // --> SELECT(1<<(Amt/64), SPLAT(-1<<(Amt%64)), (i512)-1<<(Amt&~63))
       // SRL(MSB,Amt) --> SELECT(MSB8>>u(Amt/64), SPLAT(MSB64>>u(Amt%64)), 0)
       // SRL(-1,Amt)
-      // --> SELECT(1>>u(Amt/64), SPLAT(-1>>u(Amt%64)), (i512)-1>>(Amt&~63))
+      // --> SELECT(MSB8>>u(Amt/64), SPLAT(-1>>u(Amt%64)), (i512)-1>>(Amt&~63))
       const APInt &SrcVal = SrcC->getAPIntValue();
       bool IsAllBits = SrcVal.isAllOnes();
       if ((Opc == ISD::SHL && (IsAllBits || SrcVal == 1)) ||
