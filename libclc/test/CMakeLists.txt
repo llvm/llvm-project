@@ -2,7 +2,7 @@ set(LIBCLC_LIBRARY_DIR ${LIBCLC_OUTPUT_LIBRARY_DIR})
 set(LLVM_TOOLS_DIR ${LLVM_TOOLS_BINARY_DIR})
 
 set(LIBCLC_TEST_DEPS
-  llvm-dis
+  ${llvm-dis_target}
 )
 
 umbrella_lit_testsuite_begin(check-libclc)

@@ -21216,9 +21216,14 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
 bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
                                     bool &Visible) {
   Visible = hasVisibleDefinition(D, Suggested);
+  // Accoding to [basic.def.odr]p16, it is not allowed to have duplicated definition
+  // for declaratins which is attached to named modules.
+  // We only did this if the current module is named module as we have better
+  // diagnostics for declarations in global module and named modules.
+  if (getCurrentModule() && getCurrentModule()->isNamedModule() &&
+      D->isInNamedModule())
+    return false;
   // The redefinition of D in the **current** TU is allowed if D is invisible or
-  // D is defined in the global module of other module units. We didn't check if
-  // it is in global module as, we'll check the redefinition in named module
-  // later with better diagnostic message.
+  // D is defined in the global module of other module units.
   return D->isInAnotherModuleUnit() || !Visible;
 }
