@@ -154,10 +154,18 @@ func.func @group_non_uniform_broadcast_first_negative_scope(%value: f32) -> f32 
 // -----
 
 
-func.func @group_non_uniform_broadcast_negative_type(%value: !spirv.array<3 x i32>) -> !spirv.array<3 x i32> {
+func.func @group_non_uniform_broadcast_first_negative_type(%value: !spirv.array<3 x i32>) -> !spirv.array<3 x i32> {
   // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1 or bool or fixed-length vector of bool values of length 2/3/4/8/16 of ranks 1, but got '!spirv.array<3 x i32>'}}
   %0 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %value : !spirv.array<3 x i32>
   return %0 : !spirv.array<3 x i32>
+}
+
+// -----
+
+func.func @group_non_uniform_broadcast_first_negative_type_mismatch(%value: f32) -> i32 {
+  // expected-error @+1 {{'spirv.GroupNonUniformBroadcastFirst' op failed to verify that all of {value, result} have same type}}
+  %0 = "spirv.GroupNonUniformBroadcastFirst"(%value) {execution_scope = #spirv.scope<Subgroup>} : (f32) -> i32
+  return %0 : i32
 }
 
 // -----
