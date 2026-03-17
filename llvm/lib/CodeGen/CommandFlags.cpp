@@ -713,8 +713,8 @@ void codegen::renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val) {
       renderBoolStringAttr(NewAttrs, AttrName, *CL);                           \
   } while (0)
 
-void codegen::setFunctionAttributes(StringRef CPU, StringRef TuneCPU,
-                                    StringRef Features, Function &F) {
+void codegen::setFunctionAttributes(Function &F, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU) {
   auto &Ctx = F.getContext();
   AttributeList Attrs = F.getAttributes();
   AttrBuilder NewAttrs(Ctx);
@@ -783,20 +783,10 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef TuneCPU,
   F.setAttributes(Attrs.addFnAttributes(Ctx, NewAttrs));
 }
 
-void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Function &F) {
-  return setFunctionAttributes(CPU, "", Features, F);
-}
-
-void codegen::setFunctionAttributes(StringRef CPU, StringRef TuneCPU,
-                                    StringRef Features, Module &M) {
+void codegen::setFunctionAttributes(Module &M, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU) {
   for (Function &F : M)
-    setFunctionAttributes(CPU, TuneCPU, Features, F);
-}
-
-void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Module &M) {
-  return setFunctionAttributes(CPU, "", Features, M);
+    setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
 
 Expected<std::unique_ptr<TargetMachine>>

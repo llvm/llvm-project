@@ -202,23 +202,13 @@ LLVM_ABI void renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val);
 
 /// Set function attributes of function \p F based on CPU, TuneCPU, Features,
 /// and command line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef TuneCPU,
-                                    StringRef Features, Function &F);
-
-/// Set function attributes of function \p F based on CPU, Features, and command
-/// line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Function &F);
+LLVM_ABI void setFunctionAttributes(Function &F, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU = "");
 
 /// Set function attributes of functions in Module M based on CPU,
 /// TuneCPU, Features, and command line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef TuneCPU,
-                                    StringRef Features, Module &M);
-
-/// Set function attributes of functions in Module M based on CPU,
-/// Features, and command line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Module &M);
+LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU = "");
 
 /// Should value-tracking variable locations / instruction referencing be
 /// enabled by default for this triple?

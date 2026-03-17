@@ -509,7 +509,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   // Set attributes on functions as loaded from MIR from command line arguments.
   auto setMIRFunctionAttributes = [&CPUStr, &TuneCPUStr,
                                    &FeaturesStr](Function &F) {
-    codegen::setFunctionAttributes(CPUStr, TuneCPUStr, FeaturesStr, F);
+    codegen::setFunctionAttributes(F, CPUStr, FeaturesStr, TuneCPUStr);
   };
 
   auto MAttrs = codegen::getMAttrs();
@@ -719,7 +719,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
 
   // Override function attributes based on CPUStr, TuneCPUStr, FeaturesStr, and
   // command line flags.
-  codegen::setFunctionAttributes(CPUStr, TuneCPUStr, FeaturesStr, *M);
+  codegen::setFunctionAttributes(*M, CPUStr, FeaturesStr, TuneCPUStr);
 
   for (auto &Plugin : PluginList) {
     CodeGenFileType CGFT = codegen::getFileType();
