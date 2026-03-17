@@ -596,7 +596,8 @@ static bool FlattenAggregateType(
     const uint32_t field_type_flags = field_compiler_type.GetTypeInfo();
     if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
         field_compiler_type.IsPointerType() ||
-        field_compiler_type.IsFloatingPointType()) {
+        // FIXME: is this correct for complex floats or float vector types?
+        field_type_flags & eTypeIsFloat) {
       aggregate_field_offsets.push_back(field_byte_offset);
       aggregate_compiler_types.push_back(field_compiler_type);
     } else if (field_type_flags & eTypeHasChildren) {
@@ -724,7 +725,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
             // return a nullptr return value object.
             return return_valobj_sp;
           }
-        } else if (field_compiler_type.IsFloatingPointType()) {
+        } else if (field_compiler_type.GetTypeInfo() & eTypeIsFloat) {
           // Structs with long doubles are always passed in memory.
           if (field_bit_width == 128) {
             is_memory = true;

@@ -1014,6 +1014,12 @@ enum NodeType {
   STRICT_BF16_TO_FP,
   STRICT_FP_TO_BF16,
 
+  /// CONVERT_FROM_ARBITRARY_FP - This operator converts from an arbitrary
+  /// floating-point represented as an integer to a native FP type.
+  /// The first operand is the integer containing the source FP bits.
+  /// The second operand is a constant indicating the source FP semantics.
+  CONVERT_FROM_ARBITRARY_FP,
+
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
   /// sizeof(int).
@@ -1441,6 +1447,10 @@ enum NodeType {
   /// debugging purposes.
   FAKE_USE,
 
+  /// COND_LOOP is a conditional branch to self, used for implementing efficient
+  /// conditional traps.
+  COND_LOOP,
+
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
   /// information that target might need for lowering.  The first operand is
@@ -1566,6 +1576,13 @@ enum NodeType {
   /// Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
   /// Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
+
+  /// Returns the number of number of trailing (least significant) zero elements
+  /// in a vector. Has a single i1 vector operand. The result is poison if the
+  /// return type isn't wide enough to hold the maximum number of elements in
+  /// the input vector.
+  CTTZ_ELTS,
+  CTTZ_ELTS_ZERO_POISON,
 
   /// Finds the index of the last active mask element
   /// Operands: Mask

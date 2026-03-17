@@ -2619,12 +2619,17 @@ void Writer::writeSections() {
     if ((sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
         (ctx.config.machine == AMD64 || ctx.config.machine == I386)) {
       uint32_t prevEnd = 0;
+      uint32_t rawSize = sec->getRawSize();
       for (Chunk *c : sec->chunks) {
         uint32_t off = c->getRVA() - sec->getRVA();
+        // Chunks without data (e.g., .bss) have virtual addresses beyond
+        // rawSize; stop filling when we reach the end of raw data.
+        if (off >= rawSize)
+          break;
         memset(secBuf + prevEnd, 0xCC, off - prevEnd);
-        prevEnd = off + c->getSize();
+        prevEnd = std::min(off + static_cast<uint32_t>(c->getSize()), rawSize);
       }
-      memset(secBuf + prevEnd, 0xCC, sec->getRawSize() - prevEnd);
+      memset(secBuf + prevEnd, 0xCC, rawSize - prevEnd);
     }
 
     parallelForEach(sec->chunks, [&](Chunk *c) {

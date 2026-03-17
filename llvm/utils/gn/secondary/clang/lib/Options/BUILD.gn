@@ -10,7 +10,7 @@ static_library("Options") {
   ]
   public_deps = [
     # public_dep because public header Options.h includes generated Options.inc.
-    "//clang/include/clang/Options:Options",
+    "//clang/include/clang/Options",
   ]
   sources = [
     "DriverOptions.cpp",

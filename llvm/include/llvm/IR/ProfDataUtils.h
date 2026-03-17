@@ -206,6 +206,11 @@ LLVM_ABI void
 setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I, StringRef PassName,
                                             const Function *F = nullptr);
 
+/// Returns a metadata node containing unknown branch weights if the function
+/// has an entry count, otherwise returns nullptr.
+LLVM_ABI MDNode *
+getExplicitlyUnknownBranchWeightsIfProfiled(Function &F, StringRef PassName);
+
 /// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
 /// entry counts.
 LLVM_ABI void setExplicitlyUnknownFunctionEntryCount(Function &F,

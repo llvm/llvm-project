@@ -57,6 +57,20 @@ mlir::Value genCharCompare(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value lhsLen, mlir::Value rhsBuff,
                            mlir::Value rhsLen);
 
+/// Generate call to F_C_STRING intrinsic runtime routine
+/// This appends a null character to a Fortran character string to create
+/// a C-compatible null-terminated string.
+///
+/// \p resultBox must be an unallocated allocatable used for the temporary
+/// result. \p stringBox must be a fir.box describing the F_C_STRING string
+/// argument. \p asis must be a boxed logical value (fir.box<i1>) or an
+/// AbsentOp: if true, trailing blanks are kept; if false or absent (default),
+/// trailing blanks are trimmed before appending the null.
+/// The runtime will always allocate the resultBox.
+void genFCString(fir::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Value resultBox, mlir::Value stringBox,
+                 mlir::Value asis);
+
 /// Generate call to INDEX runtime.
 /// This calls the simple runtime entry points based on the KIND of the string.
 /// No descriptors are used.
@@ -127,6 +141,22 @@ mlir::Value genVerify(fir::FirOpBuilder &builder, mlir::Location loc, int kind,
                       mlir::Value stringBase, mlir::Value stringLen,
                       mlir::Value setBase, mlir::Value setLen,
                       mlir::Value back);
+
+/// Generate call to TOKENIZE runtime (Form 1).
+/// Splits \p stringBox into tokens based on separator characters in \p setBox.
+/// \p tokensBox must be an unallocated allocatable array that receives the
+/// token substrings. \p separatorBox is optional and receives separator chars.
+void genTokenize(fir::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Value tokensBox, mlir::Value separatorBox,
+                 mlir::Value stringBox, mlir::Value setBox);
+
+/// Generate call to TOKENIZE runtime (Form 2).
+/// Returns token positions rather than substrings.
+/// \p firstBox and \p lastBox must be unallocated allocatable integer arrays
+/// that receive the starting and ending positions of each token.
+void genTokenizePositions(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value firstBox, mlir::Value lastBox,
+                          mlir::Value stringBox, mlir::Value setBox);
 
 } // namespace fir::runtime
 

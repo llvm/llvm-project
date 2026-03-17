@@ -42,7 +42,7 @@ extern "C++" {
 // expected-error-re@-3 {{import of module '{{c_library.inner|cxx_library}}' appears within namespace 'M'}}
 // expected-note@-21 {{namespace 'M' begins here}}
 #elif defined(EXTERN_C) && !defined(EXTERN_CXX) && defined(CXX_HEADER) && !defined(NO_EXTERN_C_ERROR)
-// expected-error@-6 {{import of C++ module 'cxx_library' appears within extern "C" language linkage specification}}
+// expected-warning@-6 {{import of C++ module 'cxx_library' appears within extern "C" language linkage specification}}
 // expected-note@-20 {{extern "C" language linkage specification begins here}}
 #endif
 

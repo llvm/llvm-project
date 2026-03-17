@@ -2431,6 +2431,14 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
         result.Add(symbol, Expr<SomeType>{ProcedureDesignator{**proc->init()}});
       } else if (IsAllocatableOrPointer(symbol)) {
         result.Add(symbol, Expr<SomeType>{NullPointer{}});
+        if (IsPointer(symbol)) {
+          AttachDeclaration(
+              Warn(common::LanguageFeature::DefaultStructConstructorNullPointer,
+                  typeName,
+                  "Structure constructor lacks a value for pointer component '%s', NULL() assumed"_warn_en_US,
+                  symbol.name()),
+              symbol);
+        }
       } else {
         AttachDeclaration(
             Say(typeName,
@@ -2597,7 +2605,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           sym = result.specific;
           if (!sym) {
             EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
-                isSubroutine, arguments, result.tried);
+                isSubroutine, arguments, result.tried, adjustment);
             return std::nullopt;
           }
           // re-resolve the name to the specific binding
@@ -2791,6 +2799,36 @@ static bool CheckCompatibleArguments(
 
 static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
 
+struct CudaMatchingDistance {
+  std::vector<int> perArg;
+  bool isInfinite{false};
+};
+
+// Compare CUDA matching distances using lexicographical comparison of
+// per-argument distances. This is needed to differentiate procedures that would
+// have similar total distance when summing the per-argument weights, allowing
+// the compiler to select the best match based on argument-by-argument
+// comparison.
+static int CompareCudaMatchingDistance(
+    const CudaMatchingDistance &x, const CudaMatchingDistance &y) {
+  if (x.isInfinite != y.isInfinite) {
+    return x.isInfinite ? 1 : -1;
+  }
+  if (x.isInfinite) {
+    return 0;
+  }
+  CHECK(x.perArg.size() == y.perArg.size());
+  if (std::lexicographical_compare(
+          x.perArg.begin(), x.perArg.end(), y.perArg.begin(), y.perArg.end())) {
+    return -1;
+  }
+  if (std::lexicographical_compare(
+          y.perArg.begin(), y.perArg.end(), x.perArg.begin(), x.perArg.end())) {
+    return 1;
+  }
+  return 0;
+}
+
 // Compute the matching distance as described in section 3.2.3 of the CUDA
 // Fortran references.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
@@ -2874,20 +2912,23 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   return cudaInfMatchingValue;
 }
 
-static int ComputeCudaMatchingDistance(
+static CudaMatchingDistance ComputeCudaMatchingDistance(
     const common::LanguageFeatureControl &features,
     const characteristics::Procedure &procedure,
     const ActualArguments &actuals) {
   const auto &dummies{procedure.dummyArguments};
   CHECK(dummies.size() == actuals.size());
-  int distance{0};
+  CudaMatchingDistance distance;
+  distance.perArg.reserve(dummies.size());
   for (std::size_t i{0}; i < dummies.size(); ++i) {
     const characteristics::DummyArgument &dummy{dummies[i]};
     const std::optional<ActualArgument> &actual{actuals[i]};
     int d{GetMatchingDistance(features, dummy, actual)};
-    if (d == cudaInfMatchingValue)
-      return d;
-    distance += d;
+    if (d == cudaInfMatchingValue) {
+      distance.isInfinite = true;
+      return distance;
+    }
+    distance.perArg.push_back(d);
   }
   return distance;
 }
@@ -2959,7 +3000,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails && !explicitIntrinsic) {
-    int crtMatchingDistance{cudaInfMatchingValue};
+    std::optional<CudaMatchingDistance> crtMatchingDistance;
     for (const Symbol &specific0 : genericDetails->specificProcs()) {
       const Symbol &specific1{BypassGeneric(specific0)};
       if (isSubroutine != !IsFunction(specific1)) {
@@ -2984,23 +3025,25 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
                 *procedure, localActuals, foldingContext_)) {
+          CudaMatchingDistance d{ComputeCudaMatchingDistance(
+              context_.languageFeatures(), *procedure, localActuals)};
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
-            int d{ComputeCudaMatchingDistance(
-                context_.languageFeatures(), *procedure, localActuals)};
-            if (d != crtMatchingDistance) {
-              if (d > crtMatchingDistance) {
+            if (crtMatchingDistance) {
+              int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
+              if (cmp > 0) {
                 continue;
+              }
+              if (cmp == 0) {
+                // 16.9.144(6): a bare NULL() is not allowed as an actual
+                // argument to a generic procedure if the specific procedure
+                // cannot be unambiguously distinguished
+                // Underspecified external procedure actual arguments can
+                // also lead to ambiguity.
+                return {nullptr, true /* due to ambiguity */, std::move(tried)};
               }
               // Matching distance is smaller than the previously matched
               // specific. Let it go through so the current procedure is picked.
-            } else {
-              // 16.9.144(6): a bare NULL() is not allowed as an actual
-              // argument to a generic procedure if the specific procedure
-              // cannot be unambiguously distinguished
-              // Underspecified external procedure actual arguments can
-              // also lead to ambiguity.
-              return {nullptr, true /* due to ambiguity */, std::move(tried)};
             }
           }
           if (!procedure->IsElemental()) {
@@ -3009,8 +3052,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
           } else {
             elemental = specific;
           }
-          crtMatchingDistance = ComputeCudaMatchingDistance(
-              context_.languageFeatures(), *procedure, localActuals);
+          crtMatchingDistance = std::move(d);
         }
       }
     }
@@ -3103,7 +3145,7 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 
 void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
     bool dueToAmbiguity, bool isSubroutine, ActualArguments &arguments,
-    const SymbolVector &tried) {
+    const SymbolVector &tried, const AdjustActuals &adjustment) {
   if (auto *msg{Say(dueToAmbiguity
               ? "The actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
               : semantics::IsGenericDefinedOp(symbol)
@@ -3116,7 +3158,16 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
-          auto reasons{semantics::CheckExplicitInterface(*procChars, arguments,
+          ActualArguments *actuals{&arguments};
+          ActualArguments adjustedActuals;
+          if (specific.has<semantics::ProcBindingDetails>() &&
+              adjustment.has_value()) {
+            adjustedActuals = arguments;
+            if ((*adjustment)(specific, adjustedActuals)) {
+              actuals = &adjustedActuals;
+            }
+          }
+          auto reasons{semantics::CheckExplicitInterface(*procChars, *actuals,
               context_, /*scope=*/nullptr, /*intrinsic=*/nullptr,
               /*allocActualArgumentConversions=*/false,
               /*extentErrors=*/false,
@@ -3214,8 +3265,9 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           std::move(specificCall->arguments)};
     } else {
       if (isGenericInterface) {
-        EmitGenericResolutionError(
-            *symbol, dueToAmbiguity, isSubroutine, arguments, tried);
+        AdjustActuals noAdjustment;
+        EmitGenericResolutionError(*symbol, dueToAmbiguity, isSubroutine,
+            arguments, tried, noAdjustment);
       }
       return std::nullopt;
     }
@@ -3274,6 +3326,12 @@ void ExpressionAnalyzer::CheckBadExplicitType(
 
 void ExpressionAnalyzer::CheckForBadRecursion(
     parser::CharBlock callSite, const semantics::Symbol &proc) {
+  if (const Symbol *mainEntry{GetMainEntry(&proc)}) {
+    if (mainEntry != &proc) {
+      CheckForBadRecursion(callSite, *mainEntry);
+      return;
+    }
+  }
   if (const auto *scope{proc.scope()}) {
     if (scope->sourceRange().Contains(callSite)) {
       parser::Message *msg{nullptr};
@@ -4369,8 +4427,17 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
-        ToUpperCase(EnumToString(category)), kind);
+    if (const semantics::Scope *modFileScope{
+            semantics::FindModuleFileContaining(
+                context_.FindScope(GetContextualMessages().at()))};
+        modFileScope && modFileScope->parent().IsIntrinsicModules()) {
+      // Ignore usage of unsupported intrinsic type kinds in intrinsic module
+      // files.  They might be USE'd into a cross-compilation or into a
+      // compilation with a disabled REAL kind.
+    } else {
+      Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
+          ToUpperCase(EnumToString(category)), kind);
+    }
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,
@@ -5155,7 +5222,7 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
         *isAmbiguous = result.failedDueToAmbiguity;
       }
       context_.EmitGenericResolutionError(*generic, result.failedDueToAmbiguity,
-          isSubroutine, actuals_, result.tried);
+          isSubroutine, actuals_, result.tried, adjustment);
     }
   }
   return nullptr;
@@ -5321,94 +5388,10 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
   return analyzer.AnalyzeKindSelector(category, selector);
 }
 
-// NoteUsedSymbols()
-
-static void NoteUsedSymbol(SemanticsContext &context, const Symbol &symbol) {
-  const Symbol &root{GetAssociationRoot(symbol)};
-  switch (root.owner().kind()) {
-  case semantics::Scope::Kind::Subprogram:
-  case semantics::Scope::Kind::MainProgram:
-  case semantics::Scope::Kind::BlockConstruct:
-    if ((root.has<semantics::ObjectEntityDetails>() ||
-            IsProcedurePointer(root))) {
-      context.NoteUsedSymbol(root);
-      if (root.test(Symbol::Flag::CrayPointee)) {
-        context.NoteUsedSymbol(GetCrayPointer(root));
-      }
-    }
-    break;
-  default:
-    break;
-  }
-}
-
-template <typename A>
-void NoteUsedSymbolsHelper(SemanticsContext &context, const A &x) {
-  if (context.ShouldWarn(common::UsageWarning::UnusedVariable)) {
-    for (const Symbol &symbol : CollectSymbols(x)) {
-      NoteUsedSymbol(context, symbol);
-    }
-  }
-}
-
-void NoteUsedSymbols(SemanticsContext &context, const SomeExpr &expr) {
-  NoteUsedSymbolsHelper(context, expr);
-}
-
-static bool IsBindingUsedAsProcedure(const SomeExpr &expr) {
-  if (const auto *pd{std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
-    if (const Symbol *symbol{pd->GetSymbol()}) {
-      return symbol->has<ProcBindingDetails>();
-    }
-  }
-  return false;
-}
-
 void NoteUsedSymbols(
-    SemanticsContext &context, const evaluate::ProcedureRef &call) {
-  NoteUsedSymbolsHelper(context, call.proc());
-  for (const auto &maybeArg : call.arguments()) {
-    if (maybeArg) {
-      if (const auto *expr{maybeArg->UnwrapExpr()}) {
-        if (!IsBindingUsedAsProcedure(*expr)) {
-          // Ignore procedure bindings being used as actual procedures
-          // (a local extension).
-          NoteUsedSymbolsHelper(context, *expr);
-        }
-      }
-    }
-  }
-}
-
-void NoteUsedSymbols(
-    SemanticsContext &context, const evaluate::Assignment &assignment) {
-  if (IsBindingUsedAsProcedure(assignment.rhs)) {
-    // Don't look at the RHS, we're just using its binding (extension).
-    NoteUsedSymbolsHelper(context, assignment.lhs);
-  } else {
-    NoteUsedSymbolsHelper(context, assignment);
-  }
-}
-
-void NoteUsedSymbols(
-    SemanticsContext &context, const parser::TypedExpr &typedExpr) {
-  if (typedExpr && typedExpr->v) {
-    NoteUsedSymbols(context, *typedExpr->v);
-  }
-}
-
-void NoteUsedSymbols(
-    SemanticsContext &context, const parser::TypedCall &typedCall) {
-  if (typedCall) {
-    NoteUsedSymbols(context, *typedCall);
-  }
-}
-
-void NoteUsedSymbols(
-    SemanticsContext &context, const parser::TypedAssignment &typedAssignment) {
-  if (typedAssignment && typedAssignment->v) {
-    NoteUsedSymbols(context, *typedAssignment->v);
-  }
+    SemanticsContext &context, const SomeExpr &expr, bool isDefinition) {
+  context.NoteUsedSymbols(
+      evaluate::CollectUsedSymbolValues(context, expr, isDefinition));
 }
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}

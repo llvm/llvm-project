@@ -32,28 +32,25 @@ class GreedyRewriteConfig;
 //===----------------------------------------------------------------------===//
 
 #define GEN_PASS_DECL_BUBBLEDOWNMEMORYSPACECASTS
-#define GEN_PASS_DECL_CSE
-#define GEN_PASS_DECL_CANONICALIZER
+#define GEN_PASS_DECL_CSEPASS
+#define GEN_PASS_DECL_CANONICALIZERPASS
 #define GEN_PASS_DECL_COMPOSITEFIXEDPOINTPASS
-#define GEN_PASS_DECL_CONTROLFLOWSINK
-#define GEN_PASS_DECL_GENERATERUNTIMEVERIFICATION
-#define GEN_PASS_DECL_LOOPINVARIANTCODEMOTION
-#define GEN_PASS_DECL_INLINER
+#define GEN_PASS_DECL_CONTROLFLOWSINKPASS
+#define GEN_PASS_DECL_GENERATERUNTIMEVERIFICATIONPASS
+#define GEN_PASS_DECL_LOOPINVARIANTCODEMOTIONPASS
+#define GEN_PASS_DECL_LOOPINVARIANTSUBSETHOISTINGPASS
+#define GEN_PASS_DECL_INLINERPASS
 #define GEN_PASS_DECL_MEM2REG
 #define GEN_PASS_DECL_PRINTIRPASS
-#define GEN_PASS_DECL_PRINTOPSTATS
-#define GEN_PASS_DECL_REMOVEDEADVALUES
-#define GEN_PASS_DECL_SCCP
+#define GEN_PASS_DECL_PRINTOPSTATSPASS
+#define GEN_PASS_DECL_REMOVEDEADVALUESPASS
+#define GEN_PASS_DECL_SCCPPASS
 #define GEN_PASS_DECL_SROA
-#define GEN_PASS_DECL_STRIPDEBUGINFO
-#define GEN_PASS_DECL_SYMBOLDCE
-#define GEN_PASS_DECL_SYMBOLPRIVATIZE
-#define GEN_PASS_DECL_TOPOLOGICALSORT
+#define GEN_PASS_DECL_STRIPDEBUGINFOPASS
+#define GEN_PASS_DECL_SYMBOLDCEPASS
+#define GEN_PASS_DECL_SYMBOLPRIVATIZEPASS
+#define GEN_PASS_DECL_TOPOLOGICALSORTPASS
 #include "mlir/Transforms/Passes.h.inc"
-
-/// Creates an instance of the Canonicalizer pass, configured with default
-/// settings (which can be overridden by pass options on the command line).
-std::unique_ptr<Pass> createCanonicalizerPass();
 
 /// Creates an instance of the Canonicalizer pass with the specified config.
 /// `disabledPatterns` is a set of labels used to filter out input patterns with
@@ -68,39 +65,6 @@ createCanonicalizerPass(const GreedyRewriteConfig &config,
                         ArrayRef<std::string> disabledPatterns = {},
                         ArrayRef<std::string> enabledPatterns = {});
 
-/// Creates a pass to perform control-flow sinking.
-std::unique_ptr<Pass> createControlFlowSinkPass();
-
-/// Creates a pass to perform common sub expression elimination.
-std::unique_ptr<Pass> createCSEPass();
-
-/// Creates a pass to print IR on the debug stream.
-std::unique_ptr<Pass> createPrintIRPass(const PrintIRPassOptions & = {});
-
-/// Creates a pass that generates IR to verify ops at runtime.
-std::unique_ptr<Pass> createGenerateRuntimeVerificationPass();
-
-/// Creates a loop invariant code motion pass that hoists loop invariant
-/// instructions out of the loop.
-std::unique_ptr<Pass> createLoopInvariantCodeMotionPass();
-
-/// Creates a pass that hoists loop-invariant subset ops.
-std::unique_ptr<Pass> createLoopInvariantSubsetHoistingPass();
-
-/// Creates a pass to strip debug information from a function.
-std::unique_ptr<Pass> createStripDebugInfoPass();
-
-/// Creates a pass which prints the list of ops and the number of occurrences in
-/// the module.
-std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os = llvm::errs());
-
-/// Creates a pass which prints the list of ops and the number of occurrences in
-/// the module with the output format option.
-std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os, bool printAsJSON);
-
-/// Creates a pass which inlines calls and callable operations as defined by
-/// the CallGraph.
-std::unique_ptr<Pass> createInlinerPass();
 /// Creates an instance of the inliner pass, and use the provided pass managers
 /// when optimizing callable operations with names matching the key type.
 /// Callable operations with a name not within the provided map will use the
@@ -115,26 +79,13 @@ std::unique_ptr<Pass>
 createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
                   std::function<void(OpPassManager &)> defaultPipelineBuilder);
 
-/// Creates an optimization pass to remove dead values.
-std::unique_ptr<Pass> createRemoveDeadValuesPass();
+/// Creates a pass which prints the list of ops and the number of occurrences in
+/// the module.
+std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os);
 
-/// Creates a pass which performs sparse conditional constant propagation over
-/// nested operations.
-std::unique_ptr<Pass> createSCCPPass();
-
-/// Creates a pass which delete symbol operations that are unreachable. This
-/// pass may *only* be scheduled on an operation that defines a SymbolTable.
-std::unique_ptr<Pass> createSymbolDCEPass();
-
-/// Creates a pass which marks top-level symbol operations as `private` unless
-/// listed in `excludeSymbols`.
-std::unique_ptr<Pass>
-createSymbolPrivatizePass(ArrayRef<std::string> excludeSymbols = {});
-
-/// Creates a pass that recursively sorts nested regions without SSA dominance
-/// topologically such that, as much as possible, users of values appear after
-/// their producers.
-std::unique_ptr<Pass> createTopologicalSortPass();
+/// Creates a pass which prints the list of ops and the number of occurrences in
+/// the module with the output format option.
+std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os, bool printAsJSON);
 
 /// Create composite pass, which runs provided set of passes until fixed point
 /// or maximum number of iterations reached.

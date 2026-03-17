@@ -342,6 +342,22 @@ getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
   return std::nullopt;
 }
 
+static bool mustDestroyOrFinalizeFunctionResult(
+    mlir::FunctionType callSiteType,
+    std::optional<Fortran::evaluate::DynamicType> retTy) {
+  if (callSiteType.getNumResults() == 0 || !retTy.has_value())
+    return false;
+  if (fir::isPointerType(callSiteType.getResult(0)))
+    return false;
+  if (retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic())
+    return true;
+  if (retTy->category() != Fortran::common::TypeCategory::Derived)
+    return false;
+  return Fortran::semantics::MayRequireFinalization(
+             retTy->GetDerivedTypeSpec()) ||
+         hlfir::mayHaveAllocatableComponent(callSiteType.getResult(0));
+}
+
 std::tuple<Fortran::lower::LoweredResult, bool, mlir::Operation *>
 Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
@@ -803,10 +819,7 @@ Fortran::lower::genCallOpAndResult(
   // the resulting array result will be finalized/destroyed
   // as needed by hlfir.destroy.
   const bool mustFinalizeResult =
-      !isElemental && callSiteType.getNumResults() > 0 &&
-      !fir::isPointerType(callSiteType.getResult(0)) && retTy.has_value() &&
-      (retTy->category() == Fortran::common::TypeCategory::Derived ||
-       retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic());
+      !isElemental && mustDestroyOrFinalizeFunctionResult(callSiteType, retTy);
 
   if (caller.mustSaveResult()) {
     assert(allocatedResult.has_value());
@@ -828,7 +841,13 @@ Fortran::lower::genCallOpAndResult(
             mustFinalizeResult, callOp};
   }
 
-  if (allocatedResult) {
+  // Insert clean-up for the result.
+  // In HLFIR, this is skipped when the result does not need to be finalized
+  // because the result is moved to an expression that will deal with the
+  // finalization.
+  if (allocatedResult &&
+      (mustFinalizeResult ||
+       !converter.getLoweringOptions().getLowerToHighLevelFIR())) {
     // The result must be optionally destroyed (if it is of a derived type
     // that may need finalization or deallocation of the components).
     // For an allocatable result we have to free the memory allocated
@@ -853,39 +872,22 @@ Fortran::lower::genCallOpAndResult(
         [](const auto &) {});
 
     // 7.5.6.3 point 5. Derived-type finalization for nonpointer function.
-    bool resultIsFinalized = false;
-    // Check if the derived-type is finalizable if it is a monomorphic
-    // derived-type.
-    // For polymorphic and unlimited polymorphic enities call the runtime
-    // in any cases.
+    // Note that this is also done for derived type with no final routines
+    // that have allocatable components to ensure the allocatable
+    // components are deallocated.
     if (mustFinalizeResult) {
-      if (retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic()) {
-        auto *bldr = &converter.getFirOpBuilder();
-        stmtCtx.attachCleanup([bldr, loc, allocatedResult]() {
-          fir::runtime::genDerivedTypeDestroy(*bldr, loc,
-                                              fir::getBase(*allocatedResult));
-        });
-        resultIsFinalized = true;
-      } else {
-        const Fortran::semantics::DerivedTypeSpec &typeSpec =
-            retTy->GetDerivedTypeSpec();
-        // If the result type may require finalization
-        // or have allocatable components, we need to make sure
-        // everything is properly finalized/deallocated.
-        if (Fortran::semantics::MayRequireFinalization(typeSpec) ||
-            // We can use DerivedTypeDestroy even if finalization is not needed.
-            hlfir::mayHaveAllocatableComponent(funcType.getResults()[0])) {
-          auto *bldr = &converter.getFirOpBuilder();
-          stmtCtx.attachCleanup([bldr, loc, allocatedResult]() {
-            mlir::Value box = bldr->createBox(loc, *allocatedResult);
-            fir::runtime::genDerivedTypeDestroy(*bldr, loc, box);
-          });
-          resultIsFinalized = true;
-        }
-      }
+      auto *bldr = &converter.getFirOpBuilder();
+      stmtCtx.attachCleanup([bldr, loc, allocatedResult]() {
+        mlir::Value box = bldr->createBox(loc, *allocatedResult);
+        fir::runtime::genDerivedTypeDestroy(*bldr, loc, box);
+      });
     }
-    return {LoweredResult{*allocatedResult}, resultIsFinalized, callOp};
+    return {LoweredResult{*allocatedResult}, mustFinalizeResult, callOp};
   }
+
+  if (allocatedResult)
+    return {LoweredResult{*allocatedResult}, /*resultIsFinalized=*/false,
+            callOp};
 
   // subroutine call
   if (!resultType)
@@ -1928,14 +1930,14 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   prepareUserCallArguments(loweredActuals, caller, callSiteType, callContext,
                            callCleanUps);
 
+  const bool isElemental = callContext.isElementalProcWithArrayArgs();
   // Prepare lowered arguments according to the interface
   // and map the lowered values to the dummy
   // arguments.
   auto [loweredResult, resultIsFinalized, callOp] =
       Fortran::lower::genCallOpAndResult(
           loc, callContext.converter, callContext.symMap, callContext.stmtCtx,
-          caller, callSiteType, callContext.resultType,
-          callContext.isElementalProcWithArrayArgs());
+          caller, callSiteType, callContext.resultType, isElemental);
 
   // Clean-up associations and copy-in.
   // The association clean-ups are postponed to the end of the statement
@@ -1973,17 +1975,28 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   if (!resultIsFinalized) {
     hlfir::Entity resultEntity = extendedValueToHlfirEntity(
         loc, builder, result, tempResultName, /*insertBefore=*/callOp);
+    // Allocatable result must be freed, other results are stack allocated.
+    const auto *allocatable = result.getBoxOf<fir::MutableBoxValue>();
+    const bool mustFree = allocatable != nullptr;
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {
       // If the result has no finalization, it can be moved into an expression.
-      // In such case, the expression should not be freed after its use since
-      // the result is stack allocated or deallocation (for allocatable results)
-      // was already inserted in genCallOpAndResult.
-      auto asExpr =
-          hlfir::AsExprOp::create(builder, loc, resultEntity,
-                                  /*mustFree=*/builder.createBool(loc, false));
-      return hlfir::EntityWithAttributes{asExpr.getResult()};
+      mlir::Value asExpr = hlfir::AsExprOp::create(
+          builder, loc, resultEntity, builder.createBool(loc, mustFree));
+      if (!isElemental) {
+        // Insert clean-up for the expression, except for elemental call where
+        // the cleaned-up is inserted at the array level.
+        callContext.stmtCtx.attachCleanup([bldr = &builder, loc, asExpr]() {
+          hlfir::DestroyOp::create(*bldr, loc, asExpr, /*finalize=*/false);
+        });
+      }
+      return hlfir::EntityWithAttributes{asExpr};
     }
+    if (allocatable)
+      callContext.stmtCtx.attachCleanup(
+          [bldr = &builder, loc, box = *allocatable]() {
+            fir::factory::genFreememIfAllocated(*bldr, loc, box);
+          });
     return hlfir::EntityWithAttributes{resultEntity};
   }
   // If the result has finalization, it cannot be moved because use of its

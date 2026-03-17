@@ -108,9 +108,8 @@ define <3 x i4> @partial_undef_vec() {
 define i32 @early_freeze_test1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @early_freeze_test1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
-; CHECK-NEXT:    [[V1:%.*]] = add i32 [[X_FR]], [[Y_FR]]
+; CHECK-NEXT:    [[V4:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[V1:%.*]] = freeze i32 [[V4]]
 ; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[V1]], 1
 ; CHECK-NEXT:    [[V3:%.*]] = and i32 [[V2]], 2
 ; CHECK-NEXT:    ret i32 [[V3]]
@@ -944,14 +943,14 @@ define void @fold_phi_gep_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
 ; CHECK-LABEL: define void @fold_phi_gep_phi_offset(
 ; CHECK-SAME: ptr [[INIT:%.*]], ptr [[END:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[I_NEXT_FR:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT]], [[END]]
+; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -978,13 +977,13 @@ define void @fold_phi_gep_inbounds_phi_offset(ptr %init, ptr %end, i64 noundef %
 ; CHECK-LABEL: define void @fold_phi_gep_inbounds_phi_offset(
 ; CHECK-SAME: ptr [[INIT:%.*]], ptr [[END:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[I_NEXT1:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[I_NEXT]] = freeze ptr [[I_NEXT1]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -1011,14 +1010,13 @@ define void @fold_phi_gep_phi_offset_multiple(ptr %init, ptr %end, i64 %n) {
 ; CHECK-LABEL: define void @fold_phi_gep_phi_offset_multiple(
 ; CHECK-SAME: ptr [[INIT:%.*]], ptr [[END:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze ptr [[INIT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[N]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[TMP1]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], %[[ENTRY]] ], [ [[OFF_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[I_NEXT1:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[I_NEXT]] = freeze ptr [[I_NEXT1]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -1671,13 +1669,13 @@ define i32 @pr171435_2(ptr noundef %arg, i32 noundef %arg1) "instcombine-no-veri
 ; CHECK:       [[BB_7]]:
 ; CHECK-NEXT:    br label %[[BB_8]]
 ; CHECK:       [[BB_8]]:
-; CHECK-NEXT:    [[PHI9:%.*]] = phi i32 [ [[CALL6]], %[[BB_5]] ], [ poison, %[[BB_7]] ]
-; CHECK-NEXT:    [[PHI9_FR:%.*]] = freeze i32 [[PHI9]]
+; CHECK-NEXT:    [[PHI9_FR:%.*]] = phi i32 [ [[CALL6]], %[[BB_5]] ], [ poison, %[[BB_7]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PHI9_FR]], 1
 ; CHECK-NEXT:    [[ASHR:%.*]] = lshr i32 [[PHI9_FR]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[ASHR]], [[AND]]
 ; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[PHI]], [[ADD]]
-; CHECK-NEXT:    [[AND11:%.*]] = and i32 [[ADD10]], 255
+; CHECK-NEXT:    [[ADD10_FR:%.*]] = freeze i32 [[ADD10]]
+; CHECK-NEXT:    [[AND11:%.*]] = and i32 [[ADD10_FR]], 255
 ; CHECK-NEXT:    [[ICMP12:%.*]] = icmp eq i32 [[AND11]], 0
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[ICMP12]], i32 [[PHI]], i32 [[AND11]]
 ; CHECK-NEXT:    br label %[[BB_13]]

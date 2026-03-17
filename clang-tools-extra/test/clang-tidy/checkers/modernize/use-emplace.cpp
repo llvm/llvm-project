@@ -7,6 +7,9 @@
 // RUN:              modernize-use-emplace.TupleMakeFunctions: \
 // RUN:                '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}}"
 
+#include <utility>
+#include <memory>
+
 namespace std {
 template <typename E>
 class initializer_list {
@@ -275,13 +278,6 @@ public:
   void emplace(Args &&...args){};
 };
 
-template <typename T>
-struct remove_reference { using type = T; };
-template <typename T>
-struct remove_reference<T &> { using type = T; };
-template <typename T>
-struct remove_reference<T &&> { using type = T; };
-
 template <typename T1, typename T2>
 pair<typename remove_reference<T1>::type, typename remove_reference<T2>::type>
 make_pair(T1 &&, T2 &&) {
@@ -318,12 +314,6 @@ tuple<typename remove_reference<Ts>::type...> make_tuple(Ts &&...) {
   return {};
 }
 
-template <typename T>
-class unique_ptr {
-public:
-  explicit unique_ptr(T *) {}
-  ~unique_ptr();
-};
 } // namespace std
 
 namespace llvm {

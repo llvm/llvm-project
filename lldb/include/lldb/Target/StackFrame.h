@@ -316,11 +316,16 @@ public:
   /// \param[in] error
   ///     Record any errors encountered while evaluating var_expr.
   ///
+  /// \param[in] mode
+  ///     Data Inspection Language (DIL) evaluation mode.
+  ///     \see lldb::DILMode
+  ///
   /// \return
   ///     A shared pointer to the ValueObject described by var_expr.
   virtual lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull);
 
   /// Determine whether this StackFrame has debug information available or not.
   ///
@@ -363,7 +368,7 @@ public:
   /// \param [in] frame_marker
   ///   Optional string that will be prepended to the frame output description.
   virtual void DumpUsingSettingsFormat(Stream *strm, bool show_unique = false,
-                                       const char *frame_marker = nullptr);
+                                       const llvm::StringRef frame_marker = "");
 
   /// Print a description for this frame using a default format.
   ///
@@ -400,7 +405,7 @@ public:
   ///   Returns true if successful.
   virtual bool GetStatus(Stream &strm, bool show_frame_info, bool show_source,
                          bool show_unique = false,
-                         const char *frame_marker = nullptr);
+                         const llvm::StringRef frame_marker = "");
 
   /// Query whether this frame is a concrete frame on the call stack, or if it
   /// is an inlined frame derived from the debug information and presented by
@@ -615,7 +620,8 @@ private:
 
   lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error);
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull);
 
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;

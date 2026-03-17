@@ -1633,7 +1633,6 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
         return return_valobj_sp;
     }
   } else if (compiler_type.IsFloatingPointType()) {
-    // Vector types are handled above.
     if (!compiler_type.IsCompleteType()) {
       switch (*bit_width) {
       default:
@@ -1707,8 +1706,6 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
                                               : homogeneous_count * 2);
           }
         } else if (base_type.IsFloatingPointType()) {
-          assert(!base_type.IsVectorType() &&
-                 "Vector types should've been handled above.");
           if (!base_type.IsComplexType()) {
             is_vfp_candidate = true;
             if (base_byte_size)
@@ -1726,7 +1723,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
             base_type = compiler_type.GetFieldAtIndex(index, name, nullptr,
                                                       nullptr, nullptr);
 
-            if (base_type.IsFloatingPointType()) {
+            // TODO: is this correct for float vector types?
+            if (base_type.GetTypeInfo() & eTypeIsFloat) {
               std::optional<uint64_t> base_byte_size =
                   llvm::expectedToOptional(base_type.GetByteSize(&thread));
               if (base_type.IsComplexType()) {

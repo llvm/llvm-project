@@ -86,7 +86,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_objectfilepecoff_properties);
+    m_collection_sp->Initialize(g_objectfilepecoff_properties_def);
   }
 
   llvm::Triple::EnvironmentType ABI() const {

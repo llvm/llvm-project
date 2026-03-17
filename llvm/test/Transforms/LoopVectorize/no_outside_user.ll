@@ -642,9 +642,9 @@ define i32 @sum_arrays_outside_use(ptr %B, ptr %A, ptr %C, i32 %N)  {
 ; CHECK-LABEL: define i32 @sum_arrays_outside_use(
 ; CHECK-SAME: ptr [[B:%.*]], ptr [[A:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    [[A3:%.*]] = ptrtoint ptr [[A]] to i32
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B]] to i32
-; CHECK-NEXT:    [[C1:%.*]] = ptrtoint ptr [[C]] to i32
+; CHECK-NEXT:    [[A3:%.*]] = ptrtoaddr ptr [[A]] to i32
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i32
+; CHECK-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i32
 ; CHECK-NEXT:    [[B_PROMOTED:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[B_PROMOTED]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 [[TMP0]])

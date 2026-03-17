@@ -549,6 +549,8 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
     return failure();
   }
   uint64_t tripCountValue = tripCount->getZExtValue();
+  if (tripCountValue == 0)
+    return success();
   if (unrollJamFactor > tripCountValue) {
     LDBG() << "unroll and jam factor is greater than trip count, set factor to "
               "trip "
@@ -914,6 +916,15 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   scf::ForOp innermost = loops.back();
   scf::ForOp outermost = loops.front();
 
+  // Bail out if any loop has a known zero step, as normalization
+  // would result in a division by zero.
+  for (auto loop : loops) {
+    if (auto step = getConstantIntValue(loop.getStep())) {
+      if (step.value() == 0) {
+        return failure();
+      }
+    }
+  }
   // 1. Make sure all loops iterate from 0 to upperBound with step 1.  This
   // allows the following code to assume upperBound is the number of iterations.
   for (auto loop : loops) {
@@ -948,7 +959,8 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   Value upperBound = getProductOfIntsOrIndexes(rewriter, loc, upperBounds);
   outermost.setUpperBound(upperBound);
 
-  rewriter.setInsertionPointToStart(innermost.getBody());
+  // Insert delinearization at the start of the outermost loop body.
+  rewriter.setInsertionPointToStart(outermost.getBody());
   auto [delinearizeIvs, preservedUsers] = delinearizeInductionVariable(
       rewriter, loc, outermost.getInductionVar(), upperBounds);
   rewriter.replaceAllUsesExcept(outermost.getInductionVar(), delinearizeIvs[0],
@@ -1339,6 +1351,15 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   if (forOps.size() < sizes.size())
     sizes = sizes.take_front(forOps.size());
 
+  // The strip-mining transformation splices loop bodies into a new inner loop
+  // without threading iter_args.  If any of the collected loops carries
+  // iter_args, the splice would produce invalid IR (yielded values from the
+  // inner scope used in the outer terminator).  Skip the transformation in
+  // that case.
+  if (llvm::any_of(forOps,
+                   [](scf::ForOp op) { return !op.getInitArgs().empty(); }))
+    return {};
+
   // Compute the tile sizes such that i-th outer loop executes size[i]
   // iterations.  Given that the loop current executes
   //   numIterations = ceildiv((upperBound - lowerBound), step)
@@ -1558,6 +1579,25 @@ bool mlir::isPerfectlyNestedForLoops(
     }
   }
   return true;
+}
+
+llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>>
+mlir::getConstLoopBounds(mlir::LoopLikeOpInterface loopOp) {
+  std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
+  std::optional<SmallVector<OpFoldResult>> upBnds = loopOp.getLoopUpperBounds();
+  std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
+  if (!loBnds || !upBnds || !steps)
+    return {};
+  llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>> loopRanges;
+  for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    auto lbCst = getConstantIntValue(lb);
+    auto ubCst = getConstantIntValue(ub);
+    auto stepCst = getConstantIntValue(step);
+    if (!lbCst || !ubCst || !stepCst)
+      return {};
+    loopRanges.emplace_back(*lbCst, *ubCst, *stepCst);
+  }
+  return loopRanges;
 }
 
 llvm::SmallVector<llvm::APInt>

@@ -7,7 +7,7 @@
 
 ; Check that the order of the sections is tin -> _start -> pat.
 
-; CHECK:      00000000004000d0     1 FUNC    LOCAL  DEFAULT    1 pat
+; CHECK:      00000000004000cf     1 FUNC    LOCAL  DEFAULT    1 pat
 ; CHECK:      00000000004000b0     1 FUNC    LOCAL  DEFAULT    1 tin
 ; CHECK:      00000000004000c0    15 FUNC    GLOBAL DEFAULT    1 _start
 

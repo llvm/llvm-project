@@ -22,6 +22,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -156,7 +157,7 @@ private:
   uint8_t AsmPrinterFlags;
 
   /// Cached opcode from MCID.
-  uint16_t Opcode;
+  uint32_t Opcode;
 
   /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
   /// defined by this instruction.
@@ -672,7 +673,7 @@ public:
       return true;
     if (isRegSequence() && OpIdx > 1 && (OpIdx % 2) == 0)
       return true;
-    if (isSubregToReg() && OpIdx == 3)
+    if (isSubregToReg() && OpIdx == 2)
       return true;
     return false;
   }
@@ -1329,7 +1330,10 @@ public:
   /// If this instruction is the header of a bundle, the whole bundle is erased.
   /// This function can not be used for instructions inside a bundle, use
   /// eraseFromBundle() to erase individual bundled instructions.
-  LLVM_ABI void eraseFromParent();
+  /// \returns the iterator following the erased instruction. If this is the
+  /// header of a bundle it returns the iterator following the erased bundle
+  /// iterator.
+  LLVM_ABI MachineInstrBundleIterator<MachineInstr> eraseFromParent();
 
   /// Unlink 'this' from its basic block and delete it.
   ///
