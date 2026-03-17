@@ -1,4 +1,4 @@
-//===-- SPSNativeMemoryMapTest.cpp ----------------------------------------===//
+//===-- SimpleNativeMemoryMapTest.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Test SPS serialization for MemoryFlags APIs.
+// Test SimpleNativeMemoryMap APIs.
 //
 //===----------------------------------------------------------------------===//
 
@@ -89,6 +89,12 @@ template <typename T> move_only_function<void(T)> waitFor(std::future<T> &F) {
   std::promise<T> P;
   F = P.get_future();
   return [P = std::move(P)](T Val) mutable { P.set_value(std::move(Val)); };
+}
+
+move_only_function<void()> waitFor(std::future<void> &F) {
+  std::promise<void> P;
+  F = P.get_future();
+  return [P = std::move(P)]() mutable { P.set_value(); };
 }
 
 TEST(SimpleNativeMemoryMapTest, CreateAndDestroy) {
@@ -288,9 +294,9 @@ TEST(SimpleNativeMemoryMap, ReserveInitializeShutdown) {
 
   EXPECT_EQ(SentinelValue, 0U);
 
-  std::future<Error> ShutdownResult;
-  SNMM->shutdown(waitFor(ShutdownResult));
-  cantFail(ShutdownResult.get());
+  std::future<void> ShutdownResult;
+  SNMM->onShutdown(waitFor(ShutdownResult));
+  ShutdownResult.get();
 
   EXPECT_EQ(SentinelValue, 42);
 }
@@ -325,15 +331,15 @@ TEST(SimpleNativeMemoryMap, ReserveInitializeDetachShutdown) {
 
   EXPECT_EQ(SentinelValue, 0U);
 
-  std::future<Error> DetachResult;
-  SNMM->detach(waitFor(DetachResult));
-  cantFail(DetachResult.get());
+  std::future<void> DetachResult;
+  SNMM->onDetach(waitFor(DetachResult));
+  DetachResult.get();
 
   EXPECT_EQ(SentinelValue, 0);
 
-  std::future<Error> ShutdownResult;
-  SNMM->shutdown(waitFor(ShutdownResult));
-  cantFail(ShutdownResult.get());
+  std::future<void> ShutdownResult;
+  SNMM->onShutdown(waitFor(ShutdownResult));
+  ShutdownResult.get();
 
   EXPECT_EQ(SentinelValue, 42);
 }

@@ -224,10 +224,10 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void AffineDialect::initialize() {
-  addOperations<AffineDmaStartOp, AffineDmaWaitOp,
+  addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
-                >();
+      >();
   addInterfaces<AffineInlinerInterface>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AffineApplyOp, AffineMaxOp,
                             AffineMinOp>();
@@ -1885,32 +1885,6 @@ void AffineDmaStartOp::build(OpBuilder &builder, OperationState &result,
   }
 }
 
-AffineDmaStartOp AffineDmaStartOp::create(
-    OpBuilder &builder, Location location, Value srcMemRef, AffineMap srcMap,
-    ValueRange srcIndices, Value destMemRef, AffineMap dstMap,
-    ValueRange destIndices, Value tagMemRef, AffineMap tagMap,
-    ValueRange tagIndices, Value numElements, Value stride,
-    Value elementsPerStride) {
-  mlir::OperationState state(location, getOperationName());
-  build(builder, state, srcMemRef, srcMap, srcIndices, destMemRef, dstMap,
-        destIndices, tagMemRef, tagMap, tagIndices, numElements, stride,
-        elementsPerStride);
-  auto result = dyn_cast<AffineDmaStartOp>(builder.create(state));
-  assert(result && "builder didn't return the right type");
-  return result;
-}
-
-AffineDmaStartOp AffineDmaStartOp::create(
-    ImplicitLocOpBuilder &builder, Value srcMemRef, AffineMap srcMap,
-    ValueRange srcIndices, Value destMemRef, AffineMap dstMap,
-    ValueRange destIndices, Value tagMemRef, AffineMap tagMap,
-    ValueRange tagIndices, Value numElements, Value stride,
-    Value elementsPerStride) {
-  return create(builder, builder.getLoc(), srcMemRef, srcMap, srcIndices,
-                destMemRef, dstMap, destIndices, tagMemRef, tagMap, tagIndices,
-                numElements, stride, elementsPerStride);
-}
-
 void AffineDmaStartOp::print(OpAsmPrinter &p) {
   p << " " << getSrcMemRef() << '[';
   p.printAffineMapOfSSAIds(getSrcMapAttr(), getSrcIndices());
@@ -2009,7 +1983,7 @@ ParseResult AffineDmaStartOp::parse(OpAsmParser &parser,
   return success();
 }
 
-LogicalResult AffineDmaStartOp::verifyInvariantsImpl() {
+LogicalResult AffineDmaStartOp::verify() {
   if (!llvm::isa<MemRefType>(getOperand(getSrcMemRefOperandIndex()).getType()))
     return emitOpError("expected DMA source to be of memref type");
   if (!llvm::isa<MemRefType>(getOperand(getDstMemRefOperandIndex()).getType()))
@@ -2050,7 +2024,7 @@ LogicalResult AffineDmaStartOp::verifyInvariantsImpl() {
   return success();
 }
 
-LogicalResult AffineDmaStartOp::fold(ArrayRef<Attribute> cstOperands,
+LogicalResult AffineDmaStartOp::fold(FoldAdaptor adaptor,
                                      SmallVectorImpl<OpFoldResult> &results) {
   /// dma_start(memrefcast) -> dma_start
   return memref::foldMemRefCast(*this);
@@ -2079,25 +2053,6 @@ void AffineDmaWaitOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(getTagMapAttrStrName(), AffineMapAttr::get(tagMap));
   result.addOperands(tagIndices);
   result.addOperands(numElements);
-}
-
-AffineDmaWaitOp AffineDmaWaitOp::create(OpBuilder &builder, Location location,
-                                        Value tagMemRef, AffineMap tagMap,
-                                        ValueRange tagIndices,
-                                        Value numElements) {
-  mlir::OperationState state(location, getOperationName());
-  build(builder, state, tagMemRef, tagMap, tagIndices, numElements);
-  auto result = dyn_cast<AffineDmaWaitOp>(builder.create(state));
-  assert(result && "builder didn't return the right type");
-  return result;
-}
-
-AffineDmaWaitOp AffineDmaWaitOp::create(ImplicitLocOpBuilder &builder,
-                                        Value tagMemRef, AffineMap tagMap,
-                                        ValueRange tagIndices,
-                                        Value numElements) {
-  return create(builder, builder.getLoc(), tagMemRef, tagMap, tagIndices,
-                numElements);
 }
 
 void AffineDmaWaitOp::print(OpAsmPrinter &p) {
@@ -2145,7 +2100,7 @@ ParseResult AffineDmaWaitOp::parse(OpAsmParser &parser,
   return success();
 }
 
-LogicalResult AffineDmaWaitOp::verifyInvariantsImpl() {
+LogicalResult AffineDmaWaitOp::verify() {
   if (!llvm::isa<MemRefType>(getOperand(0).getType()))
     return emitOpError("expected DMA tag to be of memref type");
   Region *scope = getAffineScope(*this);
@@ -2159,7 +2114,7 @@ LogicalResult AffineDmaWaitOp::verifyInvariantsImpl() {
   return success();
 }
 
-LogicalResult AffineDmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
+LogicalResult AffineDmaWaitOp::fold(FoldAdaptor adaptor,
                                     SmallVectorImpl<OpFoldResult> &results) {
   /// dma_wait(memrefcast) -> dma_wait
   return memref::foldMemRefCast(*this);
@@ -2249,6 +2204,11 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result, int64_t lb,
 }
 
 LogicalResult AffineForOp::verifyRegions() {
+  // Step must be a strictly positive integer.
+  if (getStepAsInt() <= 0)
+    return emitOpError("expected step to be a positive integer, got ")
+           << getStepAsInt();
+
   // Check that the body defines as single block argument for the induction
   // variable.
   auto *body = getBody();
@@ -2415,7 +2375,7 @@ ParseResult AffineForOp::parse(OpAsmParser &parser, OperationState &result) {
                               result.attributes))
       return failure();
 
-    if (stepAttr.getValue().isNegative())
+    if (!stepAttr.getValue().isStrictlyPositive())
       return parser.emitError(
           stepLoc,
           "expected step to be representable as a positive signed integer");
@@ -4977,8 +4937,12 @@ foldCstValueToCstAttrBasis(ArrayRef<OpFoldResult> mixedBasis,
                            MutableOperandRange mutableDynamicBasis,
                            ArrayRef<Attribute> dynamicBasis) {
   uint64_t dynamicBasisIndex = 0;
-  for (OpFoldResult basis : dynamicBasis) {
-    if (basis) {
+  for (Attribute basis : dynamicBasis) {
+    // Skip poison values: they don't have a concrete integer value, so erasing
+    // them from the dynamic operands would create an inconsistency between
+    // the static basis (which would still hold kDynamic) and the dynamic
+    // operand list (which would be one element shorter).
+    if (basis && isa<IntegerAttr>(basis)) {
       mutableDynamicBasis.erase(dynamicBasisIndex);
     } else {
       ++dynamicBasisIndex;
@@ -5339,7 +5303,12 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
   if (getMultiIndex().size() == 1)
     return getMultiIndex().front();
 
-  if (llvm::is_contained(adaptor.getMultiIndex(), nullptr))
+  // Return nullptr if any multi-index attribute has not been folded to a
+  // concrete integer (e.g. it is still a runtime value or has folded to a
+  // non-integer attribute such as #ub.poison).
+  if (llvm::any_of(adaptor.getMultiIndex(), [](Attribute a) {
+        return !isa_and_nonnull<IntegerAttr>(a);
+      }))
     return nullptr;
 
   if (!adaptor.getDynamicBasis().empty())

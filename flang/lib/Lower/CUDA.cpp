@@ -68,11 +68,24 @@ cuf::DataAttributeAttr Fortran::lower::translateSymbolCUFDataAttribute(
   return cuf::getDataAttribute(mlirContext, cudaAttr);
 }
 
-hlfir::ElementalOp Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
+std::pair<hlfir::ElementalOp, hlfir::ElementalOp>
+Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
+  auto isCopyElementalOp = [](hlfir::ElementalOp elOp) {
+    return llvm::hasSingleElement(
+               elOp.getBody()->getOps<hlfir::DesignateOp>()) &&
+           llvm::hasSingleElement(elOp.getBody()->getOps<fir::LoadOp>()) == 1 &&
+           llvm::hasSingleElement(
+               elOp.getBody()->getOps<hlfir::NoReassocOp>()) == 1;
+  };
   auto isConversionElementalOp = [](hlfir::ElementalOp elOp) {
     return llvm::hasSingleElement(
                elOp.getBody()->getOps<hlfir::DesignateOp>()) &&
            llvm::hasSingleElement(elOp.getBody()->getOps<fir::LoadOp>()) == 1 &&
+           llvm::hasSingleElement(elOp.getBody()->getOps<fir::ConvertOp>()) ==
+               1;
+  };
+  auto isConversionFromCopyElementalOp = [](hlfir::ElementalOp elOp) {
+    return llvm::hasSingleElement(elOp.getBody()->getOps<hlfir::ApplyOp>()) &&
            llvm::hasSingleElement(elOp.getBody()->getOps<fir::ConvertOp>()) ==
                1;
   };
@@ -84,11 +97,20 @@ hlfir::ElementalOp Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
       if (auto elOp = mlir::dyn_cast<hlfir::ElementalOp>(
               associateOp.getSource().getDefiningOp()))
         if (isConversionElementalOp(elOp))
-          return elOp;
+          return {elOp, elOp};
   }
-  if (auto elOp = mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp()))
+  if (auto elOp = mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp())) {
+    if (isConversionFromCopyElementalOp(elOp)) {
+      auto applyOp = *elOp.getBody()->getOps<hlfir::ApplyOp>().begin();
+      if (auto firstElOp = mlir::dyn_cast<hlfir::ElementalOp>(
+              applyOp.getExpr().getDefiningOp())) {
+        if (isCopyElementalOp(firstElOp))
+          return {firstElOp, elOp};
+      }
+    }
     if (isConversionElementalOp(elOp))
-      return elOp;
+      return {elOp, elOp};
+  }
   return {};
 }
 

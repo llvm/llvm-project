@@ -34,14 +34,14 @@ export void call8() {
 // vector splat from vector of length 1
 // CHECK-LABEL: define void {{.*}}call1
 // CHECK: [[B:%.*]] = alloca <1 x float>, align 4
-// CHECK-NEXT: [[A:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT: [[A:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT: store <1 x float> splat (float 1.000000e+00), ptr [[B]], align 4
 // CHECK-NEXT: [[L:%.*]] = load <1 x float>, ptr [[B]], align 4
 // CHECK-NEXT: [[VL:%.*]] = extractelement <1 x float> [[L]], i32 0
 // CHECK-NEXT: [[C:%.*]] = fptosi float [[VL]] to i32
 // CHECK-NEXT: [[SI:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
 // CHECK-NEXT: [[S:%.*]] = shufflevector <4 x i32> [[SI]], <4 x i32> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT: store <4 x i32> [[S]], ptr [[A]], align 16
+// CHECK-NEXT: store <4 x i32> [[S]], ptr [[A]], align 4
 export void call1() {
   float1 B = {1.0};
   int4 A = (int4)B;

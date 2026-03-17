@@ -87,6 +87,28 @@ int OnExit() {
   return 0;
 }
 
+#  if SANITIZER_POSIX
+static inline bool RangeOverlaps(uptr beg, uptr end_excl, uptr seg_beg,
+                                 uptr seg_end_incl) {
+  if (!seg_beg && !seg_end_incl)
+    return false;
+  uptr seg_end_excl = seg_end_incl + 1;
+  return beg < seg_end_excl && end_excl > seg_beg;
+}
+
+static inline bool IntersectsShadow(uptr beg, uptr end_excl) {
+  // Check shadow regions
+  if (RangeOverlaps(beg, end_excl, kLowShadowBeg, kLowShadowEnd))
+    return true;
+  if (kMidShadowBeg &&
+      RangeOverlaps(beg, end_excl, kMidShadowBeg, kMidShadowEnd))
+    return true;
+  if (RangeOverlaps(beg, end_excl, kHighShadowBeg, kHighShadowEnd))
+    return true;
+  return false;
+}
+#  endif  // SANITIZER_POSIX
+
 }  // namespace __asan
 
 // ---------------------- Wrappers ---------------- {{{1
@@ -159,6 +181,25 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void*)
 template <class Mmap>
 static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
                               int prot, int flags, int fd, OFF64_T offset) {
+#  if SANITIZER_POSIX
+  if (length == 0)
+    return real_mmap(addr, length, prot, flags, fd, offset);
+  const uptr start = reinterpret_cast<uptr>(addr);
+  uptr end_excl;
+  if (UNLIKELY(__builtin_add_overflow(start, static_cast<uptr>(length),
+                                      &end_excl))) {
+    errno = errno_EINVAL;
+    return (void*)-1;
+  }
+  if (flags & map_fixed) {
+    // TODO: shadow gap may need to be checked
+    if (__asan::IntersectsShadow(start, end_excl)) {
+      errno = errno_EINVAL;
+      return (void*)-1;
+    }
+  }
+#  endif  // SANITIZER_POSIX
+
   void* res = real_mmap(addr, length, prot, flags, fd, offset);
   if (length && res != (void*)-1) {
     const uptr beg = reinterpret_cast<uptr>(res);
@@ -173,14 +214,32 @@ static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
 
 template <class Munmap>
 static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
+  const uptr start = reinterpret_cast<uptr>(addr);
+
+#  if SANITIZER_POSIX
+  if (length == 0)
+    return real_munmap(addr, length);
+
+  uptr end_excl;
+  if (UNLIKELY(__builtin_add_overflow(start, static_cast<uptr>(length),
+                                      &end_excl))) {
+    errno = errno_EINVAL;
+    return -1;
+  }
+  // TODO: shadow gap may need to be checked
+  if (__asan::IntersectsShadow(start, end_excl)) {
+    errno = errno_EINVAL;
+    return -1;
+  }
+#  endif  // SANITIZER_POSIX
+
   // We should not tag if munmap fail, but it's to late to tag after
   // real_munmap, as the pages could be mmaped by another thread.
-  const uptr beg = reinterpret_cast<uptr>(addr);
-  if (length && IsAligned(beg, GetPageSize())) {
+  if (length && IsAligned(start, GetPageSize())) {
     SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
     // Protect from unmapping the shadow.
-    if (AddrIsInMem(beg) && AddrIsInMem(beg + rounded_length - 1))
-      PoisonShadow(beg, rounded_length, 0);
+    if (AddrIsInMem(start) && AddrIsInMem(start + rounded_length - 1))
+      PoisonShadow(start, rounded_length, 0);
   }
   return real_munmap(addr, length);
 }
@@ -189,13 +248,14 @@ static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
                                        fd, offset)                           \
     do {                                                                     \
       (void)(ctx);                                                           \
-      return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);   \
+      return mmap_interceptor(REAL(mmap), addr, length, prot, flags, fd,     \
+                              offset);                                       \
     } while (false)
 
-#  define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, length) \
-    do {                                                    \
-      (void)(ctx);                                          \
-      return munmap_interceptor(REAL(munmap), addr, sz);    \
+#  define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, length)  \
+    do {                                                     \
+      (void)(ctx);                                           \
+      return munmap_interceptor(REAL(munmap), addr, length); \
     } while (false)
 
 #  if CAN_SANITIZE_LEAKS

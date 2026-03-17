@@ -1,0 +1,395 @@
+## Tests that --call-graph-info produces useful warnings if SHT_LLVM_CALL_GRAPH
+## type section processing identifies malformed content.
+
+## Tests that --call-graph-info warns if there is no section of type
+## SHT_LLVM_CALL_GRAPH.
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN-NO-SECTION
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN-NO-SECTION
+
+# WARN-NO-SECTION: warning: '[[FILE]]': no SHT_LLVM_CALL_GRAPH section found
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+...
+
+## Check format version number.
+# RUN: yaml2obj --docnum=2 -DCONTENT=0x01 %s -o %t2
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2 --check-prefix=WARN-FMT-VERSION
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t2 --check-prefix=WARN-FMT-VERSION
+
+# WARN-FMT-VERSION: warning: '[[FILE]]': unknown format version value [1] in SHT_LLVM_CALL_GRAPH type section
+
+## Check missing flags.
+# RUN: yaml2obj --docnum=2 -DCONTENT=0x00 %s -o %t3
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=WARN-MISSING-FLAG
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --check-prefix=WARN-MISSING-FLAG
+
+# WARN-MISSING-FLAG: warning: '[[FILE]]': failed while reading call graph info's Flags: unexpected end of data at offset 0x1 while reading [0x1, 0x2)
+
+## Check Flags. Only valid Flag values are 0x00 to 0x07.
+# RUN: yaml2obj --docnum=2 -DCONTENT=0x00,0x08 %s -o %t4
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t4 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t4 --check-prefix=WARN-FLAG
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t4 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t4 --check-prefix=WARN-FLAG
+
+# WARN-FLAG: warning: '[[FILE]]': unsupported Flags value [8]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [
+      [[CONTENT]],
+    ]
+...
+
+## Check missing function entry PC.
+# RUN: yaml2obj --docnum=3 -DFUNCPC= %s -o %t5
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t5 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t5 --check-prefix=WARN-MISSING-PC
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t5 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t5 --check-prefix=WARN-MISSING-PC
+
+# WARN-MISSING-PC: warning: '[[FILE]]': failed while reading call graph info function entry PC: unexpected end of data at offset 0x2 while reading [0x2, 0xa)
+
+## Check incomplete function entry PC.
+# RUN: yaml2obj --docnum=3 -DFUNCPC=0x00,0x00,0x00,0x00,0x00,0x00,0x00 %s -o %t6
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t6 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-INCOMPLETE-PC
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t6 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-INCOMPLETE-PC
+
+# WARN-INCOMPLETE-PC: warning: '[[FILE]]': failed while reading call graph info function entry PC: unexpected end of data at offset 0x9 while reading [0x2, 0xa)
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [      
+      0x00, ## Format Version
+      0x00, ## Flags
+      [[FUNCPC]],      
+    ]
+...
+
+## Check missing function Type ID.
+# RUN: yaml2obj --docnum=4 -DTYPEID= %s -o %t6
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t6 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-MISSING-TYPEID
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t6 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-MISSING-TYPEID
+
+# WARN-MISSING-TYPEID: warning: '[[FILE]]': failed while reading function type ID: unexpected end of data at offset 0xa while reading [0xa, 0x12)
+
+## Check for incomplete function Type ID.
+# RUN: yaml2obj --docnum=4 -DTYPEID=0x00,0x00 %s -o %t6
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t6 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-INCOMPLETE-TYPEID
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t6 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-INCOMPLETE-TYPEID
+
+# WARN-INCOMPLETE-TYPEID: warning: '[[FILE]]': failed while reading function type ID: unexpected end of data at offset 0xc while reading [0xa, 0x12)
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [      
+      0x00, ## Format Version
+      0x00, ## Flags
+      0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, ## Function entry address
+      [[TYPEID]],      
+    ]
+...
+
+## Check missing number of direct callees.
+# RUN: yaml2obj --docnum=5 -DFLAGS=0x02 -DNUMCALLEES= %s -o %t7
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN-MISSING-DIRECT
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN-MISSING-DIRECT
+
+# WARN-MISSING-DIRECT: warning: '[[FILE]]': failed while reading number of direct callees: unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
+
+## Check missing direct callee.
+# RUN: yaml2obj --docnum=5 -DFLAGS=0x02 -DNUMCALLEES=0x01 %s -o %t8
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN-MISSING-CALLEE
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN-MISSING-CALLEE
+
+# WARN-MISSING-CALLEE: warning: '[[FILE]]': failed while reading direct callee: unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
+
+## Check incomplete direct callee.
+# RUN: yaml2obj --docnum=5 -DFLAGS=0x02 -DNUMCALLEES=0x01,0x00,0x00 %s -o %t8
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN-INCOMPLETE-CALLEE
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN-INCOMPLETE-CALLEE
+
+# WARN-INCOMPLETE-CALLEE: warning: '[[FILE]]': failed while reading direct callee: unexpected end of data at offset 0x15 while reading [0x13, 0x1b)
+
+## Check missing number of indirect callees.
+# RUN: yaml2obj --docnum=5 -DFLAGS=0x04 -DNUMCALLEES= %s -o %t7
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN-MISSING-INDIRECT
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN-MISSING-INDIRECT
+
+# WARN-MISSING-INDIRECT: warning: '[[FILE]]': failed while reading number of indirect target type IDs: unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
+
+## Check missing indirect target type ID.
+# RUN: yaml2obj --docnum=5 -DFLAGS=0x04 -DNUMCALLEES=0x01 %s -o %t10
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t10 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10 --check-prefix=WARN-MISSING-INDIRECT-TARGET-TYPE-ID
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t10 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10 --check-prefix=WARN-MISSING-INDIRECT-TARGET-TYPE-ID
+
+# WARN-MISSING-INDIRECT-TARGET-TYPE-ID: warning: '[[FILE]]': failed while reading indirect target type ID: unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
+
+## Check incomplete indirect target type ID.
+# RUN: yaml2obj --docnum=5 -DFLAGS=0x04 -DNUMCALLEES=0x01,0x00,0x00 %s -o %t8
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN-INCOMPLETE-TARGET-TYPE-ID
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN-INCOMPLETE-TARGET-TYPE-ID
+
+# WARN-INCOMPLETE-TARGET-TYPE-ID: warning: '[[FILE]]': failed while reading indirect target type ID: unexpected end of data at offset 0x15 while reading [0x13, 0x1b)
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+  - Type:  SHT_LLVM_CALL_GRAPH
+    ContentArray: [      
+      0x00, ## Format Version
+      [[FLAGS]],
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function entry address
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID unknown
+      [[NUMCALLEES]],
+    ]
+...
+
+## Check missing relocation information.
+# RUN: yaml2obj --docnum=6 %s -o %t11
+# RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t11 2>&1 | count 0
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t11 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-MISSING-INFO
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t11 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t11 --check-prefixes=WARN-MISSING-INFO
+
+# WARN-MISSING-INFO: warning: '[[FILE]]': SHT_LLVM_CALL_GRAPH type section has unknown type ID for 2 indirect targets
+# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 2
+# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 19
+# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 29
+# WARN-MISSING-INFO: warning: '[[FILE]]': missing relocation for symbol at offset 56
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Type: SHT_LLVM_CALL_GRAPH
+    ContentArray: [
+        '0', ## Format version number
+        '3', ## Flag IsIndirectTarget true, HasDirectCallees true
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s TypeID Unknown
+        '1', ## NumDirectCallees
+        '0', '0', '0', '0', '0', '0', '0', '0', ## Direct callee foo()'s address
+        '0', ## Format version number
+        '5', ## Flag IsIndirectTarget true, HasIndirectTargetTypeIDs true
+        '6', '0', '0', '0', '0', '0', '0', '0', ## bar()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', ## bar()'s TypeID Unknown
+        '1', ## NumIndirectTargetTypeIDs
+        '16', '0', '0', '0', '0', '0', '0', '0', ## Indirect callee type ID
+        '0', ## Format version number
+        '1', ## Flag IsIndirectTarget true
+        '10', '0', '0', '0', '0', '0', '0', '0', ## baz()'s address
+        '32', '0', '0', '0', '0', '0', '0', '0', ## baz()'s TypeID Unknown
+      ]
+  - Type:   SHT_RELA
+    Relocations:
+      ## 1. Pointer to foo() definition
+      - Offset: 0x2
+        Symbol: foo
+        Type:   R_X86_64_64
+
+      ## 2. Pointer to the call site "callq foo" (offset 5 inside foo)
+      ##    We relocate against 'foo' and add 5 to get the address of the instruction.
+      - Offset: 0x13
+        Symbol: foo
+        Type:   R_X86_64_64
+        Addend: 5
+
+      ## 3. Pointer to bar() definition
+      - Offset: 0x1D
+        Symbol: bar
+        Type:   R_X86_64_64
+
+      ## 4. Pointer to baz() definition
+      - Offset: 0x38
+        Symbol: baz
+        Type:   R_X86_64_64
+Symbols:
+  - Name:  foo
+  - Name:  bar
+  - Name:  baz
+...
+
+## Check that the first call graph section is processed and the second call graph section is ignored.
+## Note that we do not expect an object file to have more than one call graph section as we merge the
+## call graph sections when there are more than one.
+# RUN: yaml2obj --docnum=7 %s -o %t12
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --check-prefix=LLVM-FIRST-CGSECTION --match-full-lines
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --check-prefix=JSON-FIRST-CGSECTION --match-full-lines
+
+# LLVM-FIRST-CGSECTION:      CallGraph [
+# LLVM-FIRST-CGSECTION-NEXT:     Function {
+# LLVM-FIRST-CGSECTION-NEXT:       Names: [foo]
+# LLVM-FIRST-CGSECTION-NEXT:       Address: 0x1790
+# LLVM-FIRST-CGSECTION-NEXT:       Version: 0
+# LLVM-FIRST-CGSECTION-NEXT:       IsIndirectTarget: Yes
+# LLVM-FIRST-CGSECTION-NEXT:       TypeID: 0x3ECBEEF531F74424
+# LLVM-FIRST-CGSECTION-NEXT:       NumDirectCallees: 0
+# LLVM-FIRST-CGSECTION-NEXT:       DirectCallees [
+# LLVM-FIRST-CGSECTION-NEXT:       ]
+# LLVM-FIRST-CGSECTION-NEXT:       NumIndirectTargetTypeIDs: 0
+# LLVM-FIRST-CGSECTION-NEXT:       IndirectTypeIDs: []
+# LLVM-FIRST-CGSECTION-NEXT:     }
+# LLVM-FIRST-CGSECTION-NEXT:    ]
+# LLVM-FIRST-CGSECTION-NOT: {{.}}
+
+# JSON-FIRST-CGSECTION:     "CallGraph": [
+# JSON-FIRST-CGSECTION-NEXT:      {
+# JSON-FIRST-CGSECTION-NEXT:        "Function": {
+# JSON-FIRST-CGSECTION-NEXT:          "Names": [
+# JSON-FIRST-CGSECTION-NEXT:            "foo"
+# JSON-FIRST-CGSECTION-NEXT:          ],
+# JSON-FIRST-CGSECTION-NEXT:          "Address": 6032,
+# JSON-FIRST-CGSECTION-NEXT:          "Version": 0,
+# JSON-FIRST-CGSECTION-NEXT:          "IsIndirectTarget": true,
+# JSON-FIRST-CGSECTION-NEXT:          "TypeID": 4524972987496481828,
+# JSON-FIRST-CGSECTION-NEXT:          "NumDirectCallees": 0,
+# JSON-FIRST-CGSECTION-NEXT:          "DirectCallees": [],
+# JSON-FIRST-CGSECTION-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-FIRST-CGSECTION-NEXT:          "IndirectTypeIDs": []
+# JSON-FIRST-CGSECTION-NEXT:        }
+# JSON-FIRST-CGSECTION-NEXT:      }
+# JSON-FIRST-CGSECTION-NEXT:    ]
+# JSON-FIRST-CGSECTION-NEXT:   }
+# JSON-FIRST-CGSECTION-NEXT:  ]
+# JSON-FIRST-CGSECTION-NOT: {{.}}
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      ## --- foo ---
+      0x00, ## Version
+      0x01, ## Flags
+      0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1790
+      0x24, 0x44, 0xF7, 0x31, 0xF5, 0xEE, 0xCB, 0x3E, ## FunctionTypeID: 0x3ECBEEF531F74424
+    ]
+  ## This following second call graph section will be completely ignored.
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      ## --- bar ---
+      0x00, ## Version
+      0x01, ## Flags
+      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x17A0
+      0x24, 0x44, 0xF7, 0x31, 0xF5, 0xEE, 0xCB, 0x3E, ## FunctionTypeID: 0x3ECBEEF531F74424
+    ]
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1790
+
+## Check warning when the relocation section linked to SHT_LLVM_CALL_GRAPH has an invalid sh_link.
+# RUN: yaml2obj --docnum=8 -DLINK=255 -DINFO=.llvm_call_graph %s -o %t13
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
+# RUN: llvm-readobj --elf-output-style=JSON --call-graph-info %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
+
+# INVALID-RELA-LINK: warning: '[[FILE]]': invalid section linked to SHT_RELA section with index 2: invalid section index: 255
+
+## Check warning when getSectionAndRelocations fails to read sections.
+# RUN: yaml2obj --docnum=8 -DLINK=0 -DINFO=255 %s -o %t14
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t14 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t14 --check-prefix=ERR-READ-SECTION
+# RUN: llvm-readobj --elf-output-style=JSON --call-graph-info %t14 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t14 --check-prefix=ERR-READ-SECTION
+
+# ERR-READ-SECTION: warning: '[[FILE]]': unable to read SHT_LLVM_CALL_GRAPH section: SHT_RELA section with index 2: failed to get a relocated section: invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name: .llvm_call_graph
+    Type: SHT_LLVM_CALL_GRAPH
+    ContentArray: [
+        '0', ## Format version number
+        '1', ## Flag IsIndirectTarget true
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s TypeID Unknown
+      ]
+  - Name: .rela.llvm_call_graph
+    Type: SHT_RELA
+    Link: [[LINK]]
+    Info: [[INFO]]
+    Relocations:
+      - Offset: 0x2
+        Symbol: foo
+        Type:   R_X86_64_64
+Symbols:
+  - Name: foo

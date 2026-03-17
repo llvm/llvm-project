@@ -46,14 +46,14 @@ private:
   /// Applies syntax highlighting to a range of text.
   void HighlightRange(const HighlightStyle &options, llvm::StringRef text,
                       uint32_t start_byte, uint32_t end_byte,
-                      const HighlightStyle::ColorStyle *style,
+                      const HighlightStyle::ColorStyle &style,
                       std::optional<size_t> cursor_pos,
                       bool &highlighted_cursor, Stream &s) const;
 
   struct HLRange {
     uint32_t start_byte;
     uint32_t end_byte;
-    const HighlightStyle::ColorStyle *style;
+    HighlightStyle::ColorStyle style;
   };
 
   struct TSState {

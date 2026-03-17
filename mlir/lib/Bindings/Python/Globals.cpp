@@ -130,10 +130,10 @@ void PyGlobals::registerValueCaster(MlirTypeID mlirTypeID,
 }
 
 void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
-                                    nb::object pyClass) {
+                                    nb::object pyClass, bool replace) {
   nb::ft_lock_guard lock(mutex);
   nb::object &found = dialectClassMap[dialectNamespace];
-  if (found) {
+  if (found && !replace) {
     throw std::runtime_error(nanobind::detail::join(
         "Dialect namespace '", dialectNamespace, "' is already registered."));
   }
@@ -176,7 +176,8 @@ PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
 std::optional<nb::callable> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
                                                         MlirDialect dialect) {
   // Try to load dialect module.
-  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  MlirStringRef ns = mlirDialectGetNamespace(dialect);
+  (void)loadDialectModule(std::string_view(ns.data, ns.length));
   nb::ft_lock_guard lock(mutex);
   const auto foundIt = typeCasterMap.find(mlirTypeID);
   if (foundIt != typeCasterMap.end()) {
@@ -189,7 +190,8 @@ std::optional<nb::callable> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
 std::optional<nb::callable> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
                                                          MlirDialect dialect) {
   // Try to load dialect module.
-  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  MlirStringRef ns = mlirDialectGetNamespace(dialect);
+  (void)loadDialectModule(std::string_view(ns.data, ns.length));
   nb::ft_lock_guard lock(mutex);
   const auto foundIt = valueCasterMap.find(mlirTypeID);
   if (foundIt != valueCasterMap.end()) {

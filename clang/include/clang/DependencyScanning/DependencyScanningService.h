@@ -80,12 +80,19 @@ enum class ScanningOptimizations {
 struct DependencyScanningServiceOptions {
   DependencyScanningServiceOptions();
 
+  /// The function invoked to create each worker's VFS. This function and the
+  /// VFS itself must be thread-safe whenever using multiple workers
+  /// concurrently or whenever \c AsyncScanModules is true.
+  std::function<IntrusiveRefCntPtr<llvm::vfs::FileSystem>()>
+      MakeVFS; // = [] { return llvm::vfs::createPhysicalFileSystem(); }
   /// Whether to use optimized dependency directive scan or full preprocessing.
   ScanningMode Mode = ScanningMode::DependencyDirectivesScan;
   /// What output format are we expected to produce.
   ScanningOutputFormat Format = ScanningOutputFormat::Full;
   /// How to optimize resulting explicit module command lines.
   ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
+  /// Whether to make reported file paths absolute.
+  bool ReportAbsolutePaths = true;
   /// Whether the resulting command lines should load explicit PCMs eagerly.
   bool EagerLoadModules = false;
   /// Whether to trace VFS accesses during the scan.

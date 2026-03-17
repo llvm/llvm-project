@@ -72,24 +72,13 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
   size_t num_synthetic_frames = 0;
   // Use the provider to generate frames lazily.
   if (m_provider) {
-    // Get starting index under lock.
-    uint32_t start_idx = 0;
-    {
-      std::shared_lock<std::shared_mutex> guard(m_list_mutex);
-      start_idx = m_frames.size();
-    }
-
     // Keep fetching until we reach end_idx or the provider returns an error.
-    for (uint32_t idx = start_idx; idx <= end_idx; idx++) {
+    for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
       if (allow_interrupt &&
           m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
         return true;
 
-      // Call Python WITHOUT holding lock - prevents deadlock.
       auto frame_or_err = m_provider->GetFrameAtIndex(idx);
-
-      // Acquire lock to modify m_frames.
-      std::unique_lock<std::shared_mutex> guard(m_list_mutex);
 
       if (!frame_or_err) {
         // Provider returned error - we've reached the end.
@@ -425,10 +414,6 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
     return false;
   }
 
-  // Release lock before FetchFramesUpTo which may call Python.
-  // FetchFramesUpTo will acquire locks as needed.
-  guard.unlock();
-
   // We're adding concrete and inlined frames now:
   was_interrupted = FetchFramesUpTo(end_idx, allow_interrupt);
 
@@ -563,8 +548,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
 
       while (unwind_sc.GetParentOfInlinedScope(
           curr_frame_address, next_frame_sc, next_frame_address)) {
-        next_frame_sc.line_entry.ApplyFileMappings(target_sp,
-                                                   curr_frame_address);
+        next_frame_sc.line_entry.ApplyFileMappings(target_sp);
         behaves_like_zeroth_frame = false;
         StackFrameSP frame_sp(new StackFrame(
             m_thread.shared_from_this(), m_frames.size(), idx,
@@ -972,14 +956,14 @@ std::string StackFrameList::GetFrameMarker(lldb::StackFrameSP frame_sp,
                                            bool show_hidden_marker) {
   bool show_unicode_marker = Terminal::SupportsUnicode() && show_hidden_marker;
   if (frame_sp == selected_frame_sp)
-    return show_unicode_marker ? u8" * " : u8"* ";
+    return show_unicode_marker ? " * " : "* ";
   if (!show_unicode_marker)
-    return u8"  ";
+    return "  ";
   if (IsPreviousFrameHidden(*frame_sp))
-    return u8"﹉ ";
+    return reinterpret_cast<const char *>(u8"﹉ ");
   if (IsNextFrameHidden(*frame_sp))
-    return u8"﹍ ";
-  return u8"   ";
+    return reinterpret_cast<const char *>(u8"﹍ ");
+  return "   ";
 }
 
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,

@@ -694,7 +694,9 @@ static llvm::dwarf::SourceLanguage GetSourceLanguage(const CodeGenModule &CGM) {
 
   llvm::dwarf::SourceLanguage LangTag;
   if (LO.CPlusPlus) {
-    if (LO.ObjC)
+    if (LO.HIP)
+      LangTag = llvm::dwarf::DW_LANG_HIP;
+    else if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
     else if (CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
@@ -730,7 +732,9 @@ GetDISourceLanguageName(const CodeGenModule &CGM) {
   uint32_t LangVersion = 0;
   llvm::dwarf::SourceLanguageName LangTag;
   if (LO.CPlusPlus) {
-    if (LO.ObjC) {
+    if (LO.HIP) {
+      LangTag = llvm::dwarf::DW_LNAME_HIP;
+    } else if (LO.ObjC) {
       LangTag = llvm::dwarf::DW_LNAME_ObjC_plus_plus;
     } else {
       LangTag = llvm::dwarf::DW_LNAME_C_plus_plus;
@@ -1198,6 +1202,11 @@ llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
                                   Ty->getNumBits());
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const OverflowBehaviorType *Ty,
+                                      llvm::DIFile *U) {
+  return getOrCreateType(Ty->getUnderlyingType(), U);
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
   // Bit size and offset of the type.
   llvm::dwarf::TypeKind Encoding = llvm::dwarf::DW_ATE_complex_float;
@@ -1317,6 +1326,7 @@ static bool hasCXXMangling(llvm::dwarf::SourceLanguage Lang, bool IsTagDecl) {
   case llvm::dwarf::DW_LANG_C_plus_plus:
   case llvm::dwarf::DW_LANG_C_plus_plus_11:
   case llvm::dwarf::DW_LANG_C_plus_plus_14:
+  case llvm::dwarf::DW_LANG_HIP:
     return true;
   case llvm::dwarf::DW_LANG_ObjC_plus_plus:
     return IsTagDecl;
@@ -1329,6 +1339,7 @@ static bool hasCXXMangling(llvm::dwarf::SourceLanguageName Lang,
                            bool IsTagDecl) {
   switch (Lang) {
   case llvm::dwarf::DW_LNAME_C_plus_plus:
+  case llvm::dwarf::DW_LNAME_HIP:
     return true;
   case llvm::dwarf::DW_LNAME_ObjC_plus_plus:
     return IsTagDecl;
@@ -2070,6 +2081,56 @@ void CGDebugInfo::CollectRecordLambdaFields(
   }
 }
 
+/// Build an llvm::ConstantDataArray from the initialized elements of an
+/// APValue array, using the narrowest integer type that fits the element width.
+template <typename T>
+static llvm::Constant *
+buildConstantDataArrayFromElements(llvm::LLVMContext &Ctx, const APValue &Arr) {
+  const unsigned NumElts = Arr.getArraySize();
+  SmallVector<T, 64> Vals(
+      NumElts,
+      Arr.hasArrayFiller()
+          ? static_cast<T>(Arr.getArrayFiller().getInt().getZExtValue())
+          : 0);
+  for (unsigned I : llvm::seq(Arr.getArrayInitializedElts()))
+    Vals[I] =
+        static_cast<T>(Arr.getArrayInitializedElt(I).getInt().getZExtValue());
+  return llvm::ConstantDataArray::get(Ctx, Vals);
+}
+
+/// Try to create an llvm::Constant for a constexpr array of integer elements.
+/// Handles arrays of char, short, int, long with element width up to 64 bits.
+/// Returns nullptr if the array cannot be represented.
+static llvm::Constant *tryEmitConstexprArrayAsConstant(CodeGenModule &CGM,
+                                                       const VarDecl *Var,
+                                                       const APValue *Value) {
+  const auto *ArrayTy = CGM.getContext().getAsConstantArrayType(Var->getType());
+  if (!ArrayTy)
+    return nullptr;
+
+  const QualType ElemQTy = ArrayTy->getElementType();
+  if (ElemQTy.isNull() || !ElemQTy->isIntegerType())
+    return nullptr;
+
+  const uint64_t ElemBitWidth = CGM.getContext().getTypeSize(ElemQTy);
+
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+  switch (ElemBitWidth) {
+  case 8:
+    return buildConstantDataArrayFromElements<uint8_t>(Ctx, *Value);
+  case 16:
+    return buildConstantDataArrayFromElements<uint16_t>(Ctx, *Value);
+  case 32:
+    return buildConstantDataArrayFromElements<uint32_t>(Ctx, *Value);
+  case 64:
+    return buildConstantDataArrayFromElements<uint64_t>(Ctx, *Value);
+  default:
+    // ConstantDataArray only supports 8/16/32/64-bit elements.
+    // Wider types (e.g. __int128) are not representable.
+    return nullptr;
+  }
+}
+
 llvm::DIDerivedType *
 CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
                                      const RecordDecl *RD) {
@@ -2092,6 +2153,8 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
         C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
       if (Value->isFloat())
         C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
+      if (Value->isArray())
+        C = tryEmitConstexprArrayAsConstant(CGM, Var, Value);
     }
   }
 
@@ -2325,6 +2388,12 @@ CGDebugInfo::GetMethodLinkageName(const CXXMethodDecl *Method) const {
     return CGM.getMangledName(GlobalDecl(Dtor, CXXDtorType::Dtor_Unified));
 
   return CGM.getMangledName(Method);
+}
+
+bool CGDebugInfo::shouldGenerateVirtualCallSite() const {
+  // Check general conditions for call site generation.
+  return ((getCallSiteRelatedAttrs() != llvm::DINode::FlagZero) &&
+          (CGM.getCodeGenOpts().DwarfVersion >= 5));
 }
 
 llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
@@ -2781,7 +2850,7 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
 }
 
 // Emit symbol for the debugger that points to the vtable address for
-// the given class. The symbol is named as '_vtable$'.
+// the given class. The symbol is named as '__clang_vtable'.
 // The debugger does not need to know any details about the contents of the
 // vtable as it can work this out using its knowledge of the ABI and the
 // existing information in the DWARF. The type is assumed to be 'void *'.
@@ -2804,7 +2873,7 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
     return;
 
   ASTContext &Context = CGM.getContext();
-  StringRef SymbolName = "_vtable$";
+  StringRef SymbolName = "__clang_vtable";
   SourceLocation Loc;
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
 
@@ -4201,6 +4270,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 
   case Type::BitInt:
     return CreateType(cast<BitIntType>(Ty));
+  case Type::OverflowBehavior:
+    return CreateType(cast<OverflowBehaviorType>(Ty), Unit);
   case Type::Pipe:
     return CreateType(cast<PipeType>(Ty), Unit);
 
@@ -4976,6 +5047,23 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   if (IsDeclForCallSite)
     Fn->setSubprogram(SP);
+}
+
+void CGDebugInfo::addCallTargetIfVirtual(const FunctionDecl *FD,
+                                         llvm::CallBase *CI) {
+  if (!shouldGenerateVirtualCallSite())
+    return;
+
+  if (!FD)
+    return;
+
+  assert(CI && "Invalid Call Instruction.");
+  if (!CI->isIndirectCall())
+    return;
+
+  // Always get the method declaration.
+  if (llvm::DISubprogram *MD = getFunctionDeclaration(FD))
+    CI->setMetadata(llvm::LLVMContext::MD_call_target, MD);
 }
 
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,

@@ -340,7 +340,7 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
                                        const LangOptions &Opts) {
 #ifndef NDEBUG
   // Don't verify non-standard ABI configurations.
-  if (Opts.AlignDouble || Opts.OpenCL || Opts.HLSL)
+  if (Opts.AlignDouble || Opts.OpenCL)
     return;
 
   llvm::Triple Triple = Target.getTriple();
@@ -393,6 +393,15 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
 
   Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
+
+  if (Target.vectorsAreElementAligned() != DL.vectorsAreElementAligned()) {
+    llvm::errs() << "Datalayout for target " << Triple.str()
+                 << " sets element-aligned vectors to '"
+                 << Target.vectorsAreElementAligned()
+                 << "' but clang specifies '" << DL.vectorsAreElementAligned()
+                 << "'\n";
+    abort();
+  }
 #endif
 }
 
@@ -980,6 +989,7 @@ void CodeGenModule::Release() {
   applyGlobalValReplacements();
   applyReplacements();
   emitMultiVersionFunctions();
+  emitPFPFieldsWithEvaluatedOffset();
 
   if (Context.getLangOpts().IncrementalExtensions &&
       GlobalTopLevelStmtBlockInFlight.first) {
@@ -1187,7 +1197,8 @@ void CodeGenModule::Release() {
   // TargetLibraryInfo.
   uint64_t WCharWidth =
       Context.getTypeSizeInChars(Context.getWideCharType()).getQuantity();
-  getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
+  if (WCharWidth != getTriple().getDefaultWCharSize())
+    getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
 
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
@@ -2928,18 +2939,25 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute(llvm::Attribute::MinSize);
   }
 
-  if (D->hasAttr<NoOutlineAttr>())
+  // Add `nooutline` if Outlining is disabled with a command-line flag or a
+  // function attribute.
+  if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
     B.addAttribute(llvm::Attribute::NoOutline);
 
   F->addFnAttrs(B);
 
-  unsigned alignment = D->getMaxAlignment() / Context.getCharWidth();
-  if (alignment)
-    F->setAlignment(llvm::Align(alignment));
+  llvm::MaybeAlign ExplicitAlignment;
+  if (unsigned alignment = D->getMaxAlignment() / Context.getCharWidth())
+    ExplicitAlignment = llvm::Align(alignment);
+  else if (LangOpts.FunctionAlignment)
+    ExplicitAlignment = llvm::Align(1ull << LangOpts.FunctionAlignment);
 
-  if (!D->hasAttr<AlignedAttr>())
-    if (LangOpts.FunctionAlignment)
-      F->setAlignment(llvm::Align(1ull << LangOpts.FunctionAlignment));
+  if (ExplicitAlignment) {
+    F->setAlignment(ExplicitAlignment);
+    F->setPreferredAlignment(ExplicitAlignment);
+  } else if (LangOpts.PreferredFunctionAlignment) {
+    F->setPreferredAlignment(llvm::Align(LangOpts.PreferredFunctionAlignment));
+  }
 
   // Some C++ ABIs require 2-byte alignment for member functions, in order to
   // reserve a bit for differentiating between virtual and non-virtual member
@@ -3258,8 +3276,12 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 
 void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
                                                      llvm::CallBase *CB) {
-  // Only if needed for call graph section and only for indirect calls.
-  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall())
+  // Only if needed for call graph section and only for indirect calls that are
+  // visible externally.
+  // TODO: Handle local linkage symbols so they are not left out of call graph
+  // reducing precision.
+  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall() ||
+      !isExternallyVisible(QT->getLinkage()))
     return;
 
   llvm::Metadata *TypeIdMD = CreateMetadataIdentifierGeneralized(QT);
@@ -4398,13 +4420,15 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
           bool UnifiedMemoryEnabled =
               getOpenMPRuntime().hasRequiresUnifiedSharedMemory();
           if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-               *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+               *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+               *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
               !UnifiedMemoryEnabled) {
             (void)GetAddrOfGlobalVar(VD);
           } else {
             assert(((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
                     ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                      *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+                      *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+                      *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
                      UnifiedMemoryEnabled)) &&
                    "Link clause or to clause with unified memory expected.");
             (void)getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
@@ -4892,6 +4916,40 @@ void CodeGenModule::emitMultiVersionFunctions() {
   // deferred decls or the multiversion functions themselves are emitted.
   if (!MultiVersionFuncs.empty())
     emitMultiVersionFunctions();
+}
+
+// Symbols with this prefix are used as deactivation symbols for PFP fields.
+// See clang/docs/StructureProtection.rst for more information.
+static const char PFPDeactivationSymbolPrefix[] = "__pfp_ds_";
+
+llvm::GlobalValue *
+CodeGenModule::getPFPDeactivationSymbol(const FieldDecl *FD) {
+  std::string DSName = PFPDeactivationSymbolPrefix + getPFPFieldName(FD);
+  llvm::GlobalValue *DS = TheModule.getNamedValue(DSName);
+  if (!DS) {
+    DS = new llvm::GlobalVariable(TheModule, Int8Ty, false,
+                                  llvm::GlobalVariable::ExternalWeakLinkage,
+                                  nullptr, DSName);
+    DS->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  }
+  return DS;
+}
+
+void CodeGenModule::emitPFPFieldsWithEvaluatedOffset() {
+  llvm::Constant *Nop = llvm::ConstantExpr::getIntToPtr(
+      llvm::ConstantInt::get(Int64Ty, 0xd503201f), VoidPtrTy);
+  for (auto *FD : getContext().PFPFieldsWithEvaluatedOffset) {
+    std::string DSName = PFPDeactivationSymbolPrefix + getPFPFieldName(FD);
+    llvm::GlobalValue *OldDS = TheModule.getNamedValue(DSName);
+    llvm::GlobalValue *DS = llvm::GlobalAlias::create(
+        Int8Ty, 0, llvm::GlobalValue::ExternalLinkage, DSName, Nop, &TheModule);
+    DS->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    if (OldDS) {
+      DS->takeName(OldDS);
+      OldDS->replaceAllUsesWith(DS);
+      OldDS->eraseFromParent();
+    }
+  }
 }
 
 static void replaceDeclarationWith(llvm::GlobalValue *Old,
@@ -6224,7 +6282,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   // / cudaMemcpyToSymbol() / cudaMemcpyFromSymbol())."
   if (LangOpts.CUDA) {
     if (LangOpts.CUDAIsDevice) {
-      if (Linkage != llvm::GlobalValue::InternalLinkage &&
+      if (Linkage != llvm::GlobalValue::InternalLinkage && !D->isConstexpr() &&
+          !D->getType().isConstQualified() &&
           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
            D->getType()->isCUDADeviceBuiltinSurfaceType() ||
            D->getType()->isCUDADeviceBuiltinTextureType()))
@@ -8471,4 +8530,13 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
+}
+
+std::string CodeGenModule::getPFPFieldName(const FieldDecl *FD) {
+  std::string OutName;
+  llvm::raw_string_ostream Out(OutName);
+  getCXXABI().getMangleContext().mangleCanonicalTypeName(
+      getContext().getCanonicalTagType(FD->getParent()), Out, false);
+  Out << "." << FD->getName();
+  return OutName;
 }

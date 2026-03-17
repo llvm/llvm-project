@@ -64,7 +64,7 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 // ATTR: }
 
 // ATTR: void TestAAttr::print(::mlir::AsmPrinter &odsPrinter) const {
-// ATTR:   odsPrinter << ' ' << "hello";
+// ATTR:   odsPrinter << "hello";
 // ATTR:   odsPrinter << ' ' << "=";
 // ATTR:   odsPrinter << ' ';
 // ATTR:   odsPrinter.printStrippedAttrOrType(getValue());
@@ -273,7 +273,7 @@ def EnumAttrB : EnumAttr<Test_Dialect, TestEnumB, "EnumAttrB"> {
 // TYPE:  }
 
 // TYPE: void TestCType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   odsPrinter << ' ' << "foo";
+// TYPE:   odsPrinter << "foo";
 // TYPE:   odsPrinter << ",";
 // TYPE:   odsPrinter << ' ' << ":";
 // TYPE:   odsPrinter << ' ' << "bob";
@@ -462,7 +462,6 @@ def TypeC : TestType<"TestE"> {
 
 // TYPE: void TestFType::print(::mlir::AsmPrinter &odsPrinter) const {
 // TYPE if (getA()) {
-// TYPE   odsPrinter << ' ';
 // TYPE   odsPrinter.printStrippedAttrOrType(getA());
 def TypeD : TestType<"TestF"> {
   let parameters = (ins OptionalParameter<"int">:$a);
@@ -546,7 +545,7 @@ def TypeG : TestType<"TestI"> {
 // TYPE:       odsPrinter.printStrippedAttrOrType(getB());
 // TYPE:     odsPrinter << ")";
 // TYPE:   } else {
-// TYPE:     odsPrinter << ' ' << "x";
+// TYPE:     odsPrinter << "x";
 // TYPE:   }
 // TYPE:   odsPrinter.printStrippedAttrOrType(getA());
 
@@ -631,7 +630,7 @@ def TypeL : TestType<"TestN"> {
 
 // TYPE-LABEL: void TestOType::print
 // TYPE: if (!(!(getA() == int())))
-// TYPE: odsPrinter << ' ' << "?"
+// TYPE: odsPrinter << "?"
 // TYPE: else
 // TYPE: odsPrinter.printStrippedAttrOrType(getA())
 

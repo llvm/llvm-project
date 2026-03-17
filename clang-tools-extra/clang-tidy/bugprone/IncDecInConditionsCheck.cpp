@@ -41,8 +41,8 @@ void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       expr(
-          OperatorMatcher, unless(isExpansionInSystemHeader()),
-          unless(hasAncestor(OperatorMatcher)), expr().bind("parent"),
+          OperatorMatcher, unless(hasAncestor(OperatorMatcher)),
+          expr().bind("parent"),
 
           forEachDescendant(
               expr(anyOf(unaryOperator(isUnaryPrePostOperator(),
@@ -75,8 +75,9 @@ void IncDecInConditionsCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<UnaryOperator>("operator")) {
     ExprLoc = MatchedDecl->getExprLoc();
     IsIncrementOp = MatchedDecl->isIncrementOp();
-  } else
+  } else {
     return;
+  }
 
   diag(ExprLoc,
        "%select{decrementing|incrementing}0 and referencing a variable in a "

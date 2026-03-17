@@ -763,6 +763,24 @@ declare void @f.align4() align 4
 declare void @f.align8() align 8
 ; CHECK: declare void @f.align8() align 8
 
+; Functions -- prefalign
+define void @f.prefalign2() prefalign(2) {
+  ret void
+}
+; CHECK: define void @f.prefalign2() prefalign(2)
+define void @f.prefalign4() prefalign(4) {
+  ret void
+}
+; CHECK: define void @f.prefalign4() prefalign(4)
+define void @f.prefalign8() prefalign(8) {
+  ret void
+}
+; CHECK: define void @f.prefalign8() prefalign(8)
+define void @f.prefalign4294967296() prefalign(4294967296) {
+  ret void
+}
+; CHECK: define void @f.prefalign4294967296() prefalign(4294967296)
+
 ; Functions -- GC
 declare void @f.gcshadow() gc "shadow-stack"
 ; CHECK: declare void @f.gcshadow() gc "shadow-stack"
@@ -1270,6 +1288,8 @@ define void @typesystem() {
   ; CHECK: %t9 = alloca <4 x i32>
   %t10 = alloca <vscale x 4 x i32>
   ; CHECK: %t10 = alloca <vscale x 4 x i32>
+  %t11 = alloca b8
+  ; CHECK: %t11 = alloca b8
 
   ret void
 }
