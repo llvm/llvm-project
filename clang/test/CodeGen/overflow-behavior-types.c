@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types %s \
-// RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation \
+// RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation,implicit-integer-sign-change \
 // RUN: -emit-llvm -o - | FileCheck %s --check-prefix=DEFAULT
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types %s -ftrapv \
-// RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation \
+// RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation,implicit-integer-sign-change \
 // RUN: -emit-llvm -o - | FileCheck %s --check-prefix=DEFAULT
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types %s \
@@ -11,12 +11,12 @@
 // RUN: -emit-llvm -o - | FileCheck %s --check-prefix=TRAPV-HANDLER
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types %s -fwrapv \
-// RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation \
+// RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation,implicit-integer-sign-change \
 // RUN: -emit-llvm -o - | FileCheck %s --check-prefix=DEFAULT
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types %s \
 // RUN: -fsanitize-undefined-ignore-overflow-pattern=all \
-// RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation \
+// RUN: -fsanitize=signed-integer-overflow,unsigned-integer-overflow,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation,implicit-integer-sign-change \
 // RUN: -emit-llvm -o - | FileCheck %s --check-prefix=EXCL
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types %s \
@@ -173,4 +173,24 @@ int explicit_truncation_cast(__ob_trap unsigned long long result) {
   // NOSAN: trap:
   // NOSAN: call void @llvm.ubsantrap(i8 7)
   return (int)result;
+}
+
+// Make sure __ob_trap types warn on sign change with
+// -fsanitize=implicit-integer-sign-change or trap otherwise.
+// DEFAULT-LABEL: define {{.*}} @unsigned_to_signed_cast
+void unsigned_to_signed_cast(__ob_trap unsigned long long a) {
+  // DEFAULT: %[[T0:.*]] = load i64, ptr %a.addr
+  // DEFAULT-NEXT: %[[CONV0:.*]] = trunc i64 %[[T0]] to i8
+  // DEFAULT-NEXT: %[[NEG:.*]] = icmp slt i8 %[[CONV0]], 0
+  // DEFAULT-NEXT: %[[SIGN0:.*]] = icmp eq i1 false, %[[NEG]]
+  // DEFAULT: %[[T1:.*]] = and i1 %[[SIGN0]]
+  // DEFUALT-NEXT: br i1 %[[T1]], {{.*}}, label %handler.implicit_conversion
+
+  // NOSAN: %[[T0:.*]] = load i64, ptr %a.addr
+  // NOSAN-NEXT: %[[CONV0:.*]] = trunc i64 %[[T0]] to i8
+  // NOSAN: %[[NEG:.*]] = icmp slt i8 %[[CONV0]], 0
+  // NOSAN-NEXT: %[[SIGN0:.*]] = icmp eq i1 false, %[[NEG]]
+  // NOSAN: %[[T1:.*]] = and i1 %[[SIGN0]]
+  // NOSAN-NEXT: br i1 %[[T1]], {{.*}}, label %trap
+  (signed char)(a);
 }

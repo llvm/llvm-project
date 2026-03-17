@@ -106,7 +106,7 @@ public:
     }
     auto Ptr = std::move(It->second);
     Data.erase(It);
-    return Ptr;
+    return std::move(Ptr);
   }
 };
 

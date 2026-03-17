@@ -102,15 +102,3 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("my_ref - 1", value="1")
         self.expect_var_path("ref + my_ref", value="4")
         self.expect_var_path("ref - my_ref", value="0")
-
-        # TODO: Pointer arithmetics
-        self.expect(
-            "frame var -- 'p + 1'",
-            error=True,
-            substrs=["invalid operands to binary expression ('int *' and 'int')"],
-        )
-        self.expect(
-            "frame var -- 'p - 1'",
-            error=True,
-            substrs=["invalid operands to binary expression ('int *' and 'int')"],
-        )

@@ -298,9 +298,8 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
 };
 } // anonymous namespace
 
-AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
-  : CallLowering(&TLI) {
-}
+AMDGPUCallLowering::AMDGPUCallLowering(const TargetLowering &TLI)
+    : CallLowering(&TLI) {}
 
 // FIXME: Compatibility shim
 static ISD::NodeType extOpcodeToISDExtOpcode(unsigned MIOpc) {

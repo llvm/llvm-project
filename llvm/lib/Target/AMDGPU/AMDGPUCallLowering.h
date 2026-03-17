@@ -18,7 +18,6 @@
 
 namespace llvm {
 
-class AMDGPUTargetLowering;
 class GCNSubtarget;
 class MachineInstrBuilder;
 class SIMachineFunctionInfo;
@@ -41,7 +40,7 @@ class AMDGPUCallLowering final : public CallLowering {
                                MachineInstrBuilder &Ret) const;
 
 public:
-  AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
+  AMDGPUCallLowering(const TargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &B, const Value *Val,
                    ArrayRef<Register> VRegs,

@@ -8201,13 +8201,17 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                                  DAG.getConstant(Mask, dl, HiLoVT));
       }
 
-      LL = DAG.getNode(
-          ISD::OR, dl, HiLoVT,
-          DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
-                      DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
-          DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
-                      DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
-                                                 HiLoVT, dl)));
+      if (isOperationLegal(ISD::FSHR, HiLoVT))
+        LL = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
+                         DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+      else
+        LL = DAG.getNode(
+            ISD::OR, dl, HiLoVT,
+            DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
+                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
+            DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
+                        DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
+                                                   HiLoVT, dl)));
       LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
     }

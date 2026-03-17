@@ -40,7 +40,6 @@ public:
   }
 
 protected:
-  
   TypeSystemClang *m_ast = nullptr;
   std::unique_ptr<clang_utils::TypeSystemClangHolder> m_holder;
 
@@ -747,8 +746,9 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   CompilerType auto_type(
       m_ast->weak_from_this(),
       m_ast->getASTContext()
-          .getAutoType(ClangUtil::GetCanonicalQualType(typedef_type),
-                       clang::AutoTypeKeyword::Auto, false)
+          .getAutoType(clang::DeducedKind::Deduced,
+                       ClangUtil::GetCanonicalQualType(typedef_type),
+                       clang::AutoTypeKeyword::Auto)
           .getAsOpaquePtr());
 
   CompilerType int_type(m_ast->weak_from_this(),

@@ -67,11 +67,11 @@ subroutine vec_xstd2_test(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
-! LLVMIR: %[[gep1:.*]] = getelementptr <4 x float>, ptr %2, i64 %[[iadd]]
+! LLVMIR: %[[isub:.*]] = sub nuw nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nuw nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nuw nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nuw nsw i64 %[[imul2]], 0
+! LLVMIR: %[[gep1:.*]] = getelementptr nusw nuw <4 x float>, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x float>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i16, ptr %1, align 2
 ! LLVMIR: %[[gep2:.*]] = getelementptr i8, ptr %[[gep1]], i16 %[[arg2]]
@@ -93,11 +93,11 @@ subroutine vec_xstw4_test(arg1, arg2, arg3, i)
 
 ! LLVMIR: %[[i:.*]] = load i32, ptr %3, align 4
 ! LLVMIR: %[[iext:.*]] = sext i32 %[[i]] to i64
-! LLVMIR: %[[isub:.*]] = sub nsw i64 %[[iext]], 1
-! LLVMIR: %[[imul1:.*]] = mul nsw i64 %[[isub]], 1
-! LLVMIR: %[[imul2:.*]] = mul nsw i64 %[[imul1]], 1
-! LLVMIR: %[[iadd:.*]] = add nsw i64 %[[imul2]], 0
-! LLVMIR: %[[gep1:.*]] = getelementptr <4 x float>, ptr %2, i64 %[[iadd]]
+! LLVMIR: %[[isub:.*]] = sub nuw nsw i64 %[[iext]], 1
+! LLVMIR: %[[imul1:.*]] = mul nuw nsw i64 %[[isub]], 1
+! LLVMIR: %[[imul2:.*]] = mul nuw nsw i64 %[[imul1]], 1
+! LLVMIR: %[[iadd:.*]] = add nuw nsw i64 %[[imul2]], 0
+! LLVMIR: %[[gep1:.*]] = getelementptr nusw nuw <4 x float>, ptr %2, i64 %[[iadd]]
 ! LLVMIR: %[[arg1:.*]] = load <4 x float>, ptr %0, align 16
 ! LLVMIR: %[[arg2:.*]] = load i16, ptr %1, align 2
 ! LLVMIR: %[[gep2:.*]] = getelementptr i8, ptr %[[gep1]], i16 %[[arg2]]

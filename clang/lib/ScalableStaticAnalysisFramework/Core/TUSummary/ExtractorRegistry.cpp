@@ -33,3 +33,9 @@ ssaf::makeTUSummaryExtractor(llvm::StringRef SummaryName,
   assert(false && "Unknown SummaryExtractor name");
   return nullptr;
 }
+
+void ssaf::printAvailableTUSummaryExtractors(llvm::raw_ostream &OS) {
+  OS << "OVERVIEW: Available SSAF summary extractors:\n\n";
+  for (const auto &Entry : TUSummaryExtractorRegistry::entries())
+    OS << "  " << Entry.getName() << " - " << Entry.getDesc() << "\n";
+}

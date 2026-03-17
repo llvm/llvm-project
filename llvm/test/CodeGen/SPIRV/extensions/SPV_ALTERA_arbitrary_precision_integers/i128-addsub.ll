@@ -10,7 +10,7 @@
 ; CHECK: OpName %[[#TestAdd:]] "test_add"
 ; CHECK: OpName %[[#TestSub:]] "test_sub"
 ; CHECK: %[[#Int128Ty:]] = OpTypeInt 128 0
-; CHECK: %[[#Const64Int128:]] = OpConstant %[[#Int128Ty]] 64 0 0 0
+; CHECK: %[[#Const64Int128:]] = OpConstant %[[#Int128Ty]] 64
 
 ; CHECK: %[[#TestAdd]] = OpFunction
 define spir_func void @test_add(i64 %AL, i64 %AH, i64 %BL, i64 %BH, ptr %RL, ptr %RH) {

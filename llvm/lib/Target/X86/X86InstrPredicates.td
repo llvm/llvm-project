@@ -50,6 +50,8 @@ def PreferLegacySetCC  : Predicate<"!Subtarget->hasZU() || "
                                    "Subtarget->preferLegacySetCC()">;
 def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
                                     "!Subtarget->preferLegacySetCC()">;
+def HasNDDI      : Predicate<"Subtarget->hasNDD() && Subtarget->hasNDDI()">;
+def NoNDDI       : Predicate<"!Subtarget->hasNDD() || !Subtarget->hasNDDI()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasJMPABS    : Predicate<"Subtarget->hasJMPABS()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;

@@ -12052,26 +12052,6 @@ uint64_t test_vqsubd_u64(uint64_t a, uint64_t b) {
   return vqsubd_u64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vshld_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VSHLD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.sshl.i64(i64 [[A]], i64 [[B]])
-// CHECK-NEXT:    ret i64 [[VSHLD_S64_I]]
-//
-int64_t test_vshld_s64(int64_t a, int64_t b) {
-  return vshld_s64(a, b);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vshld_u64(
-// CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VSHLD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.ushl.i64(i64 [[A]], i64 [[B]])
-// CHECK-NEXT:    ret i64 [[VSHLD_U64_I]]
-//
-uint64_t test_vshld_u64(uint64_t a, int64_t b) {
-  return vshld_u64(a, b);
-}
-
 // CHECK-LABEL: define dso_local i8 @test_vqshlb_s8(
 // CHECK-SAME: i8 noundef [[A:%.*]], i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -17887,16 +17867,6 @@ uint64x1_t test_vrsra_n_u64(uint64x1_t a, uint64x1_t b) {
   return vrsra_n_u64(a, b, 1);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vshld_n_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHLD_N:%.*]] = shl i64 [[A]], 1
-// CHECK-NEXT:    ret i64 [[SHLD_N]]
-//
-int64_t test_vshld_n_s64(int64_t a) {
-  return (int64_t)vshld_n_s64(a, 1);
-}
-
 // CHECK-LABEL: define dso_local <1 x i64> @test_vshl_n_s64(
 // CHECK-SAME: <1 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -17907,16 +17877,6 @@ int64_t test_vshld_n_s64(int64_t a) {
 //
 int64x1_t test_vshl_n_s64(int64x1_t a) {
   return vshl_n_s64(a, 1);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vshld_n_u64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHLD_N:%.*]] = shl i64 [[A]], 63
-// CHECK-NEXT:    ret i64 [[SHLD_N]]
-//
-uint64_t test_vshld_n_u64(uint64_t a) {
-  return (uint64_t)vshld_n_u64(a, 63);
 }
 
 // CHECK-LABEL: define dso_local <1 x i64> @test_vshl_n_u64(

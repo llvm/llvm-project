@@ -55,7 +55,7 @@ LUSummaryConsumer::run(llvm::ArrayRef<SummaryName> Names) {
     }
     Store.Data.emplace(SN, std::move(*Result));
   }
-  return Store;
+  return std::move(Store);
 }
 
 SummaryDataStore LUSummaryConsumer::run() && {

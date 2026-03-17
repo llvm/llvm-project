@@ -130,6 +130,8 @@ public:
   /// contains it.
   std::optional<lldb_private::FileSpec> GetDebugLink();
 
+  std::optional<lldb_private::FileSpec> GetPDBPath();
+
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
   lldb_private::Address GetEntryPointAddress() override;

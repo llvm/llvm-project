@@ -68,6 +68,7 @@
 #include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::ssaf {
 
@@ -79,6 +80,9 @@ bool isFormatRegistered(llvm::StringRef FormatName);
 /// SerializationFormat failed.
 /// It's a fatal error if there is no format registered with the name.
 std::unique_ptr<SerializationFormat> makeFormat(llvm::StringRef FormatName);
+
+/// Print the list of available serialization formats.
+void printAvailableFormats(llvm::raw_ostream &OS);
 
 // Registry for adding new SerializationFormat implementations.
 using SerializationFormatRegistry = llvm::Registry<SerializationFormat>;

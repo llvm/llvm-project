@@ -6,12 +6,12 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 | FileCheck %s -check-prefix=GFX1100
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 | FileCheck %s -check-prefix=GFX12
 
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=verde | FileCheck %s -check-prefix=G_SI
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=hawaii | FileCheck %s  -check-prefix=G_GFX7
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -check-prefix=G_GFX10
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1030 | FileCheck %s -check-prefix=G_GFX1030
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1100 | FileCheck %s -check-prefix=G_GFX1100
-; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 | FileCheck %s -check-prefix=GFX12
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=verde | FileCheck %s -check-prefix=G_SI
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=hawaii | FileCheck %s  -check-prefix=G_GFX7
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -check-prefix=G_GFX10
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1030 | FileCheck %s -check-prefix=G_GFX1030
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 | FileCheck %s -check-prefix=G_GFX1100
+; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 | FileCheck %s -check-prefix=GFX12
 
 declare float @llvm.amdgcn.raw.buffer.atomic.fmin.f32(float, <4 x i32>, i32, i32, i32 immarg)
 declare float @llvm.amdgcn.raw.buffer.atomic.fmax.f32(float, <4 x i32>, i32, i32, i32 immarg)

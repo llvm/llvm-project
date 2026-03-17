@@ -6,10 +6,18 @@
 
 #include <arm_neon.h>
 
+//=============================================================================
+// NOTES
+//
+// ACLE section headings based on v2025Q2 of the ACLE specification:
+//  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#bitwise-equal-to-zero
+//=============================================================================
+
 //===------------------------------------------------------===//
-// BF16 get/set lane
-//===------------------------------------------------------===//
+// 2.4.1.2. Set all lanes to the same value
+//
 // TODO: Add the remaining intrinsics from this group.
+//===------------------------------------------------------===//
 
 // ALL-LABEL: @test_vduph_lane_bf16(
 bfloat16_t test_vduph_lane_bf16(bfloat16x4_t v) {

@@ -14,6 +14,7 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -3973,6 +3974,76 @@ public:
   LLVM_ABI InsertPointOrErrorTy createIteratorLoop(
       LocationDescription Loc, llvm::Value *TripCount,
       IteratorBodyGenTy BodyGen, llvm::StringRef Name = "iterator");
+
+  /// Kind of parameter in a function with 'declare simd' directive.
+  enum class DeclareSimdKindTy {
+    Linear,
+    LinearRef,
+    LinearUVal,
+    LinearVal,
+    Uniform,
+    Vector,
+  };
+
+  /// Attribute set of the `declare simd` parameter.
+  struct DeclareSimdAttrTy {
+    DeclareSimdKindTy Kind = DeclareSimdKindTy::Vector;
+    llvm::APSInt StrideOrArg;
+    llvm::APSInt Alignment;
+    bool HasVarStride = false;
+  };
+
+  enum class DeclareSimdBranch {
+    Undefined,
+    Inbranch,
+    Notinbranch,
+  };
+
+  /// Emit x86 vector-function ABI attributes for a `declare simd` function.
+  ///
+  /// Generates and attaches `_ZGV*` vector function ABI attributes to \p Fn
+  /// following the x86 vector ABI used by OpenMP `declare simd`. For each
+  /// supported ISA (SSE, AVX, AVX2, AVX512) and masking variant, this
+  /// constructs the appropriate mangled vector-function name and adds it as a
+  /// function attribute.
+  ///
+  /// \param Fn          The scalar function to which vector-function attributes
+  ///                    are attached.
+  /// \param NumElements Number of elements used to derive the vector length
+  ///                    when
+  ///                    \p VLENVal is not specified.
+  /// \param VLENVal     User provided vector length.
+  /// \param ParamAttrs  Array of attribute set of the `declare simd` parameter.
+  /// \param Branch      `undefined`, `inbranch` or `notinbranch` clause.
+  LLVM_ABI void emitX86DeclareSimdFunction(
+      llvm::Function *Fn, unsigned NumElements, const llvm::APSInt &VLENVal,
+      llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch);
+
+  /// Emit AArch64 vector-function ABI attributes for a `declare simd` function.
+  ///
+  /// Generates and attaches `_ZGV*` vector function ABI attributes to \p Fn
+  /// following the AArch64 vector-function ABI. The emitted names depend on the
+  /// selected ISA, user-specified vector length, parameter attribute mangling,
+  /// and the declare simd branch clause.
+  ///
+  /// \param Fn                  The scalar function to which vector-function
+  ///                            attributes are attached.
+  /// \param VLENVal             User provided vector length.
+  /// \param ParamAttrs          Array of attribute set of the `declare simd`
+  ///                            parameter.
+  /// \param Branch              `undefined`, `inbranch` or `notinbranch`
+  ///                            clause.
+  /// \param ISA                 `'n'` for Advanced SIMD or `'s'` for SVE.
+  /// \param NarrowestDataSize   Narrowest data size in bits used to infer the
+  ///                            default vector length when \p VLENVal is
+  ///                            absent.
+  /// \param OutputBecomesInput  Whether result values are represented as input
+  ///                            parameters in the emitted vector-function ABI
+  ///                            name.
+  LLVM_ABI void emitAArch64DeclareSimdFunction(
+      llvm::Function *Fn, unsigned VLENVal,
+      llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch,
+      char ISA, unsigned NarrowestDataSize, bool OutputBecomesInput);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.

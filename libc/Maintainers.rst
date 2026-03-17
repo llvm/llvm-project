@@ -61,6 +61,11 @@ Public Headers / hdrgen
 | Roland McGrath
 | mcgrathr\@google.com (email), `frobtech <https://github.com/frobtech>`_ (github)
 
+General Maintenance and Documentation
+-------------------------------------
+| Jeff Bailey
+| jbailey\@raspberryginger.com (email), `kaladron <https://github.com/kaladron>`_ (github), kaladron (discourse), kaladron725 (discord)
+
 
 Inactive Maintainers
 ====================

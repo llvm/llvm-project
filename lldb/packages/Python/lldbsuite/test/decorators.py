@@ -1304,3 +1304,33 @@ def skipIfBuildType(types: list[str]):
         and configuration.cmake_build_type.lower() in types,
         "skip on {} build type(s)".format(", ".join(types)),
     )
+
+
+def skipUnlessArm64eSupported(func):
+    """Decorate the item to skip test unless Clang can target arm64e."""
+
+    def can_build_and_run_arm64e():
+        arch = lldbplatformutil.getArchitecture()
+
+        # We need to be running the test suite for arm64 or arm64e. If we're
+        # running the whole test suite as arm64e, we don't need any additional
+        # checks.
+        if arch == "arm64e":
+            return None
+        elif arch != "arm64":
+            return "Not targeting arm64"
+
+        # Need at least macOS Tahoe (26) to run arm64e binaries.
+        if platform.mac_ver()[0] == "" or _check_expected_version(
+            "<", "26.0", platform.mac_ver()[0]
+        ):
+            return "Host cannot run arm64e binaries"
+
+        # Need a compiler that can target arm64e.
+        compiler_path = lldbplatformutil.getCompiler()
+        if not _compiler_supports(compiler_path, "-arch arm64e"):
+            return "Compiler cannot target arm64e"
+
+        return None
+
+    return skipTestIfFn(can_build_and_run_arm64e)(func)

@@ -3972,12 +3972,11 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     if (CheckFunctionTemplateConstraints(
             Info.getLocation(),
             FunctionTemplate->getCanonicalDecl()->getTemplatedDecl(),
-            CTAI.SugaredConverted, Info.AssociatedConstraintsSatisfaction))
+            CTAI.CanonicalConverted, Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;
     if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-      Info.reset(
-          TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted),
-          Info.takeCanonical());
+      Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
+                                         Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
   }
@@ -5043,21 +5042,27 @@ namespace {
   /// specifier within a type for a given replacement type.
   class SubstituteDeducedTypeTransform :
       public TreeTransform<SubstituteDeducedTypeTransform> {
+    DeducedKind DK;
     QualType Replacement;
-    bool ReplacementIsPack;
     bool UseTypeSugar;
     using inherited = TreeTransform<SubstituteDeducedTypeTransform>;
 
   public:
     SubstituteDeducedTypeTransform(Sema &SemaRef, DependentAuto DA)
         : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef),
-          ReplacementIsPack(DA.IsPack), UseTypeSugar(true) {}
+          DK(DA.IsPack ? DeducedKind::DeducedAsPack
+                       : DeducedKind::DeducedAsDependent),
+          UseTypeSugar(true) {}
 
     SubstituteDeducedTypeTransform(Sema &SemaRef, QualType Replacement,
                                    bool UseTypeSugar = true)
         : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef),
-          Replacement(Replacement), ReplacementIsPack(false),
-          UseTypeSugar(UseTypeSugar) {}
+          DK(Replacement.isNull() ? DeducedKind::Undeduced
+                                  : DeducedKind::Deduced),
+          Replacement(Replacement), UseTypeSugar(UseTypeSugar) {
+      assert((!Replacement.isNull() || UseTypeSugar) &&
+             "An undeduced auto type is never type sugar");
+    }
 
     QualType TransformDesugared(TypeLocBuilder &TLB, DeducedTypeLoc TL) {
       assert(isa<TemplateTypeParmType>(Replacement) &&
@@ -5082,8 +5087,8 @@ namespace {
         return TransformDesugared(TLB, TL);
 
       QualType Result = SemaRef.Context.getAutoType(
-          Replacement, TL.getTypePtr()->getKeyword(), Replacement.isNull(),
-          ReplacementIsPack, TL.getTypePtr()->getTypeConstraintConcept(),
+          DK, Replacement, TL.getTypePtr()->getKeyword(),
+          TL.getTypePtr()->getTypeConstraintConcept(),
           TL.getTypePtr()->getTypeConstraintArguments());
       auto NewTL = TLB.push<AutoTypeLoc>(Result);
       NewTL.copy(TL);
@@ -5096,8 +5101,8 @@ namespace {
         return TransformDesugared(TLB, TL);
 
       QualType Result = SemaRef.Context.getDeducedTemplateSpecializationType(
-          TL.getTypePtr()->getKeyword(), TL.getTypePtr()->getTemplateName(),
-          Replacement, Replacement.isNull());
+          DK, Replacement, TL.getTypePtr()->getKeyword(),
+          TL.getTypePtr()->getTemplateName());
       auto NewTL = TLB.push<DeducedTemplateSpecializationTypeLoc>(Result);
       NewTL.setElaboratedKeywordLoc(TL.getElaboratedKeywordLoc());
       NewTL.setNameLoc(TL.getNameLoc());

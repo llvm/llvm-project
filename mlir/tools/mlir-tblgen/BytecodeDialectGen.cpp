@@ -206,7 +206,10 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
   auto funScope = ios.scope("{\n", "}");
 
   if (args.empty()) {
-    ios << formatv("return get<{0}>(context);\n", returnType);
+    ios << formatv(
+        "return getChecked<{0}>([&]() {{ return reader.emitError(); }, "
+        "context);\n",
+        returnType);
     return;
   }
 

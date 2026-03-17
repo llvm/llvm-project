@@ -637,7 +637,7 @@ void ScopBuilder::propagateDomainConstraintsToRegionExit(
   auto *RI = scop->getRegion().getRegionInfo();
   auto *BBReg = RI ? RI->getRegionFor(BB) : nullptr;
   auto *ExitBB = BBReg ? BBReg->getExit() : nullptr;
-  if (!BBReg || BBReg->getEntry() != BB || !scop->contains(ExitBB))
+  if (!BBReg || BBReg->getEntry() != BB || !ExitBB || !scop->contains(ExitBB))
     return;
 
   // Do not propagate the domain if there is a loop backedge inside the region

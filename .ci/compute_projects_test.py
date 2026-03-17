@@ -259,6 +259,16 @@ class TestComputeProjects(unittest.TestCase):
         self.assertEqual(env_variables["runtimes_check_targets"], "check-libc")
         self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
 
+    def test_include_libclc_in_runtimes(self):
+        env_variables = compute_projects.get_env_variables(
+            ["libclc/CMakeLists.txt"], "Linux"
+        )
+        self.assertEqual(env_variables["projects_to_build"], "clang;llvm")
+        self.assertEqual(env_variables["project_check_targets"], "")
+        self.assertEqual(env_variables["runtimes_to_build"], "libclc")
+        self.assertEqual(env_variables["runtimes_check_targets"], "check-libclc")
+        self.assertEqual(env_variables["runtimes_check_targets_needs_reconfig"], "")
+
     def test_exclude_docs(self):
         env_variables = compute_projects.get_env_variables(
             ["llvm/docs/CIBestPractices.rst"], "Linux"
@@ -297,7 +307,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc",
+            "check-compiler-rt check-flang-rt check-libc check-libclc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -322,7 +332,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt",
+            "check-compiler-rt check-libclc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -371,7 +381,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc",
+            "check-compiler-rt check-flang-rt check-libc check-libclc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -406,7 +416,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc",
+            "check-compiler-rt check-flang-rt check-libc check-libclc",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],

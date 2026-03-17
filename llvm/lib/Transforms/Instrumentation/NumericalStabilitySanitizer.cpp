@@ -1398,14 +1398,11 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.log2.f64", Intrinsic::log2, makeX86FP80X86FP80},
     {"llvm.log2.f80", Intrinsic::log2, makeX86FP80X86FP80},
     {"llvm.fma.f32", Intrinsic::fma, makeDoubleDoubleDoubleDouble},
-
-    {"llvm.fmuladd.f32", Intrinsic::fmuladd, makeDoubleDoubleDoubleDouble},
-
     {"llvm.fma.f64", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
-
-    {"llvm.fmuladd.f64", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
-
     {"llvm.fma.f80", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
+    {"llvm.fmuladd.f32", Intrinsic::fmuladd, makeDoubleDoubleDoubleDouble},
+    {"llvm.fmuladd.f64", Intrinsic::fmuladd, makeX86FP80X86FP80X86FP80X86FP80},
+    {"llvm.fmuladd.f80", Intrinsic::fmuladd, makeX86FP80X86FP80X86FP80X86FP80},
     {"llvm.fabs.f32", Intrinsic::fabs, makeDoubleDouble},
     {"llvm.fabs.f64", Intrinsic::fabs, makeX86FP80X86FP80},
     {"llvm.fabs.f80", Intrinsic::fabs, makeX86FP80X86FP80},
@@ -1438,22 +1435,10 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.rint.f80", Intrinsic::rint, makeX86FP80X86FP80},
     {"llvm.nearbyint.f32", Intrinsic::nearbyint, makeDoubleDouble},
     {"llvm.nearbyint.f64", Intrinsic::nearbyint, makeX86FP80X86FP80},
-    {"llvm.nearbyin80f64", Intrinsic::nearbyint, makeX86FP80X86FP80},
+    {"llvm.nearbyint.f80", Intrinsic::nearbyint, makeX86FP80X86FP80},
     {"llvm.round.f32", Intrinsic::round, makeDoubleDouble},
     {"llvm.round.f64", Intrinsic::round, makeX86FP80X86FP80},
     {"llvm.round.f80", Intrinsic::round, makeX86FP80X86FP80},
-    {"llvm.lround.f32", Intrinsic::lround, makeDoubleDouble},
-    {"llvm.lround.f64", Intrinsic::lround, makeX86FP80X86FP80},
-    {"llvm.lround.f80", Intrinsic::lround, makeX86FP80X86FP80},
-    {"llvm.llround.f32", Intrinsic::llround, makeDoubleDouble},
-    {"llvm.llround.f64", Intrinsic::llround, makeX86FP80X86FP80},
-    {"llvm.llround.f80", Intrinsic::llround, makeX86FP80X86FP80},
-    {"llvm.lrint.f32", Intrinsic::lrint, makeDoubleDouble},
-    {"llvm.lrint.f64", Intrinsic::lrint, makeX86FP80X86FP80},
-    {"llvm.lrint.f80", Intrinsic::lrint, makeX86FP80X86FP80},
-    {"llvm.llrint.f32", Intrinsic::llrint, makeDoubleDouble},
-    {"llvm.llrint.f64", Intrinsic::llrint, makeX86FP80X86FP80},
-    {"llvm.llrint.f80", Intrinsic::llrint, makeX86FP80X86FP80},
 };
 
 const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {

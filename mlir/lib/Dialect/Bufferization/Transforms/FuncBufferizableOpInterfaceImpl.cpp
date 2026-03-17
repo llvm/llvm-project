@@ -101,12 +101,14 @@ static FuncOp getCalledFunction(CallOpInterface callOp,
 /// Return the FuncOp called by `callOp`.
 static FuncOp getCalledFunction(CallOpInterface callOp,
                                 const AnalysisState &state) {
-  auto &oneShotAnalysisState = static_cast<const OneShotAnalysisState &>(state);
-
-  if (auto *funcAnalysisState =
-          oneShotAnalysisState.getExtension<FuncAnalysisState>()) {
-    // Use the cached symbol tables.
-    return getCalledFunction(callOp, funcAnalysisState->symbolTables);
+  if (isa<OneShotAnalysisState>(state)) {
+    auto &oneShotAnalysisState =
+        static_cast<const OneShotAnalysisState &>(state);
+    if (auto *funcAnalysisState =
+            oneShotAnalysisState.getExtension<FuncAnalysisState>()) {
+      // Use the cached symbol tables.
+      return getCalledFunction(callOp, funcAnalysisState->symbolTables);
+    }
   }
 
   SymbolTableCollection symbolTables;

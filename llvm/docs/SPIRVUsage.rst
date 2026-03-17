@@ -633,6 +633,15 @@ LLVM IR representations.
 +--------------------+---------------------------------------------------------+
 | SPIR-V instruction | LLVM IR                                                 |
 +====================+=========================================================+
+| OpMemoryModel      | .. code-block:: llvm                                    |
+|                    |                                                         |
+|                    |    !spirv.MemoryModel = !{!0}                           |
+|                    |    !0 = !{i32 0, i32 1}                                 |
+|                    |    ; Set addressing model to Logical (0) and memory     |
+|                    |    ; model to GLSL450 (1). Valid memory models:         |
+|                    |    ; Simple (0), GLSL450 (1), OpenCL (2),               |
+|                    |    ; VulkanKHR (3).                                     |
++--------------------+---------------------------------------------------------+
 | OpExecutionMode    | .. code-block:: llvm                                    |
 |                    |                                                         |
 |                    |    !spirv.ExecutionMode = !{!0}                         |

@@ -29,3 +29,9 @@ ssaf::makeFormat(llvm::StringRef FormatName) {
   assert(false && "Unknown SerializationFormat name");
   return nullptr;
 }
+
+void ssaf::printAvailableFormats(llvm::raw_ostream &OS) {
+  OS << "OVERVIEW: Available SSAF serialization formats:\n\n";
+  for (const auto &Entry : SerializationFormatRegistry::entries())
+    OS << "  " << Entry.getName() << " - " << Entry.getDesc() << "\n";
+}

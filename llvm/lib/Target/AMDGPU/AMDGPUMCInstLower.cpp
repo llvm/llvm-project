@@ -283,7 +283,7 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
     }
   }
 
-  if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
+  if (const MCExpr *E = lowerAddrSpaceCast(CV, OutContext))
     return E;
   return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }

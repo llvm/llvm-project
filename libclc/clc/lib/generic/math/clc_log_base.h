@@ -193,13 +193,14 @@ __clc_log(double a)
   m = __clc_ldexp(m, b);
   int e = a_exp - b;
 
-  double2 x = __clc_ep_div(m - 1.0, __clc_ep_fast_add(1.0, m));
+  __clc_ep_pair_double x = __clc_ep_div(m - 1.0, __clc_ep_fast_add(1.0, m));
   double s = x.hi * x.hi;
   double p = __clc_mad(s, __clc_mad(s, __clc_mad(s,
              __clc_mad(s, __clc_mad(s, __clc_mad(s, 0x1.3ab76bf559e2bp-3, 0x1.385386b47b09ap-3),
                0x1.7474dd7f4df2ep-3), 0x1.c71c016291751p-3),
                0x1.249249b27acf1p-2), 0x1.99999998ef7b6p-2), 0x1.5555555555780p-1);
-  double2 r = __clc_ep_fast_add(__clc_ep_ldexp(x, 1), s * x.hi * p);
+  __clc_ep_pair_double r =
+      __clc_ep_fast_add(__clc_ep_ldexp(x, 1), s * x.hi * p);
 
 #if defined COMPILING_LOG2
   r = __clc_ep_add(

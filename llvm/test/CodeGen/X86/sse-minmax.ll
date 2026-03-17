@@ -365,8 +365,11 @@ define double @ult_x(double %x)  {
 define double @ugt_inverse_x(double %x)  {
 ; CHECK-LABEL: ugt_inverse_x:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    minsd %xmm1, %xmm0
+; CHECK-NEXT:    xorpd %xmm2, %xmm2
+; CHECK-NEXT:    movapd %xmm0, %xmm1
+; CHECK-NEXT:    cmpnlesd %xmm2, %xmm1
+; CHECK-NEXT:    andnpd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp ugt double %x, 0.000000e+00
   %d = select i1 %c, double 0.000000e+00, double %x
@@ -377,7 +380,9 @@ define double @ult_inverse_x(double %x)  {
 ; CHECK-LABEL: ult_inverse_x:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    maxsd %xmm1, %xmm0
+; CHECK-NEXT:    cmpnlesd %xmm0, %xmm1
+; CHECK-NEXT:    andnpd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp ult double %x, 0.000000e+00
   %d = select i1 %c, double 0.000000e+00, double %x
@@ -578,7 +583,10 @@ define double @ult_y(double %x)  {
 define double @ugt_inverse_y(double %x)  {
 ; CHECK-LABEL: ugt_inverse_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movapd %xmm0, %xmm1
+; CHECK-NEXT:    cmpnlesd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp ugt double %x, -0.000000e+00
   %d = select i1 %c, double -0.000000e+00, double %x
@@ -588,7 +596,11 @@ define double @ugt_inverse_y(double %x)  {
 define double @ult_inverse_y(double %x)  {
 ; CHECK-LABEL: ult_inverse_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movapd %xmm0, %xmm1
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    cmpnlesd %xmm1, %xmm0
+; CHECK-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp ult double %x, -0.000000e+00
   %d = select i1 %c, double -0.000000e+00, double %x

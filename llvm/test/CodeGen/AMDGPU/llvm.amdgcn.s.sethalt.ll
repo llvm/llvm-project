@@ -25,4 +25,25 @@ define amdgpu_kernel void @test_s_sethalt() {
   ret void
 }
 
+define amdgpu_gs void @if_sethalt(i32 %flag) #0 {
+; GCN-LABEL: if_sethalt:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN-NEXT:    s_cbranch_execz .LBB1_2
+; GCN-NEXT:  ; %bb.1: ; %sethalt
+; GCN-NEXT:    s_sethalt 1
+; GCN-NEXT:  .LBB1_2: ; %end
+; GCN-NEXT:    s_endpgm
+  %cond = icmp eq i32 %flag, 0
+  br i1 %cond, label %sethalt, label %end
+
+sethalt:
+  call void @llvm.amdgcn.s.sethalt(i32 1)
+  br label %end
+
+end:
+  ret void
+}
+
 declare void @llvm.amdgcn.s.sethalt(i32)

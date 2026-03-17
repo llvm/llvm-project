@@ -1674,6 +1674,12 @@ public:
   DenseMap<std::pair<ElementCount, APInt>, std::unique_ptr<ConstantInt>>
       IntSplatConstants;
 
+  DenseMap<unsigned, std::unique_ptr<ConstantByte>> ByteZeroConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantByte>> ByteOneConstants;
+  DenseMap<APInt, std::unique_ptr<ConstantByte>> ByteConstants;
+  DenseMap<std::pair<ElementCount, APInt>, std::unique_ptr<ConstantByte>>
+      ByteSplatConstants;
+
   DenseMap<APFloat, std::unique_ptr<ConstantFP>> FPConstants;
   DenseMap<std::pair<ElementCount, APFloat>, std::unique_ptr<ConstantFP>>
       FPSplatConstants;
@@ -1743,11 +1749,15 @@ public:
   ConstantInt *TheTrueVal = nullptr;
   ConstantInt *TheFalseVal = nullptr;
 
+  ConstantByte *TheTrueByteVal = nullptr;
+  ConstantByte *TheFalseByteVal = nullptr;
+
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
       TokenTy;
   Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_AMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
+  ByteType Byte1Ty, Byte8Ty, Byte16Ty, Byte32Ty, Byte64Ty, Byte128Ty;
 
   std::unique_ptr<ConstantTokenNone> TheNoneToken;
 
@@ -1756,6 +1766,7 @@ public:
   SpecificBumpPtrAllocator<ConstantRangeAttributeImpl>
       ConstantRangeAttributeAlloc;
 
+  DenseMap<unsigned, ByteType *> ByteTypes;
   DenseMap<unsigned, IntegerType *> IntegerTypes;
 
   using FunctionTypeSet = DenseSet<FunctionType *, FunctionTypeKeyInfo>;

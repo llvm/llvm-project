@@ -16,7 +16,6 @@
 #include "orc-rt/AllocAction.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/MemoryFlags.h"
-#include "orc-rt/SPSWrapperFunction.h"
 #include "orc-rt/Service.h"
 #include "orc-rt/move_only_function.h"
 
@@ -112,23 +111,5 @@ private:
 };
 
 } // namespace orc_rt
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes);
-
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes);
-
-ORC_RT_SPS_INTERFACE void orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes);
-
-ORC_RT_SPS_INTERFACE void
-orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper(
-    orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
-    orc_rt_WrapperFunctionBuffer ArgBytes);
 
 #endif // ORC_RT_SIMPLENATIVEMEMORYMAP_H

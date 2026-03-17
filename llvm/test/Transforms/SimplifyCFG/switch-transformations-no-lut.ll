@@ -427,13 +427,9 @@ define i1 @single_value_with_mask(i32 %x) {
 ; TTINOLUT-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i64 4294967333, [[SWITCH_MASKINDEX]]
 ; TTINOLUT-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i64 [[SWITCH_SHIFTED]] to i1
 ; TTINOLUT-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_LOBIT]], i1 false
-; TTINOLUT-NEXT:    br i1 [[OR_COND]], label %[[END:.*]], label %[[DEFAULT:.*]]
-; TTINOLUT:       [[DEFAULT]]:
 ; TTINOLUT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
 ; TTINOLUT-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i1 false, i1 true
-; TTINOLUT-NEXT:    br label %[[END]]
-; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[RES:%.*]] = phi i1 [ [[SEL]], %[[DEFAULT]] ], [ false, %[[ENTRY]] ]
+; TTINOLUT-NEXT:    [[RES:%.*]] = select i1 [[OR_COND]], i1 false, i1 [[SEL]]
 ; TTINOLUT-NEXT:    ret i1 [[RES]]
 ;
 entry:

@@ -209,6 +209,17 @@ public:
 };
 } // end anonymous namespace
 
+static Register lookThroughCopies(Register Reg, MachineRegisterInfo *MRI) {
+  MachineInstr *MI;
+  while ((MI = MRI->getUniqueVRegDef(Reg)) &&
+         MI->getOpcode() == TargetOpcode::COPY) {
+    if (MI->getOperand(1).getReg().isPhysical())
+      break;
+    Reg = MI->getOperand(1).getReg();
+  }
+  return Reg;
+}
+
 // Check that all PHIs in Tail are selecting the same value from Head and CmpBB.
 // This means that no if-conversion is required when merging CmpBB into Head.
 bool SSACCmpConv::trivialTailPHIs() {
@@ -219,7 +230,7 @@ bool SSACCmpConv::trivialTailPHIs() {
     // PHI operands come in (VReg, MBB) pairs.
     for (unsigned oi = 1, oe = I.getNumOperands(); oi != oe; oi += 2) {
       MachineBasicBlock *MBB = I.getOperand(oi + 1).getMBB();
-      Register Reg = I.getOperand(oi).getReg();
+      Register Reg = lookThroughCopies(I.getOperand(oi).getReg(), MRI);
       if (MBB == Head) {
         assert((!HeadReg || HeadReg == Reg) && "Inconsistent PHI operands");
         HeadReg = Reg;

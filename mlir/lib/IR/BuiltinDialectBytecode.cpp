@@ -33,23 +33,27 @@ namespace {
 
 // TODO: Move these to separate file.
 
-// Returns the bitwidth if known, else return 0.
-static unsigned getIntegerBitWidth(DialectBytecodeReader &reader, Type type) {
-  if (auto intType = dyn_cast<IntegerType>(type)) {
+// Returns the bitwidth if known, else return std::nullopt.
+static std::optional<unsigned> getIntegerBitWidth(DialectBytecodeReader &reader,
+                                                  Type type) {
+  if (auto intType = dyn_cast<IntegerType>(type))
     return intType.getWidth();
-  }
-  if (llvm::isa<IndexType>(type)) {
+  if (llvm::isa<IndexType>(type))
     return IndexType::kInternalStorageBitWidth;
-  }
   reader.emitError()
       << "expected integer or index type for IntegerAttr, but got: " << type;
-  return 0;
+  return std::nullopt;
 }
 
 static LogicalResult readAPIntWithKnownWidth(DialectBytecodeReader &reader,
                                              Type type, FailureOr<APInt> &val) {
-  unsigned bitWidth = getIntegerBitWidth(reader, type);
-  val = reader.readAPIntWithKnownWidth(bitWidth);
+  std::optional<unsigned> bitWidth = getIntegerBitWidth(reader, type);
+  // getIntegerBitWidth returns std::nullopt and emits an error for unsupported
+  // types. Bail out early to avoid creating a zero-width APInt with a non-zero
+  // value.
+  if (!bitWidth)
+    return failure();
+  val = reader.readAPIntWithKnownWidth(*bitWidth);
   return val;
 }
 

@@ -215,6 +215,9 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::AddressingModelOperand,
                                  MAI.Addr, *ST);
 
+  if (MAI.Mem == SPIRV::MemoryModel::VulkanKHR)
+    MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_vulkan_memory_model);
+
   if (!ST->isShader()) {
     // TODO: check if it's required by default.
     MAI.ExtInstSetMap[static_cast<unsigned>(
@@ -940,7 +943,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl, Capability::MinLod,
-                    Capability::ImageGatherExtended});
+                    Capability::ImageGatherExtended, Capability::Addresses,
+                    Capability::VulkanMemoryModelKHR});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {

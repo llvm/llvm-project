@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // RUN: %clang_cc1 -verify -fopenmp -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP60
 
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
@@ -12,6 +12,8 @@
 // RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP60
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -I %S/Inputs -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
@@ -121,6 +123,41 @@ void xoo();
 // OMP52: #pragma omp end declare target
 
 }
+#endif // _OPENMP
+
+#if _OPENMP == 202411
+int l1;
+#pragma omp declare target local(l1) device_type(any)
+// OMP60: #pragma omp declare target local
+// OMP60: int l1;
+// OMP60: #pragma omp end declare target
+
+int l2;
+#pragma omp declare target device_type(nohost) local(l2)
+// OMP60: #pragma omp declare target device_type(nohost) local
+// OMP60: int l2;
+// OMP60: #pragma omp end declare target
+
+int l3;
+int a = 0;
+#pragma omp declare target local(l3) device_type(nohost) local(a)
+// OMP60: #pragma omp declare target device_type(nohost) local
+// OMP60: int l3;
+// OMP60: #pragma omp end declare target
+// OMP60: #pragma omp declare target device_type(nohost) local
+// OMP60: int a = 0;
+// OMP60: #pragma omp end declare target
+
+int b = 0, c = 0;
+#pragma omp declare target local(b,c)
+void zoo();
+// OMP60: #pragma omp declare target local
+// OMP60: int b = 0;
+// OMP60: #pragma omp end declare target
+// OMP60: #pragma omp declare target local
+// OMP60: int c = 0;
+// OMP60: #pragma omp end declare target
+// OMP60: void zoo();
 #endif // _OPENMP
 
 int out_decl_target = 0;
@@ -373,6 +410,13 @@ int x;
 // CHECK-NEXT: int x;
 // CHECK-NEXT: #pragma omp end declare target
 
+#if _OPENMP >= 202411
+int x_local;
+// OMP60: #pragma omp declare target local
+// OMP60-NEXT: int x_local;
+// OMP60-NEXT: #pragma omp end declare target
+#endif // _OPENMP
+
 int main (int argc, char **argv) {
   foo();
   foo_c();
@@ -388,6 +432,10 @@ int main (int argc, char **argv) {
 #endif
 
   #pragma omp declare target link(x)
+
+#if _OPENMP >= 202411
+  #pragma omp declare target local(x_local)
+#endif // _OPENMP
   return (0);
 }
 

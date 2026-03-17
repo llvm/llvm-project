@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
@@ -54,11 +55,39 @@ struct GpuSubgroupIdRewriter final : OpRewritePattern<gpu::SubgroupIdOp> {
     Location loc = op->getLoc();
     Type indexType = rewriter.getIndexType();
 
-    Value dimX = gpu::BlockDimOp::create(rewriter, loc, gpu::Dimension::x);
-    Value dimY = gpu::BlockDimOp::create(rewriter, loc, gpu::Dimension::y);
-    Value tidX = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::x);
-    Value tidY = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::y);
-    Value tidZ = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::z);
+    auto asMaybeIndexAttr = [&](std::optional<uint32_t> bound) -> IntegerAttr {
+      if (!bound)
+        return IntegerAttr();
+      return IntegerAttr::get(
+          indexType, static_cast<int64_t>(static_cast<uint64_t>(*bound)));
+    };
+
+    IntegerAttr maybeKnownDimX =
+        asMaybeIndexAttr(gpu::getKnownDimensionSizeAround(
+            op, gpu::DimensionKind::Block, gpu::Dimension::x));
+    IntegerAttr maybeKnownDimY =
+        asMaybeIndexAttr(gpu::getKnownDimensionSizeAround(
+            op, gpu::DimensionKind::Block, gpu::Dimension::y));
+    IntegerAttr maybeKnownDimZ =
+        asMaybeIndexAttr(gpu::getKnownDimensionSizeAround(
+            op, gpu::DimensionKind::Block, gpu::Dimension::z));
+
+    Value dimX, dimY;
+    if (maybeKnownDimX)
+      dimX = arith::ConstantOp::create(rewriter, loc, maybeKnownDimX);
+    else
+      dimX = gpu::BlockDimOp::create(rewriter, loc, gpu::Dimension::x);
+    if (maybeKnownDimY)
+      dimY = arith::ConstantOp::create(rewriter, loc, maybeKnownDimY);
+    else
+      dimY = gpu::BlockDimOp::create(rewriter, loc, gpu::Dimension::y);
+
+    Value tidX = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::x,
+                                         maybeKnownDimX);
+    Value tidY = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::y,
+                                         maybeKnownDimY);
+    Value tidZ = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::z,
+                                         maybeKnownDimZ);
 
     Value dimYxIdZ =
         arith::MulIOp::create(rewriter, loc, indexType, dimY, tidZ);

@@ -1327,11 +1327,11 @@ public:
     if (deducedType.isNull())
       return {};
 
-    if (deducedType.getAsOpaquePtr() == T->getDeducedType().getAsOpaquePtr())
+    if (deducedType == T->getDeducedType())
       return QualType(T, 0);
 
-    return Ctx.getAutoType(deducedType, T->getKeyword(), T->isDependentType(),
-                           /*IsPack=*/false, T->getTypeConstraintConcept(),
+    return Ctx.getAutoType(T->getDeducedKind(), deducedType, T->getKeyword(),
+                           T->getTypeConstraintConcept(),
                            T->getTypeConstraintArguments());
   }
 
@@ -5545,46 +5545,74 @@ void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
   llvm::APFixedPoint(Val, FXSema).toString(Str);
 }
 
-AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-                   TypeDependence ExtraDependence, QualType Canon,
-                   TemplateDecl *TypeConstraintConcept,
+DeducedType::DeducedType(TypeClass TC, DeducedKind DK,
+                         QualType DeducedAsTypeOrCanon)
+    : Type(TC, /*canon=*/DK == DeducedKind::Deduced
+                   ? DeducedAsTypeOrCanon.getCanonicalType()
+                   : DeducedAsTypeOrCanon,
+           TypeDependence::None) {
+  DeducedTypeBits.Kind = llvm::to_underlying(DK);
+  switch (DK) {
+  case DeducedKind::Undeduced:
+    break;
+  case DeducedKind::Deduced:
+    assert(!DeducedAsTypeOrCanon.isNull() && "Deduced type cannot be null");
+    addDependence(DeducedAsTypeOrCanon->getDependence() &
+                  ~TypeDependence::VariablyModified);
+    DeducedAsType = DeducedAsTypeOrCanon;
+    break;
+  case DeducedKind::DeducedAsPack:
+    addDependence(TypeDependence::UnexpandedPack);
+    [[fallthrough]];
+  case DeducedKind::DeducedAsDependent:
+    addDependence(TypeDependence::DependentInstantiation);
+    break;
+  }
+  assert(getDeducedKind() == DK && "DeducedKind does not match the type state");
+}
+
+AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
+                   AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
-    : DeducedType(Auto, DeducedAsType, ExtraDependence, Canon) {
+    : DeducedType(Auto, DK, DeducedAsTypeOrCanon) {
   AutoTypeBits.Keyword = llvm::to_underlying(Keyword);
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
   assert(TypeConstraintConcept || AutoTypeBits.NumArgs == 0);
   if (TypeConstraintConcept) {
-    if (isa<TemplateTemplateParmDecl>(TypeConstraintConcept))
-      addDependence(TypeDependence::DependentInstantiation);
+    auto Dep = TypeDependence::None;
+    if (const auto *TTP =
+            dyn_cast<TemplateTemplateParmDecl>(TypeConstraintConcept))
+      Dep = TypeDependence::DependentInstantiation |
+            (TTP->isParameterPack() ? TypeDependence::UnexpandedPack
+                                    : TypeDependence::None);
 
     auto *ArgBuffer =
         const_cast<TemplateArgument *>(getTypeConstraintArguments().data());
     for (const TemplateArgument &Arg : TypeConstraintArgs) {
-      // We only syntactically depend on the constraint arguments. They don't
-      // affect the deduced type, only its validity.
-      addDependence(
-          toSyntacticDependence(toTypeDependence(Arg.getDependence())));
-
+      Dep |= toTypeDependence(Arg.getDependence());
       new (ArgBuffer++) TemplateArgument(Arg);
     }
+    // A deduced AutoType only syntactically depends on its constraints.
+    if (DK == DeducedKind::Deduced)
+      Dep = toSyntacticDependence(Dep);
+    addDependence(Dep);
   }
 }
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                       QualType Deduced, AutoTypeKeyword Keyword,
-                       bool IsDependent, TemplateDecl *CD,
+                       DeducedKind DK, QualType Deduced,
+                       AutoTypeKeyword Keyword, TemplateDecl *CD,
                        ArrayRef<TemplateArgument> Arguments) {
-  ID.AddPointer(Deduced.getAsOpaquePtr());
-  ID.AddInteger((unsigned)Keyword);
-  ID.AddBoolean(IsDependent);
+  DeducedType::Profile(ID, DK, Deduced);
+  ID.AddInteger(llvm::to_underlying(Keyword));
   ID.AddPointer(CD);
   for (const TemplateArgument &Arg : Arguments)
     Arg.Profile(ID, Context);
 }
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-  Profile(ID, Context, getDeducedType(), getKeyword(), isDependentType(),
+  Profile(ID, Context, getDeducedKind(), getDeducedType(), getKeyword(),
           getTypeConstraintConcept(), getTypeConstraintArguments());
 }
 

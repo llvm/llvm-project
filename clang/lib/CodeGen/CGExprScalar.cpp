@@ -405,7 +405,8 @@ public:
   /// the sign of the value. It is not UB, so we use the value after conversion.
   /// NOTE: Src and Dst may be the exact same value! (point to the same thing)
   void EmitIntegerSignChangeCheck(Value *Src, QualType SrcType, Value *Dst,
-                                  QualType DstType, SourceLocation Loc);
+                                  QualType DstType, SourceLocation Loc,
+                                  bool OBTrapInvolved = false);
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are LLVM scalar types.
@@ -1303,8 +1304,10 @@ EmitIntegerSignChangeCheckHelper(Value *Src, QualType SrcType, Value *Dst,
 
 void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
                                                    Value *Dst, QualType DstType,
-                                                   SourceLocation Loc) {
-  if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange))
+                                                   SourceLocation Loc,
+                                                   bool OBTrapInvolved) {
+  if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange) &&
+      !OBTrapInvolved)
     return;
 
   llvm::Type *SrcTy = Src->getType();
@@ -1389,6 +1392,16 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
     CheckKind = ICCK_SignedIntegerTruncationOrSignChange;
     Checks.emplace_back(Check.second);
     // If the comparison result is 'i1 false', then the truncation was lossy.
+  }
+
+  if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange)) {
+    if (OBTrapInvolved) {
+      llvm::Value *Combined = Check.second.first;
+      for (const auto &C : Checks)
+        Combined = Builder.CreateAnd(Combined, C.first);
+      CGF.EmitTrapCheck(Combined, CheckHandler);
+    }
+    return;
   }
 
   llvm::Constant *StaticArgs[] = {
@@ -1828,9 +1841,10 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     EmitIntegerTruncationCheck(Src, NoncanonicalSrcType, Res,
                                NoncanonicalDstType, Loc, OBTrapInvolved);
 
-  if (Opts.EmitImplicitIntegerSignChangeChecks)
+  if (Opts.EmitImplicitIntegerSignChangeChecks ||
+      (OBTrapInvolved && !OBWrapInvolved))
     EmitIntegerSignChangeCheck(Src, NoncanonicalSrcType, Res,
-                               NoncanonicalDstType, Loc);
+                               NoncanonicalDstType, Loc, OBTrapInvolved);
 
   return Res;
 }

@@ -458,7 +458,7 @@ public:
     Inst.addOperand(MCOperand::createReg(RRegs[getRegNum()]));
   }
 
-  void addRegGPRCNoR0Operands(MCInst &Inst, unsigned N) const {
+  void addRegGPRC_NOR0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(RRegsNoR0[getRegNum()]));
   }
@@ -468,7 +468,7 @@ public:
     Inst.addOperand(MCOperand::createReg(XRegs[getRegNum()]));
   }
 
-  void addRegG8RCNoX0Operands(MCInst &Inst, unsigned N) const {
+  void addRegG8RC_NOX0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(XRegsNoX0[getRegNum()]));
   }
@@ -487,9 +487,9 @@ public:
 
   void addRegGxRCNoR0Operands(MCInst &Inst, unsigned N) const {
     if (isPPC64())
-      addRegG8RCNoX0Operands(Inst, N);
+      addRegG8RC_NOX0Operands(Inst, N);
     else
-      addRegGPRCNoR0Operands(Inst, N);
+      addRegGPRC_NOR0Operands(Inst, N);
   }
 
   void addRegF4RCOperands(MCInst &Inst, unsigned N) const {

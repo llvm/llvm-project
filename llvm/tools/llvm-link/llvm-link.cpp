@@ -75,9 +75,12 @@ static cl::opt<std::string>
     OutputFilename("o", cl::desc("Override output filename"), cl::init("-"),
                    cl::value_desc("filename"), cl::cat(LinkCategory));
 
-static cl::opt<bool> Internalize("internalize",
-                                 cl::desc("Internalize linked symbols"),
-                                 cl::cat(LinkCategory));
+static cl::opt<bool>
+    Internalize("internalize",
+                cl::desc("Internalize linked symbols - maintains existing "
+                         "linkage for the first input and converts linkage in"
+                         " all other inputs to `internal`"),
+                cl::cat(LinkCategory));
 
 static cl::opt<bool>
     DisableDITypeMap("disable-debug-info-type-map",

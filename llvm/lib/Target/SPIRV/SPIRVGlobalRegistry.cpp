@@ -1121,6 +1121,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::findSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual,
     bool ExplicitLayoutRequired, bool EmitIR) {
+  // Treat <1 x T> as T.
+  if (auto *FVT = dyn_cast<FixedVectorType>(Ty);
+      FVT && FVT->getNumElements() == 1)
+    return findSPIRVType(FVT->getElementType(), MIRBuilder, AccQual,
+                         ExplicitLayoutRequired, EmitIR);
   Ty = adjustIntTypeByWidth(Ty);
   // TODO: findMI needs to know if a layout is required.
   if (const MachineInstr *MI =
@@ -1942,6 +1947,9 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
     SPIRVTypeInst BaseType, unsigned NumElements, MachineInstr &I,
     const SPIRVInstrInfo &TII) {
+  // At this point of time all 1-element vectors are resolved. Add assertion
+  // to fire if anything changes.
+  assert(NumElements >= 2 && "SPIR-V vectors must have at least 2 components");
   Type *Ty = FixedVectorType::get(
       const_cast<Type *>(getTypeForSPIRVType(BaseType)), NumElements);
   if (const MachineInstr *MI = findMI(Ty, false, CurMF))

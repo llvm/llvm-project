@@ -23,10 +23,10 @@ template <> void f(int &&) = delete; // #cwg873-rvalue-ref
 void g(int i) {
   f(i); // calls f<int&>(int&)
   // since-cxx11-error@-1 {{call to deleted function 'f'}}
-  //   since-cxx11-note@#cwg873-lvalue-ref {{candidate function [with T = int &] has been implicitly deleted}}
+  //   since-cxx11-note@#cwg873-lvalue-ref {{candidate function [with T = int &] has been explicitly deleted}}
   f(0); // calls f<int>(int&&)
   // since-cxx11-error@-1 {{call to deleted function 'f'}}
-  //   since-cxx11-note@#cwg873-rvalue-ref {{candidate function [with T = int] has been implicitly deleted}}
+  //   since-cxx11-note@#cwg873-rvalue-ref {{candidate function [with T = int] has been explicitly deleted}}
 }
 #endif
 } // namespace cwg873

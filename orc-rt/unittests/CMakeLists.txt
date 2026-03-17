@@ -15,6 +15,7 @@ add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
   CallableTraitsHelperTest.cpp
+  ControllerInterfaceTest.cpp
   EndianTest.cpp
   ErrorCAPITest.cpp
   ErrorTest.cpp
@@ -30,6 +31,7 @@ add_orc_rt_unittest(CoreTests
   ScopeExitTest.cpp
   SessionTest.cpp
   SimpleNativeMemoryMapTest.cpp
+  SimpleNativeMemoryMapSPSCITest.cpp
   SimplePackedSerializationTest.cpp
   SPSAllocActionTest.cpp
   SPSMemoryFlagsTest.cpp
@@ -42,6 +44,7 @@ add_orc_rt_unittest(CoreTests
   iterator_range-test.cpp
   move_only_function-test.cpp
   span-test.cpp
+
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 target_compile_options(CoreTests PRIVATE ${ORC_RT_COMPILE_FLAGS})

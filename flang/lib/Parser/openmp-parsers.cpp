@@ -1634,7 +1634,7 @@ TYPE_PARSER( //
     "SIZES" >> construct<OmpClause>(construct<OmpClause::Sizes>(
                    parenthesized(nonemptyList(scalarIntExpr)))) ||
     "PERMUTATION" >> construct<OmpClause>(construct<OmpClause::Permutation>(
-                         parenthesized(nonemptyList(scalarIntExpr)))) ||
+                         parenthesized(nonemptyList(scalarIntConstantExpr)))) ||
     "THREADS"_id >> construct<OmpClause>(construct<OmpClause::Threads>()) ||
     "THREADSET" >> construct<OmpClause>(construct<OmpClause::Threadset>(
                        parenthesized(Parser<OmpThreadsetClause>{}))) ||
@@ -2549,6 +2549,7 @@ static constexpr DirectiveSet GetLoopDirectives() {
       unsigned(Directive::OMPD_fuse),
       unsigned(Directive::OMPD_tile),
       unsigned(Directive::OMPD_unroll),
+      unsigned(Directive::OMPD_interchange),
   };
   return loopDirectives;
 }

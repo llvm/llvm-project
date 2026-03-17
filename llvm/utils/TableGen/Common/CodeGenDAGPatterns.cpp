@@ -2076,7 +2076,10 @@ void TreePatternNode::print(raw_ostream &OS) const {
   for (const ScopedName &Name : NamesAsPredicateArg)
     OS << ":$pred:" << Name.getScope() << ":" << Name.getIdentifier();
 }
-void TreePatternNode::dump() const { print(dbgs()); }
+void TreePatternNode::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
 
 /// isIsomorphicTo - Return true if this node is recursively
 /// isomorphic to the specified node.  For this comparison, the node's

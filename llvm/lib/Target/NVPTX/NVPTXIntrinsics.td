@@ -6164,8 +6164,8 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
 
   let AsmString = Prefix
                   # SpCtaKindStr
-                  # ".collector::a::" # CollectorUsage
                   # !if(IsAShift, ".ashift", "")
+                  # ".collector::a::" # CollectorUsage
                   # BaseOperandsStr
                   # InputDStr
                   # ScaleInpStr

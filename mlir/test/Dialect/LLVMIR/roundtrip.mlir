@@ -1117,3 +1117,39 @@ llvm.func @escapedtypename() {
   %1 = llvm.alloca %0 x !llvm.struct<"bucket<string, double, '\\b'>::Iterator", (ptr, i64, i64)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   llvm.return
 }
+
+// Metadata attributes and llvm.named_metadata op.
+
+llvm.func @md_kernel() {
+  llvm.return
+}
+
+// CHECK: llvm.named_metadata "foo.version" [#llvm.md_node<#llvm.md_const<1 : i32>, #llvm.md_const<0 : i32>, #llvm.md_const<0 : i32>>]
+llvm.named_metadata "foo.version" [
+  #llvm.md_node<
+    #llvm.md_const<1 : i32>,
+    #llvm.md_const<0 : i32>,
+    #llvm.md_const<0 : i32>
+  >
+]
+
+// CHECK: llvm.named_metadata "foo.language" [#llvm.md_node<#llvm.md_string<"Bar">, #llvm.md_const<1 : i32>, #llvm.md_const<2 : i32>>]
+llvm.named_metadata "foo.language" [
+  #llvm.md_node<
+    #llvm.md_string<"Bar">,
+    #llvm.md_const<1 : i32>,
+    #llvm.md_const<2 : i32>
+  >
+]
+
+// CHECK: llvm.named_metadata "foo.kernel" [#llvm.md_node<#llvm.md_func<@md_kernel>, #llvm.md_node<>, #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>>]
+llvm.named_metadata "foo.kernel" [
+  #llvm.md_node<
+    #llvm.md_func<@md_kernel>,
+    #llvm.md_node<>,
+    #llvm.md_node<
+      #llvm.md_const<0 : i32>,
+      #llvm.md_string<"foo.buffer">
+    >
+  >
+]

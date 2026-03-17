@@ -215,3 +215,140 @@ def testTranslateToLLVMIR():
         # CHECK:   ret i64 %3
         # CHECK: }
         print(llvm.translate_module_to_llvmir(module.operation))
+
+
+# CHECK-LABEL: testMetadataAttrs
+@constructAndPrintInModule
+def testMetadataAttrs():
+    # MDStringAttr
+    md_str = llvm.MDStringAttr.get("foo.buffer")
+    # CHECK: #llvm.md_string<"foo.buffer">
+    print(md_str)
+    assert md_str.value == "foo.buffer"
+
+    # MDConstantAttr
+    i32 = IntegerType.get_signless(32)
+    md_const = llvm.MDConstantAttr.get(IntegerAttr.get(i32, 42))
+    # CHECK: #llvm.md_const<42 : i32>
+    print(md_const)
+
+    # MDFuncAttr
+    md_func = llvm.MDFuncAttr.get("my_kernel")
+    # CHECK: #llvm.md_func<@my_kernel>
+    print(md_func)
+    assert md_func.name == "my_kernel"
+
+    # MDNodeAttr - empty
+    md_empty = llvm.MDNodeAttr.get([])
+    # CHECK: #llvm.md_node<>
+    print(md_empty)
+    assert len(md_empty) == 0
+
+    # MDNodeAttr - with operands
+    md_node = llvm.MDNodeAttr.get([md_const, md_str])
+    # CHECK: #llvm.md_node<#llvm.md_const<42 : i32>, #llvm.md_string<"foo.buffer">>
+    print(md_node)
+    assert len(md_node) == 2
+
+    # MDNodeAttr - __getitem__
+    # CHECK: #llvm.md_const<42 : i32>
+    print(md_node[0])
+    # CHECK: #llvm.md_string<"foo.buffer">
+    print(md_node[1])
+    assert str(md_node[0]) == str(md_const)
+    assert str(md_node[1]) == str(md_str)
+
+    # MDNodeAttr - nested
+    md_nested = llvm.MDNodeAttr.get([md_node, md_empty])
+    # CHECK: #llvm.md_node<#llvm.md_node<#llvm.md_const<42 : i32>, #llvm.md_string<"foo.buffer">>, #llvm.md_node<>>
+    print(md_nested)
+    assert len(md_nested) == 2
+
+
+# CHECK-LABEL: testNamedMetadata
+@constructAndPrintInModule
+def testNamedMetadata():
+    void = Type.parse("!llvm.void")
+    func_ty = llvm.FunctionType.get(void, [])
+
+    llvm.LLVMFuncOp("my_kernel", TypeAttr.get(func_ty))
+    # CHECK-LABEL:   llvm.func @my_kernel()
+
+    llvm.NamedMetadataOp(
+        metadata_name="foo.version",
+        nodes=ArrayAttr.get(
+            [
+                llvm.MDNodeAttr.get(
+                    [llvm.md_const(1), llvm.md_const(0), llvm.md_const(0)]
+                )
+            ]
+        ),
+    )
+    # CHECK: llvm.named_metadata "foo.version" [#llvm.md_node<#llvm.md_const<1 : i32>, #llvm.md_const<0 : i32>, #llvm.md_const<0 : i32>>]
+
+    llvm.NamedMetadataOp(
+        metadata_name="foo.language_version",
+        nodes=ArrayAttr.get(
+            [
+                llvm.MDNodeAttr.get(
+                    [
+                        llvm.md_str("Bar"),
+                        llvm.md_const(1),
+                        llvm.md_const(2),
+                        llvm.md_const(3),
+                    ]
+                )
+            ]
+        ),
+    )
+    # CHECK: llvm.named_metadata "foo.language_version" [#llvm.md_node<#llvm.md_string<"Bar">, #llvm.md_const<1 : i32>, #llvm.md_const<2 : i32>, #llvm.md_const<3 : i32>>]
+
+    buf0 = llvm.MDNodeAttr.get(
+        [
+            llvm.md_const(0),
+            llvm.md_str("foo.buffer"),
+            llvm.md_str("foo.idx"),
+            llvm.md_const(0),
+            llvm.md_const(1),
+            llvm.md_str("foo.read"),
+            llvm.md_str("foo.address_space"),
+            llvm.md_const(1),
+            llvm.md_str("foo.size"),
+            llvm.md_const(4),
+            llvm.md_str("foo.align_size"),
+            llvm.md_const(4),
+        ]
+    )
+
+    llvm.NamedMetadataOp(
+        metadata_name="foo.kernel",
+        nodes=ArrayAttr.get(
+            [
+                llvm.MDNodeAttr.get(
+                    [
+                        llvm.MDFuncAttr.get("my_kernel"),
+                        llvm.MDNodeAttr.get([]),
+                        buf0,
+                    ]
+                )
+            ]
+        ),
+    )
+    # CHECK:       llvm.named_metadata "foo.kernel" [
+    # CHECK-SAME:  #llvm.md_node<
+    # CHECK-SAME:      #llvm.md_func<@my_kernel>,
+    # CHECK-SAME:      #llvm.md_node<>,
+    # CHECK-SAME:      #llvm.md_node<
+    # CHECK-SAME:          #llvm.md_const<0 : i32>,
+    # CHECK-SAME:          #llvm.md_string<"foo.buffer">,
+    # CHECK-SAME:          #llvm.md_string<"foo.idx">,
+    # CHECK-SAME:          #llvm.md_const<0 : i32>,
+    # CHECK-SAME:          #llvm.md_const<1 : i32>,
+    # CHECK-SAME:          #llvm.md_string<"foo.read">,
+    # CHECK-SAME:          #llvm.md_string<"foo.address_space">,
+    # CHECK-SAME:          #llvm.md_const<1 : i32>,
+    # CHECK-SAME:          #llvm.md_string<"foo.size">,
+    # CHECK-SAME:          #llvm.md_const<4 : i32>,
+    # CHECK-SAME:          #llvm.md_string<"foo.align_size">,
+    # CHECK-SAME:          #llvm.md_const<4 : i32>>
+    # CHECK-SAME:    >]

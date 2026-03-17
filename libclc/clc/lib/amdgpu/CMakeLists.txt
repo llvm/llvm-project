@@ -3,6 +3,7 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   address_space/clc_qualifier.cl
   math/clc_exp.cl
   math/clc_exp2.cl
+  math/clc_exp2_fast.cl
   math/clc_exp10.cl
   math/clc_frexp.cl
   math/clc_half_exp.cl
@@ -15,6 +16,7 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   math/clc_half_rsqrt.cl
   math/clc_half_sqrt.cl
   math/clc_ldexp.cl
+  math/clc_log2_fast.cl
   math/clc_native_exp.cl
   math/clc_native_exp2.cl
   math/clc_native_log10.cl
