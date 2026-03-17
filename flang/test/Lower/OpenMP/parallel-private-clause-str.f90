@@ -9,7 +9,7 @@
 
 !CHECK:  omp.private {type = private} @{{.*}}test_allocatable_fixed_len_stringEfixed_len_str{{.*}} init {
 !CHECK:    fir.if {{.*}} {
-!CHECK:      fir.embox %{{[^[:space:]]+}} {allocator_idx = 0 : i32} : {{.*}}
+!CHECK:      fir.embox %{{[^[:space:]]+}} : {{.*}}
 !CHECK:    } else {
 !CHECK:      fir.embox %{{[^[:space:]]+}} : {{.*}}
 !CHECK:    }

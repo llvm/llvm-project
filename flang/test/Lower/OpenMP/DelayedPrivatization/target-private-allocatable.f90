@@ -39,7 +39,7 @@ end subroutine target_allocatable
 ! CPU-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi eq, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
 
 ! CPU-NEXT:   fir.if %[[ALLOC_COND]] {
-! CPU-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[PRIV_ARG_BOX]] {allocator_idx = 0 : i32} : (!fir.heap<i32>) -> [[DESC_TYPE]]
+! CPU-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> [[DESC_TYPE]]
 ! CPU-NEXT:     fir.store %[[ZERO_BOX]] to %[[PRIV_ALLOC]] : [[TYPE]]
 ! CPU-NEXT:   } else {
 ! CPU-NEXT:     %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32
