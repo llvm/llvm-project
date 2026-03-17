@@ -1,4 +1,4 @@
-//===- AnalysisDriver.h ---------------------------------------------------===//
+//===- AnalysisDriver.h -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,8 +25,8 @@
 namespace clang::ssaf {
 
 class AnalysisBase;
-class SummaryAnalysisBase;
 class DerivedAnalysisBase;
+class SummaryAnalysisBase;
 
 /// Orchestrates whole-program analysis over an LUSummary.
 ///
@@ -59,11 +59,12 @@ public:
   /// LUSummary. The EntityIdTable is copied (not moved) so the driver remains
   /// usable for subsequent calls.
   [[nodiscard]] llvm::Expected<WPASuite>
-  run(llvm::ArrayRef<AnalysisName> Names);
+  run(llvm::ArrayRef<AnalysisName> Names) const;
 
   /// Type-safe variant of run(names). Derives names from
   /// ResultTs::analysisName().
-  template <typename... ResultTs> [[nodiscard]] llvm::Expected<WPASuite> run() {
+  template <typename... ResultTs>
+  [[nodiscard]] llvm::Expected<WPASuite> run() const {
     return run({ResultTs::analysisName()...});
   }
 
@@ -74,21 +75,19 @@ private:
   /// dependencies) and returns them in topological order via a single DFS.
   /// Reports an error on unregistered names or cycles.
   static llvm::Expected<std::vector<std::unique_ptr<AnalysisBase>>>
-  sort(llvm::ArrayRef<AnalysisName> Roots);
+  toposort(llvm::ArrayRef<AnalysisName> Roots);
 
   /// Executes a topologically-sorted analysis list and returns a WPASuite.
   /// \p IdTable is moved into the returned WPASuite.
   llvm::Expected<WPASuite>
   execute(EntityIdTable IdTable,
-          std::vector<std::unique_ptr<AnalysisBase>> Sorted);
+          llvm::ArrayRef<std::unique_ptr<AnalysisBase>> Sorted) const;
 
-  llvm::Error
-  executeSummaryAnalysis(std::unique_ptr<SummaryAnalysisBase> Summary,
-                         WPASuite &Suite);
+  llvm::Error executeSummaryAnalysis(SummaryAnalysisBase &Summary,
+                                     WPASuite &Suite) const;
 
-  llvm::Error
-  executeDerivedAnalysis(std::unique_ptr<DerivedAnalysisBase> Derived,
-                         WPASuite &Suite);
+  llvm::Error executeDerivedAnalysis(DerivedAnalysisBase &Derived,
+                                     WPASuite &Suite) const;
 };
 
 } // namespace clang::ssaf

@@ -1,4 +1,4 @@
-//===- DerivedAnalysis.h --------------------------------------------------===//
+//===- DerivedAnalysis.h ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -56,9 +56,6 @@ private:
 
   /// Called after the step() loop converges. Default is a no-op.
   virtual llvm::Error finalize() { return llvm::Error::success(); }
-
-  /// Transfers ownership of the computed result. Called once after finalize().
-  virtual std::unique_ptr<AnalysisResult> result() && = 0;
 };
 
 /// Typed intermediate that concrete derived analyses inherit from.
@@ -85,11 +82,9 @@ class DerivedAnalysis : public DerivedAnalysisBase {
   friend class AnalysisRegistry;
   using ResultType = ResultT;
 
-  std::unique_ptr<ResultT> Result;
+  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
 
 public:
-  DerivedAnalysis() : Result(std::make_unique<ResultT>()) {}
-
   /// Used by AnalysisRegistry::Add to derive the registry entry name.
   AnalysisName analysisName() const final { return ResultT::analysisName(); }
 

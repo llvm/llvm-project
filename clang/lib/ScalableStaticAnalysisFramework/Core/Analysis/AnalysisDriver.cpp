@@ -24,7 +24,7 @@ AnalysisDriver::AnalysisDriver(std::unique_ptr<LUSummary> LU)
     : LU(std::move(LU)) {}
 
 llvm::Expected<std::vector<std::unique_ptr<AnalysisBase>>>
-AnalysisDriver::sort(llvm::ArrayRef<AnalysisName> Roots) {
+AnalysisDriver::toposort(llvm::ArrayRef<AnalysisName> Roots) {
   struct Visitor {
     enum class State { Unvisited, Visiting, Visited };
 
@@ -42,8 +42,9 @@ AnalysisDriver::sort(llvm::ArrayRef<AnalysisName> Roots) {
     }
 
     llvm::Error visit(const AnalysisName &Name) {
-      auto It = Marks.find(Name);
-      switch (It != Marks.end() ? It->second : State::Unvisited) {
+      auto [It, _] = Marks.emplace(Name, State::Unvisited);
+
+      switch (It->second) {
       case State::Visited:
         return llvm::Error::success();
 
@@ -53,26 +54,25 @@ AnalysisDriver::sort(llvm::ArrayRef<AnalysisName> Roots) {
             .build();
 
       case State::Unvisited: {
-        Marks[Name] = State::Visiting;
+        It->second = State::Visiting;
         Path.push_back(Name);
 
         auto V = AnalysisRegistry::instantiate(Name.str());
         if (!V) {
-          Path.pop_back();
           return V.takeError();
         }
 
         auto Analysis = std::move(*V);
         for (const auto &Dep : Analysis->dependencyNames()) {
           if (auto Err = visit(Dep)) {
-            Path.pop_back();
             return Err;
           }
         }
 
-        Marks[Name] = State::Visited;
+        It->second = State::Visited;
         Path.pop_back();
         Result.push_back(std::move(Analysis));
+
         return llvm::Error::success();
       }
       }
@@ -89,57 +89,54 @@ AnalysisDriver::sort(llvm::ArrayRef<AnalysisName> Roots) {
   return std::move(V.Result);
 }
 
-llvm::Error AnalysisDriver::executeSummaryAnalysis(
-    std::unique_ptr<SummaryAnalysisBase> Summary, WPASuite &Suite) {
-  SummaryName SN = Summary->summaryName();
+llvm::Error AnalysisDriver::executeSummaryAnalysis(SummaryAnalysisBase &Summary,
+                                                   WPASuite &Suite) const {
+  SummaryName SN = Summary.summaryName();
   auto DataIt = LU->Data.find(SN);
   if (DataIt == LU->Data.end()) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 "no data for analysis '{0}' in LUSummary",
-                                Summary->analysisName())
+                                Summary.analysisName())
         .build();
   }
 
-  if (auto Err = Summary->initialize()) {
+  if (auto Err = Summary.initialize()) {
     return Err;
   }
 
   for (auto &[Id, EntitySummary] : DataIt->second) {
-    if (auto Err = Summary->add(Id, *EntitySummary)) {
+    if (auto Err = Summary.add(Id, *EntitySummary)) {
       return Err;
     }
   }
 
-  if (auto Err = Summary->finalize()) {
+  if (auto Err = Summary.finalize()) {
     return Err;
   }
-
-  AnalysisName Name = Summary->analysisName();
-  Suite.Data.emplace(Name, std::move(*Summary).result());
 
   return llvm::Error::success();
 }
 
-llvm::Error AnalysisDriver::executeDerivedAnalysis(
-    std::unique_ptr<DerivedAnalysisBase> Derived, WPASuite &Suite) {
+llvm::Error AnalysisDriver::executeDerivedAnalysis(DerivedAnalysisBase &Derived,
+                                                   WPASuite &Suite) const {
   std::map<AnalysisName, const AnalysisResult *> DepMap;
 
-  for (const auto &DepName : Derived->dependencyNames()) {
+  for (const auto &DepName : Derived.dependencyNames()) {
     auto It = Suite.Data.find(DepName);
     if (It == Suite.Data.end()) {
       ErrorBuilder::fatal("missing dependency '{0}' for analysis '{1}': "
                           "dependency graph is not topologically sorted",
-                          DepName, Derived->analysisName());
+                          DepName, Derived.analysisName());
     }
     DepMap[DepName] = It->second.get();
   }
 
-  if (auto Err = Derived->initialize(DepMap)) {
+  if (auto Err = Derived.initialize(DepMap)) {
     return Err;
   }
 
   while (true) {
-    auto StepOrErr = Derived->step();
+    auto StepOrErr = Derived.step();
     if (!StepOrErr) {
       return StepOrErr.takeError();
     }
@@ -148,60 +145,57 @@ llvm::Error AnalysisDriver::executeDerivedAnalysis(
     }
   }
 
-  if (auto Err = Derived->finalize()) {
+  if (auto Err = Derived.finalize()) {
     return Err;
   }
-
-  AnalysisName Name = Derived->analysisName();
-  Suite.Data.emplace(Name, std::move(*Derived).result());
 
   return llvm::Error::success();
 }
 
-llvm::Expected<WPASuite>
-AnalysisDriver::execute(EntityIdTable IdTable,
-                        std::vector<std::unique_ptr<AnalysisBase>> Sorted) {
+llvm::Expected<WPASuite> AnalysisDriver::execute(
+    EntityIdTable IdTable,
+    llvm::ArrayRef<std::unique_ptr<AnalysisBase>> Sorted) const {
   WPASuite Suite;
   Suite.IdTable = std::move(IdTable);
 
-  for (auto &V : Sorted) {
-    switch (V->TheKind) {
+  for (auto &Analysis : Sorted) {
+    switch (Analysis->TheKind) {
     case AnalysisBase::Kind::Summary: {
-      auto SA = std::unique_ptr<SummaryAnalysisBase>(
-          static_cast<SummaryAnalysisBase *>(V.release()));
-      if (auto Err = executeSummaryAnalysis(std::move(SA), Suite)) {
+      SummaryAnalysisBase &SA = static_cast<SummaryAnalysisBase &>(*Analysis);
+      if (auto Err = executeSummaryAnalysis(SA, Suite)) {
         return std::move(Err);
       }
       break;
     }
     case AnalysisBase::Kind::Derived: {
-      auto DA = std::unique_ptr<DerivedAnalysisBase>(
-          static_cast<DerivedAnalysisBase *>(V.release()));
-      if (auto Err = executeDerivedAnalysis(std::move(DA), Suite)) {
+      DerivedAnalysisBase &DA = static_cast<DerivedAnalysisBase &>(*Analysis);
+      if (auto Err = executeDerivedAnalysis(DA, Suite)) {
         return std::move(Err);
       }
       break;
     }
     }
+    AnalysisName Name = Analysis->analysisName();
+    Suite.Data.emplace(Name, std::move(*Analysis).result());
   }
 
   return Suite;
 }
 
 llvm::Expected<WPASuite> AnalysisDriver::run() && {
-  auto ExpectedSorted = sort(AnalysisRegistry::names());
+  auto ExpectedSorted = toposort(AnalysisRegistry::names());
   if (!ExpectedSorted) {
     return ExpectedSorted.takeError();
   }
-  return execute(std::move(LU->IdTable), std::move(*ExpectedSorted));
+  return execute(std::move(LU->IdTable), *ExpectedSorted);
 }
 
 llvm::Expected<WPASuite>
-AnalysisDriver::run(llvm::ArrayRef<AnalysisName> Names) {
-  auto ExpectedSorted = sort(Names);
+AnalysisDriver::run(llvm::ArrayRef<AnalysisName> Names) const {
+  auto ExpectedSorted = toposort(Names);
   if (!ExpectedSorted) {
     return ExpectedSorted.takeError();
   }
 
-  return execute(LU->IdTable, std::move(*ExpectedSorted));
+  return execute(LU->IdTable, *ExpectedSorted);
 }

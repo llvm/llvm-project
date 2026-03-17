@@ -1,4 +1,4 @@
-//===- SummaryAnalysis.h --------------------------------------------------===//
+//===- SummaryAnalysis.h ----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -56,10 +56,6 @@ private:
 
   /// Called after all entities have been processed. Default is a no-op.
   virtual llvm::Error finalize() { return llvm::Error::success(); }
-
-  /// Transfers ownership of the built result. Called once after finalize().
-  /// The rvalue ref-qualifier enforces single use.
-  virtual std::unique_ptr<AnalysisResult> result() && = 0;
 };
 
 /// Typed intermediate that concrete summary analyses inherit from.
@@ -82,11 +78,9 @@ class SummaryAnalysis : public SummaryAnalysisBase {
   friend class AnalysisRegistry;
   using ResultType = ResultT;
 
-  std::unique_ptr<ResultT> Result;
+  std::unique_ptr<ResultT> Result = std::make_unique<ResultT>();
 
 public:
-  SummaryAnalysis() : Result(std::make_unique<ResultT>()) {}
-
   /// Used by AnalysisRegistry::Add to derive the registry entry name.
   AnalysisName analysisName() const final { return ResultT::analysisName(); }
 
