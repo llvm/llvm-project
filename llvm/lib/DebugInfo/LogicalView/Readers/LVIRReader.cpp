@@ -2179,10 +2179,14 @@ Error LVIRReader::createScopes() {
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseIR(
       BitCodeIR ? BitCodeIR->getMemoryBufferRef() : *TextualIR, Err, Context);
-  if (!M)
+  if (!M) {
+    // Print explanatory error message.
+    if (options().getWarningAll())
+      Err.print("", outs());
     return createStringError(errc::invalid_argument,
                              "Could not create IR module for: %s",
                              getFilename().str().c_str());
+  }
 
   TheModule = M.get();
   if (!TheModule->getNamedMetadata("llvm.dbg.cu")) {
