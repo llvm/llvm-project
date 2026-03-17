@@ -89,9 +89,8 @@ TEST(LoopUtils, DeleteDeadLoopNest) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI++);
         assert(Entry->getName() == "entry" && "Expecting BasicBlock entry");
-        const BranchInst *BI = dyn_cast<BranchInst>(Entry->getTerminator());
+        const UncondBrInst *BI = dyn_cast<UncondBrInst>(Entry->getTerminator());
         assert(BI && "Expecting valid branch instruction");
-        EXPECT_EQ(BI->getNumSuccessors(), (unsigned)1);
         EXPECT_EQ(BI->getSuccessor(0)->getName(), "for.end");
       });
 }

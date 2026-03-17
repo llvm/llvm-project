@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
 // Tests struct member arrays with both variable count expression and variable
 // stride.
 

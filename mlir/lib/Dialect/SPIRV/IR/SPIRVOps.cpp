@@ -575,7 +575,7 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
              << opType << ") does not match value type (" << valueType << ")";
     return success();
   }
-  if (isa<DenseIntOrFPElementsAttr, SparseElementsAttr>(value)) {
+  if (isa<DenseTypedElementsAttr, SparseElementsAttr>(value)) {
     auto valueType = cast<TypedAttr>(value).getType();
     if (valueType == opType)
       return success();
@@ -1694,94 +1694,6 @@ LogicalResult spirv::VectorShuffleOp::verify() {
              << index << " out of range: expected to be in [0, "
              << totalSrcElements << ") or 0xffffffff";
   }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.Transpose
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::TransposeOp::verify() {
-  auto inputMatrix = cast<spirv::MatrixType>(getMatrix().getType());
-  auto resultMatrix = cast<spirv::MatrixType>(getResult().getType());
-
-  // Verify that the input and output matrices have correct shapes.
-  if (inputMatrix.getNumRows() != resultMatrix.getNumColumns())
-    return emitError("input matrix rows count must be equal to "
-                     "output matrix columns count");
-
-  if (inputMatrix.getNumColumns() != resultMatrix.getNumRows())
-    return emitError("input matrix columns count must be equal to "
-                     "output matrix rows count");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.MatrixTimesVector
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::MatrixTimesVectorOp::verify() {
-  auto matrixType = cast<spirv::MatrixType>(getMatrix().getType());
-  auto vectorType = cast<VectorType>(getVector().getType());
-  auto resultType = cast<VectorType>(getType());
-
-  if (matrixType.getNumColumns() != vectorType.getNumElements())
-    return emitOpError("matrix columns (")
-           << matrixType.getNumColumns() << ") must match vector operand size ("
-           << vectorType.getNumElements() << ")";
-
-  if (resultType.getNumElements() != matrixType.getNumRows())
-    return emitOpError("result size (")
-           << resultType.getNumElements() << ") must match the matrix rows ("
-           << matrixType.getNumRows() << ")";
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.VectorTimesMatrix
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::VectorTimesMatrixOp::verify() {
-  auto vectorType = cast<VectorType>(getVector().getType());
-  auto matrixType = cast<spirv::MatrixType>(getMatrix().getType());
-  auto resultType = cast<VectorType>(getType());
-
-  if (matrixType.getNumRows() != vectorType.getNumElements())
-    return emitOpError("number of components in vector must equal the number "
-                       "of components in each column in matrix");
-
-  if (resultType.getNumElements() != matrixType.getNumColumns())
-    return emitOpError("number of columns in matrix must equal the number of "
-                       "components in result");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.MatrixTimesMatrix
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::MatrixTimesMatrixOp::verify() {
-  auto leftMatrix = cast<spirv::MatrixType>(getLeftmatrix().getType());
-  auto rightMatrix = cast<spirv::MatrixType>(getRightmatrix().getType());
-  auto resultMatrix = cast<spirv::MatrixType>(getResult().getType());
-
-  // left matrix columns' count and right matrix rows' count must be equal
-  if (leftMatrix.getNumColumns() != rightMatrix.getNumRows())
-    return emitError("left matrix columns' count must be equal to "
-                     "the right matrix rows' count");
-
-  // right and result matrices columns' count must be the same
-  if (rightMatrix.getNumColumns() != resultMatrix.getNumColumns())
-    return emitError(
-        "right and result matrices must have equal columns' count");
-
-  // left and result matrices rows count must be the same
-  if (leftMatrix.getNumRows() != resultMatrix.getNumRows())
-    return emitError("left and result matrices must have equal rows' count");
-
   return success();
 }
 

@@ -48,7 +48,7 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
 
   message( STATUS "libclc LLVM version: ${LLVM_PACKAGE_VERSION}" )
 
-  foreach( tool IN ITEMS llvm-link opt )
+  foreach( tool IN ITEMS llvm-link llvm-dis opt )
     find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
     set( ${tool}_exe ${LLVM_TOOL_${tool}} )
     set( ${tool}_target )
@@ -73,6 +73,7 @@ else()
   endif()
 
   get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
+  get_host_tool_path( llvm-dis LLVM_DIS llvm-dis_exe llvm-dis_target )
   get_host_tool_path( opt OPT opt_exe opt_target )
 
   # Setup the paths where libclc runtimes should be stored. By default, in an
@@ -137,12 +138,6 @@ add_custom_target( libclc ALL )
 
 add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
 add_dependencies( libclc libclc-opencl-builtins )
-
-configure_file( libclc.pc.in libclc.pc @ONLY )
-install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
-
-enable_testing()
 
 foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   message( STATUS "libclc target '${t}' is enabled" )
@@ -279,5 +274,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     COMPILE_DEFINITIONS ${_common_defs}
     INTERNALIZE_LIBRARIES ${clc_lib}
     OPT_FLAGS ${opt_flags}
+    OUTPUT_FILENAME libclc
+    PARENT_TARGET libclc-opencl-builtins
   )
 endforeach()
+
+add_subdirectory(test)
