@@ -109,7 +109,7 @@ InstructionCost LoopReduceMotionPass::getReductionPatternCost(
           InstructionCost MulCost =
               TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
           InstructionCost RedCost = TTI.getMulAccReductionCost(
-              IsUnsigned, RedOp->getOpcode(), Ty->getScalarType(),
+              IsUnsigned, Instruction::Add, Ty->getScalarType(),
               cast<VectorType>(Op0SrcTy), CostKind);
 
           if (RedCost.isValid() &&
@@ -122,7 +122,7 @@ InstructionCost LoopReduceMotionPass::getReductionPatternCost(
       InstructionCost MulCost =
           TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
       InstructionCost RedCost = TTI.getMulAccReductionCost(
-          true, RedOp->getOpcode(), Ty->getScalarType(), VectorTy, CostKind);
+          true, Instruction::Add, Ty->getScalarType(), VectorTy, CostKind);
 
       if (RedCost.isValid() && RedCost < BaseCost + MulCost)
         return RedCost;
@@ -215,7 +215,8 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
 
     auto SE = &AR.SE;
     RecurrenceDescriptor RecDesc;
-    if (!RecurrenceDescriptor::isReductionPHI(PN, &L, RecDesc, nullptr, nullptr, nullptr, SE))
+    if (!RecurrenceDescriptor::isReductionPHI(PN, &L, RecDesc, nullptr, nullptr,
+                                              nullptr, SE))
       continue;
 
     if (RecDesc.getRecurrenceKind() != RecurKind::Add)
