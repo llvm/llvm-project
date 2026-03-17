@@ -51,8 +51,7 @@ TEST_F(VPPostDomFrontierTest, SingleExitTest) {
   VPBlockUtils::connectBlocks(VPBB6, VPBB7);
 
   VPPostDominatorTree VPPDT(Plan);
-  DominanceFrontierBase<VPBlockBase, true> VPPDF;
-  VPPDF.analyze(VPPDT);
+  VPPostDominanceFrontier VPPDF(VPPDT);
 
   EXPECT_TRUE(VPPDF.find(VPBB0) != VPPDF.end());
   EXPECT_TRUE(VPPDF.find(VPBB1) != VPPDF.end());
@@ -117,7 +116,7 @@ TEST_F(VPPostDomFrontierTest, MultipleExitsTest) {
   VPBlockUtils::connectBlocks(VPBB5, VPBB6);
 
   VPPostDominatorTree VPPDT(Plan);
-  DominanceFrontierBase<VPBlockBase, true> VPPDF;
+  VPPostDominanceFrontier VPPDF(VPPDT);
   VPPDF.analyze(VPPDT);
 
   EXPECT_TRUE(VPPDF.find(VPBB0) != VPPDF.end());
