@@ -7,10 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/mathvec/expf.h"
+#include "src/__support/common.h"
 #include "src/__support/mathvec/expf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-cpp::simd<float> expf(cpp::simd<float> x) { return mathvec::expf(x); }
+LLVM_LIBC_FUNCTION(cpp::simd<float>, expf, (cpp::simd<float> x),
+                   "_ZGVbN4v_expf") {
+  return mathvec::expf(x);
+}
 
 } // namespace LIBC_NAMESPACE_DECL
