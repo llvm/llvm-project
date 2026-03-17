@@ -34480,10 +34480,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     if (auto *SrcC = dyn_cast<ConstantSDNode>(Src)) {
       // SHL(1,Amt) --> SELECT(1<<(Amt/64), SPLAT(1<<(Amt%64)), 0)
+      // SHL(-1,Amt)
+      // --> SELECT(1<<(Amt/64), SPLAT(-1<<(Amt%64)), (i512)-1<<(Amt&~63))
       // SRL(MSB,Amt) --> SELECT(MSB8>>u(Amt/64), SPLAT(MSB64>>u(Amt%64)), 0)
-      if ((Opc == ISD::SHL && SrcC->getAPIntValue() == 1) ||
-          (Opc == ISD::SRL && SrcC->getAPIntValue().isSignMask())) {
-        APInt EltBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 63);
+      // SRL(-1,Amt)
+      // --> SELECT(MSB8>>u(Amt/64), SPLAT(-1>>u(Amt%64)), (i512)-1>>(Amt&~63))
+      const APInt &SrcVal = SrcC->getAPIntValue();
+      bool IsAllBits = SrcVal.isAllOnes();
+      if ((Opc == ISD::SHL && (IsAllBits || SrcVal == 1)) ||
+          (Opc == ISD::SRL && (IsAllBits || SrcVal.isSignMask()))) {
+        APInt EltBitVal =
+            IsAllBits ? APInt::getAllOnes(64)
+                      : APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 63);
         APInt LaneBitVal =
             APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : (NumElts - 1));
         SDValue EltBit = DAG.getConstant(EltBitVal, dl, MVT::i64);
@@ -34491,13 +34499,27 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         SDValue AmtMod = DAG.getNode(ISD::AND, dl, MVT::i64,
                                      DAG.getZExtOrTrunc(Amt, dl, MVT::i64),
                                      DAG.getConstant(63, dl, MVT::i64));
+
+        SDValue Res = DAG.getConstant(0, dl, VecVT);
+        if (IsAllBits) {
+          APInt AllBitsVal = Opc == ISD::SHL
+                                 ? APInt::getAllOnes(64)
+                                 : APInt::getLowBitsSet(64, NumElts);
+          SDValue AllBitsMask =
+              DAG.getNode(Opc, dl, MVT::i64,
+                          DAG.getConstant(AllBitsVal, dl, MVT::i64), AmtLane);
+          AllBitsMask = DAG.getBitcast(
+              BoolVT, DAG.getZExtOrTrunc(AllBitsMask, dl, MVT::i8));
+          Res = DAG.getSelect(dl, VecVT, AllBitsMask,
+                              DAG.getAllOnesConstant(dl, VecVT), Res);
+        }
+
         SDValue LaneMask = DAG.getNode(Opc, dl, MVT::i64, LaneBit, AmtLane);
         LaneMask =
             DAG.getBitcast(BoolVT, DAG.getZExtOrTrunc(LaneMask, dl, MVT::i8));
         SDValue Elt = DAG.getNode(Opc, dl, MVT::i64, EltBit, AmtMod);
-        SDValue Res =
-            DAG.getSelect(dl, VecVT, LaneMask, DAG.getSplat(VecVT, dl, Elt),
-                          DAG.getConstant(0, dl, VecVT));
+        Res = DAG.getSelect(dl, VecVT, LaneMask, DAG.getSplat(VecVT, dl, Elt),
+                            Res);
         Results.push_back(DAG.getBitcast(VT, Res));
         return;
       }

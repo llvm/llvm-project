@@ -397,9 +397,11 @@ TEST(SessionTest, ControllerInterfaceContainsSessionByDefault) {
 TEST(SessionTest, ControllerInterfaceWithRef) {
   Session S(std::make_unique<NoDispatcher>(), noErrors);
   int X = 0, Y = 0;
-  S.controllerInterface().with_ref([&](Session::SymbolMap &Syms) {
-    Syms["orc_rt_A"] = &X;
-    Syms["orc_rt_B"] = &Y;
+  S.controllerInterface().with_ref([&](ControllerInterface &CI) {
+    std::pair<const char *, void *> Syms[] = {
+        {"orc_rt_A", static_cast<void *>(&X)},
+        {"orc_rt_B", static_cast<void *>(&Y)}};
+    cantFail(CI.addSymbolsUnique(Syms));
   });
 
   EXPECT_EQ(S.controllerInterface()->at("orc_rt_A"), &X);
@@ -409,7 +411,8 @@ TEST(SessionTest, ControllerInterfaceWithRef) {
 TEST(SessionTest, ControllerInterfaceConstAccess) {
   Session S(std::make_unique<NoDispatcher>(), noErrors);
   int X = 0;
-  S.controllerInterface()->emplace("orc_rt_X", &X);
+  std::pair<const char *, void *> Syms[] = {{"orc_rt_X", &X}};
+  cantFail(S.controllerInterface()->addSymbolsUnique(Syms));
 
   const Session &CS = S;
   ASSERT_TRUE(CS.controllerInterface()->count("orc_rt_X"));

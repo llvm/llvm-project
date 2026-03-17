@@ -13639,24 +13639,20 @@ ASTContext::getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
   return nullptr;
 }
 
-bool ASTContext::classNeedsVectorDeletingDestructor(const CXXRecordDecl *RD) {
+bool ASTContext::classMaybeNeedsVectorDeletingDestructor(
+    const CXXRecordDecl *RD) {
   if (!getTargetInfo().emitVectorDeletingDtors(getLangOpts()))
     return false;
-  CXXDestructorDecl *Dtor = RD->getDestructor();
-  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
-  // so just force vector deleting destructor emission if dllexport is present.
-  // This matches MSVC behavior.
-  if (Dtor && Dtor->isVirtual() && Dtor->hasAttr<DLLExportAttr>())
-    return true;
 
-  return RequireVectorDeletingDtor.count(RD);
+  return MaybeRequireVectorDeletingDtor.count(RD);
 }
 
-void ASTContext::setClassNeedsVectorDeletingDestructor(
+void ASTContext::setClassMaybeNeedsVectorDeletingDestructor(
     const CXXRecordDecl *RD) {
   if (!getTargetInfo().emitVectorDeletingDtors(getLangOpts()))
     return;
-  RequireVectorDeletingDtor.insert(RD);
+
+  MaybeRequireVectorDeletingDtor.insert(RD);
 }
 
 MangleNumberingContext &
