@@ -43,8 +43,8 @@ subroutine test4(x)
   print *,asinh(x)
 end subroutine test4
 
-! CHECK-WARN:      warning: loc({{.*}}math-name-conflict.f90{{.*}}): function
+! CHECK-WARN:      warning: #loc({{.*}}math-name-conflict.f90{{.*}}): function
 ! CHECK-WARN-SAME: signature mismatch for 'atanh' may lead to undefined behavior.
-! CHECK-WARN:      warning: loc({{.*}}math-name-conflict.f90{{.*}}): function
+! CHECK-WARN:      warning: #loc({{.*}}math-name-conflict.f90{{.*}}): function
 ! CHECK-WARN-SAME: name 'asinh' conflicts with a runtime function
 ! CHECK-WARN-SAME: name used by Flang - this may lead to undefined behavior
