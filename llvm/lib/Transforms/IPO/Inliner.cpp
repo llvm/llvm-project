@@ -142,6 +142,49 @@ static cl::opt<CallSiteFormat::Format> CGSCCInlineReplayFormat(
                    "<Line Number>:<Column Number>.<Discriminator> (default)")),
     cl::desc("How cgscc inline replay file is formatted"), cl::Hidden);
 
+/// Read !inline_history metadata from a call site and reconstruct the inline
+/// history chain. Returns the history ID for the head of the chain, or -1 if
+/// no metadata is present. The metadata format is a tuple of MDString function
+/// names ordered from most recent to oldest inlined callee.
+static int
+reconstructHistoryFromMetadata(CallBase *CB, Module &M,
+                               SmallVectorImpl<std::pair<Function *, int>> &InlineHistory) {
+  MDNode *HistMD = CB->getMetadata(LLVMContext::MD_inline_history);
+  if (!HistMD || HistMD->getNumOperands() == 0)
+    return -1;
+
+  // Build the chain from oldest (last operand) to newest (first operand).
+  int ParentID = -1;
+  for (int I = HistMD->getNumOperands() - 1; I >= 0; --I) {
+    auto *MDS = dyn_cast<MDString>(HistMD->getOperand(I));
+    if (!MDS)
+      continue;
+    Function *F = M.getFunction(MDS->getString());
+    if (!F)
+      continue;
+    int NewID = InlineHistory.size();
+    InlineHistory.push_back({F, ParentID});
+    ParentID = NewID;
+  }
+  return ParentID;
+}
+
+/// Build !inline_history metadata for a call site that was produced by inlining
+/// Callee. The metadata records the full inline chain: Callee followed by the
+/// chain from InlineHistoryID.
+static MDNode *
+buildInlineHistoryMetadata(LLVMContext &Ctx, Function &Callee,
+                           int InlineHistoryID,
+                           const SmallVectorImpl<std::pair<Function *, int>> &InlineHistory) {
+  SmallVector<Metadata *, 4> Chain;
+  Chain.push_back(MDString::get(Ctx, Callee.getName()));
+  int WalkID = InlineHistoryID;
+  while (WalkID != -1) {
+    Chain.push_back(MDString::get(Ctx, InlineHistory[WalkID].first->getName()));
+    WalkID = InlineHistory[WalkID].second;
+  }
+  return MDNode::get(Ctx, Chain);
+}
 InlineAdvisor &
 InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
                         FunctionAnalysisManager &FAM, Module &M) {
@@ -233,6 +276,12 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // incrementally maknig a single function grow in a super linear fashion.
   SmallVector<std::pair<CallBase *, int>, 16> Calls;
 
+  // When inlining a callee produces new call sites, we want to keep track of
+  // the fact that they were inlined from the callee.  This allows us to avoid
+  // infinite inlining in some obscure cases.  To represent this, we use an
+  // index into the InlineHistory vector.
+  SmallVector<std::pair<Function *, int>, 16> InlineHistory;
+
   // Populate the initial list of calls in this SCC.
   for (auto &N : InitialC) {
     auto &ORE =
@@ -245,9 +294,13 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     for (Instruction &I : instructions(N.getFunction()))
       if (auto *CB = dyn_cast<CallBase>(&I))
         if (Function *Callee = CB->getCalledFunction()) {
-          if (!Callee->isDeclaration())
-            Calls.push_back({CB, -1});
-          else if (!isa<IntrinsicInst>(I)) {
+          if (!Callee->isDeclaration()) {
+            // Reconstruct inline history from metadata persisted across
+            // devirtualization iterations to prevent infinite inlining of
+            // mutually recursive functions.
+            int HistID = reconstructHistoryFromMetadata(CB, M, InlineHistory);
+            Calls.push_back({CB, HistID});
+          } else if (!isa<IntrinsicInst>(I)) {
             using namespace ore;
             setInlineRemark(*CB, "unavailable definition");
             ORE.emit([&]() {
@@ -268,12 +321,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
   if (Calls.empty())
     return PreservedAnalyses::all();
-
-  // When inlining a callee produces new call sites, we want to keep track of
-  // the fact that they were inlined from the callee.  This allows us to avoid
-  // infinite inlining in some obscure cases.  To represent this, we use an
-  // index into the InlineHistory vector.
-  SmallVector<std::pair<Function *, int>, 16> InlineHistory;
 
   // Track a set vector of inlined callees so that we can augment the caller
   // with all of their edges in the call graph before pruning out the ones that
@@ -391,10 +438,19 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         int NewHistoryID = InlineHistory.size();
         InlineHistory.push_back({&Callee, InlineHistoryID});
 
+        // Persist inline history as metadata so it survives across
+        // devirtualization iterations. This prevents infinite inlining of
+        // mutually recursive functions that are devirtualized each iteration.
+        MDNode *HistMD = buildInlineHistoryMetadata(
+            M.getContext(), Callee, InlineHistoryID, InlineHistory);
+
         for (CallBase *ICB : reverse(IFI.InlinedCallSites)) {
           Function *NewCallee = ICB->getCalledFunction();
           assert(!(NewCallee && NewCallee->isIntrinsic()) &&
                  "Intrinsic calls should not be tracked.");
+          // Attach inline history metadata to all new call sites so the
+          // history persists across devirtualization iterations.
+          ICB->setMetadata(LLVMContext::MD_inline_history, HistMD);
           if (!NewCallee) {
             // Try to promote an indirect (virtual) call without waiting for
             // the post-inline cleanup and the next DevirtSCCRepeatedPass
@@ -617,6 +673,14 @@ PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
 
   MPM.addPass(std::move(AfterCGMPM));
   MPM.run(M, MAM);
+
+  // Strip !inline_history metadata from all instructions. This metadata is
+  // only used to persist inline history across devirtualization iterations
+  // within the inliner and should not leak into the final IR.
+  for (Function &F : M)
+    for (Instruction &I : instructions(F))
+      if (I.getMetadata(LLVMContext::MD_inline_history))
+        I.setMetadata(LLVMContext::MD_inline_history, nullptr);
 
   // Discard the InlineAdvisor, a subsequent inlining session should construct
   // its own.
