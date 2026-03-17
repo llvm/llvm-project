@@ -43,7 +43,7 @@ template <typename PtrType> class SmallPtrSetImpl;
 /// in class Type and in derived classes.  Once allocated, Types are never
 /// free'd.
 ///
-class Type : unsigned {
+class Type {
 public:
   //===--------------------------------------------------------------------===//
   /// Definitions of all of the base types for the Type system.  Based on this
@@ -52,7 +52,7 @@ public:
   /// Type::getPrimitiveType function, or else things will break!
   /// Also update LLVMTypeKind and LLVMGetTypeKind () in the C binding.
   ///
-  enum TypeID {
+  enum TypeID : unsigned {
     // PrimitiveTypes
     HalfTyID = 0,  ///< 16-bit floating point type
     BFloatTyID,    ///< 16-bit floating point type (7-bit significand)
