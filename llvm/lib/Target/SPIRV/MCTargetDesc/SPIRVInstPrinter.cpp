@@ -54,11 +54,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
     // Look up the bitwidth of this int type register from
     // IntTypeBitwidths map.
     MCRegister IntTypeReg = MI->getOperand(1).getReg();
-    auto IntTypeRegIt = IntTypeBitwidths.find(IntTypeReg);
-    if (IntTypeRegIt == IntTypeBitwidths.end()) {
-      llvm_unreachable("Int type register used before defined in OpTypeInt");
-    }
-    int Bitwidth = IntTypeRegIt->second;
+    unsigned Bitwidth = IntTypeBitwidths.at(IntTypeReg);
 
     // SPV_ALTERA_arbitrary_precision_integers allows for integer widths greater
     // than 64, which will be encoded via multiple operands.
@@ -69,7 +65,8 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
       Val |= APInt(TotalBits, Word) << (i * 32);
     }
     APInt ActualVal = Val.trunc(Bitwidth);
-    O << ' ' << ActualVal;
+    O << ' ';
+    ActualVal.print(O, /*isSigned=*/false);
     return;
   }
 
