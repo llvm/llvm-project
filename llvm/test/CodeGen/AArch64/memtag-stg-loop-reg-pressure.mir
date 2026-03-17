@@ -92,7 +92,7 @@ body:             |
   bb.0.entry:
     liveins: $x22
 
-    ; Load all registers from memory (mimics swift async thunk).
+    ; Load all registers from memory
     $x0 = LDRXui $x22, 0
     $x1 = LDRXui $x22, 1
     $x2 = LDRXui $x22, 2
@@ -124,7 +124,6 @@ body:             |
     $lr = LDRXui $x22, 29
     $fp = LDRXui $x22, 30
 
-    ; MTE tagging - e.g. untagging the async thunk
     ST2Gi $sp, %stack.1, 0 :: (store (s256))
     ST2Gi $sp, %stack.2, 0 :: (store (s256))
     ST2Gi $sp, %stack.3, 0 :: (store (s256))
@@ -136,7 +135,7 @@ body:             |
     ST2Gi $sp, %stack.9, 0 :: (store (s256))
     ST2Gi $sp, %stack.10, 0 :: (store (s256))
 
-    ; Store all registers to stack (Usually stores into callee's stack)
+    ; Store all registers to stack
     STRXui $x0, %stack.11, 0
     STRXui $x1, %stack.12, 0
     STRXui $x2, %stack.13, 0
@@ -169,7 +168,6 @@ body:             |
     STRXui $lr, %stack.40, 0
     STRXui $fp, %stack.0, 0
 
-    ; Usually a tail call in a swift thunk
     RET_ReallyLR
 ...
 ---
@@ -223,7 +221,7 @@ body:             |
   bb.0.entry:
     liveins: $x22
 
-    ; Load all registers except $x28 from memory (mimics swift async thunk).
+    ; Load all registers except $x28 from memory
     $x0 = LDRXui $x22, 0
     $x1 = LDRXui $x22, 1
     $x2 = LDRXui $x22, 2
@@ -254,7 +252,6 @@ body:             |
     $lr = LDRXui $x22, 29
     $fp = LDRXui $x22, 30
 
-    ; MTE tagging - e.g. untagging the async thunk
     ST2Gi $sp, %stack.1, 0 :: (store (s256))
     ST2Gi $sp, %stack.2, 0 :: (store (s256))
     ST2Gi $sp, %stack.3, 0 :: (store (s256))
@@ -266,8 +263,7 @@ body:             |
     ST2Gi $sp, %stack.9, 0 :: (store (s256))
     ST2Gi $sp, %stack.10, 0 :: (store (s256))
 
-    ; Store all registers except $x28 to stack (Usually stores into callee's
-    ; stack)
+    ; Store all registers except $x28 to stack
     STRXui $x0, %stack.11, 0
     STRXui $x1, %stack.12, 0
     STRXui $x2, %stack.13, 0
@@ -299,7 +295,6 @@ body:             |
     STRXui $lr, %stack.40, 0
     STRXui $fp, %stack.0, 0
 
-    ; Usually a tail call in a swift thunk
     RET_ReallyLR
 ...
 ---
@@ -353,8 +348,7 @@ body:             |
   bb.0.entry:
     liveins: $x22
 
-    ; Load all registers except $0, $x28 from memory (mimics swift async
-    ; thunk).
+    ; Load all registers except $0, $x28 from memory
     $x1 = LDRXui $x22, 1
     $x2 = LDRXui $x22, 2
     $x3 = LDRXui $x22, 3
@@ -384,7 +378,6 @@ body:             |
     $lr = LDRXui $x22, 29
     $fp = LDRXui $x22, 30
 
-    ; MTE tagging - e.g. untagging the async thunk
     ST2Gi $sp, %stack.1, 0 :: (store (s256))
     ST2Gi $sp, %stack.2, 0 :: (store (s256))
     ST2Gi $sp, %stack.3, 0 :: (store (s256))
@@ -396,8 +389,7 @@ body:             |
     ST2Gi $sp, %stack.9, 0 :: (store (s256))
     ST2Gi $sp, %stack.10, 0 :: (store (s256))
 
-    ; Store all registers except $x0, $x28 to stack (Usually stores into
-    ; callee's stack)
+    ; Store all registers except $x0, $x28 to stack
     STRXui $x1, %stack.12, 0
     STRXui $x2, %stack.13, 0
     STRXui $x3, %stack.14, 0
@@ -428,7 +420,6 @@ body:             |
     STRXui $lr, %stack.40, 0
     STRXui $fp, %stack.0, 0
 
-    ; Usually a tail call in a swift thunk
     RET_ReallyLR
 ...
 ---
@@ -482,8 +473,7 @@ body:             |
   bb.0.entry:
     liveins: $x22
 
-    ; Load all registers except $0 from memory (mimics swift async
-    ; thunk).
+    ; Load all registers except $0 from memory
     $x1 = LDRXui $x22, 1
     $x2 = LDRXui $x22, 2
     $x3 = LDRXui $x22, 3
@@ -514,7 +504,6 @@ body:             |
     $lr = LDRXui $x22, 29
     $fp = LDRXui $x22, 30
 
-    ; MTE tagging - e.g. untagging the async thunk
     ST2Gi $sp, %stack.1, 0 :: (store (s256))
     ST2Gi $sp, %stack.2, 0 :: (store (s256))
     ST2Gi $sp, %stack.3, 0 :: (store (s256))
@@ -526,8 +515,7 @@ body:             |
     ST2Gi $sp, %stack.9, 0 :: (store (s256))
     ST2Gi $sp, %stack.10, 0 :: (store (s256))
 
-    ; Store all registers except $x0 to stack (Usually stores into
-    ; callee's stack)
+    ; Store all registers except $x0 to stack
     STRXui $x1, %stack.12, 0
     STRXui $x2, %stack.13, 0
     STRXui $x3, %stack.14, 0
@@ -559,6 +547,5 @@ body:             |
     STRXui $lr, %stack.40, 0
     STRXui $fp, %stack.0, 0
 
-    ; Usually a tail call in a swift thunk
     RET_ReallyLR
 ...
