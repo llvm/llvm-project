@@ -258,9 +258,8 @@ public:
           fir::factory::getExtents(loc, builder, storage);
 
       // Generate loop nest to assign elements
-      hlfir::LoopNest loopNest =
-          hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
-                             useWorkshare);
+      hlfir::LoopNest loopNest = hlfir::genLoopNest(
+          loc, builder, extents, /*isUnordered=*/true, useWorkshare);
       builder.setInsertionPointToStart(loopNest.body);
 
       // Get RHS element via hlfir.apply
@@ -269,8 +268,8 @@ public:
       rhsElement = hlfir::loadTrivialScalar(loc, builder, rhsElement);
 
       // Get LHS element
-      hlfir::Entity lhsElement =
-          hlfir::getElementAt(loc, builder, lhsEntity, loopNest.oneBasedIndices);
+      hlfir::Entity lhsElement = hlfir::getElementAt(loc, builder, lhsEntity,
+                                                     loopNest.oneBasedIndices);
 
       // Assign the element (scalar, non-allocatable)
       hlfir::AssignOp::create(builder, loc, rhsElement, lhsElement,
