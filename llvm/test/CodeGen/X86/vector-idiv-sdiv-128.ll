@@ -1210,18 +1210,12 @@ define <16 x i8> @PR143238(<16 x i8> %a0) {
   ret <16 x i8> %mask
 }
 
-define <2 x i128> @v2i128_div_by_7(<2 x i128> %x) {
+define <2 x i128> @v2i128_div_by_7(<2 x i128> %x) nounwind {
 ; SSE-LABEL: v2i128_div_by_7:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %r15
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    pushq %r14
-; SSE-NEXT:    .cfi_def_cfa_offset 24
 ; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 32
-; SSE-NEXT:    .cfi_offset %rbx, -32
-; SSE-NEXT:    .cfi_offset %r14, -24
-; SSE-NEXT:    .cfi_offset %r15, -16
 ; SSE-NEXT:    movq %rcx, %r9
 ; SSE-NEXT:    movq %rdx, %rcx
 ; SSE-NEXT:    movabsq $1152921504606846975, %r14 # imm = 0xFFFFFFFFFFFFFFF
@@ -1282,24 +1276,15 @@ define <2 x i128> @v2i128_div_by_7(<2 x i128> %x) {
 ; SSE-NEXT:    movq %rcx, 8(%rdi)
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    popq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 24
 ; SSE-NEXT:    popq %r14
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    popq %r15
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v2i128_div_by_7:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %r15
-; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    pushq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 24
 ; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    .cfi_offset %rbx, -32
-; AVX-NEXT:    .cfi_offset %r14, -24
-; AVX-NEXT:    .cfi_offset %r15, -16
 ; AVX-NEXT:    movq %rcx, %r9
 ; AVX-NEXT:    movq %rdx, %rcx
 ; AVX-NEXT:    movabsq $1152921504606846975, %r14 # imm = 0xFFFFFFFFFFFFFFF
@@ -1360,35 +1345,22 @@ define <2 x i128> @v2i128_div_by_7(<2 x i128> %x) {
 ; AVX-NEXT:    movq %rcx, 8(%rdi)
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 24
 ; AVX-NEXT:    popq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    popq %r15
-; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
   %div = udiv <2 x i128> %x, <i128 7, i128 7>
   ret <2 x i128> %div
 }
 
-define <2 x i128> @v2i128_div_by_14(<2 x i128> %x) {
+define <2 x i128> @v2i128_div_by_14(<2 x i128> %x) nounwind {
 ; SSE-LABEL: v2i128_div_by_14:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %r15
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    pushq %r14
-; SSE-NEXT:    .cfi_def_cfa_offset 24
 ; SSE-NEXT:    pushq %r13
-; SSE-NEXT:    .cfi_def_cfa_offset 32
 ; SSE-NEXT:    pushq %r12
-; SSE-NEXT:    .cfi_def_cfa_offset 40
 ; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 48
-; SSE-NEXT:    .cfi_offset %rbx, -48
-; SSE-NEXT:    .cfi_offset %r12, -40
-; SSE-NEXT:    .cfi_offset %r13, -32
-; SSE-NEXT:    .cfi_offset %r14, -24
-; SSE-NEXT:    .cfi_offset %r15, -16
 ; SSE-NEXT:    movq %r8, %rbx
 ; SSE-NEXT:    movq %rcx, %r14
 ; SSE-NEXT:    movq %rdx, %rax
@@ -1411,34 +1383,19 @@ define <2 x i128> @v2i128_div_by_14(<2 x i128> %x) {
 ; SSE-NEXT:    movq %r12, (%r15)
 ; SSE-NEXT:    movq %r15, %rax
 ; SSE-NEXT:    popq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 40
 ; SSE-NEXT:    popq %r12
-; SSE-NEXT:    .cfi_def_cfa_offset 32
 ; SSE-NEXT:    popq %r13
-; SSE-NEXT:    .cfi_def_cfa_offset 24
 ; SSE-NEXT:    popq %r14
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    popq %r15
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v2i128_div_by_14:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %r15
-; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    pushq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 24
 ; AVX-NEXT:    pushq %r13
-; AVX-NEXT:    .cfi_def_cfa_offset 32
 ; AVX-NEXT:    pushq %r12
-; AVX-NEXT:    .cfi_def_cfa_offset 40
 ; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    .cfi_offset %rbx, -48
-; AVX-NEXT:    .cfi_offset %r12, -40
-; AVX-NEXT:    .cfi_offset %r13, -32
-; AVX-NEXT:    .cfi_offset %r14, -24
-; AVX-NEXT:    .cfi_offset %r15, -16
 ; AVX-NEXT:    movq %r8, %rbx
 ; AVX-NEXT:    movq %rcx, %r14
 ; AVX-NEXT:    movq %rdx, %rax
@@ -1461,22 +1418,17 @@ define <2 x i128> @v2i128_div_by_14(<2 x i128> %x) {
 ; AVX-NEXT:    movq %r12, (%r15)
 ; AVX-NEXT:    movq %r15, %rax
 ; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 40
 ; AVX-NEXT:    popq %r12
-; AVX-NEXT:    .cfi_def_cfa_offset 32
 ; AVX-NEXT:    popq %r13
-; AVX-NEXT:    .cfi_def_cfa_offset 24
 ; AVX-NEXT:    popq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    popq %r15
-; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
   %div = udiv <2 x i128> %x, <i128 14, i128 14>
   ret <2 x i128> %div
 }
 
-define <2 x i128> @v2i128_rem_by_7(<2 x i128> %x) {
+define <2 x i128> @v2i128_rem_by_7(<2 x i128> %x) nounwind {
 ; SSE-LABEL: v2i128_rem_by_7:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movq %rdx, %r9
@@ -1559,24 +1511,14 @@ entry:
   ret <2 x i128> %rem
 }
 
-define <2 x i128> @v2i128_rem_by_14(<2 x i128> %x) {
+define <2 x i128> @v2i128_rem_by_14(<2 x i128> %x) nounwind {
 ; SSE-LABEL: v2i128_rem_by_14:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %r15
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    pushq %r14
-; SSE-NEXT:    .cfi_def_cfa_offset 24
 ; SSE-NEXT:    pushq %r13
-; SSE-NEXT:    .cfi_def_cfa_offset 32
 ; SSE-NEXT:    pushq %r12
-; SSE-NEXT:    .cfi_def_cfa_offset 40
 ; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 48
-; SSE-NEXT:    .cfi_offset %rbx, -48
-; SSE-NEXT:    .cfi_offset %r12, -40
-; SSE-NEXT:    .cfi_offset %r13, -32
-; SSE-NEXT:    .cfi_offset %r14, -24
-; SSE-NEXT:    .cfi_offset %r15, -16
 ; SSE-NEXT:    movq %r8, %rbx
 ; SSE-NEXT:    movq %rcx, %r14
 ; SSE-NEXT:    movq %rdx, %rax
@@ -1599,34 +1541,19 @@ define <2 x i128> @v2i128_rem_by_14(<2 x i128> %x) {
 ; SSE-NEXT:    movq %r12, (%r15)
 ; SSE-NEXT:    movq %r15, %rax
 ; SSE-NEXT:    popq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 40
 ; SSE-NEXT:    popq %r12
-; SSE-NEXT:    .cfi_def_cfa_offset 32
 ; SSE-NEXT:    popq %r13
-; SSE-NEXT:    .cfi_def_cfa_offset 24
 ; SSE-NEXT:    popq %r14
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    popq %r15
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v2i128_rem_by_14:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %r15
-; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    pushq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 24
 ; AVX-NEXT:    pushq %r13
-; AVX-NEXT:    .cfi_def_cfa_offset 32
 ; AVX-NEXT:    pushq %r12
-; AVX-NEXT:    .cfi_def_cfa_offset 40
 ; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    .cfi_offset %rbx, -48
-; AVX-NEXT:    .cfi_offset %r12, -40
-; AVX-NEXT:    .cfi_offset %r13, -32
-; AVX-NEXT:    .cfi_offset %r14, -24
-; AVX-NEXT:    .cfi_offset %r15, -16
 ; AVX-NEXT:    movq %r8, %rbx
 ; AVX-NEXT:    movq %rcx, %r14
 ; AVX-NEXT:    movq %rdx, %rax
@@ -1649,15 +1576,10 @@ define <2 x i128> @v2i128_rem_by_14(<2 x i128> %x) {
 ; AVX-NEXT:    movq %r12, (%r15)
 ; AVX-NEXT:    movq %r15, %rax
 ; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 40
 ; AVX-NEXT:    popq %r12
-; AVX-NEXT:    .cfi_def_cfa_offset 32
 ; AVX-NEXT:    popq %r13
-; AVX-NEXT:    .cfi_def_cfa_offset 24
 ; AVX-NEXT:    popq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    popq %r15
-; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
   %rem = urem <2 x i128> %x, <i128 14, i128 14>

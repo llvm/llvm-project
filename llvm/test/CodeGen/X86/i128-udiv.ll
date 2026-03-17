@@ -640,22 +640,16 @@ define i128 @test3(i128 %x) nounwind {
   ret i128 %tmp
 }
 
-define i128 @div_by_7(i128 %x) {
+define i128 @div_by_7(i128 %x) nounwind {
 ; X86-LABEL: div_by_7:
 ; X86:       # %bb.0: # %entry_udiv-special-cases
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $160, %esp
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %edx
@@ -922,10 +916,8 @@ define i128 @div_by_7(i128 %x) {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl $4
 ; X86-NEXT:  .LBB3_9:
-; X86-NEXT:    .cfi_def_cfa %ebp, 8
 ; X86-NEXT:    movb $1, %cl
 ; X86-NEXT:    jmp .LBB3_11
 ; X86-NEXT:  .LBB3_19:
@@ -974,22 +966,16 @@ entry:
   ret i128 %div
 }
 
-define i128 @div_by_9(i128 %x) {
+define i128 @div_by_9(i128 %x) nounwind {
 ; X86-LABEL: div_by_9:
 ; X86:       # %bb.0: # %entry_udiv-special-cases
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $160, %esp
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %edx
@@ -1256,10 +1242,8 @@ define i128 @div_by_9(i128 %x) {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl $4
 ; X86-NEXT:  .LBB4_9:
-; X86-NEXT:    .cfi_def_cfa %ebp, 8
 ; X86-NEXT:    movb $1, %cl
 ; X86-NEXT:    jmp .LBB4_11
 ; X86-NEXT:  .LBB4_19:
@@ -1306,22 +1290,16 @@ entry:
   ret i128 %div
 }
 
-define i128 @div_by_11(i128 %x) {
+define i128 @div_by_11(i128 %x) nounwind {
 ; X86-LABEL: div_by_11:
 ; X86:       # %bb.0: # %_udiv-special-cases
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $160, %esp
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %edx
@@ -1588,10 +1566,8 @@ define i128 @div_by_11(i128 %x) {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl $4
 ; X86-NEXT:  .LBB5_9:
-; X86-NEXT:    .cfi_def_cfa %ebp, 8
 ; X86-NEXT:    movb $1, %cl
 ; X86-NEXT:    jmp .LBB5_11
 ; X86-NEXT:  .LBB5_19:
@@ -1638,22 +1614,16 @@ define i128 @div_by_11(i128 %x) {
   ret i128 %div
 }
 
-define i128 @div_by_22(i128 %x) {
+define i128 @div_by_22(i128 %x) nounwind {
 ; X86-LABEL: div_by_22:
 ; X86:       # %bb.0: # %entry_udiv-special-cases
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $160, %esp
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %edx
@@ -1920,10 +1890,8 @@ define i128 @div_by_22(i128 %x) {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl $4
 ; X86-NEXT:  .LBB6_9:
-; X86-NEXT:    .cfi_def_cfa %ebp, 8
 ; X86-NEXT:    movb $1, %cl
 ; X86-NEXT:    jmp .LBB6_11
 ; X86-NEXT:  .LBB6_19:
@@ -1940,34 +1908,26 @@ define i128 @div_by_22(i128 %x) {
 ; X64-LABEL: div_by_22:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movl $22, %edx
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 entry:
   %div = udiv i128 %x, 22
   ret i128 %div
 }
 
-define i128 @div_by_25(i128 %x) {
+define i128 @div_by_25(i128 %x) nounwind {
 ; X86-LABEL: div_by_25:
 ; X86:       # %bb.0: # %entry_udiv-special-cases
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $160, %esp
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %edx
@@ -2234,10 +2194,8 @@ define i128 @div_by_25(i128 %x) {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl $4
 ; X86-NEXT:  .LBB7_9:
-; X86-NEXT:    .cfi_def_cfa %ebp, 8
 ; X86-NEXT:    movb $1, %cl
 ; X86-NEXT:    jmp .LBB7_11
 ; X86-NEXT:  .LBB7_19:
@@ -2286,22 +2244,16 @@ entry:
   ret i128 %div
 }
 
-define i128 @div_by_56(i128 %x) {
+define i128 @div_by_56(i128 %x) nounwind {
 ; X86-LABEL: div_by_56:
 ; X86:       # %bb.0: # %_udiv-special-cases
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $160, %esp
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %edx
@@ -2568,10 +2520,8 @@ define i128 @div_by_56(i128 %x) {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl $4
 ; X86-NEXT:  .LBB8_9:
-; X86-NEXT:    .cfi_def_cfa %ebp, 8
 ; X86-NEXT:    movb $1, %cl
 ; X86-NEXT:    jmp .LBB8_11
 ; X86-NEXT:  .LBB8_19:
@@ -2588,33 +2538,25 @@ define i128 @div_by_56(i128 %x) {
 ; X64-LABEL: div_by_56:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movl $56, %edx
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %div = udiv i128 %x, 56 ; 8 * 7
   ret i128 %div
 }
 
-define i128 @rem_by_7(i128 %x) {
+define i128 @rem_by_7(i128 %x) nounwind {
 ; X86-LABEL: rem_by_7:
 ; X86:       # %bb.0: # %_udiv-special-cases
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $160, %esp
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %eax
@@ -2901,10 +2843,8 @@ define i128 @rem_by_7(i128 %x) {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl $4
 ; X86-NEXT:  .LBB9_9:
-; X86-NEXT:    .cfi_def_cfa %ebp, 8
 ; X86-NEXT:    movb $1, %al
 ; X86-NEXT:    jmp .LBB9_11
 ; X86-NEXT:  .LBB9_19:
@@ -2941,22 +2881,16 @@ define i128 @rem_by_7(i128 %x) {
   ret i128 %rem
 }
 
-define i128 @rem_by_14(i128 %x) {
+define i128 @rem_by_14(i128 %x) nounwind {
 ; X86-LABEL: rem_by_14:
 ; X86:       # %bb.0: # %_udiv-special-cases
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $160, %esp
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    movl 36(%ebp), %ebx
 ; X86-NEXT:    movl 28(%ebp), %eax
@@ -3243,10 +3177,8 @@ define i128 @rem_by_14(i128 %x) {
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl $4
 ; X86-NEXT:  .LBB10_9:
-; X86-NEXT:    .cfi_def_cfa %ebp, 8
 ; X86-NEXT:    movb $1, %al
 ; X86-NEXT:    jmp .LBB10_11
 ; X86-NEXT:  .LBB10_19:
@@ -3262,12 +3194,10 @@ define i128 @rem_by_14(i128 %x) {
 ; X64-LABEL: rem_by_14:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movl $14, %edx
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    callq __umodti3@PLT
 ; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %rem = urem i128 %x, 14
   ret i128 %rem
