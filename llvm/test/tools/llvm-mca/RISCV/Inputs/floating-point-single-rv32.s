@@ -26,11 +26,6 @@ fcvt.wu.s a1, fs6
 fcvt.s.w ft11, a4
 fcvt.s.wu ft0, a5
 
-fcvt.l.s a0, ft0
-fcvt.lu.s a1, ft1
-fcvt.s.l ft2, a2
-fcvt.s.lu ft3, a3
-
 fmv.x.w a2, fs7
 fmv.w.x ft1, a6
 
