@@ -41,6 +41,18 @@ TEST(ControllerInterfaceTest, AddSymbolsUnique) {
   EXPECT_EQ(CI.at("orc_rt_B"), &Y);
 }
 
+TEST(ControllerInterfaceTest, AddConstPointers) {
+  ControllerInterface CI;
+  const int X = 42;
+  const int Y = 7;
+  std::pair<const char *, const void *> Syms[] = {{"orc_rt_A", &X},
+                                                  {"orc_rt_B", &Y}};
+  cantFail(CI.addSymbolsUnique(Syms));
+
+  EXPECT_EQ(CI.at("orc_rt_A"), &X);
+  EXPECT_EQ(CI.at("orc_rt_B"), &Y);
+}
+
 TEST(ControllerInterfaceTest, AddSymbolsUniqueMultipleCalls) {
   ControllerInterface CI;
   int X = 0, Y = 0;
