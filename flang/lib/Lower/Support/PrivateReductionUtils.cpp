@@ -440,8 +440,7 @@ fir::IfOp PopulateInitAndCleanupRegionsHelper::handleNullAllocatable() {
                                       /*slice=*/mlir::Value{}, lenParams);
   if (sym) {
     unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
-    if (idx != kDefaultAllocator)
-      nullBox.setAllocatorIdx(idx);
+    nullBox.setAllocatorIdx(idx);
   }
   fir::StoreOp::create(builder, loc, nullBox, allocatedPrivVarArg);
   return ifOp;
