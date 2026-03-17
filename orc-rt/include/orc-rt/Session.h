@@ -13,6 +13,7 @@
 #ifndef ORC_RT_SESSION_H
 #define ORC_RT_SESSION_H
 
+#include "orc-rt/ControllerInterface.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/LockedAccess.h"
 #include "orc-rt/Service.h"
@@ -50,8 +51,6 @@ public:
   using HandlerTag = void *;
   using OnCallHandlerCompleteFn =
       move_only_function<void(WrapperFunctionBuffer)>;
-
-  using SymbolMap = std::unordered_map<std::string, void *>;
 
   /// Provides access to the controller.
   class ControllerAccess {
@@ -136,10 +135,8 @@ public:
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
   /// Controller interface symbols map.
-  auto controllerInterface() { return LockedAccess(ControllerInterface, M); }
-  auto controllerInterface() const {
-    return LockedAccess(ControllerInterface, M);
-  }
+  auto controllerInterface() { return LockedAccess(CI, M); }
+  auto controllerInterface() const { return LockedAccess(CI, M); }
 
   /// Initiate session shutdown.
   ///
@@ -213,7 +210,7 @@ private:
 
   mutable std::mutex M;
   std::vector<std::unique_ptr<Service>> Services;
-  SymbolMap ControllerInterface;
+  ControllerInterface CI;
   std::unique_ptr<ShutdownInfo> SI;
 };
 

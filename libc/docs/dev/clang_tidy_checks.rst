@@ -3,17 +3,25 @@
 LLVM libc clang-tidy checks
 ===========================
 
+Configuration
+-------------
 
-.. warning::
-  This page is severely out of date. Much of the information it contains may be
-  incorrect. Please only remove this warning once the page has been updated.
+LLVM libc uses layered ``.clang-tidy`` configuration files:
 
-These are the clang-tidy checks designed to help enforce implementation
-standards.
-The configuration file is ``src/.clang-tidy``.
+- ``libc/.clang-tidy``: baseline checks for the ``libc`` subtree (currently
+  focuses on identifier naming conventions).
+- ``libc/src/.clang-tidy``: adds LLVM-libc-specific checks (``llvmlibc-*``) for
+  implementation code under ``libc/src`` and also enables
+  ``readability-identifier-naming`` and ``llvm-header-guard``. Diagnostics from
+  ``llvmlibc-*`` checks are treated as errors.
 
-restrict-system-libc-header
----------------------------
+LLVM-libc checks
+----------------
+
+restrict-system-libc-headers
+----------------------------
+Check name: ``llvmlibc-restrict-system-libc-headers``.
+
 One of libc-project’s design goals is to use kernel headers and compiler
 provided headers to prevent code duplication on a per platform basis. This
 presents a problem when writing implementations since system libc headers are
@@ -31,17 +39,17 @@ libc implementation.
    #include <stddef.h>           // Allowed because it is provided by the compiler.
    #include "internal/stdio.h"   // Allowed because it is NOT part of system libc.
 
-
 implementation-in-namespace
 ---------------------------
+Check name: ``llvmlibc-implementation-in-namespace``.
 
 It is part of our implementation standards that all implementation pieces live
 under the ``LIBC_NAMESPACE_DECL`` namespace. This prevents pollution of the
 global namespace. Without a formal check to ensure this, an implementation
 might compile and pass unit tests, but not produce a usable libc function.
 
-This check that ensures any function call resolves to a function within the
-``LIBC_NAMESPACE_DECL`` namespace.
+This check ensures that top-level declarations in a translation unit are
+enclosed within the ``LIBC_NAMESPACE_DECL`` namespace.
 
 .. code-block:: c++
 
@@ -64,14 +72,10 @@ This check that ensures any function call resolves to a function within the
         void LLVM_LIBC_ENTRYPOINT(strcpy)(char *dest, const char *src) {}
     }
 
-..
-  TODO(97655): The clang-tidy check should be updated to ensure the namespace
-  declaration uses LIBC_NAMESPACE_DECL as opposed to LIBC_NAMESPACE. The former
-  should be used for accessing globals in LIBC_NAMESPACE rather than declaration.
-
-
 callee-namespace
 ----------------
+Check name: ``llvmlibc-callee-namespace``.
+
 LLVM-libc is distinct because it is designed to maintain interoperability with
 other libc libraries, including the one that lives on the system. This feature
 creates some uncertainty about which library a call resolves to especially when
@@ -105,3 +109,12 @@ are always external and can be intercepted.
     ::malloc(10);
 
     } // namespace LIBC_NAMESPACE_DECL
+
+
+inline-function-decl
+--------------------
+Check name: ``llvmlibc-inline-function-decl``.
+
+LLVM libc uses the ``LIBC_INLINE`` macro to tag inline function declarations in
+headers. This check enforces that any inline function declaration in a header
+begins with ``LIBC_INLINE`` and provides a fix-it to insert the macro.
