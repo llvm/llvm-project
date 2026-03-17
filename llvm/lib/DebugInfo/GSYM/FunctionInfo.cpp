@@ -275,9 +275,9 @@ void FunctionInfo::parseStatistics(
           (*MergedFuncInfoStats)[9] += 4; // MergedFunctionsInfo FnSize field
           if (!MergedData.isValidOffsetForDataOfSize(MOffset, FnSize))
             break;
-          DataExtractor FuncData(
-              MergedData.getData().substr(MOffset, FnSize),
-              MergedData.isLittleEndian(), MergedData.getAddressSize());
+          DataExtractor FuncData(MergedData.getData().substr(MOffset, FnSize),
+                                 MergedData.isLittleEndian(),
+                                 MergedData.getAddressSize());
           parseStatistics(FuncData, *MergedFuncInfoStats, nullptr);
           MOffset += FnSize;
         }

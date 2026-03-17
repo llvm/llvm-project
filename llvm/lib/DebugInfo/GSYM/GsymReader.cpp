@@ -520,13 +520,12 @@ void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS) {
       consumeError(ExpData.takeError());
     }
   }
-  auto PrintInfoType = [&](const char *Indent, const char *Name,
-                           uint32_t Type,
+  auto PrintInfoType = [&](const char *Indent, const char *Name, uint32_t Type,
                            const std::map<uint32_t, uint64_t> &Stats) {
     auto It = Stats.find(Type);
     if (It != Stats.end())
-      OS << Indent << Name << Format(It->second) << " bytes "
-         << Pct(It->second) << "\n";
+      OS << Indent << Name << Format(It->second) << " bytes " << Pct(It->second)
+         << "\n";
   };
   PrintInfoType("    ", "Line table info:   ", 1, InfoTypeStats);
   PrintInfoType("    ", "Inline info:       ", 2, InfoTypeStats);
