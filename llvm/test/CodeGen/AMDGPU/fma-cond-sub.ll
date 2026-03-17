@@ -40,8 +40,9 @@ define double @cond_sub_basic(double %a, double %c, i1 %cond) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_bitop2_b32 v5, 1, v4 bitop3:0x40
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_and_b32_e32 v5, 1, v4
+; GFX1250-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v5
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v5, 0, 0xbff00000, vcc_lo
 ; GFX1250-NEXT:    v_fmac_f64_e32 v[0:1], v[4:5], v[2:3]
@@ -89,8 +90,9 @@ define double @cond_sub_fadd_neg_select(double %a, double %c, i1 %cond) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_bitop2_b32 v5, 1, v4 bitop3:0x40
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_and_b32_e32 v5, 1, v4
+; GFX1250-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v5
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v5, 0, 0xbff00000, vcc_lo
 ; GFX1250-NEXT:    v_fmac_f64_e32 v[0:1], v[4:5], v[2:3]
@@ -140,8 +142,9 @@ define double @cond_sub_fadd_fneg(double %a, double %c, i1 %cond) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_bitop2_b32 v5, 1, v4 bitop3:0x40
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_and_b32_e32 v5, 1, v4
+; GFX1250-NEXT:    v_mov_b32_e32 v4, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v5
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v5, 0, 0xbff00000, vcc_lo
 ; GFX1250-NEXT:    v_fmac_f64_e32 v[0:1], v[4:5], v[2:3]
@@ -188,8 +191,9 @@ define double @cond_sub_constant(double %a, i1 %cond) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_bitop2_b32 v3, 1, v2 bitop3:0x40
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_and_b32_e32 v3, 1, v2
+; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v3, 0, 0x40140000, vcc_lo
 ; GFX1250-NEXT:    v_add_f64_e64 v[0:1], v[0:1], -v[2:3]
