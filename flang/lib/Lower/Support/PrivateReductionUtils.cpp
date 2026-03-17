@@ -683,11 +683,10 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
                 builder.getContext(), sym->GetUltimate());
-        auto managedDesc = cuf::AllocOp::create(
+        allocatedPrivVarArg = cuf::AllocOp::create(
             builder, loc, valTy, /*uniq_name=*/llvm::StringRef{},
             /*bindc_name=*/llvm::StringRef{}, dataAttr,
-            /*typeparams=*/mlir::ValueRange{}, /*shape=*/mlir::ValueRange{});
-        allocatedPrivVarArg = managedDesc.getResult();
+            /*typeparams=*/mlir::ValueRange{}, /*shape=*/mlir::ValueRange{}).getResult();
       }
     }
 
