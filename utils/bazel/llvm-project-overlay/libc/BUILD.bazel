@@ -4334,6 +4334,8 @@ libc_support_library(
     hdrs = ["src/__support/math/fmaf16.h"],
     deps = [
         ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_types_float16",
     ],
 )
 
