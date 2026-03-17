@@ -957,7 +957,7 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   unsigned DestAS = ASC->getDestAddressSpace();
 
   if (isNullConstant(Op.getOperand(0)) && SrcAS == AMDGPUAS::FLAT_ADDRESS)
-    return DAG.getSignedConstant(TM.getNullPointerValue(DestAS), SL, VT);
+    return DAG.getSignedConstant(AMDGPU::getNullPointerValue(DestAS), SL, VT);
 
   return Op;
 }

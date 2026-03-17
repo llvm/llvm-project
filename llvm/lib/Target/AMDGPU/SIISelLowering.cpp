@@ -8628,7 +8628,7 @@ static bool isKnownNonNull(SDValue Val, SelectionDAG &DAG,
     return true;
 
   if (auto *ConstVal = dyn_cast<ConstantSDNode>(Val))
-    return ConstVal->getSExtValue() != TM.getNullPointerValue(AddrSpace);
+    return ConstVal->getSExtValue() != AMDGPU::getNullPointerValue(AddrSpace);
 
   // TODO: Search through arithmetic, handle arguments and loads
   // marked nonnull.
@@ -8682,7 +8682,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return Ptr;
 
-      unsigned NullVal = TM.getNullPointerValue(DestAS);
+      unsigned NullVal = AMDGPU::getNullPointerValue(DestAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
       SDValue NonNull = DAG.getSetCC(SL, MVT::i1, Src, FlatNullPtr, ISD::SETNE);
 
@@ -8733,7 +8733,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return CvtPtr;
 
-      unsigned NullVal = TM.getNullPointerValue(SrcAS);
+      unsigned NullVal = AMDGPU::getNullPointerValue(SrcAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
 
       SDValue NonNull =
