@@ -779,6 +779,9 @@ bool CodeGenPrepare::_run(Function &F) {
           WorkList.insert(Succ);
     }
 
+    // Flush pending DT updates in order to finalise deletion of dead blocks.
+    DTU->flush();
+
     // Merge pairs of basic blocks with unconditional branches, connected by
     // a single edge.
     if (EverMadeChange || MadeChange)
@@ -951,11 +954,13 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
   bool MadeChange = false;
   // Note that this intentionally skips the entry block.
   for (auto &Block : llvm::drop_begin(F)) {
-    auto *BB = &Block;
     // Delete phi nodes that could block deleting other empty blocks.
     if (!DisableDeletePHIs)
-      MadeChange |= DeleteDeadPHIs(BB, TLInfo);
+      MadeChange |= DeleteDeadPHIs(&Block, TLInfo);
+  }
 
+  for (auto &Block : llvm::drop_begin(F)) {
+    auto *BB = &Block;
     if (DTU->isBBPendingDeletion(BB))
       continue;
     BasicBlock *DestBB = findDestBlockOfMergeableEmptyBlock(BB);
