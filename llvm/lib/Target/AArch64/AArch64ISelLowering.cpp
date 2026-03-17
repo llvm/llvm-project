@@ -5947,10 +5947,9 @@ static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
   SplatValue = SplatValue.abs();
   // Placeholder for MathOp
   unsigned MathOp = ISD::DELETED_NODE;
-  // The constant `2` should be treated as (2^0 + 1).
-  unsigned TZeros = SplatValue == 2 ? 0 : SplatValue.countr_zero();
+  unsigned TZeros = SplatValue.countr_zero();
 
-  // Shift the splat value by all the zeros , this won't affect the parrity
+  // Shift the splat value by all the zeros, this won't affect the parrity
   // this will help us find the first and second multiple to use.
   SplatValue.lshrInPlace(TZeros);
 
@@ -5972,15 +5971,14 @@ static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
                                            : (SplatValue + 1).logBase2();
     ShiftAmt += TZeros;
 
-    // assert(ShiftAmt < BitWidth &&
-    //        "multiply-by-constant generated out of bounds shift");
     SDValue Shl =
         DAG.getNode(ISD::SHL, DL, VT, LHS, DAG.getConstant(ShiftAmt, DL, VT));
+
+    SDValue DoubleShl = DAG.getNode(
+        MathOp, DL, VT, Shl,
+        DAG.getNode(ISD::SHL, DL, VT, LHS, DAG.getConstant(TZeros, DL, VT)));
     SDValue Combined =
-        TZeros ? DAG.getNode(MathOp, DL, VT, Shl,
-                             DAG.getNode(ISD::SHL, DL, VT, LHS,
-                                         DAG.getConstant(TZeros, DL, VT)))
-               : DAG.getNode(MathOp, DL, VT, Shl, LHS);
+        TZeros ? DoubleShl : DAG.getNode(MathOp, DL, VT, Shl, LHS);
     if (IsNegative)
       Combined = DAG.getNegative(Combined, DL, VT);
     return Combined;
