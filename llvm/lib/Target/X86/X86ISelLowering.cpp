@@ -54287,6 +54287,7 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
 static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   StoreSDNode *St = cast<StoreSDNode>(N);
   EVT StVT = St->getMemoryVT();
   SDLoc dl(St);
@@ -54295,17 +54296,15 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Pattern: store(trunc(load v4i16) to v4i8)
+  SDValue Src;
   if (!St->isTruncatingStore() && VT == MVT::v4i8 && Subtarget.hasAVX512() &&
-      StoredVal.getOpcode() == ISD::TRUNCATE &&
-      StoredVal.getOperand(0).getValueType() == MVT::v4i16 &&
-      StoredVal.hasOneUse() && TLI.isTruncStoreLegal(MVT::v4i32, MVT::v4i8)) {
-
-    SDValue Src = StoredVal.getOperand(0);
-    if (ISD::isNormalLoad(Src.getNode()) && Src.hasOneUse()) {
-      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v4i32, Src);
-      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
-                               MVT::v4i8, St->getMemOperand());
-    }
+      TLI.isTruncStoreLegal(MVT::v4i32, MVT::v4i8) &&
+      sd_match(StoredVal, m_OneUse(m_Trunc(m_Value(
+                              Src, m_OneUse(m_SpecificVT(MVT::v4i16)))))) &&
+      ISD::isNormalLoad(Src.getNode())) {
+    SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v4i32, Src);
+    return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
+                             MVT::v4i8, St->getMemOperand());
   }
 
   // Convert a store of vXi1 into a store of iX and a bitcast.

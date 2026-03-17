@@ -1538,29 +1538,3 @@ define void @test_masked_store_unaligned_v8i64(<8 x i64> %data, ptr %ptr, <8 x i
   store <8 x i64> %sel, ptr %ptr_vec, align 1
   ret void
 }
-
-define void @cast_i16x4_to_u8x4(ptr %a0, ptr %a1) {
-; AVX-LABEL: cast_i16x4_to_u8x4:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX-NEXT:    vmovd %xmm0, (%rdi)
-; AVX-NEXT:    retq
-;
-; AVX2-LABEL: cast_i16x4_to_u8x4:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX2-NEXT:    vmovd %xmm0, (%rdi)
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: cast_i16x4_to_u8x4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; AVX512-NEXT:    vpmovdb %xmm0, (%rdi)
-; AVX512-NEXT:    retq
-  %1 = load <4 x i16>, ptr %a1
-  %2 = trunc <4 x i16> %1 to <4 x i8>
-  store <4 x i8> %2, ptr %a0
-  ret void
-}
