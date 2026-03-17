@@ -23,6 +23,8 @@ set(ORC_RT_HEADERS
     orc-rt/SimpleNativeMemoryMap.h
     orc-rt/SimplePackedSerialization.h
     orc-rt/SPSAllocAction.h
+    orc-rt/sps-ci/AllSPSCI.h
+    orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h
     orc-rt/SPSMemoryFlags.h
     orc-rt/SPSWrapperFunction.h
     orc-rt/SPSWrapperFunctionBuffer.h
