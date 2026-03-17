@@ -88,7 +88,6 @@ like as follows:
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/opencl/opencl.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/ocml/ocml.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/ockl/ockl.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_correctly_rounded_sqrt_off.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_finite_only_off.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_unsafe_math_off.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/dist/amdgcn/bitcode/oclc/oclc_wavefrontsize64_on.bc \
