@@ -12,7 +12,7 @@
 ; CHECK-DAG: %[[#ZERO128:]] = OpConstantNull %[[#INT128]]
 ; CHECK-DAG: %[[#OVER64:]] = OpConstant %[[#INT96]] 18446744073709551617
 ; CHECK-DAG: %[[#NEG96:]] = OpConstant %[[#INT96]] 79228162514264337593543950335
-; CHECK-DAG: %[[#I97_MAX:]] = OpConstant %[[#INT97]] 79228162514264337593543950335
+; CHECK-DAG: %[[#I97_MAX:]] = OpConstant %[[#INT97]] 79228162514264337593543950336
 ; CHECK-DAG: %[[#OVER64_I97:]] = OpConstant %[[#INT97]] 18446744073709551617
 ; CHECK-DAG: %[[#NEG97:]] = OpConstant %[[#INT97]] 158456325028528675187087900671
 
@@ -48,6 +48,6 @@ define spir_func void @test_i97_const(ptr addrspace(4) %p) addrspace(4) {
 entry:
   store i97 -1, ptr addrspace(4) %p, align 16
   store i97 18446744073709551617, ptr addrspace(4) %p, align 16
-  store i97 79228162514264337593543950335, ptr addrspace(4) %p, align 16
+  store i97 79228162514264337593543950336, ptr addrspace(4) %p, align 16
   ret void
 }
