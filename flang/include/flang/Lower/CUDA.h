@@ -62,14 +62,6 @@ cuf::DataAttributeAttr
 translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
                                 const Fortran::semantics::Symbol &sym);
 
-/// Create a cuf.alloc operation with extents and length parameters elided
-/// when they are already encoded in the static type.
-mlir::Value genCUFAlloc(fir::FirOpBuilder &builder, mlir::Location loc,
-                        mlir::Type type, llvm::StringRef uniqName,
-                        llvm::StringRef bindcName,
-                        cuf::DataAttributeAttr dataAttr,
-                        mlir::ValueRange lenParams, mlir::ValueRange extents);
-
 /// Check if the rhs has an implicit conversion. Return the elemental op if
 /// there is a conversion. Return null otherwise.
 std::pair<hlfir::ElementalOp, hlfir::ElementalOp>

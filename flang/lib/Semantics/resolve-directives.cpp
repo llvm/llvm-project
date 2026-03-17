@@ -2136,6 +2136,10 @@ static bool isSizesClause(const parser::OmpClause *clause) {
   return std::holds_alternative<parser::OmpClause::Sizes>(clause->u);
 }
 
+static bool isCollapseClause(const parser::OmpClause *clause) {
+  return std::holds_alternative<parser::OmpClause::Collapse>(clause->u);
+}
+
 std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
     llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
@@ -2144,13 +2148,14 @@ std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
   // does not exeed the number of tiled loops.
   std::int64_t tileLevel = 0;
   for (auto [level, clause] : llvm::zip_equal(levels, clauses))
-    if (isSizesClause(clause))
+    if (clause && isSizesClause(clause))
       tileLevel = level;
 
   std::int64_t maxLevel = 1;
   const parser::OmpClause *maxClause = nullptr;
   for (auto [level, clause] : llvm::zip_equal(levels, clauses)) {
-    if (tileLevel > 0 && tileLevel < level) {
+    if (clause && isCollapseClause(clause) && tileLevel > 0 &&
+        tileLevel < level) {
       return 1;
     }
 
@@ -2181,6 +2186,14 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromLoopConstruct(
 
   CollectNumAffectedLoopsFromClauses(clauseList, levels, clauses);
   CollectNumAffectedLoopsFromInnerLoopContruct(x, levels, clauses);
+
+  // OMPD_interchange with no permutation clause needs a level 2 nest
+  if (x.BeginDir().DirId() == llvm::omp::Directive::OMPD_interchange &&
+      !parser::omp::FindClause(
+          x.BeginDir(), llvm::omp::Clause::OMPC_permutation)) {
+    levels.push_back(2);
+    clauses.push_back(nullptr);
+  }
 }
 
 void OmpAttributeVisitor::CollectNumAffectedLoopsFromInnerLoopContruct(
@@ -2221,6 +2234,11 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromClauses(
 
     if (const auto tclause{std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
       levels.push_back(tclause->v.size());
+      clauses.push_back(&clause);
+    }
+    if (const auto iclause{
+            std::get_if<parser::OmpClause::Permutation>(&clause.u)}) {
+      levels.push_back(iclause->v.size());
       clauses.push_back(&clause);
     }
   }

@@ -4311,8 +4311,8 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
     return std::nullopt;
   if (Ty->getScalarType()->isHalfTy() && ST->hasFullFP16())
     return std::nullopt;
-  if (CanUseSVE && Ty->isScalableTy() && ST->hasSVEB16B16() &&
-      ST->isNonStreamingSVEorSME2Available())
+  // If we have +sve-b16b16 the operation can be promoted to SVE.
+  if (CanUseSVE && ST->hasSVEB16B16() && ST->isNonStreamingSVEorSME2Available())
     return std::nullopt;
 
   Type *PromotedTy = Ty->getWithNewType(Type::getFloatTy(Ty->getContext()));
