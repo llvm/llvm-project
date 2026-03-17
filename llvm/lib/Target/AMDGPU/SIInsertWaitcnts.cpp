@@ -343,13 +343,13 @@ protected:
   InstCounterType MaxCounter;
   bool OptNone;
   bool ExpandWaitcntProfiling = false;
-  const AMDGPU::HardwareLimits *Limits = nullptr;
+  const AMDGPU::HardwareLimits &Limits;
 
 public:
   WaitcntGenerator() = delete;
   WaitcntGenerator(const WaitcntGenerator &) = delete;
   WaitcntGenerator(const MachineFunction &MF, InstCounterType MaxCounter,
-                   const AMDGPU::HardwareLimits *Limits)
+                   const AMDGPU::HardwareLimits &Limits)
       : ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
         IV(AMDGPU::getIsaVersion(ST.getCPU())), MaxCounter(MaxCounter),
         OptNone(MF.getFunction().hasOptNone() ||
@@ -362,7 +362,7 @@ public:
   // optimization.
   bool isOptNone() const { return OptNone; }
 
-  const AMDGPU::HardwareLimits &getLimits() const { return *Limits; }
+  const AMDGPU::HardwareLimits &getLimits() const { return Limits; }
 
   // Edits an existing sequence of wait count instructions according
   // to an incoming Waitcnt value, which is itself updated to reflect
@@ -467,7 +467,7 @@ public:
   WaitcntGeneratorGFX12Plus() = delete;
   WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
                             InstCounterType MaxCounter,
-                            const AMDGPU::HardwareLimits *Limits,
+                            const AMDGPU::HardwareLimits &Limits,
                             bool IsExpertMode)
       : WaitcntGenerator(MF, MaxCounter, Limits), IsExpertMode(IsExpertMode) {}
 
@@ -3639,13 +3639,13 @@ bool SIInsertWaitcnts::run() {
                               .getValueAsBool());
     MaxCounter = IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
     // Initialize WCG per MF. It contains state that depends on MF attributes.
-    WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, MaxCounter, &Limits,
+    WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, MaxCounter, Limits,
                                                       IsExpertMode);
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
     // Initialize WCG per MF. It contains state that depends on MF attributes.
     WCG = std::make_unique<WaitcntGeneratorPreGFX12>(MF, NUM_NORMAL_INST_CNTS,
-                                                     &Limits);
+                                                     Limits);
   }
 
   SmemAccessCounter = getCounterFromEvent(SMEM_ACCESS);

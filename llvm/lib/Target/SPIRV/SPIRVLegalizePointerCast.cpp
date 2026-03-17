@@ -165,20 +165,66 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     buildAssignType(B, ElementType, LI);
     return LI;
   }
+  Value *
+  buildVectorFromLoadedElements(IRBuilder<> &B, FixedVectorType *TargetType,
+                                SmallVector<Value *, 4> &LoadedElements) {
+    // Build the vector from the loaded elements.
+    Value *NewVector = PoisonValue::get(TargetType);
+    buildAssignType(B, TargetType, NewVector);
 
+    for (unsigned I = 0; I < TargetType->getNumElements(); ++I) {
+      Value *Index = B.getInt32(I);
+      SmallVector<Type *, 4> Types = {TargetType, TargetType,
+                                      TargetType->getElementType(),
+                                      Index->getType()};
+      SmallVector<Value *> Args = {NewVector, LoadedElements[I], Index};
+      NewVector = B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
+      buildAssignType(B, TargetType, NewVector);
+    }
+    return NewVector;
+  }
+
+  // Loads elements from a matrix with an array of vector memory layout and
+  // constructs a vector.
+  Value *loadVectorFromMatrixArray(IRBuilder<> &B, FixedVectorType *TargetType,
+                                   Value *Source,
+                                   FixedVectorType *ArrElemVecTy) {
+    Type *TargetElemTy = TargetType->getElementType();
+    unsigned ScalarsPerArrayElement = ArrElemVecTy->getNumElements();
+    // Load each element of the array.
+    SmallVector<Value *, 4> LoadedElements;
+    SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
+    for (unsigned I = 0; I < TargetType->getNumElements(); ++I) {
+      unsigned ArrayIndex = I / ScalarsPerArrayElement;
+      unsigned ElementIndexInArrayElem = I % ScalarsPerArrayElement;
+      // Create a GEP to access the i-th element of the array.
+      SmallVector<Value *, 4> Args;
+      Args.push_back(B.getInt1(/*Inbounds=*/false));
+      Args.push_back(Source);
+      Args.push_back(B.getInt32(0));
+      Args.push_back(ConstantInt::get(B.getInt32Ty(), ArrayIndex));
+      auto *ElementPtr = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+      GR->buildAssignPtr(B, ArrElemVecTy, ElementPtr);
+      Value *LoadVec = B.CreateLoad(ArrElemVecTy, ElementPtr);
+      buildAssignType(B, ArrElemVecTy, LoadVec);
+      LoadedElements.push_back(makeExtractElement(B, TargetElemTy, LoadVec,
+                                                  ElementIndexInArrayElem));
+    }
+    return buildVectorFromLoadedElements(B, TargetType, LoadedElements);
+  }
   // Loads elements from an array and constructs a vector.
   Value *loadVectorFromArray(IRBuilder<> &B, FixedVectorType *TargetType,
                              Value *Source) {
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
-    for (unsigned i = 0; i < TargetType->getNumElements(); ++i) {
+    SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
+    for (unsigned I = 0; I < TargetType->getNumElements(); ++I) {
       // Create a GEP to access the i-th element of the array.
-      SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
       SmallVector<Value *, 4> Args;
-      Args.push_back(B.getInt1(false));
+      Args.push_back(B.getInt1(/*Inbounds=*/false));
       Args.push_back(Source);
       Args.push_back(B.getInt32(0));
-      Args.push_back(ConstantInt::get(B.getInt32Ty(), i));
+      Args.push_back(ConstantInt::get(B.getInt32Ty(), I));
       auto *ElementPtr = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
       GR->buildAssignPtr(B, TargetType->getElementType(), ElementPtr);
 
@@ -187,21 +233,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       buildAssignType(B, TargetType->getElementType(), Load);
       LoadedElements.push_back(Load);
     }
-
-    // Build the vector from the loaded elements.
-    Value *NewVector = PoisonValue::get(TargetType);
-    buildAssignType(B, TargetType, NewVector);
-
-    for (unsigned i = 0; i < TargetType->getNumElements(); ++i) {
-      Value *Index = B.getInt32(i);
-      SmallVector<Type *, 4> Types = {TargetType, TargetType,
-                                      TargetType->getElementType(),
-                                      Index->getType()};
-      SmallVector<Value *> Args = {NewVector, LoadedElements[i], Index};
-      NewVector = B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
-      buildAssignType(B, TargetType, NewVector);
-    }
-    return NewVector;
+    return buildVectorFromLoadedElements(B, TargetType, LoadedElements);
   }
 
   // Stores elements from a vector into an array.
@@ -256,6 +288,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     auto *SAT = dyn_cast<ArrayType>(FromTy);
     auto *SVT = dyn_cast<FixedVectorType>(FromTy);
     auto *DVT = dyn_cast<FixedVectorType>(ToTy);
+    auto *MAT =
+        SAT ? dyn_cast<FixedVectorType>(SAT->getElementType()) : nullptr;
 
     B.SetInsertPoint(LI);
 
@@ -271,6 +305,8 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       Output = loadVectorFromVector(B, SVT, DVT, OriginalOperand);
     else if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
       Output = loadVectorFromArray(B, DVT, OriginalOperand);
+    else if (MAT && DVT && MAT->getElementType() == DVT->getElementType())
+      Output = loadVectorFromMatrixArray(B, DVT, OriginalOperand, MAT);
     else
       llvm_unreachable("Unimplemented implicit down-cast from load.");
 
