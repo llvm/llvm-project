@@ -16,7 +16,7 @@ body:             |
     ; FAST-SHLD-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $ebx
     ; FAST-SHLD-NEXT: [[SHLD32rri8_:%[0-9]+]]:gr32 = SHLD32rri8 [[COPY]], [[COPY1]], 2, implicit-def $eflags
     ; FAST-SHLD-NEXT: $eax = COPY [[SHLD32rri8_]]
-    ; FAST-SHLD-NEXT: RET 0
+    ; FAST-SHLD-NEXT: RET 0, implicit $rax
     ;
     ; SLOW-SHLD-LABEL: name: rri32
     ; SLOW-SHLD: liveins: $eax, $ebx
@@ -25,14 +25,14 @@ body:             |
     ; SLOW-SHLD-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $ebx
     ; SLOW-SHLD-NEXT: [[SHL32ri:%[0-9]+]]:gr32 = SHL32ri [[COPY]], 2, implicit-def $eflags
     ; SLOW-SHLD-NEXT: [[SHR32ri:%[0-9]+]]:gr32 = SHR32ri [[COPY1]], 30, implicit-def $eflags
-    ; SLOW-SHLD-NEXT: [[OR32rr:%[0-9]+]]:gr32 = OR32rr [[SHL32ri]], [[SHR32ri]], implicit-def $eflags
+    ; SLOW-SHLD-NEXT: [[OR32rr:%[0-9]+]]:gr32 = OR32rr killed [[SHL32ri]], killed [[SHR32ri]], implicit-def $eflags
     ; SLOW-SHLD-NEXT: $eax = COPY [[OR32rr]]
-    ; SLOW-SHLD-NEXT: RET 0
+    ; SLOW-SHLD-NEXT: RET 0, implicit $rax
     %0:gr32 = COPY $eax
     %1:gr32 = COPY $ebx
     %2:gr32 = SHLD32rri8 %0, %1, 2, implicit-def $eflags
     $eax = COPY %2
-    RET 0, implicit $rax 
+    RET 0, implicit $rax
 ...
 
 ---
@@ -49,7 +49,7 @@ body:             |
     ; FAST-SHLD-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rbx
     ; FAST-SHLD-NEXT: [[SHLD64rri8_:%[0-9]+]]:gr64 = SHLD64rri8 [[COPY]], [[COPY1]], 2, implicit-def $eflags
     ; FAST-SHLD-NEXT: $rax = COPY [[SHLD64rri8_]]
-    ; FAST-SHLD-NEXT: RET 0
+    ; FAST-SHLD-NEXT: RET 0, implicit $rax
     ;
     ; SLOW-SHLD-LABEL: name: rri64
     ; SLOW-SHLD: liveins: $rax, $rbx
@@ -58,9 +58,9 @@ body:             |
     ; SLOW-SHLD-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rbx
     ; SLOW-SHLD-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 2, implicit-def $eflags
     ; SLOW-SHLD-NEXT: [[SHR64ri:%[0-9]+]]:gr64 = SHR64ri [[COPY1]], 62, implicit-def $eflags
-    ; SLOW-SHLD-NEXT: [[OR64rr:%[0-9]+]]:gr64 = OR64rr [[SHL64ri]], [[SHR64ri]], implicit-def $eflags
+    ; SLOW-SHLD-NEXT: [[OR64rr:%[0-9]+]]:gr64 = OR64rr killed [[SHL64ri]], killed [[SHR64ri]], implicit-def $eflags
     ; SLOW-SHLD-NEXT: $rax = COPY [[OR64rr]]
-    ; SLOW-SHLD-NEXT: RET 0
+    ; SLOW-SHLD-NEXT: RET 0, implicit $rax
     %0:gr64 = COPY $rax
     %1:gr64 = COPY $rbx
     %2:gr64 = SHLD64rri8 %0, %1, 2, implicit-def $eflags
@@ -88,7 +88,7 @@ body:             |
     ; SLOW-SHLD-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $ebx
     ; SLOW-SHLD-NEXT: SHL32mi $rax, 1, $noreg, 0, $noreg, 2, implicit-def $eflags
     ; SLOW-SHLD-NEXT: [[SHR32ri:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 30, implicit-def $eflags
-    ; SLOW-SHLD-NEXT: OR32mr $rax, 1, $noreg, 0, $noreg, [[SHR32ri]], implicit-def $eflags
+    ; SLOW-SHLD-NEXT: OR32mr $rax, 1, $noreg, 0, $noreg, killed [[SHR32ri]], implicit-def $eflags
     ; SLOW-SHLD-NEXT: RET 0
     %0:gr32 = COPY $ebx
     SHLD32mri8 $rax, 1, $noreg, 0, $noreg, %0, 2, implicit-def $eflags
@@ -115,7 +115,7 @@ body:             |
     ; SLOW-SHLD-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rbx
     ; SLOW-SHLD-NEXT: SHL64mi $rax, 1, $noreg, 0, $noreg, 2, implicit-def $eflags
     ; SLOW-SHLD-NEXT: [[SHR64ri:%[0-9]+]]:gr64 = SHR64ri [[COPY]], 62, implicit-def $eflags
-    ; SLOW-SHLD-NEXT: OR64mr $rax, 1, $noreg, 0, $noreg, [[SHR64ri]], implicit-def $eflags
+    ; SLOW-SHLD-NEXT: OR64mr $rax, 1, $noreg, 0, $noreg, killed [[SHR64ri]], implicit-def $eflags
     ; SLOW-SHLD-NEXT: RET 0
     %0:gr64 = COPY $rbx
     SHLD64mri8 $rax, 1, $noreg, 0, $noreg, %0, 2, implicit-def $eflags
