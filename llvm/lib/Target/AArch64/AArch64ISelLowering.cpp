@@ -22004,11 +22004,16 @@ performInsertSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   EVT VecVT = Vec.getValueType();
   EVT SubVT = SubVec.getValueType();
 
-  // Promote fixed length vector zeros.
+  // Promote fixed length vector constants.
   if (VecVT.isScalableVector() && SubVT.isFixedLengthVector() &&
-      Vec.isUndef() && isZerosVector(SubVec.getNode()))
-    return VecVT.isInteger() ? DAG.getConstant(0, DL, VecVT)
-                             : DAG.getConstantFP(0, DL, VecVT);
+      Vec.isUndef()) {
+    SDValue SplatVal = DAG.getSplatValue(SubVec);
+    if (auto C = dyn_cast_or_null<ConstantSDNode>(SplatVal))
+      return DAG.getConstant(C->getAPIntValue(), DL, VecVT);
+
+    if (auto C = dyn_cast_or_null<ConstantFPSDNode>(SplatVal))
+      return DAG.getConstantFP(C->getValueAPF(), DL, VecVT);
+  }
 
   // Only do this for legal fixed vector types.
   if (!VecVT.isFixedLengthVector() ||

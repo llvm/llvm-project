@@ -387,6 +387,38 @@ TEST(SessionTest, CreateServiceAndUseRef) {
   CS.doMoreConfig(1);
 }
 
+TEST(SessionTest, ControllerInterfaceContainsSessionByDefault) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  ASSERT_TRUE(S.controllerInterface()->count("orc_rt_SessionInstance"));
+  EXPECT_EQ(S.controllerInterface()->at("orc_rt_SessionInstance"),
+            static_cast<void *>(&S));
+}
+
+TEST(SessionTest, ControllerInterfaceWithRef) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  int X = 0, Y = 0;
+  S.controllerInterface().with_ref([&](ControllerInterface &CI) {
+    std::pair<const char *, void *> Syms[] = {
+        {"orc_rt_A", static_cast<void *>(&X)},
+        {"orc_rt_B", static_cast<void *>(&Y)}};
+    cantFail(CI.addSymbolsUnique(Syms));
+  });
+
+  EXPECT_EQ(S.controllerInterface()->at("orc_rt_A"), &X);
+  EXPECT_EQ(S.controllerInterface()->at("orc_rt_B"), &Y);
+}
+
+TEST(SessionTest, ControllerInterfaceConstAccess) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  int X = 0;
+  std::pair<const char *, void *> Syms[] = {{"orc_rt_X", &X}};
+  cantFail(S.controllerInterface()->addSymbolsUnique(Syms));
+
+  const Session &CS = S;
+  ASSERT_TRUE(CS.controllerInterface()->count("orc_rt_X"));
+  EXPECT_EQ(CS.controllerInterface()->at("orc_rt_X"), &X);
+}
+
 TEST(ControllerAccessTest, Basics) {
   // Test that we can set the ControllerAccess implementation and still shut
   // down as expected.

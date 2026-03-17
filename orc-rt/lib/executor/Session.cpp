@@ -16,6 +16,15 @@ namespace orc_rt {
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
+Session::Session(std::unique_ptr<TaskDispatcher> Dispatcher,
+                 ErrorReporterFn ReportError)
+    : Dispatcher(std::move(Dispatcher)), ReportError(std::move(ReportError)) {
+  std::pair<const char *, void *> InitialSymbols[] = {
+      {"orc_rt_SessionInstance", static_cast<void *>(this)}};
+
+  cantFail(CI.addSymbolsUnique(InitialSymbols));
+}
+
 Session::~Session() { waitForShutdown(); }
 
 void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {

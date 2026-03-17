@@ -348,7 +348,7 @@ unsigned DWARFVerifier::verifyDebugInfoCallSite(const DWARFDie &Die) {
     return 0;
 
   DWARFDie Curr = Die.getParent();
-  for (; Curr.isValid() && !Curr.isSubprogramDIE(); Curr = Die.getParent()) {
+  for (; Curr.isValid() && !Curr.isSubprogramDIE(); Curr = Curr.getParent()) {
     if (Curr.getTag() == DW_TAG_inlined_subroutine) {
       ErrorCategory.Report(
           "Call site nested entry within inlined subroutine", [&]() {
