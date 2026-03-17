@@ -3824,10 +3824,9 @@ define <2 x float> @infer_return_from_load_nofpclass_md_v2f32(ptr %ptr) {
   ret <2 x float> %load
 }
 
-; TODO: Misses this case
 define { float, float } @infer_return_from_load_nofpclass_md_struct(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
-; CHECK-LABEL: define { float, float } @infer_return_from_load_nofpclass_md_struct
+; CHECK-LABEL: define nofpclass(nan) { float, float } @infer_return_from_load_nofpclass_md_struct
 ; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(8) [[PTR:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load { float, float }, ptr [[PTR]], align 4, !nofpclass [[META1]]
 ; CHECK-NEXT:    ret { float, float } [[LOAD]]
@@ -3846,6 +3845,70 @@ define [4 x float] @infer_return_from_load_nofpclass_md_array(ptr %ptr) {
   %load = load [4 x float], ptr %ptr, !nofpclass !1
   ret [4 x float] %load
 }
+
+define [2 x float] @constant_data_array_0() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) [2 x float] @constant_data_array_0
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret [2 x float] [float 0.000000e+00, float 1.000000e+00]
+;
+  ret [2 x float] [float 0.0, float 1.0]
+}
+
+define [2 x float] @constant_data_array_1() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(snan inf zero sub norm) [2 x float] @constant_data_array_1
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+;
+  ret [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000]
+}
+
+define { float, float } @constant_data_struct_0() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf nzero sub nnorm) { float, float } @constant_data_struct_0
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret { float, float } { float 0.000000e+00, float 1.000000e+00 }
+;
+  ret { float, float } { float 0.0, float 1.0 }
+}
+
+define { float, float } @constant_data_struct_1() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(snan inf zero sub norm) { float, float } @constant_data_struct_1
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 }
+;
+  ret { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 }
+}
+
+define { float, { float, float } } @constant_data_nested_struct() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define { float, { float, float } } @constant_data_nested_struct
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret { float, { float, float } } { float 0x7FF8000000000000, { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 } }
+;
+  ret { float, { float, float } } { float 0x7FF8000000000000, { float, float } { float 0x7FF8000000000000, float 0x7FF8000000000000 } }
+}
+
+define { float, double } @constant_data_struct_heterogeneous() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define { float, double } @constant_data_struct_heterogeneous
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret { float, double } { float 0x7FF8000000000000, double 0x7FF8000000000000 }
+;
+  ret { float, double } { float 0x7FF8000000000000, double 0x7FF8000000000000 }
+}
+
+define { float, [2 x float] } @constant_data_struct_array() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define { float, [2 x float] } @constant_data_struct_array
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret { float, [2 x float] } { float 0x7FF8000000000000, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000] }
+;
+  ret { float, [2 x float] } { float 0x7FF8000000000000, [2 x float] [float 0x7FF8000000000000, float 0x7FF8000000000000] }
+}
+
 
 declare i64 @_Z13get_global_idj(i32 noundef)
 

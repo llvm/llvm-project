@@ -36,13 +36,14 @@
 #endif
 # define SANITIZER_WEAK_ATTRIBUTE
 #  define SANITIZER_WEAK_IMPORT
-#elif SANITIZER_GO
-# define SANITIZER_INTERFACE_ATTRIBUTE
-# define SANITIZER_WEAK_ATTRIBUTE
-#  define SANITIZER_WEAK_IMPORT
 #else
-# define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
-# define SANITIZER_WEAK_ATTRIBUTE  __attribute__((weak))
+#  if SANITIZER_GO
+#    define SANITIZER_INTERFACE_ATTRIBUTE
+#    define SANITIZER_WEAK_ATTRIBUTE
+#  else
+#    define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
+#    define SANITIZER_WEAK_ATTRIBUTE __attribute__((weak))
+#  endif  // SANITIZER_GO
 #  if SANITIZER_APPLE
 #    define SANITIZER_WEAK_IMPORT extern "C" __attribute((weak_import))
 #  else

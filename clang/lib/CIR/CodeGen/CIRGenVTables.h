@@ -46,6 +46,11 @@ class CIRGenVTables {
   /// indices.
   SecondaryVirtualPointerIndicesMapTy secondaryVirtualPointerIndices;
 
+  /// Cache for the pure virtual member call function.
+  cir::FuncOp pureVirtualFn = nullptr;
+  /// Cache for the deleted virtual member call function.
+  cir::FuncOp deletedVirtualFn = nullptr;
+
   mlir::Attribute
   getVTableComponent(const VTableLayout &layout, unsigned componentIndex,
                      mlir::Attribute rtti, unsigned &nextVTableThunkIndex,

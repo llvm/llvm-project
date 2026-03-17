@@ -2979,8 +2979,12 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
       /*IsVariadic=*/false, /*IsCXXMethod=*/false));
   QualType fnType =
       Context.getFunctionType(Context.VoidTy, {Context.VoidPtrTy}, EPI);
-  llvm::Constant *dtorCallee = cast<llvm::Constant>(dtor.getCallee());
-  dtorCallee = CGF.CGM.getFunctionPointer(dtorCallee, fnType);
+  llvm::Value *dtorCallee = dtor.getCallee();
+  dtorCallee =
+      CGF.CGM.getFunctionPointer(cast<llvm::Constant>(dtorCallee), fnType);
+
+  if (dtorCallee->getType()->getPointerAddressSpace() != AddrAS)
+    dtorCallee = CGF.performAddrSpaceCast(dtorCallee, AddrPtrTy);
 
   if (!addr)
     // addr is null when we are trying to register a dtor annotated with

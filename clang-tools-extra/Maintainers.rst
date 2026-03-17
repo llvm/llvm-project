@@ -33,6 +33,9 @@ clang-tidy
 | Victor Chernyakin
 | chernyakin.victor.j@outlook.com (email), localspook (GitHub), LocalSpook (Discourse), localspook (Discord)
 
+| Zeyi Xu
+| zeyi2@nekoarch.cc (email), zeyi2 (Github), zeyi2 (Discourse), zeyi1 (Discord)
+
 
 clang-query
 -----------

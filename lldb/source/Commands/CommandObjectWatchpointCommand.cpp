@@ -548,8 +548,8 @@ protected:
                                     result.GetOutputStream().GetIndentLevel() +
                                         2);
             } else {
-              result.AppendMessageWithFormat(
-                  "Watchpoint %u does not have an associated command.\n",
+              result.AppendMessageWithFormatv(
+                  "Watchpoint {0} does not have an associated command.",
                   cur_wp_id);
             }
           }

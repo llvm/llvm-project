@@ -27,6 +27,10 @@
 #include "llvm/TargetParser/Triple.h"
 #include <cstdlib> // ::getenv
 
+#ifdef CLANG_USE_XCSELECT
+#include <xcselect.h> // ::xcselect_host_sdk_path
+#endif
+
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
@@ -1921,7 +1925,7 @@ struct DarwinPlatform {
     DarwinPlatform Result(TargetArg, getPlatformFromOS(TT.getOS()),
                           TT.getOSVersion(), A);
     VersionTuple OsVersion = TT.getOSVersion();
-    Result.TargetVariantTriple = TargetVariantTriple;
+    Result.TargetVariantTriple = std::move(TargetVariantTriple);
     Result.setEnvironment(TT.getEnvironment(), OsVersion, SDKInfo);
     return Result;
   }
@@ -2488,17 +2492,27 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     // Warn if the path does not exist.
     if (!getVFS().exists(A->getValue()))
       getDriver().Diag(clang::diag::warn_missing_sysroot) << A->getValue();
-  } else {
-    if (char *env = ::getenv("SDKROOT")) {
-      // We only use this value as the default if it is an absolute path,
-      // exists, and it is not the root path.
-      if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
-          StringRef(env) != "/") {
-        Args.append(Args.MakeSeparateArg(
-            nullptr, Opts.getOption(options::OPT_isysroot), env));
-      }
+  } else if (const char *env = ::getenv("SDKROOT")) {
+    // We only use this value as the default if it is an absolute path,
+    // exists, and it is not the root path.
+    if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
+        StringRef(env) != "/") {
+      Args.append(Args.MakeSeparateArg(
+          nullptr, Opts.getOption(options::OPT_isysroot), env));
     }
   }
+#ifdef CLANG_USE_XCSELECT
+  // FIXME: This should check for `getTriple().isMacOSX()`, but this breaks
+  // many tests. See https://github.com/llvm/llvm-project/pull/119670.
+  else if (getTriple().getOS() == llvm::Triple::MacOSX) {
+    char *p;
+    if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
+      Args.append(Args.MakeSeparateArg(
+          nullptr, Opts.getOption(options::OPT_isysroot), p));
+      ::free(p);
+    }
+  }
+#endif
 
   // Read the SDKSettings.json file for more information, like the SDK version
   // that we can pass down to the compiler.
@@ -3382,6 +3396,23 @@ void Darwin::addClangTargetOptions(
                                 options::OPT_fno_aligned_allocation) &&
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  // Enable objc_msgSend selector stubs by default if the linker supports it.
+  // ld64-811.2+ does, for arm64, arm64e, and arm64_32.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fobjc_msgsend_selector_stubs,
+                                options::OPT_fno_objc_msgsend_selector_stubs) &&
+      getTriple().isAArch64() &&
+      (getLinkerVersion(DriverArgs) >= VersionTuple(811, 2)))
+    CC1Args.push_back("-fobjc-msgsend-selector-stubs");
+
+  // Enable objc_msgSend class selector stubs by default if the linker supports
+  // it. ld64-1250+ does, for arm64, arm64e, and arm64_32.
+  if (!DriverArgs.hasArgNoClaim(
+          options::OPT_fobjc_msgsend_class_selector_stubs,
+          options::OPT_fno_objc_msgsend_class_selector_stubs) &&
+      getTriple().isAArch64() &&
+      (getLinkerVersion(DriverArgs) >= VersionTuple(1250, 0)))
+    CC1Args.push_back("-fobjc-msgsend-class-selector-stubs");
 
   // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
   // or disabled sized deallocations.

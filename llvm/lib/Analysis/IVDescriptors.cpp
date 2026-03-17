@@ -55,7 +55,6 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::UMin:
   case RecurKind::AnyOf:
   case RecurKind::FindIV:
-  // TODO: Make type-agnostic.
   case RecurKind::FindLast:
     return true;
   }
@@ -499,7 +498,12 @@ bool RecurrenceDescriptor::AddReductionVar(
   // to evaluate the reduction in the narrower width.
   // Check the scalar type to handle both scalar and vector types.
   Type *ScalarTy = RecurrenceType->getScalarType();
-  if (ScalarTy->isFloatingPointTy()) {
+  if (Kind == RecurKind::FindLast) {
+    // FindLast supports all primitive scalar types.
+    if (!ScalarTy->isFloatingPointTy() && !ScalarTy->isIntegerTy() &&
+        !ScalarTy->isPointerTy())
+      return false;
+  } else if (ScalarTy->isFloatingPointTy()) {
     if (!isFloatingPointRecurrenceKind(Kind))
       return false;
   } else if (ScalarTy->isIntegerTy()) {
@@ -923,12 +927,8 @@ RecurrenceDescriptor::isFindPattern(Loop *TheLoop, PHINode *OrigPhi,
   // We are looking for selects of the form:
   //   select(cmp(), phi, value) or
   //   select(cmp(), value, phi)
-  // TODO: Match selects with multi-use cmp conditions.
-  Value *NonRdxPhi = nullptr;
-  if (!match(I, m_CombineOr(m_Select(m_OneUse(m_Cmp()), m_Value(NonRdxPhi),
-                                     m_Specific(OrigPhi)),
-                            m_Select(m_OneUse(m_Cmp()), m_Specific(OrigPhi),
-                                     m_Value(NonRdxPhi)))))
+  if (!match(I, m_CombineOr(m_Select(m_Cmp(), m_Value(), m_Specific(OrigPhi)),
+                            m_Select(m_Cmp(), m_Specific(OrigPhi), m_Value()))))
     return InstDesc(false, I);
 
   return InstDesc(I, RecurKind::FindLast);

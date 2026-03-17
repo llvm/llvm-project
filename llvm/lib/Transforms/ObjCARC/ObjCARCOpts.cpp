@@ -1654,20 +1654,18 @@ ComputePostOrders(Function &F,
   BasicBlock *EntryBB = &F.getEntryBlock();
   BBState &MyStates = BBStates[EntryBB];
   MyStates.SetAsEntry();
-  Instruction *EntryTI = EntryBB->getTerminator();
-  SuccStack.push_back(std::make_pair(EntryBB, succ_iterator(EntryTI)));
+  SuccStack.push_back(std::make_pair(EntryBB, succ_begin(EntryBB)));
   Visited.insert(EntryBB);
   OnStack.insert(EntryBB);
   do {
   dfs_next_succ:
     BasicBlock *CurrBB = SuccStack.back().first;
-    succ_iterator SE(CurrBB->getTerminator(), false);
+    succ_iterator SE = succ_end(CurrBB->getTerminator());
 
     while (SuccStack.back().second != SE) {
       BasicBlock *SuccBB = *SuccStack.back().second++;
       if (Visited.insert(SuccBB).second) {
-        SuccStack.push_back(
-            std::make_pair(SuccBB, succ_iterator(SuccBB->getTerminator())));
+        SuccStack.push_back(std::make_pair(SuccBB, succ_begin(SuccBB)));
         BBStates[CurrBB].addSucc(SuccBB);
         BBState &SuccStates = BBStates[SuccBB];
         SuccStates.addPred(CurrBB);

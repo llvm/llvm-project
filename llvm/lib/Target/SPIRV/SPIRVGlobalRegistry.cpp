@@ -316,19 +316,32 @@ SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                      MachineIRBuilder &MIRBuilder) {
   auto EleOpc = ElemType->getOpcode();
-  (void)EleOpc;
   assert(NumElems >= 2 && "SPIR-V OpTypeVector requires at least 2 components");
-  assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
-          EleOpc == SPIRV::OpTypeBool) &&
-         "Invalid vector element type");
 
-  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
-                                                              &MIRBuilder) {
-    return MIRBuilder.buildInstr(SPIRV::OpTypeVector)
-        .addDef(createTypeVReg(MIRBuilder))
-        .addUse(getSPIRVTypeID(ElemType))
-        .addImm(NumElems);
-  });
+  if (EleOpc == SPIRV::OpTypePointer) {
+    if (!cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
+             .canUseExtension(
+                 SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      const Function &F = MIRBuilder.getMF().getFunction();
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F,
+          "Vector of pointers requires SPV_INTEL_masked_gather_scatter "
+          "extension",
+          DebugLoc(), DS_Error));
+    }
+  } else {
+    assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
+            EleOpc == SPIRV::OpTypeBool) &&
+           "Invalid vector element type");
+  }
+
+  return createConstOrTypeAtFunctionEntry(
+      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeVector)
+            .addDef(createTypeVReg(MIRBuilder))
+            .addUse(getSPIRVTypeID(ElemType))
+            .addImm(NumElems);
+      });
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstFP(APFloat Val, MachineInstr &I,
@@ -1108,6 +1121,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::findSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual,
     bool ExplicitLayoutRequired, bool EmitIR) {
+  // Treat <1 x T> as T.
+  if (auto *FVT = dyn_cast<FixedVectorType>(Ty);
+      FVT && FVT->getNumElements() == 1)
+    return findSPIRVType(FVT->getElementType(), MIRBuilder, AccQual,
+                         ExplicitLayoutRequired, EmitIR);
   Ty = adjustIntTypeByWidth(Ty);
   // TODO: findMI needs to know if a layout is required.
   if (const MachineInstr *MI =
@@ -1929,6 +1947,9 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
     SPIRVTypeInst BaseType, unsigned NumElements, MachineInstr &I,
     const SPIRVInstrInfo &TII) {
+  // At this point of time all 1-element vectors are resolved. Add assertion
+  // to fire if anything changes.
+  assert(NumElements >= 2 && "SPIR-V vectors must have at least 2 components");
   Type *Ty = FixedVectorType::get(
       const_cast<Type *>(getTypeForSPIRVType(BaseType)), NumElements);
   if (const MachineInstr *MI = findMI(Ty, false, CurMF))

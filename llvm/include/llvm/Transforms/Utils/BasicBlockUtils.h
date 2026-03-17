@@ -26,7 +26,7 @@
 #include <cassert>
 
 namespace llvm {
-class BranchInst;
+class CondBrInst;
 class LandingPadInst;
 class Loop;
 class PHINode;
@@ -603,7 +603,7 @@ LLVM_ABI void SplitBlockAndInsertForEachLane(
 ///
 /// This does no checking to see if the true/false blocks have large or unsavory
 /// instructions in them.
-LLVM_ABI BranchInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
+LLVM_ABI CondBrInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
                                     BasicBlock *&IfFalse);
 
 // Split critical edges where the source of the edge is an indirectbr
@@ -634,7 +634,7 @@ LLVM_ABI bool SplitIndirectBrCriticalEdges(Function &F,
 
 // Utility function for inverting branch condition and for swapping its
 // successors
-LLVM_ABI void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
+LLVM_ABI void InvertBranch(CondBrInst *PBI, IRBuilderBase &Builder);
 
 // Check whether the function only has simple terminator:
 // br/brcond/unreachable/ret
