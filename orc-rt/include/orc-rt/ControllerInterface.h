@@ -26,7 +26,7 @@ namespace orc_rt {
 /// duplicates with an error.
 class ControllerInterface {
 public:
-  using SymbolTable = std::unordered_map<std::string, void *>;
+  using SymbolTable = std::unordered_map<std::string, const void *>;
   using iterator = SymbolTable::const_iterator;
 
   bool empty() const noexcept { return Symbols.empty(); }
