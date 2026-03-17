@@ -5929,10 +5929,6 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
-  if (VF.isFixed() && !ST->isSVEorStreamingSVEAvailable() &&
-      (!ST->isNeonAvailable() || !ST->hasDotProd()))
-    return Invalid;
-
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
        Opcode != Instruction::FAdd) ||
       OpAExtend == TTI::PR_None)
@@ -5992,26 +5988,26 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   std::pair<InstructionCost, MVT> InputLT =
       getTypeLegalizationCost(InputVectorType);
 
-  // Returns cost of expanding the partial reduction in ISel.
-  auto GetExpandCost = [&]() -> InstructionCost {
-    unsigned ExtOpc = AccumVectorType->getElementType()->isFloatingPointTy()
-                          ? Instruction::FPExt
-                          : Instruction::ZExt;
-
-    Type *ExtVectorType =
-        VectorType::get(AccumVectorType->getElementType(), VF);
-    return (BinOp ? 2 : 1) *
-               getCastInstrCost(ExtOpc, ExtVectorType, InputVectorType,
-                                TTI::CastContextHint::None, CostKind) +
-           (BinOp ? getArithmeticInstrCost(*BinOp, ExtVectorType, CostKind)
-                  : InstructionCost()) +
-           Ratio * getArithmeticInstrCost(Opcode, AccumVectorType, CostKind);
-  };
-
   bool IsSub = Opcode == Instruction::Sub;
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
 
-  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot && !IsSub) {
+  // Returns true if the subtarget supports the operation for a given type.
+  auto IsSupported = [&AccumLT](bool SVEPred, bool NEONPred) -> bool {
+    return SVEPred || (AccumLT.second.isFixedLengthVector() &&
+                       AccumLT.second.getSizeInBits() <= 128 && NEONPred);
+  };
+
+  // i8 -> i32 is natively supported with udot/sdot/usdot, both for NEON and
+  // SVE.
+  if (IsSupported(ST->isSVEorStreamingSVEAvailable(), ST->hasDotProd()) &&
+      !IsSub) {
+    if (AccumLT.second.getScalarType() == MVT::i32 &&
+        InputLT.second.getScalarType() == MVT::i8)
+      return Cost;
+  }
+
+  if (IsSupported(ST->isSVEorStreamingSVEAvailable(), false) && !IsUSDot &&
+      !IsSub) {
     // i16 -> i64 is natively supported for udot/sdot
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
@@ -6030,30 +6026,54 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       // the extends in the IR are still counted. This can be fixed
       // after https://github.com/llvm/llvm-project/pull/147302 has landed.
       return Cost;
-  }
-
-  // For a ratio of 2, we can use 2 [u|s|f|bf]mlalb/t instructions.
-  if (Ratio == 2 && !IsSub &&
-      llvm::is_contained({MVT::i16, MVT::i32, MVT::f16, MVT::bf16},
-                         InputLT.second.getScalarType().SimpleTy))
-    return Cost * 2;
-
-  // i8 -> i32 is natively supported for udot/sdot/usdot, both for NEON and SVE.
-  if (ST->isSVEorStreamingSVEAvailable() ||
-      (AccumLT.second.isFixedLengthVector() && ST->isNeonAvailable() &&
-       ST->hasDotProd())) {
-    if (AccumLT.second.getScalarType() == MVT::i32 &&
-        InputLT.second.getScalarType() == MVT::i8 && !IsSub)
+    // f16 -> f32 is natively supported for fdot
+    if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1()) &&
+        AccumLT.second.getScalarType() == MVT::f32 &&
+        InputLT.second.getScalarType() == MVT::f16 &&
+        AccumLT.second.getVectorMinNumElements() == 4 &&
+        InputLT.second.getVectorMinNumElements() == 8)
       return Cost;
   }
 
-  // f16 -> f32 is natively supported for fdot
-  if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1()) &&
-      AccumLT.second.getScalarType() == MVT::f32 &&
-      InputLT.second.getScalarType() == MVT::f16 &&
-      AccumLT.second.getVectorMinNumElements() == 4 &&
-      InputLT.second.getVectorMinNumElements() == 8)
-    return Cost;
+  // For a ratio of 2, we can use *mlal top/bottom instructions.
+  if (Ratio == 2 && !IsSub) {
+    MVT InVT = InputLT.second.getScalarType();
+
+    // SVE2 [us]mlalb/t and NEON [us]mlal(2)
+    if (IsSupported(ST->isSVEorStreamingSVEAvailable() && ST->hasSVE2(),
+                    ST->hasNEON()) &&
+        llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
+      return Cost * 2;
+
+    // SVE2 fmlalb/t and NEON fmlal(2)
+    if (IsSupported(ST->isSVEorStreamingSVEAvailable() && ST->hasSVE2(),
+                    ST->hasFP16FML()) &&
+        InVT == MVT::f16)
+      return Cost * 2;
+
+    // SVE and NEON bfmlalb/t
+    if (IsSupported(ST->isSVEorStreamingSVEAvailable() && ST->hasBF16(),
+                    ST->hasBF16()) &&
+        InVT == MVT::bf16)
+      return Cost * 2;
+  }
+
+  // Returns cost of expanding the partial reduction in ISel.
+  auto GetExpandCost = [&]() -> InstructionCost {
+    unsigned ExtOpc = AccumVectorType->getElementType()->isFloatingPointTy()
+                          ? Instruction::FPExt
+                          : Instruction::ZExt;
+
+    Type *ExtVectorType =
+        VectorType::get(AccumVectorType->getElementType(), VF);
+    return (BinOp ? 2 : 1) *
+               getCastInstrCost(ExtOpc, ExtVectorType, InputVectorType,
+                                TTI::CastContextHint::None, CostKind) +
+           (BinOp ? getArithmeticInstrCost(*BinOp, ExtVectorType, CostKind)
+                  : InstructionCost()) +
+           Log2_32(Ratio) *
+               getArithmeticInstrCost(Opcode, AccumVectorType, CostKind);
+  };
 
   if (IsSub) {
     // Slightly lower the cost of a sub reduction so that it can be considered

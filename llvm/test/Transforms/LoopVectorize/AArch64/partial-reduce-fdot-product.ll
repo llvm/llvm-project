@@ -331,20 +331,20 @@ define float @not_fdot_f16_f32_nosve(ptr %a, ptr %b) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x half>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x half>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <8 x half> [[WIDE_LOAD4]] to <8 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <8 x half> [[WIDE_LOAD2]] to <8 x float>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <8 x float> [[TMP7]], [[TMP3]]
-; CHECK-NEXT:    [[TMP11]] = fadd reassoc contract <8 x float> [[TMP9]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <4 x float> @llvm.vector.partial.reduce.fadd.v4f32.v8f32(<4 x float> [[VEC_PHI]], <8 x float> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[PARTIAL_REDUCE]])
 ; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
 ; CHECK:       [[FOR_EXIT]]:
 ; CHECK-NEXT:    ret float [[TMP13]]
@@ -380,20 +380,20 @@ define double @not_fdot_f32_f64_nosve(ptr %a, ptr %b) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x double> [ <double 0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext <4 x float> [[WIDE_LOAD2]] to <4 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <4 x float> [[WIDE_LOAD4]] to <4 x double>
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <4 x float> [[WIDE_LOAD2]] to <4 x double>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <4 x double> [[TMP7]], [[TMP3]]
-; CHECK-NEXT:    [[TMP11]] = fadd reassoc contract <4 x double> [[TMP9]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call reassoc contract <2 x double> @llvm.vector.partial.reduce.fadd.v2f64.v4f64(<2 x double> [[VEC_PHI]], <4 x double> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[PARTIAL_REDUCE]])
 ; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
 ; CHECK:       [[FOR_EXIT]]:
 ; CHECK-NEXT:    ret double [[TMP13]]
