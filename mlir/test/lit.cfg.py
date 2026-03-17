@@ -340,6 +340,9 @@ config.environment["FILECHECK_OPTS"] = "-enable-var-scope --allow-unused-prefixe
 # by copying/linking sources to build.
 if config.enable_bindings_python:
     config.environment["PYTHONPATH"] = os.getenv("MLIR_LIT_PYTHONPATH", "")
+    config.substitutions.append(
+        ("%mlir_python_src_root", os.path.join(config.mlir_src_root, "python"))
+    )
     llvm_config.with_environment(
         "PYTHONPATH",
         [
@@ -359,6 +362,7 @@ if config.enable_python_stable_abi:
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
+
 
 def have_host_jit_feature_support(feature_name):
     mlir_runner_exe = lit.util.which("mlir-runner", config.mlir_tools_dir)

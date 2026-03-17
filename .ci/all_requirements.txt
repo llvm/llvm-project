@@ -484,6 +484,17 @@ pynacl==1.6.0 \
     --hash=sha256:f46386c24a65383a9081d68e9c2de909b1834ec74ff3013271f1bca9c2d233eb \
     --hash=sha256:f4b3824920e206b4f52abd7de621ea7a44fd3cb5c8daceb7c3612345dfc54f2e
     # via pygithub
+pyrefly==0.56.0 \
+    --hash=sha256:1e5f53781875024086a5b9f31a89c57d2977487fc3f819d9255008ad34b86fe2 \
+    --hash=sha256:21f018f47debc0842b2c3072201e53c138ae32bcda4f3119bfc8d23f59c16b3e \
+    --hash=sha256:4683f5e8820d5fbfb84231b643b2c5f6cd40b982cac48ef756d4e3d9b09a39cc \
+    --hash=sha256:5478229b09f4bba5bfea000b5ba20ea405f62dc7619ea81197e7ea637d6cba8d \
+    --hash=sha256:95366056ceb224571b9f1c20e801d949f2c1fa2cf4ed6ceaadf85ca2ebe6fb27 \
+    --hash=sha256:ec6ab3f9e2c03bae8dfa520f52778f47b6762020929a664177d36aa3b941db22 \
+    --hash=sha256:f0440a4bbf119ab646468f360e0bd047df051352db1e5d5b9fd58f89e8458809 \
+    --hash=sha256:f4948021639288b1ccda5f124c9562dc7f0a2679111eb314fa266c7bfd9f8603 \
+    --hash=sha256:f84d21d9b9b58481eea02204e2f73cabb93751b21ab2cd99178b4bde24be6a82
+    # via -r mlir/python/requirements.txt
 pyyaml==6.0.1 \
     --hash=sha256:04ac92ad1925b2cff1db0cfebffb6ffc43457495c9b3c39d3fcae417d7125dc5 \
     --hash=sha256:062582fca9fabdd2c8b54a3ef1c978d786e0f6b3a1510e0ac93ef59e0ddae2bc \
