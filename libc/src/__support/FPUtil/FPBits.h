@@ -828,8 +828,7 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
 // It derives its functionality to FPRepImpl above.
 template <typename T>
 struct FPBits final : public internal::FPRepImpl<get_fp_type<T>(), FPBits<T>> {
-  static_assert(cpp::is_floating_point_v<T>
-                ||cpp::is_same_v<T, LIBC_NAMESPACE::fputil::Float128>,
+  static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
   using UP = internal::FPRepImpl<get_fp_type<T>(), FPBits<T>>;
   using StorageType = typename UP::StorageType;
