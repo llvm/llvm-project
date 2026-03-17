@@ -319,7 +319,7 @@ def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", []> {
 
     ```mlir
     spirv.ExecutionModeId @foo "LocalSizeId" @var0, @var1, @var2
-    spirv.ExecutionModeId @bar "LocalSizeHintId", @x, @y, @z
+    spirv.ExecutionModeId @bar "LocalSizeHintId" @x, @y, @z
     ```
   }];
 
@@ -341,9 +341,16 @@ def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", []> {
   let hasVerifier = 1;
   
   let autogenSerialization = 0;
-  
+
   let builders = [OpBuilder<(ins "spirv::FuncOp":$function,
-      "spirv::ExecutionMode":$executionMode, "ArrayRef<Attribute>":$params)>];
+                                "spirv::ExecutionMode":$executionMode,
+                                "ArrayRef<Attribute>":$params),
+                            [{
+      build($_builder, $_state,
+            SymbolRefAttr::get(function),
+            ExecutionModeAttr::get($_builder.getContext(), executionMode),
+            $_builder.getArrayAttr(params));
+    }]>];
 }
 
 // -----

@@ -923,15 +923,6 @@ void spirv::ExecutionModeOp::print(OpAsmPrinter &printer) {
 // spirv.ExecutionModeId
 //===----------------------------------------------------------------------===//
 
-void spirv::ExecutionModeIdOp::build(OpBuilder &builder, OperationState &state,
-                                     FuncOp function,
-                                     ExecutionMode executionMode,
-                                     ArrayRef<Attribute> params) {
-  build(builder, state, SymbolRefAttr::get(function),
-        ExecutionModeAttr::get(builder.getContext(), executionMode),
-        builder.getArrayAttr(params));
-}
-
 ParseResult spirv::ExecutionModeIdOp::parse(OpAsmParser &parser,
                                             OperationState &result) {
   ExecutionMode execMode;
@@ -942,12 +933,14 @@ ParseResult spirv::ExecutionModeIdOp::parse(OpAsmParser &parser,
   }
 
   SmallVector<Attribute, 4> values;
-  while (!parser.parseOptionalComma()) {
-    FlatSymbolRefAttr attr;
-    if (parser.parseAttribute(attr)) {
-      return failure();
-    }
-    values.push_back(attr);
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        FlatSymbolRefAttr attr;
+        if (parser.parseAttribute(attr))
+          return failure();
+        values.push_back(attr);
+        return success();
+      })) {
+    return failure();
   }
 
   StringRef valuesAttrName = getValuesAttrName(result.name);
@@ -959,7 +952,7 @@ ParseResult spirv::ExecutionModeIdOp::parse(OpAsmParser &parser,
 void spirv::ExecutionModeIdOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printSymbolName(getFn());
-  printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\", ";
+  printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\" ";
 
   llvm::interleaveComma(
       getValues().getAsValueRange<FlatSymbolRefAttr>(), printer,
@@ -982,7 +975,7 @@ LogicalResult spirv::ExecutionModeIdOp::verify() {
   if (getValues().empty())
     return emitOpError("expected at least one value operand");
 
-  for (const auto &value : getValues()) {
+  for (const Attribute &value : getValues()) {
     auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);
     if (!valueSymbol)
       return emitOpError("expected value operands to be symbol reference");

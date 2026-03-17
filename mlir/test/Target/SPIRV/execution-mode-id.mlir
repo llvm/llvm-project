@@ -13,6 +13,6 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.2, [Shader], []> {
     spirv.Return
   }
   spirv.EntryPoint "GLCompute" @foo
-  // CHECK: spirv.ExecutionModeId @foo "LocalSizeId", @x, @y, @z
-  spirv.ExecutionModeId @foo "LocalSizeId", @x, @y, @z
+  // CHECK: spirv.ExecutionModeId @foo "LocalSizeId" @x, @y, @z
+  spirv.ExecutionModeId @foo "LocalSizeId" @x, @y, @z
 }

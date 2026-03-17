@@ -897,7 +897,6 @@ Serializer::processOp<spirv::ExecutionModeIdOp>(spirv::ExecutionModeIdOp op) {
               "serialized";
 
   operands.push_back(funcID);
-  // Add the ExecutionMode.
   operands.push_back(static_cast<uint32_t>(op.getExecutionMode()));
 
   for (Attribute refVal : op.getValues().getValue()) {

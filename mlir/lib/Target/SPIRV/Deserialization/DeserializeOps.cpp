@@ -458,24 +458,25 @@ template <>
 LogicalResult
 Deserializer::processOp<spirv::ExecutionModeIdOp>(ArrayRef<uint32_t> words) {
   unsigned wordIndex = 0;
-  if (wordIndex >= words.size())
+  unsigned const wordsSize = words.size();
+  if (wordIndex >= wordsSize)
     return emitError(unknownLoc,
                      "missing function result <id> in OpExecutionModeId");
 
-  // Get the function <id> to get the name of the function
+  // Get the function <id> to get the name of the function.
   uint32_t fnID = words[wordIndex++];
   FuncOp fn = getFunction(fnID);
   if (!fn)
     return emitError(unknownLoc, "no function matching <id> ") << fnID;
 
-  // Get the Execution mode
-  if (wordIndex >= words.size())
+  // Get the Execution mode.
+  if (wordIndex >= wordsSize)
     return emitError(unknownLoc, "missing Execution Mode in OpExecutionModeId");
 
   ExecutionModeAttr execMode = spirv::ExecutionModeAttr::get(
       context, static_cast<spirv::ExecutionMode>(words[wordIndex++]));
 
-  // Get the values
+  // Get the values.
   SmallVector<Attribute, 4> attrListElems;
   while (wordIndex < words.size()) {
     std::string id = getSpecConstantSymbol(words[wordIndex++]);
