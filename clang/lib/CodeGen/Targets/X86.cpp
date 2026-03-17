@@ -2864,6 +2864,9 @@ ABIArgInfo
 X86_64ABIInfo::classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
                                              unsigned &NeededSSE,
                                              unsigned &MaxVectorWidth) const {
+  if (isEmptyRecord(getContext(), Ty, true))
+    return ABIArgInfo::getIgnore();
+
   auto *RD =
       cast<RecordType>(Ty.getCanonicalType())->getDecl()->getDefinitionOrSelf();
 

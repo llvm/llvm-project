@@ -35,6 +35,20 @@ void __regcall v5(long long a, int b, int c) {}
 // X86: define dso_local x86_regcallcc void @__regcall3__v5(i64 noundef %a, i32 inreg noundef %b, i32 inreg noundef %c)
 // X64: define dso_local x86_regcallcc void @__regcall3__v5(i64 noundef %a, i32 noundef %b, i32 noundef %c)
 
+struct Empty {};
+void __regcall v6(struct Empty a, int b) {}
+// Win32: define dso_local x86_regcallcc void @__regcall3__v6(ptr noundef byval(%struct.Empty) align 4 %a, i32 inreg noundef %b)
+// Lin32: define dso_local x86_regcallcc void @__regcall3__v6(i32 inreg noundef %b)
+// Win64: define dso_local x86_regcallcc void @__regcall3__v6(i32 %a.coerce, i32 noundef %b)
+// Lin64: define dso_local x86_regcallcc void @__regcall3__v6(i32 noundef %b)
+
+static struct Empty g_empty;
+struct Empty __regcall v7(void) { return g_empty; }
+// Win32: define dso_local x86_regcallcc void @__regcall3__v7()
+// Lin32: define dso_local x86_regcallcc void @__regcall3__v7(ptr dead_on_unwind inreg noalias writable sret(%struct.Empty) align 1 %agg.result)
+// Win64: define dso_local x86_regcallcc i32 @__regcall3__v7()
+// Lin64: define dso_local x86_regcallcc void @__regcall3__v7()
+
 struct HFA2 { double x, y; };
 struct HFA4 { double w, x, y, z; };
 struct HFA5 { double v, w, x, y, z; };
