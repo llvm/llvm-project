@@ -2,10 +2,6 @@
 Test that LLDB correctly distinguishes template specializations with
 different non-type template parameter (NTTP) values for various type
 categories.
-
-Note: Pointer and member function pointer NTTPs are encoded in DWARF
-fusing DW_AT_location or no value attribute (not DW_AT_const_value),
-so they do not go through MakeAPValue and are not yet handled.
 """
 
 import lldb
@@ -24,6 +20,17 @@ class TestCase(TestBase):
         # Without the fix, md2 fails with "undeclared identifier".
         self.expect_expr("md1", result_type="MemberData<&S::x>")
         self.expect_expr("md2", result_type="MemberData<&S::y>")
+
+    @no_debug_info_test
+    def test_pointer(self):
+        """Pointer NTTPs: Ptr<&g1> vs Ptr<&g2>"""
+        self.build()
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        # DWARF encodes pointer NTTPs with DW_AT_location instead of
+        # DW_AT_const_value. Without the fix, ptr2 fails with
+        # "undeclared identifier".
+        self.expect_expr("ptr1", result_type="Ptr<&g1>")
+        self.expect_expr("ptr2", result_type="Ptr<&g2>")
 
     @no_debug_info_test
     def test_nullptr(self):

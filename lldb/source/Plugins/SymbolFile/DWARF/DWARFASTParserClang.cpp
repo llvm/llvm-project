@@ -2077,6 +2077,74 @@ clang::FieldDecl *DWARFASTParserClang::ResolveFieldFromPtrToMemberValue(
   return nullptr;
 }
 
+clang::VarDecl *
+DWARFASTParserClang::ResolveVarDeclFromAddress(const DWARFDIE &die,
+                                               uint64_t file_address) {
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  if (!dwarf)
+    return nullptr;
+
+  ModuleSP module_sp = dwarf->GetObjectFile()->GetModule();
+  if (!module_sp)
+    return nullptr;
+
+  // Resolve the file address to a Symbol to get the variable name
+  Address addr;
+  if (!module_sp->ResolveFileAddress(file_address, addr))
+    return nullptr;
+
+  Symbol *symbol = addr.CalculateSymbolContextSymbol();
+  if (!symbol)
+    return nullptr;
+
+  ConstString var_name = symbol->GetName();
+  if (!var_name)
+    return nullptr;
+
+  // Search DWARF for a DW_TAG_variable with this name
+  VariableList variables;
+  dwarf->FindGlobalVariables(var_name, CompilerDeclContext(), 1, variables);
+  if (variables.GetSize() == 0)
+    return nullptr;
+
+  VariableSP var_sp = variables.GetVariableAtIndex(0);
+  if (!var_sp)
+    return nullptr;
+
+  // Get the DWARFDIE for this variable and create a VarDecl
+  // Only resolve if the variable's type matches the pointer's pointee type.
+  // This prevents resolving &struct_var.member as &struct_var when the
+  // member happens to be at offset 0.
+  DWARFDIE var_die = dwarf->GetDIE(var_sp->GetID());
+  if (!var_die)
+    return nullptr;
+
+  Type *var_type = die.ResolveTypeUID(var_die.GetAttributeValueAsReferenceDIE(DW_AT_type));
+  if (!var_type)
+    return nullptr;
+
+  DWARFDIE ptr_type_die = die.GetReferencedDIE(DW_AT_type);
+  if (!ptr_type_die)
+    return nullptr;
+
+  DWARFDIE pointee_die = ptr_type_die.GetReferencedDIE(DW_AT_type);
+  if (!pointee_die)
+    return nullptr;
+
+  Type *pointee_type = die.ResolveTypeUID(pointee_die);
+  if (!pointee_type)
+    return nullptr;
+
+  if (var_type->GetID() != pointee_type->GetID())
+    return nullptr;
+
+  if (auto *decl = llvm::dyn_cast_or_null<clang::VarDecl>(
+          GetClangDeclForDIE(var_die)))
+    return decl;
+
+  return nullptr;
+}
+
 bool DWARFASTParserClang::ParseTemplateDIE(
     const DWARFDIE &die,
     TypeSystemClang::TemplateParameterInfos &template_param_infos) {
@@ -2140,6 +2208,24 @@ bool DWARFASTParserClang::ParseTemplateDIE(
           uval64 = form_value.Unsigned();
         }
         break;
+      case DW_AT_location:
+        if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+          if (const uint8_t *block = form_value.BlockData()) {
+            const DWARFDataExtractor &debug_info_data = die.GetData();
+            uint32_t block_length = form_value.Unsigned();
+            uint32_t block_offset = block - debug_info_data.GetDataStart();
+            Value initial_value(0);
+            if (auto result = DWARFExpression::Evaluate(
+                    nullptr, nullptr,
+                    die.GetDWARF()->GetObjectFile()->GetModule(),
+                    DataExtractor(debug_info_data, block_offset, block_length),
+                    die.GetCU(), eRegisterKindDWARF, &initial_value, nullptr)) {
+              uval64 = result->GetScalar().ULongLong();
+              uval64_valid = true;
+            }
+          }
+        }
+        break;
       case DW_AT_default_value:
         if (attributes.ExtractFormValueAtIndex(i, form_value))
           is_default_template_arg = form_value.Boolean();
@@ -2170,6 +2256,19 @@ bool DWARFASTParserClang::ParseTemplateDIE(
               return true;
             }
             // Failed to resolve FieldDecl, fall through to integer path
+          }
+
+          // For pointer types, try to resolve the address to the actual
+          // VarDecl so it doesn't displays a value.
+          if (clang_type.IsPointerType() && uval64 != 0) {
+            if (auto *var = ResolveVarDeclFromAddress(die, uval64)) {
+              template_param_infos.InsertArg(
+                  name, clang::TemplateArgument(
+                            var, ClangUtil::GetQualType(clang_type),
+                            is_default_template_arg));
+              return true;
+            }
+            // Failed to resolve VarDecl, fall through to integer path
           }
 
           template_param_infos.InsertArg(
