@@ -13,6 +13,10 @@
 // that is `libc.include.stdint` is added to the dependency of all targets
 // that use <stdint.h> header.
 
+#ifdef LIBC_FULL_BUILD
+#include "include/llvm-libc-macros/stdint-macros.h"
+#else
 #include <stdint.h>
+#endif
 
 #endif // LLVM_LIBC_HDR_STDINT_PROXY_H
