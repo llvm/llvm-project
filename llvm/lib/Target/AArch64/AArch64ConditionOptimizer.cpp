@@ -365,7 +365,8 @@ AArch64ConditionOptimizerImpl::getAdjustedCmpInfo(MachineInstr *CmpMI,
 }
 
 // Modifies a comparison instruction's immediate and opcode.
-void AArch64ConditionOptimizerImpl::updateCmpInstr(MachineInstr *CmpMI, int NewImm,
+void AArch64ConditionOptimizerImpl::updateCmpInstr(MachineInstr *CmpMI,
+                                                   int NewImm,
                                                    unsigned NewOpc) {
   CmpMI->getOperand(2).setImm(NewImm);
   CmpMI->setDesc(TII->get(NewOpc));
