@@ -1620,9 +1620,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_ds_add_gs_reg_rtn, amdgcn_ds_sub_gs_reg_rtn},
                    Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
-      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
-      .Div(S64, {{Vgpr64}, {IntrId, Vgpr32}})
-      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr32}});
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr32}});
 
   addRulesForIOpcs(
       {amdgcn_ds_bvh_stack_rtn, amdgcn_ds_bvh_stack_push4_pop1_rtn}, Standard)
