@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h"
 #include "orc-rt/SPSAllocAction.h"
 #include "orc-rt/SPSMemoryFlags.h"
 #include "orc-rt/SPSWrapperFunction.h"
 #include "orc-rt/SimpleNativeMemoryMap.h"
-#include "orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h"
 
 #include "AllocActionTestUtils.h"
 #include "CommonTestUtils.h"
