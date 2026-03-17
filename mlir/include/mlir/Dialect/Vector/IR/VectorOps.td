@@ -2099,10 +2099,8 @@ def Vector_GatherOp :
     Note, `indices` are element offsets - they are expressed in units of
     elements (not bytes). Each element in `indices` represents a displacement
     in units of elements from the starting element, i.e. `%base[%ofs_0, %ofs_1,
-    %ofs_2]` for the example above. If the resulting position exceeds the size
-    of a dimension, it naturally advances into the next row and/or plane
-    according to the identity (row-major) layout of `base`. Importantly, for
-    MemRefs, `indices` are interpreted assuming an identity (contiguous) MemRef
+    %ofs_2]` for the example above. Importantly, for MemRefs, `indices` are
+    %interpreted assuming an identity (contiguous) MemRef
     layout and do not account for non-identity strides.
 
 
@@ -2214,10 +2212,8 @@ def Vector_ScatterOp
     Note, `indices` are element offsets - they are expressed in units of
     elements (not bytes). Each element in `indices` represents a displacement
     in units of elements from the starting element, i.e. `%base[%ofs_0, %ofs_1,
-    %ofs_2]` for the example above. If the resulting position exceeds the size
-    of a dimension, it naturally advances into the next row and/or plane
-    according to the identity (row-major) layout of `base`. Importantly, for
-    MemRefs, `indices` are interpreted assuming an identity (contiguous) MemRef
+    %ofs_2]` for the example above. Importantly, for MemRefs, `indices` are
+    %interpreted assuming an identity (contiguous) MemRef
     layout and do not account for non-identity strides.
 
     If the index vector contains two or more duplicate indices, the behavior is
