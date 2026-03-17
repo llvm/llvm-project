@@ -42,6 +42,9 @@ if( WIN32 )
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
   # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
   set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32 ntdll)
+  if( HAVE_WINDOWS_ICU )
+    list(APPEND system_libs icu)
+  endif()
 elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBRT )
     set(system_libs ${system_libs} rt)
@@ -335,7 +338,7 @@ add_llvm_component_library(LLVMSupport
   )
 
 # Link ICU library if it is an external library.
-if(ICU_FOUND)
+if(ICU_FOUND AND NOT HAVE_WINDOWS_ICU)
   target_link_libraries(LLVMSupport
   PRIVATE
   ${ICU_LIBRARIES}
