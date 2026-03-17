@@ -476,7 +476,6 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   }
   finishDeferredAllocaToLDSPromotion(DeferredIntrs);
 
-
   VR.doReplacement();
   for (auto *I : ToBeErased) {
     I->dropDroppableUses();
