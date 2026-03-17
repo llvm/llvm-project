@@ -11647,6 +11647,220 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
   return InsertPointTy{ContBB, ContBB->begin()};
 }
 
+/// Mangle the parameter part of the vector function name according to
+/// their OpenMP classification. The mangling function is defined in
+/// section 4.5 of the AAVFABI(2021Q1).
+static std::string mangleVectorParameters(
+    ArrayRef<llvm::OpenMPIRBuilder::DeclareSimdAttrTy> ParamAttrs) {
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  for (const auto &ParamAttr : ParamAttrs) {
+    switch (ParamAttr.Kind) {
+    case llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear:
+      Out << 'l';
+      break;
+    case llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef:
+      Out << 'R';
+      break;
+    case llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearUVal:
+      Out << 'U';
+      break;
+    case llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearVal:
+      Out << 'L';
+      break;
+    case llvm::OpenMPIRBuilder::DeclareSimdKindTy::Uniform:
+      Out << 'u';
+      break;
+    case llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector:
+      Out << 'v';
+      break;
+    }
+    if (ParamAttr.HasVarStride)
+      Out << "s" << ParamAttr.StrideOrArg;
+    else if (ParamAttr.Kind ==
+                 llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear ||
+             ParamAttr.Kind ==
+                 llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef ||
+             ParamAttr.Kind ==
+                 llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearUVal ||
+             ParamAttr.Kind ==
+                 llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearVal) {
+      // Don't print the step value if it is not present or if it is
+      // equal to 1.
+      if (ParamAttr.StrideOrArg < 0)
+        Out << 'n' << -ParamAttr.StrideOrArg;
+      else if (ParamAttr.StrideOrArg != 1)
+        Out << ParamAttr.StrideOrArg;
+    }
+
+    if (!!ParamAttr.Alignment)
+      Out << 'a' << ParamAttr.Alignment;
+  }
+
+  return std::string(Out.str());
+}
+
+void OpenMPIRBuilder::emitX86DeclareSimdFunction(
+    llvm::Function *Fn, unsigned NumElts, const llvm::APSInt &VLENVal,
+    llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch) {
+  struct ISADataTy {
+    char ISA;
+    unsigned VecRegSize;
+  };
+  ISADataTy ISAData[] = {
+      {'b', 128}, // SSE
+      {'c', 256}, // AVX
+      {'d', 256}, // AVX2
+      {'e', 512}, // AVX512
+  };
+  llvm::SmallVector<char, 2> Masked;
+  switch (Branch) {
+  case DeclareSimdBranch::Undefined:
+    Masked.push_back('N');
+    Masked.push_back('M');
+    break;
+  case DeclareSimdBranch::Notinbranch:
+    Masked.push_back('N');
+    break;
+  case DeclareSimdBranch::Inbranch:
+    Masked.push_back('M');
+    break;
+  }
+  for (char Mask : Masked) {
+    for (const ISADataTy &Data : ISAData) {
+      llvm::SmallString<256> Buffer;
+      llvm::raw_svector_ostream Out(Buffer);
+      Out << "_ZGV" << Data.ISA << Mask;
+      if (!VLENVal) {
+        assert(NumElts && "Non-zero simdlen/cdtsize expected");
+        Out << llvm::APSInt::getUnsigned(Data.VecRegSize / NumElts);
+      } else {
+        Out << VLENVal;
+      }
+      Out << mangleVectorParameters(ParamAttrs);
+      Out << '_' << Fn->getName();
+      Fn->addFnAttr(Out.str());
+    }
+  }
+}
+
+// Function used to add the attribute. The parameter `VLEN` is templated to
+// allow the use of `x` when targeting scalable functions for SVE.
+template <typename T>
+static void addAArch64VectorName(T VLEN, StringRef LMask, StringRef Prefix,
+                                 char ISA, StringRef ParSeq,
+                                 StringRef MangledName, bool OutputBecomesInput,
+                                 llvm::Function *Fn) {
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  Out << Prefix << ISA << LMask << VLEN;
+  if (OutputBecomesInput)
+    Out << 'v';
+  Out << ParSeq << '_' << MangledName;
+  Fn->addFnAttr(Out.str());
+}
+
+// Helper function to generate the Advanced SIMD names depending on the value
+// of the NDS when simdlen is not present.
+static void addAArch64AdvSIMDNDSNames(unsigned NDS, StringRef Mask,
+                                      StringRef Prefix, char ISA,
+                                      StringRef ParSeq, StringRef MangledName,
+                                      bool OutputBecomesInput,
+                                      llvm::Function *Fn) {
+  switch (NDS) {
+  case 8:
+    addAArch64VectorName(8, Mask, Prefix, ISA, ParSeq, MangledName,
+                         OutputBecomesInput, Fn);
+    addAArch64VectorName(16, Mask, Prefix, ISA, ParSeq, MangledName,
+                         OutputBecomesInput, Fn);
+    break;
+  case 16:
+    addAArch64VectorName(4, Mask, Prefix, ISA, ParSeq, MangledName,
+                         OutputBecomesInput, Fn);
+    addAArch64VectorName(8, Mask, Prefix, ISA, ParSeq, MangledName,
+                         OutputBecomesInput, Fn);
+    break;
+  case 32:
+    addAArch64VectorName(2, Mask, Prefix, ISA, ParSeq, MangledName,
+                         OutputBecomesInput, Fn);
+    addAArch64VectorName(4, Mask, Prefix, ISA, ParSeq, MangledName,
+                         OutputBecomesInput, Fn);
+    break;
+  case 64:
+  case 128:
+    addAArch64VectorName(2, Mask, Prefix, ISA, ParSeq, MangledName,
+                         OutputBecomesInput, Fn);
+    break;
+  default:
+    llvm_unreachable("Scalar type is too wide.");
+  }
+}
+
+/// Emit vector function attributes for AArch64, as defined in the AAVFABI.
+void OpenMPIRBuilder::emitAArch64DeclareSimdFunction(
+    llvm::Function *Fn, unsigned UserVLEN,
+    llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch,
+    char ISA, unsigned NarrowestDataSize, bool OutputBecomesInput) {
+  assert((ISA == 'n' || ISA == 's') && "Expected ISA either 's' or 'n'.");
+
+  // Sort out parameter sequence.
+  const std::string ParSeq = mangleVectorParameters(ParamAttrs);
+  StringRef Prefix = "_ZGV";
+  StringRef MangledName = Fn->getName();
+
+  // Generate simdlen from user input (if any).
+  if (UserVLEN) {
+    if (ISA == 's') {
+      // SVE generates only a masked function.
+      addAArch64VectorName(UserVLEN, "M", Prefix, ISA, ParSeq, MangledName,
+                           OutputBecomesInput, Fn);
+      return;
+    }
+
+    switch (Branch) {
+    case DeclareSimdBranch::Undefined:
+      addAArch64VectorName(UserVLEN, "N", Prefix, ISA, ParSeq, MangledName,
+                           OutputBecomesInput, Fn);
+      addAArch64VectorName(UserVLEN, "M", Prefix, ISA, ParSeq, MangledName,
+                           OutputBecomesInput, Fn);
+      break;
+    case DeclareSimdBranch::Inbranch:
+      addAArch64VectorName(UserVLEN, "M", Prefix, ISA, ParSeq, MangledName,
+                           OutputBecomesInput, Fn);
+      break;
+    case DeclareSimdBranch::Notinbranch:
+      addAArch64VectorName(UserVLEN, "N", Prefix, ISA, ParSeq, MangledName,
+                           OutputBecomesInput, Fn);
+      break;
+    }
+    return;
+  }
+
+  if (ISA == 's') {
+    // SVE, section 3.4.1, item 1.
+    addAArch64VectorName("x", "M", Prefix, ISA, ParSeq, MangledName,
+                         OutputBecomesInput, Fn);
+    return;
+  }
+
+  switch (Branch) {
+  case DeclareSimdBranch::Undefined:
+    addAArch64AdvSIMDNDSNames(NarrowestDataSize, "N", Prefix, ISA, ParSeq,
+                              MangledName, OutputBecomesInput, Fn);
+    addAArch64AdvSIMDNDSNames(NarrowestDataSize, "M", Prefix, ISA, ParSeq,
+                              MangledName, OutputBecomesInput, Fn);
+    break;
+  case DeclareSimdBranch::Inbranch:
+    addAArch64AdvSIMDNDSNames(NarrowestDataSize, "M", Prefix, ISA, ParSeq,
+                              MangledName, OutputBecomesInput, Fn);
+    break;
+  case DeclareSimdBranch::Notinbranch:
+    addAArch64AdvSIMDNDSNames(NarrowestDataSize, "N", Prefix, ISA, ParSeq,
+                              MangledName, OutputBecomesInput, Fn);
+    break;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // OffloadEntriesInfoManager
 //===----------------------------------------------------------------------===//
