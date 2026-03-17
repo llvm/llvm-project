@@ -35,6 +35,8 @@ inline llvm::VersionTuple alignedAllocMinVersion(llvm::Triple::OSType OS) {
     return llvm::VersionTuple(4U);
   case llvm::Triple::ZOS:
     return llvm::VersionTuple(); // All z/OS versions have no support.
+  case llvm::Triple::ChipStar:
+    return llvm::VersionTuple(); // No version constraint for device targets.
   }
 
   llvm_unreachable("Unexpected OS");

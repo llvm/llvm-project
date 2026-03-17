@@ -201,7 +201,8 @@ SPIRVToolChain::SPIRVToolChain(const Driver &D, const llvm::Triple &Triple,
     : ToolChain(D, Triple, Args) {
   // TODO: Revisit need/use of --sycl-link option once SYCL toolchain is
   // available and SYCL linking support is moved there.
-  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link) || isUsingLTO(Args);
+  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link) || isUsingLTO(Args) ||
+                      Triple.getOS() == llvm::Triple::ChipStar;
 
   // Lookup binaries into the driver directory.
   getProgramPaths().push_back(getDriver().Dir);
