@@ -686,3 +686,101 @@ func.func @no_merge_self_arg_loop(%step: i1) -> i1 {
 ^exit(%result: i1):
   return %result : i1
 }
+
+// Verify that block arguments are replaced with a uniform incoming value
+// when all predecessors pass the same SSA value
+
+// CHECK-LABEL: func @fold_uniform_branch_block_arg
+// CHECK-SAME: %[[COND:.*]]: i1, %[[C:.*]]: i32
+func.func @fold_uniform_branch_block_arg(%cond: i1, %c: i32) -> i32 {
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  "foo.op"() : () -> ()
+  cf.br ^bb3(%c : i32)
+^bb2:
+  "foo.op"() : () -> ()
+  cf.br ^bb3(%c : i32)
+^bb3(%arg0: i32):
+  // CHECK: ^bb3:
+  // CHECK: return %[[C]]
+  return %arg0 : i32
+}
+
+// Verify that block arguments are not folded when incoming values differ
+// across predecessors.
+
+// CHECK-LABEL: func @no_fold_non_uniform_block_arg
+// CHECK-SAME: %[[COND:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32
+func.func @no_fold_non_uniform_block_arg(%cond: i1, %a: i32, %b: i32) -> i32 {
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  "foo.op"() : () -> ()
+  cf.br ^bb3(%a : i32)
+^bb2:
+  "foo.op"() : () -> ()
+  cf.br ^bb3(%b : i32)
+^bb3(%arg0: i32):
+  // CHECK: ^bb3(%[[ARG0:.*]]: i32):
+  // CHECK-NEXT: return %[[ARG0]]
+  return %arg0 : i32
+}
+
+// Verify no folding when the same block appears multiple times as a
+// successor with different operands.
+
+// CHECK-LABEL: func @no_fold_same_dest_different_args
+func.func @no_fold_same_dest_different_args(%a: i32, %b: i32) -> i32 {
+  "test.producing_br"(%a, %b)[^bb1, ^bb1]
+    {operandSegmentSizes = array<i32: 1, 1>} : (i32, i32) -> i32
+^bb1(%arg0: i32):
+  // CHECK: ^bb1(%[[ARG0:.*]]: i32):
+  // CHECK-NEXT: return %[[ARG0]]
+  return %arg0 : i32
+}
+
+// Verify folding when the same block appears multiple times as a
+// successor with the same operand.
+
+// CHECK-LABEL: func @fold_same_dest_same_args
+// CHECK-SAME: %[[A:.*]]: i32
+func.func @fold_same_dest_same_args(%a: i32) -> i32 {
+  "test.producing_br"(%a, %a)[^bb1, ^bb1]
+      {operandSegmentSizes = array<i32: 1, 1>} : (i32, i32) -> i32
+^bb1(%arg0: i32):
+  // CHECK: ^bb1:
+  // CHECK-NEXT: return %[[A]]
+  return %arg0 : i32
+}
+
+// Verify no folding when a predecessor has an unknown terminator.
+
+// CHECK-LABEL: func @no_fold_unknown_terminator
+func.func @no_fold_unknown_terminator(%a: i32) -> i32 {
+  cf.br ^bb1
+^bb1:
+  "foo.two_successors"()[^bb2, ^bb3] : () -> ()
+^bb2:
+  // CHECK: ^bb2(%[[ARG0:.*]]: i32):
+  cf.br ^bb3(%a : i32)
+^bb3(%arg0: i32):
+  // CHECK-NEXT: return %[[ARG0]]
+  return %arg0 : i32
+}
+
+// Verify that unused block arguments are skipped and only used arguments
+// with uniform incoming values are folded.
+
+// CHECK-LABEL: func @skip_unused_block_arg
+func.func @skip_unused_block_arg(%flag: i32, %a: i32, %b: i32) -> i32 {
+  "foo.pred"()[^bb1, ^bb2] : () -> ()
+^bb1:
+  cf.br ^bb3(%b, %a : i32, i32)
+^bb2:
+  cf.br ^bb3(%a, %a : i32, i32)
+^bb3(%arg0: i32, %arg1: i32):
+  "foo.use"(%arg0) : (i32) -> ()
+  // CHECK: ^bb3(%[[ARG0:.*]]: i32):
+  // CHECK-NEXT: "foo.use"(%[[ARG0]])
+  // CHECK-NEXT: return %[[A:.*]]
+  return %arg1 : i32
+}

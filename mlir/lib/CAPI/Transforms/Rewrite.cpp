@@ -728,6 +728,10 @@ MlirRewritePatternSet mlirRewritePatternSetCreate(MlirContext context) {
   return wrap(new mlir::RewritePatternSet(unwrap(context)));
 }
 
+MlirContext mlirRewritePatternSetGetContext(MlirRewritePatternSet set) {
+  return wrap(unwrap(set)->getContext());
+}
+
 void mlirRewritePatternSetDestroy(MlirRewritePatternSet set) {
   delete unwrap(set);
 }

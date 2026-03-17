@@ -108,6 +108,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86SuppressAPXForRelocationLegacyPass(PR);
   initializeX86WinEHUnwindV2LegacyPass(PR);
   initializeX86PreLegalizerCombinerPass(PR);
+  initializeX86PostLegalizerCombinerPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -624,7 +625,7 @@ void X86PassConfig::addPreEmitPass2() {
 
   // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
   // also CALL_RVMARKER.
-  addPass(createUnpackMachineBundles([&TT](const MachineFunction &MF) {
+  addPass(createUnpackMachineBundlesLegacy([&TT](const MachineFunction &MF) {
     // Only run bundle expansion if the module uses kcfi, or there are relevant
     // ObjC runtime functions present in the module.
     const Function &F = MF.getFunction();

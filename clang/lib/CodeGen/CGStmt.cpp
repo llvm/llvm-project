@@ -19,6 +19,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -99,6 +100,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
     llvm_unreachable("invalid statement class to emit generically");
   case Stmt::NullStmtClass:
   case Stmt::CompoundStmtClass:
@@ -543,21 +545,7 @@ bool CodeGenFunction::EmitSimpleStmt(const Stmt *S,
     EmitSEHLeaveStmt(cast<SEHLeaveStmt>(*S));
     break;
   case Stmt::SYCLKernelCallStmtClass:
-    // SYCL kernel call statements are generated as wrappers around the body
-    // of functions declared with the sycl_kernel_entry_point attribute. Such
-    // functions are used to specify how a SYCL kernel (a function object) is
-    // to be invoked; the SYCL kernel call statement contains a transformed
-    // variation of the function body and is used to generate a SYCL kernel
-    // caller function; a function that serves as the device side entry point
-    // used to execute the SYCL kernel. The sycl_kernel_entry_point attributed
-    // function is invoked by host code in order to trigger emission of the
-    // device side SYCL kernel caller function and to generate metadata needed
-    // by SYCL run-time library implementations; the function is otherwise
-    // intended to have no effect. As such, the function body is not evaluated
-    // as part of the invocation during host compilation (and the function
-    // should not be called or emitted during device compilation); the SYCL
-    // kernel call statement is thus handled as a null statement for the
-    // purpose of code generation.
+    EmitSYCLKernelCallStmt(cast<SYCLKernelCallStmt>(*S));
     break;
   }
   return true;

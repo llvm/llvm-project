@@ -4664,7 +4664,8 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //       given the typical code patterns.
   if (Opcode == AMDGPU::S_SENDMSG || Opcode == AMDGPU::S_SENDMSGHALT ||
       isEXP(Opcode) || Opcode == AMDGPU::DS_ORDERED_COUNT ||
-      Opcode == AMDGPU::S_TRAP || Opcode == AMDGPU::S_WAIT_EVENT)
+      Opcode == AMDGPU::S_TRAP || Opcode == AMDGPU::S_WAIT_EVENT ||
+      Opcode == AMDGPU::S_SETHALT)
     return true;
 
   if (MI.isCall() || MI.isInlineAsm())
@@ -5338,7 +5339,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // FIXME: We do not verify inline asm operands, but custom inline asm
     // verification is broken anyway
     if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO &&
-        Opcode != AMDGPU::V_MOV_B64_PSEUDO) {
+        Opcode != AMDGPU::V_MOV_B64_PSEUDO && !isSpill(MI)) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         if (const TargetRegisterClass *SubRC =
@@ -7566,12 +7567,12 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return nullptr;
   }
 
-  // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
-  // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
-  if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||
-      MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_D2 ||
-      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS ||
-      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_D2) {
+  // Legalize TENSOR_LOAD_TO_LDS_d2/_d4, TENSOR_STORE_FROM_LDS_d2/_d4. All their
+  // operands are scalar.
+  if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_d2 ||
+      MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_d4 ||
+      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_d2 ||
+      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_d4) {
     for (MachineOperand &Src : MI.explicit_operands()) {
       if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
         Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
@@ -8354,26 +8355,6 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       const TargetRegisterClass *SrcRC = RI.getRegClassForReg(MRI, NewDstReg);
       if (const TargetRegisterClass *CommonRC =
               RI.getCommonSubClass(NewDstRC, SrcRC)) {
-        // Also intersect with VGPR-compatible operand register class
-        // constraints from user instructions. This preserves restricted
-        // register classes (e.g., VGPR_32_Lo256 for WMMA scale operands) that
-        // would otherwise be lost when an SGPR is replaced with a VGPR.
-        // Constraints incompatible with VGPRs (e.g., SALU instructions
-        // requiring SReg_32) are skipped because those users will be converted
-        // to VALU by the worklist.
-        for (const MachineOperand &UseMO : MRI.use_operands(DstReg)) {
-          const MachineInstr *UseMI = UseMO.getParent();
-          if (UseMI == &Inst)
-            continue;
-          unsigned OpIdx = UseMI->getOperandNo(&UseMO);
-          if (const TargetRegisterClass *OpRC =
-                  getRegClass(UseMI->getDesc(), OpIdx)) {
-            if (const TargetRegisterClass *Narrowed =
-                    RI.getCommonSubClass(CommonRC, OpRC))
-              CommonRC = Narrowed;
-          }
-        }
-
         // Instead of creating a copy where src and dst are the same register
         // class, we just replace all uses of dst with src.  These kinds of
         // copies interfere with the heuristics MachineSink uses to decide
@@ -8389,10 +8370,19 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
           llvm_unreachable("failed to constrain register");
 
         Inst.eraseFromParent();
-        // Legalize t16 operand since replaceReg is called after addUsersToVALU
-        for (MachineOperand &MO :
+
+        for (MachineOperand &UseMO :
              make_early_inc_range(MRI.use_operands(NewDstReg))) {
-          legalizeOperandsVALUt16(*MO.getParent(), MRI);
+          MachineInstr &UseMI = *UseMO.getParent();
+
+          // Legalize t16 operands since replaceReg is called after
+          // addUsersToVALU.
+          legalizeOperandsVALUt16(UseMI, MRI);
+
+          unsigned OpIdx = UseMI.getOperandNo(&UseMO);
+          if (const TargetRegisterClass *OpRC =
+                  getRegClass(UseMI.getDesc(), OpIdx))
+            MRI.constrainRegClass(NewDstReg, OpRC);
         }
 
         return;
@@ -9374,14 +9364,18 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
     Register SrcReg0, SrcReg1;
     if (!Src0.isReg() || !RI.isVGPR(MRI, Src0.getReg())) {
       SrcReg0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg0).add(Src0);
+      BuildMI(*MBB, Inst, DL,
+              get(Src0.isImm() ? AMDGPU::V_MOV_B32_e32 : AMDGPU::COPY), SrcReg0)
+          .add(Src0);
     } else {
       SrcReg0 = Src0.getReg();
     }
 
     if (!Src1.isReg() || !RI.isVGPR(MRI, Src1.getReg())) {
       SrcReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg1).add(Src1);
+      BuildMI(*MBB, Inst, DL,
+              get(Src1.isImm() ? AMDGPU::V_MOV_B32_e32 : AMDGPU::COPY), SrcReg1)
+          .add(Src1);
     } else {
       SrcReg1 = Src1.getReg();
     }
@@ -10315,7 +10309,8 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX10:
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
-    return SIEncodingFamily::GFX11;
+    return ST.hasGFX11_7Insts() ? SIEncodingFamily::GFX1170
+                                : SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
     return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
@@ -10414,6 +10409,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX11_7Insts())
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX1250Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);

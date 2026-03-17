@@ -40,6 +40,7 @@
 /clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
 /lldb/ @JDevlieghere
+/lldb/**/*FreeBSD* @mchoo7
 
 # MLIR Interfaces.
 /mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
@@ -189,3 +190,14 @@
 
 # libclang/Python bindings
 /clang/bindings/python @DeinAlptraum
+
+# AMDGPU assembler and disassembler
+/llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86 
+/llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86 
+ 
+# Clang Driver
+/clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j
+/clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas
+
+# GlobalIsel
+/llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95

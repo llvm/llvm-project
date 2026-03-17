@@ -69,7 +69,7 @@ void acc_data(int parmVar, int *ptrParmVar) {
 #pragma acc enter data if (parmVar == 1) copyin(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(eq, %[[PARM_LOAD]], %[[ONE_CONST]])
+  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp eq %[[PARM_LOAD]], %[[ONE_CONST]]
   // CHECK-NEXT: %[[CMP_CAST:.*]] = builtin.unrealized_conversion_cast %[[CMP]]
   // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "parmVar", structured = false}
   // CHECK-NEXT: acc.enter_data if(%[[CMP_CAST]]) dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
@@ -77,7 +77,7 @@ void acc_data(int parmVar, int *ptrParmVar) {
 #pragma acc enter data async if (parmVar == 1) copyin(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(eq, %[[PARM_LOAD]], %[[ONE_CONST]])
+  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp eq %[[PARM_LOAD]], %[[ONE_CONST]]
   // CHECK-NEXT: %[[CMP_CAST:.*]] = builtin.unrealized_conversion_cast %[[CMP]]
   // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) async -> !cir.ptr<!s32i> {name = "parmVar", structured = false}
   // CHECK-NEXT: acc.enter_data if(%[[CMP_CAST]]) async dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>)
@@ -85,7 +85,7 @@ void acc_data(int parmVar, int *ptrParmVar) {
 #pragma acc enter data if (parmVar == 1) async(parmVar) copyin(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp(eq, %[[PARM_LOAD]], %[[ONE_CONST]])
+  // CHECK-NEXT: %[[CMP:.*]] = cir.cmp eq %[[PARM_LOAD]], %[[ONE_CONST]]
   // CHECK-NEXT: %[[CMP_CAST:.*]] = builtin.unrealized_conversion_cast %[[CMP]]
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]

@@ -4492,6 +4492,7 @@ def SPIRV_OC_OpMatrixTimesScalar              : I32EnumAttrCase<"OpMatrixTimesSc
 def SPIRV_OC_OpVectorTimesMatrix              : I32EnumAttrCase<"OpVectorTimesMatrix", 144>;
 def SPIRV_OC_OpMatrixTimesVector              : I32EnumAttrCase<"OpMatrixTimesVector", 145>;
 def SPIRV_OC_OpMatrixTimesMatrix              : I32EnumAttrCase<"OpMatrixTimesMatrix", 146>;
+def SPIRV_OC_OpOuterProduct                   : I32EnumAttrCase<"OpOuterProduct", 147>;
 def SPIRV_OC_OpDot                            : I32EnumAttrCase<"OpDot", 148>;
 def SPIRV_OC_OpIAddCarry                      : I32EnumAttrCase<"OpIAddCarry", 149>;
 def SPIRV_OC_OpISubBorrow                     : I32EnumAttrCase<"OpISubBorrow", 150>;
@@ -4587,6 +4588,7 @@ def SPIRV_OC_OpGroupNonUniformAll             : I32EnumAttrCase<"OpGroupNonUnifo
 def SPIRV_OC_OpGroupNonUniformAny             : I32EnumAttrCase<"OpGroupNonUniformAny", 335>;
 def SPIRV_OC_OpGroupNonUniformAllEqual        : I32EnumAttrCase<"OpGroupNonUniformAllEqual", 336>;
 def SPIRV_OC_OpGroupNonUniformBroadcast       : I32EnumAttrCase<"OpGroupNonUniformBroadcast", 337>;
+def SPIRV_OC_OpGroupNonUniformBroadcastFirst  : I32EnumAttrCase<"OpGroupNonUniformBroadcastFirst", 338>;
 def SPIRV_OC_OpGroupNonUniformBallot          : I32EnumAttrCase<"OpGroupNonUniformBallot", 339>;
 def SPIRV_OC_OpGroupNonUniformBallotBitCount  : I32EnumAttrCase<"OpGroupNonUniformBallotBitCount", 342>;
 def SPIRV_OC_OpGroupNonUniformBallotFindLSB   : I32EnumAttrCase<"OpGroupNonUniformBallotFindLSB", 343>;
@@ -4690,7 +4692,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpSMod, SPIRV_OC_OpFRem, SPIRV_OC_OpFMod,
       SPIRV_OC_OpVectorTimesScalar, SPIRV_OC_OpMatrixTimesScalar,
       SPIRV_OC_OpVectorTimesMatrix, SPIRV_OC_OpMatrixTimesVector,
-      SPIRV_OC_OpMatrixTimesMatrix, SPIRV_OC_OpDot, SPIRV_OC_OpIAddCarry,
+      SPIRV_OC_OpMatrixTimesMatrix, SPIRV_OC_OpOuterProduct, SPIRV_OC_OpDot,
+      SPIRV_OC_OpIAddCarry,
       SPIRV_OC_OpISubBorrow, SPIRV_OC_OpUMulExtended, SPIRV_OC_OpSMulExtended,
       SPIRV_OC_OpIsNan, SPIRV_OC_OpIsInf, SPIRV_OC_OpIsFinite,
       SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,
@@ -4725,7 +4728,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupSMax, SPIRV_OC_OpNoLine, SPIRV_OC_OpModuleProcessed,
       SPIRV_OC_OpGroupNonUniformElect, SPIRV_OC_OpGroupNonUniformAll,
       SPIRV_OC_OpGroupNonUniformAny, SPIRV_OC_OpGroupNonUniformAllEqual,
-      SPIRV_OC_OpGroupNonUniformBroadcast, SPIRV_OC_OpGroupNonUniformBallot,
+      SPIRV_OC_OpGroupNonUniformBroadcast, SPIRV_OC_OpGroupNonUniformBroadcastFirst,
+      SPIRV_OC_OpGroupNonUniformBallot,
       SPIRV_OC_OpGroupNonUniformBallotBitCount,
       SPIRV_OC_OpGroupNonUniformBallotFindLSB,
       SPIRV_OC_OpGroupNonUniformBallotFindMSB, SPIRV_OC_OpGroupNonUniformShuffle,
