@@ -212,6 +212,10 @@ public:
   GetBuiltinUnknownObjectType(swift::Mangle::ManglingFlavor flavor);
   CompilerType GetBoolType(swift::Mangle::ManglingFlavor flavor);
   CompilerType GetUnsafeRawPointerType(swift::Mangle::ManglingFlavor flavor);
+  /// The unsubstituted FixedArray<A, B> type.
+  CompilerType
+  GetUnsubstitutedFixedArrayType(swift::Mangle::ManglingFlavor flavor);
+  CompilerType Get(swift::Mangle::ManglingFlavor flavor);
   CompilerType GetUInt64Type(swift::Mangle::ManglingFlavor flavor);
   CompilerType GetTaskPriorityType(swift::Mangle::ManglingFlavor flavor);
   CompilerType
