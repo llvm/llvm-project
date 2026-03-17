@@ -392,7 +392,7 @@ define i32 @fold_add_udiv_urem_pow2_both_mul(i32 noundef %arg) {
 define i32 @fold_add_udiv_urem_by_two_no_mul(i32 noundef %arg) {
 ; CHECK-LABEL: @fold_add_udiv_urem_by_two_no_mul(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[ARG]], [[LSHR]]
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw i32 [[ARG]], [[LSHR]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %lshr = lshr i32 %arg, 1

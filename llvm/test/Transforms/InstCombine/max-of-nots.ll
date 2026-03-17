@@ -478,7 +478,7 @@ define void @cmyk6(i8 %r, i8 %g, i8 %b) {
 ; CHECK-NEXT:    [[K:%.*]] = xor i8 [[TMP2]], -1
 ; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[TMP2]], [[R]]
 ; CHECK-NEXT:    [[MK:%.*]] = sub i8 [[TMP2]], [[G]]
-; CHECK-NEXT:    [[YK:%.*]] = sub i8 [[TMP2]], [[B]]
+; CHECK-NEXT:    [[YK:%.*]] = sub nuw i8 [[TMP2]], [[B]]
 ; CHECK-NEXT:    tail call void @use(i8 [[CK]], i8 [[MK]], i8 [[YK]], i8 [[K]])
 ; CHECK-NEXT:    ret void
 ;

@@ -112,10 +112,7 @@ define i1 @urem_or_ule(i32 %x, i32 %y, i32 %z) {
 define i1 @urem_or_ule_invalid_swapped(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @urem_or_ule_invalid_swapped(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[OP1:%.*]] = urem i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[OP2:%.*]] = or i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[OP1]], [[OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op1 = urem i32 %y, %x
   %op2 = or i32 %x, %z

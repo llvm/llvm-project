@@ -1352,7 +1352,7 @@ define i32 @test70(i32 %A) {
 define i32 @test71(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test71(
 ; CHECK-NEXT:    [[C:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = sub i32 [[C]], [[B]]
+; CHECK-NEXT:    [[D:%.*]] = sub nuw i32 [[C]], [[B]]
 ; CHECK-NEXT:    [[E:%.*]] = mul i32 [[C]], [[D]]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
@@ -1416,7 +1416,7 @@ define i8 @test74(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test74(
 ; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X]], [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = sub nuw i8 [[X]], [[T0]]
 ; CHECK-NEXT:    ret i8 [[T1]]
 ;
   %t0 = and i8 %x, %y
@@ -1973,11 +1973,8 @@ define i16 @zext_nuw_noundef(i8 noundef %x, i8 %y) {
 
 define i16 @zext_nuw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @zext_nuw(
-; CHECK-NEXT:    [[D:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[EX:%.*]] = zext i8 [[X]] to i16
-; CHECK-NEXT:    [[ED:%.*]] = zext i8 [[D]] to i16
-; CHECK-NEXT:    [[Z:%.*]] = sub nsw i16 [[EX]], [[ED]]
-; CHECK-NEXT:    ret i16 [[Z]]
+; CHECK-NEXT:    [[ED:%.*]] = zext i8 [[D:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[ED]]
 ;
   %d = sub nuw i8 %x, %y
   %ex = zext i8 %x to i16

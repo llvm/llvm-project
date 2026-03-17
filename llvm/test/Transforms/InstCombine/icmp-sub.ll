@@ -512,7 +512,7 @@ define void @PR54558_reduced(i32 %arg) {
 ; CHECK-NEXT:    [[PHI_OUTER:%.*]] = phi i32 [ [[SUB:%.*]], [[BB_LOOP]] ], [ [[ARG:%.*]], [[BB_ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[MIN:%.*]] = tail call i32 @llvm.umin.i32(i32 [[PHI_OUTER]], i32 43)
 ; CHECK-NEXT:    call void @use(i32 [[MIN]])
-; CHECK-NEXT:    [[SUB]] = sub i32 [[PHI_OUTER]], [[MIN]]
+; CHECK-NEXT:    [[SUB]] = sub nuw i32 [[PHI_OUTER]], [[MIN]]
 ; CHECK-NEXT:    [[COND_OUTER:%.*]] = icmp eq i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[COND_OUTER]], label [[BB_EXIT:%.*]], label [[BB_LOOP]]
 ; CHECK:       bb_exit:
