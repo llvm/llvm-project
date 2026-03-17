@@ -4209,7 +4209,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   }
 
   // Canonicalization to achieve lowering to Bit Manipulation Instructions (BMI)
-  // ~X | (X-1) => (X & -X)
+  // ~X | (X-1) => ~(X & -X)
   Value *Op;
   if (match(&I, m_c_Or(m_OneUse(m_Not(m_Value(Op))),
                        m_OneUse(m_Add(m_Deferred(Op), m_AllOnes()))))) {
