@@ -136,14 +136,19 @@ public:
     // that diagnostic text needs to be updated as well.
   };
 
-  enum class NRVOKind { Forbidden, Allowed };
+  enum class NRVOKind : uint8_t { Forbidden, Allowed };
 
-  enum class NewArrayKind {
+  enum class NewArrayKind : uint8_t {
     KnownLength,
     UnknownLength,
   };
 
-  enum class FieldInitKind { Normal, ImplicitField, DefaultMember, ParenAgg };
+  enum class FieldInitKind : uint8_t {
+    Normal,
+    ImplicitField,
+    DefaultMember,
+    ParenAgg
+  };
 
 private:
   /// The kind of entity being initialized.
@@ -250,8 +255,8 @@ private:
   /// Create the initialization entity for a member subobject.
   InitializedEntity(FieldDecl *Member, const InitializedEntity *Parent,
                     FieldInitKind FieldKind)
-      : Kind(Kind == FieldInitKind::ParenAgg ? EK_ParenAggInitMember
-                                             : EK_Member),
+      : Kind(FieldKind == FieldInitKind::ParenAgg ? EK_ParenAggInitMember
+                                                  : EK_Member),
         Parent(Parent), Type(Member->getType()), Variable{Member, FieldKind} {}
 
   /// Create the initialization entity for an array element.
