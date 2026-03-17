@@ -803,7 +803,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     G_ATOMICRMW_AND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR,
                     G_ATOMICRMW_MIN, G_ATOMICRMW_MAX, G_ATOMICRMW_UMIN,
                     G_ATOMICRMW_UMAX, G_ATOMICRMW_UINC_WRAP,
-                    G_ATOMICRMW_UDEC_WRAP})
+                    G_ATOMICRMW_UDEC_WRAP, G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
       .Any({{DivS32, P0, S32}, {{Vgpr32}, {VgprP0, Vgpr32}}})
       .Any({{DivS64, P0, S64}, {{Vgpr64}, {VgprP0, Vgpr64}}})
       .Any({{DivS32, P1, S32}, {{Vgpr32}, {VgprP1, Vgpr32}}})
@@ -850,7 +850,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_SWAP, G_AMDGPU_BUFFER_ATOMIC_UMAX,
                     G_AMDGPU_BUFFER_ATOMIC_UMIN, G_AMDGPU_BUFFER_ATOMIC_SMAX,
-                    G_AMDGPU_BUFFER_ATOMIC_SMIN},
+                    G_AMDGPU_BUFFER_ATOMIC_SMIN, G_AMDGPU_BUFFER_ATOMIC_FMAX,
+                    G_AMDGPU_BUFFER_ATOMIC_FMIN},
                    Standard)
       .Div(S32, {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Div(S64, {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
