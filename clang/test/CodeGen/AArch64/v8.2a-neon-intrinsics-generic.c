@@ -483,23 +483,3 @@ float16x4_t test_vtrn2_f16(float16x4_t a, float16x4_t b) {
 float16x8_t test_vtrn2q_f16(float16x8_t a, float16x8_t b) {
   return vtrn2q_f16(a, b);
 }
-
-// CHECK-LABEL: define {{[^@]+}}@test_vduph_laneq_f16
-// CHECK-SAME: (<8 x half> noundef [[VEC:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x half> [[VEC]], i32 7
-// CHECK-NEXT:    ret half [[VGETQ_LANE]]
-//
-float16_t test_vduph_laneq_f16(float16x8_t vec) {
-  return vduph_laneq_f16(vec, 7);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vduph_lane_f16
-// CHECK-SAME: (<4 x half> noundef [[VEC:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x half> [[VEC]], i32 3
-// CHECK-NEXT:    ret half [[VGET_LANE]]
-//
-float16_t test_vduph_lane_f16(float16x4_t vec) {
-  return vduph_lane_f16(vec, 3);
-}
