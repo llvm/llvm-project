@@ -777,7 +777,7 @@ class Base(unittest.TestCase):
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
             shutil.rmtree(bdir)
         lldbutil.mkdir_p(bdir)
-    
+
     def getBuildArtifact(self, name="a.out"):
         """Return absolute path to an artifact in the test's build directory."""
         return os.path.join(self.getBuildDir(), name)
