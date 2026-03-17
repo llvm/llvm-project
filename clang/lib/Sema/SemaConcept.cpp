@@ -1185,8 +1185,13 @@ static bool CheckConstraintSatisfaction(
     return false;
   }
 
-  if (TemplateArgsLists.isAnyArgInstantiationDependent(S.Context)) {
-    // No need to check satisfaction for dependent constraint expressions.
+  // In the general case, we can't check satisfaction if the arguments contain
+  // unsubstituted template parameters, even if they are purely syntactic,
+  // because they may still turn out to be invalid after substitution.
+  // This could be permitted in cases where this substitution will still be
+  // attempted later and diagnosed, such as function template specializations,
+  // but that's not the case for concept specializations.
+  if (TemplateArgsLists.isAnyArgInstantiationDependent()) {
     Satisfaction.IsSatisfied = true;
     return false;
   }

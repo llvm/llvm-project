@@ -1772,13 +1772,36 @@ void f() = delete;
 
 struct Bar {};
 
-template <typename T> using Foo = Bar;
+template <typename> using Foo = Bar;
 
-template <typename T> void use() {
+template <int T>
+  requires true
+void f2() {}
+
+template <int T>
+  requires false
+void f2() = delete;
+
+template <int> constexpr auto Value = 1;
+
+template <template <typename> class> using FooTemp = Bar;
+
+template <typename T, int N, template <typename> class C> void use() {
   f<Foo<T>>();
+  f2<Value<N>>();
+  f<FooTemp<C>>();
 }
 
 }
+
+namespace instantiation_dependent {
+  template <class T> concept C = sizeof(T) >= 1;
+  template <class U> using X = int;
+  template <class V> requires C<X<V&>> struct Y {};
+  Y<void> y;
+  // expected-error@-1 {{constraints not satisfied for class template 'Y' [with V = void]}}
+  // expected-note@-3  {{because substituted constraint expression is ill-formed: cannot form a reference to 'void'}}
+} // namespace instantiation_dependent
 
 namespace GH174667 {
 
