@@ -298,7 +298,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
                            L0DefaultTimeout);
       // Synchronize on kernel event to support printf().
       auto KE = AsyncQueue->KernelEvent;
-      if (KE && KE != WaitEvents.back()) {
+      if (KE && KE != WaitEvents.back() && !SyncErrors) {
         CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, KE,
                              L0DefaultTimeout);
       }

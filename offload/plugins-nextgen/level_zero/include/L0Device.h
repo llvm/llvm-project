@@ -650,20 +650,5 @@ public:
                                          int32_t NumPrefers,
                                          interop_spec_t *Prefers) override;
 };
-
-struct L0DeviceQueueGuard {
-  L0DeviceQueueGuard(AsyncQueueTy *Queue, L0DeviceTy *Device)
-      : queue(Queue), device(Device) {}
-  ~L0DeviceQueueGuard() {
-    for (auto &Event : queue->WaitEvents)
-      auto Err = device->releaseEvent(Event);
-    queue->WaitEvents.clear();
-  }
-
-private:
-  AsyncQueueTy *queue;
-  L0DeviceTy *device;
-};
-
 } // namespace llvm::omp::target::plugin
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEVICE_H

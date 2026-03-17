@@ -725,10 +725,8 @@ Expected<ze_event_handle_t> EventPoolTy::getEvent() {
 /// Return an event to the pool.
 Error EventPoolTy::releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device) {
   std::lock_guard<std::mutex> Lock(*Mtx);
-  if (std::find(Events.begin(), Events.end(), Event) == Events.end()) {
-    CALL_ZE_RET_ERROR(zeEventHostReset, Event);
-    Events.push_back(Event);
-  }
+  CALL_ZE_RET_ERROR(zeEventHostReset, Event);
+  Events.push_back(Event);
   return Plugin::success();
 }
 
