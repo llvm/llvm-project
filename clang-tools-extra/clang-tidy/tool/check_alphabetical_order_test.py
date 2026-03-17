@@ -358,6 +358,49 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         )
         self.assertEqual(out, expected_out)
 
+    def test_release_notes_handles_multiline_doc(self) -> None:
+        rn_text = textwrap.dedent(
+            """\
+            Changes in existing checks
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+            - Renamed :doc:`performance-faster-string-find
+              <clang-tidy/checks/performance/faster-string-find>` to
+              :doc:`performance-faster-string-operation
+              <clang-tidy/checks/performance/faster-string-operation>`.
+              The `performance-faster-string-find` name is kept as an alias.
+
+            - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
+              to :doc:`portability-no-assembler
+              <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
+              name is kept as an alias.
+
+            """
+        )
+
+        out = _mod.normalize_release_notes(rn_text.splitlines(True))
+
+        expected_out = textwrap.dedent(
+            """\
+            Changes in existing checks
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+            - Renamed :doc:`hicpp-no-assembler <clang-tidy/checks/hicpp/no-assembler>`
+              to :doc:`portability-no-assembler
+              <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
+              name is kept as an alias.
+
+            - Renamed :doc:`performance-faster-string-find
+              <clang-tidy/checks/performance/faster-string-find>` to
+              :doc:`performance-faster-string-operation
+              <clang-tidy/checks/performance/faster-string-operation>`.
+              The `performance-faster-string-find` name is kept as an alias.
+
+
+            """
+        )
+        self.assertEqual(out, expected_out)
+
     def test_process_checks_list_normalizes_output(self) -> None:
         list_text = textwrap.dedent(
             """\

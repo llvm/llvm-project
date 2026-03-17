@@ -202,7 +202,7 @@ def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
 
 def extract_label(text: str) -> str:
     if m := DOC_LABEL_RN_RE.search(text):
-        return m.group("label")
+        return m.group("label").strip()
     return text
 
 
@@ -221,7 +221,7 @@ def _parse_bullet_blocks(lines: Sequence[str], start: int, end: int) -> BulletBl
     blocks: List[BulletItem] = []
     res = _scan_bullet_blocks(lines, first_bullet, n)
     for _, block in res.blocks_with_pos:
-        key: CheckLabel = extract_label(block[0])
+        key: CheckLabel = extract_label("".join(block))
         blocks.append((key, block))
 
     suffix: Lines = list(lines[res.next_index : n])
