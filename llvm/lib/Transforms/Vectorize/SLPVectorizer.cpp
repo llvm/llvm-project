@@ -24605,7 +24605,6 @@ public:
   unsigned End = 0;
   /// Stores that compose this chain
   BoUpSLP::ValueList Operands;
-  MutableArrayRef<SizePair> RangeSizes;
   /// Store information about failed vectorization attempts due to scheduling
   SmallDenseMap<Value *, SizePair> NonSchedulable;
 
@@ -24680,6 +24679,7 @@ private:
   /// vectorization of elements that belong to multiple chains
   /// - second: contains cached TreeSize value for that element
   SmallVector<SizePair> RangeSizesStorage;
+  MutableArrayRef<SizePair> RangeSizes;
   /// RangeSize information for all elements in any chain
   /// Needed since may be overlap between chains
   SmallVector<unsigned> &RangeSizesByIdx;
@@ -25112,7 +25112,7 @@ bool SLPVectorizerPass::vectorizeStores(
                   Context.isFirstSizeSameRange(SliceStartIdx, VF, TreeSize)) {
                 SliceStartIdx += VF;
                 while (SliceStartIdx != MaxSliceEnd &&
-                       Context.RangeSizes[SliceStartIdx].first == TreeSize)
+                       Context.isFirstSizeSameRange(SliceStartIdx, 1, TreeSize))
                   ++SliceStartIdx;
                 continue;
               }
