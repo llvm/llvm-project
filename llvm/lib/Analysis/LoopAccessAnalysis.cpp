@@ -2731,17 +2731,14 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
   for (LoadInst *LD : Loads) {
     Value *Ptr = LD->getPointerOperand();
-    // If we did *not* see this pointer before, insert it to the
-    // read list. If we *did* see it before, then it is already in
-    // the read-write list. This allows us to vectorize expressions
-    // such as A[i] += x;  Because the address of A[i] is a read-write
-    // pointer. This only works if the index of A[i] is strictly monotonic. We
-    // approximate (conservatively) that by checking for a constant stride and
-    // filtering out the case of a uniform/not-strictly monotonic pointer (zero
-    // stride) in the check for uniform stores below. If the address of i is
-    // unknown (for example A[B[i]]) then we may read a few words, modify, and
-    // write a few words, and some of the words may be written to the same
-    // address.
+    // If we did *not* see this pointer before, insert it to the read list. If
+    // we *did* see it before, then it is already in the read-write list. This
+    // allows us to vectorize expressions such as A[i] += x; Because the address
+    // of A[i] is a read-write pointer. This only works if the index of A[i] is
+    // strictly monotonic, which we approximate (conservatively) via
+    // getPtrStride. If the address is unknown (e.g. A[B[i]]) then we may read,
+    // modify, and write overlapping words. Note that "zero stride" is unsafe
+    // and is being handled below.
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
     if (Seen.insert({Ptr, AccessTy}).second ||
@@ -2776,10 +2773,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   }
 
   // If we write (or read-write) to a single destination and there are no other
-  // reads in this loop then is it safe to vectorize. The safety here is
-  // guaranteed by the fact that the vectorized version of the store would
-  // preserve the ordering (either replication or @llvm.masked.scatter that has
-  // order-preserving guarantee).
+  // reads in this loop then is it safe to vectorize: the vectorized stores
+  // preserve ordering via replication or order-preserving @llvm.masked.scatter.
   if (NumReadWrites == 1 && NumReads == 0) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
     return true;
