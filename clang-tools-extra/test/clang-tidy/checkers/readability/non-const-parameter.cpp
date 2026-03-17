@@ -387,4 +387,16 @@ void useDependentArray() {
   double ToFill[2] = {};
   dependentArray1(ToFill, 0, 1.0);
   dependentArray2(ToFill, 0, 1.0);
+template <typename T>
+struct DependentCtor {
+  DependentCtor(int *p);
+};
+
+void dependentInitInGenericLambda() {
+  auto lambda = []<typename T>(int *p) {
+    DependentCtor<T> s(p);
+  };
+
+  int x = 0;
+  lambda.operator()<int>(&x);
 }
