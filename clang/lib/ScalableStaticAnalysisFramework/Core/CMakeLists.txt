@@ -3,10 +3,10 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangScalableStaticAnalysisFrameworkCore
-  ASTEntityMapping.cpp
   Analysis/AnalysisDriver.cpp
   Analysis/AnalysisName.cpp
   Analysis/AnalysisRegistry.cpp
+  ASTEntityMapping.cpp
   EntityLinker/EntityLinker.cpp
   Model/BuildNamespace.cpp
   Model/EntityId.cpp
