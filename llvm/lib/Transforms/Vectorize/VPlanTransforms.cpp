@@ -2682,10 +2682,13 @@ static void licm(VPlan &Plan) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
 
-      // TODO: Support sinking VPReplicateRecipe after ensuring replicateByVF
-      // handles sunk recipes correctly.
-      if (isa<VPReplicateRecipe>(&R))
-        continue;
+      // narrowToSingleScalarRecipes should have already maximally narrowed
+      // replicates to single-scalar replicates. TODO: When unrolling
+      // replicatebyVF doesn't handle non-single-scalar replicates that are
+      // sunk yet.
+      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R))
+        if (RepR->isPredicated() || !RepR->isSingleScalar())
+          continue;
 
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads).
