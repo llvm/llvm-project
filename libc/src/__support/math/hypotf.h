@@ -73,7 +73,7 @@ LIBC_INLINE float hypotf(float x, float y) {
     // Almost all the sticky bits of the results are non-zero, extra checks are
     // needed to make sure rounding is correct.
 
-    // Perform a quick cheeck to see if the result rounded to float is already
+    // Perform a quick check to see if the result rounded to float is already
     // correct.  Majority of hard-to-round cases fall in this case.  If not, we
     // will need to perform more expensive computations to get the correct error
     // terms.
