@@ -20,15 +20,6 @@
 
 #define bitalign(hi, lo, shift) __builtin_elementwise_fshr(hi, lo, shift)
 
-#define __CLC_FULL_MUL(A, B, HI, LO)                                           \
-  LO = A * B;                                                                  \
-  HI = __clc_mul_hi(A, B)
-
-#define __CLC_FULL_MAD(A, B, C, HI, LO)                                        \
-  LO = ((A) * (B) + (C));                                                      \
-  HI = __clc_mul_hi(A, B);                                                     \
-  HI += LO < C ? 1U : 0U;
-
 #define __CLC_FLOAT_ONLY
 #define __CLC_BODY <clc_sincos_helpers.inc>
 
