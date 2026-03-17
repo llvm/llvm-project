@@ -43,7 +43,7 @@ template <typename PtrType> class SmallPtrSetImpl;
 /// in class Type and in derived classes.  Once allocated, Types are never
 /// free'd.
 ///
-class Type {
+class Type : unsigned {
 public:
   //===--------------------------------------------------------------------===//
   /// Definitions of all of the base types for the Type system.  Based on this
