@@ -12,7 +12,7 @@
 #include <clc/internal/clc.h>
 
 #define __CLC_FUNCTION __clc_bitfield_insert
-#define __CLC_BODY <clc/integer/clc_bitfield_insert.inc>
+#define __CLC_BODY <clc/integer/clc_bitfield_insert_decl.inc>
 #include <clc/integer/gentype.inc>
 
 #endif // __CLC_INTEGER_CLC_BITFIELD_INSERT_H__

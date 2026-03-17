@@ -81,12 +81,15 @@ body:             |
 
 ...
 
-# Verify that a call site parameter is emitted for the third parameter. There
-# should also be entries for the first and second parameter, but
-# DW_OP_LLVM_entry_value operations can currently not be emitted together with
-# any other expressions. Verify that nothing is emitted rather than an assert
-# being triggered, or broken expressions being emitted.
+# Verify that call site parameters are emitted for the three parameters.
+# FIXME: The parameters are ordered incorrectly (#43998).
 
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg0 W0), DW_OP_plus_uconst 0xde)
 # CHECK: DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT: DW_AT_location      (DW_OP_reg2 W2)
 # CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg0 W0))
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg1 W1)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg0 W0), DW_OP_constu 0x1bc, DW_OP_minus)

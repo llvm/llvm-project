@@ -109,6 +109,13 @@ public:
     UNW_Libgcc
   };
 
+  enum CStdlibType {
+    CST_Newlib,
+    CST_Picolibc,
+    CST_LLVMLibC,
+    CST_System,
+  };
+
   enum class UnwindTableLevel {
     None,
     Synchronous,
@@ -194,6 +201,7 @@ private:
   mutable std::optional<CXXStdlibType> cxxStdlibType;
   mutable std::optional<RuntimeLibType> runtimeLibType;
   mutable std::optional<UnwindLibType> unwindLibType;
+  mutable std::optional<CStdlibType> cStdlibType;
 
 protected:
   MultilibSet Multilibs;
@@ -615,6 +623,10 @@ public:
   // i.e. a value of 'true' does not imply that debugging is wanted.
   virtual bool GetDefaultStandaloneDebug() const { return false; }
 
+  /// Returns true if this toolchain adds '-gsimple-template-names=simple'
+  /// by default when generating debug-info.
+  virtual bool getDefaultDebugSimpleTemplateNames() const { return false; }
+
   // Return the default debugger "tuning."
   virtual llvm::DebuggerKind getDefaultDebuggerTuning() const {
     return llvm::DebuggerKind::GDB;
@@ -725,6 +737,11 @@ public:
   // given compilation arguments.
   virtual UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const;
 
+  // Determine the C standard library to use with the given
+  // compilation arguments. Defaults to CST_System when no --cstdlib= flag
+  // is provided.
+  virtual CStdlibType GetCStdlibType(const llvm::opt::ArgList &Args) const;
+
   // Detect the highest available version of libc++ in include path.
   virtual std::string detectLibcxxVersion(StringRef IncludePath) const;
 
@@ -749,8 +766,8 @@ public:
                                    llvm::opt::ArgStringList &CmdArgs) const;
 
   /// AddFilePathLibArgs - Add each thing in getFilePaths() as a "-L" option.
-  void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs) const;
+  virtual void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) const;
 
   /// AddCCKextLibArgs - Add the system specific linker arguments to use
   /// for kernel extensions (Darwin-specific).
@@ -805,10 +822,10 @@ public:
   getDeviceLibs(const llvm::opt::ArgList &Args,
                 const Action::OffloadKind DeviceOffloadingKind) const;
 
-  /// Add the system specific linker arguments to use
-  /// for the given HIP runtime library type.
-  virtual void AddHIPRuntimeLibArgs(const llvm::opt::ArgList &Args,
-                                    llvm::opt::ArgStringList &CmdArgs) const {}
+  /// Add the system specific libraries for the active offload kinds.
+  virtual void addOffloadRTLibs(unsigned ActiveKinds,
+                                const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs) const {}
 
   /// Return sanitizers which are available in this toolchain.
   virtual SanitizerMask getSupportedSanitizers() const;

@@ -535,9 +535,15 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
   }
 }
 
+void ASTStmtReader::VisitCXXReflectExpr(CXXReflectExpr *E) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
+}
+
 void ASTStmtReader::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
   VisitStmt(S);
   S->setOriginalStmt(cast<CompoundStmt>(Record.readSubStmt()));
+  S->setKernelLaunchStmt(cast<Stmt>(Record.readSubStmt()));
   S->setOutlinedFunctionDecl(readDeclAs<OutlinedFunctionDecl>());
 }
 
@@ -601,6 +607,14 @@ void ASTStmtReader::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
   E->setRParenLocation(readSourceLocation());
 
   E->setTypeSourceInfo(Record.readTypeSourceInfo());
+}
+
+void ASTStmtReader::VisitUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *S) {
+  VisitStmt(S);
+
+  S->setOriginalStmt(cast<CompoundStmt>(Record.readSubStmt()));
+  S->setKernelLaunchIdExpr(Record.readExpr());
 }
 
 void ASTStmtReader::VisitPredefinedExpr(PredefinedExpr *E) {
@@ -968,6 +982,14 @@ void ASTStmtReader::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   E->setRBracketLoc(readSourceLocation());
 }
 
+void ASTStmtReader::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  VisitExpr(E);
+  E->setBase(Record.readSubExpr());
+  E->setRowIdx(Record.readSubExpr());
+  E->setRBracketLoc(readSourceLocation());
+}
+
 void ASTStmtReader::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   VisitExpr(E);
   E->setBase(Record.readSubExpr());
@@ -1217,6 +1239,13 @@ void ASTStmtReader::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
 }
 
 void ASTStmtReader::VisitExtVectorElementExpr(ExtVectorElementExpr *E) {
+  VisitExpr(E);
+  E->setBase(Record.readSubExpr());
+  E->setAccessor(Record.readIdentifier());
+  E->setAccessorLoc(readSourceLocation());
+}
+
+void ASTStmtReader::VisitMatrixElementExpr(MatrixElementExpr *E) {
   VisitExpr(E);
   E->setBase(Record.readSubExpr());
   E->setAccessor(Record.readIdentifier());
@@ -3192,6 +3221,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = SYCLUniqueStableNameExpr::CreateEmpty(Context);
       break;
 
+    case STMT_UNRESOLVED_SYCL_KERNEL_CALL:
+      S = UnresolvedSYCLKernelCallStmt::CreateEmpty(Context);
+      break;
+
     case EXPR_OPENACC_ASTERISK_SIZE:
       S = OpenACCAsteriskSizeExpr::CreateEmpty(Context);
       break;
@@ -3367,6 +3400,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_EXT_VECTOR_ELEMENT:
       S = new (Context) ExtVectorElementExpr(Empty);
+      break;
+
+    case EXPR_MATRIX_ELEMENT:
+      S = new (Context) MatrixElementExpr(Empty);
       break;
 
     case EXPR_INIT_LIST:
@@ -4534,6 +4571,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_HLSL_OUT_ARG:
       S = HLSLOutArgExpr::CreateEmpty(Context);
       break;
+    case EXPR_REFLECT: {
+      S = CXXReflectExpr::CreateEmpty(Context);
+      break;
+    }
     }
 
     // We hit a STMT_STOP, so we're done with this expression.

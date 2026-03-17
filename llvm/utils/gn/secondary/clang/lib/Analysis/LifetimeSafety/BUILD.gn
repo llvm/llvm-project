@@ -12,9 +12,11 @@ static_library("LifetimeSafety") {
     "FactsGenerator.cpp",
     "LifetimeAnnotations.cpp",
     "LifetimeSafety.cpp",
+    "LifetimeStats.cpp",
     "LiveOrigins.cpp",
     "LoanPropagation.cpp",
     "Loans.cpp",
+    "MovedLoans.cpp",
     "Origins.cpp",
   ]
 }

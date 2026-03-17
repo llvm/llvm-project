@@ -100,11 +100,6 @@ private:
   /// Attempt to delinearize the indexed reference.
   bool delinearize(const LoopInfo &LI);
 
-  /// Attempt to delinearize \p AccessFn for fixed-size arrays.
-  bool tryDelinearizeFixedSize(const SCEV *AccessFn,
-                               SmallVectorImpl<const SCEV *> &Subscripts,
-                               const SCEV *ElementSize);
-
   /// Return true if the index reference is invariant with respect to loop \p L.
   bool isLoopInvariant(const Loop &L) const;
 

@@ -24,6 +24,7 @@ def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
 def SYCLKernelCallStmt : StmtNode<Stmt>;
+def UnresolvedSYCLKernelCallStmt : StmtNode<Stmt>;
 
 // Break/continue.
 def LoopControlStmt : StmtNode<Stmt, 1>;
@@ -75,6 +76,7 @@ def UnaryOperator : StmtNode<Expr>;
 def OffsetOfExpr : StmtNode<Expr>;
 def UnaryExprOrTypeTraitExpr : StmtNode<Expr>;
 def ArraySubscriptExpr : StmtNode<Expr>;
+def MatrixSingleSubscriptExpr : StmtNode<Expr>;
 def MatrixSubscriptExpr : StmtNode<Expr>;
 def ArraySectionExpr : StmtNode<Expr>;
 def OMPIteratorExpr : StmtNode<Expr>;
@@ -92,6 +94,7 @@ def CStyleCastExpr : StmtNode<ExplicitCastExpr>;
 def OMPArrayShapingExpr : StmtNode<Expr>;
 def CompoundLiteralExpr : StmtNode<Expr>;
 def ExtVectorElementExpr : StmtNode<Expr>;
+def MatrixElementExpr : StmtNode<Expr>;
 def InitListExpr : StmtNode<Expr>;
 def DesignatedInitExpr : StmtNode<Expr>;
 def DesignatedInitUpdateExpr : StmtNode<Expr>;
@@ -177,6 +180,9 @@ def CoyieldExpr : StmtNode<CoroutineSuspendExpr>;
 // C++20 Concepts expressions
 def ConceptSpecializationExpr : StmtNode<Expr>;
 def RequiresExpr : StmtNode<Expr>;
+
+// c++ 26 reflection
+def CXXReflectExpr : StmtNode<Expr>;
 
 // Obj-C Expressions.
 def ObjCStringLiteral : StmtNode<Expr>;

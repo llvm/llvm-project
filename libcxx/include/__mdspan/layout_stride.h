@@ -272,11 +272,10 @@ public:
       return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
         if ((__extents_.extent(_Pos) * ... * 1) == 0)
           return static_cast<index_type>(0);
-        else
-          return static_cast<index_type>(
-              static_cast<index_type>(1) +
-              (((__extents_.extent(_Pos) - static_cast<index_type>(1)) * __strides_[_Pos]) + ... +
-               static_cast<index_type>(0)));
+
+        return static_cast<index_type>(
+            static_cast<index_type>(1) + (((__extents_.extent(_Pos) - static_cast<index_type>(1)) * __strides_[_Pos]) +
+                                          ... + static_cast<index_type>(0)));
       }(make_index_sequence<__rank_>());
     }
   }

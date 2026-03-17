@@ -40,7 +40,6 @@
       "value": false,
       "doc": "Use an alternative printf float implementation based on 320-bit floats"
     },
-
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": false,
       "doc": "Disable printing fixed point values in printf and friends."
@@ -52,6 +51,14 @@
     "LIBC_CONF_PRINTF_RUNTIME_DISPATCH": {
       "value": true,
       "doc": "Use dynamic dispatch for the output mechanism to reduce code size."
+    },
+    "LIBC_CONF_PRINTF_DISABLE_WIDE": {
+      "value": false,
+      "doc": "Disable handling wide characters for printf and friends."
+    },
+    "LIBC_COPT_PRINTF_DISABLE_BITINT": {
+      "value": false,
+      "doc": "Disable bitint length modifiers to reduce code size. Specifically the wNUM and wfNUM modifiers."
     }
   },
   "scanf": {
@@ -62,6 +69,20 @@
     "LIBC_CONF_SCANF_DISABLE_INDEX_MODE": {
       "value": false,
       "doc": "Disable index mode in the scanf format string."
+    }
+  },
+  "str_to_float": {
+    "LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE": {
+      "value": false,
+      "doc": "Disable Eisel-Lemire algorithm for string to float conversion."
+    },
+    "LIBC_CONF_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION": {
+      "value": false,
+      "doc": "Disable simple decimal conversion for string to float conversion."
+    },
+    "LIBC_CONF_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH": {
+      "value": false,
+      "doc": "Disable Clinger's fast path for string to float conversion."
     }
   },
   "string": {
@@ -105,11 +126,15 @@
   "math": {
     "LIBC_CONF_MATH_OPTIMIZATIONS": {
       "value": 0,
-      "doc": "Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST."
+      "doc": "Configure optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, LIBC_MATH_FAST, and LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT."
     },
     "LIBC_CONF_FREXP_INF_NAN_EXPONENT": {
       "value": "",
       "doc": "The value written back to the second parameter when calling frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified.  Configure an explicit exp value for Inf/NaN inputs."
+    },
+    "LIBC_CONF_MATH_USE_SYSTEM_FENV": {
+      "value": false,
+      "doc": "Use C standard fenv.h calls from the system libc instead our internal fenv implementations."
     }
   },
   "qsort": {

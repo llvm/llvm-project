@@ -47,8 +47,8 @@
 //        corresponds to offset, second member corresponds to size of LDS global
 //        being replaced and third represents the total aligned size. It will
 //        have name "llvm.amdgcn.sw.lds.<kernel-name>.md". This global will have
-//        an intializer with static LDS related offsets and sizes initialized.
-//        But for dynamic LDS related entries, offsets will be intialized to
+//        an initializer with static LDS related offsets and sizes initialized.
+//        But for dynamic LDS related entries, offsets will be initialized to
 //        previous static LDS allocation end offset. Sizes for them will be zero
 //        initially. These dynamic LDS offset and size values will be updated
 //        within the kernel, since kernel can read the dynamic LDS size
@@ -990,7 +990,6 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
   auto &Kernels = NKLDSParams.OrderedKernels;
   if (Kernels.empty())
     return;
-  Type *Int32Ty = IRB.getInt32Ty();
   const size_t NumberKernels = Kernels.size();
   ArrayType *AllKernelsOffsetsType =
       ArrayType::get(IRB.getPtrTy(AMDGPUAS::LOCAL_ADDRESS), NumberKernels);
@@ -998,12 +997,7 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
   for (size_t i = 0; i < NumberKernels; i++) {
     Function *Func = Kernels[i];
     auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
-    GlobalVariable *SwLDS = LDSParams.SwLDS;
-    assert(SwLDS);
-    Constant *GEPIdx[] = {ConstantInt::get(Int32Ty, 0)};
-    Constant *GEP =
-        ConstantExpr::getGetElementPtr(SwLDS->getType(), SwLDS, GEPIdx, true);
-    OverallConstantExprElts[i] = GEP;
+    OverallConstantExprElts[i] = LDSParams.SwLDS;
   }
   Constant *init =
       ConstantArray::get(AllKernelsOffsetsType, OverallConstantExprElts);

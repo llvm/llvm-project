@@ -352,7 +352,8 @@ def _emit_duplicate_report(lines: Sequence[str], title: str) -> Optional[str]:
     if not (dups_detail := find_duplicate_entries(lines, title)):
         return None
     out: List[str] = []
-    out.append(f"Error: Duplicate entries in '{title}':\n")
+    out.append(f"Error: Duplicate entries in '{title}'.\n")
+    out.append("\nPlease merge these entries into a single bullet point.\n")
     for key, occs in dups_detail:
         out.append(f"\n-- Duplicate: {key}\n")
         for start_idx, block in occs:

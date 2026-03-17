@@ -138,6 +138,7 @@ template <class Mutex>
 #    include <__mutex/tag_types.h>
 #    include <__mutex/unique_lock.h>
 #    include <__system_error/throw_system_error.h>
+#    include <__utility/move.h>
 #    include <__utility/swap.h>
 #    include <cerrno>
 #    include <version>
@@ -340,14 +341,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI shared_lock& operator=(shared_lock&& __u) _NOEXCEPT {
-    if (__owns_)
-      __m_->unlock_shared();
-    __m_        = nullptr;
-    __owns_     = false;
-    __m_        = __u.__m_;
-    __owns_     = __u.__owns_;
-    __u.__m_    = nullptr;
-    __u.__owns_ = false;
+    if (this != std::addressof(__u))
+      shared_lock(std::move(__u)).swap(*this);
     return *this;
   }
 

@@ -233,6 +233,8 @@ void DataAggregator::start() {
 
   launchPerfProcess("task events", TaskEventsPPI,
                     "script --show-task-events --no-itrace");
+
+  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
 }
 
 void DataAggregator::abort() {
@@ -303,8 +305,6 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
   };
 
-  PerfProcessInfo BuildIDProcessInfo;
-  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
   if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
     return;
 
@@ -347,7 +347,7 @@ bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
 
   char Buf[7] = {0, 0, 0, 0, 0, 0, 0};
 
-  auto Close = make_scope_exit([&] { sys::fs::closeFile(*FD); });
+  llvm::scope_exit Close([&] { sys::fs::closeFile(*FD); });
   Expected<size_t> BytesRead = sys::fs::readNativeFileSlice(
       *FD, MutableArrayRef(Buf, sizeof(Buf)), 0);
   if (!BytesRead) {
@@ -1729,10 +1729,10 @@ std::error_code DataAggregator::parseMemEvents() {
     if (std::error_code EC = Sample.getError())
       return EC;
 
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
+    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC)) {
       BF->setHasProfileAvailable();
-
-    MemSamples.emplace_back(std::move(Sample.get()));
+      MemSamples.emplace_back(std::move(Sample.get()));
+    }
   }
 
   return std::error_code();
@@ -2387,11 +2387,9 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       if (PseudoProbeDecoder) {
         DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t>
             InlineTreeNodeId;
-        if (BF->getGUID()) {
-          std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
-              YAMLProfileWriter::convertBFInlineTree(*PseudoProbeDecoder,
-                                                     InlineTree, BF->getGUID());
-        }
+        std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
+            YAMLProfileWriter::convertBFInlineTree(*PseudoProbeDecoder,
+                                                   InlineTree, *BF);
         // Fetch probes belonging to all fragments
         const AddressProbesMap &ProbeMap =
             PseudoProbeDecoder->getAddress2ProbesMap();

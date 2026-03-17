@@ -17,6 +17,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstring>
 #include <optional>
 #include <system_error>
 
@@ -117,23 +118,26 @@ std::unique_ptr<Module> llvm::parseIRFile(StringRef Filename, SMDiagnostic &Err,
 LLVMBool LLVMParseIRInContext(LLVMContextRef ContextRef,
                               LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutM,
                               char **OutMessage) {
+  std::unique_ptr<MemoryBuffer> MB(unwrap(MemBuf));
+  return LLVMParseIRInContext2(ContextRef, wrap(MB.get()), OutM, OutMessage);
+}
+
+LLVMBool LLVMParseIRInContext2(LLVMContextRef ContextRef,
+                               LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutM,
+                               char **OutMessage) {
   SMDiagnostic Diag;
 
-  std::unique_ptr<MemoryBuffer> MB(unwrap(MemBuf));
-  *OutM =
-      wrap(parseIR(MB->getMemBufferRef(), Diag, *unwrap(ContextRef)).release());
+  *OutM = wrap(parseIR(*unwrap(MemBuf), Diag, *unwrap(ContextRef)).release());
 
-  if(!*OutM) {
-    if (OutMessage) {
-      std::string buf;
-      raw_string_ostream os(buf);
+  if (*OutM)
+    return 0;
 
-      Diag.print(nullptr, os, false);
-
-      *OutMessage = strdup(buf.c_str());
-    }
-    return 1;
+  if (OutMessage) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    Diag.print(nullptr, OS, /*ShowColors=*/false);
+    *OutMessage = strdup(Buf.c_str());
   }
 
-  return 0;
+  return 1;
 }

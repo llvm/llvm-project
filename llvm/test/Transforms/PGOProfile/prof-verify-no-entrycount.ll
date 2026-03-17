@@ -15,4 +15,4 @@ no:
   ret void
 }
 
-; CHECK: Profile verification failed: function entry count missing (set to 0 if cold)
+; CHECK: Profile verification failed for function 'foo': function entry count missing (set to 0 if cold)

@@ -354,6 +354,45 @@ exit:
   ret void
 }
 
+@b = dso_local local_unnamed_addr global i16 0, align 2
+@c = dso_local local_unnamed_addr global i16 0, align 2
+@d = dso_local local_unnamed_addr global i16 0, align 2
+@e = dso_local local_unnamed_addr global <256 x i32> zeroinitializer, align 1024
+@f = dso_local local_unnamed_addr global <256 x i32> zeroinitializer, align 1024
+
+define void @pr166653(ptr %0) {
+; CHECK-LABEL: @pr166653(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca <256 x i32>, align 64
+; CHECK-NEXT:    [[H:%.*]] = load <256 x i32>, ptr [[TMP0:%.*]], align 1024
+; CHECK-NEXT:    store <256 x i32> [[H]], ptr [[TMP1]], align 1024
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr @b, align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr @c, align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr @d, align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = udiv i16 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i16 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP2]], i16 [[TMP3]], ptr @e, i64 [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = sext i16 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP2]], i16 [[TMP4]], ptr @f, i64 [[TMP8]])
+; CHECK-NEXT:    [[TMP10:%.*]] = sext i16 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[TMP5]], i16 [[TMP3]], ptr [[TMP1]], i64 [[TMP10]])
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 [[TMP2]], i16 [[TMP3]], i16 [[TMP4]], x86_amx [[TMP7]], x86_amx [[TMP9]], x86_amx [[TMP11]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %h = load <256 x i32>, ptr %0, align 1024
+  %1 = load i16, ptr @b, align 2
+  %2 = load i16, ptr @c, align 2
+  %3 = load i16, ptr @d, align 2
+  %4 = load <256 x i32>, ptr @e, align 1024
+  %5 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %4)
+  %6 = load <256 x i32>, ptr @f, align 1024
+  %7 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %6)
+  %8 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> %h)
+  %9 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %1, i16 %2, i16 %3, x86_amx %5, x86_amx %7, x86_amx %8)
+  ret void
+}
+
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, ptr, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)

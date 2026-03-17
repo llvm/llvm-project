@@ -92,6 +92,7 @@ add_llvm_target(AArch64CodeGen
   SMEPeepholeOpt.cpp
   SVEIntrinsicOpts.cpp
   MachineSMEABIPass.cpp
+  AArch64SRLTDefineSuperRegs.cpp
   AArch64SIMDInstrOpt.cpp
   AArch64PrologueEpilogue.cpp
 

@@ -767,10 +767,12 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     Op = llvm::AtomicRMWInst::Nand;
     break;
 
-  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
     Op = llvm::AtomicRMWInst::UIncWrap;
     break;
-  case AtomicExpr::AO__scoped_atomic_udec_wrap:
+  case AtomicExpr::AO__atomic_fetch_udec:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
     Op = llvm::AtomicRMWInst::UDecWrap;
     break;
 
@@ -826,6 +828,17 @@ EmitValToTemp(CodeGenFunction &CGF, Expr *E) {
   CGF.EmitAnyExprToMem(E, DeclPtr, E->getType().getQualifiers(),
                        /*Init*/ true);
   return DeclPtr;
+}
+
+/// Return true if \param ValTy is a type that should be casted to integer
+/// around the atomic memory operation. If \param CmpXchg is true, then the
+/// cast of a floating point type is made as that instruction can not have
+/// floating point operands.  TODO: Allow compare-and-exchange and FP - see
+/// comment in AtomicExpandPass.cpp.
+static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
+  if (ValTy->isFloatingPointTy())
+    return ValTy->isX86_FP80Ty() || CmpXchg;
+  return !ValTy->isIntegerTy() && !ValTy->isPointerTy();
 }
 
 static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
@@ -939,7 +952,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   llvm::Value *Order = EmitScalarExpr(E->getOrder());
   llvm::Value *Scope =
       E->getScopeModel() ? EmitScalarExpr(E->getScope()) : nullptr;
-  bool ShouldCastToIntPtrTy = true;
 
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -1039,13 +1051,14 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
-    ShouldCastToIntPtrTy = !MemTy->isFloatingType();
     [[fallthrough]];
 
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_nand:
   case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__atomic_fetch_xor:
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__atomic_fetch_udec:
   case AtomicExpr::AO__atomic_and_fetch:
   case AtomicExpr::AO__atomic_nand_fetch:
   case AtomicExpr::AO__atomic_or_fetch:
@@ -1078,13 +1091,15 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
-  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
-  case AtomicExpr::AO__scoped_atomic_udec_wrap:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
     Val1 = EmitValToTemp(*this, E->getVal1());
     break;
   }
 
   QualType RValTy = E->getType().getUnqualifiedType();
+  bool ShouldCastToIntPtrTy =
+      shouldCastToInt(ConvertTypeForMem(MemTy), E->isCmpXChg());
 
   // The inlined atomics only function on iN types, where N is a power of 2. We
   // need to make sure (via temporaries if necessary) that all incoming values
@@ -1141,8 +1156,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       auto DestAS = getContext().getTargetAddressSpace(LangAS::opencl_generic);
       auto *DestType = llvm::PointerType::get(getLLVMContext(), DestAS);
 
-      return getTargetHooks().performAddrSpaceCast(*this, V, AS, DestType,
-                                                   false);
+      return performAddrSpaceCast(V, DestType);
     };
 
     Args.add(RValue::get(CastToGenericAddrSpace(Ptr.emitRawPointer(*this),
@@ -1278,10 +1292,12 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__opencl_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_max_fetch:
-    case AtomicExpr::AO__scoped_atomic_uinc_wrap:
-    case AtomicExpr::AO__scoped_atomic_udec_wrap:
+    case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+    case AtomicExpr::AO__scoped_atomic_fetch_udec:
     case AtomicExpr::AO__atomic_test_and_set:
     case AtomicExpr::AO__atomic_clear:
+    case AtomicExpr::AO__atomic_fetch_uinc:
+    case AtomicExpr::AO__atomic_fetch_udec:
       llvm_unreachable("Integral atomic operations always become atomicrmw!");
     }
 
@@ -1500,17 +1516,6 @@ RValue AtomicInfo::convertAtomicTempToRValue(Address addr,
   return CGF.EmitLoadOfExtVectorElementLValue(LValue::MakeExtVectorElt(
       addr, LVal.getExtVectorElts(), LVal.getType(),
       LVal.getBaseInfo(), TBAAAccessInfo()));
-}
-
-/// Return true if \param ValTy is a type that should be casted to integer
-/// around the atomic memory operation. If \param CmpXchg is true, then the
-/// cast of a floating point type is made as that instruction can not have
-/// floating point operands.  TODO: Allow compare-and-exchange and FP - see
-/// comment in AtomicExpandPass.cpp.
-static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
-  if (ValTy->isFloatingPointTy())
-    return ValTy->isX86_FP80Ty() || CmpXchg;
-  return !ValTy->isIntegerTy() && !ValTy->isPointerTy();
 }
 
 RValue AtomicInfo::ConvertToValueOrAtomic(llvm::Value *Val,

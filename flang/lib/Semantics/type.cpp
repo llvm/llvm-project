@@ -296,7 +296,8 @@ private:
   template <typename A> A Fold(A &&expr) {
     return evaluate::Fold(foldingContext(), std::move(expr));
   }
-  void InstantiateComponent(const Symbol &);
+  Symbol *BeginComponentInstantiation(const Symbol &);
+  void CompleteComponentInstantiation(Symbol &);
   const DeclTypeSpec *InstantiateType(const Symbol &);
   const DeclTypeSpec &InstantiateIntrinsicType(
       SourceName, const DeclTypeSpec &);
@@ -319,12 +320,16 @@ static int PlumbPDTInstantiationDepth(const Scope *scope) {
 static void InstantiateNonPDTScope(Scope &typeScope, Scope &containingScope) {
   auto &context{containingScope.context()};
   auto &foldingContext{context.foldingContext()};
+  std::set<DerivedTypeSpec *> deferred;
   for (auto &pair : typeScope) {
     Symbol &symbol{*pair.second};
     if (DeclTypeSpec * type{symbol.GetType()}) {
       if (DerivedTypeSpec * derived{type->AsDerived()}) {
-        if (!(derived->IsForwardReferenced() &&
-                IsAllocatableOrPointer(symbol))) {
+        if (IsAllocatableOrPointer(symbol)) {
+          if (!derived->IsForwardReferenced()) {
+            deferred.insert(derived);
+          }
+        } else {
           derived->Instantiate(containingScope);
         }
       }
@@ -340,6 +345,9 @@ static void InstantiateNonPDTScope(Scope &typeScope, Scope &containingScope) {
     }
   }
   ComputeOffsets(context, typeScope);
+  for (DerivedTypeSpec *derived : deferred) {
+    derived->Instantiate(containingScope);
+  }
 }
 
 void DerivedTypeSpec::Instantiate(Scope &containingScope) {
@@ -441,10 +449,16 @@ void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
   // Instantiate symbols in declaration order; this ensures that
   // parent components and type parameters of ancestor types exist
   // by the time that they're needed.
+  std::vector<Symbol *> newSymbols;
   for (SymbolRef ref : fromScope.GetSymbols()) {
-    InstantiateComponent(*ref);
+    if (Symbol * newSymbol{BeginComponentInstantiation(*ref)}) {
+      newSymbols.emplace_back(newSymbol);
+    }
   }
   ComputeOffsets(context(), scope_);
+  for (Symbol *symbol : newSymbols) {
+    CompleteComponentInstantiation(*symbol);
+  }
 }
 
 // Walks a parsed expression to prepare it for (re)analysis;
@@ -472,7 +486,8 @@ private:
   Scope &scope_;
 };
 
-void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
+Symbol *InstantiateHelper::BeginComponentInstantiation(
+    const Symbol &oldSymbol) {
   auto pair{scope_.try_emplace(
       oldSymbol.name(), oldSymbol.attrs(), common::Clone(oldSymbol.details()))};
   Symbol &newSymbol{*pair.first->second};
@@ -480,12 +495,14 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
     // Symbol was already present in the scope, which can only happen
     // in the case of type parameters.
     CHECK(oldSymbol.has<TypeParamDetails>());
-    return;
+    return nullptr;
   }
   newSymbol.flags() = oldSymbol.flags();
   if (auto *details{newSymbol.detailsIf<ObjectEntityDetails>()}) {
-    if (const DeclTypeSpec * newType{InstantiateType(newSymbol)}) {
-      details->ReplaceType(*newType);
+    if (!IsAllocatableOrPointer(newSymbol)) {
+      if (const DeclTypeSpec *newType{InstantiateType(newSymbol)}) {
+        details->ReplaceType(*newType);
+      }
     }
     for (ShapeSpec &dim : details->shape()) {
       if (dim.lbound().isExplicit()) {
@@ -530,6 +547,17 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
     if (const DeclTypeSpec * returnType{InstantiateType(newSymbol)}) {
       if (!procDetails->procInterface()) {
         procDetails->ReplaceType(*returnType);
+      }
+    }
+  }
+  return &newSymbol;
+}
+
+void InstantiateHelper::CompleteComponentInstantiation(Symbol &newSymbol) {
+  if (auto *details{newSymbol.detailsIf<ObjectEntityDetails>()}) {
+    if (IsAllocatableOrPointer(newSymbol)) {
+      if (const DeclTypeSpec *newType{InstantiateType(newSymbol)}) {
+        details->ReplaceType(*newType);
       }
     }
   }

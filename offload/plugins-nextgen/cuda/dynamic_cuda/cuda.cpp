@@ -22,6 +22,8 @@
 #include <string>
 #include <unordered_map>
 
+using namespace llvm::offload::debug;
+
 DLWRAP_INITIALIZE()
 
 DLWRAP_INTERNAL(cuInit, 1)
@@ -143,7 +145,8 @@ static bool checkForCUDA() {
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(CudaLib, &ErrMsg));
   if (!DynlibHandle->isValid()) {
-    DP("Unable to load library '%s': %s!\n", CudaLib, ErrMsg.c_str());
+    ODBG(OLDT_Init) << "Unable to load library ' " << CudaLib << "': " << ErrMsg
+                    << "!";
     return false;
   }
 
@@ -155,7 +158,8 @@ static bool checkForCUDA() {
       const char *First = It->second;
       void *P = DynlibHandle->getAddressOfSymbol(First);
       if (P) {
-        DP("Implementing %s with dlsym(%s) -> %p\n", Sym, First, P);
+        ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << First
+                        << ") -> " << P;
         *dlwrap::pointer(I) = P;
         continue;
       }
@@ -163,10 +167,12 @@ static bool checkForCUDA() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, CudaLib);
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << CudaLib
+                      << "'!";
       return false;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
 
     *dlwrap::pointer(I) = P;
   }

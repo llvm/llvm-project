@@ -42,6 +42,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 
@@ -85,11 +86,13 @@ static cl::opt<unsigned>
                             "when sorting profitable allocas"),
                    cl::init(4));
 
-// We support vector indices of the form (A * stride) + B
-// All parts are optional.
+// We support vector indices of the form ((A * stride) >> shift) + B
+// VarIndex is A, VarMul is stride, VarShift is shift and ConstIndex is B. All
+// parts are optional.
 struct GEPToVectorIndex {
   Value *VarIndex = nullptr;         // defaults to 0
   ConstantInt *VarMul = nullptr;     // defaults to 1
+  ConstantInt *VarShift = nullptr;   // defaults to 0
   ConstantInt *ConstIndex = nullptr; // defaults to 0
   Value *Full = nullptr;
 };
@@ -159,7 +162,10 @@ private:
   void analyzePromoteToVector(AllocaAnalysis &AA) const;
   void promoteAllocaToVector(AllocaAnalysis &AA);
   void analyzePromoteToLDS(AllocaAnalysis &AA) const;
-  bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS);
+  bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS,
+                             SetVector<IntrinsicInst *> &DeferredIntrs);
+  void
+  finishDeferredAllocaToLDSPromotion(SetVector<IntrinsicInst *> &DeferredIntrs);
 
   void scoreAlloca(AllocaAnalysis &AA) const;
 
@@ -363,12 +369,11 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
 }
 
 bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
+  if (DisablePromoteAllocaToLDS && DisablePromoteAllocaToVector)
+    return false;
+
   Mod = F.getParent();
   DL = &Mod->getDataLayout();
-
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-  if (!ST.isPromoteAllocaEnabled())
-    return false;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
   MaxVGPRs = getMaxVGPRs(CurrentLocalMemUsage, TM, F);
@@ -414,10 +419,12 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   // clang-format on
 
   bool Changed = false;
+  SetVector<IntrinsicInst *> DeferredIntrs;
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
-      const unsigned AllocaCost =
-          DL->getTypeSizeInBits(AA.Alloca->getAllocatedType());
+      std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(*DL);
+      assert(Size); // Expected to succeed on non-array alloca.
+      const unsigned AllocaCost = Size->getFixedValue() * 8;
       // First, check if we have enough budget to vectorize this alloca.
       if (AllocaCost <= VectorizationBudget) {
         promoteAllocaToVector(AA);
@@ -435,9 +442,11 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       }
     }
 
-    if (AA.LDS.Enable && tryPromoteAllocaToLDS(AA, SufficientLDS))
+    if (AA.LDS.Enable &&
+        tryPromoteAllocaToLDS(AA, SufficientLDS, DeferredIntrs))
       Changed = true;
   }
+  finishDeferredAllocaToLDSPromotion(DeferredIntrs);
 
   // NOTE: tryPromoteAllocaToVector removes the alloca, so Allocas contains
   // dangling pointers. If we want to reuse it past this point, the loop above
@@ -484,6 +493,9 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
 
       if (I->second.VarMul)
         Result = B.CreateMul(Result, I->second.VarMul);
+
+      if (I->second.VarShift)
+        Result = B.CreateAShr(Result, I->second.VarShift, "", /*isExact*/ true);
     }
 
     if (I->second.ConstIndex) {
@@ -544,33 +556,64 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   if (VarOffsets.size() > 1)
     return {};
 
-  APInt IndexQuot;
-  int64_t Rem;
-  APInt::sdivrem(ConstOffset, VecElemSize, IndexQuot, Rem);
-  if (Rem != 0)
+  // We support vector indices of the form ((VarIndex * stride) >> shift) + B.
+  // IndexQuot represents B. Check that the constant offset is a multiple
+  // of the vector element size.
+  if (ConstOffset.srem(VecElemSize) != 0)
     return {};
+  APInt IndexQuot = ConstOffset.sdiv(VecElemSize);
 
   GEPToVectorIndex Result;
 
   if (!ConstOffset.isZero())
     Result.ConstIndex = ConstantInt::get(Ctx, IndexQuot.sextOrTrunc(BW));
 
+  // If there are no variable offsets, only a constant offset, then we're done.
   if (VarOffsets.empty())
     return Result;
 
+  // Scale is the stride in the (A * stride) part. Check that there is only one
+  // variable offset and extract the scale factor.
   const auto &VarOffset = VarOffsets.front();
-  APInt OffsetQuot;
-  APInt::sdivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
-  if (Rem != 0 || OffsetQuot.isZero())
+  auto ScaleOpt = VarOffset.second.tryZExtValue();
+  if (!ScaleOpt || *ScaleOpt == 0)
     return {};
 
+  uint64_t Scale = *ScaleOpt;
   Result.VarIndex = VarOffset.first;
   auto *OffsetType = dyn_cast<IntegerType>(Result.VarIndex->getType());
   if (!OffsetType)
     return {};
 
-  if (!OffsetQuot.isOne())
-    Result.VarMul = ConstantInt::get(Ctx, OffsetQuot.sextOrTrunc(BW));
+  // The vector index for the variable part is: VarIndex * Scale / VecElemSize.
+  if (Scale >= (uint64_t)VecElemSize) {
+    if (Scale % VecElemSize != 0)
+      return {};
+
+    // Scale is a multiple of VecElemSize, so the index is just: VarIndex *
+    // (Scale / VecElemSize).
+    uint64_t VarMul = Scale / VecElemSize;
+    // Only the multiplier is needed.
+    if (VarMul != 1)
+      Result.VarMul = ConstantInt::get(Ctx, APInt(BW, VarMul));
+  } else {
+    if ((uint64_t)VecElemSize % Scale != 0)
+      return {};
+
+    // VecElemSize is a multiple of Scale, so the index is just: VarIndex /
+    // (VecElemSize / Scale).
+    uint64_t Divisor = VecElemSize / Scale;
+    // The divisor must be a power of 2 so we can use a right shift.
+    if (!isPowerOf2_64(Divisor))
+      return {};
+
+    // VarIndex must be known to be divisible by that divisor.
+    KnownBits KB = computeKnownBits(VarOffset.first, DL);
+    if (KB.countMinTrailingZeros() < Log2_64(Divisor))
+      return {};
+
+    Result.VarShift = ConstantInt::get(Ctx, APInt(BW, Log2_64(Divisor)));
+  }
 
   return Result;
 }
@@ -599,21 +642,6 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
                                         InstSimplifyFolder(DL));
   Builder.SetInsertPoint(Inst);
 
-  const auto CreateTempPtrIntCast = [&Builder, DL](Value *Val,
-                                                   Type *PtrTy) -> Value * {
-    assert(DL.getTypeStoreSize(Val->getType()) == DL.getTypeStoreSize(PtrTy));
-    const unsigned Size = DL.getTypeStoreSizeInBits(PtrTy);
-    if (!PtrTy->isVectorTy())
-      return Builder.CreateBitOrPointerCast(Val, Builder.getIntNTy(Size));
-    const unsigned NumPtrElts = cast<FixedVectorType>(PtrTy)->getNumElements();
-    // If we want to cast to cast, e.g. a <2 x ptr> into a <4 x i32>, we need to
-    // first cast the ptr vector to <2 x i64>.
-    assert((Size % NumPtrElts == 0) && "Vector size not divisble");
-    Type *EltTy = Builder.getIntNTy(Size / NumPtrElts);
-    return Builder.CreateBitOrPointerCast(
-        Val, FixedVectorType::get(EltTy, NumPtrElts));
-  };
-
   Type *VecEltTy = AA.Vector.Ty->getElementType();
 
   switch (Inst->getOpcode()) {
@@ -626,13 +654,9 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     Type *AccessTy = Inst->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index)) {
-      if (CI->isZeroValue() && AccessSize == VecStoreSize) {
-        if (AccessTy->isPtrOrPtrVectorTy())
-          CurVal = CreateTempPtrIntCast(CurVal, AccessTy);
-        else if (CurVal->getType()->isPtrOrPtrVectorTy())
-          CurVal = CreateTempPtrIntCast(CurVal, CurVal->getType());
-        Value *NewVal = Builder.CreateBitOrPointerCast(CurVal, AccessTy);
-        Inst->replaceAllUsesWith(NewVal);
+      if (CI->isNullValue() && AccessSize == VecStoreSize) {
+        Inst->replaceAllUsesWith(
+            Builder.CreateBitPreservingCastChain(DL, CurVal, AccessTy));
         return nullptr;
       }
     }
@@ -644,6 +668,36 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumLoadedElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
+      // If idx is dynamic, then sandwich load with bitcasts.
+      // ie. VectorTy                 SubVecTy  AccessTy
+      //     <64 x i8> ->             <16 x i8> <8 x i16>
+      //     <64 x i8> -> <4 x i128> -> i128 -> <8 x i16>
+      // Extracting subvector with dynamic index has very large expansion in
+      // the amdgpu backend. Limit to pow2.
+      FixedVectorType *VectorTy = AA.Vector.Ty;
+      TypeSize NumBits = DL.getTypeStoreSize(SubVecTy) * 8u;
+      uint64_t LoadAlign = cast<LoadInst>(Inst)->getAlign().value();
+      bool IsAlignedLoad = NumBits <= (LoadAlign * 8u);
+      unsigned TotalNumElts = VectorTy->getNumElements();
+      bool IsProperlyDivisible = TotalNumElts % NumLoadedElts == 0;
+      if (!isa<ConstantInt>(Index) &&
+          llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
+          IsProperlyDivisible && IsAlignedLoad) {
+        IntegerType *NewElemTy = Builder.getIntNTy(NumBits);
+        const unsigned NewNumElts =
+            DL.getTypeStoreSize(VectorTy) * 8u / NumBits;
+        const unsigned LShrAmt = llvm::Log2_32(SubVecTy->getNumElements());
+        FixedVectorType *BitCastTy =
+            FixedVectorType::get(NewElemTy, NewNumElts);
+        Value *BCVal = Builder.CreateBitCast(CurVal, BitCastTy);
+        Value *NewIdx = Builder.CreateLShr(
+            Index, ConstantInt::get(Index->getType(), LShrAmt));
+        Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
+        Value *BCOut = Builder.CreateBitCast(ExtVal, AccessTy);
+        Inst->replaceAllUsesWith(BCOut);
+        return nullptr;
+      }
+
       Value *SubVec = PoisonValue::get(SubVecTy);
       for (unsigned K = 0; K < NumLoadedElts; ++K) {
         Value *CurIdx =
@@ -652,13 +706,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
             SubVec, Builder.CreateExtractElement(CurVal, CurIdx), K);
       }
 
-      if (AccessTy->isPtrOrPtrVectorTy())
-        SubVec = CreateTempPtrIntCast(SubVec, AccessTy);
-      else if (SubVecTy->isPtrOrPtrVectorTy())
-        SubVec = CreateTempPtrIntCast(SubVec, SubVecTy);
-
-      SubVec = Builder.CreateBitOrPointerCast(SubVec, AccessTy);
-      Inst->replaceAllUsesWith(SubVec);
+      Inst->replaceAllUsesWith(
+          Builder.CreateBitPreservingCastChain(DL, SubVec, AccessTy));
       return nullptr;
     }
 
@@ -682,15 +731,9 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     // We're storing the full vector, we can handle this without knowing CurVal.
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (Constant *CI = dyn_cast<Constant>(Index)) {
-      if (CI->isZeroValue() && AccessSize == VecStoreSize) {
-        if (AccessTy->isPtrOrPtrVectorTy())
-          Val = CreateTempPtrIntCast(Val, AccessTy);
-        else if (AA.Vector.Ty->isPtrOrPtrVectorTy())
-          Val = CreateTempPtrIntCast(Val, AA.Vector.Ty);
-        return Builder.CreateBitOrPointerCast(Val, AA.Vector.Ty);
-      }
-    }
+    if (Constant *CI = dyn_cast<Constant>(Index))
+      if (CI->isNullValue() && AccessSize == VecStoreSize)
+        return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
 
     // Storing a subvector.
     if (isa<FixedVectorType>(AccessTy)) {
@@ -701,13 +744,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumWrittenElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
-      if (SubVecTy->isPtrOrPtrVectorTy())
-        Val = CreateTempPtrIntCast(Val, SubVecTy);
-      else if (AccessTy->isPtrOrPtrVectorTy())
-        Val = CreateTempPtrIntCast(Val, AccessTy);
-
-      Val = Builder.CreateBitOrPointerCast(Val, SubVecTy);
-
+      Val = Builder.CreateBitPreservingCastChain(DL, Val, SubVecTy);
       Value *CurVec = GetCurVal();
       for (unsigned K = 0, NumElts = std::min(NumWrittenElts, NumVecElts);
            K < NumElts; ++K) {
@@ -1129,9 +1166,18 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   });
 
   // Now fixup the placeholders.
-  for (Instruction *Placeholder : Placeholders) {
-    Placeholder->replaceAllUsesWith(
-        Updater.GetValueInMiddleOfBlock(Placeholder->getParent()));
+  SmallVector<Value *> PlaceholderToNewVal(Placeholders.size());
+  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
+    Value *NewVal = Updater.GetValueInMiddleOfBlock(Placeholder->getParent());
+    PlaceholderToNewVal[Index] = NewVal;
+    Placeholder->replaceAllUsesWith(NewVal);
+  }
+  // Note: we cannot merge this loop with the previous one because it is
+  // possible that the placeholder itself can be used in the SSAUpdater. The
+  // replaceAllUsesWith doesn't replace those uses.
+  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
+    if (!Placeholder->use_empty())
+      Placeholder->replaceAllUsesWith(PlaceholderToNewVal[Index]);
     Placeholder->eraseFromParent();
   }
 
@@ -1492,7 +1538,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   for (const GlobalVariable *GV : UsedLDS) {
     Align Alignment =
         DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
-    uint64_t AllocSize = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t AllocSize = GV->getGlobalSize(DL);
 
     // HIP uses an extern unsized array in local address space for dynamically
     // allocated shared memory.  In that case, we have to disable the promotion.
@@ -1550,8 +1596,9 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
 }
 
 // FIXME: Should try to pick the most likely to be profitable allocas first.
-bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
-                                                    bool SufficientLDS) {
+bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
+    AllocaAnalysis &AA, bool SufficientLDS,
+    SetVector<IntrinsicInst *> &DeferredIntrs) {
   LLVM_DEBUG(dbgs() << "Trying to promote to LDS: " << *AA.Alloca << '\n');
 
   // Not likely to have sufficient local memory for promotion.
@@ -1565,8 +1612,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, ContainingFunction);
   unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(ContainingFunction).second;
 
-  Align Alignment = DL.getValueOrABITypeAlignment(
-      AA.Alloca->getAlign(), AA.Alloca->getAllocatedType());
+  Align Alignment = AA.Alloca->getAlign();
 
   // FIXME: This computed padding is likely wrong since it depends on inverse
   // usage order.
@@ -1575,9 +1621,11 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
   // could end up using more than the maximum due to alignment padding.
 
   uint32_t NewSize = alignTo(CurrentLocalMemUsage, Alignment);
-  uint32_t AllocSize =
-      WorkGroupSize * DL.getTypeAllocSize(AA.Alloca->getAllocatedType());
-  NewSize += AllocSize;
+  std::optional<TypeSize> ElemSize = AA.Alloca->getAllocationSize(DL);
+  if (!ElemSize || ElemSize->isScalable())
+    return false;
+  TypeSize AllocSize = WorkGroupSize * *ElemSize;
+  NewSize += AllocSize.getFixedValue();
 
   if (NewSize > LocalMemLimit) {
     LLVM_DEBUG(dbgs() << "  " << AllocSize
@@ -1619,8 +1667,6 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
   AA.Alloca->mutateType(Offset->getType());
   AA.Alloca->replaceAllUsesWith(Offset);
   AA.Alloca->eraseFromParent();
-
-  SmallVector<IntrinsicInst *> DeferredIntrs;
 
   PointerType *NewPtrTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
 
@@ -1682,7 +1728,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
       // These have 2 pointer operands. In case if second pointer also needs
       // to be replaced we defer processing of these intrinsics until all
       // other values are processed.
-      DeferredIntrs.push_back(Intr);
+      DeferredIntrs.insert(Intr);
       continue;
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
@@ -1730,7 +1776,14 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
     }
   }
 
+  return true;
+}
+
+void AMDGPUPromoteAllocaImpl::finishDeferredAllocaToLDSPromotion(
+    SetVector<IntrinsicInst *> &DeferredIntrs) {
+
   for (IntrinsicInst *Intr : DeferredIntrs) {
+    IRBuilder<> Builder(Intr);
     Builder.SetInsertPoint(Intr);
     Intrinsic::ID ID = Intr->getIntrinsicID();
     assert(ID == Intrinsic::memcpy || ID == Intrinsic::memmove);
@@ -1748,6 +1801,4 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaAnalysis &AA,
 
     Intr->eraseFromParent();
   }
-
-  return true;
 }

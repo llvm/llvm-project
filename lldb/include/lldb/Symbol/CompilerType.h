@@ -144,7 +144,13 @@ public:
 
   bool IsDefined() const;
 
-  bool IsFloatingPointType(bool &is_complex) const;
+  bool IsComplexType() const;
+
+  /// Returns \c true for floating point types (including complex floats).
+  bool IsFloatingPointType() const;
+
+  /// Returns \c true for non-complex float types.
+  bool IsRealFloatingPointType() const;
 
   bool IsFunctionType() const;
 
@@ -196,10 +202,10 @@ public:
 
   bool IsVoidType() const;
 
+  bool HasPointerAuthQualifier() const;
+
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
-
-  bool IsFloat() const;
 
   /// This is used when you don't care about the signedness of the enum.
   bool IsEnumerationType() const;

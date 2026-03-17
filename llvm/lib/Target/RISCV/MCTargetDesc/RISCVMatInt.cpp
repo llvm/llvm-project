@@ -79,7 +79,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     }
   }
 
-  if (STI.hasFeature(RISCV::FeatureStdExtP)) {
+  if (STI.hasFeature(RISCV::FeatureStdExtP) && !isInt<12>(Val)) {
     // Check if the immediate is packed i8 or i10
     int32_t Bit63To32 = Val >> 32;
     int32_t Bit31To0 = Val;
@@ -87,7 +87,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     int16_t Bit15To0 = Bit31To0;
     int8_t Bit15To8 = Bit15To0 >> 8;
     int8_t Bit7To0 = Bit15To0;
-    if (Bit63To32 == Bit31To0) {
+    if (!IsRV64 || Bit63To32 == Bit31To0) {
       if (IsRV64 && isInt<10>(Bit63To32)) {
         Res.emplace_back(RISCV::PLI_W, Bit63To32);
         return;
@@ -355,7 +355,8 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
   // If the Low and High halves are the same, use pack. The pack instruction
   // packs the XLEN/2-bit lower halves of rs1 and rs2 into rd, with rs1 in the
   // lower half and rs2 in the upper half.
-  if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbkb)) {
+  if (Res.size() > 2 && (STI.hasFeature(RISCV::FeatureStdExtZbkb) ||
+                         STI.hasFeature(RISCV::FeatureStdExtP))) {
     int64_t LoVal = SignExtend64<32>(Val);
     int64_t HiVal = SignExtend64<32>(Val >> 32);
     if (LoVal == HiVal) {

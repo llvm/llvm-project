@@ -125,7 +125,7 @@ TEST(Host, FindProcesses) {
     }
   }
   ASSERT_TRUE(foundPID);
-  auto clean_up = llvm::make_scope_exit([&] {
+  llvm::scope_exit clean_up([&] {
     Host::Kill(info.GetProcessID(), SIGKILL);
     exit_status.get_future().get();
   });

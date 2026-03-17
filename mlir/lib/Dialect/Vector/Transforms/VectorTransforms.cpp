@@ -12,11 +12,6 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
-#include <cassert>
-#include <cstdint>
-#include <functional>
-#include <optional>
-
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -33,7 +28,13 @@
 #include "mlir/IR/TypeUtilities.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+
+#include <cassert>
+#include <cstdint>
+#include <functional>
+#include <optional>
 
 #define DEBUG_TYPE "vector-to-vector"
 
@@ -105,10 +106,10 @@ struct MultiReduceToContract
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
-        rewriter.getArrayAttr(llvm::to_vector(llvm::map_range(
+        rewriter.getArrayAttr(llvm::map_to_vector(
             iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
               return IteratorTypeAttr::get(rewriter.getContext(), t);
-            }))));
+            })));
     return success();
   }
 };
@@ -554,9 +555,8 @@ struct ReorderElementwiseOpsOnTranspose final
 
 // Returns the values in `arrayAttr` as an integer vector.
 static SmallVector<int64_t> getIntValueVector(ArrayAttr arrayAttr) {
-  return llvm::to_vector<4>(
-      llvm::map_range(arrayAttr.getAsRange<IntegerAttr>(),
-                      [](IntegerAttr attr) { return attr.getInt(); }));
+  return llvm::map_to_vector<4>(arrayAttr.getAsRange<IntegerAttr>(),
+                                [](IntegerAttr attr) { return attr.getInt(); });
 }
 
 // Shuffles vector.bitcast op after vector.extract op.
@@ -1718,7 +1718,7 @@ class DropInnerMostUnitDimsTransferWrite
   }
 };
 
-/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to a contraction suitable for MMT (matrix matrix multiplication
 /// with the RHS transposed) lowering.
 struct CanonicalizeContractMatmulToMMT final

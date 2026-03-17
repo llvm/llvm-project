@@ -8,6 +8,7 @@
 
 #include "Flang.h"
 #include "Arch/RISCV.h"
+#include "Cuda.h"
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/CommonArgs.h"
@@ -51,6 +52,8 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fxor_operator,
                             options::OPT_fno_xor_operator,
                             options::OPT_falternative_parameter_statement,
+                            options::OPT_fdefault_integer_4,
+                            options::OPT_fdefault_real_4,
                             options::OPT_fdefault_real_8,
                             options::OPT_fdefault_integer_8,
                             options::OPT_fdefault_double_8,
@@ -200,6 +203,33 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (stackArrays &&
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
+
+  if (Args.hasFlag(options::OPT_fsafe_trampoline,
+                   options::OPT_fno_safe_trampoline, false)) {
+    const llvm::Triple &T = getToolChain().getTriple();
+    if (T.getArch() == llvm::Triple::x86_64 ||
+        T.getArch() == llvm::Triple::aarch64 ||
+        T.getArch() == llvm::Triple::aarch64_be) {
+      CmdArgs.push_back("-fsafe-trampoline");
+    } else {
+      getToolChain().getDriver().Diag(
+          diag::warn_drv_unsupported_option_for_target)
+          << "-fsafe-trampoline" << T.str();
+    }
+  }
+
+  // -fno-protect-parens is the default for -Ofast.
+  if (!Args.hasFlag(options::OPT_fprotect_parens,
+                    options::OPT_fno_protect_parens,
+                    /*Default=*/!Args.hasArg(options::OPT_Ofast)))
+    CmdArgs.push_back("-fno-protect-parens");
+
+  if (Args.hasFlag(options::OPT_funsafe_cray_pointers,
+                   options::OPT_fno_unsafe_cray_pointers, false)) {
+    // TODO: currently passed as MLIR option
+    CmdArgs.push_back("-mmlir");
+    CmdArgs.push_back("-unsafe-cray-pointers");
+  }
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
@@ -504,6 +534,42 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
   TC.addClangTargetOptions(Args, CmdArgs, Action::OffloadKind::OFK_OpenMP);
 }
 
+void Flang::AddNVPTXTargetArgs(const ArgList &Args,
+                               ArgStringList &CmdArgs) const {
+  // we cannot use addClangTargetOptions, as it appends unsupported args for
+  // flang: -fcuda-is-device, -fno-threadsafe-statics,
+  // -fcuda-allow-variadic-functions and -target-sdk-version Instead we manually
+  // detect the CUDA installation and link libdevice
+  const ToolChain &TC = getToolChain();
+  const Driver &D = TC.getDriver();
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
+
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
+    return;
+
+  // Detect CUDA installation and link libdevice
+  CudaInstallationDetector CudaInstallation(D, Triple, Args);
+  if (!CudaInstallation.isValid()) {
+    D.Diag(diag::err_drv_no_cuda_installation);
+    return;
+  }
+
+  StringRef GpuArch = Args.getLastArgValue(options::OPT_march_EQ);
+  if (GpuArch.empty()) {
+    D.Diag(diag::err_drv_offload_missing_gpu_arch) << "NVPTX" << "flang";
+    return;
+  }
+
+  std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
+  if (LibDeviceFile.empty()) {
+    D.Diag(diag::err_drv_no_cuda_libdevice) << GpuArch;
+    return;
+  }
+
+  CmdArgs.push_back("-mlink-builtin-bitcode");
+  CmdArgs.push_back(Args.MakeArgString(LibDeviceFile));
+}
+
 void Flang::addTargetOptions(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
@@ -532,6 +598,10 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::amdgcn:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddAMDGPUTargetArgs(Args, CmdArgs);
+    break;
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+    AddNVPTXTargetArgs(Args, CmdArgs);
     break;
   case llvm::Triple::riscv64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
@@ -1131,6 +1201,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  renderGlobalISelOptions(D, Args, CmdArgs, Triple);
   renderCommonIntegerOverflowOptions(Args, CmdArgs);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");

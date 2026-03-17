@@ -10,7 +10,6 @@
 #define __CLC_INTEGER_CLC_UPSAMPLE_H__
 
 #include <clc/clcfunc.h>
-#include <clc/clctypes.h>
 
 #define __CLC_UPSAMPLE_DECL(BGENTYPE, GENTYPE, UGENTYPE)                       \
   _CLC_OVERLOAD _CLC_DECL BGENTYPE __clc_upsample(GENTYPE hi, UGENTYPE lo);

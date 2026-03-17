@@ -47,7 +47,6 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <condition_variable>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -71,6 +70,7 @@
 #undef GetObject
 #include <io.h>
 typedef int socklen_t;
+#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -286,11 +286,11 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   lldb_private::FileSystem::Initialize();
   if (!stdio.empty()) {
-    llvm::SmallVector<llvm::StringRef, 3> files;
-    stdio.split(files, ':');
-    while (files.size() < 3)
-      files.push_back(files.back());
-    if (llvm::Error err = SetupIORedirection(files))
+    constexpr size_t num_of_stdio = 3;
+    llvm::SmallVector<llvm::StringRef, num_of_stdio> stdio_files;
+    stdio.split(stdio_files, ':');
+    stdio_files.resize(std::max(num_of_stdio, stdio_files.size()));
+    if (llvm::Error err = SetupIORedirection(stdio_files))
       return err;
   } else if ((isatty(STDIN_FILENO) != 0) &&
              llvm::StringRef(getenv("TERM")).starts_with_insensitive("xterm")) {
@@ -411,7 +411,7 @@ validateConnection(llvm::StringRef conn) {
 static llvm::Error serveConnection(
     const Socket::SocketProtocol &protocol, llvm::StringRef name, Log &log,
     const ReplMode default_repl_mode,
-    const std::vector<std::string> &pre_init_commands, bool no_lldbinit,
+    const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
     std::optional<std::chrono::seconds> connection_timeout_seconds) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
@@ -451,7 +451,7 @@ static llvm::Error serveConnection(
     if (connection_timeout_seconds)
       ResetConnectionTimeout(g_connection_timeout_mutex,
                              g_connection_timeout_time_point);
-    std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
+    const std::string client_name = llvm::formatv("conn{0}", clientCount++);
     lldb::IOObjectSP io(std::move(sock));
 
     // Move the client into a background thread to unblock accepting the next
@@ -463,7 +463,7 @@ static llvm::Error serveConnection(
       DAP_LOG(client_log, "client connected");
 
       MainLoop loop;
-      Transport transport(client_log, io, io);
+      Transport transport(client_log, loop, io, io);
       DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
               client_name, transport, loop);
 
@@ -541,6 +541,30 @@ int main(int argc, char *argv[]) {
     PrintVersion();
     return EXIT_SUCCESS;
   }
+
+#ifdef _WIN32
+  if (input_args.hasArg(OPT_check_python)) {
+    auto python_path_or_err = SetupPythonRuntimeLibrary();
+    if (!python_path_or_err) {
+      llvm::WithColor::error()
+          << llvm::toString(python_path_or_err.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    std::string python_path = *python_path_or_err;
+    if (python_path.empty()) {
+      llvm::WithColor::error()
+          << "unable to look for the Python shared library" << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::outs() << python_path << '\n';
+    return EXIT_SUCCESS;
+  }
+
+  auto python_path_or_err = SetupPythonRuntimeLibrary();
+  if (!python_path_or_err)
+    llvm::WithColor::error()
+        << llvm::toString(python_path_or_err.takeError()) << '\n';
+#endif
 
   if (input_args.hasArg(OPT_client)) {
     if (llvm::Error error = LaunchClient(input_args)) {
@@ -675,13 +699,13 @@ int main(int argc, char *argv[]) {
     memory_monitor->Start();
 
   // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger = llvm::make_scope_exit([&] {
+  llvm::scope_exit terminate_debugger([&] {
     if (memory_monitor)
       memory_monitor->Stop();
     lldb::SBDebugger::Terminate();
   });
 
-  std::vector<std::string> pre_init_commands;
+  std::vector<protocol::String> pre_init_commands;
   for (const std::string &arg :
        input_args.getAllArgValues(OPT_pre_init_command)) {
     pre_init_commands.push_back(arg);
@@ -738,7 +762,7 @@ int main(int argc, char *argv[]) {
   constexpr llvm::StringLiteral client_name = "stdio";
   MainLoop loop;
   Log client_log = log.WithPrefix("(stdio)");
-  Transport transport(client_log, input, output);
+  Transport transport(client_log, loop, input, output);
   DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
           client_name, transport, loop);
 

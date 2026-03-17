@@ -24,7 +24,7 @@ void foo(A a, A b, A c) {
 // X86: ret void
 
 // X64-LABEL: define dso_local void @"?foo@@YAXUA@@00@Z"
-// X64:         (ptr dead_on_return noundef %[[a:[^,]*]], ptr dead_on_return noundef %[[b:[^,]*]], ptr dead_on_return noundef %[[c:[^)]*]])
+// X64:         (ptr noundef dead_on_return %[[a:[^,]*]], ptr noundef dead_on_return %[[b:[^,]*]], ptr noundef dead_on_return %[[c:[^)]*]])
 // X64: call void @"??1A@@QEAA@XZ"(ptr {{[^,]*}} %[[a]])
 // X64: call void @"??1A@@QEAA@XZ"(ptr {{[^,]*}} %[[b]])
 // X64: call void @"??1A@@QEAA@XZ"(ptr {{[^,]*}} %[[c]])
@@ -64,7 +64,7 @@ void call_foo() {
 // X64: invoke noundef ptr @"??0A@@QEAA@H@Z"(ptr {{[^,]*}} %[[arg2:[^,]*]], i32 noundef 2)
 // X64: invoke noundef ptr @"??0A@@QEAA@H@Z"(ptr {{[^,]*}} %[[arg1:[^,]*]], i32 noundef 1)
 // X64: call void @"?foo@@YAXUA@@00@Z"
-// X64:       (ptr dead_on_return noundef %[[arg1]], ptr dead_on_return noundef %[[arg2]], ptr dead_on_return noundef %[[arg3]])
+// X64:       (ptr noundef dead_on_return %[[arg1]], ptr noundef dead_on_return %[[arg2]], ptr noundef dead_on_return %[[arg3]])
 // X64: ret void
 //
 //   lpad2:

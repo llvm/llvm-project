@@ -629,6 +629,50 @@ def LLVM_IntToPtrOp : LLVM_DereferenceableCastOp<"inttoptr", "IntToPtr",
 def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "PtrToInt",
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
                                   LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
+
+def LLVM_PtrToAddrOp : LLVM_CastOp<"ptrtoaddr", "PtrToAddr",
+                                  LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
+                                  LLVM_ScalarOrVectorOf<AnySignlessInteger>> {
+  // Overwrite the base class llvmBuilder since the instruction doesn't take a
+  // destination type argument.
+  let llvmBuilder = "$res = builder.CreatePtrToAddr($arg);";
+  let hasVerifier = 1;
+
+  let description = [{
+    Operation mirroring LLVM's `ptrtoaddr` operation.
+
+    This operation casts a pointer (or a vector of pointers) to an integer
+    (or a vector of integers) without capturing the provenance of the pointer.
+    Therefore, an integer returned or derived from `llvm.ptrtoaddr` does not
+    create a legal-to-access pointer when used in `llvm.inttoptr`.
+    Code that only cares about the address value of a pointer
+    (e.g. pointer subtraction) should prefer `llvm.ptrtoaddr` over
+    `llvm.ptrtoint`.
+
+    The integer type used as the result type is required to be equal in width
+    to the pointer type as specified in the data layout.
+    Use the `llvm-target-to-data-layout` pass to derive an MLIR datalayout from
+    an LLVM datalayout.
+
+    Examples:
+    ```
+    llvm.func @default_64_bit_ptrtoaddr(%arg0 : !llvm.ptr) -> i64 {
+      %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
+      llvm.return i64
+    }
+
+    module attributes { dlti.dl_spec = #dlti.dl_spec<
+      #dlti.dl_entry<!llvm.ptr, dense<[/*size=*/32, 32, 64]> : vector<3xi64>>
+    >} {
+      llvm.func @datalayout_32_bit(%arg0 : !llvm.ptr) -> i32 {
+        %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i32
+        llvm.return %0 : i32
+      }
+    }
+    ```
+  }];
+}
+
 def LLVM_SExtOp : LLVM_CastOp<"sext", "SExt",
                               LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                               LLVM_ScalarOrVectorOf<AnySignlessInteger>> {
@@ -795,6 +839,18 @@ def LLVM_CallOp
       DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
       OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
       UnitAttr:$convergent, UnitAttr:$no_unwind, UnitAttr:$will_return,
+      UnitAttr:$noreturn, UnitAttr:$returns_twice, UnitAttr:$hot,
+      UnitAttr:$cold, UnitAttr:$noduplicate,
+      UnitAttr:$no_caller_saved_registers, UnitAttr:$nocallback,
+      OptionalAttr<StrAttr>:$modular_format,
+      OptionalAttr<ArrayAttr>:$nobuiltins,
+      OptionalAttr<DenseI32ArrayAttr>:$allocsize,
+      UnitAttr:$optsize, UnitAttr:$minsize,
+      UnitAttr:$builtin, UnitAttr:$nobuiltin,
+      UnitAttr:$save_reg_params,
+      OptionalAttr<StrAttr>:$zero_call_used_regs,
+      OptionalAttr<StrAttr>:$trap_func_name,
+      OptionalAttr<DictionaryAttr>:$default_func_attrs,
       VariadicOfVariadic<LLVM_Type, "op_bundle_sizes">:$op_bundle_operands,
       DenseI32ArrayAttr:$op_bundle_sizes,
       OptionalAttr<ArrayAttr>:$op_bundle_tags,
@@ -940,6 +996,7 @@ def LLVM_InsertValueOp : LLVM_Op<
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 
   string llvmInstName = "InsertValue";
   string llvmBuilder = [{
@@ -1951,7 +2008,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     UnitAttr:$dso_local,
     DefaultValuedAttr<CConv, "CConv::C">:$CConv,
     OptionalAttr<SymbolRefAttr>:$comdat,
-    OptionalAttr<UnitAttr>:$convergent,
+    UnitAttr:$convergent,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     OptionalAttr<StrAttr>:$garbageCollector,
     OptionalAttr<ArrayAttr>:$passthrough,
@@ -1960,15 +2017,10 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<I64Attr>:$function_entry_count,
     OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
-    OptionalAttr<UnitAttr>:$arm_streaming,
-    OptionalAttr<UnitAttr>:$arm_locally_streaming,
-    OptionalAttr<UnitAttr>:$arm_streaming_compatible,
-    OptionalAttr<UnitAttr>:$arm_new_za,
-    OptionalAttr<UnitAttr>:$arm_in_za,
-    OptionalAttr<UnitAttr>:$arm_out_za,
-    OptionalAttr<UnitAttr>:$arm_inout_za,
-    OptionalAttr<UnitAttr>:$arm_preserves_za,
-    OptionalAttr<StrAttr>:$section,
+    UnitAttr:$arm_streaming, UnitAttr:$arm_locally_streaming,
+    UnitAttr:$arm_streaming_compatible, UnitAttr:$arm_new_za,
+    UnitAttr:$arm_in_za, UnitAttr:$arm_out_za, UnitAttr:$arm_inout_za,
+    UnitAttr:$arm_preserves_za, OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<I64Attr>:$alignment,
     OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
@@ -1978,20 +2030,23 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$reciprocal_estimates,
     OptionalAttr<StrAttr>:$prefer_vector_width,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
-    OptionalAttr<BoolAttr>:$no_infs_fp_math,
-    OptionalAttr<BoolAttr>:$no_nans_fp_math,
     OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math,
-    OptionalAttr<StrAttr>:$denormal_fp_math,
-    OptionalAttr<StrAttr>:$denormal_fp_math_f32,
+    OptionalAttr<LLVM_DenormalFPEnvAttr>:$denormal_fpenv,
     OptionalAttr<StrAttr>:$fp_contract,
     OptionalAttr<StrAttr>:$instrument_function_entry,
     OptionalAttr<StrAttr>:$instrument_function_exit,
-    OptionalAttr<UnitAttr>:$no_inline,
-    OptionalAttr<UnitAttr>:$always_inline,
-    OptionalAttr<UnitAttr>:$inline_hint,
-    OptionalAttr<UnitAttr>:$no_unwind,
-    OptionalAttr<UnitAttr>:$will_return,
-    OptionalAttr<UnitAttr>:$optimize_none,
+    UnitAttr:$no_inline, UnitAttr:$always_inline, UnitAttr:$inline_hint,
+    UnitAttr:$no_unwind, UnitAttr:$will_return, UnitAttr:$noreturn,
+    UnitAttr:$optimize_none, UnitAttr:$returns_twice, UnitAttr:$hot,
+    UnitAttr:$cold, UnitAttr:$noduplicate, UnitAttr:$no_caller_saved_registers,
+    UnitAttr:$nocallback, OptionalAttr<StrAttr>:$modular_format,
+    OptionalAttr<ArrayAttr>:$nobuiltins,
+    OptionalAttr<DenseI32ArrayAttr>:$allocsize,
+    OptionalAttr<UnitAttr>:$optsize,
+    OptionalAttr<UnitAttr>:$minsize,
+    OptionalAttr<UnitAttr>:$save_reg_params,
+    OptionalAttr<StrAttr>:$zero_call_used_regs,
+    OptionalAttr<DictionaryAttr>:$default_func_attrs,
     OptionalAttr<LLVM_VecTypeHintAttr>:$vec_type_hint,
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
@@ -2519,6 +2574,55 @@ def LLVM_ModuleFlagsOp
   }];
 
   let hasVerifier = 1;
+}
+
+//===--------------------------------------------------------------------===//
+// NamedMetadataOp
+//===--------------------------------------------------------------------===//
+
+def LLVM_NamedMetadataOp
+    : LLVM_Op<"named_metadata"> {
+  let summary = "Module-level named metadata";
+  let description = [{
+    Represents an LLVM named metadata node (`llvm::NamedMDNode`). Named
+    metadata nodes are module-level metadata that associate a name string
+    with a list of metadata nodes. Each operand must be an `#llvm.md_node`.
+
+    Note: cyclic metadata graphs are not supported. Because metadata attributes
+    are represented as MLIR attributes (which form a tree), there is no way to
+    express a metadata node that directly or transitively references itself.
+    LLVM IR permits such cycles (e.g. `!0 = !{!0}`), but they cannot be
+    represented here and will not round-trip through this op.
+
+    Example:
+    ```mlir
+    llvm.named_metadata "foo.version" [
+      #llvm.md_node<#llvm.md_const<2 : i32>,
+                    #llvm.md_const<9 : i32>,
+                    #llvm.md_const<0 : i32>
+      >
+    ]
+    llvm.named_metadata "foo.kernel" [
+      #llvm.md_node<
+        #llvm.md_func<@my_kernel>,
+        #llvm.md_node<>,
+        #llvm.md_node<
+          #llvm.md_node<#llvm.md_const<0 : i32>,
+                        #llvm.md_string<"foo.buffer">
+          >
+        >
+      >
+    ]
+    ```
+  }];
+  let arguments = (ins StrAttr:$metadata_name, ArrayAttr:$nodes);
+  let assemblyFormat = [{
+    $metadata_name $nodes attr-dict
+  }];
+
+  let llvmBuilder = [{
+    convertNamedMetadataOp($metadata_name, $nodes, builder, moduleTranslation);
+  }];
 }
 
 #endif // LLVMIR_OPS

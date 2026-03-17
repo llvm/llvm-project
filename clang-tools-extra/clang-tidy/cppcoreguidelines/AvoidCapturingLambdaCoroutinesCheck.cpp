@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 namespace {
 AST_MATCHER(LambdaExpr, hasCoroutineBody) {
   const Stmt *Body = Node.getBody();
-  return Body != nullptr && CoroutineBodyStmt::classof(Body);
+  return Body != nullptr && isa<CoroutineBodyStmt>(Body);
 }
 
 AST_MATCHER(LambdaExpr, hasCaptures) { return Node.capture_size() != 0U; }

@@ -19,16 +19,21 @@ def err_fe_pch_malformed_block : Error<
     "malformed block record in PCH file: '%0'">, DefaultFatal;
 def err_fe_ast_file_modified : Error<
     "file '%0' has been modified since the "
-    "%select{precompiled header|module file|precompiled file}1 '%2' was built"
-    ": %select{size|mtime|content}3 changed%select{| (was %5, now %6)}4">,
+    "%select{precompiled header|module file|precompiled file}1 '%2' was built">,
     DefaultFatal;
+def note_fe_ast_file_modified : Note<
+    "%select{size|mtime|content}0 changed%select{| from expected %2 to %3}1">;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
 def note_ast_file_required_by : Note<"'%0' required by '%1'">;
 def note_ast_file_rebuild_required
-    : Note<"please rebuild precompiled file '%0'">;
+    : Note<"precompiled file '%0' needs to be rebuilt">;
 def note_module_cache_path : Note<
     "after modifying system headers, please delete the module cache at '%0'">;
+def note_ast_file_input_files_validation_status : Note<"earlier input file validation "
+    "%select{was not performed|was disabled for this kind of precompiled file|"
+    "was skipped for the current build session|"
+    "has covered only user files|has covered all files}0">;
 
 def err_ast_file_targetopt_mismatch : Error<
     "precompiled file '%0' was compiled for the %1 '%2' but the current translation "
@@ -39,6 +44,12 @@ def err_ast_file_targetopt_feature_mismatch : Error<
     "not">;
 def err_ast_file_langopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "
     "precompiled file '%3' but is currently %select{disabled|enabled}2">;
+def warn_ast_file_config_mismatch
+    : Warning<"precompiled file '%0' cannot be loaded due to a configuration "
+              "mismatch with the current "
+              "compilation">,
+      InGroup<DiagGroup<"module-file-config-mismatch">>,
+      DefaultError;
 def err_ast_file_langopt_value_mismatch : Error<
   "%0 differs in precompiled file '%1' vs. current file">;
 def err_ast_file_codegenopt_mismatch : Error<"%0 was %select{disabled|enabled}1 in "
@@ -90,6 +101,13 @@ def remark_module_validation : Remark<
   "validating %0 input files in module '%1' from '%2'">,
   ShowInSystemHeader,
   InGroup<ModuleValidation>;
+def remark_module_check_relocation
+    : Remark<"checking if module '%0' from '%1' has relocated">,
+      ShowInSystemHeader,
+      InGroup<ModuleValidation>;
+def remark_module_relocated : Remark<"module '%0' relocated from '%1' to '%2'">,
+                              ShowInSystemHeader,
+                              InGroup<ModuleValidation>;
 
 def err_imported_module_not_found : Error<
     "module '%0' in precompiled file '%1' %select{(imported by precompiled file '%2') |}4"

@@ -152,7 +152,7 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
 
   static const Signature SinglePivotFunc[] = {SinglePivotRange};
 
-  static const std::pair<ArrayRef<Signature>, ArrayRef<const char *>>
+  static constexpr std::pair<ArrayRef<Signature>, ArrayRef<const char *>>
       AlgorithmNames[] = {{SingleRangeFunc, SingleRangeNames},
                           {TwoRangeFunc, TwoRangeNames},
                           {SinglePivotFunc, SinglePivotRangeNames}};
@@ -189,13 +189,13 @@ bool UseRangesCheck::isLanguageVersionSupported(
 }
 ArrayRef<std::pair<StringRef, StringRef>>
 UseRangesCheck::getFreeBeginEndMethods() const {
-  static const std::pair<StringRef, StringRef> Refs[] = {
+  static constexpr std::pair<StringRef, StringRef> Refs[] = {
       {"::std::begin", "::std::end"}, {"::std::cbegin", "::std::cend"}};
   return Refs;
 }
 std::optional<UseRangesCheck::ReverseIteratorDescriptor>
 UseRangesCheck::getReverseDescriptor() const {
-  static const std::pair<StringRef, StringRef> Refs[] = {
+  static constexpr std::pair<StringRef, StringRef> Refs[] = {
       {"::std::rbegin", "::std::rend"}, {"::std::crbegin", "::std::crend"}};
   return ReverseIteratorDescriptor{"std::views::reverse", "<ranges>", Refs,
                                    UseReversePipe};

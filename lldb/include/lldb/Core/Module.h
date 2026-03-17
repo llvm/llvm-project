@@ -510,8 +510,7 @@ public:
   ///     \b true if it is, \b false otherwise.
   bool IsLoadedInTarget(Target *target);
 
-  bool LoadScriptingResourceInTarget(Target *target, Status &error,
-                                     Stream &feedback_stream);
+  bool LoadScriptingResourceInTarget(Target *target, Status &error);
 
   /// Get the number of compile units for this module.
   ///
@@ -1044,10 +1043,10 @@ protected:
   uint64_t m_object_offset = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
-  /// DataBuffer containing the module image, if it was provided at
+  /// DataExtractor containing the module image, if it was provided at
   /// construction time. Otherwise the data will be retrieved by mapping
   /// one of the FileSpec members above.
-  lldb::DataBufferSP m_data_sp;
+  lldb::DataExtractorSP m_extractor_sp;
 
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
@@ -1101,8 +1100,6 @@ protected:
                                         SymbolContextList &sc_list);
 
   bool SetArchitecture(const ArchSpec &new_arch);
-
-  void SetUUID(const lldb_private::UUID &uuid);
 
   SectionList *GetUnifiedSectionList();
 

@@ -349,14 +349,14 @@ static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
     return false;
 
   bool Changed = false;
-  bool PrevCanFallthough = true;
+  bool PrevCanFallthrough = true;
   for (auto &MBB : *MF) {
-    if (!PrevCanFallthough) {
+    if (!PrevCanFallthrough) {
       Changed = true;
       MBB.setAlignment(Alignment);
     }
 
-    PrevCanFallthough = MBB.canFallThrough();
+    PrevCanFallthrough = MBB.canFallThrough();
 
     // For LOB's, the ARMLowOverheadLoops pass may remove the unconditional
     // branch later in the pipeline.
@@ -367,7 +367,7 @@ static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
           continue;
         if (isLoopStart(MI) || MI.getOpcode() == ARM::t2LoopEnd ||
             MI.getOpcode() == ARM::t2LoopEndDec) {
-          PrevCanFallthough = true;
+          PrevCanFallthrough = true;
           break;
         }
         // Any other terminator - nothing to do
@@ -1436,7 +1436,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
     // If the CP is referenced(ie, UserOffset) is in first four instructions
     // after IT, this recalculated BaseInsertOffset could be in the middle of
     // an IT block. If it is, change the BaseInsertOffset to just after the
-    // IT block. This still make the CP Entry is in range becuase of the
+    // IT block. This still make the CP Entry is in range because of the
     // following reasons.
     //   1. The initial BaseseInsertOffset calculated is (UserOffset +
     //   U.getMaxDisp() - UPad).

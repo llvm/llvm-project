@@ -1,8 +1,8 @@
 // UNSUPPORTED:  target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=ref,ref20,all,all20 %s
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=ref,ref23,all,all23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected20,all,all20 %s -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected23,all,all23 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected,expected20,all,all20 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -Wno-deprecated-volatile -verify=expected,expected23,all,all23 %s -fexperimental-new-constant-interpreter
 
 
 #define assert_active(F)   if (!__builtin_is_within_lifetime(&F)) (1/0);
@@ -12,6 +12,8 @@ inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p;
 namespace std {
 template<typename T, typename... Args>
 constexpr T* construct_at(T* p, Args&&... args) { return ::new((void*)p) T(static_cast<Args&&>(args)...); }
+template<typename T>
+constexpr void destroy_at(T *p) { p->~T(); } // #destroy
 }
 
 constexpr int f(int n) {  // all20-error {{constexpr function never produces a constant expression}}
@@ -259,6 +261,15 @@ namespace ExplicitLambdaInstancePointer {
       constexpr int (*fp)(C) = b;
       static_assert(fp(1) == 1, "");
   }
+
+  /// Failure case. The instance pointer is of type int.
+  struct S2 {
+      constexpr K(auto) { } // all-error {{a type specifier is required for all declarations}}
+  };
+  constexpr auto b = [](this K) { return 1; }; // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}} \
+                                               // all-error {{unknown type name 'K'}}
+  constexpr int (*fp)(K) = b; // all-error {{unknown type name 'K'}}
+  static_assert(fp(1) == 1, ""); // expected-error {{not an integral constant expression}}
 }
 
 namespace TwosComplementShifts {
@@ -395,7 +406,7 @@ namespace UnionMemberCallDiags {
 }
 #endif
 
-namespace VolatileWrites {
+namespace Volatile {
   constexpr void test1() {// all20-error {{never produces a constant expression}}
     int k;
     volatile int &m = k;
@@ -448,6 +459,30 @@ namespace VolatileWrites {
   }
   static_assert(test7(12)); // all-error {{not an integral constant expression}} \
                             // all-note {{in call to}}
+
+  constexpr int test8(bool b) {
+    if (!b)
+      return -1;
+    struct C {
+      int a;
+    };
+    volatile C c{12}; // all-note {{volatile object declared here}}
+    return ((C&)(c)).a; // all-note {{read of volatile object}}
+  }
+  static_assert(test8(true) == 0); // all-error {{not an integral constant expression}} \
+                                   // all-note {{in call to}}
+
+  struct C {
+    int n;
+    constexpr C() : n(1) { n = 2; int b= n;}
+  };
+  constexpr int f(bool get) {
+    if (get)
+      return -1;
+    volatile C c;
+    return 2;
+  }
+  static_assert(f(false) == 2, "");
 }
 
 namespace AIEWithIndex0Narrows {
@@ -495,4 +530,77 @@ namespace InactiveLocalsInConditionalOp {
   static_assert(test2(true));
 
 }
+
+namespace PrimitiveArrayLifetimes {
+  consteval int test1() {
+    int a[3];
+    assert_active(a[0]);
+    assert_active(a[1]);
+    assert_active(a[2]);
+    std::destroy_at(&a[0]);
+    assert_inactive(a[0]);
+
+    std::construct_at(&a[0]);
+    assert_active(a[0]);
+    return a[0];
+  }
+  static_assert(test1() == 0);
+
+  consteval int test2() {
+    int a[3] = {1,2,3};
+    assert_active(a[0]);
+    assert_active(a[1]);
+    assert_active(a[2]);
+    std::destroy_at(&a[0]);
+    assert_inactive(a[0]);
+
+    std::construct_at(&a[0]);
+    assert_active(a[0]);
+    return a[0];
+  }
+  static_assert(test2() == 0);
+}
+
 #endif
+
+namespace UnknownParams {
+  class X {
+  public:
+    constexpr operator bool(){ return true; }
+  };
+  int foo(X x) {
+    static_assert(x);
+    return 1;
+  }
+
+  int foo2(X &x) { // all20-note {{declared here}}
+    static_assert(x); // all20-error {{not an integral constant expression}} \
+                      // all20-note {{function parameter 'x' with unknown value cannot be used in a constant expression}}
+    return 1;
+  }
+}
+
+namespace NonCompoundStmtBody {
+  /// The body of the constructor is NOT a CompoundStmt.
+  struct S {
+    constexpr S() try { x = 20; } catch(...) {}
+
+    int x = 0;
+  };
+
+  constexpr bool testS() {
+    S s;
+    return s.x == 20;
+  }
+  static_assert(testS());
+}
+
+namespace LValueConstant {
+  struct D {
+    unsigned y;
+  };
+
+  extern D d;
+  consteval D& c() { return d; }
+  long long f() { return c().y; }
+}

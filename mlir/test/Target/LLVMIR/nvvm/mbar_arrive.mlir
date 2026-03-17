@@ -3,7 +3,7 @@
 llvm.func @mbarrier_arrive_generic(%barrier: !llvm.ptr, %count : i32) {
   // CHECK-LABEL: define void @mbarrier_arrive_generic(ptr %0, i32 %1) {
   // CHECK-NEXT: %3 = addrspacecast ptr %0 to ptr addrspace(3)
-  // CHECK-NEXT: %4 = call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %3, i32 1)
+  // CHECK-NEXT: %4 = call i64 @llvm.nvvm.mbarrier.arrive.shared(ptr addrspace(3) %3)
   // CHECK-NEXT: %5 = addrspacecast ptr %0 to ptr addrspace(3)
   // CHECK-NEXT: %6 = call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %5, i32 %1)
   // CHECK-NEXT: %7 = addrspacecast ptr %0 to ptr addrspace(3)
@@ -34,7 +34,7 @@ llvm.func @mbarrier_arrive_generic(%barrier: !llvm.ptr, %count : i32) {
 
 llvm.func @mbarrier_arrive_shared(%barrier: !llvm.ptr<3>, %count : i32) {
   // CHECK-LABEL: define void @mbarrier_arrive_shared(ptr addrspace(3) %0, i32 %1) {
-  // CHECK-NEXT: %3 = call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %0, i32 1)
+  // CHECK-NEXT: %3 = call i64 @llvm.nvvm.mbarrier.arrive.shared(ptr addrspace(3) %0)
   // CHECK-NEXT: %4 = call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %0, i32 %1)
   // CHECK-NEXT: %5 = call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %0, i32 %1)
   // CHECK-NEXT: %6 = call i64 @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cta(ptr addrspace(3) %0, i32 %1)

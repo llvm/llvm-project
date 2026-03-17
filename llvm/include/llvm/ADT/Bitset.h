@@ -16,10 +16,10 @@
 #ifndef LLVM_ADT_BITSET_H
 #define LLVM_ADT_BITSET_H
 
-#include <llvm/ADT/STLExtras.h>
 #include <array>
 #include <climits>
 #include <cstdint>
+#include <llvm/ADT/STLExtras.h>
 
 namespace llvm {
 
@@ -155,7 +155,7 @@ public:
 
   bool operator!=(const Bitset &RHS) const { return !(*this == RHS); }
 
-  bool operator < (const Bitset &Other) const {
+  bool operator<(const Bitset &Other) const {
     for (unsigned I = 0, E = size(); I != E; ++I) {
       bool LHS = test(I), RHS = Other.test(I);
       if (LHS != RHS)

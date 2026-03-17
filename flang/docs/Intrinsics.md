@@ -1182,6 +1182,18 @@ END PROGRAM example_dsecnds
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
 
+### Non-Standard Intrinsics: RTC
+
+#### Description
+`RTC()` returns the current time of the system as a REAL(8), interpreted as
+seconds since the Unix epoch.
+
+#### Usage and Info
+
+- **Standard:** Intel extension
+- **Class:** function
+- **Syntax:** `RESULT = RTC()`
+
 ### Non-Standard Intrinsics: TIME
 
 #### Description
@@ -1414,7 +1426,6 @@ This is prefixed by `STRING`, a colon and a space.
 - **Class:** subroutine
 - **Syntax:** `CALL PERROR(STRING)`
 
-<<<<<<< HEAD
 ### Non-Standard Intrinsics: SRAND
 
 #### Description

@@ -637,7 +637,7 @@ void ScopBuilder::propagateDomainConstraintsToRegionExit(
   auto *RI = scop->getRegion().getRegionInfo();
   auto *BBReg = RI ? RI->getRegionFor(BB) : nullptr;
   auto *ExitBB = BBReg ? BBReg->getExit() : nullptr;
-  if (!BBReg || BBReg->getEntry() != BB || !scop->contains(ExitBB))
+  if (!BBReg || BBReg->getEntry() != BB || !ExitBB || !scop->contains(ExitBB))
     return;
 
   // Do not propagate the domain if there is a loop backedge inside the region
@@ -3249,6 +3249,9 @@ static bool buildMinMaxAccess(isl::set Set,
 
   Set = Set.remove_divs();
   polly::simplify(Set);
+
+  if (Set.is_null())
+    return false;
 
   if (unsignedFromIslSize(Set.n_basic_set()) > RunTimeChecksMaxAccessDisjuncts)
     Set = Set.simple_hull();

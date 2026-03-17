@@ -605,8 +605,8 @@ define <vscale x 32 x half> @vfmacc_vf_nxv32f16_unmasked(<vscale x 32 x half> %v
 define <vscale x 32 x half> @vfmacc_vv_nxv32f16_ta(<vscale x 32 x half> %a, <vscale x 32 x half> %b, <vscale x 32 x half> %c, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmacc_vv_nxv32f16_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfmacc.vv v24, v8, v16, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
@@ -1138,8 +1138,8 @@ define <vscale x 16 x float> @vfmacc_vf_nxv16f32_unmasked(<vscale x 16 x float> 
 define <vscale x 16 x float> @vfmacc_vv_nxv16f32_ta(<vscale x 16 x float> %a, <vscale x 16 x float> %b, <vscale x 16 x float> %c, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmacc_vv_nxv16f32_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfmacc.vv v24, v8, v16, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
@@ -1565,8 +1565,8 @@ define <vscale x 8 x double> @vfmacc_vf_nxv8f64_unmasked(<vscale x 8 x double> %
 define <vscale x 8 x double> @vfmacc_vv_nxv8f64_ta(<vscale x 8 x double> %a, <vscale x 8 x double> %b, <vscale x 8 x double> %c, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmacc_vv_nxv8f64_ta:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfmacc.vv v24, v8, v16, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret

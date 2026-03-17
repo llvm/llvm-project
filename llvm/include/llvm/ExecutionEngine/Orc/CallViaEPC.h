@@ -67,7 +67,7 @@ callViaEPC(HandlerFn &&H, ExecutorProcessControl &EPC, Serializer S,
     EPC.callWrapperAsync(
         Fn.getAddress(),
         [S = std::move(S), H = std::forward<HandlerFn>(H)](
-            shared::WrapperFunctionResult R) mutable {
+            shared::WrapperFunctionBuffer R) mutable {
           if (const char *ErrMsg = R.getOutOfBandError())
             H(make_error<StringError>(ErrMsg, inconvertibleErrorCode()));
           else

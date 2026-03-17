@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clcfunc.h>
-#include <clc/clctypes.h>
 
 #define __CLC_GENSIZE 32
 #undef __CLC_SCALAR_GENTYPE

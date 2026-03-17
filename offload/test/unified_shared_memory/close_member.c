@@ -2,6 +2,7 @@
 
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

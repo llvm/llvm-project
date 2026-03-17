@@ -39,7 +39,7 @@
 #include "llvm/LinkAllPasses.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -72,13 +72,6 @@ static codegen::RegisterSaveStatsFlag SSF;
 // PassNameParser.
 static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
     "Optimizations available (use \"-passes=\" for the new pass manager)"));
-
-static cl::opt<bool> EnableLegacyPassManager(
-    "bugpoint-enable-legacy-pm",
-    cl::desc(
-        "Enable the legacy pass manager. This is strictly for bugpoint "
-        "due to it not working with the new PM, please do not use otherwise."),
-    cl::init(false));
 
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
@@ -375,11 +368,10 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "view-regions",
       "view-regions-only",
       "select-optimize",
-      "expand-large-div-rem",
       "structurizecfg",
       "fix-irreducible",
-      "expand-fp",
-      "callbrprepare",
+      "expand-ir-insts",
+      "inline-asm-prepare",
       "scalarizer",
   };
   for (StringLiteral P : PassNamePrefix)
@@ -429,12 +421,11 @@ optMain(int argc, char **argv,
   initializeTarget(Registry);
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
-  initializeExpandLargeDivRemLegacyPassPass(Registry);
-  initializeExpandFpLegacyPassPass(Registry);
+  initializeExpandIRInstsLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
-  initializeCallBrPreparePass(Registry);
+  initializeInlineAsmPreparePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
   initializeAtomicExpandLegacyPass(Registry);
   initializeWinEHPreparePass(Registry);
@@ -471,8 +462,8 @@ optMain(int argc, char **argv,
   LLVMContext Context;
 
   // TODO: remove shouldForceLegacyPM().
-  const bool UseNPM = (!EnableLegacyPassManager && !shouldForceLegacyPM()) ||
-                      PassPipeline.getNumOccurrences() > 0;
+  const bool UseNPM =
+      !shouldForceLegacyPM() || PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {
     errs() << "The `opt -passname` syntax for the new pass manager is "

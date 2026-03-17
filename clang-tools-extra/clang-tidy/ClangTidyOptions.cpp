@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidyOptions.h"
-#include "ClangTidyModuleRegistry.h"
+#include "ClangTidyModule.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
@@ -52,10 +52,9 @@ template <> struct MappingTraits<FileFilter> {
   static std::string validate(IO &Io, FileFilter &File) {
     if (File.Name.empty())
       return "No file name specified";
-    for (const FileFilter::LineRange &Range : File.LineRanges) {
+    for (const FileFilter::LineRange &Range : File.LineRanges)
       if (Range.first <= 0 || Range.second <= 0)
         return "Invalid line range";
-    }
     return "";
   }
 };
@@ -66,6 +65,8 @@ template <> struct MappingTraits<ClangTidyOptions::StringPair> {
     IO.mapRequired("value", KeyValue.second);
   }
 };
+
+namespace {
 
 struct NOptionMap {
   NOptionMap(IO &) {}
@@ -84,6 +85,8 @@ struct NOptionMap {
   std::vector<ClangTidyOptions::StringPair> Options;
 };
 
+} // namespace
+
 template <>
 void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
              EmptyContext &Ctx) {
@@ -91,9 +94,8 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     // Ensure check options are sorted
     std::vector<std::pair<StringRef, StringRef>> SortedOptions;
     SortedOptions.reserve(Val.size());
-    for (auto &Key : Val) {
+    for (auto &Key : Val)
       SortedOptions.emplace_back(Key.getKey(), Key.getValue().Value);
-    }
     std::sort(SortedOptions.begin(), SortedOptions.end());
 
     IO.beginMapping();
@@ -155,7 +157,7 @@ template <> struct ScalarEnumerationTraits<clang::DiagnosticIDs::Level> {
 };
 template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckDiag> {
   // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
-  static const bool flow = false;
+  static constexpr bool flow = false;
 };
 template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
   static void mapping(IO &IO, ClangTidyOptions::CustomCheckDiag &D) {
@@ -167,7 +169,7 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
 };
 template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckValue> {
   // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
-  static const bool flow = false;
+  static constexpr bool flow = false;
 };
 template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   static void mapping(IO &IO, ClangTidyOptions::CustomCheckValue &V) {
@@ -178,10 +180,14 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
   }
 };
 
+namespace {
+
 struct GlobListVariant {
   std::optional<std::string> AsString;
   std::optional<std::vector<std::string>> AsVector;
 };
+
+} // namespace
 
 template <>
 void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {
@@ -318,16 +324,7 @@ ClangTidyOptions ClangTidyOptions::merge(const ClangTidyOptions &Other,
   return Result;
 }
 
-const char ClangTidyOptionsProvider::OptionsSourceTypeDefaultBinary[] =
-    "clang-tidy binary";
-const char ClangTidyOptionsProvider::OptionsSourceTypeCheckCommandLineOption[] =
-    "command-line option '-checks'";
-const char
-    ClangTidyOptionsProvider::OptionsSourceTypeConfigCommandLineOption[] =
-        "command-line option '-config'";
-
-ClangTidyOptions
-ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
+ClangTidyOptions ClangTidyOptionsProvider::getOptions(StringRef FileName) {
   ClangTidyOptions Result;
   unsigned Priority = 0;
   for (auto &Source : getRawOptions(FileName))
@@ -336,7 +333,7 @@ ClangTidyOptionsProvider::getOptions(llvm::StringRef FileName) {
 }
 
 std::vector<OptionsSource>
-DefaultOptionsProvider::getRawOptions(llvm::StringRef FileName) {
+DefaultOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> Result;
   Result.emplace_back(DefaultOptions, OptionsSourceTypeDefaultBinary);
   return Result;
@@ -352,18 +349,17 @@ ConfigOptionsProvider::ConfigOptionsProvider(
       ConfigOptions(std::move(ConfigOptions)) {}
 
 std::vector<OptionsSource>
-ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
+ConfigOptionsProvider::getRawOptions(StringRef FileName) {
   std::vector<OptionsSource> RawOptions =
       DefaultOptionsProvider::getRawOptions(FileName);
   if (ConfigOptions.InheritParentConfig.value_or(false)) {
     LLVM_DEBUG(llvm::dbgs()
                << "Getting options for file " << FileName << "...\n");
 
-    llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+    llvm::ErrorOr<SmallString<128>> AbsoluteFilePath =
         getNormalizedAbsolutePath(FileName);
-    if (AbsoluteFilePath) {
+    if (AbsoluteFilePath)
       addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
-    }
   }
   RawOptions.emplace_back(ConfigOptions,
                           OptionsSourceTypeConfigCommandLineOption);
@@ -393,10 +389,10 @@ FileOptionsBaseProvider::FileOptionsBaseProvider(
       OverrideOptions(std::move(OverrideOptions)),
       ConfigHandlers(std::move(ConfigHandlers)) {}
 
-llvm::ErrorOr<llvm::SmallString<128>>
-FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
+llvm::ErrorOr<SmallString<128>>
+FileOptionsBaseProvider::getNormalizedAbsolutePath(StringRef Path) {
   assert(FS && "FS must be set.");
-  llvm::SmallString<128> NormalizedAbsolutePath = {Path};
+  SmallString<128> NormalizedAbsolutePath = {Path};
   const std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
   if (Err)
     return Err;
@@ -405,7 +401,7 @@ FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
 }
 
 void FileOptionsBaseProvider::addRawFileOptions(
-    llvm::StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
+    StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
   auto CurSize = CurOptions.size();
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
@@ -468,7 +464,7 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
                           << "...\n");
 
-  const llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+  const llvm::ErrorOr<SmallString<128>> AbsoluteFilePath =
       getNormalizedAbsolutePath(FileName);
   if (!AbsoluteFilePath)
     return {};

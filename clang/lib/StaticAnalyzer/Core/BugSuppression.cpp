@@ -9,6 +9,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -165,6 +166,89 @@ bool BugSuppression::isSuppressed(const BugReport &R) {
          isSuppressed(UniqueingLocation, DeclWithIssue, {});
 }
 
+static const ClassTemplateDecl *
+walkInstantiatedFromChain(const ClassTemplateDecl *Tmpl) {
+  // For nested member templates (e.g., S2 inside S1<T>), getInstantiatedFrom
+  // may return the member template as instantiated within an outer
+  // specialization (e.g., S2 as it appears in S1<int>).  That instantiated
+  // member template has no definition redeclaration itself; we need to walk
+  // up the member template chain to reach the primary template definition.
+  // \code
+  //   template <class> struct S1 {
+  //     template <class> struct S2 {
+  //       int i;
+  //       template <class T> int m(const S2<T>& s2) {
+  //         return s2.i;
+  //       }
+  //     };
+  //   }
+  // /code
+  const ClassTemplateDecl *MemberTmpl;
+  while ((MemberTmpl = Tmpl->getInstantiatedFromMemberTemplate())) {
+    if (Tmpl->isMemberSpecialization())
+      break;
+    Tmpl = MemberTmpl;
+  }
+  return Tmpl;
+}
+
+static const ClassTemplatePartialSpecializationDecl *walkInstantiatedFromChain(
+    const ClassTemplatePartialSpecializationDecl *PartialSpec) {
+  const ClassTemplatePartialSpecializationDecl *MemberPS;
+  while ((MemberPS = PartialSpec->getInstantiatedFromMember())) {
+    if (PartialSpec->isMemberSpecialization())
+      break;
+    PartialSpec = MemberPS;
+  }
+  return PartialSpec;
+}
+
+template <class T> static const T *chooseDefinitionRedecl(const T *Tmpl) {
+  static_assert(llvm::is_one_of<T, ClassTemplateDecl,
+                                ClassTemplatePartialSpecializationDecl>::value);
+  for (const auto *Redecl : Tmpl->redecls()) {
+    if (const T *D = cast<T>(Redecl); D->isThisDeclarationADefinition()) {
+      return D;
+    }
+  }
+  assert(false && "This template must have a redecl that is a definition");
+  return Tmpl;
+}
+
+// For template specializations, returns the primary template definition or
+// partial specialization that was used to instantiate the specialization.
+// This ensures suppression attributes on templates apply to their
+// specializations.
+//
+// For example, given:
+//   template <typename T> class [[clang::suppress]] Wrapper { ... };
+//   Wrapper<int> w; // instantiates ClassTemplateSpecializationDecl
+//
+// When analyzing code in Wrapper<int>, this function maps the specialization
+// back to the primary template definition, allowing us to find the suppression
+// attribute.
+//
+// The function handles specializations (and partial specializations) of
+// class templates. For any other decl, it returns the input unchagned.
+static const Decl *
+preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
+  const auto *SpecializationDecl = dyn_cast<ClassTemplateSpecializationDecl>(D);
+  if (!SpecializationDecl)
+    return D;
+
+  auto InstantiatedFrom = SpecializationDecl->getInstantiatedFrom();
+  if (!InstantiatedFrom)
+    return D;
+
+  if (const auto *Tmpl = InstantiatedFrom.dyn_cast<ClassTemplateDecl *>()) {
+    // Interestingly, the source template might be a forward declaration, so we
+    // need to find the definition redeclaration.
+    return chooseDefinitionRedecl(walkInstantiatedFromChain(Tmpl));
+  }
+  return chooseDefinitionRedecl(walkInstantiatedFromChain(
+      cast<ClassTemplatePartialSpecializationDecl *>(InstantiatedFrom)));
+}
+
 bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
                                   const Decl *DeclWithIssue,
                                   DiagnosticIdentifierList Hashtags) {
@@ -182,6 +266,17 @@ bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
     // declaration that isn't TranslationUnitDecl, because we should respect
     // attributes on the entire declaration chain.
     while (true) {
+
+      // Template specializations (e.g., Wrapper<int>) should inherit
+      // suppression attributes from their primary template or partial
+      // specialization. Transform specializations to their template definitions
+      // before checking for suppressions or walking up the lexical parent
+      // chain.
+      // Simply taking the lexical parent of template specializations might land
+      // us in a completely different namespace.
+      DeclWithIssue =
+          preferTemplateDefinitionForTemplateSpecializations(DeclWithIssue);
+
       // Use the "lexical" parent. Eg., if the attribute is on a class, suppress
       // warnings in inline methods but not in out-of-line methods.
       const Decl *Parent =

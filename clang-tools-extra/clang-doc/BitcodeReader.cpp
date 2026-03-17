@@ -159,6 +159,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->Name, Blob);
   case NAMESPACE_PATH:
     return decodeRecord(R, I->Path, Blob);
+  case NAMESPACE_PARENT_USR:
+    return decodeRecord(R, I->ParentUSR, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for NamespaceInfo");
@@ -184,6 +186,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->IsTypeDef, Blob);
   case RECORD_MANGLED_NAME:
     return decodeRecord(R, I->MangledName, Blob);
+  case RECORD_PARENT_USR:
+    return decodeRecord(R, I->ParentUSR, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for RecordInfo");
@@ -429,6 +433,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->IsType, Blob);
   case CONCEPT_CONSTRAINT_EXPRESSION:
     return decodeRecord(R, I->ConstraintExpression, Blob);
+  case CONCEPT_DEFLOCATION:
+    return decodeRecord(R, I->DefLoc, Blob);
   }
   llvm_unreachable("invalid field for ConceptInfo");
 }
@@ -501,8 +507,8 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumValueInfo *I) {
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {
-  I->Children.emplace_back(std::make_unique<CommentInfo>());
-  return I->Children.back().get();
+  I->Children.emplace_back(allocatePtr<CommentInfo>());
+  return getPtr(I->Children.back());
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(ConceptInfo *I) {
@@ -510,6 +516,10 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(ConceptInfo *I) {
 }
 
 template <> Expected<CommentInfo *> getCommentInfo(VarInfo *I) {
+  return &I->Description.emplace_back();
+}
+
+template <> Expected<CommentInfo *> getCommentInfo(FriendInfo *I) {
   return &I->Description.emplace_back();
 }
 
@@ -798,6 +808,9 @@ template <> void addTemplate(ConceptInfo *I, TemplateInfo &&P) {
 template <> void addTemplate(FriendInfo *I, TemplateInfo &&P) {
   I->Template.emplace(std::move(P));
 }
+template <> void addTemplate(TypedefInfo *I, TemplateInfo &&P) {
+  I->Template.emplace(std::move(P));
+}
 
 // Template specializations go only into template records.
 template <typename T>
@@ -1063,16 +1076,15 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
 }
 
 template <typename T>
-llvm::Expected<std::unique_ptr<Info>>
-ClangDocBitcodeReader::createInfo(unsigned ID) {
+llvm::Expected<OwnedPtr<Info>> ClangDocBitcodeReader::createInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "createInfo");
-  std::unique_ptr<Info> I = std::make_unique<T>();
-  if (auto Err = readBlock(ID, static_cast<T *>(I.get())))
+  OwnedPtr<Info> I = doc::allocatePtr<T>();
+  if (auto Err = readBlock(ID, static_cast<T *>(getPtr(I))))
     return std::move(Err);
-  return std::unique_ptr<Info>{std::move(I)};
+  return OwnedPtr<Info>{std::move(I)};
 }
 
-llvm::Expected<std::unique_ptr<Info>>
+llvm::Expected<OwnedPtr<Info>>
 ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
   llvm::TimeTraceScope("Reducing infos", "readBlockToInfo");
   switch (ID) {
@@ -1099,9 +1111,8 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
 }
 
 // Entry point
-llvm::Expected<std::vector<std::unique_ptr<Info>>>
-ClangDocBitcodeReader::readBitcode() {
-  std::vector<std::unique_ptr<Info>> Infos;
+llvm::Expected<OwningPtrArray<Info>> ClangDocBitcodeReader::readBitcode() {
+  OwningPtrArray<Info> Infos;
   if (auto Err = validateStream())
     return std::move(Err);
 

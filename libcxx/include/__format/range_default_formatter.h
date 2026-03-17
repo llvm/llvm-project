@@ -22,6 +22,7 @@
 #include <__format/formatter.h>
 #include <__format/range_format.h>
 #include <__format/range_formatter.h>
+#include <__fwd/format.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>

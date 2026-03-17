@@ -343,19 +343,10 @@ define amdgpu_ps void @struct_buffer_store_f16(<4 x i32> inreg %rsrc, float %v1,
 }
 
 define amdgpu_ps void @struct_buffer_store_v2f16(<4 x i32> inreg %rsrc, <2 x half> %v1, i32 %index) {
-; VERDE-LABEL: struct_buffer_store_v2f16:
-; VERDE:       ; %bb.0:
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_or_b32_e32 v0, v0, v1
-; VERDE-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 idxen
-; VERDE-NEXT:    s_endpgm
-;
-; GFX8-LABEL: struct_buffer_store_v2f16:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
-; GFX8-NEXT:    s_endpgm
+; GFX68-LABEL: struct_buffer_store_v2f16:
+; GFX68:       ; %bb.0:
+; GFX68-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
+; GFX68-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: struct_buffer_store_v2f16:
 ; GFX11:       ; %bb.0:
@@ -372,23 +363,10 @@ define amdgpu_ps void @struct_buffer_store_v2f16(<4 x i32> inreg %rsrc, <2 x hal
 }
 
 define amdgpu_ps void @struct_buffer_store_v4f16(<4 x i32> inreg %rsrc, <4 x half> %v1, i32 %index) {
-; VERDE-LABEL: struct_buffer_store_v4f16:
-; VERDE:       ; %bb.0:
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v5, v1
-; VERDE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
-; VERDE-NEXT:    v_or_b32_e32 v1, v2, v1
-; VERDE-NEXT:    v_lshlrev_b32_e32 v2, 16, v5
-; VERDE-NEXT:    v_or_b32_e32 v0, v0, v2
-; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v4, s[0:3], 0 idxen
-; VERDE-NEXT:    s_endpgm
-;
-; GFX8-LABEL: struct_buffer_store_v4f16:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 idxen
-; GFX8-NEXT:    s_endpgm
+; GFX68-LABEL: struct_buffer_store_v4f16:
+; GFX68:       ; %bb.0:
+; GFX68-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 idxen
+; GFX68-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: struct_buffer_store_v4f16:
 ; GFX11:       ; %bb.0:
@@ -431,18 +409,10 @@ main_body:
 }
 
 define amdgpu_ps void @struct_buffer_store_vif16(<4 x i32> inreg %rsrc, <2 x i16> %v1, i32 %index) {
-; VERDE-LABEL: struct_buffer_store_vif16:
-; VERDE:       ; %bb.0:
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; VERDE-NEXT:    v_or_b32_e32 v0, v0, v1
-; VERDE-NEXT:    buffer_store_dword v0, v2, s[0:3], 0 idxen
-; VERDE-NEXT:    s_endpgm
-;
-; GFX8-LABEL: struct_buffer_store_vif16:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
-; GFX8-NEXT:    s_endpgm
+; GFX68-LABEL: struct_buffer_store_vif16:
+; GFX68:       ; %bb.0:
+; GFX68-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
+; GFX68-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: struct_buffer_store_vif16:
 ; GFX11:       ; %bb.0:
@@ -459,21 +429,10 @@ define amdgpu_ps void @struct_buffer_store_vif16(<4 x i32> inreg %rsrc, <2 x i16
 }
 
 define amdgpu_ps void @struct_buffer_store_v4i16(<4 x i32> inreg %rsrc, <4 x i16> %v1, i32 %index) {
-; VERDE-LABEL: struct_buffer_store_v4i16:
-; VERDE:       ; %bb.0:
-; VERDE-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; VERDE-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; VERDE-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VERDE-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; VERDE-NEXT:    v_or_b32_e32 v2, v2, v3
-; VERDE-NEXT:    v_or_b32_e32 v1, v0, v1
-; VERDE-NEXT:    buffer_store_dwordx2 v[1:2], v4, s[0:3], 0 idxen
-; VERDE-NEXT:    s_endpgm
-;
-; GFX8-LABEL: struct_buffer_store_v4i16:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 idxen
-; GFX8-NEXT:    s_endpgm
+; GFX68-LABEL: struct_buffer_store_v4i16:
+; GFX68:       ; %bb.0:
+; GFX68-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 idxen
+; GFX68-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: struct_buffer_store_v4i16:
 ; GFX11:       ; %bb.0:

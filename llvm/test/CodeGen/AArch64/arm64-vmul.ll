@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:	 warning: Instruction selection used fallback path for sqdmulh_1s
+; CHECK-GI:      warning: Instruction selection used fallback path for sqdmulh_1s
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_2s
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_4s
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmls_2d
@@ -19,6 +19,7 @@
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_4s_strict
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for fmla_indexed_scalar_2d_strict
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmulh_lane_1s
+; CHECK-GI-NEXT: warning: Instruction selection used fallback path for test_vqdmulls_lane_s32
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlal_lane_1d
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for sqdmlsl_lane_1d
 ; CHECK-GI-NEXT: warning: Instruction selection used fallback path for scalar_fmls_from_extract_v4f32
@@ -304,10 +305,8 @@ define <4 x i32> @sqdmulh_4s(ptr %A, ptr %B) nounwind {
 define i32 @sqdmulh_1s(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqdmulh_1s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
 ; CHECK-NEXT:    sqdmulh s0, s0, s1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -376,23 +375,13 @@ define <4 x i32> @sqrdmulh_4s(ptr %A, ptr %B) nounwind {
 }
 
 define i32 @sqrdmulh_1s(ptr %A, ptr %B) nounwind {
-; CHECK-SD-LABEL: sqrdmulh_1s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    ldr w9, [x1]
-; CHECK-SD-NEXT:    fmov s0, w8
-; CHECK-SD-NEXT:    fmov s1, w9
-; CHECK-SD-NEXT:    sqrdmulh s0, s0, s1
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sqrdmulh_1s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr s0, [x0]
-; CHECK-GI-NEXT:    ldr s1, [x1]
-; CHECK-GI-NEXT:    sqrdmulh s0, s0, s1
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sqrdmulh_1s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldr s1, [x1]
+; CHECK-NEXT:    sqrdmulh s0, s0, s1
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
   %tmp1 = load i32, ptr %A
   %tmp2 = load i32, ptr %B
   %tmp3 = call i32 @llvm.aarch64.neon.sqrdmulh.i32(i32 %tmp1, i32 %tmp2)
@@ -1802,6 +1791,20 @@ define i32 @sqsub_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
   %prod = extractelement <4 x i32> %prod.vec, i32 1
   %res = call i32 @llvm.aarch64.neon.sqsub.i32(i32 %A, i32 %prod)
   ret i32 %res
+}
+
+define i64 @test_vqdmulls_lane_s32(i32 noundef %a, <2 x i32> noundef %b) {
+; CHECK-LABEL: test_vqdmulls_lane_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    sqdmull d0, s1, v0.s[1]
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+entry:
+  %vget_lane = extractelement <2 x i32> %b, i64 1
+  %vqdmulls_s32.i = tail call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %a, i32 %vget_lane)
+  ret i64 %vqdmulls_s32.i
 }
 
 define i64 @sqdmlal_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {

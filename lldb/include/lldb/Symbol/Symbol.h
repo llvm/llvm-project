@@ -318,8 +318,8 @@ protected:
 
   void SynthesizeNameIfNeeded() const;
 
-  uint32_t m_uid =
-      UINT32_MAX;           // User ID (usually the original symbol table index)
+  uint32_t m_uid = LLDB_INVALID_SYMBOL_ID; // User ID (usually the original
+                                           // symbol table index)
   uint16_t m_type_data = 0; // data specific to m_type
   uint16_t m_type_data_resolved : 1, // True if the data in m_type_data has
                                      // already been calculated

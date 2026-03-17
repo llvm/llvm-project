@@ -45,8 +45,7 @@ public:
   virtual std::optional<SmallVector<char, 0>> run();
 
   /// Translate LLVM module to textual ISA.
-  /// TODO: switch to SmallString
-  static FailureOr<std::string>
+  static FailureOr<SmallString<0>>
   translateModuleToISA(llvm::Module &llvmModule,
                        llvm::TargetMachine &targetMachine,
                        function_ref<InFlightDiagnostic()> emitError);
@@ -76,13 +75,13 @@ protected:
 
   /// Serializes the LLVM IR bitcode to an object file, by default it serializes
   /// to LLVM bitcode.
-  virtual std::optional<SmallVector<char, 0>>
+  virtual FailureOr<SmallVector<char, 0>>
   moduleToObject(llvm::Module &llvmModule);
 
 protected:
   /// Create the target machine based on the target triple and chip.
   /// This can fail if the target is not available.
-  std::optional<llvm::TargetMachine *> getOrCreateTargetMachine();
+  FailureOr<llvm::TargetMachine *> getOrCreateTargetMachine();
 
   /// Loads a bitcode file from path.
   std::unique_ptr<llvm::Module> loadBitcodeFile(llvm::LLVMContext &context,

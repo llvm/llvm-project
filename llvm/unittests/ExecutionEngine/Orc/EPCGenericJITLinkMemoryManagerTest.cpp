@@ -82,14 +82,14 @@ private:
   DenseMap<void *, sys::OwningMemoryBlock> Blocks;
 };
 
-CWrapperFunctionResult testReserve(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testReserve(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReserveSignature>::
       handle(ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::reserve))
           .release();
 }
 
-CWrapperFunctionResult testInitialize(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testInitialize(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<
              rt::SPSSimpleExecutorMemoryManagerInitializeSignature>::
       handle(ArgData, ArgSize,
@@ -97,7 +97,7 @@ CWrapperFunctionResult testInitialize(const char *ArgData, size_t ArgSize) {
           .release();
 }
 
-CWrapperFunctionResult testRelease(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer testRelease(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReleaseSignature>::
       handle(ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::release))
