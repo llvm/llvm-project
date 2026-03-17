@@ -311,6 +311,8 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     .string_utils
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(

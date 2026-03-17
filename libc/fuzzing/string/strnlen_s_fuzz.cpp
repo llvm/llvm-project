@@ -10,8 +10,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strnlen_s.h"
 #define __STDC_WANT_LIB_EXT1__ 1
+
+#include "src/string/strnlen_s.h"
 #include <stdint.h>
 #include <string.h>
 
