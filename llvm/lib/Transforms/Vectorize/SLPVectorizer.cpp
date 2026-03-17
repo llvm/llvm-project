@@ -945,7 +945,7 @@ namespace {
 /// converted to another instruction with same semantics. For example, x << 1 is
 /// equal to x * 2. x * 1 is equal to x | 0.
 class BinOpSameOpcodeHelper {
-  using MaskType = std::uint_fast16_t;
+  using MaskType = std::uint_fast32_t;
   /// Sort SupportedOp because it is used by binary_search.
   constexpr static std::initializer_list<unsigned> SupportedOp = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
