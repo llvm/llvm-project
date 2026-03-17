@@ -1581,18 +1581,19 @@ void Module::LoadPrefixMapsIfNeeded() {
   // don't redundantly walk the same directory.
   llvm::DenseSet<ConstString> searched;
   for (ConstString start_cs : m_prefix_map_search_dirs) {
-    for (FileSpec d(start_cs.GetStringRef());;) {
-      ConstString d_cs(d.GetPath());
-      if (!searched.insert(d_cs).second)
+    for (FileSpec current(start_cs.GetStringRef());;) {
+      ConstString directory_cs(current.GetPath());
+      if (!searched.insert(directory_cs).second)
         break;
-      FileSpec jp(d);
-      jp.AppendPathComponent("compilation-prefix-map.json");
+      FileSpec map_file(current);
+      map_file.AppendPathComponent("compilation-prefix-map.json");
       llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> file =
-          vfs.openFileForRead(jp.GetPath());
+          vfs.openFileForRead(map_file.GetPath());
       if (file && *file) {
-        LLDB_LOG(log, "found compilation-prefix-map.json at {0}", jp.GetPath());
+        LLDB_LOG(log, "found compilation-prefix-map.json at {0}",
+                 map_file.GetPath());
         llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buf =
-            (*file)->getBuffer(jp.GetPath());
+            (*file)->getBuffer(map_file.GetPath());
         if (buf && *buf) {
           llvm::Expected<llvm::json::Value> val =
               llvm::json::parse((*buf)->getBuffer());
@@ -1611,11 +1612,11 @@ void Module::LoadPrefixMapsIfNeeded() {
         }
         break;
       }
-      FileSpec parent = d;
+      FileSpec parent = current;
       parent.RemoveLastPathComponent();
-      if (parent == d)
+      if (parent == current)
         break;
-      d = parent;
+      current = parent;
     }
   }
   m_prefix_map_search_dirs.clear();
