@@ -2701,11 +2701,23 @@ def fir_CallOp : fir_Op<"call",
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
-      if (auto calling =
-          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-        (*this)->setAttr(getCalleeAttrName(),
-                         llvm::cast<mlir::SymbolRefAttr>(callee));
-      setOperand(0, llvm::cast<mlir::Value>(callee));
+      if (auto symbolRef = llvm::dyn_cast<mlir::SymbolRefAttr>(callee)) {
+        // Switching to direct call: set attribute and remove callee operand
+        // if the op was in indirect form (operand 0 was the callable value).
+        bool wasIndirect = llvm::isa<mlir::Value>(getCallableForCallee());
+        (*this)->setAttr(getCalleeAttrName(), symbolRef);
+        if (wasIndirect && getNumOperands() > 0)
+          (*this)->eraseOperand(0);
+        return;
+      }
+      // Switching to indirect call: unset attribute, then either insert
+      // operand 0 (was direct, had no operands) or set it (was already indirect).
+      (*this)->removeAttr(getCalleeAttrNameStr());
+      mlir::Value calleeVal = llvm::cast<mlir::Value>(callee);
+      if (getNumOperands() == 0)
+        (*this)->insertOperands(0, calleeVal);
+      else
+        setOperand(0, calleeVal);
     }
   }];
 }
