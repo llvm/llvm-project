@@ -2507,8 +2507,8 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
           nullptr, Opts.getOption(options::OPT_isysroot), env));
     }
   } else {
-    TryXcselect = !Args.getLastArg(options::OPT__sysroot_EQ) &&
-                  !Args.getLastArg(options::OPT_no_xcselect);
+    TryXcselect = !Args.hasArg(options::OPT__sysroot_EQ) &&
+                  !Args.hasArg(options::OPT_no_xcselect);
   }
 
   // Read the SDKSettings.json file for more information, like the SDK version
