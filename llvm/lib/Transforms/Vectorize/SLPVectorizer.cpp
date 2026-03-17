@@ -24643,8 +24643,7 @@ public:
   // Record vectorization of the provided range
   void markRangeVectorized(unsigned StartIdx, unsigned Length,
                            unsigned &FirstUnvecStore, unsigned &MaxSliceEnd);
-  bool checkTreeSizes(const unsigned SliceStartIdx,
-                      const unsigned VF) const;
+  bool checkTreeSizes(const unsigned SliceStartIdx, const unsigned VF) const;
 
 private:
   bool isNotVectorized(const SizePair &P) const {
@@ -24699,8 +24698,8 @@ void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
     FirstUnvecStore = StartIdx + Length;
   }
   if (StartIdx + Length > MaxSliceEnd - MinVF) {
-    for (SizePair &P : RangeSizes.slice(
-             StartIdx + Length, MaxSliceEnd - (StartIdx + Length))) {
+    for (SizePair &P : RangeSizes.slice(StartIdx + Length,
+                                        MaxSliceEnd - (StartIdx + Length))) {
       P.first = LocallyUnvectorizable;
       P.second = 0;
     }
