@@ -105,7 +105,7 @@ end subroutine target_allocatable
 ! CHECK-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi eq, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
 !
 ! CHECK-NEXT:   fir.if %[[ALLOC_COND]] {
-! CHECK-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK-NEXT:     %[[ZERO_BOX:.*]] = fir.embox %[[PRIV_ARG_BOX]] {allocator_idx = 0 : i32} : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK-NEXT:     fir.store %[[ZERO_BOX]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK-NEXT:   } else {
 ! CHECK:          %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32

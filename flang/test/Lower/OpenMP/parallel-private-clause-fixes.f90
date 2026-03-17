@@ -12,7 +12,7 @@
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 0 : i64
 ! CHECK:             %[[VAL_9:.*]] = arith.cmpi eq, %[[VAL_7]], %[[VAL_8]] : i64
 ! CHECK:             fir.if %[[VAL_9]] {
-! CHECK:               %[[VAL_17:.*]] = fir.embox %[[VAL_6]] typeparams %[[ELESIZE]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
+! CHECK:               %[[VAL_17:.*]] = fir.embox %[[VAL_6]] typeparams %[[ELESIZE]] {allocator_idx = 0 : i32} : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
 ! CHECK:               fir.store %[[VAL_17]] to %[[VAL_4]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:             } else {
 ! CHECK:               %[[VAL_13:.*]] = fir.allocmem !fir.char<1,?>(%[[ELESIZE]] : index)
