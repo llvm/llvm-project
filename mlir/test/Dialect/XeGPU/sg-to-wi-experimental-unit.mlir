@@ -522,7 +522,6 @@ gpu.func @vector_extract_strided_slice_distributed_dim_fully_extracted() {
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : () -> vector<24x16xf32>
   %1 = vector.extract_strided_slice %0 { offsets = [8, 0], sizes = [8, 16], strides = [1, 1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<24x16xf32> to vector<8x16xf32>
@@ -536,7 +535,6 @@ gpu.func @vector_extract_strided_slice_inner_distributed() {
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : () -> vector<24x64xf32>
   %1 = vector.extract_strided_slice %0 { offsets = [8, 48], sizes = [8, 16], strides = [1, 1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<24x64xf32> to vector<8x16xf32>
@@ -550,7 +548,6 @@ gpu.func @vector_extract_strided_slice_outer_distributed() {
     {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
     : () -> vector<32x16xf32>
   %1 = vector.extract_strided_slice %0 { offsets = [16], sizes = [16], strides = [1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
     }
     : vector<32x16xf32> to vector<16x16xf32>
@@ -564,7 +561,6 @@ gpu.func @vector_extract_strided_slice_1d() {
     {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
     : () -> vector<64xf32>
   %1 = vector.extract_strided_slice %0 { offsets = [16], sizes = [32], strides = [1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
     }
     : vector<64xf32> to vector<32xf32>
@@ -578,7 +574,6 @@ gpu.func @vector_extract_strided_slice_partial_offsets() {
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : () -> vector<24x16xf32>
   %1 = vector.extract_strided_slice %0 { offsets = [8], sizes = [8], strides = [1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<24x16xf32> to vector<8x16xf32>
@@ -595,8 +590,6 @@ gpu.func @vector_insert_strided_slice_distributed_dim_fully_inserted() {
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : () -> vector<64x16xf32>
   %2 = vector.insert_strided_slice %0, %1 { offsets = [24, 0], strides = [1, 1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-      layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16x16xf32> into vector<64x16xf32>
@@ -613,8 +606,6 @@ gpu.func @vector_insert_strided_slice_inner_distributed() {
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : () -> vector<64x32xf32>
   %2 = vector.insert_strided_slice %0, %1 { offsets = [24, 16], strides = [1, 1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-      layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16x16xf32> into vector<64x32xf32>
@@ -631,8 +622,6 @@ gpu.func @vector_insert_strided_slice_outer_distributed() {
     {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
     : () -> vector<48x32xf32>
   %2 = vector.insert_strided_slice %0, %1 { offsets = [32, 4], strides = [1, 1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>,
-      layout_operand_1 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
     }
     : vector<16x16xf32> into vector<48x32xf32>
@@ -649,8 +638,6 @@ gpu.func @vector_insert_strided_slice_1d() {
     {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
     : () -> vector<48xf32>
   %2 = vector.insert_strided_slice %0, %1 { offsets = [16], strides = [1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
-      layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
     }
     : vector<16xf32> into vector<48xf32>
@@ -667,8 +654,6 @@ gpu.func @vector_insert_strided_slice_different_ranks() {
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : () -> vector<64x16xf32>
   %2 = vector.insert_strided_slice %0, %1 { offsets = [13, 0], strides = [1],
-      layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
-      layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16xf32> into vector<64x16xf32>

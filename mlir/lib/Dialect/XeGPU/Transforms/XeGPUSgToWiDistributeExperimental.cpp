@@ -860,6 +860,15 @@ struct SgToWiVectorExtract : public OpConversionPattern<vector::ExtractOp> {
     if (!layout || !layout.isForSubgroup())
       return failure();
 
+    // This implementation assumes distribution only happens on the innermost
+    // dimension. Verify that lane_layout[0...n-2] are all unit.
+    auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
+    if (llvm::any_of(ArrayRef<int64_t>(laneLayout).drop_back(1),
+                     [](int64_t v) { return v != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "only innermost dimension distribution is supported for "
+              "vector.extract");
+
     auto newOp = vector::ExtractOp::create(
         rewriter, op.getLoc(), adaptor.getSource(), op.getMixedPosition());
     rewriter.replaceOp(op, newOp.getResult());
@@ -1064,6 +1073,15 @@ struct SgToWiVectorInsert : public OpConversionPattern<vector::InsertOp> {
         xegpu::getTemporaryLayout(op->getOpResult(0));
     if (!layout || !layout.isForSubgroup())
       return failure();
+
+    // verify that the outer k dimensions (for offsets)
+    // don't have non-unit lane_layout.
+    auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
+    if (llvm::any_of(ArrayRef<int64_t>(laneLayout).drop_back(1),
+                     [](int64_t v) { return v != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "only innermost dimension distribution is supported for "
+              "vector.insert");
 
     auto newOp = vector::InsertOp::create(
         rewriter, op.getLoc(), adaptor.getValueToStore(), adaptor.getDest(),
