@@ -313,8 +313,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
                                           SmallVectorImpl<char> &CB,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
-  MCOperand Src1 = MI.getOperand(0);
-  MCRegister SrcReg1 = Src1.getReg();
+  MCRegister SrcReg1 = MI.getOperand(0).getReg();
   MCOperand Src2 = MI.getOperand(1);
   MCOperand SrcSymbol = MI.getOperand(2);
   unsigned Opcode = MI.getOpcode();
