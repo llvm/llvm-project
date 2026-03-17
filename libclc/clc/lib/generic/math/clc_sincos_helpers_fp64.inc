@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#pragma OPENCL FP_CONTRACT OFF
+
 _CLC_DEF _CLC_OVERLOAD void __clc_sincos_piby4(__CLC_DOUBLEN x,
                                                __CLC_DOUBLEN xx,
                                                private __CLC_DOUBLEN *sinval,

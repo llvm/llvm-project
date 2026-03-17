@@ -6040,11 +6040,6 @@ static bool BrPHIToSelect(DominatorTree &DT, CondBrInst *BI, PHINode *Merge,
   BasicBlockEdge LeftEdge(BI->getParent(), BI->getSuccessor(0));
   BasicBlockEdge RightEdge(BI->getParent(), BI->getSuccessor(1));
 
-  if (!LeftEdge.isSingleEdge())
-    return false;
-
-  assert(RightEdge.isSingleEdge() && "Follows from LeftEdge.isSingleEdge()");
-
   Use &LeftUse = Merge->getOperandUse(0);
   Use &RightUse = Merge->getOperandUse(1);
 
@@ -11878,27 +11873,20 @@ bool ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
     if (!PBB)
       continue;
 
-    CondBrInst *ContinuePredicate = dyn_cast<CondBrInst>(PBB->getTerminator());
-    if (!ContinuePredicate)
+    CondBrInst *ContBr = dyn_cast<CondBrInst>(PBB->getTerminator());
+    if (!ContBr || ContBr->getSuccessor(0) == ContBr->getSuccessor(1))
       continue;
-
-    Value *Condition = ContinuePredicate->getCondition();
 
     // If we have an edge `E` within the loop body that dominates the only
     // latch, the condition guarding `E` also guards the backedge.  This
     // reasoning works only for loops with a single latch.
-
-    BasicBlockEdge DominatingEdge(PBB, BB);
-    if (DominatingEdge.isSingleEdge()) {
-      // We're constructively (and conservatively) enumerating edges within the
-      // loop body that dominate the latch.  The dominator tree better agree
-      // with us on this:
-      assert(DT.dominates(DominatingEdge, Latch) && "should be!");
-
-      if (isImpliedCond(Pred, LHS, RHS, Condition,
-                        BB != ContinuePredicate->getSuccessor(0)))
-        return true;
-    }
+    // We're constructively (and conservatively) enumerating edges within the
+    // loop body that dominate the latch.  The dominator tree better agree
+    // with us on this:
+    assert(DT.dominates(BasicBlockEdge(PBB, BB), Latch) && "should be!");
+    if (isImpliedCond(Pred, LHS, RHS, ContBr->getCondition(),
+                      BB != ContBr->getSuccessor(0)))
+      return true;
   }
 
   return false;

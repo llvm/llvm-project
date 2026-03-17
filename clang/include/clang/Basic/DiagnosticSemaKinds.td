@@ -9692,6 +9692,7 @@ def err_deleted_inherited_ctor_use : Error<
   "constructor inherited by %0 from base class %1 is implicitly deleted">;
 
 def note_called_by : Note<"called by %0">;
+def note_which_is_called_by : Note<"which is called by %0">;
 def err_kern_type_not_void_return : Error<
   "kernel function type %0 must have void return type">;
 def err_kern_is_nonstatic_method : Error<
@@ -12127,13 +12128,16 @@ def warn_omp_alignment_not_power_of_two : Warning<
   InGroup<OpenMPClauses>;
 def err_omp_invalid_target_decl : Error<
   "%0 used in declare target directive is not a variable or a function name">;
-def err_omp_declare_target_to_and_link : Error<
-  "%0 must not appear in both clauses 'to' and 'link'">;
+def err_omp_declare_target_var_in_both_clauses
+    : Error<"%0 must not appear in both clauses '%1' and '%2'">;
+def err_omp_declare_target_local_host_only
+    : Error<"'local' clause is incompatible with 'device_type(host)'; "
+            "local variables exist only on the device">;
 def warn_omp_not_in_target_context : Warning<
   "declaration is not declared in any declare target region">,
   InGroup<OpenMPTarget>;
-def err_omp_function_in_link_clause : Error<
-  "function name is not allowed in 'link' clause">;
+def err_omp_function_in_target_clause_list
+    : Error<"function name is not allowed in '%0' clause">;
 def err_omp_aligned_expected_array_or_ptr : Error<
   "argument of aligned clause should be array"
   "%select{ or pointer|, pointer, reference to array or reference to pointer}1"
@@ -12549,6 +12553,11 @@ def err_omp_declare_target_has_local_vars : Error<
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
+def warn_omp_declare_target_local_not_implemented
+    : Warning<"'local' clause on 'declare_target' directive is not yet fully "
+              "implemented; "
+              "variable will be treated as 'enter'">,
+      InGroup<OpenMPTarget>;
 def err_omp_declare_variant_incompat_attributes : Error<
   "'#pragma omp declare variant' is not compatible with any target-specific attributes">;
 def warn_omp_declare_variant_score_not_constant
