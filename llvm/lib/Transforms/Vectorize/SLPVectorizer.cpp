@@ -24615,7 +24615,7 @@ struct StoreChainContext {
   SmallVector<SizePair> RangeSizesStorage;
   SizePairArrayRef RangeSizes;
   /// Store information about failed vectorization attempts due to scheduling
-  DenseMap<Value *, SizePair> NonSchedulable;
+  SmallDenseMap<Value *, SizePair> NonSchedulable;
   /// Type of the Stores in `Operands`
   Type *StoreTy = nullptr;
 
