@@ -262,6 +262,7 @@ void FunctionInfo::parseStatistics(
     // If this is a MergedFunctionsInfo section, parse the inner FunctionInfos
     // to collect per-InfoType sub-statistics.
     if (InfoType == InfoType::MergedFunctionsInfo && MergedFuncInfoStats) {
+      (*MergedFuncInfoStats)[9] += 8; // MergedFunctionsInfo TLV header
       DataExtractor MergedData(Data.getData().substr(Offset, InfoLength),
                                Data.isLittleEndian(), Data.getAddressSize());
       uint64_t MOffset = 0;
