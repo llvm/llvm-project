@@ -11,6 +11,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisResult.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/DerivedAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/SummaryAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/WPASuite.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummary.h"
@@ -23,6 +24,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -85,6 +87,7 @@ class Analysis1Result final : public AnalysisResult {
 public:
   static AnalysisName analysisName() { return AnalysisName("Analysis1"); }
   std::vector<std::pair<EntityId, int>> Entries;
+  bool WasInitialized = false;
   bool WasFinalized = false;
 };
 
@@ -92,6 +95,7 @@ class Analysis2Result final : public AnalysisResult {
 public:
   static AnalysisName analysisName() { return AnalysisName("Analysis2"); }
   std::vector<std::pair<EntityId, int>> Entries;
+  bool WasInitialized = false;
   bool WasFinalized = false;
 };
 
@@ -108,7 +112,34 @@ class Analysis4Result final : public AnalysisResult {
 public:
   static AnalysisName analysisName() { return AnalysisName("Analysis4"); }
   std::vector<std::pair<EntityId, int>> Entries;
+  bool WasInitialized = false;
   bool WasFinalized = false;
+};
+
+// Analysis5 is a derived analysis that depends on Analysis1, Analysis2, and
+// Analysis4. It verifies that the driver passes dependency results to
+// initialize() and that the initialize/step/finalize lifecycle is respected.
+class Analysis5Result final : public AnalysisResult {
+public:
+  static AnalysisName analysisName() { return AnalysisName("Analysis5"); }
+  std::vector<std::string> CallSequence;
+  std::vector<std::pair<EntityId, int>> Analysis1Entries;
+  std::vector<std::pair<EntityId, int>> Analysis2Entries;
+  std::vector<std::pair<EntityId, int>> Analysis4Entries;
+};
+
+// CycleA and CycleB form a dependency cycle (CycleA → CycleB → CycleA).
+// Registered solely to exercise cycle detection in AnalysisDriver::sort().
+// initialize() and step() are unreachable stubs — the cycle is caught before
+// any analysis executes.
+class CycleAResult final : public AnalysisResult {
+public:
+  static AnalysisName analysisName() { return AnalysisName("CycleA"); }
+};
+
+class CycleBResult final : public AnalysisResult {
+public:
+  static AnalysisName analysisName() { return AnalysisName("CycleB"); }
 };
 
 // ---------------------------------------------------------------------------
@@ -118,6 +149,7 @@ public:
 static bool Analysis1WasDestroyed = false;
 static bool Analysis2WasDestroyed = false;
 static bool Analysis4WasDestroyed = false;
+static bool Analysis5WasDestroyed = false;
 
 // ---------------------------------------------------------------------------
 // Analyses
@@ -127,6 +159,11 @@ class Analysis1 final
     : public SummaryAnalysis<Analysis1Result, Analysis1EntitySummary> {
 public:
   ~Analysis1() { Analysis1WasDestroyed = true; }
+
+  llvm::Error initialize() override {
+    result().WasInitialized = true;
+    return llvm::Error::success();
+  }
 
   llvm::Error add(EntityId Id, const Analysis1EntitySummary &S) override {
     result().Entries.push_back({Id, S.InstanceId});
@@ -146,6 +183,11 @@ class Analysis2 final
 public:
   ~Analysis2() { Analysis2WasDestroyed = true; }
 
+  llvm::Error initialize() override {
+    result().WasInitialized = true;
+    return llvm::Error::success();
+  }
+
   llvm::Error add(EntityId Id, const Analysis2EntitySummary &S) override {
     result().Entries.push_back({Id, S.InstanceId});
     return llvm::Error::success();
@@ -159,10 +201,17 @@ public:
 
 static AnalysisRegistry::Add<Analysis2> RegAnalysis2("Analysis for Analysis2");
 
+// No Analysis3 or registration for Analysis3.
+
 class Analysis4 final
     : public SummaryAnalysis<Analysis4Result, Analysis4EntitySummary> {
 public:
   ~Analysis4() { Analysis4WasDestroyed = true; }
+
+  llvm::Error initialize() override {
+    result().WasInitialized = true;
+    return llvm::Error::success();
+  }
 
   llvm::Error add(EntityId Id, const Analysis4EntitySummary &S) override {
     result().Entries.push_back({Id, S.InstanceId});
@@ -176,6 +225,56 @@ public:
 };
 
 static AnalysisRegistry::Add<Analysis4> RegAnalysis4("Analysis for Analysis4");
+
+class Analysis5 final
+    : public DerivedAnalysis<Analysis5Result, Analysis1Result, Analysis2Result,
+                             Analysis4Result> {
+  int StepCount = 0;
+
+public:
+  ~Analysis5() { Analysis5WasDestroyed = true; }
+
+  llvm::Error initialize(const Analysis1Result &R1, const Analysis2Result &R2,
+                         const Analysis4Result &R4) override {
+    result().CallSequence.push_back("initialize");
+    result().Analysis1Entries = R1.Entries;
+    result().Analysis2Entries = R2.Entries;
+    result().Analysis4Entries = R4.Entries;
+    return llvm::Error::success();
+  }
+
+  llvm::Expected<bool> step() override {
+    result().CallSequence.push_back("step");
+    return ++StepCount < 2;
+  }
+
+  llvm::Error finalize() override {
+    result().CallSequence.push_back("finalize");
+    return llvm::Error::success();
+  }
+};
+
+static AnalysisRegistry::Add<Analysis5> RegAnalysis5("Analysis for Analysis5");
+
+class CycleA final : public DerivedAnalysis<CycleAResult, CycleBResult> {
+public:
+  llvm::Error initialize(const CycleBResult &) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<bool> step() override { return false; }
+};
+
+static AnalysisRegistry::Add<CycleA> RegCycleA("Cyclic analysis A (test only)");
+
+class CycleB final : public DerivedAnalysis<CycleBResult, CycleAResult> {
+public:
+  llvm::Error initialize(const CycleAResult &) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<bool> step() override { return false; }
+};
+
+static AnalysisRegistry::Add<CycleB> RegCycleB("Cyclic analysis B (test only)");
 
 // ---------------------------------------------------------------------------
 // Fixture
@@ -191,6 +290,7 @@ protected:
     Analysis1WasDestroyed = false;
     Analysis2WasDestroyed = false;
     Analysis4WasDestroyed = false;
+    Analysis5WasDestroyed = false;
   }
 
   std::unique_ptr<LUSummary> makeLUSummary() {
@@ -227,25 +327,36 @@ protected:
 // ---------------------------------------------------------------------------
 
 TEST(AnalysisRegistryTest, AnalysisIsRegistered) {
-  EXPECT_FALSE(AnalysisRegistry::contains("AnalysisNonExisting"));
   EXPECT_TRUE(AnalysisRegistry::contains("Analysis1"));
   EXPECT_TRUE(AnalysisRegistry::contains("Analysis2"));
+  EXPECT_FALSE(AnalysisRegistry::contains("Analysis3"));
   EXPECT_TRUE(AnalysisRegistry::contains("Analysis4"));
+  EXPECT_TRUE(AnalysisRegistry::contains("Analysis5"));
+  EXPECT_TRUE(AnalysisRegistry::contains("CycleA"));
+  EXPECT_TRUE(AnalysisRegistry::contains("CycleB"));
 }
 
 TEST(AnalysisRegistryTest, AnalysisCanBeInstantiated) {
   EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("AnalysisNonExisting"),
-                       llvm::Failed());
+                       llvm::FailedWithMessage(
+                           "no analysis registered for 'AnalysisNonExisting'"));
   EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis1"),
                        llvm::Succeeded());
   EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis2"),
                        llvm::Succeeded());
   EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis4"),
                        llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis5"),
+                       llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("CycleA"),
+                       llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("CycleB"),
+                       llvm::Succeeded());
 }
 
-// run() — processes all registered analyses present in the LUSummary.
-// Silently skips data whose analysis is unregistered (Analysis3).
+// run<T...>() — processes the non-cyclic analyses in topological order.
+// CycleA and CycleB are excluded because they form a cycle; run() && would
+// error on them, so the type-safe subset overload is used here instead.
 TEST_F(AnalysisDriverTest, RunAll) {
   auto LU = makeLUSummary();
   const auto E1 = addEntity(*LU, "Entity1");
@@ -263,7 +374,8 @@ TEST_F(AnalysisDriverTest, RunAll) {
   (void)insertSummary<Analysis3EntitySummary>(*LU, "Analysis3", E1);
 
   AnalysisDriver Driver(std::move(LU));
-  auto WPAOrErr = std::move(Driver).run();
+  auto WPAOrErr = Driver.run<Analysis1Result, Analysis2Result, Analysis4Result,
+                             Analysis5Result>();
   ASSERT_THAT_EXPECTED(WPAOrErr, llvm::Succeeded());
 
   {
@@ -272,6 +384,7 @@ TEST_F(AnalysisDriverTest, RunAll) {
     EXPECT_EQ(R1OrErr->Entries.size(), 2u);
     EXPECT_TRUE(hasEntry(R1OrErr->Entries, E1, s1a));
     EXPECT_TRUE(hasEntry(R1OrErr->Entries, E2, s1b));
+    EXPECT_TRUE(R1OrErr->WasInitialized);
     EXPECT_TRUE(R1OrErr->WasFinalized);
     EXPECT_TRUE(Analysis1WasDestroyed);
   }
@@ -282,6 +395,7 @@ TEST_F(AnalysisDriverTest, RunAll) {
     EXPECT_EQ(R2OrErr->Entries.size(), 2u);
     EXPECT_TRUE(hasEntry(R2OrErr->Entries, E2, s2a));
     EXPECT_TRUE(hasEntry(R2OrErr->Entries, E3, s2b));
+    EXPECT_TRUE(R2OrErr->WasInitialized);
     EXPECT_TRUE(R2OrErr->WasFinalized);
     EXPECT_TRUE(Analysis2WasDestroyed);
   }
@@ -291,12 +405,32 @@ TEST_F(AnalysisDriverTest, RunAll) {
     ASSERT_THAT_EXPECTED(R4OrErr, llvm::Succeeded());
     EXPECT_EQ(R4OrErr->Entries.size(), 1u);
     EXPECT_TRUE(hasEntry(R4OrErr->Entries, E4, s4a));
+    EXPECT_TRUE(R4OrErr->WasInitialized);
     EXPECT_TRUE(R4OrErr->WasFinalized);
     EXPECT_TRUE(Analysis4WasDestroyed);
   }
 
+  {
+    auto R5OrErr = WPAOrErr->get<Analysis5Result>();
+    ASSERT_THAT_EXPECTED(R5OrErr, llvm::Succeeded());
+    EXPECT_EQ(
+        R5OrErr->CallSequence,
+        (std::vector<std::string>{"initialize", "step", "step", "finalize"}));
+    EXPECT_EQ(R5OrErr->Analysis1Entries.size(), 2u);
+    EXPECT_TRUE(hasEntry(R5OrErr->Analysis1Entries, E1, s1a));
+    EXPECT_TRUE(hasEntry(R5OrErr->Analysis1Entries, E2, s1b));
+    EXPECT_EQ(R5OrErr->Analysis2Entries.size(), 2u);
+    EXPECT_TRUE(hasEntry(R5OrErr->Analysis2Entries, E2, s2a));
+    EXPECT_TRUE(hasEntry(R5OrErr->Analysis2Entries, E3, s2b));
+    EXPECT_EQ(R5OrErr->Analysis4Entries.size(), 1u);
+    EXPECT_TRUE(hasEntry(R5OrErr->Analysis4Entries, E4, s4a));
+    EXPECT_TRUE(Analysis5WasDestroyed);
+  }
+
   // Unregistered analysis — not present in WPA.
-  EXPECT_THAT_EXPECTED(WPAOrErr->get<Analysis3Result>(), llvm::Failed());
+  EXPECT_THAT_EXPECTED(WPAOrErr->get<Analysis3Result>(),
+                       llvm::FailedWithMessage(
+                           "no result for analysis 'Analysis3' in WPASuite"));
 }
 
 // run(names) — processes only the analyses for the given names.
@@ -317,10 +451,13 @@ TEST_F(AnalysisDriverTest, RunByName) {
   ASSERT_THAT_EXPECTED(R1OrErr, llvm::Succeeded());
   EXPECT_EQ(R1OrErr->Entries.size(), 1u);
   EXPECT_TRUE(hasEntry(R1OrErr->Entries, E1, s1a));
+  EXPECT_TRUE(R1OrErr->WasInitialized);
   EXPECT_TRUE(R1OrErr->WasFinalized);
 
   // Analysis2 was not requested — not present even though data exists.
-  EXPECT_THAT_EXPECTED(WPAOrErr->get<Analysis2Result>(), llvm::Failed());
+  EXPECT_THAT_EXPECTED(WPAOrErr->get<Analysis2Result>(),
+                       llvm::FailedWithMessage(
+                           "no result for analysis 'Analysis2' in WPASuite"));
 }
 
 // run(names) — error when a requested name has no data in LUSummary.
@@ -328,7 +465,9 @@ TEST_F(AnalysisDriverTest, RunByNameErrorMissingData) {
   auto LU = makeLUSummary();
   AnalysisDriver Driver(std::move(LU));
 
-  EXPECT_THAT_EXPECTED(Driver.run({AnalysisName("Analysis1")}), llvm::Failed());
+  EXPECT_THAT_EXPECTED(
+      Driver.run({AnalysisName("Analysis1")}),
+      llvm::FailedWithMessage("no data for analysis 'Analysis1' in LUSummary"));
 }
 
 // run(names) — error when a requested name has no registered analysis.
@@ -340,7 +479,9 @@ TEST_F(AnalysisDriverTest, RunByNameErrorMissingAnalysis) {
   AnalysisDriver Driver(std::move(LU));
 
   // Analysis3 has data but no registered analysis.
-  EXPECT_THAT_EXPECTED(Driver.run({AnalysisName("Analysis3")}), llvm::Failed());
+  EXPECT_THAT_EXPECTED(
+      Driver.run({AnalysisName("Analysis3")}),
+      llvm::FailedWithMessage("no analysis registered for 'Analysis3'"));
 }
 
 // run<ResultTs...>() — type-safe subset.
@@ -361,10 +502,13 @@ TEST_F(AnalysisDriverTest, RunByType) {
   ASSERT_THAT_EXPECTED(R1OrErr, llvm::Succeeded());
   EXPECT_EQ(R1OrErr->Entries.size(), 1u);
   EXPECT_TRUE(hasEntry(R1OrErr->Entries, E1, s1a));
+  EXPECT_TRUE(R1OrErr->WasInitialized);
   EXPECT_TRUE(R1OrErr->WasFinalized);
 
   // Analysis2 was not requested — not present even though data exists.
-  EXPECT_THAT_EXPECTED(WPAOrErr->get<Analysis2Result>(), llvm::Failed());
+  EXPECT_THAT_EXPECTED(WPAOrErr->get<Analysis2Result>(),
+                       llvm::FailedWithMessage(
+                           "no result for analysis 'Analysis2' in WPASuite"));
 }
 
 // run<ResultTs...>() — error when a requested type has no data in LUSummary.
@@ -372,7 +516,9 @@ TEST_F(AnalysisDriverTest, RunByTypeErrorMissingData) {
   auto LU = makeLUSummary();
   AnalysisDriver Driver(std::move(LU));
 
-  EXPECT_THAT_EXPECTED(Driver.run<Analysis1Result>(), llvm::Failed());
+  EXPECT_THAT_EXPECTED(
+      Driver.run<Analysis1Result>(),
+      llvm::FailedWithMessage("no data for analysis 'Analysis1' in LUSummary"));
 }
 
 // contains() — present entries return true; absent entries return false.
@@ -380,14 +526,26 @@ TEST_F(AnalysisDriverTest, Contains) {
   auto LU = makeLUSummary();
   const auto E1 = addEntity(*LU, "Entity1");
   insertSummary<Analysis1EntitySummary>(*LU, "Analysis1", E1);
+  insertSummary<Analysis2EntitySummary>(*LU, "Analysis2", E1);
   insertSummary<Analysis4EntitySummary>(*LU, "Analysis4", E1);
 
   AnalysisDriver Driver(std::move(LU));
-  auto WPAOrErr = std::move(Driver).run();
+  auto WPAOrErr = Driver.run<Analysis1Result, Analysis2Result, Analysis4Result,
+                             Analysis5Result>();
   ASSERT_THAT_EXPECTED(WPAOrErr, llvm::Succeeded());
-
   EXPECT_TRUE(WPAOrErr->contains<Analysis1Result>());
-  EXPECT_FALSE(WPAOrErr->contains<Analysis2Result>());
+  // Analysis3 has no registered analysis — never present in WPA.
+  EXPECT_FALSE(WPAOrErr->contains<Analysis3Result>());
+}
+
+// run() && — errors when the registry contains a dependency cycle.
+TEST_F(AnalysisDriverTest, CycleDetected) {
+  auto LU = makeLUSummary();
+  AnalysisDriver Driver(std::move(LU));
+  EXPECT_THAT_EXPECTED(
+      std::move(Driver).run(),
+      llvm::FailedWithMessage("cycle detected: AnalysisName(CycleA) -> "
+                              "AnalysisName(CycleB) -> AnalysisName(CycleA)"));
 }
 
 } // namespace

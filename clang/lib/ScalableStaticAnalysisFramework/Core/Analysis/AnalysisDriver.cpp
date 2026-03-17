@@ -11,6 +11,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/DerivedAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/SummaryAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <map>
@@ -28,7 +29,17 @@ AnalysisDriver::sort(llvm::ArrayRef<AnalysisName> Roots) {
     enum class State { Unvisited, Visiting, Visited };
 
     std::map<AnalysisName, State> Marks;
+    std::vector<AnalysisName> Path;
     std::vector<std::unique_ptr<AnalysisBase>> Result;
+
+    std::string formatCycle(const AnalysisName &CycleEntry) const {
+      auto CycleBegin = llvm::find(Path, CycleEntry);
+      std::string Cycle;
+      llvm::raw_string_ostream OS(Cycle);
+      llvm::interleave(llvm::make_range(CycleBegin, Path.end()), OS, " -> ");
+      OS << " -> " << CycleEntry;
+      return Cycle;
+    }
 
     llvm::Error visit(const AnalysisName &Name) {
       auto It = Marks.find(Name);
@@ -38,26 +49,29 @@ AnalysisDriver::sort(llvm::ArrayRef<AnalysisName> Roots) {
 
       case State::Visiting:
         return ErrorBuilder::create(std::errc::invalid_argument,
-                                    "cycle detected involving analysis '{0}'",
-                                    Name)
+                                    "cycle detected: {0}", formatCycle(Name))
             .build();
 
       case State::Unvisited: {
         Marks[Name] = State::Visiting;
+        Path.push_back(Name);
 
         auto V = AnalysisRegistry::instantiate(Name.str());
         if (!V) {
+          Path.pop_back();
           return V.takeError();
         }
 
         auto Analysis = std::move(*V);
         for (const auto &Dep : Analysis->dependencyNames()) {
           if (auto Err = visit(Dep)) {
+            Path.pop_back();
             return Err;
           }
         }
 
         Marks[Name] = State::Visited;
+        Path.pop_back();
         Result.push_back(std::move(Analysis));
         return llvm::Error::success();
       }
