@@ -2059,8 +2059,7 @@ static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
   mlir::Type rttiPtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Type ptrDiffTy = cgf.convertType(cgf.getContext().getPointerDiffType());
 
-  // TODO(cir): mark the function as nowind willreturn readonly.
-  assert(!cir::MissingFeatures::opFuncNoUnwind());
+  // TODO(cir): mark the function as willreturn readonly.
   assert(!cir::MissingFeatures::opFuncWillReturn());
   assert(!cir::MissingFeatures::opFuncReadOnly());
 
@@ -2069,7 +2068,10 @@ static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
 
   cir::FuncType FTy = cgf.getBuilder().getFuncType(
       {voidPtrTy, rttiPtrTy, rttiPtrTy, ptrDiffTy}, voidPtrTy);
-  return cgf.cgm.createRuntimeFunction(FTy, "__dynamic_cast");
+  cir::FuncOp fn = cgf.cgm.createRuntimeFunction(FTy, "__dynamic_cast");
+  fn->setAttr(cir::CIRDialect::getNoThrowAttrName(),
+              mlir::UnitAttr::get(cgf.getBuilder().getContext()));
+  return fn;
 }
 
 static Address emitDynamicCastToVoid(CIRGenFunction &cgf, mlir::Location loc,
