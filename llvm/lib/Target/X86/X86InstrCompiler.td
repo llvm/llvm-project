@@ -2068,8 +2068,8 @@ defm : OneBitPats<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
 // EFLAGS-defining Patterns
 //===----------------------------------------------------------------------===//
 
-multiclass EFLAGSDefiningPats<string suffix, Predicate p1, Predicate p2, bit ndd> {
-  let Predicates = [p1] in {
+multiclass EFLAGSDefiningPats<string suffix, Predicate PredNDD, Predicate PredNDDI, bit ndd> {
+  let Predicates = [PredNDD] in {
     // add reg, reg
     def : Pat<(add GR8 :$src1, GR8 :$src2), (!cast<Instruction>(ADD8rr#suffix) GR8 :$src1, GR8 :$src2)>;
     def : Pat<(add GR16:$src1, GR16:$src2), (!cast<Instruction>(ADD16rr#suffix) GR16:$src1, GR16:$src2)>;
@@ -2213,7 +2213,7 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p1, Predicate p2, bit ndd
               (!cast<Instruction>(AND64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
   }
 
-  let Predicates = [p2] in {
+  let Predicates = [PredNDDI] in {
     def : Pat<(add GR64:$src1, i64immSExt32:$src2), (!cast<Instruction>(ADD64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
     def : Pat<(sub GR64:$src1, i64immSExt32:$src2),
               (!cast<Instruction>(SUB64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
@@ -2221,7 +2221,7 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p1, Predicate p2, bit ndd
 
   // Increment/Decrement reg.
   // Do not make INC/DEC if it is slow
-  let Predicates = [UseIncDec, p1] in {
+  let Predicates = [UseIncDec, PredNDD] in {
     def : Pat<(add GR8:$src, 1),   (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
     def : Pat<(add GR16:$src, 1),  (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
     def : Pat<(add GR32:$src, 1),  (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
@@ -2241,7 +2241,7 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p1, Predicate p2, bit ndd
     def : Pat<(or_is_add GR32:$src, 1),  (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
   }
 
-  let Predicates = [UseIncDec, p2] in {
+  let Predicates = [UseIncDec, PredNDDI] in {
     def : Pat<(add GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
     def : Pat<(add GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
     def : Pat<(X86add_flag_nocf GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;

@@ -216,7 +216,7 @@ namespace {
     bool matchAddressBase(SDValue N, X86ISelAddressMode &AM);
     bool selectAddr(SDNode *Parent, SDValue N, SDValue &Base, SDValue &Scale,
                     SDValue &Index, SDValue &Disp, SDValue &Segment,
-                    bool IsMRNSupported = true);
+                    bool HasNDDM = true);
     bool selectNDDAddr(SDNode *Parent, SDValue N, SDValue &Base, SDValue &Scale,
                        SDValue &Index, SDValue &Disp, SDValue &Segment);
     bool selectVectorAddr(MemSDNode *Parent, SDValue BasePtr, SDValue IndexOp,
@@ -3023,7 +3023,7 @@ bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,
 /// checking memory operands for inline asm nodes.
 bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
                                  SDValue &Scale, SDValue &Index, SDValue &Disp,
-                                 SDValue &Segment, bool IsMRNSupported) {
+                                 SDValue &Segment, bool HasNDDM) {
   X86ISelAddressMode AM;
 
   if (Parent &&
@@ -3053,7 +3053,7 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
   if (matchAddress(N, AM))
     return false;
 
-  if (!IsMRNSupported && !AM.isRIPRelative())
+  if (!HasNDDM && !AM.isRIPRelative())
     return false;
 
   getAddressOperands(AM, DL, VT, Base, Scale, Index, Disp, Segment);
