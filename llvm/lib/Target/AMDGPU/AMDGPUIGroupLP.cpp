@@ -694,7 +694,6 @@ void PipelineSolver::greedyFind(
     std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
   int BestNodeCost = -1;
-  int TempCost;
   SchedGroup *BestGroup = nullptr;
   int BestGroupID = -1;
   std::list<std::pair<SUnit *, SUnit *>> BestEdges;
@@ -726,7 +725,7 @@ void PipelineSolver::greedyFind(
     }
 
     std::list<std::pair<SUnit *, SUnit *>> TempEdges;
-    TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
+    int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
 
     if (TempCost < BestNodeCost || BestNodeCost == -1) {
@@ -756,7 +755,7 @@ void PipelineSolver::greedyFind(
 
     LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
                       << (int)BestGroup->getMask() << "\n");
-    BestCost += TempCost;
+    BestCost += BestNodeCost;
   } else
     BestCost += MissPenalty;
 
@@ -812,6 +811,7 @@ void PipelineSolver::solve() {
   } else { // Use the Greedy Algorithm by default
     LLVM_DEBUG(dbgs() << "Starting GREEDY pipeline solver\n");
     solveGreedy();
+    LLVM_DEBUG(dbgs() << "Greedy produced best cost of " << BestCost << "\n");
   }
 
   makePipeline();
