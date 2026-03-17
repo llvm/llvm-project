@@ -16,8 +16,8 @@ define i32 @test_cvt_pk_fp8_f32(float %x, float %y) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @lds, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64_align2 = DS_READ_B64_gfx9 killed [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (dereferenceable load (s64) from @lds, align 4, addrspace 3)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY [[DS_READ_B64_gfx9_]].sub0
+  ; CHECK-NEXT:   [[DS_READ2_B32_gfx9_:%[0-9]+]]:vreg_64_align2 = DS_READ2_B32_gfx9 killed [[V_MOV_B32_e32_]], 0, 1, 0, implicit $exec :: (dereferenceable load (s64) from @lds, align 4, addrspace 3)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY [[DS_READ2_B32_gfx9_]].sub0
   ; CHECK-NEXT:   [[S_CVT_F16_F32_:%[0-9]+]]:sreg_32 = nofpexcept S_CVT_F16_F32 killed [[COPY2]], implicit $mode
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 killed [[S_MOV_B32_]], killed [[S_CVT_F16_F32_]], implicit-def dead $scc
@@ -74,8 +74,8 @@ define i32 @test_cvt_pk_fp8_f32_e5m3(float %x, float %y) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @lds, implicit $exec
-  ; CHECK-NEXT:   [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64_align2 = DS_READ_B64_gfx9 killed [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (dereferenceable load (s64) from @lds, align 4, addrspace 3)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY [[DS_READ_B64_gfx9_]].sub0
+  ; CHECK-NEXT:   [[DS_READ2_B32_gfx9_:%[0-9]+]]:vreg_64_align2 = DS_READ2_B32_gfx9 killed [[V_MOV_B32_e32_]], 0, 1, 0, implicit $exec :: (dereferenceable load (s64) from @lds, align 4, addrspace 3)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY [[DS_READ2_B32_gfx9_]].sub0
   ; CHECK-NEXT:   [[S_CVT_F16_F32_:%[0-9]+]]:sreg_32 = nofpexcept S_CVT_F16_F32 killed [[COPY2]], implicit $mode
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 killed [[S_MOV_B32_]], killed [[S_CVT_F16_F32_]], implicit-def dead $scc
