@@ -265,7 +265,8 @@ public:
   /// Emits the necessary instruction sequence to extract element of type \p
   /// ExtrTy at \p Lane from \p FromVec. Emits instructions before \p WhereIt.
   /// Returns the extracted value.
-  /// Note: This handles both vectors and scalars.
+  /// Note: This handles both vectors and scalars. In the vector case it
+  /// extracts an N-wide element (with N dictated by \p ExtrTy).
   static Value *unpack(Value *FromVec, Type *ExtrTy, unsigned Lane,
                        BasicBlock::iterator WhereIt) {
     assert(isa<FixedVectorType>(FromVec->getType()) && "Expected vector!");
@@ -280,14 +281,13 @@ public:
              "Expected same element type!");
       Constant *ExtractLaneC =
           ConstantInt::getSigned(Type::getInt32Ty(Ctx), Lane);
-      // This may be folded into a Constant if LastInsert is a Constant. In
-      // that case we only collect the last constant.
+      // Note: This may be folded into a Constant if FromVec is a Constant.
       return ExtractElementInst::create(FromVec, ExtractLaneC, WhereIt, Ctx,
                                         "Unpack");
     }
     // For vector elements we emit a shuffle.
     // For example, extracting lanes 2 and 3 of a <4 x i32> vector %vec:
-    //   %extr0 = shufflevectorinst <4 x i32> %vec, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+    //   %extr0 = shufflevector <4 x i32> %vec, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
     auto *VecTy = cast<FixedVectorType>(FromVec->getType());
     auto *ExtrVecTy = cast<FixedVectorType>(ExtrTy);
     assert(ExtrVecTy->getElementType() == VecTy->getElementType() &&
