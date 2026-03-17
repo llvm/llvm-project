@@ -2409,8 +2409,8 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
     while (AI != AE) {
       Visited.insert(*AI);
       bool AIIsWrite = AI->getInt();
-  // Reads from the same pointer don't create extra hazards, but multiple
-  // stores do (WAW), so start from AI for writes and next(AI) for reads.
+      // Reads from the same pointer don't create extra hazards, but multiple
+      // stores do (WAW), so start from AI for writes and next(AI) for reads.
       EquivalenceClasses<MemAccessInfo>::member_iterator OI =
           (AIIsWrite ? AI : std::next(AI));
       while (OI != AE) {
@@ -2418,7 +2418,9 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
         auto &Acc = Accesses[*AI];
         for (std::vector<unsigned>::iterator I1 = Acc.begin(), I1E = Acc.end();
              I1 != I1E; ++I1)
-// When checking for WAW (OI == AI) caused by multiple writes to the same pointer, start I2 at the next access past I1 to avoid self-comparison.
+          // When checking for WAW (OI == AI) caused by multiple writes to the
+          // same pointer, start I2 at the next access past I1 to avoid
+          // self-comparison.
           for (std::vector<unsigned>::iterator
                    I2 = (OI == AI ? std::next(I1) : Accesses[*OI].begin()),
                    I2E = (OI == AI ? I1E : Accesses[*OI].end());
@@ -2562,7 +2564,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   LoopBlocksRPO RPOT(TheLoop);
   RPOT.perform(LI);
 
-  // Don't return early as soon as we found a memory access that cannot be vectorize - HasConvergentOp must still be computed as it is part of LAI's public API (used by LoopDistribute).
+  // Don't return early as soon as we found a memory access that cannot be
+  // vectorize - HasConvergentOp must still be computed as it is part of LAI's
+  // public API (used by LoopDistribute).
   for (BasicBlock *BB : RPOT) {
     // Scan the BB and collect legal loads and stores. Also detect any
     // convergent instructions.
@@ -2577,7 +2581,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       if (HasComplexMemInst && HasConvergentOp)
         return false;
 
-    // Already unsafe to vectorize; keep scanning for convergent ops.
+      // Already unsafe to vectorize; keep scanning for convergent ops.
       if (HasComplexMemInst)
         continue;
 
@@ -2708,7 +2712,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       if (blockNeedsPredication(ST->getParent(), TheLoop, DT))
         Loc.AATags.TBAA = nullptr;
 
-      // Expand forked pointers (i.e., a phi of multiple strided pointers) into all alternatives.
+      // Expand forked pointers (i.e., a phi of multiple strided pointers) into
+      // all alternatives.
       visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
                     [&Accesses, AccessTy, Loc](Value *Ptr) {
                       MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
@@ -2761,7 +2766,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     if (blockNeedsPredication(LD->getParent(), TheLoop, DT))
       Loc.AATags.TBAA = nullptr;
 
-// Expand forked pointers (i.e., a phi of multiple strided pointers) into all alternatives.
+    // Expand forked pointers (i.e., a phi of multiple strided pointers) into
+    // all alternatives.
     visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
                   [&Accesses, AccessTy, Loc, IsReadOnlyPtr](Value *Ptr) {
                     MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
