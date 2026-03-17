@@ -1373,6 +1373,16 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
 
+  // x && (x && y) -> x && y
+  if (match(Def, m_LogicalAnd(m_VPValue(X),
+                              m_LogicalAnd(m_Deferred(X), m_VPValue()))))
+    return Def->replaceAllUsesWith(Def->getOperand(1));
+
+  // x && (y && x) -> x && y
+  if (match(Def, m_LogicalAnd(m_VPValue(X),
+                              m_LogicalAnd(m_VPValue(Y), m_Deferred(X)))))
+    return Def->replaceAllUsesWith(Builder.createLogicalAnd(X, Y));
+
   // x && !x -> 0
   if (match(Def, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
     return Def->replaceAllUsesWith(Plan->getFalse());
