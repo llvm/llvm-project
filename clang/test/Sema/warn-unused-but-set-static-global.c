@@ -55,7 +55,7 @@ void f3() {
   (void)x;
 }
 
-static volatile int vol_set; // expected-warning {{variable 'vol_set' set but not used}}
+static volatile int vol_set;
 void f4() {
   vol_set = 1;
 }
