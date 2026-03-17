@@ -1,5 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-pc-vulkan1.3-library %s -o - -filetype=obj | spirv-val %}
 
 %struct.simple = type { i8 }
 @g_simple = private unnamed_addr addrspace(2) constant %struct.simple poison, align 1
@@ -21,7 +22,7 @@
 
 @g_arr_of_struct = private addrspace(2) constant [2 x %struct.with_arr] poison, align 4
 
-define spir_kernel void @k() {
+define spir_func void @foo() {
 entry:
   ret void
 }
