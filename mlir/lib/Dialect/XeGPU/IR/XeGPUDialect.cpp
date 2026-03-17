@@ -1061,11 +1061,6 @@ bool SliceAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
 
   auto flattenedThis = flatten();
   auto parent = dyn_cast<LayoutAttr>(flattenedThis.getParent());
-  // debug print parent
-  llvm::dbgs() << "Parent layout - sgLayout: ";
-  for (auto &l : parent.getEffectiveSgLayoutAsInt()) {
-    llvm::dbgs() << l << " ";
-  }
   if (level == xegpu::LayoutKind::Subgroup) {
     int64_t wgSize = computeProduct(parent.getEffectiveSgLayoutAsInt());
     for (int64_t id : llvm::seq<int64_t>(0, wgSize)) {
@@ -1083,19 +1078,6 @@ bool SliceAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
     for (int64_t id : llvm::seq<int64_t>(0, subgroupSize)) {
       auto coords = computeStaticDistributedCoords(id, shape);
       auto otherCoords = other.computeStaticDistributedCoords(id, shape);
-      llvm::dbgs() << "Lane comparison - id: " << id << ", coords: ";
-      for (auto &c : coords) {
-        llvm::dbgs() << "[";
-        llvm::interleaveComma(c, llvm::dbgs());
-        llvm::dbgs() << "] ";
-      }
-      llvm::dbgs() << "otherCoords: ";
-      for (auto &c : otherCoords) {
-        llvm::dbgs() << "[";
-        llvm::interleaveComma(c, llvm::dbgs());
-        llvm::dbgs() << "] ";
-      }
-      llvm::dbgs() << "\n";
       if (coords != otherCoords)
         return false;
     }

@@ -58,18 +58,6 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
     return std::make_pair(sgShape, count);
   auto sgData = layout.getEffectiveSgDataAsInt();
   count = computeProduct(distributedShape.value()) / computeProduct(sgData);
-  // auto sgLayout = layout.getEffectiveSgLayoutAsInt();
-  // auto sgData = layout.getEffectiveSgDataAsInt();
-  // SmallVector<int64_t> distUnit =
-  //     computeElementwiseMul(sgLayout, sgData);
-  // // Clamp distUnit to the original shape to handle wrap-around cases where
-  // data
-  // // is shared among subgroups, which may cause distUnit to exceed the
-  // original
-  // // shape.
-  // for (size_t i = 0; i < distUnit.size(); ++i)
-  //   distUnit[i] = std::min(shape[i], distUnit[i]);
-  // count = computeProduct(shape) / computeProduct(distUnit);
   return std::make_pair(sgData, count);
 }
 
