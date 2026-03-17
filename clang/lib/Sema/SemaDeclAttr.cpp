@@ -1241,7 +1241,21 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
 
     if (Template && declaresSameEntity(Template, CTD)) {
-      D->addAttr(::new (S.Context) PreferredNameAttr(S.Context, AL, TSI));
+      auto *PNA = ::new (S.Context) PreferredNameAttr(S.Context, AL, TSI);
+      D->addAttr(PNA);
+
+      for(auto *Spec : CTD->specializations()) {
+	 
+	const TypeDecl *TD = static_cast<const TypeDecl *>(Spec);
+	      if (S.Context.hasSameType(S.Context.getTypeDeclType(TD), TSI->getType())) {
+              
+	  {
+ 		for (auto *R : Spec->redecls()) {
+            if (!R->hasAttr<PreferredNameAttr>())
+              R->addAttr(PNA->clone(S.Context));
+	  }
+	}
+      }
       return;
     }
   }
