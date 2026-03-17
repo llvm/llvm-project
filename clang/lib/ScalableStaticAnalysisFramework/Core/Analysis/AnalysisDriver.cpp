@@ -96,7 +96,7 @@ llvm::Error AnalysisDriver::executeSummaryAnalysis(
   if (DataIt == LU->Data.end()) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 "no data for analysis '{0}' in LUSummary",
-                                Summary->analysisName().str())
+                                Summary->analysisName())
         .build();
   }
 
@@ -129,7 +129,7 @@ llvm::Error AnalysisDriver::executeDerivedAnalysis(
     if (It == Suite.Data.end()) {
       ErrorBuilder::fatal("missing dependency '{0}' for analysis '{1}': "
                           "dependency graph is not topologically sorted",
-                          DepName.str(), Derived->analysisName().str());
+                          DepName, Derived->analysisName());
     }
     DepMap[DepName] = It->second.get();
   }

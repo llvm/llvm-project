@@ -19,8 +19,8 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisResult.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisTraits.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <map>
 #include <memory>
 #include <vector>
@@ -124,8 +124,9 @@ private:
     auto lookup = [&Map](const AnalysisName &Name) -> const AnalysisResult * {
       auto It = Map.find(Name);
       if (It == Map.end()) {
-        llvm_unreachable("dependency missing from DepResults map; "
-                         "dependency graph is not topologically sorted");
+        ErrorBuilder::fatal("dependency '{0}' missing from DepResults map; "
+                            "dependency graph is not topologically sorted",
+                            Name);
       }
       return It->second;
     };

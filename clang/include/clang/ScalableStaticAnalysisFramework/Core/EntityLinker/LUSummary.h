@@ -31,10 +31,10 @@ namespace clang::ssaf {
 /// together. It contains deduplicated entities with their linkage information
 /// and the merged entity summaries.
 class LUSummary {
+  friend class AnalysisDriver;
   friend class LUSummaryConsumer;
   friend class SerializationFormat;
   friend class TestFixture;
-  friend class AnalysisDriver;
 
   NestedBuildNamespace LUNamespace;
 
