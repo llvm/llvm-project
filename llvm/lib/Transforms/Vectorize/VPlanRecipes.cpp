@@ -2527,6 +2527,88 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
          getScalarType() == getRegion()->getCanonicalIVType();
 }
 
+/// Compute the transformed value of Index at offset StartValue using step
+/// StepValue.
+/// For integer induction, returns StartValue + Index * StepValue.
+/// For pointer induction, returns StartValue[Index * StepValue].
+/// FIXME: The newly created binary instructions should contain nsw/nuw
+/// flags, which can be found from the original scalar operations.
+static Value *
+emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
+                     Value *Step,
+                     InductionDescriptor::InductionKind InductionKind,
+                     const BinaryOperator *InductionBinOp) {
+  Type *StepTy = Step->getType();
+  Value *CastedIndex = StepTy->isIntegerTy()
+                           ? B.CreateSExtOrTrunc(Index, StepTy)
+                           : B.CreateCast(Instruction::SIToFP, Index, StepTy);
+  if (CastedIndex != Index) {
+    CastedIndex->setName(CastedIndex->getName() + ".cast");
+    Index = CastedIndex;
+  }
+
+  // Note: the IR at this point is broken. We cannot use SE to create any new
+  // SCEV and then expand it, hoping that SCEV's simplification will give us
+  // a more optimal code. Unfortunately, attempt of doing so on invalid IR may
+  // lead to various SCEV crashes. So all we can do is to use builder and rely
+  // on InstCombine for future simplifications. Here we handle some trivial
+  // cases only.
+  auto CreateAdd = [&B](Value *X, Value *Y) {
+    assert(X->getType() == Y->getType() && "Types don't match!");
+    if (PatternMatch::match(X, PatternMatch::m_ZeroInt()))
+      return Y;
+    if (PatternMatch::match(Y, PatternMatch::m_ZeroInt()))
+      return X;
+    return B.CreateAdd(X, Y);
+  };
+
+  // We allow X to be a vector type, in which case Y will potentially be
+  // splatted into a vector with the same element count.
+  auto CreateMul = [&B](Value *X, Value *Y) {
+    assert(X->getType()->getScalarType() == Y->getType() &&
+           "Types don't match!");
+    if (PatternMatch::match(X, PatternMatch::m_One()))
+      return Y;
+    if (PatternMatch::match(Y, PatternMatch::m_One()))
+      return X;
+    VectorType *XVTy = dyn_cast<VectorType>(X->getType());
+    if (XVTy && !isa<VectorType>(Y->getType()))
+      Y = B.CreateVectorSplat(XVTy->getElementCount(), Y);
+    return B.CreateMul(X, Y);
+  };
+
+  switch (InductionKind) {
+  case InductionDescriptor::IK_IntInduction: {
+    assert(!isa<VectorType>(Index->getType()) &&
+           "Vector indices not supported for integer inductions yet");
+    assert(Index->getType() == StartValue->getType() &&
+           "Index type does not match StartValue type");
+    if (isa<ConstantInt>(Step) && cast<ConstantInt>(Step)->isMinusOne())
+      return B.CreateSub(StartValue, Index);
+    auto *Offset = CreateMul(Index, Step);
+    return CreateAdd(StartValue, Offset);
+  }
+  case InductionDescriptor::IK_PtrInduction:
+    return B.CreatePtrAdd(StartValue, CreateMul(Index, Step));
+  case InductionDescriptor::IK_FpInduction: {
+    assert(!isa<VectorType>(Index->getType()) &&
+           "Vector indices not supported for FP inductions yet");
+    assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");
+    assert(InductionBinOp &&
+           (InductionBinOp->getOpcode() == Instruction::FAdd ||
+            InductionBinOp->getOpcode() == Instruction::FSub) &&
+           "Original bin op should be defined for FP induction");
+
+    Value *MulExp = B.CreateFMul(Step, Index);
+    return B.CreateBinOp(InductionBinOp->getOpcode(), StartValue, MulExp,
+                         "induction");
+  }
+  case InductionDescriptor::IK_NoInduction:
+    return nullptr;
+  }
+  llvm_unreachable("invalid enum");
+}
+
 void VPDerivedIVRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
 
@@ -2535,11 +2617,12 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
   if (FPBinOp)
     State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
 
+  Value *Start = State.get(getStartValue(), VPLane(0));
   Value *Step = State.get(getStepValue(), VPLane(0));
   Value *Index = State.get(getOperand(1), VPLane(0));
-  Value *DerivedIV = emitTransformedIndex(
-      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
-      cast_if_present<BinaryOperator>(FPBinOp));
+  Value *DerivedIV =
+      emitTransformedIndex(State.Builder, Index, Start, Step, Kind,
+                           cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName(Name);
   State.set(this, DerivedIV, VPLane(0));
 }
