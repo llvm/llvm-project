@@ -16,6 +16,8 @@ static_library("Driver") {
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
     "//clang/lib/Options",
+    "//clang/lib/ScalableStaticAnalysisFramework/Core",
+    "//clang/lib/ScalableStaticAnalysisFramework/Frontend",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Option",
