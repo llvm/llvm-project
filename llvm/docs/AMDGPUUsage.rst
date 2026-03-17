@@ -6913,14 +6913,13 @@ Threads can synchronize execution by performing barrier operations on barrier *o
     ``J`` must *barrier-executes-before* at least one operation ``X`` that
     *barrier-participates-in* ``W``; otherwise, the behavior is undefined.
 
+* *barrier-phase-with* is a symmetric relation over barrier operations defined as the
+  transitive closure of: *barrier-participates-in* and its inverse relation.
 * For every barrier operation ``A`` that *barrier-participates-in* a barrier *wait* ``W`` on a barrier *object* ``BO``:
 
   * There is no barrier operation ``X`` on ``BO`` such that ``A -> X -> B`` in
     *barrier-executes-before*, and ``X`` *barrier-phase-with* a non-empty set of operations
     that does not include ``W``.
-
-* *barrier-phase-with* is a symmetric relation over barrier operations defined as the
-  transitive closure of: *barrier-participates-in* and its inverse relation.
 
 .. note::
 
