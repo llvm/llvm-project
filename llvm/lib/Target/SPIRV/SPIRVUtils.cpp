@@ -119,9 +119,9 @@ FunctionType *getOriginalFunctionType(const CallBase &CB) {
 
 StringRef getOriginalAsmConstraints(const CallBase &CB) {
   return extractAsmConstraintsFromMetadata(
-    CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-    cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
-    CB.getName());
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
+      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
+      CB.getName());
 }
 } // Namespace SPIRV
 

@@ -507,8 +507,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
 static void
 addFunctionTypeMutation(NamedMDNode *NMD,
                         SmallVector<std::pair<int, Type *>> ChangedTys,
-                        StringRef Name,
-                        StringRef AsmConstraints = "") {
+                        StringRef Name, StringRef AsmConstraints = "") {
 
   LLVMContext &Ctx = NMD->getParent()->getContext();
   Type *I32Ty = IntegerType::getInt32Ty(Ctx);
