@@ -272,12 +272,15 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast",
 def SPIRV_GroupNonUniformBroadcastFirstOp : SPIRV_Op<"GroupNonUniformBroadcastFirst",
   [Pure, SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
-    Result is the Value of the invocation from the active invocations with
-    the lowest id within the Execution scope to all active invocations
-    within the Execution scope.
+    Broadcast the value from the active invocation with the lowest id in
+    the subgroup.
   }];
 
   let description = [{
+    Result is the Value of the invocation from the active invocations with
+    the lowest id within the Execution scope to all active invocations
+    within the Execution scope.
+
     Result Type must be a scalar or vector of floating-point type, integer
     type, or Boolean type.
 
