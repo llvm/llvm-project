@@ -656,34 +656,15 @@ bb0:
 
   // Check unpacking vectors.
   auto *ExtrTy = sandboxir::FixedVectorType::get(Int32Ty, 2);
+  auto *VecTy = cast<sandboxir::FixedVectorType>(Vec->getType());
   for (unsigned Lane = 0; Lane != 2; ++Lane) {
-    auto *InsI1 = cast<sandboxir::InsertElementInst>(
-        sandboxir::VecUtils::unpack(Vec, ExtrTy, Lane, WhereIt));
-    auto *ExtrI1 = cast<sandboxir::ExtractElementInst>(InsI1->getPrevNode());
-    auto *InsI0 = cast<sandboxir::InsertElementInst>(ExtrI1->getPrevNode());
-    auto *ExtrI0 = cast<sandboxir::ExtractElementInst>(InsI0->getPrevNode());
+    auto *Shuff = cast<sandboxir::ShuffleVectorInst>(sandboxir::VecUtils::unpack(Vec, ExtrTy, Lane, WhereIt));
+    EXPECT_EQ(Shuff->getOperand(0), Vec);
+    EXPECT_EQ(Shuff->getOperand(1), sandboxir::PoisonValue::get(VecTy));
+    auto Mask = Shuff->getShuffleMask();
+    EXPECT_THAT(Mask, testing::ElementsAre(Lane, Lane + 1));
 
-    EXPECT_EQ(ExtrI0->getOperand(0), Vec);
-    EXPECT_EQ(ExtrI0->getOperand(1), sandboxir::ConstantInt::get(Int32Ty, Lane));
-
-    EXPECT_EQ(InsI0->getOperand(0), sandboxir::PoisonValue::get(ExtrTy));
-    EXPECT_EQ(InsI0->getOperand(1), ExtrI0);
-    EXPECT_EQ(
-        cast<sandboxir::ConstantInt>(InsI0->getOperand(2))->getZExtValue(), 0u);
-
-    EXPECT_EQ(ExtrI1->getOperand(0), Vec);
-    EXPECT_EQ(
-        cast<sandboxir::ConstantInt>(ExtrI1->getOperand(1))->getZExtValue(),
-        Lane + 1u);
-
-    EXPECT_EQ(InsI1->getOperand(0), InsI0);
-    EXPECT_EQ(InsI1->getOperand(1), ExtrI1);
-    EXPECT_EQ(InsI1->getOperand(2), sandboxir::ConstantInt::get(Int32Ty, 1));
-
-    InsI1->eraseFromParent();
-    ExtrI1->eraseFromParent();
-    InsI0->eraseFromParent();
-    ExtrI0->eraseFromParent();
+    Shuff->eraseFromParent();
   }
   // Check out of bounds!.
   auto *Ty2xi32 = sandboxir::FixedVectorType::get(Int32Ty, 2);

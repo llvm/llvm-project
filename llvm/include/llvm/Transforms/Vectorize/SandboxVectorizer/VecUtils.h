@@ -283,36 +283,25 @@ public:
       // This may be folded into a Constant if LastInsert is a Constant. In
       // that case we only collect the last constant.
       return ExtractElementInst::create(FromVec, ExtractLaneC, WhereIt, Ctx,
-                                        "UnPack");
+                                        "Unpack");
     }
-    // For vector elements we emit a sequence of Extracts and Inserts.
+    // For vector elements we emit a shuffle.
     // For example, extracting lanes 2 and 3 of a <4 x i32> vector %vec:
-    //   %extr0 = extractelementinst <4 x i32> %vec,   i32 2
-    //   %ins0  = insertelementinst  <2 x i32> poison, i32 %extr0, i32 0
-    //   %extr1 = extractelementisnt <4 x i32> %vec,   i32 3
-    //   %ins1  = insertelementinst  <2 x i32> %ins0,  i32 %extr1, i32 1
+    //   %extr0 = shufflevectorinst <4 x i32> %vec, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+    auto *VecTy = cast<FixedVectorType>(FromVec->getType());
     auto *ExtrVecTy = cast<FixedVectorType>(ExtrTy);
-    assert(ExtrVecTy->getElementType() ==
-               cast<FixedVectorType>(FromVec->getType())->getElementType() &&
+    assert(ExtrVecTy->getElementType() == VecTy->getElementType() &&
            "Expected same element type!");
-    Value *ExtractedVec = PoisonValue::get(ExtrVecTy);
-    Value *LastIns = nullptr;
+    SmallVector<int, 4> Mask;
     for (unsigned Idx = 0, E = ExtrVecTy->getNumElements(); Idx != E; ++Idx) {
-      assert(Lane + Idx <
+      int MaskLane = Lane + Idx;
+      assert((unsigned)MaskLane <
                  cast<FixedVectorType>(FromVec->getType())->getNumElements() &&
              "Out of bounds!");
-      Constant *ExtractLaneC =
-          ConstantInt::getSigned(Type::getInt32Ty(Ctx), Lane + Idx);
-      auto *Elm = ExtractElementInst::create(FromVec, ExtractLaneC, WhereIt,
-                                             Ctx, "UnPackExt");
-
-      Constant *InsertLaneC =
-          ConstantInt::getSigned(Type::getInt32Ty(Ctx), Idx);
-      LastIns = InsertElementInst::create(ExtractedVec, Elm, InsertLaneC,
-                                          WhereIt, Ctx, "UnPackIns");
-      ExtractedVec = LastIns;
+      Mask.push_back(MaskLane);
     }
-    return LastIns;
+    return ShuffleVectorInst::create(FromVec, PoisonValue::get(VecTy), Mask,
+                                     WhereIt, Ctx, "Unpack");
   }
 
 #ifndef NDEBUG

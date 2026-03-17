@@ -53,10 +53,7 @@ define void @vector_external_users(ptr %ptr) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
 ; CHECK-NEXT:    [[VECL:%.*]] = load <3 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META2:![0-9]+]]
 ; CHECK-NEXT:    [[VEC:%.*]] = fsub <3 x float> [[VECL]], zeroinitializer, !sandboxvec [[META2]]
-; CHECK-NEXT:    [[UNPACKEXT:%.*]] = extractelement <3 x float> [[VEC]], i32 1, !sandboxvec [[META2]]
-; CHECK-NEXT:    [[UNPACKINS:%.*]] = insertelement <2 x float> poison, float [[UNPACKEXT]], i32 0, !sandboxvec [[META2]]
-; CHECK-NEXT:    [[UNPACKEXT1:%.*]] = extractelement <3 x float> [[VEC]], i32 2, !sandboxvec [[META2]]
-; CHECK-NEXT:    [[UNPACKINS2:%.*]] = insertelement <2 x float> [[UNPACKINS]], float [[UNPACKEXT1]], i32 1, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[UNPACKINS2:%.*]] = shufflevector <3 x float> [[VEC]], <3 x float> poison, <2 x i32> <i32 1, i32 2>, !sandboxvec [[META2]]
 ; CHECK-NEXT:    store <3 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META2]]
 ; CHECK-NEXT:    [[USER:%.*]] = fneg <2 x float> [[UNPACKINS2]]
 ; CHECK-NEXT:    ret void
