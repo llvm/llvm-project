@@ -58266,9 +58266,7 @@ static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
   }
 
   bool IsVector = SrcVT.isVector();
-  if (IsVector &&
-      (!SrcVT.isFixedLengthVector() || !DstVT.isFixedLengthVector() ||
-       SrcVT.getVectorElementCount() != DstVT.getVectorElementCount()))
+  if (IsVector && !SrcVT.isFixedLengthVector())
     return SDValue();
 
   EVT SrcEltVT = IsVector ? SrcVT.getVectorElementType() : SrcVT;
