@@ -8,6 +8,12 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswupper
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
   - name: iswcntrl
     standards:
       - stdc
@@ -51,6 +57,12 @@ functions:
     arguments:
       - type: wint_t
   - name: iswalnum
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswpunct
     standards:
       - stdc
     return_type: int

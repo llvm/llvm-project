@@ -17,6 +17,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
+#include <cinttypes>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -470,6 +471,9 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
         if (m_options.m_hide_pointer_value &&
             IsPointerValue(valobj.GetCompilerType())) {
         } else {
+          if (auto stripped = valobj.GetStrippedPointerValue(
+                  valobj.GetPointerValue().address))
+            m_stream->Printf(" (actual=0x%" PRIx64 ")", *stripped);
           if (ShouldShowName())
             m_stream->PutChar(' ');
           m_stream->PutCString(m_value);

@@ -527,6 +527,36 @@ auto get(MLIRContext *context, Ts &&...params) {
   }
 }
 
+namespace detail {
+template <typename T, typename... Ts>
+using has_get_checked_method = decltype(T::getChecked(std::declval<Ts>()...));
+} // namespace detail
+
+/// Helper method analogous to `get`, but uses `getChecked` when available to
+/// allow graceful failure on invalid parameters instead of asserting.
+///
+/// Only the no-context form of `getChecked` is tried here. Types that expose
+/// `getChecked(emitError, params...)` without a leading `MLIRContext*` (e.g.
+/// MemRefType, VectorType, RankedTensorType) will use it for graceful failure.
+/// Everything else falls back to `get<T>()`.  We intentionally do NOT try
+/// `T::getChecked(emitError, context, params...)`: for types that only inherit
+/// the base `StorageUserBase::getChecked` template (e.g. ArrayAttr), that
+/// template instantiation requires a complete storage type which may not be
+/// available in the bytecode reading TU.
+template <typename T, typename... Ts>
+auto getChecked(function_ref<InFlightDiagnostic()> emitError,
+                MLIRContext *context, Ts &&...params) {
+  if constexpr (llvm::is_detected<detail::has_get_checked_method, T,
+                                  function_ref<InFlightDiagnostic()>,
+                                  Ts...>::value) {
+    (void)context;
+    return T::getChecked(emitError, std::forward<Ts>(params)...);
+  } else {
+    // Fall back to get() for types that don't define a no-context getChecked.
+    return get<T>(context, std::forward<Ts>(params)...);
+  }
+}
+
 } // namespace mlir
 
 #endif // MLIR_BYTECODE_BYTECODEIMPLEMENTATION_H

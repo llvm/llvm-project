@@ -9,6 +9,6 @@
 #include <clc/relational/clc_isnan.h>
 
 #define __CLC_FUNCTION isnan
-#define __CLC_BODY "unary_def.inc"
+#define __CLC_BODY "relational_unary_def.inc"
 
 #include <clc/math/gentype.inc>
