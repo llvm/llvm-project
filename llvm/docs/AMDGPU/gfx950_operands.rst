@@ -1016,23 +1016,6 @@ Instruction input.
 
 *Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`exec<amdgpu_synid_exec>`, :ref:`vccz<amdgpu_synid_vccz>`, :ref:`execz<amdgpu_synid_execz>`, :ref:`scc<amdgpu_synid_scc>`, :ref:`fconst<amdgpu_synid_fconst>`, :ref:`literal<amdgpu_synid_literal>`
 
-.. _amdgpu_synid_gfx950_tgt:
-
-tgt
----
-
-An export target:
-
-    ================== ===================================
-    Syntax             Description
-    ================== ===================================
-    pos{0..3}          Copy vertex position 0..3.
-    param{0..31}       Copy vertex parameter 0..31.
-    mrt{0..7}          Copy pixel color to the MRTs 0..7.
-    mrtz               Copy pixel depth (Z) data.
-    null               Copy nothing.
-    ================== ===================================
-
 .. _amdgpu_synid_gfx950_vaddr_5d0b42:
 
 vaddr
@@ -1438,17 +1421,6 @@ Interpolation parameter to read:
     p20          Parameter *P20*.
     ============ ===================================
 
-.. _amdgpu_synid_gfx950_vsrc0:
-
-vsrc0
------
-
-Instruction input.
-
-*Size:* 1 dword.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`
-
 .. _amdgpu_synid_gfx950_vsrc1_6802ce:
 
 vsrc1
@@ -1468,28 +1440,6 @@ vsrc1
 Instruction input.
 
 *Size:* 2 dwords.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`
-
-.. _amdgpu_synid_gfx950_vsrc2:
-
-vsrc2
------
-
-Instruction input.
-
-*Size:* 1 dword.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`
-
-.. _amdgpu_synid_gfx950_vsrc3:
-
-vsrc3
------
-
-Instruction input.
-
-*Size:* 1 dword.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`
 
