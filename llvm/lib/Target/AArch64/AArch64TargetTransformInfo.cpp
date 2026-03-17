@@ -2949,6 +2949,36 @@ instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineFCMPCC(InstCombiner &IC,
+                                                      IntrinsicInst &II) {
+  if (!isAllActivePredicate(II.getOperand(0)))
+    return std::nullopt;
+
+  Intrinsic::ID IID = II.getIntrinsicID();
+  FCmpInst::Predicate Cond = FCmpInst::FCMP_FALSE;
+  switch (IID) {
+  default:
+    return std::nullopt;
+  case Intrinsic::aarch64_sve_fcmpge:
+    Cond = FCmpInst::FCMP_OGE;
+    break;
+  case Intrinsic::aarch64_sve_fcmpeq:
+    Cond = FCmpInst::FCMP_OEQ;
+    break;
+  case Intrinsic::aarch64_sve_fcmpgt:
+    Cond = FCmpInst::FCMP_OGT;
+    break;
+  case Intrinsic::aarch64_sve_fcmpne:
+    Cond = FCmpInst::FCMP_ONE;
+    break;
+  case Intrinsic::aarch64_sve_fcmpuo:
+    Cond = FCmpInst::FCMP_UNO;
+    break;
+  }
+  return IC.replaceInstUsesWith(
+      II, IC.Builder.CreateFCmp(Cond, II.getOperand(1), II.getOperand(2)));
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -3060,6 +3090,12 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEUxt(IC, II, 32);
   case Intrinsic::aarch64_sme_in_streaming_mode:
     return instCombineInStreamingMode(IC, II);
+  case Intrinsic::aarch64_sve_fcmpge:
+  case Intrinsic::aarch64_sve_fcmpeq:
+  case Intrinsic::aarch64_sve_fcmpgt:
+  case Intrinsic::aarch64_sve_fcmpne:
+  case Intrinsic::aarch64_sve_fcmpuo:
+    return instCombineFCMPCC(IC, II);
   }
 
   return std::nullopt;
