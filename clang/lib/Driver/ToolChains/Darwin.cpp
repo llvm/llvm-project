@@ -2484,6 +2484,7 @@ std::optional<DarwinSDKInfo> parseSDKSettings(llvm::vfs::FileSystem &VFS,
 
 void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const OptTable &Opts = getDriver().getOpts();
+  bool TryXcselect = false;
 
   // Support allowing the SDKROOT environment variable used by xcrun and other
   // Xcode tools to define the default sysroot, by making it the default for
@@ -2500,6 +2501,9 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
       Args.append(Args.MakeSeparateArg(
           nullptr, Opts.getOption(options::OPT_isysroot), env));
     }
+  } else {
+    TryXcselect = !Args.getLastArg(options::OPT__sysroot_EQ) &&
+                  !Args.getLastArg(options::OPT_no_xcselect);
   }
 
   // Read the SDKSettings.json file for more information, like the SDK version
@@ -2642,9 +2646,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
 #ifdef CLANG_USE_XCSELECT
     // If we don't have an SDK yet and are on macOS, try to inject one using
     // xcselect, except when passed --no-xcselect.
-    if (!Args.hasArg(options::OPT_no_xcselect) &&
-        !Args.getLastArg(options::OPT_isysroot) && !::getenv("SDKROOT") &&
-        !SDKInfo) {
+    if (TryXcselect && !SDKInfo) {
       char *p;
       if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
         Args.append(Args.MakeSeparateArg(
