@@ -2218,7 +2218,7 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
   if (VD->hasAttr<ObjCPreciseLifetimeAttr>() && Ty->isObjCObjectPointerType())
     return;
 
-  auto iter = RefsMinusAssignments.find(VD);
+  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
   if (iter == RefsMinusAssignments.end())
     return;
 
@@ -2300,7 +2300,7 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
       if (auto *VD = dyn_cast<VarDecl>(D);
           VD && !VD->isInternalLinkageFileVar()) {
         DiagnoseUnusedButSetDecl(VD, addDiag);
-        RefsMinusAssignments.erase(VD);
+        RefsMinusAssignments.erase(VD->getCanonicalDecl());
       }
     }
 

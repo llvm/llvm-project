@@ -7013,6 +7013,9 @@ public:
   /// Increment when we find a reference; decrement when we find an ignored
   /// assignment.  Ultimately the value is 0 if every reference is an ignored
   /// assignment.
+  ///
+  /// Uses canonical VarDecl as key so in-class decls and out-of-class defs of
+  /// static data members get tracked as a single entry.
   llvm::DenseMap<const VarDecl *, int> RefsMinusAssignments;
 
   /// Used to control the generation of ExprWithCleanups.

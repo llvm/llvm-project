@@ -103,11 +103,11 @@ void f5() {
 namespace {
   class AnonClass {
   public:
-    static int unused_member;
+    static int unused_member; // expected-warning {{variable 'unused_member' set but not used}}
     static int used_member;
   };
 
-  int AnonClass::unused_member = 0; // expected-warning {{variable 'unused_member' set but not used}}
+  int AnonClass::unused_member = 0;
   int AnonClass::used_member = 0;
 }
 
@@ -122,12 +122,44 @@ void f6() {
 namespace outer2 {
   namespace {
     struct NestedAnonClass {
-      static int v;
+      static int v; // expected-warning {{variable 'v' set but not used}}
     };
-    int NestedAnonClass::v = 0; // expected-warning {{variable 'v' set but not used}}
+    int NestedAnonClass::v = 0;
   }
 }
 
 void f7() {
   outer2::NestedAnonClass::v = 5;
+}
+
+// Static data members set inside methods, read outside.
+namespace {
+  struct SetInMethod {
+    static int x;
+    static int y; // expected-warning {{variable 'y' set but not used}}
+    void setX() { x = 1; }
+    void setY() { y = 1; }
+  };
+  int SetInMethod::x;
+  int SetInMethod::y;
+}
+
+void f8() {
+  SetInMethod s;
+  s.setX();
+  s.setY();
+  int v = SetInMethod::x;
+  (void)v;  // only x is read
+}
+
+// External linkage static data members set inside methods.
+struct ExtSetInMethod {
+  static int x;
+  void set() { x = 1; }
+};
+int ExtSetInMethod::x;
+
+void f9() {
+  ExtSetInMethod e;
+  e.set();
 }

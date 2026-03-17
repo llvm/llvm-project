@@ -1220,7 +1220,9 @@ public:
     // it syntactically instead.
     if (!isFileVarDecl())
       return false;
-    if (getStorageClass() == SC_Static)
+    // Linkage is determined by enclosing class/namespace for static data
+    // members.
+    if (getStorageClass() == SC_Static && !isStaticDataMember())
       return true;
     return isInAnonymousNamespace();
   }

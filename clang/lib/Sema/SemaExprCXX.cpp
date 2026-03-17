@@ -7483,7 +7483,7 @@ static void MaybeDecrementCount(
   if ((IsCompoundAssign || isIncrementDecrementUnaryOp) &&
       VD->getType().isVolatileQualified())
     return;
-  auto iter = RefsMinusAssignments.find(VD);
+  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
   if (iter == RefsMinusAssignments.end())
     return;
   iter->getSecond()--;
