@@ -2649,13 +2649,14 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   // Set the tool chain target information.
   if (Platform == MacOS) {
 #ifdef CLANG_USE_XCSELECT
-    if (TryXcselect && !SDKInfo) {
+    if (TryXcselect) {
       char *p;
       if (!::xcselect_host_sdk_path(CLANG_XCSELECT_HOST_SDK_POLICY, &p)) {
         Args.append(Args.MakeSeparateArg(
             nullptr, Opts.getOption(options::OPT_isysroot), p));
         ::free(p);
-        SDKInfo = parseSDKSettings(getVFS(), Args, getDriver());
+        if (!SDKInfo)
+          SDKInfo = parseSDKSettings(getVFS(), Args, getDriver());
       }
     }
 #endif
