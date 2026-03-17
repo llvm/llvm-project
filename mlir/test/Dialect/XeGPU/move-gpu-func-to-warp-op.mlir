@@ -1,4 +1,4 @@
-// RUN: mlir-opt -xevm-attach-target='chip=pvc' -test-xegpu-move-func-to-warp-op -split-input-file --allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt -xevm-attach-target='chip=pvc' -test-xegpu-move-func-to-warp-op -split-input-file %s | FileCheck %s
 
 gpu.module @test {
 gpu.func @empty()  {
@@ -46,7 +46,7 @@ gpu.module @test {
 gpu.func @already_in_warp_op() {
   %laneid = gpu.lane_id
   gpu.warp_execute_on_lane_0(%laneid)[16] {
-    "some_op"() : () -> ()
+    "test.unknown"() : () -> ()
     gpu.yield
   }
   gpu.return
@@ -56,7 +56,7 @@ gpu.func @already_in_warp_op() {
 // CHECK-LABEL: gpu.func @already_in_warp_op()
 // CHECK:         %[[LANEID:.*]] = gpu.lane_id
 // CHECK:         gpu.warp_execute_on_lane_0(%[[LANEID]])[16]
-// CHECK:           "some_op"() : () -> ()
+// CHECK:           "test.unknown"() : () -> ()
 // CHECK:         gpu.return
 
 // -----
