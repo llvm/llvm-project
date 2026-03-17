@@ -24992,7 +24992,7 @@ bool SLPVectorizerPass::vectorizeStores(
           continue;
       }
 
-      if (Operands.size() > 1 ||
+      if (Operands.size() > 1 &&
           Visited
               .insert({Operands.front(),
                        cast<StoreInst>(Operands.front())->getValueOperand(),
