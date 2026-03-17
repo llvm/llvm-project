@@ -152,6 +152,12 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
     return;
   }
 
+  // Identify all branches/edges that **directly** control VPBB's mask, i.e.,
+  //   * control flow does not re-converge before reaching VPBB
+  //   * control flow does not branch further beore reaching VPBB
+  // Those conditional branches originate exactly in the post-dominance frontier
+  // of VPBB, with the edge destinations being post-dominated by VPBB.
+
   VPValue *BlockMask = nullptr;
   assert(VPPDF.find(VPBB) != VPPDF.end() &&
          "PostDomFrontier cannot be empty because header mask should have been "
