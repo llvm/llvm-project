@@ -1751,6 +1751,87 @@ libc_support_library(
     ],
 )
 
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_open",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/open.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_fcntl_macros",
+        ":types_mode_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_close",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/close.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_read",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/read.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_write",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/write.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_getrandom",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+    ],
+)
+
 libc_support_library(
     name = "__support_osutil_linux_auxv",
     hdrs = ["src/__support/OSUtil/linux/auxv.h"],
@@ -9372,7 +9453,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_fcntl",
+        ":__support_osutil_linux_syscall_wrappers_open",
         ":errno",
         ":hdr_fcntl_macros",
         ":types_mode_t",
@@ -9466,7 +9547,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_fcntl",
+        ":__support_osutil_linux_syscall_wrappers_close",
         ":errno",
     ],
 )
@@ -9782,7 +9863,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_macros_sanitizer",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_read",
         ":errno",
         ":hdr_unistd_macros",
         ":types_size_t",
@@ -9964,7 +10045,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_write",
         ":errno",
         ":hdr_unistd_macros",
         ":types_size_t",
@@ -10881,7 +10962,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
-        ":__support_osutil_fcntl",
+        ":__support_osutil_linux_syscall_wrappers_open",
         ":errno",
         ":hdr_fcntl_macros",
         ":shm_common",
