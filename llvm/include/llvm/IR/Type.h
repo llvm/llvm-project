@@ -52,7 +52,7 @@ public:
   /// Type::getPrimitiveType function, or else things will break!
   /// Also update LLVMTypeKind and LLVMGetTypeKind () in the C binding.
   ///
-  enum TypeID : unsigned {
+  enum TypeID : uint8_t {
     // PrimitiveTypes
     HalfTyID = 0,  ///< 16-bit floating point type
     BFloatTyID,    ///< 16-bit floating point type (7-bit significand)
