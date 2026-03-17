@@ -1865,6 +1865,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       return DAG.getConstant(*CI, DL, VT);
     }
 
+    if (const ConstantByte *CB = dyn_cast<ConstantByte>(C))
+      return DAG.getConstant(CB->getValue(), getCurSDLoc(), VT);
+
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
       return DAG.getGlobalAddress(GV, getCurSDLoc(), VT);
 
@@ -8318,9 +8321,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     auto DL = getCurSDLoc();
     SDValue Op = getValue(I.getOperand(0));
     EVT OpVT = Op.getValueType();
+    EVT RetTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    bool ZeroIsPoison =
+        !cast<ConstantSDNode>(getValue(I.getOperand(1)))->isZero();
 
     if (!TLI.shouldExpandCttzElements(OpVT)) {
-      visitTargetIntrinsic(I, Intrinsic);
+      SDValue Ret = DAG.getNode(ZeroIsPoison ? ISD::CTTZ_ELTS_ZERO_POISON
+                                             : ISD::CTTZ_ELTS,
+                                sdl, RetTy, Op);
+      setValue(&I, Ret);
       return;
     }
 
@@ -8334,8 +8343,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     // If the zero-is-poison flag is set, we can assume the upper limit
     // of the result is VF-1.
-    bool ZeroIsPoison =
-        !cast<ConstantSDNode>(getValue(I.getOperand(1)))->isZero();
     ConstantRange VScaleRange(1, true); // Dummy value.
     if (isa<ScalableVectorType>(I.getOperand(0)->getType()))
       VScaleRange = getVScaleRange(I.getCaller(), 64);
@@ -8359,7 +8366,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Max = DAG.getNode(ISD::VECREDUCE_UMAX, DL, NewEltTy, And);
     SDValue Sub = DAG.getNode(ISD::SUB, DL, NewEltTy, VL, Max);
 
-    EVT RetTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
     SDValue Ret = DAG.getZExtOrTrunc(Sub, DL, RetTy);
 
     setValue(&I, Ret);

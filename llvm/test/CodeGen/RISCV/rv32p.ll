@@ -1210,3 +1210,25 @@ define i64 @wsubau_zext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
   %sum = add i64 %sub, %ext_b
   ret i64 %sum
 }
+
+define i64 @waddu(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: waddu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    waddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %sum = add i64 %ext_a, %ext_b
+  ret i64 %sum
+}
+
+define i64 @wsubu(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsubu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %diff = sub i64 %ext_a, %ext_b
+  ret i64 %diff
+}
