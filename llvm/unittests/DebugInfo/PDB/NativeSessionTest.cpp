@@ -121,6 +121,10 @@ TEST(NativeSessionTest, TestModuleIndexLookupForGaps) {
 
   // SimpleTest.pdb leaves a gap between two mods in section 1 at [10, 16).
   uint16_t ModuleIndex;
-  EXPECT_FALSE(NS.moduleIndexForSectOffset(1, 12, ModuleIndex));
-  EXPECT_FALSE(NS.moduleIndexForVA(NS.getVAFromSectOffset(1, 12), ModuleIndex));
+  EXPECT_TRUE(NS.moduleIndexForSectOffset(1, 9, ModuleIndex));
+  EXPECT_TRUE(NS.moduleIndexForVA(NS.getVAFromSectOffset(1, 9), ModuleIndex));
+  EXPECT_FALSE(NS.moduleIndexForSectOffset(1, 10, ModuleIndex));
+  EXPECT_FALSE(NS.moduleIndexForVA(NS.getVAFromSectOffset(1, 10), ModuleIndex));
+  EXPECT_TRUE(NS.moduleIndexForSectOffset(1, 16, ModuleIndex));
+  EXPECT_TRUE(NS.moduleIndexForVA(NS.getVAFromSectOffset(1, 16), ModuleIndex));
 }
