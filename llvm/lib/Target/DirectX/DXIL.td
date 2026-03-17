@@ -1152,7 +1152,11 @@ def WaveActiveBit : DXILOp<120, waveActiveBit> {
   let intrinsics = [
     IntrinSelect<int_dx_wave_reduce_or,
                  [
-                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,                   
+                 ]>,
+    IntrinSelect<int_dx_wave_reduce_xor,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Xor>,
                  ]>,
   ];
 

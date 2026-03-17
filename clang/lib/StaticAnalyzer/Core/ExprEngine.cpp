@@ -2562,7 +2562,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
     unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
     if (Term) {
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
                                                  Pred, maxBlockVisitOnPath);
@@ -2580,10 +2580,10 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
 
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
-  unsigned int BlockCount = Builder.getContext().blockCount();
+  unsigned int BlockCount = getNumVisitedCurrent();
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
-    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = getCurrBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
 
@@ -2596,9 +2596,8 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // would be stale.  Ideally, we should pass on the terminator of the CFG
     // block, but the terminator cannot be referred as a CFG element.
     // Here we just pass the the first CFG element in the block.
-    ProgramStateRef WidenedState =
-        getWidenedLoopState(Pred->getState(), LCtx, BlockCount,
-                            *Builder.getContext().getBlock()->ref_begin());
+    ProgramStateRef WidenedState = getWidenedLoopState(
+        Pred->getState(), LCtx, BlockCount, *getCurrBlock()->ref_begin());
     Builder.generateNode(BE, WidenedState, Pred);
     return;
   }

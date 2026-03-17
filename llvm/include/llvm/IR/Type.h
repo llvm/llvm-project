@@ -26,6 +26,7 @@
 
 namespace llvm {
 
+class ByteType;
 class IntegerType;
 struct fltSemantics;
 class LLVMContext;
@@ -68,6 +69,7 @@ public:
 
     // Derived types... see DerivedTypes.h file.
     IntegerTyID,        ///< Arbitrary bit width integers
+    ByteTyID,           ///< Arbitrary bit width bytes
     FunctionTyID,       ///< Functions
     PointerTyID,        ///< Pointers
     StructTyID,         ///< Structures
@@ -236,6 +238,21 @@ public:
   /// Returns true if this is 'token' or a token-like target type.s
   LLVM_ABI bool isTokenLikeTy() const;
 
+  /// True if this is an instance of ByteType.
+  bool isByteTy() const { return getTypeID() == ByteTyID; }
+
+  /// Return true if this is a ByteType of the given width.
+  LLVM_ABI bool isByteTy(unsigned BitWidth) const;
+
+  /// Return true if this is a byte type or a vector of byte types.
+  bool isByteOrByteVectorTy() const { return getScalarType()->isByteTy(); }
+
+  /// Return true if this is a byte type or a vector of byte types of
+  /// the given width.
+  bool isByteOrByteVectorTy(unsigned BitWidth) const {
+    return getScalarType()->isByteTy(BitWidth);
+  }
+
   /// True if this is an instance of IntegerType.
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }
 
@@ -295,7 +312,7 @@ public:
   /// includes all first-class types except struct and array types.
   bool isSingleValueType() const {
     return isFloatingPointTy() || isIntegerTy() || isPointerTy() ||
-           isVectorTy() || isX86_AMXTy() || isTargetExtTy();
+           isVectorTy() || isX86_AMXTy() || isTargetExtTy() || isByteTy();
   }
 
   /// Return true if the type is an aggregate type. This means it is valid as
@@ -311,7 +328,8 @@ public:
   bool isSized(SmallPtrSetImpl<Type*> *Visited = nullptr) const {
     // If it's a primitive, it is always sized.
     if (getTypeID() == IntegerTyID || isFloatingPointTy() ||
-        getTypeID() == PointerTyID || getTypeID() == X86_AMXTyID)
+        getTypeID() == PointerTyID || getTypeID() == X86_AMXTyID ||
+        getTypeID() == ByteTyID)
       return true;
     // If it is not something that can have a size (e.g. a function or label),
     // it doesn't have a size.
@@ -394,6 +412,7 @@ public:
   // methods should not be added here.
 
   LLVM_ABI inline unsigned getIntegerBitWidth() const;
+  LLVM_ABI inline unsigned getByteBitWidth() const;
 
   LLVM_ABI inline Type *getFunctionParamType(unsigned i) const;
   LLVM_ABI inline unsigned getFunctionNumParams() const;
@@ -451,6 +470,13 @@ public:
   LLVM_ABI static Type *getPPC_FP128Ty(LLVMContext &C);
   LLVM_ABI static Type *getX86_AMXTy(LLVMContext &C);
   LLVM_ABI static Type *getTokenTy(LLVMContext &C);
+  LLVM_ABI static ByteType *getByteNTy(LLVMContext &C, unsigned N);
+  LLVM_ABI static ByteType *getByte1Ty(LLVMContext &C);
+  LLVM_ABI static ByteType *getByte8Ty(LLVMContext &C);
+  LLVM_ABI static ByteType *getByte16Ty(LLVMContext &C);
+  LLVM_ABI static ByteType *getByte32Ty(LLVMContext &C);
+  LLVM_ABI static ByteType *getByte64Ty(LLVMContext &C);
+  LLVM_ABI static ByteType *getByte128Ty(LLVMContext &C);
   LLVM_ABI static IntegerType *getIntNTy(LLVMContext &C, unsigned N);
   LLVM_ABI static IntegerType *getInt1Ty(LLVMContext &C);
   LLVM_ABI static IntegerType *getInt8Ty(LLVMContext &C);
@@ -474,6 +500,17 @@ public:
   }
   LLVM_ABI static Type *getFloatingPointTy(LLVMContext &C,
                                            const fltSemantics &S);
+
+  //===--------------------------------------------------------------------===//
+  // Convenience methods for getting byte/integer types.
+  //
+  /// Returns an integer (vector of integer) type with the same size of a byte
+  /// of the given byte (vector of byte) type.
+  LLVM_ABI static Type *getIntFromByteType(Type *);
+
+  /// Returns a byte (vector of byte) type with the same size of an integer of
+  /// the given integer (vector of integer) type.
+  LLVM_ABI static Type *getByteFromIntType(Type *);
 
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types.

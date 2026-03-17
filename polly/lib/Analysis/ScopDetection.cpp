@@ -886,7 +886,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
         if (auto *AF2 = dyn_cast<SCEVAddRecExpr>(Op))
           collectParametricTerms(SE, AF2, Terms);
         if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
-          SmallVector<const SCEV *, 0> Operands;
+          SmallVector<SCEVUse, 0> Operands;
 
           for (const SCEV *MulOp : AF2->operands()) {
             if (auto *Const = dyn_cast<SCEVConstant>(MulOp))

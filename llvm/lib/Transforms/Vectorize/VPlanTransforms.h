@@ -155,9 +155,7 @@ struct VPlanTransforms {
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
-  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan,
-                                               bool RequiresScalarEpilogueCheck,
-                                               bool TailFolded);
+  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
   // Create a check to \p Plan to see if the vector loop should be executed.
   static void addMinimumIterationCheck(
