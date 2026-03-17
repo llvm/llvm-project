@@ -63,13 +63,16 @@ static void printOffloadBinaryMetadata(const OffloadBinary &OB,
 }
 
 static void printBinary(const OffloadBinary &OB, uint64_t Index,
-                        uint64_t Level = 0, std::string ParentIndex = "");
+                        uint64_t Level = 0, std::string ParentIndex = "") {
+  outs() << "\n"
+         << Indent(Level) << "OFFLOADING IMAGE [" << ParentIndex << Index
+         << "]:\n";
 
-/// Print information about nested OffloadBinary (inner layer).
-static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
-                                     uint64_t Index, uint64_t Level,
-                                     std::string ParentIndex) {
-  StringRef ImageData = OuterOB.getImage();
+  printOffloadBinaryMetadata(OB, Level);
+
+  StringRef ImageData = OB.getImage();
+  if (identify_magic(ImageData) != file_magic::offload_binary)
+    return;
 
   MemoryBufferRef InnerBuffer(ImageData, "inner-offload-binary");
   llvm::SmallVector<OffloadFile> InnerBinaries;
@@ -77,12 +80,11 @@ static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
   if (Err) {
     reportWarning("failed to extract nested OffloadBinary: " +
                       toString(std::move(Err)),
-                  OuterOB.getFileName());
+                  OB.getFileName());
     return;
   }
   if (InnerBinaries.empty()) {
-    reportWarning("nested OffloadBinary contains no entries",
-                  OuterOB.getFileName());
+    reportWarning("nested OffloadBinary contains no entries", OB.getFileName());
     return;
   }
 
@@ -91,22 +93,9 @@ static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
 
   for (uint64_t I = 0, E = InnerBinaries.size(); I != E; ++I) {
     const OffloadBinary *InnerOB = InnerBinaries[I].getBinary();
-    printBinary(*InnerOB, I, Level + 1, ParentIndex);
+    printBinary(*InnerOB, I, Level + 1,
+                ParentIndex + std::to_string(Index) + ".");
   }
-}
-
-static void printBinary(const OffloadBinary &OB, uint64_t Index, uint64_t Level,
-                        std::string ParentIndex) {
-  outs() << "\n"
-         << Indent(Level) << "OFFLOADING IMAGE [" << ParentIndex << Index
-         << "]:\n";
-
-  printOffloadBinaryMetadata(OB, Level);
-
-  StringRef ImageData = OB.getImage();
-  if (identify_magic(ImageData) == file_magic::offload_binary)
-    printNestedOffloadBinary(OB, Index, Level,
-                             ParentIndex + std::to_string(Index) + ".");
 }
 
 /// Print the embedded offloading contents of an ObjectFile \p O.
