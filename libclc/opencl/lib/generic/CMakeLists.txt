@@ -224,7 +224,7 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   workitem/get_work_dim.cl
 )
 
-libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} "${flag_prefix}-fapprox-func"
+libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
   math/native_cos.cl
   math/native_divide.cl
   math/native_exp.cl
