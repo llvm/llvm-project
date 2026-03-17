@@ -26,7 +26,7 @@ define i64 @gep_idx_zero_multi_use(i64 %idx) {
 ;
   %base = alloca [1 x %struct.pair], align 16
   call void @init(ptr %base)
-  %gep = getelementptr inbounds [1 x %struct.pair], ptr %base, i64 %idx
+  %gep = getelementptr inbounds [16 x i8], ptr %base, i64 %idx
   %load1 = load i64, ptr %gep, align 16
   %off = getelementptr inbounds i8, ptr %gep, i64 8
   %load2 = load i64, ptr %off, align 8
@@ -45,7 +45,7 @@ define i64 @gep_idx_zero_multi_use_store(i64 %idx, i64 %val) {
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
   %base = alloca [1 x %struct.pair], align 16
-  %gep = getelementptr inbounds [1 x %struct.pair], ptr %base, i64 %idx
+  %gep = getelementptr inbounds [16 x i8], ptr %base, i64 %idx
   store i64 %val, ptr %gep, align 16
   %off = getelementptr inbounds i8, ptr %gep, i64 8
   %load = load i64, ptr %off, align 8
@@ -71,13 +71,13 @@ define i64 @gep_idx_zero_different_bb(i64 %idx, i1 %cond) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[BASE]], align 16
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x [[STRUCT_PAIR]]], ptr [[BASE]], i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i8], ptr [[BASE]], i64 [[IDX]]
 ; CHECK-NEXT:    call void @use_ptr(ptr nonnull [[GEP]])
 ; CHECK-NEXT:    ret i64 0
 ;
   %base = alloca [1 x %struct.pair], align 16
   call void @init(ptr %base)
-  %gep = getelementptr inbounds [1 x %struct.pair], ptr %base, i64 %idx
+  %gep = getelementptr inbounds [16 x i8], ptr %base, i64 %idx
   br i1 %cond, label %then, label %else
 
 then:
@@ -105,7 +105,7 @@ define i64 @gep_idx_zero_may_throw(i64 %idx) {
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[BASE:%.*]] = alloca [1 x [[STRUCT_PAIR:%.*]]], align 16
 ; CHECK-NEXT:    call void @init(ptr nonnull [[BASE]])
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x [[STRUCT_PAIR]]], ptr [[BASE]], i64 [[IDX]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i8], ptr [[BASE]], i64 [[IDX]]
 ; CHECK-NEXT:    call void @nounwind_use(ptr nonnull [[GEP]])
 ; CHECK-NEXT:    call void @may_throw()
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[BASE]], align 16
@@ -113,7 +113,7 @@ define i64 @gep_idx_zero_may_throw(i64 %idx) {
 ;
   %base = alloca [1 x %struct.pair], align 16
   call void @init(ptr %base)
-  %gep = getelementptr inbounds [1 x %struct.pair], ptr %base, i64 %idx
+  %gep = getelementptr inbounds [16 x i8], ptr %base, i64 %idx
   call void @nounwind_use(ptr %gep)
   call void @may_throw()
   %load = load i64, ptr %gep, align 16
