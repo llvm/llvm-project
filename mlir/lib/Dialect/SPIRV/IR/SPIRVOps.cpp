@@ -975,7 +975,7 @@ LogicalResult spirv::ExecutionModeIdOp::verify() {
   if (getValues().empty())
     return emitOpError("expected at least one value operand");
 
-  for (const Attribute &value : getValues()) {
+  for (Attribute value : getValues()) {
     auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);
     if (!valueSymbol)
       return emitOpError("expected value operands to be symbol reference");
