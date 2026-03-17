@@ -277,9 +277,9 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   __CLC_INTN i = __CLC_AS_INTN(p7 >> 29U);
 
   // Scoot up 2 more bits so only fraction remains
-  p7 = bitalign(p7, p6, 30);
-  p6 = bitalign(p6, p5, 30);
-  p5 = bitalign(p5, p4, 30);
+  p7 = bitalign(p7, p6, (__CLC_UINTN)30u);
+  p6 = bitalign(p6, p5, (__CLC_UINTN)30u);
+  p5 = bitalign(p5, p4, (__CLC_UINTN)30u);
 
   // Subtract 1 if msb of fraction is 1, i.e. fraction >= 0.5
   __CLC_UINTN flip = (i & 1) != 0 ? 0xFFFFFFFFU : 0U;
@@ -299,12 +299,12 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
       __CLC_AS_FLOATN(sign | ((127U - __CLC_AS_UINTN(xe)) << 23U) | p7 >> 9);
 
   // Shift out bits we captured on q1
-  p7 = bitalign(p7, p6, 32 - 23);
+  p7 = bitalign(p7, p6, (__CLC_UINTN)(32u - 23u));
 
   // Get 24 more bits of fraction in another float, there are not long strings
   // of zeroes here
   __CLC_INTN xxe = __CLC_AS_INTN(__clc_clz(p7)) + 1;
-  p7 = bitalign(p7, p6, 32 - xxe);
+  p7 = bitalign(p7, p6, __CLC_CONVERT_UINTN(32 - xxe));
   __CLC_FLOATN q0 = __CLC_AS_FLOATN(
       sign | ((127U - __CLC_AS_UINTN(xe + 23 + xxe)) << 23U) | p7 >> 9);
 

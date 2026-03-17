@@ -16,7 +16,7 @@
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
 
-#define bitalign(hi, lo, shift) ((hi) << (32 - (shift))) | ((lo) >> (shift));
+#define bitalign(hi, lo, shift) __builtin_elementwise_fshr(hi, lo, shift)
 
 #define __CLC_FULL_MUL(A, B, HI, LO)                                           \
   LO = A * B;                                                                  \
