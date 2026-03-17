@@ -324,10 +324,10 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
         if (auto Err = releaseEvent(*Itr))
           addError(std::move(Err));
       }
-      // In either case, all the events are now reset and released
-      // back into the pool. We need to clear them from the queue.
-      AsyncQueue->WaitEvents.clear();
     }
+    // In either case, all the events are now reset and released
+    // back into the pool. We need to clear them from the queue.
+    AsyncQueue->WaitEvents.clear();
   }
 
   // Commit delayed USM2M copies.
