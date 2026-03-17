@@ -788,6 +788,13 @@ bool llvm::UnrollRuntimeLoopRemainder(
     return false;
   }
 
+  // LCSSA allows lifetime intrinsics and tokens to directly use loop
+  // instructions, as they cannot use a phi.
+  // Cloning loop blocks requires a phi join; just remove the problematic
+  // instructions.
+  if (cleanupDanglingLifetimeUsers(L, *DT))
+    LLVM_DEBUG(dbgs() << "Unroll: removed dangling lifetime users.\n");
+
   // Loop structure is the following:
   //
   // PreHeader

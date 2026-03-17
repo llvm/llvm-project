@@ -590,7 +590,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   bool EpilogProfitability =
       UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
                                               : isEpilogProfitable(L);
-
   if (ULO.Runtime &&
       !UnrollRuntimeLoopRemainder(
           L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
