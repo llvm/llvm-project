@@ -24609,8 +24609,9 @@ struct StoreChainContext {
   std::queue<unsigned> CandidateVFs;
   /// Track the TreeSizes of prior vectorization attempts using each element,
   /// to help us find early exit cases
-  /// .first contains pointer into RangeSizesByIdx to help us track
+  /// - first: contains pointer into RangeSizesByIdx to help us track
   /// vectorization of elements that belong to multiple chains
+  /// - second: contains cached TreeSize value for that element
   SmallVector<SizePair> RangeSizesStorage;
   SizePairArrayRef RangeSizes;
   /// Store information about failed vectorization attempts due to scheduling
