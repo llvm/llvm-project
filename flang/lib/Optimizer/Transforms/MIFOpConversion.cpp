@@ -727,13 +727,15 @@ struct MIFChangeTeamOpConversion
     mlir::cf::BranchOp::create(rewriter, loc, firstBlock);
 
     // Removing mif.end_team operation and add the call to prif_end_team.
-    auto endTeamOp = mlir::dyn_cast<mif::EndTeamOp>(lastBlock->getTerminator());
-    if (endTeamOp) {
+    if (auto endTeamOp =
+            mlir::dyn_cast<mif::EndTeamOp>(lastBlock->getTerminator())) {
       rewriter.setInsertionPoint(endTeamOp);
       genPrifEndTeamCallOp(endTeamOp, rewriter);
       mlir::cf::BranchOp::create(rewriter, loc, newBlock);
       rewriter.eraseOp(endTeamOp);
-    }
+    } else
+      fir::emitFatalError(loc,
+                          "internal error: missing expected mif::EndTeamOp");
 
     rewriter.eraseOp(op);
     return mlir::success();
