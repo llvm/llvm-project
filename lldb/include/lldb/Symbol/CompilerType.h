@@ -213,6 +213,8 @@ public:
 
   bool IsVoidType() const;
 
+  bool HasPointerAuthQualifier() const;
+
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
 

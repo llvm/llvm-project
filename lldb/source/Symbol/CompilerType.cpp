@@ -311,6 +311,13 @@ bool CompilerType::IsVoidType() const {
   return false;
 }
 
+bool CompilerType::HasPointerAuthQualifier() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->HasPointerAuthQualifier(m_type);
+  return false;
+}
+
 bool CompilerType::IsPointerToScalarType() const {
   if (!IsValid())
     return false;

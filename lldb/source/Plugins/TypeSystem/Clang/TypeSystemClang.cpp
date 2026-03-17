@@ -3639,6 +3639,13 @@ bool TypeSystemClang::IsVoidType(lldb::opaque_compiler_type_t type) {
   return GetCanonicalQualType(type)->isVoidType();
 }
 
+bool TypeSystemClang::HasPointerAuthQualifier(
+    lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+  return GetCanonicalQualType(type).getPointerAuth().isPresent();
+}
+
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
   if (auto *record_decl =
       TypeSystemClang::GetAsRecordDecl(type)) {
