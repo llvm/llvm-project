@@ -6616,8 +6616,7 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   // seem to be true in practice?
 
   for (Decl *Member : Class->decls()) {
-    if (isTemplateInstantiation(TSK) &&
-        Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+    if (Member->hasAttr<ExcludeFromExplicitInstantiationAttr>())
       continue;
 
     VarDecl *VD = dyn_cast<VarDecl>(Member);
