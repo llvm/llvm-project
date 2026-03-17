@@ -805,11 +805,11 @@ bool ReductionProcessor::processReductionArguments(
         if (!ReductionProcessor::supportedIntrinsicProcReduction(
                 *reductionIntrinsic)) {
           if (isByRef) {
-            // User-defined reduction on allocatable/pointer variable-
-            // we need a new declare_reduction for the boxed type, reusing
-            // the init value and combiner from the existing one. 
+            // create a new declare_reduction for the boxed type, reusing
+            // the existing init and combiner
             semantics::Symbol *sym = reductionIntrinsic->v.sym();
-            std::string baseName = sym->name().ToString();
+            llvm::StringRef baseName = {sym->name().begin(),
+                                        sym->name().size()};
             mlir::ModuleOp module = builder.getModule();
             auto existingDecl = module.lookupSymbol<OpType>(baseName);
             if (!existingDecl) {
@@ -1046,4 +1046,3 @@ int ReductionProcessor::getOperationIdentity(ReductionIdentifier redId,
 } // namespace omp
 } // namespace lower
 } // namespace Fortran
-
