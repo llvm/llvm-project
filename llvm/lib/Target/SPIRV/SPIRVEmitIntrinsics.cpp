@@ -423,11 +423,11 @@ static bool isMemInstrToReplace(Instruction *I) {
 }
 
 static bool isAggrConstForceInt32(const Value *V) {
+  bool IsAggrZero =
+      isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy();
   bool IsUndefAggregate = isa<UndefValue>(V) && V->getType()->isAggregateType();
   return isa<ConstantArray>(V) || isa<ConstantStruct>(V) ||
-         isa<ConstantDataArray>(V) ||
-         (isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy()) ||
-         IsUndefAggregate;
+         isa<ConstantDataArray>(V) || IsAggrZero || IsUndefAggregate;
 }
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {

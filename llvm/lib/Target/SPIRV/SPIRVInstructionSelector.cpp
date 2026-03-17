@@ -553,12 +553,14 @@ static bool isConstReg(MachineRegisterInfo *MRI, MachineInstr *OpDef) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_INTRINSIC:
     case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
-      if (cast<GIntrinsic>(*MI).getIntrinsicID() !=
-              Intrinsic::spv_const_composite &&
-          cast<GIntrinsic>(*MI).getIntrinsicID() != Intrinsic::spv_undef)
+    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS: {
+      GIntrinsic *GIntr = cast<GIntrinsic>(MI);
+      unsigned IntrID = GIntr->getIntrinsicID();
+      if (IntrID != Intrinsic::spv_const_composite &&
+          IntrID != Intrinsic::spv_undef)
         return false;
       continue;
+    }
     case TargetOpcode::G_BUILD_VECTOR:
     case TargetOpcode::G_SPLAT_VECTOR:
       for (unsigned i = OpDef->getNumExplicitDefs();
