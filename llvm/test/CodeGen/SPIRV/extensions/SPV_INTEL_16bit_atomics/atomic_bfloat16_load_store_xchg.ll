@@ -31,6 +31,7 @@ define spir_func void @test_atomic_bfloat16_load_store_xchg() {
 entry:
 ; TODO: 'load atomic'/'store atomic' LLVM instructions are not yet lowered to
 ; OpAtomicLoad/OpAtomicStore by the SPIRV backend; use OCL builtins instead.
+; TODO: test Vulkan path as well once we support atomic load/store.
   %load = call spir_func bfloat @_Z11atomic_loadPU3AS1VU7_AtomicDF16b(ptr addrspace(1) @val)
   call spir_func void @_Z12atomic_storePU3AS1VU7_AtomicDF16bDF16b(ptr addrspace(1) @val, bfloat 42.000000e+00)
   %xchg = atomicrmw xchg ptr addrspace(1) @val, bfloat 42.000000e+00 seq_cst
