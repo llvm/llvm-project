@@ -61,7 +61,7 @@ const B2 b2; // dev-note {{const variable cannot be emitted on device side due t
 const int b3 = func(); // dev-note {{const variable cannot be emitted on device side due to dynamic initialization}}
 
 template<typename F>
-__global__ void kernel(F f) { f(); } // dev-note2 {{called by 'kernel<(lambda}}
+__global__ void kernel(F f) { f(); } // dev-note4 {{called by 'kernel<(lambda}}
 
 __device__ void dev_fun(int *out) {
   // Check access device variables are allowed.

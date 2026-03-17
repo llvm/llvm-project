@@ -2023,22 +2023,21 @@ public:
     auto It = S.DeviceDeferredDiags.find(FD);
     if (It == S.DeviceDeferredDiags.end())
       return;
-    bool HasWarningOrError = false;
     for (PartialDiagnosticAt &PDAt : It->second) {
       if (S.Diags.hasFatalErrorOccurred())
         return;
       const SourceLocation &Loc = PDAt.first;
       const PartialDiagnostic &PD = PDAt.second;
-      HasWarningOrError |=
+      bool IsWarningOrError =
           S.getDiagnostics().getDiagnosticLevel(PD.getDiagID(), Loc) >=
           DiagnosticsEngine::Warning;
       {
         DiagnosticBuilder Builder(S.Diags.Report(Loc, PD.getDiagID()));
         PD.Emit(Builder);
       }
+      if (IsWarningOrError)
+        emitCallStackNotes(S, FD);
     }
-    if (HasWarningOrError)
-      emitCallStackNotes(S, FD);
   }
 
   void emitCollectedDiags() {

@@ -422,7 +422,7 @@ inline __host__ __device__ void test_host_device_wrong_side_overloading_inline_d
 
 __host__ __device__ void test_host_device_wrong_side_overloading_inline_diag_caller() {
   test_host_device_wrong_side_overloading_inline_diag();
-  // expected-note@-1 {{called by 'test_host_device_wrong_side_overloading_inline_diag_caller'}}
+  // expected-note@-1 2{{called by 'test_host_device_wrong_side_overloading_inline_diag_caller'}}
 }
 
 // Verify that we allow overloading function templates.

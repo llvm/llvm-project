@@ -22,15 +22,15 @@ __device__ auto l =
   };
 
 __device__ void df1() {
-  l(); // expected-note {{called by 'df1'}}
+  l(); // expected-note 2{{called by 'df1'}}
 }
 
 __device__ void df2() {
-  l(); // expected-note {{called by 'df2'}}
+  l(); // expected-note 2{{called by 'df2'}}
 }
 
 __device__ void df3() {
-  l(); // expected-note {{called by 'df3'}}
+  l(); // expected-note 2{{called by 'df3'}}
 }
 
 // Test with shared call chains: two chains reaching the same function
