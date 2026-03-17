@@ -1658,10 +1658,8 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
-  for (Function &F : M) {
-    if (!F.isIntrinsic())
-      Functions.insert(&F);
-  }
+  for (Function &F : M)
+    Functions.insert(&F);
 
   // TODO: Probably preserves CFG
   return runImpl(Functions, /*IsModulePass=*/true, /*DeleteFns=*/true, M, AG,
@@ -1682,8 +1680,7 @@ PreservedAnalyses llvm::AMDGPUAttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   SetVector<Function *> Functions;
   for (LazyCallGraph::Node &N : C) {
     Function *F = &N.getFunction();
-    if (!F->isIntrinsic())
-      Functions.insert(F);
+    Functions.insert(F);
   }
 
   AMDGPUAttributorOptions Options;
