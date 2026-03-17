@@ -178,6 +178,10 @@ def sve_cnth_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -8>">;
 def sve_cntw_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -4>">;
 def sve_cntd_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -2>">;
 
+def NEONSplatOfSVELogicalImmPat : ComplexPattern<vAny, 1, "SelectNEONSplatOfSVELogicalImm", []>;
+def NEONSplatOfSVEAddSubImm : ComplexPattern<vAny, 2, "SelectNEONSplatOfSVEAddSubImm", []>;
+def NEONSplatOfSVEArithSImm: ComplexPattern<vAny, 1, "SelectNEONSplatOfSVEArithSImm", []>;
+
 def SDT_AArch64Reduce : SDTypeProfile<1, 2, [SDTCisVec<1>, SDTCisVec<2>]>;
 def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3,
    [SDTCisVec<1>, SDTCVecEltisVT<1,i1>, SDTCisVec<3>, SDTCisSameNumEltsAs<1,3>]>;
@@ -389,8 +393,10 @@ def AArch64fdot : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
                             ]>;
 
 def SDT_AArch64FCVT : SDTypeProfile<1, 3, [
-  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
-  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>, SDTCisSameAs<0,3>
+  SDTCisVec<0>,
+  SDTCisVec<1>, SDTCisSameNumEltsAs<1,0>, SDTCVecEltisVT<1,i1>,
+  SDTCisVec<2>, SDTCisSameNumEltsAs<2,0>,
+  SDTCisSameAs<3,0>
 ]>;
 
 def SDT_AArch64FCVTR : SDTypeProfile<1, 4, [
@@ -981,6 +987,9 @@ let Predicates = [HasSVE_or_SME] in {
             (DUP_ZI_S $a, $b)>;
   def : Pat<(nxv2i64 (splat_vector (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)))),
             (DUP_ZI_D $a, $b)>;
+
+  def : Pat<(v2i64 (AArch64dup (i64 (SVECpyDupImm64Pat i32:$a, i32:$b)))),
+            (EXTRACT_SUBREG (DUP_ZI_D $a, $b), zsub)>;
 
   // Duplicate immediate FP into all vector elements.
   def : Pat<(nxv2f16 (splat_vector (f16 fpimm:$val))),
@@ -2518,6 +2527,12 @@ let Predicates = [HasSVE_or_SME] in {
             (LSL_ZZI_S $op, (i32 16))>;
   def : Pat<(nxv2f32 (AArch64fcvte_mt (SVEAnyPredicate), nxv2bf16:$op, undef)),
             (LSL_ZZI_S $op, (i32 16))>;
+
+  // A common sequence that occurs when promoting nxv8bf16 operations.
+  def : Pat<(nxv4f32 (AArch64fcvte_mt (SVEAnyPredicate), (extract_subvector nxv8bf16:$Zs, (i64 0)), undef)),
+            (ZIP1_ZZZ_H (SUBREG_TO_REG (MOVIv2d_ns (i32 0)), zsub), $Zs)>;
+  def : Pat<(nxv4f32 (AArch64fcvte_mt (SVEAnyPredicate), (extract_subvector nxv8bf16:$Zs, (i64 4)), undef)),
+            (ZIP2_ZZZ_H (SUBREG_TO_REG (MOVIv2d_ns (i32 0)), zsub), $Zs)>;
 
   // Signed integer -> Floating-point
   def : Pat<(nxv2f16 (AArch64scvtf_mt (nxv2i1 (SVEAllActive):$Pg),
@@ -4147,6 +4162,20 @@ let Predicates = [HasSVE2_or_SME] in {
   defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", AArch64bsl2n>;
   defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  AArch64nbsl>;
 
+  // Pseudos for commutable operations that expand to NBSL or BSL2N. These can
+  // avoid a COPY if one of the source registers can be clobbered, or otherwise
+  // use a MOVPRFX.
+  let isCommutable = 1, hasSideEffects = 0 in {
+    // EON (a, b) = BSL2N (a, a, b) = BSL2N (b, b, a)
+    def EON_ZZZ : Pseudo<(outs ZPR64:$Zd), (ins ZPR64:$Zn, ZPR64:$Zm), []>;
+
+    // NAND (a, b) = NBSL (a, b, b) = NBSL (b, a, a)
+    def NAND_ZZZ : Pseudo<(outs ZPR64:$Zd), (ins ZPR64:$Zn, ZPR64:$Zm), []>;
+
+    // NOR (a, b) = NBSL (a, b, a) = NBSL (b, a, b)
+    def NOR_ZZZ : Pseudo<(outs ZPR64:$Zd), (ins ZPR64:$Zn, ZPR64:$Zm), []>;
+  }
+
   multiclass binary_bitwise<ValueType VT, SDPatternOperator InOp, SDPatternOperator OutOp> {
     def : Pat<(InOp VT:$op1, VT:$op2), (OutOp $op1, $op2)>;
 
@@ -4160,17 +4189,14 @@ let Predicates = [HasSVE2_or_SME] in {
   }
 
   foreach VT = [nxv16i8, nxv8i16, nxv4i32, nxv2i64] in {
-    // EON (a, b) = BSL2N (a, a, b) = BSL2N (b, b, a)
     defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (vnot (xor node:$op1, node:$op2))>,
-                              OutPatFrag<(ops node:$op1, node:$op2), (BSL2N_ZZZZ $op1, $op1, $op2)>>;
+                              OutPatFrag<(ops node:$op1, node:$op2), (EON_ZZZ $op1, $op2)>>;
 
-    // NAND (a, b) = NBSL (a, b, b) = NBSL (b, a, a)
     defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (vnot (and node:$op1, node:$op2))>,
-                              OutPatFrag<(ops node:$op1, node:$op2), (NBSL_ZZZZ $op2, $op1, $op1)>>;
+                              OutPatFrag<(ops node:$op1, node:$op2), (NAND_ZZZ $op1, $op2)>>;
 
-    // NOR (a, b) = NBSL (a, b, a) = NBSL (b, a, b)
     defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (vnot (or node:$op1, node:$op2))>,
-                              OutPatFrag<(ops node:$op1, node:$op2), (NBSL_ZZZZ $op2, $op1, $op2)>>;
+                              OutPatFrag<(ops node:$op1, node:$op2), (NOR_ZZZ $op1, $op2)>>;
 
     // ORN (a, b) = BSL2N (a, b, a)
     defm : binary_bitwise<VT, PatFrag<(ops node:$op1, node:$op2), (or node:$op1, (vnot node:$op2))>,
@@ -4506,6 +4532,46 @@ def : InstAlias<"pfalse\t$Pd", (PFALSE PPRorPNR8:$Pd), 0>;
 
 }
 
+// Promote NEON operations to SVE when an SVE immediate form can be used.
+class PromoteNEONToSVEImm
+  <SDNode Opc, ValueType VT, ComplexPattern ImmPat, Instruction SVEImmInst, ValueType ImmType>
+  : Pat<(Opc (VT V128:$Vm), (VT (ImmPat ImmType:$imm))),
+      (EXTRACT_SUBREG (SVEImmInst
+        (INSERT_SUBREG (IMPLICIT_DEF), (VT V128: $Vm), zsub), ImmType:$imm), zsub)>;
+// Same as PromoteNEONToSVEImm but accepts immediates with a shift (for ADD/SUB).
+class PromoteNEONToSVEImmWithShift
+  <SDNode Opc, ValueType VT, ComplexPattern ImmPat, Instruction SVEImmInst>
+  : Pat<(Opc (VT V128:$Vm), (VT (ImmPat i32:$imm, i32:$shift))),
+      (EXTRACT_SUBREG (SVEImmInst
+        (INSERT_SUBREG (IMPLICIT_DEF), (VT V128: $Vm), zsub), i32:$imm, i32:$shift), zsub)>;
+
+let Predicates = [HasSVE_or_SME] in {
+  foreach VT = [v2i64, v4i32, v8i16, v16i8] in {
+    // Logical operations
+    def : PromoteNEONToSVEImm<and, VT, NEONSplatOfSVELogicalImmPat, AND_ZI, i64>;
+    def : PromoteNEONToSVEImm<xor, VT, NEONSplatOfSVELogicalImmPat, EOR_ZI, i64>;
+    def : PromoteNEONToSVEImm< or, VT, NEONSplatOfSVELogicalImmPat, ORR_ZI, i64>;
+  }
+
+  // Arith operations: ADD
+  def : PromoteNEONToSVEImmWithShift<add, v2i64, NEONSplatOfSVEAddSubImm, ADD_ZI_D>;
+  def : PromoteNEONToSVEImmWithShift<add, v4i32, NEONSplatOfSVEAddSubImm, ADD_ZI_S>;
+  def : PromoteNEONToSVEImmWithShift<add, v8i16, NEONSplatOfSVEAddSubImm, ADD_ZI_H>;
+  def : PromoteNEONToSVEImmWithShift<add, v16i8, NEONSplatOfSVEAddSubImm, ADD_ZI_B>;
+
+  // Arith operations: SUB
+  def : PromoteNEONToSVEImmWithShift<sub, v2i64, NEONSplatOfSVEAddSubImm, SUB_ZI_D>;
+  def : PromoteNEONToSVEImmWithShift<sub, v4i32, NEONSplatOfSVEAddSubImm, SUB_ZI_S>;
+  def : PromoteNEONToSVEImmWithShift<sub, v8i16, NEONSplatOfSVEAddSubImm, SUB_ZI_H>;
+  def : PromoteNEONToSVEImmWithShift<sub, v16i8, NEONSplatOfSVEAddSubImm, SUB_ZI_B>;
+
+  // Arith operations: MUL
+  def : PromoteNEONToSVEImm<mul, v2i64, NEONSplatOfSVEAddSubImm, MUL_ZI_D, i32>;
+  def : PromoteNEONToSVEImm<mul, v4i32, NEONSplatOfSVEArithSImm, MUL_ZI_S, i32>;
+  def : PromoteNEONToSVEImm<mul, v8i16, NEONSplatOfSVEArithSImm, MUL_ZI_H, i32>;
+  def : PromoteNEONToSVEImm<mul, v16i8, NEONSplatOfSVEArithSImm, MUL_ZI_B, i32>;
+}
+
 //===----------------------------------------------------------------------===//
 // Non-widening BFloat16 to BFloat16 instructions
 //===----------------------------------------------------------------------===//
@@ -4704,6 +4770,11 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   // SVE2 integer dot product
   def SDOT_ZZZ_BtoH : sve_intx_dot<0b01, 0b00000, 0b0, "sdot", ZPR16, ZPR8>;
   def UDOT_ZZZ_BtoH : sve_intx_dot<0b01, 0b00000, 0b1, "udot", ZPR16, ZPR8>;
+
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+            (UDOT_ZZZ_BtoH $Acc, $MulLHS, $MulRHS)>;
+  def : Pat<(nxv8i16 (partial_reduce_smla nxv8i16:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+            (SDOT_ZZZ_BtoH $Acc, $MulLHS, $MulRHS)>;
 
   // SVE2 integer indexed dot product
   def SDOT_ZZZI_BtoH : sve_intx_dot_by_indexed_elem_x<0b0, "sdot">;

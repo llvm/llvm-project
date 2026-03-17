@@ -6,7 +6,7 @@ define i32 @test() {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:  Classifying expressions for: @test
 ; CHECK-NEXT:    %phi = phi i32 [ -173, %bb ], [ %sub, %loop ]
-; CHECK-NEXT:    --> %phi U: [-173,1) S: [-173,1) Exits: -173 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %phi U: [-256,256) S: [-256,256) Exits: -173 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv2 = phi i32 [ 1, %bb ], [ %iv2.inc, %loop ]
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %srem = srem i32 729259140, %phi

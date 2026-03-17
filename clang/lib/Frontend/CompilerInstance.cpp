@@ -487,10 +487,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   PP->setPreprocessedOutput(getPreprocessorOutputOpts().ShowCPP);
 
   if (PP->getLangOpts().Modules && PP->getLangOpts().ImplicitModules) {
-    std::string ContextHash = getInvocation().computeContextHash();
-    PP->getHeaderSearchInfo().setContextHash(ContextHash);
-    PP->getHeaderSearchInfo().setSpecificModuleCachePath(
-        getSpecificModuleCachePath(ContextHash));
+    // FIXME: We already might've computed the context hash and the specific
+    // module cache path in `FrontendAction::BeginSourceFile()` when turning
+    // "-include-pch <DIR>" into "-include-pch <DIR>/<FILE>". Reuse those here.
+    PP->getHeaderSearchInfo().initializeModuleCachePath(
+        getInvocation().computeContextHash());
   }
 
   // Handle generating dependencies, if requested.
@@ -544,19 +545,6 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   if (GetDependencyDirectives)
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
-}
-
-std::string
-CompilerInstance::getSpecificModuleCachePath(StringRef ContextHash) {
-  assert(FileMgr && "Specific module cache path requires a FileManager");
-
-  // Set up the module path, including the hash for the module-creation options.
-  SmallString<256> SpecificModuleCache;
-  normalizeModuleCachePath(*FileMgr, getHeaderSearchOpts().ModuleCachePath,
-                           SpecificModuleCache);
-  if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
-    llvm::sys::path::append(SpecificModuleCache, ContextHash);
-  return std::string(SpecificModuleCache);
 }
 
 // ASTContext
@@ -1406,6 +1394,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
 }
 
 /// Read the AST right after compiling the module.
+/// Returns true on success, false on failure.
 static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
                                       SourceLocation ImportLoc,
                                       SourceLocation ModuleNameLoc,
@@ -1445,13 +1434,12 @@ static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
   return false;
 }
 
-/// Compile a module in a separate compiler instance and read the AST,
-/// returning true if the module compiles without errors.
-static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
-                                        SourceLocation ImportLoc,
-                                        SourceLocation ModuleNameLoc,
-                                        Module *Module,
-                                        StringRef ModuleFileName) {
+/// Compile a module in a separate compiler instance.
+/// Returns true on success, false on failure.
+static bool compileModuleImpl(CompilerInstance &ImportingInstance,
+                              SourceLocation ImportLoc,
+                              SourceLocation ModuleNameLoc, Module *Module,
+                              StringRef ModuleFileName) {
   {
     auto Instance = ImportingInstance.cloneForModuleCompile(
         ModuleNameLoc, Module, ModuleFileName);
@@ -1474,20 +1462,25 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
     ImportingInstance.getModuleCache().updateModuleTimestamp(ModuleFileName);
   }
 
-  return readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
-                                   Module, ModuleFileName,
-                                   /*OutOfDate=*/nullptr, /*Missing=*/nullptr);
+  return true;
 }
 
-/// Compile a module in a separate compiler instance and read the AST,
-/// returning true if the module compiles without errors, using a lock manager
-/// to avoid building the same module in multiple compiler instances.
-///
-/// Uses a lock file manager and exponential backoff to reduce the chances that
-/// multiple instances will compete to create the same module.  On timeout,
-/// deletes the lock file in order to avoid deadlock from crashing processes or
-/// bugs in the lock file manager.
-static bool compileModuleAndReadASTBehindLock(
+/// The result of `compileModuleBehindLockOrRead()`.
+enum class CompileOrReadResult : uint8_t {
+  /// We failed to compile the module.
+  FailedToCompile,
+  /// We successfully compiled the module and we still need to read it.
+  Compiled,
+  /// We failed to read the module file compiled by another instance.
+  FailedToRead,
+  /// We read a module file compiled by another instance.
+  Read,
+};
+
+/// Attempt to compile the module in a separate compiler instance behind a lock
+/// (to avoid building the same module in multiple compiler instances), or read
+/// the AST produced by another compiler instance.
+static CompileOrReadResult compileModuleBehindLockOrRead(
     CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
     SourceLocation ModuleNameLoc, Module *Module, StringRef ModuleFileName) {
   DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
@@ -1507,13 +1500,17 @@ static bool compileModuleAndReadASTBehindLock(
       // related errors.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_failure)
           << Module->Name << toString(std::move(Err));
-      return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
-                                         ModuleNameLoc, Module, ModuleFileName);
+      if (!compileModuleImpl(ImportingInstance, ImportLoc, ModuleNameLoc,
+                             Module, ModuleFileName))
+        return CompileOrReadResult::FailedToCompile;
+      return CompileOrReadResult::Compiled;
     }
     if (Owned) {
       // We're responsible for building the module ourselves.
-      return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
-                                         ModuleNameLoc, Module, ModuleFileName);
+      if (!compileModuleImpl(ImportingInstance, ImportLoc, ModuleNameLoc,
+                             Module, ModuleFileName))
+        return CompileOrReadResult::FailedToCompile;
+      return CompileOrReadResult::Compiled;
     }
 
     // Someone else is responsible for building the module. Wait for them to
@@ -1541,9 +1538,9 @@ static bool compileModuleAndReadASTBehindLock(
     bool Missing = false;
     if (readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
                                   Module, ModuleFileName, &OutOfDate, &Missing))
-      return true;
+      return CompileOrReadResult::Read;
     if (!OutOfDate && !Missing)
-      return false;
+      return CompileOrReadResult::FailedToRead;
 
     // The module may be missing or out of date in the presence of file system
     // races. It may also be out of date if one of its imports depends on header
@@ -1560,15 +1557,30 @@ static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
                                     SourceLocation ImportLoc,
                                     SourceLocation ModuleNameLoc,
                                     Module *Module, StringRef ModuleFileName) {
-  return ImportingInstance.getInvocation()
-                 .getFrontendOpts()
-                 .BuildingImplicitModuleUsesLock
-             ? compileModuleAndReadASTBehindLock(ImportingInstance, ImportLoc,
-                                                 ModuleNameLoc, Module,
-                                                 ModuleFileName)
-             : compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
-                                           ModuleNameLoc, Module,
-                                           ModuleFileName);
+  if (ImportingInstance.getInvocation()
+          .getFrontendOpts()
+          .BuildingImplicitModuleUsesLock) {
+    switch (compileModuleBehindLockOrRead(
+        ImportingInstance, ImportLoc, ModuleNameLoc, Module, ModuleFileName)) {
+    case CompileOrReadResult::FailedToRead:
+    case CompileOrReadResult::FailedToCompile:
+      return false;
+    case CompileOrReadResult::Read:
+      return true;
+    case CompileOrReadResult::Compiled:
+      // We successfully compiled the module under a lock. Let's read it from
+      // the in-memory module cache now.
+      break;
+    }
+  } else {
+    if (!compileModuleImpl(ImportingInstance, ImportLoc, ModuleNameLoc, Module,
+                           ModuleFileName))
+      return false;
+  }
+
+  return readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
+                                   Module, ModuleFileName,
+                                   /*OutOfDate=*/nullptr, /*Missing=*/nullptr);
 }
 
 /// Diagnose differences between the current definition of the given

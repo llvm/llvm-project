@@ -42,7 +42,7 @@ ArrayDtor arrDtor[16];
 // CIR:     cir.yield
 // CIR:   } while {
 // CIR:     %[[CUR:.*]] = cir.load %[[CUR_ADDR]] : !cir.ptr<!cir.ptr<!rec_ArrayDtor>>, !cir.ptr<!rec_ArrayDtor>
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[BEGIN]]) : !cir.ptr<!rec_ArrayDtor>, !cir.bool
+// CIR:     %[[CMP:.*]] = cir.cmp ne %[[CUR]], %[[BEGIN]] : !cir.ptr<!rec_ArrayDtor>
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
 // CIR:   cir.return

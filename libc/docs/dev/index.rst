@@ -9,6 +9,7 @@ Navigate to the links below for information on the respective topics:
 .. toctree::
    :maxdepth: 1
 
+   building_docs
    code_style
    source_tree_layout
    entrypoints

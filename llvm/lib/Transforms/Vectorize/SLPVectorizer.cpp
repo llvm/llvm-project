@@ -262,8 +262,9 @@ static Type *getValueType(Value *V) {
     return SI->getValueOperand()->getType();
   if (auto *CI = dyn_cast<CmpInst>(V))
     return CI->getOperand(0)->getType();
-  if (auto *IE = dyn_cast<InsertElementInst>(V))
-    return IE->getOperand(1)->getType();
+  if (!SLPReVec)
+    if (auto *IE = dyn_cast<InsertElementInst>(V))
+      return IE->getOperand(1)->getType();
   return V->getType();
 }
 
@@ -1127,13 +1128,11 @@ class BinOpSameOpcodeHelper {
         break;
       }
       Value *LHS = I->getOperand(1 - Pos);
-      // constant + x cannot be -constant - x
-      // instead, it should be x - -constant
-      if (Pos == 1 ||
-          ((FromOpcode == Instruction::Add || FromOpcode == Instruction::Or ||
-            FromOpcode == Instruction::Xor) &&
-           ToOpcode == Instruction::Sub))
+      // If the target opcode is non-commutative (e.g., shl, sub),
+      // force the variable to the left and the constant to the right.
+      if (Pos == 1 || !Instruction::isCommutative(ToOpcode))
         return SmallVector<Value *>({LHS, RHS});
+
       return SmallVector<Value *>({RHS, LHS});
     }
   };
@@ -2023,10 +2022,11 @@ public:
   /// Vectorize the tree but with the list of externally used values \p
   /// ExternallyUsedValues. Values in this MapVector can be replaced but the
   /// generated extractvalue instructions.
-  Value *vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
-                       Instruction *ReductionRoot = nullptr,
-                       ArrayRef<std::tuple<Value *, unsigned, bool, bool>>
-                           VectorValuesAndScales = {});
+  Value *
+  vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
+                Instruction *ReductionRoot = nullptr,
+                ArrayRef<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
+                    VectorValuesAndScales = {});
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
@@ -3579,7 +3579,7 @@ public:
   template <typename T>
   void removeInstructionsAndOperands(
       ArrayRef<T *> DeadVals,
-      ArrayRef<std::tuple<Value *, unsigned, bool, bool>>
+      ArrayRef<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
           VectorValuesAndScales) {
     SmallVector<WeakTrackingVH> DeadInsts;
     for (T *V : DeadVals) {
@@ -3647,10 +3647,10 @@ public:
         if (auto *OpI = dyn_cast<Instruction>(OpV))
           if (!DeletedInstructions.contains(OpI) &&
               (!OpI->getType()->isVectorTy() ||
-               none_of(VectorValuesAndScales,
-                       [&](const std::tuple<Value *, unsigned, bool, bool> &V) {
-                         return std::get<0>(V) == OpI;
-                       })) &&
+               none_of(
+                   VectorValuesAndScales,
+                   [&](const std::tuple<WeakTrackingVH, unsigned, bool, bool>
+                           &V) { return std::get<0>(V) == OpI; })) &&
               isInstructionTriviallyDead(OpI, TLI))
             DeadInsts.push_back(OpI);
       }
@@ -13267,8 +13267,6 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   if (ScalarTy->isVectorTy())
     return false;
   const unsigned Sz = DL->getTypeSizeInBits(ScalarTy);
-  if (!isPowerOf2_64(Sz))
-    return false;
   const TreeEntry *LhsTE = getOperandEntry(&TE, /*Idx=*/0);
   const TreeEntry *RhsTE = getOperandEntry(&TE, /*Idx=*/1);
   // Lhs should be zext i<stride> to I<sz>.
@@ -13280,7 +13278,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
     return false;
   Type *SrcScalarTy = cast<ZExtInst>(LhsTE->getMainOp())->getSrcTy();
   unsigned Stride = DL->getTypeSizeInBits(SrcScalarTy);
-  if (!isPowerOf2_64(Stride) || Stride >= Sz)
+  if (!isPowerOf2_64(Stride) || Stride >= Sz || Sz % Stride != 0 ||
+      !isPowerOf2_64(LhsTE->getVectorFactor()))
     return false;
   if (!(RhsTE->isGather() && RhsTE->ReorderIndices.empty() &&
         RhsTE->ReuseShuffleIndices.empty() && !MinBWs.contains(RhsTE)))
@@ -13332,6 +13331,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       return false;
   }
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  auto *SrcType = IntegerType::getIntNTy(ScalarTy->getContext(),
+                                         Stride * LhsTE->getVectorFactor());
   FastMathFlags FMF;
   SmallPtrSet<Value *, 4> CheckedExtracts;
   auto *VecTy = getWidenedType(ScalarTy, TE.getVectorFactor());
@@ -13347,7 +13348,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
           getWidenedType(SrcScalarTy, LhsTE->getVectorFactor()), CastCtx,
           CostKind);
   InstructionCost BitcastCost = TTI->getCastInstrCost(
-      Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx, CostKind);
+      Instruction::BitCast, SrcType, SrcVecTy, CastCtx, CostKind);
   if (!Order.empty()) {
     fixupOrderingIndices(Order);
     SmallVector<int> Mask;
@@ -13359,9 +13360,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   constexpr unsigned ByteSize = 8;
   if (!Order.empty() && isReverseOrder(Order) &&
       DL->getTypeSizeInBits(SrcScalarTy) == ByteSize) {
-    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ScalarTy, {ScalarTy});
+    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
     InstructionCost BSwapCost =
-        TTI->getCastInstrCost(Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx,
+        TTI->getCastInstrCost(Instruction::BitCast, SrcType, SrcVecTy, CastCtx,
                               CostKind) +
         TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
     if (BSwapCost <= BitcastCost) {
@@ -13375,10 +13376,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
           SrcTE->getOpcode() == Instruction::Load && !SrcTE->isAltShuffle() &&
           all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
         auto *LI = cast<LoadInst>(SrcTE->getMainOp());
-        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ScalarTy,
-                                          {ScalarTy});
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
         InstructionCost BSwapCost =
-            TTI->getMemoryOpCost(Instruction::Load, ScalarTy, LI->getAlign(),
+            TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
                                  LI->getPointerAddressSpace(), CostKind) +
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         if (BSwapCost <= BitcastCost) {
@@ -13399,13 +13399,17 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
         all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
       auto *LI = cast<LoadInst>(SrcTE->getMainOp());
       BitcastCost =
-          TTI->getMemoryOpCost(Instruction::Load, ScalarTy, LI->getAlign(),
+          TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
                                LI->getPointerAddressSpace(), CostKind);
       VecCost +=
           TTI->getMemoryOpCost(Instruction::Load, SrcVecTy, LI->getAlign(),
                                LI->getPointerAddressSpace(), CostKind);
       ForLoads = true;
     }
+  }
+  if (SrcType != ScalarTy) {
+    BitcastCost += TTI->getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
+                                         TTI::CastContextHint::None, CostKind);
   }
   return BitcastCost < VecCost;
 }
@@ -18046,7 +18050,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     return false;
   };
   const EdgeInfo TEUseEI = GetUserEntry(TE);
-  if (!TEUseEI)
+  if (!TEUseEI || (TEUseEI.UserTE->Idx == 0 && TEUseEI.UserTE->isGather() &&
+                   !TEUseEI.UserTE->hasState()))
     return std::nullopt;
   const Instruction *TEInsertPt = &getLastInstructionInBundle(TEUseEI.UserTE);
   const BasicBlock *TEInsertBlock = nullptr;
@@ -21625,7 +21630,8 @@ Value *BoUpSLP::vectorizeTree() {
 Value *BoUpSLP::vectorizeTree(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     Instruction *ReductionRoot,
-    ArrayRef<std::tuple<Value *, unsigned, bool, bool>> VectorValuesAndScales) {
+    ArrayRef<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
+        VectorValuesAndScales) {
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
   EntryToLastInstruction.clear();
@@ -22323,11 +22329,17 @@ Value *BoUpSLP::vectorizeTree(
     IRBuilder<>::InsertPointGuard Guard(Builder);
     Builder.SetInsertPoint(ReductionRoot->getParent(),
                            ReductionRoot->getIterator());
-    Vec = Builder.CreateIntCast(
-        Vec,
-        VectorType::get(Builder.getIntNTy(ReductionBitWidth),
-                        cast<VectorType>(Vec->getType())->getElementCount()),
-        It->second.second);
+    if (isReducedBitcastRoot() || isReducedCmpBitcastRoot()) {
+      Vec = Builder.CreateIntCast(Vec, Builder.getIntNTy(ReductionBitWidth),
+                                  It->second.second);
+
+    } else {
+      Vec = Builder.CreateIntCast(
+          Vec,
+          VectorType::get(Builder.getIntNTy(ReductionBitWidth),
+                          cast<VectorType>(Vec->getType())->getElementCount()),
+          It->second.second);
+    }
   }
   return Vec;
 }
@@ -25276,7 +25288,8 @@ class HorizontalReduction {
   const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
   /// Contains vector values for reduction including their scale factor and
   /// signedness. The last bool is true, if the value was reduced in-tree.
-  SmallVector<std::tuple<Value *, unsigned, bool, bool>> VectorValuesAndScales;
+  SmallVector<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
+      VectorValuesAndScales;
 
   static bool isCmpSelMinMax(Instruction *I) {
     return match(I, m_Select(m_Cmp(), m_Value(), m_Value())) &&
@@ -28330,6 +28343,8 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
         const SCEV *SCEVI = SE->getSCEV(GEPList[I]);
         for (int J = I + 1; J < E && Candidates.size() > 1; ++J) {
           auto *GEPJ = GEPList[J];
+          if (!Candidates.count(GEPJ))
+            continue;
           const SCEV *SCEVJ = SE->getSCEV(GEPList[J]);
           if (isa<SCEVConstant>(SE->getMinusSCEV(SCEVI, SCEVJ))) {
             Candidates.remove(GEPI);

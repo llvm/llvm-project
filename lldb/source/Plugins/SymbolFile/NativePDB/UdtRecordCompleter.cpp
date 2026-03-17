@@ -127,7 +127,12 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            VirtualBaseClassRecord &base) {
-  AddBaseClassForTypeIndex(base.BaseType, base.getAccess(), base.VTableIndex);
+  // Don't create indirect virtual bases. These records indicate that at least
+  // one base class C of this class virtually inherits the specified class.
+  // We already added that virtual base when creating C. There, it's present as
+  // LF_VBCLASS.
+  if (cvr.Kind == LF_VBCLASS)
+    AddBaseClassForTypeIndex(base.BaseType, base.getAccess(), base.VTableIndex);
 
   return Error::success();
 }

@@ -176,7 +176,7 @@ public:
   unsigned PreEmitNoopsCommon(MachineInstr *) const;
   void AdvanceCycle() override;
   void RecedeCycle() override;
-  bool ShouldPreferAnother(SUnit *SU) override;
+  bool ShouldPreferAnother(SUnit *SU) const override;
   void Reset() override;
 };
 

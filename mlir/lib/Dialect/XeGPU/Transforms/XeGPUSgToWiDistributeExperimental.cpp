@@ -1091,6 +1091,26 @@ struct SgToWiVectorInsert : public OpConversionPattern<vector::InsertOp> {
   }
 };
 
+/// Folds a subgroup-level ConvertLayout op with compatible lane layouts.
+struct SgToWiConvertLayout
+    : public OpConversionPattern<xegpu::ConvertLayoutOp> {
+  using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::ConvertLayoutOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto inputLayout = op.getInputLayoutAttr();
+    auto targetLayout = op.getTargetLayoutAttr();
+
+    if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
+      return rewriter.notifyMatchFailure(
+          op, "lowering incompatible convert_layout not yet supported");
+    }
+    rewriter.replaceOp(op, adaptor.getSource());
+    return success();
+  }
+};
+
 struct XeGPUSgToWiDistributeExperimentalPass
     : public xegpu::impl::XeGPUSgToWiDistributeExperimentalBase<
           XeGPUSgToWiDistributeExperimentalPass> {
@@ -1316,6 +1336,6 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
                SgToWiLoadGather, SgToWiStoreScatter, SgToWiVectorReduction,
                SgToWiMultiDimReduction, SgToWiVectorExtract, SgToWiVectorInsert,
                SgToWiVectorExtractStridedSlice, SgToWiVectorInsertStridedSlice,
-               SgToWiLoadMatrix, SgToWiStoreMatrix>(typeConverter,
-                                                    patterns.getContext());
+               SgToWiLoadMatrix, SgToWiStoreMatrix, SgToWiConvertLayout>(
+      typeConverter, patterns.getContext());
 }

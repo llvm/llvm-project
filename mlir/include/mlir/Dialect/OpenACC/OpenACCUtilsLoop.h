@@ -13,22 +13,12 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACCUTILSLOOP_H_
 #define MLIR_DIALECT_OPENACC_OPENACCUTILSLOOP_H_
 
-#include "mlir/IR/Block.h"
-#include "mlir/IR/ValueRange.h"
-#include "llvm/ADT/SmallVector.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/IR/IRMapping.h"
 
 namespace mlir {
-class IRMapping;
-class Location;
-class Region;
-class RewriterBase;
-namespace scf {
-class ForOp;
-class ParallelOp;
-class ExecuteRegionOp;
-} // namespace scf
 namespace acc {
-class LoopOp;
 
 /// Clone an ACC region into a destination block at the given insertion point.
 /// Requires a single-block source region. Maps block arguments and optional

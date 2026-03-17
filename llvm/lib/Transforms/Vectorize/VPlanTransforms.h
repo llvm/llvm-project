@@ -155,9 +155,7 @@ struct VPlanTransforms {
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
-  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan,
-                                               bool RequiresScalarEpilogueCheck,
-                                               bool TailFolded);
+  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
   // Create a check to \p Plan to see if the vector loop should be executed.
   static void addMinimumIterationCheck(
@@ -401,10 +399,12 @@ struct VPlanTransforms {
                                      PredicatedScalarEvolution &PSE);
 
   /// Materialize vector trip count computations to a set of VPInstructions.
+  /// \p Step is used as the step value for the trip count computation.
   static void materializeVectorTripCount(VPlan &Plan,
                                          VPBasicBlock *VectorPHVPBB,
                                          bool TailByMasking,
-                                         bool RequiresScalarEpilogue);
+                                         bool RequiresScalarEpilogue,
+                                         VPValue *Step);
 
   /// Materialize the backedge-taken count to be computed explicitly using
   /// VPInstructions.

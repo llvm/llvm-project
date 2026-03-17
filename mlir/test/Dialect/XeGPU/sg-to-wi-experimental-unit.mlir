@@ -659,6 +659,19 @@ gpu.func @vector_insert_strided_slice_different_ranks() {
     : vector<16xf32> into vector<64x16xf32>
   gpu.return
 }
+
+// CHECK-LABEL: gpu.func @convert_layout_removed_when_compatible
+// CHECK-NOT: xegpu.convert_layout
+gpu.func @convert_layout_removed_when_compatible() {
+  %0 = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+    : () -> vector<16xf32>
+  %1 = xegpu.convert_layout %0
+    <{input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+    target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}>
+    : vector<16xf32>
+  gpu.return
+}
 }
 
 // -----

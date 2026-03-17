@@ -6138,6 +6138,8 @@ def : Pat<(v2f64 (fmaxnum_ieee (v2f64 V128:$Rn), (v2f64 V128:$Rm))),
           (v2f64 (FMAXNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rm)))>;
 def : Pat<(v2f64 (fcanonicalize (v2f64 V128:$Rn))),
           (v2f64 (FMINNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rn)))>;
+def : Pat<(v1f64 (fcanonicalize (v1f64 V64:$Rn))),
+          (v1f64 (FMINNMDrr (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rn)))>;
 def : Pat<(v4f32 (fminnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
           (v4f32 (FMINNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rm)))>;
 def : Pat<(v4f32 (fmaxnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
@@ -9041,9 +9043,9 @@ defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull", AArch64umull>;
 
 // A scalar sqdmull with the second operand being a vector lane can be
 // handled directly with the indexed instruction encoding.
-def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
-                                          (vector_extract (v4i32 V128:$Vm),
-                                                           VectorIndexS:$idx)),
+def : Pat<(f64 (AArch64sqdmull FPR32:$Rn,
+                               (f32 (bitconvert (i32 (vector_extract (v4i32 V128:$Vm),
+                                                           VectorIndexS:$idx)))))),
           (SQDMULLv1i64_indexed FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
 
 //----------------------------------------------------------------------------
@@ -11887,7 +11889,7 @@ let Predicates = [HasLSFE] in {
 }
 
 let Predicates = [HasF16F32DOT] in {
-  defm FDOT :SIMDThreeSameVectorFDot<"fdot">;
+  defm FDOT :SIMDThreeSameVectorFDot<"fdot", partial_reduce_fmla>;
   defm FDOTlane: SIMDThreeSameVectorFDOTIndex<"fdot">;
 }
 

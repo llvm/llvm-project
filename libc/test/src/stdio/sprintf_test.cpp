@@ -3585,4 +3585,107 @@ TEST(LlvmLibcSprintfTest, WideCharConversion) {
             -1);
   ASSERT_ERRNO_EQ(EILSEQ);
 }
+
+TEST(LlvmLibcSprintfTest, WideCharStringConversion) {
+  char buff[64];
+  int written;
+
+  // Basic test.
+  written = LIBC_NAMESPACE::sprintf(buff, "%ls", L"Hello, World!");
+  EXPECT_EQ(written, 13);
+  ASSERT_STREQ_LEN(written, buff, "Hello, World!");
+
+  // Left justified.
+  written = LIBC_NAMESPACE::sprintf(buff, "%-10ls", L"Hello, World!");
+  EXPECT_EQ(written, 13);
+  ASSERT_STREQ_LEN(written, buff, "Hello, World!");
+
+  // Precision test.
+  written = LIBC_NAMESPACE::sprintf(buff, "%.5ls", L"Hello, World!");
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ_LEN(written, buff, "Hello");
+
+  // Test ¢ which is 2 bytes multibyte character.
+  written = LIBC_NAMESPACE::sprintf(buff, "%ls", L"¢");
+  EXPECT_EQ(written, 2);
+  ASSERT_STREQ_LEN(written, buff, "¢");
+
+  // Test € which is 3 bytes multibyte character.
+  written = LIBC_NAMESPACE::sprintf(buff, "%ls", L"€");
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ_LEN(written, buff, "€");
+
+  // Test 😀 which is 4 bytes multibyte character
+  written = LIBC_NAMESPACE::sprintf(buff, "%ls", L"😀");
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "😀");
+
+  // Test string with multiple multibyte characters.
+  written = LIBC_NAMESPACE::sprintf(buff, "%ls", L"¢€😀");
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ_LEN(written, buff, "¢€😀");
+
+  // Width with multibyte characters.
+  written = LIBC_NAMESPACE::sprintf(buff, "%2ls", L"¢€😀");
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ_LEN(written, buff, "¢€😀");
+
+  // Width with multibyte characters and padding.
+  written = LIBC_NAMESPACE::sprintf(buff, "%12ls", L"¢€😀");
+  EXPECT_EQ(written, 12);
+  ASSERT_STREQ_LEN(written, buff, "   ¢€😀");
+
+  // Precision with multibyte characters.
+  written = LIBC_NAMESPACE::sprintf(buff, "%.4ls", L"¢€😀");
+  EXPECT_EQ(written, 2); // Only ¢ fits in 4 bytes.
+  ASSERT_STREQ_LEN(written, buff, "¢");
+
+  // Precision with padding and multibyte characters.
+  written = LIBC_NAMESPACE::sprintf(buff, "%5.4ls", L"¢€😀");
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ_LEN(written, buff, "   ¢");
+
+  // Precision with left justification and multibyte characters.
+  written = LIBC_NAMESPACE::sprintf(buff, "%-5.4ls", L"¢€😀");
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ_LEN(written, buff, "¢   ");
+
+  // Short precision that cuts a multibyte character.
+  written = LIBC_NAMESPACE::sprintf(buff, "%.1ls", L"¢€😀");
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ_LEN(written, buff, "");
+
+  // Longer precision and shorter width.
+  written = LIBC_NAMESPACE::sprintf(buff, "%3.5ls", L"¢€😀");
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ_LEN(written, buff, "¢€");
+
+  // Reverse the wide string and test with width and precision.
+  written = LIBC_NAMESPACE::sprintf(buff, "%4.4ls", L"😀€¢");
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ_LEN(written, buff, "😀");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%5.4ls", L"😀€¢");
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ_LEN(written, buff, " 😀");
+
+  written = LIBC_NAMESPACE::sprintf(buff, "%.3ls", L"😀€¢");
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ_LEN(written, buff, "");
+
+  // NULL string test.
+  written = LIBC_NAMESPACE::sprintf(buff, "%ls", nullptr);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ_LEN(written, buff, "(null)");
+
+  // NULL string with precision.
+  written = LIBC_NAMESPACE::sprintf(buff, "%.3ls", nullptr);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ_LEN(written, buff, "(nu");
+
+  // NULL string with precision and width.
+  written = LIBC_NAMESPACE::sprintf(buff, "%6.3ls", nullptr);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ_LEN(written, buff, "   (nu");
+}
 #endif // LIBC_COPT_PRINTF_DISABLE_WIDE

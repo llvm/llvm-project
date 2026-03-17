@@ -288,7 +288,7 @@ public:
   ///   br ExitSucc
   /// ExitSucc:
   /// \endcode
-  BranchInst *getLoopGuardBranch() const;
+  CondBrInst *getLoopGuardBranch() const;
 
   /// Return true iff the loop is
   /// - in simplify rotated form, and
