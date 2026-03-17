@@ -2156,9 +2156,7 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 //
 // return true if dependence disproved
 bool DependenceInfo::symbolicRDIVtest(const SCEVAddRecExpr *Src,
-                                      const SCEVAddRecExpr *Dst,
-                                      const Loop *Loop1,
-                                      const Loop *Loop2) const {
+                                      const SCEVAddRecExpr *Dst) const {
   if (!isDependenceTestEnabled(DependenceTestType::SymbolicRDIV))
     return false;
 
@@ -2215,7 +2213,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
       disproven = exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst,
                                CurSrcLoop, CurDstLoop, Level, Result);
     return disproven || gcdMIVtest(Src, Dst, Result) ||
-           symbolicRDIVtest(SrcAddRec, DstAddRec, CurSrcLoop, CurDstLoop);
+           symbolicRDIVtest(SrcAddRec, DstAddRec);
   }
   if (SrcAddRec) {
     const SCEV *SrcConst = SrcAddRec->getStart();
@@ -2272,8 +2270,7 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
     llvm_unreachable("RDIV expected at least one AddRec");
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
                        Result) ||
-         gcdMIVtest(Src, Dst, Result) ||
-         symbolicRDIVtest(SrcAddRec, DstAddRec, SrcLoop, DstLoop);
+         gcdMIVtest(Src, Dst, Result) || symbolicRDIVtest(SrcAddRec, DstAddRec);
 }
 
 // Tests the single-subscript MIV pair (Src and Dst) for dependence.
