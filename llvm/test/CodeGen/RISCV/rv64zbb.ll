@@ -1124,17 +1124,11 @@ define i64 @sexth_i64(i64 %a) nounwind {
 }
 
 define i32 @sextb_extract_i32(i32 %x) {
-; RV64I-LABEL: sextb_extract_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 35
-; RV64I-NEXT:    srai a0, a0, 56
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sextb_extract_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    srli a0, a0, 21
-; RV64ZBB-NEXT:    sext.b a0, a0
-; RV64ZBB-NEXT:    ret
+; CHECK-LABEL: sextb_extract_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 35
+; CHECK-NEXT:    srai a0, a0, 56
+; CHECK-NEXT:    ret
   %a = lshr i32 %x, 21
   %b = trunc i32 %a to i8
   %c = sext i8 %b to i32
@@ -1142,17 +1136,11 @@ define i32 @sextb_extract_i32(i32 %x) {
 }
 
 define i64 @sextb_extract_i64(i64 %x) {
-; RV64I-LABEL: sextb_extract_i64:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 44
-; RV64I-NEXT:    srai a0, a0, 56
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sextb_extract_i64:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    srli a0, a0, 12
-; RV64ZBB-NEXT:    sext.b a0, a0
-; RV64ZBB-NEXT:    ret
+; CHECK-LABEL: sextb_extract_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 44
+; CHECK-NEXT:    srai a0, a0, 56
+; CHECK-NEXT:    ret
   %a = lshr i64 %x, 12
   %b = trunc i64 %a to i8
   %c = sext i8 %b to i64
@@ -1160,17 +1148,11 @@ define i64 @sextb_extract_i64(i64 %x) {
 }
 
 define i32 @sexth_extract_i32(i32 %x) {
-; RV64I-LABEL: sexth_extract_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 40
-; RV64I-NEXT:    srai a0, a0, 48
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sexth_extract_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    srli a0, a0, 8
-; RV64ZBB-NEXT:    sext.h a0, a0
-; RV64ZBB-NEXT:    ret
+; CHECK-LABEL: sexth_extract_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 40
+; CHECK-NEXT:    srai a0, a0, 48
+; CHECK-NEXT:    ret
   %a = lshr i32 %x, 8
   %b = trunc i32 %a to i16
   %c = sext i16 %b to i32
@@ -1178,17 +1160,11 @@ define i32 @sexth_extract_i32(i32 %x) {
 }
 
 define i64 @sexth_extract_i64(i64 %x) {
-; RV64I-LABEL: sexth_extract_i64:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    srai a0, a0, 48
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sexth_extract_i64:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    srli a0, a0, 47
-; RV64ZBB-NEXT:    sext.h a0, a0
-; RV64ZBB-NEXT:    ret
+; CHECK-LABEL: sexth_extract_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    srai a0, a0, 48
+; CHECK-NEXT:    ret
   %a = lshr i64 %x, 47
   %b = trunc i64 %a to i16
   %c = sext i16 %b to i64
