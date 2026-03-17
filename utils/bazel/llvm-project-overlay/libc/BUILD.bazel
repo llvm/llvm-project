@@ -1751,7 +1751,6 @@ libc_support_library(
     ],
 )
 
-
 libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_open",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/open.h"],
