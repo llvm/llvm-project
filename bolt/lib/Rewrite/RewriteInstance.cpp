@@ -286,13 +286,23 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
-cl::bits<GadgetScannerKind> GadgetScannersToRun(
-    "scanners", cl::desc("which gadget scanners to run"),
+static cl::list<GadgetKindBitmask> GadgetScannersToRun(
+    "scanners", cl::desc("Which gadget scanners to run"),
     cl::values(
-        clEnumValN(GS_PACRET, "pacret",
-                   "pac-ret: return address protection (subset of \"pauth\")"),
-        clEnumValN(GS_PAUTH, "pauth", "All Pointer Authentication scanners"),
-        clEnumValN(GS_ALL, "all", "All implemented scanners")),
+        clEnumValN(GS_PTRAUTH_RETURN_TARGETS, "ptrauth-pac-ret",
+                   "Unprotected returns (pac-ret)"),
+        clEnumValN(GS_PTRAUTH_TAIL_CALLS, "ptrauth-tail-calls",
+                   "Tail calls performed with unprotected link register"),
+        clEnumValN(GS_PTRAUTH_BRANCH_AND_CALL_TARGETS, "ptrauth-forward-cf",
+                   "Unprotected calls and branches (forward control-flow)"),
+        clEnumValN(GS_PTRAUTH_SIGN_ORACLES, "ptrauth-sign-oracles",
+                   "Signing of untrusted pointers (signing oracles)"),
+        clEnumValN(GS_PTRAUTH_AUTH_ORACLES, "ptrauth-auth-oracles",
+                   "Authentication oracles"),
+
+        clEnumValN(GS_PTRAUTH_ALL_MASK, "ptrauth-all",
+                   "All Pointer Authentication scanners"),
+        clEnumValN(GS_ALL_MASK, "all", "All implemented scanners")),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 // Primary targets for hooking runtime library initialization hooking
@@ -3868,20 +3878,21 @@ void RewriteInstance::runBinaryAnalyses() {
   BinaryFunctionPassManager Manager(*BC);
   // FIXME: add a pass that warns about which functions do not have CFG,
   // and therefore, analysis is most likely to be less accurate.
-  using GSK = opts::GadgetScannerKind;
-  using PAuthScanner = PAuthGadgetScanner::Analysis;
+  using PtrAuthScanner = PAuthGadgetScanner::Analysis;
+
+  // Accumulate all enabled analyses.
+  decltype(~opts::GS_ALL_MASK) EnabledAnalyses = 0;
+  for (auto NamedOptionSubmask : opts::GadgetScannersToRun)
+    EnabledAnalyses |= NamedOptionSubmask;
 
   // If no command line option was given, act as if "all" was specified.
-  bool RunAll = !opts::GadgetScannersToRun.getBits() ||
-                opts::GadgetScannersToRun.isSet(GSK::GS_ALL);
+  if (opts::GadgetScannersToRun.empty())
+    EnabledAnalyses = opts::GS_ALL_MASK;
 
-  if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PAUTH)) {
-    Manager.registerPass(
-        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/false));
-  } else if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PACRET)) {
-    Manager.registerPass(
-        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/true));
-  }
+  const auto PtrAuthAnalyses = static_cast<opts::GadgetKindBitmask>(
+      EnabledAnalyses & opts::GS_PTRAUTH_ALL_MASK);
+  if (PtrAuthAnalyses)
+    Manager.registerPass(std::make_unique<PtrAuthScanner>(PtrAuthAnalyses));
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
 }

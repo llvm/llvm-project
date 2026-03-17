@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/common/clc_radians.h"
-#include "clc/internal/clc.h"
+#include <clc/common/clc_radians.h>
+#include <clc/internal/clc.h>
 
-#define __CLC_BODY "clc_radians.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_radians.inc>
+#include <clc/math/gentype.inc>

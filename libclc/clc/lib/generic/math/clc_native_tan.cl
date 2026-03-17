@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/internal/clc.h"
-#include "clc/math/clc_native_cos.h"
-#include "clc/math/clc_native_sin.h"
+#include <clc/internal/clc.h>
+#include <clc/math/clc_native_cos.h>
+#include <clc/math/clc_native_sin.h>
 
 #define __CLC_FLOAT_ONLY
-#define __CLC_BODY "clc_native_tan.inc"
+#define __CLC_BODY <clc_native_tan.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

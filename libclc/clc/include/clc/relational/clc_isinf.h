@@ -9,7 +9,7 @@
 #ifndef __CLC_RELATIONAL_CLC_ISINF_H__
 #define __CLC_RELATIONAL_CLC_ISINF_H__
 
-#include "clc/clcfunc.h"
+#include <clc/clcfunc.h>
 
 #define _CLC_ISINF_DECL(RET_TYPE, ARG_TYPE)                                    \
   _CLC_OVERLOAD _CLC_CONST _CLC_DECL RET_TYPE __clc_isinf(ARG_TYPE);

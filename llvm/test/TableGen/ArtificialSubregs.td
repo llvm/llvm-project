@@ -129,6 +129,7 @@ def TestTarget : Target;
 // CHECK-NEXT: 	LaneMask: 0000000000000120
 // CHECK-LABEL: SubRegIndex dsub_hi:
 // CHECK-NEXT: 	LaneMask: 0000000000000001
+// CHECK:       Artificial: 1
 // CHECK-LABEL: SubRegIndex ssub:
 // CHECK-NEXT: 	LaneMask: 0000000000000004
 // CHECK-LABEL: SubRegIndex ssub0:
@@ -139,10 +140,13 @@ def TestTarget : Target;
 // CHECK-NEXT: 	LaneMask: 0000000000000020
 // CHECK-LABEL: SubRegIndex ssub_hi:
 // CHECK-NEXT: 	LaneMask: 0000000000000040
+// CHECK:       Artificial: 1
 // CHECK-LABEL: SubRegIndex dsub1_then_ssub_hi:
 // CHECK-NEXT: 	LaneMask: 0000000000000080
+// CHECK:       Artificial: 1
 // CHECK-LABEL: SubRegIndex dsub2_then_ssub_hi:
 // CHECK-NEXT: 	LaneMask: 0000000000000100
+// CHECK:       Artificial: 1
 // CHECK-LABEL: SubRegIndex ssub_ssub1:
 // CHECK-NEXT: 	LaneMask: 0000000000000014
 // CHECK-LABEL: SubRegIndex dsub0_dsub1:
@@ -173,6 +177,12 @@ def TestTarget : Target;
 // CHECK-LABEL: Register S0:
 // CHECK: 	CoveredBySubregs: 0
 // CHECK: 	HasDisjunctSubRegs: 0
+//
+// CHECK-LABEL: Register D0_HI:
+// CHECK:       Artificial: 1
+//
+// CHECK-LABEL: Register S0_HI:
+// CHECK:       Artificial: 1
 //
 // CHECK-LABEL: Register D0_D1:
 // CHECK: 	CoveredBySubregs: 1

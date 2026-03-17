@@ -428,16 +428,15 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
     auto *PredBBTerminator = PredBB->getTerminator();
     LLVM_DEBUG(dbgs() << "LV: draw edge from " << PredBB->getName() << '\n');
 
-    auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
     if (isa<UnreachableInst>(PredBBTerminator)) {
       assert(PredVPSuccessors.size() == 1 &&
              "Predecessor ending w/o branch must have single successor.");
       DebugLoc DL = PredBBTerminator->getDebugLoc();
       PredBBTerminator->eraseFromParent();
-      auto *Br = BranchInst::Create(NewBB, PredBB);
+      auto *Br = UncondBrInst::Create(NewBB, PredBB);
       Br->setDebugLoc(DL);
-    } else if (TermBr && !TermBr->isConditional()) {
-      TermBr->setSuccessor(0, NewBB);
+    } else if (auto *UBI = dyn_cast<UncondBrInst>(PredBBTerminator)) {
+      UBI->setSuccessor(NewBB);
     } else {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
@@ -447,10 +446,11 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
       // TODO: Remove exception by modeling the terminator of entry block using
       // BranchOnCond.
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-      assert((TermBr && (!TermBr->getSuccessor(idx) ||
-                         (isa<VPIRBasicBlock>(this) &&
-                          (TermBr->getSuccessor(idx) == NewBB ||
-                           PredVPBlock == getPlan()->getEntry())))) &&
+      auto *TermBr = cast<CondBrInst>(PredBBTerminator);
+      assert((!TermBr->getSuccessor(idx) ||
+              (isa<VPIRBasicBlock>(this) &&
+               (TermBr->getSuccessor(idx) == NewBB ||
+                PredVPBlock == getPlan()->getEntry()))) &&
              "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }
@@ -475,9 +475,9 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
     Br->setOperand(0, nullptr);
     IRBB->getTerminator()->eraseFromParent();
   } else {
-    assert(
-        (getNumSuccessors() == 0 || isa<BranchInst>(IRBB->getTerminator())) &&
-        "other blocks must be terminated by a branch");
+    assert((getNumSuccessors() == 0 ||
+            isa<UncondBrInst, CondBrInst>(IRBB->getTerminator())) &&
+           "other blocks must be terminated by a branch");
   }
 
   connectToPredecessors(*State);
@@ -664,7 +664,7 @@ void VPBlockBase::print(raw_ostream &O) const {
 }
 
 void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
-  if (getSuccessors().empty()) {
+  if (!hasSuccessors()) {
     O << Indent << "No successors\n";
   } else {
     O << Indent << "Successor(s): ";
@@ -936,7 +936,7 @@ void VPlan::execute(VPTransformState *State) {
 
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
-  cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
+  cast<UncondBrInst>(VectorPreHeader->getTerminator())->setSuccessor(nullptr);
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
@@ -1407,11 +1407,14 @@ bool VPValue::isDefinedOutsideLoopRegions() const {
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
+  if (auto *SV = dyn_cast<VPSymbolicValue>(this))
+    SV->markMaterialized();
 }
 
 void VPValue::replaceUsesWithIf(
     VPValue *New,
     llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+  assertNotMaterialized();
   // Note that this early exit is required for correctness; the implementation
   // below relies on the number of users for this VPValue to decrease, which
   // isn't the case if this == New.

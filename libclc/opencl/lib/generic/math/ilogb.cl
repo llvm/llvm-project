@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_ilogb.h"
+#include <clc/math/clc_ilogb.h>
 
 #define __CLC_FUNCTION ilogb
-#define __CLC_BODY "clc/math/unary_def_with_int_return.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc/math/unary_def_with_int_return.inc>
+#include <clc/math/gentype.inc>

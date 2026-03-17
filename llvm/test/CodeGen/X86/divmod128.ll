@@ -425,8 +425,8 @@ entry:
 define i128 @urem_i128_12(i128 %x) nounwind {
 ; X86-64-LABEL: urem_i128_12:
 ; X86-64:       # %bb.0: # %entry
-; X86-64-NEXT:    movq %rsi, %rcx
-; X86-64-NEXT:    shldq $62, %rdi, %rcx
+; X86-64-NEXT:    movq %rdi, %rcx
+; X86-64-NEXT:    shrdq $2, %rsi, %rcx
 ; X86-64-NEXT:    shrq $2, %rsi
 ; X86-64-NEXT:    addq %rsi, %rcx
 ; X86-64-NEXT:    adcq $0, %rcx
@@ -443,8 +443,8 @@ define i128 @urem_i128_12(i128 %x) nounwind {
 ;
 ; WIN64-LABEL: urem_i128_12:
 ; WIN64:       # %bb.0: # %entry
-; WIN64-NEXT:    movq %rdx, %r8
-; WIN64-NEXT:    shldq $62, %rcx, %r8
+; WIN64-NEXT:    movq %rcx, %r8
+; WIN64-NEXT:    shrdq $2, %rdx, %r8
 ; WIN64-NEXT:    shrq $2, %rdx
 ; WIN64-NEXT:    addq %rdx, %r8
 ; WIN64-NEXT:    adcq $0, %r8

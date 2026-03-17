@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_ldexp.h"
+#include <clc/math/clc_ldexp.h>
 
 #define __CLC_FUNCTION ldexp
 #define __CLC_IMPL_FUNCTION(x) __clc_ldexp
-#define __CLC_BODY "clc/shared/binary_def_with_int_second_arg.inc"
+#define __CLC_BODY <clc/shared/binary_def_with_int_second_arg.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>
 
 // This defines all the ldexp(GENTYPE, int) variants
-#define __CLC_BODY "ldexp.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <ldexp.inc>
+#include <clc/math/gentype.inc>

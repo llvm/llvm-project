@@ -72,7 +72,15 @@ LLVM_ABI void expandMemSetAsLoop(MemSetInst *MemSet,
                                  const TargetTransformInfo &TTI);
 
 /// Expand \p MemSetPattern as a loop. \p MemSet is not deleted.
-LLVM_ABI void expandMemSetPatternAsLoop(MemSetPatternInst *MemSet);
+/// If \p TTI is provided, the memset.pattern is expanded according to the
+/// target's preferences. Otherwise, it is expanded as an element-wise loop.
+LLVM_ABI void
+expandMemSetPatternAsLoop(MemSetPatternInst *MemSet,
+                          const TargetTransformInfo *TTI = nullptr);
+
+/// Expand \p MemSetPattern as a loop. \p MemSet is not deleted.
+LLVM_ABI void expandMemSetPatternAsLoop(MemSetPatternInst *MemSet,
+                                        const TargetTransformInfo &TTI);
 
 /// Expand \p AtomicMemCpy as a loop. \p AtomicMemCpy is not deleted.
 LLVM_ABI void expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemCpy,

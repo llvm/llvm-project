@@ -214,9 +214,11 @@ namespace {
     bool matchVectorAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                        unsigned Depth);
     bool matchAddressBase(SDValue N, X86ISelAddressMode &AM);
-    bool selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
-                    SDValue &Scale, SDValue &Index, SDValue &Disp,
-                    SDValue &Segment);
+    bool selectAddr(SDNode *Parent, SDValue N, SDValue &Base, SDValue &Scale,
+                    SDValue &Index, SDValue &Disp, SDValue &Segment,
+                    bool HasNDDM = true);
+    bool selectNDDAddr(SDNode *Parent, SDValue N, SDValue &Base, SDValue &Scale,
+                       SDValue &Index, SDValue &Disp, SDValue &Segment);
     bool selectVectorAddr(MemSDNode *Parent, SDValue BasePtr, SDValue IndexOp,
                           SDValue ScaleOp, SDValue &Base, SDValue &Scale,
                           SDValue &Index, SDValue &Disp, SDValue &Segment);
@@ -273,6 +275,8 @@ namespace {
       Scale = getI8Imm(AM.Scale, DL);
 
 #define GET_ND_IF_ENABLED(OPC) (Subtarget->hasNDD() ? OPC##_ND : OPC)
+#define GET_NDM_IF_ENABLED(OPC)                                              \
+    (Subtarget->hasNDD() && Subtarget->hasNDDM() ? OPC##_ND : OPC)
       // Negate the index if needed.
       if (AM.NegateIndex) {
         unsigned NegOpc;
@@ -3018,8 +3022,8 @@ bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,
 /// is always a load, store, atomic node, or null.  It is only null when
 /// checking memory operands for inline asm nodes.
 bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
-                                 SDValue &Scale, SDValue &Index,
-                                 SDValue &Disp, SDValue &Segment) {
+                                 SDValue &Scale, SDValue &Index, SDValue &Disp,
+                                 SDValue &Segment, bool HasNDDM) {
   X86ISelAddressMode AM;
 
   if (Parent &&
@@ -3049,8 +3053,18 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
   if (matchAddress(N, AM))
     return false;
 
+  if (!HasNDDM && !AM.isRIPRelative())
+    return false;
+
   getAddressOperands(AM, DL, VT, Base, Scale, Index, Disp, Segment);
   return true;
+}
+
+bool X86DAGToDAGISel::selectNDDAddr(SDNode *Parent, SDValue N, SDValue &Base,
+                                    SDValue &Scale, SDValue &Index,
+                                    SDValue &Disp, SDValue &Segment) {
+  return selectAddr(Parent, N, Base, Scale, Index, Disp, Segment,
+                    Subtarget->hasNDDM());
 }
 
 bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
@@ -5050,6 +5064,21 @@ VPTESTM_CASE(v32i16, WZ##SUFFIX)
 #undef VPTESTM_CASE
 }
 
+static void orderRegForMul(SDValue &N0, SDValue &N1, const unsigned LoReg,
+                           const MachineRegisterInfo &MRI) {
+  auto GetPhysReg = [&](SDValue V) -> Register {
+    if (V.getOpcode() != ISD::CopyFromReg)
+      return Register();
+    Register Reg = cast<RegisterSDNode>(V.getOperand(1))->getReg();
+    if (Reg.isVirtual())
+      return MRI.getLiveInPhysReg(Reg);
+    return Reg;
+  };
+
+  if (GetPhysReg(N1) == LoReg && GetPhysReg(N0) != LoReg)
+    std::swap(N0, N1);
+}
+
 // Try to create VPTESTM instruction. If InMask is not null, it will be used
 // to form a masked operation.
 bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
@@ -5633,23 +5662,23 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       default: llvm_unreachable("Unexpected opcode!");
       case ISD::ADD:
         ROpc = GET_ND_IF_ENABLED(X86::ADD8rr);
-        MOpc = GET_ND_IF_ENABLED(X86::ADD8rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::ADD8rm);
         break;
       case ISD::SUB:
         ROpc = GET_ND_IF_ENABLED(X86::SUB8rr);
-        MOpc = GET_ND_IF_ENABLED(X86::SUB8rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::SUB8rm);
         break;
       case ISD::AND:
         ROpc = GET_ND_IF_ENABLED(X86::AND8rr);
-        MOpc = GET_ND_IF_ENABLED(X86::AND8rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::AND8rm);
         break;
       case ISD::OR:
         ROpc = GET_ND_IF_ENABLED(X86::OR8rr);
-        MOpc = GET_ND_IF_ENABLED(X86::OR8rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::OR8rm);
         break;
       case ISD::XOR:
         ROpc = GET_ND_IF_ENABLED(X86::XOR8rr);
-        MOpc = GET_ND_IF_ENABLED(X86::XOR8rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::XOR8rm);
         break;
       }
       break;
@@ -5658,23 +5687,23 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       default: llvm_unreachable("Unexpected opcode!");
       case ISD::ADD:
         ROpc = GET_ND_IF_ENABLED(X86::ADD16rr);
-        MOpc = GET_ND_IF_ENABLED(X86::ADD16rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::ADD16rm);
         break;
       case ISD::SUB:
         ROpc = GET_ND_IF_ENABLED(X86::SUB16rr);
-        MOpc = GET_ND_IF_ENABLED(X86::SUB16rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::SUB16rm);
         break;
       case ISD::AND:
         ROpc = GET_ND_IF_ENABLED(X86::AND16rr);
-        MOpc = GET_ND_IF_ENABLED(X86::AND16rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::AND16rm);
         break;
       case ISD::OR:
         ROpc = GET_ND_IF_ENABLED(X86::OR16rr);
-        MOpc = GET_ND_IF_ENABLED(X86::OR16rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::OR16rm);
         break;
       case ISD::XOR:
         ROpc = GET_ND_IF_ENABLED(X86::XOR16rr);
-        MOpc = GET_ND_IF_ENABLED(X86::XOR16rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::XOR16rm);
         break;
       }
       break;
@@ -5683,23 +5712,23 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       default: llvm_unreachable("Unexpected opcode!");
       case ISD::ADD:
         ROpc = GET_ND_IF_ENABLED(X86::ADD32rr);
-        MOpc = GET_ND_IF_ENABLED(X86::ADD32rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::ADD32rm);
         break;
       case ISD::SUB:
         ROpc = GET_ND_IF_ENABLED(X86::SUB32rr);
-        MOpc = GET_ND_IF_ENABLED(X86::SUB32rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::SUB32rm);
         break;
       case ISD::AND:
         ROpc = GET_ND_IF_ENABLED(X86::AND32rr);
-        MOpc = GET_ND_IF_ENABLED(X86::AND32rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::AND32rm);
         break;
       case ISD::OR:
         ROpc = GET_ND_IF_ENABLED(X86::OR32rr);
-        MOpc = GET_ND_IF_ENABLED(X86::OR32rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::OR32rm);
         break;
       case ISD::XOR:
         ROpc = GET_ND_IF_ENABLED(X86::XOR32rr);
-        MOpc = GET_ND_IF_ENABLED(X86::XOR32rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::XOR32rm);
         break;
       }
       break;
@@ -5708,23 +5737,23 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       default: llvm_unreachable("Unexpected opcode!");
       case ISD::ADD:
         ROpc = GET_ND_IF_ENABLED(X86::ADD64rr);
-        MOpc = GET_ND_IF_ENABLED(X86::ADD64rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::ADD64rm);
         break;
       case ISD::SUB:
         ROpc = GET_ND_IF_ENABLED(X86::SUB64rr);
-        MOpc = GET_ND_IF_ENABLED(X86::SUB64rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::SUB64rm);
         break;
       case ISD::AND:
         ROpc = GET_ND_IF_ENABLED(X86::AND64rr);
-        MOpc = GET_ND_IF_ENABLED(X86::AND64rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::AND64rm);
         break;
       case ISD::OR:
         ROpc = GET_ND_IF_ENABLED(X86::OR64rr);
-        MOpc = GET_ND_IF_ENABLED(X86::OR64rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::OR64rm);
         break;
       case ISD::XOR:
         ROpc = GET_ND_IF_ENABLED(X86::XOR64rr);
-        MOpc = GET_ND_IF_ENABLED(X86::XOR64rm);
+        MOpc = GET_NDM_IF_ENABLED(X86::XOR64rm);
         break;
       }
       break;
@@ -5795,6 +5824,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       if (FoldedLoad)
         std::swap(N0, N1);
     }
+
+    // UMUL/SMUL have an implicit source in LoReg (AL/AX/EAX/RAX). Prefer the
+    // operand that's already there to avoid an extra register-to-register move.
+    if (!FoldedLoad)
+      orderRegForMul(N0, N1, LoReg, CurDAG->getMachineFunction().getRegInfo());
 
     SDValue InGlue = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, LoReg,
                                           N0, SDValue()).getValue(1);
@@ -5882,23 +5916,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         std::swap(N0, N1);
     }
 
-    // For MULX, the implicit source must be in RDX (LoReg). If N1 is
-    // already a CopyFromReg of LoReg and N0 is not, flip so that N0
-    // (which feeds the CopyToReg below) is the operand already in LoReg,
-    // avoiding an unnecessary register-to-register copy before the multiply.
-    if (UseMULX && !foldedLoad) {
-      MachineRegisterInfo &MRI = CurDAG->getMachineFunction().getRegInfo();
-      auto GetPhysReg = [&](SDValue V) -> Register {
-        if (V.getOpcode() != ISD::CopyFromReg)
-          return Register();
-        Register Reg = cast<RegisterSDNode>(V.getOperand(1))->getReg();
-        if (Reg.isVirtual())
-          return MRI.getLiveInPhysReg(Reg);
-        return Reg;
-      };
-      if (GetPhysReg(N1) == LoReg && GetPhysReg(N0) != LoReg)
-        std::swap(N0, N1);
-    }
+    // UMUL/SMUL_LOHI has an implicit source in LoReg (RDX for MULX, RAX for
+    // MUL/IMUL). Prefer the operand that's already there.
+    if (!foldedLoad)
+      orderRegForMul(N0, N1, LoReg, CurDAG->getMachineFunction().getRegInfo());
 
     SDValue InGlue = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, LoReg,
                                           N0, SDValue()).getValue(1);

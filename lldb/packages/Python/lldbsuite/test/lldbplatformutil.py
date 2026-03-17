@@ -166,11 +166,27 @@ def platformIsDarwin():
     return getPlatform() in getDarwinOSTriples()
 
 
+def getDarwinEmbeddedKernelVersion():
+    """Returns the major kernel version of the remote device via 'uname -r'."""
+    shell_cmd = lldb.SBPlatformShellCommand("uname -r")
+    err = lldb.selected_platform.Run(shell_cmd)
+    if err.Success():
+        output = shell_cmd.GetOutput()
+        if output:
+            try:
+                return int(output.strip().split(".")[0])
+            except ValueError:
+                pass
+    return 0
+
+
 def findMainThreadCheckerDylib():
     if not platformIsDarwin():
         return ""
 
     if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        if getDarwinEmbeddedKernelVersion() >= 26:
+            return "/usr/lib/libMainThreadChecker.dylib"
         return "/Developer/usr/lib/libMainThreadChecker.dylib"
 
     with os.popen("xcode-select -p") as output:

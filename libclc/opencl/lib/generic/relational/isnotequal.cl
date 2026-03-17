@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/relational/clc_isnotequal.h"
+#include <clc/relational/clc_isnotequal.h>
 
 #define __CLC_FUNCTION isnotequal
-#define __CLC_BODY "binary_def.inc"
+#define __CLC_BODY "relational_binary_def.inc"
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

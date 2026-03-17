@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_exp2.h"
+#include <clc/math/clc_exp2.h>
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_half_exp2
 #define __CLC_IMPL_FUNCTION(x) __clc_exp2
-#define __CLC_BODY "clc/shared/unary_def.inc"
+#define __CLC_BODY <clc/shared/unary_def.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

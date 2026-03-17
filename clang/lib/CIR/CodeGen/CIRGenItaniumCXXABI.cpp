@@ -2518,7 +2518,25 @@ static void initCatchParam(CIRGenFunction &cgf, mlir::Value ehToken,
     llvm_unreachable("bad evaluation kind");
   }
 
-  cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Aggregate");
+  assert(isa<RecordType>(catchType) && "unexpected catch type!");
+  auto *catchRD = catchType->getAsCXXRecordDecl();
+  CharUnits caughtExnAlignment = cgf.cgm.getClassPointerAlignment(catchRD);
+
+  // Check for a copy expression.  If we don't have a copy expression,
+  // that means a trivial copy is okay.
+  const Expr *copyExpr = catchParam.getInit();
+  if (!copyExpr) {
+    mlir::Type cirCatchPtrTy = cgf.getBuilder().getPointerTo(cirCatchTy);
+    mlir::Value rawAdjustedExn =
+        callBeginCatch(cgf, ehToken, cirCatchPtrTy, /*endMightThrow=*/true);
+    Address adjustedExn(rawAdjustedExn, cirCatchTy, caughtExnAlignment);
+    LValue dest = cgf.makeAddrLValue(paramAddr, catchType);
+    LValue src = cgf.makeAddrLValue(adjustedExn, catchType);
+    cgf.emitAggregateCopy(dest, src, catchType, AggValueSlot::DoesNotOverlap);
+    return;
+  }
+
+  cgf.cgm.errorNYI(loc, "initCatchParam: cir::TEK_Aggregate non-trivial copy");
 }
 
 /// Begins a catch statement by initializing the catch variable and

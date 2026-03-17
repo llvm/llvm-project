@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clcfunc.h"
-#include "clc/utils.h"
+#include <clc/clcfunc.h>
+#include <clc/utils.h>
 
 // Define some useful macros for type conversions.
 #define __CLC_AS_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)
@@ -75,6 +75,7 @@
 #define __CLC_FP_LIT(x) (__CLC_GENTYPE) x##F
 #define __CLC_GENTYPE_NAN (__CLC_GENTYPE) FLT_NAN
 #define __CLC_GENTYPE_INF (__CLC_GENTYPE) INFINITY
+#define __CLC_GENTYPE_TRUE_MIN (__CLC_GENTYPE) FLT_TRUE_MIN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(int, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(uint, __CLC_VECSIZE)
@@ -139,6 +140,7 @@
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_GENTYPE_NAN
+#undef __CLC_GENTYPE_TRUE_MIN
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -153,6 +155,7 @@
 #define __CLC_FPSIZE 64
 #define __CLC_FP_LIT(x) (__CLC_GENTYPE)(x)
 #define __CLC_GENTYPE_NAN (__CLC_GENTYPE) DBL_NAN
+#define __CLC_GENTYPE_TRUE_MIN (__CLC_GENTYPE) DBL_TRUE_MIN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(long, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ulong, __CLC_VECSIZE)
@@ -217,6 +220,7 @@
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_GENTYPE_NAN
+#undef __CLC_GENTYPE_TRUE_MIN
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -231,6 +235,7 @@
 #define __CLC_FPSIZE 16
 #define __CLC_FP_LIT(x) (__CLC_GENTYPE) x##H
 #define __CLC_GENTYPE_NAN (__CLC_GENTYPE) HALF_NAN
+#define __CLC_GENTYPE_TRUE_MIN (__CLC_GENTYPE) HALF_TRUE_MIN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(short, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ushort, __CLC_VECSIZE)
@@ -295,6 +300,7 @@
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_GENTYPE_NAN
+#undef __CLC_GENTYPE_TRUE_MIN
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE

@@ -11,10 +11,10 @@
 
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY "clc/collective/clc_work_group_broadcast.inc"
-#include "clc/integer/gentype.inc"
+#define __CLC_BODY <clc/collective/clc_work_group_broadcast_decl.inc>
+#include <clc/integer/gentype.inc>
 
-#define __CLC_BODY "clc/collective/clc_work_group_broadcast.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc/collective/clc_work_group_broadcast_decl.inc>
+#include <clc/math/gentype.inc>
 
 #endif // __CLC_COLLECTIVE_CLC_WORK_GROUP_BROADCAST_H__

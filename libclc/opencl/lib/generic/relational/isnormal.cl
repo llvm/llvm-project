@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/relational/clc_isnormal.h"
+#include <clc/relational/clc_isnormal.h>
 
 #define __CLC_FUNCTION isnormal
-#define __CLC_BODY "unary_def.inc"
+#define __CLC_BODY "relational_unary_def.inc"
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

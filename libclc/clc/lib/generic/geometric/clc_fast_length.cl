@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/geometric/clc_dot.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_fabs.h"
-#include "clc/math/clc_half_sqrt.h"
+#include <clc/geometric/clc_dot.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_half_sqrt.h>
 
 _CLC_OVERLOAD _CLC_DEF float __clc_fast_length(float p) {
   return __clc_fabs(p);

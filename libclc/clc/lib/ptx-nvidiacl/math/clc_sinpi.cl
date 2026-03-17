@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_sinpi.h"
+#include <clc/math/clc_sinpi.h>
 
 float __nv_sinpif(float);
 double __nv_sinpi(double);
@@ -30,5 +30,5 @@ _CLC_OVERLOAD _CLC_DEF half __clc_sinpi(half x) {
 #endif
 
 #define __CLC_FUNCTION __clc_sinpi
-#define __CLC_BODY "clc/shared/unary_def_scalarize.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#include <clc/math/gentype.inc>

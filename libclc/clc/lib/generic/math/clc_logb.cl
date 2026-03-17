@@ -10,7 +10,11 @@
 #include "clc/float/definitions.h"
 #include "clc/integer/clc_clz.h"
 #include "clc/internal/clc.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_frexp_exp.h"
 #include "clc/math/math.h"
+#include "clc/relational/clc_isfinite.h"
+#include "clc/relational/clc_select.h"
 
-#define __CLC_BODY "clc_logb.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_logb.inc>
+#include <clc/math/gentype.inc>

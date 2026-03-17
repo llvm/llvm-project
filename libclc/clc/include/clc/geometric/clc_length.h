@@ -10,9 +10,9 @@
 #define __CLC_GEOMETRIC_CLC_LENGTH_H__
 
 #define __CLC_FUNCTION __clc_length
-#define __CLC_BODY "clc/geometric/unary_decl.inc"
+#define __CLC_BODY <clc/geometric/unary_decl.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>
 
 #undef __CLC_FUNCTION
 

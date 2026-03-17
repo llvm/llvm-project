@@ -76,7 +76,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -89,7 +88,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
-#include <tuple>
 
 using namespace llvm;
 
@@ -99,6 +97,13 @@ STATISTIC(NumConditionsAdjusted, "Number of conditions adjusted");
 
 namespace {
 
+/// Bundles the parameters needed to adjust a comparison instruction.
+struct CmpInfo {
+  int Imm;
+  unsigned Opc;
+  AArch64CC::CondCode CC;
+};
+
 class AArch64ConditionOptimizer : public MachineFunctionPass {
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -106,10 +111,6 @@ class AArch64ConditionOptimizer : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
 
 public:
-  // Stores immediate, compare instruction opcode and branch condition (in this
-  // order) of adjusted comparison.
-  using CmpInfo = std::tuple<int, unsigned, AArch64CC::CondCode>;
-
   static char ID;
 
   AArch64ConditionOptimizer() : MachineFunctionPass(ID) {}
@@ -120,8 +121,11 @@ public:
   bool nzcvLivesOut(MachineBasicBlock *MBB);
   MachineInstr *getBccTerminator(MachineBasicBlock *MBB);
   MachineInstr *findAdjustableCmp(MachineInstr *CondMI);
-  CmpInfo adjustCmp(MachineInstr *CmpMI, AArch64CC::CondCode Cmp);
-  void modifyCmp(MachineInstr *CmpMI, const CmpInfo &Info);
+  CmpInfo getAdjustedCmpInfo(MachineInstr *CmpMI, AArch64CC::CondCode Cmp);
+  void updateCmpInstr(MachineInstr *CmpMI, int NewImm, unsigned NewOpc);
+  void updateCondInstr(MachineInstr *CondMI, AArch64CC::CondCode NewCC);
+  void applyCmpAdjustment(MachineInstr *CmpMI, MachineInstr *CondMI,
+                          const CmpInfo &Info);
   bool adjustTo(MachineInstr *CmpMI, AArch64CC::CondCode Cmp, MachineInstr *To,
                 int ToImm);
   bool optimizeIntraBlock(MachineBasicBlock &MBB);
@@ -312,11 +316,10 @@ static AArch64CC::CondCode getAdjustedCmp(AArch64CC::CondCode Cmp) {
   }
 }
 
-// Transforms GT -> GE, GE -> GT, LT -> LE, LE -> LT by updating comparison
-// operator and condition code.
-AArch64ConditionOptimizer::CmpInfo
-AArch64ConditionOptimizer::adjustCmp(MachineInstr *CmpMI,
-                                     AArch64CC::CondCode Cmp) {
+// Returns the adjusted immediate, opcode, and condition code for switching
+// between inclusive/exclusive forms (GT <-> GE, LT <-> LE).
+CmpInfo AArch64ConditionOptimizer::getAdjustedCmpInfo(MachineInstr *CmpMI,
+                                                      AArch64CC::CondCode Cmp) {
   unsigned Opc = CmpMI->getOpcode();
 
   bool IsSigned = Cmp == AArch64CC::GT || Cmp == AArch64CC::GE ||
@@ -338,7 +341,7 @@ AArch64ConditionOptimizer::adjustCmp(MachineInstr *CmpMI,
   // Bail out on cmn 0 (ADDS with immediate 0). It is a valid instruction but
   // doesn't set flags in a way we can safely transform, so skip optimization.
   if (OldImm == 0 && Negative)
-    return CmpInfo(OldImm, Opc, Cmp);
+    return {OldImm, Opc, Cmp};
 
   if ((OldImm == 1 && Negative && Correction == -1) ||
       (OldImm == 0 && Correction == -1)) {
@@ -346,66 +349,70 @@ AArch64ConditionOptimizer::adjustCmp(MachineInstr *CmpMI,
     // unsigned wrap (e.g., 0 wrapping to 0xFFFFFFFF), so return the old cmp.
     // Note: For signed comparisons, opcode changes (cmn 1 ↔ cmp 0) are valid.
     if (!IsSigned)
-      return CmpInfo(OldImm, Opc, Cmp);
+      return {OldImm, Opc, Cmp};
     Opc = getComplementOpc(Opc);
   }
 
-  return CmpInfo(NewImm, Opc, getAdjustedCmp(Cmp));
+  return {NewImm, Opc, getAdjustedCmp(Cmp)};
 }
 
-// Applies changes to comparison instruction suggested by adjustCmp().
-void AArch64ConditionOptimizer::modifyCmp(MachineInstr *CmpMI,
-    const CmpInfo &Info) {
-  int Imm;
-  unsigned Opc;
-  AArch64CC::CondCode Cmp;
-  std::tie(Imm, Opc, Cmp) = Info;
+// Modifies a comparison instruction's immediate and opcode.
+void AArch64ConditionOptimizer::updateCmpInstr(MachineInstr *CmpMI, int NewImm,
+                                               unsigned NewOpc) {
+  CmpMI->getOperand(2).setImm(NewImm);
+  CmpMI->setDesc(TII->get(NewOpc));
+}
 
-  MachineBasicBlock *const MBB = CmpMI->getParent();
-
-  // Change immediate in comparison instruction (ADDS or SUBS).
-  BuildMI(*MBB, CmpMI, CmpMI->getDebugLoc(), TII->get(Opc))
-      .add(CmpMI->getOperand(0))
-      .add(CmpMI->getOperand(1))
-      .addImm(Imm)
-      .add(CmpMI->getOperand(3));
-  CmpMI->eraseFromParent();
-
-  // The fact that this comparison was picked ensures that it's related to the
-  // first terminator instruction.
-  MachineInstr &BrMI = *MBB->getFirstTerminator();
-
-  // Change condition in branch instruction.
-  BuildMI(*MBB, BrMI, BrMI.getDebugLoc(), TII->get(AArch64::Bcc))
-      .addImm(Cmp)
-      .add(BrMI.getOperand(1));
-  BrMI.eraseFromParent();
-
+// Modifies the condition code of a conditional instruction.
+void AArch64ConditionOptimizer::updateCondInstr(MachineInstr *CondMI,
+                                                AArch64CC::CondCode NewCC) {
+  // Get the correct operand index for the conditional instruction
+  unsigned CondOpIdx;
+  switch (CondMI->getOpcode()) {
+  case AArch64::Bcc:
+    CondOpIdx = 0;
+    break;
+  case AArch64::CSINCWr:
+  case AArch64::CSINCXr:
+    CondOpIdx = 3;
+    break;
+  default:
+    llvm_unreachable("Unsupported conditional instruction");
+  }
+  CondMI->getOperand(CondOpIdx).setImm(NewCC);
   ++NumConditionsAdjusted;
 }
 
-// Parse a condition code returned by analyzeBranch, and compute the CondCode
-// corresponding to TBB.
-// Returns true if parsing was successful, otherwise false is returned.
-static bool parseCond(ArrayRef<MachineOperand> Cond, AArch64CC::CondCode &CC) {
+// Applies a comparison adjustment to a cmp/cond instruction pair.
+void AArch64ConditionOptimizer::applyCmpAdjustment(MachineInstr *CmpMI,
+                                                   MachineInstr *CondMI,
+                                                   const CmpInfo &Info) {
+  updateCmpInstr(CmpMI, Info.Imm, Info.Opc);
+  updateCondInstr(CondMI, Info.CC);
+}
+
+// Extracts the condition code from the result of analyzeBranch.
+// Returns the CondCode or Invalid if the format is not a simple br.cond.
+static AArch64CC::CondCode parseCondCode(ArrayRef<MachineOperand> Cond) {
+  assert(!Cond.empty() && "Expected non-empty condition from analyzeBranch");
   // A normal br.cond simply has the condition code.
   if (Cond[0].getImm() != -1) {
     assert(Cond.size() == 1 && "Unknown Cond array format");
-    CC = (AArch64CC::CondCode)(int)Cond[0].getImm();
-    return true;
+    return (AArch64CC::CondCode)(int)Cond[0].getImm();
   }
-  return false;
+  return AArch64CC::CondCode::Invalid;
 }
 
 // Adjusts one cmp instruction to another one if result of adjustment will allow
 // CSE.  Returns true if compare instruction was changed, otherwise false is
 // returned.
 bool AArch64ConditionOptimizer::adjustTo(MachineInstr *CmpMI,
-  AArch64CC::CondCode Cmp, MachineInstr *To, int ToImm)
-{
-  CmpInfo Info = adjustCmp(CmpMI, Cmp);
-  if (std::get<0>(Info) == ToImm && std::get<1>(Info) == To->getOpcode()) {
-    modifyCmp(CmpMI, Info);
+                                         AArch64CC::CondCode Cmp,
+                                         MachineInstr *To, int ToImm) {
+  CmpInfo Info = getAdjustedCmpInfo(CmpMI, Cmp);
+  if (Info.Imm == ToImm && Info.Opc == To->getOpcode()) {
+    MachineInstr &BrMI = *CmpMI->getParent()->getFirstTerminator();
+    applyCmpAdjustment(CmpMI, &BrMI, Info);
     return true;
   }
   return false;
@@ -527,17 +534,14 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
     AArch64CC::CondCode CondToAdjust = adjustFirst ? FirstCond : SecondCond;
     int TargetImm = adjustFirst ? SecondImm : FirstImm;
 
-    CmpInfo AdjustedInfo = adjustCmp(CmpToAdjust, CondToAdjust);
+    CmpInfo Adj = getAdjustedCmpInfo(CmpToAdjust, CondToAdjust);
 
-    if (std::get<0>(AdjustedInfo) == TargetImm &&
-        std::get<1>(AdjustedInfo) ==
-            (adjustFirst ? SecondCmpMI : FirstCmpMI)->getOpcode()) {
+    if (Adj.Imm == TargetImm &&
+        Adj.Opc == (adjustFirst ? SecondCmpMI : FirstCmpMI)->getOpcode()) {
       LLVM_DEBUG(dbgs() << "Successfully optimizing intra-block CSINC pair\n");
 
       // Modify the selected CMP and CSINC
-      CmpToAdjust->getOperand(2).setImm(std::get<0>(AdjustedInfo));
-      CmpToAdjust->setDesc(TII->get(std::get<1>(AdjustedInfo)));
-      CSINCToAdjust->getOperand(3).setImm(std::get<2>(AdjustedInfo));
+      applyCmpAdjustment(CmpToAdjust, CSINCToAdjust, Adj);
 
       return true;
     }
@@ -582,13 +586,10 @@ bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
   if (!registersMatch(HeadCmpMI, TrueCmpMI))
     return false;
 
-  AArch64CC::CondCode HeadCmp;
-  if (HeadCond.empty() || !parseCond(HeadCond, HeadCmp)) {
-    return false;
-  }
-
-  AArch64CC::CondCode TrueCmp;
-  if (TrueCond.empty() || !parseCond(TrueCond, TrueCmp)) {
+  AArch64CC::CondCode HeadCmp = parseCondCode(HeadCond);
+  AArch64CC::CondCode TrueCmp = parseCondCode(TrueCond);
+  if (HeadCmp == AArch64CC::CondCode::Invalid ||
+      TrueCmp == AArch64CC::CondCode::Invalid) {
     return false;
   }
 
@@ -629,12 +630,12 @@ bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
     // 1) (a >= {NewImm} && ...) || (a <= {NewImm} && ...)
     // 2) (a <= {NewImm} && ...) || (a >= {NewImm} && ...)
 
-    CmpInfo HeadCmpInfo = adjustCmp(HeadCmpMI, HeadCmp);
-    CmpInfo TrueCmpInfo = adjustCmp(TrueCmpMI, TrueCmp);
-    if (std::get<0>(HeadCmpInfo) == std::get<0>(TrueCmpInfo) &&
-        std::get<1>(HeadCmpInfo) == std::get<1>(TrueCmpInfo)) {
-      modifyCmp(HeadCmpMI, HeadCmpInfo);
-      modifyCmp(TrueCmpMI, TrueCmpInfo);
+    CmpInfo HeadCmpInfo = getAdjustedCmpInfo(HeadCmpMI, HeadCmp);
+    CmpInfo TrueCmpInfo = getAdjustedCmpInfo(TrueCmpMI, TrueCmp);
+    if (HeadCmpInfo.Imm == TrueCmpInfo.Imm &&
+        HeadCmpInfo.Opc == TrueCmpInfo.Opc) {
+      applyCmpAdjustment(HeadCmpMI, HeadBrMI, HeadCmpInfo);
+      applyCmpAdjustment(TrueCmpMI, TrueBrMI, TrueCmpInfo);
       return true;
     }
   } else if (((isGreaterThan(HeadCmp) && isGreaterThan(TrueCmp)) ||

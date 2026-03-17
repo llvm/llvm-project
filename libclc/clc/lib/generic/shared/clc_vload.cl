@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/internal/clc.h"
-#include "clc/shared/clc_vload.h"
+#include <clc/internal/clc.h>
+#include <clc/shared/clc_vload.h>
 
 #define __CLC_VLOAD_VECTORIZE(PRIM_TYPE, ADDR_SPACE)                           \
   _CLC_OVERLOAD _CLC_DEF PRIM_TYPE##2 __clc_vload2(                            \
@@ -115,7 +115,7 @@ __CLC_VLOAD_ADDR_SPACES(half)
   __CLC_FUNC_IMPL(SUFFIX, VEC_SIZE, OFFSET_SIZE, TYPE, AS)
 
 #define __CLC_BODY "clc_vload_half.inc"
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>
 #undef __CLC_FUNC
 #undef __CLC_FUNC_IMPL
 #undef __CLC_VEC_LOAD16

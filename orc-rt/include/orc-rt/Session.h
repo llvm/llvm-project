@@ -13,8 +13,10 @@
 #ifndef ORC_RT_SESSION_H
 #define ORC_RT_SESSION_H
 
+#include "orc-rt/ControllerInterface.h"
 #include "orc-rt/Error.h"
-#include "orc-rt/ResourceManager.h"
+#include "orc-rt/LockedAccess.h"
+#include "orc-rt/Service.h"
 #include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
@@ -116,9 +118,7 @@ public:
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
   Session(std::unique_ptr<TaskDispatcher> Dispatcher,
-          ErrorReporterFn ReportError)
-      : Dispatcher(std::move(Dispatcher)), ReportError(std::move(ReportError)) {
-  }
+          ErrorReporterFn ReportError);
 
   // Sessions are not copyable or moveable.
   Session(const Session &) = delete;
@@ -134,6 +134,10 @@ public:
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
+  /// Controller interface symbols map.
+  auto controllerInterface() { return LockedAccess(CI, M); }
+  auto controllerInterface() const { return LockedAccess(CI, M); }
+
   /// Initiate session shutdown.
   ///
   /// Runs shutdown on registered resources in reverse order.
@@ -142,8 +146,23 @@ public:
   /// Initiate session shutdown and block until complete.
   void waitForShutdown();
 
-  /// Add a ResourceManager to the session.
-  void addResourceManager(std::unique_ptr<ResourceManager> RM);
+  /// Add a Service to the session.
+  template <typename ServiceT>
+  ServiceT &addService(std::unique_ptr<ServiceT> Srv) {
+    assert(Srv && "addService called with null value");
+    ServiceT &Ref = *Srv;
+    std::scoped_lock<std::mutex> Lock(M);
+    assert(!SI && "addService called after shutdown");
+    Services.push_back(std::move(Srv));
+    return Ref;
+  }
+
+  /// Construct an instance of ServiceT from the given arguments and add it to
+  /// the Session.
+  template <typename ServiceT, typename... ArgTs>
+  ServiceT &createService(ArgTs &&...Args) {
+    return addService(std::make_unique<ServiceT>(std::forward<ArgTs>(Args)...));
+  }
 
   /// Set the ControllerAccess object.
   void setController(std::shared_ptr<ControllerAccess> CA);
@@ -163,11 +182,11 @@ public:
 private:
   struct ShutdownInfo {
     bool Complete = false;
-    std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
+    std::vector<std::unique_ptr<Service>> Services;
     std::vector<OnShutdownCompleteFn> OnCompletes;
   };
 
-  void shutdownNext(Error Err);
+  void shutdownNext();
   void shutdownComplete();
 
   void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
@@ -189,8 +208,9 @@ private:
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
 
-  std::mutex M;
-  std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
+  mutable std::mutex M;
+  std::vector<std::unique_ptr<Service>> Services;
+  ControllerInterface CI;
   std::unique_ptr<ShutdownInfo> SI;
 };
 

@@ -7,5 +7,5 @@
 //===----------------------------------------------------------------------===//
 
 #include "clc/math/clc_sqrt_cr.h"
-#define __CLC_BODY "clc_sqrt_cr.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_sqrt_cr.inc>
+#include <clc/math/gentype.inc>

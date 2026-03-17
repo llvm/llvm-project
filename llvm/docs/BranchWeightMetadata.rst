@@ -23,11 +23,10 @@ indicates a greater chance of being taken.
 Supported Instructions
 ======================
 
-``BranchInst``
+``CondBrInst``
 ^^^^^^^^^^^^^^
 
-Metadata is only assigned to conditional branches. There are two extra
-operands for the true and the false branch.
+There are two extra operands for the true and the false branch.
 We optionally track if the metadata was added by ``__builtin_expect`` or
 ``__builtin_expect_with_probability`` with an optional field ``!"expected"``.
 

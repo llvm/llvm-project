@@ -16,8 +16,8 @@
 
 #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
 
-#define __CLC_BODY "clc_work_group_broadcast.inc"
-#include "clc/integer/gentype.inc"
+#define __CLC_BODY <clc_work_group_broadcast.inc>
+#include <clc/integer/gentype.inc>
 
-#define __CLC_BODY "clc_work_group_broadcast.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_work_group_broadcast.inc>
+#include <clc/math/gentype.inc>

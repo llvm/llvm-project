@@ -35,10 +35,8 @@ void returnsVoid() {
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness
   // CHECK-FIXES: if (!OEO.empty())
-  // CHECK-MESSAGES: :19:8: note: method 'OpEqOnly'::empty() defined here
   if (HSM != HasSpaceshipMem<int>())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness
   // CHECK-FIXES: if (!HSM.empty())
-  // CHECK-MESSAGES: :27:8: note: method 'HasSpaceshipMem'::empty() defined here
 }

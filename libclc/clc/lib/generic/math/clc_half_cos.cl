@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_cos.h"
+#include <clc/math/clc_cos.h>
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_half_cos
 #define __CLC_IMPL_FUNCTION(x) __clc_cos
-#define __CLC_BODY "clc/shared/unary_def.inc"
+#define __CLC_BODY <clc/shared/unary_def.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

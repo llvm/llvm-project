@@ -9,5 +9,5 @@
 #include "clc/math/clc_div_fast.h"
 
 #define __CLC_FUNCTION __clc_div_fast
-#define __CLC_BODY "clc_div_fast.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_div_fast.inc>
+#include <clc/math/gentype.inc>
