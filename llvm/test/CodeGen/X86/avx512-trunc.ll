@@ -1133,3 +1133,63 @@ define void @test_truncus_v4i16_v4i8(ptr %dst, ptr %src) {
   store <4 x i8> %4, ptr %dst
   ret void
 }
+
+; Test load-trunc-store pattern optimization for v2i32 -> v2i8
+define void @test_trunc_v2i32_v2i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v2i32_v2i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v2i32_v2i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; SKX-NEXT:    vpmovqb %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <2 x i32>, ptr %src
+  %2 = trunc <2 x i32> %1 to <2 x i8>
+  store <2 x i8> %2, ptr %dst
+  ret void
+}
+
+; Test load-trunc-store pattern optimization for v2i32 -> v2i16
+define void @test_trunc_v2i32_v2i16(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v2i32_v2i16:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; KNL-NEXT:    vmovd %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v2i32_v2i16:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; SKX-NEXT:    vpmovqw %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <2 x i32>, ptr %src
+  %2 = trunc <2 x i32> %1 to <2 x i16>
+  store <2 x i16> %2, ptr %dst
+  ret void
+}
+
+; Test load-trunc-store pattern optimization for v2i16 -> v2i8
+define void @test_trunc_v2i16_v2i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v2i16_v2i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v2i16_v2i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
+; SKX-NEXT:    vpmovqb %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <2 x i16>, ptr %src
+  %2 = trunc <2 x i16> %1 to <2 x i8>
+  store <2 x i8> %2, ptr %dst
+  ret void
+}

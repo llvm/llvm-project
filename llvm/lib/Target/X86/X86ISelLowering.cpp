@@ -54295,16 +54295,45 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   EVT VT = StoredVal.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  // Pattern: store(trunc(load v4i16) to v4i8)
+  // Pattern: store(trunc(load vXiY) to vXiZ) optimization
   SDValue Src;
-  if (!St->isTruncatingStore() && VT == MVT::v4i8 && Subtarget.hasAVX512() &&
-      TLI.isTruncStoreLegal(MVT::v4i32, MVT::v4i8) &&
-      sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(
-                              m_Value(Src, m_SpecificVT(MVT::v4i16)))))) &&
-      ISD::isNormalLoad(Src.getNode())) {
-    SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v4i32, Src);
-    return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
-                             MVT::v4i8, St->getMemOperand());
+  if (!St->isTruncatingStore() && Subtarget.hasAVX512()) {
+    // v4i16 -> v4i8
+    if (VT == MVT::v4i8 && TLI.isTruncStoreLegal(MVT::v4i32, MVT::v4i8) &&
+        sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(
+                                m_Value(Src, m_SpecificVT(MVT::v4i16)))))) &&
+        ISD::isNormalLoad(Src.getNode())) {
+      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v4i32, Src);
+      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
+                               MVT::v4i8, St->getMemOperand());
+    }
+    // v2i32 -> v2i8
+    if (VT == MVT::v2i8 && TLI.isTruncStoreLegal(MVT::v2i64, MVT::v2i8) &&
+        sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(
+                                m_Value(Src, m_SpecificVT(MVT::v2i32)))))) &&
+        ISD::isNormalLoad(Src.getNode())) {
+      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v2i64, Src);
+      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
+                               MVT::v2i8, St->getMemOperand());
+    }
+    // v2i32 -> v2i16
+    if (VT == MVT::v2i16 && TLI.isTruncStoreLegal(MVT::v2i64, MVT::v2i16) &&
+        sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(
+                                m_Value(Src, m_SpecificVT(MVT::v2i32)))))) &&
+        ISD::isNormalLoad(Src.getNode())) {
+      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v2i64, Src);
+      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
+                               MVT::v2i16, St->getMemOperand());
+    }
+    // v2i16 -> v2i8
+    if (VT == MVT::v2i8 && TLI.isTruncStoreLegal(MVT::v2i64, MVT::v2i8) &&
+        sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(
+                                m_Value(Src, m_SpecificVT(MVT::v2i16)))))) &&
+        ISD::isNormalLoad(Src.getNode())) {
+      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v2i64, Src);
+      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
+                               MVT::v2i8, St->getMemOperand());
+    }
   }
 
   // Convert a store of vXi1 into a store of iX and a bitcast.
