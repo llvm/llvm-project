@@ -35,6 +35,7 @@ class VPPredicator {
   VPPostDominatorTree VPPDT;
 
   /// Post-dominance frontier for the VPlan.
+  // NOTE: Must appear after VPPDT because VPPDT is used during initialization.
   VPPostDominanceFrontier VPPDF;
 
   /// When we if-convert we need to create edge masks. We have to cache values
@@ -136,11 +137,13 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
 }
 
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
-  // Start inserting after the block's phis, which be replaced by blends later.
+  // Insert after the block's phis, they will be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
 
-  // Reuse the mask of the immediate dominator if the VPBB post-dominates the
-  // immediate dominator.
+  // Reuse the mask of the immediate dominator if the VPBB post-dominates it.
+  // This isn't "just" an optimization but is necessary for the
+  // post-dom-frontier-based mask creation to avoid (backward) tarversing the
+  // CFG past the loop header.
   auto *IDom = VPDT.getNode(VPBB)->getIDom();
   assert(IDom && "Block in loop must have immediate dominator");
   auto *IDomBB = cast<VPBasicBlock>(IDom->getBlock());
@@ -148,29 +151,36 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
     setBlockInMask(VPBB, getBlockInMask(IDomBB));
     return;
   }
-  // All-one mask is modelled as no-mask following the convention for masked
-  // load/store/gather/scatter. Initialize BlockMask to no-mask.
+
   VPValue *BlockMask = nullptr;
-  auto AffectingBlocks = VPPDF.find(VPBB)->second;
-  for (VPBlockBase *AffectingBB : AffectingBlocks) {
+  assert(VPPDF.find(VPBB) != VPPDF.end() &&
+         "PostDomFrontier cannot be empty because header mask should have been "
+         "re-used via IDom logic above.");
+  auto FrontierBlocks = VPPDF.find(VPBB)->second;
+  for (VPBlockBase *FrontierBB : FrontierBlocks) {
     // Switch can have multiple edges to the same successor, don't need to "or"
     // it more than once.
     SmallPtrSet<VPBlockBase *, 4> ProcessedSuccessors;
 
-    for (auto *Succ : AffectingBB->successors()) {
+    for (auto *Succ : FrontierBB->successors()) {
       if (!VPPDT.dominates(VPBB, Succ))
-        // That edge doesn't affect us:
+        // That edge doesn't **directly** affect us. If VPBB is reachable
+        // through this edge, the condition it "carries" would be handled
+        // through another block in the post-dom-frontier.
         continue;
 
       if (!ProcessedSuccessors.insert(Succ).second)
         continue;
 
-      VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(AffectingBB),
+      VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(FrontierBB),
                                          cast<VPBasicBlock>(Succ));
       BlockMask =
           BlockMask ? Builder.createOr(BlockMask, EdgeMask, {}) : EdgeMask;
     }
   }
+  assert(
+      BlockMask &&
+      "Header mask re-use expected to have happenned using IDom logic above.");
 
   setBlockInMask(VPBB, BlockMask);
 }
