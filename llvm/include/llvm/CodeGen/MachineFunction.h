@@ -941,7 +941,9 @@ public:
   unsigned getNumBlockIDs() const { return (unsigned)MBBNumbering.size(); }
 
   /// Return the numbering "epoch" of analysis block numbers.
-  unsigned getBlockNumberEpoch() const { return AnalysisNumberingEpoch; }
+  unsigned getAnalysisBlockNumberEpoch() const {
+    return AnalysisNumberingEpoch;
+  }
 
   unsigned assignAnalysisNumber() { return NextAnalysisNumber++; }
 
@@ -1551,7 +1553,7 @@ template <> struct GraphTraits<MachineFunction*> :
     return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 template <> struct GraphTraits<const MachineFunction*> :
@@ -1577,7 +1579,7 @@ template <> struct GraphTraits<const MachineFunction*> :
     return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(const MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 
@@ -1596,7 +1598,7 @@ template <> struct GraphTraits<Inverse<MachineFunction*>> :
     return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 template <> struct GraphTraits<Inverse<const MachineFunction*>> :
@@ -1609,7 +1611,7 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
     return F->getMaxAnalysisBlockNumber();
   }
   static unsigned getNumberEpoch(const MachineFunction *F) {
-    return F->getBlockNumberEpoch();
+    return F->getAnalysisBlockNumberEpoch();
   }
 };
 

@@ -1272,7 +1272,7 @@ public:
   int getNumber() const { return Number; }
   void setNumber(int N) { Number = N; }
 
-  /// For analyses, we blocks have a more stable number.
+  /// For analyses, blocks have a more stable number.
   int getAnalysisNumber() const { return AnalysisNumber; }
   void setAnalysisNumber(int N) { AnalysisNumber = N; }
 
