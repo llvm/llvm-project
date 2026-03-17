@@ -6888,7 +6888,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
   following is true:
 
   * ``A -> B`` in *program-order*.
-  * ``A-> B`` in *barrier-participates-in*.
+  * ``A -> B`` in *barrier-participates-in*.
   * ``A`` *barrier-executes-before* some barrier operation ``X``, and ``X``
     *barrier-executes-before* ``B``.
 
@@ -6904,7 +6904,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
   ``BO``, such that ``A -> D`` in *thread-barrier-order<BO>*, one of the following must be true:
 
   * ``A`` does not *barrier-participates-in* any barrier *wait*.
-  * ``A`` *barrier-participates-in at least one barrier *wait* ``W``
+  * ``A`` *barrier-participates-in* at least one barrier *wait* ``W``
     such that  ``W -> D`` in *barrier-executes-before*.
 
 * For every barrier *wait* ``W`` performed on a barrier *object* ``BO``:
@@ -6916,7 +6916,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 * For every barrier operation ``A`` that *barrier-participates-in* a barrier *wait* ``W`` on a barrier *object* ``BO``:
 
   * There is no barrier operation ``X`` on ``BO`` such that ``A -> X -> B`` in
-    *barrier-executes-before*, and ``X`` *barrier-participates-in* a non-empty set of operations
+    *barrier-executes-before*, and ``X`` *barrier-phase-with* a non-empty set of operations
     that does not include ``W``.
 
 * *barrier-phase-with* is a symmetric relation over barrier operations defined as the
