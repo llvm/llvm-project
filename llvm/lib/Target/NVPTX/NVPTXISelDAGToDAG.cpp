@@ -1866,6 +1866,8 @@ bool NVPTXDAGToDAGISel::tryFence(SDNode *N) {
   auto Scope = Scopes[N->getConstantOperandVal(2)];
 
   // Singlethread fences have no inter-thread synchronization requirements.
+  // Note: std::atomic_signal_fence lowers to singlethread LLVM IR fences;
+  // this intentionally drops these before emitting PTX.
   if (Scope == NVPTX::Scope::Thread) {
     CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), N->getOperand(0));
     CurDAG->RemoveDeadNode(N);
