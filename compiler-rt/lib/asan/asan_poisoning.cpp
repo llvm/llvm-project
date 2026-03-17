@@ -264,7 +264,7 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
       return 0;
     uptr shadow_beg = MemToShadow(aligned_b);
     uptr shadow_last = MemToShadow(aligned_l);
-    CHECK_LE(shadow_beg, shadow_last);
+    CHECK_LT(shadow_beg, shadow_last);
     if (__sanitizer::mem_is_zero((const char*)shadow_beg,
                                  shadow_last - shadow_beg))
       return 0;
