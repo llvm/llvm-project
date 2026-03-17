@@ -651,16 +651,17 @@ public:
                                          interop_spec_t *Prefers) override;
 };
 
-struct L0DeviceQueueGuard{
-  L0DeviceQueueGuard(AsyncQueueTy *Queue, L0DeviceTy *Device) : queue(Queue), device(Device) {}
-  ~L0DeviceQueueGuard(){
+struct L0DeviceQueueGuard {
+  L0DeviceQueueGuard(AsyncQueueTy *Queue, L0DeviceTy *Device)
+      : queue(Queue), device(Device) {}
+  ~L0DeviceQueueGuard() {
     for (auto &Event : queue->WaitEvents)
       auto Err = device->releaseEvent(Event);
     queue->WaitEvents.clear();
   }
-  private:
-    AsyncQueueTy *queue;
-    L0DeviceTy *device;
+private:
+  AsyncQueueTy *queue;
+  L0DeviceTy *device;
 };
 
 } // namespace llvm::omp::target::plugin

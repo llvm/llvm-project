@@ -9,7 +9,6 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu
 
-
 #include <omp.h>
 
 int main(void) {
