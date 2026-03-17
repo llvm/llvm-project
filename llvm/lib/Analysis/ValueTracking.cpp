@@ -9542,6 +9542,9 @@ PatternKind classifyCmpPatternAndAnchorConstants(
 /// Return true if "icmp Pred LHS RHS" is always true.
 bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
                         const Value *RHS) {
+  if (LHS->getType() != RHS->getType())
+    return false;
+
   switch (Pred) {
   default:
     break;
@@ -9824,6 +9827,9 @@ bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
 /// Return true if "fcmp Pred LHS RHS" is always true.
 bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
                        const Value *RHS, const Instruction *ContextI = nullptr) {
+  if (LHS->getType() != RHS->getType())
+    return false;
+
   if (Pred == CmpInst::FCMP_TRUE)
     return true;
 
