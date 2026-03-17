@@ -46,7 +46,7 @@ namespace {
 ///   i24.  This isn't always possible because i24 has storage size of 32 bit
 ///   and if it is possible to use that extra byte of padding we must use [i8 x
 ///   3] instead of i24. This is computed when accumulating bitfields in
-///   accumulateBitfields.
+///   accumulateBitFields.
 ///   C++ examples that require clipping:
 ///   struct { int a : 24; char b; }; // a must be clipped, b goes at offset 3
 ///   struct A { int a : 24; ~A(); }; // a must be clipped because:
@@ -510,6 +510,48 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
   // cached here.
   CharUnits ScissorOffset = CharUnits::Zero();
 
+  auto getLimitOffset = [&]() -> CharUnits {
+    for (auto Probe = Field; Probe != FieldEnd; ++Probe)
+      if (!isEmptyFieldForLayout(Context, *Probe)) {
+        // A member with storage sets the limit.
+        assert((getFieldBitOffset(*Probe) % CharBits) == 0 &&
+               "Next storage is not byte-aligned");
+        return bitsToCharUnits(getFieldBitOffset(*Probe));
+      }
+    // We reached the end of the fields, determine the bounds of useable
+    // tail padding. As this can be complex for C++, we cache the result.
+    if (ScissorOffset.isZero()) {
+      ScissorOffset = calculateTailClippingOffset(isNonVirtualBaseType);
+      assert(!ScissorOffset.isZero() && "Tail clipping at zero");
+    }
+    return ScissorOffset;
+  };
+
+  auto emitAccessUnit = [&](CharUnits BeginOffset, CharUnits EndOffset,
+                            bool Clipped, RecordDecl::field_iterator First,
+                            RecordDecl::field_iterator Last) {
+    CharUnits AccessSize = EndOffset - BeginOffset;
+    if (AccessSize.isZero())
+      return;
+    // Add the storage member for the access unit to the record. The
+    // bitfields get the offset of their storage but come afterward and
+    // remain there after a stable sort.
+    llvm::Type *Type;
+    if (Clipped) {
+      assert(getSize(getIntNType(Context.toBits(AccessSize))) > AccessSize &&
+             "Clipped access need not be clipped");
+      Type = getByteArrayType(AccessSize);
+    } else {
+      Type = getIntNType(Context.toBits(AccessSize));
+      assert(getSize(Type) == AccessSize && "Unclipped access must be clipped");
+    }
+    Members.push_back(StorageInfo(BeginOffset, Type));
+    for (; First != Last; ++First)
+      if (!First->isZeroLengthBitField())
+        Members.push_back(
+            MemberInfo(BeginOffset, MemberInfo::Field, nullptr, *First));
+  };
+
   // Data about the start of the span we're accumulating to create an access
   // unit from. Begin is the first bitfield of the span. If Begin is FieldEnd,
   // we've not got a current span. The span starts at the BeginOffset character
@@ -632,24 +674,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
           // the current span is. That's either the offset of the next field
           // with storage (which might be Field itself) or the end of the
           // non-reusable tail padding.
-          CharUnits LimitOffset;
-          for (auto Probe = Field; Probe != FieldEnd; ++Probe)
-            if (!isEmptyFieldForLayout(Context, *Probe)) {
-              // A member with storage sets the limit.
-              assert((getFieldBitOffset(*Probe) % CharBits) == 0 &&
-                     "Next storage is not byte-aligned");
-              LimitOffset = bitsToCharUnits(getFieldBitOffset(*Probe));
-              goto FoundLimit;
-            }
-          // We reached the end of the fields, determine the bounds of useable
-          // tail padding. As this can be complex for C++, we cache the result.
-          if (ScissorOffset.isZero()) {
-            ScissorOffset = calculateTailClippingOffset(isNonVirtualBaseType);
-            assert(!ScissorOffset.isZero() && "Tail clipping at zero");
-          }
-
-          LimitOffset = ScissorOffset;
-        FoundLimit:;
+          CharUnits LimitOffset = getLimitOffset();
 
           CharUnits TypeSize = getSize(Type);
           if (BeginOffset + TypeSize <= LimitOffset) {
@@ -679,28 +704,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
       assert((Field == FieldEnd || !Field->isBitField() ||
               (getFieldBitOffset(*Field) % CharBits) == 0) &&
              "Installing but not at an aligned bitfield or limit");
-      CharUnits AccessSize = BestEndOffset - BeginOffset;
-      if (!AccessSize.isZero()) {
-        // Add the storage member for the access unit to the record. The
-        // bitfields get the offset of their storage but come afterward and
-        // remain there after a stable sort.
-        llvm::Type *Type;
-        if (BestClipped) {
-          assert(getSize(getIntNType(Context.toBits(AccessSize))) >
-                     AccessSize &&
-                 "Clipped access need not be clipped");
-          Type = getByteArrayType(AccessSize);
-        } else {
-          Type = getIntNType(Context.toBits(AccessSize));
-          assert(getSize(Type) == AccessSize &&
-                 "Unclipped access must be clipped");
-        }
-        Members.push_back(StorageInfo(BeginOffset, Type));
-        for (; Begin != BestEnd; ++Begin)
-          if (!Begin->isZeroLengthBitField())
-            Members.push_back(
-                MemberInfo(BeginOffset, MemberInfo::Field, nullptr, *Begin));
-      }
+      emitAccessUnit(BeginOffset, BestEndOffset, BestClipped, Begin, BestEnd);
       // Reset to start a new span.
       Field = BestEnd;
       Begin = FieldEnd;
