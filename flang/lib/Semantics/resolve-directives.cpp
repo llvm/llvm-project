@@ -2186,13 +2186,10 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromLoopConstruct(
   CollectNumAffectedLoopsFromClauses(clauseList, levels, clauses);
   CollectNumAffectedLoopsFromInnerLoopContruct(x, levels, clauses);
 
-  bool has_permutation =
-      llvm::any_of(clauseList.v, [](const parser::OmpClause &c) {
-        return c.Id() == llvm::omp::Clause::OMPC_permutation;
-      });
-  if (x.BeginDir().DirName().v == llvm::omp::Directive::OMPD_interchange &&
-      !has_permutation) {
-    // OMPD_interchange with no permutation clause needs a level 2 nest
+  // OMPD_interchange with no permutation clause needs a level 2 nest
+  if (x.BeginDir().DirId() == llvm::omp::Directive::OMPD_interchange &&
+      !parser::omp::FindClause(
+          x.BeginDir(), llvm::omp::Clause::OMPC_permutation)) {
     levels.push_back(2);
     clauses.push_back(nullptr);
   }
