@@ -24600,9 +24600,6 @@ public:
   unsigned Repeat = 1;
   /// Did any vectorization occur for the current iteration over CandidateVFs
   bool RepeatChanged = false;
-  /// Are we finished checking this StoreChainContext? Can be due to all VFs
-  /// being checked, or an early exit condition
-  bool Done = false;
   /// What element index is the end of the to be vectorized Operands
   /// i.e. Operands.size() == 16, and 12-15 were vectorized, then End == 12
   unsigned End = 0;
@@ -24743,7 +24740,6 @@ bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
     LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
                       << ") < "
                       << "MinVF (" << MinVF << ")\n");
-    Done = true;
     return false;
   }
 
@@ -24767,7 +24763,6 @@ bool StoreChainContext::initializeContext(BoUpSLP &R, const DataLayout &DL,
     LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
                       << ") < "
                       << "MinVF (" << MinVF << ")\n");
-    Done = true;
     return false;
   }
 
@@ -24859,7 +24854,7 @@ bool StoreChainContext::updateCandidateVFs(const TargetTransformInfo &TTI) {
 
 // Get the current VF
 std::optional<unsigned> StoreChainContext::getCurrentVF() const {
-  if (Done || CandidateVFs.empty())
+  if (CandidateVFs.empty())
     return std::nullopt;
   return CandidateVFs.front();
 }
@@ -25038,7 +25033,9 @@ bool SLPVectorizerPass::vectorizeStores(
     constexpr unsigned MaxAttempts = 4;
     for (unsigned LimitVF = GlobalMaxVF; LimitVF > 0;
          LimitVF = bit_ceil(LimitVF) / 2) {
-      for (const auto &CtxPtr : AllContexts) {
+      for (auto &CtxPtr : AllContexts) {
+        if (!CtxPtr)
+          break;
         StoreChainContext &Context = *CtxPtr;
         for (std::optional<unsigned> VFUnval = Context.getCurrentVF();
              VFUnval && *VFUnval >= LimitVF; VFUnval = Context.getCurrentVF()) {
@@ -25143,7 +25140,7 @@ bool SLPVectorizerPass::vectorizeStores(
           if (!Context.getCurrentVF()) {
             // All values vectorized - exit.
             if (Context.allVectorized()) {
-              Context.Done = true;
+              CtxPtr.reset();
               break;
             }
             // Check if tried all attempts or no need for the last attempts at
@@ -25151,12 +25148,12 @@ bool SLPVectorizerPass::vectorizeStores(
             if (Context.Repeat >= MaxAttempts ||
                 (Context.Repeat > 1 &&
                  (Context.RepeatChanged || !AnyProfitableGraph))) {
-              Context.Done = true;
+              CtxPtr.reset();
               break;
             }
 
             if (!Context.updateCandidateVFs(*TTI)) {
-              Context.Done = true;
+              CtxPtr.reset();
               break;
             }
             Context.updateRangeSizesFromCache();
