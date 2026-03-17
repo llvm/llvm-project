@@ -2832,34 +2832,11 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  AccDataMap dataMap;
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *ifClause =
             std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
       genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
-    } else if (const auto *useDevice =
-                   std::get_if<Fortran::parser::AccClause::UseDevice>(
-                       &clause.u)) {
-      // When CUDA Fortran is enabled, extra symbols are used in the host_data
-      // region. Look for them and bind their values with the symbols in the
-      // outer scope.
-      if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
-        const Fortran::parser::AccObjectList &objectList{useDevice->v};
-        for (const auto &accObject : objectList.v) {
-          Fortran::semantics::Symbol &symbol =
-              getSymbolFromAccObject(accObject);
-          const Fortran::semantics::Symbol *baseSym =
-              localSymbols.lookupSymbolByName(symbol.name().ToString());
-          localSymbols.copySymbolBinding(*baseSym, symbol);
-        }
-      }
-      genDataOperandOperations<mlir::acc::UseDeviceOp>(
-          useDevice->v, converter, semanticsContext, stmtCtx, dataOperands,
-          mlir::acc::DataClause::acc_use_device,
-          /*structured=*/true, /*implicit=*/false, /*async=*/{},
-          /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
-          /*setDeclareAttr=*/false, &dataMap);
     } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
       addIfPresentAttr = true;
     }
@@ -2872,12 +2849,58 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
         if (boolAttr.getValue()) {
           // get rid of the if condition if it is always true.
           ifCond = mlir::Value();
-        } else {
-          // Do not generate the acc.host_data op if the if condition is always
-          // false.
-          return;
         }
       }
+  }
+
+  AccDataMap dataMap;
+  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+    if (const auto *useDevice =
+            std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
+      // When CUDA Fortran is enabled, extra symbols are used in the host_data
+      // region. Look for them and bind their values with the symbols in the
+      // outer scope.
+      if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
+        const Fortran::parser::AccObjectList &objectList{useDevice->v};
+        for (const auto &accObject : objectList.v) {
+          const Fortran::semantics::Symbol *newSym = nullptr;
+          if (const auto *designator =
+                  std::get_if<Fortran::parser::Designator>(&accObject.u)) {
+            if (const auto *name =
+                    Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
+              newSym = name->symbol;
+            } else if (const auto *arrayElement = Fortran::parser::Unwrap<
+                           Fortran::parser::ArrayElement>(*designator)) {
+              const Fortran::parser::Name &name =
+                  Fortran::parser::GetLastName(arrayElement->Base());
+              newSym = name.symbol;
+            } else if (const auto *component = Fortran::parser::Unwrap<
+                           Fortran::parser::StructureComponent>(*designator)) {
+              const Fortran::parser::DataRef &base{component->Base()};
+              if (const auto *name =
+                      std::get_if<Fortran::parser::Name>(&base.u)) {
+                newSym = name->symbol;
+              }
+            }
+          } else if (const auto *name =
+                         std::get_if<Fortran::parser::Name>(&accObject.u)) {
+            newSym = name->symbol;
+          }
+          if (newSym) {
+            const Fortran::semantics::Symbol *origSym =
+                localSymbols.lookupSymbolByName(newSym->name().ToString());
+            if (origSym)
+              localSymbols.copySymbolBinding(*origSym, *newSym);
+          }
+        }
+      }
+      genDataOperandOperations<mlir::acc::UseDeviceOp>(
+          useDevice->v, converter, semanticsContext, stmtCtx, dataOperands,
+          mlir::acc::DataClause::acc_use_device,
+          /*structured=*/true, /*implicit=*/false, /*async=*/{},
+          /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
+          /*setDeclareAttr=*/false, &dataMap);
+    }
   }
 
   // Prepare the operand segment size attribute and the operands value range.

@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-scf-to-cf,convert-arith-to-llvm),finalize-memref-to-llvm,convert-func-to-llvm{use-bare-ptr-memref-call-conv=1},convert-cf-to-llvm,reconcile-unrealized-casts)" | mlir-runner -shared-libs=%mlir_c_runner_utils -entry-point-result=void | FileCheck %s
+// XFAIL: system-aix
 
 // Verify bare pointer memref calling convention. `simple_add1_add2_test`
 // gets two 2xf32 memrefs, adds 1.0f to the first one and 2.0f to the second
