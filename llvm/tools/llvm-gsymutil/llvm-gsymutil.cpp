@@ -104,6 +104,7 @@ static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 static std::vector<std::string> MergedFunctionsFilters;
 static bool ShowStatistics;
+static GsymReader::StatisticsFormat StatisticsFormat;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -198,7 +199,21 @@ static void parseArgs(int argc, char **argv) {
 
   LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
 
-  ShowStatistics = Args.hasArg(OPT_statistics);
+  ShowStatistics = Args.hasArg(OPT_statistics_EQ);
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_statistics_EQ)) {
+    StringRef Val = A->getValue();
+    if (Val == "" || Val == "text")
+      StatisticsFormat = GsymReader::StatisticsFormat::Text;
+    else if (Val == "json")
+      StatisticsFormat = GsymReader::StatisticsFormat::JSON;
+    else if (Val == "pretty-json")
+      StatisticsFormat = GsymReader::StatisticsFormat::PrettyJSON;
+    else {
+      errs() << "error: unknown statistics format '" << Val
+             << "'. Supported formats: text, json, pretty-json\n";
+      std::exit(1);
+    }
+  }
 
   for (const llvm::opt::Arg *A :
        Args.filtered(OPT_merged_functions_filter_EQ)) {
@@ -532,11 +547,6 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
   return Error::success();
 }
 
-static void dumpStatistics(StringRef GSYMPath, GsymReader &Gsym,
-                           raw_ostream &OS) {
-  Gsym.dumpStatistics(GSYMPath, OS);
-}
-
 static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   if (UseMergedFunctions) {
     if (auto Results = Gsym.lookupAll(Addr)) {
@@ -713,7 +723,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       error(GSYMPath, Gsym.takeError());
 
     if (ShowStatistics) {
-      dumpStatistics(GSYMPath, *Gsym, OS);
+      Gsym->dumpStatistics(GSYMPath, OS, StatisticsFormat);
       continue;
     }
 
