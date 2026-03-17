@@ -14,6 +14,7 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -4019,7 +4020,110 @@ public:
   /// \param Name Name of the variable.
   LLVM_ABI GlobalVariable *
   getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
-                              std::optional<unsigned> AddressSpace = 0);
+                              std::optional<unsigned> AddressSpace = {});
+
+  using IteratorBodyGenTy = llvm::function_ref<llvm::Error(
+      InsertPointTy BodyIP, llvm::Value *LinearIV)>;
+
+  /// Create a canonical iterator loop at the current insertion point.
+  ///
+  /// This helper splits the current block and builds a canonical loop
+  /// using createLoopSkeleton(). The resulting control flow looks like:
+  ///
+  ///   CurBB -> Preheader -> Header -> Body -> Latch -> After -> ContBB
+  ///
+  /// The body of the loop is produced by calling \p BodyGen with the insertion
+  /// point for the loop body and the induction variable.
+  /// Unlike createCanonicalLoop(), this function is intended for \p BodyGen
+  /// that may perform region lowering (e.g., translating MLIR regions) and are
+  /// not guaranteed to preserve the canonical skeleton's body terminator. In
+  /// particular:
+  ///
+  ///  - The skeleton’s unconditional branch from the loop body is removed
+  ///    before invoking \p BodyGen.
+  ///  - \p BodyGen may freely emit instructions and temporarily introduce
+  ///    control flow.
+  ///  - If the loop body does not end with a terminator after \p BodyGen
+  ///    returns, a branch to the latch is inserted to restore canonical form.
+  ///
+  /// \param Loc The location where the iterator modifier was encountered.
+  /// \param TripCount Number of loop iterations.
+  /// \param BodyGen Callback to generate the loop body.
+  /// \param Name Base name used for creating the loop
+  /// \returns The insertion position *after* the iterator loop
+  LLVM_ABI InsertPointOrErrorTy createIteratorLoop(
+      LocationDescription Loc, llvm::Value *TripCount,
+      IteratorBodyGenTy BodyGen, llvm::StringRef Name = "iterator");
+
+  /// Kind of parameter in a function with 'declare simd' directive.
+  enum class DeclareSimdKindTy {
+    Linear,
+    LinearRef,
+    LinearUVal,
+    LinearVal,
+    Uniform,
+    Vector,
+  };
+
+  /// Attribute set of the `declare simd` parameter.
+  struct DeclareSimdAttrTy {
+    DeclareSimdKindTy Kind = DeclareSimdKindTy::Vector;
+    llvm::APSInt StrideOrArg;
+    llvm::APSInt Alignment;
+    bool HasVarStride = false;
+  };
+
+  enum class DeclareSimdBranch {
+    Undefined,
+    Inbranch,
+    Notinbranch,
+  };
+
+  /// Emit x86 vector-function ABI attributes for a `declare simd` function.
+  ///
+  /// Generates and attaches `_ZGV*` vector function ABI attributes to \p Fn
+  /// following the x86 vector ABI used by OpenMP `declare simd`. For each
+  /// supported ISA (SSE, AVX, AVX2, AVX512) and masking variant, this
+  /// constructs the appropriate mangled vector-function name and adds it as a
+  /// function attribute.
+  ///
+  /// \param Fn          The scalar function to which vector-function attributes
+  ///                    are attached.
+  /// \param NumElements Number of elements used to derive the vector length
+  ///                    when
+  ///                    \p VLENVal is not specified.
+  /// \param VLENVal     User provided vector length.
+  /// \param ParamAttrs  Array of attribute set of the `declare simd` parameter.
+  /// \param Branch      `undefined`, `inbranch` or `notinbranch` clause.
+  LLVM_ABI void emitX86DeclareSimdFunction(
+      llvm::Function *Fn, unsigned NumElements, const llvm::APSInt &VLENVal,
+      llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch);
+
+  /// Emit AArch64 vector-function ABI attributes for a `declare simd` function.
+  ///
+  /// Generates and attaches `_ZGV*` vector function ABI attributes to \p Fn
+  /// following the AArch64 vector-function ABI. The emitted names depend on the
+  /// selected ISA, user-specified vector length, parameter attribute mangling,
+  /// and the declare simd branch clause.
+  ///
+  /// \param Fn                  The scalar function to which vector-function
+  ///                            attributes are attached.
+  /// \param VLENVal             User provided vector length.
+  /// \param ParamAttrs          Array of attribute set of the `declare simd`
+  ///                            parameter.
+  /// \param Branch              `undefined`, `inbranch` or `notinbranch`
+  ///                            clause.
+  /// \param ISA                 `'n'` for Advanced SIMD or `'s'` for SVE.
+  /// \param NarrowestDataSize   Narrowest data size in bits used to infer the
+  ///                            default vector length when \p VLENVal is
+  ///                            absent.
+  /// \param OutputBecomesInput  Whether result values are represented as input
+  ///                            parameters in the emitted vector-function ABI
+  ///                            name.
+  LLVM_ABI void emitAArch64DeclareSimdFunction(
+      llvm::Function *Fn, unsigned VLENVal,
+      llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch,
+      char ISA, unsigned NarrowestDataSize, bool OutputBecomesInput);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
