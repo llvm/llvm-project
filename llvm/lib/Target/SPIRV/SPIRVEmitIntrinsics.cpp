@@ -1634,11 +1634,11 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
 
-  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
   LLVMContext &Ctx = CurrF->getContext();
 
-  Constant *TyC = UndefValue::get(IA->getFunctionType());
-  MDString *ConstraintString = MDString::get(Ctx, IA->getConstraintString());
+  Constant *TyC = UndefValue::get(SPIRV::getOriginalFunctionType(Call));
+  MDString *ConstraintString =
+      MDString::get(Ctx, SPIRV::getOriginalAsmConstraints(Call));
   SmallVector<Value *> Args = {
       buildMD(TyC),
       MetadataAsValue::get(Ctx, MDNode::get(Ctx, ConstraintString))};

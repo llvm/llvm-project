@@ -41,6 +41,12 @@ void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
+static inline void invalidateAndEraseMI(SPIRVGlobalRegistry *GR,
+                                        MachineInstr *MI) {
+  GR->invalidateMachineInstr(MI);
+  MI->eraseFromParent();
+}
+
 static void
 addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                     const SPIRVSubtarget &STI,
@@ -126,13 +132,10 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     if (!MRI.getRegClassOrNull(Reg) && RC)
       MRI.setRegClass(Reg, RC);
     MRI.replaceRegWith(MI->getOperand(0).getReg(), Reg);
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
+    invalidateAndEraseMI(GR, MI);
   }
-  for (MachineInstr *MI : ToEraseComposites) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToEraseComposites)
+    invalidateAndEraseMI(GR, MI);
 }
 
 static void foldConstantsIntoIntrinsics(MachineFunction &MF,
@@ -151,10 +154,8 @@ static void foldConstantsIntoIntrinsics(MachineFunction &MF,
       }
       ToErase.push_back(&MI);
     }
-    for (MachineInstr *MI : ToErase) {
-      GR->invalidateMachineInstr(MI);
-      MI->eraseFromParent();
-    }
+    for (MachineInstr *MI : ToErase)
+      invalidateAndEraseMI(GR, MI);
     ToErase.clear();
   }
 }
@@ -235,10 +236,8 @@ static void lowerBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       ToErase.push_back(&MI);
     }
   }
-  for (MachineInstr *MI : ToErase) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToErase)
+    invalidateAndEraseMI(GR, MI);
 }
 
 static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -279,10 +278,8 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       }
     }
   }
-  for (MachineInstr *MI : ToErase) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToErase)
+    invalidateAndEraseMI(GR, MI);
 }
 
 // Translating GV, IRTranslator sometimes generates following IR:
@@ -623,8 +620,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     auto It = RegsAlreadyAddedToDT.find(MI);
     if (It != RegsAlreadyAddedToDT.end())
       MRI.replaceRegWith(MI->getOperand(0).getReg(), It->second);
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
+    invalidateAndEraseMI(GR, MI);
   }
 
   // Address the case when IRTranslator introduces instructions with new
@@ -759,11 +755,31 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                        .addUse(AsmReg);
     for (unsigned IntrIdx = 3; IntrIdx < I1->getNumOperands(); ++IntrIdx)
       AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
+
+    // IRTranslator gets a bit confused when lowering inline ASM with multiple,
+    // outputs (which we have to spoof as single i32 return), and inserts a
+    // spurious COPY & TRUNC as registers are assumed to be i64; we have to
+    // clean that up here to prevent an erroneous cast on a struct to get
+    // lowered into SPIR-V
+    if (FTy->getReturnType()->isStructTy()) {
+      MachineInstr &Copy = *++I2->getIterator();
+      MachineInstr &Trunc = *++Copy.getIterator();
+
+      assert(Copy.isCopy() && Trunc.getOpcode() == TargetOpcode::G_TRUNC &&
+             "Unexpected successors to inline ASM with multiple outputs!");
+
+      Register TruncReg = Trunc.defs().begin()->getReg();
+      MRI.replaceRegWith(TruncReg, DefReg);
+      // for (auto It = ++Trunc.getIterator();
+      //      isSpvIntrinsic(*It, Intrinsic::spv_extractv); ++It)
+      //   if (It->getOperand(2).getReg() == TruncReg)
+      //     It->getOperand(2).setReg(DefReg);
+      invalidateAndEraseMI(GR, &Trunc);
+      invalidateAndEraseMI(GR, &Copy);
+    }
   }
-  for (MachineInstr *MI : ToProcess) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToProcess)
+    invalidateAndEraseMI(GR, MI);
 }
 
 static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -830,10 +846,8 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       ToErase.push_back(&MI);
     }
   }
-  for (MachineInstr *MI : ToErase) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToErase)
+    invalidateAndEraseMI(GR, MI);
 }
 
 // LLVM allows the switches to use registers as cases, while SPIR-V required
@@ -883,10 +897,8 @@ static void cleanupHelperInstructions(MachineFunction &MF,
     }
   }
 
-  for (MachineInstr *MI : ToEraseMI) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToEraseMI)
+    invalidateAndEraseMI(GR, MI);
 }
 
 // Find all usages of G_BLOCK_ADDR in our intrinsics and replace those
@@ -988,8 +1000,7 @@ static void processBlockAddr(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           ConstantExpr::getIntToPtr(Replacement, BA->getType()));
       BA->destroyConstant();
     }
-    GR->invalidateMachineInstr(BlockAddrI);
-    BlockAddrI->eraseFromParent();
+    invalidateAndEraseMI(GR, BlockAddrI);
   }
 }
 
