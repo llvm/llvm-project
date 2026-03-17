@@ -638,7 +638,7 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
       // Load stored size/modification time.
       off_t StoredSize = (off_t)Record[Idx++];
       time_t StoredModTime = (time_t)Record[Idx++];
-      (void)Record[Idx++]; // ModuleCacheLen
+      (void)Record[Idx++]; // ImplicitModuleSuffixLength
 
       // Skip the stored signature.
       // FIXME: we could read the signature out of the import and validate it.

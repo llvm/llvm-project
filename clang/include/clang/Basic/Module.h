@@ -75,7 +75,7 @@ class ModuleFileKey {
   const void *Ptr;
   /// The path relative to the module cache path for implicit module file, empty
   /// for other kinds of module files.
-  std::string PathSuffix;
+  std::string ImplicitModulePathSuffix;
 
   friend class serialization::ModuleManager;
   friend class ModuleFileName;
@@ -86,11 +86,12 @@ class ModuleFileKey {
   ModuleFileKey(const FileEntry *ModuleFile) : Ptr(ModuleFile) {}
 
   ModuleFileKey(const DirectoryEntry *ModuleCacheDir, StringRef PathSuffix)
-      : Ptr(ModuleCacheDir), PathSuffix(PathSuffix) {}
+      : Ptr(ModuleCacheDir), ImplicitModulePathSuffix(PathSuffix) {}
 
 public:
   bool operator==(const ModuleFileKey &Other) const {
-    return Ptr == Other.Ptr && PathSuffix == Other.PathSuffix;
+    return Ptr == Other.Ptr &&
+           ImplicitModulePathSuffix == Other.ImplicitModulePathSuffix;
   }
 
   bool operator!=(const ModuleFileKey &Other) const {
@@ -105,7 +106,7 @@ public:
 /// other types of module files, this is just the file system path.
 class ModuleFileName {
   std::string Path;
-  unsigned SuffixLength = 0;
+  unsigned ImplicitModuleSuffixLength = 0;
 
 public:
   /// Creates an empty module file name.
@@ -126,9 +127,11 @@ public:
   /// Creates a file name for an implicit module.
   static ModuleFileName makeImplicit(std::string Name, unsigned SuffixLength) {
     assert(SuffixLength != 0 && "Empty suffix for implicit module file name");
+    assert(SuffixLength <= Name.size() &&
+           "Suffix for implicit module file name out-of-bounds");
     ModuleFileName File;
     File.Path = std::move(Name);
-    File.SuffixLength = SuffixLength;
+    File.ImplicitModuleSuffixLength = SuffixLength;
     return File;
   }
 
@@ -138,7 +141,9 @@ public:
   }
 
   /// Returns the suffix length for an implicit module name, zero otherwise.
-  unsigned getSuffixLength() const { return SuffixLength; }
+  unsigned getImplicitModuleSuffixLength() const {
+    return ImplicitModuleSuffixLength;
+  }
 
   /// Returns the plain module file name.
   StringRef str() const { return Path; }
@@ -150,6 +155,9 @@ public:
   bool empty() const { return Path.empty(); }
 
   /// Creates the deduplication key for use in \c ModuleManager.
+  /// Returns an empty optional if:
+  /// * the module cache does not exist for an implicit module name,
+  /// * the module file does not exist for an explicit module name.
   std::optional<ModuleFileKey> makeKey(FileManager &FileMgr) const;
 };
 
@@ -1035,7 +1043,7 @@ template <> struct llvm::DenseMapInfo<clang::ModuleFileKey> {
   }
 
   static unsigned getHashValue(const clang::ModuleFileKey &Val) {
-    return hash_combine(Val.Ptr, Val.PathSuffix);
+    return hash_combine(Val.Ptr, Val.ImplicitModulePathSuffix);
   }
 
   static bool isEqual(const clang::ModuleFileKey &LHS,

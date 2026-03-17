@@ -3477,7 +3477,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
-      unsigned SuffixLength = 0;
+      unsigned ImplicitModuleSuffixLength = 0;
       ASTFileSignature StoredSignature;
       ModuleFileName ImportedFile;
       std::string StoredFile;
@@ -3501,7 +3501,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (!IsImportingStdCXXModule) {
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
-        SuffixLength = (unsigned)Record[Idx++];
+        ImplicitModuleSuffixLength = (unsigned)Record[Idx++];
 
         StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
         StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
@@ -3510,11 +3510,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
         StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          ImportedFile =
-              SuffixLength
-                  ? ModuleFileName::makeImplicit(StoredFile, SuffixLength)
-                  : ModuleFileName::makeExplicit(StoredFile);
-          assert((ImportedKind == MK_ImplicitModule) == (SuffixLength != 0));
+          ImportedFile = ImplicitModuleSuffixLength
+                             ? ModuleFileName::makeImplicit(
+                                   StoredFile, ImplicitModuleSuffixLength)
+                             : ModuleFileName::makeExplicit(StoredFile);
+          assert((ImportedKind == MK_ImplicitModule) ==
+                 (ImplicitModuleSuffixLength != 0));
         } else if (!getDiags().isIgnored(
                        diag::warn_module_file_mapping_mismatch,
                        CurrentImportLoc)) {
@@ -6143,7 +6144,7 @@ bool ASTReader::readASTFileControlBlock(
         continue;
       }
 
-      // Skip Size, ModTime and ModuleCacheLen.
+      // Skip Size, ModTime and ImplicitModuleSuffix.
       Idx += 1 + 1 + 1;
       // Skip signature.
       Blob = Blob.substr(ASTFileSignature::size);
