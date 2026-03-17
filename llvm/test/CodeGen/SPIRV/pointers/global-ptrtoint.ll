@@ -6,6 +6,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; XFAIL: spirv-tools
+; https://github.com/llvm/llvm-project/issues/186756
+
 ; CHECK: OpName %[[GlobalValue:.*]] "dev_global"
 ; CHECK-DAG: %[[TyI64:.*]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[TyStruct:.*]] = OpTypeStruct %[[TyI64]] %[[TyI64]]

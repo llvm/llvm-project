@@ -1,6 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; XFAIL: spirv-tools
+; https://github.com/llvm/llvm-project/issues/186756
+
 ; CHECK-NOT: OpTypeInt 8 0
 
 @GI = addrspace(1) constant i64 42
