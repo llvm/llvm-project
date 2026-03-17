@@ -10445,6 +10445,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FMaximum:
   case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:

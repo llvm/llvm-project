@@ -1386,6 +1386,10 @@ static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
     return AtomicRMWInst::FMaximum;
   case bitc::RMW_FMINIMUM:
     return AtomicRMWInst::FMinimum;
+  case bitc::RMW_FMAXIMUMNUM:
+    return AtomicRMWInst::FMaximumNum;
+  case bitc::RMW_FMINIMUMNUM:
+    return AtomicRMWInst::FMinimumNum;
   case bitc::RMW_UINC_WRAP:
     return AtomicRMWInst::UIncWrap;
   case bitc::RMW_UDEC_WRAP:

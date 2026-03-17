@@ -967,6 +967,8 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMaximum:
   case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
@@ -1881,6 +1883,8 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FMaximum:
   case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::UIncWrap:
