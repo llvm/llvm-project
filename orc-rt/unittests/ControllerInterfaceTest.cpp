@@ -79,10 +79,12 @@ TEST(ControllerInterfaceTest, AddSymbolsUniqueMultipleDuplicates) {
   ControllerInterface CI;
   int X = 0, Y = 0, Z = 0;
 
-  std::pair<const char *, void *> First[] = {{"orc_rt_A", &X}, {"orc_rt_B", &Y}};
+  std::pair<const char *, void *> First[] = {{"orc_rt_A", &X},
+                                             {"orc_rt_B", &Y}};
   cantFail(CI.addSymbolsUnique(First));
 
-  std::pair<const char *, void *> Second[] = {{"orc_rt_A", &Z}, {"orc_rt_B", &Z}};
+  std::pair<const char *, void *> Second[] = {{"orc_rt_A", &Z},
+                                              {"orc_rt_B", &Z}};
   auto Err = CI.addSymbolsUnique(Second);
   EXPECT_TRUE(Err.isA<StringError>());
 
