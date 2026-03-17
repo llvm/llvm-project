@@ -693,10 +693,14 @@ template <typename T>
 void PipelineSolver::greedyFind(
     std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-  int BestNodeCost = -1;
-  SchedGroup *BestGroup = nullptr;
-  int BestGroupID = -1;
-  std::list<std::pair<SUnit *, SUnit *>> BestEdges;
+
+  struct GroupInfo {
+    SchedGroup *SG;
+    int Cost = 0;
+    std::list<std::pair<SUnit *, SUnit *>> Edges;
+  };
+  std::optional<GroupInfo> Best;
+
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
   LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
                     << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
@@ -728,34 +732,33 @@ void PipelineSolver::greedyFind(
     int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
 
-    if (TempCost < BestNodeCost || BestNodeCost == -1) {
-      BestEdges = TempEdges;
-      BestGroup = Match;
-      BestNodeCost = TempCost;
-      BestGroupID = CandSGID;
-
-      if (BestNodeCost == 0)
+    if (!Best.has_value() || TempCost < Best->Cost) {
+      Best = {Match, TempCost, TempEdges};
+      if (Best->Cost == 0)
         break;
     }
 
     removeEdges(TempEdges);
   }
 
-  if (BestGroupID != -1) {
-    BestGroup->add(*CurrSU.first);
-    if (AddedEdges.empty())
-      AddedEdges = BestEdges;
-    else
-      AddedEdges.splice(std::prev(AddedEdges.cend()), BestEdges);
+  if (Best.has_value()) {
+    SchedGroup *SG = Best->SG;
+    std::list<std::pair<SUnit *, SUnit *>> &Edges = Best->Edges;
 
-    for (const std::pair<SUnit *, SUnit *> &E : BestEdges) {
-      if (!BestGroup->tryAddEdge(E.first, E.second))
+    SG->add(*CurrSU.first);
+    if (AddedEdges.empty())
+      AddedEdges = Edges;
+    else
+      AddedEdges.splice(std::prev(AddedEdges.cend()), Edges);
+
+    for (const std::pair<SUnit *, SUnit *> &E : Edges) {
+      if (!SG->tryAddEdge(E.first, E.second))
         llvm_unreachable("Edges known to be insertable.");
     }
 
-    LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
-                      << (int)BestGroup->getMask() << "\n");
-    BestCost += BestNodeCost;
+    LLVM_DEBUG(dbgs() << "Best Group has ID: " << SG->getSGID() << " and Mask"
+                      << (int)SG->getMask() << "\n");
+    BestCost += Best->Cost;
   } else
     BestCost += MissPenalty;
 
