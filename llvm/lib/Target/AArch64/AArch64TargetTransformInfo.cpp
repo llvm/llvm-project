@@ -6844,18 +6844,26 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         Ops.push_back(&I->getOperandUse(1));
     }
     break;
+
+  // Type            |    BIC    |    ORN    |    EON
+  // ----------------+-----------+-----------+-----------
+  // scalar          |    Base   |    Base   |    Base
+  // scalar w/shift  |     -     |     -     |     -
+  // fixed vector    | NEON/Base | NEON/Base | BSL2N/Base
+  // scalable vector |    SVE    |     -     |   BSL2N
   case Instruction::Xor:
-    // NEON has no EON instruction.
-    if (isa<FixedVectorType>(I->getType()) && ST->hasNEON())
+    // EON only for scalars (possibly expanded fixed vectors)
+    // and vectors using the SVE2/SME BSL2N instruction.
+    if (I->getType()->isVectorTy() && ST->hasNEON() && !ST->hasSVE2() &&
+        !ST->hasSME())
       break;
     [[fallthrough]];
   case Instruction::And:
   case Instruction::Or:
-    // SVE has only BIC.
-    // SVE2 and SME implement "or not" and "xor not" with BSL2N.
-    if (I->getOpcode() != Instruction::And &&
-        isa<ScalableVectorType>(I->getType()) && !ST->hasSVE2() &&
-        !ST->hasSME())
+    // Even though we could use the SVE2/SME BSL2N instruction,
+    // it might pessimize with an extra MOV depending on register allocation.
+    if (I->getOpcode() == Instruction::Or &&
+        isa<ScalableVectorType>(I->getType()))
       break;
     // Shift can be fold into scalar AND/ORR/EOR,
     // but not the non-negated operand of BIC/ORN/EON.
