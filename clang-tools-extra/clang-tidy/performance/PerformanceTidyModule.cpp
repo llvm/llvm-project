@@ -10,7 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "AvoidEndlCheck.h"
 #include "EnumSizeCheck.h"
-#include "FasterStringFindCheck.h"
+#include "FasterStringOperationCheck.h"
 #include "ForRangeCopyCheck.h"
 #include "ImplicitConversionInLoopCheck.h"
 #include "InefficientAlgorithmCheck.h"
@@ -39,8 +39,10 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidEndlCheck>("performance-avoid-endl");
     CheckFactories.registerCheck<EnumSizeCheck>("performance-enum-size");
-    CheckFactories.registerCheck<FasterStringFindCheck>(
+    CheckFactories.registerCheck<FasterStringOperationCheck>(
         "performance-faster-string-find");
+    CheckFactories.registerCheck<FasterStringOperationCheck>(
+        "performance-faster-string-operation");
     CheckFactories.registerCheck<ForRangeCopyCheck>(
         "performance-for-range-copy");
     CheckFactories.registerCheck<ImplicitConversionInLoopCheck>(

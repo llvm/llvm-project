@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FASTERSTRINGFINDCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FASTERSTRINGFINDCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FASTERSTRINGOPERATIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FASTERSTRINGOPERATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -21,10 +21,10 @@ namespace clang::tidy::performance {
 /// The character literal overload is more efficient.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/performance/faster-string-find.html
-class FasterStringFindCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/faster-string-operation.html
+class FasterStringOperationCheck : public ClangTidyCheck {
 public:
-  FasterStringFindCheck(StringRef Name, ClangTidyContext *Context);
+  FasterStringOperationCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -41,4 +41,4 @@ private:
 
 } // namespace clang::tidy::performance
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FASTERSTRINGFINDCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FASTERSTRINGOPERATIONCHECK_H

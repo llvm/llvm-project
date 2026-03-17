@@ -351,6 +351,7 @@ Clang-Tidy Checks
    :doc:`performance-avoid-endl <performance/avoid-endl>`, "Yes"
    :doc:`performance-enum-size <performance/enum-size>`,
    :doc:`performance-faster-string-find <performance/faster-string-find>`, "Yes"
+   :doc:`performance-faster-string-operation <performance/faster-string-operation>`, "Yes"
    :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"
    :doc:`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>`,
    :doc:`performance-inefficient-algorithm <performance/inefficient-algorithm>`, "Yes"

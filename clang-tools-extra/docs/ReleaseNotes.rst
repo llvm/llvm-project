@@ -49,6 +49,12 @@ Major New Features
 Potentially Breaking Changes
 ----------------------------
 
+- Deprecated the :program:`clang-tidy` check :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>`. It has been renamed to
+  :doc:`performance-faster-string-operation
+  <clang-tidy/checks/performance/faster-string-operation>`.
+  The original check will be removed in the 25th release.
+
 Improvements to clangd
 ----------------------
 
@@ -174,6 +180,12 @@ New check aliases
   <clang-tidy/checks/portability/no-assembler>`. The `hicpp-no-assembler`
   name is kept as an alias.
 
+- Renamed :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>` to
+  :doc:`performance-faster-string-operation
+  <clang-tidy/checks/performance/faster-string-operation>`.
+  The `performance-faster-string-find` name is kept as an alias.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -292,8 +304,8 @@ Changes in existing checks
 
   - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
 
-- Improved :doc:`performance-faster-string-find
-  <clang-tidy/checks/performance/faster-string-find>` check:
+- Improved :doc:`performance-faster-string-operation
+  <clang-tidy/checks/performance/faster-string-operation>` check:
 
   - Now analyzes calls to the ``starts_with``, ``ends_with``, ``contains``,
     and ``operator+=`` string member functions.
