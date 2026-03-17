@@ -48294,137 +48294,60 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
   SDValue Op0 = Cond.getOperand(IsStrict ? 1 : 0);
   SDValue Op1 = Cond.getOperand(IsStrict ? 2 : 1);
 
-  unsigned Opcode = 0;
   // Check for x CC y ? x : y.
-  if (DAG.isEqualTo(LHS, Op0) && DAG.isEqualTo(RHS, Op1)) {
-    switch (CC) {
-    default:
-      break;
-    case ISD::SETULT:
-      // Converting this to a min would handle NaNs incorrectly, and swapping
-      // the operands would cause it to handle comparisons between positive
-      // and negative zero incorrectly.
-      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-        if (!N->getFlags().hasNoSignedZeros() &&
-            !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
-          break;
-        std::swap(LHS, RHS);
-      }
-      Opcode = X86ISD::FMIN;
-      break;
-    case ISD::SETOLE:
-      // Converting this to a min would handle comparisons between positive
-      // and negative zero incorrectly.
-      if (!N->getFlags().hasNoSignedZeros() &&
-          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
-        break;
-      Opcode = X86ISD::FMIN;
-      break;
-    case ISD::SETULE:
-      // Converting this to a min would handle both negative zeros and NaNs
-      // incorrectly, but we can swap the operands to fix both.
-      std::swap(LHS, RHS);
-      [[fallthrough]];
-    case ISD::SETOLT:
-    case ISD::SETLT:
-    case ISD::SETLE:
-      Opcode = X86ISD::FMIN;
-      break;
+  if (!DAG.isEqualTo(LHS, Op0) || !DAG.isEqualTo(RHS, Op1)) {
+    if (!DAG.isEqualTo(LHS, Op1) || !DAG.isEqualTo(RHS, Op0))
+      return SDValue();
 
-    case ISD::SETOGE:
-      // Converting this to a max would handle comparisons between positive
-      // and negative zero incorrectly.
-      if (!N->getFlags().hasNoSignedZeros() &&
-          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
-        break;
-      Opcode = X86ISD::FMAX;
-      break;
-    case ISD::SETUGT:
-      // Converting this to a max would handle NaNs incorrectly, and swapping
-      // the operands would cause it to handle comparisons between positive
-      // and negative zero incorrectly.
-      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-        if (!N->getFlags().hasNoSignedZeros() &&
-            !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
-          break;
-        std::swap(LHS, RHS);
-      }
-      Opcode = X86ISD::FMAX;
-      break;
-    case ISD::SETUGE:
-      // Converting this to a max would handle both negative zeros and NaNs
-      // incorrectly, but we can swap the operands to fix both.
-      std::swap(LHS, RHS);
-      [[fallthrough]];
-    case ISD::SETOGT:
-    case ISD::SETGT:
-    case ISD::SETGE:
-      Opcode = X86ISD::FMAX;
-      break;
-    }
-    // Check for x CC y ? y : x -- a min/max with reversed arms.
-  } else if (DAG.isEqualTo(LHS, Op1) && DAG.isEqualTo(RHS, Op0)) {
-    switch (CC) {
-    default:
-      break;
-    case ISD::SETOGE:
-      // Converting this to a min would handle comparisons between positive
-      // and negative zero incorrectly, and swapping the operands would
-      // cause it to handle NaNs incorrectly.
-      if (!N->getFlags().hasNoSignedZeros() &&
-          !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS))) {
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-          break;
-        std::swap(LHS, RHS);
-      }
-      Opcode = X86ISD::FMIN;
-      break;
-    case ISD::SETUGT:
-      // Converting this to a min would handle NaNs incorrectly.
-      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-        break;
-      Opcode = X86ISD::FMIN;
-      break;
-    case ISD::SETUGE:
-      // Converting this to a min would handle both negative zeros and NaNs
-      // incorrectly, but we can swap the operands to fix both.
-      std::swap(LHS, RHS);
-      [[fallthrough]];
-    case ISD::SETOGT:
-    case ISD::SETGT:
-    case ISD::SETGE:
-      Opcode = X86ISD::FMIN;
-      break;
+    // Convert x CC y ? y : x to x inv(CC) y ? x : y.
+    CC = ISD::getSetCCInverse(CC, VT);
+    std::swap(LHS, RHS);
+  }
 
-    case ISD::SETULT:
-      // Converting this to a max would handle NaNs incorrectly.
-      if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-        break;
-      Opcode = X86ISD::FMAX;
+  // Convert x CC y ? x : y to y swap(inv(CC)) x ? y : x
+  // to convert an unordered into an ordered comparison.
+  if (ISD::getUnorderedFlavor(CC) == 1) {
+    CC = ISD::getSetCCSwappedOperands(ISD::getSetCCInverse(CC, VT));
+    std::swap(LHS, RHS);
+  }
+
+  unsigned Opcode = 0;
+  switch (CC) {
+  default:
+    break;
+  case ISD::SETOLE:
+    // Converting this to a min would handle comparisons between positive
+    // and negative zero incorrectly.
+    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
+        !DAG.isKnownNeverZeroFloat(RHS))
       break;
-    case ISD::SETOLE:
-      // Converting this to a max would handle comparisons between positive
-      // and negative zero incorrectly, and swapping the operands would
-      // cause it to handle NaNs incorrectly.
-      if (!N->getFlags().hasNoSignedZeros() &&
-          !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS)) {
-        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
-          break;
-        std::swap(LHS, RHS);
-      }
-      Opcode = X86ISD::FMAX;
+    Opcode = X86ISD::FMIN;
+    break;
+  case ISD::SETLE:
+    // Convert setle to setlt via inv+swap.
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ISD::SETOLT:
+  case ISD::SETLT:
+    Opcode = X86ISD::FMIN;
+    break;
+
+  case ISD::SETOGE:
+    // Converting this to a max would handle comparisons between positive
+    // and negative zero incorrectly.
+    if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
+        !DAG.isKnownNeverZeroFloat(RHS))
       break;
-    case ISD::SETULE:
-      // Converting this to a max would handle both negative zeros and NaNs
-      // incorrectly, but we can swap the operands to fix both.
-      std::swap(LHS, RHS);
-      [[fallthrough]];
-    case ISD::SETOLT:
-    case ISD::SETLT:
-    case ISD::SETLE:
-      Opcode = X86ISD::FMAX;
-      break;
-    }
+    Opcode = X86ISD::FMAX;
+    break;
+  case ISD::SETGE:
+    // Convert setge to setgt via inv+swap.
+    std::swap(LHS, RHS);
+    [[fallthrough]];
+  case ISD::SETOGT:
+  case ISD::SETGT:
+    Opcode = X86ISD::FMAX;
+    break;
   }
 
   if (!Opcode)
