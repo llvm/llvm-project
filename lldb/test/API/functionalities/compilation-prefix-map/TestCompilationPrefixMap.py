@@ -37,5 +37,7 @@ class TestCompilationPrefixMap(TestBase):
         lldbutil.run_to_source_breakpoint(self, "return x", source_spec)
 
         self.filecheck_log(log, __file__)
+
+
 #       CHECK: found compilation-prefix-map.json
 #       CHECK: applying prefix map: '/fake/srcdir'
