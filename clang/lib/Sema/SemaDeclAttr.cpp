@@ -2353,7 +2353,8 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
     bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
     VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
     bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-    int Priority, const IdentifierInfo *Environment) {
+    int Priority, const IdentifierInfo *Environment,
+    VersionTuple OrigAnyAppleOSVersion) {
   VersionTuple MergedIntroduced = Introduced;
   VersionTuple MergedDeprecated = Deprecated;
   VersionTuple MergedObsoleted = Obsoleted;
@@ -2512,7 +2513,8 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
       !OverrideOrImpl) {
     auto *Avail = ::new (Context) AvailabilityAttr(
         Context, CI, Platform, Introduced, Deprecated, Obsoleted, IsUnavailable,
-        Message, IsStrict, Replacement, Priority, Environment);
+        Message, IsStrict, Replacement, Priority, Environment,
+        OrigAnyAppleOSVersion);
     Avail->setImplicit(Implicit);
     return Avail;
   }
@@ -2754,12 +2756,13 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         ND, AL, NewII, /*Implicit=*/true, CorrectedIntroduced,
         CorrectedDeprecated, CorrectedObsoleted, IsUnavailable, Str, IsStrict,
         Replacement, AvailabilityMergeKind::None, ExpandedPriority,
-        IIEnvironment);
+        IIEnvironment, CorrectedIntroduced);
     if (NewAttr)
       D->addAttr(NewAttr);
 
     // Don't add the original anyAppleOS attribute - only the implicit
     // platform-specific attributes.
+    return;
   }
 
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(

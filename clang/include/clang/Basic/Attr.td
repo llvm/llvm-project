@@ -278,7 +278,8 @@ class VariadicParamOrParamIdxArgument<string name> : Argument<name, 1>;
 class ParamIdxArgument<string name, bit opt = 0> : Argument<name, opt>;
 
 // A version of the form major.minor[.subminor].
-class VersionArgument<string name, bit opt = 0> : Argument<name, opt>;
+class VersionArgument<string name, bit opt = 0, bit fake = 0>
+    : Argument<name, opt, fake>;
 
 // This one's a doozy, so it gets its own special type
 // It can be an unsigned integer, or a type. Either can
@@ -1094,7 +1095,8 @@ def Availability : InheritableAttr {
               VersionArgument<"deprecated">, VersionArgument<"obsoleted">,
               BoolArgument<"unavailable">, StringArgument<"message">,
               BoolArgument<"strict">, StringArgument<"replacement">,
-              IntArgument<"priority">, IdentifierArgument<"environment">];
+              IntArgument<"priority">, IdentifierArgument<"environment">,
+              VersionArgument<"origAnyAppleOSVersion", 0, 1>];
   let AdditionalMembers =
 [{static llvm::StringRef getPrettyPlatformName(llvm::StringRef Platform) {
     return llvm::StringSwitch<llvm::StringRef>(Platform)

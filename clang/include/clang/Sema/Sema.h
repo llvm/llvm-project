@@ -4963,7 +4963,8 @@ public:
                         VersionTuple Obsoleted, bool IsUnavailable,
                         StringRef Message, bool IsStrict, StringRef Replacement,
                         AvailabilityMergeKind AMK, int Priority,
-                        const IdentifierInfo *IIEnvironment);
+                        const IdentifierInfo *IIEnvironment,
+                        VersionTuple OrigAnyAppleOSVersion = {});
 
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
