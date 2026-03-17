@@ -3637,8 +3637,8 @@ Error AMDGPUEventTy::elapsedTime(AMDGPUEventTy &EndEvent, float &ElapsedTime) {
         ErrorCode::UNKNOWN,
         "timing information is not ready for one or both events");
 
-  const uint64_t Frequency = Device.getSystemTimestampFrequency();
-  if (Frequency == 0)
+  const uint64_t TicksPerSecond = Device.getSystemTimestampFrequency();
+  if (TicksPerSecond == 0)
     return Plugin::error(ErrorCode::UNSUPPORTED,
                          "HSA system timestamp frequency is unavailable");
 
@@ -3659,9 +3659,11 @@ Error AMDGPUEventTy::elapsedTime(AMDGPUEventTy &EndEvent, float &ElapsedTime) {
 
   const int64_t DeltaTicks =
       static_cast<int64_t>(StopTime.end) - static_cast<int64_t>(StartTime.end);
+  constexpr double MillisecondsPerSecond = 1000.0;
 
-  ElapsedTime = static_cast<float>(static_cast<double>(DeltaTicks) * 1000.0 /
-                                   static_cast<double>(Frequency));
+  ElapsedTime = static_cast<float>(static_cast<double>(DeltaTicks) *
+                                   MillisecondsPerSecond /
+                                   static_cast<double>(TicksPerSecond));
 
   return Plugin::success();
 }
