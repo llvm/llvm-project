@@ -32,6 +32,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cassert>
@@ -39,6 +40,10 @@
 #include <iterator>
 
 using namespace llvm;
+
+static cl::opt<bool> EnableMultiVecSpillFill(
+    "aarch64-enable-multivec-spill-fill", cl::init(true), cl::Hidden,
+    cl::desc("Enable multi-vector spill/fill expansion for SVE"));
 
 #define AARCH64_EXPAND_PSEUDO_NAME "AArch64 pseudo instruction expansion pass"
 
@@ -81,6 +86,11 @@ private:
   bool expandSVESpillFill(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, unsigned Opc,
                           unsigned N);
+  bool tryExpandSVESpillFillToMultiVec(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI,
+                                       unsigned MultiVecOpc, unsigned N,
+                                       LivePhysRegs &LiveRegs);
+  bool expandSVEMultiVecSpillFills(MachineBasicBlock &MBB);
   bool expandCALL_RVMARKER(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
   bool expandCALL_BTI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
@@ -100,6 +110,10 @@ private:
                                         MachineBasicBlock::iterator MBBI);
   MachineBasicBlock *expandCondSMToggle(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI);
+
+  // Cached scratch PNR register for multi-vector spill/fill optimization.
+  // Reset at the start of each block.
+  Register CachedScratchPNR = AArch64::NoRegister;
 };
 
 class AArch64ExpandPseudoLegacy : public MachineFunctionPass {
@@ -861,9 +875,77 @@ bool AArch64ExpandPseudoImpl::expandSetTagLoop(
   return true;
 }
 
-bool AArch64ExpandPseudoImpl::expandSVESpillFill(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned Opc,
-    unsigned N) {
+/// Try to use multi-vector instructions to replace the tuple load/stores,
+/// returns true if successful.
+bool AArch64ExpandPseudoImpl::tryExpandSVESpillFillToMultiVec(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    unsigned MultiVecOpc, unsigned N, LivePhysRegs &LiveRegs) {
+  MachineFunction &MF = *MBB.getParent();
+  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+  MachineInstr &MI = *MBBI;
+  Register TupleReg = MI.getOperand(0).getReg();
+  Register BaseReg = MI.getOperand(1).getReg();
+  int BaseOffset = MI.getOperand(2).getImm();
+  DebugLoc DL = MI.getDebugLoc();
+
+  // Check immediate range for multi-vector instructions.
+  // simm4s2 for x2: -8 to +7 (scaled by 2)
+  // simm4s4 for x4: -8 to +7 (scaled by 4)
+  int Scale = N == 4 ? 4 : 2;
+  int ScaledOffset = BaseOffset / Scale;
+  if ((BaseOffset % Scale != 0) || ScaledOffset < -8 || ScaledOffset > 7)
+    return false;
+
+  // Find a scratch PNR register that is not live at this point.
+  // First check if our cached register is still usable.
+  Register ScratchPNR = CachedScratchPNR;
+
+  if (ScratchPNR == AArch64::NoRegister || LiveRegs.contains(ScratchPNR)) {
+    ScratchPNR = AArch64::NoRegister;
+    for (MCPhysReg Reg :
+         {AArch64::PN8, AArch64::PN9, AArch64::PN10, AArch64::PN11,
+          AArch64::PN12, AArch64::PN13, AArch64::PN14, AArch64::PN15}) {
+      if (!LiveRegs.contains(Reg)) {
+        ScratchPNR = Reg;
+        break;
+      }
+    }
+    if (ScratchPNR == AArch64::NoRegister)
+      return false; // No available scratch register, bail out.
+    CachedScratchPNR = ScratchPNR;
+  }
+
+  // Get the register tuple for the multi-vector instruction.
+  Register FirstReg = TRI->getSubReg(TupleReg, AArch64::zsub0);
+  unsigned RegNum = FirstReg - AArch64::Z0;
+  Register MultiVecTupleReg =
+      (N == 4) ? AArch64::Z0_Z1_Z2_Z3 + RegNum : AArch64::Z0_Z1 + RegNum;
+
+  bool IsLoad = (MultiVecOpc == AArch64::LD1B_2Z_IMM ||
+                 MultiVecOpc == AArch64::LD1B_4Z_IMM);
+  bool Kill = MI.getOperand(1).isKill();
+
+  // Insert PTRUE_C_B to set up the predicate.
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::PTRUE_C_B), ScratchPNR);
+
+  // Build the multi-vector instruction.
+  MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(MultiVecOpc));
+  if (IsLoad)
+    MIB.addReg(MultiVecTupleReg, RegState::Define);
+  else
+    MIB.addReg(MultiVecTupleReg);
+  MIB.addReg(ScratchPNR, RegState::Kill);
+  MIB.addReg(BaseReg, getKillRegState(Kill));
+  MIB.addImm(ScaledOffset);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64ExpandPseudoImpl::expandSVESpillFill(MachineBasicBlock &MBB,
+                                                 MachineBasicBlock::iterator MBBI,
+                                                 unsigned Opc, unsigned N) {
   assert((Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI ||
           Opc == AArch64::LDR_PXI || Opc == AArch64::STR_PXI) &&
          "Unexpected opcode");
@@ -2010,10 +2092,95 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   return false;
 }
 
+/// Map SVE tuple spill/fill pseudo opcodes to multi-vector opcodes.
+/// Returns {MultiVecOpc, N} or {0, 0} if not a candidate.
+/// Only ZPR (not PPR) spills with contiguous, properly-aligned registers
+/// can use multi-vector instructions.
+static std::pair<unsigned, unsigned>
+getSVEMultiVecSpillFillInfo(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AArch64::STR_ZZZZXI:
+  case AArch64::STR_ZZZZXI_STRIDED_CONTIGUOUS:
+    if (AArch64::ZPR4Mul4RegClass.contains(MI.getOperand(0).getReg()))
+      return {AArch64::ST1B_4Z_IMM, 4};
+    return {0, 0};
+  case AArch64::STR_ZZXI:
+  case AArch64::STR_ZZXI_STRIDED_CONTIGUOUS:
+    if (AArch64::ZPR2Mul2RegClass.contains(MI.getOperand(0).getReg()))
+      return {AArch64::ST1B_2Z_IMM, 2};
+    return {0, 0};
+  case AArch64::LDR_ZZZZXI:
+  case AArch64::LDR_ZZZZXI_STRIDED_CONTIGUOUS:
+    if (AArch64::ZPR4Mul4RegClass.contains(MI.getOperand(0).getReg()))
+      return {AArch64::LD1B_4Z_IMM, 4};
+    return {0, 0};
+  case AArch64::LDR_ZZXI:
+  case AArch64::LDR_ZZXI_STRIDED_CONTIGUOUS:
+    if (AArch64::ZPR2Mul2RegClass.contains(MI.getOperand(0).getReg()))
+      return {AArch64::LD1B_2Z_IMM, 2};
+    return {0, 0};
+  default:
+    return {0, 0};
+  }
+}
+
+/// Try to expand SVE spill/fill pseudos into multi-vector instructions.
+/// Iterates backward through the block with incremental liveness to find
+/// free PNR scratch registers, avoiding O(n^2) liveness recomputation.
+bool AArch64ExpandPseudoImpl::expandSVEMultiVecSpillFills(MachineBasicBlock &MBB) {
+  if (!EnableMultiVecSpillFill || MBB.empty())
+    return false;
+
+  MachineFunction &MF = *MBB.getParent();
+  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+  if (!STI.hasSVE2p1() && !(STI.hasSME2() && STI.isStreaming()))
+    return false;
+
+  bool Modified = false;
+  const TargetRegisterInfo *TRI =
+      MBB.getParent()->getSubtarget().getRegisterInfo();
+  LivePhysRegs LiveRegs(*TRI);
+  LiveRegs.addLiveOuts(MBB);
+  auto MBBI = MBB.end();
+  while (MBBI != MBB.begin()) {
+    --MBBI;
+    MachineInstr &MI = *MBBI;
+    auto [MultiVecOpc, N] = getSVEMultiVecSpillFillInfo(MI);
+    if (MultiVecOpc != 0) {
+      // Save iterator to instruction after MI so we can find inserted
+      // instructions after MI is erased.
+      auto AfterMI = std::next(MachineBasicBlock::iterator(MBBI));
+      if (tryExpandSVESpillFillToMultiVec(MBB, MBBI, MultiVecOpc, N,
+                                          LiveRegs)) {
+        Modified = true;
+        // MI was erased. Two new instructions (PTRUE_C_B + multi-vec)
+        // were inserted before AfterMI. Step liveness backward over them.
+        auto It = AfterMI;
+        assert(It != MBB.begin());
+        --It; // multi-vec instruction
+        LiveRegs.stepBackward(*It);
+        assert(It != MBB.begin());
+        --It; // PTRUE_C_B
+        LiveRegs.stepBackward(*It);
+        MBBI = It; // Loop will --MBBI to get instruction before PTRUE_C_B
+        continue;
+      }
+    }
+    // Step liveness backward past this instruction.
+    LiveRegs.stepBackward(MI);
+  }
+  return Modified;
+}
+
 /// Iterate over the instructions in basic block MBB and expand any
 /// pseudo instructions.  Return true if anything was modified.
 bool AArch64ExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
+
+  // Reset cached scratch PNR at the start of each block.
+  CachedScratchPNR = AArch64::NoRegister;
+
+  Modified |= expandSVEMultiVecSpillFills(MBB);
 
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
