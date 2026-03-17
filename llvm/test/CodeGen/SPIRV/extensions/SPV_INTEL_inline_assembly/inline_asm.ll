@@ -16,6 +16,7 @@
 ; CHECK-DAG: %[[#HalfTy:]] = OpTypeFloat 16
 ; CHECK-DAG: %[[#FloatTy:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#DoubleTy:]] = OpTypeFloat 64
+; CHECK-DAG: %[[#StructTy:]] = OpTypeStruct %[[#Int32Ty]] %[[#FloatTy]] %[[#HalfTy]]
 
 ; CHECK-DAG: OpTypeFunction %[[#VoidTy]] %[[#]] %[[#]] %[[#]] %[[#Int64Ty]]
 ; CHECK-DAG: %[[#Fun1Ty:]] = OpTypeFunction %[[#VoidTy]]
@@ -26,6 +27,7 @@
 ; CHECK-DAG: %[[#Fun6Ty:]] = OpTypeFunction %[[#Int8Ty]] %[[#FloatTy]] %[[#Int32Ty]] %[[#Int8Ty]]
 ; CHECK-DAG: %[[#Fun7Ty:]] = OpTypeFunction %[[#Int64Ty]] %[[#Int64Ty]] %[[#Int32Ty]] %[[#Int8Ty]]
 ; CHECK-DAG: %[[#Fun8Ty:]] = OpTypeFunction %[[#VoidTy]] %[[#Int32Ty]] %[[#DoubleTy]]
+; CHECK-DAG: %[[#Fun9Ty:]] = OpTypeFunction %[[#StructTy]] %[[#Int32Ty]] %[[#FloatTy]] %[[#HalfTy]]
 
 ; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#FloatTy]] 2
 ; CHECK-DAG: %[[#Const123:]] = OpConstant %[[#Int32Ty]] 123
@@ -45,6 +47,7 @@
 ; CHECK-DAG: %[[#Asm9:]] = OpAsmINTEL %[[#Int64Ty]] %[[#Fun7Ty]] %[[#Dialect]] "icmdext $0 $3 $1 $2" "=r,r,r,r"
 ; CHECK-DAG: %[[#Asm10:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun8Ty]] %[[#Dialect]] "constcmd $0 $1" "r,r"
 ; CHECK-DAG: %[[#Asm11:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun8Ty]] %[[#Dialect]] "constcmd $0 $1" "i,i"
+; CHECK-DAG: %[[#Asm12:]] = OpAsmINTEL %[[#StructTy]] %[[#Fun9Ty]] %[[#Dialect]] "cmdext $0 $4 $5\n cmdext $2 $5 $6\n cmdext $3 $4 $6" "=&r,=&r,=&r,r,r,r"
 ; CHECK-NO: OpAsmINTEL
 
 ; CHECK: OpFunction
@@ -59,7 +62,13 @@
 ; CHECK: OpAsmCallINTEL %[[#Int64Ty]] %[[#Asm9]] %[[#]] %[[#]] %[[#]]
 ; CHECK: OpAsmCallINTEL %[[#VoidTy]] %[[#Asm10]] %[[#Const123]] %[[#Const42]]
 ; CHECK: OpAsmCallINTEL %[[#VoidTy]] %[[#Asm11]] %[[#Const123]] %[[#Const42]]
+; CHECK: %[[#StructRet:]] = OpAsmCallINTEL %[[#StructTy]] %[[#Asm12]]
+; CHECK-NEXT: OpCompositeExtract %[[#Int32Ty]] %[[#StructRet]] 0
+; CHECK-NEXT: OpCompositeExtract %[[#FloatTy]] %[[#StructRet]] 1
+; CHECK-NEXT: OpCompositeExtract %[[#HalfTy]] %[[#StructRet]] 2
 ; CHECK-NO: OpAsmCallINTEL
+
+target triple = "spirv64-unknown-unknown"
 
 define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_float, ptr addrspace(1) %_arg_half, i64 %_lng) {
   %i1 = load i32, ptr addrspace(1) %_arg_int
@@ -89,5 +98,13 @@ define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_
   ; inline asm: constant arguments, misc constraints
   call void asm "constcmd $0 $1", "r,r"(i32 123, double 42.0)
   call void asm "constcmd $0 $1", "i,i"(i32 123, double 42.0)
+  ; inline asm: multiple outputs, hence aggregate return
+  %res_struct = call { i32, float, half } asm sideeffect "cmdext $0 $4 $5\0A cmdext $2 $5 $6\0A cmdext $3 $4 $6", "=&r,=&r,=&r,r,r,r"(i32 %i1, float %f1, half %h1)
+  %asmresult = extractvalue { i32, float, half } %res_struct, 0
+  %asmresult3 = extractvalue { i32, float, half } %res_struct, 1
+  %asmresult4 = extractvalue { i32, float, half } %res_struct, 2
+  store i32 %asmresult, ptr addrspace(1) %_arg_int
+  store float %asmresult3, ptr addrspace(1) %_arg_float
+  store half %asmresult4, ptr addrspace(1) %_arg_half
   ret void
 }
