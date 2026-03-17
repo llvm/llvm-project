@@ -54299,8 +54299,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   SDValue Src;
   if (!St->isTruncatingStore() && VT == MVT::v4i8 && Subtarget.hasAVX512() &&
       TLI.isTruncStoreLegal(MVT::v4i32, MVT::v4i8) &&
-      sd_match(StoredVal, m_OneUse(m_Trunc(m_Value(
-                              Src, m_OneUse(m_SpecificVT(MVT::v4i16)))))) &&
+      sd_match(StoredVal, m_OneUse(m_Trunc(m_OneUse(m_Value(
+                              Src, m_SpecificVT(MVT::v4i16)))))) &&
       ISD::isNormalLoad(Src.getNode())) {
     SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v4i32, Src);
     return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
