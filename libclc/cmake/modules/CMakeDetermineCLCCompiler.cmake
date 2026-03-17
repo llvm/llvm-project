@@ -4,7 +4,22 @@ if(NOT CMAKE_CLC_COMPILER)
       "The CLC language requires the C compiler (CMAKE_C_COMPILER) to be "
       "Clang, but CMAKE_C_COMPILER_ID is '${CMAKE_C_COMPILER_ID}'.")
   endif()
-  set(CMAKE_CLC_COMPILER "${CMAKE_C_COMPILER}" CACHE FILEPATH "CLC compiler")
+
+  # Use the regular clang driver if the C compiler is clang-cl.
+  if(CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    cmake_path(GET CMAKE_C_COMPILER PARENT_PATH llvm_bin_dir)
+    find_program(clang_exe clang
+      HINTS "${llvm_bin_dir}"
+      NO_DEFAULT_PATH
+    )
+    if(NOT clang_exe)
+      message(FATAL_ERROR "clang-cl detected, but clang not found in ${llvm_bin_dir}")
+    endif()
+    set(clc_compiler "${clang_exe}")
+  else()
+    set(clc_compiler "${CMAKE_C_COMPILER}")
+  endif()
+  set(CMAKE_CLC_COMPILER "${clc_compiler}" CACHE FILEPATH "libclc: CLC compiler")
 endif()
 
 mark_as_advanced(CMAKE_CLC_COMPILER)

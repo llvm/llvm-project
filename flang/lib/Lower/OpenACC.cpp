@@ -2832,15 +2832,31 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-  AccDataMap dataMap;
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *ifClause =
             std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
       genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
-    } else if (const auto *useDevice =
-                   std::get_if<Fortran::parser::AccClause::UseDevice>(
-                       &clause.u)) {
+    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
+      addIfPresentAttr = true;
+    }
+  }
+
+  if (ifCond) {
+    if (auto cst =
+            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp()))
+      if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
+        if (boolAttr.getValue()) {
+          // get rid of the if condition if it is always true.
+          ifCond = mlir::Value();
+        }
+      }
+  }
+
+  AccDataMap dataMap;
+  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+    if (const auto *useDevice =
+            std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
       // When CUDA Fortran is enabled, extra symbols are used in the host_data
       // region. Look for them and bind their values with the symbols in the
       // outer scope.
@@ -2884,24 +2900,7 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
           /*structured=*/true, /*implicit=*/false, /*async=*/{},
           /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
           /*setDeclareAttr=*/false, &dataMap);
-    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
-      addIfPresentAttr = true;
     }
-  }
-
-  if (ifCond) {
-    if (auto cst =
-            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp()))
-      if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
-        if (boolAttr.getValue()) {
-          // get rid of the if condition if it is always true.
-          ifCond = mlir::Value();
-        } else {
-          // Do not generate the acc.host_data op if the if condition is always
-          // false.
-          return;
-        }
-      }
   }
 
   // Prepare the operand segment size attribute and the operands value range.

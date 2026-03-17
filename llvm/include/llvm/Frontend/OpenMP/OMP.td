@@ -829,6 +829,7 @@ def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
     VersionedClause<OMPC_Enter, 52>,
     VersionedClause<OMPC_Indirect, 51>,
     VersionedClause<OMPC_Link>,
+    VersionedClause<OMPC_Local, 60>,
     VersionedClause<OMPC_To>,
   ];
   let allowedOnceClauses = [
