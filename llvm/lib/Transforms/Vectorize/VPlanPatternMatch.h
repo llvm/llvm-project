@@ -853,23 +853,16 @@ inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
 inline auto m_CanonicalIV() { return class_match<VPCanonicalIVPHIRecipe>(); }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-using VPScalarIVSteps_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0,
-                                           false, VPScalarIVStepsRecipe>;
-
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPScalarIVSteps_match<Op0_t, Op1_t, Op2_t>
-m_ScalarIVSteps(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return VPScalarIVSteps_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
+inline auto m_ScalarIVSteps(const Op0_t &Op0, const Op1_t &Op1,
+                            const Op2_t &Op2) {
+  return Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0, false,
+                      VPScalarIVStepsRecipe>({Op0, Op1, Op2});
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-using VPDerivedIV_match =
-    Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0, false, VPDerivedIVRecipe>;
-
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPDerivedIV_match<Op0_t, Op1_t, Op2_t>
-m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return VPDerivedIV_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
+inline auto m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0, false,
+                      VPDerivedIVRecipe>({Op0, Op1, Op2});
 }
 
 template <typename Addr_t, typename Mask_t> struct Load_match {
