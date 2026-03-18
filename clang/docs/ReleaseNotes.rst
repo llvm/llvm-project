@@ -163,6 +163,8 @@ Non-comprehensive list of changes in this release
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 
+- Added header ``endian.h`` which contains byte order helpers specified in POSIX
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added

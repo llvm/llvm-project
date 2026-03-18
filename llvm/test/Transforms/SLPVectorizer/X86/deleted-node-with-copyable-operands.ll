@@ -5,35 +5,37 @@ define void @test(ptr %0, ptr %1, i1 %cond, double %2) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], i1 [[COND:%.*]], double [[TMP2:%.*]]) {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br [[DOTLR_PH383_US_US_US_US:label %.*]]
 ; CHECK:       [[_LR_PH383_US_US_US_US:.*:]]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double> [ [[TMP18:%.*]], %[[DOT_CRIT_EDGE384_US_US_US_US:.*]] ], [ zeroinitializer, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double> [ [[TMP22:%.*]], %[[DOT_CRIT_EDGE384_US_US_US_US:.*]] ], [ zeroinitializer, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br i1 false, label %[[DOTLR_PH383_US_US_US_US___CRIT_EDGE384_US_US_US_US_CRIT_EDGE:.*]], label %[[BB6:.*]]
 ; CHECK:       [[_LR_PH383_US_US_US_US___CRIT_EDGE384_US_US_US_US_CRIT_EDGE:.*:]]
 ; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE384_US_US_US_US]]
 ; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BB16:.*]], label %[[BB7:.*]]
 ; CHECK:       [[BB7]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul double [[TMP9]], 0.000000e+00
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd double [[TMP11]], 0.000000e+00
-; CHECK-NEXT:    [[TMP16:%.*]] = fadd double [[TMP9]], 0.000000e+00
-; CHECK-NEXT:    [[TMP17:%.*]] = fadd double [[TMP2]], [[TMP10]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> poison, double [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul <2 x double> [[TMP11]], <double 1.000000e+00, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd double [[TMP2]], [[TMP8]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP13]], i32 0
 ; CHECK-NEXT:    br label %[[BB16]]
 ; CHECK:       [[BB16]]:
-; CHECK-NEXT:    [[DOT0311_US_US_US_US:%.*]] = phi double [ [[TMP12]], %[[BB7]] ], [ [[TMP2]], %[[BB6]] ]
-; CHECK-NEXT:    [[DOT0304_US_US_US_US:%.*]] = phi double [ [[TMP17]], %[[BB7]] ], [ 0.000000e+00, %[[BB6]] ]
-; CHECK-NEXT:    [[DOT0301_US_US_US_US:%.*]] = phi double [ [[TMP16]], %[[BB7]] ], [ 0.000000e+00, %[[BB6]] ]
-; CHECK-NEXT:    [[DOT0257_US_US_US_US:%.*]] = phi double [ [[TMP16]], %[[BB7]] ], [ [[TMP2]], %[[BB6]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> poison, double [[DOT0257_US_US_US_US]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> [[TMP13]], double [[DOT0301_US_US_US_US]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x double> [[TMP14]], double [[DOT0304_US_US_US_US]], i32 2
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x double> [[TMP15]], double [[DOT0311_US_US_US_US]], i32 3
+; CHECK-NEXT:    [[DOT0304_US_US_US_US:%.*]] = phi double [ [[TMP14]], %[[BB7]] ], [ 0.000000e+00, %[[BB6]] ]
+; CHECK-NEXT:    [[DOT0301_US_US_US_US:%.*]] = phi double [ [[TMP15]], %[[BB7]] ], [ 0.000000e+00, %[[BB6]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi <2 x double> [ [[TMP13]], %[[BB7]] ], [ [[TMP4]], %[[BB6]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x double> [[TMP17]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 1>
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x double> [[TMP18]], double [[DOT0301_US_US_US_US]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x double> [[TMP19]], double [[DOT0304_US_US_US_US]], i32 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = fadd <4 x double> [[TMP20]], [[TMP5]]
 ; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE384_US_US_US_US]]
 ; CHECK:       [[__CRIT_EDGE384_US_US_US_US:.*:]]
-; CHECK-NEXT:    [[TMP18]] = phi <4 x double> [ [[TMP21]], %[[BB16]] ], [ zeroinitializer, %[[DOTLR_PH383_US_US_US_US___CRIT_EDGE384_US_US_US_US_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[TMP22]] = phi <4 x double> [ [[TMP21]], %[[BB16]] ], [ zeroinitializer, %[[DOTLR_PH383_US_US_US_US___CRIT_EDGE384_US_US_US_US_CRIT_EDGE]] ]
 ; CHECK-NEXT:    br [[DOTLR_PH383_US_US_US_US]]
 ;
 iter.check:

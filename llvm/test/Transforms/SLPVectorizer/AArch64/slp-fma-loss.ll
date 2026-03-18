@@ -216,8 +216,8 @@ define void @slp_profitable_missing_fmf_nnans_only(ptr %A, ptr %B) {
 define float @slp_not_profitable_in_loop(float %x, ptr %A) {
 ; CHECK-LABEL: @slp_not_profitable_in_loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[L_2:%.*]] = load float, ptr [[A1]], align 4
+; CHECK-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 2
+; CHECK-NEXT:    [[L_1:%.*]] = load float, ptr [[GEP_A_2]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[L_3:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float poison, float 3.000000e+00>, float [[X:%.*]], i32 0
@@ -226,7 +226,7 @@ define float @slp_not_profitable_in_loop(float %x, ptr %A) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[RED:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[MUL12:%.*]] = fmul fast float 3.000000e+00, [[L_2]]
+; CHECK-NEXT:    [[MUL12:%.*]] = fmul fast float 3.000000e+00, [[L_1]]
 ; CHECK-NEXT:    [[MUL16:%.*]] = fmul fast float 3.000000e+00, [[L_3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[MUL12]], [[TMP3]]
