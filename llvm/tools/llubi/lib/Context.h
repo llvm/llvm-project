@@ -116,6 +116,8 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   // TODO: allow encoding metadata bits (e.g., captured pointer components) into
   // the tag. The injection should affect all the bits in the tag rather than
   // just some low bits for better robustness.
+  // TODO: we need a special tag encoding for wildcard provenance, which is
+  // introduced by inttoptr.
   APInt Tag;
 
 public:
