@@ -139,10 +139,6 @@ public:
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
-  /// Controller interface symbols map.
-  auto controllerInterface() { return LockedAccess(CI, M); }
-  auto controllerInterface() const { return LockedAccess(CI, M); }
-
   /// Initiate session shutdown.
   ///
   /// Runs shutdown on registered resources in reverse order.
@@ -216,7 +212,6 @@ private:
 
   mutable std::mutex M;
   std::vector<std::unique_ptr<Service>> Services;
-  SimpleSymbolTable CI;
   std::unique_ptr<ShutdownInfo> SI;
 };
 

@@ -1,5 +1,6 @@
 set(files
   AllocAction.cpp
+  BootstrapInfo.cpp
   SimpleSymbolTable.cpp
   Error.cpp
   ExecutorProcessInfo.cpp

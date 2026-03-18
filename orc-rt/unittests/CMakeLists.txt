@@ -14,6 +14,7 @@ endfunction()
 add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
+  BootstrapInfoTest.cpp
   CallableTraitsHelperTest.cpp
   SimpleSymbolTableTest.cpp
   EndianTest.cpp
