@@ -70,9 +70,8 @@ getSrcIndxValue(OpBuilder &rewriter, Location loc, Value operand,
   if (!srcBuff)
     return failure();
 
-  if (isNotAcc) {
+  if (isNotAcc)
     indexVals.pop_back();
-  }
 
   SmallVector<Value> indices;
   indices.reserve(indexVals.size());
@@ -203,8 +202,7 @@ static amx::TileLoadOp createTileLoads(OpBuilder &rewriter, Location loc,
   }
 
   amx::TileType tileType = amx::TileType::get({16, (16 * offset)}, ipType);
-  auto load = amx::TileLoadOp::create(rewriter, loc, tileType, mat, indices);
-  return load;
+  return amx::TileLoadOp::create(rewriter, loc, tileType, mat, indices);
 }
 
 // Creates tiled amx dot-products.
@@ -344,13 +342,8 @@ struct VectorContractToAMXDotProduct
                       "transfer_read or a load. And, the result should be "
                       "stored using transfer_write or store.");
 
-    Type ipType;
-    Type opType;
-
-    if (lhsTy.getElementType().isBF16()) {
-      ipType = rewriter.getBF16Type();
-      opType = rewriter.getF32Type();
-    }
+    Type ipType = rewriter.getBF16Type();
+    Type opType = rewriter.getF32Type();
 
     if (lhsTy.getElementType().isSignlessInteger(8)) {
       ipType = rewriter.getIntegerType(8);
@@ -558,7 +551,7 @@ struct VectorContractToAMXDotProduct
           });
     }
 
-    // Case 2a: Reduction loop depth is 1.
+    // Case 2b: Reduction loop depth is 1.
     if (loopLists.size() == 1) {
       outerLoop = loopLists[0];
 
@@ -649,7 +642,7 @@ struct VectorContractToAMXDotProduct
                 });
 
             Value sum = arith::AddIOp::create(builder, loc, iv, indicesAcc[0]);
-            indicesAcc[0] = sum;
+            indicesAcc[indicesAcc.size() - 2] = sum;
 
             auto acc = vector::LoadOp::create(rewriter, loc,
                                               VectorType::get(16, opType),
