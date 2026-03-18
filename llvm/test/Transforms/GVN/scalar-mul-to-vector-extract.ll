@@ -168,6 +168,108 @@ define float @neg_vector_has_nsz(<2 x float> %v0, <2 x float> %v1) {
   ret float %mul
 }
 
+; Negative test: vector fmul has reassoc but scalar does not.
+define float @neg_vector_has_reassoc(<2 x float> %v0, <2 x float> %v1) {
+; CHECK-LABEL: define float @neg_vector_has_reassoc(
+; CHECK-SAME: <2 x float> [[V0:%.*]], <2 x float> [[V1:%.*]]) {
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x float> [[V0]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x float> [[V1]], i64 0
+; CHECK-NEXT:    [[V:%.*]] = fmul reassoc <2 x float> [[V0]], [[V1]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %e0 = extractelement <2 x float> %v0, i64 0
+  %e1 = extractelement <2 x float> %v1, i64 0
+  %v = fmul reassoc <2 x float> %v0, %v1
+  %mul = fmul float %e0, %e1
+  ret float %mul
+}
+
+; Negative test: vector fmul has arcp but scalar does not.
+define float @neg_vector_has_arcp(<2 x float> %v0, <2 x float> %v1) {
+; CHECK-LABEL: define float @neg_vector_has_arcp(
+; CHECK-SAME: <2 x float> [[V0:%.*]], <2 x float> [[V1:%.*]]) {
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x float> [[V0]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x float> [[V1]], i64 0
+; CHECK-NEXT:    [[V:%.*]] = fmul arcp <2 x float> [[V0]], [[V1]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %e0 = extractelement <2 x float> %v0, i64 0
+  %e1 = extractelement <2 x float> %v1, i64 0
+  %v = fmul arcp <2 x float> %v0, %v1
+  %mul = fmul float %e0, %e1
+  ret float %mul
+}
+
+; Negative test: vector fmul has contract but scalar does not.
+define float @neg_vector_has_contract(<2 x float> %v0, <2 x float> %v1) {
+; CHECK-LABEL: define float @neg_vector_has_contract(
+; CHECK-SAME: <2 x float> [[V0:%.*]], <2 x float> [[V1:%.*]]) {
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x float> [[V0]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x float> [[V1]], i64 0
+; CHECK-NEXT:    [[V:%.*]] = fmul contract <2 x float> [[V0]], [[V1]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %e0 = extractelement <2 x float> %v0, i64 0
+  %e1 = extractelement <2 x float> %v1, i64 0
+  %v = fmul contract <2 x float> %v0, %v1
+  %mul = fmul float %e0, %e1
+  ret float %mul
+}
+
+; Negative test: vector fmul has afn but scalar does not.
+define float @neg_vector_has_afn(<2 x float> %v0, <2 x float> %v1) {
+; CHECK-LABEL: define float @neg_vector_has_afn(
+; CHECK-SAME: <2 x float> [[V0:%.*]], <2 x float> [[V1:%.*]]) {
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x float> [[V0]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x float> [[V1]], i64 0
+; CHECK-NEXT:    [[V:%.*]] = fmul afn <2 x float> [[V0]], [[V1]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %e0 = extractelement <2 x float> %v0, i64 0
+  %e1 = extractelement <2 x float> %v1, i64 0
+  %v = fmul afn <2 x float> %v0, %v1
+  %mul = fmul float %e0, %e1
+  ret float %mul
+}
+
+; Negative test: vector fmul has !fpmath but scalar does not.
+define float @neg_vector_has_fpmath(<2 x float> %v0, <2 x float> %v1) {
+; CHECK-LABEL: define float @neg_vector_has_fpmath(
+; CHECK-SAME: <2 x float> [[V0:%.*]], <2 x float> [[V1:%.*]]) {
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x float> [[V0]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x float> [[V1]], i64 0
+; CHECK-NEXT:    [[V:%.*]] = fmul <2 x float> [[V0]], [[V1]], !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %e0 = extractelement <2 x float> %v0, i64 0
+  %e1 = extractelement <2 x float> %v1, i64 0
+  %v = fmul <2 x float> %v0, %v1, !fpmath !0
+  %mul = fmul float %e0, %e1
+  ret float %mul
+}
+
+; Scalar fmul allows looser error than the vector fmul - ok to fold.
+define float @fmul_scalar_has_fpmath(<2 x float> %v0, <2 x float> %v1) {
+; CHECK-LABEL: define float @fmul_scalar_has_fpmath(
+; CHECK-SAME: <2 x float> [[V0:%.*]], <2 x float> [[V1:%.*]]) {
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x float> [[V0]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x float> [[V1]], i64 0
+; CHECK-NEXT:    [[V:%.*]] = fmul <2 x float> [[V0]], [[V1]], !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[V]], i64 0
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %e0 = extractelement <2 x float> %v0, i64 0
+  %e1 = extractelement <2 x float> %v1, i64 0
+  %v = fmul <2 x float> %v0, %v1, !fpmath !0
+  %mul = fmul float %e0, %e1, !fpmath !1
+  ret float %mul
+}
+
 ; Negative test: scalar fmul has nnan but vector does not.
 define float @neg_scalar_has_nnan(<2 x float> %v0, <2 x float> %v1) {
 ; CHECK-LABEL: define float @neg_scalar_has_nnan(
@@ -199,6 +301,23 @@ define float @neg_scalar_has_ninf(<2 x float> %v0, <2 x float> %v1) {
   %e1 = extractelement <2 x float> %v1, i64 0
   %v = fmul <2 x float> %v0, %v1
   %mul = fmul ninf float %e0, %e1
+  ret float %mul
+}
+
+; Scalar rewrite FMF can fold to an exact vector fmul result.
+define float @fmul_scalar_has_rewrite_fmf(<2 x float> %v0, <2 x float> %v1) {
+; CHECK-LABEL: define float @fmul_scalar_has_rewrite_fmf(
+; CHECK-SAME: <2 x float> [[V0:%.*]], <2 x float> [[V1:%.*]]) {
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <2 x float> [[V0]], i64 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x float> [[V1]], i64 0
+; CHECK-NEXT:    [[V:%.*]] = fmul <2 x float> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[V]], i64 0
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %e0 = extractelement <2 x float> %v0, i64 0
+  %e1 = extractelement <2 x float> %v1, i64 0
+  %v = fmul <2 x float> %v0, %v1
+  %mul = fmul reassoc arcp contract afn float %e0, %e1
   ret float %mul
 }
 
@@ -330,3 +449,6 @@ if:
 end:
   ret float %mul
 }
+
+!0 = !{float 2.500000e+00}
+!1 = !{float 3.000000e+00}
