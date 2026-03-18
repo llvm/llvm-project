@@ -41,7 +41,7 @@ expand_template(
         "@LLVM_HAS_NVPTX_TARGET@": "0",
         "@LLVM_INCLUDE_SPIRV_TOOLS_TESTS@": "0",
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
-        "@MLIR_ENABLE_ROCM_CONVERSIONS@": "0",
+        "@LLVM_HAS_AMDGPU_TARGET@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
         "@MLIR_ENABLE_SYCL_RUNNER@": "0",
         "@MLIR_ENABLE_LEVELZERO_RUNNER@": "0",
@@ -49,10 +49,11 @@ expand_template(
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
         "@MLIR_ENABLE_XEVM_CONVERSIONS@": "0",
-        "@MLIR_RUN_AMX_TESTS@": "0",
+        "@MLIR_ENABLE_PYTHON_STABLE_ABI@": "0",
         "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_ARM_SME_TESTS@": "0",
-        "@MLIR_RUN_X86VECTOR_TESTS@": "0",
+        "@MLIR_RUN_X86_TESTS@": "0",
+        "@MLIR_RUN_X86_AMX_TESTS@": "0",
         "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM80_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM80_LT_TESTS@": "0",
@@ -100,6 +101,7 @@ cc_library(
         "//mlir:AffineDialect",
         "//mlir:Analysis",
         "//mlir:CallOpInterfaces",
+        "//mlir:ControlFlowDialect",
         "//mlir:ControlFlowInterfaces",
         "//mlir:FuncDialect",
         "//mlir:FunctionInterfaces",
@@ -385,6 +387,7 @@ cc_library(
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
         "//mlir:CommonFolders",
+        "//mlir:ControlFlowDialect",
         "//mlir:ControlFlowInterfaces",
         "//mlir:ControlFlowTransforms",
         "//mlir:DLTIDialect",
@@ -457,6 +460,7 @@ cc_library(
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:Support",
+        "//mlir:UBDialect",
     ],
 )
 
@@ -854,7 +858,7 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
-        "//mlir:X86VectorDialect",
+        "//mlir:X86Dialect",
     ],
 )
 
@@ -1152,7 +1156,7 @@ cc_library(
         "//mlir:VectorDialect",
         "//mlir:VectorToSCF",
         "//mlir:VectorTransforms",
-        "//mlir:X86VectorDialect",
+        "//mlir:X86Dialect",
     ],
 )
 

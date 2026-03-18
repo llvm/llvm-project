@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_data(int cond) {
-  // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
 
   int *ptr;
@@ -18,7 +18,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: cir.const
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: cir.load
-  // CHECK-NEXT: cir.unary
+  // CHECK-NEXT: cir.inc
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -33,7 +33,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: cir.const
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: cir.load
-  // CHECK-NEXT: cir.unary
+  // CHECK-NEXT: cir.inc
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
@@ -106,7 +106,7 @@ void acc_data(int cond) {
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[EQ_RES:.*]] = cir.cmp(eq, %[[COND_LOAD]], %[[ONE_LITERAL]]) : !s32i, !cir.bool
+  // CHECK-NEXT: %[[EQ_RES:.*]] = cir.cmp eq %[[COND_LOAD]], %[[ONE_LITERAL]] : !s32i
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[EQ_RES]] : !cir.bool to i1
   // CHECK-NEXT: acc.data if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator

@@ -65,7 +65,10 @@ private:
 
 static Kernel32 kernel32;
 
-PseudoConsole::~PseudoConsole() { Close(); }
+PseudoConsole::~PseudoConsole() {
+  Close();
+  ClosePipes();
+}
 
 llvm::Error PseudoConsole::OpenPseudoConsole() {
   if (!kernel32.IsConPTYAvailable())
@@ -98,6 +101,11 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
         std::error_code(GetLastError(), std::system_category()));
 
   COORD consoleSize{80, 25};
+  CONSOLE_SCREEN_BUFFER_INFO csbi;
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+    consoleSize = {
+        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
+        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
   HPCON hPC = INVALID_HANDLE_VALUE;
   hr = kernel32.CreatePseudoConsole(consoleSize, hInputRead, hOutputWrite, 0,
                                     &hPC);
@@ -128,15 +136,28 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   return llvm::Error::success();
 }
 
+bool PseudoConsole::IsConnected() const {
+  return m_conpty_handle != INVALID_HANDLE_VALUE &&
+         m_conpty_input != INVALID_HANDLE_VALUE &&
+         m_conpty_output != INVALID_HANDLE_VALUE;
+}
+
 void PseudoConsole::Close() {
+  SetStopping(true);
+  std::unique_lock<std::mutex> guard(m_mutex);
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
+  m_conpty_handle = INVALID_HANDLE_VALUE;
+  SetStopping(false);
+  m_cv.notify_all();
+}
+
+void PseudoConsole::ClosePipes() {
   if (m_conpty_input != INVALID_HANDLE_VALUE)
     CloseHandle(m_conpty_input);
   if (m_conpty_output != INVALID_HANDLE_VALUE)
     CloseHandle(m_conpty_output);
 
-  m_conpty_handle = INVALID_HANDLE_VALUE;
   m_conpty_input = INVALID_HANDLE_VALUE;
   m_conpty_output = INVALID_HANDLE_VALUE;
 }

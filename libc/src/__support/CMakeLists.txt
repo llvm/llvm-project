@@ -351,6 +351,15 @@ add_header_library(
 )
 
 add_header_library(
+  frac128
+  HDRS
+    frac128.h
+  DEPENDS
+    .big_int
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   uint128
   HDRS
     uint128.h
@@ -442,3 +451,6 @@ if(NOT (LIBC_TARGET_OS_IS_DARWIN))
 endif()
 
 add_subdirectory(math)
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+  add_subdirectory(mathvec)
+endif()

@@ -263,7 +263,7 @@ TEST(LoopInfoTest, CanonicalLoop) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -322,7 +322,7 @@ TEST(LoopInfoTest, LoopWithInverseGuardSuccs) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -381,7 +381,7 @@ TEST(LoopInfoTest, LoopWithSwappedGuardCmp) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -440,7 +440,7 @@ TEST(LoopInfoTest, LoopWithInverseLatchSuccs) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -499,7 +499,7 @@ TEST(LoopInfoTest, LoopWithLatchCmpNE) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -559,7 +559,7 @@ TEST(LoopInfoTest, LoopWithGuardCmpSLE) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -618,7 +618,7 @@ TEST(LoopInfoTest, LoopNonConstantStep) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -674,7 +674,7 @@ TEST(LoopInfoTest, LoopUnsignedBounds) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -733,7 +733,7 @@ TEST(LoopInfoTest, DecreasingLoop) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -792,7 +792,7 @@ TEST(LoopInfoTest, CannotFindDirection) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader
         // - skip them.
         ++FI;
@@ -853,7 +853,7 @@ TEST(LoopInfoTest, ZextIndVar) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -914,7 +914,7 @@ TEST(LoopInfoTest, MultiExitingLoop) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -1084,7 +1084,7 @@ TEST(LoopInfoTest, UnguardedLoopWithControlFlow) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
@@ -1154,12 +1154,12 @@ TEST(LoopInfoTest, LoopNest) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *OuterGuard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *OuterGuard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.outer.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);
         assert(Header->getName() == "for.outer");
-        BranchInst *InnerGuard = dyn_cast<BranchInst>(Header->getTerminator());
+        CondBrInst *InnerGuard = dyn_cast<CondBrInst>(Header->getTerminator());
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
@@ -1248,7 +1248,7 @@ TEST(LoopInfoTest, AuxiliaryIV) {
       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
         Function::iterator FI = F.begin();
         BasicBlock *Entry = &*(FI);
-        BranchInst *Guard = dyn_cast<BranchInst>(Entry->getTerminator());
+        CondBrInst *Guard = dyn_cast<CondBrInst>(Entry->getTerminator());
         // First two basic block are entry and for.preheader - skip them.
         ++FI;
         BasicBlock *Header = &*(++FI);

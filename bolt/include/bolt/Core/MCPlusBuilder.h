@@ -1798,6 +1798,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  virtual void patchFunctionEntryForBTI(BinaryFunction &Function,
+                                        MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
   virtual void applyBTIFixupToTarget(BinaryBasicBlock &StubBB) {
     llvm_unreachable("not implemented");
   }

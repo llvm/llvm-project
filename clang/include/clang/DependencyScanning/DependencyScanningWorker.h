@@ -27,10 +27,13 @@ namespace clang {
 
 class DependencyOutputOptions;
 
+namespace tooling {
+class CompilerInstanceWithContext;
+}
+
 namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
-class CompilerInstanceWithContext;
 
 /// A command-line tool invocation that is part of building a TU.
 ///
@@ -72,8 +75,55 @@ class DependencyActionController {
 public:
   virtual ~DependencyActionController();
 
+  /// Creates a copy of the controller. The result must be both thread-safe.
+  virtual std::unique_ptr<DependencyActionController> clone() const = 0;
+
+  /// Provides output path for a given module dependency. Must be thread-safe.
   virtual std::string lookupModuleOutput(const ModuleDeps &MD,
                                          ModuleOutputKind Kind) = 0;
+
+  /// Initializes the scan invocation.
+  virtual void initializeScanInvocation(CompilerInvocation &ScanInvocation) {}
+
+  /// Initializes the scan instance and modifies the resulting TU invocation.
+  /// Returns true on success, false on failure.
+  virtual bool initialize(CompilerInstance &ScanInstance,
+                          CompilerInvocation &NewInvocation) {
+    return true;
+  }
+
+  /// Finalizes the scan instance and modifies the resulting TU invocation.
+  /// Returns true on success, false on failure.
+  virtual bool finalize(CompilerInstance &ScanInstance,
+                        CompilerInvocation &NewInvocation) {
+    return true;
+  }
+
+  /// Returns the cache key for the resulting invocation, or nullopt.
+  virtual std::optional<std::string>
+  getCacheKey(const CompilerInvocation &NewInvocation) {
+    return std::nullopt;
+  }
+
+  /// Initializes the module scan instance.
+  /// Returns true on success, false on failure.
+  virtual bool initializeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return true;
+  }
+
+  /// Finalizes the module scan instance.
+  /// Returns true on success, false on failure.
+  virtual bool finalizeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return true;
+  }
+
+  /// Modifies the resulting module invocation and the associated structure.
+  /// Returns true on success, false on failure.
+  virtual bool finalizeModuleInvocation(CompilerInstance &ScanInstance,
+                                        CowCompilerInvocation &CI,
+                                        const ModuleDeps &MD) {
+    return true;
+  }
 };
 
 /// An individual dependency scanning worker that is able to run on its own
@@ -125,49 +175,6 @@ public:
       llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
           nullptr);
 
-  /// The three method below implements a new interface for by name
-  /// dependency scanning. They together enable the dependency scanning worker
-  /// to more effectively perform scanning for a sequence of modules
-  /// by name when the CWD and CommandLine do not change across the queries.
-  /// The initialization function asks the client for a DiagnosticsConsumer
-  /// that it direct the diagnostics to.
-
-  /// @brief Initializing the context and the compiler instance.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @return False if the initializaiton fails.
-  bool initializeCompilerInstanceWithContext(StringRef CWD,
-                                             ArrayRef<std::string> CommandLine,
-                                             DiagnosticConsumer &DC);
-
-  /// @brief Initializing the context and the compiler instance.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @param DiagEngineWithCmdAndOpts Preconfigured diagnostics engine and
-  /// options associated with the cc1 command line.
-  /// @param FS The overlay file system to use for this compiler instance.
-  /// @return False if the initializaiton fails.
-  bool initializeCompilerInstanceWithContext(
-      StringRef CWD, ArrayRef<std::string> CommandLine,
-      std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
-
-  /// @brief Performaces dependency scanning for the module whose name is
-  ///        specified.
-  /// @param ModuleName  The name of the module whose dependency will be
-  ///                    scanned.
-  /// @param Consumer The dependency consumer that stores the results.
-  /// @param Controller The controller for the dependency scanning action.
-  /// @return False if the scanner incurs errors.
-  bool
-  computeDependenciesByNameWithContext(StringRef ModuleName,
-                                       DependencyConsumer &Consumer,
-                                       DependencyActionController &Controller);
-
-  /// @brief Finalizes the diagnostics engine and deletes the compiler instance.
-  /// @return False if errors occur during finalization.
-  bool finalizeCompilerInstanceWithContext();
-
   llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
 
 private:
@@ -178,23 +185,8 @@ private:
   /// overlaid on top of the base VFS passed in the constructor.
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
-  friend CompilerInstanceWithContext;
-  std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
+  friend tooling::CompilerInstanceWithContext;
 };
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                           ArrayRef<std::string> CommandLine,
-                           StringRef WorkingDirectory,
-                           llvm::MemoryBufferRef TUBuffer);
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                         ArrayRef<std::string> CommandLine,
-                         StringRef WorkingDirectory, StringRef ModuleName);
-
 } // end namespace dependencies
 } // end namespace clang
 

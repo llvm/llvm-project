@@ -839,18 +839,6 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     ASTContext::BuiltinVectorTypeInfo Info =
         Context.getBuiltinVectorTypeInfo(Arg0Type->castAs<BuiltinType>());
     uint64_t ElemSize = Context.getTypeSize(Info.ElementType);
-    if (ElemSize == 64 && !TI.hasFeature("zvknhb") &&
-        !FunctionFeatureMap.lookup("zvknhb"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_riscv_builtin_requires_extension)
-             << /* IsExtension */ true << TheCall->getSourceRange() << "zvknhb";
-    // If ElemSize is 32, check at least zvknha or zvknhb is enabled.
-    if (!TI.hasFeature("zvknha") && !FunctionFeatureMap.lookup("zvknha") &&
-        !TI.hasFeature("zvknhb") && !FunctionFeatureMap.lookup("zvknhb"))
-      return Diag(TheCall->getBeginLoc(),
-                  diag::err_riscv_builtin_requires_extension)
-             << /* IsExtension */ true << TheCall->getSourceRange()
-             << "zvknha or zvknhb";
 
     return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
                                    Arg0Type, ElemSize * 4) ||

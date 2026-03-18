@@ -803,7 +803,7 @@ nb::tuple PyDiagnostic::getNotes() {
   for (intptr_t i = 0; i < numNotes; ++i) {
     MlirDiagnostic noteDiag = mlirDiagnosticGetNote(diagnostic, i);
     nb::object diagnostic = nb::cast(PyDiagnostic(noteDiag));
-    PyTuple_SET_ITEM(notes.ptr(), i, diagnostic.release().ptr());
+    PyTuple_SetItem(notes.ptr(), i, diagnostic.release().ptr());
   }
   materializedNotes = std::move(notes);
 
@@ -2672,75 +2672,15 @@ void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
 } // namespace mlir
 
 namespace {
-// see
-// https://raw.githubusercontent.com/python/pythoncapi_compat/master/pythoncapi_compat.h
-
-#ifndef _Py_CAST
-#define _Py_CAST(type, expr) ((type)(expr))
-#endif
-
-// Static inline functions should use _Py_NULL rather than using directly NULL
-// to prevent C++ compiler warnings. On C23 and newer and on C++11 and newer,
-// _Py_NULL is defined as nullptr.
-#ifndef _Py_NULL
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ > 201710L) ||               \
-    (defined(__cplusplus) && __cplusplus >= 201103)
-#define _Py_NULL nullptr
-#else
-#define _Py_NULL NULL
-#endif
-#endif
-
-// Python 3.10.0a3
-#if PY_VERSION_HEX < 0x030A00A3
-
-// bpo-42262 added Py_XNewRef()
-#if !defined(Py_XNewRef)
-[[maybe_unused]] PyObject *_Py_XNewRef(PyObject *obj) {
-  Py_XINCREF(obj);
-  return obj;
-}
-#define Py_XNewRef(obj) _Py_XNewRef(_PyObject_CAST(obj))
-#endif
-
-// bpo-42262 added Py_NewRef()
-#if !defined(Py_NewRef)
-[[maybe_unused]] PyObject *_Py_NewRef(PyObject *obj) {
-  Py_INCREF(obj);
-  return obj;
-}
-#define Py_NewRef(obj) _Py_NewRef(_PyObject_CAST(obj))
-#endif
-
-#endif // Python 3.10.0a3
-
-// Python 3.9.0b1
-#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
-
-// bpo-40429 added PyThreadState_GetFrame()
-PyFrameObject *PyThreadState_GetFrame(PyThreadState *tstate) {
-  assert(tstate != _Py_NULL && "expected tstate != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(tstate->frame));
-}
-
-// bpo-40421 added PyFrame_GetBack()
-PyFrameObject *PyFrame_GetBack(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(frame->f_back));
-}
-
-// bpo-40421 added PyFrame_GetCode()
-PyCodeObject *PyFrame_GetCode(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  assert(frame->f_code != _Py_NULL && "expected frame->f_code != _Py_NULL");
-  return _Py_CAST(PyCodeObject *, Py_NewRef(frame->f_code));
-}
-
-#endif // Python 3.9.0b1
 
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 MlirLocation tracebackToLocation(MlirContext ctx) {
+#if defined(Py_LIMITED_API)
+  // Frame introspection C APIs are not available under the limited API.
+  // Traceback-based auto-location is not supported; return unknown.
+  return mlirLocationUnknownGet(ctx);
+#else
   size_t framesLimit =
       PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
   // Use a thread_local here to avoid requiring a large amount of space.
@@ -2749,6 +2689,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   size_t count = 0;
 
   nb::gil_scoped_acquire acquire;
+
   PyThreadState *tstate = PyThreadState_GET();
   PyFrameObject *next;
   PyFrameObject *pyFrame = PyThreadState_GetFrame(tstate);
@@ -2812,6 +2753,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     caller = mlirLocationCallSiteGet(frames[i], caller);
 
   return mlirLocationCallSiteGet(callee, caller);
+#endif
 }
 
 PyLocation
@@ -2832,6 +2774,75 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
+static std::string formatMLIRError(const MLIRError &e) {
+  auto locStr = [](const PyLocation &loc) {
+    PyPrintAccumulator accum;
+    mlirLocationPrint(loc, accum.getCallback(), accum.getUserData());
+    std::string s = nb::cast<std::string>(nb::str(accum.join()));
+    std::string_view sv(s);
+    if (sv.size() > 5) {
+      sv.remove_prefix(4); // "loc("
+      sv.remove_suffix(1); // ")"
+    }
+    return std::string(sv);
+  };
+  auto indent = [](std::string s) {
+    size_t pos = 0;
+    while ((pos = s.find('\n', pos)) != std::string::npos) {
+      s.replace(pos, 1, "\n  ");
+      pos += 3;
+    }
+    return s;
+  };
+
+  std::ostringstream os;
+  os << e.message;
+  if (!e.errorDiagnostics.empty())
+    os << ":";
+  for (const auto &diag : e.errorDiagnostics) {
+    os << "\nerror: " << locStr(diag.location) << ": " << indent(diag.message);
+    for (const auto &note : diag.notes) {
+      os << "\n note: " << locStr(note.location) << ": "
+         << indent(note.message);
+    }
+  }
+  return os.str();
+}
+
+void MLIRError::bind(nb::module_ &m) {
+  auto cls = nb::exception<MLIRError>(m, "MLIRError", PyExc_Exception);
+  nb::register_exception_translator(
+      [](const std::exception_ptr &p, void *payload) {
+        try {
+          if (p)
+            std::rethrow_exception(p);
+        } catch (MLIRError &e) {
+          std::string formatted = formatMLIRError(e);
+          nb::object ty = nb::borrow(static_cast<PyObject *>(payload));
+          nb::object obj = ty(formatted);
+          obj.attr("_message") = nb::cast(std::move(e.message));
+          obj.attr("_error_diagnostics") =
+              nb::cast(std::move(e.errorDiagnostics));
+          PyErr_SetObject(static_cast<PyObject *>(payload), obj.ptr());
+        }
+      },
+      cls.ptr());
+  auto propertyType = nb::borrow<nb::type_object>(
+      reinterpret_cast<PyObject *>(&PyProperty_Type));
+  nb::setattr(
+      cls, "message",
+      propertyType(nb::cpp_function(
+          [](nb::object self) -> nb::str { return self.attr("_message"); },
+          nb::is_method())));
+  nb::setattr(cls, "error_diagnostics",
+              propertyType(nb::cpp_function(
+                  [](nb::object self)
+                      -> nb::typed<nb::list, PyDiagnostic::DiagnosticInfo> {
+                    return self.attr("_error_diagnostics");
+                  },
+                  nb::is_method())));
+}
+
 void populateRoot(nb::module_ &m) {
   m.attr("T") = nb::type_var("T");
   m.attr("U") = nb::type_var("U");
@@ -2849,7 +2860,8 @@ void populateRoot(nb::module_ &m) {
           },
           "dialect_namespace"_a)
       .def("_register_dialect_impl", &PyGlobals::registerDialectImpl,
-           "dialect_namespace"_a, "dialect_class"_a,
+           "dialect_namespace"_a, "dialect_class"_a, nb::kw_only(),
+           "replace"_a = false,
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
            "operation_name"_a, "operation_class"_a, nb::kw_only(),
@@ -3046,7 +3058,8 @@ void populateIRCore(nb::module_ &m) {
                    "Returns True if an error was encountered during diagnostic "
                    "handling.")
       .def("__enter__", &PyDiagnosticHandler::contextEnter,
-           "Enters the diagnostic handler as a context manager.")
+           "Enters the diagnostic handler as a context manager.",
+           nb::sig("def __enter__(self, /) -> DiagnosticHandler"))
       .def("__exit__", &PyDiagnosticHandler::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the diagnostic handler context manager.");
@@ -3092,7 +3105,8 @@ void populateIRCore(nb::module_ &m) {
                   &PyMlirContext::createFromCapsule,
                   "Creates a Context from a capsule wrapping MlirContext.")
       .def("__enter__", &PyMlirContext::contextEnter,
-           "Enters the context as a context manager.")
+           "Enters the context as a context manager.",
+           nb::sig("def __enter__(self, /) -> Context"))
       .def("__exit__", &PyMlirContext::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the context manager.")
@@ -3318,7 +3332,8 @@ void populateIRCore(nb::module_ &m) {
       .def_static(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyLocation::createFromCapsule,
                   "Creates a Location from a capsule wrapping MlirLocation.")
       .def("__enter__", &PyLocation::contextEnter,
-           "Enters the location as a context manager.")
+           "Enters the location as a context manager.",
+           nb::sig("def __enter__(self, /) -> Location"))
       .def("__exit__", &PyLocation::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the location context manager.")
@@ -3913,17 +3928,40 @@ void populateIRCore(nb::module_ &m) {
 
             Note:
               After erasing, any Python references to the operation become invalid.)")
-      .def("walk", &PyOperationBase::walk, "callback"_a,
-           "walk_order"_a = PyWalkOrder::PostOrder,
-           // clang-format off
-          nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder) -> None"),
-           // clang-format on
-           R"(
+      .def(
+          "walk",
+          [](PyOperationBase &self,
+             std::function<PyWalkResult(MlirOperation)> callback,
+             PyWalkOrder walkOrder, std::optional<nb::object> opClass) {
+            if (!opClass)
+              return self.walk(callback, walkOrder);
+            self.walk(
+                [&](MlirOperation mlirOp) -> PyWalkResult {
+                  nb::object opview =
+                      PyOperation::forOperation(
+                          self.getOperation().getContext(), mlirOp)
+                          ->createOpView();
+                  if (nb::isinstance(opview, *opClass))
+                    return callback(mlirOp);
+                  return PyWalkResult::Advance;
+                },
+                walkOrder);
+          },
+          "callback"_a, "walk_order"_a = PyWalkOrder::PostOrder,
+          "op_class"_a = nb::none(),
+          // clang-format off
+           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = ..., op_class: type[OpView] | None = None) -> None"),
+          // clang-format on
+          R"(
              Walks the operation tree with a callback function.
+
+             If op_class is provided, the callback is only invoked on operations
+             of that type; all other operations are skipped silently.
 
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
-               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).)");
+               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).
+               op_class: If provided, only operations of this type are passed to the callback.)");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
@@ -4348,7 +4386,8 @@ void populateIRCore(nb::module_ &m) {
       .def(nb::init<PyBlock &>(), "block"_a,
            "Inserts after the last operation but still inside the block.")
       .def("__enter__", &PyInsertionPoint::contextEnter,
-           "Enters the insertion point as a context manager.")
+           "Enters the insertion point as a context manager.",
+           nb::sig("def __enter__(self, /) -> InsertionPoint"))
       .def("__exit__", &PyInsertionPoint::contextExit, "exc_type"_a.none(),
            "exc_value"_a.none(), "traceback"_a.none(),
            "Exits the insertion point context manager.")
@@ -4685,7 +4724,7 @@ void populateIRCore(nb::module_ &m) {
   m.attr("_T") = nb::type_var("_T", "bound"_a = m.attr("Type"));
 
   nb::class_<PyValue>(m, "Value", nb::is_generic(),
-                      nb::sig("class Value(Generic[_T])"))
+                      nb::sig("class Value(typing.Generic[_T])"))
       .def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), "value"_a,
            "Creates a Value reference from another `Value`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule,
@@ -4823,27 +4862,6 @@ void populateIRCore(nb::module_ &m) {
           },
           "Replace all uses of value with the new value, updating anything in "
           "the IR that uses `self` to use the other value instead.")
-      .def(
-          "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, PyOperation &exception) {
-            MlirOperation exceptedUser = exception.get();
-            mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
-      .def(
-          "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, const nb::list &exceptions) {
-            // Convert Python list to a std::vector of MlirOperations
-            std::vector<MlirOperation> exceptionOps;
-            for (nb::handle exception : exceptions) {
-              exceptionOps.push_back(nb::cast<PyOperation &>(exception).get());
-            }
-
-            mlirValueReplaceAllUsesExcept(
-                self, with, static_cast<intptr_t>(exceptionOps.size()),
-                exceptionOps.data());
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
       .def(
           "replace_all_uses_except",
           [](PyValue &self, PyValue &with, PyOperation &exception) {
@@ -5005,6 +5023,9 @@ void populateIRCore(nb::module_ &m) {
   PyDynamicOpTrait::bind(m);
   PyDynamicOpTraits::IsTerminator::bind(m);
   PyDynamicOpTraits::NoTerminator::bind(m);
+
+  // MLIRError exception.
+  MLIRError::bind(m);
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

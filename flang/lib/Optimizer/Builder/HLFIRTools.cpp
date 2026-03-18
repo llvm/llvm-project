@@ -1395,20 +1395,17 @@ bool hlfir::elementalOpMustProduceTemp(hlfir::ElementalOp elemental) {
 static void combineAndStoreElement(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity lhs,
     hlfir::Entity rhs, bool temporaryLHS,
-    std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
-                                hlfir::Entity, hlfir::Entity)> *combiner,
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)> *scalarCombineAndAssign,
     mlir::ArrayAttr accessGroups) {
+  if (scalarCombineAndAssign) {
+    (*scalarCombineAndAssign)(loc, builder, lhs, rhs, accessGroups);
+    return;
+  }
   hlfir::Entity valueToAssign = hlfir::loadTrivialScalar(loc, builder, rhs);
   if (accessGroups)
     if (auto load = valueToAssign.getDefiningOp<fir::LoadOp>())
       load.setAccessGroupsAttr(accessGroups);
-  if (combiner) {
-    hlfir::Entity lhsValue = hlfir::loadTrivialScalar(loc, builder, lhs);
-    if (accessGroups)
-      if (auto load = lhsValue.getDefiningOp<fir::LoadOp>())
-        load.setAccessGroupsAttr(accessGroups);
-    valueToAssign = (*combiner)(loc, builder, lhsValue, valueToAssign);
-  }
   auto assign = hlfir::AssignOp::create(builder, loc, valueToAssign, lhs,
                                         /*realloc=*/false,
                                         /*keep_lhs_length_if_realloc=*/false,
@@ -1420,8 +1417,8 @@ static void combineAndStoreElement(
 void hlfir::genNoAliasArrayAssignment(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
     hlfir::Entity lhs, bool emitWorkshareLoop, bool temporaryLHS,
-    std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
-                                hlfir::Entity, hlfir::Entity)> *combiner,
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)> *scalarCombineAndAssign,
     mlir::ArrayAttr accessGroups) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
@@ -1441,28 +1438,30 @@ void hlfir::genNoAliasArrayAssignment(
   builder.setInsertionPointToStart(loopNest.body);
   auto rhsArrayElement =
       hlfir::getElementAt(loc, builder, rhs, loopNest.oneBasedIndices);
-  rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);
+  if (!scalarCombineAndAssign)
+    rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);
   auto lhsArrayElement =
       hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
   combineAndStoreElement(loc, builder, lhsArrayElement, rhsArrayElement,
-                         temporaryLHS, combiner, accessGroups);
+                         temporaryLHS, scalarCombineAndAssign, accessGroups);
 }
 
 void hlfir::genNoAliasAssignment(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
     hlfir::Entity lhs, bool emitWorkshareLoop, bool temporaryLHS,
-    std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
-                                hlfir::Entity, hlfir::Entity)> *combiner,
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)> *scalarCombineAndAssign,
     mlir::ArrayAttr accessGroups) {
   if (lhs.isArray()) {
     genNoAliasArrayAssignment(loc, builder, rhs, lhs, emitWorkshareLoop,
-                              temporaryLHS, combiner, accessGroups);
+                              temporaryLHS, scalarCombineAndAssign,
+                              accessGroups);
     return;
   }
   rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
   lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
-  combineAndStoreElement(loc, builder, lhs, rhs, temporaryLHS, combiner,
-                         accessGroups);
+  combineAndStoreElement(loc, builder, lhs, rhs, temporaryLHS,
+                         scalarCombineAndAssign, accessGroups);
 }
 
 std::pair<hlfir::Entity, bool>

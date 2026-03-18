@@ -16,12 +16,9 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExecutionContext.h"
-#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
-#include "lldb/API/SBModule.h"
-#include "lldb/API/SBModuleSpec.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/API/SBThread.h"
@@ -36,7 +33,6 @@
 #include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedSymbolLocatorInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -549,11 +545,6 @@ public:
     return {};
   }
 
-  virtual lldb::ScriptedSymbolLocatorInterfaceSP
-  CreateScriptedSymbolLocatorInterface() {
-    return {};
-  }
-
   virtual lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() {
     return {};
@@ -620,17 +611,6 @@ public:
 
   lldb::ValueObjectSP
   GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
-
-  std::optional<FileSpec>
-  GetOpaqueTypeFromSBFileSpec(const lldb::SBFileSpec &file_spec) const;
-
-  std::optional<ModuleSpec>
-  GetOpaqueTypeFromSBModuleSpec(const lldb::SBModuleSpec &module_spec) const;
-
-  lldb::ModuleSP GetOpaqueTypeFromSBModule(const lldb::SBModule &module) const;
-
-  std::unique_ptr<lldb::SBModuleSpec>
-  MakeSBModuleSpec(const ModuleSpec &module_spec) const;
 
 protected:
   Debugger &m_debugger;

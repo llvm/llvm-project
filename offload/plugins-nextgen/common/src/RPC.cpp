@@ -17,6 +17,10 @@
 #include "shared/rpc_opcodes.h"
 #include "shared/rpc_server.h"
 
+#ifdef OFFLOAD_HAS_FLANG_RT
+#include "flang/Runtime/io-api.h"
+#endif
+
 using namespace llvm;
 using namespace omp;
 using namespace target;
@@ -91,13 +95,13 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   rpc::Server Server(NumPorts, Buffer);
 
-  auto Port = Server.try_open(Device.getWarpSize());
+  auto Port = Server.try_open(Device.getRPCNumLanes());
   if (!Port)
     return rpc::RPC_SUCCESS;
   ClientInUse = true;
 
   rpc::Status Status = rpc::RPC_UNHANDLED_OPCODE;
-  const uint32_t NumLanes = Device.getWarpSize();
+  const uint32_t NumLanes = Device.getRPCNumLanes();
 
   for (RPCServerTy::RPCServerCallbackTy Callback : Callbacks) {
     Status = static_cast<rpc::Status>(Callback(&*Port, NumLanes));
@@ -110,6 +114,12 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
 
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port, NumLanes);
+
+#ifdef OFFLOAD_HAS_FLANG_RT
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
+    Status = static_cast<rpc::Status>(
+        Fortran::runtime::io::IONAME(HandleRPCOpcodes)(&*Port, NumLanes));
+#endif
 
   return Status;
 }
@@ -204,7 +214,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   auto RPCBufferOrErr = Device.allocate(
-      rpc::Server::allocation_size(Device.getWarpSize(), NumPorts), nullptr,
+      rpc::Server::allocation_size(Device.getRPCNumLanes(), NumPorts), nullptr,
       TARGET_ALLOC_HOST);
   if (!RPCBufferOrErr)
     return RPCBufferOrErr.takeError();

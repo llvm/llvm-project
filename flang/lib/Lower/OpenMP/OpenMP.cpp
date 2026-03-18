@@ -1589,7 +1589,7 @@ genOrderedRegionClauses(lower::AbstractConverter &converter,
                         const List<Clause> &clauses, mlir::Location loc,
                         mlir::omp::OrderedRegionOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processTODO<clause::Simd>(loc, llvm::omp::Directive::OMPD_ordered);
+  cp.processSimd(clauseOps);
 }
 
 static void genParallelClauses(
@@ -2245,6 +2245,16 @@ static void genCanonicalLoopNest(
   firOpBuilder.setInsertionPointAfter(loops.front());
 }
 
+static void genInterchangeOp(Fortran::lower::AbstractConverter &converter,
+                             Fortran::lower::SymMap &symTable,
+                             lower::StatementContext &stmtCtx,
+                             Fortran::semantics::SemanticsContext &semaCtx,
+                             Fortran::lower::pft::Evaluation &eval,
+                             mlir::Location loc, const ConstructQueue &queue,
+                             ConstructQueue::const_iterator item) {
+  TODO(converter.getCurrentLocation(), "OpenMP Interchange");
+}
+
 static void genTileOp(Fortran::lower::AbstractConverter &converter,
                       Fortran::lower::SymMap &symTable,
                       lower::StatementContext &stmtCtx,
@@ -2307,6 +2317,7 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
   mlir::omp::LooprangeClauseOps looprangeClause;
   ClauseProcessor cp(converter, semaCtx, item->clauses);
   bool looprange = cp.processLooprange(stmtCtx, looprangeClause, count);
+  cp.processTODO<clause::Depth>(loc, llvm::omp::Directive::OMPD_fuse);
 
   llvm::SmallVector<mlir::Value> applyees;
   for (auto &child : eval.getNestedEvaluations()) {
@@ -2844,16 +2855,24 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 converter.mangleName(mapperIdName, *typeSpec->GetScope());
 
           if (!mapperIdName.empty()) {
-            bool allowImplicitMapper =
-                semantics::IsAllocatableOrObjectPointer(&sym);
+            bool isPointer = semantics::IsPointer(sym);
+            bool isAllocatable = semantics::IsAllocatable(sym);
             bool hasDefaultMapper =
                 converter.getModuleOp().lookupSymbol(mapperIdName);
-            if (hasDefaultMapper || allowImplicitMapper) {
+            // Avoid attaching implicit default mappers to pointer captures.
+            // For large pointer-based derived aggregates this can over-map
+            // nested payloads and conflict with explicit enter/exit maps.
+            if (!isPointer && (hasDefaultMapper || isAllocatable)) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
                   mapperId = getOrGenImplicitDefaultDeclareMapper(
-                      converter, loc, recordType, mapperIdName);
+                      converter.getFirOpBuilder(), loc, recordType,
+                      mapperIdName,
+                      [&](std::string &mapperIdName,
+                          llvm::StringRef memberName) {
+                        defaultMangler(converter, mapperIdName, memberName);
+                      });
               } else {
                 mapperId = mlir::FlatSymbolRefAttr::get(
                     &converter.getMLIRContext(), mapperIdName);
@@ -3731,6 +3750,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     newOp = genTeamsOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
                        item);
     break;
+  case llvm::omp::Directive::OMPD_interchange:
+    genInterchangeOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
+                     item);
+    break;
   case llvm::omp::Directive::OMPD_tile:
     genTileOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;
@@ -3955,8 +3978,28 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       appendCombiner(construct, clauses, semaCtx);
   const auto &identifier =
       std::get<parser::OmpReductionIdentifier>(specifier.t);
-  const auto &designator = std::get<parser::ProcedureDesignator>(identifier.u);
-  const auto &reductionName = std::get<parser::Name>(designator.u);
+
+  std::string reductionNameStr = Fortran::common::visit(
+      common::visitors{
+          [](const parser::ProcedureDesignator &pd) -> std::string {
+            return std::get<parser::Name>(pd.u).ToString();
+          },
+          [](const parser::DefinedOperator &defOp) -> std::string {
+            return Fortran::common::visit(
+                common::visitors{
+                    [](const parser::DefinedOpName &opName) -> std::string {
+                      return opName.v.ToString();
+                    },
+                    [](parser::DefinedOperator::IntrinsicOperator intrOp)
+                        -> std::string {
+                      return std::string(
+                          parser::DefinedOperator::EnumToString(intrOp));
+                    },
+                },
+                defOp.u);
+          },
+      },
+      identifier.u);
 
   for (const auto &typeSpec : typeNameList.v) {
     (void)typeSpec; // Currently unused
@@ -3969,7 +4012,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
     ReductionProcessor::createDeclareReductionHelper<
         mlir::omp::DeclareReductionOp>(
-        converter, reductionName.ToString(), reductionType,
+        converter, reductionNameStr, reductionType,
         converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
   }
 }
@@ -4299,10 +4342,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::TaskReduction>(clause.u) &&
         !std::holds_alternative<clause::Detach>(clause.u) &&
         !std::holds_alternative<clause::Device>(clause.u)) {
-      std::string name =
-          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(clause.id));
-      if (!semaCtx.langOptions().OpenMPSimd)
+      const common::LangOptions &options = semaCtx.langOptions();
+      if (!options.OpenMPSimd) {
+        std::string name =
+            parser::omp::GetUpperName(clause.id, options.OpenMPVersion);
         TODO(clauseLocation, name + " clause is not implemented yet");
+      }
     }
   }
 
