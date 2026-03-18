@@ -6,6 +6,8 @@
 ; RUN: rm -rf %t && mkdir -p %t
 ; RUN: llc --filetype=obj --mccas-verify --cas-backend --cas-friendly-debug-info --cas=%t/cas %s -o %t/LEB.o 
 
+; REQUIRES: aarch64-registered-target
+
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "arm64-apple-macosx14.0.0"
 
