@@ -1647,8 +1647,8 @@ void LoweringPreparePass::runOnOperation() {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::StoreOp, cir::UnaryOp, cir::CmpThreeWayOp, cir::IncOp,
-                  cir::DecOp, cir::MinusOp, cir::NotOp>(op))
+                  cir::StoreOp, cir::CmpThreeWayOp, cir::IncOp, cir::DecOp,
+                  cir::MinusOp, cir::NotOp>(op))
       opsToTransform.push_back(op);
   });
 
