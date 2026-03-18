@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=4294967295
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=4294967295
-
 // <deque>
 
 // void push_back(const value_type& v);
@@ -55,6 +52,17 @@ TEST_CONSTEXPR_CXX26 void test(int size) {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
+#if TEST_STD_VER >= 26
+  if consteval {
+    constexpr int is{0, 1025, 2047, 4096};
+    for (int i : is) {
+      test<std::deque<int>>(i);
+      test<std::deque<int, min_allocator<int>>>(i);
+    }
+
+    return true;
+  }
+#endif
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2046, 2047, 2048, 2049, 4094, 4095, 4096};
     const int N = sizeof(rng) / sizeof(rng[0]);

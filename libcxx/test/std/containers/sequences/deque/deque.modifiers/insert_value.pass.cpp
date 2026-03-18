@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=4294967295
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=4294967295
-
 // <deque>
 
 // iterator insert (const_iterator p, const value_type& v);
@@ -103,6 +100,25 @@ TEST_CONSTEXPR_CXX26 void self_reference_test() {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
+#if TEST_STD_VER >= 26
+  if consteval {
+    constexpr int is[]{0, 1025, 2049};
+    constexpr int js[]{0, 1025, 2049};
+    for (int i : is) {
+      for (int j : js) {
+        testN<std::deque<int>>(is, js);
+        testN<std::deque<int, min_allocator<int>>>(is, js);
+        testN<std::deque<int, safe_allocator<int>>>(is, js);
+      }
+    }
+
+    self_reference_test<std::deque<int>>();
+    self_reference_test<std::deque<int, min_allocator<int>>>();
+    self_reference_test<std::deque<int, safe_allocator<int>>>();
+
+    return true;
+  }
+#endif
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);

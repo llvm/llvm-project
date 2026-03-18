@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=200000000
-
 // <deque>
 
 // template <class... Args> reference emplace_back(Args&&... args);
@@ -72,19 +69,34 @@ TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
+#if TEST_STD_VER >= 26
+  if consteval {
+    constexpr int is[]{0, 1025, 2049};
+    constexpr int js[]{0, 1025, 2049};
+
+    for (int i : is) {
+      for (int j : js) {
+        testN<std::deque<Emplaceable>>(is, js);
+        testN<std::deque<Emplaceable, min_allocator<Emplaceable>>>(i, j);
+      }
+    }
+  } else
+#endif
   {
-    int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
-    const int N = sizeof(rng) / sizeof(rng[0]);
-    for (int i = 0; i < N; ++i)
-      for (int j = 0; j < N; ++j)
-        testN<std::deque<Emplaceable> >(rng[i], rng[j]);
-  }
-  {
-    int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
-    const int N = sizeof(rng) / sizeof(rng[0]);
-    for (int i = 0; i < N; ++i)
-      for (int j = 0; j < N; ++j)
-        testN<std::deque<Emplaceable, min_allocator<Emplaceable>> >(rng[i], rng[j]);
+    {
+      int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+      const int N = sizeof(rng) / sizeof(rng[0]);
+      for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+          testN<std::deque<Emplaceable> >(rng[i], rng[j]);
+    }
+    {
+      int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
+      const int N = sizeof(rng) / sizeof(rng[0]);
+      for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+          testN<std::deque<Emplaceable, min_allocator<Emplaceable>> >(rng[i], rng[j]);
+    }
   }
   {
     std::deque<Tag_X, TaggingAllocator<Tag_X>> c;

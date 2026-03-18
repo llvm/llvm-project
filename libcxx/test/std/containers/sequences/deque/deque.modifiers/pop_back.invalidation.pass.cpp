@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=4294967295
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=4294967295
-
 // <deque>
 
 // void pop_back()
@@ -46,7 +43,18 @@ TEST_CONSTEXPR_CXX26 bool tests() {
     queue.push_back(i);
 
   while (queue.size() > 1) {
-    test(queue);
+#if TEST_STD_VER >= 26
+    if ([dq_size = queue.size()] {
+          if consteval {
+            return (dq_size & (dq_size - 1)) == 0;
+          } else {
+            return true;
+          }
+        }())
+#endif
+    {
+      test(queue);
+    }
     queue.pop_back();
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(queue));
   }
