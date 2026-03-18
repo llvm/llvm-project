@@ -54,6 +54,7 @@ BitVector BPFRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   markSuperRegs(Reserved, BPF::W10); // [W|R]10 is read only frame pointer
   markSuperRegs(Reserved, BPF::W11); // [W|R]11 is pseudo stack pointer
+  markSuperRegs(Reserved, BPF::W12); // [W|R]12 is extra argument area pointer
   return Reserved;
 }
 

@@ -89,8 +89,8 @@ private:
                           const SDLoc &DL, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
 
-  // Maximum number of arguments to a call
-  static const size_t MaxArgs;
+  // Maximum number of register arguments to a call
+  static const size_t MaxRegArgs;
 
   // Lower a call into CALLSEQ_START - BPFISD:CALL - CALLSEQ_END chain
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
