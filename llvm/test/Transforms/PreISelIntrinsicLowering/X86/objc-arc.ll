@@ -236,6 +236,16 @@ define void @test_objc_unsafeClaimAutoreleasedReturnValue_bundle() {
   ret void
 }
 
+define ptr @test_objc_claimAutoreleasedReturnValue(ptr %arg0) {
+; CHECK-LABEL: test_objc_claimAutoreleasedReturnValue
+; CHECK-NEXT: entry
+; CHECK-NEXT: %0 = call ptr @objc_claimAutoreleasedReturnValue(ptr %arg0)
+; CHECK-NEXT: ret ptr %0
+entry:
+  %0 = call ptr @llvm.objc.claimAutoreleasedReturnValue(ptr %arg0)
+  ret ptr %0
+}
+
 define ptr @test_objc_retainedObject(ptr %arg0) {
 ; CHECK-LABEL: test_objc_retainedObject
 ; CHECK-NEXT: entry
@@ -300,6 +310,7 @@ declare ptr @llvm.objc.autorelease(ptr)
 declare void @llvm.objc.autoreleasePoolPop(ptr)
 declare ptr @llvm.objc.autoreleasePoolPush()
 declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
+declare ptr @llvm.objc.claimAutoreleasedReturnValue(ptr)
 declare void @llvm.objc.copyWeak(ptr, ptr)
 declare void @llvm.objc.destroyWeak(ptr)
 declare extern_weak ptr @llvm.objc.initWeak(ptr, ptr)
@@ -328,6 +339,7 @@ attributes #0 = { nounwind }
 ; CHECK: declare void @objc_autoreleasePoolPop(ptr)
 ; CHECK: declare ptr @objc_autoreleasePoolPush()
 ; CHECK: declare ptr @objc_autoreleaseReturnValue(ptr)
+; CHECK: declare ptr @objc_claimAutoreleasedReturnValue(ptr)
 ; CHECK: declare void @objc_copyWeak(ptr, ptr)
 ; CHECK: declare void @objc_destroyWeak(ptr)
 ; CHECK: declare extern_weak ptr @objc_initWeak(ptr, ptr)
