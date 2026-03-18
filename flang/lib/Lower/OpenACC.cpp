@@ -2889,7 +2889,7 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
         if (newSym) {
           const Fortran::semantics::Symbol *origSym =
               localSymbols.lookupSymbolByName(newSym->name().ToString());
-          if (origSym)
+          if (origSym && *origSym != *newSym)
             localSymbols.copySymbolBinding(*origSym, *newSym);
         }
       }
