@@ -73,14 +73,11 @@ void SymbolLocatorSymStore::Initialize() {
 }
 
 void SymbolLocatorSymStore::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForSymbolLocatorPlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    constexpr bool is_global_setting = true;
-    PluginManager::CreateSettingForSymbolLocatorPlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the SymStore Symbol Locator plug-in.",
-        is_global_setting);
-  }
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_symbollocatorsymstore_properties_def.expected_path,
+      GetGlobalPluginProperties().GetValueProperties(),
+      "Properties for the SymStore Symbol Locator plug-in.",
+      /*is_global_property=*/true);
 }
 
 void SymbolLocatorSymStore::Terminate() {
