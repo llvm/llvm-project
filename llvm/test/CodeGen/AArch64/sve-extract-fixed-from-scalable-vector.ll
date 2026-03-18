@@ -334,8 +334,8 @@ define <2 x half> @extract_v2f16_nxv4f16_6(<vscale x 4 x half> %arg) {
 define <2 x i32> @extract_nxv2i32_from_nxv4i32_then_extract_v2i32(<vscale x 4 x i32> %arg) {
 ; CHECK-LABEL: extract_nxv2i32_from_nxv4i32_then_extract_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
   %ext1 = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv4i32(<vscale x 4 x i32> %arg, i64 2)
   %ext2 = call <2 x i32> @llvm.vector.extract.v2i32.nxv2i32(<vscale x 2 x i32> %ext1, i64 0)
