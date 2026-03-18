@@ -139,6 +139,11 @@ template <> struct IRTraits<MachineBasicBlock> {
   static SuccRangeT getSuccessors(MachineBasicBlock *BB) {
     return BB->successors();
   }
+  static uint64_t getID(const MachineBasicBlock *BB) {
+    if (auto BBID = BB->getBBID())
+      return BBID->BaseID;
+    return BB->getNumber();
+  }
 };
 } // namespace afdo_detail
 
@@ -311,7 +316,6 @@ bool MIRProfileLoader::doInitialization(Module &M) {
 }
 
 bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
-  // Do not load non-FS profiles. A line or probe can get a zero-valued
   // discriminator at certain pass which could result in accidentally loading
   // the corresponding base counter in the non-FS profile, while a non-zero
   // discriminator would end up getting zero samples. This could in turn undo
@@ -319,6 +323,7 @@ bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
   // probe distribution factor work for pseudo probes.
   if (!Reader->profileIsFS())
     return false;
+
 
   Function &Func = MF.getFunction();
   clearFunctionData(false);
@@ -333,6 +338,14 @@ bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
     if (getFunctionLoc(MF) == 0)
       return false;
   }
+
+  extern cl::opt<std::string> SampleProfileProfiDebugFunc;
+  bool ShouldPrint =
+      !SampleProfileProfiDebugFunc.empty() && MF.getFunction().getName() == SampleProfileProfiDebugFunc;
+  if (ShouldPrint)
+    dbgs() << "MIRProfileLoader: runOnFunction " << MF.getFunction().getName()
+           << " (Pass " << static_cast<unsigned>(P) << ") " << Reader->profileIsFS() << "\n";
+  // Do not load non-FS profiles. A line or probe can get a zero-valued
 
   DenseSet<GlobalValue::GUID> InlinedGUIDs;
   bool Changed = computeAndPropagateWeights(MF, InlinedGUIDs);

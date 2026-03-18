@@ -78,6 +78,7 @@ template <> struct IRTraits<BasicBlock> {
   }
   static pred_range getPredecessors(BasicBlock *BB) { return predecessors(BB); }
   static succ_range getSuccessors(BasicBlock *BB) { return successors(BB); }
+  static uint64_t getID(const BasicBlock *BB) { return BB->getNumber(); }
 };
 
 } // end namespace afdo_detail
@@ -152,6 +153,7 @@ public:
 
 
 extern cl::opt<bool> SampleProfileUseProfi;
+extern cl::opt<std::string> SampleProfileProfiDebugFunc;
 
 static inline bool skipProfileForFunction(const Function &F) {
   return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
@@ -225,6 +227,9 @@ protected:
   }
   SuccRangeT getSuccessors(BasicBlockT *BB) {
     return afdo_detail::IRTraits<BT>::getSuccessors(BB);
+  }
+  uint64_t getID(const BasicBlockT *BB) const {
+    return afdo_detail::IRTraits<BT>::getID(BB);
   }
 
   unsigned getFunctionLoc(FunctionT &Func);
@@ -931,7 +936,36 @@ void SampleProfileLoaderBaseImpl<BT>::propagateWeights(FunctionT &F) {
         SampleBlockWeights[&BI] = Weight.get();
     }
     // Fill in BlockWeights and EdgeWeights using an inference algorithm.
+    bool ShouldPrint =
+        !SampleProfileProfiDebugFunc.empty() &&
+        getFunction(F).getName() == SampleProfileProfiDebugFunc;
+    if (ShouldPrint) {
+      dbgs() << "\n--- Profi debug for " << getFunction(F).getName() << " ---\n";
+      dbgs() << "Weights BEFORE profi for " << getFunction(F).getName()
+             << ":\n";
+      for (auto &I : BlockWeights) {
+        dbgs() << "  Block " << getID(I.first) << " weight: " << I.second
+               << "\n";
+      }
+      for (auto &I : EdgeWeights) {
+        dbgs() << "  Edge " << getID(I.first.first) << "->"
+               << getID(I.first.second) << " weight: " << I.second << "\n";
+      }
+    }
+
     applyProfi(F, Successors, SampleBlockWeights, BlockWeights, EdgeWeights);
+
+    if (ShouldPrint) {
+      dbgs() << "Weights AFTER profi for " << getFunction(F).getName() << ":\n";
+      for (auto &I : BlockWeights) {
+        dbgs() << "  Block " << getID(I.first) << " weight: " << I.second
+               << "\n";
+      }
+      for (auto &I : EdgeWeights) {
+        dbgs() << "  Edge " << getID(I.first.first) << "->"
+               << getID(I.first.second) << " weight: " << I.second << "\n";
+      }
+    }
   } else {
     bool Changed = true;
     unsigned I = 0;
