@@ -18,3 +18,13 @@
 ; CHECK: .globl  wasm_var_i64
 ; CHECK-LABEL: wasm_var_i64:
 @wasm_var_i64 = addrspace(1) global i64 1234567890
+
+; CHECK: .globaltype     wasm_var_f64, f64
+; CHECK: .globl  wasm_var_f64
+; CHECK-LABEL: wasm_var_f64:
+@wasm_var_f64 = local_unnamed_addr addrspace(1) global double -0.0
+
+; CHECK: .globaltype wasm_external, i32
+; CHECK-NOT: .global wasm_external
+; CHECK-NOT: wasm_external:
+@wasm_external = external addrspace(1) global i32
