@@ -14889,7 +14889,7 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1, SDValue V2,
   switch (OpNum) {
   default:
     llvm_unreachable("Unknown shuffle opcode!");
-  case OP_VREV:
+  case OP_VREV: {
     // VREV divides the vector in half and swaps within the half.
     if (VT.getVectorElementType() == MVT::i32 ||
         VT.getVectorElementType() == MVT::f32)
@@ -14899,9 +14899,14 @@ static SDValue GeneratePerfectShuffle(unsigned ID, SDValue V1, SDValue V2,
         VT.getVectorElementType() == MVT::f16 ||
         VT.getVectorElementType() == MVT::bf16)
       return DAG.getNode(AArch64ISD::REV32, DL, VT, OpLHS);
-    // vrev <4 x i8> -> REV16
-    assert(VT.getVectorElementType() == MVT::i8);
-    return DAG.getNode(AArch64ISD::REV16, DL, VT, OpLHS);
+    // vrev <4 x i8> -> BSWAP which is REV16
+    assert(VT == MVT::v8i8 || VT == MVT::v16i8);
+    EVT BSVT = VT == MVT::v8i8 ? MVT::v4i16 : MVT::v8i16;
+    return DAG.getNode(
+        AArch64ISD::NVCAST, DL, VT,
+        DAG.getNode(ISD::BSWAP, DL, BSVT,
+                    DAG.getNode(AArch64ISD::NVCAST, DL, BSVT, OpLHS)));
+  }
   case OP_VDUP0:
   case OP_VDUP1:
   case OP_VDUP2:
@@ -15313,8 +15318,15 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(AArch64ISD::REV64, DL, V1.getValueType(), V1);
   if (isREVMask(ShuffleMask, EltSize, NumElts, 32))
     return DAG.getNode(AArch64ISD::REV32, DL, V1.getValueType(), V1);
-  if (isREVMask(ShuffleMask, EltSize, NumElts, 16))
-    return DAG.getNode(AArch64ISD::REV16, DL, V1.getValueType(), V1);
+  if (isREVMask(ShuffleMask, EltSize, NumElts, 16)) {
+    EVT VT = V1.getValueType();
+    assert(VT == MVT::v8i8 || VT == MVT::v16i8);
+    EVT BSVT = VT == MVT::v8i8 ? MVT::v4i16 : MVT::v8i16;
+    return DAG.getNode(
+        AArch64ISD::NVCAST, DL, VT,
+        DAG.getNode(ISD::BSWAP, DL, BSVT,
+                    DAG.getNode(AArch64ISD::NVCAST, DL, BSVT, V1)));
+  }
 
   if (((NumElts == 8 && EltSize == 16) || (NumElts == 16 && EltSize == 8)) &&
       ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
