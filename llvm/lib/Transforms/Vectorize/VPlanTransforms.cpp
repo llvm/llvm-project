@@ -6167,18 +6167,17 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   }
 
   // Match: UpdateR(PrevValue, ext(...))
-  VPWidenRecipe *BinOp = matchWidenBinaryOperator(Op);
-  if (!BinOp && (UpdateR->getOpcode() == Instruction::Add ||
-                 UpdateR->getOpcode() == Instruction::FAdd)) {
+  if ((UpdateR->getOpcode() == Instruction::Add ||
+       UpdateR->getOpcode() == Instruction::FAdd) &&
+      match(Op, m_IntOrFloatExtend(m_VPValue()))) {
     assert(!OuterExtKind && "Op should be Mul BinOp with OuterExtKind");
-    if (match(Op, m_IntOrFloatExtend(m_VPValue())))
-      return ExtendedReductionOperand{UpdateR,
-                                      {cast<VPWidenCastRecipe>(Op), nullptr}};
-    return std::nullopt;
+    return ExtendedReductionOperand{UpdateR,
+                                    {cast<VPWidenCastRecipe>(Op), nullptr}};
   }
 
   // The rest of the matching assumes `Op` is a (possibly extended/negated)
   // binary operation.
+  VPWidenRecipe *BinOp = matchWidenBinaryOperator(Op);
   if (!BinOp || !BinOp->hasOneUse())
     return std::nullopt;
 
