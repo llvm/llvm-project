@@ -16,6 +16,7 @@
 
 #include "../../ModelStringConversions.h"
 #include "JSONEntitySummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntitySummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
@@ -138,6 +139,13 @@ llvm::Error writeJSON(Value &&V, llvm::StringRef Path);
 
 SummaryName summaryNameFromJSON(llvm::StringRef SummaryNameStr);
 llvm::StringRef summaryNameToJSON(const SummaryName &SN);
+
+//----------------------------------------------------------------------------
+// AnalysisName helpers
+//----------------------------------------------------------------------------
+
+AnalysisName analysisNameFromJSON(llvm::StringRef AnalysisNameStr);
+llvm::StringRef analysisNameToJSON(const AnalysisName &AN);
 
 //----------------------------------------------------------------------------
 // BuildNamespaceKind helpers
