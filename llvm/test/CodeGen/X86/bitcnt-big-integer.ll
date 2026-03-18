@@ -1241,21 +1241,19 @@ define i32 @test_ctlz_i128(i128 %a0) nounwind {
 ;
 ; AVX2-LABEL: test_ctlz_i128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    lzcntq %rsi, %rcx
-; AVX2-NEXT:    lzcntq %rdi, %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %ecx, %eax
+; AVX2-NEXT:    lzcntq %rdi, %rcx
+; AVX2-NEXT:    addl $64, %ecx
+; AVX2-NEXT:    lzcntq %rsi, %rax
+; AVX2-NEXT:    cmovbl %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctlz_i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    lzcntq %rsi, %rcx
-; AVX512-NEXT:    lzcntq %rdi, %rax
-; AVX512-NEXT:    addl $64, %eax
-; AVX512-NEXT:    testq %rsi, %rsi
-; AVX512-NEXT:    cmovnel %ecx, %eax
+; AVX512-NEXT:    lzcntq %rdi, %rcx
+; AVX512-NEXT:    addl $64, %ecx
+; AVX512-NEXT:    lzcntq %rsi, %rax
+; AVX512-NEXT:    cmovbl %ecx, %eax
 ; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX512-NEXT:    retq
   %cnt = call i128 @llvm.ctlz.i128(i128 %a0, i1 0)
@@ -1280,23 +1278,19 @@ define i32 @load_ctlz_i128(ptr %p0) nounwind {
 ;
 ; AVX2-LABEL: load_ctlz_i128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movq 8(%rdi), %rcx
-; AVX2-NEXT:    lzcntq %rcx, %rdx
-; AVX2-NEXT:    lzcntq (%rdi), %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %edx, %eax
+; AVX2-NEXT:    lzcntq (%rdi), %rcx
+; AVX2-NEXT:    addl $64, %ecx
+; AVX2-NEXT:    lzcntq 8(%rdi), %rax
+; AVX2-NEXT:    cmovbl %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_ctlz_i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movq 8(%rdi), %rcx
-; AVX512-NEXT:    lzcntq %rcx, %rdx
-; AVX512-NEXT:    lzcntq (%rdi), %rax
-; AVX512-NEXT:    addl $64, %eax
-; AVX512-NEXT:    testq %rcx, %rcx
-; AVX512-NEXT:    cmovnel %edx, %eax
+; AVX512-NEXT:    lzcntq (%rdi), %rcx
+; AVX512-NEXT:    addl $64, %ecx
+; AVX512-NEXT:    lzcntq 8(%rdi), %rax
+; AVX512-NEXT:    cmovbl %ecx, %eax
 ; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX512-NEXT:    retq
   %a0 = load i128, ptr %p0
@@ -1323,63 +1317,25 @@ define i32 @vector_ctlz_i128(<4 x i32> %v0) nounwind {
 ;
 ; AVX2-LABEL: vector_ctlz_i128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX2-NEXT:    lzcntq %rcx, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-NEXT:    vmovq %xmm0, %rcx
+; AVX2-NEXT:    lzcntq %rcx, %rcx
+; AVX2-NEXT:    addl $64, %ecx
 ; AVX2-NEXT:    lzcntq %rax, %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %edx, %eax
+; AVX2-NEXT:    cmovbl %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: vector_ctlz_i128:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512F-NEXT:    lzcntq %rcx, %rdx
-; AVX512F-NEXT:    lzcntq %rax, %rax
-; AVX512F-NEXT:    addl $64, %eax
-; AVX512F-NEXT:    testq %rcx, %rcx
-; AVX512F-NEXT:    cmovnel %edx, %eax
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512F-NEXT:    retq
-;
-; AVX512POPCNT-LABEL: vector_ctlz_i128:
-; AVX512POPCNT:       # %bb.0:
-; AVX512POPCNT-NEXT:    vmovq %xmm0, %rax
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512POPCNT-NEXT:    lzcntq %rcx, %rdx
-; AVX512POPCNT-NEXT:    lzcntq %rax, %rax
-; AVX512POPCNT-NEXT:    addl $64, %eax
-; AVX512POPCNT-NEXT:    testq %rcx, %rcx
-; AVX512POPCNT-NEXT:    cmovnel %edx, %eax
-; AVX512POPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512POPCNT-NEXT:    retq
-;
-; AVX512VL-LABEL: vector_ctlz_i128:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512VL-NEXT:    vmovq %xmm0, %rax
-; AVX512VL-NEXT:    lzcntq %rcx, %rdx
-; AVX512VL-NEXT:    lzcntq %rax, %rax
-; AVX512VL-NEXT:    addl $64, %eax
-; AVX512VL-NEXT:    testq %rcx, %rcx
-; AVX512VL-NEXT:    cmovnel %edx, %eax
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VL-NEXT:    retq
-;
-; AVX512VLPOPCNT-LABEL: vector_ctlz_i128:
-; AVX512VLPOPCNT:       # %bb.0:
-; AVX512VLPOPCNT-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512VLPOPCNT-NEXT:    vmovq %xmm0, %rax
-; AVX512VLPOPCNT-NEXT:    lzcntq %rcx, %rdx
-; AVX512VLPOPCNT-NEXT:    lzcntq %rax, %rax
-; AVX512VLPOPCNT-NEXT:    addl $64, %eax
-; AVX512VLPOPCNT-NEXT:    testq %rcx, %rcx
-; AVX512VLPOPCNT-NEXT:    cmovnel %edx, %eax
-; AVX512VLPOPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VLPOPCNT-NEXT:    retq
+; AVX512-LABEL: vector_ctlz_i128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vmovq %xmm0, %rcx
+; AVX512-NEXT:    lzcntq %rcx, %rcx
+; AVX512-NEXT:    addl $64, %ecx
+; AVX512-NEXT:    lzcntq %rax, %rax
+; AVX512-NEXT:    cmovbl %ecx, %eax
+; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512-NEXT:    retq
   %a0 = bitcast <4 x i32> %v0 to i128
   %cnt = call i128 @llvm.ctlz.i128(i128 %a0, i1 0)
   %res = trunc i128 %cnt to i32
@@ -1412,17 +1368,15 @@ define i32 @test_ctlz_i256(i256 %a0) nounwind {
 ;
 ; AVX2-LABEL: test_ctlz_i256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    lzcntq %rcx, %rax
-; AVX2-NEXT:    lzcntq %rdx, %r8
-; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %eax, %r8d
-; AVX2-NEXT:    lzcntq %rsi, %r9
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rdi, %rax
+; AVX2-NEXT:    lzcntq %rdx, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %r9d, %eax
+; AVX2-NEXT:    lzcntq %rcx, %r8
+; AVX2-NEXT:    cmovbl %eax, %r8d
+; AVX2-NEXT:    lzcntq %rdi, %rdi
+; AVX2-NEXT:    addl $64, %edi
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq %rsi, %rax
+; AVX2-NEXT:    cmovbl %edi, %eax
 ; AVX2-NEXT:    subl $-128, %eax
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    cmovnel %r8d, %eax
@@ -1431,16 +1385,14 @@ define i32 @test_ctlz_i256(i256 %a0) nounwind {
 ;
 ; AVX512-LABEL: test_ctlz_i256:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    lzcntq %rcx, %rax
-; AVX512-NEXT:    lzcntq %rdx, %r8
-; AVX512-NEXT:    addl $64, %r8d
-; AVX512-NEXT:    testq %rcx, %rcx
-; AVX512-NEXT:    cmovnel %eax, %r8d
-; AVX512-NEXT:    lzcntq %rsi, %r9
-; AVX512-NEXT:    lzcntq %rdi, %rax
+; AVX512-NEXT:    lzcntq %rdx, %rax
 ; AVX512-NEXT:    addl $64, %eax
-; AVX512-NEXT:    testq %rsi, %rsi
-; AVX512-NEXT:    cmovnel %r9d, %eax
+; AVX512-NEXT:    lzcntq %rcx, %r8
+; AVX512-NEXT:    cmovbl %eax, %r8d
+; AVX512-NEXT:    lzcntq %rdi, %rdi
+; AVX512-NEXT:    addl $64, %edi
+; AVX512-NEXT:    lzcntq %rsi, %rax
+; AVX512-NEXT:    cmovbl %edi, %eax
 ; AVX512-NEXT:    subl $-128, %eax
 ; AVX512-NEXT:    orq %rcx, %rdx
 ; AVX512-NEXT:    cmovnel %r8d, %eax
@@ -1482,18 +1434,15 @@ define i32 @load_ctlz_i256(ptr %p0) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq 16(%rdi), %rcx
 ; AVX2-NEXT:    movq 24(%rdi), %rdx
-; AVX2-NEXT:    lzcntq %rdx, %rax
-; AVX2-NEXT:    lzcntq %rcx, %rsi
-; AVX2-NEXT:    addl $64, %esi
-; AVX2-NEXT:    testq %rdx, %rdx
-; AVX2-NEXT:    cmovnel %eax, %esi
-; AVX2-NEXT:    movq 8(%rdi), %r8
-; AVX2-NEXT:    lzcntq %r8, %r9
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq (%rdi), %rax
+; AVX2-NEXT:    lzcntq %rcx, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %r8, %r8
-; AVX2-NEXT:    cmovnel %r9d, %eax
+; AVX2-NEXT:    lzcntq %rdx, %rsi
+; AVX2-NEXT:    cmovbl %eax, %esi
+; AVX2-NEXT:    lzcntq (%rdi), %r8
+; AVX2-NEXT:    addl $64, %r8d
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq 8(%rdi), %rax
+; AVX2-NEXT:    cmovbl %r8d, %eax
 ; AVX2-NEXT:    subl $-128, %eax
 ; AVX2-NEXT:    orq %rdx, %rcx
 ; AVX2-NEXT:    cmovnel %esi, %eax
@@ -1585,24 +1534,21 @@ define i32 @vector_ctlz_i256(<8 x i32> %v0) nounwind {
 ;
 ; AVX2-LABEL: vector_ctlz_i256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
 ; AVX2-NEXT:    vmovq %xmm0, %rdx
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX2-NEXT:    vmovq %xmm1, %rsi
 ; AVX2-NEXT:    lzcntq %rsi, %rdi
-; AVX2-NEXT:    lzcntq %rdx, %r8
-; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %edi, %r8d
-; AVX2-NEXT:    xorl %edi, %edi
-; AVX2-NEXT:    lzcntq %rcx, %rdi
+; AVX2-NEXT:    addl $64, %edi
+; AVX2-NEXT:    lzcntq %rcx, %r8
+; AVX2-NEXT:    cmovbl %edi, %r8d
+; AVX2-NEXT:    lzcntq %rdx, %rdx
+; AVX2-NEXT:    addl $64, %edx
 ; AVX2-NEXT:    lzcntq %rax, %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %edi, %eax
+; AVX2-NEXT:    cmovbl %edx, %eax
 ; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %rsi, %rdx
+; AVX2-NEXT:    orq %rcx, %rsi
 ; AVX2-NEXT:    cmovnel %r8d, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    vzeroupper
@@ -1720,42 +1666,36 @@ define i32 @test_ctlz_i512(i512 %a0) nounwind {
 ;
 ; AVX2-LABEL: test_ctlz_i512:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    pushq %r15
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; AVX2-NEXT:    lzcntq %r11, %rax
+; AVX2-NEXT:    lzcntq %r10, %rax
+; AVX2-NEXT:    addl $64, %eax
 ; AVX2-NEXT:    xorl %r14d, %r14d
-; AVX2-NEXT:    lzcntq %r10, %r14
-; AVX2-NEXT:    addl $64, %r14d
-; AVX2-NEXT:    testq %r11, %r11
-; AVX2-NEXT:    cmovnel %eax, %r14d
+; AVX2-NEXT:    lzcntq %r11, %r14
+; AVX2-NEXT:    cmovbl %eax, %r14d
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r9, %rax
+; AVX2-NEXT:    lzcntq %r8, %rax
+; AVX2-NEXT:    addl $64, %eax
 ; AVX2-NEXT:    xorl %ebx, %ebx
-; AVX2-NEXT:    lzcntq %r8, %rbx
-; AVX2-NEXT:    addl $64, %ebx
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %eax, %ebx
+; AVX2-NEXT:    lzcntq %r9, %rbx
+; AVX2-NEXT:    cmovbl %eax, %ebx
 ; AVX2-NEXT:    subl $-128, %ebx
 ; AVX2-NEXT:    movq %r10, %rax
 ; AVX2-NEXT:    orq %r11, %rax
 ; AVX2-NEXT:    cmovnel %r14d, %ebx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rcx, %rax
-; AVX2-NEXT:    xorl %r14d, %r14d
-; AVX2-NEXT:    lzcntq %rdx, %r14
-; AVX2-NEXT:    addl $64, %r14d
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %eax, %r14d
-; AVX2-NEXT:    xorl %r15d, %r15d
-; AVX2-NEXT:    lzcntq %rsi, %r15
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rdi, %rax
+; AVX2-NEXT:    lzcntq %rdx, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %r15d, %eax
+; AVX2-NEXT:    xorl %r14d, %r14d
+; AVX2-NEXT:    lzcntq %rcx, %r14
+; AVX2-NEXT:    cmovbl %eax, %r14d
+; AVX2-NEXT:    lzcntq %rdi, %rdi
+; AVX2-NEXT:    addl $64, %edi
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq %rsi, %rax
+; AVX2-NEXT:    cmovbl %edi, %eax
 ; AVX2-NEXT:    subl $-128, %eax
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    cmovnel %r14d, %eax
@@ -1767,7 +1707,6 @@ define i32 @test_ctlz_i512(i512 %a0) nounwind {
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %r14
-; AVX2-NEXT:    popq %r15
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_ctlz_i512:
@@ -1922,48 +1861,42 @@ define i32 @load_ctlz_i512(ptr %p0) nounwind {
 ;
 ; AVX2-LABEL: load_ctlz_i512:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movq 16(%rdi), %rcx
-; AVX2-NEXT:    movq 24(%rdi), %rdx
-; AVX2-NEXT:    movq 40(%rdi), %rax
-; AVX2-NEXT:    movq 48(%rdi), %r8
-; AVX2-NEXT:    movq 56(%rdi), %r9
-; AVX2-NEXT:    lzcntq %r9, %rsi
-; AVX2-NEXT:    lzcntq %r8, %r10
-; AVX2-NEXT:    addl $64, %r10d
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %esi, %r10d
-; AVX2-NEXT:    lzcntq %rax, %r11
-; AVX2-NEXT:    xorl %esi, %esi
-; AVX2-NEXT:    lzcntq 32(%rdi), %rsi
-; AVX2-NEXT:    addl $64, %esi
-; AVX2-NEXT:    testq %rax, %rax
-; AVX2-NEXT:    cmovnel %r11d, %esi
-; AVX2-NEXT:    subl $-128, %esi
-; AVX2-NEXT:    orq %r9, %r8
-; AVX2-NEXT:    cmovnel %r10d, %esi
+; AVX2-NEXT:    movq 56(%rdi), %rax
+; AVX2-NEXT:    movq 48(%rdi), %rsi
+; AVX2-NEXT:    lzcntq %rsi, %rcx
+; AVX2-NEXT:    addl $64, %ecx
+; AVX2-NEXT:    lzcntq %rax, %r8
+; AVX2-NEXT:    cmovbl %ecx, %r8d
+; AVX2-NEXT:    lzcntq 32(%rdi), %r9
+; AVX2-NEXT:    movq 16(%rdi), %rdx
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    lzcntq 40(%rdi), %rcx
+; AVX2-NEXT:    movq 24(%rdi), %r10
+; AVX2-NEXT:    cmovbl %r9d, %ecx
+; AVX2-NEXT:    subl $-128, %ecx
+; AVX2-NEXT:    orq %rax, %rsi
+; AVX2-NEXT:    cmovnel %r8d, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    lzcntq %rdx, %rax
-; AVX2-NEXT:    xorl %r8d, %r8d
-; AVX2-NEXT:    lzcntq %rcx, %r8
-; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %rdx, %rdx
-; AVX2-NEXT:    cmovnel %eax, %r8d
-; AVX2-NEXT:    movq 8(%rdi), %r9
-; AVX2-NEXT:    xorl %r10d, %r10d
-; AVX2-NEXT:    lzcntq %r9, %r10
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq (%rdi), %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %r10d, %eax
+; AVX2-NEXT:    xorl %esi, %esi
+; AVX2-NEXT:    lzcntq %r10, %rsi
+; AVX2-NEXT:    cmovbl %eax, %esi
+; AVX2-NEXT:    xorl %r8d, %r8d
+; AVX2-NEXT:    lzcntq (%rdi), %r8
+; AVX2-NEXT:    addl $64, %r8d
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq 8(%rdi), %rax
+; AVX2-NEXT:    cmovbl %r8d, %eax
 ; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %rdx, %rcx
-; AVX2-NEXT:    cmovnel %r8d, %eax
+; AVX2-NEXT:    orq %r10, %rdx
+; AVX2-NEXT:    cmovnel %esi, %eax
 ; AVX2-NEXT:    vmovdqa 32(%rdi), %xmm0
 ; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    vpor 48(%rdi), %xmm0, %xmm0
 ; AVX2-NEXT:    vptest %xmm0, %xmm0
-; AVX2-NEXT:    cmovnel %esi, %eax
+; AVX2-NEXT:    cmovnel %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    retq
 ;
@@ -2077,49 +2010,43 @@ define i32 @vector_ctlz_i512(<16 x i32> %v0) nounwind {
 ;
 ; AVX2-LABEL: vector_ctlz_i512:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX2-NEXT:    vmovq %xmm2, %rdx
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX2-NEXT:    vmovq %xmm2, %r8
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX2-NEXT:    vmovq %xmm1, %rdi
-; AVX2-NEXT:    vpextrq $1, %xmm1, %r9
-; AVX2-NEXT:    lzcntq %rax, %r10
-; AVX2-NEXT:    lzcntq %r8, %r11
-; AVX2-NEXT:    addl $64, %r11d
-; AVX2-NEXT:    testq %rax, %rax
-; AVX2-NEXT:    cmovnel %r10d, %r11d
-; AVX2-NEXT:    xorl %r10d, %r10d
-; AVX2-NEXT:    lzcntq %r9, %r10
-; AVX2-NEXT:    lzcntq %rdi, %rdi
-; AVX2-NEXT:    addl $64, %edi
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %r10d, %edi
-; AVX2-NEXT:    subl $-128, %edi
-; AVX2-NEXT:    orq %rax, %r8
-; AVX2-NEXT:    cmovnel %r11d, %edi
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rcx, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rsi
+; AVX2-NEXT:    vmovq %xmm0, %rdx
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rdi
+; AVX2-NEXT:    vmovq %xmm0, %r8
+; AVX2-NEXT:    vmovq %xmm1, %r9
+; AVX2-NEXT:    lzcntq %r8, %r10
+; AVX2-NEXT:    addl $64, %r10d
+; AVX2-NEXT:    lzcntq %rdi, %r11
+; AVX2-NEXT:    cmovbl %r10d, %r11d
+; AVX2-NEXT:    lzcntq %r9, %r9
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    lzcntq %rsi, %rsi
+; AVX2-NEXT:    cmovbl %r9d, %esi
+; AVX2-NEXT:    subl $-128, %esi
+; AVX2-NEXT:    orq %rdi, %r8
+; AVX2-NEXT:    cmovnel %r11d, %esi
+; AVX2-NEXT:    vmovq %xmm2, %rdi
 ; AVX2-NEXT:    xorl %r8d, %r8d
-; AVX2-NEXT:    lzcntq %rdx, %r8
+; AVX2-NEXT:    lzcntq %rdi, %r8
 ; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %eax, %r8d
-; AVX2-NEXT:    vmovq %xmm0, %rax
 ; AVX2-NEXT:    xorl %r9d, %r9d
-; AVX2-NEXT:    lzcntq %rsi, %r9
+; AVX2-NEXT:    lzcntq %rcx, %r9
+; AVX2-NEXT:    cmovbl %r8d, %r9d
+; AVX2-NEXT:    lzcntq %rdx, %rdx
+; AVX2-NEXT:    addl $64, %edx
 ; AVX2-NEXT:    lzcntq %rax, %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %r9d, %eax
+; AVX2-NEXT:    cmovbl %edx, %eax
 ; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %rcx, %rdx
-; AVX2-NEXT:    cmovnel %r8d, %eax
+; AVX2-NEXT:    orq %rcx, %rdi
+; AVX2-NEXT:    cmovnel %r9d, %eax
 ; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    vptest %ymm1, %ymm1
-; AVX2-NEXT:    cmovnel %edi, %eax
+; AVX2-NEXT:    cmovnel %esi, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -2289,94 +2216,81 @@ define i32 @test_ctlz_i1024(i1024 %a0) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %r15
 ; AVX2-NEXT:    pushq %r14
-; AVX2-NEXT:    pushq %r13
 ; AVX2-NEXT:    pushq %r12
 ; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
+; AVX2-NEXT:    lzcntq %rbx, %rax
+; AVX2-NEXT:    addl $64, %eax
+; AVX2-NEXT:    xorl %r14d, %r14d
+; AVX2-NEXT:    lzcntq %r10, %r14
+; AVX2-NEXT:    cmovbl %eax, %r14d
+; AVX2-NEXT:    xorl %r15d, %r15d
+; AVX2-NEXT:    lzcntq {{[0-9]+}}(%rsp), %r15
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r15
+; AVX2-NEXT:    addl $64, %r15d
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq {{[0-9]+}}(%rsp), %rax
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; AVX2-NEXT:    cmovbl %r15d, %eax
+; AVX2-NEXT:    subl $-128, %eax
+; AVX2-NEXT:    orq %r10, %rbx
+; AVX2-NEXT:    cmovnel %r14d, %eax
+; AVX2-NEXT:    xorl %r10d, %r10d
+; AVX2-NEXT:    lzcntq %r11, %r10
+; AVX2-NEXT:    addl $64, %r10d
 ; AVX2-NEXT:    xorl %ebx, %ebx
-; AVX2-NEXT:    lzcntq %r15, %rbx
-; AVX2-NEXT:    xorl %r12d, %r12d
-; AVX2-NEXT:    lzcntq %r11, %r12
-; AVX2-NEXT:    addl $64, %r12d
-; AVX2-NEXT:    testq %r15, %r15
-; AVX2-NEXT:    cmovnel %ebx, %r12d
+; AVX2-NEXT:    lzcntq %r12, %rbx
+; AVX2-NEXT:    cmovbl %r10d, %ebx
+; AVX2-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %ymm0
 ; AVX2-NEXT:    xorl %r14d, %r14d
 ; AVX2-NEXT:    lzcntq {{[0-9]+}}(%rsp), %r14
-; AVX2-NEXT:    xorl %r13d, %r13d
-; AVX2-NEXT:    lzcntq %r10, %r13
 ; AVX2-NEXT:    addl $64, %r14d
-; AVX2-NEXT:    testq %r10, %r10
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; AVX2-NEXT:    cmovnel %r13d, %r14d
-; AVX2-NEXT:    subl $-128, %r14d
-; AVX2-NEXT:    orq %r15, %r11
-; AVX2-NEXT:    cmovnel %r12d, %r14d
-; AVX2-NEXT:    xorl %r10d, %r10d
-; AVX2-NEXT:    lzcntq %rbx, %r10
-; AVX2-NEXT:    xorl %r15d, %r15d
-; AVX2-NEXT:    lzcntq %rax, %r15
-; AVX2-NEXT:    addl $64, %r15d
-; AVX2-NEXT:    testq %rbx, %rbx
-; AVX2-NEXT:    cmovnel %r10d, %r15d
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; AVX2-NEXT:    xorl %r12d, %r12d
-; AVX2-NEXT:    lzcntq %r11, %r12
 ; AVX2-NEXT:    xorl %r10d, %r10d
 ; AVX2-NEXT:    lzcntq {{[0-9]+}}(%rsp), %r10
-; AVX2-NEXT:    addl $64, %r10d
-; AVX2-NEXT:    testq %r11, %r11
-; AVX2-NEXT:    cmovnel %r12d, %r10d
-; AVX2-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %ymm0
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; AVX2-NEXT:    cmovbl %r14d, %r10d
 ; AVX2-NEXT:    subl $-128, %r10d
-; AVX2-NEXT:    orq %rbx, %rax
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; AVX2-NEXT:    cmovnel %r15d, %r10d
+; AVX2-NEXT:    orq %r12, %r11
+; AVX2-NEXT:    cmovnel %ebx, %r10d
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX2-NEXT:    addl $256, %r10d # imm = 0x100
 ; AVX2-NEXT:    vpor {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX2-NEXT:    vptest %xmm1, %xmm1
-; AVX2-NEXT:    cmovnel %r14d, %r10d
+; AVX2-NEXT:    cmovnel %eax, %r10d
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rbx, %rax
+; AVX2-NEXT:    lzcntq %r11, %rax
+; AVX2-NEXT:    addl $64, %eax
 ; AVX2-NEXT:    xorl %r15d, %r15d
-; AVX2-NEXT:    lzcntq %r11, %r15
-; AVX2-NEXT:    addl $64, %r15d
-; AVX2-NEXT:    testq %rbx, %rbx
-; AVX2-NEXT:    cmovnel %eax, %r15d
+; AVX2-NEXT:    lzcntq %rbx, %r15
+; AVX2-NEXT:    cmovbl %eax, %r15d
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r9, %rax
+; AVX2-NEXT:    lzcntq %r8, %rax
+; AVX2-NEXT:    addl $64, %eax
 ; AVX2-NEXT:    xorl %r14d, %r14d
-; AVX2-NEXT:    lzcntq %r8, %r14
-; AVX2-NEXT:    addl $64, %r14d
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %eax, %r14d
+; AVX2-NEXT:    lzcntq %r9, %r14
+; AVX2-NEXT:    cmovbl %eax, %r14d
 ; AVX2-NEXT:    subl $-128, %r14d
 ; AVX2-NEXT:    movq %r11, %rax
 ; AVX2-NEXT:    orq %rbx, %rax
 ; AVX2-NEXT:    cmovnel %r15d, %r14d
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rcx, %rax
-; AVX2-NEXT:    xorl %r15d, %r15d
-; AVX2-NEXT:    lzcntq %rdx, %r15
-; AVX2-NEXT:    addl $64, %r15d
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %eax, %r15d
-; AVX2-NEXT:    xorl %r12d, %r12d
-; AVX2-NEXT:    lzcntq %rsi, %r12
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rdi, %rax
+; AVX2-NEXT:    lzcntq %rdx, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %r12d, %eax
+; AVX2-NEXT:    xorl %r15d, %r15d
+; AVX2-NEXT:    lzcntq %rcx, %r15
+; AVX2-NEXT:    cmovbl %eax, %r15d
+; AVX2-NEXT:    lzcntq %rdi, %rdi
+; AVX2-NEXT:    addl $64, %edi
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq %rsi, %rax
+; AVX2-NEXT:    cmovbl %edi, %eax
 ; AVX2-NEXT:    subl $-128, %eax
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    cmovnel %r15d, %eax
+; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    orq %rbx, %r9
 ; AVX2-NEXT:    orq %r11, %r8
-; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    orq %r9, %r8
 ; AVX2-NEXT:    cmovnel %r14d, %eax
 ; AVX2-NEXT:    addl $512, %eax # imm = 0x200
@@ -2386,7 +2300,6 @@ define i32 @test_ctlz_i1024(i1024 %a0) nounwind {
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %r12
-; AVX2-NEXT:    popq %r13
 ; AVX2-NEXT:    popq %r14
 ; AVX2-NEXT:    popq %r15
 ; AVX2-NEXT:    vzeroupper
@@ -2651,101 +2564,86 @@ define i32 @load_ctlz_i1024(ptr %p0) nounwind {
 ;
 ; AVX2-LABEL: load_ctlz_i1024:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    movq 16(%rdi), %rcx
-; AVX2-NEXT:    movq 72(%rdi), %rsi
-; AVX2-NEXT:    movq 104(%rdi), %rdx
-; AVX2-NEXT:    movq 112(%rdi), %r8
-; AVX2-NEXT:    movq 120(%rdi), %r10
-; AVX2-NEXT:    lzcntq %r10, %rax
-; AVX2-NEXT:    xorl %ebx, %ebx
-; AVX2-NEXT:    lzcntq %r8, %rbx
-; AVX2-NEXT:    addl $64, %ebx
-; AVX2-NEXT:    testq %r10, %r10
-; AVX2-NEXT:    cmovnel %eax, %ebx
-; AVX2-NEXT:    lzcntq %rdx, %r11
+; AVX2-NEXT:    movq 120(%rdi), %rax
+; AVX2-NEXT:    movq 112(%rdi), %rcx
+; AVX2-NEXT:    lzcntq %rcx, %rdx
+; AVX2-NEXT:    addl $64, %edx
+; AVX2-NEXT:    lzcntq %rax, %r8
+; AVX2-NEXT:    cmovbl %edx, %r8d
+; AVX2-NEXT:    lzcntq 96(%rdi), %r9
+; AVX2-NEXT:    movq 88(%rdi), %rsi
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    lzcntq 104(%rdi), %rdx
+; AVX2-NEXT:    movq 80(%rdi), %r10
+; AVX2-NEXT:    cmovbl %r9d, %edx
+; AVX2-NEXT:    subl $-128, %edx
+; AVX2-NEXT:    orq %rax, %rcx
+; AVX2-NEXT:    cmovnel %r8d, %edx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq 96(%rdi), %rax
+; AVX2-NEXT:    lzcntq %r10, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rdx, %rdx
-; AVX2-NEXT:    movq 80(%rdi), %r9
-; AVX2-NEXT:    cmovnel %r11d, %eax
-; AVX2-NEXT:    movq 88(%rdi), %r11
-; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %r10, %r8
-; AVX2-NEXT:    cmovnel %ebx, %eax
-; AVX2-NEXT:    xorl %edx, %edx
-; AVX2-NEXT:    lzcntq %r11, %rdx
-; AVX2-NEXT:    xorl %ebx, %ebx
-; AVX2-NEXT:    lzcntq %r9, %rbx
-; AVX2-NEXT:    addl $64, %ebx
-; AVX2-NEXT:    testq %r11, %r11
-; AVX2-NEXT:    cmovnel %edx, %ebx
-; AVX2-NEXT:    xorl %edx, %edx
-; AVX2-NEXT:    lzcntq 64(%rdi), %rdx
 ; AVX2-NEXT:    xorl %r8d, %r8d
 ; AVX2-NEXT:    lzcntq %rsi, %r8
-; AVX2-NEXT:    addl $64, %edx
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    movq 40(%rdi), %r10
-; AVX2-NEXT:    cmovnel %r8d, %edx
-; AVX2-NEXT:    movq 48(%rdi), %r8
-; AVX2-NEXT:    subl $-128, %edx
-; AVX2-NEXT:    orq %r11, %r9
-; AVX2-NEXT:    movq 56(%rdi), %r9
-; AVX2-NEXT:    cmovnel %ebx, %edx
+; AVX2-NEXT:    cmovbl %eax, %r8d
+; AVX2-NEXT:    movq 56(%rdi), %rax
+; AVX2-NEXT:    xorl %r9d, %r9d
+; AVX2-NEXT:    lzcntq 64(%rdi), %r9
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    lzcntq 72(%rdi), %rcx
+; AVX2-NEXT:    cmovbl %r9d, %ecx
+; AVX2-NEXT:    subl $-128, %ecx
+; AVX2-NEXT:    orq %rsi, %r10
+; AVX2-NEXT:    cmovnel %r8d, %ecx
 ; AVX2-NEXT:    vmovdqu 96(%rdi), %ymm0
-; AVX2-NEXT:    addl $256, %edx # imm = 0x100
+; AVX2-NEXT:    addl $256, %ecx # imm = 0x100
 ; AVX2-NEXT:    vpor 112(%rdi), %xmm0, %xmm1
 ; AVX2-NEXT:    vptest %xmm1, %xmm1
-; AVX2-NEXT:    cmovnel %eax, %edx
+; AVX2-NEXT:    cmovnel %edx, %ecx
+; AVX2-NEXT:    movq 48(%rdi), %r8
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    lzcntq %r8, %rdx
+; AVX2-NEXT:    addl $64, %edx
+; AVX2-NEXT:    xorl %r9d, %r9d
+; AVX2-NEXT:    lzcntq %rax, %r9
+; AVX2-NEXT:    cmovbl %edx, %r9d
+; AVX2-NEXT:    xorl %r10d, %r10d
+; AVX2-NEXT:    lzcntq 32(%rdi), %r10
+; AVX2-NEXT:    movq 16(%rdi), %rsi
+; AVX2-NEXT:    addl $64, %r10d
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    lzcntq 40(%rdi), %rdx
+; AVX2-NEXT:    movq 24(%rdi), %r11
+; AVX2-NEXT:    cmovbl %r10d, %edx
+; AVX2-NEXT:    subl $-128, %edx
+; AVX2-NEXT:    orq %rax, %r8
+; AVX2-NEXT:    cmovnel %r9d, %edx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r9, %rax
-; AVX2-NEXT:    xorl %r11d, %r11d
-; AVX2-NEXT:    lzcntq %r8, %r11
-; AVX2-NEXT:    addl $64, %r11d
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %eax, %r11d
-; AVX2-NEXT:    xorl %esi, %esi
-; AVX2-NEXT:    lzcntq 32(%rdi), %rsi
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r10, %rax
-; AVX2-NEXT:    addl $64, %esi
-; AVX2-NEXT:    testq %r10, %r10
-; AVX2-NEXT:    movq 24(%rdi), %r10
-; AVX2-NEXT:    cmovnel %eax, %esi
-; AVX2-NEXT:    subl $-128, %esi
-; AVX2-NEXT:    orq %r9, %r8
-; AVX2-NEXT:    cmovnel %r11d, %esi
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r10, %rax
-; AVX2-NEXT:    xorl %r8d, %r8d
-; AVX2-NEXT:    lzcntq %rcx, %r8
-; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %r10, %r10
-; AVX2-NEXT:    cmovnel %eax, %r8d
-; AVX2-NEXT:    movq 8(%rdi), %r9
-; AVX2-NEXT:    xorl %r11d, %r11d
-; AVX2-NEXT:    lzcntq %r9, %r11
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq (%rdi), %rax
+; AVX2-NEXT:    lzcntq %rsi, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %r11d, %eax
+; AVX2-NEXT:    xorl %r8d, %r8d
+; AVX2-NEXT:    lzcntq %r11, %r8
+; AVX2-NEXT:    cmovbl %eax, %r8d
+; AVX2-NEXT:    xorl %r9d, %r9d
+; AVX2-NEXT:    lzcntq (%rdi), %r9
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq 8(%rdi), %rax
+; AVX2-NEXT:    cmovbl %r9d, %eax
 ; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %r10, %rcx
+; AVX2-NEXT:    orq %r11, %rsi
 ; AVX2-NEXT:    cmovnel %r8d, %eax
 ; AVX2-NEXT:    vmovdqa 32(%rdi), %xmm1
 ; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    vpor 48(%rdi), %xmm1, %xmm1
 ; AVX2-NEXT:    vptest %xmm1, %xmm1
-; AVX2-NEXT:    cmovnel %esi, %eax
-; AVX2-NEXT:    vpor 64(%rdi), %ymm0, %ymm0
-; AVX2-NEXT:    addl $512, %eax # imm = 0x200
-; AVX2-NEXT:    vptest %ymm0, %ymm0
 ; AVX2-NEXT:    cmovnel %edx, %eax
+; AVX2-NEXT:    addl $512, %eax # imm = 0x200
+; AVX2-NEXT:    vpor 64(%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vptest %ymm0, %ymm0
+; AVX2-NEXT:    cmovnel %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2871,21 +2769,19 @@ define i32 @test_ctlz_undef_i128(i128 %a0) nounwind {
 ;
 ; AVX2-LABEL: test_ctlz_undef_i128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    lzcntq %rsi, %rcx
-; AVX2-NEXT:    lzcntq %rdi, %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %ecx, %eax
+; AVX2-NEXT:    lzcntq %rdi, %rcx
+; AVX2-NEXT:    addl $64, %ecx
+; AVX2-NEXT:    lzcntq %rsi, %rax
+; AVX2-NEXT:    cmovbl %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_ctlz_undef_i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    lzcntq %rsi, %rcx
-; AVX512-NEXT:    lzcntq %rdi, %rax
-; AVX512-NEXT:    addl $64, %eax
-; AVX512-NEXT:    testq %rsi, %rsi
-; AVX512-NEXT:    cmovnel %ecx, %eax
+; AVX512-NEXT:    lzcntq %rdi, %rcx
+; AVX512-NEXT:    addl $64, %ecx
+; AVX512-NEXT:    lzcntq %rsi, %rax
+; AVX512-NEXT:    cmovbl %ecx, %eax
 ; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX512-NEXT:    retq
   %cnt = call i128 @llvm.ctlz.i128(i128 %a0, i1 -1)
@@ -2909,23 +2805,19 @@ define i32 @load_ctlz_undef_i128(ptr %p0) nounwind {
 ;
 ; AVX2-LABEL: load_ctlz_undef_i128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movq 8(%rdi), %rcx
-; AVX2-NEXT:    lzcntq %rcx, %rdx
-; AVX2-NEXT:    lzcntq (%rdi), %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %edx, %eax
+; AVX2-NEXT:    lzcntq (%rdi), %rcx
+; AVX2-NEXT:    addl $64, %ecx
+; AVX2-NEXT:    lzcntq 8(%rdi), %rax
+; AVX2-NEXT:    cmovbl %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_ctlz_undef_i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movq 8(%rdi), %rcx
-; AVX512-NEXT:    lzcntq %rcx, %rdx
-; AVX512-NEXT:    lzcntq (%rdi), %rax
-; AVX512-NEXT:    addl $64, %eax
-; AVX512-NEXT:    testq %rcx, %rcx
-; AVX512-NEXT:    cmovnel %edx, %eax
+; AVX512-NEXT:    lzcntq (%rdi), %rcx
+; AVX512-NEXT:    addl $64, %ecx
+; AVX512-NEXT:    lzcntq 8(%rdi), %rax
+; AVX512-NEXT:    cmovbl %ecx, %eax
 ; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX512-NEXT:    retq
   %a0 = load i128, ptr %p0
@@ -2951,63 +2843,25 @@ define i32 @vector_ctlz_undef_i128(<4 x i32> %v0) nounwind {
 ;
 ; AVX2-LABEL: vector_ctlz_undef_i128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX2-NEXT:    lzcntq %rcx, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-NEXT:    vmovq %xmm0, %rcx
+; AVX2-NEXT:    lzcntq %rcx, %rcx
+; AVX2-NEXT:    addl $64, %ecx
 ; AVX2-NEXT:    lzcntq %rax, %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %edx, %eax
+; AVX2-NEXT:    cmovbl %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: vector_ctlz_undef_i128:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512F-NEXT:    lzcntq %rcx, %rdx
-; AVX512F-NEXT:    lzcntq %rax, %rax
-; AVX512F-NEXT:    addl $64, %eax
-; AVX512F-NEXT:    testq %rcx, %rcx
-; AVX512F-NEXT:    cmovnel %edx, %eax
-; AVX512F-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512F-NEXT:    retq
-;
-; AVX512POPCNT-LABEL: vector_ctlz_undef_i128:
-; AVX512POPCNT:       # %bb.0:
-; AVX512POPCNT-NEXT:    vmovq %xmm0, %rax
-; AVX512POPCNT-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512POPCNT-NEXT:    lzcntq %rcx, %rdx
-; AVX512POPCNT-NEXT:    lzcntq %rax, %rax
-; AVX512POPCNT-NEXT:    addl $64, %eax
-; AVX512POPCNT-NEXT:    testq %rcx, %rcx
-; AVX512POPCNT-NEXT:    cmovnel %edx, %eax
-; AVX512POPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512POPCNT-NEXT:    retq
-;
-; AVX512VL-LABEL: vector_ctlz_undef_i128:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512VL-NEXT:    vmovq %xmm0, %rax
-; AVX512VL-NEXT:    lzcntq %rcx, %rdx
-; AVX512VL-NEXT:    lzcntq %rax, %rax
-; AVX512VL-NEXT:    addl $64, %eax
-; AVX512VL-NEXT:    testq %rcx, %rcx
-; AVX512VL-NEXT:    cmovnel %edx, %eax
-; AVX512VL-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VL-NEXT:    retq
-;
-; AVX512VLPOPCNT-LABEL: vector_ctlz_undef_i128:
-; AVX512VLPOPCNT:       # %bb.0:
-; AVX512VLPOPCNT-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX512VLPOPCNT-NEXT:    vmovq %xmm0, %rax
-; AVX512VLPOPCNT-NEXT:    lzcntq %rcx, %rdx
-; AVX512VLPOPCNT-NEXT:    lzcntq %rax, %rax
-; AVX512VLPOPCNT-NEXT:    addl $64, %eax
-; AVX512VLPOPCNT-NEXT:    testq %rcx, %rcx
-; AVX512VLPOPCNT-NEXT:    cmovnel %edx, %eax
-; AVX512VLPOPCNT-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512VLPOPCNT-NEXT:    retq
+; AVX512-LABEL: vector_ctlz_undef_i128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    vmovq %xmm0, %rcx
+; AVX512-NEXT:    lzcntq %rcx, %rcx
+; AVX512-NEXT:    addl $64, %ecx
+; AVX512-NEXT:    lzcntq %rax, %rax
+; AVX512-NEXT:    cmovbl %ecx, %eax
+; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX512-NEXT:    retq
   %a0 = bitcast <4 x i32> %v0 to i128
   %cnt = call i128 @llvm.ctlz.i128(i128 %a0, i1 -1)
   %res = trunc i128 %cnt to i32
@@ -3039,17 +2893,15 @@ define i32 @test_ctlz_undef_i256(i256 %a0) nounwind {
 ;
 ; AVX2-LABEL: test_ctlz_undef_i256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    lzcntq %rcx, %rax
-; AVX2-NEXT:    lzcntq %rdx, %r8
-; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %eax, %r8d
-; AVX2-NEXT:    lzcntq %rsi, %r9
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rdi, %rax
+; AVX2-NEXT:    lzcntq %rdx, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %r9d, %eax
+; AVX2-NEXT:    lzcntq %rcx, %r8
+; AVX2-NEXT:    cmovbl %eax, %r8d
+; AVX2-NEXT:    lzcntq %rdi, %rdi
+; AVX2-NEXT:    addl $64, %edi
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq %rsi, %rax
+; AVX2-NEXT:    cmovbl %edi, %eax
 ; AVX2-NEXT:    subl $-128, %eax
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    cmovnel %r8d, %eax
@@ -3058,16 +2910,14 @@ define i32 @test_ctlz_undef_i256(i256 %a0) nounwind {
 ;
 ; AVX512-LABEL: test_ctlz_undef_i256:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    lzcntq %rcx, %rax
-; AVX512-NEXT:    lzcntq %rdx, %r8
-; AVX512-NEXT:    addl $64, %r8d
-; AVX512-NEXT:    testq %rcx, %rcx
-; AVX512-NEXT:    cmovnel %eax, %r8d
-; AVX512-NEXT:    lzcntq %rsi, %r9
-; AVX512-NEXT:    lzcntq %rdi, %rax
+; AVX512-NEXT:    lzcntq %rdx, %rax
 ; AVX512-NEXT:    addl $64, %eax
-; AVX512-NEXT:    testq %rsi, %rsi
-; AVX512-NEXT:    cmovnel %r9d, %eax
+; AVX512-NEXT:    lzcntq %rcx, %r8
+; AVX512-NEXT:    cmovbl %eax, %r8d
+; AVX512-NEXT:    lzcntq %rdi, %rdi
+; AVX512-NEXT:    addl $64, %edi
+; AVX512-NEXT:    lzcntq %rsi, %rax
+; AVX512-NEXT:    cmovbl %edi, %eax
 ; AVX512-NEXT:    subl $-128, %eax
 ; AVX512-NEXT:    orq %rcx, %rdx
 ; AVX512-NEXT:    cmovnel %r8d, %eax
@@ -3108,18 +2958,15 @@ define i32 @load_ctlz_undef_i256(ptr %p0) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq 16(%rdi), %rcx
 ; AVX2-NEXT:    movq 24(%rdi), %rdx
-; AVX2-NEXT:    lzcntq %rdx, %rax
-; AVX2-NEXT:    lzcntq %rcx, %rsi
-; AVX2-NEXT:    addl $64, %esi
-; AVX2-NEXT:    testq %rdx, %rdx
-; AVX2-NEXT:    cmovnel %eax, %esi
-; AVX2-NEXT:    movq 8(%rdi), %r8
-; AVX2-NEXT:    lzcntq %r8, %r9
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq (%rdi), %rax
+; AVX2-NEXT:    lzcntq %rcx, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %r8, %r8
-; AVX2-NEXT:    cmovnel %r9d, %eax
+; AVX2-NEXT:    lzcntq %rdx, %rsi
+; AVX2-NEXT:    cmovbl %eax, %esi
+; AVX2-NEXT:    lzcntq (%rdi), %r8
+; AVX2-NEXT:    addl $64, %r8d
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq 8(%rdi), %rax
+; AVX2-NEXT:    cmovbl %r8d, %eax
 ; AVX2-NEXT:    subl $-128, %eax
 ; AVX2-NEXT:    orq %rdx, %rcx
 ; AVX2-NEXT:    cmovnel %esi, %eax
@@ -3206,24 +3053,21 @@ define i32 @vector_ctlz_undef_i256(<8 x i32> %v0) nounwind {
 ;
 ; AVX2-LABEL: vector_ctlz_undef_i256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
 ; AVX2-NEXT:    vmovq %xmm0, %rdx
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX2-NEXT:    vmovq %xmm1, %rsi
 ; AVX2-NEXT:    lzcntq %rsi, %rdi
-; AVX2-NEXT:    lzcntq %rdx, %r8
-; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %edi, %r8d
-; AVX2-NEXT:    xorl %edi, %edi
-; AVX2-NEXT:    lzcntq %rcx, %rdi
+; AVX2-NEXT:    addl $64, %edi
+; AVX2-NEXT:    lzcntq %rcx, %r8
+; AVX2-NEXT:    cmovbl %edi, %r8d
+; AVX2-NEXT:    lzcntq %rdx, %rdx
+; AVX2-NEXT:    addl $64, %edx
 ; AVX2-NEXT:    lzcntq %rax, %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %edi, %eax
+; AVX2-NEXT:    cmovbl %edx, %eax
 ; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %rsi, %rdx
+; AVX2-NEXT:    orq %rcx, %rsi
 ; AVX2-NEXT:    cmovnel %r8d, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    vzeroupper
@@ -3336,42 +3180,36 @@ define i32 @test_ctlz_undef_i512(i512 %a0) nounwind {
 ;
 ; AVX2-LABEL: test_ctlz_undef_i512:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    pushq %r15
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; AVX2-NEXT:    lzcntq %r11, %rax
+; AVX2-NEXT:    lzcntq %r10, %rax
+; AVX2-NEXT:    addl $64, %eax
 ; AVX2-NEXT:    xorl %r14d, %r14d
-; AVX2-NEXT:    lzcntq %r10, %r14
-; AVX2-NEXT:    addl $64, %r14d
-; AVX2-NEXT:    testq %r11, %r11
-; AVX2-NEXT:    cmovnel %eax, %r14d
+; AVX2-NEXT:    lzcntq %r11, %r14
+; AVX2-NEXT:    cmovbl %eax, %r14d
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r9, %rax
+; AVX2-NEXT:    lzcntq %r8, %rax
+; AVX2-NEXT:    addl $64, %eax
 ; AVX2-NEXT:    xorl %ebx, %ebx
-; AVX2-NEXT:    lzcntq %r8, %rbx
-; AVX2-NEXT:    addl $64, %ebx
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %eax, %ebx
+; AVX2-NEXT:    lzcntq %r9, %rbx
+; AVX2-NEXT:    cmovbl %eax, %ebx
 ; AVX2-NEXT:    subl $-128, %ebx
 ; AVX2-NEXT:    movq %r10, %rax
 ; AVX2-NEXT:    orq %r11, %rax
 ; AVX2-NEXT:    cmovnel %r14d, %ebx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rcx, %rax
-; AVX2-NEXT:    xorl %r14d, %r14d
-; AVX2-NEXT:    lzcntq %rdx, %r14
-; AVX2-NEXT:    addl $64, %r14d
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %eax, %r14d
-; AVX2-NEXT:    xorl %r15d, %r15d
-; AVX2-NEXT:    lzcntq %rsi, %r15
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rdi, %rax
+; AVX2-NEXT:    lzcntq %rdx, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %r15d, %eax
+; AVX2-NEXT:    xorl %r14d, %r14d
+; AVX2-NEXT:    lzcntq %rcx, %r14
+; AVX2-NEXT:    cmovbl %eax, %r14d
+; AVX2-NEXT:    lzcntq %rdi, %rdi
+; AVX2-NEXT:    addl $64, %edi
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq %rsi, %rax
+; AVX2-NEXT:    cmovbl %edi, %eax
 ; AVX2-NEXT:    subl $-128, %eax
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    cmovnel %r14d, %eax
@@ -3383,7 +3221,6 @@ define i32 @test_ctlz_undef_i512(i512 %a0) nounwind {
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %r14
-; AVX2-NEXT:    popq %r15
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_ctlz_undef_i512:
@@ -3535,48 +3372,42 @@ define i32 @load_ctlz_undef_i512(ptr %p0) nounwind {
 ;
 ; AVX2-LABEL: load_ctlz_undef_i512:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movq 16(%rdi), %rcx
-; AVX2-NEXT:    movq 24(%rdi), %rdx
-; AVX2-NEXT:    movq 40(%rdi), %rax
-; AVX2-NEXT:    movq 48(%rdi), %r8
-; AVX2-NEXT:    movq 56(%rdi), %r9
-; AVX2-NEXT:    lzcntq %r9, %rsi
-; AVX2-NEXT:    lzcntq %r8, %r10
-; AVX2-NEXT:    addl $64, %r10d
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %esi, %r10d
-; AVX2-NEXT:    lzcntq %rax, %r11
-; AVX2-NEXT:    xorl %esi, %esi
-; AVX2-NEXT:    lzcntq 32(%rdi), %rsi
-; AVX2-NEXT:    addl $64, %esi
-; AVX2-NEXT:    testq %rax, %rax
-; AVX2-NEXT:    cmovnel %r11d, %esi
-; AVX2-NEXT:    subl $-128, %esi
-; AVX2-NEXT:    orq %r9, %r8
-; AVX2-NEXT:    cmovnel %r10d, %esi
+; AVX2-NEXT:    movq 56(%rdi), %rax
+; AVX2-NEXT:    movq 48(%rdi), %rsi
+; AVX2-NEXT:    lzcntq %rsi, %rcx
+; AVX2-NEXT:    addl $64, %ecx
+; AVX2-NEXT:    lzcntq %rax, %r8
+; AVX2-NEXT:    cmovbl %ecx, %r8d
+; AVX2-NEXT:    lzcntq 32(%rdi), %r9
+; AVX2-NEXT:    movq 16(%rdi), %rdx
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    lzcntq 40(%rdi), %rcx
+; AVX2-NEXT:    movq 24(%rdi), %r10
+; AVX2-NEXT:    cmovbl %r9d, %ecx
+; AVX2-NEXT:    subl $-128, %ecx
+; AVX2-NEXT:    orq %rax, %rsi
+; AVX2-NEXT:    cmovnel %r8d, %ecx
 ; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    lzcntq %rdx, %rax
-; AVX2-NEXT:    xorl %r8d, %r8d
-; AVX2-NEXT:    lzcntq %rcx, %r8
-; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %rdx, %rdx
-; AVX2-NEXT:    cmovnel %eax, %r8d
-; AVX2-NEXT:    movq 8(%rdi), %r9
-; AVX2-NEXT:    xorl %r10d, %r10d
-; AVX2-NEXT:    lzcntq %r9, %r10
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq (%rdi), %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %r10d, %eax
+; AVX2-NEXT:    xorl %esi, %esi
+; AVX2-NEXT:    lzcntq %r10, %rsi
+; AVX2-NEXT:    cmovbl %eax, %esi
+; AVX2-NEXT:    xorl %r8d, %r8d
+; AVX2-NEXT:    lzcntq (%rdi), %r8
+; AVX2-NEXT:    addl $64, %r8d
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq 8(%rdi), %rax
+; AVX2-NEXT:    cmovbl %r8d, %eax
 ; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %rdx, %rcx
-; AVX2-NEXT:    cmovnel %r8d, %eax
+; AVX2-NEXT:    orq %r10, %rdx
+; AVX2-NEXT:    cmovnel %esi, %eax
 ; AVX2-NEXT:    vmovdqa 32(%rdi), %xmm0
 ; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    vpor 48(%rdi), %xmm0, %xmm0
 ; AVX2-NEXT:    vptest %xmm0, %xmm0
-; AVX2-NEXT:    cmovnel %esi, %eax
+; AVX2-NEXT:    cmovnel %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    retq
 ;
@@ -3685,49 +3516,43 @@ define i32 @vector_ctlz_undef_i512(<16 x i32> %v0) nounwind {
 ;
 ; AVX2-LABEL: vector_ctlz_undef_i512:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX2-NEXT:    vmovq %xmm2, %rdx
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX2-NEXT:    vmovq %xmm2, %r8
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX2-NEXT:    vmovq %xmm1, %rdi
-; AVX2-NEXT:    vpextrq $1, %xmm1, %r9
-; AVX2-NEXT:    lzcntq %rax, %r10
-; AVX2-NEXT:    lzcntq %r8, %r11
-; AVX2-NEXT:    addl $64, %r11d
-; AVX2-NEXT:    testq %rax, %rax
-; AVX2-NEXT:    cmovnel %r10d, %r11d
-; AVX2-NEXT:    xorl %r10d, %r10d
-; AVX2-NEXT:    lzcntq %r9, %r10
-; AVX2-NEXT:    lzcntq %rdi, %rdi
-; AVX2-NEXT:    addl $64, %edi
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %r10d, %edi
-; AVX2-NEXT:    subl $-128, %edi
-; AVX2-NEXT:    orq %rax, %r8
-; AVX2-NEXT:    cmovnel %r11d, %edi
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rcx, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rsi
+; AVX2-NEXT:    vmovq %xmm0, %rdx
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rdi
+; AVX2-NEXT:    vmovq %xmm0, %r8
+; AVX2-NEXT:    vmovq %xmm1, %r9
+; AVX2-NEXT:    lzcntq %r8, %r10
+; AVX2-NEXT:    addl $64, %r10d
+; AVX2-NEXT:    lzcntq %rdi, %r11
+; AVX2-NEXT:    cmovbl %r10d, %r11d
+; AVX2-NEXT:    lzcntq %r9, %r9
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    lzcntq %rsi, %rsi
+; AVX2-NEXT:    cmovbl %r9d, %esi
+; AVX2-NEXT:    subl $-128, %esi
+; AVX2-NEXT:    orq %rdi, %r8
+; AVX2-NEXT:    cmovnel %r11d, %esi
+; AVX2-NEXT:    vmovq %xmm2, %rdi
 ; AVX2-NEXT:    xorl %r8d, %r8d
-; AVX2-NEXT:    lzcntq %rdx, %r8
+; AVX2-NEXT:    lzcntq %rdi, %r8
 ; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %eax, %r8d
-; AVX2-NEXT:    vmovq %xmm0, %rax
 ; AVX2-NEXT:    xorl %r9d, %r9d
-; AVX2-NEXT:    lzcntq %rsi, %r9
+; AVX2-NEXT:    lzcntq %rcx, %r9
+; AVX2-NEXT:    cmovbl %r8d, %r9d
+; AVX2-NEXT:    lzcntq %rdx, %rdx
+; AVX2-NEXT:    addl $64, %edx
 ; AVX2-NEXT:    lzcntq %rax, %rax
-; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %r9d, %eax
+; AVX2-NEXT:    cmovbl %edx, %eax
 ; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %rcx, %rdx
-; AVX2-NEXT:    cmovnel %r8d, %eax
+; AVX2-NEXT:    orq %rcx, %rdi
+; AVX2-NEXT:    cmovnel %r9d, %eax
 ; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    vptest %ymm1, %ymm1
-; AVX2-NEXT:    cmovnel %edi, %eax
+; AVX2-NEXT:    cmovnel %esi, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -3892,94 +3717,81 @@ define i32 @test_ctlz_undef_i1024(i1024 %a0) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %r15
 ; AVX2-NEXT:    pushq %r14
-; AVX2-NEXT:    pushq %r13
 ; AVX2-NEXT:    pushq %r12
 ; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
+; AVX2-NEXT:    lzcntq %rbx, %rax
+; AVX2-NEXT:    addl $64, %eax
+; AVX2-NEXT:    xorl %r14d, %r14d
+; AVX2-NEXT:    lzcntq %r10, %r14
+; AVX2-NEXT:    cmovbl %eax, %r14d
+; AVX2-NEXT:    xorl %r15d, %r15d
+; AVX2-NEXT:    lzcntq {{[0-9]+}}(%rsp), %r15
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r15
+; AVX2-NEXT:    addl $64, %r15d
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq {{[0-9]+}}(%rsp), %rax
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; AVX2-NEXT:    cmovbl %r15d, %eax
+; AVX2-NEXT:    subl $-128, %eax
+; AVX2-NEXT:    orq %r10, %rbx
+; AVX2-NEXT:    cmovnel %r14d, %eax
+; AVX2-NEXT:    xorl %r10d, %r10d
+; AVX2-NEXT:    lzcntq %r11, %r10
+; AVX2-NEXT:    addl $64, %r10d
 ; AVX2-NEXT:    xorl %ebx, %ebx
-; AVX2-NEXT:    lzcntq %r15, %rbx
-; AVX2-NEXT:    xorl %r12d, %r12d
-; AVX2-NEXT:    lzcntq %r11, %r12
-; AVX2-NEXT:    addl $64, %r12d
-; AVX2-NEXT:    testq %r15, %r15
-; AVX2-NEXT:    cmovnel %ebx, %r12d
+; AVX2-NEXT:    lzcntq %r12, %rbx
+; AVX2-NEXT:    cmovbl %r10d, %ebx
+; AVX2-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %ymm0
 ; AVX2-NEXT:    xorl %r14d, %r14d
 ; AVX2-NEXT:    lzcntq {{[0-9]+}}(%rsp), %r14
-; AVX2-NEXT:    xorl %r13d, %r13d
-; AVX2-NEXT:    lzcntq %r10, %r13
 ; AVX2-NEXT:    addl $64, %r14d
-; AVX2-NEXT:    testq %r10, %r10
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; AVX2-NEXT:    cmovnel %r13d, %r14d
-; AVX2-NEXT:    subl $-128, %r14d
-; AVX2-NEXT:    orq %r15, %r11
-; AVX2-NEXT:    cmovnel %r12d, %r14d
-; AVX2-NEXT:    xorl %r10d, %r10d
-; AVX2-NEXT:    lzcntq %rbx, %r10
-; AVX2-NEXT:    xorl %r15d, %r15d
-; AVX2-NEXT:    lzcntq %rax, %r15
-; AVX2-NEXT:    addl $64, %r15d
-; AVX2-NEXT:    testq %rbx, %rbx
-; AVX2-NEXT:    cmovnel %r10d, %r15d
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; AVX2-NEXT:    xorl %r12d, %r12d
-; AVX2-NEXT:    lzcntq %r11, %r12
 ; AVX2-NEXT:    xorl %r10d, %r10d
 ; AVX2-NEXT:    lzcntq {{[0-9]+}}(%rsp), %r10
-; AVX2-NEXT:    addl $64, %r10d
-; AVX2-NEXT:    testq %r11, %r11
-; AVX2-NEXT:    cmovnel %r12d, %r10d
-; AVX2-NEXT:    vmovdqu {{[0-9]+}}(%rsp), %ymm0
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; AVX2-NEXT:    cmovbl %r14d, %r10d
 ; AVX2-NEXT:    subl $-128, %r10d
-; AVX2-NEXT:    orq %rbx, %rax
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; AVX2-NEXT:    cmovnel %r15d, %r10d
+; AVX2-NEXT:    orq %r12, %r11
+; AVX2-NEXT:    cmovnel %ebx, %r10d
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX2-NEXT:    addl $256, %r10d # imm = 0x100
 ; AVX2-NEXT:    vpor {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX2-NEXT:    vptest %xmm1, %xmm1
-; AVX2-NEXT:    cmovnel %r14d, %r10d
+; AVX2-NEXT:    cmovnel %eax, %r10d
+; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rbx, %rax
+; AVX2-NEXT:    lzcntq %r11, %rax
+; AVX2-NEXT:    addl $64, %eax
 ; AVX2-NEXT:    xorl %r15d, %r15d
-; AVX2-NEXT:    lzcntq %r11, %r15
-; AVX2-NEXT:    addl $64, %r15d
-; AVX2-NEXT:    testq %rbx, %rbx
-; AVX2-NEXT:    cmovnel %eax, %r15d
+; AVX2-NEXT:    lzcntq %rbx, %r15
+; AVX2-NEXT:    cmovbl %eax, %r15d
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r9, %rax
+; AVX2-NEXT:    lzcntq %r8, %rax
+; AVX2-NEXT:    addl $64, %eax
 ; AVX2-NEXT:    xorl %r14d, %r14d
-; AVX2-NEXT:    lzcntq %r8, %r14
-; AVX2-NEXT:    addl $64, %r14d
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %eax, %r14d
+; AVX2-NEXT:    lzcntq %r9, %r14
+; AVX2-NEXT:    cmovbl %eax, %r14d
 ; AVX2-NEXT:    subl $-128, %r14d
 ; AVX2-NEXT:    movq %r11, %rax
 ; AVX2-NEXT:    orq %rbx, %rax
 ; AVX2-NEXT:    cmovnel %r15d, %r14d
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rcx, %rax
-; AVX2-NEXT:    xorl %r15d, %r15d
-; AVX2-NEXT:    lzcntq %rdx, %r15
-; AVX2-NEXT:    addl $64, %r15d
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    cmovnel %eax, %r15d
-; AVX2-NEXT:    xorl %r12d, %r12d
-; AVX2-NEXT:    lzcntq %rsi, %r12
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %rdi, %rax
+; AVX2-NEXT:    lzcntq %rdx, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    cmovnel %r12d, %eax
+; AVX2-NEXT:    xorl %r15d, %r15d
+; AVX2-NEXT:    lzcntq %rcx, %r15
+; AVX2-NEXT:    cmovbl %eax, %r15d
+; AVX2-NEXT:    lzcntq %rdi, %rdi
+; AVX2-NEXT:    addl $64, %edi
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq %rsi, %rax
+; AVX2-NEXT:    cmovbl %edi, %eax
 ; AVX2-NEXT:    subl $-128, %eax
 ; AVX2-NEXT:    orq %rcx, %rdx
 ; AVX2-NEXT:    cmovnel %r15d, %eax
+; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    orq %rbx, %r9
 ; AVX2-NEXT:    orq %r11, %r8
-; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    orq %r9, %r8
 ; AVX2-NEXT:    cmovnel %r14d, %eax
 ; AVX2-NEXT:    addl $512, %eax # imm = 0x200
@@ -3989,7 +3801,6 @@ define i32 @test_ctlz_undef_i1024(i1024 %a0) nounwind {
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %r12
-; AVX2-NEXT:    popq %r13
 ; AVX2-NEXT:    popq %r14
 ; AVX2-NEXT:    popq %r15
 ; AVX2-NEXT:    vzeroupper
@@ -4247,101 +4058,86 @@ define i32 @load_ctlz_undef_i1024(ptr %p0) nounwind {
 ;
 ; AVX2-LABEL: load_ctlz_undef_i1024:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    movq 16(%rdi), %rcx
-; AVX2-NEXT:    movq 72(%rdi), %rsi
-; AVX2-NEXT:    movq 104(%rdi), %rdx
-; AVX2-NEXT:    movq 112(%rdi), %r8
-; AVX2-NEXT:    movq 120(%rdi), %r10
-; AVX2-NEXT:    lzcntq %r10, %rax
-; AVX2-NEXT:    xorl %ebx, %ebx
-; AVX2-NEXT:    lzcntq %r8, %rbx
-; AVX2-NEXT:    addl $64, %ebx
-; AVX2-NEXT:    testq %r10, %r10
-; AVX2-NEXT:    cmovnel %eax, %ebx
-; AVX2-NEXT:    lzcntq %rdx, %r11
+; AVX2-NEXT:    movq 120(%rdi), %rax
+; AVX2-NEXT:    movq 112(%rdi), %rcx
+; AVX2-NEXT:    lzcntq %rcx, %rdx
+; AVX2-NEXT:    addl $64, %edx
+; AVX2-NEXT:    lzcntq %rax, %r8
+; AVX2-NEXT:    cmovbl %edx, %r8d
+; AVX2-NEXT:    lzcntq 96(%rdi), %r9
+; AVX2-NEXT:    movq 88(%rdi), %rsi
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    lzcntq 104(%rdi), %rdx
+; AVX2-NEXT:    movq 80(%rdi), %r10
+; AVX2-NEXT:    cmovbl %r9d, %edx
+; AVX2-NEXT:    subl $-128, %edx
+; AVX2-NEXT:    orq %rax, %rcx
+; AVX2-NEXT:    cmovnel %r8d, %edx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq 96(%rdi), %rax
+; AVX2-NEXT:    lzcntq %r10, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %rdx, %rdx
-; AVX2-NEXT:    movq 80(%rdi), %r9
-; AVX2-NEXT:    cmovnel %r11d, %eax
-; AVX2-NEXT:    movq 88(%rdi), %r11
-; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %r10, %r8
-; AVX2-NEXT:    cmovnel %ebx, %eax
-; AVX2-NEXT:    xorl %edx, %edx
-; AVX2-NEXT:    lzcntq %r11, %rdx
-; AVX2-NEXT:    xorl %ebx, %ebx
-; AVX2-NEXT:    lzcntq %r9, %rbx
-; AVX2-NEXT:    addl $64, %ebx
-; AVX2-NEXT:    testq %r11, %r11
-; AVX2-NEXT:    cmovnel %edx, %ebx
-; AVX2-NEXT:    xorl %edx, %edx
-; AVX2-NEXT:    lzcntq 64(%rdi), %rdx
 ; AVX2-NEXT:    xorl %r8d, %r8d
 ; AVX2-NEXT:    lzcntq %rsi, %r8
-; AVX2-NEXT:    addl $64, %edx
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    movq 40(%rdi), %r10
-; AVX2-NEXT:    cmovnel %r8d, %edx
-; AVX2-NEXT:    movq 48(%rdi), %r8
-; AVX2-NEXT:    subl $-128, %edx
-; AVX2-NEXT:    orq %r11, %r9
-; AVX2-NEXT:    movq 56(%rdi), %r9
-; AVX2-NEXT:    cmovnel %ebx, %edx
+; AVX2-NEXT:    cmovbl %eax, %r8d
+; AVX2-NEXT:    movq 56(%rdi), %rax
+; AVX2-NEXT:    xorl %r9d, %r9d
+; AVX2-NEXT:    lzcntq 64(%rdi), %r9
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    lzcntq 72(%rdi), %rcx
+; AVX2-NEXT:    cmovbl %r9d, %ecx
+; AVX2-NEXT:    subl $-128, %ecx
+; AVX2-NEXT:    orq %rsi, %r10
+; AVX2-NEXT:    cmovnel %r8d, %ecx
 ; AVX2-NEXT:    vmovdqu 96(%rdi), %ymm0
-; AVX2-NEXT:    addl $256, %edx # imm = 0x100
+; AVX2-NEXT:    addl $256, %ecx # imm = 0x100
 ; AVX2-NEXT:    vpor 112(%rdi), %xmm0, %xmm1
 ; AVX2-NEXT:    vptest %xmm1, %xmm1
-; AVX2-NEXT:    cmovnel %eax, %edx
+; AVX2-NEXT:    cmovnel %edx, %ecx
+; AVX2-NEXT:    movq 48(%rdi), %r8
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    lzcntq %r8, %rdx
+; AVX2-NEXT:    addl $64, %edx
+; AVX2-NEXT:    xorl %r9d, %r9d
+; AVX2-NEXT:    lzcntq %rax, %r9
+; AVX2-NEXT:    cmovbl %edx, %r9d
+; AVX2-NEXT:    xorl %r10d, %r10d
+; AVX2-NEXT:    lzcntq 32(%rdi), %r10
+; AVX2-NEXT:    movq 16(%rdi), %rsi
+; AVX2-NEXT:    addl $64, %r10d
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    lzcntq 40(%rdi), %rdx
+; AVX2-NEXT:    movq 24(%rdi), %r11
+; AVX2-NEXT:    cmovbl %r10d, %edx
+; AVX2-NEXT:    subl $-128, %edx
+; AVX2-NEXT:    orq %rax, %r8
+; AVX2-NEXT:    cmovnel %r9d, %edx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r9, %rax
-; AVX2-NEXT:    xorl %r11d, %r11d
-; AVX2-NEXT:    lzcntq %r8, %r11
-; AVX2-NEXT:    addl $64, %r11d
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %eax, %r11d
-; AVX2-NEXT:    xorl %esi, %esi
-; AVX2-NEXT:    lzcntq 32(%rdi), %rsi
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r10, %rax
-; AVX2-NEXT:    addl $64, %esi
-; AVX2-NEXT:    testq %r10, %r10
-; AVX2-NEXT:    movq 24(%rdi), %r10
-; AVX2-NEXT:    cmovnel %eax, %esi
-; AVX2-NEXT:    subl $-128, %esi
-; AVX2-NEXT:    orq %r9, %r8
-; AVX2-NEXT:    cmovnel %r11d, %esi
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq %r10, %rax
-; AVX2-NEXT:    xorl %r8d, %r8d
-; AVX2-NEXT:    lzcntq %rcx, %r8
-; AVX2-NEXT:    addl $64, %r8d
-; AVX2-NEXT:    testq %r10, %r10
-; AVX2-NEXT:    cmovnel %eax, %r8d
-; AVX2-NEXT:    movq 8(%rdi), %r9
-; AVX2-NEXT:    xorl %r11d, %r11d
-; AVX2-NEXT:    lzcntq %r9, %r11
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    lzcntq (%rdi), %rax
+; AVX2-NEXT:    lzcntq %rsi, %rax
 ; AVX2-NEXT:    addl $64, %eax
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    cmovnel %r11d, %eax
+; AVX2-NEXT:    xorl %r8d, %r8d
+; AVX2-NEXT:    lzcntq %r11, %r8
+; AVX2-NEXT:    cmovbl %eax, %r8d
+; AVX2-NEXT:    xorl %r9d, %r9d
+; AVX2-NEXT:    lzcntq (%rdi), %r9
+; AVX2-NEXT:    addl $64, %r9d
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    lzcntq 8(%rdi), %rax
+; AVX2-NEXT:    cmovbl %r9d, %eax
 ; AVX2-NEXT:    subl $-128, %eax
-; AVX2-NEXT:    orq %r10, %rcx
+; AVX2-NEXT:    orq %r11, %rsi
 ; AVX2-NEXT:    cmovnel %r8d, %eax
 ; AVX2-NEXT:    vmovdqa 32(%rdi), %xmm1
 ; AVX2-NEXT:    addl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    vpor 48(%rdi), %xmm1, %xmm1
 ; AVX2-NEXT:    vptest %xmm1, %xmm1
-; AVX2-NEXT:    cmovnel %esi, %eax
-; AVX2-NEXT:    vpor 64(%rdi), %ymm0, %ymm0
-; AVX2-NEXT:    addl $512, %eax # imm = 0x200
-; AVX2-NEXT:    vptest %ymm0, %ymm0
 ; AVX2-NEXT:    cmovnel %edx, %eax
+; AVX2-NEXT:    addl $512, %eax # imm = 0x200
+; AVX2-NEXT:    vpor 64(%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vptest %ymm0, %ymm0
+; AVX2-NEXT:    cmovnel %ecx, %eax
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
