@@ -9,7 +9,8 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc <16 x i64> [[TMP7]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <16 x i1> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = freeze <16 x i1> [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <16 x i1> [[TMP10]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = zext <16 x i1> [[TMP10]] to <16 x i16>
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <16 x i16> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    ret void
 ;
   %xor108.i.i.i = xor i64 0, 1
