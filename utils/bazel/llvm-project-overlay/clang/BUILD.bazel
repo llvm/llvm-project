@@ -1615,6 +1615,8 @@ cc_library(
         ":lex",
         ":options",
         ":parse",
+        ":scalable_static_analysis_core",
+        ":scalable_static_analysis_frontend",
         ":serialization",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
@@ -2604,6 +2606,21 @@ cc_library(
         ":ast",
         ":support",
         ":unified_symbol_resolution",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "scalable_static_analysis_analyses",
+    srcs = glob([
+        "lib/ScalableStaticAnalysisFramework/Analyses/**/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Analyses/**/*.h"]),
+    deps = [
+        ":analysis",
+        ":ast",
+        ":basic",
+        ":scalable_static_analysis_core",
         "//llvm:Support",
     ],
 )

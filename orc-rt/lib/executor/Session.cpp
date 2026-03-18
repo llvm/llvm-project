@@ -16,14 +16,11 @@ namespace orc_rt {
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
-Session::Session(std::unique_ptr<TaskDispatcher> Dispatcher,
+Session::Session(ExecutorProcessInfo EPI,
+                 std::unique_ptr<TaskDispatcher> Dispatcher,
                  ErrorReporterFn ReportError)
-    : Dispatcher(std::move(Dispatcher)), ReportError(std::move(ReportError)) {
-  std::pair<const char *, void *> InitialSymbols[] = {
-      {"orc_rt_SessionInstance", static_cast<void *>(this)}};
-
-  cantFail(CI.addSymbolsUnique(InitialSymbols));
-}
+    : EPI(std::move(EPI)), Dispatcher(std::move(Dispatcher)),
+      ReportError(std::move(ReportError)) {}
 
 Session::~Session() { waitForShutdown(); }
 
@@ -31,7 +28,7 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
   assert(OnShutdownComplete && "OnShutdownComplete must be set");
 
   // Safe to call concurrently / redundantly.
-  detachFromController();
+  detach();
 
   {
     std::scoped_lock<std::mutex> Lock(M);
@@ -72,7 +69,7 @@ void Session::waitForShutdown() {
   F.get();
 }
 
-void Session::setController(std::shared_ptr<ControllerAccess> CA) {
+void Session::attach(std::shared_ptr<ControllerAccess> CA) {
   assert(CA && "Cannot attach null controller");
   std::scoped_lock<std::mutex> Lock(M);
   assert(!this->CA && "Cannot re-attach controller");
@@ -80,7 +77,7 @@ void Session::setController(std::shared_ptr<ControllerAccess> CA) {
   this->CA = std::move(CA);
 }
 
-void Session::detachFromController() {
+void Session::detach() {
   if (auto TmpCA = CA) {
     TmpCA->doDisconnect();
     CA = nullptr;

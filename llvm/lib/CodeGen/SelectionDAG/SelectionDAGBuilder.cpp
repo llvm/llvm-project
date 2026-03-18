@@ -5251,6 +5251,12 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   case AtomicRMWInst::FMinimum:
     NT = ISD::ATOMIC_LOAD_FMINIMUM;
     break;
+  case AtomicRMWInst::FMaximumNum:
+    NT = ISD::ATOMIC_LOAD_FMAXIMUMNUM;
+    break;
+  case AtomicRMWInst::FMinimumNum:
+    NT = ISD::ATOMIC_LOAD_FMINIMUMNUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     NT = ISD::ATOMIC_LOAD_UINC_WRAP;
     break;
