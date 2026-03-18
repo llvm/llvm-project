@@ -9441,7 +9441,7 @@ std::optional<APFloat> getCompareAPFloat(const APFloat &C,
                               : false);
 }
 
-// If LHS Pred RHS is alwasy true, return true.
+// If LHS Pred RHS is always true, return true.
 // This function = FCmpInst::compare + DenormalMode
 bool compareFloat(const FCmpInst::Predicate Pred, const APFloat &LHS,
                   const APFloat &RHS, const Function *CxtF) {
@@ -9840,8 +9840,14 @@ bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
   if (CanEqual && LHS == RHS)
     return true;
 
-  if (Pred == CmpInst::FCMP_UGE)
-    return isTrueFPPredicate(CmpInst::FCMP_ULE, RHS, LHS);
+  switch (Pred) {
+  default:
+    break;
+  case CmpInst::FCMP_OGE:
+    return isTrueFPPredicate(FCmpInst::FCMP_OLE, RHS, LHS, ContextI);
+  case CmpInst::FCMP_UGE:
+    return isTrueFPPredicate(FCmpInst::FCMP_ULE, RHS, LHS, ContextI);
+  }
 
   if (CmpInst::isUnordered(Pred) &&
       (match(LHS, m_NaN()) || match(RHS, m_NaN())))
@@ -9887,8 +9893,6 @@ bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
   case CmpInst::FCMP_OLT:
     // Hard to ensure NaN-free.
     return false;
-  case CmpInst::FCMP_OGE:
-    return isTrueFPPredicate(CmpInst::FCMP_OLE, RHS, LHS);
   case CmpInst::FCMP_ORD:
   case CmpInst::FCMP_OLE: {
     const APFloat *C;
@@ -9899,7 +9903,6 @@ bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
     }
     // omin(V, C) o<= C for any V (C = NaN should be folded before)
     if (PK == MATCH_LHS && match(RHS, m_APFloat(C)) && MatchOrderedFMin(LHS)) {
-
       assert(!C->isNaN() && "min(NaN, RHS) should be folded before");
       return true;
     }
@@ -10429,7 +10432,7 @@ std::optional<bool> llvm::isImpliedByDomCondition(CmpPredicate Pred,
   if (isTruePredicate(CmpInst::getInversePredicate(Pred), LHS, RHS, ContextI))
     return false;
 
-  // Check Pred, LHS, RHS by dom condtion.
+  // Check Pred, LHS, RHS by dom condition.
   auto PredCond = getDomPredecessorCondition(ContextI);
   if (PredCond.first)
     return isImpliedCondition(PredCond.first, Pred, LHS, RHS, DL,
