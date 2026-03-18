@@ -403,11 +403,15 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       if (FI == ProgramOptimizationProfile.end())
         continue;
       if (Values.size() != 2)
-        return createProfileParseError(Twine("Prefetch hint expected of format '<prefetch-site> <prefetch-target>': " + S));
+        return createProfileParseError(
+            Twine("Prefetch hint expected of format '<prefetch-site> "
+                  "<prefetch-target>': " +
+                  S));
       SmallVector<StringRef, 2> PrefetchSiteStr;
       Values[0].split(PrefetchSiteStr, ',');
       if (PrefetchSiteStr.size() != 2)
-        return createProfileParseError(Twine("Prefetch site expected of format '<block-id>,<callsite-id>': ") +
+        return createProfileParseError(Twine("Prefetch site expected of format "
+                                             "'<block-id>,<callsite-id>': ") +
                                        Values[0]);
       auto SiteBBID = parseUniqueBBID(PrefetchSiteStr[0]);
       if (!SiteBBID)
@@ -421,7 +425,9 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       Values[1].split(PrefetchTargetStr, ',');
       if (PrefetchTargetStr.size() != 3)
         return createProfileParseError(
-            Twine("Prefetch target expected of format '<function-name>,<block-id>,<callsite-id>': ") + Values[1]);
+            Twine("Prefetch target expected of format "
+                  "'<function-name>,<block-id>,<callsite-id>': ") +
+            Values[1]);
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[1]);
       if (!TargetBBID)
         return TargetBBID.takeError();
