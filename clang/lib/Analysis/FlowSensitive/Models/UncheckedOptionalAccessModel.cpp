@@ -312,6 +312,25 @@ auto isStdForwardCall() {
                   hasArgument(0, hasOptionalOrDerivedType()));
 }
 
+auto isAssertionResultOperatorBoolCall() {
+  return cxxMemberCallExpr(
+      on(expr(unless(cxxThisExpr()))),
+      callee(cxxMethodDecl(hasName("operator bool"),
+                           ofClass(hasName("testing::AssertionResult")))));
+}
+
+auto isAssertionResultConstructFromBoolCall() {
+  return cxxConstructExpr(
+      hasType(recordDecl(hasName("testing::AssertionResult"))),
+      hasArgument(0, hasType(booleanType())));
+}
+
+auto isAssertionResultConstructFromOptionalCall() {
+  return cxxConstructExpr(
+      hasType(recordDecl(hasName("testing::AssertionResult"))),
+      hasArgument(0, hasOptionalOrDerivedType()));
+}
+
 constexpr llvm::StringLiteral ValueOrCallID = "ValueOrCall";
 
 auto isValueOrStringEmptyCall() {
@@ -897,52 +916,6 @@ void transferOptionalAndNulloptCmp(const clang::CXXOperatorCallExpr *CmpExpr,
   }
 }
 
-std::optional<StatementMatcher>
-ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
-  if (Options.IgnoreSmartPointerDereference) {
-    auto SmartPtrUse = expr(ignoringParenImpCasts(cxxOperatorCallExpr(
-        anyOf(hasOverloadedOperatorName("->"), hasOverloadedOperatorName("*")),
-        unless(hasArgument(0, expr(hasOptionalType()))))));
-    return expr(
-        anyOf(SmartPtrUse, memberExpr(hasObjectExpression(SmartPtrUse))));
-  }
-  return std::nullopt;
-}
-
-StatementMatcher
-valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
-  return isOptionalMemberCallWithNameMatcher(hasName("value"),
-                                             IgnorableOptional);
-}
-
-StatementMatcher
-valueOperatorCall(const std::optional<StatementMatcher> &IgnorableOptional) {
-  return expr(anyOf(isOptionalOperatorCallWithName("*", IgnorableOptional),
-                    isOptionalOperatorCallWithName("->", IgnorableOptional)));
-}
-
-auto isAssertionResultOperatorBoolCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return cxxMemberCallExpr(
-      on(expr(unless(cxxThisExpr()))),
-      callee(cxxMethodDecl(hasName("operator bool"),
-                           ofClass(hasName("testing::AssertionResult")))));
-}
-
-static auto isAssertionResultConstructFromBoolCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return cxxConstructExpr(
-      hasType(recordDecl(hasName("testing::AssertionResult"))),
-      hasArgument(0, hasType(booleanType())));
-}
-
-static auto isAssertionResultConstructFromOptionalCall() {
-  using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return cxxConstructExpr(
-      hasType(recordDecl(hasName("testing::AssertionResult"))),
-      hasArgument(0, hasOptionalOrDerivedType()));
-}
-
 void transferAssertionResultOperatorBoolCall(const CXXMemberCallExpr *Expr,
                                              const MatchFinder::MatchResult &,
                                              LatticeTransferState &State) {
@@ -988,6 +961,30 @@ void transferAssertionResultConstructFromOptionalCall(
 
   auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
   State.Env.setValue(locForHasValue(ResultLoc), *HasVal);
+}
+
+std::optional<StatementMatcher>
+ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
+  if (Options.IgnoreSmartPointerDereference) {
+    auto SmartPtrUse = expr(ignoringParenImpCasts(cxxOperatorCallExpr(
+        anyOf(hasOverloadedOperatorName("->"), hasOverloadedOperatorName("*")),
+        unless(hasArgument(0, expr(hasOptionalType()))))));
+    return expr(
+        anyOf(SmartPtrUse, memberExpr(hasObjectExpression(SmartPtrUse))));
+  }
+  return std::nullopt;
+}
+
+StatementMatcher
+valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
+  return isOptionalMemberCallWithNameMatcher(hasName("value"),
+                                             IgnorableOptional);
+}
+
+StatementMatcher
+valueOperatorCall(const std::optional<StatementMatcher> &IgnorableOptional) {
+  return expr(anyOf(isOptionalOperatorCallWithName("*", IgnorableOptional),
+                    isOptionalOperatorCallWithName("->", IgnorableOptional)));
 }
 
 auto buildTransferMatchSwitch() {
@@ -1218,6 +1215,7 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isNonConstMemberOperatorCall(),
           transferValue_NonConstMemberOperatorCall)
+
       // other cases of returning optional
       .CaseOfCFGStmt<CallExpr>(isCallReturningOptional(),
                                transferCallReturningOptional)

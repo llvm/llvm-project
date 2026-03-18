@@ -2901,47 +2901,43 @@ TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    void target() {
-	$ns::$optional<int> opt;
-	ASSERT_TRUE(opt.has_value());
-	EXPECT_EQ(opt.value(), 42);
+    void target($ns::$optional<int> opt) {
+      ASSERT_TRUE(opt.has_value());
+      EXPECT_EQ(opt.value(), 42);
 
-	opt.reset();
-	EXPECT_EQ(opt.value(), 42); // [[unsafe]]
-	ASSERT_TRUE(opt.value()); // [[unsafe]]
+      opt.reset();
+      EXPECT_EQ(opt.value(), 42); // [[unsafe]]
+      ASSERT_TRUE(opt.value()); // [[unsafe]]
     }
   )cc");
 
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    void target() {
-	$ns::$optional<int> opt;
-	ASSERT_TRUE(opt);
-	EXPECT_EQ(*opt, 42);
+    void target($ns::$optional<int> opt) {
+      ASSERT_TRUE(opt);
+      EXPECT_EQ(*opt, 42);
     }
   )cc");
 
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    void target() {
-	$ns::$optional<int> opt;
-	ASSERT_FALSE(opt.has_value());
-	EXPECT_EQ(opt.value(), 42); // [[unsafe]]
+    void target($ns::$optional<int> opt) {
+      ASSERT_FALSE(opt.has_value());
+      EXPECT_EQ(opt.value(), 42); // [[unsafe]]
     }
   )cc");
 
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
-    void target() {
-	$ns::$optional<int> opt;
-	EXPECT_TRUE(opt.has_value());
-	EXPECT_EQ(opt.value(), 42); // [[unsafe]]
+    void target($ns::$optional<int> opt) {
+      EXPECT_TRUE(opt.has_value());
+      EXPECT_EQ(opt.value(), 42); // [[unsafe]]
 
-	EXPECT_TRUE(opt);
-	EXPECT_EQ(*opt, 42); // [[unsafe]]
+      EXPECT_TRUE(opt);
+      EXPECT_EQ(*opt, 42); // [[unsafe]]
     }
   )cc");
 
@@ -2955,11 +2951,9 @@ TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
       };
     }
 
-    void target() {
-	BloombergLP::bdlb::NullableValue<int> opt;
-
-	ASSERT_FALSE(opt.isNull());
-	EXPECT_EQ(*opt, 42);
+    void target(BloombergLP::bdlb::NullableValue<int> opt) {
+      ASSERT_FALSE(opt.isNull());
+      EXPECT_EQ(*opt, 42);
     }
   )cc");
 }
