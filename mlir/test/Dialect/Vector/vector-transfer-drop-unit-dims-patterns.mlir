@@ -267,7 +267,55 @@ func.func @masked_transfer_write_dynamic_rank_reducing(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [%[[DIM0]], 1] [1, 1] : memref<?x1xi8, {{.*}}> to memref<?xi8, {{.*}}>
 //       CHECK:   vector.transfer_write {{.*}}, %[[SUBVIEW]][%[[C0]]], %[[MASK]] {in_bounds = [true]} : vector<[16]xi8>, memref<?xi8, {{.*}}>
 
-/// Only masks operands of vector.create_mask are currently supported.
+func.func @constant_masked_transfer_read_rank_reducing(
+      %arg : memref<3x1xi8>) -> vector<3x1xi8> {
+    %c0 = arith.constant 0 : index
+    %pad = arith.constant 0 : i8
+    %mask = vector.constant_mask [2, 1] : vector<3x1xi1>
+    %v = vector.transfer_read %arg[%c0, %c0], %pad, %mask {in_bounds = [true, true]} :
+      memref<3x1xi8>, vector<3x1xi8>
+    return %v : vector<3x1xi8>
+}
+// CHECK-LABEL: func @constant_masked_transfer_read_rank_reducing
+//  CHECK-SAME:     %[[ARG:.+]]: memref<3x1xi8>
+//       CHECK:   %[[MASK:.+]] = vector.constant_mask [2] : vector<3xi1>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [3, 1] [1, 1]
+//  CHECK-SAME:     memref<3x1xi8> to memref<3xi8, {{.*}}>
+//       CHECK:   vector.transfer_read %[[SUBVIEW]]{{.*}}, %[[MASK]] {in_bounds = [true]} : memref<3xi8, {{.*}}>, vector<3xi8>
+
+func.func @constant_masked_transfer_write_rank_reducing(
+      %arg : memref<1x1x3x1x16x1xf32>,
+      %vec : vector<1x3x1x16x1xf32>) {
+    %c0 = arith.constant 0 : index
+    %mask = vector.constant_mask [1, 3, 1, 16, 1] : vector<1x3x1x16x1xi1>
+    vector.transfer_write %vec, %arg[%c0, %c0, %c0, %c0, %c0, %c0], %mask :
+      vector<1x3x1x16x1xf32>, memref<1x1x3x1x16x1xf32>
+    return
+}
+// CHECK-LABEL: func @constant_masked_transfer_write_rank_reducing
+//  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x1x16x1xf32>
+//   CHECK-NOT:   vector.constant_mask
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0, 0, 0, 0, 0] [1, 1, 3, 1, 16, 1] [1, 1, 1, 1, 1, 1]
+//  CHECK-SAME:     memref<1x1x3x1x16x1xf32> to memref<3x16xf32>
+//       CHECK:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]{{.*}} {in_bounds = [true, true]} : vector<3x16xf32>, memref<3x16xf32>
+
+func.func @constant_masked_transfer_write_trailing_unit_dim(
+      %arg : memref<3x1xi32>,
+      %vec : vector<4x1xi32>) {
+    %c0 = arith.constant 0 : index
+    %mask = vector.constant_mask [3, 1] : vector<4x1xi1>
+    vector.transfer_write %vec, %arg[%c0, %c0], %mask {in_bounds = [true, true]} :
+      vector<4x1xi32>, memref<3x1xi32>
+    return
+}
+// CHECK-LABEL: func @constant_masked_transfer_write_trailing_unit_dim
+//  CHECK-SAME:     %[[ARG:.+]]: memref<3x1xi32>
+//       CHECK:   %[[MASK:.+]] = vector.constant_mask [3] : vector<4xi1>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]][0, 0] [3, 1] [1, 1]
+//  CHECK-SAME:     memref<3x1xi32> to memref<3xi32, {{.*}}>
+//       CHECK:   vector.transfer_write %{{.*}}, %[[SUBVIEW]]{{.*}}, %[[MASK]] {in_bounds = [true]} : vector<4xi32>, memref<3xi32, {{.*}}>
+
+/// Only vector.create_mask and vector.constant_mask masks are supported.
 func.func @unsupported_masked_transfer_read_dynamic_rank_reducing_1(
       %arg : memref<?x1xi8, strided<[?, ?], offset: ?>>,
       %mask : vector<[16]x1xi1>) -> vector<[16]x1xi8> {
