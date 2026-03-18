@@ -3,7 +3,7 @@ SWIFT_ENABLE_EXPLICIT_MODULES := YES
 SWIFT_ENABLE_COMPILE_CACHE := YES
 SWIFT_BRIDGING_HEADER := bridging.h
 HIDE_SWIFTMODULE := YES
-SWIFTFLAGS_EXTRAS = -Xcc -I$(BUILDDIR)/secret -scanner-prefix-map-paths $(BUILDDIR) /^build
+SWIFTFLAGS_EXTRAS = -Xcc -I$(BUILDDIR)/secret -scanner-prefix-map-paths $(BUILDDIR) /^build -scanner-prefix-map-paths $(SRCDIR) /^src
 
 all: cas-config secret.h $(EXE)
 
@@ -19,3 +19,4 @@ secret.h:
 
 cas-config:
 	echo "{\"CASPath\": \"$(BUILDDIR)/cas\"}" > .cas-config
+	echo "{\"/^build\": \"$(BUILDDIR)\", \"/^src\": \"$(SRCDIR)\"}" > compilation-prefix-map.json
