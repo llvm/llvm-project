@@ -1387,7 +1387,8 @@ void fir::CallOp::setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
     setOperand(0, calleeVal);
   } else {
     (*this)->insertOperands(0, calleeVal);
-    // Make arg_attrs by adding an empty dict for the callee.
+    // Make arg_attrs consistent in size with operands by adding an empty dict
+    // for the callee.
     if (auto argAttrs = getArgAttrsAttr()) {
       assert(argAttrs.size() == getNumOperands() - 1 &&
              "arg_attrs must be one-per-operand");
