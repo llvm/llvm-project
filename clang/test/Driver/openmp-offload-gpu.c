@@ -415,6 +415,7 @@
 // Check that `-fprofile-generate` flags are forwarded to link in the runtime.
 //
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --offload-arch=gfx906 -fprofile-generate -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=PROFILE %s
 //

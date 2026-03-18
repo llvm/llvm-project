@@ -118,4 +118,4 @@
 // RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE %s
 //      PROFILE: clang-nvlink-wrapper
 // PROFILE-SAME: "-L[[RESOURCE_DIR:.*]]/lib/nvptx64-nvidia-cuda"
-// PROFILE-SAME: "[[RESOURCE_DIR:.*]]/lib/nvptx64-nvidia-cuda/libclang_rt.profile.a"
+// PROFILE-SAME: "[[RESOURCE_DIR]]/lib/nvptx64-nvidia-cuda/libclang_rt.profile.a"

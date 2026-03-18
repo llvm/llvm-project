@@ -52,4 +52,4 @@
 // RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE %s
 //      PROFILE: ld.lld
 // PROFILE-SAME: "-L[[RESOURCE_DIR:.*]]/lib/amdgcn-amd-amdhsa"
-// PROFILE-SAME: "[[RESOURCE_DIR:.*]]/lib/amdgcn-amd-amdhsa/libclang_rt.profile.a"
+// PROFILE-SAME: "[[RESOURCE_DIR]]/lib/amdgcn-amd-amdhsa/libclang_rt.profile.a"
