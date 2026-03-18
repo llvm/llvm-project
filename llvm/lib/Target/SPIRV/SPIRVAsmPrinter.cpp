@@ -449,7 +449,7 @@ static void addOpsFromMDNode(MDNode *MDN, MCInst &Inst,
       if (ConstantInt *Const = dyn_cast<ConstantInt>(C)) {
         Inst.addOperand(MCOperand::createImm(Const->getZExtValue()));
       } else if (auto *CE = dyn_cast<Function>(C)) {
-        MCRegister FuncReg = MAI->getFuncReg(CE);
+        MCRegister FuncReg = MAI->getGlobalObjReg(CE);
         assert(FuncReg.isValid());
         Inst.addOperand(MCOperand::createReg(FuncReg));
       }
@@ -543,7 +543,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     // <Entry Point> operands of OpExecutionMode
     if (F.isDeclaration() || !isEntryPoint(F))
       continue;
-    MCRegister FReg = MAI->getFuncReg(&F);
+    MCRegister FReg = MAI->getGlobalObjReg(&F);
     assert(FReg.isValid());
 
     if (Attribute Attr = F.getFnAttribute("hlsl.shader"); Attr.isValid()) {
@@ -690,11 +690,8 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
       // The first field of the struct contains a pointer to
       // the annotated variable.
       Value *AnnotatedVar = CS->getOperand(0)->stripPointerCasts();
-      MCRegister Reg;
-      if (auto *Func = dyn_cast<Function>(AnnotatedVar))
-        Reg = MAI->getFuncReg(Func);
-      else if (auto *GV = dyn_cast<GlobalVariable>(AnnotatedVar))
-        Reg = MAI->getGVarReg(GV);
+      auto *GO = dyn_cast<GlobalObject>(AnnotatedVar);
+      MCRegister Reg = GO ? MAI->getGlobalObjReg(GO) : MCRegister();
       if (!Reg.isValid()) {
         std::string DiagMsg;
         raw_string_ostream OS(DiagMsg);
@@ -772,7 +769,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
              "Mismatched float type size");
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionModeId);
-      MCRegister FuncReg = MAI->getFuncReg(Func);
+      MCRegister FuncReg = MAI->getGlobalObjReg(Func);
       assert(FuncReg.isValid());
       Inst.addOperand(MCOperand::createReg(FuncReg));
       Inst.addOperand(

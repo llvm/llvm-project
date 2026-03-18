@@ -141,7 +141,7 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     MAI.MS[i].clear();
   MAI.RegisterAliasTable.clear();
   MAI.InstrsToDelete.clear();
-  MAI.FuncMap.clear();
+  MAI.GlobalObjMap.clear();
   MAI.GlobalVarList.clear();
   MAI.ExtInstSetMap.clear();
   MAI.Reqs.clear();
@@ -496,7 +496,7 @@ MCRegister SPIRVModuleAnalysis::handleVariable(
   It->second = GReg;
   MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
   if (const auto *GV = dyn_cast<GlobalVariable>(GObj))
-    MAI.GVarMap[GV] = GReg;
+    MAI.GlobalObjMap[GV] = GReg;
   return GReg;
 }
 
@@ -564,7 +564,8 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
         const Function *ImportedFunc =
             F->getParent()->getFunction(getStringImm(MI, 2));
         Register Target = MI.getOperand(0).getReg();
-        MAI.FuncMap[ImportedFunc] = MAI.getRegisterAlias(MI.getMF(), Target);
+        MAI.GlobalObjMap[ImportedFunc] =
+            MAI.getRegisterAlias(MI.getMF(), Target);
       }
     }
   } else if (MI.getOpcode() == SPIRV::OpFunction) {
@@ -572,7 +573,7 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
     Register Reg = MI.defs().begin()->getReg();
     MCRegister GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
     assert(GlobalReg.isValid());
-    MAI.FuncMap[F] = GlobalReg;
+    MAI.GlobalObjMap[F] = GlobalReg;
   }
 }
 
