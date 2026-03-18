@@ -100,6 +100,8 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
         Fusion->getValueAsListOfDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
 
+    OS << "STATISTIC(Num" << Fusion->getName() << ", \"Times "
+       << Fusion->getName() << " Triggered\");\n";
     OS << "bool is" << Fusion->getName() << "(\n";
     OS.indent(4) << "const TargetInstrInfo &TII,\n";
     OS.indent(4) << "const TargetSubtargetInfo &STI,\n";
@@ -110,6 +112,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
 
     emitPredicates(Predicates, IsCommutable, PE, OS);
 
+    OS.indent(2) << "++Num" << Fusion->getName() << ";\n";
     OS.indent(2) << "return true;\n";
     OS << "}\n";
   }

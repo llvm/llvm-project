@@ -88,6 +88,7 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
 // CHECK-PREDICATOR-EMPTY:
+// CHECK-PREDICATOR-NEXT:  STATISTIC(NumTestBothFusionPredicate, "Times TestBothFusionPredicate Triggered");
 // CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
@@ -104,8 +105,10 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:      if (MI->getOperand(0).getReg() != Test::X0)
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    ++NumTestBothFusionPredicate;
 // CHECK-PREDICATOR-NEXT:    return true;
 // CHECK-PREDICATOR-NEXT:  }
+// CHECK-PREDICATOR-NEXT:  STATISTIC(NumTestCommutableFusion, "Times TestCommutableFusion Triggered");
 // CHECK-PREDICATOR-NEXT:  bool isTestCommutableFusion(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
@@ -152,8 +155,10 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:        if (FirstMI->getOperand(0).getReg() != SecondMI.getOperand(SrcOpIdx2).getReg())
 // CHECK-PREDICATOR-NEXT:          return false;
 // CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    ++NumTestCommutableFusion;
 // CHECK-PREDICATOR-NEXT:    return true;
 // CHECK-PREDICATOR-NEXT:  }
+// CHECK-PREDICATOR-NEXT:  STATISTIC(NumTestFirstSameRegFusion, "Times TestFirstSameRegFusion Triggered");
 // CHECK-PREDICATOR-NEXT:  bool isTestFirstSameRegFusion(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
@@ -170,8 +175,10 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:            return false;
 // CHECK-PREDICATOR-NEXT:      }
 // CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    ++NumTestFirstSameRegFusion;
 // CHECK-PREDICATOR-NEXT:    return true;
 // CHECK-PREDICATOR-NEXT:  }
+// CHECK-PREDICATOR-NEXT:  STATISTIC(NumTestFusion, "Times TestFusion Triggered");
 // CHECK-PREDICATOR-NEXT:  bool isTestFusion(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
@@ -206,8 +213,10 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:          SecondMI.getOperand(1).isReg() &&
 // CHECK-PREDICATOR-NEXT:          FirstMI->getOperand(0).getReg() == SecondMI.getOperand(1).getReg()))
 // CHECK-PREDICATOR-NEXT:      return false;
+// CHECK-PREDICATOR-NEXT:    ++NumTestFusion;
 // CHECK-PREDICATOR-NEXT:    return true;
 // CHECK-PREDICATOR-NEXT:  }
+// CHECK-PREDICATOR-NEXT:  STATISTIC(NumTestSingleFusion, "Times TestSingleFusion Triggered");
 // CHECK-PREDICATOR-NEXT:  bool isTestSingleFusion(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
@@ -257,6 +266,7 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-NEXT:        if (FirstMI->getOperand(0).getReg() != SecondMI.getOperand(SrcOpIdx2).getReg())
 // CHECK-PREDICATOR-NEXT:          return false;
 // CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    ++NumTestSingleFusion;
 // CHECK-PREDICATOR-NEXT:    return true;
 // CHECK-PREDICATOR-NEXT:  }
 // CHECK-PREDICATOR-EMPTY:
