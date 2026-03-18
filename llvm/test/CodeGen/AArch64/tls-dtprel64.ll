@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=aarch64-linux-gnu -enable-debug-tls-location -filetype=obj < %s \
+; RUN: llc -O0 -mtriple=aarch64-linux-gnu --aarch64-emit-debug-tls-location -filetype=obj < %s \
 ; RUN:     | llvm-objdump -r - | FileCheck %s
 
 ; CHECK: R_AARCH64_TLS_DTPREL64   var
