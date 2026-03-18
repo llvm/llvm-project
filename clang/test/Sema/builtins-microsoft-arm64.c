@@ -27,10 +27,10 @@ void check_ReadWriteStatusReg(int v) {
 
 void check_ReadWriteStatusReg_range(int v) {
   _ReadStatusReg(0x3fff);      // expected-error-re {{argument value {{.*}} is outside the valid range}}
-  _ReadStatusReg(0x10000); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  _ReadStatusReg(0x8000); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
   _WriteStatusReg(0x3fff, v);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
-  _WriteStatusReg(0x10000, v); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  _WriteStatusReg(0x8000, v); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 void check__sys(int v) {

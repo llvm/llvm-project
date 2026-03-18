@@ -5647,7 +5647,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
     std::string SysRegStr;
     llvm::raw_string_ostream(SysRegStr)
-        << (SysReg >> 14) << ":" << ((SysReg >> 11) & 7) << ":"
+        << (0b10 | SysReg >> 14) << ":" << ((SysReg >> 11) & 7) << ":"
         << ((SysReg >> 7) & 15) << ":" << ((SysReg >> 3) & 15) << ":"
         << (SysReg & 7);
 

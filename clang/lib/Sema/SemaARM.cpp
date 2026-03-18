@@ -1264,7 +1264,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   // an exception for incorrect registers. This matches MSVC behavior.
   if (BuiltinID == AArch64::BI_ReadStatusReg ||
       BuiltinID == AArch64::BI_WriteStatusReg)
-    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0x4000, 0xffff);
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0x4000, 0x7fff);
 
   if (BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x3fff);
