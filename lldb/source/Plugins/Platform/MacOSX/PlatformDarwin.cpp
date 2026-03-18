@@ -80,6 +80,98 @@ static Status ExceptionMaskValidator(const char *string, void *unused) {
   return {};
 }
 
+namespace {
+/// Holds an lldb_private::Module name and a "sanitized" version
+/// of it for the purposes of loading a script of that name by
+/// the relevant ScriptInterpreter.
+///
+/// E.g., for Python the sanitized name can't include:
+/// * Special characters: '-', ' ', '.'
+/// * Python keywords
+class SanitizedScriptingModuleName {
+public:
+  SanitizedScriptingModuleName(llvm::StringRef name,
+                               ScriptInterpreter *script_interpreter)
+      : m_original_name(name), m_sanitized_name(name.str()) {
+    // FIXME: for Python, don't allow certain characters in imported module
+    // filenames. Theoretically, different scripting languages may have
+    // different sets of forbidden tokens in filenames, and that should
+    // be dealt with by each ScriptInterpreter. For now, just replace dots
+    // with underscores. In order to support anything other than Python
+    // this will need to be reworked.
+    llvm::replace(m_sanitized_name, '.', '_');
+    llvm::replace(m_sanitized_name, ' ', '_');
+    llvm::replace(m_sanitized_name, '-', '_');
+    llvm::replace(m_sanitized_name, '+', 'x');
+
+    if (script_interpreter &&
+        script_interpreter->IsReservedWord(m_sanitized_name.c_str())) {
+      m_conflicting_keyword = m_sanitized_name;
+      m_sanitized_name.insert(m_sanitized_name.begin(), '_');
+    }
+  }
+
+  /// Returns \c true if this name is a keyword in the associated scripting
+  /// language.
+  bool IsKeyword() const { return !m_conflicting_keyword.empty(); }
+
+  /// Returns \c true if the original name has been sanitized (i.e., required
+  /// changes).
+  bool RequiredSanitization() const {
+    return m_sanitized_name != m_original_name;
+  }
+
+  llvm::StringRef GetSanitizedName() const { return m_sanitized_name; }
+  llvm::StringRef GetOriginalName() const { return m_original_name; }
+  llvm::StringRef GetConflictingKeyword() const {
+    return m_conflicting_keyword;
+  }
+
+  /// If we did some replacements of reserved characters, and a
+  /// file with the untampered name exists, then warn the user
+  /// that the file as-is shall not be loaded.
+  void WarnIfInvalidUnsanitizedScriptExists(Stream &os,
+                                            const FileSpec &original_fspec,
+                                            const FileSpec &fspec) const {
+    if (!RequiredSanitization())
+      return;
+
+    // Path to unsanitized script name doesn't exist. Nothing to warn about.
+    if (!FileSystem::Instance().Exists(original_fspec))
+      return;
+
+    std::string reason_for_complaint =
+        IsKeyword() ? llvm::formatv("conflicts with the keyword '{0}'",
+                                    GetConflictingKeyword())
+                          .str()
+                    : "contains reserved characters";
+
+    if (FileSystem::Instance().Exists(fspec))
+       os.Format(
+            "debug script '{0}' cannot be loaded because '{1}' {2}. "
+            "Ignoring '{1}' and loading '{3}' instead.\n",
+            original_fspec.GetPath(), original_fspec.GetFilename(),
+            std::move(reason_for_complaint), fspec.GetFilename());
+    else
+      os.Format(
+            "debug script '{0}' cannot be loaded because '{1}' {2}. "
+            "If you intend to have this script loaded, please rename it to "
+            "'{3}' and retry.\n",
+            original_fspec.GetPath(), original_fspec.GetFilename(),
+            std::move(reason_for_complaint), fspec.GetFilename());
+  }
+
+private:
+  llvm::StringRef m_original_name;
+  std::string m_sanitized_name;
+
+  /// If the m_sanitized_name conflicts with a keyword for the ScriptInterpreter
+  /// language associated with this SanitizedScriptingModuleName, is set to the
+  /// conflicting keyword. Empty otherwise.
+  std::string m_conflicting_keyword;
+};
+} // namespace
+
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
@@ -200,123 +292,92 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
   return PlatformPOSIX::PutFile(source, destination, uid, gid);
 }
 
+FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
+    Stream &feedback_stream, FileSpec module_spec, const Target &target,
+    const FileSpec &symfile_spec) {
+  FileSpecList file_list;
+  while (module_spec.GetFilename()) {
+    SanitizedScriptingModuleName sanitized_name(
+        module_spec.GetFilename().GetStringRef(),
+        target.GetDebugger().GetScriptInterpreter());
+
+    StreamString path_string;
+    StreamString original_path_string;
+    // for OSX we are going to be in
+    // .dSYM/Contents/Resources/DWARF/<basename> let us go to
+    // .dSYM/Contents/Resources/Python/<basename>.py and see if the
+    // file exists
+    path_string.Format("{0}/../Python/{1}.py",
+                       symfile_spec.GetDirectory().GetStringRef(),
+                       sanitized_name.GetSanitizedName());
+    original_path_string.Format("{0}/../Python/{1}.py",
+                                symfile_spec.GetDirectory().GetStringRef(),
+                                sanitized_name.GetOriginalName());
+
+    FileSpec script_fspec(path_string.GetString());
+    FileSystem::Instance().Resolve(script_fspec);
+    FileSpec orig_script_fspec(original_path_string.GetString());
+    FileSystem::Instance().Resolve(orig_script_fspec);
+
+    sanitized_name.WarnIfInvalidUnsanitizedScriptExists(
+        feedback_stream, orig_script_fspec, script_fspec);
+
+    if (FileSystem::Instance().Exists(script_fspec)) {
+      file_list.Append(script_fspec);
+      break;
+    }
+
+    // If we didn't find the python file, then keep stripping the
+    // extensions and try again
+    ConstString filename_no_extension(
+        module_spec.GetFileNameStrippingExtension());
+    if (module_spec.GetFilename() == filename_no_extension)
+      break;
+
+    module_spec.SetFilename(filename_no_extension);
+  }
+
+  return file_list;
+}
+
 FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
     Target *target, Module &module, Stream &feedback_stream) {
-  FileSpecList file_list;
-  if (target &&
-      target->GetDebugger().GetScriptLanguage() == eScriptLanguagePython) {
-    // NB some extensions might be meaningful and should not be stripped -
-    // "this.binary.file"
-    // should not lose ".file" but GetFileNameStrippingExtension() will do
-    // precisely that. Ideally, we should have a per-platform list of
-    // extensions (".exe", ".app", ".dSYM", ".framework") which should be
-    // stripped while leaving "this.binary.file" as-is.
+  if (!target)
+    return {};
 
-    FileSpec module_spec = module.GetFileSpec();
+  // For now only Python scripts supported for auto-loading.
+  if (target->GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
+    return {};
 
-    if (module_spec) {
-      if (SymbolFile *symfile = module.GetSymbolFile()) {
-        ObjectFile *objfile = symfile->GetObjectFile();
-        if (objfile) {
-          FileSpec symfile_spec(objfile->GetFileSpec());
-          if (symfile_spec &&
-              llvm::StringRef(symfile_spec.GetPath())
-                  .contains_insensitive(".dSYM/Contents/Resources/DWARF") &&
-              FileSystem::Instance().Exists(symfile_spec)) {
-            while (module_spec.GetFilename()) {
-              std::string module_basename(
-                  module_spec.GetFilename().GetCString());
-              std::string original_module_basename(module_basename);
+  // NB some extensions might be meaningful and should not be stripped -
+  // "this.binary.file"
+  // should not lose ".file" but GetFileNameStrippingExtension() will do
+  // precisely that. Ideally, we should have a per-platform list of
+  // extensions (".exe", ".app", ".dSYM", ".framework") which should be
+  // stripped while leaving "this.binary.file" as-is.
 
-              bool was_keyword = false;
+  const FileSpec &module_spec = module.GetFileSpec();
 
-              // FIXME: for Python, we cannot allow certain characters in
-              // module
-              // filenames we import. Theoretically, different scripting
-              // languages may have different sets of forbidden tokens in
-              // filenames, and that should be dealt with by each
-              // ScriptInterpreter. For now, we just replace dots with
-              // underscores, but if we ever support anything other than
-              // Python we will need to rework this
-              llvm::replace(module_basename, '.', '_');
-              llvm::replace(module_basename, ' ', '_');
-              llvm::replace(module_basename, '-', '_');
-              ScriptInterpreter *script_interpreter =
-                  target->GetDebugger().GetScriptInterpreter();
-              if (script_interpreter &&
-                  script_interpreter->IsReservedWord(module_basename.c_str())) {
-                module_basename.insert(module_basename.begin(), '_');
-                was_keyword = true;
-              }
+  if (!module_spec)
+    return {};
 
-              StreamString path_string;
-              StreamString original_path_string;
-              // for OSX we are going to be in
-              // .dSYM/Contents/Resources/DWARF/<basename> let us go to
-              // .dSYM/Contents/Resources/Python/<basename>.py and see if the
-              // file exists
-              path_string.Printf("%s/../Python/%s.py",
-                                 symfile_spec.GetDirectory().GetCString(),
-                                 module_basename.c_str());
-              original_path_string.Printf(
-                  "%s/../Python/%s.py",
-                  symfile_spec.GetDirectory().GetCString(),
-                  original_module_basename.c_str());
-              FileSpec script_fspec(path_string.GetString());
-              FileSystem::Instance().Resolve(script_fspec);
-              FileSpec orig_script_fspec(original_path_string.GetString());
-              FileSystem::Instance().Resolve(orig_script_fspec);
+  SymbolFile *symfile = module.GetSymbolFile();
+  if (!symfile)
+    return {};
 
-              // if we did some replacements of reserved characters, and a
-              // file with the untampered name exists, then warn the user
-              // that the file as-is shall not be loaded
-              if (module_basename != original_module_basename &&
-                  FileSystem::Instance().Exists(orig_script_fspec)) {
-                const char *reason_for_complaint =
-                    was_keyword ? "conflicts with a keyword"
-                                : "contains reserved characters";
-                if (FileSystem::Instance().Exists(script_fspec))
-                  feedback_stream.Printf(
-                      "warning: the symbol file '%s' contains a debug "
-                      "script. However, its name"
-                      " '%s' %s and as such cannot be loaded. LLDB will"
-                      " load '%s' instead. Consider removing the file with "
-                      "the malformed name to"
-                      " eliminate this warning.\n",
-                      symfile_spec.GetPath().c_str(),
-                      original_path_string.GetData(), reason_for_complaint,
-                      path_string.GetData());
-                else
-                  feedback_stream.Printf(
-                      "warning: the symbol file '%s' contains a debug "
-                      "script. However, its name"
-                      " %s and as such cannot be loaded. If you intend"
-                      " to have this script loaded, please rename '%s' to "
-                      "'%s' and retry.\n",
-                      symfile_spec.GetPath().c_str(), reason_for_complaint,
-                      original_path_string.GetData(), path_string.GetData());
-              }
+  ObjectFile *objfile = symfile->GetObjectFile();
+  if (!objfile)
+    return {};
 
-              if (FileSystem::Instance().Exists(script_fspec)) {
-                file_list.Append(script_fspec);
-                break;
-              }
+  const FileSpec &symfile_spec = objfile->GetFileSpec();
+  if (symfile_spec &&
+      llvm::StringRef(symfile_spec.GetPath())
+          .contains_insensitive(".dSYM/Contents/Resources/DWARF") &&
+      FileSystem::Instance().Exists(symfile_spec))
+    return LocateExecutableScriptingResourcesFromDSYM(
+        feedback_stream, module_spec, *target, symfile_spec);
 
-              // If we didn't find the python file, then keep stripping the
-              // extensions and try again
-              ConstString filename_no_extension(
-                  module_spec.GetFileNameStrippingExtension());
-              if (module_spec.GetFilename() == filename_no_extension)
-                break;
-
-              module_spec.SetFilename(filename_no_extension);
-            }
-          }
-        }
-      }
-    }
-  }
-  return file_list;
+  return {};
 }
 
 Status PlatformDarwin::ResolveSymbolFile(Target &target,

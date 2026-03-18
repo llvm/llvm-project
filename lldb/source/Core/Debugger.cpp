@@ -305,13 +305,10 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       if (target_sp->TargetProperties::GetLoadScriptFromSymbolFile() ==
           eLoadScriptFromSymFileTrue) {
         std::list<Status> errors;
-        StreamString feedback_stream;
-        if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
+        if (!target_sp->LoadScriptingResources(errors)) {
           lldb::StreamUP s = GetAsyncErrorStream();
           for (auto &error : errors)
             s->Printf("%s\n", error.AsCString());
-          if (feedback_stream.GetSize())
-            s->PutCString(feedback_stream.GetString());
         }
       }
     }
@@ -1032,6 +1029,12 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
         "Settings specify to the debugger's command interpreter.", true,
         m_command_interpreter_up->GetValueProperties());
   }
+#ifndef NDEBUG
+  m_collection_sp->AppendProperty(
+      "testing", "Testing-only settings.", /*is_global=*/true,
+      TestingProperties::GetGlobalTestingProperties().GetValueProperties());
+#endif
+
   if (log_callback)
     m_callback_handler_sp =
         std::make_shared<CallbackLogHandler>(log_callback, baton);
