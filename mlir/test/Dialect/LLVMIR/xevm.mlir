@@ -109,8 +109,8 @@ func.func @mma_mx(%loaded_c_casted: vector<8xf32>, %loaded_a: vector<8xi16>, %lo
 func.func @truncf_scalar() -> i8 {
   // CHECK: %[[VAR0:.*]] = arith.constant 1.0
   %0 = arith.constant 1.0 : bf16
-  // CHECK: xevm.truncf %[[VAR0]] {etype = f8} : (bf16) -> i8
-  %2 = xevm.truncf %0 { etype=f8 } : (bf16) -> i8
+  // CHECK: xevm.truncf %[[VAR0]] {src_etype = bf16, dst_etype = f8} : (bf16) -> i8
+  %2 = xevm.truncf %0 { src_etype=bf16, dst_etype=f8 } : (bf16) -> i8
   return %2 : i8
 }
 
@@ -119,8 +119,8 @@ func.func @truncf_scalar() -> i8 {
 func.func @truncf_vector() -> vector<8xi4> {
   // CHECK: %[[VAR0:.*]] = arith.constant
   %0 = arith.constant dense<1.0> : vector<8xbf16>
-  // CHECK: xevm.truncf %[[VAR0]] {etype = e2m1} : (vector<8xbf16>) -> vector<8xi4>
-  %2 = xevm.truncf %0 { etype=e2m1 } : (vector<8xbf16>) -> vector<8xi4>
+  // CHECK: xevm.truncf %[[VAR0]] {src_etype = bf16, dst_etype = e2m1} : (vector<8xbf16>) -> vector<8xi4>
+  %2 = xevm.truncf %0 { src_etype=bf16, dst_etype=e2m1 } : (vector<8xbf16>) -> vector<8xi4>
   return %2 : vector<8xi4>
 }
 

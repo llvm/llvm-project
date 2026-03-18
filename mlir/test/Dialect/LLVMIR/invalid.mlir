@@ -2021,7 +2021,7 @@ llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_hei
 
 llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
   // expected-error@+1 {{op both src and dst should be vector types or both}}
-  %0 = xevm.truncf %arg0 { etype = bf8 } : (vector<8xf16>) -> i8
+  %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> i8
   llvm.return
 }
 
@@ -2029,7 +2029,7 @@ llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
 
 llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
   // expected-error@+1 {{op src and dst vector types should have the same number of elements}}
-  %0 = xevm.truncf %arg0 { etype = bf8 } : (vector<8xf16>) -> vector<4xi8>
+  %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> vector<4xi8>
   llvm.return
 }
 

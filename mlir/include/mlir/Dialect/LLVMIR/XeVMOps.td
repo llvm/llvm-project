@@ -596,6 +596,18 @@ def XeVM_MMAOp
   let hasVerifier = 1;
 }
 
+def XeVM_TruncfSrcElemTypes
+    : I32EnumAttr<
+          "TruncfSrcElemTypes",
+          "Source element type for xevm.truncf", [XeVM_ET_F16, XeVM_ET_BF16]> {
+  let cppNamespace = "::mlir::xevm";
+}
+
+def XeVM_TruncfSrcElemTypeAttr : XeVM_Attr<"TruncfSrcElemType", "src_etype"> {
+  let parameters = (ins "xevm::TruncfSrcElemTypes":$etype);
+  let assemblyFormat = "`src_etype` `=` $etype";
+}
+
 def XeVM_TruncfDstElemTypes
     : I32EnumAttr<"TruncfDstElemTypes",
                   "Destination element type for xevm.truncf",
@@ -605,7 +617,7 @@ def XeVM_TruncfDstElemTypes
 
 def XeVM_TruncfDstElemTypeAttr : XeVM_Attr<"TruncfDstElemType", "dst_etype"> {
   let parameters = (ins "xevm::TruncfDstElemTypes":$etype);
-  let assemblyFormat = "`etype` `=` $etype";
+  let assemblyFormat = "`dst_etype` `=` $etype";
 }
 
 def XeVM_TruncfOp
@@ -614,7 +626,8 @@ def XeVM_TruncfOp
                                I<4>]>:$dst)>,
       Arguments<(ins AnyTypeOf<[VectorOfRankAndType<[1], [F16, BF16]>, F16,
                                 BF16]>:$src,
-          XeVM_TruncfDstElemTypeAttr:$etype)> {
+          XeVM_TruncfSrcElemTypeAttr:$src_etype,
+          XeVM_TruncfDstElemTypeAttr:$dst_etype)> {
   let summary = "Floating point truncation from f16/bf16 to f8/bf8/f4";
   let description = [{
     The `xevm.truncf` operation truncates a floating point value from
@@ -622,7 +635,7 @@ def XeVM_TruncfOp
   }];
 
   let assemblyFormat = [{
-    $src ` ` `{` $etype `}` attr-dict `:` functional-type(operands, results)
+    $src ` ` `{` $src_etype `,` $dst_etype `}` attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
