@@ -350,6 +350,9 @@ function(create_libc_unittest fq_target_name)
 endfunction(create_libc_unittest)
 
 function(add_libc_unittest target_name)
+  if(NOT LIBC_ENABLE_UNITTESTS)
+    return()
+  endif()
   add_target_with_flags(
     ${target_name}
     CREATE_TARGET create_libc_unittest
@@ -667,6 +670,7 @@ function(add_integration_test test_name)
     COMMENT "Running integration test ${fq_target_name}"
   )
   add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
+  add_dependencies(libc-integration-tests-build ${fq_build_target_name})
 endfunction(add_integration_test)
 
 # Rule to add a hermetic program. A hermetic program is one whose executable is fully

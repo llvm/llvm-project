@@ -13,6 +13,7 @@ add_custom_target(libc-long-running-tests)
 # Build-only targets for lit (don't run tests, just build executables)
 add_custom_target(libc-unit-tests-build)
 add_custom_target(libc-hermetic-tests-build)
+add_custom_target(libc-integration-tests-build)
 
 # Resolve the GPU loader executable path for the lit site config.
 if(TARGET libc.utils.gpu.loader)
@@ -35,10 +36,15 @@ configure_lit_site_cfg(
   "LIBC_GPU_LOADER_EXECUTABLE"
 )
 
+set(libc_lit_deps libc-hermetic-tests-build libc-integration-tests-build)
+if(LIBC_ENABLE_UNITTESTS)
+  list(APPEND libc_lit_deps libc-unit-tests-build)
+endif()
+
 add_lit_testsuite(check-libc-lit
   "Running libc tests via lit"
   ${LIBC_BUILD_DIR}/test
-  DEPENDS libc-unit-tests-build libc-hermetic-tests-build
+  DEPENDS ${libc_lit_deps}
 )
 
 add_subdirectory(UnitTest)
