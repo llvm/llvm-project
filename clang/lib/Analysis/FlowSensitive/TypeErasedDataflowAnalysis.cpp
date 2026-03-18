@@ -481,10 +481,10 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   return State;
 }
 
-// Returns the number of blocks that would be visited if we only visit each
-// reachable block once. This provides a lower bound on the number of block
-// visits. This is a light version of the main analysis loop (keep in sync).
-size_t NumBlockVisitsIfVisitEachReachableOnce(const CFG &CFG) {
+// Returns the number of reachable blocks (would be visited if we only visit
+// each reachable block once). This is a light version of the main fixpoint loop
+// (keep in sync).
+size_t NumBlockVisitsIfVisitOnce(const CFG &CFG) {
   PostOrderCFGView POV(&CFG);
   ForwardDataflowWorklist Worklist(CFG, &POV);
   llvm::BitVector VisitedBlocks(CFG.size());
@@ -519,8 +519,14 @@ runTypeErasedDataflowAnalysis(
       MaybeStartingEnv ? *MaybeStartingEnv : InitEnv;
 
   const clang::CFG &CFG = ACFG.getCFG();
+
+  // Bail out if the number of reachable blocks is already beyond the maximum
+  // number of block visits to save time and avoid runnign out of memory for
+  // massive CFGs. Note: CFG.size() could have unreachable blocks,
+  // but it is a faster to compare that to MaxBlockVisits first before doing the
+  // reachable block count.
   if (CFG.size() > static_cast<size_t>(MaxBlockVisits)) {
-    if (CFG.size() > NumBlockVisitsIfVisitEachReachableOnce(CFG)) {
+    if (NumBlockVisitsIfVisitOnce(CFG) > static_cast<size_t>(MaxBlockVisits)) {
       return llvm::createStringError(
           std::errc::timed_out, "number of blocks in cfg will lead to "
                                 "exceeding maximum number of block visits");
