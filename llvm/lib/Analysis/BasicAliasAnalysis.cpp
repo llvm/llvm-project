@@ -837,6 +837,15 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
 
   if (const Function *F = dyn_cast<Function>(Call->getCalledOperand())) {
     MemoryEffects FuncME = AAQI.AAR.getMemoryEffects(F);
+
+    // Floating-point operations have memory effects that describe interaction
+    // with the floating-point environment. These memory effects depend on
+    // the attributes of the containing function.
+    if (auto FPME = Call->getFloatingPointMemoryEffects())
+      FuncME =
+          FuncME.getWithModRef(IRMemLocation::InaccessibleMem,
+                               FPME->getModRef(IRMemLocation::InaccessibleMem));
+
     // Operand bundles on the call may also read or write memory, in addition
     // to the behavior of the called function.
     if (Call->hasReadingOperandBundles())
@@ -863,6 +872,16 @@ MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
     // inaccessible memory to model control dependence.
     return MemoryEffects::readOnly() |
            MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
+#define FUNCTION(NAME, R, D) case Intrinsic::NAME:
+#include "llvm/IR/FloatingPointOps.def"
+    // Floating-point operations may have or may not have side effects due to
+    // the interaction with floating-point environment. Which case is realized,
+    // it depends on the corresponding call site bundles and attribute of the
+    // containing function. Here we conservatively assume that in stricfp
+    // function the side effects exist.
+    if (F->getAttributes().hasFnAttr(llvm::Attribute::StrictFP))
+      return MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
+    return MemoryEffects::none();
   }
 
   return F->getMemoryEffects();

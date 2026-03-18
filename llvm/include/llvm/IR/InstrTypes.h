@@ -25,6 +25,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1028,6 +1029,14 @@ struct OperandBundleUse {
     return false;
   }
 
+  /// Return the value of the given input as a string. The input must be
+  /// a string metadata.
+  StringRef getInputAsString(size_t Ndx) const {
+    const Value *V = Inputs[Ndx].get();
+    const auto *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return cast<MDString>(MD)->getString();
+  }
+
   /// Return the tag of this operand bundle as a string.
   StringRef getTagName() const {
     return Tag->getKey();
@@ -1091,11 +1100,31 @@ public:
   input_iterator input_begin() const { return Inputs.begin(); }
   input_iterator input_end() const { return Inputs.end(); }
 
+  /// Return the value of the given input as a string. The input must be
+  /// a string metadata.
+  StringRef getInputAsString(size_t Ndx) const {
+    const Value *V = Inputs[Ndx];
+    const auto *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return cast<MDString>(MD)->getString();
+  }
+
   StringRef getTag() const { return Tag; }
 };
 
 using OperandBundleDef = OperandBundleDefT<Value *>;
 using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
+
+/// Add a bundle with tag "fp.round" and the specified rounding to the given
+/// bundle set.
+void addRoundingBundle(LLVMContext &Ctx,
+                       SmallVectorImpl<OperandBundleDef> &Bundles,
+                       RoundingMode Rounding, bool Assumed = false);
+
+/// Add a bundle with tag "fp.except" and the specified exception behavior to
+/// the given bundle set.
+void addExceptionBundle(LLVMContext &Ctx,
+                        SmallVectorImpl<OperandBundleDef> &Bundles,
+                        fp::ExceptionBehavior Except);
 
 //===----------------------------------------------------------------------===//
 //                               CallBase Class
@@ -1194,6 +1223,9 @@ public:
     }
     return nullptr;
   }
+
+  /// Get memory effects specific to floating-point operations.
+  std::optional<MemoryEffects> getFloatingPointMemoryEffects() const;
 
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call ||
@@ -2165,6 +2197,19 @@ public:
     }
     return false;
   }
+
+  /// Returns true, if this call has a floating-point operand bundle.
+  bool hasFloatingPointOperandBundle() const;
+
+  /// Return information about the rounding mode to be used for evaluation of
+  /// the called instruction.
+  RoundingSpec getRoundingSpec() const;
+
+  /// Return the effective rounding mode for this call.
+  RoundingMode getRoundingMode() const;
+
+  /// Return the effective exception behavior for this call.
+  fp::ExceptionBehavior getExceptionBehavior() const;
 
   /// Used to keep track of an operand bundle.  See the main comment on
   /// OperandBundleUser above.

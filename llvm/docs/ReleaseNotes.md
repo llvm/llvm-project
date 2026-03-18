@@ -63,6 +63,12 @@ Changes to the LLVM IR
   intrinsics. These are equivalent to `fptrunc` and `fpext` with half
   with a bitcast.
 
+* Calls to floating-point intrinsics implicitly acquire side effects if
+  containing function has strictfp attribute.
+
+* Operand bundles "fp.round" and "fp.except" may be used in floating-point
+  intrinsics calls.
+
 * "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
   migrated to first-class denormal_fpenv attribute.
 

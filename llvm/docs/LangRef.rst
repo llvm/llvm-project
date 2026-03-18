@@ -3296,6 +3296,76 @@ value of its first argument instead of calling the specified function
 or intrinsic. This is achieved with ``PATCHINST`` relocations on the
 target instructions (see the AArch64 psABI for details).
 
+.. _ob_fp:
+
+Floating-point Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A floating-point bundle may be used on a call that implements a
+:ref:`floating-point operation <floatop>`. It can specify execution options,
+provide optimization hints or convey any other information about the operation
+and its context that may be useful to the compiler.
+
+Currently the following tags are supported in floating-point bundles:
+* "fp.round"
+* "fp.except"
+
+An operand bundle tagged with ``"fp.round"`` specifies the rounding mode used
+for the operation's evaluation (the effective rounding mode). This mode is
+represented by a metadata string. Possible values are:
+
+::
+
+    "towardzero"
+    "tonearest"
+    "upward"
+    "downward"
+    "tonearestaway"
+    "dynamic"
+
+Example:
+
+.. code-block:: llvm
+
+        %y = call @llvm.trunc.f64(double%x) [ "fp.round"(metadata !"upward") ]
+
+Only one value with this tag may be specified. If the "fp.round" bundle is
+absent and the operation depends on the rounding mode, the default behavior is
+to use the value from the control register (dynamic rounding). In the
+:ref:`default floating-point environment <floatenv>`, the register is assumed to
+be set to rounding to nearest, ties to even.
+
+An operand bundle tagged with "fp.except" may be associated with operations that
+can raise floating-point exceptions. It contains a single metadata string value,
+which can be one of the following:
+
+::
+
+    "ignore"
+    "maytrap"
+    "strict"
+
+If the argument is ``"ignore"``, any floating-point exceptions raised by the
+call are not intended to be observed. Optimizers may reorder such operations
+or even eliminate them in some cases. For example, if the call's result is
+unused, the call may be removed entirely, even if it could raise exceptions.
+This is the only permitted value in the
+:ref:`default floating-point environment <floatenv>`.
+
+If the ``"fp.except"`` argument is ``"strict"``, any exceptions observed during
+code execution must be preserved by transformations, including indirect
+observation through traps handling. No new observable floating-point exceptions
+may be introduced. This value may only be used in functions with ``strictfp``
+attribute.
+
+If the ``"fp.except"`` bundle is absent, the containing function has the
+``strictfp`` attribute, and the operation may raise floating-point exceptions,
+``"strict"`` is used as the default exception behavior.
+
+The value ``"maytrap"`` is almost same as ``"strict"``, but transformations are
+not required to preserve all exceptions that are implied by the original code.
+For example, exceptions may be potentially hidden by constant folding.
+
 .. _moduleasm:
 
 Module-Level Inline Assembly
@@ -4045,18 +4115,63 @@ seq\_cst total orderings of other operations that are not marked
 Floating-Point Environment
 --------------------------
 
-The default LLVM floating-point environment assumes that traps are disabled and
-status flags are not observable. Therefore, floating-point math operations do
-not have side effects and may be speculated freely. Results assume the
-round-to-nearest rounding mode, and subnormals are assumed to be preserved.
+The execution of an operation on floating-point values is often a more complex
+process than simply evaluating a function of its input arguments. First, it can
+depend on various parameters like rounding mode, denormal behavior, trap masks
+and so on. These are referenced to as "control modes" and are stored in
+floating-point control registers. In addition, the operation may set status bits
+in a status register. Floating-point environment is a collection of registers
+that hold both control modes and status bits.
 
-Running LLVM code in an environment where these assumptions are not met
-typically leads to undefined behavior. The ``strictfp`` and
-:ref:`denormal_fpenv <denormal_fpenv>` attributes as well as
-:ref:`Constrained Floating-Point Intrinsics <constrainedfp>` can be
-used to weaken LLVM's assumptions and ensure defined behavior in
-non-default floating-point environments; see their respective
-documentation for details.
+Interaction with the floating-point environment, including reading control
+modes, writing status bits and trapping, is regarded as side effects. Depending
+on how the side effects are treated, compilation occurs in one of two modes.
+
+In the ``strict mode``, all side effects produced by the floating-point
+operations are taken into account. Modifications to the floating-point
+environment are allowed only in this mode.
+
+In the ``unconstrained mode``, control modes are not modified and status bits
+are not observed. This allows floating-point operations to be considered free
+of side effects, which facilitates code optimizations. An important case of this
+mode is the ``default mode``, in which the control modes have default values:
+rounding mode is "round to nearest, ties to even", traps are disabled, and
+subnormals are assumed to be preserved.
+
+The compilation mode is defined for an entire function and is specified by
+``strictfp`` attribute. If this attribute is set, compilation occurs in strict
+mode. The value of the floating-point environment is specified by function
+attributes (such as :ref:`denormal_fpenv <denormal_fpenv>`) and can be modified
+either by intrinsic functions like ``llvm.set_rounding`` or external functions
+like ``fesetround``.
+
+.. _floatop:
+
+Floating-point operations
+-------------------------
+
+Whether an operation interacts with the floating-point environment depends on
+the operation itself, the attributes of its containing function and
+floating-point bundles specified with its call. Operations that can exhibit such
+interaction, and which may be ignored in the unconstrained mode, are referred to
+as ``floating-point operations``. These are computational operations that
+produce floating-point or integer results, round all results according to the
+value of the floating-point environment, and might signal floating-point
+exceptions.
+
+Some operations on floating-point values are not classified as floating-point
+operations. For instance, ``llvm.copysign``, ``llvm.fabs`` or
+``llvm.is_fpclass`` do not depend on control modes and cannot raise exceptions.
+The operations like ``llvm.set_rounding`` or ``llvm.set_fpenv`` interact with
+the floating-point environment, but they are not computational and their
+interaction cannot be ignored.
+
+In addition to optional side effects, floating-point operations may have
+:ref:`floating-point operand bundles <ob_fp>`. These bundles can specify
+evaluation options (such as rounding mode), optimization hints, or any other
+information that may be useful to the compiler. They can even remove side
+effects from an operation - for example, when a dynamic rounding mode is
+replaced with a static one.
 
 .. _floatnan:
 
@@ -16666,6 +16781,10 @@ matches a conforming libm implementation.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 '``llvm.powi.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16714,6 +16833,10 @@ function may non-deterministically treat signaling NaNs as quiet NaNs. For
 example, `powi(QNaN, 0)` returns `1.0`, and `powi(SNaN, 0)` may
 non-deterministically return `1.0` or a NaN.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. _t_llvm_sin:
 
 '``llvm.sin.*``' Intrinsic
@@ -16752,6 +16875,10 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _t_llvm_cos:
 
@@ -16792,6 +16919,10 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 '``llvm.tan.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16828,6 +16959,10 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 '``llvm.asin.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16866,6 +17001,10 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 '``llvm.acos.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16903,6 +17042,10 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 '``llvm.atan.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -16939,6 +17082,10 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 '``llvm.atan2.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16978,6 +17125,10 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 '``llvm.sinh.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -17014,6 +17165,10 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 '``llvm.cosh.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17052,6 +17207,10 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 '``llvm.tanh.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -17089,6 +17248,9 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 '``llvm.sincos.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17283,6 +17445,10 @@ function may non-deterministically treat signaling NaNs as quiet NaNs. For
 example, `pow(QNaN, 0.0)` returns `1.0`, and `pow(SNaN, 0.0)` may
 non-deterministically return `1.0` or a NaN.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. _int_exp:
 
 '``llvm.exp.*``' Intrinsic
@@ -17323,6 +17489,10 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. _int_exp2:
 
 '``llvm.exp2.*``' Intrinsic
@@ -17362,6 +17532,10 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _int_exp10:
 
@@ -17444,6 +17618,10 @@ argument's power. If the first argument is NaN or infinite, the same
 value is returned. If the result underflows a zero with the same sign
 is returned. If the result overflows, the result is an infinity with
 the same sign.
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _int_frexp:
 
@@ -17541,6 +17719,10 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. _int_log10:
 
 '``llvm.log10.*``' Intrinsic
@@ -17581,6 +17763,9 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _int_log2:
 
@@ -17622,6 +17807,10 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. _int_fma:
 
 '``llvm.fma.*``' Intrinsic
@@ -17660,6 +17849,10 @@ is assumed to not trap or set ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _int_fabs:
 
@@ -17803,6 +17996,10 @@ which follow :ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
 The ``llvm.minnum`` intrinsic can be refined into ``llvm.minimumnum``, as the
 latter exhibits a subset of behaviors of the former.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. warning::
 
   If the intrinsic is used without nsz, not all backends currently respect the
@@ -17869,6 +18066,10 @@ which follow :ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
 The ``llvm.maxnum`` intrinsic can be refined into ``llvm.maximumnum``, as the
 latter exhibits a subset of behaviors of the former.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. warning::
 
   If the intrinsic is used without nsz, not all backends currently respect the
@@ -17924,6 +18125,10 @@ If the ``nsz`` flag is specified, ``llvm.maximum`` with one +0.0 and one
 ``nsz`` semantics, if both operands have the same sign, the result must also
 have the same sign.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. _i_maximum:
 
 '``llvm.maximum.*``' Intrinsic
@@ -17971,6 +18176,10 @@ If the ``nsz`` flag is specified, ``llvm.maximum`` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
 ``nsz`` semantics, if both operands have the same sign, the result must also
 have the same sign.
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _i_minimumnum:
 
@@ -18157,6 +18366,10 @@ Semantics:
 This function returns the same values as the libm ``floor`` functions
 would, and handles error conditions in the same way.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. _int_ceil:
 
 '``llvm.ceil.*``' Intrinsic
@@ -18194,6 +18407,9 @@ Semantics:
 This function returns the same values as the libm ``ceil`` functions
 would, and handles error conditions in the same way.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _int_llvm_trunc:
 
@@ -18233,6 +18449,10 @@ Semantics:
 This function returns the same values as the libm ``trunc`` functions
 would, and handles error conditions in the same way.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 .. _int_rint:
 
 '``llvm.rint.*``' Intrinsic
@@ -18270,11 +18490,13 @@ Semantics:
 """"""""""
 
 This function returns the same values as the libm ``rint`` functions
-would, and handles error conditions in the same way. Since LLVM assumes the
-:ref:`default floating-point environment <floatenv>`, the rounding mode is
-assumed to be set to "nearest", so halfway cases are rounded to the even
-integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>`
-to avoid that assumption.
+would, and handles error conditions in the same way.
+
+In the :ref:`default floating-point environment <floatenv>`, the rounding mode is
+assumed to be "round to nearest, ties to even".
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _int_nearbyint:
 
@@ -18312,11 +18534,13 @@ Semantics:
 """"""""""
 
 This function returns the same values as the libm ``nearbyint``
-functions would, and handles error conditions in the same way. Since LLVM
-assumes the :ref:`default floating-point environment <floatenv>`, the rounding
-mode is assumed to be set to "nearest", so halfway cases are rounded to the even
-integer. Use :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` to
-avoid that assumption.
+functions would, and handles error conditions in the same way.
+
+In the :ref:`default floating-point environment <floatenv>`, the rounding mode is
+assumed to be "round to nearest, ties to even".
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _int_round:
 
@@ -18355,6 +18579,10 @@ Semantics:
 
 This function returns the same values as the libm ``round``
 functions would, and handles error conditions in the same way.
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _int_roundeven:
 
@@ -18395,6 +18623,9 @@ This function implements IEEE 754 operation ``roundToIntegralTiesToEven``. It
 also behaves in the same way as C standard function ``roundeven``, including
 that it disregards rounding mode and does not raise floating point exceptions.
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 '``llvm.lround.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -18441,6 +18672,10 @@ would, but without setting errno. If the rounded value is too large to
 be stored in the result type, the return value is a non-deterministic
 value (equivalent to `freeze poison`).
 
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
+
 '``llvm.llround.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -18477,6 +18712,10 @@ This function returns the same values as the libm ``llround``
 functions would, but without setting errno. If the rounded value is
 too large to be stored in the result type, the return value is a
 non-deterministic value (equivalent to `freeze poison`).
+
+As a :ref:`floating-point operation <floatop>`, this function has side effects
+in a ``strictfp`` function and may be annotated with
+:ref:`floating-point operand bundles <ob_fp>`.
 
 .. _int_lrint:
 
@@ -28044,13 +28283,6 @@ round-to-nearest and that floating-point exceptions will not be monitored.
 Constrained FP intrinsics are used to support non-default rounding modes and
 accurately preserve exception behavior without compromising LLVM's ability to
 optimize FP code when the default behavior is used.
-
-If any FP operation in a function is constrained then they all must be
-constrained. This is required for correct LLVM IR. Optimizations that
-move code around can create miscompiles if mixing of constrained and normal
-operations is done. The correct way to mix constrained and less constrained
-operations is to use the rounding mode and exception handling metadata to
-mark constrained intrinsics as having LLVM's default behavior.
 
 Each of these intrinsics corresponds to a normal floating-point operation. The
 data arguments and the return value are the same as the corresponding FP

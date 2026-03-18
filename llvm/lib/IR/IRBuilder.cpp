@@ -186,6 +186,108 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
+CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
+                                    ArrayRef<Value *> Args,
+                                    ArrayRef<OperandBundleDef> OpBundles,
+                                    const Twine &Name, MDNode *FPMathTag) {
+  // Operand bundles can be extended by floating-point bundles. In this case
+  // we need a copy of OpBundles, because ArrayRef is immutable.
+  ArrayRef<OperandBundleDef> ActualBundlesRef = OpBundles;
+  SmallVector<OperandBundleDef, 2> ActualBundles;
+
+  bool NeedUpdateMemoryEffects = false;
+  if (const auto *Func = dyn_cast<Function>(Callee))
+    if (Intrinsic::ID ID = Func->getIntrinsicID())
+      if (Intrinsic::isFPOperation(ID)) {
+        // If the builder specifies non-default floating-point options, add
+        // corresponding operand bundle unless a bundle with such tag is already
+        // present.
+        bool AddRounding;
+        bool AddExceptions;
+        if (IsFPConstrained) {
+          AddRounding = DefaultConstrainedRounding != RoundingMode::Dynamic;
+          AddExceptions = DefaultConstrainedExcept != fp::ebStrict;
+        } else {
+          AddRounding =
+              DefaultConstrainedRounding != RoundingMode::NearestTiesToEven;
+          AddExceptions = false;
+          assert(DefaultConstrainedExcept == fp::ebIgnore &&
+                 "FP exception in default mode must be ignored");
+        }
+
+        // The options specified by the specified bundles have higher
+        // precedence than the options specified in the builder. Some FP
+        // operations do not depend on rounding mode, do not add "fp.round"
+        // to them.
+        bool NoRoundingMode = !Intrinsic::dependsOnRoundingMode(ID);
+        bool RoundingModeIsSpecified = false;
+        for (const auto &Bundle : OpBundles) {
+          if (!RoundingModeIsSpecified)
+            RoundingModeIsSpecified = Bundle.getTag() == "fp.round";
+          if (AddRounding && RoundingModeIsSpecified)
+            AddRounding = false;
+          if (AddExceptions && Bundle.getTag() == "fp.except")
+            AddExceptions = false;
+        }
+        if (AddRounding && NoRoundingMode)
+          AddRounding = false;
+
+        if (!OpBundles.empty()) {
+          if (RoundingModeIsSpecified && NoRoundingMode) {
+            std::copy_if(OpBundles.begin(), OpBundles.end(),
+                         std::back_inserter(ActualBundles),
+                         [](const OperandBundleDef &Bundle) {
+                           return Bundle.getTag() != "fp.round";
+                         });
+          } else {
+            ActualBundles.append(OpBundles.begin(), OpBundles.end());
+#ifndef NDEBUG
+            // In the default floating-point mode assumed rounding is not
+            // allowed, except when rounding mode is NearestTiesToEven.
+            if (!IsFPConstrained)
+              for (const OperandBundleDef &Bundle : ActualBundles) {
+                if (Bundle.getTag() == "fp.round") {
+                  StringRef MDS = Bundle.getInputAsString(0);
+                  RoundingSpec RS = *readRoundingSpec(MDS);
+                  assert(RS.isStatic() || RS.isDefault());
+                }
+              }
+#endif
+          }
+          ActualBundlesRef = ActualBundles;
+        }
+        if (AddRounding || AddExceptions) {
+          if (AddRounding)
+            createRoundingBundle(ActualBundles, DefaultConstrainedRounding);
+          if (AddExceptions)
+            createExceptionBundle(ActualBundles, DefaultConstrainedExcept);
+          ActualBundlesRef = ActualBundles;
+        }
+
+        if (IsFPConstrained) {
+          // Due to potential setting FP exception bits, in modes other than
+          // the default, the memory effects must include read/write access
+          // to FPE.
+          MemoryEffects FME = Func->getMemoryEffects();
+          NeedUpdateMemoryEffects = !FME.doesAccessInaccessibleMem();
+        }
+      }
+
+  // If the call accesses FPE, update memory effects accordingly.
+  CallInst *CI = CallInst::Create(FTy, Callee, Args, ActualBundlesRef);
+  if (NeedUpdateMemoryEffects) {
+    MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+    auto A = Attribute::getWithMemoryEffects(getContext(), ME);
+    CI->addFnAttr(A);
+  }
+
+  if (IsFPConstrained)
+    setConstrainedFPCallAttr(CI);
+  if (isa<FPMathOperator>(CI))
+    setFPAttrs(CI, FPMathTag, FMF);
+  return Insert(CI, Name);
+}
+
 static Value *CreateVScaleMultiple(IRBuilderBase &B, Type *Ty, uint64_t Scale) {
   Value *VScale = B.CreateVScale(Ty);
   if (Scale == 1)
@@ -1395,6 +1497,16 @@ CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
   OperandBundleDefT<Value *> DereferenceableOpB("dereferenceable", Vals);
   return CreateAssumption(ConstantInt::getTrue(getContext()),
                           {DereferenceableOpB});
+}
+
+void IRBuilderBase::createRoundingBundle(
+    SmallVectorImpl<OperandBundleDef> &Bundles, RoundingMode RM) {
+  addRoundingBundle(Context, Bundles, RM);
+}
+
+void IRBuilderBase::createExceptionBundle(
+    SmallVectorImpl<OperandBundleDef> &Bundles, fp::ExceptionBehavior Except) {
+  addExceptionBundle(Context, Bundles, Except);
 }
 
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;

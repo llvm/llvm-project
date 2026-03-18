@@ -128,8 +128,7 @@ Value *llvm::buildAtomicRMWValue(AtomicRMWInst::BinOp Op,
 
 bool llvm::lowerAtomicRMWInst(AtomicRMWInst *RMWI) {
   IRBuilder<> Builder(RMWI);
-  Builder.setIsFPConstrained(
-      RMWI->getFunction()->hasFnAttribute(Attribute::StrictFP));
+  Builder.setFPMode(RMWI->getFunction()->hasFnAttribute(Attribute::StrictFP));
 
   Value *Ptr = RMWI->getPointerOperand();
   Value *Val = RMWI->getValOperand();

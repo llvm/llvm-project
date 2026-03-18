@@ -1282,9 +1282,9 @@ define float @test_rootn_fast_f32_strictfp(float %x, i32 %y) #1 {
 ; NOPRELINK-NEXT:    [[TMP0:%.*]] = call fast float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; NOPRELINK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.experimental.constrained.fdiv.f32(float 1.000000e+00, float [[TMP0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
 ; NOPRELINK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.fabs.f32(float [[X]]) #[[ATTR0]]
-; NOPRELINK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.log2.f32(float [[TMP2]]) #[[ATTR0]]
+; NOPRELINK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.log2.f32(float [[TMP2]]) #[[ATTR5:[0-9]+]]
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.experimental.constrained.fmul.f32(float [[TMP1]], float [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
-; NOPRELINK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.exp2.f32(float [[TMP4]]) #[[ATTR0]]
+; NOPRELINK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.exp2.f32(float [[TMP4]]) #[[ATTR5]]
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = and i32 [[Y]], 1
 ; NOPRELINK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP6]], 0
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = select fast i1 [[DOTNOT]], float 1.000000e+00, float [[X]]
@@ -1965,6 +1965,7 @@ attributes #2 = { noinline }
 ; NOPRELINK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
 ; NOPRELINK: attributes #[[ATTR3]] = { noinline }
 ; NOPRELINK: attributes #[[ATTR4]] = { nobuiltin }
+; NOPRELINK: attributes #[[ATTR5]] = { strictfp memory(inaccessiblemem: readwrite) }
 ;.
 ; PRELINK: [[META0:![0-9]+]] = !{i32 1, !"amdgpu-libcall-have-fast-pow", i32 1}
 ; PRELINK: [[META1]] = !{float 2.000000e+00}

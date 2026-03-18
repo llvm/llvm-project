@@ -537,7 +537,12 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
       if (F->isDeclaration() || F->hasOptNone()) {
         // Try to get mod/ref behaviour from function attributes.
-        if (F->doesNotAccessMemory()) {
+        if (F->isFPOperation()) {
+          // Floating-point operations have mod/ref behaviour that depends on
+          // the call site properties and containing function attributes.
+          // Conservatively assume RW access to the floating-point environment.
+          FI.addModRefInfo(ModRefInfo::ModRef);
+        } else if (F->doesNotAccessMemory()) {
           // Can't do better than that!
         } else if (F->onlyReadsMemory()) {
           FI.addModRefInfo(ModRefInfo::Ref);
