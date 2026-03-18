@@ -586,24 +586,23 @@ public:
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
 
   // Unary Operators.
-  mlir::Value VisitUnaryPostDec(const UnaryOperator *e) {
+  mlir::Value VisitUnaryPrePostIncDec(const UnaryOperator *e) {
     LValue lv = cgf.emitLValue(e->getSubExpr());
-    return emitScalarPrePostIncDec(e, lv, cir::UnaryOpKind::Dec, false);
+    return emitScalarPrePostIncDec(e, lv);
+  }
+  mlir::Value VisitUnaryPostDec(const UnaryOperator *e) {
+    return VisitUnaryPrePostIncDec(e);
   }
   mlir::Value VisitUnaryPostInc(const UnaryOperator *e) {
-    LValue lv = cgf.emitLValue(e->getSubExpr());
-    return emitScalarPrePostIncDec(e, lv, cir::UnaryOpKind::Inc, false);
+    return VisitUnaryPrePostIncDec(e);
   }
   mlir::Value VisitUnaryPreDec(const UnaryOperator *e) {
-    LValue lv = cgf.emitLValue(e->getSubExpr());
-    return emitScalarPrePostIncDec(e, lv, cir::UnaryOpKind::Dec, true);
+    return VisitUnaryPrePostIncDec(e);
   }
   mlir::Value VisitUnaryPreInc(const UnaryOperator *e) {
-    LValue lv = cgf.emitLValue(e->getSubExpr());
-    return emitScalarPrePostIncDec(e, lv, cir::UnaryOpKind::Inc, true);
+    return VisitUnaryPrePostIncDec(e);
   }
-  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                      cir::UnaryOpKind kind, bool isPre) {
+  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv) {
     if (cgf.getLangOpts().OpenMP)
       cgf.cgm.errorNYI(e->getSourceRange(), "inc/dec OpenMP");
 
@@ -632,7 +631,7 @@ public:
     //          -> bool = ((int)bool + 1 != 0)
     // An interesting aspect of this is that increment is always true.
     // Decrement does not have this property.
-    if (kind == cir::UnaryOpKind::Inc && type->isBooleanType()) {
+    if (e->isIncrementOp() && type->isBooleanType()) {
       value = builder.getTrue(cgf.getLoc(e->getExprLoc()));
     } else if (type->isIntegerType()) {
       QualType promotedType;
@@ -663,12 +662,10 @@ public:
 
       assert(!cir::MissingFeatures::sanitizers());
       if (e->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
-        value = emitIncDecConsiderOverflowBehavior(e, value, kind);
+        value = emitIncDecConsiderOverflowBehavior(e, value);
       } else {
-        cir::UnaryOpKind kind =
-            e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
-        value = emitUnaryOp(e, kind, input, /*nsw=*/false);
+        value = emitIncOrDec(e, input, /*nsw=*/false);
       }
     } else if (const PointerType *ptr = type->getAs<PointerType>()) {
       QualType type = ptr->getPointeeType();
@@ -680,7 +677,7 @@ public:
         // For everything else, we can just do a simple increment.
         mlir::Location loc = cgf.getLoc(e->getSourceRange());
         CIRGenBuilderTy &builder = cgf.getBuilder();
-        int amount = kind == cir::UnaryOpKind::Inc ? 1 : -1;
+        int amount = e->isIncrementOp() ? 1 : -1;
         mlir::Value amt = builder.getSInt32(amount, loc);
         assert(!cir::MissingFeatures::sanitizers());
         value = builder.createPtrStride(loc, value, amt);
@@ -700,10 +697,7 @@ public:
       if (mlir::isa<cir::SingleType, cir::DoubleType>(value.getType())) {
         // Create the inc/dec operation.
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
-        assert(
-            (kind == cir::UnaryOpKind::Inc || kind == cir::UnaryOpKind::Dec) &&
-            "Invalid UnaryOp kind");
-        value = emitUnaryOp(e, kind, value);
+        value = emitIncOrDec(e, value);
       } else {
         cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fp type");
         return {};
@@ -728,23 +722,20 @@ public:
 
     // If this is a postinc, return the value read from memory, otherwise use
     // the updated value.
-    return isPre ? value : input;
+    return e->isPrefix() ? value : input;
   }
 
   mlir::Value emitIncDecConsiderOverflowBehavior(const UnaryOperator *e,
-                                                 mlir::Value inVal,
-                                                 cir::UnaryOpKind kind) {
-    assert((kind == cir::UnaryOpKind::Inc || kind == cir::UnaryOpKind::Dec) &&
-           "Invalid UnaryOp kind");
+                                                 mlir::Value inVal) {
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      return emitUnaryOp(e, kind, inVal, /*nsw=*/false);
+      return emitIncOrDec(e, inVal, /*nsw=*/false);
     case LangOptions::SOB_Undefined:
       assert(!cir::MissingFeatures::sanitizers());
-      return emitUnaryOp(e, kind, inVal, /*nsw=*/true);
+      return emitIncOrDec(e, inVal, /*nsw=*/true);
     case LangOptions::SOB_Trapping:
       if (!e->canOverflow())
-        return emitUnaryOp(e, kind, inVal, /*nsw=*/true);
+        return emitIncOrDec(e, inVal, /*nsw=*/true);
       cgf.cgm.errorNYI(e->getSourceRange(), "inc/def overflow SOB_Trapping");
       return {};
     }
@@ -766,25 +757,28 @@ public:
 
   mlir::Value VisitUnaryPlus(const UnaryOperator *e) {
     QualType promotionType = getPromotionType(e->getSubExpr()->getType());
-    mlir::Value result =
-        emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus, promotionType);
+    mlir::Value result = VisitUnaryPlus(e, promotionType);
     if (result && !promotionType.isNull())
       return emitUnPromotedValue(result, e->getType());
     return result;
+  }
+
+  mlir::Value VisitUnaryPlus(const UnaryOperator *e, QualType promotionType) {
+    ignoreResultAssign = false;
+    if (!promotionType.isNull())
+      return cgf.emitPromotedScalarExpr(e->getSubExpr(), promotionType);
+    return Visit(e->getSubExpr());
   }
 
   mlir::Value VisitUnaryMinus(const UnaryOperator *e) {
     QualType promotionType = getPromotionType(e->getSubExpr()->getType());
-    mlir::Value result =
-        emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus, promotionType);
+    mlir::Value result = VisitUnaryMinus(e, promotionType);
     if (result && !promotionType.isNull())
       return emitUnPromotedValue(result, e->getType());
     return result;
   }
 
-  mlir::Value emitUnaryPlusOrMinus(const UnaryOperator *e,
-                                   cir::UnaryOpKind kind,
-                                   QualType promotionType) {
+  mlir::Value VisitUnaryMinus(const UnaryOperator *e, QualType promotionType) {
     ignoreResultAssign = false;
     mlir::Value operand;
     if (!promotionType.isNull())
@@ -795,27 +789,29 @@ public:
     // TODO(cir): We might have to change this to support overflow trapping.
     //            Classic codegen routes unary minus through emitSub to ensure
     //            that the overflow behavior is handled correctly.
-    bool nsw = kind == cir::UnaryOpKind::Minus &&
-               e->getType()->isSignedIntegerType() &&
+    bool nsw = e->getType()->isSignedIntegerType() &&
                cgf.getLangOpts().getSignedOverflowBehavior() !=
                    LangOptions::SOB_Defined;
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
-    return emitUnaryOp(e, kind, operand, nsw);
+    return builder.createOrFold<cir::MinusOp>(
+        cgf.getLoc(e->getSourceRange().getBegin()), operand, nsw);
   }
 
-  mlir::Value emitUnaryOp(const UnaryOperator *e, cir::UnaryOpKind kind,
-                          mlir::Value input, bool nsw = false) {
-    return builder.createOrFold<cir::UnaryOp>(
-        cgf.getLoc(e->getSourceRange().getBegin()), input.getType(), kind,
-        input, nsw);
+  mlir::Value emitIncOrDec(const UnaryOperator *e, mlir::Value input,
+                           bool nsw = false) {
+    mlir::Location loc = cgf.getLoc(e->getSourceRange().getBegin());
+    return e->isIncrementOp()
+               ? builder.createOrFold<cir::IncOp>(loc, input, nsw)
+               : builder.createOrFold<cir::DecOp>(loc, input, nsw);
   }
 
   mlir::Value VisitUnaryNot(const UnaryOperator *e) {
     ignoreResultAssign = false;
     mlir::Value op = Visit(e->getSubExpr());
-    return emitUnaryOp(e, cir::UnaryOpKind::Not, op);
+    return builder.createOrFold<cir::NotOp>(
+        cgf.getLoc(e->getSourceRange().getBegin()), op);
   }
 
   mlir::Value VisitUnaryLNot(const UnaryOperator *e);
@@ -1196,19 +1192,25 @@ public:
         result = builder.createCompare(loc, kind, lhs, rhs);
       }
     } else {
-      // Complex Comparison: can only be an equality comparison.
-      assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
-      BinOpInfo boInfo = emitBinOps(e);
-      mlir::Value lhs = boInfo.lhs;
-      if (!lhsTy->isAnyComplexType()) {
-        lhs = builder.createComplexCreate(
-            loc, lhs, builder.getNullValue(lhs.getType(), loc));
+      assert((e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE) &&
+             "Complex Comparison: can only be an equality comparison");
+
+      mlir::Value lhs;
+      if (lhsTy->isAnyComplexType()) {
+        lhs = cgf.emitComplexExpr(e->getLHS());
+      } else {
+        mlir::Value lhsReal = Visit(e->getLHS());
+        mlir::Value lhsImag = builder.getNullValue(convertType(lhsTy), loc);
+        lhs = builder.createComplexCreate(loc, lhsReal, lhsImag);
       }
 
-      mlir::Value rhs = boInfo.rhs;
-      if (!rhsTy->isAnyComplexType()) {
-        rhs = builder.createComplexCreate(
-            loc, rhs, builder.getNullValue(rhs.getType(), loc));
+      mlir::Value rhs;
+      if (rhsTy->isAnyComplexType()) {
+        rhs = cgf.emitComplexExpr(e->getRHS());
+      } else {
+        mlir::Value rhsReal = Visit(e->getRHS());
+        mlir::Value rhsImag = builder.getNullValue(convertType(rhsTy), loc);
+        rhs = builder.createComplexCreate(loc, rhsReal, rhsImag);
       }
 
       result = builder.createCompare(loc, kind, lhs, rhs);
@@ -1560,9 +1562,9 @@ mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
     case UO_Real:
       return VisitRealImag(uo, promotionType);
     case UO_Minus:
-      return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Minus, promotionType);
+      return VisitUnaryMinus(uo, promotionType);
     case UO_Plus:
-      return emitUnaryPlusOrMinus(uo, cir::UnaryOpKind::Plus, promotionType);
+      return VisitUnaryPlus(uo, promotionType);
     default:
       break;
     }
@@ -2813,9 +2815,6 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 }
 
 mlir::Value CIRGenFunction::emitScalarPrePostIncDec(const UnaryOperator *e,
-                                                    LValue lv,
-                                                    cir::UnaryOpKind kind,
-                                                    bool isPre) {
-  return ScalarExprEmitter(*this, builder)
-      .emitScalarPrePostIncDec(e, lv, kind, isPre);
+                                                    LValue lv) {
+  return ScalarExprEmitter(*this, builder).emitScalarPrePostIncDec(e, lv);
 }

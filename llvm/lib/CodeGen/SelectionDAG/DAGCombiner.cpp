@@ -5478,16 +5478,6 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
       AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::AND, DL, VT, N0, Add);
     }
-    // fold (urem x, (lshr pow2, y)) -> (and x, (add (lshr pow2, y), -1))
-    // TODO: We should sink the following into isKnownToBePowerOfTwo
-    // using a OrZero parameter analogous to our handling in ValueTracking.
-    if (N1.getOpcode() == ISD::SRL &&
-        DAG.isKnownToBeAPowerOfTwo(N1.getOperand(0))) {
-      SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
-      SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);
-      AddToWorklist(Add.getNode());
-      return DAG.getNode(ISD::AND, DL, VT, N0, Add);
-    }
   }
 
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
@@ -8532,6 +8522,24 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
       SDValue B = N0.getOperand(1);
       SDValue NewRHS = DAG.getNode(ISD::OR, DL, VT, X, B);
       return DAG.getNode(ISD::FSHR, DL, VT, X, NewRHS, N0.getOperand(2));
+    }
+  }
+
+  // (fshl A, B, S0) | (fshr C, D, S1) --> fshl (A|C), (B|D), S0
+  // iff S0 + S1 == bitwidth(S1)
+  if (N0.getOpcode() == ISD::FSHL && N1.getOpcode() == ISD::FSHR &&
+      N0.hasOneUse() && N1.hasOneUse()) {
+    auto *S0 = dyn_cast<ConstantSDNode>(N0.getOperand(2));
+    auto *S1 = dyn_cast<ConstantSDNode>(N1.getOperand(2));
+    if (S0 && S1 && S0->getZExtValue() < BW && S1->getZExtValue() < BW &&
+        S0->getZExtValue() == (BW - S1->getZExtValue())) {
+      SDValue A = N0.getOperand(0);
+      SDValue B = N0.getOperand(1);
+      SDValue C = N1.getOperand(0);
+      SDValue D = N1.getOperand(1);
+      SDValue NewLHS = DAG.getNode(ISD::OR, DL, VT, A, C);
+      SDValue NewRHS = DAG.getNode(ISD::OR, DL, VT, B, D);
+      return DAG.getNode(ISD::FSHL, DL, VT, NewLHS, NewRHS, N0.getOperand(2));
     }
   }
 
@@ -11702,6 +11710,32 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
           ISD::SHL, DL, VT, N0,
           DAG.getConstant(IsFSHL ? ShAmt : BitWidth - ShAmt, DL, ShAmtTy));
 
+    // fold fshl(N0, N1, c) -> x  and  fshr(N0, N1, c) -> x
+    // where N0 is any node that contributes "x >> C0" to the result:
+    //   lshr(x, C0)  |  fshr(_, x, C0)  |  fshl(_, x, C1)
+    // and N1 is any node that contributes "x << C1" to the result:
+    //   shl(x, C1)   |  fshl(x, _, C1)  |  fshr(x, _, C0)
+    // with C0 = IsFSHL ? amnt : BW-amnt,  C1 = BW - C0
+
+    // ShAmt == 0 was handled above; uge(BitWidth) was reduced via modulo above.
+    assert(ShAmt >= 1 && ShAmt < BitWidth &&
+           "ShAmt must be in [1, BW-1] for the identity fold to be valid");
+    SDValue Val;
+    unsigned C0Expected = IsFSHL ? ShAmt : BitWidth - ShAmt;
+    unsigned C1Expected = IsFSHL ? BitWidth - ShAmt : ShAmt;
+
+    if ((sd_match(N0, m_Srl(m_Value(Val), m_SpecificInt(C0Expected))) ||
+         sd_match(N0, m_Node(ISD::FSHR, m_Value(), m_Value(Val),
+                             m_SpecificInt(C0Expected))) ||
+         sd_match(N0, m_Node(ISD::FSHL, m_Value(), m_Value(Val),
+                             m_SpecificInt(C1Expected)))) &&
+        (sd_match(N1, m_Shl(m_Specific(Val), m_SpecificInt(C1Expected))) ||
+         sd_match(N1, m_Node(ISD::FSHL, m_Specific(Val), m_Value(),
+                             m_SpecificInt(C1Expected))) ||
+         sd_match(N1, m_Node(ISD::FSHR, m_Specific(Val), m_Value(),
+                             m_SpecificInt(C0Expected)))))
+      return Val;
+
     // fold (fshl ld1, ld0, c) -> (ld0[ofs]) iff ld0 and ld1 are consecutive.
     // fold (fshr ld1, ld0, c) -> (ld0[ofs]) iff ld0 and ld1 are consecutive.
     // TODO - bigendian support once we have test coverage.
@@ -11813,29 +11847,10 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
   EVT VT = N->getValueType(0);
   SDValue Op0, Op1;
 
-  if (!sd_match(N, m_Abs(m_AnyOf(m_Sub(m_Value(Op0), m_Value(Op1)),
-                                 m_Add(m_Value(Op0), m_Value(Op1))))))
+  if (!sd_match(N, m_Abs(m_Sub(m_Value(Op0), m_Value(Op1)))))
     return SDValue();
 
   SDValue AbsOp0 = N->getOperand(0);
-  bool IsAdd = AbsOp0.getOpcode() == ISD::ADD;
-  // Make sure (neg B) is positive.
-  if (IsAdd) {
-    // Elements of Op1 must be constant and != VT.minSignedValue() (or undef)
-    std::function<bool(ConstantSDNode *)> IsNotMinSignedInt =
-        [VT](ConstantSDNode *C) {
-          if (C == nullptr)
-            return true;
-          return !C->getAPIntValue()
-                      .trunc(VT.getScalarSizeInBits())
-                      .isMinSignedValue();
-        };
-
-    if (!ISD::matchUnaryPredicate(Op1, IsNotMinSignedInt, /*AllowUndefs=*/true,
-                                  /*AllowTruncation=*/true))
-      return SDValue();
-  }
-
   unsigned Opc0 = Op0.getOpcode();
 
   // Check if the operands of the sub are (zero|sign)-extended, otherwise
@@ -11844,35 +11859,21 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
       (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND &&
        Opc0 != ISD::SIGN_EXTEND_INREG)) {
     // fold (abs (sub nsw x, y)) -> abds(x, y)
-    // fold (abs (add nsw x, -y)) -> abds(x, y)
-    bool AbsOpWillNSW =
-        AbsOp0->getFlags().hasNoSignedWrap() ||
-        (IsAdd ? DAG.willNotOverflowAdd(/*IsSigned=*/true, Op0, Op1)
-               : DAG.willNotOverflowSub(/*IsSigned=*/true, Op0, Op1));
-
     // Don't fold this for unsupported types as we lose the NSW handling.
     if (hasOperation(ISD::ABDS, VT) && TLI.preferABDSToABSWithNSW(VT) &&
-        AbsOpWillNSW) {
-      if (IsAdd)
-        Op1 = DAG.getNegative(Op1, SDLoc(Op1), VT);
+        (AbsOp0->getFlags().hasNoSignedWrap() ||
+         DAG.willNotOverflowSub(/*IsSigned=*/true, Op0, Op1))) {
       SDValue ABD = DAG.getNode(ISD::ABDS, DL, VT, Op0, Op1);
       return DAG.getZExtOrTrunc(ABD, DL, SrcVT);
     }
     // fold (abs (sub x, y)) -> abdu(x, y)
     if (hasOperation(ISD::ABDU, VT) && DAG.SignBitIsZero(Op0) &&
         DAG.SignBitIsZero(Op1)) {
-      if (IsAdd)
-        Op1 = DAG.getNegative(Op1, SDLoc(Op1), VT);
       SDValue ABD = DAG.getNode(ISD::ABDU, DL, VT, Op0, Op1);
       return DAG.getZExtOrTrunc(ABD, DL, SrcVT);
     }
     return SDValue();
   }
-
-  // The IsAdd case explicitly checks for const/bv-of-const. This implies either
-  // (Opc0 != Op1.getOpcode() || Opc0 is not in {zext/sext/sign_ext_inreg}. This
-  // implies it was alrady handled by the above if statement.
-  assert(!IsAdd && "Unexpected abs(add(x,y)) pattern");
 
   EVT VT0, VT1;
   if (Opc0 == ISD::SIGN_EXTEND_INREG) {
@@ -17209,6 +17210,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   // fold (conv (freeze (load x))) -> (freeze (load (conv*)x))
   // If the resultant load doesn't need a higher alignment than the original!
   auto CastLoad = [this, &VT](SDValue N0, const SDLoc &DL) {
+    if (N0.getOpcode() == ISD::AssertNoFPClass)
+      N0 = N0.getOperand(0);
     if (!ISD::isNormalLoad(N0.getNode()) || !N0.hasOneUse())
       return SDValue();
 

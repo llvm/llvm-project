@@ -1108,6 +1108,23 @@ public:
     setResult(SVI, std::move(Res));
   }
 
+  void visitBitCastInst(BitCastInst &BCI) {
+    // The conversion is done as if the value had been stored to memory and read
+    // back as the target type.
+    SmallVector<Byte> Bytes;
+    Bytes.resize(Ctx.getEffectiveTypeStoreSize(BCI.getType()),
+                 Byte::concrete(0));
+    Ctx.toBytes(getValue(BCI.getOperand(0)), BCI.getOperand(0)->getType(),
+                Bytes);
+    setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
+  }
+
+  void visitFreezeInst(FreezeInst &FI) {
+    AnyValue Val = getValue(FI.getOperand(0));
+    Ctx.freeze(Val, FI.getType());
+    setResult(FI, std::move(Val));
+  }
+
   /// This function implements the main interpreter loop.
   /// It handles function calls in a non-recursive manner to avoid stack
   /// overflows.

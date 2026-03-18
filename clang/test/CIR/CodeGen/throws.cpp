@@ -112,9 +112,7 @@ void paren_expr() { (throw 0, 1 + 2); }
 // CIR:   cir.throw %[[EXCEPTION_ADDR]] : !cir.ptr<!s32i>, @_ZTIi
 // CIR:   cir.unreachable
 // CIR: ^bb1:
-// CIR:   %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:   %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR:   %[[ADD:.*]] = cir.add nsw %[[CONST_1]], %[[CONST_2]] : !s32i
+// CIR:   cir.return
 
 // LLVM: %[[EXCEPTION_ADDR:.*]] = call ptr @__cxa_allocate_exception(i64 4)
 // LLVM: store i32 0, ptr %[[EXCEPTION_ADDR]], align 16

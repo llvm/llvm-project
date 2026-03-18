@@ -505,7 +505,7 @@ namespace {
 /// a Preprocessor.
 class ASTInfoCollector : public ASTReaderListener {
   HeaderSearchOptions &HSOpts;
-  std::string &SpecificModuleCachePath;
+  std::string &ContextHash;
   PreprocessorOptions &PPOpts;
   LangOptions &LangOpts;
   CodeGenOptions &CodeGenOpts;
@@ -513,14 +513,13 @@ class ASTInfoCollector : public ASTReaderListener {
   uint32_t &Counter;
 
 public:
-  ASTInfoCollector(HeaderSearchOptions &HSOpts,
-                   std::string &SpecificModuleCachePath,
+  ASTInfoCollector(HeaderSearchOptions &HSOpts, std::string &ContextHash,
                    PreprocessorOptions &PPOpts, LangOptions &LangOpts,
                    CodeGenOptions &CodeGenOpts, TargetOptions &TargetOpts,
                    uint32_t &Counter)
-      : HSOpts(HSOpts), SpecificModuleCachePath(SpecificModuleCachePath),
-        PPOpts(PPOpts), LangOpts(LangOpts), CodeGenOpts(CodeGenOpts),
-        TargetOpts(TargetOpts), Counter(Counter) {}
+      : HSOpts(HSOpts), ContextHash(ContextHash), PPOpts(PPOpts),
+        LangOpts(LangOpts), CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts),
+        Counter(Counter) {}
 
   bool ReadLanguageOptions(const LangOptions &NewLangOpts,
                            StringRef ModuleFilename, bool Complain,
@@ -538,10 +537,10 @@ public:
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &NewHSOpts,
                                StringRef ModuleFilename,
-                               StringRef NewSpecificModuleCachePath,
+                               StringRef NewContextHash,
                                bool Complain) override {
     HSOpts = NewHSOpts;
-    SpecificModuleCachePath = NewSpecificModuleCachePath;
+    ContextHash = NewContextHash;
     return false;
   }
 
@@ -733,13 +732,13 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->ModCache = createCrossProcessModuleCache();
 
   // Gather info for preprocessor construction later on.
-  std::string SpecificModuleCachePath;
+  std::string ContextHash;
   unsigned Counter = 0;
   // Using a temporary FileManager since the AST file might specify custom
   // HeaderSearchOptions::VFSOverlayFiles that affect the underlying VFS.
   FileManager TmpFileMgr(FileSystemOpts, VFS);
-  ASTInfoCollector Collector(*AST->HSOpts, SpecificModuleCachePath,
-                             *AST->PPOpts, *AST->LangOpts, *AST->CodeGenOpts,
+  ASTInfoCollector Collector(*AST->HSOpts, ContextHash, *AST->PPOpts,
+                             *AST->LangOpts, *AST->CodeGenOpts,
                              *AST->TargetOpts, Counter);
   if (ASTReader::readASTFileControlBlock(
           Filename, TmpFileMgr, *AST->ModCache, PCHContainerRdr,
@@ -763,7 +762,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       AST->getHeaderSearchOpts(), AST->getSourceManager(),
       AST->getDiagnostics(), AST->getLangOpts(),
       /*Target=*/nullptr);
-  AST->HeaderInfo->setSpecificModuleCachePath(SpecificModuleCachePath);
+  AST->HeaderInfo->initializeModuleCachePath(std::move(ContextHash));
 
   AST->PP = std::make_shared<Preprocessor>(
       *AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
