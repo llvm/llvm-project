@@ -66,6 +66,7 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXTagInvariantLoads.cpp",
     "NVPTXTargetMachine.cpp",
     "NVPTXTargetTransformInfo.cpp",
+    "NVVMAnnotations.cpp",
     "NVPTXUtilities.cpp",
     "NVVMIntrRange.cpp",
     "NVVMReflect.cpp",
