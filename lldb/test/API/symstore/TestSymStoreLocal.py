@@ -15,15 +15,13 @@ currently.
 
 class MockedSymStore:
     """
-    Context Manager to populate a file structure equivalent to SymStore.exe in a
-    temporary directory.
+    Context Manager to populate a file structure equivalent to SymStore.exe
     """
 
     def __init__(self, test, exe, pdb):
         self._test = test
         self._exe = exe
         self._pdb = pdb
-        self._tmp = None
 
     def get_key_pdb(self, exe):
         """
@@ -48,20 +46,19 @@ class MockedSymStore:
         if self._test.getDebugInfo() == "pdb":
             key = self.get_key_pdb(self._exe)
         self._test.assertIsNotNone(key)
-        self._tmp = self._test.getBuildArtifact("tmp")
-        pdb_dir = os.path.join(self._tmp, self._pdb, key)
+        symstore_dir = self._test.getBuildArtifact("symstore")
+        pdb_dir = os.path.join(symstore_dir, self._pdb, key)
         os.makedirs(pdb_dir, exist_ok=True)
         shutil.move(
             self._test.getBuildArtifact(self._pdb),
             os.path.join(pdb_dir, self._pdb),
         )
-        return self._tmp
+        return symstore_dir
 
     def __exit__(self, *exc_info):
         """
-        Remove symstore and reset settings
+        Reset settings
         """
-        shutil.rmtree(self._tmp)
         self._test.runCmd("settings clear plugin.symbol-locator.symstore")
 
 
