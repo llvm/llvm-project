@@ -9,10 +9,22 @@
 #ifndef LLVM_LIBC_HDR_TYPES_CONSTRAINT_HANDLER_T_H
 #define LLVM_LIBC_HDR_TYPES_CONSTRAINT_HANDLER_T_H
 
-#define LIBC_HAS_ANNEX_K
+#ifndef __STDC_WANT_LIB_EXT1__
+#define __STDC_WANT_LIB_EXT1__ 1
+#endif
+
+#ifdef LIBC_FULL_BUILD
 
 #include "include/llvm-libc-types/constraint_handler_t.h"
 
-#undef LIBC_HAS_ANNEX_K
+#else // Overlay mode
+
+#include <stdlib.h>
+
+#endif // LIBC_FULL_BUILD
+
+#ifdef __STDC_WANT_LIB_EXT1__
+#undef __STDC_WANT_LIB_EXT1__
+#endif
 
 #endif // LLVM_LIBC_HDR_TYPES_CONSTRAINT_HANDLER_T_H

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_INCLUDE_LLVM_LIBC_TYPES_CONSTRAINT_HANDLER_T_H
 #define LLVM_LIBC_INCLUDE_LLVM_LIBC_TYPES_CONSTRAINT_HANDLER_T_H
 
+#include "../llvm-libc-macros/annex-k-macros.h"
 #include "errno_t.h"
 
 #ifdef LIBC_HAS_ANNEX_K
