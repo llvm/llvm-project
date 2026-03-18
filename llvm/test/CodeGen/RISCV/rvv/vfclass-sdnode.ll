@@ -13,10 +13,10 @@
 ; RUN:     --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zfhmin,+zvfhmin,+experimental-zvfbfa,+v \
 ; RUN:     -target-abi=ilp32d -verify-machineinstrs < %s | FileCheck %s \
-; RUN:     --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:     --check-prefixes=CHECK,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfhmin,+zvfhmin,+experimental-zvfbfa,+v \
 ; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
-; RUN:     --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:     --check-prefixes=CHECK,ZVFBFA
 
 define <vscale x 2 x i1> @isnan_nxv2bf16(<vscale x 2 x bfloat> %x) {
 ; ZVFBFMIN-LABEL: isnan_nxv2bf16:
