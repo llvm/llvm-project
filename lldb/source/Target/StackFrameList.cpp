@@ -211,17 +211,17 @@ static void FindInterveningFrames(Function &begin, Function &end,
                                   addr_t return_pc, CallSequence &path,
                                   ModuleList &images, Log *log) {
   LLDB_LOGV(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
-           begin.GetDisplayName(), end.GetDisplayName(), return_pc);
+            begin.GetDisplayName(), end.GetDisplayName(), return_pc);
 
   // Find a non-tail calling edge with the correct return PC.
   if (log)
     for (const auto &edge : begin.GetCallEdges())
       LLDB_LOGV(log, "FindInterveningFrames: found call with retn-PC = {0:x}",
-               edge->GetReturnPCAddress(begin, target));
+                edge->GetReturnPCAddress(begin, target));
   CallEdge *first_edge = begin.GetCallEdgeForReturnAddress(return_pc, target);
   if (!first_edge) {
     LLDB_LOGV(log, "No call edge outgoing from {0} with retn-PC == {1:x}",
-             begin.GetDisplayName(), return_pc);
+              begin.GetDisplayName(), return_pc);
     return;
   }
 
@@ -232,8 +232,9 @@ static void FindInterveningFrames(Function &begin, Function &end,
     return;
   }
   if (first_callee == &end) {
-    LLDB_LOGV(log, "Not searching further, first callee is {0} (retn-PC: {1:x})",
-             end.GetDisplayName(), return_pc);
+    LLDB_LOGV(log,
+              "Not searching further, first callee is {0} (retn-PC: {1:x})",
+              end.GetDisplayName(), return_pc);
     return;
   }
 
