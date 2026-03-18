@@ -5787,7 +5787,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // Get width of largest magnitude integer known.
       // This still works for a signed minimum value because the largest FP
       // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
-      unsigned IntSize = IntKnown.getBitWidth();
+      int IntSize = IntKnown.getBitWidth();
       if (Op->getOpcode() == Instruction::UIToFP)
         IntSize -= IntKnown.countMinLeadingZeros();
       else if (Op->getOpcode() == Instruction::SIToFP)
