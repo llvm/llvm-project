@@ -144,8 +144,8 @@ public:
   /// Create a column-major matrix from a row-major matrix with the given
   /// logical dimensions by transposing it.
   /// Assumes the matrix transpose assumes column-major matrix memory layout,
-  /// which is true in the case of the DirectX and SPIRV backends, but not true
-  /// in the case of the LowerMatrixIntrinsics pass.
+  /// which is true in the case of the DirectX and SPIRV backends, but not
+  /// necessarily true in the case of the LowerMatrixIntrinsics pass.
   CallInst *CreateRowMajorToColumnMajorTransform(Value *Matrix, unsigned Rows,
                                                  unsigned Columns,
                                                  const Twine &Name = "") {
@@ -155,8 +155,8 @@ public:
   /// Create a row-major matrix from a column-major matrix with the given
   /// logical dimensions by transposing it.
   /// Assumes the matrix transpose assumes column-major matrix memory layout,
-  /// which is true in the case of the DirectX and SPIRV backends, but not true
-  /// in the case of the LowerMatrixIntrinsics pass.
+  /// which is true in the case of the DirectX and SPIRV backends, but not
+  /// necessarily true in the case of the LowerMatrixIntrinsics pass.
   CallInst *CreateColumnMajorToRowMajorTransform(Value *Matrix, unsigned Rows,
                                                  unsigned Columns,
                                                  const Twine &Name = "") {
