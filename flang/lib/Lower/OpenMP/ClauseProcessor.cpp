@@ -325,8 +325,7 @@ static void collectIteratorIVs(
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
 
-bool ClauseProcessor::processAlign(
-    mlir::omp::AlignClauseOps &result) const {
+bool ClauseProcessor::processAlign(mlir::omp::AlignClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Align>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     const std::optional<std::int64_t> align = evaluate::ToInt64(clause->v);
@@ -336,7 +335,9 @@ bool ClauseProcessor::processAlign(
   return false;
 }
 
-bool ClauseProcessor::processAllocator(lower::StatementContext &stmtCtx, mlir::omp::AllocatorClauseOps &result) const {
+bool ClauseProcessor::processAllocator(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::AllocatorClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Allocator>()) {
     result.allocator = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;

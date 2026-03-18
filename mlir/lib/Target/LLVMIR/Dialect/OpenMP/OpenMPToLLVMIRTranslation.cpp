@@ -7492,7 +7492,7 @@ convertTargetAllocMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
 
 static LogicalResult
 convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation) {
+                     LLVM::ModuleTranslation &moduleTranslation) {
   auto allocateDirOp = cast<omp::AllocateDirOp>(opInst);
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
@@ -7508,8 +7508,8 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
     if (allocator->getType()->isIntegerTy())
       allocator = builder.CreateIntToPtr(allocator, builder.getPtrTy());
     else if (allocator->getType()->isPointerTy())
-      allocator =
-          builder.CreatePointerBitCastOrAddrSpaceCast(allocator, builder.getPtrTy());
+      allocator = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocator, builder.getPtrTy());
   } else {
     allocator = llvm::ConstantPointerNull::get(builder.getPtrTy());
   }
@@ -7526,8 +7526,7 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
       Value baseVar = getBaseValueForTypeLookup(var);
       if (Operation *globalOp = getGlobalOpFromValue(baseVar)) {
         if (auto gop = dyn_cast<LLVM::GlobalOp>(globalOp))
-          typeToInspect =
-              moduleTranslation.convertType(gop.getGlobalType());
+          typeToInspect = moduleTranslation.convertType(gop.getGlobalType());
       }
     }
 
@@ -7541,8 +7540,8 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
         currentType = nestedArrTy->getElementType();
       }
       uint64_t elemSizeInBits = dataLayout.getTypeSizeInBits(currentType);
-      size = builder.CreateMul(elementCount,
-                              builder.getInt64(elemSizeInBits / 8));
+      size =
+          builder.CreateMul(elementCount, builder.getInt64(elemSizeInBits / 8));
     } else {
       size = builder.getInt64(
           dataLayout.getTypeStoreSize(typeToInspect).getFixedValue());
@@ -7562,9 +7561,11 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::CallInst *allocCall;
     if (alignAttr.has_value()) {
       allocCall = ompBuilder->createOMPAlignedAlloc(
-          ompLoc, builder.getInt64(alignAttr.value()), size, allocator, allocName);
+          ompLoc, builder.getInt64(alignAttr.value()), size, allocator,
+          allocName);
     } else {
-      allocCall = ompBuilder->createOMPAlloc(ompLoc, size, allocator, allocName);
+      allocCall =
+          ompBuilder->createOMPAlloc(ompLoc, size, allocator, allocName);
     }
     allocatedVars.push_back({allocCall, allocator});
   }
@@ -7573,7 +7574,7 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
   Block *block = allocateDirOp->getBlock();
   for (auto &alloc : allocatedVars)
     moduleTranslation.registerPendingOmpAllocateFree(block, alloc.first,
-                                                    alloc.second);
+                                                     alloc.second);
 
   return success();
 }

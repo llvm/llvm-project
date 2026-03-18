@@ -518,8 +518,7 @@ private:
   DenseMap<BlockAddressAttr, llvm::BasicBlock *> blockAddressToLLVMMapping;
 
   /// Pending __kmpc_free calls per block, emitted before the terminator.
-  DenseMap<Block *,
-           llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>>>
+  DenseMap<Block *, llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>>>
       pendingOmpAllocateFrees;
 
   /// Stack of user-specified state elements, useful when translating operations

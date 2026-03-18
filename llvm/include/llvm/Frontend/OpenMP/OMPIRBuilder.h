@@ -3201,8 +3201,9 @@ public:
   ///
   /// \returns CallInst to the OMP_Align_Alloc call
   LLVM_ABI CallInst *createOMPAlignedAlloc(const LocationDescription &Loc,
-                                    Value *Align, Value *Size, Value *Allocator,
-                                    std::string Name = "");
+                                           Value *Align, Value *Size,
+                                           Value *Allocator,
+                                           std::string Name = "");
 
   /// Create a runtime call for kmpc_free
   ///

@@ -7642,8 +7642,9 @@ CallInst *OpenMPIRBuilder::createOMPAlloc(const LocationDescription &Loc,
 }
 
 CallInst *OpenMPIRBuilder::createOMPAlignedAlloc(const LocationDescription &Loc,
-                                          Value *Align, Value *Size, Value *Allocator,
-                                          std::string Name) {
+                                                 Value *Align, Value *Size,
+                                                 Value *Allocator,
+                                                 std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
   updateToLocation(Loc);
 

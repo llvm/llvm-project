@@ -1508,12 +1508,12 @@ static OpTy genWrapperOp(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 
 static void genAllocateClauses(lower::AbstractConverter &converter,
-                            semantics::SemanticsContext &semaCtx,
-                            lower::StatementContext &stmtCtx,
-                            const ObjectList &objects,
-                            const List<Clause> &clauses, mlir::Location loc,
-                            llvm::SmallVectorImpl<mlir::Value> &operandRange,
-                            mlir::omp::AllocateDirOperands &clauseOps) {
+                               semantics::SemanticsContext &semaCtx,
+                               lower::StatementContext &stmtCtx,
+                               const ObjectList &objects,
+                               const List<Clause> &clauses, mlir::Location loc,
+                               llvm::SmallVectorImpl<mlir::Value> &operandRange,
+                               mlir::omp::AllocateDirOperands &clauseOps) {
   if (!objects.empty())
     genObjectList(objects, converter, operandRange);
 
@@ -1942,16 +1942,19 @@ static void genWsloopClauses(
 //===----------------------------------------------------------------------===//
 // Code generation functions for leaf constructs
 //===----------------------------------------------------------------------===//
-static mlir::omp::AllocateDirOp
-genAllocateDirOp(lower::AbstractConverter &converter,
-           semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
-           mlir::Location loc, const ObjectList &objects,  const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+static mlir::omp::AllocateDirOp genAllocateDirOp(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ObjectList &objects, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item) {
   llvm::SmallVector<mlir::Value> operandRange;
   mlir::omp::AllocateDirOperands clauseOps;
   genAllocateClauses(converter, semaCtx, stmtCtx, objects, item->clauses, loc,
-                  operandRange, clauseOps);
+                     operandRange, clauseOps);
 
-  return mlir::omp::AllocateDirOp::create(converter.getFirOpBuilder(), loc, operandRange, clauseOps.align, clauseOps.allocator);
+  return mlir::omp::AllocateDirOp::create(converter.getFirOpBuilder(), loc,
+                                          operandRange, clauseOps.align,
+                                          clauseOps.allocator);
 }
 
 static mlir::omp::BarrierOp
@@ -3877,8 +3880,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       converter.getFirOpBuilder().getModule(), semaCtx, eval, allocate.source,
       llvm::omp::Directive::OMPD_allocate, clauses)};
 
-  genAllocateDirOp(converter, semaCtx, stmtCtx, eval, loc, objects,
-             queue, queue.begin());
+  genAllocateDirOp(converter, semaCtx, stmtCtx, eval, loc, objects, queue,
+                   queue.begin());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
