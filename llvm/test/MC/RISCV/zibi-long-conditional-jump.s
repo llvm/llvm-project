@@ -5,28 +5,106 @@
 # RUN:     | llvm-objdump --mattr=+experimental-zibi -dr -M no-aliases - \
 # RUN:     | FileCheck --check-prefix=CHECK-INST-RELAX %s
 
-       .text
-       .type   test,@function
+# Tests that are forward in range.
 
-test:
+# CHECK-INST-LABEL: beqi_in_range_forward
+# CHECK-INST:       beqi a0, 0xa, {{.*}}
 
-# CHECK-INST:         beqi     a0, 0xa, 0x8
-# CHECK-INST-NEXT:    jal     zero, 0x1458
-# CHECK-INST-RELAX:         beqi     a0, 0xa, 0x8
-# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-   bnei a0, 10, .L1
-.fill 1300, 4, 0
+# CHECK-INST-RELAX-LABEL: beqi_in_range_forward
+# CHECK-INST-RELAX:       beqi a0, 0xa, {{.*}}
+beqi_in_range_forward:
+   beqi a0, 10, .L1
+   .fill 1000, 4, 0
 .L1:
    ret
 
-# CHECK-INST:         bnei     a0, 0x6, 0x1464
-# CHECK-INST-NEXT:    jal     zero, 0x28b4
-# CHECK-INST-RELAX:         bnei     a0, 0x6, 0x1464
-# CHECK-INST-RELAX-NEXT:    jal     zero, {{.*}}
-   beqi a0, 6, .L2
-.fill 1300, 4, 0
+# CHECK-INST-LABEL: bnei_in_range_forward
+# CHECK-INST:       bnei a0, 0xa, {{.*}}
+
+# CHECK-INST-RELAX-LABEL: bnei_in_range_forward
+# CHECK-INST-RELAX:       bnei a0, 0xa, {{.*}}
+bnei_in_range_forward:
+   bnei a0, 10, .L2
+   .fill 1000, 4, 0
 .L2:
    ret
 
-.Lfunc_end0:
-       .size   test, .Lfunc_end0-test
+# Tests that are backward in range.
+
+# CHECK-INST-LABEL: beqi_in_range_backward
+# CHECK-INST:       beqi a0, 0xa, {{.*}}
+
+# CHECK-INST-RELAX-LABEL: beqi_in_range_backward
+# CHECK-INST-RELAX:       beqi a0, 0xa, {{.*}}
+beqi_in_range_backward:
+.L3:
+   .fill 1000, 4, 0
+   beqi a0, 10, .L3
+   ret
+
+# CHECK-INST-LABEL: bnei_in_range_backward
+# CHECK-INST:       bnei a0, 0xa, {{.*}}
+
+# CHECK-INST-RELAX-LABEL: bnei_in_range_backward
+# CHECK-INST-RELAX:       bnei a0, 0xa, {{.*}}
+bnei_in_range_backward:
+.L4:
+   .fill 1000, 4, 0
+   bnei a0, 10, .L4
+   ret
+
+# Tests that are forward out of range.
+
+# CHECK-INST-LABEL: beqi_out_of_range_forward
+# CHECK-INST:       bnei a0, 0xa, {{.*}}+0x8
+# CHECK-INST-NEXT:  jal zero, {{.*}}
+
+# CHECK-INST-RELAX-LABEL: beqi_out_of_range_forward
+# CHECK-INST-RELAX:       bnei a0, 0xa, {{.*}}+0x8
+# CHECK-INST-RELAX-NEXT:  jal zero, {{.*}}
+beqi_out_of_range_forward:
+   beqi a0, 10, .L5
+   .fill 1300, 4, 0
+.L5:
+   ret
+
+# CHECK-INST-LABEL: bnei_out_of_range_forward
+# CHECK-INST:       beqi a0, 0xa, {{.*}}+0x8
+# CHECK-INST-NEXT:  jal zero, {{.*}}
+
+# CHECK-INST-RELAX-LABEL: bnei_out_of_range_forward
+# CHECK-INST-RELAX:       beqi a0, 0xa, {{.*}}+0x8
+# CHECK-INST-RELAX-NEXT:  jal zero, {{.*}}
+bnei_out_of_range_forward:
+   bnei a0, 10, .L6
+   .fill 1300, 4, 0
+.L6:
+   ret
+
+# Tests that are backward out of range.
+
+# CHECK-INST-LABEL: beqi_out_of_range_backward
+# CHECK-INST:       bnei a0, 0xa, {{.*}}+0x1458
+# CHECK-INST-NEXT:  jal zero, {{.*}}
+
+# CHECK-INST-RELAX-LABEL: beqi_out_of_range_backward
+# CHECK-INST-RELAX:       bnei a0, 0xa, {{.*}}+0x1458
+# CHECK-INST-RELAX-NEXT:  jal zero, {{.*}}
+beqi_out_of_range_backward:
+.L7:
+   .fill 1300, 4, 0
+   beqi a0, 10, .L7
+   ret
+
+# CHECK-INST-LABEL: bnei_out_of_range_backward
+# CHECK-INST:       beqi a0, 0xa, {{.*}}+0x1458
+# CHECK-INST-NEXT:  jal zero, {{.*}}
+
+# CHECK-INST-RELAX-LABEL: bnei_out_of_range_backward
+# CHECK-INST-RELAX:       beqi a0, 0xa, {{.*}}+0x1458
+# CHECK-INST-RELAX-NEXT:  jal zero, {{.*}}
+bnei_out_of_range_backward:
+.L8:
+   .fill 1300, 4, 0
+   bnei a0, 10, .L8
+   ret
