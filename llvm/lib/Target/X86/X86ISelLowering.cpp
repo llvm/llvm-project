@@ -34524,6 +34524,16 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         Results.push_back(DAG.getBitcast(VT, Res));
         return;
       }
+      // SRA(MSB,Amt) --> SHL(-1,(BW-1)-Amt)
+      if (Opc == ISD::SRA && SrcVal.isSignMask()) {
+        Amt = DAG.getZExtOrTrunc(Amt, dl, MVT::i32);
+        Amt = DAG.getNode(ISD::SUB, dl, MVT::i32,
+                          DAG.getConstant(BW - 1, dl, MVT::i32), Amt);
+        SDValue Res =
+            DAG.getNode(ISD::SHL, dl, VT, DAG.getAllOnesConstant(dl, VT), Amt);
+        Results.push_back(DAG.getBitcast(VT, Res));
+        return;
+      }
     }
 
     // Use EXPAND/COMPRESS to shuffle the i64 elements left/right with the
