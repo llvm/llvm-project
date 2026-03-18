@@ -595,9 +595,12 @@ def check_prerequisites(runner: CommandRunner) -> None:
         raise LlvmPrError("This script must be run inside a git repository.")
     runner.print("Prerequisites met.")
 
+
 def get_token_from_cli(runner: CommandRunner) -> str:
     runner.print("Getting token...")
-    result = runner.run_command(["gh", "auth", "token"], capture_output=True, read_only=True)
+    result = runner.run_command(
+        ["gh", "auth", "token"], capture_output=True, read_only=True
+    )
     return result.stdout.strip().decode("utf-8")
 
 
@@ -643,7 +646,7 @@ def main() -> None:
     parser.add_argument(
         "--use-gh-cli-token",
         action="store_true",
-        help="Automatically get a token from gh CLI."
+        help="Automatically get a token from gh CLI.",
     )
     merging = parser.add_mutually_exclusive_group()
     merging.add_argument(
