@@ -104,12 +104,12 @@ public:
     VariableDescription desc(v, m_storage.config.enableAutoVariableSummaries,
                              format_hex, is_name_duplicated, custom_name);
     Variable var;
-    var.name = desc.name;
-    var.value = desc.display_value;
-    var.type = desc.display_type_name;
+    var.name = std::move(desc.name);
+    var.value = std::move(desc.display_value);
+    var.type = std::move(desc.display_type_name);
 
     if (!desc.evaluate_name.empty())
-      var.evaluateName = desc.evaluate_name;
+      var.evaluateName = std::move(desc.evaluate_name);
 
     // If we have a type with many children, we would like to be able to
     // give a hint to the IDE that the type has indexed children so that the
