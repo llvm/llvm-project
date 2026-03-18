@@ -136,8 +136,7 @@ LIBC_INLINE float16 atanpif16(float16 x) {
       }
     }
     double result = atanpi_eval(x_abs);
-    float16 s_result = signed_result(result);
-    return s_result;
+    return signed_result(result);
   }
 
   if (LIBC_UNLIKELY(x_abs == 1.0))

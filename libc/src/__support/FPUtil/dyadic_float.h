@@ -219,7 +219,6 @@ template <size_t Bits> struct DyadicFloat {
       underflow = true;
     } else if (unbiased_exp == -FPBits::EXP_BIAS - FPBits::FRACTION_LEN) {
       round = true;
-      underflow = true;
       MantissaType sticky_mask = (MantissaType(1) << (Bits - 1)) - 1;
       sticky = (mantissa & sticky_mask) != 0;
     } else {
