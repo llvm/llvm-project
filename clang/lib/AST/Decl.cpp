@@ -3810,12 +3810,18 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
     return 0;
 
   // As AMDGCN implementation of OpenMP does not have a device-side standard
-  // library, none of the predefined library functions except printf and malloc
-  // should be treated as a builtin i.e. 0 should be returned for them.
+  // library, none of the predefined library functions except printf, malloc,
+  // and the complex functions that can be emitted inline (creal, cimag,
+  // conj and their float/double variants) should be treated as a builtin
+  // i.e. 0 should be returned for them. The long double variants are excluded
+  // because AMDGCN does not support x86 long double.
   if (Context.getTargetInfo().getTriple().isAMDGCN() &&
       Context.getLangOpts().OpenMPIsTargetDevice &&
       Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID) &&
-      !(BuiltinID == Builtin::BIprintf || BuiltinID == Builtin::BImalloc))
+      !(BuiltinID == Builtin::BIprintf || BuiltinID == Builtin::BImalloc ||
+        BuiltinID == Builtin::BIcreal || BuiltinID == Builtin::BIcrealf ||
+        BuiltinID == Builtin::BIcimag || BuiltinID == Builtin::BIcimagf ||
+        BuiltinID == Builtin::BIconj || BuiltinID == Builtin::BIconjf))
     return 0;
 
   return BuiltinID;
