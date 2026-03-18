@@ -796,7 +796,7 @@ static const DIType *resolveTypeQualifiers(const DIType *Ty) {
 bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
                                                    const DbgVariable &DV,
                                                    DIE &VariableDie) {
-  const auto *Expr = Single.getExpr();
+  const DIExpression *Expr = Single.getExpr();
   if (!Expr)
     return false;
 
@@ -804,12 +804,11 @@ bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
   // sole operation (or followed only by DW_OP_LLVM_fragment).
   //
   // Multi-level implicit pointers (e.g., int **pp where both levels are
-  // optimized away) are expressed as chains of separate #dbg_value records
-  // at the IR level, each with a single DW_OP_LLVM_implicit_pointer,
-  // rather than stacking multiple ops in one expression. The backend handles
-  // each level independently, and chaining emerges naturally in the DWARF
-  // output when the referenced artificial DIE itself has an implicit pointer
-  // location.
+  // optimized away) would require stacking multiple implicit_pointer ops
+  // in one expression and unwinding them into a chain of artificial DIEs.
+  // This is left for future work.
+  //
+  // Location list support (Loc::Multi) is not yet handled.
   auto ExprOps = Expr->expr_ops();
   auto FirstOp = ExprOps.begin();
   if (FirstOp == ExprOps.end() ||
@@ -819,15 +818,18 @@ bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
   if (DD->getDwarfVersion() < 4)
     return false;
 
-  const auto &DVal = Single.getValueLoc();
+  const DbgValueLoc &DVal = Single.getValueLoc();
   if (DVal.isVariadic())
     return false;
 
-  const auto &Entry = DVal.getLocEntries()[0];
+  assert(!DVal.getLocEntries().empty() &&
+         "Non-variadic value must have one entry");
+  const DbgValueLocEntry &Entry = DVal.getLocEntries()[0];
 
   // Resolve the variable's type, stripping qualifiers and typedefs,
-  // to find the pointer or reference type.
-  const auto *PtrTy =
+  // to find the pointer or reference type underneath.
+  // The verifier rejects cyclic type references, so this loop terminates.
+  const DIDerivedType *PtrTy =
       dyn_cast_or_null<DIDerivedType>(resolveTypeQualifiers(DV.getType()));
   if (!PtrTy)
     return false;
@@ -837,7 +839,7 @@ bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
       PtrTy->getTag() != dwarf::DW_TAG_rvalue_reference_type)
     return false;
 
-  const auto *PointeeTy = PtrTy->getBaseType();
+  const DIType *PointeeTy = PtrTy->getBaseType();
 
   // Try to reuse an existing artificial DIE for constant integer values.
   // This avoids duplicate DIEs when multiple pointer variables reference
@@ -845,36 +847,31 @@ bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
   // struct member for two different pointer parameters).
   DIE *ArtificialDIEPtr = nullptr;
   if (Entry.isInt() && PointeeTy) {
-    auto Key = std::make_pair(PointeeTy, Entry.getInt());
-    auto It = ImplicitPointerDIEs.find(Key);
+    auto It = ImplicitPointerDIEs.find({PointeeTy, Entry.getInt()});
     if (It != ImplicitPointerDIEs.end())
       ArtificialDIEPtr = It->second;
   }
 
   if (!ArtificialDIEPtr) {
-    DIE &ArtificialDIE = createAndAddDIE(dwarf::DW_TAG_variable, getUnitDie());
-    addFlag(ArtificialDIE, dwarf::DW_AT_artificial);
-
-    if (PointeeTy)
-      addType(ArtificialDIE, PointeeTy);
+    DIE &ProcDIE = createAndAddDIE(dwarf::DW_TAG_dwarf_procedure, getUnitDie());
 
     if (Entry.isLocation()) {
-      addAddress(ArtificialDIE, dwarf::DW_AT_location, Entry.getLoc());
+      addAddress(ProcDIE, dwarf::DW_AT_location, Entry.getLoc());
     } else if (Entry.isInt()) {
       if (PointeeTy)
-        addConstantValue(ArtificialDIE, Entry.getInt(), PointeeTy);
+        addConstantValue(ProcDIE, Entry.getInt(), PointeeTy);
     } else if (Entry.isConstantFP()) {
-      addConstantFPValue(ArtificialDIE, Entry.getConstantFP());
+      addConstantFPValue(ProcDIE, Entry.getConstantFP());
     } else {
       return false;
     }
 
-    ArtificialDIEPtr = &ArtificialDIE;
+    ArtificialDIEPtr = &ProcDIE;
 
     // Cache constant entries for de-duplication.
     if (Entry.isInt() && PointeeTy)
-      ImplicitPointerDIEs[std::make_pair(PointeeTy, Entry.getInt())] =
-          ArtificialDIEPtr;
+      ImplicitPointerDIEs.insert(
+          {{PointeeTy, Entry.getInt()}, ArtificialDIEPtr});
   }
 
   auto *Loc = new (DIEValueAllocator) DIELoc;
