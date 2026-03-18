@@ -35,13 +35,22 @@ namespace mlir {
                  genericOp.getDpsInputs()[(OPERANDS_SWAP) ? 0 : 1]},           \
       ValueRange{genericOp.getDpsInits()[0]}))
 
-#define REPLACE_UNARY_OP(NEWOP)                                                \
-  static_cast<LinalgOp>(rewriter.replaceOpWithNewOp<NEWOP>(                    \
-      genericOp, ValueRange{genericOp.getDpsInputs()[0]},                      \
-      ValueRange{genericOp.getDpsInits()[0]}))
+#define REPLACE_UNARY_OP(NEWOP, NEWKIND)                                       \
+  static_cast<LinalgOp>(                                                       \
+      emitCategoryOp                                                           \
+          ? rewriter.replaceOpWithNewOp<ElementwiseOp>(                        \
+                genericOp, genericOp.getDpsInputs(), genericOp.getDpsInits(),  \
+                ElementwiseKindAttr::get(rewriter.getContext(), NEWKIND),      \
+                genericOp.getIndexingMaps())                                   \
+          : rewriter.replaceOpWithNewOp<NEWOP>(                                \
+                genericOp, genericOp.getDpsInputs(), genericOp.getDpsInits()))
 
 using namespace mlir;
 using namespace mlir::linalg;
+
+//===----------------------------------------------------------------------===//
+// Specialize linalg generic to elementwise ops.
+//===----------------------------------------------------------------------===//
 
 // Given a elementwise single binary linalg generic op, checks whether the
 // binary op accesses operands as swapped. e.g.
@@ -65,6 +74,77 @@ static bool areBinOpsSwapped(GenericOp genericOp) {
            "binary op uses just one block arg");
   }
   return swapped;
+}
+
+// Attempt to specialize linalg.generic to named elementwise ops or
+// linalg.elementwise.
+//
+// Example:
+//   %0 = linalg.generic {
+//       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+//                        affine_map<(d0, d1) -> (d0, d1)>],
+//       iterator_types = ["parallel", "parallel"]
+//     } ins(%In : tensor<?x?xf32>) outs(%Out : tensor<?x?xf32>) {
+//     ^bb0(%in: f32, %out: f32):
+//       %1 = math.exp %in : f32
+//       linalg.yield %1 : f32
+//     } -> tensor<?x?xf32>
+//
+// is specialized to either
+//   linalg.exp ins(...) outs(...) -> ...
+// or
+//   linalg.elementwise kind=#linalg.elementwise_kind<exp> ...
+//
+// Only the category op can carry non-identity indexing maps; these are
+// transferred verbatim from the `genericOp`.
+static FailureOr<LinalgOp>
+specializeLinalgUnaryElementwise(RewriterBase &rewriter, GenericOp genericOp,
+                                 bool emitCategoryOp) {
+  bool hasNonIdentityMaps =
+      !llvm::all_of(genericOp.getIndexingMapsArray(),
+                    [](AffineMap map) { return map.isIdentity(); });
+
+  // Early exit: Named ops cannot carry user-defined maps.
+  if (hasNonIdentityMaps && !emitCategoryOp) {
+    return failure();
+  }
+
+  // Inspect body operation to determine named op or elementwise kind.
+  Operation *op = &genericOp.getBody()->front();
+
+  if (isa<math::ExpOp>(op))
+    return REPLACE_UNARY_OP(ExpOp, ElementwiseKind::exp);
+  if (isa<math::LogOp>(op))
+    return REPLACE_UNARY_OP(LogOp, ElementwiseKind::log);
+  if (isa<math::AbsFOp>(op))
+    return REPLACE_UNARY_OP(AbsOp, ElementwiseKind::abs);
+  if (isa<math::CeilOp>(op))
+    return REPLACE_UNARY_OP(CeilOp, ElementwiseKind::ceil);
+  if (isa<math::FloorOp>(op))
+    return REPLACE_UNARY_OP(FloorOp, ElementwiseKind::floor);
+  if (isa<arith::NegFOp>(op))
+    return REPLACE_UNARY_OP(NegFOp, ElementwiseKind::negf);
+  if (auto divOp = dyn_cast<arith::DivFOp>(op)) {
+    if (auto constOp = dyn_cast_if_present<arith::ConstantOp>(
+            divOp.getLhs().getDefiningOp()))
+      if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
+        return REPLACE_UNARY_OP(ReciprocalOp, ElementwiseKind::reciprocal);
+  }
+  if (isa<math::RoundOp>(op))
+    return REPLACE_UNARY_OP(RoundOp, ElementwiseKind::round);
+  if (isa<math::SqrtOp>(op))
+    return REPLACE_UNARY_OP(SqrtOp, ElementwiseKind::sqrt);
+  if (isa<math::RsqrtOp>(op))
+    return REPLACE_UNARY_OP(RsqrtOp, ElementwiseKind::rsqrt);
+  if (auto mulOp = dyn_cast<arith::MulFOp>(op);
+      mulOp && mulOp.getLhs() == mulOp.getRhs())
+    return REPLACE_UNARY_OP(SquareOp, ElementwiseKind::square);
+  if (isa<math::TanhOp>(op))
+    return REPLACE_UNARY_OP(TanhOp, ElementwiseKind::tanh);
+  if (isa<math::ErfOp>(op))
+    return REPLACE_UNARY_OP(ErfOp, ElementwiseKind::erf);
+
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -455,6 +535,12 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
 FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
     RewriterBase &rewriter, GenericOp genericOp,
     const GenericOpSpecializationOptions &options) {
+  // Unary elementwise - e.g. exp
+  if (isaElemwiseSingleUnaryOpInterface(genericOp, options.emitCategoryOps)) {
+    return specializeLinalgUnaryElementwise(rewriter, genericOp,
+                                            options.emitCategoryOps);
+  }
+
   // Contraction - e.g. matmul
   if (isaContractionOpInterface(genericOp)) {
     return specializeLinalgContractions(rewriter, genericOp,
@@ -503,42 +589,6 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
         genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0],
         permutation);
     return namedOp;
-  }
-
-  // Elementwise Unary
-  if (isaElemwiseSingleUnaryOpInterface(genericOp)) {
-    Operation *op = &genericOp.getBody()->front();
-    if (isa<math::ExpOp>(op))
-      return REPLACE_UNARY_OP(ExpOp);
-    if (isa<math::LogOp>(op))
-      return REPLACE_UNARY_OP(LogOp);
-    if (isa<math::AbsFOp>(op))
-      return REPLACE_UNARY_OP(AbsOp);
-    if (isa<math::CeilOp>(op))
-      return REPLACE_UNARY_OP(CeilOp);
-    if (isa<math::FloorOp>(op))
-      return REPLACE_UNARY_OP(FloorOp);
-    if (isa<arith::NegFOp>(op))
-      return REPLACE_UNARY_OP(NegFOp);
-    if (auto divOp = dyn_cast<arith::DivFOp>(op)) {
-      if (auto constOp = dyn_cast_if_present<arith::ConstantOp>(
-              divOp.getLhs().getDefiningOp()))
-        if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
-          return REPLACE_UNARY_OP(ReciprocalOp);
-    }
-    if (isa<math::RoundOp>(op))
-      return REPLACE_UNARY_OP(RoundOp);
-    if (isa<math::SqrtOp>(op))
-      return REPLACE_UNARY_OP(SqrtOp);
-    if (isa<math::RsqrtOp>(op))
-      return REPLACE_UNARY_OP(RsqrtOp);
-    if (auto mulOp = dyn_cast<arith::MulFOp>(op);
-        mulOp && mulOp.getLhs() == mulOp.getRhs())
-      return REPLACE_UNARY_OP(SquareOp);
-    if (isa<math::TanhOp>(op))
-      return REPLACE_UNARY_OP(TanhOp);
-    if (isa<math::ErfOp>(op))
-      return REPLACE_UNARY_OP(ErfOp);
   }
 
   // Elementwise Binary
