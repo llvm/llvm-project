@@ -5,20 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-if (BOLT_ENABLE_RUNTIME)
-  set(BOLT_DRIVER_DEPS "bolt_rt")
-else()
-  set(BOLT_DRIVER_DEPS "")
-endif()
-
-add_bolt_tool(llvm-bolt
-  llvm-bolt.cpp
-
-  DISABLE_LLVM_LINK_LLVM_DYLIB
-
-  DEPENDS
-  ${BOLT_DRIVER_DEPS}
-  )
+add_bolt_tool(llvm-bolt llvm-bolt.cpp DISABLE_LLVM_LINK_LLVM_DYLIB)
 
 target_link_libraries(llvm-bolt
   PRIVATE

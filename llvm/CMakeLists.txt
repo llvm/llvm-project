@@ -164,7 +164,7 @@ endforeach()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind;libclc;compiler-rt;openmp")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc;libsycl;orc-rt")
+set(LLVM_SUPPORTED_RUNTIMES "bolt-rt;libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -714,6 +714,11 @@ if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND
    NOT ("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS))
   message(STATUS "Enabling compiler-rt as a dependency of Flang")
   list(APPEND LLVM_ENABLE_RUNTIMES "compiler-rt")
+endif()
+
+if("bolt" IN_LIST LLVM_ENABLE_PROJECTS AND NOT ("bolt-rt" IN_LIST LLVM_ENABLE_RUNTIMES))
+  message(STATUS "Enabling bolt-rt as a dependency of bolt.")
+  list(APPEND LLVM_ENABLE_RUNTIMES "bolt-rt")
 endif()
 
 set(LLVM_TARGETS_TO_BUILD
