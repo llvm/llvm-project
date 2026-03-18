@@ -88,9 +88,9 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 
     for (int i : is) {
       for (int j : js) {
-        testN<std::deque<MoveOnly>>(is, js);
-        testN<std::deque<MoveOnly, min_allocator<MoveOnly>>>(is, js);
-        testN<std::deque<MoveOnly, safe_allocator<MoveOnly>>>(is, js);
+        testN<std::deque<MoveOnly>>(i, j);
+        testN<std::deque<MoveOnly, min_allocator<MoveOnly>>>(i, j);
+        testN<std::deque<MoveOnly, safe_allocator<MoveOnly>>>(i, j);
       }
     }
 

@@ -106,9 +106,9 @@ TEST_CONSTEXPR_CXX26 bool tests() {
     constexpr int js[]{0, 1025, 2049};
     for (int i : is) {
       for (int j : js) {
-        testN<std::deque<int>>(is, js);
-        testN<std::deque<int, min_allocator<int>>>(is, js);
-        testN<std::deque<int, safe_allocator<int>>>(is, js);
+        testN<std::deque<int>>(i, j);
+        testN<std::deque<int, min_allocator<int>>>(i, j);
+        testN<std::deque<int, safe_allocator<int>>>(i, j);
       }
     }
 

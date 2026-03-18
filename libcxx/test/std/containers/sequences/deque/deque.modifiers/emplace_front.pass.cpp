@@ -76,7 +76,7 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 
     for (int i : is) {
       for (int j : js) {
-        testN<std::deque<Emplaceable>>(is, js);
+        testN<std::deque<Emplaceable>>(i, j);
         testN<std::deque<Emplaceable, min_allocator<Emplaceable>>>(i, j);
       }
     }
