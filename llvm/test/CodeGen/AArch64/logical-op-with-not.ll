@@ -132,7 +132,7 @@ define i64 @_Z6or_bic(i64 %0, i64 %1) {
 define i64 @or_bic2(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_bic2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-65281
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    and x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -158,7 +158,7 @@ define i32 @or_bic3(i32 %0, i32 %1) {
 define i64 @_Z6or_orn(i64 %0, i64 %1) {
 ; CHECK-LABEL: _Z6or_orn:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-4096
+; CHECK-NEXT:    mov x8, #-4096 // =0xfffffffffffff000
 ; CHECK-NEXT:    bic x8, x8, x0
 ; CHECK-NEXT:    orr x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -171,7 +171,7 @@ define i64 @_Z6or_orn(i64 %0, i64 %1) {
 define i64 @or_orn2(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_orn2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4096
+; CHECK-NEXT:    mov w8, #-4096 // =0xfffff000
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    orr x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -185,7 +185,7 @@ define i64 @or_orn2(i32 %0, i64 %1) {
 define i64 @or_orn3(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_orn3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4096
+; CHECK-NEXT:    mov w8, #-4096 // =0xfffff000
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    orr x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -212,7 +212,7 @@ define i64 @_Z6or_eon(i64 %0, i64 %1) {
 define i64 @or_eon2(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_eon2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4096
+; CHECK-NEXT:    mov w8, #-4096 // =0xfffff000
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    eor x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -226,7 +226,7 @@ define i64 @or_eon2(i32 %0, i64 %1) {
 define i64 @or_eon3(i32 %0, i64 %1) {
 ; CHECK-LABEL: or_eon3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4096
+; CHECK-NEXT:    mov w8, #-4096 // =0xfffff000
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    eor x0, x8, x1
 ; CHECK-NEXT:    ret
@@ -235,4 +235,88 @@ define i64 @or_eon3(i32 %0, i64 %1) {
   %5 = zext i32 %4 to i64
   %6 = xor i64 %5, %1
   ret i64 %6
+}
+
+define i32 @mvn_lsl_i32(i32 %0) {
+; CHECK-LABEL: mvn_lsl_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w0, w0, lsl #5
+; CHECK-NEXT:    ret
+  %2 = shl i32 %0, 5
+  %3 = xor i32 %2, -1
+  ret i32 %3
+}
+
+define i64 @mvn_lsl_i64(i64 %0) {
+; CHECK-LABEL: mvn_lsl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x0, x0, lsl #5
+; CHECK-NEXT:    ret
+  %2 = shl i64 %0, 5
+  %3 = xor i64 %2, -1
+  ret i64 %3
+}
+
+define i32 @mvn_lsr_i32(i32 %0) {
+; CHECK-LABEL: mvn_lsr_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w0, w0, lsr #10
+; CHECK-NEXT:    ret
+  %2 = lshr i32 %0, 10
+  %3 = xor i32 %2, -1
+  ret i32 %3
+}
+
+define i64 @mvn_lsr_i64(i64 %0) {
+; CHECK-LABEL: mvn_lsr_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x0, x0, lsr #10
+; CHECK-NEXT:    ret
+  %2 = lshr i64 %0, 10
+  %3 = xor i64 %2, -1
+  ret i64 %3
+}
+
+define i32 @mvn_asr_i32(i32 %0) {
+; CHECK-LABEL: mvn_asr_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w0, w0, asr #15
+; CHECK-NEXT:    ret
+  %2 = ashr i32 %0, 15
+  %3 = xor i32 %2, -1
+  ret i32 %3
+}
+
+define i64 @mvn_asr_i64(i64 %0) {
+; CHECK-LABEL: mvn_asr_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x0, x0, asr #15
+; CHECK-NEXT:    ret
+  %2 = ashr i64 %0, 15
+  %3 = xor i64 %2, -1
+  ret i64 %3
+}
+
+define i32 @mvn_ror_i32(i32 %0) {
+; CHECK-LABEL: mvn_ror_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w0, w0, ror #1
+; CHECK-NEXT:    ret
+  %2 = shl i32 %0, 31
+  %3 = lshr i32 %0, 1
+  %4 = or i32 %2, %3
+  %5 = xor i32 %4, -1
+  ret i32 %5
+}
+
+define i64 @mvn_ror_i64(i64 %0) {
+; CHECK-LABEL: mvn_ror_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x0, x0, ror #1
+; CHECK-NEXT:    ret
+  %2 = shl i64 %0, 63
+  %3 = lshr i64 %0, 1
+  %4 = or i64 %2, %3
+  %5 = xor i64 %4, -1
+  ret i64 %5
 }

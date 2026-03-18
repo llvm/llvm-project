@@ -68,7 +68,7 @@ bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
   assert(MatchingParen);
   assert(MatchingParen->is(tok::l_brace));
   if (Style.Cpp11BracedListStyle == FormatStyle::BLS_Block ||
-      Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent) {
+      !Style.BreakBeforeCloseBracketBracedList) {
     return false;
   }
   const auto *LBrace = MatchingParen;
@@ -198,7 +198,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
     return;
 
   // Column format doesn't really make sense if we don't align after brackets.
-  if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign)
+  if (!Style.AlignAfterOpenBracket)
     return;
 
   FormatToken *ItemBegin = Token->Next;

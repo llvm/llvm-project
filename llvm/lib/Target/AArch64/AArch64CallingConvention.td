@@ -162,7 +162,13 @@ def RetCC_AArch64_AAPCS : CallingConv<[
 ]>;
 
 let Entry = 1 in
-def CC_AArch64_Win64PCS : CallingConv<AArch64_Common>;
+def CC_AArch64_Win64PCS : CallingConv<!listconcat(
+  [
+    // 'CFGuardTarget' is used for Arm64EC; it passes its parameter in X9.
+    CCIfCFGuardTarget<CCAssignToReg<[X9]>>
+  ],
+  AArch64_Common)
+>;
 
 // Vararg functions on windows pass floats in integer registers
 let Entry = 1 in
@@ -177,6 +183,9 @@ def CC_AArch64_Win64_VarArg : CallingConv<[
 // a stack layout compatible with the x64 calling convention.
 let Entry = 1 in
 def CC_AArch64_Arm64EC_VarArg : CallingConv<[
+  // 'CFGuardTarget' is used for Arm64EC; it passes its parameter in X9.
+  CCIfCFGuardTarget<CCAssignToReg<[X9]>>,
+
   CCIfNest<CCAssignToReg<[X15]>>,
 
   // Convert small floating-point values to integer.
@@ -345,7 +354,7 @@ def CC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
 
 let Entry = 1 in
 def RetCC_AArch64_Arm64EC_CFGuard_Check : CallingConv<[
-  CCIfType<[i64], CCAssignToReg<[X11]>>
+  CCIfType<[i64], CCAssignToReg<[X11, X9]>>
 ]>;
 
 
@@ -601,11 +610,20 @@ def CSR_Win_AArch64_AAPCS_SwiftError
 def CSR_Win_AArch64_AAPCS_SwiftTail
     : CalleeSavedRegs<(sub CSR_Win_AArch64_AAPCS, X20, X22)>;
 
+def CSR_Win_AArch64_RT_MostRegs
+    : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS, (sequence "X%u", 9, 15))>;
+
+def CSR_Win_AArch64_RT_AllRegs
+    : CalleeSavedRegs<(add CSR_Win_AArch64_RT_MostRegs, (sequence "Q%u", 8, 31))>;
+
 // The Control Flow Guard check call uses a custom calling convention that also
-// preserves X0-X8 and Q0-Q7.
+// preserves X0-X8 and Q0-Q7. On native AArch64, X15 is the target function and
+// is preserved by the checker. On Arm64EC X15 is not used by the checker, but
+// is also guaranteed to be preserved.
 def CSR_Win_AArch64_CFGuard_Check : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS,
                                                (sequence "X%u", 0, 8),
-                                               (sequence "Q%u", 0, 7))>;
+                                               (sequence "Q%u", 0, 7),
+                                               X15)>;
 
 // To match the x64 calling convention, Arm64EC thunks preserve q6-q15.
 def CSR_Win_AArch64_Arm64EC_Thunk : CalleeSavedRegs<(add (sequence "Q%u", 6, 15),

@@ -19,8 +19,20 @@
 # CHECK-NOT: 0000000100000d22
 # CHECK-NOT: _main:
 
+# RUN: llvm-objdump --macho -d %p/Inputs/exeThread.macho-x86_64 --dis-symname _nonexistent 2>&1 | FileCheck --check-prefix BAD-OBJDUMP-NOTFOUND %s
+BAD-OBJDUMP-NOTFOUND: Can't find --dis-symname: _nonexistent
+
 # RUN: llvm-objdump --macho -d %p/Inputs/exeThread.macho-x86_64 --dis-symname _environ 2>&1 | FileCheck --check-prefix BAD-SYMAME-1 %s
-BAD-SYMAME-1: -dis-symname: _environ not in the section
+BAD-SYMAME-1: --dis-symname: _environ not in the section
 
 # RUN: llvm-objdump --macho -d %p/Inputs/exeThread.macho-x86_64 --dis-symname __mh_execute_header 2>&1 | FileCheck --check-prefix BAD-SYMAME-2 %s
-BAD-SYMAME-2: -dis-symname: __mh_execute_header not in any section
+BAD-SYMAME-2: --dis-symname: __mh_execute_header not in any section
+
+# RUN: llvm-otool -tV %p/Inputs/exeThread.macho-x86_64 -p _nonexistent 2>&1 | FileCheck --check-prefix BAD-OTOOL-NOTFOUND %s
+BAD-OTOOL-NOTFOUND: Can't find -p symbol: _nonexistent
+
+# RUN: llvm-otool -tV %p/Inputs/exeThread.macho-x86_64 -p _environ 2>&1 | FileCheck --check-prefix BAD-OTOOL-NOTSECTION %s
+BAD-OTOOL-NOTSECTION: -p symbol: _environ not in the section
+
+# RUN: llvm-otool -tV %p/Inputs/exeThread.macho-x86_64 -p __mh_execute_header 2>&1 | FileCheck --check-prefix BAD-OTOOL-NOSECTION %s
+BAD-OTOOL-NOSECTION: -p symbol: __mh_execute_header not in any section

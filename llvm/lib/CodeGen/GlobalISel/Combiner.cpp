@@ -221,7 +221,7 @@ Combiner::WorkListMaintainer::create(Level Lvl, WorkListTy &WorkList,
   llvm_unreachable("Illegal ObserverLevel");
 }
 
-Combiner::Combiner(MachineFunction &MF, CombinerInfo &CInfo,
+Combiner::Combiner(MachineFunction &MF, const CombinerInfo &CInfo,
                    const TargetPassConfig *TPC, GISelValueTracking *VT,
                    GISelCSEInfo *CSEInfo)
     : Builder(CSEInfo ? std::make_unique<CSEMIRBuilder>()

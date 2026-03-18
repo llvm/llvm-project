@@ -998,7 +998,7 @@ This section describes the LLVM Utility Passes.
 -----------------------------------------------------------------------
 
 Same as dead argument elimination, but deletes arguments to functions which are
-external.  This is only for use by :doc:`bugpoint <Bugpoint>`.
+external.  This is only for use by `bugpoint`.
 
 ``extract-blocks``: Extract Basic Blocks From Module (for bugpoint use)
 -----------------------------------------------------------------------

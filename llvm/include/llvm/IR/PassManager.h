@@ -39,6 +39,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
@@ -47,7 +48,6 @@
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
-#include <iterator>
 #include <list>
 #include <memory>
 #include <tuple>
@@ -178,11 +178,10 @@ public:
 
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    for (unsigned Idx = 0, Size = Passes.size(); Idx != Size; ++Idx) {
-      auto *P = Passes[Idx].get();
+    ListSeparator LS(",");
+    for (auto &P : Passes) {
+      OS << LS;
       P->printPipeline(OS, MapClassName2PassName);
-      if (Idx + 1 < Size)
-        OS << ',';
     }
   }
 
@@ -590,7 +589,7 @@ public:
 
     Result(Result &&Arg) : InnerAM(std::move(Arg.InnerAM)) {
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       Arg.InnerAM = nullptr;
     }
@@ -608,7 +607,7 @@ public:
     Result &operator=(Result &&RHS) {
       InnerAM = RHS.InnerAM;
       // We have to null out the analysis manager in the moved-from state
-      // because we are taking ownership of the responsibilty to clear the
+      // because we are taking ownership of the responsibility to clear the
       // analysis state.
       RHS.InnerAM = nullptr;
       return *this;

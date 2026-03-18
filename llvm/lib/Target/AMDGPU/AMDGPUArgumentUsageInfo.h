@@ -10,13 +10,11 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUARGUMENTUSAGEINFO_H
 
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/Pass.h"
+#include <variant>
 
 namespace llvm {
 
-class Function;
 class LLT;
 class raw_ostream;
 class TargetRegisterClass;
@@ -25,57 +23,45 @@ class TargetRegisterInfo;
 struct ArgDescriptor {
 private:
   friend struct AMDGPUFunctionArgInfo;
-  friend class AMDGPUArgumentUsageInfo;
 
-  union {
-    MCRegister Reg;
-    unsigned StackOffset;
-  };
+  std::variant<std::monostate, MCRegister, unsigned> Val;
 
   // Bitmask to locate argument within the register.
   unsigned Mask;
 
-  bool IsStack : 1;
-  bool IsSet : 1;
-
 public:
-  ArgDescriptor(unsigned Val = 0, unsigned Mask = ~0u, bool IsStack = false,
-                bool IsSet = false)
-      : Reg(Val), Mask(Mask), IsStack(IsStack), IsSet(IsSet) {}
+  ArgDescriptor(unsigned Mask = ~0u) : Mask(Mask) {}
 
   static ArgDescriptor createRegister(Register Reg, unsigned Mask = ~0u) {
-    return ArgDescriptor(Reg, Mask, false, true);
+    ArgDescriptor Ret(Mask);
+    Ret.Val = Reg.asMCReg();
+    return Ret;
   }
 
   static ArgDescriptor createStack(unsigned Offset, unsigned Mask = ~0u) {
-    return ArgDescriptor(Offset, Mask, true, true);
+    ArgDescriptor Ret(Mask);
+    Ret.Val = Offset;
+    return Ret;
   }
 
   static ArgDescriptor createArg(const ArgDescriptor &Arg, unsigned Mask) {
-    return ArgDescriptor(Arg.Reg, Mask, Arg.IsStack, Arg.IsSet);
+    // Copy the descriptor, then change the mask.
+    ArgDescriptor Ret(Arg);
+    Ret.Mask = Mask;
+    return Ret;
   }
 
-  bool isSet() const {
-    return IsSet;
-  }
+  bool isSet() const { return !std::holds_alternative<std::monostate>(Val); }
 
   explicit operator bool() const {
     return isSet();
   }
 
-  bool isRegister() const {
-    return !IsStack;
-  }
+  bool isRegister() const { return std::holds_alternative<MCRegister>(Val); }
 
-  MCRegister getRegister() const {
-    assert(!IsStack);
-    return Reg;
-  }
+  MCRegister getRegister() const { return std::get<MCRegister>(Val); }
 
-  unsigned getStackOffset() const {
-    assert(IsStack);
-    return StackOffset;
-  }
+  unsigned getStackOffset() const { return std::get<unsigned>(Val); }
 
   unsigned getMask() const {
     // None of the target SGPRs or VGPRs are expected to have a 'zero' mask.
@@ -96,7 +82,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ArgDescriptor &Arg) {
 }
 
 struct KernArgPreloadDescriptor : public ArgDescriptor {
-  KernArgPreloadDescriptor() {}
+  KernArgPreloadDescriptor() = default;
   SmallVector<MCRegister> Regs;
 };
 
@@ -176,34 +162,7 @@ struct AMDGPUFunctionArgInfo {
   getPreloadedValue(PreloadedValue Value) const;
 
   static AMDGPUFunctionArgInfo fixedABILayout();
-};
-
-class AMDGPUArgumentUsageInfo : public ImmutablePass {
-private:
-  DenseMap<const Function *, AMDGPUFunctionArgInfo> ArgInfoMap;
-
-public:
-  static char ID;
-
-  static const AMDGPUFunctionArgInfo ExternFunctionInfo;
   static const AMDGPUFunctionArgInfo FixedABIFunctionInfo;
-
-  AMDGPUArgumentUsageInfo() : ImmutablePass(ID) { }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-  bool doInitialization(Module &M) override;
-  bool doFinalization(Module &M) override;
-
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
-
-  void setFuncArgInfo(const Function &F, const AMDGPUFunctionArgInfo &ArgInfo) {
-    ArgInfoMap[&F] = ArgInfo;
-  }
-
-  const AMDGPUFunctionArgInfo &lookupFuncArgInfo(const Function &F) const;
 };
 
 } // end namespace llvm

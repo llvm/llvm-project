@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_STRFTIME_MAIN_H
 
 #include "hdr/types/struct_tm.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/writer.h"
 #include "src/time/strftime_core/converter.h"
@@ -20,8 +21,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {
 
 template <printf_core::WriteMode write_mode>
-int strftime_main(printf_core::Writer<write_mode> *writer,
-                  const char *__restrict str, const tm *timeptr) {
+ErrorOr<size_t> strftime_main(printf_core::Writer<write_mode> *writer,
+                              const char *__restrict str, const tm *timeptr) {
   Parser parser(str);
   int result = 0;
   for (strftime_core::FormatSection cur_section = parser.get_next_section();
@@ -33,7 +34,7 @@ int strftime_main(printf_core::Writer<write_mode> *writer,
       result = writer->write(cur_section.raw_string);
 
     if (result < 0)
-      return result;
+      return Error(-result);
   }
 
   return writer->get_chars_written();

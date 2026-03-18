@@ -63,7 +63,6 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -750,13 +749,13 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
 
       // Loop over all of the incoming value in PN, moving them to NewPN if they
       // are from the extracted region.
-      for (unsigned i = 0; i != PN->getNumIncomingValues(); ++i) {
+      PN->removeIncomingValueIf([&](unsigned i) {
         if (Blocks.count(PN->getIncomingBlock(i))) {
           NewPN->addIncoming(PN->getIncomingValue(i), PN->getIncomingBlock(i));
-          PN->removeIncomingValue(i);
-          --i;
+          return true;
         }
-      }
+        return false;
+      });
     }
   }
 }
@@ -792,7 +791,7 @@ void CodeExtractor::severSplitPHINodesOfExits() {
         for (BasicBlock *PredBB : Preds)
           if (Blocks.count(PredBB))
             PredBB->getTerminator()->replaceUsesOfWith(ExitBB, NewBB);
-        BranchInst::Create(ExitBB, NewBB);
+        UncondBrInst::Create(ExitBB, NewBB);
         Blocks.insert(NewBB);
       }
 
@@ -933,6 +932,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::CoroDestroyOnlyWhenComplete:
       case Attribute::CoroElideSafe:
       case Attribute::NoDivergenceSource:
+      case Attribute::NoCreateUndefOrPoison:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
@@ -949,6 +949,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoFree:
       case Attribute::NoImplicitFloat:
       case Attribute::NoInline:
+      case Attribute::NoOutline:
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
       case Attribute::NoUnwind:
@@ -982,6 +983,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::MustProgress:
       case Attribute::NoProfile:
       case Attribute::SkipProfile:
+      case Attribute::DenormalFPEnv:
         break;
       // These attributes cannot be applied to functions.
       case Attribute::Alignment:
@@ -1740,7 +1742,7 @@ void CodeExtractor::emitFunctionBody(
   }
 
   // Connect newFunction entry block to new header.
-  BranchInst *BranchI = BranchInst::Create(header, newFuncRoot);
+  UncondBrInst *BranchI = UncondBrInst::Create(header, newFuncRoot);
   applyFirstDebugLoc(oldFunction, Blocks.getArrayRef(), BranchI);
 
   // Store the arguments right after the definition of output value.
@@ -1980,15 +1982,15 @@ CallInst *CodeExtractor::emitReplacerCall(
   case 1:
     // Only a single destination, change the switch into an unconditional
     // branch.
-    BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getIterator());
+    UncondBrInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getIterator());
     TheSwitch->eraseFromParent();
     break;
   case 2:
     // Only two destinations, convert to a condition branch.
     // Remark: This also swaps the target branches:
     // 0 -> false -> getSuccessor(2); 1 -> true -> getSuccessor(1)
-    BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getSuccessor(2),
-                       call, TheSwitch->getIterator());
+    CondBrInst::Create(call, TheSwitch->getSuccessor(1),
+                       TheSwitch->getSuccessor(2), TheSwitch->getIterator());
     TheSwitch->eraseFromParent();
     break;
   default:

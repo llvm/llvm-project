@@ -207,7 +207,7 @@ void TimeRecord::print(const TimeRecord &Total, raw_ostream &OS) const {
 
 namespace {
 
-typedef StringMap<Timer> Name2TimerMap;
+using Name2TimerMap = StringMap<Timer>;
 
 class Name2PairMap {
   StringMap<std::pair<TimerGroup*, Name2TimerMap> > Map;
@@ -240,7 +240,8 @@ private:
   getGroupEntry(StringRef GroupName, StringRef GroupDescription) {
     std::pair<TimerGroup *, Name2TimerMap> &GroupEntry = Map[GroupName];
     if (!GroupEntry.first)
-      GroupEntry.first = new TimerGroup(GroupName, GroupDescription);
+      GroupEntry.first =
+          new TimerGroup(GroupName, GroupDescription, /*PrintOnExit=*/true);
 
     return GroupEntry;
   }
@@ -270,9 +271,10 @@ TimerGroup &NamedRegionTimer::getNamedTimerGroup(StringRef GroupName,
 static TimerGroup *TimerGroupList = nullptr;
 
 TimerGroup::TimerGroup(StringRef Name, StringRef Description,
-                       sys::SmartMutex<true> &lock)
+                       sys::SmartMutex<true> &lock, bool PrintOnExit)
     : Name(Name.begin(), Name.end()),
-      Description(Description.begin(), Description.end()) {
+      Description(Description.begin(), Description.end()),
+      PrintOnExit(PrintOnExit) {
   // Add the group to TimerGroupList.
   sys::SmartScopedLock<true> L(lock);
   if (TimerGroupList)
@@ -282,12 +284,12 @@ TimerGroup::TimerGroup(StringRef Name, StringRef Description,
   TimerGroupList = this;
 }
 
-TimerGroup::TimerGroup(StringRef Name, StringRef Description)
-    : TimerGroup(Name, Description, timerLock()) {}
+TimerGroup::TimerGroup(StringRef Name, StringRef Description, bool PrintOnExit)
+    : TimerGroup(Name, Description, timerLock(), PrintOnExit) {}
 
 TimerGroup::TimerGroup(StringRef Name, StringRef Description,
-                       const StringMap<TimeRecord> &Records)
-    : TimerGroup(Name, Description) {
+                       const StringMap<TimeRecord> &Records, bool PrintOnExit)
+    : TimerGroup(Name, Description, PrintOnExit) {
   TimersToPrint.reserve(Records.size());
   for (const auto &P : Records)
     TimersToPrint.emplace_back(P.getValue(), std::string(P.getKey()),
@@ -301,7 +303,7 @@ TimerGroup::~TimerGroup() {
   while (FirstTimer)
     removeTimer(*FirstTimer);
 
-  if (!TimersToPrint.empty()) {
+  if (!TimersToPrint.empty() && PrintOnExit) {
     std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
     PrintQueuedTimers(*OutStream);
   }
@@ -530,7 +532,7 @@ public:
 
   sys::SmartMutex<true> TimerLock;
   TimerGroup DefaultTimerGroup{"misc", "Miscellaneous Ungrouped Timers",
-                               TimerLock};
+                               TimerLock, /*PrintOnExit=*/true};
   SignpostEmitter Signposts;
 
   // Order of these members and initialization below is important. For example

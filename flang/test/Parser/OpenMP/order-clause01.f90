@@ -18,7 +18,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_simd_order_reproducible()
  integer :: i, j = 1
@@ -36,7 +36,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_do_simd_order_unconstrained()
  integer :: i, j = 1
@@ -54,7 +54,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_parallel_do_order()
  integer :: i, j = 1
@@ -71,7 +71,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_parallel_do_simd_order_reproducible()
  integer :: i, j = 1
@@ -89,7 +89,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_target_simd_order_unconstrained()
  integer :: i, j = 1
@@ -107,7 +107,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_target_parallel_do_order()
  integer :: i, j = 1
@@ -124,7 +124,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target parallel do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_target_parallel_do_simd_order_reproducible()
  integer :: i, j = 1
@@ -142,7 +142,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_teams_distribute_simd_order_unconstrained()
  integer :: i, j = 1
@@ -160,7 +160,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_teams_distribute_parallel_do_order()
  integer :: i, j = 1
@@ -177,7 +177,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = teams distribute parallel do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_teams_distribute_parallel_do_simd_order_reproducible()
  integer :: i, j = 1
@@ -195,7 +195,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_target_teams_distribute_simd_order_unconstrained()
  integer :: i, j = 1
@@ -213,7 +213,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_target_teams_distribute_parallel_do_order()
  integer :: i, j = 1
@@ -230,7 +230,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target teams distribute parallel do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_target_teams_distribute_parallel_do_simd_order_reproducible()
  integer :: i, j = 1
@@ -248,7 +248,7 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}
 
 subroutine test_taskloop_simd_order_unconstrained()
  integer :: i, j = 1
@@ -266,4 +266,4 @@ end subroutine
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained
 !PARSE-TREE-NEXT: Ordering = Concurrent
-!PARSE-TREE-NEXT: Flags = None
+!PARSE-TREE-NEXT: Flags = {}

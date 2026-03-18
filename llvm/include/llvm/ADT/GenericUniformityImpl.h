@@ -602,8 +602,6 @@ public:
                       << Context.print(&DivTermBlock) << "\n");
 
     int DivTermIdx = CyclePOT.getIndex(&DivTermBlock);
-
-    // Bootstrap with branch targets
     auto const *DivTermCycle = CI.getCycle(&DivTermBlock);
 
     // Locate the largest ancestor cycle that is not reducible and does not
@@ -624,6 +622,7 @@ public:
       return C;
     }(DivTermCycle);
 
+    // Bootstrap with branch targets
     for (const auto *SuccBlock : successors(&DivTermBlock)) {
       if (DivTermCycle && !DivTermCycle->contains(SuccBlock)) {
         // If DivTerm exits the cycle immediately, computeJoin() might
@@ -667,35 +666,34 @@ public:
       const auto *Label = BlockLabels[Block];
       assert(Label);
 
-      // If the current block is the header of a reducible cycle that
-      // contains the divergent branch, then the label should be
-      // propagated to the cycle exits. Such a header is the "last
-      // possible join" of any disjoint paths within this cycle. This
-      // prevents detection of spurious joins at the entries of any
-      // irreducible child cycles.
-      //
-      // This conclusion about the header is true for any choice of DFS:
+      // If the current block is the header of a reducible cycle, then the label
+      // should be propagated to the cycle exits. If this cycle contains the
+      // branch, then those exits are divergent exits. This is true for any DFS.
       //
       //   If some DFS has a reducible cycle C with header H, then for
       //   any other DFS, H is the header of a cycle C' that is a
-      //   superset of C. For a divergent branch inside the subgraph
-      //   C, any join node inside C is either H, or some node
-      //   encountered without passing through H.
+      //   superset of C.
       //
-      auto getReducibleParent = [&](const BlockT *Block) -> const CycleT * {
-        if (!CyclePOT.isReducibleCycleHeader(Block))
-          return nullptr;
+      //   - For a divergent branch inside the subgraph C, any join node inside
+      //     C is either H, or some node encountered by paths within C, without
+      //     passing through H.
+      //
+      //   - For a divergent branch outside the subgraph C, H is the only node
+      //     in C reachable from multiple paths since it is the only entry to C.
+      LLVM_DEBUG(dbgs() << "Check for reducible cycle: " << Context.print(Block)
+                        << '\n');
+      if (CyclePOT.isReducibleCycleHeader(Block)) {
         const auto *BlockCycle = CI.getCycle(Block);
-        if (BlockCycle->contains(&DivTermBlock))
-          return BlockCycle;
-        return nullptr;
-      };
-
-      if (const auto *BlockCycle = getReducibleParent(Block)) {
+        LLVM_DEBUG(dbgs() << BlockCycle->print(Context) << '\n');
         SmallVector<BlockT *, 4> BlockCycleExits;
         BlockCycle->getExitBlocks(BlockCycleExits);
-        for (auto *BlockCycleExit : BlockCycleExits)
-          visitCycleExitEdge(*BlockCycleExit, *Label);
+        bool BranchIsInside = BlockCycle->contains(&DivTermBlock);
+        for (auto *BlockCycleExit : BlockCycleExits) {
+          if (BranchIsInside)
+            visitCycleExitEdge(*BlockCycleExit, *Label);
+          else
+            visitEdge(*BlockCycleExit, *Label);
+        }
       } else {
         for (const auto *SuccBlock : successors(Block))
           visitEdge(*SuccBlock, *Label);

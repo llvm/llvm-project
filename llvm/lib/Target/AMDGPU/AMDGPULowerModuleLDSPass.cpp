@@ -316,20 +316,17 @@ public:
     // Create a ConstantArray containing the address of each Variable within the
     // kernel corresponding to LDSVarsToConstantGEP, or poison if that kernel
     // does not allocate it
-    // TODO: Drop the ptrtoint conversion
 
-    Type *I32 = Type::getInt32Ty(Ctx);
-
-    ArrayType *KernelOffsetsType = ArrayType::get(I32, Variables.size());
+    Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
+    ArrayType *KernelOffsetsType = ArrayType::get(LocalPtrTy, Variables.size());
 
     SmallVector<Constant *> Elements;
     for (GlobalVariable *GV : Variables) {
       auto ConstantGepIt = LDSVarsToConstantGEP.find(GV);
       if (ConstantGepIt != LDSVarsToConstantGEP.end()) {
-        auto *elt = ConstantExpr::getPtrToInt(ConstantGepIt->second, I32);
-        Elements.push_back(elt);
+        Elements.push_back(ConstantGepIt->second);
       } else {
-        Elements.push_back(PoisonValue::get(I32));
+        Elements.push_back(PoisonValue::get(LocalPtrTy));
       }
     }
     return ConstantArray::get(KernelOffsetsType, Elements);
@@ -347,8 +344,8 @@ public:
     const size_t NumberVariables = Variables.size();
     const size_t NumberKernels = kernels.size();
 
-    ArrayType *KernelOffsetsType =
-        ArrayType::get(Type::getInt32Ty(Ctx), NumberVariables);
+    Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
+    ArrayType *KernelOffsetsType = ArrayType::get(LocalPtrTy, NumberVariables);
 
     ArrayType *AllKernelsOffsetsType =
         ArrayType::get(KernelOffsetsType, NumberKernels);
@@ -401,12 +398,8 @@ public:
     Value *Address = Builder.CreateInBoundsGEP(
         LookupTable->getValueType(), LookupTable, GEPIdx, GV->getName());
 
-    Value *loaded = Builder.CreateLoad(I32, Address);
-
-    Value *replacement =
-        Builder.CreateIntToPtr(loaded, GV->getType(), GV->getName());
-
-    U.set(replacement);
+    Value *Loaded = Builder.CreateLoad(GV->getType(), Address);
+    U.set(Loaded);
   }
 
   void replaceUsesInInstructionsWithTableLookup(
@@ -441,7 +434,7 @@ public:
       return KernelSet;
 
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
       for (GlobalVariable *GV : LDSUsesInfo.indirect_access[&Func]) {
         if (VariableSet.contains(GV)) {
@@ -501,9 +494,7 @@ public:
         // strategy
         continue;
       }
-      CandidateTy Candidate(
-          GV, K.second.size(),
-          DL.getTypeAllocSize(GV->getValueType()).getFixedValue());
+      CandidateTy Candidate(GV, K.second.size(), GV->getGlobalSize(DL));
       if (MostUsed < Candidate)
         MostUsed = Candidate;
     }
@@ -555,7 +546,7 @@ public:
       for (Function &Func : M->functions()) {
         if (Func.isDeclaration())
           continue;
-        if (!isKernelLDS(&Func))
+        if (!isKernel(Func))
           continue;
 
         if (KernelsThatAllocateTableLDS.contains(&Func) ||
@@ -703,7 +694,7 @@ public:
             return false;
           }
           Function *F = I->getFunction();
-          return !isKernelLDS(F);
+          return !isKernel(*F);
         });
 
     // Replace uses of module scope variable from kernel functions that
@@ -711,7 +702,7 @@ public:
     // Record on each kernel whether the module scope global is used by it
 
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
 
       if (KernelsThatAllocateModuleLDS.contains(&Func)) {
@@ -743,7 +734,7 @@ public:
 
     DenseMap<Function *, LDSVariableReplacement> KernelToReplacement;
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
 
       DenseSet<GlobalVariable *> KernelUsedVariables;
@@ -828,7 +819,7 @@ public:
     // semantics. Setting the alignment here allows this IR pass to accurately
     // predict the exact constant at which it will be allocated.
 
-    assert(isKernelLDS(func));
+    assert(isKernel(*func));
 
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
@@ -870,7 +861,7 @@ public:
     if (!KernelsThatIndirectlyAllocateDynamicLDS.empty()) {
       LLVMContext &Ctx = M.getContext();
       IRBuilder<> Builder(Ctx);
-      Type *I32 = Type::getInt32Ty(Ctx);
+      Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
 
       std::vector<Constant *> newDynamicLDS;
 
@@ -878,7 +869,7 @@ public:
       for (auto &func : OrderedKernels) {
 
         if (KernelsThatIndirectlyAllocateDynamicLDS.contains(func)) {
-          assert(isKernelLDS(func));
+          assert(isKernel(*func));
           if (!func->hasName()) {
             reportFatalUsageError("anonymous kernels cannot use LDS variables");
           }
@@ -890,17 +881,14 @@ public:
 
           markUsedByKernel(func, N);
 
-          auto *emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
-          auto *GEP = ConstantExpr::getGetElementPtr(
-              emptyCharArray, N, ConstantInt::get(I32, 0), true);
-          newDynamicLDS.push_back(ConstantExpr::getPtrToInt(GEP, I32));
+          newDynamicLDS.push_back(N);
         } else {
-          newDynamicLDS.push_back(PoisonValue::get(I32));
+          newDynamicLDS.push_back(PoisonValue::get(LocalPtrTy));
         }
       }
       assert(OrderedKernels.size() == newDynamicLDS.size());
 
-      ArrayType *t = ArrayType::get(I32, newDynamicLDS.size());
+      ArrayType *t = ArrayType::get(LocalPtrTy, newDynamicLDS.size());
       Constant *init = ConstantArray::get(t, newDynamicLDS);
       GlobalVariable *table = new GlobalVariable(
           M, t, true, GlobalValue::InternalLinkage, init,
@@ -912,7 +900,7 @@ public:
           auto *I = dyn_cast<Instruction>(U.getUser());
           if (!I)
             continue;
-          if (isKernelLDS(I->getFunction()))
+          if (isKernel(*I->getFunction()))
             continue;
 
           replaceUseWithTableLookup(M, Builder, table, GV, U, nullptr);
@@ -920,126 +908,6 @@ public:
       }
     }
     return KernelToCreatedDynamicLDS;
-  }
-
-  static GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
-                                             Function *KF) {
-    bool NeedsReplacement = false;
-    for (Use &U : GV->uses()) {
-      if (auto *I = dyn_cast<Instruction>(U.getUser())) {
-        Function *F = I->getFunction();
-        if (isKernelLDS(F) && F != KF) {
-          NeedsReplacement = true;
-          break;
-        }
-      }
-    }
-    if (!NeedsReplacement)
-      return GV;
-    // Create a new GV used only by this kernel and its function
-    GlobalVariable *NewGV = new GlobalVariable(
-        M, GV->getValueType(), GV->isConstant(), GV->getLinkage(),
-        GV->getInitializer(), GV->getName() + "." + KF->getName(), nullptr,
-        GV->getThreadLocalMode(), GV->getType()->getAddressSpace());
-    NewGV->copyAttributesFrom(GV);
-    for (Use &U : make_early_inc_range(GV->uses())) {
-      if (auto *I = dyn_cast<Instruction>(U.getUser())) {
-        Function *F = I->getFunction();
-        if (!isKernelLDS(F) || F == KF) {
-          U.getUser()->replaceUsesOfWith(GV, NewGV);
-        }
-      }
-    }
-    return NewGV;
-  }
-
-  bool lowerSpecialLDSVariables(
-      Module &M, LDSUsesInfoTy &LDSUsesInfo,
-      VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
-    bool Changed = false;
-    const DataLayout &DL = M.getDataLayout();
-    // The 1st round: give module-absolute assignments
-    int NumAbsolutes = 0;
-    std::vector<GlobalVariable *> OrderedGVs;
-    for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
-      GlobalVariable *GV = K.first;
-      if (!isNamedBarrier(*GV))
-        continue;
-      // give a module-absolute assignment if it is indirectly accessed by
-      // multiple kernels. This is not precise, but we don't want to duplicate
-      // a function when it is called by multiple kernels.
-      if (LDSToKernelsThatNeedToAccessItIndirectly[GV].size() > 1) {
-        OrderedGVs.push_back(GV);
-      } else {
-        // leave it to the 2nd round, which will give a kernel-relative
-        // assignment if it is only indirectly accessed by one kernel
-        LDSUsesInfo.direct_access[*K.second.begin()].insert(GV);
-      }
-      LDSToKernelsThatNeedToAccessItIndirectly.erase(GV);
-    }
-    OrderedGVs = sortByName(std::move(OrderedGVs));
-    for (GlobalVariable *GV : OrderedGVs) {
-      unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
-      unsigned BarId = NumAbsolutes + 1;
-      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
-      NumAbsolutes += BarCnt;
-
-      // 4 bits for alignment, 5 bits for the barrier num,
-      // 3 bits for the barrier scope
-      unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
-      recordLDSAbsoluteAddress(&M, GV, Offset);
-    }
-    OrderedGVs.clear();
-
-    // The 2nd round: give a kernel-relative assignment for GV that
-    // either only indirectly accessed by single kernel or only directly
-    // accessed by multiple kernels.
-    std::vector<Function *> OrderedKernels;
-    for (auto &K : LDSUsesInfo.direct_access) {
-      Function *F = K.first;
-      assert(isKernelLDS(F));
-      OrderedKernels.push_back(F);
-    }
-    OrderedKernels = sortByName(std::move(OrderedKernels));
-
-    llvm::DenseMap<Function *, uint32_t> Kernel2BarId;
-    for (Function *F : OrderedKernels) {
-      for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
-        if (!isNamedBarrier(*GV))
-          continue;
-
-        LDSUsesInfo.direct_access[F].erase(GV);
-        if (GV->isAbsoluteSymbolRef()) {
-          // already assigned
-          continue;
-        }
-        OrderedGVs.push_back(GV);
-      }
-      OrderedGVs = sortByName(std::move(OrderedGVs));
-      for (GlobalVariable *GV : OrderedGVs) {
-        // GV could also be used directly by other kernels. If so, we need to
-        // create a new GV used only by this kernel and its function.
-        auto NewGV = uniquifyGVPerKernel(M, GV, F);
-        Changed |= (NewGV != GV);
-        unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
-        unsigned BarId = Kernel2BarId[F];
-        BarId += NumAbsolutes + 1;
-        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
-        Kernel2BarId[F] += BarCnt;
-        unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
-        recordLDSAbsoluteAddress(&M, NewGV, Offset);
-      }
-      OrderedGVs.clear();
-    }
-    // Also erase those special LDS variables from indirect_access.
-    for (auto &K : LDSUsesInfo.indirect_access) {
-      assert(isKernelLDS(K.first));
-      for (GlobalVariable *GV : K.second) {
-        if (isNamedBarrier(*GV))
-          K.second.erase(GV);
-      }
-    }
-    return Changed;
   }
 
   bool runOnModule(Module &M) {
@@ -1058,16 +926,10 @@ public:
     VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
     for (auto &K : LDSUsesInfo.indirect_access) {
       Function *F = K.first;
-      assert(isKernelLDS(F));
+      assert(isKernel(*F));
       for (GlobalVariable *GV : K.second) {
         LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
       }
-    }
-
-    if (LDSUsesInfo.HasSpecialGVs) {
-      // Special LDS variables need special address assignment
-      Changed |= lowerSpecialLDSVariables(
-          M, LDSUsesInfo, LDSToKernelsThatNeedToAccessItIndirectly);
     }
 
     // Partition variables accessed indirectly into the different strategies
@@ -1157,7 +1019,7 @@ public:
       const DataLayout &DL = M.getDataLayout();
 
       for (Function &Func : M.functions()) {
-        if (Func.isDeclaration() || !isKernelLDS(&Func))
+        if (Func.isDeclaration() || !isKernel(Func))
           continue;
 
         // All three of these are optional. The first variable is allocated at
@@ -1187,14 +1049,14 @@ public:
         if (AllocateModuleScopeStruct) {
           // Allocated at zero, recorded once on construction, not once per
           // kernel
-          Offset += DL.getTypeAllocSize(MaybeModuleScopeStruct->getValueType());
+          Offset += MaybeModuleScopeStruct->getGlobalSize(DL);
         }
 
         if (AllocateKernelScopeStruct) {
           GlobalVariable *KernelStruct = Replacement->second.SGV;
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, KernelStruct));
           recordLDSAbsoluteAddress(&M, KernelStruct, Offset);
-          Offset += DL.getTypeAllocSize(KernelStruct->getValueType());
+          Offset += KernelStruct->getGlobalSize(DL);
         }
 
         // If there is dynamic allocation, the alignment needed is included in
@@ -1264,7 +1126,7 @@ private:
       }
 
       Align Alignment = AMDGPU::getAlign(DL, &GV);
-      TypeSize GVSize = DL.getTypeAllocSize(GV.getValueType());
+      uint64_t GVSize = GV.getGlobalSize(DL);
 
       if (GVSize > 8) {
         // We might want to use a b96 or b128 load/store
@@ -1310,8 +1172,7 @@ private:
           LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
 
       for (GlobalVariable *GV : Sorted) {
-        OptimizedStructLayoutField F(GV,
-                                     DL.getTypeAllocSize(GV->getValueType()),
+        OptimizedStructLayoutField F(GV, GV->getGlobalSize(DL),
                                      AMDGPU::getAlign(DL, GV));
         LayoutFields.emplace_back(F);
       }

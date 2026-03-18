@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BOOST_USE_TO_STRING_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BOOST_USE_TO_STRING_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BOOST_USETOSTRINGCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BOOST_USETOSTRINGCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -32,4 +32,4 @@ public:
 
 } // namespace clang::tidy::boost
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BOOST_USE_TO_STRING_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BOOST_USETOSTRINGCHECK_H

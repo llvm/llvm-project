@@ -728,7 +728,7 @@ declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, ptr, i32, i64, ptr, ptr, p
 
 declare i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32, ptr, i32, ptr);
 
-declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64);
+declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32);
 
 declare i32 @__kmpc_shuffle_int32(i32, i16, i16);
 
@@ -1372,7 +1372,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK: declare i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32, ptr, i32, ptr)
 
 ; CHECK: ; Function Attrs: alwaysinline
-; CHECK: declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
+; CHECK: declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32)
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare i32 @__kmpc_shuffle_int32(i32, i16, i16)
@@ -2014,7 +2014,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC: declare i32 @__kmpc_omp_reg_task_with_affinity(ptr nofree readonly captures(none), i32, ptr nofree readonly captures(none), i32, ptr nofree readonly captures(none))
 
 ; OPTIMISTIC: alwaysinline
-; OPTIMISTIC: declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
+; OPTIMISTIC: declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32)
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare i32 @__kmpc_shuffle_int32(i32, i16, i16)
@@ -2672,7 +2672,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT: declare signext i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32 signext, ptr, i32 signext, ptr)
 
 ; EXT: ; Function Attrs: alwaysinline
-; EXT: declare void @__kmpc_parallel_51(ptr, i32 signext, i32 signext, i32 signext, i32 signext, ptr, ptr, ptr, i64)
+; EXT: declare void @__kmpc_parallel_60(ptr, i32 signext, i32 signext, i32 signext, i32 signext, ptr, ptr, ptr, i64, i32)
 
 ; EXT-NOT: Function Attrs
 ; EXT: declare signext i32 @__kmpc_shuffle_int32(i32 signext, i16 signext, i16 signext)

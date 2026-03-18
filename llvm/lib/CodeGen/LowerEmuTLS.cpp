@@ -35,9 +35,7 @@ namespace {
 class LowerEmuTLS : public ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  LowerEmuTLS() : ModulePass(ID) {
-    initializeLowerEmuTLSPass(*PassRegistry::getPassRegistry());
-  }
+  LowerEmuTLS() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override;
 };

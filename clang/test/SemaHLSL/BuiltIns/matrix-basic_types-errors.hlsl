@@ -3,7 +3,7 @@
 uint64_t5x5 mat;
 // expected-error@-1  {{unknown type name 'uint64_t5x5'}}
 
-// Note: this one only fails because -fnative-half-type is not set
+// Note: this one only fails because -fnative-half-type -fnative-int16-type is not set
 uint16_t4x4 mat2;
 // expected-error@-1  {{unknown type name 'uint16_t4x4'}}
 

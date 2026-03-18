@@ -231,7 +231,12 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
         construct<IoControlSpec::CharExpr>(
             pure(IoControlSpec::CharExpr::Kind::Sign), scalarDefaultCharExpr)),
     construct<IoControlSpec>(
-        "SIZE =" >> construct<IoControlSpec::Size>(scalarIntVariable))))
+        "SIZE =" >> construct<IoControlSpec::Size>(scalarIntVariable)),
+    lookAhead(keyword) >>
+        construct<IoControlSpec>(recovery(
+            fail<ErrorRecovery>(
+                "invalid or unknown I/O control specification"_err_en_US),
+            keyword >> "="_tok >> expr >> construct<ErrorRecovery>()))))
 
 // R1211 write-stmt -> WRITE ( io-control-spec-list ) [output-item-list]
 constexpr auto outputItemList{
@@ -547,6 +552,11 @@ TYPE_PARSER(construct<format::FormatItem>(
     construct<format::FormatItem>(
         maybe(repeat), Parser<format::DerivedTypeDataEditDesc>{}) ||
     construct<format::FormatItem>(Parser<format::ControlEditDesc>{}) ||
+    // Error recovery: accept [r] before control-edit-desc so that the
+    // format validator can diagnose a repeat specifier before descriptors
+    // like SS, SP, S, BN, BZ, etc., rather than failing the parse entirely.
+    construct<format::FormatItem>(
+        maybe(repeat), Parser<format::ControlEditDesc>{}) ||
     construct<format::FormatItem>(charStringEditDesc) ||
     construct<format::FormatItem>(maybe(repeat), parenthesized(formatItems)))
 

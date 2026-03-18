@@ -28,7 +28,7 @@ public:
 
   SPIRVStripConvergentIntrinsics() : FunctionPass(ID) {}
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     DenseSet<Instruction *> ToRemove;
 
     // Is the instruction is a convergent intrinsic, add it to kill-list and

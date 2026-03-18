@@ -34,10 +34,11 @@ class NormalFileTarget:
 
 
 class SplitFileTarget:
-    def __init__(self, slice_start_idx, test_path, lines):
+    def __init__(self, slice_start_idx, test_path, lines, filename):
         self.slice_start_idx = slice_start_idx
         self.test_path = test_path
         self.lines = lines
+        self.filename = filename
 
     def copyFrom(self, source):
         lines_before = self.lines[: self.slice_start_idx + 1]
@@ -58,7 +59,7 @@ class SplitFileTarget:
                 f.write(l)
 
     def __str__(self):
-        return f"slice in {self.test_path}"
+        return f"slice {self.filename} in {self.test_path}"
 
     @staticmethod
     def get_target_dir(commands, test_path):
@@ -89,7 +90,7 @@ class SplitFileTarget:
                 break
         else:
             return None
-        return SplitFileTarget(idx, test_path, lines)
+        return SplitFileTarget(idx, test_path, lines, p)
 
     @staticmethod
     def _get_split_line_path(l):
@@ -117,27 +118,32 @@ def get_source_and_target(a, b, test_path, commands):
     Try to figure out which file is the test output and which is the reference.
     """
     split_target_dir = SplitFileTarget.get_target_dir(commands, test_path)
+    a_target = None
+    b_target = None
     if split_target_dir:
         a_target = SplitFileTarget.create(a, commands, test_path, split_target_dir)
         b_target = SplitFileTarget.create(b, commands, test_path, split_target_dir)
-        if a_target and b_target:
-            return None
-        if a_target:
+        if a_target and not b_target:
             return b, a_target
-        if b_target:
+        if b_target and not a_target:
             return a, b_target
+
+    if not a_target:
+        a_target = NormalFileTarget(a)
+    if not b_target:
+        b_target = NormalFileTarget(b)
 
     expected_suffix = ".expected"
     if a.endswith(expected_suffix) and not b.endswith(expected_suffix):
-        return b, NormalFileTarget(a)
+        return b, a_target
     if b.endswith(expected_suffix) and not a.endswith(expected_suffix):
-        return a, NormalFileTarget(b)
+        return a, b_target
 
     tmp_substr = ".tmp"
     if tmp_substr in a and not tmp_substr in b:
-        return a, NormalFileTarget(b)
+        return a, b_target
     if tmp_substr in b and not tmp_substr in a:
-        return b, NormalFileTarget(a)
+        return b, a_target
 
     return None
 

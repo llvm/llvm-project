@@ -15,6 +15,8 @@ typedef half __attribute__((ext_vector_type(32))) half32;
 typedef float __attribute__((ext_vector_type(8))) float8;
 typedef float __attribute__((ext_vector_type(16))) float16;
 typedef float __attribute__((ext_vector_type(32))) float32;
+typedef short __attribute__((ext_vector_type(2))) short2;
+typedef unsigned short __attribute__((ext_vector_type(2))) ushort2;
 
 typedef int    v4i   __attribute__((ext_vector_type(4)));
 typedef int    v8i   __attribute__((ext_vector_type(8)));
@@ -92,15 +94,48 @@ void test_cvt_scale_pk(global half8 *outh8, global bfloat8 *outy8, uint2 src2,
   *outf16 = __builtin_amdgcn_cvt_scale_pk16_f32_bf6(src3, scale, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
 }
 
-void test_amdgcn_load_monitor(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
-                              global int* b32out, global v2i* b64out, global v4i* b128out, int cpol)
+void test_amdgcn_load_monitor_ao_constant(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
+                              global int* b32out, global v2i* b64out, global v4i* b128out, int ao)
 {
-  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, cpol); // expected-error {{'__builtin_amdgcn_global_load_monitor_b32' must be a constant integer}}
-  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, cpol); // expected-error {{'__builtin_amdgcn_global_load_monitor_b64' must be a constant integer}}
-  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, cpol); // expected-error {{'__builtin_amdgcn_global_load_monitor_b128' must be a constant integer}}
-  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, cpol); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b32' must be a constant integer}}
-  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, cpol); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b64' must be a constant integer}}
-  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, cpol); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b128' must be a constant integer}}
+  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_global_load_monitor_b32' must be a constant integer}}
+  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_global_load_monitor_b64' must be a constant integer}}
+  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_global_load_monitor_b128' must be a constant integer}}
+  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b32' must be a constant integer}}
+  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b64' must be a constant integer}}
+  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, ao, __MEMORY_SCOPE_SYSTEM); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b128' must be a constant integer}}
+}
+
+void test_amdgcn_load_monitor_ao_valid(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
+                              global int* b32out, global v2i* b64out, global v4i* b128out)
+{
+  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, __ATOMIC_ACQ_REL, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, __ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM); // expected-warning {{memory order argument to atomic operation is invalid}}
+}
+
+void test_amdgcn_load_monitor_scope_constant(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
+                              global int* b32out, global v2i* b64out, global v4i* b128out, int sc)
+{
+  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_global_load_monitor_b32' must be a constant integer}}
+  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_global_load_monitor_b64' must be a constant integer}}
+  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_global_load_monitor_b128' must be a constant integer}}
+  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b32' must be a constant integer}}
+  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b64' must be a constant integer}}
+  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, __ATOMIC_RELAXED, sc); // expected-error {{'__builtin_amdgcn_flat_load_monitor_b128' must be a constant integer}}
+}
+
+void test_amdgcn_load_monitor_scope_valid(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
+                              global int* b32out, global v2i* b64out, global v4i* b128out)
+{
+  *b32out  = __builtin_amdgcn_global_load_monitor_b32(b32gaddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b64out  = __builtin_amdgcn_global_load_monitor_b64(b64gaddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b128out = __builtin_amdgcn_global_load_monitor_b128(b128gaddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b32out  = __builtin_amdgcn_flat_load_monitor_b32(b32faddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b64out  = __builtin_amdgcn_flat_load_monitor_b64(b64faddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b128out = __builtin_amdgcn_flat_load_monitor_b128(b128faddr, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
 }
 
 void test_amdgcn_cluster_load(global int* addr32, global v2i* addr64, global v4i* addr128, global int* b32out, global v2i* b64out, global v4i* b128out, int cpol, int mask)
@@ -148,12 +183,10 @@ void test_amdgcn_async_load_store_lds_cpol(global char* gaddr8, global int *gadd
   __builtin_amdgcn_global_store_async_from_lds_b128(gaddr128, laddr128, 16, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b128' must be a constant integer}}
 }
 
-void test_amdgcn_tensor_load_store(v4i sg0, v8i sg1, v4i sg2, v4i sg3, int cpol)
+void test_amdgcn_tensor_load_store(v4i sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4, int cpol)
 {
-  __builtin_amdgcn_tensor_load_to_lds(sg0, sg1, sg2, sg3, cpol); // expected-error {{'__builtin_amdgcn_tensor_load_to_lds' must be a constant integer}}
-  __builtin_amdgcn_tensor_load_to_lds_d2(sg0, sg1, cpol); // expected-error {{'__builtin_amdgcn_tensor_load_to_lds_d2' must be a constant integer}}
-  __builtin_amdgcn_tensor_store_from_lds(sg0, sg1, sg2, sg3, cpol); // expected-error {{'__builtin_amdgcn_tensor_store_from_lds' must be a constant integer}}
-  __builtin_amdgcn_tensor_store_from_lds_d2(sg0, sg1, cpol); // expected-error {{'__builtin_amdgcn_tensor_store_from_lds_d2' must be a constant integer}}
+  __builtin_amdgcn_tensor_load_to_lds(sg0, sg1, sg2, sg3, sg4, cpol); // expected-error {{'__builtin_amdgcn_tensor_load_to_lds' must be a constant integer}}
+  __builtin_amdgcn_tensor_store_from_lds(sg0, sg1, sg2, sg3, sg4, cpol); // expected-error {{'__builtin_amdgcn_tensor_store_from_lds' must be a constant integer}}
 }
 
 void test_prefetch(generic void *fptr, global void *gptr, int cpol) {
@@ -164,4 +197,20 @@ void test_prefetch(generic void *fptr, global void *gptr, int cpol) {
 void test_cvt_f32_fp8_e5m3(global int* out, int a)
 {
   *out = __builtin_amdgcn_cvt_f32_fp8_e5m3(a, a); // expected-error {{'__builtin_amdgcn_cvt_f32_fp8_e5m3' must be a constant integer}}
+}
+
+void test_add_min_max(global int *out, int a, int b, int c, bool clamp)
+{
+  *out = __builtin_amdgcn_add_max_i32(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_add_max_i32' must be a constant integer}}
+  *out = __builtin_amdgcn_add_max_u32(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_add_max_u32' must be a constant integer}}
+  *out = __builtin_amdgcn_add_min_i32(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_add_min_i32' must be a constant integer}}
+  *out = __builtin_amdgcn_add_min_u32(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_add_min_u32' must be a constant integer}}
+}
+
+void test_pk_add_min_max(global short2 *out, global ushort2 *uout, short2 a, short2 b, short2 c, ushort2 ua, ushort2 ub, ushort2 uc, bool clamp)
+{
+  *out = __builtin_amdgcn_pk_add_max_i16(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_pk_add_max_i16' must be a constant integer}}
+  *uout = __builtin_amdgcn_pk_add_max_u16(ua, ub, uc, clamp); // expected-error {{'__builtin_amdgcn_pk_add_max_u16' must be a constant integer}}
+  *out = __builtin_amdgcn_pk_add_min_i16(a, b, c, clamp); // expected-error {{'__builtin_amdgcn_pk_add_min_i16' must be a constant integer}}
+  *uout = __builtin_amdgcn_pk_add_min_u16(ua, ub, uc, clamp); // expected-error {{'__builtin_amdgcn_pk_add_min_u16' must be a constant integer}}
 }

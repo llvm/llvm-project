@@ -131,6 +131,9 @@ struct FindHostArray
     return (*this)(x.base());
   }
   Result operator()(const Symbol &symbol) const {
+    if (symbol.IsFuncResult()) {
+      return nullptr;
+    }
     if (const auto *details{
             symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->IsArray() &&
@@ -511,10 +514,10 @@ private:
     Check(uS.statement, uS.source);
   }
   void Check(const parser::LoopControl::Bounds &bounds) {
-    Check(bounds.lower);
-    Check(bounds.upper);
-    if (bounds.step) {
-      Check(*bounds.step);
+    Check(bounds.Lower());
+    Check(bounds.Upper());
+    if (auto &step{bounds.Step()}) {
+      Check(*step);
     }
   }
   void Check(const parser::LoopControl::Concurrent &x) {

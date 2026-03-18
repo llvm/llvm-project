@@ -222,6 +222,18 @@ int main(int, char**) {
     assert(r == std::next(m.begin(), 8));
   }
 #endif
+  { // Make sure we only make the comparator transparent if it's not converting the arguments
+    struct S {
+      int i_;
+
+      S(int i) : i_(i) {}
+      bool operator<(S lhs) const { return lhs.i_ < i_; }
+    };
+    // less<S> causes an implicit conversion from reference_wrapper<S> to const S&, making the `<` lookup succeed
+    std::map<std::reference_wrapper<S>, void*, std::less<S> > m;
+    S v(1);
+    assert(m.find(v) == m.end());
+  }
 
   return 0;
 }

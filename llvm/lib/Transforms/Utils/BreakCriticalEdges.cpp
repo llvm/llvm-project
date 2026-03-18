@@ -39,36 +39,36 @@ using namespace llvm;
 STATISTIC(NumBroken, "Number of blocks inserted");
 
 namespace {
-  struct BreakCriticalEdges : public FunctionPass {
-    static char ID; // Pass identification, replacement for typeid
-    BreakCriticalEdges() : FunctionPass(ID) {
-      initializeBreakCriticalEdgesPass(*PassRegistry::getPassRegistry());
-    }
+struct BreakCriticalEdges : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  BreakCriticalEdges() : FunctionPass(ID) {
+    initializeBreakCriticalEdgesPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override {
-      auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-      auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  bool runOnFunction(Function &F) override {
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
 
-      auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
-      auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
+    auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
+    auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
 
-      auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
-      auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
-      unsigned N =
-          SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI, nullptr, PDT));
-      NumBroken += N;
-      return N > 0;
-    }
+    auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
+    auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
+    unsigned N = SplitAllCriticalEdges(
+        F, CriticalEdgeSplittingOptions(DT, LI, nullptr, PDT));
+    NumBroken += N;
+    return N > 0;
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addPreserved<LoopInfoWrapperPass>();
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
 
-      // No loop canonicalization guarantees are broken by this pass.
-      AU.addPreservedID(LoopSimplifyID);
-    }
-  };
-}
+    // No loop canonicalization guarantees are broken by this pass.
+    AU.addPreservedID(LoopSimplifyID);
+  }
+};
+} // namespace
 
 char BreakCriticalEdges::ID = 0;
 INITIALIZE_PASS(BreakCriticalEdges, "break-crit-edges",
@@ -76,6 +76,7 @@ INITIALIZE_PASS(BreakCriticalEdges, "break-crit-edges",
 
 // Publicly exposed interface to pass...
 char &llvm::BreakCriticalEdgesID = BreakCriticalEdges::ID;
+
 FunctionPass *llvm::createBreakCriticalEdgesPass() {
   return new BreakCriticalEdges();
 }
@@ -172,7 +173,7 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
                                                      DestBB->getName() +
                                                      "_crit_edge");
   // Create our unconditional branch.
-  BranchInst *NewBI = BranchInst::Create(DestBB, NewBB);
+  UncondBrInst *NewBI = UncondBrInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());
   if (auto *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
     NewBI->setMetadata(LLVMContext::MD_loop, LoopMD);
@@ -333,7 +334,8 @@ findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
         return nullptr;
       IBB = PredBB;
       break;
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Switch:
       OtherPreds.push_back(PredBB);
       continue;

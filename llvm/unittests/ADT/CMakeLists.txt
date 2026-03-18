@@ -63,7 +63,9 @@ add_llvm_unittest(ADTTests
   PointerUnionTest.cpp
   PostOrderIteratorTest.cpp
   PriorityWorklistTest.cpp
+  RadixTreeTest.cpp
   RangeAdapterTest.cpp
+  RepeatedTest.cpp
   RewriteBufferTest.cpp
   SCCIteratorTest.cpp
   STLExtrasTest.cpp

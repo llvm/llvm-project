@@ -70,8 +70,8 @@ cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
 mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
   ImplicitParamDecl *vd = getThisDecl(cgf);
   Address addr = cgf.getAddrOfLocalVar(vd);
-  return cgf.getBuilder().create<cir::LoadOp>(
-      cgf.getLoc(vd->getLocation()), addr.getElementType(), addr.getPointer());
+  return cir::LoadOp::create(cgf.getBuilder(), cgf.getLoc(vd->getLocation()),
+                             addr.getElementType(), addr.getPointer());
 }
 
 void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
@@ -95,4 +95,12 @@ bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *e) {
     return true;
 
   return e->getAllocatedType().isDestructedType();
+}
+
+void CIRGenCXXABI::emitReturnFromThunk(CIRGenFunction &cgf, RValue rv,
+                                       QualType resultType) {
+  assert(!cgf.hasAggregateEvaluationKind(resultType) &&
+         "cannot handle aggregates");
+  mlir::Location loc = cgf.getBuilder().getUnknownLoc();
+  cgf.emitReturnOfRValue(loc, rv, resultType);
 }

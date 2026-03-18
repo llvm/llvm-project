@@ -122,7 +122,7 @@ class TrainingIRExtractor:
     def _extract_clang_artifacts(
         self,
         llvm_objcopy_path: str,
-        cmd_filter: str,
+        cmd_filter: Optional[str],
         is_thinlto: bool,
         cmd_section_name: str,
         bitcode_section_name: str,
@@ -343,7 +343,7 @@ def run_extraction(
     objs: List[TrainingIRExtractor],
     num_workers: int,
     llvm_objcopy_path: str,
-    cmd_filter: str,
+    cmd_filter: Optional[str],
     thinlto_build: str,
     cmd_section_name: str,
     bitcode_section_name: str,

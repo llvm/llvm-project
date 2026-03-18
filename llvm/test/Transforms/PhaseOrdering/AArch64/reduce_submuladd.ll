@@ -6,7 +6,7 @@ target triple = "aarch64"
 
 ; This function (a more complex reduction of (a[i] - b[i]) * itself) should be vectorized successfully.
 
-define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3) #0 {
+define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3) {
 ; CHECK-LABEL: define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii
 ; CHECK-SAME: (ptr noundef readonly captures(none) [[TMP0:%.*]], ptr noundef readonly captures(none) [[TMP1:%.*]], i32 noundef [[TMP2:%.*]], i32 noundef [[TMP3:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  .preheader.i:
@@ -22,8 +22,8 @@ define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %
 ; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr [[TMP12]], align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = fsub fast float [[TMP11]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast float [[TMP14]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v20f32(float [[TMP15]], <20 x float> [[TMP9]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <20 x float>, ptr [[TMP16]], align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = load <20 x float>, ptr [[TMP17]], align 4, !tbaa [[TBAA4]]
@@ -35,8 +35,8 @@ define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %
 ; CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr [[TMP24]], align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = fsub fast float [[TMP23]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = fmul fast float [[TMP26]], [[TMP26]]
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP16]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP17]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[OP_RDX_1:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v20f32(float [[TMP27]], <20 x float> [[TMP21]])
 ; CHECK-NEXT:    [[OP_RDX3_1:%.*]] = fadd fast float [[OP_RDX_1]], [[OP_RDX]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = load <20 x float>, ptr [[TMP28]], align 4, !tbaa [[TBAA4]]
@@ -49,8 +49,8 @@ define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %
 ; CHECK-NEXT:    [[TMP37:%.*]] = load float, ptr [[TMP36]], align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = fsub fast float [[TMP35]], [[TMP37]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = fmul fast float [[TMP38]], [[TMP38]]
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds float, ptr [[TMP28]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds float, ptr [[TMP29]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP28]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP29]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[OP_RDX_2:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v20f32(float [[TMP39]], <20 x float> [[TMP33]])
 ; CHECK-NEXT:    [[OP_RDX3_2:%.*]] = fadd fast float [[OP_RDX_2]], [[OP_RDX3_1]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = load <20 x float>, ptr [[TMP40]], align 4, !tbaa [[TBAA4]]
@@ -63,8 +63,8 @@ define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %
 ; CHECK-NEXT:    [[TMP49:%.*]] = load float, ptr [[TMP48]], align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = fsub fast float [[TMP47]], [[TMP49]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = fmul fast float [[TMP50]], [[TMP50]]
-; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds float, ptr [[TMP40]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds float, ptr [[TMP41]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP40]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP41]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[OP_RDX_3:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v20f32(float [[TMP51]], <20 x float> [[TMP45]])
 ; CHECK-NEXT:    [[OP_RDX3_3:%.*]] = fadd fast float [[OP_RDX_3]], [[OP_RDX3_2]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = load <20 x float>, ptr [[TMP52]], align 4, !tbaa [[TBAA4]]
@@ -77,8 +77,8 @@ define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %
 ; CHECK-NEXT:    [[TMP61:%.*]] = load float, ptr [[TMP60]], align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = fsub fast float [[TMP59]], [[TMP61]]
 ; CHECK-NEXT:    [[TMP63:%.*]] = fmul fast float [[TMP62]], [[TMP62]]
-; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr inbounds float, ptr [[TMP52]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr inbounds float, ptr [[TMP53]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP52]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP65:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP53]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[OP_RDX_4:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v20f32(float [[TMP63]], <20 x float> [[TMP57]])
 ; CHECK-NEXT:    [[OP_RDX3_4:%.*]] = fadd fast float [[OP_RDX_4]], [[OP_RDX3_3]]
 ; CHECK-NEXT:    [[TMP66:%.*]] = load <20 x float>, ptr [[TMP64]], align 4, !tbaa [[TBAA4]]
@@ -91,8 +91,8 @@ define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %
 ; CHECK-NEXT:    [[TMP73:%.*]] = load float, ptr [[TMP72]], align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP74:%.*]] = fsub fast float [[TMP71]], [[TMP73]]
 ; CHECK-NEXT:    [[TMP75:%.*]] = fmul fast float [[TMP74]], [[TMP74]]
-; CHECK-NEXT:    [[TMP76:%.*]] = getelementptr inbounds float, ptr [[TMP64]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP77:%.*]] = getelementptr inbounds float, ptr [[TMP65]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP76:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP64]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP77:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP65]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[OP_RDX_5:%.*]] = tail call fast float @llvm.vector.reduce.fadd.v20f32(float [[TMP75]], <20 x float> [[TMP69]])
 ; CHECK-NEXT:    [[OP_RDX3_5:%.*]] = fadd fast float [[OP_RDX_5]], [[OP_RDX3_4]]
 ; CHECK-NEXT:    [[TMP78:%.*]] = load <20 x float>, ptr [[TMP76]], align 4, !tbaa [[TBAA4]]
@@ -125,7 +125,7 @@ define dso_local noundef nofpclass(nan inf) float @_Z4testPKfS0_ii(ptr noundef %
   ret float %13
 }
 
-define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3) #1 {
+define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 noundef %3) {
   %5 = alloca ptr, align 8
   %6 = alloca ptr, align 8
   %7 = alloca i32, align 4
@@ -143,15 +143,15 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
   store ptr %1, ptr %6, align 8, !tbaa !4
   store i32 %2, ptr %7, align 4, !tbaa !9
   store i32 %3, ptr %8, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(ptr %9) #3
+  call void @llvm.lifetime.start.p0(ptr %9)
   store i32 3, ptr %9, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(ptr %10) #3
+  call void @llvm.lifetime.start.p0(ptr %10)
   store i32 3, ptr %10, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(ptr %11) #3
+  call void @llvm.lifetime.start.p0(ptr %11)
   store i32 7, ptr %11, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(ptr %12) #3
+  call void @llvm.lifetime.start.p0(ptr %12)
   store float 0.000000e+00, ptr %12, align 4, !tbaa !11
-  call void @llvm.lifetime.start.p0(ptr %13) #3
+  call void @llvm.lifetime.start.p0(ptr %13)
   store i32 0, ptr %13, align 4, !tbaa !9
   br label %18
 
@@ -162,13 +162,13 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
 
 21:                                               ; preds = %18
   store i32 2, ptr %14, align 4
-  call void @llvm.lifetime.end.p0(ptr %13) #3
+  call void @llvm.lifetime.end.p0(ptr %13)
   br label %62
 
 22:                                               ; preds = %18
-  call void @llvm.lifetime.start.p0(ptr %15) #3
+  call void @llvm.lifetime.start.p0(ptr %15)
   store float 0.000000e+00, ptr %15, align 4, !tbaa !11
-  call void @llvm.lifetime.start.p0(ptr %16) #3
+  call void @llvm.lifetime.start.p0(ptr %16)
   store i32 0, ptr %16, align 4, !tbaa !9
   br label %23
 
@@ -179,11 +179,11 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
 
 26:                                               ; preds = %23
   store i32 5, ptr %14, align 4
-  call void @llvm.lifetime.end.p0(ptr %16) #3
+  call void @llvm.lifetime.end.p0(ptr %16)
   br label %47
 
 27:                                               ; preds = %23
-  call void @llvm.lifetime.start.p0(ptr %17) #3
+  call void @llvm.lifetime.start.p0(ptr %17)
   %28 = load ptr, ptr %5, align 8, !tbaa !4
   %29 = load i32, ptr %16, align 4, !tbaa !9
   %30 = sext i32 %29 to i64
@@ -202,7 +202,7 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
   %42 = load float, ptr %15, align 4, !tbaa !11
   %43 = fadd fast float %42, %41
   store float %43, ptr %15, align 4, !tbaa !11
-  call void @llvm.lifetime.end.p0(ptr %17) #3
+  call void @llvm.lifetime.end.p0(ptr %17)
   br label %44
 
 44:                                               ; preds = %27
@@ -226,7 +226,7 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
   %57 = load float, ptr %12, align 4, !tbaa !11
   %58 = fadd fast float %57, %56
   store float %58, ptr %12, align 4, !tbaa !11
-  call void @llvm.lifetime.end.p0(ptr %15) #3
+  call void @llvm.lifetime.end.p0(ptr %15)
   br label %59
 
 59:                                               ; preds = %47
@@ -238,20 +238,15 @@ define internal noundef nofpclass(nan inf) float @_ZL6reduceILi7EEfPKfS1_ii(ptr 
 62:                                               ; preds = %21
   %63 = load float, ptr %12, align 4, !tbaa !11
   store i32 1, ptr %14, align 4
-  call void @llvm.lifetime.end.p0(ptr %12) #3
-  call void @llvm.lifetime.end.p0(ptr %11) #3
-  call void @llvm.lifetime.end.p0(ptr %10) #3
-  call void @llvm.lifetime.end.p0(ptr %9) #3
+  call void @llvm.lifetime.end.p0(ptr %12)
+  call void @llvm.lifetime.end.p0(ptr %11)
+  call void @llvm.lifetime.end.p0(ptr %10)
+  call void @llvm.lifetime.end.p0(ptr %9)
   ret float %63
 }
 
-declare void @llvm.lifetime.start.p0(ptr captures(none)) #2
-declare void @llvm.lifetime.end.p0(ptr captures(none)) #2
-
-attributes #0 = { mustprogress uwtable "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+v8a,-fmv" "unsafe-fp-math"="true" }
-attributes #1 = { inlinehint mustprogress nounwind uwtable "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+v8a,-fmv" "unsafe-fp-math"="true" }
-attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #3 = { nounwind }
+declare void @llvm.lifetime.start.p0(ptr captures(none))
+declare void @llvm.lifetime.end.p0(ptr captures(none))
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}

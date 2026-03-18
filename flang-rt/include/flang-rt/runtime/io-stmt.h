@@ -184,6 +184,18 @@ public:
       }
       connection_.HandleRelativePosition(bytes);
     }
+    RT_API_ATTRS bool SkipBlanks() {
+      if (at_) {
+        const char *start{at_};
+        while (at_ < limit_ && (*at_ == ' ' || *at_ == '\t' || *at_ == '\n')) {
+          ++at_;
+        }
+        connection_.HandleRelativePosition(at_ - start);
+        return true;
+      } else {
+        return false;
+      }
+    }
 
     // Could there be a list-directed repetition count here?
     RT_API_ATTRS bool MightBeRepetitionCount() const {
@@ -289,24 +301,32 @@ public:
   // Skips spaces, advances records, and ignores NAMELIST comments
   RT_API_ATTRS common::optional<char32_t> GetNextNonBlank(
       std::size_t &byteCount, FastAsciiField *fastField = nullptr) {
-    auto ch{GetCurrentChar(byteCount, fastField)};
     bool inNamelist{mutableModes().inNamelist};
+    if (fastField) {
+      while (fastField->SkipBlanks()) {
+        if (auto ch{fastField->Next()}) {
+          if (inNamelist && *ch == '!') {
+            // skip namelist comment
+          } else {
+            byteCount = 1;
+            return ch;
+          }
+        }
+        if (!AdvanceRecord()) {
+          break;
+        }
+        fastField->NextRecord(*this);
+      }
+    }
+    auto ch{GetCurrentCharSlow(byteCount)};
     while (!ch || *ch == ' ' || *ch == '\t' || *ch == '\n' ||
         (inNamelist && *ch == '!')) {
       if (ch && (*ch == ' ' || *ch == '\t' || *ch == '\n')) {
-        if (fastField) {
-          fastField->Advance(0, byteCount);
-        } else {
-          HandleRelativePosition(byteCount);
-        }
-      } else if (AdvanceRecord()) {
-        if (fastField) {
-          fastField->NextRecord(*this);
-        }
-      } else {
+        HandleRelativePosition(byteCount);
+      } else if (!AdvanceRecord()) {
         return common::nullopt;
       }
-      ch = GetCurrentChar(byteCount, fastField);
+      ch = GetCurrentCharSlow(byteCount);
     }
     return ch;
   }
@@ -710,8 +730,7 @@ public:
   RT_API_ATTRS bool AdvanceRecord(int = 1);
   RT_API_ATTRS int EndIoStatement();
   RT_API_ATTRS bool CanAdvance() {
-    return DIR == Direction::Input &&
-        (canAdvance_ || this->mutableModes().inNamelist);
+    return canAdvance_ || this->mutableModes().inNamelist;
   }
 
 private:

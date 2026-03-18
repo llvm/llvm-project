@@ -15,10 +15,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -969,7 +969,7 @@ APInt APInt::truncUSat(unsigned width) const {
   return APInt::getMaxValue(width);
 }
 
-// Truncate to new width with signed saturation.
+// Truncate to new width with signed saturation to signed result.
 APInt APInt::truncSSat(unsigned width) const {
   assert(width <= BitWidth && "Invalid APInt Truncate request");
 
@@ -979,6 +979,17 @@ APInt APInt::truncSSat(unsigned width) const {
   // If not, then just return the new limits.
   return isNegative() ? APInt::getSignedMinValue(width)
                       : APInt::getSignedMaxValue(width);
+}
+
+// Truncate to new width with signed saturation to unsigned result.
+APInt APInt::truncSSatU(unsigned width) const {
+  assert(width <= BitWidth && "Invalid APInt Truncate request");
+
+  // Can we just losslessly truncate it?
+  if (isIntN(width))
+    return trunc(width);
+  // If not, then just return the new limits.
+  return isNegative() ? APInt::getZero(width) : APInt::getMaxValue(width);
 }
 
 // Sign extend to a new width.
@@ -3186,4 +3197,24 @@ APInt llvm::APIntOps::fshr(const APInt &Hi, const APInt &Lo,
   if (ShiftAmt == 0)
     return Lo;
   return Hi.shl(Hi.getBitWidth() - ShiftAmt) | Lo.lshr(ShiftAmt);
+}
+
+APInt llvm::APIntOps::clmul(const APInt &LHS, const APInt &RHS) {
+  unsigned BW = LHS.getBitWidth();
+  assert(BW == RHS.getBitWidth() && "Operand mismatch");
+  APInt Result(BW, 0);
+  for (unsigned I : seq(std::min(RHS.getActiveBits(), BW - LHS.countr_zero())))
+    if (RHS[I])
+      Result ^= LHS << I;
+  return Result;
+}
+
+APInt llvm::APIntOps::clmulr(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  return clmul(LHS.reverseBits(), RHS.reverseBits()).reverseBits();
+}
+
+APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
+  assert(LHS.getBitWidth() == RHS.getBitWidth());
+  return clmulr(LHS, RHS).lshr(1);
 }

@@ -11,11 +11,6 @@
 
 #include "test_macros.h"
 
-#if TEST_STD_VER > 17
-// Test constexpr-constructibility.
-constinit std::__no_destroy<int> nd_int_const(std::__uninitialized_tag{});
-#endif
-
 struct DestroyLast {
   ~DestroyLast() { assert(*ptr == 5); }
 

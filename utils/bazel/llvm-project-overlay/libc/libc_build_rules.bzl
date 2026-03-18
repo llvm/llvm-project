@@ -247,6 +247,14 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
         **kwargs
     )
 
+    # Also generate a filegroup that contains _all_ of the headers for use in
+    # systems like Carbon's where runtime sources are shipped outside of Bazel.
+    _libc_srcs_filegroup(
+        name = name + "_hdrs",
+        libs = [":" + name],
+        enforce_headers_only = True,
+    )
+
 def libc_generated_header(name, hdr, yaml_template, other_srcs = []):
     """Generates a libc header file from YAML template.
 
@@ -306,5 +314,9 @@ def libc_math_function(
         name = name,
         srcs = ["src/math/generic/" + name + ".cpp"],
         hdrs = ["src/math/" + name + ".h"],
-        deps = [":__support_common"] + OLD_FPUTIL_DEPS + additional_deps,
+        deps = [
+            ":__support_common",
+            ":__support_macros_config",
+            ":__support_macros_properties_types",
+        ] + OLD_FPUTIL_DEPS + additional_deps,
     )

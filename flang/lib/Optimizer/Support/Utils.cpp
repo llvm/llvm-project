@@ -66,7 +66,7 @@ fir::genConstantIndex(mlir::Location loc, mlir::Type ity,
                       mlir::ConversionPatternRewriter &rewriter,
                       std::int64_t offset) {
   auto cattr = rewriter.getI64IntegerAttr(offset);
-  return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
+  return mlir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
 }
 
 mlir::Value
@@ -125,9 +125,9 @@ mlir::Value fir::integerCast(const fir::LLVMTypeConverter &converter,
       return rewriter.createOrFold<mlir::LLVM::SExtOp>(loc, ty, val);
   } else {
     if (toSize < fromSize)
-      return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
+      return mlir::LLVM::TruncOp::create(rewriter, loc, ty, val);
     if (toSize > fromSize)
-      return rewriter.create<mlir::LLVM::SExtOp>(loc, ty, val);
+      return mlir::LLVM::SExtOp::create(rewriter, loc, ty, val);
   }
   return val;
 }

@@ -170,13 +170,13 @@ define fp128 @test_v2f128(<2 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-SD-LABEL: test_v2f128:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    sub sp, sp, #32
-; CHECK-SD-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    mov v0.16b, v2.16b
-; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-SD-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-SD-NEXT:    bl __addtf3
-; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-SD-NEXT:    add sp, sp, #32
 ; CHECK-SD-NEXT:    b __addtf3
 ;
@@ -184,14 +184,14 @@ define fp128 @test_v2f128(<2 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    sub sp, sp, #32
 ; CHECK-GI-NEXT:    mov v3.16b, v0.16b
-; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    bl __addtf3
-; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    bl __addtf3
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    add sp, sp, #32
 ; CHECK-GI-NEXT:    ret
   %b = call fp128 @llvm.vector.reduce.fadd.f128.v2f128(fp128 %s, <2 x fp128> %a)
@@ -208,14 +208,14 @@ define fp128 @test_v2f128_neutral(<2 x fp128> %a) nounwind {
 ; CHECK-GI-NEXT:    sub sp, sp, #32
 ; CHECK-GI-NEXT:    mov v2.16b, v0.16b
 ; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI13_0]
-; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-GI-NEXT:    mov v1.16b, v2.16b
 ; CHECK-GI-NEXT:    bl __addtf3
-; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    bl __addtf3
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    add sp, sp, #32
 ; CHECK-GI-NEXT:    ret
   %b = call fp128 @llvm.vector.reduce.fadd.f128.v2f128(fp128 0xL00000000000000008000000000000000, <2 x fp128> %a)

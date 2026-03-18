@@ -90,7 +90,8 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX900-NEXT:    v_mov_b32_e32 v28, v35
 ; GFX900-NEXT:    v_mov_b32_e32 v29, v34
 ; GFX900-NEXT:    v_mov_b32_e32 v30, v33
-; GFX900-NEXT:    ; kill: def $vgpr31 killed $vgpr32 killed $exec
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    v_mov_b32_e32 v31, v32
 ; GFX900-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX900-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
@@ -190,7 +191,8 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX906-NEXT:    v_mov_b32_e32 v28, v35
 ; GFX906-NEXT:    v_mov_b32_e32 v29, v34
 ; GFX906-NEXT:    v_mov_b32_e32 v30, v33
-; GFX906-NEXT:    ; kill: def $vgpr31 killed $vgpr32 killed $exec
+; GFX906-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-NEXT:    v_mov_b32_e32 v31, v32
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-NEXT:    buffer_load_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
@@ -290,7 +292,8 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX908-NEXT:    v_mov_b32_e32 v28, v35
 ; GFX908-NEXT:    v_mov_b32_e32 v29, v34
 ; GFX908-NEXT:    v_mov_b32_e32 v30, v33
-; GFX908-NEXT:    ; kill: def $vgpr31 killed $vgpr32 killed $exec
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-NEXT:    v_mov_b32_e32 v31, v32
 ; GFX908-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v62, a14 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_read_b32 v61, a13 ; Reload Reuse
@@ -307,7 +310,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX908-NEXT:    v_accvgpr_read_b32 v42, a2 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_read_b32 v41, a1 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_read_b32 v40, a0 ; Reload Reuse
-; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90a-LABEL: test_tuple:
@@ -390,7 +392,8 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX90a-NEXT:    v_mov_b32_e32 v28, v35
 ; GFX90a-NEXT:    v_mov_b32_e32 v29, v34
 ; GFX90a-NEXT:    v_mov_b32_e32 v30, v33
-; GFX90a-NEXT:    ; kill: def $vgpr31 killed $vgpr32 killed $exec
+; GFX90a-NEXT:    s_waitcnt vmcnt(0)
+; GFX90a-NEXT:    v_mov_b32_e32 v31, v32
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v62, a14 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v61, a13 ; Reload Reuse
@@ -407,7 +410,6 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v42, a2 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v41, a1 ; Reload Reuse
 ; GFX90a-NEXT:    v_accvgpr_read_b32 v40, a0 ; Reload Reuse
-; GFX90a-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90a-NEXT:    s_setpc_b64 s[30:31]
   %2 = shufflevector <16 x i64> %0, <16 x i64> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret i32 0

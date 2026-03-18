@@ -88,7 +88,7 @@ static cl::opt<std::string> AssumeFileName(
              "  CSharp: .cs\n"
              "  Java: .java\n"
              "  JavaScript: .js .mjs .cjs .ts\n"
-             "  Json: .json .ipynb\n"
+             "  JSON: .json .ipynb\n"
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
@@ -489,7 +489,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
     auto Err =
         Replaces.add(tooling::Replacement(AssumedFileName, 0, 0, "x = "));
     if (Err)
-      llvm::errs() << "Bad Json variable insertion\n";
+      llvm::errs() << "Bad JSON variable insertion\n";
   }
 
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);

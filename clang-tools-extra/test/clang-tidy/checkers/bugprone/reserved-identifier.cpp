@@ -1,8 +1,9 @@
-// RUN: %check_clang_tidy %s bugprone-reserved-identifier %t -- -- \
+// RUN: %check_clang_tidy %s bugprone-reserved-identifier %t -- \
+// RUN:   -header-filter='' -- \
 // RUN:   -I%S/Inputs/reserved-identifier \
 // RUN:   -isystem %S/Inputs/reserved-identifier/system
 
-// no warnings expected without -header-filter=
+// no warnings expected with -header-filter=''
 #include "user-header.h"
 #include <system-header.h>
 

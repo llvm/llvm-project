@@ -24,6 +24,9 @@ struct support::adapt_operations<std::multimap<K, V>> {
 
   using InsertionResult = typename std::multimap<K, V>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }
+
+  template <class Allocator>
+  using rebind_alloc = std::multimap<K, V, std::less<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {

@@ -1070,9 +1070,6 @@ define amdgpu_ps void @load_divergent_P3_i16(ptr addrspace(3) inreg %ptra, ptr a
 ; GFX11-True16-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-True16-NEXT:    ds_load_u16_d16 v1, v1
 ; GFX11-True16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-True16-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX11-True16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-True16-NEXT:    v_mov_b16_e32 v1.l, s0
 ; GFX11-True16-NEXT:    ds_store_b16 v0, v1
 ; GFX11-True16-NEXT:    s_endpgm
 ;
@@ -1089,10 +1086,6 @@ define amdgpu_ps void @load_divergent_P3_i16(ptr addrspace(3) inreg %ptra, ptr a
 ; GFX12-True16-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-True16-NEXT:    ds_load_u16_d16 v1, v1
 ; GFX12-True16-NEXT:    s_wait_dscnt 0x0
-; GFX12-True16-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX12-True16-NEXT:    s_wait_alu 0xf1ff
-; GFX12-True16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-True16-NEXT:    v_mov_b16_e32 v1.l, s0
 ; GFX12-True16-NEXT:    ds_store_b16 v0, v1
 ; GFX12-True16-NEXT:    s_endpgm
 ;

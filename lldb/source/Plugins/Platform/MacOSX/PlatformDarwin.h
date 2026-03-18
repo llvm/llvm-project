@@ -73,9 +73,14 @@ public:
 
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,
-                         const FileSpecList *module_search_paths_ptr,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
+
+  Status
+  GetModuleFromSharedCaches(const ModuleSpec &module_spec, Process *process,
+                            lldb::ModuleSP &module_sp,
+                            llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                            bool *did_create_ptr);
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
@@ -127,6 +132,28 @@ public:
 
   llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) override;
+
+  /// Helper function for \c LocateExecutableScriptingResources
+  /// which gathers FileSpecs for executable scripts (currently
+  /// just Python) from a .dSYM Python directory.
+  ///
+  /// \param[out] feedback_stream Any warnings/errors are printed into this
+  /// stream.
+  ///
+  /// \param[in] module_spec FileSpec of the Module for which to locate
+  /// scripting resources.
+  ///
+  /// \param[in] target Target which owns the ScriptInterpreter which is
+  /// eventually used for loading the scripting resources.
+  ///
+  /// \param[in] symfile_spec FileSpec for the SymbolFile inside the Module's
+  /// dSYM directory. The scripting resources are loaded from the adjacent
+  /// Resources directory in the same dSYM.
+  /// E.g., \c /path/to/.dSYM/Contents/Resources/DWARF/a.out
+  ///
+  static FileSpecList LocateExecutableScriptingResourcesFromDSYM(
+      Stream &feedback_stream, FileSpec module_spec, const Target &target,
+      const FileSpec &symfile_spec);
 
 protected:
   static const char *GetCompatibleArch(ArchSpec::Core core, size_t idx);
@@ -189,7 +216,7 @@ protected:
 
   Status FindBundleBinaryInExecSearchPaths(
       const ModuleSpec &module_spec, Process *process,
-      lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
+      lldb::ModuleSP &module_sp,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   // The OSType where lldb is running.

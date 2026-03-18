@@ -1145,6 +1145,34 @@ TEST_F(WideningTest, DistinctValuesWithDifferentPropertiesWidenedToTop) {
       });
 }
 
+TEST_F(WideningTest,
+       DistinctValuesWithDifferentPropertiesWidenedToTopGotoInsteadOfWhile) {
+  std::string Code = R"cc(
+    void target(bool Cond) {
+      int *Foo;
+      int i = 0;
+      Foo = nullptr;
+      start:
+      if (Cond) {
+        Foo = &i;
+        goto start;
+      }
+      (void)0;
+      /*[[p]]*/
+    }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const auto &FooVal = getValueForDecl<Value>(ASTCtx, Env, "Foo");
+        ASSERT_THAT(FooVal.getProperty("is_null"), NotNull());
+        EXPECT_TRUE(areEquivalentValues(*FooVal.getProperty("is_null"),
+                                        Env.makeTopBoolValue()));
+      });
+}
+
 class FlowConditionTest : public Test {
 protected:
   template <typename Matcher>
@@ -1253,18 +1281,47 @@ TEST_F(FlowConditionTest, WhileStmt) {
 }
 
 TEST_F(FlowConditionTest, WhileStmtWithAssignmentInCondition) {
-  std::string Code = R"(
+  std::string Code = R"cc(
+    bool getBool();
+
     void target(bool Foo) {
       // This test checks whether the analysis preserves the connection between
       // the value of `Foo` and the assignment expression, despite widening.
-      // The equality operator generates a fresh boolean variable on each
-      // interpretation, which forces use of widening.
-      while ((Foo = (3 == 4))) {
+      // The return value of getBool() should have a fresh boolean variable on
+      // each interpretation, which forces use of widening.
+      while (Foo = getBool()) {
         (void)0;
         /*[[p]]*/
       }
     }
-  )";
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo").formula();
+        EXPECT_TRUE(Env.proves(FooVal));
+      });
+}
+
+TEST_F(FlowConditionTest, GotoLoopWithAssignmentInCondition) {
+  std::string Code = R"cc(
+    bool getBool();
+
+    void target(bool Foo) {
+      // This test checks whether the analysis preserves the connection between
+      // the value of `Foo` and the assignment expression, despite widening.
+      // The return value of getBool() should have a fresh boolean variable on
+      // each interpretation, which forces use of widening.
+      start:
+      if (Foo = getBool()) {
+        (void)0;
+        /*[[p]]*/
+        goto start;
+      }
+    }
+  )cc";
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,

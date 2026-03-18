@@ -125,6 +125,9 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
   OnCuIndexOverflow OverflowOptValue = OnCuIndexOverflow::HardStop;
+  Dwarf64StrOffsetsPromotion Dwarf64StrOffsetsValue =
+      Dwarf64StrOffsetsPromotion::Disabled;
+
   opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
@@ -156,6 +159,27 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
       } else {
         llvm::errs() << "invalid value for --continue-on-cu-index-overflow"
                      << ContinueOption << '\n';
+        exit(1);
+      }
+    }
+  }
+
+  if (Arg *Arg = Args.getLastArg(OPT_dwarf64StringOffsets,
+                                 OPT_dwarf64StringOffsets_EQ)) {
+    if (Arg->getOption().matches(OPT_dwarf64StringOffsets)) {
+      Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Enabled;
+    } else {
+      std::string OptValue = Arg->getValue();
+      if (OptValue == "disabled") {
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Disabled;
+      } else if (OptValue == "enabled") {
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Enabled;
+      } else if (OptValue == "always") {
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Always;
+      } else {
+        llvm::errs()
+            << "invalid value for --dwarf64-str-offsets-promotion. Valid "
+               "values are one of: \"enabled\", \"disabled\" or \"always\".\n";
         exit(1);
       }
     }
@@ -194,6 +218,35 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
     WithColor::defaultWarningHandler(make_error<DWPError>(
         "executable file does not contain any references to dwo files"));
     return 0;
+  }
+
+  StringRef DiscardPrefix = Args.getLastArgValue(OPT_prioritizeDiscardPath, "");
+  if (OverflowOptValue == OnCuIndexOverflow::SoftStop &&
+      !DiscardPrefix.empty()) {
+    SmallString<256> CanonicalDiscardPrefix(DiscardPrefix);
+    if (std::error_code EC =
+            sys::fs::real_path(DiscardPrefix, CanonicalDiscardPrefix)) {
+      WithColor::warning() << "invalid --prioritize-discard-path '"
+                           << DiscardPrefix << "': " << EC.message()
+                           << "; ignoring option.\n";
+    } else {
+      StringRef PrefixRef(CanonicalDiscardPrefix);
+      auto IsNonDiscarded = [&](const std::string &Name) {
+        SmallString<256> CanonicalDWO;
+        if (sys::fs::real_path(Name, CanonicalDWO))
+          return true;
+        StringRef DWORef(CanonicalDWO);
+        if (!DWORef.starts_with(PrefixRef))
+          return true;
+        if (DWORef.size() == PrefixRef.size())
+          return false;
+        if (sys::path::is_separator(DWORef[PrefixRef.size()]))
+          return false;
+        return true;
+      };
+      std::stable_partition(DWOFilenames.begin(), DWOFilenames.end(),
+                            IsNonDiscarded);
+    }
   }
 
   std::string ErrorStr;
@@ -274,7 +327,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, DWOFilenames, OverflowOptValue)) {
+  if (auto Err =
+          write(*MS, DWOFilenames, OverflowOptValue, Dwarf64StrOffsetsValue)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }

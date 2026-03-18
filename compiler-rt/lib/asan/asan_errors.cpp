@@ -514,11 +514,15 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
 }
 
 static void PrintContainerOverflowHint() {
-  Printf("HINT: if you don't care about these errors you may set "
-         "ASAN_OPTIONS=detect_container_overflow=0.\n"
-         "If you suspect a false positive see also: "
-         "https://github.com/google/sanitizers/wiki/"
-         "AddressSanitizerContainerOverflow.\n");
+  Printf(
+      "HINT: if you don't care about these errors you may set "
+      "ASAN_OPTIONS=detect_container_overflow=0.\n"
+      "Or if supported by the container library, pass "
+      "-D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ to the compiler to disable "
+      " instrumentation.\n"
+      "If you suspect a false positive see also: "
+      "https://github.com/google/sanitizers/wiki/"
+      "AddressSanitizerContainerOverflow.\n");
 }
 
 static void PrintShadowByte(InternalScopedString *str, const char *before,

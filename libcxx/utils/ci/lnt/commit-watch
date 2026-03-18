@@ -1,0 +1,132 @@
+#!/usr/bin/env python
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+from typing import List, Optional, Set
+import argparse
+import json
+import logging
+import os
+import pathlib
+import subprocess
+import sys
+import time
+
+
+def directory_path(string):
+    if os.path.isdir(string):
+        return pathlib.Path(string)
+    else:
+        raise NotADirectoryError(string)
+
+def api(lnt_url: str, test_suite: str, endpoint: str):
+    url = f'{lnt_url}/api/db_default/v4/{test_suite}{endpoint}'
+    logging.debug(f'Querying {url}')
+    result = json.loads(subprocess.check_output(['curl', '-sS', url]).decode())
+    return result
+
+def get_benchmarked_commits(lnt_url: str, test_suite: str, machine: str) -> Set[str]:
+    """
+    Return the set of commits that have already been benchmarked on the given LNT
+    instance, test suite and machine.
+    """
+    result = api(lnt_url, test_suite, f'/machines/{machine}')
+    commits = set()
+    if 'runs' not in result: # there is no such machine
+        return set()
+    for run in result['runs']:
+        if 'git_sha' not in run:
+            raise ValueError(f'Found run without a git_sha field: are you using the right LNT test suite? {run}')
+        commits.add(run['git_sha'])
+    return commits
+
+def git_rev_list(git_repo: str, paths: List[str] = []) -> List[str]:
+    """
+    Return the list of all revisions in the given Git repository. Older commits are earlier in the list.
+    """
+    cli = ['git', '-C', git_repo, 'rev-list', 'origin', '--', *paths]
+    rev_list = subprocess.check_output(cli).decode().strip().splitlines()
+    return list(reversed(rev_list))
+
+def git_sort_revlist(git_repo: str, commits: List[str]) -> List[str]:
+    """
+    Return the list of commits sorted by their chronological order (from oldest to newest) in the
+    provided Git repository. Items earlier in the list are older than items later in the list.
+    """
+    revlist_cmd = ['git', '-C', git_repo, 'rev-list', '--no-walk'] + list(commits)
+    revlist = subprocess.check_output(revlist_cmd, text=True).strip().splitlines()
+    return list(reversed(revlist))
+
+def get_all_libcxx_commits(git_repo: str) -> Set[str]:
+    """
+    Return the set of commits available to benchmark for libc++: this is the list of
+    commits that touch code in libc++ that we care to benchmark.
+    """
+    logging.debug(f'Fetching {git_repo}')
+    subprocess.check_call(['git', '-C', git_repo, 'fetch', '--quiet', 'origin'])
+    return set(git_rev_list(git_repo, paths=['libcxx/include', 'libcxx/src']))
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='commit-watch',
+        description='Watch for libc++ commits to run benchmarks on and print them to standard output.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--lnt-url', type=str, required=True,
+        help='The URL of the LNT instance to use as the source of truth for finding already-benchmarked commits.')
+    parser.add_argument('--test-suite', type=str, required=True,
+        help='The name of the test suite that we are producing results for on the LNT instance.')
+    parser.add_argument('--machine', type=str, required=True,
+        help='The name of the machine that we are producing results for on the LNT instance.')
+    parser.add_argument('-d', '--delay', type=int, required=False, default=60,
+        help='The delay (in seconds) to wait before successive polls.')
+    parser.add_argument('--git-repo', type=directory_path, default=os.getcwd(),
+        help='Optional path to the Git repository to use. By default, the current working directory is used.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+        help='Verbosity level: passing the option multiple times increases the level.')
+    args = parser.parse_args(argv)
+
+    VERY_VERBOSE = logging.DEBUG - 1
+    if args.verbose == 1:
+        logging.basicConfig(level=logging.INFO)
+    elif args.verbose == 2:
+        logging.basicConfig(level=logging.DEBUG)
+    elif args.verbose > 2:
+        logging.basicConfig(level=VERY_VERBOSE)
+
+    last_commit: Optional[str] = None # last commit printed
+    while True:
+        logging.info(f'Fetching all libc++ commits in {args.git_repo}')
+        all_commits = get_all_libcxx_commits(args.git_repo)
+        logging.log(VERY_VERBOSE, f'Found all libc++ commits: {all_commits}')
+
+        logging.info(f'Getting benchmarked commits for {args.machine} from {args.lnt_url}')
+        benchmarked_commits = get_benchmarked_commits(args.lnt_url, args.test_suite, args.machine)
+        logging.log(VERY_VERBOSE, f'Found benchmarked commits: {benchmarked_commits}')
+
+        # Print the next commit that should be benchmarked, but only when it changes over the one
+        # that we just printed. This ensures that we don't repeatedly print that the same benchmark
+        # should be benchmarked, which would otherwise happen when we are running the benchmarks but
+        # have not submitted to LNT yet.
+        commits_to_benchmark = all_commits - benchmarked_commits
+        if not commits_to_benchmark:
+            logging.info('No more commits to benchmark')
+        else:
+            commits_to_benchmark = git_sort_revlist(args.git_repo, list(commits_to_benchmark))
+            most_recent = commits_to_benchmark[-1]
+            if most_recent != last_commit:
+                logging.info(f'Selected {most_recent}')
+                print(most_recent, flush=True)
+                last_commit = most_recent
+
+        logging.debug(f'Waiting {args.delay}s before next poll')
+        time.sleep(args.delay)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

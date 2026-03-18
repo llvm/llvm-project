@@ -635,9 +635,7 @@ public:
     // if find a collision compare those trees by their contents.
     unsigned digest = TNew->computeDigest();
     TreeTy *&entry = Cache[maskCacheIndex(digest)];
-    do {
-      if (!entry)
-        break;
+    if (entry) {
       for (TreeTy *T = entry ; T != nullptr; T = T->next) {
         // Compare the Contents('T') with Contents('TNew')
         typename TreeTy::iterator TI = T->begin(), TE = T->end();
@@ -653,7 +651,6 @@ public:
       entry->prev = TNew;
       TNew->next = entry;
     }
-    while (false);
 
     entry = TNew;
     TNew->IsCanonicalized = true;

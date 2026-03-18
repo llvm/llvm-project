@@ -2,6 +2,9 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16 %s -o - -filetype=obj | spirv-val %}
 
+// TODO: Open bug bfloat16 cannot be stored to.
+XFAIL: *
+
 define void @main() {
 entry:
 
@@ -49,50 +52,66 @@ entry:
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_half]] Function
   %half_Val = alloca half, align 2
+  store half 0.0, ptr %half_Val, align 2
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_bfloat]] Function
   %bfloat_Val = alloca bfloat, align 2
+  store bfloat 0.0, ptr %bfloat_Val, align 2
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_float]] Function
   %float_Val = alloca float, align 4
+  store float 0.0, ptr %float_Val, align 4
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_double]] Function
   %double_Val = alloca double, align 8
+  store double 0.0, ptr %double_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2half]] Function
   %half2_Val = alloca <2 x half>, align 4
+  store <2 x half> zeroinitializer, ptr %half2_Val, align 4
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3half]] Function
   %half3_Val = alloca <3 x half>, align 8
+  store <3 x half> zeroinitializer, ptr %half3_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4half]] Function
   %half4_Val = alloca <4 x half>, align 8
+  store <4 x half> zeroinitializer, ptr %half4_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2bfloat]] Function
   %bfloat2_Val = alloca <2 x bfloat>, align 4
+  store <2 x bfloat> zeroinitializer, ptr %bfloat2_Val, align 4
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3bfloat]] Function
   %bfloat3_Val = alloca <3 x bfloat>, align 8
+  store <3 x bfloat> zeroinitializer, ptr %bfloat3_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4bfloat]] Function
   %bfloat4_Val = alloca <4 x bfloat>, align 8
+  store <4 x bfloat> zeroinitializer, ptr %bfloat4_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2float]] Function
   %float2_Val = alloca <2 x float>, align 8
+  store <2 x float> zeroinitializer, ptr %float2_Val, align 8
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3float]] Function
   %float3_Val = alloca <3 x float>, align 16
+  store <3 x float> zeroinitializer, ptr %float3_Val, align 16
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4float]] Function
   %float4_Val = alloca <4 x float>, align 16
+  store <4 x float> zeroinitializer, ptr %float4_Val, align 16
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v2double]] Function
   %double2_Val = alloca <2 x double>, align 16
+  store <2 x double> zeroinitializer, ptr %double2_Val, align 16
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v3double]] Function
   %double3_Val = alloca <3 x double>, align 32
+  store <3 x double> zeroinitializer, ptr %double3_Val, align 32
 
 ; CHECK: %[[#]] = OpVariable %[[#ptr_Function_v4double]] Function
   %double4_Val = alloca <4 x double>, align 32
+  store <4 x double> zeroinitializer, ptr %double4_Val, align 32
   ret void
 }

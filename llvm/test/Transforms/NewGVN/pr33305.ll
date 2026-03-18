@@ -16,9 +16,9 @@ target triple = "x86_64-apple-macosx10.12.0"
 @str.2 = private unnamed_addr constant [8 x i8] c"Screwed\00"
 
 ; Function Attrs: nounwind optsize ssp uwtable
-define i32 @main() local_unnamed_addr #0 {
+define i32 @main() local_unnamed_addr {
 ; CHECK-LABEL: define i32 @main(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DOTPR_I:%.*]] = load i32, ptr @c, align 4, !tbaa [[INT_TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[CMP13_I:%.*]] = icmp slt i32 [[DOTPR_I]], 1
@@ -77,7 +77,7 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    [[PUTS2:%.*]] = tail call i32 @puts(ptr @str.2)
-; CHECK-NEXT:    tail call void @abort() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[PUTS:%.*]] = tail call i32 @puts(ptr @str)
@@ -153,7 +153,7 @@ fn1.exit:                                         ; preds = %if.then.i, %for.end
 
 if.then:                                          ; preds = %fn1.exit
   %puts2 = tail call i32 @puts(ptr @str.2)
-  tail call void @abort() #3
+  tail call void @abort()
   unreachable
 
 if.end:                                           ; preds = %fn1.exit
@@ -162,15 +162,10 @@ if.end:                                           ; preds = %fn1.exit
 }
 
 ; Function Attrs: noreturn nounwind optsize
-declare void @abort() local_unnamed_addr #1
+declare void @abort() local_unnamed_addr
 
 ; Function Attrs: nounwind
-declare i32 @puts(ptr nocapture readonly) local_unnamed_addr #2
-
-attributes #0 = { nounwind optsize ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { noreturn nounwind optsize "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }
-attributes #3 = { noreturn nounwind optsize }
+declare i32 @puts(ptr nocapture readonly) local_unnamed_addr
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

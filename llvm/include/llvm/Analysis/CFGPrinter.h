@@ -31,6 +31,9 @@
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <functional>
+#include <sstream>
+
 namespace llvm {
 class ModuleSlotTracker;
 
@@ -69,13 +72,18 @@ private:
   bool ShowHeat;
   bool EdgeWeights;
   bool RawWeights;
+  using NodeIdFormatterTy =
+      std::function<std::optional<std::string>(const BasicBlock *)>;
+  std::optional<NodeIdFormatterTy> NodeIdFormatter;
 
 public:
   DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr, 0) {}
   LLVM_ABI ~DOTFuncInfo();
 
-  LLVM_ABI DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
-                       const BranchProbabilityInfo *BPI, uint64_t MaxFreq);
+  LLVM_ABI
+  DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
+              const BranchProbabilityInfo *BPI, uint64_t MaxFreq,
+              std::optional<NodeIdFormatterTy> NodeIdFormatter = std::nullopt);
 
   const BlockFrequencyInfo *getBFI() const { return BFI; }
 
@@ -102,6 +110,10 @@ public:
   void setEdgeWeights(bool EdgeWeights) { this->EdgeWeights = EdgeWeights; }
 
   bool showEdgeWeights() { return EdgeWeights; }
+
+  std::optional<NodeIdFormatterTy> getNodeIdFormatter() {
+    return NodeIdFormatter;
+  }
 };
 
 template <>
@@ -223,13 +235,12 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   static std::string getEdgeSourceLabel(const BasicBlock *Node,
                                         const_succ_iterator I) {
     // Label source of conditional branches with "T" or "F"
-    if (const BranchInst *BI = dyn_cast<BranchInst>(Node->getTerminator()))
-      if (BI->isConditional())
-        return (I == succ_begin(Node)) ? "T" : "F";
+    if (isa<CondBrInst>(Node->getTerminator()))
+      return (I == succ_begin(Node)) ? "T" : "F";
 
     // Label source of switch edges with the associated value.
     if (const SwitchInst *SI = dyn_cast<SwitchInst>(Node->getTerminator())) {
-      unsigned SuccNo = I.getSuccessorIndex();
+      unsigned SuccNo = std::distance(succ_begin(SI), I);
 
       if (SuccNo == 0)
         return "def";
@@ -261,8 +272,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     if (!CFGInfo->showEdgeWeights())
       return "";
 
-    unsigned OpNo = I.getSuccessorIndex();
     const Instruction *TI = Node->getTerminator();
+    unsigned OpNo = std::distance(succ_begin(TI), I);
     BasicBlock *SuccBB = TI->getSuccessor(OpNo);
     auto BranchProb = CFGInfo->getBPI()->getEdgeProbability(Node, SuccBB);
     double WeightPercent = ((double)BranchProb.getNumerator()) /
@@ -299,7 +310,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     if (!WeightsNode)
       return TTAttr;
 
-    OpNo = I.getSuccessorIndex() + 1;
+    OpNo += 1;
     if (OpNo >= WeightsNode->getNumOperands())
       return TTAttr;
     ConstantInt *Weight =
@@ -311,21 +322,27 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   }
 
   std::string getNodeAttributes(const BasicBlock *Node, DOTFuncInfo *CFGInfo) {
+    std::stringstream Attrs;
 
-    if (!CFGInfo->showHeatColors())
-      return "";
+    if (auto NodeIdFmt = CFGInfo->getNodeIdFormatter())
+      if (auto NodeId = (*NodeIdFmt)(Node))
+        Attrs << "id=\"" << *NodeId << "\"";
 
-    uint64_t Freq = CFGInfo->getFreq(Node);
-    std::string Color = getHeatColor(Freq, CFGInfo->getMaxFreq());
-    std::string EdgeColor = (Freq <= (CFGInfo->getMaxFreq() / 2))
-                                ? (getHeatColor(0))
-                                : (getHeatColor(1));
+    if (CFGInfo->showHeatColors()) {
+      uint64_t Freq = CFGInfo->getFreq(Node);
+      std::string Color = getHeatColor(Freq, CFGInfo->getMaxFreq());
+      std::string EdgeColor = (Freq <= (CFGInfo->getMaxFreq() / 2))
+                                  ? (getHeatColor(0))
+                                  : (getHeatColor(1));
+      if (!Attrs.str().empty())
+        Attrs << ",";
+      Attrs << "color=\"" << EdgeColor << "ff\", style=filled, "
+            << "fillcolor=\"" << Color << "70\", " << "fontname=\"Courier\"";
+    }
 
-    std::string Attrs = "color=\"" + EdgeColor + "ff\", style=filled," +
-                        " fillcolor=\"" + Color + "70\"" +
-                        " fontname=\"Courier\"";
-    return Attrs;
+    return Attrs.str();
   }
+
   LLVM_ABI bool isNodeHidden(const BasicBlock *Node,
                              const DOTFuncInfo *CFGInfo);
   LLVM_ABI void computeDeoptOrUnreachablePaths(const Function *F);

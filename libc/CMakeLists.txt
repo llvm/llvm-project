@@ -47,8 +47,6 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
-set(LIBC_KERNEL_HEADERS "/usr/include" CACHE STRING "Path to Linux kernel headers")
-
 # Defining a global namespace to enclose all libc functions.
 set(default_namespace "__llvm_libc")
 if(LLVM_VERSION_MAJOR)
@@ -145,6 +143,11 @@ option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
+
+if(LIBC_TARGET_OS_IS_LINUX)
+  set(kernel_headers "/usr/include")
+endif()
+set(LIBC_KERNEL_HEADERS "${kernel_headers}" CACHE STRING "Path to Linux kernel headers")
 
 set(LIBC_ENABLE_UNITTESTS ON)
 set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
@@ -347,6 +350,7 @@ include(LLVMLibCRules)
 set(TARGET_LLVMLIBC_ENTRYPOINTS "")
 set(TARGET_LIBC_ENTRYPOINTS "")
 set(TARGET_LIBM_ENTRYPOINTS "")
+set(TARGET_LIBMVEC_ENTRYPOINTS "")
 set(TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS "")
 
 # Check entrypoints.txt
@@ -363,7 +367,7 @@ elseif(LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "${LIBC_CONFIG_PATH}/headers.txt file not found and fullbuild requested.")
 endif()
 
-# Check exclude.txt that appends to LIBC_EXCLUDE_ENTRYPOINTS list
+# Check exclude.txt that appends to TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS list
 if(EXISTS "${LIBC_CONFIG_PATH}/exclude.txt")
     include("${LIBC_CONFIG_PATH}/exclude.txt")
 endif()
@@ -377,6 +381,7 @@ foreach(removed_entrypoint IN LISTS TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS)
   list(REMOVE_ITEM TARGET_LLVMLIBC_ENTRYPOINTS ${removed_entrypoint})
   list(REMOVE_ITEM TARGET_LIBC_ENTRYPOINTS ${removed_entrypoint})
   list(REMOVE_ITEM TARGET_LIBM_ENTRYPOINTS ${removed_entrypoint})
+  list(REMOVE_ITEM TARGET_LIBMVEC_ENTRYPOINTS ${removed_entrypoint})
 endforeach()
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")

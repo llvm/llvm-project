@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
@@ -17,6 +14,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -DRU_MON_THOU_SEP=%{LOCALE_CONV_RU_RU_UTF_8_MON_THOUSANDS_SEP}
 
 // XFAIL: glibc-old-ru_RU-decimal-point
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // <locale>
 

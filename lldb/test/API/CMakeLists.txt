@@ -74,6 +74,16 @@ else()
   endif()
 endif()
 
+find_program(LLDB_DIRNAME_PATH dirname)
+if(LLDB_DIRNAME_PATH)
+  message(STATUS "Found dirname: ${LLDB_DIRNAME_PATH}")
+else()
+  message(STATUS "Could NOT find 'dirname'")
+  message(WARNING
+        "Many LLDB API tests require the GNU coreutils tools. Please make "
+        "sure they are installed and in PATH.")
+endif()
+
 if (TARGET clang)
   set(LLDB_DEFAULT_TEST_COMPILER "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
 else()
@@ -114,10 +124,6 @@ if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
 endif()
 
 if(CMAKE_HOST_APPLE)
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_FRAMEWORK_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
-  endif()
-
   if(LLDB_USE_SYSTEM_DEBUGSERVER)
     lldb_find_system_debugserver(system_debugserver_path)
     if(LLDB_BUILD_FRAMEWORK)

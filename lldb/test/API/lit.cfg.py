@@ -90,6 +90,8 @@ def find_python_interpreter():
     )
 
     shutil.copy(real_python, copied_python)
+    # macOS 15+ restricts injecting the ASAN runtime to only user-compiled code.
+    subprocess.check_call(["/usr/bin/codesign", "--remove-signature", copied_python])
 
     # Now make sure the copied Python works. The Python in Xcode has a relative
     # RPATH and cannot be copied.
@@ -297,6 +299,9 @@ if "lldb-simulator-qemu-user" in config.available_features:
 if is_configured("enabled_plugins"):
     for plugin in config.enabled_plugins:
         dotest_cmd += ["--enable-plugin", plugin]
+
+if getattr(config, "lldb_enable_mte", False):
+    dotest_cmd += ["--enable-mte"]
 
 # `dotest` args come from three different sources:
 # 1. Derived by CMake based on its configs (LLDB_TEST_COMMON_ARGS), which end

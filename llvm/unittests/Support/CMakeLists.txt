@@ -76,6 +76,7 @@ add_llvm_unittest(SupportTests
   ProcessTest.cpp
   ProgramTest.cpp
   ProgramStackTest.cpp
+  IntegerInclusiveIntervalTest.cpp
   RecyclerTest.cpp
   RegexTest.cpp
   ReverseIterationTest.cpp
@@ -127,6 +128,7 @@ add_llvm_unittest(SupportTests
   intrinsics_gen
   )
 
+add_subdirectory(HTTP)
 add_subdirectory(LSP)
 
 target_link_libraries(SupportTests PRIVATE LLVMTestingSupport)

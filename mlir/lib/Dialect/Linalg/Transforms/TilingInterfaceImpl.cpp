@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -23,6 +24,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -110,12 +112,11 @@ struct LinalgOpTilingInterface
         linalgOp.createFlatListOfOperandDims(b, loc);
     AffineMap map = linalgOp.getShapesToLoopsMap();
 
-    return llvm::to_vector(
-        llvm::map_range(map.getResults(), [&](AffineExpr loopExpr) {
-          OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-              b, loc, loopExpr, allShapesSizes);
-          return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
-        }));
+    return llvm::map_to_vector(map.getResults(), [&](AffineExpr loopExpr) {
+      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(b, loc, loopExpr,
+                                                               allShapesSizes);
+      return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
+    });
   }
 
   /// Instantiate the tiled implementation of the operation.
@@ -167,7 +168,7 @@ struct LinalgOpTilingInterface
            llvm::zip_equal(indexingMap.getResults(), offsets, sizes)) {
         auto dimExpr = dyn_cast<AffineDimExpr>(resultExpr);
         if (!dimExpr)
-          continue;
+          return failure();
         unsigned position = dimExpr.getPosition();
         auto it = mappedOffsets.find(position);
         if (it != mappedOffsets.end()) {
@@ -216,8 +217,6 @@ struct LinalgOpTilingInterface
       SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
     auto linalgOp = cast<LinalgOp>(op);
 
-    std::optional<SmallVector<OpFoldResult>> iterationSpaceOffsets,
-        iterationSpaceSizes;
     SmallVector<AffineMap> indexingMaps =
         llvm::map_to_vector(operandNumbers, [&](unsigned operandNumber) {
           OpOperand &opOperand = linalgOp->getOpOperand(operandNumber);
@@ -245,9 +244,9 @@ struct LinalgOpTilingInterface
     AffineExpr d0;
     bindDims(b.getContext(), d0);
     SmallVector<OpFoldResult> subShapeSizes =
-        llvm::to_vector(llvm::map_range(sizes, [&](OpFoldResult ofr) {
+        llvm::map_to_vector(sizes, [&](OpFoldResult ofr) {
           return affine::makeComposedFoldedAffineApply(b, loc, d0 - 1, ofr);
-        }));
+        });
 
     OpOperand *outOperand = linalgOp.getDpsInitOperand(resultNumber);
     SliceParameters sliceParams = computeSliceParameters(
@@ -358,6 +357,32 @@ struct LinalgOpTilingInterface
 
     /// Inline the op payload and store the result.
     return inlinePayload(builder, linalgOp, ivs, indexedValues);
+  }
+
+  bool isOpFusableWithConsumerSlice(Operation *op, unsigned resultNumber,
+                                    ArrayRef<OpFoldResult> offsets,
+                                    ArrayRef<OpFoldResult> sizes) const {
+    // The verifier gives all the necessary requirements for consumer fusion.
+    return true;
+  }
+
+  bool isOpFusableWithProducerSlices(
+      Operation *op, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+
+    auto linalgOp = cast<LinalgOp>(op);
+    SmallVector<AffineMap> indexingMaps =
+        llvm::map_to_vector(operandNumbers, [&](unsigned operandNumber) {
+          OpOperand &opOperand = linalgOp->getOpOperand(operandNumber);
+          return linalgOp.getMatchingIndexingMap(&opOperand);
+        });
+    // Check that offsets/sizes are consistent across all operands.
+    OpBuilder b(op);
+    SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
+    return succeeded(getMappedOffsetAndSize(linalgOp, b, indexingMaps,
+                                            allOffsets, allSizes, mappedOffsets,
+                                            mappedSizes));
   }
 };
 
@@ -701,7 +726,7 @@ static SmallVector<Range> getPackUnPackIterationDomain(OpTy op,
   OpFoldResult zero = builder.getIndexAttr(0);
   OpFoldResult one = builder.getIndexAttr(1);
   ReifiedRankedShapedTypeDims resultShape;
-  (void)reifyResultShapes(builder, op, resultShape);
+  (void)op.reifyResultShapes(builder, resultShape);
   SmallVector<Range> loopBounds(rank);
   for (auto dim : llvm::seq<int64_t>(0, rank)) {
     loopBounds[dim].offset = zero;
@@ -718,6 +743,137 @@ static void applyPermToRange(SmallVector<OpFoldResult> &offsets,
     return;
   applyPermutationToVector<OpFoldResult>(offsets, permutation);
   applyPermutationToVector<OpFoldResult>(sizes, permutation);
+}
+
+/// Compute the permutation vector to interchange `elements` such that the
+/// elements at positions in `dimsPos` are moved to the positions `[0, ...,
+/// dimsPos.size())` in order.
+static SmallVector<int64_t>
+computeInterchangeFromDimPos(ArrayRef<int64_t> dimsPos, int64_t rank) {
+  SmallVector<int64_t> interchangeVector;
+  interchangeVector.reserve(dimsPos.size());
+  // First map dims and their position. For example, dims_pos = [2, 0] will map
+  // to:
+  // [
+  //  [ key: 2, value: 0]
+  //  [ key: 0, value: 1]
+  // ]
+  // where key is the idx in dims_pos while value its position in dims_pos.
+  DenseMap<int64_t, int64_t> dimsAndPosMapping;
+  for (int64_t dimsIdx = 0, end = dimsPos.size(); dimsIdx < end; dimsIdx++)
+    dimsAndPosMapping[dimsPos[dimsIdx]] = dimsIdx;
+
+  // Scan the position in order and insert the value in the map
+  // to compute the interchange vector.
+  for (int64_t dimsIdx = 0; dimsIdx < rank; dimsIdx++) {
+    if (dimsAndPosMapping.count(dimsIdx))
+      interchangeVector.push_back(dimsAndPosMapping[dimsIdx]);
+  }
+  return interchangeVector;
+}
+
+/// Permute the elements of `vec` starting at position `offset` according to
+/// `interchangeVector`. The permutation maps position `i` in the permuted range
+/// to position `interchangeVector[i]` in the original range. Elements before
+/// `offset` are unchanged.
+///
+/// Example: interchange([a, b, c, d, e], [2, 0, 1], offset=2)
+///          returns [a, b, e, c, d] (permutes the suffix [c, d, e])
+///
+/// Note: This is similar to `applyPermutationToVector` but supports an offset
+/// for permuting a suffix of the vector. It is only used for pack/unpack scalar
+/// implementation where we need to permute inner tile dimensions which are
+/// stored at the end of the index vector.
+template <typename T>
+static SmallVector<T> interchange(ArrayRef<T> elements,
+                                  ArrayRef<int64_t> interchangeVector,
+                                  int offset = 0) {
+  SmallVector<T> vec = llvm::to_vector(elements);
+  for (auto [idx, val] : llvm::enumerate(interchangeVector))
+    vec[idx + offset] = elements[val + offset];
+  return vec;
+}
+
+/// Generate the body of the innermost loop of the scalar implementation
+/// of `pack` operation.
+static void generatePackOpScalarImplementationBody(PackOp packOp,
+                                                   OpBuilder &builder,
+                                                   Location loc,
+                                                   ValueRange ivs) {
+  // Note: `ivs` are already in the correct order, possibly interchanged based
+  // on `dims_pos`. However, connecting the loops with the access patterns is
+  // difficult - What is the relation between the position of the tile loop and
+  // the point loop? However, if we interchange `ivs` once more to go to the
+  // canonical blocking format: ABCabc, this connection becomes trivial: Each
+  // point loop is pointLoopsOffset + inputRank away from the tiled loop.
+  ArrayRef<int64_t> dimsToInnerBlock = packOp.getInnerDimsPos();
+  ArrayRef<int64_t> dimsToOuterBlock = packOp.getOuterDimsPerm();
+
+  SmallVector<Value> interchangedIvs = ivs;
+  SmallVector<int64_t> interchangeVector =
+      computeInterchangeFromDimPos(dimsToInnerBlock, packOp.getSourceRank());
+  interchangedIvs = interchange<Value>(interchangedIvs, interchangeVector,
+                                       /*offset=*/packOp.getSourceRank());
+  if (!dimsToOuterBlock.empty()) {
+    interchangeVector =
+        computeInterchangeFromDimPos(dimsToOuterBlock, packOp.getSourceRank());
+    interchangedIvs =
+        interchange<Value>(interchangedIvs, interchangeVector, /*offset=*/0);
+  }
+  DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
+      packOp.getDimAndTileMapping();
+  SmallVector<OpFoldResult> sourceIndices;
+  size_t pointLoopsOffset = 0;
+  int64_t sourceRank = packOp.getSourceRank();
+  for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
+    if (dimAndTileMapping.contains(dim)) {
+      AffineExpr i, j, tile;
+      bindDims(builder.getContext(), i, j);
+      bindSymbols(builder.getContext(), tile);
+      OpFoldResult sourceIndex = affine::makeComposedFoldedAffineApply(
+          builder, loc, i * tile + j,
+          ArrayRef<OpFoldResult>{
+              interchangedIvs[dim],
+              interchangedIvs[pointLoopsOffset + packOp.getSourceRank()],
+              dimAndTileMapping[dim]});
+      sourceIndices.push_back(sourceIndex);
+      ++pointLoopsOffset;
+    } else {
+      sourceIndices.push_back(interchangedIvs[dim]);
+    }
+  }
+
+  auto createLoad = [&]() -> Value {
+    return memref::LoadOp::create(
+        builder, loc, packOp.getSource(),
+        getValueOrCreateConstantIndexOp(builder, loc, sourceIndices));
+  };
+  Value scalar;
+  if (auto paddingValue = packOp.getPaddingValue()) {
+    ArithBuilder arithBuilder(builder, loc);
+    Value isInBounds;
+    for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
+      Value idx =
+          getValueOrCreateConstantIndexOp(builder, loc, sourceIndices[dim]);
+      Value cond = arithBuilder.slt(
+          idx, createOrFoldDimOp(builder, loc, packOp.getSource(), dim));
+      isInBounds = dim == 0 ? cond : arithBuilder._and(isInBounds, cond);
+    }
+    scalar = scf::IfOp::create(
+                 builder, loc, isInBounds, /*thenBuilder=*/
+                 [&](OpBuilder &b, Location l) {
+                   scf::YieldOp::create(b, l, createLoad());
+                 },
+                 /*elseBuilder=*/
+                 [&](OpBuilder &b, Location l) {
+                   scf::YieldOp::create(b, l, paddingValue);
+                 })
+                 .getResult(0);
+  } else {
+    scalar = createLoad();
+  }
+
+  memref::StoreOp::create(builder, loc, scalar, packOp.getDest(), ivs);
 }
 
 struct PackOpTiling
@@ -742,6 +898,10 @@ struct PackOpTiling
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
     auto packOp = cast<PackOp>(op);
+    // TODO: Support Memref PackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     Location loc = packOp.getLoc();
 
     // The tiling is applied on interchanged dimensions. We have to undo the
@@ -871,6 +1031,52 @@ struct PackOpTiling
     return tilingResult.value();
   }
 
+  LogicalResult generateScalarImplementation(Operation *op, OpBuilder &builder,
+                                             Location loc,
+                                             ValueRange ivs) const {
+    auto packOp = cast<PackOp>(op);
+    assert(packOp.hasPureBufferSemantics() &&
+           "expected operation to have buffer semantics");
+    OpBuilder::InsertionGuard g(builder);
+    // The `ivs` already represent the position into the output for the non
+    // data-tile dimensions.
+    SmallVector<Value> ivVec(ivs);
+
+    // Get output shape - for memrefs, get dimensions from dest directly.
+    SmallVector<OpFoldResult> outputShape;
+    Value dest = packOp.getDest();
+    for (auto dim : llvm::seq<int64_t>(0, packOp.getDestRank()))
+      outputShape.push_back(createOrFoldDimOp(builder, loc, dest, dim));
+
+    // Generate the loops that iterate over the data tile.
+    Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
+    Value one = arith::ConstantIndexOp::create(builder, loc, 1);
+
+    // All loops except the innermost are simple loops that just iterate
+    // over the tile dimensions.
+    for (auto dataTileDim : llvm::seq<unsigned>(packOp.getSourceRank(),
+                                                packOp.getDestRank() - 1)) {
+      Value ub = getValueOrCreateConstantIndexOp(builder, loc,
+                                                 outputShape[dataTileDim]);
+      scf::ForOp loop = scf::ForOp::create(builder, loc, zero, ub, one);
+      builder.setInsertionPointToStart(loop.getBody());
+      ivVec.push_back(loop.getInductionVar());
+    }
+    // The body of the innermost loops does the actual data movement.
+    scf::ForOp::create(
+        builder, loc, zero,
+        getValueOrCreateConstantIndexOp(builder, loc, outputShape.back()), one,
+        ValueRange{},
+        [&](OpBuilder &bodyBuilder, Location bodyLoc, Value iv,
+            ValueRange regionIterArgs) {
+          ivVec.push_back(iv);
+          generatePackOpScalarImplementationBody(packOp, bodyBuilder, bodyLoc,
+                                                 ivVec);
+          scf::YieldOp::create(bodyBuilder, bodyLoc);
+        });
+    return success();
+  }
+
   /// Method to return the position of iteration domain tile computed by the
   /// tiled operation. In current `tensor.pack` context, the `resultOffsets` and
   /// `resultSizes` only cover outer dimensions.
@@ -986,6 +1192,10 @@ struct PackOpTiling
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
 
     auto packOp = cast<PackOp>(op);
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     Location loc = packOp.getLoc();
 
     int64_t inputRank = packOp.getSourceRank();
@@ -1165,6 +1375,10 @@ struct UnPackOpTiling
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
     auto unpackOp = cast<UnPackOp>(op);
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unpackOp.hasPureTensorSemantics())
+      return failure();
+
     int64_t srcRank = unpackOp.getSourceRank();
     int64_t destRank = unpackOp.getDestRank();
     int64_t numInnerTiles = srcRank - destRank;
@@ -1256,6 +1470,62 @@ struct UnPackOpTiling
     return tilingResult.value();
   }
 
+  LogicalResult generateScalarImplementation(Operation *op, OpBuilder &builder,
+                                             Location loc,
+                                             ValueRange ivs) const {
+    auto unpackOp = cast<UnPackOp>(op);
+    assert(unpackOp.hasPureBufferSemantics() &&
+           "expected operation to have buffer semantics");
+    assert(ivs.size() == unpackOp.getDestRank() &&
+           "number of ivs must match the rank of the output tensor");
+    OpBuilder::InsertionGuard g(builder);
+
+    DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
+        unpackOp.getDimAndTileMapping();
+    // Untiled loops and tile loops induction variables.
+    SmallVector<Value> inputIvs;
+    // Point loops induction variables.
+    SmallVector<Value> inputIvsPointLoops;
+    inputIvs.reserve(unpackOp.getDestRank());
+    inputIvsPointLoops.reserve(dimAndTileMapping.size());
+    for (auto dim : llvm::seq<int64_t>(0, unpackOp.getDestRank())) {
+      if (dimAndTileMapping.count(dim)) {
+        affine::DivModValue divMod =
+            affine::getDivMod(builder, loc, ivs[dim],
+                              getValueOrCreateConstantIndexOp(
+                                  builder, loc, dimAndTileMapping[dim]));
+        inputIvsPointLoops.push_back(divMod.remainder);
+        inputIvs.push_back(divMod.quotient);
+      } else {
+        inputIvs.push_back(ivs[dim]);
+      }
+    }
+
+    // TODO: (lorenzo) simplify the logic a bit. There is `ivs`,
+    // `inputIvsPointLoops` and `inputIvs`.
+    assert(inputIvsPointLoops.size() + inputIvs.size() ==
+               unpackOp.getSourceRank() &&
+           "expect same number of induction variables equals to input rank");
+    // Interchange the point loops induction variables based on `inner_dim_pos`.
+    ArrayRef<int64_t> innerDims = unpackOp.getInnerDimsPos();
+    SmallVector<int64_t> interchangeVector =
+        computeInterchangeFromDimPos(innerDims, unpackOp.getDestRank());
+    SmallVector<Value> interchangedInputIvsPointLoops = inputIvsPointLoops;
+    interchangedInputIvsPointLoops = interchange<Value>(
+        interchangedInputIvsPointLoops, interchangeVector, /*offset=*/0);
+    // Interchange the tiled loops induction variables based on
+    // `outer_dims_perm`.
+    ArrayRef<int64_t> outerDims = unpackOp.getOuterDimsPerm();
+    if (!outerDims.empty())
+      inputIvs = interchange<Value>(inputIvs, outerDims, /*offset=*/0);
+
+    llvm::append_range(inputIvs, interchangedInputIvsPointLoops);
+    Value scalar =
+        memref::LoadOp::create(builder, loc, unpackOp.getSource(), inputIvs);
+    memref::StoreOp::create(builder, loc, scalar, unpackOp.getDest(), ivs);
+    return success();
+  }
+
   /// Method to return the position of iteration domain tile computed by the
   /// tiled operation.
   LogicalResult getIterationDomainTileFromOperandTiles(
@@ -1335,6 +1605,10 @@ struct UnPackOpTiling
       return failure();
     }
     auto unPackOp = cast<UnPackOp>(op);
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
+
     ArrayRef<OpFoldResult> offsets(allOffsets[0]);
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
 

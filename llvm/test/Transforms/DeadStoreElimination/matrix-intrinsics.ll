@@ -5,8 +5,8 @@ define void @dead_unstrided_store_non_matrix_load(ptr noalias %src, ptr noalias 
 ; CHECK-LABEL: define void @dead_unstrided_store_non_matrix_load(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[SRC]], align 8
+; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -173,7 +173,6 @@ define void @dead_unstrided_store(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: define void @dead_unstrided_store(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> [[L]], ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    ret void
@@ -241,7 +240,6 @@ define void @dead_matrix_store_non_matrix_overwrite_unstrided(ptr noalias %src, 
 ; CHECK-LABEL: define void @dead_matrix_store_non_matrix_overwrite_unstrided(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    store <8 x double> zeroinitializer, ptr [[DST]], align 64
 ; CHECK-NEXT:    ret void
@@ -257,7 +255,6 @@ define void @dead_matrix_store_non_matrix_overwrite_strided(ptr noalias %src, pt
 ; CHECK-LABEL: define void @dead_matrix_store_non_matrix_overwrite_strided(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC]], i32 8, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    store <16 x double> zeroinitializer, ptr [[DST]], align 128
 ; CHECK-NEXT:    ret void
@@ -289,7 +286,6 @@ define void @live_matrix_store_non_matrix_overwrite_strided(ptr noalias %src, pt
 ; CHECK-LABEL: define void @live_matrix_store_non_matrix_overwrite_strided(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC]], i32 8, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    store <8 x double> zeroinitializer, ptr [[DST]], align 64
 ; CHECK-NEXT:    ret void
@@ -305,8 +301,6 @@ define void @dead_matrix_store_dimension_change(ptr noalias %src, ptr noalias %d
 ; CHECK-LABEL: define void @dead_matrix_store_dimension_change(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC]], i32 8, i1 false, i32 4, i32 2)
-; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> [[L]], ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v9f64.i32(<9 x double> zeroinitializer, ptr [[DST]], i32 3, i1 false, i32 3, i32 3)
 ; CHECK-NEXT:    ret void
 ;

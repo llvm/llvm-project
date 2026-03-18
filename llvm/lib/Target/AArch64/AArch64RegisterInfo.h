@@ -46,7 +46,6 @@ public:
 
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
-  const MCPhysReg *getDarwinCalleeSavedRegs(const MachineFunction *MF) const;
   const MCPhysReg *
   getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
@@ -54,11 +53,15 @@ public:
   const uint32_t *getDarwinCallPreservedMask(const MachineFunction &MF,
                                              CallingConv::ID) const;
 
-  unsigned getCSRFirstUseCost() const override {
+  unsigned getCSRCost() const override {
     // The cost will be compared against BlockFrequency where entry has the
     // value of 1 << 14. A value of 5 will choose to spill or split really
     // cold path instead of using a callee-saved register.
     return 5;
+  }
+  unsigned getCSRFirstUseCost() const override {
+    // The cost of 2 means push and pop for each CSR.
+    return 2;
   }
 
   const TargetRegisterClass *
@@ -124,7 +127,7 @@ public:
 
   bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override;
   bool hasBasePointer(const MachineFunction &MF) const;
-  unsigned getBaseRegister() const;
+  MCRegister getBaseRegister() const;
 
   bool isArgumentRegister(const MachineFunction &MF,
                           MCRegister Reg) const override;
@@ -154,7 +157,7 @@ public:
 
   bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const override;
 
-  virtual bool isIgnoredCVReg(MCRegister LLVMReg) const override;
+  bool isIgnoredCVReg(MCRegister LLVMReg) const override;
 };
 
 } // end namespace llvm

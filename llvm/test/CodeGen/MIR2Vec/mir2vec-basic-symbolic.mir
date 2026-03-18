@@ -48,29 +48,29 @@ body:             |
     RET 0
 
 # CHECK: MIR2Vec embeddings for machine function add_function:
-# CHECK: Function vector:  [ 19.20  19.80  20.40 ]
+# CHECK: Function vector:  [ 26.50  27.10  27.70 ]
 # CHECK-NEXT: Machine basic block vectors:
 # CHECK-NEXT: Machine basic block: add_function:entry:
-# CHECK-NEXT:  [ 19.20  19.80  20.40 ]
+# CHECK-NEXT:  [ 26.50  27.10  27.70 ]
 # CHECK-NEXT: Machine instruction vectors:
 # CHECK-NEXT: Machine instruction: %1:gr32 = COPY $esi
-# CHECK-NEXT:  [ 5.20  5.30  5.40 ]
+# CHECK-NEXT:  [ 6.00  6.10  6.20 ]
 # CHECK-NEXT: Machine instruction: %0:gr32 = COPY $edi
-# CHECK-NEXT:  [ 5.20  5.30  5.40 ]
+# CHECK-NEXT:  [ 6.00  6.10  6.20 ]
 # CHECK-NEXT: Machine instruction: %2:gr32 = nsw ADD32rr %0:gr32(tied-def 0), %1:gr32, implicit-def dead $eflags
-# CHECK-NEXT:  [ 1.30  1.40  1.50 ]
+# CHECK-NEXT:  [ 3.70  3.80  3.90 ]
 # CHECK-NEXT: Machine instruction: %3:gr32 = ADD32rr %2:gr32(tied-def 0), %2:gr32, implicit-def dead $eflags
-# CHECK-NEXT:  [ 1.30  1.40  1.50 ]
+# CHECK-NEXT:  [ 3.70  3.80  3.90 ]
 # CHECK-NEXT: Machine instruction: $eax = COPY %3:gr32
-# CHECK-NEXT:  [ 5.20  5.30  5.40 ]
+# CHECK-NEXT:  [ 6.00  6.10  6.20 ]
 # CHECK-NEXT: Machine instruction: RET 0, $eax
-# CHECK-NEXT:  [ 1.00  1.10  1.20 ]
+# CHECK-NEXT:  [ 1.10  1.20  1.30 ]
 
 # CHECK: MIR2Vec embeddings for machine function simple_function:
-# CHECK-NEXT:Function vector:  [ 1.00  1.10  1.20 ]
+# CHECK-NEXT:Function vector:  [ 1.10  1.20  1.30 ]
 # CHECK-NEXT: Machine basic block vectors:
 # CHECK-NEXT: Machine basic block: simple_function:entry:
-# CHECK-NEXT:  [ 1.00  1.10  1.20 ]
+# CHECK-NEXT:  [ 1.10  1.20  1.30 ]
 # CHECK-NEXT: Machine instruction vectors:
 # CHECK-NEXT: Machine instruction: RET 0
-# CHECK-NEXT:  [ 1.00  1.10  1.20 ]
+# CHECK-NEXT:  [ 1.10  1.20  1.30 ]

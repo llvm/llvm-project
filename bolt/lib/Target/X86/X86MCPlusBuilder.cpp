@@ -219,6 +219,12 @@ public:
     return getPopSize(Inst) == 0 ? false : true;
   }
 
+  bool isEpilogue(const BinaryBasicBlock &BB) const override {
+    return ::llvm::any_of(BB, [&](const MCInst &Instr) {
+      return isLeave(Instr) || isPop(Instr);
+    });
+  }
+
   bool isTerminateBranch(const MCInst &Inst) const override {
     return Inst.getOpcode() == X86::ENDBR32 || Inst.getOpcode() == X86::ENDBR64;
   }
@@ -3117,7 +3123,7 @@ public:
 
   InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
-                                                     int CallSiteID,
+                                                     size_t CallSiteID,
                                                      MCContext *Ctx) override {
     // Check if the target address expression used in the original indirect call
     // uses the stack pointer, which we are going to clobber.

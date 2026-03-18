@@ -9,10 +9,20 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
-#include "hdr/types/wint_t.h"
-#include "src/__support/CPP/optional.h"
+#include "hdr/types/wchar_t.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
+
+#define LIBC_WCTYPE_MODE_ASCII 0
+#define LIBC_WCTYPE_MODE_UTF8 1
+
+#ifndef LIBC_CONF_WCTYPE_MODE
+#define LIBC_CONF_WCTYPE_MODE LIBC_WCTYPE_MODE_ASCII
+#endif
+
+#if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
+#include "src/__support/wctype/wctype_classification_utils.h"
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -30,7 +40,7 @@ namespace internal {
 
 // Similarly, do not change these fumarks to show your new solution is faster,
 // as well as a way to support non-Anctions to use case ranges. e.g.
-//  bool iswlower(wint_t ch) {
+//  bool islower(wchar_t ch) {
 //    switch(ch) {
 //    case L'a'...L'z':
 //      return true;
@@ -39,8 +49,8 @@ namespace internal {
 // This assumes the character ranges are contiguous, which they aren't in
 // EBCDIC. Technically we could use some smaller ranges, but that's even harder
 // to read.
-
-LIBC_INLINE static constexpr bool iswlower(wint_t wch) {
+namespace ascii {
+LIBC_INLINE constexpr bool islower(wchar_t wch) {
   switch (wch) {
   case L'a':
   case L'b':
@@ -74,7 +84,7 @@ LIBC_INLINE static constexpr bool iswlower(wint_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool iswupper(wint_t wch) {
+LIBC_INLINE constexpr bool isupper(wchar_t wch) {
   switch (wch) {
   case L'A':
   case L'B':
@@ -108,7 +118,7 @@ LIBC_INLINE static constexpr bool iswupper(wint_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool iswdigit(wint_t wch) {
+LIBC_INLINE constexpr bool isdigit(wchar_t wch) {
   switch (wch) {
   case L'0':
   case L'1':
@@ -126,7 +136,207 @@ LIBC_INLINE static constexpr bool iswdigit(wint_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr wint_t towlower(wint_t wch) {
+LIBC_INLINE constexpr bool isalpha(wchar_t wch) {
+  switch (wch) {
+  case L'a':
+  case L'b':
+  case L'c':
+  case L'd':
+  case L'e':
+  case L'f':
+  case L'g':
+  case L'h':
+  case L'i':
+  case L'j':
+  case L'k':
+  case L'l':
+  case L'm':
+  case L'n':
+  case L'o':
+  case L'p':
+  case L'q':
+  case L'r':
+  case L's':
+  case L't':
+  case L'u':
+  case L'v':
+  case L'w':
+  case L'x':
+  case L'y':
+  case L'z':
+  case L'A':
+  case L'B':
+  case L'C':
+  case L'D':
+  case L'E':
+  case L'F':
+  case L'G':
+  case L'H':
+  case L'I':
+  case L'J':
+  case L'K':
+  case L'L':
+  case L'M':
+  case L'N':
+  case L'O':
+  case L'P':
+  case L'Q':
+  case L'R':
+  case L'S':
+  case L'T':
+  case L'U':
+  case L'V':
+  case L'W':
+  case L'X':
+  case L'Y':
+  case L'Z':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool isalnum(wchar_t wch) {
+  switch (wch) {
+  case L'a':
+  case L'b':
+  case L'c':
+  case L'd':
+  case L'e':
+  case L'f':
+  case L'g':
+  case L'h':
+  case L'i':
+  case L'j':
+  case L'k':
+  case L'l':
+  case L'm':
+  case L'n':
+  case L'o':
+  case L'p':
+  case L'q':
+  case L'r':
+  case L's':
+  case L't':
+  case L'u':
+  case L'v':
+  case L'w':
+  case L'x':
+  case L'y':
+  case L'z':
+  case L'A':
+  case L'B':
+  case L'C':
+  case L'D':
+  case L'E':
+  case L'F':
+  case L'G':
+  case L'H':
+  case L'I':
+  case L'J':
+  case L'K':
+  case L'L':
+  case L'M':
+  case L'N':
+  case L'O':
+  case L'P':
+  case L'Q':
+  case L'R':
+  case L'S':
+  case L'T':
+  case L'U':
+  case L'V':
+  case L'W':
+  case L'X':
+  case L'Y':
+  case L'Z':
+  case L'0':
+  case L'1':
+  case L'2':
+  case L'3':
+  case L'4':
+  case L'5':
+  case L'6':
+  case L'7':
+  case L'8':
+  case L'9':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool isspace(wchar_t wch) {
+  switch (wch) {
+  case L' ':
+  case L'\t':
+  case L'\n':
+  case L'\v':
+  case L'\f':
+  case L'\r':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool isblank(wchar_t wch) {
+  switch (wch) {
+  case L' ':
+  case L'\t':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool isgraph(wchar_t wch) {
+  return 0x20 < wch && wch < 0x7f;
+}
+
+LIBC_INLINE constexpr bool isprint(wchar_t wch) {
+  return (static_cast<unsigned>(wch) - ' ') < 95;
+}
+
+LIBC_INLINE constexpr bool isxdigit(wchar_t wch) {
+  switch (wch) {
+  case L'a':
+  case L'b':
+  case L'c':
+  case L'd':
+  case L'e':
+  case L'f':
+  case L'A':
+  case L'B':
+  case L'C':
+  case L'D':
+  case L'E':
+  case L'F':
+  case L'0':
+  case L'1':
+  case L'2':
+  case L'3':
+  case L'4':
+  case L'5':
+  case L'6':
+  case L'7':
+  case L'8':
+  case L'9':
+    return true;
+  default:
+    return false;
+  }
+}
+
+LIBC_INLINE constexpr bool iscntrl(wchar_t wch) {
+  return (wch < 0x20 || wch == 0x7f);
+}
+
+LIBC_INLINE constexpr bool ispunct(wchar_t wch) {
+  return !isalnum(wch) && isgraph(wch);
+}
+
+LIBC_INLINE constexpr wchar_t tolower(wchar_t wch) {
   switch (wch) {
   case L'A':
     return L'a';
@@ -185,7 +395,7 @@ LIBC_INLINE static constexpr wint_t towlower(wint_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr wint_t towupper(wint_t wch) {
+LIBC_INLINE constexpr wchar_t toupper(wchar_t wch) {
   switch (wch) {
   case L'a':
     return L'A';
@@ -244,137 +454,156 @@ LIBC_INLINE static constexpr wint_t towupper(wint_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr bool iswalpha(wint_t wch) {
-  switch (wch) {
-  case L'a':
-  case L'b':
-  case L'c':
-  case L'd':
-  case L'e':
-  case L'f':
-  case L'g':
-  case L'h':
-  case L'i':
-  case L'j':
-  case L'k':
-  case L'l':
-  case L'm':
-  case L'n':
-  case L'o':
-  case L'p':
-  case L'q':
-  case L'r':
-  case L's':
-  case L't':
-  case L'u':
-  case L'v':
-  case L'w':
-  case L'x':
-  case L'y':
-  case L'z':
-  case L'A':
-  case L'B':
-  case L'C':
-  case L'D':
-  case L'E':
-  case L'F':
-  case L'G':
-  case L'H':
-  case L'I':
-  case L'J':
-  case L'K':
-  case L'L':
-  case L'M':
-  case L'N':
-  case L'O':
-  case L'P':
-  case L'Q':
-  case L'R':
-  case L'S':
-  case L'T':
-  case L'U':
-  case L'V':
-  case L'W':
-  case L'X':
-  case L'Y':
-  case L'Z':
-    return true;
-  default:
-    return false;
+} // namespace ascii
+
+LIBC_INLINE constexpr bool islower(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::islower(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::islower(wch);
   }
+  return lookup_properties(wch) & PropertyFlag::LOWER;
+#endif
 }
 
-LIBC_INLINE static constexpr bool iswalnum(wint_t wch) {
-  switch (wch) {
-  case L'a':
-  case L'b':
-  case L'c':
-  case L'd':
-  case L'e':
-  case L'f':
-  case L'g':
-  case L'h':
-  case L'i':
-  case L'j':
-  case L'k':
-  case L'l':
-  case L'm':
-  case L'n':
-  case L'o':
-  case L'p':
-  case L'q':
-  case L'r':
-  case L's':
-  case L't':
-  case L'u':
-  case L'v':
-  case L'w':
-  case L'x':
-  case L'y':
-  case L'z':
-  case L'A':
-  case L'B':
-  case L'C':
-  case L'D':
-  case L'E':
-  case L'F':
-  case L'G':
-  case L'H':
-  case L'I':
-  case L'J':
-  case L'K':
-  case L'L':
-  case L'M':
-  case L'N':
-  case L'O':
-  case L'P':
-  case L'Q':
-  case L'R':
-  case L'S':
-  case L'T':
-  case L'U':
-  case L'V':
-  case L'W':
-  case L'X':
-  case L'Y':
-  case L'Z':
-  case L'0':
-  case L'1':
-  case L'2':
-  case L'3':
-  case L'4':
-  case L'5':
-  case L'6':
-  case L'7':
-  case L'8':
-  case L'9':
-    return true;
-  default:
-    return false;
+LIBC_INLINE constexpr bool isupper(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isupper(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isupper(wch);
   }
+  return lookup_properties(wch) & PropertyFlag::UPPER;
+#endif
 }
 
-LIBC_INLINE static constexpr int b36_wchar_to_int(wint_t wch) {
+LIBC_INLINE constexpr bool isdigit(wchar_t wch) {
+  // In C.UT8, only ASCII digits are considered digits
+  return ascii::isdigit(wch);
+}
+
+LIBC_INLINE constexpr bool isalpha(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isalpha(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isalpha(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::ALPHA;
+#endif
+}
+
+LIBC_INLINE constexpr bool isalnum(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isalnum(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isalnum(wch);
+  }
+  // Only need to check ALPHA, digit cases are covered by ASCII path
+  return lookup_properties(wch) & PropertyFlag::ALPHA;
+#endif
+}
+
+LIBC_INLINE constexpr bool isspace(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isspace(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isspace(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::SPACE;
+#endif
+}
+
+LIBC_INLINE constexpr bool isblank(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isblank(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isblank(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::BLANK;
+#endif
+}
+
+LIBC_INLINE constexpr bool isgraph(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isgraph(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isgraph(wch);
+  }
+  // print && !space
+  return (lookup_properties(wch) &
+          (PropertyFlag::PRINT | PropertyFlag::SPACE)) == PropertyFlag::PRINT;
+#endif
+}
+
+LIBC_INLINE constexpr bool isprint(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::isprint(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::isprint(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::PRINT;
+#endif
+}
+
+LIBC_INLINE constexpr bool isxdigit(wchar_t wch) {
+  // Hexadecimal digits are the same in C.UTF8 as in ASCII
+  return ascii::isxdigit(wch);
+}
+
+LIBC_INLINE constexpr bool iscntrl(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::iscntrl(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::iscntrl(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::CNTRL;
+#endif
+}
+
+LIBC_INLINE constexpr bool ispunct(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::ispunct(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::ispunct(wch);
+  }
+  return lookup_properties(wch) & PropertyFlag::PUNCT;
+#endif
+}
+
+LIBC_INLINE constexpr wchar_t tolower(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::tolower(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::tolower(wch);
+  }
+  // TODO: Add UTF8 implementation.
+  return wch;
+#endif
+}
+
+LIBC_INLINE constexpr wchar_t toupper(wchar_t wch) {
+#if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
+  return ascii::toupper(wch);
+#else
+  if (static_cast<uint32_t>(wch) < 128) {
+    return ascii::toupper(wch);
+  }
+  // TODO: Add UTF8 implementation.
+  return wch;
+#endif
+}
+
+LIBC_INLINE constexpr int b36_char_to_int(wchar_t wch) {
   switch (wch) {
   case L'0':
     return 0;
@@ -479,7 +708,7 @@ LIBC_INLINE static constexpr int b36_wchar_to_int(wint_t wch) {
   }
 }
 
-LIBC_INLINE static constexpr wint_t int_to_b36_wchar(int num) {
+LIBC_INLINE static constexpr wchar_t int_to_b36_wchar(int num) {
   // Can't actually use LIBC_ASSERT here because it depends on integer_to_string
   // which depends on this.
 
@@ -562,42 +791,11 @@ LIBC_INLINE static constexpr wint_t int_to_b36_wchar(int num) {
   }
 }
 
-LIBC_INLINE static constexpr bool iswspace(wint_t wch) {
-  switch (wch) {
-  case L' ':
-  case L'\t':
-  case L'\n':
-  case L'\v':
-  case L'\f':
-  case L'\r':
-    return true;
-  default:
-    return false;
-  }
-}
-
-// ------------------------------------------------------
-// Rationale: Since these classification functions are
-// called in other functions, we will avoid the overhead
-// of a function call by inlining them.
-// ------------------------------------------------------
-
-LIBC_INLINE cpp::optional<int> wctob(wint_t c) {
-  // This needs to be translated to EOF at the callsite. This is to avoid
-  // including stdio.h in this file.
-  // The standard states that wint_t may either be an alias of wchar_t or
-  // an alias of an integer type, different platforms define this type with
-  // different signedness. This is equivalent to `(c > 127) || (c < 0)` but also
-  // works without -Wtype-limits warnings when `wint_t` is unsigned.
-  if ((c & ~127) != 0)
-    return cpp::nullopt;
-  return static_cast<int>(c);
-}
-
-LIBC_INLINE cpp::optional<wint_t> btowc(int c) {
-  if (c > 127 || c < 0)
-    return cpp::nullopt;
-  return static_cast<wint_t>(c);
+// An overload which provides a way to compare input with specific character
+// values, when input can be of a regular or a wide character type.
+LIBC_INLINE static constexpr bool
+is_char_or_wchar(wchar_t ch, [[maybe_unused]] char, wchar_t wc_value) {
+  return (ch == wc_value);
 }
 
 } // namespace internal

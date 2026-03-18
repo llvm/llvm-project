@@ -1,22 +1,52 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+! RUN: bbc --dump-symbols -fcuda %s -o - | FileCheck %s --check-prefix=SYMBOLS
+
 
 module m
+
+! SYMBOLS-LABEL: Module scope: m
+
   type device_array
     real(kind=8), allocatable, dimension(:), device :: ad
     real(kind=8), pointer, dimension(:), device :: pd
   end type
 
+! SYMBOLS: .c.device_array, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:1_8 init:[component::component(name=.n.ad,genre=3_1,category=2_1,kind=8_1,rank=1_1,memoryspace=1_1,offset=0_8
+
+  type managed_array
+    real(kind=8), allocatable, dimension(:), managed :: ad
+    real(kind=8), pointer, dimension(:), managed :: pd
+  end type
+
+! SYMBOLS: .c.managed_array, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:1_8 init:[component::component(name=.n.ad,genre=3_1,category=2_1,kind=8_1,rank=1_1,memoryspace=2_1,offset=0_8
+
+  type unified_array
+    real(kind=8), allocatable, dimension(:), unified :: ad
+    real(kind=8), pointer, dimension(:), unified :: pd
+  end type
+
+!  SYMBOLS: .c.unified_array, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(component) shape: 0_8:1_8 init:[component::component(name=.n.ad,genre=3_1,category=2_1,kind=8_1,rank=1_1,memoryspace=3_1
+
   type(device_array), allocatable :: da(:)
+  type(managed_array), allocatable :: ma(:)
+  type(unified_array), allocatable :: ua(:)
 end module
 
 ! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.device_array
-! CHECK: fir.insert_value %{{.*}}, %c6{{.*}}, ["genre"
-! CHECK: fir.insert_value %{{.*}}, %c5{{.*}}, ["genre"
+! CHECK: fir.insert_value %{{.*}}, %c1{{.*}}, ["memoryspace"
+
+! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.managed_array
+! CHECK: fir.insert_value %{{.*}}, %c2{{.*}}, ["memoryspace"
+
+! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.unified_array
+! CHECK: fir.insert_value %{{.*}}, %c3{{.*}}, ["memoryspace"
 
 program main
   use m
   type(device_array) :: local
+  type(managed_array) :: local_ma
+  type(unified_array) :: local_ua
 end
 
 ! CHECK-LABEL: func.func @_QQmain()
-! CHECK: fir.call @_FortranAInitialize
+! CHECK-COUNT-3: fir.call @_FortranAInitialize

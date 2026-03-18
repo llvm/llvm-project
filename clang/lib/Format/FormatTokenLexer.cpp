@@ -163,8 +163,6 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
   if (tryMergeForEach())
     return;
-  if (Style.isCpp() && tryTransformTryUsageForC())
-    return;
 
   if ((Style.Language == FormatStyle::LK_Cpp ||
        Style.Language == FormatStyle::LK_ObjC) &&
@@ -318,11 +316,18 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                            {tok::equal, tok::greater},
                            {tok::star, tok::greater},
                            {tok::pipeequal, tok::greater},
-                           {tok::pipe, tok::arrow},
-                           {tok::hash, tok::minus, tok::hash},
-                           {tok::hash, tok::equal, tok::hash}},
+                           {tok::pipe, tok::arrow}},
                           TT_BinaryOperator) ||
         Tokens.back()->is(tok::arrow)) {
+      Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+    if (Tokens.size() >= 3 &&
+        Tokens[Tokens.size() - 3]->is(Keywords.kw_verilogHash) &&
+        Tokens[Tokens.size() - 2]->isOneOf(tok::minus, tok::equal) &&
+        Tokens[Tokens.size() - 1]->is(Keywords.kw_verilogHash) &&
+        tryMergeTokens(3, TT_BinaryOperator)) {
+      Tokens.back()->setFinalizedType(TT_BinaryOperator);
       Tokens.back()->ForcedPrecedence = prec::Comma;
       return;
     }
@@ -526,26 +531,6 @@ bool FormatTokenLexer::tryMergeForEach() {
   return true;
 }
 
-bool FormatTokenLexer::tryTransformTryUsageForC() {
-  if (Tokens.size() < 2)
-    return false;
-  auto &Try = *(Tokens.end() - 2);
-  if (Try->isNot(tok::kw_try))
-    return false;
-  auto &Next = *(Tokens.end() - 1);
-  if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))
-    return false;
-
-  if (Tokens.size() > 2) {
-    auto &At = *(Tokens.end() - 3);
-    if (At->is(tok::at))
-      return false;
-  }
-
-  Try->Tok.setKind(tok::identifier);
-  return true;
-}
-
 bool FormatTokenLexer::tryMergeLessLess() {
   // Merge X,less,less,Y into X,lessless,Y unless X or Y is less.
   if (Tokens.size() < 3)
@@ -711,14 +696,19 @@ void FormatTokenLexer::tryParseJavaTextBlock() {
   ++S; // Skip the `"""` that begins a text block.
 
   // Find the `"""` that ends the text block.
+  bool Escaped = false;
   for (int Count = 0; Count < 3 && S < End; ++S) {
+    if (Escaped) {
+      Escaped = false;
+      continue;
+    }
     switch (*S) {
-    case '\\':
-      Count = -1;
-      break;
     case '\"':
       ++Count;
       break;
+    case '\\':
+      Escaped = true;
+      [[fallthrough]];
     default:
       Count = 0;
     }
@@ -1400,6 +1390,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
                                   tok::kw_operator)) {
       FormatTok->Tok.setKind(tok::identifier);
     } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
+      FormatTok->Tok.setKind(tok::identifier);
+    } else if (Style.isVerilog() && Keywords.isVerilogIdentifier(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
     }
   } else if (const bool Greater = FormatTok->is(tok::greatergreater);

@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
@@ -29,6 +25,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
@@ -52,8 +49,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
-#include <mutex>
 #include <optional>
+#include <stdlib.h>
 #include <string>
 
 using namespace lldb;
@@ -272,6 +269,7 @@ void ScriptInterpreterPython::SharedLibraryDirectoryHelper(
   // does.
   if (this_file.GetFileNameExtension() == ".pyd") {
     this_file.RemoveLastPathComponent(); // _lldb.pyd or _lldb_d.pyd
+    this_file.RemoveLastPathComponent(); // native
     this_file.RemoveLastPathComponent(); // lldb
     llvm::StringRef libdir = LLDB_PYTHON_RELATIVE_LIBDIR;
     for (auto it = llvm::sys::path::begin(libdir),
@@ -293,17 +291,27 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 }
 
 void ScriptInterpreterPython::Initialize() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguagePython,
-                                  ScriptInterpreterPythonImpl::CreateInstance);
-    ScriptInterpreterPythonImpl::Initialize();
-  });
+#if LLDB_ENABLE_MTE
+  // Python's allocator (pymalloc) is not aware of Memory Tagging Extension
+  // (MTE) and crashes.
+  // https://bugs.python.org/issue43593
+  setenv("PYTHONMALLOC", "malloc", /*overwrite=*/true);
+#endif
+
+  HostInfo::SetSharedLibraryDirectoryHelper(
+      ScriptInterpreterPython::SharedLibraryDirectoryHelper);
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), GetPluginDescriptionStatic(),
+      lldb::eScriptLanguagePython, ScriptInterpreterPythonImpl::CreateInstance,
+      ScriptInterpreterPythonImpl::GetPythonDir);
+  ScriptInterpreterPythonImpl::Initialize();
+  ScriptInterpreterPythonInterfaces::Initialize();
 }
 
-void ScriptInterpreterPython::Terminate() {}
+void ScriptInterpreterPython::Terminate() {
+  ScriptInterpreterPythonInterfaces::Terminate();
+  PluginManager::UnregisterPlugin(ScriptInterpreterPythonImpl::CreateInstance);
+}
 
 ScriptInterpreterPythonImpl::Locker::Locker(
     ScriptInterpreterPythonImpl *py_interpreter, uint16_t on_entry,
@@ -1228,7 +1236,7 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
     StringList &function_def) {
   // Convert StringList to one long, newline delimited, const char *.
   std::string function_def_string(function_def.CopyList());
-  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n%s\n",
+  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n{0}\n",
            function_def_string.c_str());
 
   Status error = ExecuteMultipleLines(
@@ -1524,6 +1532,11 @@ ScriptInterpreterPythonImpl::CreateScriptedThreadInterface() {
 ScriptedFrameInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedFrameInterface() {
   return std::make_shared<ScriptedFramePythonInterface>(*this);
+}
+
+ScriptedFrameProviderInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedFrameProviderInterface() {
+  return std::make_shared<ScriptedFrameProviderPythonInterface>(*this);
 }
 
 ScriptedThreadPlanInterfaceSP
@@ -1939,7 +1952,7 @@ lldb::ValueObjectSP ScriptInterpreterPythonImpl::GetChildAtIndex(
   return ret_val;
 }
 
-llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
+llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
     return llvm::createStringError("Type has no child named '%s'", child_name);
@@ -1951,7 +1964,7 @@ llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
   if (!implementor)
     return llvm::createStringError("Type has no child named '%s'", child_name);
 
-  int ret_val = INT32_MAX;
+  uint32_t ret_val = UINT32_MAX;
 
   {
     Locker py_lock(this,
@@ -1960,7 +1973,7 @@ llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
                                                                  child_name);
   }
 
-  if (ret_val == INT32_MAX)
+  if (ret_val == UINT32_MAX)
     return llvm::createStringError("Type has no child named '%s'", child_name);
   return ret_val;
 }
@@ -3090,5 +3103,3 @@ void ScriptInterpreterPythonImpl::AddToSysPath(AddLocation location,
 // when the process exits).
 //
 // void ScriptInterpreterPythonImpl::Terminate() { Py_Finalize (); }
-
-#endif

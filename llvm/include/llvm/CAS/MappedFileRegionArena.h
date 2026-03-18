@@ -21,6 +21,10 @@
 
 namespace llvm::cas {
 
+namespace ondisk {
+class OnDiskCASLogger;
+} // namespace ondisk
+
 /// Allocator for an owned mapped file region that supports thread-safe and
 /// process-safe bump pointer allocation.
 ///
@@ -61,8 +65,9 @@ public:
   /// that information can be stored before the header, like a file magic.
   /// \param NewFileConstructor is for constructing new files. It has exclusive
   /// access to the file. Must call \c initializeBumpPtr.
-  static Expected<MappedFileRegionArena>
+  LLVM_ABI_FOR_TEST static Expected<MappedFileRegionArena>
   create(const Twine &Path, uint64_t Capacity, uint64_t HeaderOffset,
+         std::shared_ptr<ondisk::OnDiskCASLogger> Logger,
          function_ref<Error(MappedFileRegionArena &)> NewFileConstructor);
 
   /// Minimum alignment for allocations, currently hardcoded to 8B.
@@ -81,7 +86,7 @@ public:
     return data() + *Offset;
   }
   /// Allocate, returning the offset from \a data() instead of a pointer.
-  Expected<int64_t> allocateOffset(uint64_t AllocSize);
+  LLVM_ABI_FOR_TEST Expected<int64_t> allocateOffset(uint64_t AllocSize);
 
   char *data() const { return Region.data(); }
   uint64_t size() const { return H->BumpPtr; }
@@ -106,13 +111,14 @@ private:
   // initialize header from offset.
   void initializeHeader(uint64_t HeaderOffset);
 
-  void destroyImpl();
+  LLVM_ABI_FOR_TEST void destroyImpl();
   void moveImpl(MappedFileRegionArena &RHS) {
     std::swap(Region, RHS.Region);
     std::swap(H, RHS.H);
     std::swap(Path, RHS.Path);
     std::swap(FD, RHS.FD);
     std::swap(SharedLockFD, RHS.SharedLockFD);
+    std::swap(Logger, RHS.Logger);
   }
 
 private:
@@ -123,6 +129,7 @@ private:
   std::optional<int> FD;
   // File descriptor for the file used as reader/writer lock.
   std::optional<int> SharedLockFD;
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger = nullptr;
 };
 
 } // namespace llvm::cas

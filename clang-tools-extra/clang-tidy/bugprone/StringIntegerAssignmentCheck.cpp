@@ -40,6 +40,8 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+namespace {
+
 class CharExpressionDetector {
 public:
   CharExpressionDetector(QualType CharType, const ASTContext &Ctx)
@@ -102,7 +104,7 @@ private:
   // Returns true if `E` is an character constant.
   bool isCharConstant(const Expr *E) const {
     return isCharTyped(E) && isCharValuedConstant(E);
-  };
+  }
 
   // Returns true if `E` is an integer constant which fits in `CharType`.
   bool isCharValuedConstant(const Expr *E) const {
@@ -112,24 +114,26 @@ private:
     if (!E->EvaluateAsInt(EvalResult, Ctx, Expr::SE_AllowSideEffects))
       return false;
     return EvalResult.Val.getInt().getActiveBits() <= Ctx.getTypeSize(CharType);
-  };
+  }
 
   // Returns true if `E` has the right character type.
   bool isCharTyped(const Expr *E) const {
     return E->getType().getCanonicalType().getTypePtr() ==
            CharType.getTypePtr();
-  };
+  }
 
   const QualType CharType;
   const ASTContext &Ctx;
 };
+
+} // namespace
 
 void StringIntegerAssignmentCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Argument = Result.Nodes.getNodeAs<Expr>("expr");
   const auto CharType =
       Result.Nodes.getNodeAs<QualType>("type")->getCanonicalType();
-  SourceLocation Loc = Argument->getBeginLoc();
+  const SourceLocation Loc = Argument->getBeginLoc();
 
   // Try to detect a few common expressions to reduce false positives.
   if (CharExpressionDetector(CharType, *Result.Context)
@@ -145,7 +149,7 @@ void StringIntegerAssignmentCheck::check(
   if (Loc.isMacroID())
     return;
 
-  bool IsWideCharType = CharType->isWideCharType();
+  const bool IsWideCharType = CharType->isWideCharType();
   if (!CharType->isCharType() && !IsWideCharType)
     return;
   bool IsOneDigit = false;
@@ -155,7 +159,7 @@ void StringIntegerAssignmentCheck::check(
     IsLiteral = true;
   }
 
-  SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+  const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
       Argument->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
   if (IsOneDigit) {
     Diag << FixItHint::CreateInsertion(Loc, IsWideCharType ? "L'" : "'")

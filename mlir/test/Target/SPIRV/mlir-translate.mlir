@@ -1,7 +1,6 @@
 // Check that `--spirv-save-validation-files-with-prefix` generates
 // a correct number of files.
 
-// REQUIRES: shell
 // RUN: rm -rf %t
 // RUN: mkdir %t && mlir-translate --serialize-spirv --no-implicit-module \
 // RUN: --split-input-file --spirv-save-validation-files-with-prefix=%t/foo %s \

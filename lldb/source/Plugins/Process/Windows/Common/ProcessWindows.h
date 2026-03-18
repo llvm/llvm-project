@@ -9,6 +9,7 @@
 #ifndef liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 #define liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 
+#include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
@@ -37,10 +38,6 @@ public:
   static llvm::StringRef GetPluginDescriptionStatic();
 
   ~ProcessWindows();
-
-  size_t GetSTDOUT(char *buf, size_t buf_size, Status &error) override;
-  size_t GetSTDERR(char *buf, size_t buf_size, Status &error) override;
-  size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
@@ -96,10 +93,17 @@ public:
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
+
+  /// Returns the exception code of the active (current) debug exception,
+  /// or std::nullopt if there is no active exception.
+  std::optional<DWORD> GetActiveExceptionCode() const;
+
   Status EnableWatchpoint(lldb::WatchpointSP wp_sp,
                           bool notify = true) override;
   Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
                            bool notify = true) override;
+
+  void SetPseudoConsoleHandle() override;
 
 protected:
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
@@ -117,6 +121,7 @@ private:
   };
   std::map<lldb::break_id_t, WatchpointInfo> m_watchpoints;
   std::vector<lldb::break_id_t> m_watchpoint_ids;
+  std::shared_ptr<PTY> m_pty;
 };
 } // namespace lldb_private
 

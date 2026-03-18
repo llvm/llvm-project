@@ -28,7 +28,6 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x, <1 x i1> %m, i32 zeroext %evl) {
   %a = call <1 x iXLen> @llvm.vp.lrint.v1iXLen.v1f32(<1 x float> %x, <1 x i1> %m, i32 %evl)
   ret <1 x iXLen> %a
 }
-declare <1 x iXLen> @llvm.vp.lrint.v1iXLen.v1f32(<1 x float>, <1 x i1>, i32)
 
 define <2 x iXLen> @lrint_v2f32(<2 x float> %x, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_v2f32:
@@ -52,7 +51,6 @@ define <2 x iXLen> @lrint_v2f32(<2 x float> %x, <2 x i1> %m, i32 zeroext %evl) {
   %a = call <2 x iXLen> @llvm.vp.lrint.v2iXLen.v2f32(<2 x float> %x, <2 x i1> %m, i32 %evl)
   ret <2 x iXLen> %a
 }
-declare <2 x iXLen> @llvm.vp.lrint.v2iXLen.v2f32(<2 x float>, <2 x i1>, i32)
 
 define <3 x iXLen> @lrint_v3f32(<3 x float> %x, <3 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_v3f32:
@@ -76,7 +74,6 @@ define <3 x iXLen> @lrint_v3f32(<3 x float> %x, <3 x i1> %m, i32 zeroext %evl) {
   %a = call <3 x iXLen> @llvm.vp.lrint.v3iXLen.v3f32(<3 x float> %x, <3 x i1> %m, i32 %evl)
   ret <3 x iXLen> %a
 }
-declare <3 x iXLen> @llvm.vp.lrint.v3iXLen.v3f32(<3 x float>, <3 x i1>, i32)
 
 define <4 x iXLen> @lrint_v4f32(<4 x float> %x, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_v4f32:
@@ -100,7 +97,6 @@ define <4 x iXLen> @lrint_v4f32(<4 x float> %x, <4 x i1> %m, i32 zeroext %evl) {
   %a = call <4 x iXLen> @llvm.vp.lrint.v4iXLen.v4f32(<4 x float> %x, <4 x i1> %m, i32 %evl)
   ret <4 x iXLen> %a
 }
-declare <4 x iXLen> @llvm.vp.lrint.v4iXLen.v4f32(<4 x float>, <4 x i1>, i32)
 
 define <8 x iXLen> @lrint_v8f32(<8 x float> %x, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_v8f32:
@@ -124,7 +120,6 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x, <8 x i1> %m, i32 zeroext %evl) {
   %a = call <8 x iXLen> @llvm.vp.lrint.v8iXLen.v8f32(<8 x float> %x, <8 x i1> %m, i32 %evl)
   ret <8 x iXLen> %a
 }
-declare <8 x iXLen> @llvm.vp.lrint.v8iXLen.v8f32(<8 x float>, <8 x i1>, i32)
 
 define <16 x iXLen> @lrint_v16f32(<16 x float> %x, <16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_v16f32:
@@ -148,7 +143,6 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x, <16 x i1> %m, i32 zeroext %ev
   %a = call <16 x iXLen> @llvm.vp.lrint.v16iXLen.v16f32(<16 x float> %x, <16 x i1> %m, i32 %evl)
   ret <16 x iXLen> %a
 }
-declare <16 x iXLen> @llvm.vp.lrint.v16iXLen.v16f32(<16 x float>, <16 x i1>, i32)
 
 define <1 x iXLen> @lrint_v1f64(<1 x double> %x, <1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_v1f64:
@@ -173,7 +167,6 @@ define <1 x iXLen> @lrint_v1f64(<1 x double> %x, <1 x i1> %m, i32 zeroext %evl) 
   %a = call <1 x iXLen> @llvm.vp.lrint.v1iXLen.v1f64(<1 x double> %x, <1 x i1> %m, i32 %evl)
   ret <1 x iXLen> %a
 }
-declare <1 x iXLen> @llvm.vp.lrint.v1iXLen.v1f64(<1 x double>, <1 x i1>, i32)
 
 define <2 x iXLen> @lrint_v2f64(<2 x double> %x, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_v2f64:
@@ -198,7 +191,6 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x, <2 x i1> %m, i32 zeroext %evl) 
   %a = call <2 x iXLen> @llvm.vp.lrint.v2iXLen.v2f64(<2 x double> %x, <2 x i1> %m, i32 %evl)
   ret <2 x iXLen> %a
 }
-declare <2 x iXLen> @llvm.vp.lrint.v2iXLen.v2f64(<2 x double>, <2 x i1>, i32)
 
 define <4 x iXLen> @lrint_v4f64(<4 x double> %x, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_v4f64:
@@ -223,7 +215,6 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x, <4 x i1> %m, i32 zeroext %evl) 
   %a = call <4 x iXLen> @llvm.vp.lrint.v4iXLen.v4f64(<4 x double> %x, <4 x i1> %m, i32 %evl)
   ret <4 x iXLen> %a
 }
-declare <4 x iXLen> @llvm.vp.lrint.v4iXLen.v4f64(<4 x double>, <4 x i1>, i32)
 
 define <8 x iXLen> @lrint_v8f64(<8 x double> %x, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: lrint_v8f64:
@@ -248,4 +239,3 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x, <8 x i1> %m, i32 zeroext %evl) 
   %a = call <8 x iXLen> @llvm.vp.lrint.v8iXLen.v8f64(<8 x double> %x, <8 x i1> %m, i32 %evl)
   ret <8 x iXLen> %a
 }
-declare <8 x iXLen> @llvm.vp.lrint.v8iXLen.v8f64(<8 x double>, <8 x i1>, i32)

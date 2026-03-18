@@ -17,8 +17,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
-#include <map>
-#include <memory>
 #include <vector>
 
 namespace llvm {

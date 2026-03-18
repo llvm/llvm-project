@@ -135,10 +135,10 @@ body:             |
 
 # CHECK: Machine basic block vectors:
 # CHECK-NEXT: Machine basic block: abc:entry:
-# CHECK-NEXT:  [ 16.50  17.10  17.70 ]
+# CHECK-NEXT:  [ 23.60  24.20  24.80 ]
 # CHECK-NEXT: Machine basic block: abc:if.then:
-# CHECK-NEXT:  [ 4.50  4.80  5.10 ]
+# CHECK-NEXT:  [ 7.30  7.60  7.90 ]
 # CHECK-NEXT: Machine basic block: abc:if.else:
-# CHECK-NEXT:  [ 0.80  1.00  1.20 ]
+# CHECK-NEXT:  [ 3.40  3.60  3.80 ]
 # CHECK-NEXT: Machine basic block: abc:return:
-# CHECK-NEXT:  [ 6.60  6.90  7.20 ]
+# CHECK-NEXT:  [ 8.80  9.10  9.40 ]

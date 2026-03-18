@@ -95,23 +95,20 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
 /// Return the FuncOp called by `callOp`.
 static FuncOp getCalledFunction(CallOpInterface callOp,
                                 SymbolTableCollection &symbolTables) {
-  SymbolRefAttr sym =
-      llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
-  if (!sym)
-    return nullptr;
-  return dyn_cast_or_null<FuncOp>(
-      symbolTables.lookupNearestSymbolFrom(callOp, sym));
+  return dyn_cast_or_null<FuncOp>(callOp.resolveCallableInTable(&symbolTables));
 }
 
 /// Return the FuncOp called by `callOp`.
 static FuncOp getCalledFunction(CallOpInterface callOp,
                                 const AnalysisState &state) {
-  auto &oneShotAnalysisState = static_cast<const OneShotAnalysisState &>(state);
-
-  if (auto *funcAnalysisState =
-          oneShotAnalysisState.getExtension<FuncAnalysisState>()) {
-    // Use the cached symbol tables.
-    return getCalledFunction(callOp, funcAnalysisState->symbolTables);
+  if (isa<OneShotAnalysisState>(state)) {
+    auto &oneShotAnalysisState =
+        static_cast<const OneShotAnalysisState &>(state);
+    if (auto *funcAnalysisState =
+            oneShotAnalysisState.getExtension<FuncAnalysisState>()) {
+      // Use the cached symbol tables.
+      return getCalledFunction(callOp, funcAnalysisState->symbolTables);
+    }
   }
 
   SymbolTableCollection symbolTables;
@@ -234,10 +231,8 @@ struct CallOpInterface
                 SmallVector<Value> &invocationStack) const {
     auto callOp = cast<func::CallOp>(op);
 
-    // TODO Avoid recomputing the symbol tables every time.
-    SymbolTableCollection symbolTable;
-
-    FuncOp funcOp = getCalledFunction(callOp, symbolTable);
+    // Reuse the cached symbol tables from the bufferization state.
+    FuncOp funcOp = getCalledFunction(callOp, state.getSymbolTables());
     assert(funcOp && "expected CallOp to a FuncOp");
 
     // If the callee was already bufferized, we can directly take the type from

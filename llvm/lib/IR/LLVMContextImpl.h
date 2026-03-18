@@ -480,20 +480,22 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   uint32_t AlignInBits;
   unsigned Encoding;
   uint32_t NumExtraInhabitants;
+  uint32_t DataSizeInBits;
   unsigned Flags;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *SizeInBits,
                 uint32_t AlignInBits, unsigned Encoding,
-                uint32_t NumExtraInhabitants, unsigned Flags)
+                uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
+                unsigned Flags)
       : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
         Encoding(Encoding), NumExtraInhabitants(NumExtraInhabitants),
-        Flags(Flags) {}
+        DataSizeInBits(DataSizeInBits), Flags(Flags) {}
   MDNodeKeyImpl(const DIBasicType *N)
       : Tag(N->getTag()), Name(N->getRawName()),
         SizeInBits(N->getRawSizeInBits()), AlignInBits(N->getAlignInBits()),
         Encoding(N->getEncoding()),
-        NumExtraInhabitants(N->getNumExtraInhabitants()), Flags(N->getFlags()) {
-  }
+        NumExtraInhabitants(N->getNumExtraInhabitants()),
+        DataSizeInBits(N->getDataSizeInBits()), Flags(N->getFlags()) {}
 
   bool isKeyOf(const DIBasicType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -501,6 +503,7 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
            AlignInBits == RHS->getAlignInBits() &&
            Encoding == RHS->getEncoding() &&
            NumExtraInhabitants == RHS->getNumExtraInhabitants() &&
+           DataSizeInBits == RHS->getDataSizeInBits() &&
            Flags == RHS->getFlags();
   }
 
@@ -1671,6 +1674,12 @@ public:
   DenseMap<std::pair<ElementCount, APInt>, std::unique_ptr<ConstantInt>>
       IntSplatConstants;
 
+  DenseMap<unsigned, std::unique_ptr<ConstantByte>> ByteZeroConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantByte>> ByteOneConstants;
+  DenseMap<APInt, std::unique_ptr<ConstantByte>> ByteConstants;
+  DenseMap<std::pair<ElementCount, APInt>, std::unique_ptr<ConstantByte>>
+      ByteSplatConstants;
+
   DenseMap<APFloat, std::unique_ptr<ConstantFP>> FPConstants;
   DenseMap<std::pair<ElementCount, APFloat>, std::unique_ptr<ConstantFP>>
       FPSplatConstants;
@@ -1740,11 +1749,15 @@ public:
   ConstantInt *TheTrueVal = nullptr;
   ConstantInt *TheFalseVal = nullptr;
 
+  ConstantByte *TheTrueByteVal = nullptr;
+  ConstantByte *TheFalseByteVal = nullptr;
+
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
       TokenTy;
   Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_AMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
+  ByteType Byte1Ty, Byte8Ty, Byte16Ty, Byte32Ty, Byte64Ty, Byte128Ty;
 
   std::unique_ptr<ConstantTokenNone> TheNoneToken;
 
@@ -1753,6 +1766,7 @@ public:
   SpecificBumpPtrAllocator<ConstantRangeAttributeImpl>
       ConstantRangeAttributeAlloc;
 
+  DenseMap<unsigned, ByteType *> ByteTypes;
   DenseMap<unsigned, IntegerType *> IntegerTypes;
 
   using FunctionTypeSet = DenseSet<FunctionType *, FunctionTypeKeyInfo>;

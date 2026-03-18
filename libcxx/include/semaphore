@@ -55,12 +55,11 @@ using binary_semaphore = counting_semaphore<1>; // since C++20
 #    include <__assert>
 #    include <__atomic/atomic.h>
 #    include <__atomic/atomic_sync.h>
+#    include <__atomic/atomic_sync_timed.h>
 #    include <__atomic/memory_order.h>
 #    include <__chrono/time_point.h>
 #    include <__cstddef/ptrdiff_t.h>
-#    include <__thread/poll_with_backoff.h>
 #    include <__thread/support.h>
-#    include <__thread/timed_backoff_policy.h>
 #    include <limits>
 #    include <version>
 
@@ -107,8 +106,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
     if (__rel_time == chrono::duration<_Rep, _Period>::zero())
       return try_acquire();
-    auto const __poll_fn = [this]() { return try_acquire(); };
-    return std::__libcpp_thread_poll_with_backoff(__poll_fn, __libcpp_timed_backoff_policy(), __rel_time);
+
+    return std::__atomic_wait_unless_with_timeout(
+        __a_, memory_order_relaxed, [this](ptrdiff_t& __old) { return __try_acquire_impl(__old); }, __rel_time);
   }
   _LIBCPP_HIDE_FROM_ABI bool try_acquire() {
     auto __old = __a_.load(memory_order_relaxed);
@@ -133,7 +133,7 @@ class counting_semaphore {
 public:
   static_assert(__least_max_value >= 0, "The least maximum value must be a positive number");
 
-  static constexpr ptrdiff_t max() noexcept { return __least_max_value; }
+  [[nodiscard]] static constexpr ptrdiff_t max() noexcept { return __least_max_value; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit counting_semaphore(ptrdiff_t __count) : __semaphore_(__count) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -156,12 +156,12 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void acquire() { __semaphore_.acquire(); }
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
     return __semaphore_.try_acquire_for(chrono::duration_cast<chrono::nanoseconds>(__rel_time));
   }
-  _LIBCPP_HIDE_FROM_ABI bool try_acquire() { return __semaphore_.try_acquire(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool try_acquire() { return __semaphore_.try_acquire(); }
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI bool try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time) {
     auto const __current = _Clock::now();
     if (__current >= __abs_time)
       return try_acquire();

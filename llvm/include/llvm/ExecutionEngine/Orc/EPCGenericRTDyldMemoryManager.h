@@ -52,7 +52,7 @@ public:
   EPCGenericRTDyldMemoryManager(EPCGenericRTDyldMemoryManager &&) = delete;
   EPCGenericRTDyldMemoryManager &
   operator=(EPCGenericRTDyldMemoryManager &&) = delete;
-  ~EPCGenericRTDyldMemoryManager();
+  ~EPCGenericRTDyldMemoryManager() override;
 
   uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
                                unsigned SectionID,

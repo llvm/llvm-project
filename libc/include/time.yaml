@@ -1,7 +1,7 @@
 header: time.h
 header_template: time.h.def
 macros:
-  - macro_name: NULL
+  - macro_name: "NULL"
     macro_header: null-macro.h
 types:
   - type_name: struct_timeval
@@ -26,7 +26,7 @@ functions:
       - stdc
     return_type: char *
     arguments:
-      - type: struct tm *
+      - type: const struct tm *
       - type: char *
   - name: ctime
     standard:
@@ -67,6 +67,13 @@ functions:
     arguments:
       - type: clockid_t
       - type: struct timespec *
+  - name: clock_settime
+    standard:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: clockid_t
+      - type: const struct timespec *
   - name: difftime
     standard:
       - stdc
@@ -86,13 +93,13 @@ functions:
       - stdc
     return_type: struct tm *
     arguments:
-      - type: time_t *
+      - type: const time_t *
   - name: gmtime_r
     standard:
       - stdc
     return_type: struct tm *
     arguments:
-      - type: time_t *
+      - type: const time_t *
       - type: struct tm *
   - name: mktime
     standard:

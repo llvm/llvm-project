@@ -62,12 +62,12 @@ define void @test_2xi64_with_wide_load(ptr noalias %data, ptr noalias %factor) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT2]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[TMP0]], 1

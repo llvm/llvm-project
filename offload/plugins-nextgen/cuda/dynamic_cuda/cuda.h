@@ -33,6 +33,9 @@ typedef struct CUfunc_st *CUfunction;
 typedef void (*CUhostFn)(void *userData);
 typedef struct CUstream_st *CUstream;
 typedef struct CUevent_st *CUevent;
+typedef struct CUuuid_st {
+  char bytes[16];
+} CUuuid;
 
 #define CU_DEVICE_INVALID ((CUdevice)(-2))
 
@@ -258,6 +261,7 @@ typedef enum CUdevice_attribute_enum {
 
 typedef enum CUfunction_attribute_enum {
   CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK = 0,
+  CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES = 1,
   CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES = 8,
 } CUfunction_attribute;
 
@@ -301,6 +305,7 @@ CUresult cuFuncSetAttribute(CUfunction, CUfunction_attribute, int);
 
 // Device info
 CUresult cuDeviceGetName(char *, int, CUdevice);
+CUresult cuDeviceGetUuid(CUuuid *, CUdevice);
 CUresult cuDeviceTotalMem(size_t *, CUdevice);
 CUresult cuDriverGetVersion(int *);
 
@@ -386,5 +391,6 @@ CUresult cuMemGetAllocationGranularity(size_t *granularity,
                                        CUmemAllocationGranularity_flags option);
 CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
                                           CUoccupancyB2DSize, size_t, int);
+CUresult cuFuncGetParamInfo(CUfunction, size_t, size_t *, size_t *);
 
 #endif

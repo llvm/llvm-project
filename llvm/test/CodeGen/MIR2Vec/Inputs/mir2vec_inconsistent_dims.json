@@ -1,7 +1,16 @@
 {
-    "entities": {
+    "Opcodes": {
         "ADD": [1.0, 2.0, 3.0],
         "SUB": [1.5],
         "MUL": [2.0, 3.0]
+    },
+    "CommonOperands": {
+        "Immediate": [1.0]
+    },
+    "PhysicalRegisters": {
+        "GR32": [1.0, 2.0]
+    },
+    "VirtualRegisters": {
+        "GR32": [1.0, 2.0, 3.0]
     }
 }

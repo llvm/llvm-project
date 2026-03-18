@@ -54,7 +54,6 @@ define half @fadd_h(half %a, half %b) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.fadd.f16(half %a, half %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
-declare half @llvm.experimental.constrained.fadd.f16(half, half, metadata, metadata)
 
 define half @fsub_h(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fsub_h:
@@ -85,7 +84,6 @@ define half @fsub_h(half %a, half %b) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.fsub.f16(half %a, half %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
-declare half @llvm.experimental.constrained.fsub.f16(half, half, metadata, metadata)
 
 define half @fmul_h(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fmul_h:
@@ -116,7 +114,6 @@ define half @fmul_h(half %a, half %b) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.fmul.f16(half %a, half %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
-declare half @llvm.experimental.constrained.fmul.f16(half, half, metadata, metadata)
 
 define half @fdiv_h(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fdiv_h:
@@ -147,7 +144,6 @@ define half @fdiv_h(half %a, half %b) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.fdiv.f16(half %a, half %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
-declare half @llvm.experimental.constrained.fdiv.f16(half, half, metadata, metadata)
 
 define half @fsqrt_h(half %a) nounwind strictfp {
 ; CHECK-LABEL: fsqrt_h:
@@ -176,7 +172,6 @@ define half @fsqrt_h(half %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.sqrt.f16(half %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
-declare half @llvm.experimental.constrained.sqrt.f16(half, metadata, metadata)
 
 ; FIXME: fminnum/fmaxnum need libcalls to handle SNaN, but we don't have f16
 ; libcalls and don't support promotion yet.
@@ -223,7 +218,6 @@ define half @fmadd_h(half %a, half %b, half %c) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.fma.f16(half %a, half %b, half %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
-declare half @llvm.experimental.constrained.fma.f16(half, half, half, metadata, metadata) strictfp
 
 define half @fmsub_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-LABEL: fmsub_h:

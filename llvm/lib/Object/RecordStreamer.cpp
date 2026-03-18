@@ -126,7 +126,7 @@ void RecordStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
 
 iterator_range<RecordStreamer::const_symver_iterator>
 RecordStreamer::symverAliases() {
-  return {SymverAliasMap.begin(), SymverAliasMap.end()};
+  return SymverAliasMap;
 }
 
 void RecordStreamer::flushSymverDirectives() {

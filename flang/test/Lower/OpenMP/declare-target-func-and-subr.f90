@@ -1,8 +1,8 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s --check-prefixes ALL,HOST
 !RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -fopenmp-is-device %s -o - | FileCheck %s --check-prefixes ALL,DEVICE
 
-! Check specification valid forms of declare target with functions 
-! utilising device_type and to clauses as well as the default 
+! Check specification valid forms of declare target with functions
+! utilising device_type and to clauses as well as the default
 ! zero clause declare target
 
 ! DEVICE-LABEL: func.func @_QPfunc_t_device()
@@ -94,8 +94,8 @@ END FUNCTION FUNC_NAME_AS_RESULT
 
 !! -----
 
-! Check specification valid forms of declare target with subroutines 
-! utilising device_type and to clauses as well as the default 
+! Check specification valid forms of declare target with subroutines
+! utilising device_type and to clauses as well as the default
 ! zero clause declare target
 
 ! DEVICE-LABEL: func.func @_QPsubr_t_device()
@@ -161,7 +161,7 @@ END
 !! -----
 
 ! DEVICE-LABEL: func.func @_QPrecursive_declare_target
-! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}
+! DEVICE-SAME: {{.*}}attributes {{.*}}omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}
 RECURSIVE FUNCTION RECURSIVE_DECLARE_TARGET(INCREMENT) RESULT(K)
 !$omp declare target to(RECURSIVE_DECLARE_TARGET) device_type(nohost)
     INTEGER :: INCREMENT, K
@@ -173,7 +173,7 @@ RECURSIVE FUNCTION RECURSIVE_DECLARE_TARGET(INCREMENT) RESULT(K)
 END FUNCTION RECURSIVE_DECLARE_TARGET
 
 ! DEVICE-LABEL: func.func @_QPrecursive_declare_target_enter
-! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter), automap = false>{{.*}}
+! DEVICE-SAME: {{.*}}attributes {{.*}}omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter), automap = false>{{.*}}
 RECURSIVE FUNCTION RECURSIVE_DECLARE_TARGET_ENTER(INCREMENT) RESULT(K)
 !$omp declare target enter(RECURSIVE_DECLARE_TARGET_ENTER) device_type(nohost)
     INTEGER :: INCREMENT, K
