@@ -643,34 +643,14 @@ declare i32 @someVariadicFunc(i32, ...)
 ; and it hurts the binary size.
 ;
 define i32 @noreturn(i8 signext %bad_thing) {
-; ENABLE-LABEL: noreturn:
-; ENABLE:       ; %bb.0: ; %entry
-; ENABLE-NEXT:    cbnz w0, LBB9_2
-; ENABLE-NEXT:  ; %bb.1: ; %if.end
-; ENABLE-NEXT:    mov w0, #42 ; =0x2a
-; ENABLE-NEXT:    ret
-; ENABLE-NEXT:  LBB9_2: ; %if.abort
-; ENABLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; ENABLE-NEXT:    mov x29, sp
-; ENABLE-NEXT:    .cfi_def_cfa w29, 16
-; ENABLE-NEXT:    .cfi_offset w30, -8
-; ENABLE-NEXT:    .cfi_offset w29, -16
-; ENABLE-NEXT:    bl _abort
-;
-; DISABLE-LABEL: noreturn:
-; DISABLE:       ; %bb.0: ; %entry
-; DISABLE-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; DISABLE-NEXT:    mov x29, sp
-; DISABLE-NEXT:    .cfi_def_cfa w29, 16
-; DISABLE-NEXT:    .cfi_offset w30, -8
-; DISABLE-NEXT:    .cfi_offset w29, -16
-; DISABLE-NEXT:    cbnz w0, LBB9_2
-; DISABLE-NEXT:  ; %bb.1: ; %if.end
-; DISABLE-NEXT:    mov w0, #42 ; =0x2a
-; DISABLE-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; DISABLE-NEXT:    ret
-; DISABLE-NEXT:  LBB9_2: ; %if.abort
-; DISABLE-NEXT:    bl _abort
+; CHECK-LABEL: noreturn:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    cbnz w0, LBB9_2
+; CHECK-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NEXT:    mov w0, #42 ; =0x2a
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB9_2: ; %if.abort
+; CHECK-NEXT:    b _abort
 entry:
   %tobool = icmp eq i8 %bad_thing, 0
   br i1 %tobool, label %if.end, label %if.abort

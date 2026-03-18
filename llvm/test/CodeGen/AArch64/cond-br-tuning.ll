@@ -201,7 +201,11 @@ define void @test_call_clobber(i32 %unused, i32 %a) uwtable {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB9_2: // %if.then
 ; CHECK-NEXT:    .cfi_restore_state
-; CHECK-NEXT:    bl foo
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    b foo
 entry:
   %c = and i32 %a, 6
   call void @bar(i32 %c)
