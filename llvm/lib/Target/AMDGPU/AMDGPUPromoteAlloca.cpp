@@ -130,7 +130,7 @@ struct AllocaAnalysis {
 struct ValueReplacer {
   // Keep record of the value replacement pair.
   void postReplaceAllUsesWith(Value *Old, Value *New) {
-    ReplaceVec.push_back({Old, New});
+    ReplaceVec.emplace_back(Old, New);
   }
 
   // Do the actual value replacement and erase dead instructions.
@@ -151,7 +151,7 @@ struct ValueReplacer {
   // order they were added.
   void postErase(Instruction *I) { ErasableInstrs.push_back(I); }
 
-  template <typename Range> void postErase(const Range &R) {
+  template <typename Range> void postEraseRange(const Range &R) {
     append_range(ErasableInstrs, R);
   }
 
@@ -468,9 +468,9 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       if (AllocaCost <= VectorizationBudget) {
         promoteAllocaToVector(AA, VR);
 
-        VR.postErase(AA.Vector.Worklist);
+        VR.postEraseRange(AA.Vector.Worklist);
         // Append in reverse order so that further users would be erased first.
-        VR.postErase(reverse(AA.Vector.UsersToRemove));
+        VR.postEraseRange(reverse(AA.Vector.UsersToRemove));
         VR.postErase(AA.Alloca);
 
         Changed = true;
