@@ -642,6 +642,8 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
       // Skip CASIDIsKey
       ++Idx;
 
+      (void)Record[Idx++]; // ImplicitModuleSuffixLength
+
       // Skip the stored signature.
       // FIXME: we could read the signature out of the import and validate it.
       StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);

@@ -2901,7 +2901,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       std::string ErrorStr = "could not find file '";
       ErrorStr += *Filename;
       ErrorStr += "' referenced by AST file '";
-      ErrorStr += F.FileName;
+      ErrorStr += F.FileName.str();
       ErrorStr += "'";
       Error(ErrorStr);
     }
@@ -3486,8 +3486,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
+      unsigned ImplicitModuleSuffixLength = 0;
       ASTFileSignature StoredSignature;
-      std::string ImportedFile;
+      ModuleFileName ImportedFile;
       std::string StoredFile;
       bool IgnoreImportedByNote = false;
       bool CASIDIsKey = false;
@@ -3512,17 +3513,21 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
         CASIDIsKey = (bool)Record[Idx++];
+        ImplicitModuleSuffixLength = (unsigned)Record[Idx++];
 
         StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
         StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
                                                    SignatureBytes.end());
         Blob = Blob.substr(ASTFileSignature::size);
 
-        // Use BaseDirectoryAsWritten to ensure we use the same path in the
-        // ModuleCache as when writing.
         StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          ImportedFile = StoredFile;
+          ImportedFile = ImplicitModuleSuffixLength
+                             ? ModuleFileName::makeImplicit(
+                                   StoredFile, ImplicitModuleSuffixLength)
+                             : ModuleFileName::makeExplicit(StoredFile);
+          assert((ImportedKind == MK_ImplicitModule) ==
+                 (ImplicitModuleSuffixLength != 0));
         } else if (!getDiags().isIgnored(
                        diag::warn_module_file_mapping_mismatch,
                        CurrentImportLoc)) {
@@ -4767,8 +4772,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
           // This module was built with a different module map.
           Diag(diag::err_imported_module_not_found)
               << F.ModuleName << F.FileName
-              << (ImportedBy ? ImportedBy->FileName : "") << F.ModuleMapPath
-              << !ImportedBy;
+              << (ImportedBy ? ImportedBy->FileName.str() : "")
+              << F.ModuleMapPath << !ImportedBy;
           // In case it was imported by a PCH, there's a chance the user is
           // just missing to include the search path to the directory containing
           // the modulemap.
@@ -5024,7 +5029,8 @@ static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
   }
 }
 
-ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
+ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
+                                            ModuleKind Type,
                                             SourceLocation ImportLoc,
                                             unsigned ClientLoadCapabilities,
                                             ModuleFile **NewLoadedModuleFile) {
@@ -5300,15 +5306,11 @@ static unsigned moduleKindForDiagnostic(ModuleKind Kind) {
   llvm_unreachable("unknown module kind");
 }
 
-ASTReader::ASTReadResult
-ASTReader::ReadASTCore(StringRef FileName,
-                       ModuleKind Type,
-                       SourceLocation ImportLoc,
-                       ModuleFile *ImportedBy,
-                       SmallVectorImpl<ImportedModule> &Loaded,
-                       off_t ExpectedSize, time_t ExpectedModTime,
-                       ASTFileSignature ExpectedSignature,
-                       unsigned ClientLoadCapabilities) {
+ASTReader::ASTReadResult ASTReader::ReadASTCore(
+    ModuleFileName FileName, ModuleKind Type, SourceLocation ImportLoc,
+    ModuleFile *ImportedBy, SmallVectorImpl<ImportedModule> &Loaded,
+    off_t ExpectedSize, time_t ExpectedModTime,
+    ASTFileSignature ExpectedSignature, unsigned ClientLoadCapabilities) {
   ModuleFile *M;
   std::string ErrorStr;
   ModuleManager::AddModuleResult AddResult
@@ -6272,6 +6274,9 @@ bool ASTReader::readASTFileControlBlock(
       Blob = Blob.substr(ASTFileSignature::size);
 
       bool CASIDIsKey = Record[Idx++];
+
+      // Skip ImplicitModuleSuffix.
+      Idx += 1;
 
       StringRef FilenameStr = ReadStringBlob(Record, Idx, Blob);
       auto Filename = ResolveImportedPath(PathBuf, FilenameStr, ModuleDir);

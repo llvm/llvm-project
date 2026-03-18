@@ -33,6 +33,25 @@
 
 using namespace clang;
 
+std::optional<ModuleFileKey>
+ModuleFileName::makeKey(FileManager &FileMgr) const {
+  if (ImplicitModuleSuffixLength) {
+    StringRef ModuleCachePath =
+        StringRef(Path).drop_back(ImplicitModuleSuffixLength);
+    StringRef ImplicitModuleSuffix =
+        StringRef(Path).take_back(ImplicitModuleSuffixLength);
+    if (auto ModuleCache = FileMgr.getOptionalDirectoryRef(
+            ModuleCachePath, /*CacheFailure=*/false))
+      return ModuleFileKey(*ModuleCache, ImplicitModuleSuffix);
+  } else {
+    if (auto ModuleFile = FileMgr.getOptionalFileRef(Path, /*OpenFile=*/true,
+                                                     /*CacheFailure=*/false))
+      return ModuleFileKey(*ModuleFile);
+  }
+
+  return std::nullopt;
+}
+
 Module::Module(ModuleConstructorTag, StringRef Name,
                SourceLocation DefinitionLoc, Module *Parent, bool IsFramework,
                bool IsExplicit, unsigned VisibilityID)
