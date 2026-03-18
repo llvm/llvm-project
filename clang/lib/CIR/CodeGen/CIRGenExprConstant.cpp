@@ -1641,12 +1641,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
         // just emitting a global with zero init (mimic what we do for trivial
         // assignments and whatnots). Since this is for globals shouldn't
         // be a problem for the near future.
-        if (cd->isTrivial() && cd->isDefaultConstructor()) {
+        if (cd->isTrivial() && cd->isDefaultConstructor())
           return cgm.emitNullConstantAttr(d.getType());
-          // TODO: ERICH: main does the following line.  Figure out which is
-          // right.
-          // return cir::ZeroAttr::get(cgm.convertType(d.getType()));
-        }
       }
     }
   }
