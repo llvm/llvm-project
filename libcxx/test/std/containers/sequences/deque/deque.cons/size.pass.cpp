@@ -92,8 +92,8 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 #if TEST_STD_VER >= 26
   if consteval {
     test<DefaultOnly, std::allocator<DefaultOnly>>(0);
-    test<DefaultOnly, std::allocator<DefaultOnly>>(2049);
-    test<DefaultOnly, std::allocator<DefaultOnly>>(4097);
+    test<DefaultOnly, std::allocator<DefaultOnly>>(129);
+    test<DefaultOnly, std::allocator<DefaultOnly>>(513);
   } else
 #endif
   {

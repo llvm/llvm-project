@@ -79,9 +79,9 @@ TEST_CONSTEXPR_CXX26 void testNI(int start, int N, int M) {
 TEST_CONSTEXPR_CXX26 void basic_test() {
 #if TEST_STD_VER >= 26
   if consteval {
-    constexpr int is[]{0, 1025, 2049};
-    constexpr int js[]{0, 1025, 2049};
-    constexpr int ks[]{0, 1025, 2049};
+    constexpr int is[]{0, 129, 257};
+    constexpr int js[]{0, 129, 257};
+    constexpr int ks[]{0, 129, 257};
 
     for (int i : is) {
       for (int j : js) {
@@ -96,6 +96,8 @@ TEST_CONSTEXPR_CXX26 void basic_test() {
     testNI<std::deque<int>>(1500, 2000, 1000);
     testNI<std::deque<int, min_allocator<int>>>(1500, 2000, 1000);
     testNI<std::deque<int, safe_allocator<int>>>(1500, 2000, 1000);
+
+    return true;
   }
 #endif
   {

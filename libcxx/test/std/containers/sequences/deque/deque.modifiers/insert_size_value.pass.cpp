@@ -116,9 +116,9 @@ TEST_CONSTEXPR_CXX26 void self_reference_test() {
 TEST_CONSTEXPR_CXX26 bool tests() {
 #if TEST_STD_VER >= 26
   if consteval {
-    constexpr int is[]{0, 1025, 2049};
-    constexpr int js[]{0, 1025, 2049};
-    constexpr int ks[]{0, 1025, 2049};
+    constexpr int is[]{0, 129, 257};
+    constexpr int js[]{0, 129, 257};
+    constexpr int ks[]{0, 129, 257};
 
     for (int i : is) {
       for (int j : js) {

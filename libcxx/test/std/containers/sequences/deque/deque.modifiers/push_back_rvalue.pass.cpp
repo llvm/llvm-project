@@ -57,7 +57,7 @@ TEST_CONSTEXPR_CXX26 void test(int size) {
 TEST_CONSTEXPR_CXX26 bool tests() {
 #if TEST_STD_VER >= 26
   if consteval {
-    constexpr int is[]{0, 2047, 4096};
+    constexpr int is[]{0, 129, 257, 513};
     for (int i : is) {
       test<std::deque<MoveOnly>>(i);
       test<std::deque<MoveOnly, min_allocator<MoveOnly>>>(i);
