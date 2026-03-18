@@ -182,6 +182,7 @@ private:
   bool showMatchError(SMLoc Loc, unsigned ErrCode, uint64_t ErrorInfo,
                       OperandVector &Operands);
 
+  bool parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E);
   bool parseDataExpr(const MCExpr *&Res) override;
   bool parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc);
 
@@ -4669,6 +4670,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
                   .Case("prel_g1_nc", AArch64::S_PREL_G1_NC)
                   .Case("prel_g0", AArch64::S_PREL_G0)
                   .Case("prel_g0_nc", AArch64::S_PREL_G0_NC)
+                  .Case("dtprel", AArch64::S_DTPREL)
                   .Case("dtprel_g2", AArch64::S_DTPREL_G2)
                   .Case("dtprel_g1", AArch64::S_DTPREL_G1)
                   .Case("dtprel_g1_nc", AArch64::S_DTPREL_G1_NC)
@@ -8463,8 +8465,32 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   return false;
 }
 
+bool AArch64AsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
+  SMLoc Loc = getLoc();
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return TokError("expected '%' relocation specifier");
+  StringRef Identifier = getParser().getTok().getIdentifier();
+  auto Spec = AArch64::parsePercentSpecifierName(Identifier);
+  if (!Spec)
+    return TokError("invalid relocation specifier");
+
+  getParser().Lex(); // Eat the identifier
+  if (parseToken(AsmToken::LParen, "expected '('"))
+    return true;
+
+  const MCExpr *SubExpr;
+  if (getParser().parseParenExpression(SubExpr, E))
+    return true;
+
+  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext(), Loc);
+  return false;
+}
+
 bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
   SMLoc EndLoc;
+
+  if (parseOptionalToken(AsmToken::Percent))
+    return parseExprWithSpecifier(Res, EndLoc);
 
   if (getParser().parseExpression(Res))
     return true;
