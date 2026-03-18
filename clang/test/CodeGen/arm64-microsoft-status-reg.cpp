@@ -14,7 +14,7 @@
 
 // From winnt.h
 #define ARM64_SYSREG(op0, op1, crn, crm, op2) \
-        ( ((op0 & 1) << 14) | \
+        ( ((op0 & 3) << 14) | \
           ((op1 & 7) << 11) | \
           ((crn & 15) << 7) | \
           ((crm & 15) << 3) | \
