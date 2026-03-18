@@ -1018,7 +1018,7 @@ public:
   }
 };
 
-/// Both UncondBrInst and CondBrInst inherit from this t avoid duplication of
+/// Both UncondBrInst and CondBrInst inherit from this to avoid duplication of
 /// the successor iterators and successors(). Does not hold any state.
 class BrInstCommon {
 private:
@@ -1076,10 +1076,10 @@ class UncondBrInst : public SingleLLVMInstructionImpl<llvm::UncondBrInst>,
   UncondBrInst(llvm::UncondBrInst *UBI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::UncondBr, Opcode::UncondBr, UBI,
                                   Ctx) {}
-  friend Context; // for UcnondBrInst()
+  friend Context; // for UncondBrInst()
 
 public:
-  static UncondBrInst *create(BasicBlock *IfTrue, InsertPosition InsertBefore,
+  static UncondBrInst *create(BasicBlock *Target, InsertPosition InsertBefore,
                               Context &Ctx);
   LLVM_ABI BasicBlock *getSuccessor() const;
   LLVM_ABI void setSuccessor(BasicBlock *NewSucc);

@@ -355,11 +355,11 @@ BrInstCommon::ConstLLVMBBToSBBB::operator()(const llvm::BasicBlock *BB) const {
   return cast<BasicBlock>(Ctx.getValue(BB));
 }
 
-UncondBrInst *UncondBrInst::create(BasicBlock *IfTrue,
+UncondBrInst *UncondBrInst::create(BasicBlock *Target,
                                    InsertPosition InsertBefore, Context &Ctx) {
   auto &Builder = setInsertPos(InsertBefore);
   llvm::UncondBrInst *NewUBr =
-      Builder.CreateBr(cast<llvm::BasicBlock>(IfTrue->Val));
+      Builder.CreateBr(cast<llvm::BasicBlock>(Target->Val));
   return Ctx.createUncondBrInst(NewUBr);
 }
 
