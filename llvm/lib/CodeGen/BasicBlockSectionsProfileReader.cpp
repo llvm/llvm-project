@@ -204,13 +204,14 @@ BasicBlockSectionsProfileReader::getPrefetchHintsForFunction(
 // +----------------------------------+
 //
 // A prefetch hint specified in function "bar" as "120,1 foo,10,2" results
-// in a hint inserted after the first call in block #120 of bar:
+// in a hint inserted after the first call in block #120 of bar targeting the
+// address immediately after the second call in block #10 of function foo.
 //
 // B
 // +----------------------------------------------------+
 // | Instruction 1                                      |
 // | call_C (Callsite 1)                                |
-// | code_prefetch __llvm_prfetch_target_foo_10         |
+// | code_prefetch __llvm_prefetch_target_foo_10         |
 // | Instruction 2                                      |
 // +----------------------------------------------------+
 //
@@ -402,11 +403,11 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       if (FI == ProgramOptimizationProfile.end())
         continue;
       if (Values.size() != 2)
-        return createProfileParseError(Twine("Prefetch hint expected: " + S));
+        return createProfileParseError(Twine("Prefetch hint expected of format '<prefetch-site> <prefetch-target>': " + S));
       SmallVector<StringRef, 2> PrefetchSiteStr;
       Values[0].split(PrefetchSiteStr, ',');
       if (PrefetchSiteStr.size() != 2)
-        return createProfileParseError(Twine("Prefetch site expected: ") +
+        return createProfileParseError(Twine("Prefetch site expected of format '<block-id>,<callsite-id>': ") +
                                        Values[0]);
       auto SiteBBID = parseUniqueBBID(PrefetchSiteStr[0]);
       if (!SiteBBID)
@@ -420,7 +421,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       Values[1].split(PrefetchTargetStr, ',');
       if (PrefetchTargetStr.size() != 3)
         return createProfileParseError(
-            Twine("Prefetch target target expected: ") + Values[1]);
+            Twine("Prefetch target expected of format '<function-name>,<block-id>,<callsite-id>': ") + Values[1]);
       auto TargetBBID = parseUniqueBBID(PrefetchTargetStr[1]);
       if (!TargetBBID)
         return TargetBBID.takeError();

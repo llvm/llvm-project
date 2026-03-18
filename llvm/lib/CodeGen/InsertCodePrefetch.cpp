@@ -35,6 +35,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Object/ELFTypes.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "insert-code-prefetch"
@@ -151,7 +152,7 @@ insertPrefetchHints(MachineFunction &MF,
           // __llvm_prefetch_target_foo_x_y:
           MCSymbolELF *WeakFallbackSym = static_cast<MCSymbolELF *>(
               MF.getContext().getOrCreateSymbol(TargetSymbolName));
-          WeakFallbackSym->setIsWeakref();
+          WeakFallbackSym->setBinding(ELF::STB_WEAK);
           PrefetchInstr->setPostInstrSymbol(MF, WeakFallbackSym);
         }
         ++HintIt;
