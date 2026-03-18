@@ -2256,7 +2256,6 @@ struct BackgroundDeletion : llvm::DefaultThreadPool {
           std::error_code EC = sys::fs::remove(F, true);
           if (EC && EC != std::make_error_code(
                               std::errc::no_such_file_or_directory)) {
-            std::lock_guard<std::mutex> Lock(WarningMutex);
             Warnings.emplace_back(
                 (Twine("warning: could not remove the file '") + F +
                  "': " + EC.message() + "\n")
@@ -2269,8 +2268,6 @@ struct BackgroundDeletion : llvm::DefaultThreadPool {
     });
   }
 
-private:
-  std::mutex WarningMutex;
   SmallVector<std::string> Warnings;
 };
 
