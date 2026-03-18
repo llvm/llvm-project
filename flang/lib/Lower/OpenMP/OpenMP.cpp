@@ -980,6 +980,20 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
     mlir::Operation *op = mod.lookupSymbol(converter.mangleName(sym));
     auto declareTargetOp =
         llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
+
+    // Double check it's not part of a common block, and that the common block
+    // isn't marked declare target.
+    if (!declareTargetOp) {
+      if (const semantics::Symbol *common =
+              semantics::FindCommonBlockContaining(sym.GetUltimate())) {
+        mlir::Operation *commonOp =
+            mod.lookupSymbol(converter.mangleName(*common));
+        declareTargetOp =
+            llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(
+                commonOp);
+      }
+    }
+
     if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
       if (declareTargetOp.getDeclareTargetCaptureClause() ==
               mlir::omp::DeclareTargetCaptureClause::link &&
@@ -1414,6 +1428,16 @@ static void genBodyOfTargetOp(
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter))
     hostEvalInfo->bindOperands(argIface.getHostEvalBlockArgs());
 
+  // If we map a common block using it's symbol e.g. map(tofrom: /common_block/)
+  // and accessing its members within the target region, there is a large
+  // chance we will end up with uses external to the region accessing the common
+  // resolve these, we do so by generating new common block member accesses
+  // within the region, binding them to the member symbol for the scope of the
+  // region so that subsequent code generation within the region will utilise
+  // our new member accesses we have created.
+  genIntermediateCommonBlockAccessors(
+      converter, currentLocation, argIface.getMapBlockArgs(), args.map.syms);
+
   // Check if cloning the bounds introduced any dependency on the outer region.
   // If so, then either clone them as well if they are MemoryEffectFree, or else
   // copy them to a new temporary and add them to the map and block_argument
@@ -1439,16 +1463,6 @@ static void genBodyOfTargetOp(
 
   // Create the insertion point after the marker.
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
-
-  // If we map a common block using it's symbol e.g. map(tofrom: /common_block/)
-  // and accessing its members within the target region, there is a large
-  // chance we will end up with uses external to the region accessing the common
-  // resolve these, we do so by generating new common block member accesses
-  // within the region, binding them to the member symbol for the scope of the
-  // region so that subsequent code generation within the region will utilise
-  // our new member accesses we have created.
-  genIntermediateCommonBlockAccessors(
-      converter, currentLocation, argIface.getMapBlockArgs(), args.map.syms);
 
   if (ConstructQueue::const_iterator next = std::next(item);
       next != queue.end()) {
