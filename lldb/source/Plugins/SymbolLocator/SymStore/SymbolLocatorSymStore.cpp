@@ -190,25 +190,26 @@ requestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
   using namespace llvm::sys;
   Log *log = GetLog(LLDBLog::Symbols);
 
-  //// Make sure URL will be valid, portable, and compatible with symbol servers
+  // Make sure URL will be valid, portable, and compatible with symbol servers
   if (has_unsafe_characters(pdb_name)) {
-    LLDB_LOGV(log,
-              "Rejecting HTTP lookup for PDB file due to unsafe characters in "
-              "name: {0}",
-              pdb_name);
+    Debugger::ReportWarning(llvm::formatv(
+        "Rejecting HTTP lookup for PDB file due to unsafe characters in "
+        "name: {0}",
+        pdb_name));
     return {};
   }
 
   // Construct the path for local storage. Configurable cache coming soon.
   llvm::SmallString<128> cache_file;
   if (!path::cache_directory(cache_file)) {
-    LLDB_LOGV(log, "Failed to determine cache directory for SymStore");
+    Debugger::ReportWarning("Failed to determine cache directory for SymStore");
     return {};
   }
   path::append(cache_file, "lldb", "SymStore", pdb_name, key);
   if (std::error_code ec = fs::create_directories(cache_file)) {
-    LLDB_LOG(log, "Failed to create temporary folder '{0}': {1}", cache_file,
-             ec.message());
+    Debugger::ReportWarning(
+        llvm::formatv("Failed to create cache directory '{0}': {1}", cache_file,
+                      ec.message()));
     return {};
   }
   path::append(cache_file, pdb_name);
@@ -218,7 +219,7 @@ requestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
       llvm::formatv("{0}/{1}/{2}/{1}", base_url, pdb_name, key);
   if (llvm::Error err = downloadFileHTTP(source_url, cache_file.str())) {
     LLDB_LOG_ERROR(log, std::move(err),
-                   "  Failed to download from SymStore '{1}': {0}", source_url);
+                   "Failed to download from SymStore '{1}': {0}", source_url);
     return {};
   }
 
@@ -277,7 +278,7 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
   Args sym_store_urls = GetGlobalPluginProperties().GetURLs();
   for (const Args::ArgEntry &url : sym_store_urls) {
     if (auto spec = locateSymStoreEntry(url.ref(), key, pdb_name)) {
-      LLDB_LOGV(log, "  Found {0} in SymStore {1}", pdb_name, url.ref());
+      LLDB_LOGV(log, "Found {0} in SymStore {1}", pdb_name, url.ref());
       return *spec;
     }
   }
