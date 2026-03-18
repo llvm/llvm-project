@@ -579,8 +579,6 @@ MUBUF
     buffer_store_lds_dword                  :ref:`srsrc<amdgpu_synid_gfx950_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx950_soffset_d856a0>`            :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
     buffer_store_short             :ref:`vdata<amdgpu_synid_gfx950_vdata_fa7dbd>`,   :ref:`vaddr<amdgpu_synid_gfx950_vaddr_7a736f>`,   :ref:`srsrc<amdgpu_synid_gfx950_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx950_soffset_d856a0>`   :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
     buffer_store_short_d16_hi      :ref:`vdata<amdgpu_synid_gfx950_vdata_fa7dbd>`,   :ref:`vaddr<amdgpu_synid_gfx950_vaddr_7a736f>`,   :ref:`srsrc<amdgpu_synid_gfx950_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx950_soffset_d856a0>`   :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
-    buffer_wbinvl1                 :ref:`vdata<amdgpu_synid_gfx950_vdata_fa7dbd>`,   :ref:`vaddr<amdgpu_synid_gfx950_vaddr_7a736f>`,   :ref:`srsrc<amdgpu_synid_gfx950_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx950_soffset_d856a0>`   :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
-    buffer_wbinvl1_vol             :ref:`vdata<amdgpu_synid_gfx950_vdata_fa7dbd>`,   :ref:`vaddr<amdgpu_synid_gfx950_vaddr_7a736f>`,   :ref:`srsrc<amdgpu_synid_gfx950_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx950_soffset_d856a0>`   :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
     buffer_wbl2                                                         :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
 
 SMEM
@@ -907,17 +905,6 @@ VERIF
     \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
     s_illegal
     s_nowaitcnt
-
-VINTRP
-------
-
-.. parsed-literal::
-
-    **INSTRUCTION**                    **DST**       **SRC0**      **SRC1**
-    \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
-    v_interp_mov_f32               :ref:`vdst<amdgpu_synid_gfx950_vdst_89680f>`,     :ref:`vsrc<amdgpu_synid_gfx950_vsrc>`,     :ref:`attr<amdgpu_synid_gfx950_attr>`
-    v_interp_p1_f32                :ref:`vdst<amdgpu_synid_gfx950_vdst_89680f>`,     :ref:`vsrc<amdgpu_synid_gfx950_vsrc>`,     :ref:`attr<amdgpu_synid_gfx950_attr>`
-    v_interp_p2_f32                :ref:`vdst<amdgpu_synid_gfx950_vdst_89680f>`,     :ref:`vsrc<amdgpu_synid_gfx950_vsrc>`,     :ref:`attr<amdgpu_synid_gfx950_attr>`
 
 VOP1
 ----
@@ -1331,7 +1318,6 @@ VOP3P
     v_mfma_i32_32x32x32_i8         :ref:`vdst<amdgpu_synid_gfx950_vdst_d6f4bd>`,     :ref:`src0<amdgpu_synid_gfx950_src0_848ff7>`,     :ref:`src1<amdgpu_synid_gfx950_src1_848ff7>`,     :ref:`src2<amdgpu_synid_gfx950_src2_14f1c8>`
     v_mfma_i32_32x32x4_2b_i8       :ref:`vdst<amdgpu_synid_gfx950_vdst_8c77d4>`,     :ref:`src0<amdgpu_synid_gfx950_src0_be4895>`,     :ref:`src1<amdgpu_synid_gfx950_src1_be4895>`,     :ref:`src2<amdgpu_synid_gfx950_src2_a90bd6>`
     v_mfma_i32_4x4x4_16b_i8        :ref:`vdst<amdgpu_synid_gfx950_vdst_180bef>`,     :ref:`src0<amdgpu_synid_gfx950_src0_be4895>`,     :ref:`src1<amdgpu_synid_gfx950_src1_be4895>`,     :ref:`src2<amdgpu_synid_gfx950_src2_ca14ce>`
-    v_mfma_ld_scale_b32                      :ref:`src0<amdgpu_synid_gfx950_src0_168f33>`,     :ref:`src1<amdgpu_synid_gfx950_src1_14b47a>`
     v_pk_add_f16                   :ref:`vdst<amdgpu_synid_gfx950_vdst_89680f>`,     :ref:`src0<amdgpu_synid_gfx950_src0_168f33>`,     :ref:`src1<amdgpu_synid_gfx950_src1_14b47a>`
     v_pk_add_f32                   :ref:`vdst<amdgpu_synid_gfx950_vdst_bdb32f>`,     :ref:`src0<amdgpu_synid_gfx950_src0_e30a18>`,     :ref:`src1<amdgpu_synid_gfx950_src1_e30a18>`
     v_pk_add_i16                   :ref:`vdst<amdgpu_synid_gfx950_vdst_89680f>`,     :ref:`src0<amdgpu_synid_gfx950_src0_168f33>`,     :ref:`src1<amdgpu_synid_gfx950_src1_14b47a>`
@@ -1393,7 +1379,6 @@ VOP3PX2
 
     **INSTRUCTION**                       **DST**       **SRC0**      **SRC1**      **SRC2**      **SRC3**        **SRC4**
     \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
-    v_mfma_ld_scale_paired_b32        :ref:`vdst<amdgpu_synid_gfx950_vdst_fa7dbd>`,     :ref:`src0<amdgpu_synid_gfx950_src0_be4895>`,     :ref:`src1<amdgpu_synid_gfx950_src1_be4895>`,     :ref:`src2<amdgpu_synid_gfx950_src2_581e7b>`,     :ref:`scale_src0<amdgpu_synid_gfx950_scale_src0>`, :ref:`scale_src1<amdgpu_synid_gfx950_scale_src1>`
     v_mfma_scale_f32_16x16x128_f8f6f4 :ref:`vdst<amdgpu_synid_gfx950_vdst_180bef>`,     :ref:`src0<amdgpu_synid_gfx950_src0_ca334d>`,     :ref:`src1<amdgpu_synid_gfx950_src1_ca334d>`,     :ref:`src2<amdgpu_synid_gfx950_src2_ca14ce>`,     :ref:`scale_src0<amdgpu_synid_gfx950_scale_src0>`, :ref:`scale_src1<amdgpu_synid_gfx950_scale_src1>`
     v_mfma_scale_f32_32x32x64_f8f6f4  :ref:`vdst<amdgpu_synid_gfx950_vdst_d6f4bd>`,     :ref:`src0<amdgpu_synid_gfx950_src0_ca334d>`,     :ref:`src1<amdgpu_synid_gfx950_src1_ca334d>`,     :ref:`src2<amdgpu_synid_gfx950_src2_14f1c8>`,     :ref:`scale_src0<amdgpu_synid_gfx950_scale_src0>`, :ref:`scale_src1<amdgpu_synid_gfx950_scale_src1>`
 
