@@ -1,7 +1,7 @@
-; RUN: sed -e "s/ORDER/unordered/" %s | llc -mtriple=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/monotonic/" %s | llc -mtriple=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/release/" %s | llc -mtriple=hexagon | FileCheck %s
-; RUN: sed -e "s/ORDER/seq_cst/" %s | llc -mtriple=hexagon | FileCheck %s
+; RUN: sed -e "s/ORDER/unordered/" %s | llc -mtriple=hexagon -hexagon-small-data-threshold=8 | FileCheck %s
+; RUN: sed -e "s/ORDER/monotonic/" %s | llc -mtriple=hexagon -hexagon-small-data-threshold=8 | FileCheck %s
+; RUN: sed -e "s/ORDER/release/" %s | llc -mtriple=hexagon -hexagon-small-data-threshold=8 | FileCheck %s
+; RUN: sed -e "s/ORDER/seq_cst/" %s | llc -mtriple=hexagon -hexagon-small-data-threshold=8 | FileCheck %s
 
 %struct.Obj = type { [100 x i32] }
 

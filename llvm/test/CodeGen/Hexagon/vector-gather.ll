@@ -1,5 +1,5 @@
 ; REQUIRES: hexagon-registered-target
-; RUN: llc -march=hexagon -mcpu=hexagonv73 -mattr=+hvxv73,+hvx-length128b < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv73 -mattr=+hvxv73,+hvx-length128b -hexagon-small-data-threshold=8 < %s | FileCheck %s
 
 target triple = "hexagon"
 

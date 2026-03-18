@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=8 < %s | FileCheck %s
 ; Check that gp-relative instructions are being generated.
 
 ; CHECK: r{{[0-9]+}} = memw(gp+#g0)

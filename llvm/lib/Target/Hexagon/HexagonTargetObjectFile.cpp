@@ -34,9 +34,9 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> SmallDataThreshold("hexagon-small-data-threshold",
-  cl::init(8), cl::Hidden,
-  cl::desc("The maximum size of an object in the sdata section"));
+static cl::opt<unsigned> SmallDataThreshold(
+    "hexagon-small-data-threshold", cl::init(0), cl::Hidden,
+    cl::desc("The maximum size of an object in the sdata section"));
 
 static cl::opt<bool> NoSmallDataSorting("mno-sort-sda", cl::init(false),
   cl::Hidden, cl::desc("Disable small data sections sorting"));

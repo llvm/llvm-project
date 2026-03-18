@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=8 -O2 < %s | FileCheck %s
 ;
 ; Check whether there are no redundant register copies of return values
 ;

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=hexagon  < %s -o - | FileCheck %s --check-prefix=CHECK
-; RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length64b < %s -o - | FileCheck %s --check-prefix=CHECK-64
-; RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length128b < %s -o - | FileCheck %s --check-prefix=CHECK-128
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=8  < %s -o - | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length64b -hexagon-small-data-threshold=8 < %s -o - | FileCheck %s --check-prefix=CHECK-64
+; RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length128b -hexagon-small-data-threshold=8 < %s -o - | FileCheck %s --check-prefix=CHECK-128
 
 ; CHECK-LABEL: compare_vectors
 ; CHECK: [[REG8:(r[0-9]+):[0-9]]] = CONST64(#72340172838076673)

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -hexagon-eif=0 -disable-machine-sink < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=8 -hexagon-eif=0 -disable-machine-sink < %s | FileCheck %s
 target triple = "hexagon"
 
 %struct.0 = type { i16, i16 }

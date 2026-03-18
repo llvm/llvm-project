@@ -1,6 +1,6 @@
-;RUN: llc -mtriple=hexagon  < %s -o - | FileCheck %s --check-prefix=CHECK
-;RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length64b < %s -o - | FileCheck %s --check-prefix=CHECK
-;RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length128b < %s -o - | FileCheck %s --check-prefix=CHECK
+;RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=8  < %s -o - | FileCheck %s --check-prefix=CHECK
+;RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length64b -hexagon-small-data-threshold=8 < %s -o - | FileCheck %s --check-prefix=CHECK
+;RUN: llc -mtriple=hexagon -mattr=+hvxv79,+hvx-length128b -hexagon-small-data-threshold=8 < %s -o - | FileCheck %s --check-prefix=CHECK
 
 ; CHECK-LABEL: compare_vectors
 ; CHECK: [[REG0:(p[0-9]+)]] = vcmpb.eq([[REG1:(r[0-9]+):[0-9]]],[[REG2:(r[0-9]+):[0-9]]])

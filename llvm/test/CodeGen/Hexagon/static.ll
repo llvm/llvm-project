@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=8 < %s | FileCheck %s
 
 @num = external global i32
 @acc = external global i32

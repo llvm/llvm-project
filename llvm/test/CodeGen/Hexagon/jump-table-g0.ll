@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=0 < %s
+; RUN: llc -mtriple=hexagon < %s
 ; REQUIRES: asserts
 
 ; Check for successful compilation.

@@ -277,7 +277,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncStdLib = !Args.hasArg(options::OPT_nostdlib);
   bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
-  bool UseG0 = false;
+  bool UseG0 = true;
   bool UseLLD = false;
   const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
   UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
@@ -564,7 +564,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
 
   bool HasPIC = Args.hasArg(options::OPT_fpic, options::OPT_fPIC);
   // Assume G0 with -shared.
-  bool HasG0 = Args.hasArg(options::OPT_shared);
+  bool HasG0 = true;
   if (auto G = getSmallDataThreshold(Args))
     HasG0 = *G == 0;
 
