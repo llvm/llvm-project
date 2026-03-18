@@ -6060,19 +6060,21 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   // Returns cost of expanding the partial reduction in ISel.
   auto GetExpandCost = [&]() -> InstructionCost {
-    unsigned ExtOpc = AccumVectorType->getElementType()->isFloatingPointTy()
-                          ? Instruction::FPExt
-                          : Instruction::ZExt;
-
     Type *ExtVectorType =
         VectorType::get(AccumVectorType->getElementType(), VF);
-    return (BinOp ? 2 : 1) *
-               getCastInstrCost(ExtOpc, ExtVectorType, InputVectorType,
-                                TTI::CastContextHint::None, CostKind) +
-           (BinOp ? getArithmeticInstrCost(*BinOp, ExtVectorType, CostKind)
-                  : InstructionCost()) +
-           Log2_32(Ratio) *
-               getArithmeticInstrCost(Opcode, AccumVectorType, CostKind);
+    auto ExtendCostA = getCastInstrCost(
+        TTI::getOpcodeForPartialReductionExtendKind(OpAExtend), ExtVectorType,
+        InputVectorType, TTI::CastContextHint::None, CostKind);
+    auto RedOpCost = Log2_32(Ratio) *
+                     getArithmeticInstrCost(Opcode, AccumVectorType, CostKind);
+    if (!BinOp)
+      return ExtendCostA + RedOpCost;
+
+    auto ExtendCostB = getCastInstrCost(
+        TTI::getOpcodeForPartialReductionExtendKind(OpBExtend), ExtVectorType,
+        InputVectorType, TTI::CastContextHint::None, CostKind);
+    return ExtendCostA + ExtendCostB + RedOpCost +
+           getArithmeticInstrCost(*BinOp, ExtVectorType, CostKind);
   };
 
   if (IsSub) {
