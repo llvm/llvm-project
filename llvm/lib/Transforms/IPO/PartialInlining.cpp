@@ -799,7 +799,7 @@ PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
   InstructionCost InlineCost = 0;
   const DataLayout &DL = BB->getDataLayout();
   int InstrCost = InlineConstants::getInstrCost();
-  for (Instruction &I : BB->instructionsWithoutDebug()) {
+  for (Instruction &I : *BB) {
     // Skip free instructions.
     switch (I.getOpcode()) {
     case Instruction::BitCast:
@@ -816,7 +816,7 @@ PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
       break;
     }
 
-    if (I.isLifetimeStartOrEnd())
+    if (I.isLifetimeStartOrEnd() || isa<PseudoProbeInst>(I))
       continue;
 
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {

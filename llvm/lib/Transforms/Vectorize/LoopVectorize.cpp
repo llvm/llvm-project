@@ -4590,7 +4590,7 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
   // For each block.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the loop.
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
+    for (Instruction &I : *BB) {
       Type *T = I.getType();
 
       // Skip ignored values.
@@ -5180,10 +5180,11 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     InstructionCost BlockCost;
 
     // For each instruction in the old loop.
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
+    for (Instruction &I : *BB) {
       // Skip ignored values.
       if (ValuesToIgnore.count(&I) || ValuesToIgnoreForVF.count(&I) ||
-          (VF.isVector() && VecValuesToIgnore.count(&I)))
+          (VF.isVector() && VecValuesToIgnore.count(&I)) ||
+          isa<PseudoProbeInst>(I))
         continue;
 
       InstructionCost C = getInstructionCost(&I, VF);

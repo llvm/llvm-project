@@ -638,9 +638,9 @@ ReprocessLoop:
       // comparison and the branch.
       bool AllInvariant = true;
       bool AnyInvariant = false;
-      for (auto I = ExitingBlock->instructionsWithoutDebug().begin(); &*I != BI; ) {
+      for (auto I = ExitingBlock->begin(); &*I != BI;) {
         Instruction *Inst = &*I++;
-        if (Inst == CI)
+        if (Inst == CI || isa<PseudoProbeInst>(Inst))
           continue;
         if (!L->makeLoopInvariant(
                 Inst, AnyInvariant,
