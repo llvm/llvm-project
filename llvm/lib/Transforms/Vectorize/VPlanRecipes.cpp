@@ -3624,7 +3624,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (ParentRegion && ParentRegion->isReplicator()) {
       if (!PtrSCEV)
         break;
-
       Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
       Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 
