@@ -316,6 +316,11 @@ static cl::opt<std::string> PGOTraceFuncHash(
     cl::value_desc("function name"),
     cl::desc("Trace the hash of the function with this name."));
 
+static cl::opt<std::string> PGOSplitBBTraceFunc(
+    "pgo-split-bb-trace-func", cl::init("-"), cl::Hidden,
+    cl::value_desc("function name"),
+    cl::desc("Print the split BB IDs for the function with this name."));
+
 static cl::opt<unsigned> PGOFunctionSizeThreshold(
     "pgo-function-size-threshold", cl::Hidden,
     cl::desc("Do not instrument functions smaller than this threshold."));
@@ -339,6 +344,10 @@ static cl::opt<bool> PGOUseEdgeCountInference(
     "pgo-use-edge-count-inference", cl::init(false), cl::Hidden,
     cl::desc("Use profile inference to infer block and edge counts from the "
              "block counts."));
+
+static cl::opt<bool> UseSplitBBCount(
+    "pgo-use-split-bb-count", cl::init(true), cl::Hidden,
+    cl::desc("Use the block count for critical edge splitting basic-blocks."));
 
 cl::opt<bool> PGOInstrumentColdFunctionOnly(
     "pgo-instrument-cold-function-only", cl::init(false), cl::Hidden,
@@ -917,6 +926,8 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   BasicBlock *InstrBB =
       isa<IndirectBrInst>(TI) ? nullptr : SplitCriticalEdge(TI, SuccNum);
   if (!InstrBB) {
+    if (F.getName() == PGOSplitBBTraceFunc)
+      dbgs() << "Could not split critical edge: " << getBBInfo(SrcBB).Index << " --> " << getBBInfo(DestBB).Index << "\n";
     LLVM_DEBUG(
         dbgs() << "Fail to split critical edge: not instrument this edge.\n");
     return nullptr;
@@ -1361,6 +1372,13 @@ bool PGOUseFunc::setInstrumentedCounts(
   }
   auto *FuncEntry = &*F.begin();
 
+  // Set the edge count and update the count of unknown edges for BBs.
+  auto setEdgeCount = [this](PGOUseEdge *E, uint64_t Value) -> void {
+    E->setEdgeCount(Value);
+    this->getBBInfo(E->SrcBB).UnknownCountOutEdge--;
+    this->getBBInfo(E->DestBB).UnknownCountInEdge--;
+  };
+
   // Set the profile count to the Instrumented BBs.
   uint32_t I = 0;
   for (BasicBlock *InstrBB : InstrumentBBs) {
@@ -1371,17 +1389,14 @@ bool PGOUseFunc::setInstrumentedCounts(
     // Fix it if necessary.
     if (InstrBB == FuncEntry && CountValue == 0)
       CountValue = 1;
-    Info.setBBInfoCount(CountValue);
+    if (!UseSplitBBCount && FuncInfo.SplitBBs.count(InstrBB)) {
+      assert(Info.InEdges.size() == 1);
+      setEdgeCount(Info.InEdges[0], CountValue);
+    } else if (UseSplitBBCount || !FuncInfo.SplitBBs.count(InstrBB))
+      Info.setBBInfoCount(CountValue);
   }
   ProfileCountSize = CountFromProfile.size();
   CountPosition = I;
-
-  // Set the edge count and update the count of unknown edges for BBs.
-  auto setEdgeCount = [this](PGOUseEdge *E, uint64_t Value) -> void {
-    E->setEdgeCount(Value);
-    this->getBBInfo(E->SrcBB).UnknownCountOutEdge--;
-    this->getBBInfo(E->DestBB).UnknownCountInEdge--;
-  };
 
   // Set the profile count the Instrumented edges. There are BBs that not in
   // MST but not instrumented. Need to set the edge count value so that we can
@@ -1698,6 +1713,29 @@ void PGOUseFunc::populateCounters() {
   LLVM_DEBUG(dbgs() << "Populate counts in " << NumPasses << " passes.\n");
   (void)NumPasses;
 
+  bool ShouldTrace =
+      PGOSplitBBTraceFunc != "-" &&
+      (PGOSplitBBTraceFunc == "*" || F.getName() == PGOSplitBBTraceFunc);
+
+  if (ShouldTrace) {
+    dbgs() << "NumOfPGOSplit: " << F.getName() << " "
+           << FuncInfo.SplitBBs.size() << "\n";
+    if (!FuncInfo.SplitBBs.empty()) {
+      dbgs() << "SplitBBs for function " << F.getName() << ":";
+      for (auto *BB : FuncInfo.SplitBBs) {
+        dbgs() << " " << getBBInfo(BB).Index;
+      }
+      dbgs() << "\n";
+    }
+    for (auto &BB : F) {
+      if (auto *BI = findBBInfo(&BB)) {
+        dbgs() << "BB " << BI->Index << " IR for function " << F.getName()
+               << ":\n";
+        BB.print(dbgs());
+      }
+    }
+  }
+
   if (PGOUseEdgeCountInference) {
     SampleProfileInference<Function>::BlockWeightMap SampleBlockWeights;
     SampleProfileInference<Function>::EdgeWeightMap EdgeWeights;
@@ -1719,6 +1757,11 @@ void PGOUseFunc::populateCounters() {
           }
         }
       }
+    }
+
+    if (F.getName() == PGOSplitBBTraceFunc) {
+      for (auto [BB, Count]: SampleBlockWeights)
+        dbgs() << "BB :"  << getBBInfo(BB).Index << " Count: " << Count << "\n";
     }
 
     SampleProfileInference<Function> SPI(F, Successors, SampleBlockWeights);
@@ -1743,11 +1786,18 @@ void PGOUseFunc::populateCounters() {
       if (!UseEdge)
         continue;
       if (auto It = EdgeWeights.find(Edge); It != EdgeWeights.end()) {
-        LLVM_DEBUG(dbgs() << "Edge: " << E->infoString() << " setting to " << It->second
-               << "\n");
+        if ((F.getName() == PGOSplitBBTraceFunc || PGOSplitBBTraceFunc == "*") &&
+            getBBInfo(SrcBB).Index != 0 && getBBInfo(DestBB).Index != 0)
+          dbgs() << "Edge " << F.getName() << " " << E->infoString() << "["
+                 << getBBInfo(SrcBB).Index << "->" << getBBInfo(DestBB).Index
+                 << "] setting to " << It->second << "\n";
         UseEdge->setEdgeCount(It->second);
       } else {
-        LLVM_DEBUG(dbgs() << "Edge: " << E->infoString() << " setting to 0\n");
+        if ((F.getName() == PGOSplitBBTraceFunc || PGOSplitBBTraceFunc == "*") &&
+            getBBInfo(SrcBB).Index != 0 && getBBInfo(DestBB).Index != 0)
+          dbgs() << "Edge " << F.getName() << " " << E->infoString() << "["
+                 << getBBInfo(SrcBB).Index << "->" << getBBInfo(DestBB).Index
+                 << "] setting to 0\n";
         UseEdge->setEdgeCount(0);
       }
     }
