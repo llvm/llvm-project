@@ -8,13 +8,14 @@
 
 #include "clc/clc_convert.h"
 #include "clc/integer/clc_clz.h"
-#include "clc/integer/clc_mul_hi.h"
 #include "clc/internal/clc.h"
 #include "clc/math/clc_fma.h"
 #include "clc/math/clc_frexp.h"
 #include "clc/math/clc_ldexp.h"
 #include "clc/math/clc_mad.h"
 #include "clc/math/clc_native_divide.h"
+#include "clc/math/clc_rint.h"
+#include "clc/math/clc_sincos_helpers.h"
 #include "clc/math/clc_trunc.h"
 #include "clc/math/math.h"
 

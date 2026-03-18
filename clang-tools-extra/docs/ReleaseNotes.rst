@@ -226,6 +226,11 @@ Changes in existing checks
   string constructor calls when the string class constructor has a default
   allocator argument.
 
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
+  GoogleTest macros such as ``ASSERT_TRUE`` and ``ASSERT_FALSE``, reducing the
+  number of false positives in test code.
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
   ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
