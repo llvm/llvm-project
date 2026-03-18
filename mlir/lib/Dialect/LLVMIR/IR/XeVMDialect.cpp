@@ -369,6 +369,13 @@ LogicalResult TruncfOp::verify() {
     if (srcVecTy.getNumElements() != dstVecTy.getNumElements())
       return emitOpError(
           "src and dst vector types should have the same number of elements");
+    if (srcVecTy.getElementTypeBitWidth() <= dstVecTy.getElementTypeBitWidth())
+      return emitError(
+          "dst element bitwidth should be less than src element bitwidth");
+  } else {
+    if (srcTy.getIntOrFloatBitWidth() <= dstTy.getIntOrFloatBitWidth())
+      return emitError(
+          "dst element bitwidth should be less than src element bitwidth");
   }
   return success();
 }
