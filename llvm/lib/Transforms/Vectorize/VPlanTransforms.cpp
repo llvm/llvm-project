@@ -6124,9 +6124,9 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
 }
 
 static VPWidenRecipe *matchWidenBinaryOperator(VPValue *Value) {
-  if (auto WidenR = dyn_cast<VPWidenRecipe>(Value);
-      WidenR && Instruction::isBinaryOp(WidenR->getOpcode()))
-    return WidenR;
+  if (auto WidenR = dyn_cast<VPWidenRecipe>(Value))
+    if (Instruction::isBinaryOp(WidenR->getOpcode()))
+      return WidenR;
   return nullptr;
 }
 
@@ -6160,7 +6160,8 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   // reduction since the inner extends will be widened. We already have oneUse
   // checks on the inner extends so widening them is safe.
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
-  if (match(Op, m_IntOrFloatExtend(m_Mul(m_VPValue(), m_VPValue())))) {
+  if (match(Op, m_ZExtOrSExt(m_Mul(m_VPValue(), m_VPValue()))) ||
+      match(Op, m_FPExt(m_FMul(m_VPValue(), m_VPValue())))) {
     auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
     OuterExtKind = getPartialReductionExtendKind(CastRecipe);
     Op = CastRecipe->getOperand(0);
@@ -6169,7 +6170,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   // Match: UpdateR(PrevValue, ext(...))
   if ((UpdateR->getOpcode() == Instruction::Add ||
        UpdateR->getOpcode() == Instruction::FAdd) &&
-      match(Op, m_IntOrFloatExtend(m_VPValue()))) {
+      match(Op, m_AnyExtend(m_VPValue()))) {
     assert(!OuterExtKind && "Op should be Mul BinOp with OuterExtKind");
     return ExtendedReductionOperand{UpdateR,
                                     {cast<VPWidenCastRecipe>(Op), nullptr}};
@@ -6192,7 +6193,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   VPValue *RHS = BinOp->getOperand(1);
 
   // The LHS of the operation must always be an extend.
-  if (!match(LHS, m_IntOrFloatExtend(m_VPValue())))
+  if (!match(LHS, m_AnyExtend(m_VPValue())))
     return std::nullopt;
 
   auto *LHSCast = cast<VPWidenCastRecipe>(LHS);
@@ -6200,7 +6201,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   // The RHS of the operation can be an extend or a constant integer.
   // The constant will be validated in isValidPartialReduction.
   VPWidenCastRecipe *RHSCast = nullptr;
-  if (match(RHS, m_IntOrFloatExtend(m_VPValue())))
+  if (match(RHS, m_AnyExtend(m_VPValue())))
     RHSCast = cast<VPWidenCastRecipe>(RHS);
   else if (!isa<VPConstantInt>(RHS))
     return std::nullopt;
