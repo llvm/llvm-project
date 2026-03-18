@@ -9826,7 +9826,8 @@ bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
 
 /// Return true if "fcmp Pred LHS RHS" is always true.
 bool isTrueFPPredicate(CmpInst::Predicate Pred, const Value *LHS,
-                       const Value *RHS, const Instruction *ContextI = nullptr) {
+                       const Value *RHS,
+                       const Instruction *ContextI = nullptr) {
   if (LHS->getType() != RHS->getType())
     return false;
 

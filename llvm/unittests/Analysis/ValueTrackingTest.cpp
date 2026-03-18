@@ -2611,7 +2611,8 @@ TEST_F(ValueTrackingTest, IsImpliedConditionDoesNotInferFromUnrelatedPatterns) {
     EXPECT_EQ(isImpliedCondition(A, Cmp, DL), std::nullopt);
 }
 
-TEST_F(ValueTrackingTest, IsImpliedByDomConditionOrderedFPDistinguishesMaximum) {
+TEST_F(ValueTrackingTest,
+       IsImpliedByDomConditionOrderedFPDistinguishesMaximum) {
   parseAssembly(R"(
     declare float @llvm.maxnum.f32(float, float)
     declare float @llvm.maximum.f32(float, float)
@@ -2676,7 +2677,8 @@ TEST_F(ValueTrackingTest, IsImpliedByDomConditionOrderedFPDistinguishesMaximum) 
             true);
 }
 
-TEST_F(ValueTrackingTest, IsImpliedByDomConditionUnorderedFPAcceptsAllFamilies) {
+TEST_F(ValueTrackingTest,
+       IsImpliedByDomConditionUnorderedFPAcceptsAllFamilies) {
   parseAssembly(R"(
     declare float @llvm.maxnum.f32(float, float)
     declare float @llvm.maximum.f32(float, float)
