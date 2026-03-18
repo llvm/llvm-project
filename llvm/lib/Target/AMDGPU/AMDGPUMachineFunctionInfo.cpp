@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 #include "AMDGPU.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSubtarget.h"
@@ -39,8 +39,8 @@ static bool hasLDSKernelArgument(const Function &F) {
   return false;
 }
 
-AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
-                                             const AMDGPUSubtarget &ST)
+AMDGPUMachineFunctionInfo::AMDGPUMachineFunctionInfo(const Function &F,
+                                                     const AMDGPUSubtarget &ST)
     : IsEntryFunction(AMDGPU::isEntryFunctionCC(F.getCallingConv())),
       IsModuleEntryFunction(
           AMDGPU::isModuleEntryFunctionCC(F.getCallingConv())),
@@ -85,9 +85,9 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
     UsesDynamicLDS = true;
 }
 
-unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
-                                                  const GlobalVariable &GV,
-                                                  Align Trailing) {
+unsigned AMDGPUMachineFunctionInfo::allocateLDSGlobal(const DataLayout &DL,
+                                                      const GlobalVariable &GV,
+                                                      Align Trailing) {
   auto Entry = LocalMemoryObjects.insert(std::pair(&GV, 0));
   if (!Entry.second)
     return Entry.first->second;
@@ -166,7 +166,7 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 }
 
 std::optional<uint32_t>
-AMDGPUMachineFunction::getLDSKernelIdMetadata(const Function &F) {
+AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(const Function &F) {
   // TODO: Would be more consistent with the abs symbols to use a range
   MDNode *MD = F.getMetadata("llvm.amdgcn.lds.kernel.id");
   if (MD && MD->getNumOperands() == 1) {
@@ -182,7 +182,7 @@ AMDGPUMachineFunction::getLDSKernelIdMetadata(const Function &F) {
 }
 
 std::optional<uint32_t>
-AMDGPUMachineFunction::getLDSAbsoluteAddress(const GlobalValue &GV) {
+AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(const GlobalValue &GV) {
   if (GV.getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
     return {};
 
@@ -200,8 +200,8 @@ AMDGPUMachineFunction::getLDSAbsoluteAddress(const GlobalValue &GV) {
   return {};
 }
 
-void AMDGPUMachineFunction::setDynLDSAlign(const Function &F,
-                                           const GlobalVariable &GV) {
+void AMDGPUMachineFunctionInfo::setDynLDSAlign(const Function &F,
+                                               const GlobalVariable &GV) {
   const Module *M = F.getParent();
   const DataLayout &DL = M->getDataLayout();
   assert(GV.getGlobalSize(DL) == 0);
@@ -228,8 +228,10 @@ void AMDGPUMachineFunction::setDynLDSAlign(const Function &F,
   }
 }
 
-void AMDGPUMachineFunction::setUsesDynamicLDS(bool DynLDS) {
+void AMDGPUMachineFunctionInfo::setUsesDynamicLDS(bool DynLDS) {
   UsesDynamicLDS = DynLDS;
 }
 
-bool AMDGPUMachineFunction::isDynamicLDSUsed() const { return UsesDynamicLDS; }
+bool AMDGPUMachineFunctionInfo::isDynamicLDSUsed() const {
+  return UsesDynamicLDS;
+}
