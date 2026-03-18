@@ -164,6 +164,12 @@ TypeSystemSwift::GetUnsafeRawPointerType(swift::Mangle::ManglingFlavor flavor) {
       ConstString(SwiftLanguageRuntime::MakeMangledName("SVD", flavor)));
 }
 
+CompilerType TypeSystemSwift::GetUnsubstitutedFixedArrayType(
+    swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("xq_BVD", flavor)));
+}
+
 CompilerType
 TypeSystemSwift::GetUInt64Type(swift::Mangle::ManglingFlavor flavor) {
   return GetTypeFromMangledTypename(
