@@ -146,15 +146,15 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
 }
 
 /// Wrap a multi-block region with scf.execute_region.
-scf::ExecuteRegionOp wrapMultiBlockRegionWithSCFExecuteRegionImpl(
-    Region &region, IRMapping &mapping, Location loc, RewriterBase &rewriter,
-    function_ref<bool(Operation *)> isTerminatorToReplace) {
+scf::ExecuteRegionOp
+wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
+                                         Location loc, RewriterBase &rewriter) {
   SmallVector<Operation *> terminators;
   for (Block &block : region.getBlocks()) {
     if (block.empty())
       continue;
     Operation *term = block.getTerminator();
-    if (isTerminatorToReplace(term))
+    if (term->getNumSuccessors() == 0)
       terminators.push_back(term);
   }
   SmallVector<Type> resultTypes;
@@ -298,7 +298,7 @@ scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp,
                         mapping);
 
   if (!loopOp.getRegion().hasOneBlock()) {
-    auto exeRegion = wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp>(
+    auto exeRegion = wrapMultiBlockRegionWithSCFExecuteRegion(
         loopOp.getRegion(), mapping, loc, rewriter);
     if (!exeRegion) {
       rewriter.eraseOp(parallelOp);
@@ -330,8 +330,8 @@ convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp,
       "builder insertion point must not be inside the loop being converted");
 
   IRMapping mapping;
-  return wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp>(
-      loopOp.getRegion(), mapping, loopOp->getLoc(), rewriter);
+  return wrapMultiBlockRegionWithSCFExecuteRegion(loopOp.getRegion(), mapping,
+                                                  loopOp->getLoc(), rewriter);
 }
 
 } // namespace acc
