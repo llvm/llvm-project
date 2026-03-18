@@ -1,9 +1,9 @@
 // Testfile to verify Sema diagnostics for BCD builtins bcdshift, bcdshiftround, bcdtruncate.
 
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-unknown -fsyntax-only -verify %s
-// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown -fsyntax-only -verify %s
-// RUN: %clang_cc1 -target-feature +altivec -triple powerpc-unknown-unknown -fsyntax-only -verify %s
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector -target-feature +isa-v207-instructions -triple powerpc64-unknown-unknown -fsyntax-only -verify %s
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector -target-feature +isa-v207-instructions -triple powerpc64le-unknown-unknown -fsyntax-only -verify %s
+// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector -target-feature +isa-v207-instructions -triple powerpc-unknown-unknown -fsyntax-only -verify %s
 
 #include <altivec.h>
 #define DECL_COMMON_VARS            \
