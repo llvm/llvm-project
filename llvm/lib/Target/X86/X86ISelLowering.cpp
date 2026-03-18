@@ -1,4 +1,3 @@
-// I
 //===-- X86ISelLowering.cpp - X86 DAG Lowering Implementation -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -34522,6 +34521,16 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         SDValue Elt = DAG.getNode(Opc, dl, MVT::i64, EltBit, AmtMod);
         Res = DAG.getSelect(dl, VecVT, LaneMask, DAG.getSplat(VecVT, dl, Elt),
                             Res);
+        Results.push_back(DAG.getBitcast(VT, Res));
+        return;
+      }
+      // SRA(MSB,Amt) --> SHL(-1,(BW-1)-Amt)
+      if (Opc == ISD::SRA && SrcVal.isSignMask()) {
+        Amt = DAG.getZExtOrTrunc(Amt, dl, MVT::i32);
+        Amt = DAG.getNode(ISD::SUB, dl, MVT::i32,
+                          DAG.getConstant(BW - 1, dl, MVT::i32), Amt);
+        SDValue Res =
+            DAG.getNode(ISD::SHL, dl, VT, DAG.getAllOnesConstant(dl, VT), Amt);
         Results.push_back(DAG.getBitcast(VT, Res));
         return;
       }

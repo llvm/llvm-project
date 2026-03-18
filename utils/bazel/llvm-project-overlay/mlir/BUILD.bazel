@@ -13826,6 +13826,7 @@ cc_library(
         ":CallOpInterfaces",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
+        ":DataLayoutInterfaces",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
