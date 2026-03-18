@@ -2940,7 +2940,9 @@ TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
       EXPECT_EQ(*opt, 42); // [[unsafe]]
     }
   )cc");
+}
 
+TEST_P(UncheckedOptionalAccessTest, AssertFalseGtestMacroWithNullableValue) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
@@ -2952,6 +2954,9 @@ TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
     }
 
     void target(BloombergLP::bdlb::NullableValue<int> opt) {
+      ASSERT_TRUE(opt.isNull());
+      EXPECT_EQ(*opt, 42); // [[unsafe]]
+
       ASSERT_FALSE(opt.isNull());
       EXPECT_EQ(*opt, 42);
     }

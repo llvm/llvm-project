@@ -928,12 +928,10 @@ void transferAssertionResultOperatorBoolCall(const CXXMemberCallExpr *Expr,
   if (AssertResultLoc == nullptr)
     return;
 
-  BoolValue *SuccessVal =
-      State.Env.get<BoolValue>(locForAssertResultSuccess(*AssertResultLoc));
-  if (SuccessVal == nullptr)
-    return;
-
-  State.Env.setValue(*Expr, *SuccessVal);
+  if (BoolValue *SuccessVal =
+      State.Env.get<BoolValue>(locForAssertResultSuccess(*AssertResultLoc))) {
+    State.Env.setValue(*Expr, *SuccessVal);
+  }
 }
 
 void transferAssertionResultConstructFromBoolCall(
@@ -942,12 +940,10 @@ void transferAssertionResultConstructFromBoolCall(
   assert(ConstructExpr->getNumArgs() > 0);
   const Expr *Arg = ConstructExpr->getArg(0)->IgnoreImplicit();
 
-  BoolValue *SuccessVal = State.Env.get<BoolValue>(*Arg);
-  if (SuccessVal == nullptr)
-    return;
-
-  auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
-  State.Env.setValue(locForAssertResultSuccess(ResultLoc), *SuccessVal);
+  if (BoolValue *SuccessVal = State.Env.get<BoolValue>(*Arg)) {
+    auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
+    State.Env.setValue(locForAssertResultSuccess(ResultLoc), *SuccessVal);
+  }
 }
 
 void transferAssertionResultConstructFromOptionalCall(
@@ -961,12 +957,10 @@ void transferAssertionResultConstructFromOptionalCall(
   if (OptionalLoc == nullptr)
     return;
 
-  BoolValue *HasVal = getHasValue(State.Env, OptionalLoc);
-  if (HasVal == nullptr)
-    return;
-
-  auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
-  State.Env.setValue(locForAssertResultSuccess(ResultLoc), *HasVal);
+  if (BoolValue *HasVal = getHasValue(State.Env, OptionalLoc)) {
+    auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
+    State.Env.setValue(locForAssertResultSuccess(ResultLoc), *HasVal);
+  }
 }
 
 std::optional<StatementMatcher>
