@@ -14,13 +14,15 @@ endfunction()
 add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
+  BootstrapInfoTest.cpp
   CallableTraitsHelperTest.cpp
-  ControllerInterfaceTest.cpp
+  SimpleSymbolTableTest.cpp
   EndianTest.cpp
   ErrorCAPITest.cpp
   ErrorTest.cpp
   ErrorExceptionInteropTest.cpp
   ExecutorAddressTest.cpp
+  ExecutorProcessInfoTest.cpp
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   LockedAccessTest.cpp
