@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
 
 
 namespace cwg3005 { // cwg3005: 21

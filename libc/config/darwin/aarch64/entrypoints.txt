@@ -111,6 +111,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
     libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -415,6 +416,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.acoshf16
     libc.src.math.asinf16
     libc.src.math.asinhf16
+    libc.src.math.atan2f16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16

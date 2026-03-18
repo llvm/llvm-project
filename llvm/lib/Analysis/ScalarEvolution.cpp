@@ -6040,11 +6040,6 @@ static bool BrPHIToSelect(DominatorTree &DT, CondBrInst *BI, PHINode *Merge,
   BasicBlockEdge LeftEdge(BI->getParent(), BI->getSuccessor(0));
   BasicBlockEdge RightEdge(BI->getParent(), BI->getSuccessor(1));
 
-  if (!LeftEdge.isSingleEdge())
-    return false;
-
-  assert(RightEdge.isSingleEdge() && "Follows from LeftEdge.isSingleEdge()");
-
   Use &LeftUse = Merge->getOperandUse(0);
   Use &RightUse = Merge->getOperandUse(1);
 
@@ -6063,7 +6058,9 @@ static bool BrPHIToSelect(DominatorTree &DT, CondBrInst *BI, PHINode *Merge,
   return false;
 }
 
-const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
+static bool getOperandsForSelectLikePHI(DominatorTree &DT, PHINode *PN,
+                                        Value *&Cond, Value *&LHS,
+                                        Value *&RHS) {
   auto IsReachable =
       [&](BasicBlock *BB) { return DT.isReachableFromEntry(BB); };
   if (PN->getNumIncomingValues() == 2 && all_of(PN->blocks(), IsReachable)) {
@@ -6083,28 +6080,22 @@ const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
     assert(IDom && "At least the entry block should dominate PN");
 
     auto *BI = dyn_cast<CondBrInst>(IDom->getTerminator());
-    Value *Cond = nullptr, *LHS = nullptr, *RHS = nullptr;
-
-    if (BI && BrPHIToSelect(DT, BI, PN, Cond, LHS, RHS) &&
-        properlyDominates(getSCEV(LHS), PN->getParent()) &&
-        properlyDominates(getSCEV(RHS), PN->getParent()))
-      return createNodeForSelectOrPHI(PN, Cond, LHS, RHS);
+    return BI && BrPHIToSelect(DT, BI, PN, Cond, LHS, RHS);
   }
+  return false;
+}
+
+const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
+  Value *Cond = nullptr, *LHS = nullptr, *RHS = nullptr;
+  if (getOperandsForSelectLikePHI(DT, PN, Cond, LHS, RHS) &&
+      properlyDominates(getSCEV(LHS), PN->getParent()) &&
+      properlyDominates(getSCEV(RHS), PN->getParent()))
+    return createNodeForSelectOrPHI(PN, Cond, LHS, RHS);
 
   return nullptr;
 }
 
-/// Returns SCEV for the first operand of a phi if all phi operands have
-/// identical opcodes and operands
-/// eg.
-/// a: %add = %a + %b
-///    br %c
-/// b: %add1 = %a + %b
-///    br %c
-/// c: %phi = phi [%add, a], [%add1, b]
-/// scev(%phi) => scev(%add)
-const SCEV *
-ScalarEvolution::createNodeForPHIWithIdenticalOperands(PHINode *PN) {
+static BinaryOperator *getCommonInstForPHI(PHINode *PN) {
   BinaryOperator *CommonInst = nullptr;
   // Check if instructions are identical.
   for (Value *Incoming : PN->incoming_values()) {
@@ -6119,6 +6110,21 @@ ScalarEvolution::createNodeForPHIWithIdenticalOperands(PHINode *PN) {
       CommonInst = IncomingInst;
     }
   }
+  return CommonInst;
+}
+
+/// Returns SCEV for the first operand of a phi if all phi operands have
+/// identical opcodes and operands
+/// eg.
+/// a: %add = %a + %b
+///    br %c
+/// b: %add1 = %a + %b
+///    br %c
+/// c: %phi = phi [%add, a], [%add1, b]
+/// scev(%phi) => scev(%add)
+const SCEV *
+ScalarEvolution::createNodeForPHIWithIdenticalOperands(PHINode *PN) {
+  BinaryOperator *CommonInst = getCommonInstForPHI(PN);
   if (!CommonInst)
     return nullptr;
 
@@ -6662,6 +6668,30 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   return FullSet;
 }
 
+// The goal of this function is to check if recursively visiting the operands
+// of this PHI might lead to an infinite loop. If we do see such a loop,
+// there's no good way to break it, so we avoid analyzing such cases.
+//
+// getRangeRef previously used a visited set to avoid infinite loops, but this
+// caused other issues: the result was dependent on the order of getRangeRef
+// calls, and the interaction with createSCEVIter could cause a stack overflow
+// in some cases (see issue #148253).
+//
+// FIXME: The way this is implemented is overly conservative; this checks
+// for a few obviously safe patterns, but anything that doesn't lead to
+// recursion is fine.
+static bool RangeRefPHIAllowedOperands(DominatorTree &DT, PHINode *PHI) {
+  Value *Cond = nullptr, *LHS = nullptr, *RHS = nullptr;
+  if (getOperandsForSelectLikePHI(DT, PHI, Cond, LHS, RHS))
+    return true;
+
+  if (all_of(PHI->operands(),
+             [&](Value *Operand) { return DT.dominates(Operand, PHI); }))
+    return true;
+
+  return false;
+}
+
 const ConstantRange &
 ScalarEvolution::getRangeRefIter(const SCEV *S,
                                  ScalarEvolution::RangeSignHint SignHint) {
@@ -6718,8 +6748,8 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
       continue;
     }
     // `SCEVUnknown`'s require special treatment.
-    if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
-      if (!PendingPhiRangesIter.insert(P).second)
+    if (PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
+      if (!RangeRefPHIAllowedOperands(DT, P))
         continue;
       for (auto &Op : reverse(P->operands()))
         AddToWorklist(getSCEV(Op));
@@ -6732,10 +6762,6 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
     // their users in most cases.
     for (const SCEV *P : reverse(drop_begin(WorkList))) {
       getRangeRef(P, SignHint);
-
-      if (auto *UnknownS = dyn_cast<SCEVUnknown>(P))
-        if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue()))
-          PendingPhiRangesIter.erase(P);
     }
   }
 
@@ -7055,8 +7081,13 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
     // A range of Phi is a subset of union of all ranges of its input.
     if (PHINode *Phi = dyn_cast<PHINode>(V)) {
+      // SCEVExpander sometimes creates SCEVUnknowns that are secretly
+      // AddRecs; return the range for the corresponding AddRec.
+      if (auto *AR = dyn_cast<SCEVAddRecExpr>(getSCEV(V)))
+        return getRangeRef(AR, SignHint, Depth + 1);
+
       // Make sure that we do not run over cycled Phis.
-      if (PendingPhiRanges.insert(Phi).second) {
+      if (RangeRefPHIAllowedOperands(DT, Phi)) {
         ConstantRange RangeFromOps(BitWidth, /*isFullSet=*/false);
 
         for (const auto &Op : Phi->operands()) {
@@ -7068,9 +7099,6 @@ const ConstantRange &ScalarEvolution::getRangeRef(
         }
         ConservativeResult =
             ConservativeResult.intersectWith(RangeFromOps, RangeType);
-        bool Erased = PendingPhiRanges.erase(Phi);
-        assert(Erased && "Failed to erase Phi properly?");
-        (void)Erased;
       }
     }
 
@@ -7749,7 +7777,55 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
     return getUnknown(V);
 
   case Instruction::PHI:
-    // Keep constructing SCEVs' for phis recursively for now.
+    // getNodeForPHI has four ways to turn a PHI into a SCEV; retrieve the
+    // relevant nodes for each of them.
+    //
+    // The first is just to call simplifyInstruction, and get something back
+    // that isn't a PHI.
+    if (Value *V = simplifyInstruction(
+            cast<PHINode>(U),
+            {getDataLayout(), &TLI, &DT, &AC, /*CtxI=*/nullptr,
+             /*UseInstrInfo=*/true, /*CanUseUndef=*/false})) {
+      assert(V);
+      Ops.push_back(V);
+      return nullptr;
+    }
+    // The second is createNodeForPHIWithIdenticalOperands: this looks for
+    // operands which all perform the same operation, but haven't been
+    // CSE'ed for whatever reason.
+    if (BinaryOperator *BO = getCommonInstForPHI(cast<PHINode>(U))) {
+      assert(BO);
+      Ops.push_back(BO);
+      return nullptr;
+    }
+    // The third is createNodeFromSelectLikePHI; this takes a PHI which
+    // is equivalent to a select, and analyzes it like a select.
+    {
+      Value *Cond = nullptr, *LHS = nullptr, *RHS = nullptr;
+      if (getOperandsForSelectLikePHI(DT, cast<PHINode>(U), Cond, LHS, RHS)) {
+        assert(Cond);
+        assert(LHS);
+        assert(RHS);
+        if (auto *CondICmp = dyn_cast<ICmpInst>(Cond)) {
+          Ops.push_back(CondICmp->getOperand(0));
+          Ops.push_back(CondICmp->getOperand(1));
+        }
+        Ops.push_back(Cond);
+        Ops.push_back(LHS);
+        Ops.push_back(RHS);
+        return nullptr;
+      }
+    }
+    // The fourth way is createAddRecFromPHI. It's complicated to handle here,
+    // so just construct it recursively.
+    //
+    // In addition to getNodeForPHI, also construct nodes which might be needed
+    // by getRangeRef.
+    if (RangeRefPHIAllowedOperands(DT, cast<PHINode>(U))) {
+      for (Value *V : cast<PHINode>(U)->operands())
+        Ops.push_back(V);
+      return nullptr;
+    }
     return nullptr;
 
   case Instruction::Select: {
@@ -11797,27 +11873,20 @@ bool ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
     if (!PBB)
       continue;
 
-    CondBrInst *ContinuePredicate = dyn_cast<CondBrInst>(PBB->getTerminator());
-    if (!ContinuePredicate)
+    CondBrInst *ContBr = dyn_cast<CondBrInst>(PBB->getTerminator());
+    if (!ContBr || ContBr->getSuccessor(0) == ContBr->getSuccessor(1))
       continue;
-
-    Value *Condition = ContinuePredicate->getCondition();
 
     // If we have an edge `E` within the loop body that dominates the only
     // latch, the condition guarding `E` also guards the backedge.  This
     // reasoning works only for loops with a single latch.
-
-    BasicBlockEdge DominatingEdge(PBB, BB);
-    if (DominatingEdge.isSingleEdge()) {
-      // We're constructively (and conservatively) enumerating edges within the
-      // loop body that dominate the latch.  The dominator tree better agree
-      // with us on this:
-      assert(DT.dominates(DominatingEdge, Latch) && "should be!");
-
-      if (isImpliedCond(Pred, LHS, RHS, Condition,
-                        BB != ContinuePredicate->getSuccessor(0)))
-        return true;
-    }
+    // We're constructively (and conservatively) enumerating edges within the
+    // loop body that dominate the latch.  The dominator tree better agree
+    // with us on this:
+    assert(DT.dominates(BasicBlockEdge(PBB, BB), Latch) && "should be!");
+    if (isImpliedCond(Pred, LHS, RHS, ContBr->getCondition(),
+                      BB != ContBr->getSuccessor(0)))
+      return true;
   }
 
   return false;
@@ -12394,9 +12463,10 @@ bool ScalarEvolution::isImpliedCondOperandsViaAddRecStart(
   // Make sure AR varies in the context block.
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(FoundLHS)) {
     const Loop *L = AR->getLoop();
+    const auto *Latch = L->getLoopLatch();
     // Make sure that context belongs to the loop and executes on 1st iteration
     // (if it ever executes at all).
-    if (!L->contains(ContextBB) || !DT.dominates(ContextBB, L->getLoopLatch()))
+    if (!L->contains(ContextBB) || !Latch || !DT.dominates(ContextBB, Latch))
       return false;
     if (!isAvailableAtLoopEntry(FoundRHS, AR->getLoop()))
       return false;
@@ -12405,9 +12475,10 @@ bool ScalarEvolution::isImpliedCondOperandsViaAddRecStart(
 
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(FoundRHS)) {
     const Loop *L = AR->getLoop();
+    const auto *Latch = L->getLoopLatch();
     // Make sure that context belongs to the loop and executes on 1st iteration
     // (if it ever executes at all).
-    if (!L->contains(ContextBB) || !DT.dominates(ContextBB, L->getLoopLatch()))
+    if (!L->contains(ContextBB) || !Latch || !DT.dominates(ContextBB, Latch))
       return false;
     if (!isAvailableAtLoopEntry(FoundLHS, AR->getLoop()))
       return false;
@@ -13853,7 +13924,6 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       DT(Arg.DT), LI(Arg.LI), CouldNotCompute(std::move(Arg.CouldNotCompute)),
       ValueExprMap(std::move(Arg.ValueExprMap)),
       PendingLoopPredicates(std::move(Arg.PendingLoopPredicates)),
-      PendingPhiRanges(std::move(Arg.PendingPhiRanges)),
       PendingMerges(std::move(Arg.PendingMerges)),
       ConstantMultipleCache(std::move(Arg.ConstantMultipleCache)),
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
@@ -13896,7 +13966,6 @@ ScalarEvolution::~ScalarEvolution() {
   PredicatedBackedgeTakenCounts.clear();
 
   assert(PendingLoopPredicates.empty() && "isImpliedCond garbage");
-  assert(PendingPhiRanges.empty() && "getRangeRef garbage");
   assert(PendingMerges.empty() && "isImpliedViaMerge garbage");
   assert(!WalkingBEDominatingConds && "isLoopBackedgeGuardedByCond garbage!");
   assert(!ProvingSplitPredicate && "ProvingSplitPredicate garbage!");

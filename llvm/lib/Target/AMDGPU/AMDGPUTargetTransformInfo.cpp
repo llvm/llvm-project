@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <optional>
 
 using namespace llvm;
@@ -166,8 +167,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
       // if region and potentially even PHI itself, saving on both divergence
       // and registers used for the PHI.
       // Add a small bonus for each of such "if" statements.
-      if (const BranchInst *Br = dyn_cast<BranchInst>(&I)) {
-        if (UP.Threshold < MaxBoost && Br->isConditional()) {
+      if (const CondBrInst *Br = dyn_cast<CondBrInst>(&I)) {
+        if (UP.Threshold < MaxBoost) {
           BasicBlock *Succ0 = Br->getSuccessor(0);
           BasicBlock *Succ1 = Br->getSuccessor(1);
           if ((L->contains(Succ0) && L->isLoopExiting(Succ0)) ||
@@ -268,6 +269,12 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
+  const unsigned PragmaCount = unrollCountPragmaValue(L);
+  const bool PragmaEnableUnroll = hasUnrollEnablePragma(L);
+  // If a user provided an explicit unroll pragma (with or without count),
+  // override expensive trip count checks
+  if (PragmaEnableUnroll || PragmaCount > 0)
+    UP.AllowExpensiveTripCount = true;
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,

@@ -144,6 +144,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
     libc.src.stdio.sscanf
+    libc.src.stdio.stderr
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
     libc.src.stdio.vasprintf
     libc.src.stdio.vfprintf
     libc.src.stdio.vfscanf
@@ -305,6 +308,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
     libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
 
     # internal entrypoints
     libc.startup.baremetal.init
@@ -599,6 +603,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.acoshf16
     libc.src.math.asinf16
     libc.src.math.asinhf16
+    libc.src.math.atan2f16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16

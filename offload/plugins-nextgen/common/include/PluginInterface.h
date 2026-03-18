@@ -462,7 +462,8 @@ private:
               ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
               llvm::SmallVectorImpl<void *> &Args,
               llvm::SmallVectorImpl<void *> &Ptrs,
-              KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
+              KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
+              uint32_t Version) const;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.

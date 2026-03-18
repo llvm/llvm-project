@@ -765,6 +765,14 @@ public:
     /// \p minimum matches the behavior of \p llvm.minimum.*.
     FMinimum,
 
+    /// *p = maximumnum(old, v)
+    /// \p maximumnum matches the behavior of \p llvm.maximumnum.*.
+    FMaximumNum,
+
+    /// *p = minimumnum(old, v)
+    /// \p minimumnum matches the behavior of \p llvm.minimumnum.*.
+    FMinimumNum,
+
     /// Increment one up to a maximum value.
     /// *p = (old u>= v) ? 0 : (old + 1)
     UIncWrap,
@@ -829,6 +837,8 @@ public:
     case AtomicRMWInst::FMin:
     case AtomicRMWInst::FMaximum:
     case AtomicRMWInst::FMinimum:
+    case AtomicRMWInst::FMaximumNum:
+    case AtomicRMWInst::FMinimumNum:
       return true;
     default:
       return false;
@@ -3023,6 +3033,13 @@ public:
     return getNumOperands() != 0 ? getOperand(0) : nullptr;
   }
 
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(op_end()), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(op_end()), const_succ_iterator(op_end())};
+  }
+
   unsigned getNumSuccessors() const { return 0; }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -3062,33 +3079,6 @@ protected:
       : Instruction(Ty, Opcode, AllocInfo, InsertBefore) {}
 
 public:
-  /// Iterator type that casts an operand to a basic block.
-  ///
-  /// This only makes sense because the successors are stored as adjacent
-  /// operands for branch instructions.
-  struct succ_op_iterator
-      : iterator_adaptor_base<succ_op_iterator, value_op_iterator,
-                              std::random_access_iterator_tag, BasicBlock *,
-                              ptrdiff_t, BasicBlock *, BasicBlock *> {
-    explicit succ_op_iterator(value_op_iterator I) : iterator_adaptor_base(I) {}
-
-    BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
-    BasicBlock *operator->() const { return operator*(); }
-  };
-
-  /// The const version of `succ_op_iterator`.
-  struct const_succ_op_iterator
-      : iterator_adaptor_base<const_succ_op_iterator, const_value_op_iterator,
-                              std::random_access_iterator_tag,
-                              const BasicBlock *, ptrdiff_t, const BasicBlock *,
-                              const BasicBlock *> {
-    explicit const_succ_op_iterator(const_value_op_iterator I)
-        : iterator_adaptor_base(I) {}
-
-    const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
-    const BasicBlock *operator->() const { return operator*(); }
-  };
-
   static BranchInst *Create(BasicBlock *IfTrue,
                             InsertPosition InsertBefore = nullptr);
 
@@ -3105,36 +3095,12 @@ public:
   Value *getCondition() const;
   void setCondition(Value *V);
 
-  unsigned getNumSuccessors() const { return 1+isConditional(); }
-
-  BasicBlock *getSuccessor(unsigned i) const {
-    assert(i < getNumSuccessors() && "Successor # out of range for Branch!");
-    return cast_or_null<BasicBlock>((&Op<-1>() - i)->get());
-  }
-
-  void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
-    assert(idx < getNumSuccessors() && "Successor # out of range for Branch!");
-    *(&Op<-1>() - idx) = NewSucc;
-  }
-
   /// Swap the successors of this branch instruction.
   ///
   /// Swaps the successors of the branch instruction. This also swaps any
   /// branch weight metadata associated with the instruction so that it
   /// continues to map correctly to each operand.
   void swapSuccessors();
-
-  iterator_range<succ_op_iterator> successors() {
-    return make_range(
-        succ_op_iterator(std::next(value_op_begin(), isConditional() ? 1 : 0)),
-        succ_op_iterator(value_op_end()));
-  }
-
-  iterator_range<const_succ_op_iterator> successors() const {
-    return make_range(const_succ_op_iterator(
-                          std::next(value_op_begin(), isConditional() ? 1 : 0)),
-                      const_succ_op_iterator(value_op_end()));
-  }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -3202,14 +3168,13 @@ public:
     Op<-1>() = NewSucc;
   }
 
-  iterator_range<succ_op_iterator> successors() {
-    return make_range(succ_op_iterator(value_op_begin()),
-                      succ_op_iterator(value_op_end()));
+  iterator_range<succ_iterator> successors() {
+    return make_range(succ_iterator(op_begin()), succ_iterator(op_end()));
   }
 
-  iterator_range<const_succ_op_iterator> successors() const {
-    return make_range(const_succ_op_iterator(value_op_begin()),
-                      const_succ_op_iterator(value_op_end()));
+  iterator_range<const_succ_iterator> successors() const {
+    return make_range(const_succ_iterator(op_begin()),
+                      const_succ_iterator(op_end()));
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -3271,12 +3236,12 @@ public:
 
   BasicBlock *getSuccessor(unsigned i) const {
     assert(i < getNumSuccessors() && "Successor # out of range for Branch!");
-    return cast_or_null<BasicBlock>((&Op<-1>() - i)->get());
+    return cast_or_null<BasicBlock>((&Op<-2>() + i)->get());
   }
 
   void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
     assert(idx < getNumSuccessors() && "Successor # out of range for Branch!");
-    *(&Op<-1>() - idx) = NewSucc;
+    *(&Op<-2>() + idx) = NewSucc;
   }
 
   /// Swap the successors of this branch instruction.
@@ -3286,14 +3251,14 @@ public:
   /// continues to map correctly to each operand.
   LLVM_ABI void swapSuccessors();
 
-  iterator_range<succ_op_iterator> successors() {
-    return make_range(succ_op_iterator(std::next(value_op_begin())),
-                      succ_op_iterator(value_op_end()));
+  iterator_range<succ_iterator> successors() {
+    return make_range(succ_iterator(std::next(op_begin())),
+                      succ_iterator(op_end()));
   }
 
-  iterator_range<const_succ_op_iterator> successors() const {
-    return make_range(const_succ_op_iterator(std::next(value_op_begin())),
-                      const_succ_op_iterator(value_op_end()));
+  iterator_range<const_succ_iterator> successors() const {
+    return make_range(const_succ_iterator(std::next(op_begin())),
+                      const_succ_iterator(op_end()));
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -3675,6 +3640,13 @@ public:
   /// case.
   LLVM_ABI CaseIt removeCase(CaseIt I);
 
+  iterator_range<succ_iterator> successors() {
+    return make_range(std::next(op_begin()), op_end());
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return make_range(std::next(op_begin()), op_end());
+  }
+
   unsigned getNumSuccessors() const { return getNumOperands() - 1; }
   BasicBlock *getSuccessor(unsigned idx) const {
     assert(idx < getNumSuccessors() &&"Successor idx out of range for switch!");
@@ -3783,33 +3755,6 @@ protected:
 public:
   void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
-  /// Iterator type that casts an operand to a basic block.
-  ///
-  /// This only makes sense because the successors are stored as adjacent
-  /// operands for indirectbr instructions.
-  struct succ_op_iterator
-      : iterator_adaptor_base<succ_op_iterator, value_op_iterator,
-                              std::random_access_iterator_tag, BasicBlock *,
-                              ptrdiff_t, BasicBlock *, BasicBlock *> {
-    explicit succ_op_iterator(value_op_iterator I) : iterator_adaptor_base(I) {}
-
-    BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
-    BasicBlock *operator->() const { return operator*(); }
-  };
-
-  /// The const version of `succ_op_iterator`.
-  struct const_succ_op_iterator
-      : iterator_adaptor_base<const_succ_op_iterator, const_value_op_iterator,
-                              std::random_access_iterator_tag,
-                              const BasicBlock *, ptrdiff_t, const BasicBlock *,
-                              const BasicBlock *> {
-    explicit const_succ_op_iterator(const_value_op_iterator I)
-        : iterator_adaptor_base(I) {}
-
-    const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
-    const BasicBlock *operator->() const { return operator*(); }
-  };
-
   static IndirectBrInst *Create(Value *Address, unsigned NumDests,
                                 InsertPosition InsertBefore = nullptr) {
     return new IndirectBrInst(Address, NumDests, InsertBefore);
@@ -3847,14 +3792,14 @@ public:
     setOperand(i + 1, NewSucc);
   }
 
-  iterator_range<succ_op_iterator> successors() {
-    return make_range(succ_op_iterator(std::next(value_op_begin())),
-                      succ_op_iterator(value_op_end()));
+  iterator_range<succ_iterator> successors() {
+    return make_range(succ_iterator(std::next(op_begin())),
+                      succ_iterator(op_end()));
   }
 
-  iterator_range<const_succ_op_iterator> successors() const {
-    return make_range(const_succ_op_iterator(std::next(value_op_begin())),
-                      const_succ_op_iterator(value_op_end()));
+  iterator_range<const_succ_iterator> successors() const {
+    return make_range(const_succ_iterator(std::next(op_begin())),
+                      const_succ_iterator(op_end()));
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -4001,6 +3946,15 @@ public:
   }
 
   unsigned getNumSuccessors() const { return 2; }
+
+  iterator_range<succ_iterator> successors() {
+    Use *First = &Op<NormalDestOpEndIdx>();
+    return {succ_iterator(First), succ_iterator(First + 2)};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    const Use *First = &Op<NormalDestOpEndIdx>();
+    return {const_succ_iterator(First), const_succ_iterator(First + 2)};
+  }
 
   /// Updates profile metadata by scaling it by \p S / \p T.
   LLVM_ABI void updateProfWeight(uint64_t S, uint64_t T);
@@ -4179,6 +4133,15 @@ public:
 
   unsigned getNumSuccessors() const { return getNumIndirectDests() + 1; }
 
+  iterator_range<succ_iterator> successors() {
+    Use *First = &Op<-1>() - getNumIndirectDests() - 1;
+    return {succ_iterator(First), succ_iterator(&Op<-1>())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    const Use *First = &Op<-1>() - getNumIndirectDests() - 1;
+    return {const_succ_iterator(First), const_succ_iterator(&Op<-1>())};
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return (I->getOpcode() == Instruction::CallBr);
@@ -4255,6 +4218,13 @@ private:
 
   void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
     llvm_unreachable("ResumeInst has no successors!");
+  }
+
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(op_end()), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(op_end()), const_succ_iterator(op_end())};
   }
 };
 
@@ -4418,6 +4388,14 @@ public:
     setOperand(Idx + 1, NewSucc);
   }
 
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(std::next(op_begin())), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(std::next(op_begin())),
+            const_succ_iterator(op_end())};
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::CatchSwitch;
@@ -4567,6 +4545,14 @@ private:
     assert(Idx < getNumSuccessors() && "Successor # out of range for catchret!");
     setSuccessor(B);
   }
+
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(std::next(op_begin())), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(std::next(op_begin())),
+            const_succ_iterator(op_end())};
+  }
 };
 
 template <>
@@ -4654,6 +4640,14 @@ private:
     setUnwindDest(B);
   }
 
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(std::next(op_begin())), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(std::next(op_begin())),
+            const_succ_iterator(op_end())};
+  }
+
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
   template <typename Bitfield>
@@ -4715,6 +4709,13 @@ private:
 
   void setSuccessor(unsigned idx, BasicBlock *B) {
     llvm_unreachable("UnreachableInst has no successors!");
+  }
+
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(op_end()), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(op_end()), const_succ_iterator(op_end())};
   }
 };
 

@@ -147,6 +147,9 @@ libcxx_library_dir = None
 # A plugin whose tests will be enabled, like intel-pt.
 enabled_plugins = []
 
+# Whether MTE (Memory Tagging Extension) is enabled.
+mte_enabled = False
+
 # the build type of lldb
 # Typical values include Debug, Release, RelWithDebInfo and MinSizeRel
 cmake_build_type = None

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -pedantic-errors %s -verify=expected,cxx98
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors %s -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,cxx98
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)

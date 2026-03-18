@@ -1142,6 +1142,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                    MatTy0->getNumColumns(),
                                    MatTy1->getNumColumns(), "hlsl.mul");
   }
+  case Builtin::BI__builtin_hlsl_transpose: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    auto *MatTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
+    llvm::MatrixBuilder MB(Builder);
+    return MB.CreateMatrixTranspose(Op0, MatTy->getNumRows(),
+                                    MatTy->getNumColumns());
+  }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())

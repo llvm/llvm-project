@@ -229,6 +229,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.sprintf
     libc.src.stdio.asprintf
     libc.src.stdio.sscanf
+    libc.src.stdio.stderr
+    libc.src.stdio.stdin
+    libc.src.stdio.stdout
     libc.src.stdio.vsscanf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
@@ -379,6 +382,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
     libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -679,6 +683,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     # math.h C23 _Float16 entrypoints
     libc.src.math.acoshf16
     libc.src.math.asinpif16
+    libc.src.math.atan2f16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16

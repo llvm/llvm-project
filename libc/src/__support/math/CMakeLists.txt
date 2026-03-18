@@ -260,6 +260,21 @@ add_header_library(
 )
 
 add_header_library(
+  atan2f16
+  HDRS
+    atan2f16.h
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.optimization
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
   atan2f128
   HDRS
     atan2f128.h
@@ -327,6 +342,23 @@ add_header_library(
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atanpif16
+  HDRS
+    atanpif16.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )
@@ -418,12 +450,32 @@ add_header_library(
 )
 
 add_header_library(
+  bf16div
+  HDRS
+    bf16div.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   bf16divf
   HDRS
     bf16divf.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16fma
+  HDRS
+    bf16fma.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
 )
 
@@ -1269,6 +1321,34 @@ add_header_library(
 )
 
 add_header_library(
+  fma
+  HDRS
+    fma.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmaf
+  HDRS
+    fmaf.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmaf16
+  HDRS
+    fmaf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ffma
   HDRS
     ffma.h
@@ -1983,6 +2063,16 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
     libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  hypot
+  HDRS
+    hypot.h
+  DEPENDS
+    libc.src.__support.FPUtil.hypot
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -2792,6 +2882,21 @@ add_header_library(
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.math.common_constants
     libc.src.__support.uint128
+)
+
+add_header_library(
+  log_bf16
+  HDRS
+    log_bf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
