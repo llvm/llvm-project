@@ -29,6 +29,11 @@ include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<CIR_Dialect, name, traits> {
   let mnemonic = attrMnemonic;
+  // Setting this to 0 will make the CXXABILowering always consider this
+  // attribute 'legal', so that it won't require any transformation. This should
+  // not be set to 0 if this type has any ability to have a 'record' type,
+  // member type, or method type.
+  bit canHaveIllegalCXXABIType = 1;
 }
 
 class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
@@ -138,6 +143,7 @@ def CIR_OptInfoAttr : CIR_Attr<"OptInfo", "opt_info"> {
     `<` struct(params) `>`
   }];
   let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -163,6 +169,7 @@ def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
   let assemblyFormat = [{
     `<` $value `>`
   }];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -265,6 +272,7 @@ def CIR_IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
   }];
 
   let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -299,6 +307,7 @@ def CIR_FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
   }];
 
   let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
 }
 
 
@@ -381,6 +390,7 @@ def CIR_ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector", [
 
   // Enable verifier.
   let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -857,6 +867,7 @@ def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
 
   let parameters = (ins "unsigned":$value);
   let assemblyFormat = "`<` `target` `<` $value `>` `>`";
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -902,6 +913,7 @@ def CIR_ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex", [
   let assemblyFormat = [{
     `<` qualified($real) `,` qualified($imag) `>`
   }];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -978,6 +990,7 @@ class CIR_GlobalCtorDtor<string name, string attrMnemonic>
       return 65535;
     }
   }];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 def CIR_GlobalCtorAttr : CIR_GlobalCtorDtor<"Ctor", "ctor"> {
@@ -1169,6 +1182,7 @@ def CIR_BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
                    size, offset, is_signed);
     }]>
   ];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1201,6 +1215,7 @@ def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
   let assemblyFormat = [{
     `<` struct($index, $offset) `>`
   }];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1271,12 +1286,14 @@ def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
 // Represents the catch_all region.
 def CIR_CatchAllAttr : CIR_UnitAttr<"CatchAll", "all"> {
   let storageType = [{ CatchAllAttr }];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 // Represents the unwind region where unwind continues or
 // the program std::terminate's.
 def CIR_UnwindAttr : CIR_UnitAttr<"Unwind", "unwind"> {
   let storageType = [{ CatchUnwind }];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1302,6 +1319,7 @@ def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
                    mlir::StringAttr::get($_ctxt, label_name));
     }]>
   ];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1355,6 +1373,7 @@ def CIR_StaticLocalGuardAttr : CIR_Attr<"StaticLocalGuard",
   }];
   let parameters = (ins "mlir::StringAttr":$name);
   let assemblyFormat = "`<` $name `>`";
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1379,6 +1398,7 @@ def CIR_UsualDeleteParamsAttr
   let assemblyFormat = [{
     `<` struct($size, $alignment, $type_aware_delete, $destroying_delete) `>`
   }];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1415,6 +1435,7 @@ class CIR_AST<string name, string prefix, list<Trait> traits = []>
       // Nothing to print besides the mnemonics.
     }
   }];
+  let canHaveIllegalCXXABIType = 0;
 }
 
 def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [

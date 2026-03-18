@@ -52,18 +52,16 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
 
   // These attributes either don't contain a type, or don't contain a type that
   // can have a data member/method.
-  if (isa<cir::IntAttr, cir::BoolAttr, cir::SourceLanguageAttr,
-          cir::OptInfoAttr, cir::ConstVectorAttr, cir::FPAttr,
-          cir::CUDAKernelNameAttr, cir::VisibilityAttr, cir::GlobalCtorAttr,
-          cir::GlobalDtorAttr, cir::LangAddressSpaceAttr,
-          cir::TargetAddressSpaceAttr, cir::BitfieldInfoAttr,
-          cir::AddressPointAttr, cir::BlockAddrInfoAttr,
-          cir::StaticLocalGuardAttr, cir::UsualDeleteParamsAttr,
-          cir::ASTVarDeclAttr, cir::CUDAExternallyInitializedAttr,
-          cir::CleanupKindAttr, cir::CleanupKindAttr, cir::ConstComplexAttr,
-          cir::CatchAllAttr, cir::UnwindAttr, cir::BlockAddrInfoAttr,
-          mlir::DenseArrayAttr, mlir::FloatAttr, mlir::UnitAttr,
+  if (isa<mlir::DenseArrayAttr, mlir::FloatAttr, mlir::UnitAttr,
           mlir::StringAttr, mlir::IntegerAttr, mlir::SymbolRefAttr>(attr))
+    return true;
+
+  // Tablegen'ed always-legal attributes:
+  if (isa<
+#define CXX_ABI_ALWAYS_LEGAL_ATTRS
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef CXX_ABI_ALWAYS_LEGAL_ATTRS
+          >(attr))
     return true;
 
   // Data Member and method are ALWAYS illegal.
