@@ -829,6 +829,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return (ST == llvm::Triple::Vertex && !IsInput) ||
            (ST == llvm::Triple::Pixel && IsInput);
   }
+  if (SemanticName == "SV_VERTEXID")
+    return true;
 
   return false;
 }
@@ -1048,6 +1050,11 @@ void SemaHLSL::checkSemanticAnnotation(
     diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
                                   {{llvm::Triple::Vertex, IOType::InOut},
                                    {llvm::Triple::Pixel, IOType::In}});
+    return;
+  }
+  if (SemanticName == "SV_VERTEXID") {
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                  {{llvm::Triple::Vertex, IOType::In}});
     return;
   }
 
@@ -1930,6 +1937,14 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
         (VT && VT->getNumElements() > 4))
       Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
           << AL << "float/float1/float2/float3/float4";
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_VERTEXID") {
+    uint64_t SizeInBits = SemaRef.Context.getTypeSize(ValueType);
+    if (!ValueType->isUnsignedIntegerType() || SizeInBits != 32)
+      Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type) << AL << "uint";
     D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
     return;
   }
@@ -3500,6 +3515,50 @@ static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
 
   return false;
 }
+static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountRange(TheCall, 2, 3))
+    return true;
+
+  // Check the texture handle.
+  if (CheckResourceHandle(&S, TheCall, 0,
+                          [](const HLSLAttributedResourceType *ResType) {
+                            return ResType->getAttrs().ResourceDimension ==
+                                   llvm::dxil::ResourceDimension::Unknown;
+                          }))
+    return true;
+
+  auto *ResourceTy =
+      TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+  // Check the location + lod (int3 for Texture2D).
+  unsigned ExpectedDim =
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  QualType CoordLODTy = TheCall->getArg(1)->getType();
+  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, ExpectedDim + 1,
+                              TheCall->getArg(1)->getBeginLoc()))
+    return true;
+
+  QualType EltTy = CoordLODTy;
+  if (const auto *VTy = EltTy->getAs<VectorType>())
+    EltTy = VTy->getElementType();
+  if (!EltTy->isIntegerType()) {
+    S.Diag(TheCall->getArg(1)->getBeginLoc(), diag::err_typecheck_expect_int)
+        << CoordLODTy;
+    return true;
+  }
+
+  // Check the offset operand.
+  if (TheCall->getNumArgs() > 2) {
+    if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
+                                S.Context.IntTy, ExpectedDim,
+                                TheCall->getArg(2)->getBeginLoc()))
+      return true;
+  }
+
+  TheCall->setType(ResourceTy->getContainedType());
+  return false;
+}
+
 static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   unsigned MinArgs, MaxArgs;
   if (Kind == SampleKind::Sample) {
@@ -3720,6 +3779,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_load_level:
+    return CheckLoadLevelBuiltin(SemaRef, TheCall);
   case Builtin::BI__builtin_hlsl_resource_sample:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Sample);
   case Builtin::BI__builtin_hlsl_resource_sample_bias:
@@ -3989,6 +4050,25 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_hlsl_transpose: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    Expr *Arg = TheCall->getArg(0);
+    QualType ArgTy = Arg->getType();
+
+    const auto *MatTy = ArgTy->getAs<ConstantMatrixType>();
+    if (!MatTy) {
+      SemaRef.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* matrix */ 3 << /* no int */ 0 << /* no fp */ 0 << ArgTy;
+      return true;
+    }
+
+    QualType RetTy = getASTContext().getConstantMatrixType(
+        MatTy->getElementType(), MatTy->getNumColumns(), MatTy->getNumRows());
+    TheCall->setType(RetTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
@@ -4053,6 +4133,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_xor:
   case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
@@ -4149,6 +4230,19 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
       return true;
     if (CheckWavePrefix(&SemaRef, TheCall))
+      return true;
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_quad_read_across_x: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+    if (CheckNotBoolScalarOrVector(&SemaRef, TheCall, 0))
       return true;
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();

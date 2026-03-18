@@ -815,7 +815,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
           MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target) &&
           SanCovAddrs.find(Target) != SanCovAddrs.end())
         Addrs->insert(CovPoint);
-      MIA->updateState(Inst, Addr);
+      MIA->updateState(Inst, STI.get(), Addr);
     }
   }
 }

@@ -1,0 +1,32 @@
+#ifndef _UTILITY_
+#define _UTILITY_
+
+#include <type_traits>
+
+namespace std {
+
+template <typename _Tp>
+constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
+  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
+}
+
+template <typename T>
+constexpr T &&forward(remove_reference_t<T> &t) noexcept {
+  return static_cast<T &&>(t);
+}
+
+template <typename T>
+constexpr T &&forward(remove_reference_t<T> &&t) noexcept {
+  return static_cast<T &&>(t);
+}
+
+template <typename T>
+void swap(T &a, T &b) {
+  T tmp = move(a);
+  a = move(b);
+  b = move(tmp);
+}
+
+} // namespace std
+
+#endif // _UTILITY_

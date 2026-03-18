@@ -43,6 +43,13 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.ReturnValue %result : vector<4xf32>
   }
 
+  // CHECK-LABEL: @outer_product_1
+  spirv.func @outer_product_1(%arg0: vector<3xf32>, %arg1: vector<2xf32>) -> !spirv.matrix<2 x vector<3xf32>> "None" {
+    // CHECK: {{%.*}} = spirv.OuterProduct {{%.*}}, {{%.*}} : vector<3xf32>, vector<2xf32> -> !spirv.matrix<2 x vector<3xf32>>
+    %result = spirv.OuterProduct %arg0, %arg1 : vector<3xf32>, vector<2xf32> -> !spirv.matrix<2 x vector<3xf32>>
+    spirv.ReturnValue %result : !spirv.matrix<2 x vector<3xf32>>
+  }
+
   // CHECK-LABEL: @matrix_times_matrix_1
   spirv.func @matrix_times_matrix_1(%arg0: !spirv.matrix<3 x vector<3xf32>>, %arg1: !spirv.matrix<3 x vector<3xf32>>) -> !spirv.matrix<3 x vector<3xf32>> "None"{
     // CHECK: {{%.*}} = spirv.MatrixTimesMatrix {{%.*}}, {{%.*}} : !spirv.matrix<3 x vector<3xf32>>, !spirv.matrix<3 x vector<3xf32>> -> !spirv.matrix<3 x vector<3xf32>>
@@ -199,5 +206,29 @@ func.func @vector_times_matrix_vector_type_mismatch(%arg0: vector<3xf16>, %arg1:
 func.func @vector_times_matrix_matrix_type_mismatch(%arg0: vector<3xf32>, %arg1: !spirv.matrix<4 x vector<3xf16>>) {
   // expected-error @+1 {{op failed to verify that all of {matrix, result} have same element type}}
   %result = spirv.VectorTimesMatrix %arg0, %arg1 : vector<3xf32>, !spirv.matrix<4 x vector<3xf16>> -> vector<4xf32>
+  return
+}
+
+// -----
+
+func.func @outer_product_element_type_mismatch(%arg0: vector<3xf16>, %arg1: vector<2xf16>) {
+  // expected-error @+1 {{op failed to verify that all of {vector1, vector2, result} have same element type}}
+  %result = spirv.OuterProduct %arg0, %arg1 : vector<3xf16>, vector<2xf16> -> !spirv.matrix<2 x vector<3xf32>>
+  return
+}
+
+// -----
+
+func.func @outer_product_vector1_result_row_mismatch(%arg0: vector<3xf32>, %arg1: vector<2xf32>) {
+  // expected-error @+1 {{op failed to verify that result rows count matches vector1 elements count}}
+  %result = spirv.OuterProduct %arg0, %arg1 : vector<3xf32>, vector<2xf32> -> !spirv.matrix<2 x vector<4xf32>>
+  return
+}
+
+// -----
+
+func.func @outer_product_vector2_result_column_mismatch(%arg0: vector<3xf32>, %arg1: vector<2xf32>) {
+  // expected-error @+1 {{op failed to verify that result columns count matches vector2 elements count}}
+  %result = spirv.OuterProduct %arg0, %arg1 : vector<3xf32>, vector<2xf32> -> !spirv.matrix<3 x vector<3xf32>>
   return
 }

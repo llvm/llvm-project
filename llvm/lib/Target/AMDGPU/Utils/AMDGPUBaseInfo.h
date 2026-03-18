@@ -1997,6 +1997,12 @@ MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
 std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
                                                    bool HasSetregVGPRMSBFixup);
 
+/// \returns VGPR MSBs encoded in a S_SETREG_IMM32_B32 \p MI if it sets
+/// it. If \p HasSetregVGPRMSBFixup is true then size of the ID_MODE mask is
+/// ignored.
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MCInst &MI,
+                                                   bool HasSetregVGPRMSBFixup);
+
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
 // maps, one for X and one for Y component.

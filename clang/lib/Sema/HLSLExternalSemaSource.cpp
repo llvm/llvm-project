@@ -258,6 +258,7 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
                                                ResourceDimension Dim) {
   return BuiltinTypeDeclBuilder(S, Decl)
       .addTextureHandle(RC, IsROV, Dim)
+      .addTextureLoadMethods(Dim)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()

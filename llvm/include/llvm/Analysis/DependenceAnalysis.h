@@ -541,9 +541,7 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                    const SCEV *SrcConst, const SCEV *DstConst,
-                    const Loop *CurrentSrcLoop, const Loop *CurrentDstLoop,
+  bool exactSIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                     unsigned Level, FullDependence &Result) const;
 
   /// weakZeroSrcSIVtest - Tests the weak-zero SIV subscript pair
@@ -554,10 +552,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool weakZeroSrcSIVtest(const SCEV *DstCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                          const Loop *CurrentDstLoop, unsigned Level,
-                          FullDependence &Result) const;
+  bool weakZeroSrcSIVtest(const SCEV *SrcConst, const SCEVAddRecExpr *Dst,
+                          unsigned Level, FullDependence &Result) const;
 
   /// weakZeroDstSIVtest - Tests the weak-zero SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -567,10 +563,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool weakZeroDstSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                          const Loop *CurrentDstLoop, unsigned Level,
-                          FullDependence &Result) const;
+  bool weakZeroDstSIVtest(const SCEVAddRecExpr *Src, const SCEV *DstConst,
+                          unsigned Level, FullDependence &Result) const;
 
   /// exactRDIVtest - Tests the RDIV subscript pair for dependence.
   /// Things of the form [c1 + a*i] and [c2 + b*j],
@@ -592,9 +586,8 @@ private:
   /// Works in some cases that exactRDIVtest doesn't,
   /// and vice versa. Can also be used as a backup for
   /// ordinary SIV tests.
-  bool symbolicRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                        const SCEV *SrcConst, const SCEV *DstConst,
-                        const Loop *SrcLoop, const Loop *DstLoop) const;
+  bool symbolicRDIVtest(const SCEVAddRecExpr *Src,
+                        const SCEVAddRecExpr *Dst) const;
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
   /// Returns true if any possible dependence is disproved.
