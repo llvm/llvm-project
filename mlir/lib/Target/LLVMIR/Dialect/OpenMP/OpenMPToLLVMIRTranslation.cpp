@@ -2129,11 +2129,10 @@ buildDependData(std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
 /// if there is cancellation inside of the taskgroup body.
 /// The terminator will need to be fixed to branch to the correct block to
 /// cleanup the construct.
-static void
-pushCancelFinalizationCB(SmallVectorImpl<llvm::UncondBrInst *> &cancelTerminators,
-                         llvm::IRBuilderBase &llvmBuilder,
-                         llvm::OpenMPIRBuilder &ompBuilder, mlir::Operation *op,
-                         llvm::omp::Directive cancelDirective) {
+static void pushCancelFinalizationCB(
+    SmallVectorImpl<llvm::UncondBrInst *> &cancelTerminators,
+    llvm::IRBuilderBase &llvmBuilder, llvm::OpenMPIRBuilder &ompBuilder,
+    mlir::Operation *op, llvm::omp::Directive cancelDirective) {
   auto finiCB = [&](llvm::OpenMPIRBuilder::InsertPointTy ip) -> llvm::Error {
     llvm::IRBuilderBase::InsertPointGuard guard(llvmBuilder);
 
