@@ -804,6 +804,25 @@ lldb::addr_t SBValue::GetValueAsAddress() {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
+    bool success = true;
+    uint64_t ret_val = fail_value;
+    ret_val = value_sp->GetValueAsUnsigned(fail_value, &success);
+    if (!success)
+      return fail_value;
+    ProcessSP process_sp = m_opaque_sp->GetProcessSP();
+    if (!process_sp)
+      return ret_val;
+    return process_sp->FixDataAddress(ret_val);
+  }
+
+  return fail_value;
+}
+
+lldb::addr_t SBValue::GetPointerValue() {
+  addr_t fail_value = LLDB_INVALID_ADDRESS;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (value_sp) {
     auto [ret_val, type] = value_sp->GetPointerValue();
     if (type != eAddressTypeLoad)
       return fail_value;
