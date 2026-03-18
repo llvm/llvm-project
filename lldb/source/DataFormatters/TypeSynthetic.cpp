@@ -20,10 +20,8 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
-#include <iterator>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -294,7 +292,7 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
   }
 
   if (data.size() > 0)
-    m_update_results = std::move(data);
+    m_self = std::move(data);
 
   return ChildCacheState::eRefetch;
 }
@@ -305,7 +303,7 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
     return 0;
 
   FormatterBytecode::ControlStack control = {m_impl.num_children->getBuffer()};
-  FormatterBytecode::DataStack data = GetSelf();
+  FormatterBytecode::DataStack data = m_self;
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_num_children);
   if (error)
@@ -337,7 +335,7 @@ BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
 
   FormatterBytecode::ControlStack control = {
       m_impl.get_child_at_index->getBuffer()};
-  FormatterBytecode::DataStack data = GetSelf();
+  FormatterBytecode::DataStack data = m_self;
   data.emplace_back((uint64_t)idx);
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_child_at_index);
@@ -367,7 +365,7 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
 
   FormatterBytecode::ControlStack control = {
       m_impl.get_child_index->getBuffer()};
-  FormatterBytecode::DataStack data = GetSelf();
+  FormatterBytecode::DataStack data = m_self;
   data.emplace_back(name.GetString());
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_child_index);
@@ -391,16 +389,6 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
   }
 
   return llvm::createStringError("@get_child_index returned invalid value");
-}
-
-FormatterBytecode::DataStack BytecodeSyntheticChildren::FrontEnd::GetSelf() {
-  FormatterBytecode::DataStack self;
-  llvm::copy(m_init_results, std::back_inserter(self));
-  llvm::copy(m_update_results, std::back_inserter(self));
-  if (self.empty())
-    // As a fallback, "self" is just the valobj.
-    self.emplace_back(m_backend.GetSP());
-  return self;
 }
 
 std::string BytecodeSyntheticChildren::GetDescription() {
