@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx98 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98-17,cxx98-20,since-cxx11,since-cxx17 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98-20,cxx20-23,since-cxx11,since-cxx17 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx98 
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx98-17,cxx98-20,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx98-20,cxx20-23,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-linux-gnu %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx20-23,cxx23,since-cxx11,since-cxx17,since-cxx23
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
