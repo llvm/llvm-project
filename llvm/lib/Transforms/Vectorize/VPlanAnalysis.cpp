@@ -30,7 +30,7 @@ VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
     return;
   }
 
-  // If there's no canonical IV, retrieve the type from the trip count
+  // If there's no loop region, retrieve the type from the trip count
   // expression.
   auto *TC = Plan.getTripCount();
   if (auto *TCIRV = dyn_cast<VPIRValue>(TC)) {

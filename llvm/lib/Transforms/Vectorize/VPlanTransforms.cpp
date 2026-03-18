@@ -1655,14 +1655,34 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Hoist an invariant increment Y of a phi X, by having X start at Y.
-  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && isa<VPIRValue>(Y) &&
-      isa<VPPhi>(X)) {
+  // Fold the offset added to the backedge value of a zero-start canonical IV.
+  // Given: CanIV = phi [0, IVInc], IVInc = CanIV + Step,
+  //        Def = CanIV + Y (or Def = IVInc + Y)
+  // where all users of CanIV other than IVInc are adds of CanIV + Y.
+  // Transform: CanIV = phi [Y, IVInc], (CanIV + Y) → CanIV,
+  //            (IVInc + Y) → IVInc.
+  if ((match(Def, m_Add(m_c_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) ||
+       match(Def, m_Add(m_VPValue(X), m_VPValue(Y)))) &&
+      isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) && isa<VPPhi>(X)) {
     auto *Phi = cast<VPPhi>(X);
-    if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
-        Phi->getSingleUser() == Def) {
+    auto *IVInc =
+        cast<VPSingleDefRecipe>(Phi->getOperand(1)->getDefiningRecipe());
+    if (match(Phi->getOperand(0), m_ZeroInt()) &&
+        match(IVInc, m_c_Add(m_Specific(Phi), m_VPValue())) &&
+        all_of(Phi->users(), [IVInc, Phi, Y](VPUser *U) {
+          return U == IVInc || match(U, m_Add(m_Specific(Phi), m_Specific(Y)));
+        }) &&
+        all_of(IVInc->users(), [Phi, IVInc, Y](VPUser *U) {
+          return U == Phi ||
+                 match(U, m_c_Add(m_Specific(IVInc), m_Specific(Y)));
+        })) {
       Phi->setOperand(0, Y);
-      Def->replaceAllUsesWith(Phi);
+      for (VPUser *U : to_vector(Phi->users()))
+        if (U != IVInc)
+          cast<VPSingleDefRecipe>(U)->replaceAllUsesWith(Phi);
+      for (VPUser *U : to_vector(IVInc->users()))
+        if (U != Phi)
+          cast<VPSingleDefRecipe>(U)->replaceAllUsesWith(IVInc);
       return;
     }
   }
@@ -2171,9 +2191,11 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
-  if (match(Term,
-            m_BranchOnCount(m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())),
-                            m_VPValue())) ||
+  auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
+  if (match(Term, m_BranchOnCount(
+                      m_CombineOr(m_CanIVInc,
+                                  m_c_Add(m_CanIVInc, m_VPValue())),
+                      m_VPValue())) ||
       match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
                       m_VPValue(), m_VPValue(), m_VPValue()))))) {
     // Try to simplify the branch condition if VectorTC <= VF * UF when the
@@ -3440,9 +3462,9 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
 
   // Replace CanonicalIVInc with CurrentIteration increment if it exists.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
-  if (auto *CanIVInc =
-          vputils::findCanonicalIVIncrement(CanonicalIV, &Plan.getVFxUF())) {
-    CanIVInc->replaceAllUsesWith(CurrentIterationIncr);
+  if (auto *CanIVInc = vputils::findUserOf(
+          CanonicalIV, m_c_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())))) {
+    cast<VPInstruction>(CanIVInc)->replaceAllUsesWith(CurrentIterationIncr);
     CanIVInc->eraseFromParent();
   }
 }
@@ -3482,13 +3504,15 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   if (match(LatchBr, m_BranchOnCond(m_True())))
     return;
 
-  VPValue *CanIVInc = vputils::findCanonicalIVIncrement(
-      LoopRegion->getCanonicalIV(), &Plan.getVFxUF());
-  assert(CanIVInc && "Must have canonical IV increment");
+  VPValue *CanIVInc;
+  [[maybe_unused]] bool FoundIncrement = match(
+      LatchBr,
+      m_BranchOnCond(m_SpecificCmp(CmpInst::ICMP_EQ, m_VPValue(CanIVInc),
+                                   m_Specific(&Plan.getVectorTripCount()))));
   assert(
-      match(LatchBr, m_BranchOnCond(m_SpecificCmp(
-                         CmpInst::ICMP_EQ, m_Specific(CanIVInc),
-                         m_Specific(&Plan.getVectorTripCount())))) &&
+      FoundIncrement &&
+      match(CanIVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
+                            m_Specific(&Plan.getVFxUF()))) &&
       "Expected BranchOnCond with ICmp comparing CanIV increment with vector "
       "trip count");
 
@@ -5534,7 +5558,8 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
 
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
-  VPInstruction *CanIVInc = VectorLoop->getOrCreateCanonicalIVIncrement();
+  VPInstruction *CanIVInc = vputils::findCanonicalIVIncrement(
+      VectorLoop->getCanonicalIV(), Plan);
   Type *CanIVTy = VectorLoop->getCanonicalIVType();
   VPBasicBlock *VectorPH = Plan.getVectorPreheader();
   VPBuilder PHBuilder(VectorPH, VectorPH->begin());

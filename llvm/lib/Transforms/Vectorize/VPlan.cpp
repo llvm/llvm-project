@@ -888,8 +888,7 @@ VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
   VPRegionValue *CanIV = getCanonicalIV();
   assert(CanIV && "Expected a canonical IV");
 
-  if (auto *Inc =
-          vputils::findCanonicalIVIncrement(CanIV, &getPlan()->getVFxUF()))
+  if (auto *Inc = vputils::findCanonicalIVIncrement(CanIV, *getPlan()))
     return Inc;
 
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
@@ -1231,13 +1230,21 @@ VPlan *VPlan::duplicate() {
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
-  Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
-  Old2NewVPValues[&VF] = &NewPlan->VF;
-  Old2NewVPValues[&UF] = &NewPlan->UF;
-  Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
+  // Map and propagate materialized state for symbolic values.
+  for (auto [OldSV, NewSV] :
+       {std::pair{&VectorTripCount, &NewPlan->VectorTripCount},
+        {&VF, &NewPlan->VF},
+        {&UF, &NewPlan->UF},
+        {&VFxUF, &NewPlan->VFxUF}}) {
+    Old2NewVPValues[OldSV] = NewSV;
+    if (OldSV->isMaterialized())
+      NewSV->markMaterialized();
+  }
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPSymbolicValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
+    if (BackedgeTakenCount->isMaterialized())
+      NewPlan->BackedgeTakenCount->markMaterialized();
   }
   if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
     Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);

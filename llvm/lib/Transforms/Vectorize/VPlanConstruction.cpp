@@ -764,8 +764,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
-  assert(isa<VPPhi>(HeaderVPBB->front()) && "first recipe must be VPPhi");
-  for (VPRecipeBase &R : make_early_inc_range(drop_begin(HeaderVPBB->phis()))) {
+  for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
     auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
@@ -774,7 +773,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
   }
 
   for (const auto &[HeaderPhiR, ScalarPhiR] :
-       getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarPreheader())) {
+       zip_equal(HeaderVPBB->phis(), Plan.getScalarPreheader()->phis())) {
     auto *ResumePhiR = cast<VPPhi>(&ScalarPhiR);
     if (isa<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhiR)) {
       ResumePhiR->setName("scalar.recur.init");

@@ -643,34 +643,49 @@ vputils::getMemoryLocation(const VPRecipeBase &R) {
   return Loc;
 }
 
-VPInstruction *vputils::findCanonicalIVIncrement(VPValue *CanIV,
-                                                 VPValue *VFxUF) {
-  using namespace VPlanPatternMatch;
-  if (auto *R =
-          findUserOf(CanIV, m_c_Add(m_Specific(CanIV), m_Specific(VFxUF))))
-    return cast<VPInstruction>(R);
+VPInstruction *vputils::findCanonicalIVIncrement(VPValue *CanIV, VPlan &Plan) {
+  VPValue *Step;
+  VPInstruction *Increment = nullptr;
+  VPSymbolicValue &VFxUF = Plan.getVFxUF();
 
-  // If CanIV is a region value, also try to find the increment via the
-  // terminator of the exiting block.
-  auto *RegionV = dyn_cast<VPRegionValue>(CanIV);
-  if (!RegionV)
-    return nullptr;
+  auto SetIncrement = [&Increment](VPUser *U) {
+    assert(!Increment && "There must be a unique increment");
+    Increment = cast<VPInstruction>(U);
+  };
 
-  auto *Region = RegionV->getDefiningRegion();
-  auto *ExitingLatch = cast<VPBasicBlock>(Region->getExiting());
-  auto *ExitingTerm = ExitingLatch->getTerminator();
-  VPInstruction *CanIVInc = nullptr;
-  VPValue *Cond = nullptr;
-  if (match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
-      match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ, m_VPInstruction(CanIVInc),
-                                 m_VPValue())) &&
-      match(CanIVInc,
-            m_c_Add(m_CombineOr(m_Specific(CanIV),
-                                m_c_Add(m_Specific(CanIV), m_LiveIn())),
-                    m_VPValue())))
-    return CanIVInc;
+  for (VPUser *U : CanIV->users()) {
+    if (!match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))))
+      continue;
 
-  return nullptr;
+    if (!VFxUF.isMaterialized()) {
+      if (Step == &VFxUF)
+        SetIncrement(U);
+      continue;
+    }
+
+    // VFxUF has been materialized; look for increment by UF.
+    VPSymbolicValue &UF = Plan.getUF();
+    if (Step == &UF) {
+      SetIncrement(U);
+      continue;
+    }
+
+    if (!UF.isMaterialized())
+      continue;
+
+    unsigned ConcreteUF = Plan.getConcreteUF();
+    if ((ConcreteUF == 1 &&
+         match(Step, m_VPInstruction<VPInstruction::VScale>())) ||
+        match(Step, m_Mul(m_SpecificInt(ConcreteUF),
+                          m_VPInstruction<VPInstruction::VScale>())) ||
+        match(Step, m_SpecificInt(ConcreteUF)))
+      SetIncrement(U);
+  }
+
+  assert((!VFxUF.isMaterialized() || Increment) &&
+         "When VFxUF has been materialized, "
+         "an UF based increment must exist");
+  return Increment;
 }
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
