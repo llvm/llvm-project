@@ -945,7 +945,7 @@ namespace {
 /// converted to another instruction with same semantics. For example, x << 1 is
 /// equal to x * 2. x * 1 is equal to x | 0.
 class BinOpSameOpcodeHelper {
-  using MaskType = std::uint_fast16_t;
+  using MaskType = std::uint_fast32_t;
   /// Sort SupportedOp because it is used by binary_search.
   constexpr static std::initializer_list<unsigned> SupportedOp = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
@@ -953,15 +953,15 @@ class BinOpSameOpcodeHelper {
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
                 "SupportedOp is not sorted.");
   enum : MaskType {
-    ShlBIT = 0b1,
-    AShrBIT = 0b10,
-    MulBIT = 0b100,
-    AddBIT = 0b1000,
-    SubBIT = 0b10000,
-    AndBIT = 0b100000,
-    OrBIT = 0b1000000,
-    XorBIT = 0b10000000,
-    MainOpBIT = 0b100000000,
+    ShlBIT = 1,
+    AShrBIT = 1 << 1,
+    MulBIT = 1 << 2,
+    AddBIT = 1 << 3,
+    SubBIT = 1 << 4,
+    AndBIT = 1 << 5,
+    OrBIT = 1 << 6,
+    XorBIT = 1 << 7,
+    MainOpBIT = 1 << 8,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
   /// Return a non-nullptr if either operand of I is a ConstantInt.
@@ -13267,8 +13267,6 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   if (ScalarTy->isVectorTy())
     return false;
   const unsigned Sz = DL->getTypeSizeInBits(ScalarTy);
-  if (!isPowerOf2_64(Sz))
-    return false;
   const TreeEntry *LhsTE = getOperandEntry(&TE, /*Idx=*/0);
   const TreeEntry *RhsTE = getOperandEntry(&TE, /*Idx=*/1);
   // Lhs should be zext i<stride> to I<sz>.
@@ -13280,7 +13278,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
     return false;
   Type *SrcScalarTy = cast<ZExtInst>(LhsTE->getMainOp())->getSrcTy();
   unsigned Stride = DL->getTypeSizeInBits(SrcScalarTy);
-  if (!isPowerOf2_64(Stride) || Stride >= Sz)
+  if (!isPowerOf2_64(Stride) || Stride >= Sz || Sz % Stride != 0 ||
+      !isPowerOf2_64(LhsTE->getVectorFactor()))
     return false;
   if (!(RhsTE->isGather() && RhsTE->ReorderIndices.empty() &&
         RhsTE->ReuseShuffleIndices.empty() && !MinBWs.contains(RhsTE)))
@@ -13332,6 +13331,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       return false;
   }
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  auto *SrcType = IntegerType::getIntNTy(ScalarTy->getContext(),
+                                         Stride * LhsTE->getVectorFactor());
   FastMathFlags FMF;
   SmallPtrSet<Value *, 4> CheckedExtracts;
   auto *VecTy = getWidenedType(ScalarTy, TE.getVectorFactor());
@@ -13347,7 +13348,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
           getWidenedType(SrcScalarTy, LhsTE->getVectorFactor()), CastCtx,
           CostKind);
   InstructionCost BitcastCost = TTI->getCastInstrCost(
-      Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx, CostKind);
+      Instruction::BitCast, SrcType, SrcVecTy, CastCtx, CostKind);
   if (!Order.empty()) {
     fixupOrderingIndices(Order);
     SmallVector<int> Mask;
@@ -13359,9 +13360,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   constexpr unsigned ByteSize = 8;
   if (!Order.empty() && isReverseOrder(Order) &&
       DL->getTypeSizeInBits(SrcScalarTy) == ByteSize) {
-    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ScalarTy, {ScalarTy});
+    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
     InstructionCost BSwapCost =
-        TTI->getCastInstrCost(Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx,
+        TTI->getCastInstrCost(Instruction::BitCast, SrcType, SrcVecTy, CastCtx,
                               CostKind) +
         TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
     if (BSwapCost <= BitcastCost) {
@@ -13375,10 +13376,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
           SrcTE->getOpcode() == Instruction::Load && !SrcTE->isAltShuffle() &&
           all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
         auto *LI = cast<LoadInst>(SrcTE->getMainOp());
-        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ScalarTy,
-                                          {ScalarTy});
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
         InstructionCost BSwapCost =
-            TTI->getMemoryOpCost(Instruction::Load, ScalarTy, LI->getAlign(),
+            TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
                                  LI->getPointerAddressSpace(), CostKind) +
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         if (BSwapCost <= BitcastCost) {
@@ -13399,13 +13399,17 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
         all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
       auto *LI = cast<LoadInst>(SrcTE->getMainOp());
       BitcastCost =
-          TTI->getMemoryOpCost(Instruction::Load, ScalarTy, LI->getAlign(),
+          TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
                                LI->getPointerAddressSpace(), CostKind);
       VecCost +=
           TTI->getMemoryOpCost(Instruction::Load, SrcVecTy, LI->getAlign(),
                                LI->getPointerAddressSpace(), CostKind);
       ForLoads = true;
     }
+  }
+  if (SrcType != ScalarTy) {
+    BitcastCost += TTI->getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
+                                         TTI::CastContextHint::None, CostKind);
   }
   return BitcastCost < VecCost;
 }
@@ -22325,11 +22329,17 @@ Value *BoUpSLP::vectorizeTree(
     IRBuilder<>::InsertPointGuard Guard(Builder);
     Builder.SetInsertPoint(ReductionRoot->getParent(),
                            ReductionRoot->getIterator());
-    Vec = Builder.CreateIntCast(
-        Vec,
-        VectorType::get(Builder.getIntNTy(ReductionBitWidth),
-                        cast<VectorType>(Vec->getType())->getElementCount()),
-        It->second.second);
+    if (isReducedBitcastRoot() || isReducedCmpBitcastRoot()) {
+      Vec = Builder.CreateIntCast(Vec, Builder.getIntNTy(ReductionBitWidth),
+                                  It->second.second);
+
+    } else {
+      Vec = Builder.CreateIntCast(
+          Vec,
+          VectorType::get(Builder.getIntNTy(ReductionBitWidth),
+                          cast<VectorType>(Vec->getType())->getElementCount()),
+          It->second.second);
+    }
   }
   return Vec;
 }
@@ -28333,6 +28343,8 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
         const SCEV *SCEVI = SE->getSCEV(GEPList[I]);
         for (int J = I + 1; J < E && Candidates.size() > 1; ++J) {
           auto *GEPJ = GEPList[J];
+          if (!Candidates.count(GEPJ))
+            continue;
           const SCEV *SCEVJ = SE->getSCEV(GEPList[J]);
           if (isa<SCEVConstant>(SE->getMinusSCEV(SCEVI, SCEVJ))) {
             Candidates.remove(GEPI);

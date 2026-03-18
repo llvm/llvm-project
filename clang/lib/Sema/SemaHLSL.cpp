@@ -4042,6 +4042,25 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_hlsl_transpose: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    Expr *Arg = TheCall->getArg(0);
+    QualType ArgTy = Arg->getType();
+
+    const auto *MatTy = ArgTy->getAs<ConstantMatrixType>();
+    if (!MatTy) {
+      SemaRef.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* matrix */ 3 << /* no int */ 0 << /* no fp */ 0 << ArgTy;
+      return true;
+    }
+
+    QualType RetTy = getASTContext().getConstantMatrixType(
+        MatTy->getElementType(), MatTy->getNumColumns(), MatTy->getNumRows());
+    TheCall->setType(RetTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
@@ -4106,6 +4125,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_xor:
   case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;

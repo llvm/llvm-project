@@ -4,8 +4,8 @@
 // omp target has_device_addr(x)
 
 // CHECK-LABEL: ModuleID
-// CHECK: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 48]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 549]
+// CHECK: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 48, i64 0]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 549, i64 288]
 
 module attributes { llvm.target_triple = "x86_64-unknown-linux-gnu", omp.target_triples = ["amdgcn-amd-amdhsa"], omp.version = #omp.version<version = 52>} {
   llvm.func @has_device_addr(%arg0: !llvm.ptr) attributes {target_cpu = "x86-64"} {

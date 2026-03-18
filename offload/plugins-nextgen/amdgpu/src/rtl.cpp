@@ -3822,10 +3822,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                            KernelArgs.DynCGroupMem);
   }
 
-  // Increase to the requested dynamic memory size for the device if needed.
-  DynBlockMemSize =
-      std::max(DynBlockMemSize, GenericDevice.getDynamicMemorySize());
-
   // HSA requires the group segment size to include both static and dynamic.
   uint32_t TotalBlockMemSize = getStaticBlockMemSize() + DynBlockMemSize;
 

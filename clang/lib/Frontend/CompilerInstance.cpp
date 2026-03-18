@@ -487,10 +487,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   PP->setPreprocessedOutput(getPreprocessorOutputOpts().ShowCPP);
 
   if (PP->getLangOpts().Modules && PP->getLangOpts().ImplicitModules) {
-    std::string ContextHash = getInvocation().computeContextHash();
-    PP->getHeaderSearchInfo().setContextHash(ContextHash);
-    PP->getHeaderSearchInfo().setSpecificModuleCachePath(
-        getSpecificModuleCachePath(ContextHash));
+    // FIXME: We already might've computed the context hash and the specific
+    // module cache path in `FrontendAction::BeginSourceFile()` when turning
+    // "-include-pch <DIR>" into "-include-pch <DIR>/<FILE>". Reuse those here.
+    PP->getHeaderSearchInfo().initializeModuleCachePath(
+        getInvocation().computeContextHash());
   }
 
   // Handle generating dependencies, if requested.
@@ -544,19 +545,6 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   if (GetDependencyDirectives)
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
-}
-
-std::string
-CompilerInstance::getSpecificModuleCachePath(StringRef ContextHash) {
-  assert(FileMgr && "Specific module cache path requires a FileManager");
-
-  // Set up the module path, including the hash for the module-creation options.
-  SmallString<256> SpecificModuleCache;
-  normalizeModuleCachePath(*FileMgr, getHeaderSearchOpts().ModuleCachePath,
-                           SpecificModuleCache);
-  if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
-    llvm::sys::path::append(SpecificModuleCache, ContextHash);
-  return std::string(SpecificModuleCache);
 }
 
 // ASTContext

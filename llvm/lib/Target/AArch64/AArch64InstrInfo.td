@@ -9043,9 +9043,9 @@ defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull", AArch64umull>;
 
 // A scalar sqdmull with the second operand being a vector lane can be
 // handled directly with the indexed instruction encoding.
-def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
-                                          (vector_extract (v4i32 V128:$Vm),
-                                                           VectorIndexS:$idx)),
+def : Pat<(f64 (AArch64sqdmull FPR32:$Rn,
+                               (f32 (bitconvert (i32 (vector_extract (v4i32 V128:$Vm),
+                                                           VectorIndexS:$idx)))))),
           (SQDMULLv1i64_indexed FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
 
 //----------------------------------------------------------------------------
