@@ -116,7 +116,7 @@ void memberExpr() {
    // CHECK-FIXES:    if (foo.bar()) {
   }
 
-  if((foo.fooBar().z)) {
+  if ((foo.fooBar().z)) {
    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
    // CHECK-FIXES:    if(foo.fooBar().z) {
   }
