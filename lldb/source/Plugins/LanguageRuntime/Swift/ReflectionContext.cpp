@@ -133,11 +133,10 @@ public:
   }
 
   llvm::Expected<const swift::reflection::TypeRef &>
-  GetTypeRef(StringRef mangled_type_name,
-             swift::reflection::DescriptorFinder *descriptor_finder) override {
+  GetTypeRef(StringRef mangled_type_name) override {
     swift::Demangle::Demangler dem;
     swift::Demangle::NodePointer node = dem.demangleSymbol(mangled_type_name);
-    return GetTypeRef(dem, node, descriptor_finder);
+    return GetTypeRef(dem, node);
   }
 
   /// Sets the descriptor finder, and on scope exit clears it out.
@@ -149,9 +148,8 @@ public:
   }
 
   llvm::Expected<const swift::reflection::TypeRef &>
-  GetTypeRef(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-             swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
+  GetTypeRef(swift::Demangle::Demangler &dem,
+             swift::Demangle::NodePointer node) override {
     auto type_ref_or_err =
         swift::Demangle::decodeMangledType(m_reflection_ctx.getBuilder(), node);
     if (type_ref_or_err.isError())
