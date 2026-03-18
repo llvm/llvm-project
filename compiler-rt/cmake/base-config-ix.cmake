@@ -31,7 +31,7 @@ if (NOT HAVE_RPC_XDR_H)
   if (COMPILER_RT_REQUIRE_RPC_XDR_H)
     message(FATAL_ERROR
       "${_rpc_xdr_header} is required for sanitizer builds but was not found. "
-      "Install the appropriate development package (e.g. libtirpc-devel on AIX), "
+      "Install the appropriate development package (e.g. bos.net.nfs.adt on AIX), "
       "or set -DCOMPILER_RT_REQUIRE_RPC_XDR_H=OFF to bypass this check.")
   endif()
 endif()
