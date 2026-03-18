@@ -11,7 +11,9 @@
 
 #ifdef LIBC_HAS_ANNEX_K
 
-typedef __SIZE_TYPE__ rsize_t;
+#include "./size_t.h"
+
+typedef size_t rsize_t;
 
 #endif // LIBC_HAS_ANNEX_K
 
