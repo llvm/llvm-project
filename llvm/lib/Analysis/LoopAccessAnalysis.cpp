@@ -755,7 +755,7 @@ void RuntimePointerChecking::groupChecks(
 struct StencilDecomposition {
   int64_t Constant = 0;
   /// Map from loop-invariant stride SCEV to its integer coefficient.
-  SmallDenseMap<const SCEV *, int64_t, 4> Coefficients;
+  SmallMapVector<const SCEV *, int64_t, 4> Coefficients;
 };
 
 /// Try to decompose \p Expr into a stencil offset function of loop-invariant
@@ -943,7 +943,7 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
       continue;
     SmallDenseMap<const SCEV *, int64_t, 4> MinCoeff, MaxCoeff;
     int64_t CMin = 0, CMax = 0;
-    SmallDenseSet<const SCEV *, 4> LocalStridesNeedingPreds;
+    SmallSetVector<const SCEV *, 4> LocalStridesNeedingPreds;
 
     for (unsigned Idx : AllMembers) {
       const SCEV *PtrStart = Pointers[Idx].Start;
