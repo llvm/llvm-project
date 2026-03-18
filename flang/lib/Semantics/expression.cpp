@@ -5184,7 +5184,29 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
     }
   }
   auto restorer{context_.AllowNullPointer()};
-  return context_.Analyze(expr);
+  MaybeExpr result{context_.Analyze(expr)};
+  // If the expression is a subscripted named constant array (PARAMETER array
+  // element), preserve the Designator<ArrayRef> form rather than returning the
+  // folded scalar constant.  Sequence association requires a designator with
+  // an array element subscript (F'2023 15.5.2.5p14); constant folding of
+  // PARAMETER array elements loses this structure.
+  // Note: Analyze(expr) may have converted a FunctionReference to a Designator
+  // in the parse tree (via CheckFuncRefToArrayElement), so check for
+  // ArrayElement only after Analyze(expr) has run.
+  if (isProcedureCall_ && result && result->Rank() == 0) {
+    if (const auto *ae{parser::Unwrap<parser::ArrayElement>(expr)}) {
+      const auto &baseName{parser::GetLastName(ae->Base())};
+      if (baseName.symbol) {
+        const auto &sym{baseName.symbol->GetUltimate()};
+        if (semantics::IsNamedConstant(sym) && sym.Rank() > 0) {
+          // Re-analyze the ArrayElement directly; this path does not apply
+          // the outer Fold, so the result is a Designator<ArrayRef>.
+          return context_.Analyze(*ae);
+        }
+      }
+    }
+  }
+  return result;
 }
 
 bool ArgumentAnalyzer::AreConformable() const {

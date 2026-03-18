@@ -1500,6 +1500,24 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     // is contiguous according to the dummy type.
     if (mustSetDynamicTypeToDummyType)
       entity = genSetDynamicTypeToDummyType(entity);
+    const bool isParamObject = isParameterObjectOrSubObject(entity);
+    // For sequence association of a named constant array element with an
+    // array dummy argument, the element address points into contiguous
+    // parameter array storage. Per per F'2023 15.5.2.5p14, we should pass
+    // this address directly, instead of creating a scalar temp copy.
+    // Only apply this to array element designators (hlfir.designate with
+    // subscripts), not to scalar parameter variables.
+    const bool dummyIsArrayRef =
+        mlir::isa<fir::BoxCharType>(dummyType) ||
+        mlir::isa<fir::SequenceType>(fir::unwrapRefType(dummyType));
+    // Character substring designators produce !fir.boxchar<1> entities and
+    // must not be mistaken for array elements; only reference-typed entities
+    // are array element designators valid for sequence association.
+    const bool haveDesignator =
+        entity.getDefiningOp<hlfir::DesignateOp>() != nullptr;
+    const bool skipParamCopyForSeqAssoc =
+        isParamObject && entity.getRank() == 0 && dummyIsArrayRef &&
+        haveDesignator && fir::isa_ref_type(entity.getType());
     if (arg.hasValueAttribute() ||
         // Constant expressions might be lowered as variables with
         // 'parameter' attribute. Even though the constant expressions
@@ -1507,7 +1525,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         // possible, we have to create a temporary copies when we pass
         // them down the call stack because of potential compiler
         // generated writes in copy-out.
-        isParameterObjectOrSubObject(entity)) {
+        (isParamObject && !skipParamCopyForSeqAssoc)) {
       // Make a copy in a temporary.
       auto copy = hlfir::AsExprOp::create(builder, loc, entity);
       mlir::Type storageType = entity.getType();
