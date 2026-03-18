@@ -115,7 +115,7 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
 
     if (!op->getParentOfType<FunctionOpInterface>())
       return rewriter.notifyMatchFailure(
-    op, "must be nested in a function body before LLVM-SPIRV lowering");
+          op, "must be nested in a function body before LLVM-SPIRV lowering");
 
     Operation *moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
     assert(moduleOp && "Expecting module");
