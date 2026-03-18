@@ -49,7 +49,7 @@ class AArch64ExpandPseudoImpl {
 public:
   const AArch64InstrInfo *TII;
 
-  bool run(MachineFunction &Fn);
+  bool run(MachineFunction &MF);
 
 private:
   bool expandMBB(MachineBasicBlock &MBB);
@@ -113,7 +113,7 @@ public:
 
   AArch64ExpandPseudoLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &Fn) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override { return AARCH64_EXPAND_PSEUDO_NAME; }
 };
