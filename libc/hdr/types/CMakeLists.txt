@@ -163,6 +163,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  errno_t
+  HDRS
+    errno_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.errno_t
+)
+
+add_proxy_header_library(
   fenv_t
   HDRS
     fenv_t.h

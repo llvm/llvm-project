@@ -4162,6 +4162,9 @@ private:
       copy(OpVL, Operands[OpIdx].begin());
     }
 
+    /// Maps values to their lanes in the node.
+    mutable SmallDenseMap<Value *, unsigned> ValueToLane;
+
   public:
     /// Returns interleave factor for interleave nodes.
     unsigned getInterleaveFactor() const { return InterleaveFactor; }
@@ -4261,7 +4264,10 @@ private:
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
     unsigned findLaneForValue(Value *V) const {
-      unsigned FoundLane = getVectorFactor();
+      auto Res = ValueToLane.try_emplace(V, getVectorFactor());
+      if (!Res.second)
+        return Res.first->second;
+      unsigned &FoundLane = Res.first->getSecond();
       for (auto *It = find(Scalars, V), *End = Scalars.end(); It != End;
            std::advance(It, 1)) {
         if (*It != V)
@@ -16538,6 +16544,28 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                 (!TE->hasState() ||
                  TE->getOpcode() != Instruction::ExtractElement));
       }))
+    return true;
+
+  // Single non-phi vector node - skip the tree.
+  bool VectorNodeFound = false;
+  bool AnyNonConst = false;
+  if (!ForReduction && SLPCostThreshold >= 0 && VectorizableTree.size() >= 5 &&
+      VectorizableTree.front()->getVectorFactor() <= 2 &&
+      VectorizableTree.front()->Scalars.front()->getType()->isIntegerTy() &&
+      all_of(VectorizableTree,
+             [&](const std::unique_ptr<TreeEntry> &TE) {
+               if (TE->State == TreeEntry::Vectorize && TE->hasState()) {
+                 if (TE->hasState() && (TE->getOpcode() == Instruction::PHI ||
+                                        !TE->ReorderIndices.empty()))
+                   return true;
+                 bool PrevVectorNodeFound = VectorNodeFound;
+                 VectorNodeFound = true;
+                 return !PrevVectorNodeFound;
+               }
+               AnyNonConst |= !allConstant(TE->Scalars);
+               return TE->isGather() || TE->State == TreeEntry::SplitVectorize;
+             }) &&
+      AnyNonConst)
     return true;
 
   // If the tree contains only phis, buildvectors, split nodes and

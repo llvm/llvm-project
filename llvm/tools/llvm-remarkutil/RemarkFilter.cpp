@@ -40,6 +40,11 @@ static cl::list<std::string> InputFileNames(
     cl::Positional, cl::OneOrMore, cl::list_init<std::string>({"-"}),
     cl::desc("<input file> [<input file> ...]"), cl::sub(FilterSub));
 
+static cl::opt<bool>
+    ExcludeOpt("exclude",
+               cl::desc("Keep all remarks except those matching the filter"),
+               cl::init(false), cl::sub(FilterSub));
+
 REMARK_FILTER_SETUP_FUNC()
 
 namespace {
@@ -47,6 +52,7 @@ namespace {
 class FilterTool {
 public:
   Filters Filter;
+  bool Exclude = false;
 
   FilterTool(Filters Filter) : Filter(std::move(Filter)) {}
   ~FilterTool() { finalize(); }
@@ -67,7 +73,7 @@ public:
     auto MaybeRemark = Parser.next();
     for (; MaybeRemark; MaybeRemark = Parser.next()) {
       Remark &Remark = **MaybeRemark;
-      if (!Filter.filterRemark(Remark))
+      if (Filter.filterRemark(Remark) == Exclude)
         continue;
       Serializer->emit(Remark);
     }
@@ -116,6 +122,7 @@ static Error tryFilter() {
   if (!MaybeFilter)
     return MaybeFilter.takeError();
   FilterTool Tool(std::move(*MaybeFilter));
+  Tool.Exclude = ExcludeOpt;
 
   for (auto &InputFileName : InputFileNames) {
     if (Error E = Tool.processInputFile(InputFileName))

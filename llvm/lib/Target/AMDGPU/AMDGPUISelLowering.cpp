@@ -15,7 +15,7 @@
 #include "AMDGPUISelLowering.h"
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -1518,7 +1518,7 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
-SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
+SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                                  SDValue Op,
                                                  SelectionDAG &DAG) const {
 
@@ -1529,7 +1529,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   if (!MFI->isModuleEntryFunction()) {
     auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
     if (std::optional<uint32_t> Address =
-            AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+            AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV)) {
       if (IsNamedBarrier) {
         unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
@@ -5897,7 +5897,8 @@ uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     const MachineFunction &MF, const ImplicitParameter Param) const {
-  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+  const AMDGPUMachineFunctionInfo *MFI =
+      MF.getInfo<AMDGPUMachineFunctionInfo>();
   return getImplicitParameterOffset(MFI->getExplicitKernArgSize(), Param);
 }
 
