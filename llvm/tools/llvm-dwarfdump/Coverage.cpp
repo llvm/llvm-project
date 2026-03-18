@@ -102,7 +102,7 @@ static DenseSet<SourceLocation>
 computeSubroutineCoverage(DWARFDie SubroutineDIE,
                           const DWARFDebugLine::LineTable *const LineTable) {
   auto Ranges = SubroutineDIE.getAddressRanges();
-  DenseSet<SourceLocation> Lines = DenseSet<SourceLocation>();
+  DenseSet<SourceLocation> Lines;
   if (Ranges) {
     for (const auto &R : Ranges.get())
       addLines(LineTable, Lines, R);
