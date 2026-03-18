@@ -63,11 +63,8 @@ end module maxtype_mod
 !CHECK:    fir.save_result %[[COMBINE_RESULT]] to %[[TMPRESULT]]#0 : [[MAXTYPE]], !fir.ref<[[MAXTYPE]]>
 !CHECK:    %false = arith.constant false
 !CHECK:    %[[EXPRRESULT:.*]] = hlfir.as_expr %[[TMPRESULT]]#0 move %false : (!fir.ref<[[MAXTYPE]]>, i1) -> !hlfir.expr<[[MAXTYPE]]>
-!CHECK:    %[[ASSOCIATE:.*]]:3 = hlfir.associate %[[EXPRRESULT]] {adapt.valuebyref} : (!hlfir.expr<[[MAXTYPE]]>) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>, i1)
-!CHECK:    %[[RESULT_VAL:.*]] = fir.load %[[ASSOCIATE]]#0 : !fir.ref<[[MAXTYPE]]>
-!CHECK:    hlfir.end_associate %[[ASSOCIATE]]#1, %[[ASSOCIATE]]#2 : !fir.ref<[[MAXTYPE]]>, i1
+!CHECK:    hlfir.assign %[[EXPRRESULT]] to %[[OMP_OUT]]#0 : !hlfir.expr<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>
 !CHECK:    hlfir.destroy %[[EXPRRESULT]] : !hlfir.expr<[[MAXTYPE]]>
-!CHECK:    fir.store %[[RESULT_VAL]] to %[[LHS_ARG]] : !fir.ref<[[MAXTYPE]]>
 !CHECK:    omp.yield(%[[LHS_ARG]] : !fir.ref<[[MAXTYPE]]>)
 !CHECK:  }
 
