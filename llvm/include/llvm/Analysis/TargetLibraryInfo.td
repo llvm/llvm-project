@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "llvm/Analysis/TargetLibraryInfoImpl.td"
+include "llvm/IR/RuntimeLibcalls.td"
 
 /// void *operator new(unsigned int);
 def msvc_new_int : TargetLibCall<"??2@YAPAXI@Z", Ptr, [Int]>;

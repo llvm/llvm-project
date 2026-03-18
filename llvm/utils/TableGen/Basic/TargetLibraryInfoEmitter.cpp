@@ -78,11 +78,18 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoEnum(
 // the string.
 void TargetLibraryInfoEmitter::emitTargetLibraryInfoStringTable(
     raw_ostream &OS) const {
+
+  auto getFuncName = [](const Record *R) -> StringRef {
+    if (R->isSubClassOf("TargetLibCall_R"))
+      R = R->getValueAsDef("RTLibcallImpl");
+    return R->getValueAsString("LibCallFuncName");
+  };
+
   llvm::StringToOffsetTable Table(
       /*AppendZero=*/true,
       "TargetLibraryInfoImpl::", /*UsePrefixForStorageMember=*/false);
   for (const auto *R : AllTargetLibcalls)
-    Table.GetOrAddStringOffset(R->getValueAsString("String"));
+    Table.GetOrAddStringOffset(getFuncName(R));
 
   size_t NumEl = AllTargetLibcalls.size() + 1;
 
@@ -97,7 +104,7 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoStringTable(
           "{\n";
     OS.indent(2) << "0, //\n";
     for (const auto *R : AllTargetLibcalls) {
-      StringRef Str = R->getValueAsString("String");
+      StringRef Str = getFuncName(R);
       OS.indent(2) << Table.GetStringOffset(Str) << ", // " << Str << "\n";
     }
     OS << "};\n";
@@ -105,7 +112,7 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoStringTable(
        << NumEl << "] = {\n";
     OS << "  0,\n";
     for (const auto *R : AllTargetLibcalls)
-      OS.indent(2) << R->getValueAsString("String").size() << ",\n";
+      OS.indent(2) << getFuncName(R).size() << ",\n";
     OS << "};\n";
   }
 
@@ -133,6 +140,8 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
   using Signature = std::vector<StringRef>;
   SequenceToOffsetTable<Signature> SignatureTable("NoFuncArgType");
   auto GetSignature = [](const Record *R) -> Signature {
+    if (R->isSubClassOf("TargetLibCall_R"))
+      R = R->getValueAsDef("RTLibcallImpl")->getValueAsDef("Provides");
     const auto *Tys = R->getValueAsListInit("ArgumentTypes");
     Signature Sig;
     Sig.reserve(Tys->size() + 1);
