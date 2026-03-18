@@ -2595,7 +2595,7 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
 ///
 /// If the transform is performed, return true and set ModifiedDT to true.
 static bool despeculateCountZeros(IntrinsicInst *CountZeros,
-                                  DomTreeUpdater &DTU, LoopInfo &LI,
+                                  DomTreeUpdater *DTU, LoopInfo *LI,
                                   const TargetLowering *TLI,
                                   const DataLayout *DL, ModifyDT &ModifiedDT,
                                   SmallPtrSet<BasicBlock *, 32> &FreshBBs,
@@ -2623,7 +2623,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // The intrinsic will be sunk behind a compare against zero and branch.
   BasicBlock *StartBlock = CountZeros->getParent();
-  BasicBlock *CallBlock = SplitBlock(StartBlock, CountZeros, &DTU, &LI,
+  BasicBlock *CallBlock = SplitBlock(StartBlock, CountZeros, DTU, LI,
                                      /* MSSAU */ nullptr, "cond.false");
   if (IsHugeFunc)
     FreshBBs.insert(CallBlock);
@@ -2634,7 +2634,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   BasicBlock::iterator SplitPt = std::next(BasicBlock::iterator(CountZeros));
   // Any debug-info after CountZeros should not be included.
   SplitPt.setHeadBit(true);
-  BasicBlock *EndBlock = SplitBlock(CallBlock, &*SplitPt, &DTU, &LI,
+  BasicBlock *EndBlock = SplitBlock(CallBlock, &*SplitPt, DTU, LI,
                                     /* MSSAU */ nullptr, "cond.end");
   if (IsHugeFunc)
     FreshBBs.insert(EndBlock);
@@ -2653,7 +2653,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   Value *Cmp = Builder.CreateICmpEQ(Op, Zero, "cmpz");
   Builder.CreateCondBr(Cmp, EndBlock, CallBlock);
   StartBlock->getTerminator()->eraseFromParent();
-  DTU.applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock}});
+  DTU->applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock}});
 
   // Create a PHI in the end block to select either the output of the intrinsic
   // or the bit width of the operand.
@@ -2805,7 +2805,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
     case Intrinsic::cttz:
     case Intrinsic::ctlz:
       // If counting zeros is expensive, try to avoid it.
-      return despeculateCountZeros(II, *DTU, *LI, TLI, DL, ModifiedDT, FreshBBs,
+      return despeculateCountZeros(II, DTU, LI, TLI, DL, ModifiedDT, FreshBBs,
                                    IsHugeFunc);
     case Intrinsic::fshl:
     case Intrinsic::fshr:
