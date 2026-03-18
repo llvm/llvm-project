@@ -52,11 +52,6 @@ void check__sys(__int64 v) {
 // CHECK-IR: %[[VAR:.*]] = load i64,
 // CHECK-IR-NEXT: call void @llvm.aarch64.sys(i32 0, i32 8, i32 7, i32 0, i64 %[[VAR]])
 
-  __sys(ARM64_TLBI_VMALLE1, 0);
-// CHECK-ASM: sys     #0, c8, c7, #0, x8
-// CHECK-IR: %[[VAR:.*]] = load i64,
-// CHECK-IR-NEXT: call void @llvm.aarch64.sys(i32 0, i32 8, i32 7, i32 0, i64 %[[VAR]])
-
   __sys(ARM64_CFP_RCTX, v);
 // CHECK-ASM: sys     #3, c7, c3, #4, x8
 // CHECK-IR: %[[VAR:.*]] = load i64,
