@@ -1201,8 +1201,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // clang-format off
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
-    .legalFor({{S32, S32}, {S32, S64}, {S16, S16}})
+    .legalFor({{S32, S32}, {S32, S64}})
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+  if (ST.has16BitInsts())
+    FPToISat.legalFor({{S16, S16}});
+
   FPToISat.minScalar(1, S32);
   FPToISat.minScalar(0, S32)
        .widenScalarToNextPow2(0, 32)
