@@ -6,6 +6,8 @@ import os
 
 import lit.formats
 
+from lit.llvm import llvm_config
+
 # Configuration file for the 'lit' test runner.
 
 # name: The name of this test suite.
@@ -21,8 +23,7 @@ config.suffixes = [".test"]
 config.excludes = ["CMakeLists.txt"]
 
 # test_source_root: The root path where tests are located.
-# For per-target tests, this is the target's test directory.
-config.test_source_root = config.libclc_obj_root
+config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = config.libclc_obj_root
@@ -37,10 +38,6 @@ else:
 
 # Define substitutions for the test files
 config.substitutions.append(("%libclc_library_dir", config.libclc_library_dir))
-config.substitutions.append(("%llvm_tools_dir", config.llvm_tools_dir))
-config.substitutions.append(
-    (
-        "%check_external_funcs",
-        os.path.join(config.libclc_test_root, "check_external_funcs.sh"),
-    )
-)
+
+tools = ["llvm-nm"]
+llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
