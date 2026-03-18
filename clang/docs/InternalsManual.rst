@@ -3460,7 +3460,7 @@ the change in behavior. There are four kinds of tests:
   :ref:`"Verifying Diagnostics" <verifying-diagnostics>`. Additional
   provisions for tests for C++ defect reports are described in
   :ref:`"C++ Defect Report Tests" <cxx-defect-report-tests>` section.
-* AST dump tests: such tests pass printable AST output to
+* AST dump tests: such tests pass printable AST output to the
   `FileCheck <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ utility,
   which check presence of certain patterns (or lack of thereof).
 * LLVM IR tests: in such tests, the LLVM IR output of Clang is checked, which
