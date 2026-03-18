@@ -49758,6 +49758,113 @@ static SDValue combineSetCCEFLAGS(SDValue EFLAGS, X86::CondCode &CC,
   return combineSetCCAtomicArith(EFLAGS, CC, DAG, Subtarget);
 }
 
+static SDValue foldCMovCtlzToLZCNT(SDValue FalseOp, SDValue TrueOp,
+                                   X86::CondCode CC, SDValue Cond, EVT VT,
+                                   const SDLoc &DL, SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasLZCNT())
+    return SDValue();
+  if (CC != X86::COND_NE && CC != X86::COND_E)
+    return SDValue();
+
+  SDValue CmpSrc;
+  auto CondOpc = Cond.getOpcode();
+  if (CondOpc != X86ISD::CMP && CondOpc != X86ISD::SUB &&
+      CondOpc != X86ISD::AND)
+    return SDValue();
+  if ((CondOpc == X86ISD::CMP || CondOpc == X86ISD::SUB) &&
+      !isNullConstant(Cond.getOperand(1)))
+    return SDValue();
+  if (CondOpc == X86ISD::AND && Cond.getOperand(0) != Cond.getOperand(1))
+    return SDValue();
+  CmpSrc = Cond.getOperand(0);
+
+  auto StripCasts = [](SDValue V) {
+    unsigned Opc;
+    while ((Opc = V.getOpcode()) == ISD::TRUNCATE || Opc == ISD::ZERO_EXTEND ||
+           Opc == ISD::SIGN_EXTEND || Opc == ISD::ANY_EXTEND)
+      V = V.getOperand(0);
+    return V;
+  };
+
+  auto IsCtlzLike = [&StripCasts](SDValue V) {
+    unsigned Opc = StripCasts(V).getOpcode();
+    return Opc == ISD::CTLZ_ZERO_UNDEF || Opc == ISD::CTLZ ||
+           Opc == X86ISD::LZCNT;
+  };
+
+  // LZCNT32 works on both x86-32 and x86-64. LZCNT64 is only on x86-64.
+  // Other integer types (i8, i16, i128...) have no direct LZCNT and won't work.
+  MVT XVT = CmpSrc.getSimpleValueType();
+  if (XVT != MVT::i32 && (XVT != MVT::i64 || !Subtarget.is64Bit()))
+    return SDValue();
+
+  // CMOV(FalseOp, TrueOp, CC, Cond) selects TrueOp when CC is true.
+  // IfArm is selected when Cond is nonzero, ElseArm when zero.
+  SDValue IfArm, ElseArm;
+  if (CC == X86::COND_NE) {
+    IfArm = TrueOp;
+    ElseArm = FalseOp;
+  } else {
+    IfArm = FalseOp;
+    ElseArm = TrueOp;
+  }
+
+  // Pattern 1 (zero-arm select): if nonzero -> 0, else -> CTLZ(x)
+  // e.g., lo != 0 ? 0 : CTLZ(hi)
+  // CMOV(CTLZ(x), 0, NE, CMP(x, 0)) | CMOV(0, CTLZ(x), E, CMP(x, 0))
+  //   -> CMOV(CTLZ(x), 0, AE, LZCNT(x).flags)
+  if (isNullConstant(IfArm)) {
+    if (!IsCtlzLike(ElseArm) || ElseArm.getValueType() != VT)
+      return SDValue();
+
+    // If ElseArm is already an X86ISD::LZCNT on CmpSrc, reuse its flags
+    // output directly rather than emitting a second LZCNT.
+    SDValue Flags;
+    if (SDValue Stripped = StripCasts(ElseArm);
+        Stripped.getOpcode() == X86ISD::LZCNT &&
+        Stripped.getOperand(0) == CmpSrc)
+      Flags = Stripped.getValue(1);
+    else
+      Flags =
+          DAG.getNode(X86ISD::LZCNT, DL, DAG.getVTList(XVT, MVT::i32), CmpSrc)
+              .getValue(1);
+
+    SDValue Ops[] = {ElseArm, DAG.getConstant(0, DL, VT),
+                     DAG.getTargetConstant(X86::COND_AE, DL, MVT::i8), Flags};
+    return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+  }
+
+  // Pattern 2 (i128 CTLZ split): if nonzero -> CTLZ(hi), else -> CTLZ(lo) + 64
+  // e.g., hi != 0 ? CTLZ_ZERO_UNDEF(hi) : CTLZ(lo) + 64
+  // CMOV(CTLZ(lo)+64, CTLZ(hi), NE, CMP(hi, 0))
+  //   -> CMOV(CTLZ(lo)+64, LZCNT(hi), AE, LZCNT(hi).flags)
+  SDValue StrippedNZA = StripCasts(IfArm);
+  if (!IsCtlzLike(StrippedNZA) || StrippedNZA.getOperand(0) != CmpSrc)
+    return SDValue();
+
+  SDValue LzcntVal, Flags;
+  if (StrippedNZA.getOpcode() == X86ISD::LZCNT) {
+    // Reuse the existing LZCNT's result and flags directly.
+    LzcntVal = SDValue(StrippedNZA.getNode(), 0);
+    Flags = StrippedNZA.getValue(1);
+  } else {
+    SDValue Lzcnt =
+        DAG.getNode(X86ISD::LZCNT, DL, DAG.getVTList(XVT, MVT::i32), CmpSrc);
+    LzcntVal = Lzcnt;
+    Flags = Lzcnt.getValue(1);
+  }
+
+  // LZCNT produces XVT; narrow to the CMOV's result type VT if needed
+  // (e.g. Rust's u128::leading_zeros() returns u32, so VT=i32, XVT=i64).
+  if (LzcntVal.getValueType() != VT)
+    LzcntVal = DAG.getNode(ISD::TRUNCATE, DL, VT, LzcntVal);
+
+  SDValue Ops[] = {ElseArm, LzcntVal,
+                   DAG.getTargetConstant(X86::COND_AE, DL, MVT::i8), Flags};
+  return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+}
+
 /// Optimize X86ISD::CMOV [LHS, RHS, CONDCODE (e.g. X86::COND_NE), CONDVAL]
 static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
@@ -49969,6 +50076,18 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       return CMOV;
     }
   }
+
+  // Fold:
+  //   CMOV(CTLZ(Y), 0, (X != 0))
+  // or
+  //   CMOV(0, CTLZ(Y), (X == 0))
+  // into:
+  //   CMOV(CTLZ(Y), 0, COND_AE, LZCNT(X).flags)
+  //
+  // LZCNT sets CF=1 iff source is zero, so COND_AE (CF=0) matches X != 0.
+  if (SDValue V = foldCMovCtlzToLZCNT(FalseOp, TrueOp, CC, Cond, VT, DL, DAG,
+                                      Subtarget))
+    return V;
 
   // Fold (CMOV C1, (ADD (CTTZ X), C2), (X != 0)) ->
   //      (ADD (CMOV C1-C2, (CTTZ X), (X != 0)), C2)
