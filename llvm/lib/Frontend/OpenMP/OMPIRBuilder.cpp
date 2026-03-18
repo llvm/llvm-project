@@ -2185,7 +2185,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     /* Create the casting for the Bounds Values that can be used when outlining
      * to replace the uses of the fakes with real values */
     BasicBlock *CodeReplBB = StaleCI->getParent();
-    IRBuilderBase::InsertPoint CurrentIp = Builder.saveIP();
     Builder.SetInsertPoint(CodeReplBB->getFirstInsertionPt());
     Value *CastedLBVal =
         Builder.CreateIntCast(LBVal, Builder.getInt64Ty(), true, "lb64");
@@ -2193,7 +2192,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
         Builder.CreateIntCast(UBVal, Builder.getInt64Ty(), true, "ub64");
     Value *CastedStepVal =
         Builder.CreateIntCast(StepVal, Builder.getInt64Ty(), true, "step64");
-    Builder.restoreIP(CurrentIp);
 
     Builder.SetInsertPoint(StaleCI);
 
