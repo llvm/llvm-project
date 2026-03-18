@@ -11625,9 +11625,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createIteratorLoop(
 
   // Body must either fallthrough to the latch or branch directly to it.
   if (Instruction *BodyTerminator = CLI->getBody()->getTerminator()) {
-    auto *BodyBr = dyn_cast<BranchInst>(BodyTerminator);
-    if (!BodyBr || !BodyBr->isUnconditional() ||
-        BodyBr->getSuccessor(0) != CLI->getLatch()) {
+    auto *BodyBr = dyn_cast<UncondBrInst>(BodyTerminator);
+    if (!BodyBr || BodyBr->getSuccessor() != CLI->getLatch()) {
       return make_error<StringError>(
           "iterator bodygen must terminate the canonical body with an "
           "unconditional branch to the loop latch",
