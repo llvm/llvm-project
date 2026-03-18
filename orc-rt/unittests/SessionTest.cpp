@@ -40,7 +40,7 @@ public:
       : DetachOpIdx(DetachOpIdx), ShutdownOpIdx(ShutdownOpIdx), OpIdx(OpIdx),
         GenResult(std::move(GenResult)) {}
 
-  void onDetach(OnCompleteFn OnComplete) override {
+  void onDetach(OnCompleteFn OnComplete, bool ShutdownRequested) override {
     DetachOpIdx = OpIdx++;
     GenResult(Op::Detach);
     OnComplete();
@@ -63,7 +63,9 @@ class ConfigurableService : public Service {
 public:
   ConfigurableService(int ConstructorOption) {}
 
-  void onDetach(OnCompleteFn OnComplete) override { OnComplete(); }
+  void onDetach(OnCompleteFn OnComplete, bool ShutdownRequested) override {
+    OnComplete();
+  }
 
   void onShutdown(OnCompleteFn OnComplete) override { OnComplete(); }
 
