@@ -64,6 +64,7 @@ DEFINE_C_API_STRUCT(MlirAttribute, const void);
 DEFINE_C_API_STRUCT(MlirIdentifier, const void);
 DEFINE_C_API_STRUCT(MlirLocation, const void);
 DEFINE_C_API_STRUCT(MlirModule, const void);
+DEFINE_C_API_STRUCT(MlirOpFoldResult, const void);
 DEFINE_C_API_STRUCT(MlirType, const void);
 DEFINE_C_API_STRUCT(MlirValue, const void);
 
@@ -1210,6 +1211,37 @@ MLIR_CAPI_EXPORTED void mlirAttributeDump(MlirAttribute attr);
 /// Associates an attribute with the name. Takes ownership of neither.
 MLIR_CAPI_EXPORTED MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name,
                                                             MlirAttribute attr);
+
+//===----------------------------------------------------------------------===//
+// OpFoldResult API.
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given OpFoldResult is null.
+static inline bool mlirOpFoldResultIsNull(MlirOpFoldResult result) {
+  return !result.ptr;
+}
+
+/// Creates an OpFoldResult from an attribute.
+MLIR_CAPI_EXPORTED MlirOpFoldResult
+mlirOpFoldResultFromAttribute(MlirAttribute attr);
+
+/// Creates an OpFoldResult from a value.
+MLIR_CAPI_EXPORTED MlirOpFoldResult mlirOpFoldResultFromValue(MlirValue value);
+
+/// Returns true if the OpFoldResult contains an attribute.
+MLIR_CAPI_EXPORTED bool mlirOpFoldResultIsAttribute(MlirOpFoldResult result);
+
+/// Returns true if the OpFoldResult contains a value.
+MLIR_CAPI_EXPORTED bool mlirOpFoldResultIsValue(MlirOpFoldResult result);
+
+/// Returns the attribute contained in the OpFoldResult. Asserts if the
+/// OpFoldResult does not contain an attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirOpFoldResultGetAttribute(MlirOpFoldResult result);
+
+/// Returns the value contained in the OpFoldResult. Asserts if the
+/// OpFoldResult does not contain a value.
+MLIR_CAPI_EXPORTED MlirValue mlirOpFoldResultGetValue(MlirOpFoldResult result);
 
 //===----------------------------------------------------------------------===//
 // Identifier API.

@@ -19,6 +19,7 @@
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 
 DEFINE_C_API_PTR_METHODS(MlirAsmState, mlir::AsmState)
@@ -39,5 +40,12 @@ DEFINE_C_API_METHODS(MlirLocation, mlir::Location)
 DEFINE_C_API_METHODS(MlirModule, mlir::ModuleOp)
 DEFINE_C_API_METHODS(MlirType, mlir::Type)
 DEFINE_C_API_METHODS(MlirValue, mlir::Value)
+static inline MlirOpFoldResult wrap(mlir::OpFoldResult ofr) {
+  return MlirOpFoldResult{ofr.getOpaqueValue()};
+}
+static inline mlir::OpFoldResult unwrap(MlirOpFoldResult result) {
+  return static_cast<mlir::OpFoldResult &&>(
+      mlir::OpFoldResult::getFromOpaqueValue(const_cast<void *>(result.ptr)));
+}
 
 #endif // MLIR_CAPI_IR_H
