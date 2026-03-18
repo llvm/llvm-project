@@ -2439,7 +2439,7 @@ def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"BF16x2", "conve
 // (E4M3x4, E5M2x4, E2M3x4, E3M2x4, E2M1x4)
 // These operations always use RS (stochastic rounding) mode with SATFINITE saturation.
 class NVVM_ConvertF32x4ToFPx4OpBase<string dstFormat, string mnemonic, Type dstType> :
-  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
+  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMAA<[100, 103]>]>,
   Results<(outs dstType:$dst)>,
   Arguments<(ins VectorOfLengthAndType<[4], [F32]>:$src, I32:$rbits,
                  DefaultValuedAttr<BoolAttr, "false">:$relu,
@@ -4682,7 +4682,7 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
 // NVVM Wgmma Ops
 //===----------------------------------------------------------------------===//
 
-def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMa<[90]>]> {
+def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMAA<[90]>]> {
   let arguments = (ins);
   let description = [{
     Enforce an ordering of register accesses between warpgroup level matrix 
@@ -4696,7 +4696,7 @@ def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMa<[
   }];
 }
 
-def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", [NVVMRequiresSMa<[90]>]> {
+def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", [NVVMRequiresSMAA<[90]>]> {
   let assemblyFormat = "attr-dict";
   let description = [{
     Commits all prior uncommitted warpgroup level matrix multiplication operations.
@@ -4708,7 +4708,7 @@ def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", [N
   }];
 }
 
-def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", [NVVMRequiresSMa<[90]>]> {
+def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", [NVVMRequiresSMAA<[90]>]> {
   let arguments = (ins I64Attr:$group);
   let assemblyFormat = "attr-dict $group";
   let description = [{
@@ -5070,7 +5070,7 @@ def Tcgen05WaitKindAttr :
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMAA<[100, 101]>]> {
   let summary = "Tcgen05 alloc operation";
   let description = [{
     The `tcgen05.alloc` Op allocates tensor core memory for
@@ -5100,7 +5100,7 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMa<[100, 101]>]
   }];
 }
 
-def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc", [NVVMRequiresSMAA<[100, 101]>]> {
   let summary = "Tcgen05 dealloc operation";
   let description = [{
     The `tcgen05.dealloc` Op de-allocates the tensor core memory
@@ -5128,7 +5128,7 @@ def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc", [NVVMRequiresSMa<[100, 10
   }];
 }
 
-def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_permit", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_permit", [NVVMRequiresSMAA<[100, 101]>]> {
   let summary = "Tcgen05 Op to relinquish the right to allocate";
   let description = [{
     The `tcgen05.relinquish_alloc_permit` Op specifies that the CTA
@@ -5151,7 +5151,7 @@ def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_perm
   }];
 }
 
-def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSMAA<[100, 101]>]> {
   let summary = "Tcgen05 fence operations";
   let description = [{
     The `tcgen05.fence<before>` orders all prior async tcgen05 operations
@@ -5173,7 +5173,7 @@ def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSMa<[100, 101]>]
   }];
 }
 
-def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMAA<[100, 101]>]> {
   let summary = "Tcgen05 wait operations";
   let description = [{
     The `tcgen05.wait<load>` causes the executing thread to block until
@@ -5195,7 +5195,7 @@ def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMa<[100, 101]>]> 
   }];
 }
 
-def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMAA<[100, 101]>]> {
   let summary = "Tcgen05 commit operations";
   let description = [{
     The `tcgen05.commit` makes the *mbarrier object*, specified by
@@ -5233,7 +5233,7 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMa<[100, 101]
   }];
 }
 
-def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift", [NVVMRequiresSMa<[100, 101, 103]>]> {
+def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift", [NVVMRequiresSMAA<[100, 101, 103]>]> {
   let summary = "Tcgen05 shift operation";
   let description = [{
     The `tcgen05.shift` is an asynchronous instruction which initiates
@@ -5299,7 +5299,7 @@ def Tcgen05CpSrcFormatAttr : EnumAttr<NVVM_Dialect, Tcgen05CpSrcFormat, "tcgen05
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMAA<[100, 101]>]> {
   let summary = "Tcgen05 copy operation";
   let description = [{
     Instruction tcgen05.cp initiates an asynchronous copy operation from
@@ -5435,7 +5435,7 @@ def Tcgen05LdStShapeAttr: EnumAttr<NVVM_Dialect, Tcgen05LdStShape, "tcgen05_ldst
 // NVVM tcgen05.ld Op
 //===----------------------------------------------------------------------===//
 
-def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMAA<[100, 101]>]> {
   let summary = "tensor memory load instructions";
   let arguments = (ins
     // Attributes
@@ -5528,7 +5528,7 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
 //===----------------------------------------------------------------------===//
 
 def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
-                          [NVVMRequiresSMa<[101, 110]>]> {
+                          [NVVMRequiresSMAA<[101, 110]>]> {
   let summary = "Tcgen05 tensor memory load and reduce instructions";
   let arguments = (ins
     Tcgen05LdStShapeAttr:$shape,
@@ -5617,7 +5617,7 @@ def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
 // NVVM tcgen05.st Op
 //===----------------------------------------------------------------------===//
 
-def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMAA<[100, 101]>]> {
   let summary = "tensor memory store instructions";
   let arguments = (ins
     // Attributes
@@ -5996,7 +5996,7 @@ defvar Tcgen05MMABlockScaleKindAttr =
 
 def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
                           [AttrSizedOperandSegments,
-                           NVVMRequiresSMa<[100, 110]>]> {
+                           NVVMRequiresSMAA<[100, 110]>]> {
   let summary = "Performs MMA operation on 5th-gen tensor cores";
 
   let description = [{
@@ -6080,7 +6080,7 @@ def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
 
 def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
                                       [AttrSizedOperandSegments,
-                                       NVVMRequiresSMa<[100, 110]>]> {
+                                       NVVMRequiresSMAA<[100, 110]>]> {
   let summary = "Performs MMA operation with sparse A matrix on 5th-gen tensor cores";
 
   let description = [{
@@ -6161,7 +6161,7 @@ def Tcgen05MMABlockScaleAttr : EnumAttr<NVVM_Dialect, Tcgen05MMABlockScale,
 }
 
 def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
-                                          [NVVMRequiresSMa<[100, 110]>]> {
+                                          [NVVMRequiresSMAA<[100, 110]>]> {
   let summary = "Performs block scaled MMA operation on 5th-gen tensor cores";
 
   let description = [{
@@ -6234,7 +6234,7 @@ def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
 }
 
 def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
-                                                [NVVMRequiresSMa<[100, 110]>]> {
+                                                [NVVMRequiresSMAA<[100, 110]>]> {
   let summary = "Performs block scaled MMA operation with sparse A matrix on 5th-gen tensor cores";
 
   let description = [{
@@ -6316,7 +6316,7 @@ def Tcgen05MMACollectorBBufferAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorB
 }
 
 def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
-                                  [NVVMRequiresSMa<[100, 110]>]> {
+                                  [NVVMRequiresSMAA<[100, 110]>]> {
   let summary = "Performs weight stationary convolution MMA operation on 5th-gen tensor cores";
 
   let description = [{
@@ -6386,7 +6386,7 @@ def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
 }
 
 def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
-                                        [NVVMRequiresSMa<[100, 110]>]> {
+                                        [NVVMRequiresSMAA<[100, 110]>]> {
   let summary = "Performs weight stationary convolution MMA with sparse A matrix on 5th-gen tensor cores";
 
   let description = [{

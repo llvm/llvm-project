@@ -33,16 +33,16 @@ class NVVMRequiresSM<int minVersion> :
   ParamNativeOpTrait<"NVVMRequiresSM", !cast<string>(minVersion)>;
 
 // Op requires an exact SM match along with architecture acceleration.
-class NVVMRequiresSMa<list<int> smVersions> :
-  ParamNativeOpTrait<"NVVMRequiresSMa", !interleave(smVersions, ",")>;
+class NVVMRequiresSMAA<list<int> smVersions> :
+  ParamNativeOpTrait<"NVVMRequiresSMAA", !interleave(smVersions, ",")>;
 
 // Op requires an SM version belonging to the family.
-class NVVMRequiresSMf<list<int> smVersions> :
-  ParamNativeOpTrait<"NVVMRequiresSMf", !interleave(smVersions, ",")>;
+class NVVMRequiresSMFS<list<int> smVersions> :
+  ParamNativeOpTrait<"NVVMRequiresSMFS", !interleave(smVersions, ",")>;
 
 // Op supported on some combination of architecture acceleration and family-specific SM versions.
-class NVVMRequiresSMaOrf<list<int> smVersionsA, list<int> smVersionsF> :
-  ParamNativeOpTrait<"NVVMRequiresSMaOrf",
-    "mlir::OpTrait::NVVMRequiresSMa<" # !interleave(smVersionsA, ",") # ">" # "," #
-    "mlir::OpTrait::NVVMRequiresSMf<" # !interleave(smVersionsF, ",") # ">">;
+class NVVMRequiresSMAAOrFS<list<int> smVersionsAA, list<int> smVersionsFS> :
+  ParamNativeOpTrait<"NVVMRequiresSMAAOrFS",
+    "mlir::OpTrait::NVVMRequiresSMAA<" # !interleave(smVersionsAA, ",") # ">" # "," #
+    "mlir::OpTrait::NVVMRequiresSMFS<" # !interleave(smVersionsFS, ",") # ">">;
 #endif //NVVM_REQUIRES_SM_TRAITS

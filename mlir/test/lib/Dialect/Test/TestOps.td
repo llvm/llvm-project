@@ -3106,31 +3106,31 @@ def TestNVVMRequiresSMOp :
 }
 
 def TestNVVMRequiresSMArchCondOp :
-    TEST_Op<"nvvm_requires_sm_90a", [NVVMRequiresSMa<[90]>]> {
+    TEST_Op<"nvvm_requires_sm_90a", [NVVMRequiresSMAA<[90]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequirestSMArchCondMultiOp :
-    TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMAA<[90, 100]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequiresSMFamilyCondOp :
-    TEST_Op<"nvvm_requires_sm_100f", [NVVMRequiresSMf<[100]>]> {
+    TEST_Op<"nvvm_requires_sm_100f", [NVVMRequiresSMFS<[100]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequiresSMFamilyCondMultiOp :
-    TEST_Op<"nvvm_requires_sm_100f_or_sm_120f", [NVVMRequiresSMf<[100, 120]>]> {
+    TEST_Op<"nvvm_requires_sm_100f_or_sm_120f", [NVVMRequiresSMFS<[100, 120]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequiresSMArchOrFamilyCondOp :
-    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMaOrf<[90], [100]>]> {
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMAAOrFS<[90], [100]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }

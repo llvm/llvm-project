@@ -120,12 +120,14 @@ public:
   };
 };
 
+// SMVersions is a template parameter pack of the supported
+// architecture-accelerated SM versions.
 template <int... SMVersions>
-class NVVMRequiresSMa {
+class NVVMRequiresSMAA {
 public:
   template <typename ConcreteOp>
   class Impl : public OpTrait::TraitBase<ConcreteOp,
-                                         NVVMRequiresSMa<SMVersions...>::Impl>,
+                                         NVVMRequiresSMAA<SMVersions...>::Impl>,
                public mlir::NVVM::RequiresSMInterface::Trait<ConcreteOp> {
   public:
     NVVM::NVVMCheckSMVersion getRequiredMinSMVersion() const {
@@ -138,12 +140,14 @@ public:
   }
 };
 
+// SMVersions is a template parameter pack of the supported family-specific SM
+// versions.
 template <int... SMVersions>
-class NVVMRequiresSMf {
+class NVVMRequiresSMFS {
 public:
   template <typename ConcreteOp>
   class Impl : public OpTrait::TraitBase<ConcreteOp,
-                                         NVVMRequiresSMf<SMVersions...>::Impl>,
+                                         NVVMRequiresSMFS<SMVersions...>::Impl>,
                public mlir::NVVM::RequiresSMInterface::Trait<ConcreteOp> {
   public:
     NVVM::NVVMCheckSMVersion getRequiredMinSMVersion() const {
@@ -156,18 +160,20 @@ public:
   }
 };
 
-template <typename SMVersionsA, typename SMVersionsF>
-class NVVMRequiresSMaOrf {
+// SMVersionsAA (SMVersionsFS) is a template parameter pack of the supported
+// architecture-accelerated (family-specific) SM versions.
+template <typename SMVersionsAA, typename SMVersionsFS>
+class NVVMRequiresSMAAOrFS {
 public:
   template <typename ConcreteOp>
   class Impl
       : public OpTrait::TraitBase<
-            ConcreteOp, NVVMRequiresSMaOrf<SMVersionsA, SMVersionsF>::Impl>,
+            ConcreteOp, NVVMRequiresSMAAOrFS<SMVersionsAA, SMVersionsFS>::Impl>,
         public mlir::NVVM::RequiresSMInterface::Trait<ConcreteOp> {
   public:
     NVVM::NVVMCheckSMVersion getRequiredMinSMVersion() const {
-      auto result = SMVersionsA::getRequiredMinSMVersion();
-      result.append(SMVersionsF::getRequiredMinSMVersion());
+      auto result = SMVersionsAA::getRequiredMinSMVersion();
+      result.append(SMVersionsFS::getRequiredMinSMVersion());
       return result;
     }
   };
