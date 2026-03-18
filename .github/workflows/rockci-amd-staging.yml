@@ -81,6 +81,9 @@ jobs:
       fail-fast: false
       matrix:
         variant: ${{ fromJSON(needs.setup.outputs.linux_variants) }}
+        exclude:  # families that should not run linux_build_and_test
+          - variant:
+              family: gfx950-dcgpu          
     uses: ./.github/workflows/ci_linux.yml
     secrets: inherit
     with:
