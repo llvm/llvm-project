@@ -570,8 +570,7 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
     return nullptr;
 
   ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
-  if (auto err =
-          SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc)) {
+  if (auto err = SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc)) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
                    "Failed to deserialize ProcSym record: {0}");
     return nullptr;
@@ -618,8 +617,7 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
     optimized = eLazyBoolYes;
 
   llvm::SmallString<64> source_file_name;
-  if (auto main_file_or_err =
-          m_index->compilands().GetMainSourceFile(cci)) {
+  if (auto main_file_or_err = m_index->compilands().GetMainSourceFile(cci)) {
     source_file_name = std::move(*main_file_or_err);
   } else {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), main_file_or_err.takeError(),
@@ -924,8 +922,7 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
 
   if (cvt.kind() == LF_PROCEDURE) {
     ProcedureRecord pr;
-    if (auto err =
-            TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr)) {
+    if (auto err = TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
                      "Failed to deserialize ProcedureRecord record: {0}");
       return nullptr;
@@ -1851,8 +1848,9 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
     MemberFuncIdRecord mfr;
     if (auto err = TypeDeserializer::deserializeAs<MemberFuncIdRecord>(
             *inlinee_cvt, mfr)) {
-      inlinee_name = "[error reading function name: " +
-                     llvm::toString(std::move(err)) + "]";
+      inlinee_name =
+          "[error reading function name: " + llvm::toString(std::move(err)) +
+          "]";
     } else {
       LazyRandomTypeCollection &types = m_index->tpi().typeCollection();
       inlinee_name.append(std::string(types.getTypeName(mfr.ClassType)));
@@ -1861,10 +1859,11 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
     }
   } else if (inlinee_cvt->kind() == LF_FUNC_ID) {
     FuncIdRecord fir;
-    if (auto err = TypeDeserializer::deserializeAs<FuncIdRecord>(
-            *inlinee_cvt, fir)) {
-      inlinee_name = "[error reading function name: " +
-                     llvm::toString(std::move(err)) + "]";
+    if (auto err =
+            TypeDeserializer::deserializeAs<FuncIdRecord>(*inlinee_cvt, fir)) {
+      inlinee_name =
+          "[error reading function name: " + llvm::toString(std::move(err)) +
+          "]";
     } else {
       TypeIndex parent_idx = fir.getParentScope();
       if (!parent_idx.isNoneType()) {
@@ -2163,8 +2162,7 @@ void SymbolFileNativePDB::FindFunctions(
       auto kind = sym.kind();
       lldbassert(kind == S_PROCREF || kind == S_LPROCREF);
 
-      auto proc_or_err =
-          SymbolDeserializer::deserializeAs<ProcRefSym>(sym);
+      auto proc_or_err = SymbolDeserializer::deserializeAs<ProcRefSym>(sym);
       if (!proc_or_err) {
         LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), proc_or_err.takeError(),
                        "Failed to deserialize ProcRefSym record: {0}");
@@ -2986,8 +2984,7 @@ SymbolFileNativePDB::FindMangledFunctionName(PdbCompilandSymId func_id) {
     return std::nullopt;
 
   ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
-  if (auto err =
-          SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc)) {
+  if (auto err = SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc)) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
                    "Failed to deserialize ProcSym record: {0}");
     return std::nullopt;

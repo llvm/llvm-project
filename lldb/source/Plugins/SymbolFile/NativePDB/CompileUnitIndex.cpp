@@ -48,8 +48,7 @@ static bool IsMainFile(llvm::StringRef main, llvm::StringRef other) {
   return main.equals_insensitive(normalized);
 }
 
-static llvm::Error ParseCompile3(const CVSymbol &sym,
-                                 CompilandIndexItem &cci) {
+static llvm::Error ParseCompile3(const CVSymbol &sym, CompilandIndexItem &cci) {
   cci.m_compile_opts.emplace();
   if (auto err = SymbolDeserializer::deserializeAs<Compile3Sym>(
           sym, *cci.m_compile_opts)) {
@@ -59,11 +58,10 @@ static llvm::Error ParseCompile3(const CVSymbol &sym,
   return llvm::Error::success();
 }
 
-static llvm::Error ParseObjname(const CVSymbol &sym,
-                                CompilandIndexItem &cci) {
+static llvm::Error ParseObjname(const CVSymbol &sym, CompilandIndexItem &cci) {
   cci.m_obj_name.emplace();
-  if (auto err = SymbolDeserializer::deserializeAs<ObjNameSym>(
-          sym, *cci.m_obj_name)) {
+  if (auto err =
+          SymbolDeserializer::deserializeAs<ObjNameSym>(sym, *cci.m_obj_name)) {
     cci.m_obj_name.reset();
     return err;
   }
@@ -85,8 +83,7 @@ static llvm::Error ParseBuildInfo(PdbIndex &index, const CVSymbol &sym,
     return llvm::Error::success();
 
   BuildInfoRecord bir;
-  if (auto err =
-          TypeDeserializer::deserializeAs<BuildInfoRecord>(*cvt, bir))
+  if (auto err = TypeDeserializer::deserializeAs<BuildInfoRecord>(*cvt, bir))
     return err;
   cci.m_build_info.assign(bir.ArgIndices.begin(), bir.ArgIndices.end());
   return llvm::Error::success();
@@ -184,9 +181,8 @@ CompilandIndexItem &CompileUnitIndex::GetOrCreateCompiland(uint16_t modi) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
                    "Failed to reload debug stream for module {1}: {0}", modi);
     llvm::pdb::ModuleDebugStreamRef empty_stream(descriptor, nullptr);
-    cci = std::make_unique<CompilandIndexItem>(PdbCompilandId{modi},
-                                               empty_stream,
-                                               std::move(descriptor));
+    cci = std::make_unique<CompilandIndexItem>(
+        PdbCompilandId{modi}, empty_stream, std::move(descriptor));
     return *cci;
   }
 
@@ -271,11 +267,11 @@ CompileUnitIndex::GetMainSourceFile(const CompilandIndexItem &item) const {
   StringIdRecord file_name;
   CVType dir_cvt = types.getType(item.m_build_info[0]);
   CVType file_cvt = types.getType(item.m_build_info[2]);
-  if (auto err = TypeDeserializer::deserializeAs<StringIdRecord>(
-          dir_cvt, working_dir))
+  if (auto err =
+          TypeDeserializer::deserializeAs<StringIdRecord>(dir_cvt, working_dir))
     return std::move(err);
-  if (auto err = TypeDeserializer::deserializeAs<StringIdRecord>(
-          file_cvt, file_name))
+  if (auto err =
+          TypeDeserializer::deserializeAs<StringIdRecord>(file_cvt, file_name))
     return std::move(err);
 
   llvm::sys::path::Style style = working_dir.String.starts_with("/")

@@ -86,8 +86,7 @@ GetIntegralTypeInfo(TypeIndex ti, TpiStream &tpi) {
   switch (cvt.kind()) {
   case LF_MODIFIER: {
     ModifierRecord mfr;
-    if (auto err =
-            TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mfr))
+    if (auto err = TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mfr))
       return std::move(err);
     return GetIntegralTypeInfo(mfr.ModifiedType, tpi);
   }
@@ -104,9 +103,8 @@ GetIntegralTypeInfo(TypeIndex ti, TpiStream &tpi) {
     return GetIntegralTypeInfo(er.UnderlyingType, tpi);
   }
   default:
-    return llvm::make_error<llvm::StringError>(
-        "Type is not integral",
-        llvm::inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>("Type is not integral",
+                                               llvm::inconvertibleErrorCode());
   }
 }
 
@@ -255,9 +253,10 @@ DWARFExpression lldb_private::npdb::MakeGlobalLocationExpression(
 }
 
 llvm::Expected<DWARFExpression>
-lldb_private::npdb::MakeConstantLocationExpression(
-    TypeIndex underlying_ti, TpiStream &tpi, const llvm::APSInt &constant,
-    ModuleSP module) {
+lldb_private::npdb::MakeConstantLocationExpression(TypeIndex underlying_ti,
+                                                   TpiStream &tpi,
+                                                   const llvm::APSInt &constant,
+                                                   ModuleSP module) {
   const ArchSpec &architecture = module->GetArchitecture();
   uint32_t address_size = architecture.GetAddressByteSize();
 
