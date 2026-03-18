@@ -8,10 +8,10 @@
 
 #ifdef cl_khr_extended_bit_ops
 
-#include <clc/integer/clc_bitfield_insert.h>
+#include "clc/integer/clc_bitfield_insert.h"
 
 #define __CLC_FUNCTION bitfield_insert
-#define __CLC_BODY <bitfield_insert.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "bitfield_insert.inc"
+#include "clc/integer/gentype.inc"
 
 #endif // cl_khr_extended_bit_ops

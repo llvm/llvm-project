@@ -3211,7 +3211,7 @@ void X86FrameLowering::determineCalleeSaves(MachineFunction &MF,
       BasePtr = getX86SubSuperRegister(BasePtr, 64);
     SavedRegs.set(BasePtr);
   }
-  if (STI.is64Bit()) {
+  if (STI.hasUserReservedRegisters()) {
     for (int Reg = SavedRegs.find_first(); Reg != -1;
          Reg = SavedRegs.find_next(Reg)) {
       if (STI.isRegisterReservedByUser(Reg)) {

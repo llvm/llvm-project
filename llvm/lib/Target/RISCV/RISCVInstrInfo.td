@@ -1475,9 +1475,9 @@ def riscv_or_disjoint : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:
 }]>;
 def : PatGprSimm12<riscv_or_disjoint, ADDI>;
 
-def add_like : PatFrags<(ops node:$lhs, node:$rhs),
-                        [(riscv_or_disjoint node:$lhs, node:$rhs),
-                         (add  node:$lhs, node:$rhs)]>;
+def riscv_add_like : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(riscv_or_disjoint node:$lhs, node:$rhs),
+                               (add  node:$lhs, node:$rhs)]>;
 
 def riscv_xor_like : PatFrags<(ops node:$lhs, node:$rhs),
                               [(riscv_or_disjoint node:$lhs, node:$rhs),
@@ -1550,7 +1550,7 @@ def : GICustomOperandRenderer<"renderFrameIndex">,
 
 def : Pat<(frameindex:$fi), (ADDI (iPTR (to_tframeindex $fi)), 0)>;
 
-def : Pat<(add_like frameindex:$fi, simm12_lo:$offset),
+def : Pat<(riscv_add_like frameindex:$fi, simm12_lo:$offset),
           (ADDI (iPTR (to_tframeindex $fi)), simm12_lo:$offset)>;
 
 def GIAddrRegImm :

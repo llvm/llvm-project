@@ -12909,8 +12909,8 @@ cc_library(
     hdrs = ["include/mlir/Dialect/Arith/Utils/Utils.h"],
     includes = ["include"],
     deps = [
-        ":AsmParser",
         ":ArithDialect",
+        ":AsmParser",
         ":ComplexDialect",
         ":DialectUtils",
         ":IR",
@@ -13826,6 +13826,7 @@ cc_library(
         ":CallOpInterfaces",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
+        ":DataLayoutInterfaces",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",

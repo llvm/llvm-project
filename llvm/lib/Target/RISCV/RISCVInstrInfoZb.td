@@ -207,7 +207,7 @@ class binop_with_non_imm12<SDPatternOperator binop>
   }];
 }
 def add_non_imm12       : binop_with_non_imm12<add>;
-def add_like_non_imm12 : binop_with_non_imm12<add_like>;
+def riscv_add_like_non_imm12 : binop_with_non_imm12<riscv_add_like>;
 
 def Shifted32OnesMask : IntImmLeaf<XLenVT, [{
   if (!Imm.isShiftedMask())
@@ -719,24 +719,24 @@ let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in
 def : Pat<(i64 (and GPR:$rs, 0xFFFF)), (ZEXT_H_RV64 GPR:$rs)>;
 
 multiclass ShxAddPat<int i, Instruction shxadd> {
-  def : Pat<(XLenVT (add_like_non_imm12 (shl GPR:$rs1, (XLenVT i)), GPR:$rs2)),
+  def : Pat<(XLenVT (riscv_add_like_non_imm12 (shl GPR:$rs1, (XLenVT i)), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVT (riscv_shl_add GPR:$rs1, (XLenVT i), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
 
   defvar pat = !cast<ComplexPattern>("sh"#i#"add_op");
   // More complex cases use a ComplexPattern.
-  def : Pat<(XLenVT (add_like_non_imm12 pat:$rs1, GPR:$rs2)),
+  def : Pat<(XLenVT (riscv_add_like_non_imm12 pat:$rs1, GPR:$rs2)),
             (shxadd pat:$rs1, GPR:$rs2)>;
 }
 
 class CSImm12MulBy4Pat<Instruction sh2add>
-    : Pat<(add_like (XLenVT GPR:$r), CSImm12MulBy4:$i),
+    : Pat<(riscv_add_like (XLenVT GPR:$r), CSImm12MulBy4:$i),
           (sh2add (XLenVT (ADDI (XLenVT X0), CSImm12MulBy4:$i)),
                   GPR:$r)>;
 
 class CSImm12MulBy8Pat<Instruction sh3add>
-    : Pat<(add_like (XLenVT GPR:$r), CSImm12MulBy8:$i),
+    : Pat<(riscv_add_like (XLenVT GPR:$r), CSImm12MulBy8:$i),
           (sh3add (XLenVT (ADDI (XLenVT X0), CSImm12MulBy8:$i)),
                   GPR:$r)>;
 
@@ -753,15 +753,15 @@ def : CSImm12MulBy8Pat<SH3ADD>;
 def zExtImm32 : ComplexPattern<i64, 1, "selectZExtImm32", [], [], 0>;
 
 multiclass ADD_UWPat<Instruction add_uw> {
-  def : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFF), GPR:$rs2)),
+  def : Pat<(i64 (riscv_add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFF), GPR:$rs2)),
             (add_uw GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(i64 (add_like zExtImm32:$rs1, GPR:$rs2)),
+  def : Pat<(i64 (riscv_add_like zExtImm32:$rs1, GPR:$rs2)),
             (add_uw zExtImm32:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (and GPR:$rs, 0xFFFFFFFF)), (add_uw GPR:$rs, (XLenVT X0))>;
 }
 
 multiclass ShxAdd_UWPat<int i, Instruction shxadd_uw> {
-  def : Pat<(i64 (add_like_non_imm12 (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 i)),
+  def : Pat<(i64 (riscv_add_like_non_imm12 (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 i)),
                                      (XLenVT GPR:$rs2))),
             (shxadd_uw GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (riscv_shl_add (and GPR:$rs1, 0xFFFFFFFF), (i64 i), GPR:$rs2)),
@@ -769,52 +769,52 @@ multiclass ShxAdd_UWPat<int i, Instruction shxadd_uw> {
 
   defvar pat = !cast<ComplexPattern>("sh"#i#"add_uw_op");
   // More complex cases use a ComplexPattern.
-  def : Pat<(i64 (add_like_non_imm12 pat:$rs1, (XLenVT GPR:$rs2))),
+  def : Pat<(i64 (riscv_add_like_non_imm12 pat:$rs1, (XLenVT GPR:$rs2))),
             (shxadd_uw pat:$rs1, GPR:$rs2)>;
 }
 
 multiclass Sh1Add_UWPat<Instruction sh1add_uw> {
-  def : Pat<(add_like_non_imm12 (and (shl GPR:$rs1, (i64 1)), (i64 0x1FFFFFFFF)),
+  def : Pat<(riscv_add_like_non_imm12 (and (shl GPR:$rs1, (i64 1)), (i64 0x1FFFFFFFF)),
                                      (XLenVT GPR:$rs2)),
             (sh1add_uw GPR:$rs1, GPR:$rs2)>;
   // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
-  def : Pat<(add_like_non_imm12 (and GPR:$rs1, (i64 0x1FFFFFFFE)),
+  def : Pat<(riscv_add_like_non_imm12 (and GPR:$rs1, (i64 0x1FFFFFFFE)),
                                 (XLenVT GPR:$rs2)),
             (sh1add_uw (XLenVT (SRLI GPR:$rs1, 1)), GPR:$rs2)>;
 }
 
 multiclass Sh2Add_UWPat<Instruction sh2add_uw> {
-  def : Pat<(add_like_non_imm12 (and (shl GPR:$rs1, (i64 2)), (i64 0x3FFFFFFFF)),
+  def : Pat<(riscv_add_like_non_imm12 (and (shl GPR:$rs1, (i64 2)), (i64 0x3FFFFFFFF)),
                                 (XLenVT GPR:$rs2)),
             (sh2add_uw GPR:$rs1, GPR:$rs2)>;
   // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
-  def : Pat<(add_like_non_imm12 (and GPR:$rs1, (i64 0x3FFFFFFFC)),
+  def : Pat<(riscv_add_like_non_imm12 (and GPR:$rs1, (i64 0x3FFFFFFFC)),
                                 (XLenVT GPR:$rs2)),
             (sh2add_uw (XLenVT (SRLI GPR:$rs1, 2)), GPR:$rs2)>;
 }
 
 multiclass Sh3Add_UWPat<Instruction sh3add_uw> {
-  def : Pat<(add_like_non_imm12 (and (shl GPR:$rs1, (i64 3)), (i64 0x7FFFFFFFF)),
+  def : Pat<(riscv_add_like_non_imm12 (and (shl GPR:$rs1, (i64 3)), (i64 0x7FFFFFFFF)),
                                 (XLenVT GPR:$rs2)),
             (sh3add_uw GPR:$rs1, GPR:$rs2)>;
   // Use SRLI to clear the LSBs and SHXADD_UW to mask and shift.
-  def : Pat<(add_like_non_imm12 (and GPR:$rs1, (i64 0x7FFFFFFF8)),
+  def : Pat<(riscv_add_like_non_imm12 (and GPR:$rs1, (i64 0x7FFFFFFF8)),
                                 (XLenVT GPR:$rs2)),
             (sh3add_uw (XLenVT (SRLI GPR:$rs1, 3)), GPR:$rs2)>;
 }
 
 class Sh1AddPat<Instruction sh1add>
-    : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFE),
+    : Pat<(i64 (riscv_add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFE),
                                    (XLenVT GPR:$rs2))),
           (sh1add (XLenVT (SRLIW GPR:$rs1, 1)), GPR:$rs2)>;
 
 class Sh2AddPat<Instruction sh2add>
-    : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFC),
+    : Pat<(i64 (riscv_add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFFC),
                                    (XLenVT GPR:$rs2))),
           (sh2add (XLenVT (SRLIW GPR:$rs1, 2)), GPR:$rs2)>;
 
 class Sh3AddPat<Instruction sh3add>
-    : Pat<(i64 (add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFF8),
+    : Pat<(i64 (riscv_add_like_non_imm12 (and GPR:$rs1, 0xFFFFFFF8),
                                    (XLenVT GPR:$rs2))),
           (sh3add (XLenVT (SRLIW GPR:$rs1, 3)), GPR:$rs2)>;
 

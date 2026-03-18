@@ -475,4 +475,15 @@ def ACCRoutineLowering : Pass<"acc-routine-lowering", "mlir::ModuleOp"> {
   let options = [ AccDeviceTypeOption ];
 }
 
+def ACCRoutineToGPUFunc : Pass<"acc-routine-to-gpu-func", "mlir::ModuleOp"> {
+  let summary = "Move ACC routine functions into the GPU module as gpu.func";
+  let description = [{
+    This pass moves functions associated with `acc routine` (and any callees
+    that must be present on the device) into the GPU module as `gpu.func`
+    operations.
+  }];
+  let dependentDialects = ["mlir::gpu::GPUDialect"];
+  let options = [ AccDeviceTypeOption ];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

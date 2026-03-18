@@ -849,6 +849,7 @@ def OpGroupNonUniformBitwiseXor: OpGroupNUGroup<"BitwiseXor", 361>;
 def OpGroupNonUniformLogicalAnd: OpGroupNUGroup<"LogicalAnd", 362>;
 def OpGroupNonUniformLogicalOr: OpGroupNUGroup<"LogicalOr", 363>;
 def OpGroupNonUniformLogicalXor: OpGroupNUGroup<"LogicalXor", 364>;
+def OpGroupNonUniformQuadSwap: OpGroupNU4<"QuadSwap", 366>;
 
 // SPV_KHR_subgroup_rotate
 def OpGroupNonUniformRotateKHR: Op<4431, (outs ID:$res),

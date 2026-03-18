@@ -13,12 +13,12 @@
 #ifndef ORC_RT_SPS_CI_SIMPLENATIVEMEMORYMAPSPSCI_H
 #define ORC_RT_SPS_CI_SIMPLENATIVEMEMORYMAPSPSCI_H
 
-#include "orc-rt/ControllerInterface.h"
+#include "orc-rt/SimpleSymbolTable.h"
 
 namespace orc_rt::sps_ci {
 
 /// Add the SimpleNativeMemoryMap SPS interface to the controller interface.
-Error addSimpleNativeMemoryMap(ControllerInterface &CI);
+Error addSimpleNativeMemoryMap(SimpleSymbolTable &ST);
 
 } // namespace orc_rt::sps_ci
 

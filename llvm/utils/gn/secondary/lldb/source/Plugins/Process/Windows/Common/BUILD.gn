@@ -27,6 +27,7 @@ static_library("Common") {
   sources = [
     "DebuggerThread.cpp",
     "LocalDebugDelegate.cpp",
+    "MSVCRTCFrameRecognizer.cpp",
     "NativeProcessWindows.cpp",
     "NativeRegisterContextWindows.cpp",
     "NativeRegisterContextWindows_WoW64.cpp",

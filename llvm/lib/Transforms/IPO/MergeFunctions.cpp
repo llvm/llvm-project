@@ -408,7 +408,7 @@ bool MergeFunctions::doFunctionalCheck(std::vector<WeakTrackingVH> &Worklist) {
 /// instance of this would be CFI checks for function-local types.
 static bool hasDistinctMetadataIntrinsic(const Function &F) {
   for (const BasicBlock &BB : F) {
-    for (const Instruction &I : BB.instructionsWithoutDebug()) {
+    for (const Instruction &I : BB) {
       if (!isa<IntrinsicInst>(&I))
         continue;
 
@@ -703,7 +703,7 @@ static bool canCreateThunkFor(Function *F) {
   // Don't merge tiny functions using a thunk, since it can just end up
   // making the function larger.
   if (F->size() == 1) {
-    if (F->front().sizeWithoutDebug() < 2) {
+    if (F->front().size() < 2) {
       LLVM_DEBUG(dbgs() << "canCreateThunkFor: " << F->getName()
                         << " is too small to bother creating a thunk for\n");
       return false;

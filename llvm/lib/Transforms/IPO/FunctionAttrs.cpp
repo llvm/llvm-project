@@ -2092,7 +2092,7 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
 static bool mayHaveRecursiveCallee(Function &F,
                                    bool AnyFunctionsAddressIsTaken = true) {
   for (const auto &BB : F) {
-    for (const auto &I : BB.instructionsWithoutDebug()) {
+    for (const auto &I : BB) {
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
         const Function *Callee = CB->getCalledFunction();
         if (!Callee || Callee == &F)

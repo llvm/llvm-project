@@ -1,0 +1,551 @@
+# RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prologepilog %s -verify-machineinstrs -o - | FileCheck %s
+
+# This test ensures that when register pressure is extremely high, the compiler
+# does not attempt to merge ST2Gi instructions into an STGloop. STGloop requires
+# two scratch locations (either free GPRs or emergency spill slots) which the
+# scavenger cannot provide without crashing.
+#
+# The test pattern mimics a Swift async continuation thunk, which loads all
+# registers from an async context, performs MTE stack untagging, then stores
+# all registers to the callee's stack area before a tail call. This creates
+# maximum register pressure at the ST2Gi instructions.
+#
+# We test the 4 possible combinations of (Free GPRs) + (Emergency Spill Slots)
+# to ensure the loop is only formed when the sum is >= 2.
+#
+# CHECK-LABEL: name: test_no_free_regs_emergency_slot
+# CHECK-NOT: STGloop
+# CHECK-LABEL: name: test_one_csr_free_no_slot
+# CHECK-NOT: STGloop
+# CHECK-LABEL: name: test_one_csr_one_caller_free
+# CHECK: STGloop
+# CHECK-LABEL: name: test_emergency_slot_one_caller_free
+# CHECK: STGloop
+
+
+--- |
+  define void @test_no_free_regs_emergency_slot() {
+  entry:
+    ret void
+  }
+  define void @test_one_csr_free_no_slot() {
+  entry:
+    ret void
+  }
+  define void @test_one_csr_one_caller_free() {
+  entry:
+    ret void
+  }
+  define void @test_emergency_slot_one_caller_free() {
+  entry:
+    ret void
+  }
+...
+---
+name:            test_no_free_regs_emergency_slot
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x22', virtual-reg: '' }
+stack:
+  - { id: 0, size: 8192, alignment: 16 }
+  - { id: 1, size: 32, alignment: 16 }
+  - { id: 2, size: 32, alignment: 16 }
+  - { id: 3, size: 32, alignment: 16 }
+  - { id: 4, size: 32, alignment: 16 }
+  - { id: 5, size: 32, alignment: 16 }
+  - { id: 6, size: 32, alignment: 16 }
+  - { id: 7, size: 32, alignment: 16 }
+  - { id: 8, size: 32, alignment: 16 }
+  - { id: 9, size: 32, alignment: 16 }
+  - { id: 10, size: 32, alignment: 16 }
+  - { id: 11, size: 8, alignment: 8 }
+  - { id: 12, size: 8, alignment: 8 }
+  - { id: 13, size: 8, alignment: 8 }
+  - { id: 14, size: 8, alignment: 8 }
+  - { id: 15, size: 8, alignment: 8 }
+  - { id: 16, size: 8, alignment: 8 }
+  - { id: 17, size: 8, alignment: 8 }
+  - { id: 18, size: 8, alignment: 8 }
+  - { id: 19, size: 8, alignment: 8 }
+  - { id: 20, size: 8, alignment: 8 }
+  - { id: 21, size: 8, alignment: 8 }
+  - { id: 22, size: 8, alignment: 8 }
+  - { id: 23, size: 8, alignment: 8 }
+  - { id: 24, size: 8, alignment: 8 }
+  - { id: 25, size: 8, alignment: 8 }
+  - { id: 26, size: 8, alignment: 8 }
+  - { id: 27, size: 8, alignment: 8 }
+  - { id: 28, size: 8, alignment: 8 }
+  - { id: 29, size: 8, alignment: 8 }
+  - { id: 30, size: 8, alignment: 8 }
+  - { id: 31, size: 8, alignment: 8 }
+  - { id: 32, size: 8, alignment: 8 }
+  - { id: 33, size: 8, alignment: 8 }
+  - { id: 34, size: 8, alignment: 8 }
+  - { id: 35, size: 8, alignment: 8 }
+  - { id: 36, size: 8, alignment: 8 }
+  - { id: 37, size: 8, alignment: 8 }
+  - { id: 38, size: 8, alignment: 8 }
+  - { id: 39, size: 8, alignment: 8 }
+  - { id: 40, size: 8, alignment: 8 }
+body:             |
+  bb.0.entry:
+    liveins: $x22
+
+    ; Load all registers from memory
+    $x0 = LDRXui $x22, 0
+    $x1 = LDRXui $x22, 1
+    $x2 = LDRXui $x22, 2
+    $x3 = LDRXui $x22, 3
+    $x4 = LDRXui $x22, 4
+    $x5 = LDRXui $x22, 5
+    $x6 = LDRXui $x22, 6
+    $x7 = LDRXui $x22, 7
+    $x8 = LDRXui $x22, 8
+    $x9 = LDRXui $x22, 9
+    $x10 = LDRXui $x22, 10
+    $x11 = LDRXui $x22, 11
+    $x12 = LDRXui $x22, 12
+    $x13 = LDRXui $x22, 13
+    $x14 = LDRXui $x22, 14
+    $x15 = LDRXui $x22, 15
+    $x16 = LDRXui $x22, 16
+    $x17 = LDRXui $x22, 17
+    $x18 = LDRXui $x22, 18
+    $x19 = LDRXui $x22, 19
+    $x20 = LDRXui $x22, 20
+    $x21 = LDRXui $x22, 21
+    $x23 = LDRXui $x22, 23
+    $x24 = LDRXui $x22, 24
+    $x25 = LDRXui $x22, 25
+    $x26 = LDRXui $x22, 26
+    $x27 = LDRXui $x22, 27
+    $x28 = LDRXui $x22, 28
+    $lr = LDRXui $x22, 29
+    $fp = LDRXui $x22, 30
+
+    ST2Gi $sp, %stack.1, 0 :: (store (s256))
+    ST2Gi $sp, %stack.2, 0 :: (store (s256))
+    ST2Gi $sp, %stack.3, 0 :: (store (s256))
+    ST2Gi $sp, %stack.4, 0 :: (store (s256))
+    ST2Gi $sp, %stack.5, 0 :: (store (s256))
+    ST2Gi $sp, %stack.6, 0 :: (store (s256))
+    ST2Gi $sp, %stack.7, 0 :: (store (s256))
+    ST2Gi $sp, %stack.8, 0 :: (store (s256))
+    ST2Gi $sp, %stack.9, 0 :: (store (s256))
+    ST2Gi $sp, %stack.10, 0 :: (store (s256))
+
+    ; Store all registers to stack
+    STRXui $x0, %stack.11, 0
+    STRXui $x1, %stack.12, 0
+    STRXui $x2, %stack.13, 0
+    STRXui $x3, %stack.14, 0
+    STRXui $x4, %stack.15, 0
+    STRXui $x5, %stack.16, 0
+    STRXui $x6, %stack.17, 0
+    STRXui $x7, %stack.18, 0
+    STRXui $x8, %stack.19, 0
+    STRXui $x9, %stack.20, 0
+    STRXui $x10, %stack.21, 0
+    STRXui $x11, %stack.22, 0
+    STRXui $x12, %stack.23, 0
+    STRXui $x13, %stack.24, 0
+    STRXui $x14, %stack.25, 0
+    STRXui $x15, %stack.26, 0
+    STRXui $x16, %stack.27, 0
+    STRXui $x17, %stack.28, 0
+    STRXui $x18, %stack.29, 0
+    STRXui $x19, %stack.30, 0
+    STRXui $x20, %stack.31, 0
+    STRXui $x21, %stack.32, 0
+    STRXui $x22, %stack.33, 0
+    STRXui $x23, %stack.34, 0
+    STRXui $x24, %stack.35, 0
+    STRXui $x25, %stack.36, 0
+    STRXui $x26, %stack.37, 0
+    STRXui $x27, %stack.38, 0
+    STRXui $x28, %stack.39, 0
+    STRXui $lr, %stack.40, 0
+    STRXui $fp, %stack.0, 0
+
+    RET_ReallyLR
+...
+---
+name:            test_one_csr_free_no_slot
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x22', virtual-reg: '' }
+stack:
+  - { id: 0, size: 8192, alignment: 16 }
+  - { id: 1, size: 32, alignment: 16 }
+  - { id: 2, size: 32, alignment: 16 }
+  - { id: 3, size: 32, alignment: 16 }
+  - { id: 4, size: 32, alignment: 16 }
+  - { id: 5, size: 32, alignment: 16 }
+  - { id: 6, size: 32, alignment: 16 }
+  - { id: 7, size: 32, alignment: 16 }
+  - { id: 8, size: 32, alignment: 16 }
+  - { id: 9, size: 32, alignment: 16 }
+  - { id: 10, size: 32, alignment: 16 }
+  - { id: 11, size: 8, alignment: 8 }
+  - { id: 12, size: 8, alignment: 8 }
+  - { id: 13, size: 8, alignment: 8 }
+  - { id: 14, size: 8, alignment: 8 }
+  - { id: 15, size: 8, alignment: 8 }
+  - { id: 16, size: 8, alignment: 8 }
+  - { id: 17, size: 8, alignment: 8 }
+  - { id: 18, size: 8, alignment: 8 }
+  - { id: 19, size: 8, alignment: 8 }
+  - { id: 20, size: 8, alignment: 8 }
+  - { id: 21, size: 8, alignment: 8 }
+  - { id: 22, size: 8, alignment: 8 }
+  - { id: 23, size: 8, alignment: 8 }
+  - { id: 24, size: 8, alignment: 8 }
+  - { id: 25, size: 8, alignment: 8 }
+  - { id: 26, size: 8, alignment: 8 }
+  - { id: 27, size: 8, alignment: 8 }
+  - { id: 28, size: 8, alignment: 8 }
+  - { id: 29, size: 8, alignment: 8 }
+  - { id: 30, size: 8, alignment: 8 }
+  - { id: 31, size: 8, alignment: 8 }
+  - { id: 32, size: 8, alignment: 8 }
+  - { id: 33, size: 8, alignment: 8 }
+  - { id: 34, size: 8, alignment: 8 }
+  - { id: 35, size: 8, alignment: 8 }
+  - { id: 36, size: 8, alignment: 8 }
+  - { id: 37, size: 8, alignment: 8 }
+  - { id: 38, size: 8, alignment: 8 }
+  - { id: 39, size: 8, alignment: 8 }
+  - { id: 40, size: 8, alignment: 8 }
+body:             |
+  bb.0.entry:
+    liveins: $x22
+
+    ; Load all registers except $x28 from memory
+    $x0 = LDRXui $x22, 0
+    $x1 = LDRXui $x22, 1
+    $x2 = LDRXui $x22, 2
+    $x3 = LDRXui $x22, 3
+    $x4 = LDRXui $x22, 4
+    $x5 = LDRXui $x22, 5
+    $x6 = LDRXui $x22, 6
+    $x7 = LDRXui $x22, 7
+    $x8 = LDRXui $x22, 8
+    $x9 = LDRXui $x22, 9
+    $x10 = LDRXui $x22, 10
+    $x11 = LDRXui $x22, 11
+    $x12 = LDRXui $x22, 12
+    $x13 = LDRXui $x22, 13
+    $x14 = LDRXui $x22, 14
+    $x15 = LDRXui $x22, 15
+    $x16 = LDRXui $x22, 16
+    $x17 = LDRXui $x22, 17
+    $x18 = LDRXui $x22, 18
+    $x19 = LDRXui $x22, 19
+    $x20 = LDRXui $x22, 20
+    $x21 = LDRXui $x22, 21
+    $x23 = LDRXui $x22, 23
+    $x24 = LDRXui $x22, 24
+    $x25 = LDRXui $x22, 25
+    $x26 = LDRXui $x22, 26
+    $x27 = LDRXui $x22, 27
+    $lr = LDRXui $x22, 29
+    $fp = LDRXui $x22, 30
+
+    ST2Gi $sp, %stack.1, 0 :: (store (s256))
+    ST2Gi $sp, %stack.2, 0 :: (store (s256))
+    ST2Gi $sp, %stack.3, 0 :: (store (s256))
+    ST2Gi $sp, %stack.4, 0 :: (store (s256))
+    ST2Gi $sp, %stack.5, 0 :: (store (s256))
+    ST2Gi $sp, %stack.6, 0 :: (store (s256))
+    ST2Gi $sp, %stack.7, 0 :: (store (s256))
+    ST2Gi $sp, %stack.8, 0 :: (store (s256))
+    ST2Gi $sp, %stack.9, 0 :: (store (s256))
+    ST2Gi $sp, %stack.10, 0 :: (store (s256))
+
+    ; Store all registers except $x28 to stack
+    STRXui $x0, %stack.11, 0
+    STRXui $x1, %stack.12, 0
+    STRXui $x2, %stack.13, 0
+    STRXui $x3, %stack.14, 0
+    STRXui $x4, %stack.15, 0
+    STRXui $x5, %stack.16, 0
+    STRXui $x6, %stack.17, 0
+    STRXui $x7, %stack.18, 0
+    STRXui $x8, %stack.19, 0
+    STRXui $x9, %stack.20, 0
+    STRXui $x10, %stack.21, 0
+    STRXui $x11, %stack.22, 0
+    STRXui $x12, %stack.23, 0
+    STRXui $x13, %stack.24, 0
+    STRXui $x14, %stack.25, 0
+    STRXui $x15, %stack.26, 0
+    STRXui $x16, %stack.27, 0
+    STRXui $x17, %stack.28, 0
+    STRXui $x18, %stack.29, 0
+    STRXui $x19, %stack.30, 0
+    STRXui $x20, %stack.31, 0
+    STRXui $x21, %stack.32, 0
+    STRXui $x22, %stack.33, 0
+    STRXui $x23, %stack.34, 0
+    STRXui $x24, %stack.35, 0
+    STRXui $x25, %stack.36, 0
+    STRXui $x26, %stack.37, 0
+    STRXui $x27, %stack.38, 0
+    STRXui $lr, %stack.40, 0
+    STRXui $fp, %stack.0, 0
+
+    RET_ReallyLR
+...
+---
+name:            test_one_csr_one_caller_free
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x22', virtual-reg: '' }
+stack:
+  - { id: 0, size: 8192, alignment: 16 }
+  - { id: 1, size: 32, alignment: 16 }
+  - { id: 2, size: 32, alignment: 16 }
+  - { id: 3, size: 32, alignment: 16 }
+  - { id: 4, size: 32, alignment: 16 }
+  - { id: 5, size: 32, alignment: 16 }
+  - { id: 6, size: 32, alignment: 16 }
+  - { id: 7, size: 32, alignment: 16 }
+  - { id: 8, size: 32, alignment: 16 }
+  - { id: 9, size: 32, alignment: 16 }
+  - { id: 10, size: 32, alignment: 16 }
+  - { id: 11, size: 8, alignment: 8 }
+  - { id: 12, size: 8, alignment: 8 }
+  - { id: 13, size: 8, alignment: 8 }
+  - { id: 14, size: 8, alignment: 8 }
+  - { id: 15, size: 8, alignment: 8 }
+  - { id: 16, size: 8, alignment: 8 }
+  - { id: 17, size: 8, alignment: 8 }
+  - { id: 18, size: 8, alignment: 8 }
+  - { id: 19, size: 8, alignment: 8 }
+  - { id: 20, size: 8, alignment: 8 }
+  - { id: 21, size: 8, alignment: 8 }
+  - { id: 22, size: 8, alignment: 8 }
+  - { id: 23, size: 8, alignment: 8 }
+  - { id: 24, size: 8, alignment: 8 }
+  - { id: 25, size: 8, alignment: 8 }
+  - { id: 26, size: 8, alignment: 8 }
+  - { id: 27, size: 8, alignment: 8 }
+  - { id: 28, size: 8, alignment: 8 }
+  - { id: 29, size: 8, alignment: 8 }
+  - { id: 30, size: 8, alignment: 8 }
+  - { id: 31, size: 8, alignment: 8 }
+  - { id: 32, size: 8, alignment: 8 }
+  - { id: 33, size: 8, alignment: 8 }
+  - { id: 34, size: 8, alignment: 8 }
+  - { id: 35, size: 8, alignment: 8 }
+  - { id: 36, size: 8, alignment: 8 }
+  - { id: 37, size: 8, alignment: 8 }
+  - { id: 38, size: 8, alignment: 8 }
+  - { id: 39, size: 8, alignment: 8 }
+  - { id: 40, size: 8, alignment: 8 }
+body:             |
+  bb.0.entry:
+    liveins: $x22
+
+    ; Load all registers except $0, $x28 from memory
+    $x1 = LDRXui $x22, 1
+    $x2 = LDRXui $x22, 2
+    $x3 = LDRXui $x22, 3
+    $x4 = LDRXui $x22, 4
+    $x5 = LDRXui $x22, 5
+    $x6 = LDRXui $x22, 6
+    $x7 = LDRXui $x22, 7
+    $x8 = LDRXui $x22, 8
+    $x9 = LDRXui $x22, 9
+    $x10 = LDRXui $x22, 10
+    $x11 = LDRXui $x22, 11
+    $x12 = LDRXui $x22, 12
+    $x13 = LDRXui $x22, 13
+    $x14 = LDRXui $x22, 14
+    $x15 = LDRXui $x22, 15
+    $x16 = LDRXui $x22, 16
+    $x17 = LDRXui $x22, 17
+    $x18 = LDRXui $x22, 18
+    $x19 = LDRXui $x22, 19
+    $x20 = LDRXui $x22, 20
+    $x21 = LDRXui $x22, 21
+    $x23 = LDRXui $x22, 23
+    $x24 = LDRXui $x22, 24
+    $x25 = LDRXui $x22, 25
+    $x26 = LDRXui $x22, 26
+    $x27 = LDRXui $x22, 27
+    $lr = LDRXui $x22, 29
+    $fp = LDRXui $x22, 30
+
+    ST2Gi $sp, %stack.1, 0 :: (store (s256))
+    ST2Gi $sp, %stack.2, 0 :: (store (s256))
+    ST2Gi $sp, %stack.3, 0 :: (store (s256))
+    ST2Gi $sp, %stack.4, 0 :: (store (s256))
+    ST2Gi $sp, %stack.5, 0 :: (store (s256))
+    ST2Gi $sp, %stack.6, 0 :: (store (s256))
+    ST2Gi $sp, %stack.7, 0 :: (store (s256))
+    ST2Gi $sp, %stack.8, 0 :: (store (s256))
+    ST2Gi $sp, %stack.9, 0 :: (store (s256))
+    ST2Gi $sp, %stack.10, 0 :: (store (s256))
+
+    ; Store all registers except $x0, $x28 to stack
+    STRXui $x1, %stack.12, 0
+    STRXui $x2, %stack.13, 0
+    STRXui $x3, %stack.14, 0
+    STRXui $x4, %stack.15, 0
+    STRXui $x5, %stack.16, 0
+    STRXui $x6, %stack.17, 0
+    STRXui $x7, %stack.18, 0
+    STRXui $x8, %stack.19, 0
+    STRXui $x9, %stack.20, 0
+    STRXui $x10, %stack.21, 0
+    STRXui $x11, %stack.22, 0
+    STRXui $x12, %stack.23, 0
+    STRXui $x13, %stack.24, 0
+    STRXui $x14, %stack.25, 0
+    STRXui $x15, %stack.26, 0
+    STRXui $x16, %stack.27, 0
+    STRXui $x17, %stack.28, 0
+    STRXui $x18, %stack.29, 0
+    STRXui $x19, %stack.30, 0
+    STRXui $x20, %stack.31, 0
+    STRXui $x21, %stack.32, 0
+    STRXui $x22, %stack.33, 0
+    STRXui $x23, %stack.34, 0
+    STRXui $x24, %stack.35, 0
+    STRXui $x25, %stack.36, 0
+    STRXui $x26, %stack.37, 0
+    STRXui $x27, %stack.38, 0
+    STRXui $lr, %stack.40, 0
+    STRXui $fp, %stack.0, 0
+
+    RET_ReallyLR
+...
+---
+name:            test_emergency_slot_one_caller_free
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x22', virtual-reg: '' }
+stack:
+  - { id: 0, size: 8192, alignment: 16 }
+  - { id: 1, size: 32, alignment: 16 }
+  - { id: 2, size: 32, alignment: 16 }
+  - { id: 3, size: 32, alignment: 16 }
+  - { id: 4, size: 32, alignment: 16 }
+  - { id: 5, size: 32, alignment: 16 }
+  - { id: 6, size: 32, alignment: 16 }
+  - { id: 7, size: 32, alignment: 16 }
+  - { id: 8, size: 32, alignment: 16 }
+  - { id: 9, size: 32, alignment: 16 }
+  - { id: 10, size: 32, alignment: 16 }
+  - { id: 11, size: 8, alignment: 8 }
+  - { id: 12, size: 8, alignment: 8 }
+  - { id: 13, size: 8, alignment: 8 }
+  - { id: 14, size: 8, alignment: 8 }
+  - { id: 15, size: 8, alignment: 8 }
+  - { id: 16, size: 8, alignment: 8 }
+  - { id: 17, size: 8, alignment: 8 }
+  - { id: 18, size: 8, alignment: 8 }
+  - { id: 19, size: 8, alignment: 8 }
+  - { id: 20, size: 8, alignment: 8 }
+  - { id: 21, size: 8, alignment: 8 }
+  - { id: 22, size: 8, alignment: 8 }
+  - { id: 23, size: 8, alignment: 8 }
+  - { id: 24, size: 8, alignment: 8 }
+  - { id: 25, size: 8, alignment: 8 }
+  - { id: 26, size: 8, alignment: 8 }
+  - { id: 27, size: 8, alignment: 8 }
+  - { id: 28, size: 8, alignment: 8 }
+  - { id: 29, size: 8, alignment: 8 }
+  - { id: 30, size: 8, alignment: 8 }
+  - { id: 31, size: 8, alignment: 8 }
+  - { id: 32, size: 8, alignment: 8 }
+  - { id: 33, size: 8, alignment: 8 }
+  - { id: 34, size: 8, alignment: 8 }
+  - { id: 35, size: 8, alignment: 8 }
+  - { id: 36, size: 8, alignment: 8 }
+  - { id: 37, size: 8, alignment: 8 }
+  - { id: 38, size: 8, alignment: 8 }
+  - { id: 39, size: 8, alignment: 8 }
+  - { id: 40, size: 8, alignment: 8 }
+body:             |
+  bb.0.entry:
+    liveins: $x22
+
+    ; Load all registers except $0 from memory
+    $x1 = LDRXui $x22, 1
+    $x2 = LDRXui $x22, 2
+    $x3 = LDRXui $x22, 3
+    $x4 = LDRXui $x22, 4
+    $x5 = LDRXui $x22, 5
+    $x6 = LDRXui $x22, 6
+    $x7 = LDRXui $x22, 7
+    $x8 = LDRXui $x22, 8
+    $x9 = LDRXui $x22, 9
+    $x10 = LDRXui $x22, 10
+    $x11 = LDRXui $x22, 11
+    $x12 = LDRXui $x22, 12
+    $x13 = LDRXui $x22, 13
+    $x14 = LDRXui $x22, 14
+    $x15 = LDRXui $x22, 15
+    $x16 = LDRXui $x22, 16
+    $x17 = LDRXui $x22, 17
+    $x18 = LDRXui $x22, 18
+    $x19 = LDRXui $x22, 19
+    $x20 = LDRXui $x22, 20
+    $x21 = LDRXui $x22, 21
+    $x23 = LDRXui $x22, 23
+    $x24 = LDRXui $x22, 24
+    $x25 = LDRXui $x22, 25
+    $x26 = LDRXui $x22, 26
+    $x27 = LDRXui $x22, 27
+    $x28 = LDRXui $x22, 28
+    $lr = LDRXui $x22, 29
+    $fp = LDRXui $x22, 30
+
+    ST2Gi $sp, %stack.1, 0 :: (store (s256))
+    ST2Gi $sp, %stack.2, 0 :: (store (s256))
+    ST2Gi $sp, %stack.3, 0 :: (store (s256))
+    ST2Gi $sp, %stack.4, 0 :: (store (s256))
+    ST2Gi $sp, %stack.5, 0 :: (store (s256))
+    ST2Gi $sp, %stack.6, 0 :: (store (s256))
+    ST2Gi $sp, %stack.7, 0 :: (store (s256))
+    ST2Gi $sp, %stack.8, 0 :: (store (s256))
+    ST2Gi $sp, %stack.9, 0 :: (store (s256))
+    ST2Gi $sp, %stack.10, 0 :: (store (s256))
+
+    ; Store all registers except $x0 to stack
+    STRXui $x1, %stack.12, 0
+    STRXui $x2, %stack.13, 0
+    STRXui $x3, %stack.14, 0
+    STRXui $x4, %stack.15, 0
+    STRXui $x5, %stack.16, 0
+    STRXui $x6, %stack.17, 0
+    STRXui $x7, %stack.18, 0
+    STRXui $x8, %stack.19, 0
+    STRXui $x9, %stack.20, 0
+    STRXui $x10, %stack.21, 0
+    STRXui $x11, %stack.22, 0
+    STRXui $x12, %stack.23, 0
+    STRXui $x13, %stack.24, 0
+    STRXui $x14, %stack.25, 0
+    STRXui $x15, %stack.26, 0
+    STRXui $x16, %stack.27, 0
+    STRXui $x17, %stack.28, 0
+    STRXui $x18, %stack.29, 0
+    STRXui $x19, %stack.30, 0
+    STRXui $x20, %stack.31, 0
+    STRXui $x21, %stack.32, 0
+    STRXui $x22, %stack.33, 0
+    STRXui $x23, %stack.34, 0
+    STRXui $x24, %stack.35, 0
+    STRXui $x25, %stack.36, 0
+    STRXui $x26, %stack.37, 0
+    STRXui $x27, %stack.38, 0
+    STRXui $x28, %stack.39, 0
+    STRXui $lr, %stack.40, 0
+    STRXui $fp, %stack.0, 0
+
+    RET_ReallyLR
+...

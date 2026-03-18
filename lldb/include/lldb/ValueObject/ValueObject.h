@@ -580,6 +580,9 @@ public:
 
   virtual AddrAndType GetAddressOf(bool scalar_is_load_address = true);
 
+  /// Remove ptrauth bits from address if the type has a ptrauth qualifier.
+  std::optional<lldb::addr_t> GetStrippedPointerValue(lldb::addr_t address);
+
   AddrAndType GetPointerValue();
 
   lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;

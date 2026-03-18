@@ -4659,6 +4659,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
                   .Case("prel_g1_nc", AArch64::S_PREL_G1_NC)
                   .Case("prel_g0", AArch64::S_PREL_G0)
                   .Case("prel_g0_nc", AArch64::S_PREL_G0_NC)
+                  .Case("dtprel", AArch64::S_DTPREL)
                   .Case("dtprel_g2", AArch64::S_DTPREL_G2)
                   .Case("dtprel_g1", AArch64::S_DTPREL_G1)
                   .Case("dtprel_g1_nc", AArch64::S_DTPREL_G1_NC)

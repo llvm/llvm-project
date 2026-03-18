@@ -791,9 +791,8 @@ bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
 // Return the depth of the affected nests:
 //   {affected-depth, must-be-perfect-nest}.
 std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version) {
-  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
-  llvm::omp::Directive dir{beginSpec.DirId()};
+    const parser::OmpDirectiveSpecification &spec, unsigned version) {
+  llvm::omp::Directive dir{spec.DirId()};
   bool allowsCollapse{llvm::omp::isAllowedClauseForDirective(
       dir, llvm::omp::Clause::OMPC_collapse, version)};
   bool allowsOrdered{llvm::omp::isAllowedClauseForDirective(
@@ -801,9 +800,9 @@ std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
 
   if (allowsCollapse || allowsOrdered) {
     auto [count, reason]{GetArgumentValueWithReason(
-        beginSpec, llvm::omp::Clause::OMPC_collapse, version)};
+        spec, llvm::omp::Clause::OMPC_collapse, version)};
     auto [vo, ro]{GetArgumentValueWithReason(
-        beginSpec, llvm::omp::Clause::OMPC_ordered, version)};
+        spec, llvm::omp::Clause::OMPC_ordered, version)};
     if (vo) {
       if (!count || *count < *vo) {
         count = vo;
@@ -817,17 +816,16 @@ std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
     switch (dir) {
     case llvm::omp::Directive::OMPD_interchange: {
       // Get the length of the argument list to PERMUTATION.
-      if (parser::omp::FindClause(
-              beginSpec, llvm::omp::Clause::OMPC_permutation)) {
+      if (parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_permutation)) {
         auto [num, reason]{GetNumArgumentsWithReason(
-            beginSpec, llvm::omp::Clause::OMPC_permutation, version)};
+            spec, llvm::omp::Clause::OMPC_permutation, version)};
         return {num, true, std::move(reason)};
       }
       // PERMUTATION not specified, assume PERMUTATION(2, 1).
       std::string name{parser::omp::GetUpperName(
           llvm::omp::Clause::OMPC_permutation, version)};
       Reason reason;
-      reason.Say(beginSpec.source,
+      reason.Say(spec.source,
           "%s clause was not specified, %s(2, 1) was assumed"_because_en_US,
           name.c_str(), name.c_str());
       return {2, true, std::move(reason)};
@@ -836,20 +834,20 @@ std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
     case llvm::omp::Directive::OMPD_tile: {
       // Get the length of the argument list to SIZES.
       auto [num, reason]{GetNumArgumentsWithReason(
-          beginSpec, llvm::omp::Clause::OMPC_sizes, version)};
+          spec, llvm::omp::Clause::OMPC_sizes, version)};
       return {num, true, std::move(reason)};
     }
     case llvm::omp::Directive::OMPD_fuse: {
       // Get the value from the argument to DEPTH.
-      if (parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_depth)) {
+      if (parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_depth)) {
         auto [count, reason]{GetArgumentValueWithReason(
-            beginSpec, llvm::omp::Clause::OMPC_depth, version)};
+            spec, llvm::omp::Clause::OMPC_depth, version)};
         return {count, true, std::move(reason)};
       }
       std::string name{
           parser::omp::GetUpperName(llvm::omp::Clause::OMPC_depth, version)};
       Reason reason;
-      reason.Say(beginSpec.source,
+      reason.Say(spec.source,
           "%s clause was not specified, a value of 1 was assumed"_because_en_US,
           name.c_str());
       return {1, true, std::move(reason)};
@@ -871,14 +869,13 @@ std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
 //   {first, count, std::move(reason)}.
 std::tuple<std::optional<int64_t>, std::optional<int64_t>, Reason>
 GetAffectedLoopRangeWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version) {
-  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
-  llvm::omp::Directive dir{beginSpec.DirId()};
+    const parser::OmpDirectiveSpecification &spec, unsigned version) {
+  llvm::omp::Directive dir{spec.DirId()};
 
   if (dir == llvm::omp::Directive::OMPD_fuse) {
     std::string name{GetUpperName(llvm::omp::Clause::OMPC_looprange, version)};
-    if (auto *clause{parser::omp::FindClause(
-            beginSpec, llvm::omp::Clause::OMPC_looprange)}) {
+    if (auto *clause{
+            parser::omp::FindClause(spec, llvm::omp::Clause::OMPC_looprange)}) {
       auto &range{DEREF(parser::Unwrap<parser::OmpLooprangeClause>(clause->u))};
       std::optional<int64_t> first{GetIntValue(std::get<0>(range.t))};
       std::optional<int64_t> count{GetIntValue(std::get<1>(range.t))};
@@ -897,7 +894,7 @@ GetAffectedLoopRangeWithReason(
     // If LOOPRANGE was not found, return {1, -1}, where -1 means "the whole
     // associated sequence".
     Reason reason;
-    reason.Say(x.source,
+    reason.Say(spec.source,
         "%s clause was not specified, a value of 1 was assumed"_because_en_US,
         name.c_str());
     return {1, -1, std::move(reason)};
@@ -1111,7 +1108,8 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
       // The result is a perfect nest only if all loop in the sequence
       // are fused.
       if (value && nestedLength) {
-        auto [first, count, _]{GetAffectedLoopRangeWithReason(omp, version_)};
+        auto [first, count, _]{
+            GetAffectedLoopRangeWithReason(beginSpec, version_)};
         if (auto required{GetRequiredCount(first, count)}) {
           if (*required == -1 || *required == *nestedLength) {
             return Depth{value, value};

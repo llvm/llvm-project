@@ -14,6 +14,7 @@
 #include "orc-rt/SPSAllocAction.h"
 #include "orc-rt/SPSMemoryFlags.h"
 #include "orc-rt/SPSWrapperFunction.h"
+#include "orc-rt/Session.h"
 #include "orc-rt/SimpleNativeMemoryMap.h"
 
 #include "AllocActionTestUtils.h"
@@ -113,7 +114,9 @@ class SimpleNativeMemoryMapSPSCITest : public ::testing::Test {
 protected:
   void SetUp() override {
     cantFail(sps_ci::addSimpleNativeMemoryMap(CI));
-    SNMM = std::make_unique<SimpleNativeMemoryMap>();
+    S = std::make_unique<Session>(mockExecutorProcessInfo(),
+                                  std::make_unique<NoDispatcher>(), noErrors);
+    SNMM = cantFail(SimpleNativeMemoryMap::Create(*S, CI));
   }
 
   void TearDown() override {
@@ -164,7 +167,8 @@ protected:
         std::forward<OnCompleteFn>(OnComplete), SNMM.get(), Bases);
   }
 
-  ControllerInterface CI;
+  SimpleSymbolTable CI;
+  std::unique_ptr<Session> S;
   std::unique_ptr<SimpleNativeMemoryMap> SNMM;
 };
 
@@ -309,7 +313,7 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeDetachShutdown) {
   EXPECT_EQ(SentinelValue, 0U);
 
   std::future<void> DetachResult;
-  SNMM->onDetach(waitFor(DetachResult));
+  SNMM->onDetach(waitFor(DetachResult), /* ShutdownRequested */ false);
   DetachResult.get();
 
   EXPECT_EQ(SentinelValue, 0);

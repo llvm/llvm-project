@@ -67,7 +67,7 @@ protected:
   Local createLocal(Descriptor *D);
 
   /// Parameter indices.
-  llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
+  llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
   /// Offset of the This parameter in a lambda record.

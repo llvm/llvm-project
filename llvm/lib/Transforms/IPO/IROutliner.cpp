@@ -2288,8 +2288,7 @@ static bool nextIRInstructionDataMatchesNextInst(IRInstructionData &ID) {
   if (!ID.Inst->isTerminator())
     NextModuleInst = ID.Inst->getNextNode();
   else if (NextIDLInst != nullptr)
-    NextModuleInst =
-        &*NextIDIt->Inst->getParent()->instructionsWithoutDebug().begin();
+    NextModuleInst = &*NextIDIt->Inst->getParent()->begin();
 
   if (NextIDLInst && NextIDLInst != NextModuleInst)
     return false;

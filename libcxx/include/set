@@ -825,11 +825,11 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __tree_.find(__k); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __tree_.find(__k); }
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator find(const _K2& __k) {
     return __tree_.find(__k);
   }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator find(const _K2& __k) const {
     return __tree_.find(__k);
   }
@@ -839,7 +839,7 @@ public:
     return __tree_.__count_unique(__k);
   }
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type count(const _K2& __k) const {
     return __tree_.__count_multi(__k);
   }
@@ -847,7 +847,7 @@ public:
 
 #  if _LIBCPP_STD_VER >= 20
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __k) const { return find(__k) != end(); }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const _K2& __k) const {
     return find(__k) != end();
   }
@@ -864,12 +864,12 @@ public:
   // The transparent versions of the lookup functions use the _multi version, since a non-element key is allowed to
   // match multiple elements.
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _K2& __k) {
     return __tree_.__lower_bound_multi(__k);
   }
 
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _K2& __k) const {
     return __tree_.__lower_bound_multi(__k);
   }
@@ -884,11 +884,11 @@ public:
   }
 
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _K2& __k) {
     return __tree_.__upper_bound_multi(__k);
   }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _K2& __k) const {
     return __tree_.__upper_bound_multi(__k);
   }
@@ -901,11 +901,11 @@ public:
     return __tree_.__equal_range_unique(__k);
   }
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) {
     return __tree_.__equal_range_multi(__k);
   }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const {
     return __tree_.__equal_range_multi(__k);
   }
@@ -1302,11 +1302,11 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __tree_.find(__k); }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __tree_.find(__k); }
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator find(const _K2& __k) {
     return __tree_.find(__k);
   }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator find(const _K2& __k) const {
     return __tree_.find(__k);
   }
@@ -1316,7 +1316,7 @@ public:
     return __tree_.__count_multi(__k);
   }
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type count(const _K2& __k) const {
     return __tree_.__count_multi(__k);
   }
@@ -1324,7 +1324,7 @@ public:
 
 #  if _LIBCPP_STD_VER >= 20
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __k) const { return find(__k) != end(); }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool contains(const _K2& __k) const {
     return find(__k) != end();
   }
@@ -1339,12 +1339,12 @@ public:
   }
 
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _K2& __k) {
     return __tree_.__lower_bound_multi(__k);
   }
 
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _K2& __k) const {
     return __tree_.__lower_bound_multi(__k);
   }
@@ -1359,11 +1359,11 @@ public:
   }
 
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _K2& __k) {
     return __tree_.__upper_bound_multi(__k);
   }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _K2& __k) const {
     return __tree_.__upper_bound_multi(__k);
   }
@@ -1376,11 +1376,11 @@ public:
     return __tree_.__equal_range_multi(__k);
   }
 #  if _LIBCPP_STD_VER >= 14
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) {
     return __tree_.__equal_range_multi(__k);
   }
-  template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
+  template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const {
     return __tree_.__equal_range_multi(__k);
   }

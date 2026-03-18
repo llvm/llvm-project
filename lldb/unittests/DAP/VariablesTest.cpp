@@ -27,7 +27,7 @@ using namespace lldb_dap::protocol;
 class VariablesTest : public ::testing::Test {
 
 public:
-  VariablesTest() : log(llvm::nulls(), mutex), vars(log) {}
+  VariablesTest() : log(llvm::nulls(), mutex), vars(log, config) {}
 
   static void SetUpTestSuite() {
     lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
@@ -48,6 +48,7 @@ protected:
   enum : bool { Permanent = true, Temporary = false };
   Log::Mutex mutex;
   Log log;
+  protocol::Configuration config;
   VariableReferenceStorage vars;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
@@ -104,10 +105,10 @@ TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
   auto y42 = target.CreateValueFromExpression("y", "42");
   auto gzero = target.CreateValueFromExpression("$0", "42");
   auto gone = target.CreateValueFromExpression("$1", "7");
-  const var_ref_t temp1 = vars.Insert(x15, Temporary);
-  const var_ref_t temp2 = vars.Insert(y42, Temporary);
-  const var_ref_t perm1 = vars.Insert(gzero, Permanent);
-  const var_ref_t perm2 = vars.Insert(gone, Permanent);
+  const var_ref_t temp1 = vars.Insert(x15, Temporary, /*is_internal=*/false);
+  const var_ref_t temp2 = vars.Insert(y42, Temporary, /*is_internal=*/false);
+  const var_ref_t perm1 = vars.Insert(gzero, Permanent, /*is_internal=*/false);
+  const var_ref_t perm2 = vars.Insert(gone, Permanent, /*is_internal=*/false);
   EXPECT_NE(temp1.AsUInt32(), temp2.AsUInt32());
   EXPECT_NE(perm1.AsUInt32(), perm2.AsUInt32());
   EXPECT_LT(temp1.AsUInt32(), perm1.AsUInt32());
@@ -116,7 +117,7 @@ TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
 
 TEST_F(VariablesTest, InsertAndGetVariable_Temporary) {
   lldb::SBValue dummy;
-  const var_ref_t ref = vars.Insert(dummy, Temporary);
+  const var_ref_t ref = vars.Insert(dummy, Temporary, /*is_internal=*/false);
   lldb::SBValue out = vars.GetVariable(ref);
 
   EXPECT_EQ(out.IsValid(), dummy.IsValid());
@@ -124,15 +125,17 @@ TEST_F(VariablesTest, InsertAndGetVariable_Temporary) {
 
 TEST_F(VariablesTest, InsertAndGetVariable_Permanent) {
   lldb::SBValue dummy;
-  const var_ref_t ref = vars.Insert(dummy, Permanent);
+  const var_ref_t ref = vars.Insert(dummy, Permanent, /*is_internal=*/false);
   lldb::SBValue out = vars.GetVariable(ref);
 
   EXPECT_EQ(out.IsValid(), dummy.IsValid());
 }
 
 TEST_F(VariablesTest, IsPermanentVariableReference) {
-  const var_ref_t perm = vars.Insert(lldb::SBValue(), Permanent);
-  const var_ref_t temp = vars.Insert(lldb::SBValue(), Temporary);
+  const var_ref_t perm =
+      vars.Insert(lldb::SBValue(), Permanent, /*is_internal=*/false);
+  const var_ref_t temp =
+      vars.Insert(lldb::SBValue(), Temporary, /*is_internal=*/false);
 
   EXPECT_EQ(perm.Kind(), eReferenceKindPermanent);
   EXPECT_EQ(temp.Kind(), eReferenceKindTemporary);
@@ -140,8 +143,8 @@ TEST_F(VariablesTest, IsPermanentVariableReference) {
 
 TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
   lldb::SBValue dummy;
-  const var_ref_t temp = vars.Insert(dummy, Temporary);
-  const var_ref_t perm = vars.Insert(dummy, Permanent);
+  const var_ref_t temp = vars.Insert(dummy, Temporary, /*is_internal=*/false);
+  const var_ref_t perm = vars.Insert(dummy, Permanent, /*is_internal=*/false);
   vars.Clear();
 
   EXPECT_FALSE(vars.GetVariable(temp).IsValid());
@@ -184,7 +187,7 @@ TEST_F(VariablesTest, VariablesStore) {
 
   ASSERT_TRUE(vars.FindVariable(local_ref, "rect").IsValid());
 
-  auto variables = locals_store->GetVariables(vars, {}, {});
+  auto variables = locals_store->GetVariables({});
   ASSERT_THAT_EXPECTED(variables, Succeeded());
   ASSERT_EQ(variables->size(), 1u);
   auto rect = variables->at(0);
@@ -196,7 +199,7 @@ TEST_F(VariablesTest, VariablesStore) {
   auto *store = vars.GetVariableStore(args.variablesReference);
   ASSERT_NE(store, nullptr);
 
-  variables = store->GetVariables(vars, {}, args);
+  variables = store->GetVariables(args);
   ASSERT_THAT_EXPECTED(variables, Succeeded());
   ASSERT_EQ(variables->size(), 4u);
   EXPECT_EQ(variables->at(0).name, "x");

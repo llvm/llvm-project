@@ -231,30 +231,40 @@ TEST(AddressSanitizer, ShadowRegionIsPoisonedTest) {
 }
 
 // Test regions fully contained in the last 8 bytes (shadow granularity)
-// before given end address of a memory range (LowMem / MidMem / HighMem).
-// __asan_region_is_poisoned() should not crash for those regions.
-static void TestRegionIsPoisonedNearEnd(uptr end) {
+// of a memory range (LowMem / MidMem / HighMem).
+static void TestIsPoisonedNearMemEnd(uptr end) {
   static const uptr granularity = 1ULL << 3;  // shadow granularity
   for (uptr offset = 0; offset < granularity; ++offset) {
-    uptr ptr = end - offset;
-    for (uptr size = 1; ptr < ptr + size && ptr + size <= end + 1; ++size) {
-      uptr first_poisoned = __asan_region_is_poisoned(ptr, size);
+    const uptr first = end - offset;
+    for (uptr last = first; first <= last && last <= end; ++last) {
+      const uptr size = last - first + 1;
+      // __asan_region_is_poisoned() should not crash for the region.
+      uptr first_poisoned = __asan_region_is_poisoned(first, size);
       EXPECT_TRUE(first_poisoned == 0 ||
-                  (first_poisoned >= ptr && first_poisoned <= ptr + size));
+                  (first_poisoned >= first && first_poisoned <= last))
+          << " first=" << (void*)first << " size=" << size
+          << " first_poisoned=" << (void*)first_poisoned;
+
+      // __asan_region_is_poisoned() and __asan_address_is_poisoned() should
+      // behave consistently, i.e. both should return the same result.
+      if (size == 1) {
+        int is_poisoned = __asan_address_is_poisoned((void*)first);
+        EXPECT_EQ((void*)first_poisoned, is_poisoned ? (void*)first : 0);
+      }
     }
   }
 }
 
-TEST(AddressSanitizer, IsPoisonedDoesNotCrashOnMemoryBoundaries) {
+TEST(AddressSanitizer, IsPoisonedOnMemoryBoundariesTest) {
   using __asan::kHighMemEnd;
   using __asan::kMidMemBeg;
   using __asan::kMidMemEnd;
 
-  TestRegionIsPoisonedNearEnd(kLowMemEnd);
+  TestIsPoisonedNearMemEnd(kLowMemEnd);
   if (__asan::kMidMemBeg)  // if mid memory is available
-    TestRegionIsPoisonedNearEnd(__asan::kMidMemEnd);
+    TestIsPoisonedNearMemEnd(__asan::kMidMemEnd);
   if (kHighMemBeg)  // if high memory is available
-    TestRegionIsPoisonedNearEnd(__asan::kHighMemEnd);
+    TestIsPoisonedNearMemEnd(__asan::kHighMemEnd);
 }
 
 // Test __asan_load1 & friends.

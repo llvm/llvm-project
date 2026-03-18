@@ -1980,3 +1980,125 @@ void outer_pointer_outlives_inner_pointee() {
 }
 
 } // namespace LoopLocalPointers
+
+namespace array {
+
+void element_use_after_scope() {
+  int* p;
+  {
+    int a[10]{};
+    p = &a[2]; // expected-warning {{object whose reference is captured does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  (void)*p;    // expected-note {{later used here}}
+}
+
+int* element_use_after_return() {
+  int a[10]{};
+  int* p = &a[0]; // expected-warning {{address of stack memory is returned later}}
+  return p;       // expected-note {{returned here}}
+}
+
+void element_use_same_scope() {
+  int a[10]{};
+  int* p = &a[0];
+  (void)*p;
+}
+
+void element_reassigned_safe() {
+  int safe[10]{};
+  int* p;
+  {
+    int a[10]{};
+    p = &a[0];
+  }
+  p = &safe[0]; // Rescued.
+  (void)*p;
+}
+
+void multidimensional_use_after_scope() {
+  int* p;
+  {
+    int a[3][4]{};
+    p = &a[1][2]; // expected-warning {{object whose reference is captured does not live long enough}}
+  }               // expected-note {{destroyed here}}
+  (void)*p;       // expected-note {{later used here}}
+}
+
+void member_array_element_use_after_scope() {
+  struct S {
+    int arr[10];
+    int b;
+  };
+  int* p;
+  {
+    S s;
+    p = &s.arr[0]; // expected-warning {{object whose reference is captured does not live long enough}}
+  }                // expected-note {{destroyed here}}
+  (void)*p;        // expected-note {{later used here}}
+}
+
+void array_of_pointers_use_after_scope() {
+  int** p;
+  {
+    int* a[10]{};
+    p = a;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)*p; // expected-note {{later used here}}
+}
+
+void reversed_subscript_use_after_scope() {
+  int* p;
+  {
+    int a[10]{};
+    p = &(0[a]); // expected-warning {{object whose reference is captured does not live long enough}}
+  }              // expected-note {{destroyed here}}
+  (void)*p;      // expected-note {{later used here}}
+}
+
+int* return_decayed_array() {
+  int a[10]{};
+  int *p = a; // expected-warning {{address of stack memory is returned later}}
+  return p;   // expected-note {{returned here}}
+}
+
+int* param_array_element(int a[], int n) {
+  return &a[n];
+}
+
+int* static_array() {
+  static int a[10]{};
+  return &a[1];
+}
+
+// FIXME: Pointer arithmetic is not yet tracked.
+void pointer_arithmetic_use_after_scope() {
+  int* p;
+  {
+    int a[10]{};
+    p = a + 5;
+  }
+  (void)*p; // Should warn.
+}
+
+// FIXME: Copying a pointer value out of an array element is not tracked.
+void copy_pointer_from_array_use_after_scope() {
+  int* q;
+  {
+    int x = 0;
+    int* arr[10] = {&x};
+    q = arr[0];
+  }
+  (void)*q; // Should warn.
+}
+
+// FIXME: A pointer inside an array becoming dangling is not detected.
+void pointer_in_array_use_after_scope() {
+  int* arr[10];
+  {
+    int x = 0;
+    arr[0] = &x;
+  }
+  (void)*arr[0]; // Should warn.
+}
+
+} // namespace array

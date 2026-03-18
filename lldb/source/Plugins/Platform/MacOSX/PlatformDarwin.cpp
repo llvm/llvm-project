@@ -91,7 +91,7 @@ namespace {
 class SanitizedScriptingModuleName {
 public:
   SanitizedScriptingModuleName(llvm::StringRef name,
-                               ScriptInterpreter *script_interpreter)
+                               ScriptInterpreter &script_interpreter)
       : m_original_name(name), m_sanitized_name(name.str()) {
     // FIXME: for Python, don't allow certain characters in imported module
     // filenames. Theoretically, different scripting languages may have
@@ -104,8 +104,7 @@ public:
     llvm::replace(m_sanitized_name, '-', '_');
     llvm::replace(m_sanitized_name, '+', 'x');
 
-    if (script_interpreter &&
-        script_interpreter->IsReservedWord(m_sanitized_name.c_str())) {
+    if (script_interpreter.IsReservedWord(m_sanitized_name.c_str())) {
       m_conflicting_keyword = m_sanitized_name;
       m_sanitized_name.insert(m_sanitized_name.begin(), '_');
     }
@@ -291,11 +290,16 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
 FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
+
+  assert(target.GetDebugger().GetScriptInterpreter() &&
+         "Trying to locate scripting resources but no ScriptInterpreter is "
+         "available.");
+
   FileSpecList file_list;
   while (module_spec.GetFilename()) {
     SanitizedScriptingModuleName sanitized_name(
         module_spec.GetFilename().GetStringRef(),
-        target.GetDebugger().GetScriptInterpreter());
+        *target.GetDebugger().GetScriptInterpreter());
 
     StreamString path_string;
     StreamString original_path_string;

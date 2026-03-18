@@ -590,8 +590,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         // Truth table for inputs and output signbits:
         //       X:0 | X:1
         //      -----------
-        // Y:0  | -1 | -1 |
-        // Y:1  | -1 |  0 |
+        // Y:0  |  0 | -1 |
+        // Y:1  | -1 | -1 |
         //      -----------
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(I);

@@ -59,10 +59,9 @@ define i64 @adc64rr(i64 %a, i64 %b, i64 %x, i64 %y) nounwind {
 define i8 @adc8rm(i8 %a, ptr %ptr, i8 %x, i8 %y) nounwind {
 ; NDD-LABEL: adc8rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; NDD-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
 ; NDD-NEXT:    cmpb %dl, %cl # encoding: [0x38,0xd1]
-; NDD-NEXT:    {evex} adcb (%rsi), %al # encoding: [0x62,0xf4,0x7c,0x08,0x12,0x06]
-; NDD-NEXT:    # kill: def $al killed $al killed $eax
+; NDD-NEXT:    adcb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x10,0xf8]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: adc8rm:
@@ -81,10 +80,9 @@ define i8 @adc8rm(i8 %a, ptr %ptr, i8 %x, i8 %y) nounwind {
 define i16 @adc16rm(i16 %a, ptr %ptr, i16 %x, i16 %y) nounwind {
 ; NDD-LABEL: adc16rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; NDD-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
 ; NDD-NEXT:    cmpw %dx, %cx # encoding: [0x66,0x39,0xd1]
-; NDD-NEXT:    {evex} adcw (%rsi), %ax # encoding: [0x62,0xf4,0x7d,0x08,0x13,0x06]
-; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
+; NDD-NEXT:    adcw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x11,0xf8]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: adc16rm:
@@ -103,9 +101,9 @@ define i16 @adc16rm(i16 %a, ptr %ptr, i16 %x, i16 %y) nounwind {
 define i32 @adc32rm(i32 %a, ptr %ptr, i32 %x, i32 %y) nounwind {
 ; NDD-LABEL: adc32rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; NDD-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
 ; NDD-NEXT:    cmpl %edx, %ecx # encoding: [0x39,0xd1]
-; NDD-NEXT:    {evex} adcl (%rsi), %eax # encoding: [0x62,0xf4,0x7c,0x08,0x13,0x06]
+; NDD-NEXT:    adcl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x11,0xf8]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: adc32rm:
@@ -124,9 +122,9 @@ define i32 @adc32rm(i32 %a, ptr %ptr, i32 %x, i32 %y) nounwind {
 define i64 @adc64rm(i64 %a, ptr %ptr, i64 %x, i64 %y) nounwind {
 ; NDD-LABEL: adc64rm:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; NDD-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
 ; NDD-NEXT:    cmpq %rdx, %rcx # encoding: [0x48,0x39,0xd1]
-; NDD-NEXT:    {evex} adcq (%rsi), %rax # encoding: [0x62,0xf4,0xfc,0x08,0x13,0x06]
+; NDD-NEXT:    adcq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x11,0xf8]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: adc64rm:

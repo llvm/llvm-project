@@ -1075,9 +1075,8 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
     // If the basic block is the starting block, then the shared instruction may
     // not be the first instruction in the block, it will be the first
     // instruction in the similarity region.
-    Value *FirstOutlineInst = BB == getStartBB()
-                                  ? frontInstruction()
-                                  : &*BB->instructionsWithoutDebug().begin();
+    Value *FirstOutlineInst =
+        BB == getStartBB() ? frontInstruction() : &*BB->begin();
 
     unsigned FirstInstGVN = *getGVN(FirstOutlineInst);
     unsigned FirstInstCanonNum = *getCanonicalNum(FirstInstGVN);

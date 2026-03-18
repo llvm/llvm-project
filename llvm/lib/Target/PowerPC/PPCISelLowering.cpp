@@ -15768,8 +15768,11 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
     auto *LoadNode = cast<LoadSDNode>(Operand);
-    return DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
-                       LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    SDValue NewLoad =
+        DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                    LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(Operand.getValue(1), NewLoad.getValue(1));
+    return NewLoad;
   };
 
   // Following code transforms the DAG

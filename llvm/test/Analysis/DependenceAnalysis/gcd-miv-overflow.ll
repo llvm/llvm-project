@@ -69,8 +69,7 @@ exit:
 ;     A[3*i - 2] = 1;
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist. For example,
+; There is a bidirectional dependency between the two stores, for example,
 ;
 ;  memory access       | i == 1 | i == (max_i + 1) / 2 | i == max_i
 ; ---------------------|--------|----------------------|-------------------
@@ -83,7 +82,7 @@ define void @gcdmiv_delta_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;

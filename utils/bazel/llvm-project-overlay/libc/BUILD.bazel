@@ -1751,7 +1751,6 @@ libc_support_library(
     ],
 )
 
-
 libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_open",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/open.h"],
@@ -4309,6 +4308,34 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_fma",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fma",
+    hdrs = ["src/__support/math/fma.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaf",
+    hdrs = ["src/__support/math/fmaf.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaf16",
+    hdrs = ["src/__support/math/fmaf16.h"],
+    deps = [
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -7080,18 +7107,18 @@ libc_math_function(
 
 libc_math_function(
     name = "fma",
-    additional_deps = [":__support_fputil_fma"],
+    additional_deps = [":__support_math_fma"],
 )
 
 libc_math_function(
     name = "fmaf",
-    additional_deps = [":__support_fputil_fma"],
+    additional_deps = [":__support_math_fmaf"],
 )
 
 libc_math_function(
     name = "fmaf16",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_fmaf16",
     ],
 )
 

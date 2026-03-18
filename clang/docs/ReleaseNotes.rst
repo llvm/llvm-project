@@ -106,6 +106,8 @@ Clang Python Bindings Potentially Breaking Changes
   equality checks (``__eq__``) to the other object they are compared with when
   they are of different classes. They previously returned ``False`` when compared
   with objects of other classes.
+- ``TranslationUnit.get_tokens`` now throws an error if both the ``extent`` and
+  ``locations`` argument are passed. Previousy, ``locations`` took precedence.
 
 What's New in Clang |release|?
 ==============================
@@ -160,6 +162,8 @@ Non-comprehensive list of changes in this release
 
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
+
+- Added header ``endian.h`` which contains byte order helpers specified in POSIX
 
 New Compiler Flags
 ------------------

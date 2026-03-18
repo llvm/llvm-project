@@ -127,3 +127,42 @@ func.func @multiple_host_data_(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_nam
 // CHECK: acc.host_data dataOperands(%[[USE_DEVICE_2]] : !fir.ref<!fir.array<?xf32>>) {
 // CHECK: acc.terminator
 // CHECK: }
+
+// -----
+
+// Test single use_device (to ref-of-box) used by multiple host_data.
+func.func @test_ref_to_box_multiple_host_data() {
+  %1 = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "ptr", uniq_name = "_QFEptr"}
+  %4 = fir.declare %1 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEptr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %5 = fir.address_of(@_QFEtgt) : !fir.ref<i32>
+  %6 = fir.declare %5 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFEtgt"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %8 = fir.embox %6 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
+  fir.store %8 to %4 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %9 = acc.use_device varPtr(%4 : !fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>> {name = "ptr"}
+  acc.host_data dataOperands(%9 : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
+    %14 = fir.load %9 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+    %15 = fir.box_addr %14 : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+    %16 = fir.convert %15 : (!fir.ptr<i32>) -> i64
+    fir.call @foo(%16) : (i64) -> ()
+    acc.terminator
+  }
+  acc.host_data dataOperands(%9 : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
+    %14 = fir.load %9 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+    %15 = fir.box_addr %14 : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+    %16 = fir.convert %15 : (!fir.ptr<i32>) -> i64
+    fir.call @foo(%16) : (i64) -> ()
+    acc.terminator
+  }
+  return
+}
+// CHECK-LABEL: func.func @test_ref_to_box_multiple_host_data
+// CHECK: fir.load %{{.*}}
+// CHECK: fir.box_addr %{{.*}}
+// CHECK: %[[USE_DEVICE_1:.*]] = acc.use_device varPtr({{.*}} : !fir.ptr<i32>) varType(!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32> {name = "ptr"}
+// CHECK: acc.host_data dataOperands(%[[USE_DEVICE_1]] : !fir.ptr<i32>) {
+// CHECK: acc.terminator
+// CHECK: }
+// CHECK: %[[USE_DEVICE_2:.*]] = acc.use_device varPtr({{.*}} : !fir.ptr<i32>) varType(!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32> {name = "ptr"}
+// CHECK: acc.host_data dataOperands(%[[USE_DEVICE_2]] : !fir.ptr<i32>) {
+// CHECK: acc.terminator
+// CHECK: }

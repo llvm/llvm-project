@@ -293,7 +293,7 @@ void OmpStructureChecker::CheckNestedConstruct(
   // Check if a loop-nest-associated construct has only one top-level loop
   // in it.
   auto [needFirst, needCount, rangeReason]{
-      GetAffectedLoopRangeWithReason(x, version)};
+      GetAffectedLoopRangeWithReason(beginSpec, version)};
 
   if (std::optional<int64_t> numLoops{sequence.length()}) {
     if (*numLoops == 0) {
@@ -324,7 +324,7 @@ void OmpStructureChecker::CheckNestedConstruct(
 
   // Check requirements on nest depth.
   auto [needDepth, needPerfect, depthReason]{
-      GetAffectedNestDepthWithReason(x, version)};
+      GetAffectedNestDepthWithReason(beginSpec, version)};
   auto [haveSema, havePerf]{sequence.depth()};
 
   if (dir != llvm::omp::Directive::OMPD_fuse) {

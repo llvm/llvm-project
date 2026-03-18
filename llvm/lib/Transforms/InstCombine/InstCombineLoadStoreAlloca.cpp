@@ -995,6 +995,15 @@ static Instruction *replaceGEPIdxWithZero(InstCombinerImpl &IC, Value *Ptr,
       NewGEPI->setOperand(Idx,
         ConstantInt::get(GEPI->getOperand(Idx)->getType(), 0));
       IC.InsertNewInstBefore(NewGEPI, GEPI->getIterator());
+      // If the memory instruction is guaranteed to execute whenever the GEP
+      // does, the dereference proves the index is unconditionally zero.
+      // Replace the GEP for all users so they all benefit.
+      if (GEPI->getParent() == MemI.getParent() &&
+          isGuaranteedToTransferExecutionToSuccessor(GEPI->getIterator(),
+                                                     MemI.getIterator())) {
+        IC.replaceInstUsesWith(*GEPI, NewGEPI);
+        IC.eraseInstFromFunction(*GEPI);
+      }
       return NewGEPI;
     }
   }

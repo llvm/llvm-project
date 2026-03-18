@@ -10,18 +10,18 @@
 // (__clc_sw_fma), but avoids the use of ulong in favor of uint2. The logic has
 // been updated as appropriate.
 
-#include <clc/clc_as_type.h>
-#include <clc/float/definitions.h>
-#include <clc/integer/clc_abs.h>
-#include <clc/integer/clc_clz.h>
-#include <clc/integer/clc_hadd.h>
-#include <clc/integer/clc_mul_hi.h>
-#include <clc/integer/definitions.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/math.h>
-#include <clc/relational/clc_isinf.h>
-#include <clc/relational/clc_isnan.h>
-#include <clc/shared/clc_max.h>
+#include "clc/clc_as_type.h"
+#include "clc/float/definitions.h"
+#include "clc/integer/clc_abs.h"
+#include "clc/integer/clc_clz.h"
+#include "clc/integer/clc_hadd.h"
+#include "clc/integer/clc_mul_hi.h"
+#include "clc/integer/definitions.h"
+#include "clc/math/clc_mad.h"
+#include "clc/math/math.h"
+#include "clc/relational/clc_isinf.h"
+#include "clc/relational/clc_isnan.h"
+#include "clc/shared/clc_max.h"
 
 struct fp {
   uint2 mantissa;
@@ -270,5 +270,5 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_sw_fma
-#define __CLC_BODY <clc/shared/ternary_def_scalarize.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/ternary_def_scalarize.inc"
+#include "clc/math/gentype.inc"

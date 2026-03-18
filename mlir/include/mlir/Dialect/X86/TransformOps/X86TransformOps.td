@@ -71,5 +71,16 @@ def ApplyShuffleVectorFMAOpsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyVectorContractToAMXDotProductPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.vector_contract_to_amx_dot_product",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns to lower a BF16/Int8 type vector.contract operation 
+	to a BF16/Int8 AMX tiled dot-product.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 
 #endif // X86_TRANSFORM_OPS

@@ -2055,70 +2055,57 @@ define i512 @ashr_signbit_i512(i512 %a0) nounwind {
 ;
 ; AVX512F-LABEL: ashr_signbit_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    movl %esi, %eax
-; AVX512F-NEXT:    shrl $6, %esi
-; AVX512F-NEXT:    movl $-1, %ecx
-; AVX512F-NEXT:    shlxl %esi, %ecx, %ecx
-; AVX512F-NEXT:    kmovw %ecx, %k1
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,0,0,0,0,0,0,9223372036854775808]
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 = -1
-; AVX512F-NEXT:    vpcompressq %zmm1, %zmm2 {%k1}
-; AVX512F-NEXT:    vmovq %rax, %xmm1
-; AVX512F-NEXT:    vpbroadcastq %xmm1, %xmm1
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [63,63]
-; AVX512F-NEXT:    vpand %xmm3, %xmm1, %xmm4
-; AVX512F-NEXT:    vpsrlq %xmm4, %zmm2, %zmm4
-; AVX512F-NEXT:    vpandn %xmm3, %xmm1, %xmm1
-; AVX512F-NEXT:    valignq {{.*#+}} zmm0 = zmm2[1,2,3,4,5,6,7],zmm0[0]
-; AVX512F-NEXT:    vpaddq %zmm0, %zmm0, %zmm0
-; AVX512F-NEXT:    vpsllq %xmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    vporq %zmm4, %zmm0, %zmm0
-; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; AVX512F-NEXT:    movl $511, %ecx # imm = 0x1FF
+; AVX512F-NEXT:    subl %esi, %ecx
+; AVX512F-NEXT:    movq $-1, %rdx
+; AVX512F-NEXT:    shlxq %rcx, %rdx, %rsi
+; AVX512F-NEXT:    shrl $6, %ecx
+; AVX512F-NEXT:    movl $1, %edi
+; AVX512F-NEXT:    shlxq %rcx, %rdi, %rdi
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    shlxq %rcx, %rdx, %rcx
+; AVX512F-NEXT:    kmovw %ecx, %k2
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512F-NEXT:    vpbroadcastq %rsi, %zmm0 {%k1}
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: ashr_signbit_i512:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    movl %esi, %ecx
-; AVX512VL-NEXT:    shrl $6, %esi
-; AVX512VL-NEXT:    movl $-1, %edx
-; AVX512VL-NEXT:    shlxl %esi, %edx, %edx
-; AVX512VL-NEXT:    kmovd %edx, %k1
-; AVX512VL-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,0,0,0,0,0,0,9223372036854775808]
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm2 = -1
-; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm2 {%k1}
-; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [63,63]
-; AVX512VL-NEXT:    vpbroadcastq %rcx, %xmm3
-; AVX512VL-NEXT:    vpand %xmm0, %xmm3, %xmm4
-; AVX512VL-NEXT:    vpsrlq %xmm4, %zmm2, %zmm4
-; AVX512VL-NEXT:    vpandn %xmm0, %xmm3, %xmm0
-; AVX512VL-NEXT:    valignq {{.*#+}} zmm1 = zmm2[1,2,3,4,5,6,7],zmm1[0]
-; AVX512VL-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
-; AVX512VL-NEXT:    vpsllq %xmm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    vporq %zmm4, %zmm0, %zmm0
-; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; AVX512VL-NEXT:    movl $511, %ecx # imm = 0x1FF
+; AVX512VL-NEXT:    subl %esi, %ecx
+; AVX512VL-NEXT:    movq $-1, %rdx
+; AVX512VL-NEXT:    shlxq %rcx, %rdx, %rsi
+; AVX512VL-NEXT:    shrl $6, %ecx
+; AVX512VL-NEXT:    movl $1, %edi
+; AVX512VL-NEXT:    shlxq %rcx, %rdi, %rdi
+; AVX512VL-NEXT:    kmovd %edi, %k1
+; AVX512VL-NEXT:    shlxq %rcx, %rdx, %rcx
+; AVX512VL-NEXT:    kmovd %ecx, %k2
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VL-NEXT:    vpbroadcastq %rsi, %zmm0 {%k1}
+; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: ashr_signbit_i512:
 ; AVX512VBMI:       # %bb.0:
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    movl %esi, %ecx
+; AVX512VBMI-NEXT:    movl $511, %ecx # imm = 0x1FF
+; AVX512VBMI-NEXT:    subl %esi, %ecx
+; AVX512VBMI-NEXT:    movq $-1, %rdx
+; AVX512VBMI-NEXT:    shlxq %rcx, %rdx, %rsi
 ; AVX512VBMI-NEXT:    shrl $6, %ecx
-; AVX512VBMI-NEXT:    movl $-1, %edx
-; AVX512VBMI-NEXT:    shlxl %ecx, %edx, %ecx
-; AVX512VBMI-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,0,0,0,0,0,0,9223372036854775808]
-; AVX512VBMI-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
-; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
-; AVX512VBMI-NEXT:    vpbroadcastq %rsi, %zmm0
-; AVX512VBMI-NEXT:    vpternlogd {{.*#+}} zmm2 = -1
-; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm2 = zmm1[1,2,3,4,5,6,7],zmm2[0]
-; AVX512VBMI-NEXT:    vpshrdvq %zmm0, %zmm2, %zmm1
-; AVX512VBMI-NEXT:    vmovdqu64 %zmm1, (%rdi)
+; AVX512VBMI-NEXT:    movl $1, %edi
+; AVX512VBMI-NEXT:    shlxq %rcx, %rdi, %rdi
+; AVX512VBMI-NEXT:    kmovd %edi, %k1
+; AVX512VBMI-NEXT:    shlxq %rcx, %rdx, %rcx
+; AVX512VBMI-NEXT:    kmovd %ecx, %k2
+; AVX512VBMI-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VBMI-NEXT:    vpbroadcastq %rsi, %zmm0 {%k1}
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %s = shl i512 1, 511

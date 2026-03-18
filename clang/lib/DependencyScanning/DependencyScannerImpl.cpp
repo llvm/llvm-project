@@ -614,7 +614,7 @@ struct AsyncModuleCompile : PPCallbacks {
 
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     ModuleCache &ModCache = CI.getModuleCache();
-    std::string ModuleFileName = HS.getCachedModuleFileName(M);
+    ModuleFileName ModuleFileName = HS.getCachedModuleFileName(M);
 
     uint64_t Timestamp = ModCache.getModuleTimestamp(ModuleFileName);
     // Someone else already built/validated the PCM.

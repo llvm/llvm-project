@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/relational/clc_isinf.h>
+#include "clc/relational/clc_isinf.h"
 
 int __nv_isinff(float);
 int __nv_isinfd(double);
@@ -28,6 +28,6 @@ _CLC_OVERLOAD _CLC_DEF int __clc_isinf(half x) { return __clc_isinf((float)x); }
 #endif
 
 #define __CLC_FUNCTION __clc_isinf
-#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#define __CLC_BODY "clc/shared/unary_def_scalarize.inc"
 #define __CLC_RET_TYPE __CLC_BIT_INT
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_exchange.h>
-#include <clc/atomic/clc_atomic_flag_test_and_set.h>
+#include "clc/atomic/clc_atomic_exchange.h"
+#include "clc/atomic/clc_atomic_flag_test_and_set.h"
 
 #define __CLC_ATOMIC_FLAG_TRUE 1
 

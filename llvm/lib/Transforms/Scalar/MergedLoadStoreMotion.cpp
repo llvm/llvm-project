@@ -101,7 +101,7 @@ class MergedLoadStoreMotion {
   // where Size0 and Size1 are the #instructions on the two sides of
   // the diamond. The constant chosen here is arbitrary. Compiler Time
   // Control is enforced by the check Size0 * Size1 < MagicCompileTimeControl.
-  const int MagicCompileTimeControl = 250;
+  const unsigned MagicCompileTimeControl = 250;
 
   const bool SplitFooterBB;
 public:
@@ -317,9 +317,8 @@ bool MergedLoadStoreMotion::mergeStores(BasicBlock *HeadBB) {
   if (!SplitFooterBB && TailBB->hasNPredecessorsOrMore(3))
     return false;
   // #Instructions in Pred1 for Compile Time Control
-  auto InstsNoDbg = Pred1->instructionsWithoutDebug();
-  int Size1 = std::distance(InstsNoDbg.begin(), InstsNoDbg.end());
-  int NStores = 0;
+  unsigned Size1 = Pred1->size();
+  unsigned NStores = 0;
 
   for (BasicBlock::reverse_iterator RBI = Pred0->rbegin(), RBE = Pred0->rend();
        RBI != RBE;) {

@@ -95,35 +95,35 @@ def rev : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchREV(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def zip : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchZip(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def uzp : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchUZP(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def dup: GICombineRule <
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchDup(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def trn : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchTRN(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def ext: GICombineRule <

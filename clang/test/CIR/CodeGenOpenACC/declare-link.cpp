@@ -117,7 +117,7 @@ int AnonNSInt1;
 struct Struct {
 
   void MemFunc1() {
-    // CHECK: cir.func {{.*}}MemFunc1{{.*}}({{.*}}) {
+    // CHECK: cir.func {{.*}}MemFunc1{{.*}}({{.*}}) {{.*}}{
     // CHECK-NEXT: cir.alloca{{.*}}["this"
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.load
@@ -160,7 +160,7 @@ void use() {
 }
 
 void Struct::MemFunc2() {
-    // CHECK: cir.func {{.*}}MemFunc2{{.*}}({{.*}}) {
+    // CHECK: cir.func {{.*}}MemFunc2{{.*}}({{.*}}) {{.*}}{
     // CHECK-NEXT: cir.alloca{{.*}}["this"
     // CHECK-NEXT: cir.store
     // CHECK-NEXT: cir.load
@@ -198,7 +198,7 @@ void Struct::MemFunc2() {
 extern "C" void do_thing();
 
 void NormalFunc() {
-    // CHECK: cir.func {{.*}}NormalFunc{{.*}}()
+    // CHECK: cir.func {{.*}}{{.*}}NormalFunc{{.*}}()
     extern HasSideEffects LocalHSE3;
     extern HasSideEffects LocalHSEArr3[5];
     extern int LocalInt3;

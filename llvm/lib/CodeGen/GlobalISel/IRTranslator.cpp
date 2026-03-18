@@ -3598,6 +3598,12 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   case AtomicRMWInst::FMinimum:
     Opcode = TargetOpcode::G_ATOMICRMW_FMINIMUM;
     break;
+  case AtomicRMWInst::FMaximumNum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMAXIMUMNUM;
+    break;
+  case AtomicRMWInst::FMinimumNum:
+    Opcode = TargetOpcode::G_ATOMICRMW_FMINIMUMNUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     Opcode = TargetOpcode::G_ATOMICRMW_UINC_WRAP;
     break;

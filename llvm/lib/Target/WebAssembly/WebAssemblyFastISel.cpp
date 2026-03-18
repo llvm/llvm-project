@@ -1370,17 +1370,79 @@ static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
   }
 }
 
+/// Matches a sign-extension pattern (shl + shr_s) to fold it into a signed
+/// load. FastISel assumes that 'sext' from i8 or i16 will first be lowered to a
+/// 32-bit zero-extending load (i32.load8_u / i32.load16_u) followed by 32-bit
+/// shifts, even when extending to i64. Therefore, this function only matches
+/// 32-bit shifts (SHL_I32 / SHR_S_I32) and specifically checks if both shift
+/// amounts are identical, compile-time constants that match the exact extension
+/// size (32 - LoadBitWidth).
+static unsigned matchFoldableShift(MachineInstr *MI, const LoadInst *LI,
+                                   MachineRegisterInfo &MRI, bool A64,
+                                   MachineInstr *&UserMI) {
+  unsigned Opc = MI->getOpcode();
+  unsigned NewOpc = WebAssembly::INSTRUCTION_LIST_END;
+  if (Opc != WebAssembly::SHL_I32)
+    return NewOpc;
+
+  Register DestReg = MI->getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(DestReg))
+    return NewOpc;
+
+  UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
+  unsigned UserOpc = UserMI->getOpcode();
+  if (UserOpc != WebAssembly::SHR_S_I32)
+    return NewOpc;
+
+  Type *LoadTy = LI->getType();
+  if (!LoadTy->isIntegerTy(8) && !LoadTy->isIntegerTy(16))
+    return NewOpc;
+
+  int64_t ExpectedShiftAmt = 32 - LoadTy->getIntegerBitWidth();
+  Register ShlAmtReg = MI->getOperand(2).getReg();
+  Register ShrAmtReg = UserMI->getOperand(2).getReg();
+  MachineInstr *ShlAmtDef = MRI.getUniqueVRegDef(ShlAmtReg);
+  MachineInstr *ShrAmtDef = MRI.getUniqueVRegDef(ShrAmtReg);
+  auto IsExpectedConst = [ExpectedShiftAmt](MachineInstr *MI) {
+    return MI && MI->getOpcode() == WebAssembly::CONST_I32 &&
+           MI->getOperand(1).getImm() == ExpectedShiftAmt;
+  };
+  if (!IsExpectedConst(ShlAmtDef) || !IsExpectedConst(ShrAmtDef))
+    return NewOpc;
+
+  if (LoadTy->isIntegerTy(8))
+    NewOpc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
+  else if (LoadTy->isIntegerTy(16))
+    NewOpc =
+        A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
+
+  return NewOpc;
+}
+
 bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                               const LoadInst *LI) {
   bool A64 = Subtarget->hasAddr64();
   MachineRegisterInfo &MRI = FuncInfo.MF->getRegInfo();
-  unsigned NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64);
-  if (NewOpc == WebAssembly::INSTRUCTION_LIST_END)
+  Register ResultReg;
+  MachineInstr *UserMI = nullptr;
+  unsigned NewOpc;
+  if ((NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64)) !=
+      WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = MI->getOperand(0).getReg();
+  } else if ((NewOpc = matchFoldableShift(MI, LI, MRI, A64, UserMI)) !=
+             WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = UserMI->getOperand(0).getReg();
+  } else {
     return false;
+  }
 
-  Register ResultReg = MI->getOperand(0).getReg();
   if (!emitLoad(ResultReg, NewOpc, LI))
     return false;
+
+  if (UserMI) {
+    MachineBasicBlock::iterator UserIter(UserMI);
+    removeDeadCode(UserIter, std::next(UserIter));
+  }
 
   MachineBasicBlock::iterator Iter(MI);
   removeDeadCode(Iter, std::next(Iter));

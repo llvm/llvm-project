@@ -89,14 +89,19 @@ struct GpuSubgroupIdRewriter final : OpRewritePattern<gpu::SubgroupIdOp> {
     Value tidZ = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::z,
                                          maybeKnownDimZ);
 
+    // Block dimensions don't exceed a signed int32_t maximum, and neither does
+    // their product, on any realistic hardware, nor would any targets compile
+    // with index < 32 bits, so we can assert no overflow.
+    auto flags =
+        arith::IntegerOverflowFlags::nsw | arith::IntegerOverflowFlags::nuw;
     Value dimYxIdZ =
-        arith::MulIOp::create(rewriter, loc, indexType, dimY, tidZ);
+        arith::MulIOp::create(rewriter, loc, indexType, dimY, tidZ, flags);
     Value dimYxIdZPlusIdY =
-        arith::AddIOp::create(rewriter, loc, indexType, dimYxIdZ, tidY);
-    Value dimYxIdZPlusIdYTimesDimX =
-        arith::MulIOp::create(rewriter, loc, indexType, dimX, dimYxIdZPlusIdY);
+        arith::AddIOp::create(rewriter, loc, indexType, dimYxIdZ, tidY, flags);
+    Value dimYxIdZPlusIdYTimesDimX = arith::MulIOp::create(
+        rewriter, loc, indexType, dimX, dimYxIdZPlusIdY, flags);
     Value idXPlusDimYxIdZPlusIdYTimesDimX = arith::AddIOp::create(
-        rewriter, loc, indexType, tidX, dimYxIdZPlusIdYTimesDimX);
+        rewriter, loc, indexType, tidX, dimYxIdZPlusIdYTimesDimX, flags);
     Value subgroupSize = gpu::SubgroupSizeOp::create(
         rewriter, loc, rewriter.getIndexType(), /*upper_bound = */ nullptr);
     Value subgroupIdOp =

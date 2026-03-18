@@ -19,7 +19,7 @@
 namespace orc_rt::sps_ci {
 
 /// Add all SPS interfaces to the controller interface.
-Error addAll(ControllerInterface &CI);
+Error addAll(SimpleSymbolTable &ST);
 
 } // namespace orc_rt::sps_ci
 

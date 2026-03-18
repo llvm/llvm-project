@@ -13,7 +13,6 @@ define float @atomic_add_f32_generic(ptr %addr, float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_generic_param_0];
-; CHECK-NEXT:    membar.sys;
 ; CHECK-NEXT:    ld.param.b32 %r1, [atomic_add_f32_generic_param_1];
 ; CHECK-NEXT:    atom.add.f32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
@@ -33,7 +32,6 @@ define float @atomic_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_addrspace1_param_0];
-; CHECK-NEXT:    membar.sys;
 ; CHECK-NEXT:    ld.param.b32 %r1, [atomic_add_f32_addrspace1_param_1];
 ; CHECK-NEXT:    atom.global.add.f32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
@@ -53,7 +51,6 @@ define float @atomic_add_f32_addrspace3(ptr addrspace(3) %addr, float %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [atomic_add_f32_addrspace3_param_0];
-; CHECK-NEXT:    membar.sys;
 ; CHECK-NEXT:    ld.param.b32 %r1, [atomic_add_f32_addrspace3_param_1];
 ; CHECK-NEXT:    atom.shared.add.f32 %r2, [%rd1], %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;

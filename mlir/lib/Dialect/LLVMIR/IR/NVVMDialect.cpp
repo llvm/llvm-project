@@ -4796,9 +4796,7 @@ NVVM::IDArgPair DotAccumulate2WayOp::getIntrinsicIDAndArgs(
 static llvm::Value *getParamCastedAddr(llvm::Value *addr,
                                        llvm::IRBuilderBase &builder) {
   return builder.CreateAddrSpaceCast(
-      addr,
-      llvm::PointerType::get(builder.getContext(),
-                             llvm::NVPTXAS::AddressSpace::ADDRESS_SPACE_PARAM));
+      addr, builder.getPtrTy(llvm::NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM));
 }
 
 NVVM::IDArgPair

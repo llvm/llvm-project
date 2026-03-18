@@ -3294,6 +3294,12 @@ multiversioned function would have if it had been declared without the attribute
 For backward compatibility with earlier Clang releases, a function alias with an
 ``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
 feature and support for it may be removed in the future.
+
+For PowerPC targets, ``target_clones`` is supported on AIX only. Only CPU
+(specified as ``cpu=CPU``) and ``default`` options are allowed. IFUNC is supported
+on AIX in Clang, so dispatch is implemented similar to other targets using IFUNC.
+An FMV function that is only declared in a translation unit is treated as a
+non-FMV. The resolver and the function clones are given internal linkage.
 }];
 }
 

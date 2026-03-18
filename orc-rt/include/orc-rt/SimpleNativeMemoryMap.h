@@ -14,10 +14,13 @@
 #define ORC_RT_SIMPLENATIVEMEMORYMAP_H
 
 #include "orc-rt/AllocAction.h"
+#include "orc-rt/BootstrapInfo.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/MemoryFlags.h"
 #include "orc-rt/Service.h"
+#include "orc-rt/SimpleSymbolTable.h"
 #include "orc-rt/move_only_function.h"
+#include "orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h"
 
 #include <map>
 #include <mutex>
@@ -25,6 +28,8 @@
 #include <vector>
 
 namespace orc_rt {
+
+class Session;
 
 /// JIT'd memory management backend.
 ///
@@ -41,6 +46,26 @@ namespace orc_rt {
 ///    the system permits).
 class SimpleNativeMemoryMap : public Service {
 public:
+  /// Create a SimpleNativeMemoryMap, adding associated symbols to the given
+  /// SimpleSymbolTable (typically the BootstrapInfo table).
+  static Expected<std::unique_ptr<SimpleNativeMemoryMap>>
+  Create(Session &S, SimpleSymbolTable &ST,
+         const char *InstanceName = "orc_rt_SimpleNativeMemoryMap_Instance",
+         SimpleSymbolTable::MutatorFn AddInterface =
+             sps_ci::addSimpleNativeMemoryMap);
+
+  /// Convenience constructor that adds default symbols to the given
+  /// BootstrapInfo's symbols map.
+  static Expected<std::unique_ptr<SimpleNativeMemoryMap>>
+  Create(Session &S, BootstrapInfo &BI) {
+    return Create(S, BI.symbols());
+  }
+  /// SimpleNativeMemoryMap is not copyable / moveable.
+  SimpleNativeMemoryMap(const SimpleNativeMemoryMap &) = delete;
+  SimpleNativeMemoryMap &operator=(const SimpleNativeMemoryMap &) = delete;
+  SimpleNativeMemoryMap(SimpleNativeMemoryMap &&) = delete;
+  SimpleNativeMemoryMap &operator=(SimpleNativeMemoryMap &&) = delete;
+
   /// Reserves a slab of contiguous address space for allocation.
   ///
   /// Returns the base address of the allocated memory.
@@ -85,10 +110,13 @@ public:
   void deinitializeMultiple(OnDeinitializeCompleteFn &&OnComplete,
                             std::vector<void *> Bases);
 
-  void onDetach(Service::OnCompleteFn OnComplete) override;
+  void onDetach(Service::OnCompleteFn OnComplete,
+                bool ShutdownRequested) override;
   void onShutdown(Service::OnCompleteFn OnComplete) override;
 
 private:
+  SimpleNativeMemoryMap(Session &S) : S(S) {}
+
   struct SlabInfo {
     SlabInfo(size_t Size) : Size(Size) {}
     size_t Size;
@@ -106,6 +134,7 @@ private:
   Error recordDeallocActions(void *Base,
                              std::vector<AllocAction> DeallocActions);
 
+  Session &S;
   std::mutex M;
   std::map<void *, SlabInfo> Slabs;
 };

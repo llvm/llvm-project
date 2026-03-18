@@ -286,20 +286,25 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
 
   AsyncQueueTy *AsyncQueue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo.Queue);
 
+  Error SyncErrors = Error::success();
+  auto addError = [&](Error Err) {
+    SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
+  };
   if (!AsyncQueue->WaitEvents.empty()) {
     const auto &WaitEvents = AsyncQueue->WaitEvents;
     if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
       // Only need to wait for the last event.
-      CALL_ZE_RET_ERROR(zeEventHostSynchronize, WaitEvents.back(),
-                        L0DefaultTimeout);
+      CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, WaitEvents.back(),
+                           L0DefaultTimeout);
       // Synchronize on kernel event to support printf().
       auto KE = AsyncQueue->KernelEvent;
-      if (KE && KE != WaitEvents.back()) {
-        CALL_ZE_RET_ERROR(zeEventHostSynchronize, KE, L0DefaultTimeout);
+      if (KE && KE != WaitEvents.back() && !SyncErrors) {
+        CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, KE,
+                             L0DefaultTimeout);
       }
       for (auto &Event : WaitEvents) {
         if (auto Err = releaseEvent(Event))
-          return Err;
+          addError(std::move(Err));
       }
     } else {
       // Async case.
@@ -311,12 +316,13 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
       bool WaitDone = false;
       for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
         if (!WaitDone) {
-          CALL_ZE_RET_ERROR(zeEventHostSynchronize, *Itr, L0DefaultTimeout);
+          CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, *Itr,
+                               L0DefaultTimeout);
           if (*Itr == AsyncQueue->KernelEvent)
             WaitDone = true;
         }
         if (auto Err = releaseEvent(*Itr))
-          return Err;
+          addError(std::move(Err));
       }
     }
     // In either case, all the events are now reset and released
@@ -340,7 +346,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
     AsyncInfo.Queue = nullptr;
   }
 
-  return Plugin::success();
+  return SyncErrors;
 }
 
 Expected<bool>

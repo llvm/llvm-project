@@ -16,6 +16,7 @@
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
@@ -96,6 +97,16 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFileSP objfile_sp) {
       // Let the winning symbol file parser initialize itself more completely
       // now that it has been chosen
       best_symfile_up->InitializeObject();
+
+      // Register the object file's directory so the module can lazily search
+      // for a compilation-prefix-map.json when source paths are first remapped.
+      if (ObjectFile *obj = best_symfile_up->GetMainObjectFile())
+        if (ModuleSP mod = obj->GetModule()) {
+          FileSpec dir = obj->GetFileSpec();
+          dir.ClearFilename();
+          if (dir)
+            mod->AddPrefixMapSearchDir(std::move(dir));
+        }
     }
   }
   return best_symfile_up.release();

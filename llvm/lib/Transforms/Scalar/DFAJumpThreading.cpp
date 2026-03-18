@@ -920,7 +920,7 @@ private:
       BasicBlock *VisitedBB = getClonedBB(BB, NextState, DuplicateMap);
       if (!VisitedBB) {
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
-        NumClonedInst += BB->sizeWithoutDebug();
+        NumClonedInst += BB->size();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -938,7 +938,7 @@ private:
         if (VisitedBB)
           continue;
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
-        NumClonedInst += BB->sizeWithoutDebug();
+        NumClonedInst += BB->size();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -981,7 +981,7 @@ private:
     uint64_t NumOrigInst = 0;
     uint64_t NumOuterUseBlock = 0;
     for (auto *BB : DuplicateMap.keys()) {
-      NumOrigInst += BB->sizeWithoutDebug();
+      NumOrigInst += BB->size();
       // Only unduplicated blocks with single predecessor require new phi
       // nodes.
       for (auto *Succ : successors(BB))

@@ -291,6 +291,8 @@ enum Kind {
   kw_fmin,
   kw_fmaximum,
   kw_fminimum,
+  kw_fmaximumnum,
+  kw_fminimumnum,
   kw_uinc_wrap,
   kw_udec_wrap,
   kw_usub_cond,

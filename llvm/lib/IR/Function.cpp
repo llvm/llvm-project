@@ -366,8 +366,7 @@ const DataLayout &Function::getDataLayout() const {
 unsigned Function::getInstructionCount() const {
   unsigned NumInstrs = 0;
   for (const BasicBlock &BB : BasicBlocks)
-    NumInstrs += std::distance(BB.instructionsWithoutDebug().begin(),
-                               BB.instructionsWithoutDebug().end());
+    NumInstrs += BB.size();
   return NumInstrs;
 }
 

@@ -590,6 +590,9 @@ public:
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
 
   mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
+  /// Returns a null attribute to represent either a null method or null data
+  /// member, depending on the type of mpt.
+  mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an

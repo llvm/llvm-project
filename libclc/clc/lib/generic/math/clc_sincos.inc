@@ -6,17 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_DECLARE_SINCOS(ADDRSPACE, TYPE)                                  \
-  _CLC_OVERLOAD _CLC_DEF TYPE __clc_sincos(TYPE x, ADDRSPACE TYPE *cosval) {   \
-    *cosval = __clc_cos(x);                                                    \
-    return __clc_sin(x);                                                       \
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
+__clc_sincos(__CLC_GENTYPE x, private __CLC_GENTYPE *cosval) {
+  *cosval = __clc_cos(x);
+  return __clc_sin(x);
+}
+
+#define __CLC_SINCOS_DEF(addrspace)                                            \
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_sincos(                           \
+      __CLC_GENTYPE x, addrspace __CLC_GENTYPE *cos_out) {                     \
+    __CLC_GENTYPE cos_result;                                                  \
+    __CLC_GENTYPE sin_result = __clc_sincos(x, &cos_result);                   \
+    *cos_out = cos_result;                                                     \
+    return sin_result;                                                         \
   }
 
-__CLC_DECLARE_SINCOS(global, __CLC_GENTYPE)
-__CLC_DECLARE_SINCOS(local, __CLC_GENTYPE)
-__CLC_DECLARE_SINCOS(private, __CLC_GENTYPE)
+__CLC_SINCOS_DEF(local)
+__CLC_SINCOS_DEF(global)
 #if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
-__CLC_DECLARE_SINCOS(generic, __CLC_GENTYPE)
+__CLC_SINCOS_DEF(generic)
 #endif
-
-#undef __CLC_DECLARE_SINCOS

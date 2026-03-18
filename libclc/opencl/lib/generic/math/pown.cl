@@ -9,7 +9,7 @@
 #include "clc/math/clc_pown.h"
 
 #define __CLC_FUNCTION pown
-#define __CLC_BODY <clc/shared/binary_def_with_int_second_arg.inc>
+#define __CLC_BODY "clc/shared/binary_def_with_int_second_arg.inc"
 #include "clc/math/gentype.inc"
 #undef __CLC_FUNCTION
 #undef __CLC_IMPL_FUNCTION
@@ -17,5 +17,5 @@
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __pown_fast
 #define __CLC_IMPL_FUNCTION(x) __clc_pown_fast
-#define __CLC_BODY <clc/shared/binary_def_with_int_second_arg.inc>
+#define __CLC_BODY "clc/shared/binary_def_with_int_second_arg.inc"
 #include "clc/math/gentype.inc"

@@ -723,6 +723,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
   case Intrinsic::amdgcn_implicitarg_ptr: {
+    if (II.getFunction()->hasFnAttribute("amdgpu-no-implicitarg-ptr"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
     uint64_t ImplicitArgBytes = ST->getImplicitArgNumBytes(*II.getFunction());
 
     uint64_t CurrentOrNullBytes =

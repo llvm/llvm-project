@@ -112,6 +112,8 @@ def AtomicBinOpUSubSat : LLVM_EnumAttrCase<"usub_sat",
                                            "usub_sat", "USubSat", 18>;
 def AtomicBinOpFMaximum : LLVM_EnumAttrCase<"fmaximum", "fmaximum", "FMaximum", 19>;
 def AtomicBinOpFMinimum : LLVM_EnumAttrCase<"fminimum", "fminimum", "FMinimum", 20>;
+def AtomicBinOpFMaximumNum : LLVM_EnumAttrCase<"fmaximumnum", "fmaximumnum", "FMaximumNum", 21>;
+def AtomicBinOpFMinimumNum : LLVM_EnumAttrCase<"fminimumnum", "fminimumnum", "FMinimumNum", 22>;
 
 // A sentinel value that has no MLIR counterpart.
 def AtomicBadBinOp : LLVM_EnumAttrCase<"", "", "BAD_BINOP", 0>;
@@ -125,7 +127,8 @@ def AtomicBinOp : LLVM_EnumAttr<
      AtomicBinOpMin, AtomicBinOpUMax, AtomicBinOpUMin, AtomicBinOpFAdd,
      AtomicBinOpFSub, AtomicBinOpFMax, AtomicBinOpFMin, AtomicBinOpUIncWrap,
      AtomicBinOpUDecWrap, AtomicBinOpUSubCond, AtomicBinOpUSubSat,
-     AtomicBinOpFMaximum, AtomicBinOpFMinimum],
+     AtomicBinOpFMaximum, AtomicBinOpFMinimum, AtomicBinOpFMaximumNum,
+     AtomicBinOpFMinimumNum],
     [AtomicBadBinOp]> {
   let cppNamespace = "::mlir::LLVM";
 }

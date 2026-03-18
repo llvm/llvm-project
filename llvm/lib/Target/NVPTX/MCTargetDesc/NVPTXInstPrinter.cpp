@@ -334,7 +334,8 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
     case NVPTX::AddressSpace::Const:
     case NVPTX::AddressSpace::Shared:
     case NVPTX::AddressSpace::SharedCluster:
-    case NVPTX::AddressSpace::Param:
+    case NVPTX::AddressSpace::EntryParam:
+    case NVPTX::AddressSpace::DeviceParam:
     case NVPTX::AddressSpace::Local:
       O << "." << A;
       return;
