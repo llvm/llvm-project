@@ -32,8 +32,7 @@ static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   // However, the struct may not be fully processed yet to determine
   // whether it's anonymous or not. In that case, this function treats it as
   // an anonymous struct and tries to find a named parent.
-  while (RD && (RD->isAnonymousStructOrUnion() ||
-                (!RD->isCompleteDefinition() && RD->getName().empty()))) {
+  while (RD && (RD->isAnonymousStructOrUnion() || RD->getName().empty())) {
     const auto *Parent = dyn_cast<RecordDecl>(RD->getParent());
     if (!Parent)
       break;
