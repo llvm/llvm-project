@@ -2611,6 +2611,21 @@ cc_library(
 )
 
 cc_library(
+    name = "scalable_static_analysis_analyses",
+    srcs = glob([
+        "lib/ScalableStaticAnalysisFramework/Analyses/**/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Analyses/**/*.h"]),
+    deps = [
+        ":analysis",
+        ":ast",
+        ":basic",
+        ":scalable_static_analysis_core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "scalable_static_analysis_frontend",
     srcs = glob([
         "lib/ScalableStaticAnalysisFramework/Frontend/**/*.cpp",

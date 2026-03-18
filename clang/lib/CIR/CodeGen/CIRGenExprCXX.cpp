@@ -581,9 +581,9 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // allocation fails.
     if (typeSizeMultiplier != 1) {
       mlir::Value tsmV = cgf.getBuilder().getConstInt(loc, typeSizeMultiplier);
-      auto mulOp = cir::BinOpOverflowOp::create(
-          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
-          cir::BinOpOverflowKind::Mul, size, tsmV);
+      auto mulOp = cir::MulOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy), size,
+          tsmV);
 
       if (hasOverflow)
         hasOverflow =
@@ -617,9 +617,9 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     if (cookieSize != 0) {
       sizeWithoutCookie = size;
       mlir::Value cookieSizeV = cgf.getBuilder().getConstInt(loc, cookieSize);
-      auto addOp = cir::BinOpOverflowOp::create(
-          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
-          cir::BinOpOverflowKind::Add, size, cookieSizeV);
+      auto addOp = cir::AddOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy), size,
+          cookieSizeV);
 
       if (hasOverflow)
         hasOverflow =

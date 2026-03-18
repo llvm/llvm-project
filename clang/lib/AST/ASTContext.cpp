@@ -15247,6 +15247,14 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());
       Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
+    } else if (Target->getTriple().isOSAIX()) {
+      std::vector<std::string> Features;
+      StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
+      if (VersionStr.starts_with("cpu="))
+        TargetCPU = VersionStr.drop_front(sizeof("cpu=") - 1);
+      else
+        assert(VersionStr == "default");
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     } else {
       std::vector<std::string> Features;
       StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());

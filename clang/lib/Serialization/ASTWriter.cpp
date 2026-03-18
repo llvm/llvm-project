@@ -1567,6 +1567,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Implicit suff len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
@@ -1593,6 +1594,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(0);
         Record.push_back(0);
         Record.push_back(0);
+        Record.push_back(0);
       } else {
         // If we have calculated signature, there is no need to store
         // the size or timestamp.
@@ -1601,6 +1603,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
         llvm::append_range(Blob, M.Signature);
 
+        Record.push_back(M.FileName.getImplicitModuleSuffixLength());
         AddPathBlob(M.FileName, Record, Blob);
       }
 
@@ -6142,7 +6145,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
         // relocatable files. We probably should call
         // `PreparePathForOutput(M.FileName)` to properly support relocatable
         // PCHs.
-        StringRef Name = M.isModule() ? M.ModuleName : M.FileName;
+        StringRef Name = M.isModule() ? M.ModuleName : M.FileName.str();
         LE.write<uint16_t>(Name.size());
         Out.write(Name.data(), Name.size());
 
