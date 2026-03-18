@@ -48434,6 +48434,11 @@ static SDValue foldSelectCTLZToLZCNT(SDNode *N, SelectionDAG &DAG,
   if (VT.isVector())
     return SDValue();
 
+  // LZCNT is only defined for i32 and (on 64-bit targets) i64.
+  MVT SrcVT = VT.getSimpleVT();
+  if (SrcVT != MVT::i32 && (SrcVT != MVT::i64 || !Subtarget.is64Bit()))
+    return SDValue();
+
   SDValue Src = LHS.getOperand(0);
   if (cast<CondCodeSDNode>(Cond.getOperand(2))->get() != ISD::SETNE ||
       !isNullConstant(Cond.getOperand(1)) || Cond.getOperand(0) != Src)
