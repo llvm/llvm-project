@@ -185,6 +185,46 @@
 // CHECK-NO-FILE-INDIRECT-NOT:  note:
 
 // -------------------------------
+// Check that we diagnose stale dependencies correctly when modules change.
+//
+// Trigger a rebuild of A with a different configuration (-DA_EXTRA_DEFINE) to make B and C out of date
+// RUN: mv %t/a.pcm %t/a-tmp.pcm
+// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN:            -fmodule-name=a -emit-module %S/Inputs/explicit-build/module.modulemap -o %t/a.pcm \
+// RUN:            -DA_EXTRA_DEFINE \
+// RUN:            2>&1 | FileCheck --check-prefix=CHECK-NO-IMPLICIT-BUILD %s --allow-empty
+
+// Try to use C, which depends on B, which depends on the now-changed A.
+// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN:            -I%S/Inputs/explicit-build \
+// RUN:            -fmodule-file=%t/c.pcm \
+// RUN:            %s -DHAVE_A -DHAVE_B -DHAVE_C 2>&1 | FileCheck --check-prefix=CHECK-OUT-OF-DATE-INDIRECT %s
+//
+// CHECK-OUT-OF-DATE-INDIRECT: fatal error: module file '{{.*}}b.pcm' is out of date because dependency '{{.*}}a.pcm' has changed
+// CHECK-OUT-OF-DATE-INDIRECT-NEXT: note: imported by module 'b' in '{{.*}}b.pcm'
+// CHECK-OUT-OF-DATE-INDIRECT-NEXT: note: imported by module 'c' in '{{.*}}c.pcm'
+
+// Rebuild B with the new A, leaving C out of date.
+// RUN: mv %t/b.pcm %t/b-tmp.pcm
+// RUN: %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN:            -fmodule-file=%t/a.pcm \
+// RUN:            -fmodule-name=b -emit-module %S/Inputs/explicit-build/module.modulemap -o %t/b.pcm \
+// RUN:            -DA_EXTRA_DEFINE \
+// RUN:            2>&1 | FileCheck --check-prefix=CHECK-NO-IMPLICIT-BUILD %s --allow-empty
+//
+// Now only C is out of date. Try to use C.
+// RUN: not %clang_cc1 -x c++ -std=c++11 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Rmodule-build -fno-modules-error-recovery \
+// RUN:            -I%S/Inputs/explicit-build \
+// RUN:            -fmodule-file=%t/c.pcm \
+// RUN:            %s -DHAVE_A -DHAVE_B -DHAVE_C 2>&1 | FileCheck --check-prefix=CHECK-OUT-OF-DATE-DIRECT %s
+//
+// CHECK-OUT-OF-DATE-DIRECT: fatal error: module file '{{.*}}c.pcm' is out of date because dependency '{{.*}}b.pcm' has changed
+// CHECK-OUT-OF-DATE-DIRECT-NOT: fatal error: module file '{{.*}}b.pcm' is out of date
+//
+// RUN: mv %t/a-tmp.pcm %t/a.pcm
+// RUN: mv %t/b-tmp.pcm %t/b.pcm
+
+// -------------------------------
 // Check that we don't get upset if B's timestamp is newer than C's.
 // RUN: touch %t/b.pcm
 //
@@ -202,6 +242,6 @@
 // RUN:            -fmodule-file=%t/c.pcm \
 // RUN:            %s -DHAVE_A -DHAVE_B -DHAVE_C 2>&1 | FileCheck --check-prefix=CHECK-MISMATCHED-B %s
 //
-// CHECK-MISMATCHED-B:      fatal error: module file '{{.*}}b.pcm' is out of date and needs to be rebuilt: module file has a different size than expected
+// CHECK-MISMATCHED-B:      fatal error: module file '{{.*}}c.pcm' is out of date because dependency '{{.*}}b.pcm' has changed: module file has a different size than expected
 // CHECK-MISMATCHED-B-NEXT: note: imported by module 'c'
 // CHECK-MISMATCHED-B-NOT:  note:
