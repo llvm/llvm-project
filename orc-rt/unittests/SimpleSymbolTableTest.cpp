@@ -30,7 +30,7 @@ TEST(SimpleSymbolTableTest, AddSymbolsUnique) {
   int X = 0, Y = 0;
   std::pair<const char *, void *> Syms[] = {{"orc_rt_A", &X}, {"orc_rt_B", &Y}};
 
-  auto Err = ST.addSymbolsUnique(Syms);
+  auto Err = ST.addUnique(Syms);
   EXPECT_FALSE(Err) << "Unexpected error adding unique symbols";
 
   EXPECT_EQ(ST.size(), 2U);
@@ -47,7 +47,7 @@ TEST(SimpleSymbolTableTest, AddConstPointers) {
   const int Y = 7;
   std::pair<const char *, const void *> Syms[] = {{"orc_rt_A", &X},
                                                   {"orc_rt_B", &Y}};
-  cantFail(ST.addSymbolsUnique(Syms));
+  cantFail(ST.addUnique(Syms));
 
   EXPECT_EQ(ST.at("orc_rt_A"), &X);
   EXPECT_EQ(ST.at("orc_rt_B"), &Y);
@@ -60,8 +60,8 @@ TEST(SimpleSymbolTableTest, AddSymbolsUniqueMultipleCalls) {
   std::pair<const char *, void *> First[] = {{"orc_rt_A", &X}};
   std::pair<const char *, void *> Second[] = {{"orc_rt_B", &Y}};
 
-  cantFail(ST.addSymbolsUnique(First));
-  cantFail(ST.addSymbolsUnique(Second));
+  cantFail(ST.addUnique(First));
+  cantFail(ST.addUnique(Second));
 
   EXPECT_EQ(ST.size(), 2U);
   EXPECT_EQ(ST.at("orc_rt_A"), &X);
@@ -73,10 +73,10 @@ TEST(SimpleSymbolTableTest, AddSymbolsUniqueDuplicateRejected) {
   int X = 0, Y = 0;
 
   std::pair<const char *, void *> First[] = {{"orc_rt_A", &X}};
-  cantFail(ST.addSymbolsUnique(First));
+  cantFail(ST.addUnique(First));
 
   std::pair<const char *, void *> Second[] = {{"orc_rt_A", &Y}};
-  auto Err = ST.addSymbolsUnique(Second);
+  auto Err = ST.addUnique(Second);
   EXPECT_TRUE(Err.isA<StringError>());
 
   auto ErrMsg = toString(std::move(Err));
@@ -93,11 +93,11 @@ TEST(SimpleSymbolTableTest, AddSymbolsUniqueMultipleDuplicates) {
 
   std::pair<const char *, void *> First[] = {{"orc_rt_A", &X},
                                              {"orc_rt_B", &Y}};
-  cantFail(ST.addSymbolsUnique(First));
+  cantFail(ST.addUnique(First));
 
   std::pair<const char *, void *> Second[] = {{"orc_rt_A", &Z},
                                               {"orc_rt_B", &Z}};
-  auto Err = ST.addSymbolsUnique(Second);
+  auto Err = ST.addUnique(Second);
   EXPECT_TRUE(Err.isA<StringError>());
 
   auto ErrMsg = toString(std::move(Err));
@@ -114,12 +114,12 @@ TEST(SimpleSymbolTableTest, AddSymbolsUniqueAllOrNothing) {
   int X = 0, Y = 0, Z = 0;
 
   std::pair<const char *, void *> First[] = {{"orc_rt_existing", &X}};
-  cantFail(ST.addSymbolsUnique(First));
+  cantFail(ST.addUnique(First));
 
-  // One new, one duplicate — neither should be added.
+  // One new, one incompatible — neither should be added.
   std::pair<const char *, void *> Second[] = {{"orc_rt_new", &Y},
                                               {"orc_rt_existing", &Z}};
-  auto Err = ST.addSymbolsUnique(Second);
+  auto Err = ST.addUnique(Second);
   EXPECT_TRUE(Err.isA<StringError>());
   consumeError(std::move(Err));
 
@@ -128,12 +128,22 @@ TEST(SimpleSymbolTableTest, AddSymbolsUniqueAllOrNothing) {
   EXPECT_FALSE(ST.count("orc_rt_new"));
 }
 
+TEST(SimpleSymbolTableTest, AddUniqueSameAddressSucceeds) {
+  SimpleSymbolTable ST;
+  int X = 0;
+  std::pair<const char *, void *> Syms[] = {{"orc_rt_A", &X}};
+  cantFail(ST.addUnique(Syms));
+  cantFail(ST.addUnique(Syms)); // Same name, same address — should succeed.
+  EXPECT_EQ(ST.size(), 1U);
+  EXPECT_EQ(ST.at("orc_rt_A"), &X);
+}
+
 TEST(SimpleSymbolTableTest, Iteration) {
   SimpleSymbolTable ST;
   int X = 0, Y = 0, Z = 0;
   std::pair<const char *, void *> Syms[] = {
       {"orc_rt_A", &X}, {"orc_rt_B", &Y}, {"orc_rt_C", &Z}};
-  cantFail(ST.addSymbolsUnique(Syms));
+  cantFail(ST.addUnique(Syms));
 
   std::set<std::string> Names;
   for (auto &[Name, Addr] : ST)

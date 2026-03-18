@@ -24,7 +24,7 @@ Session::Session(ExecutorProcessInfo EPI,
   std::pair<const char *, void *> InitialSymbols[] = {
       {"orc_rt_SessionInstance", static_cast<void *>(this)}};
 
-  cantFail(CI.addSymbolsUnique(InitialSymbols));
+  cantFail(CI.addUnique(InitialSymbols));
 }
 
 Session::~Session() { waitForShutdown(); }
