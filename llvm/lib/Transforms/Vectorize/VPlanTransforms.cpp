@@ -5929,6 +5929,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
 
   // reduce.add(ext(mul(ext(A), ext(B))))
   // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
+  // TODO: Support this optimization for float types.
   if (match(BinOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
                                       m_ZExtOrSExt(m_VPValue()))))) {
     auto *Ext = cast<VPWidenCastRecipe>(BinOp);
