@@ -28,6 +28,7 @@
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
@@ -843,7 +844,8 @@ void SymbolFileNativePDB::CreateSimpleArgumentListTypes(
   if (auto err =
           TypeDeserializer::deserializeAs<ArgListRecord>(arglist_cvt, alr)) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Failed to deserialize ArgListRecord record: {0}");
+                   "Failed to deserialize ArgListRecord record ({1}): {0}",
+                   arglist_ti);
     return;
   }
   for (TypeIndex id : alr.getIndices())
@@ -863,7 +865,8 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     if (auto err =
             TypeDeserializer::deserializeAs<ModifierRecord>(cvt, modifier)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                     "Failed to deserialize ModifierRecord record: {0}");
+                     "Failed to deserialize ModifierRecord record ({1}): {0}",
+                     type_id.index);
       return nullptr;
     }
     return CreateModifierType(type_id, modifier, ct);
@@ -874,7 +877,8 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     if (auto err =
             TypeDeserializer::deserializeAs<PointerRecord>(cvt, pointer)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                     "Failed to deserialize PointerRecord record: {0}");
+                     "Failed to deserialize PointerRecord record ({1}): {0}",
+                     type_id.index);
       return nullptr;
     }
     return CreatePointerType(type_id, pointer, ct);
@@ -884,7 +888,8 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     ClassRecord cr;
     if (auto err = TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                     "Failed to deserialize ClassRecord record: {0}");
+                     "Failed to deserialize ClassRecord record ({1}): {0}",
+                     type_id.index);
       return nullptr;
     }
     return CreateTagType(type_id, cr, ct);
@@ -894,7 +899,8 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     EnumRecord er;
     if (auto err = TypeDeserializer::deserializeAs<EnumRecord>(cvt, er)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                     "Failed to deserialize EnumRecord record: {0}");
+                     "Failed to deserialize EnumRecord record ({1}): {0}",
+                     type_id.index);
       return nullptr;
     }
     return CreateTagType(type_id, er, ct);
@@ -904,7 +910,8 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     UnionRecord ur;
     if (auto err = TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                     "Failed to deserialize UnionRecord record: {0}");
+                     "Failed to deserialize UnionRecord record ({1}): {0}",
+                     type_id.index);
       return nullptr;
     }
     return CreateTagType(type_id, ur, ct);
@@ -914,7 +921,8 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     ArrayRecord ar;
     if (auto err = TypeDeserializer::deserializeAs<ArrayRecord>(cvt, ar)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                     "Failed to deserialize ArrayRecord record: {0}");
+                     "Failed to deserialize ArrayRecord record ({1}): {0}",
+                     type_id.index);
       return nullptr;
     }
     return CreateArrayType(type_id, ar, ct);
@@ -924,7 +932,8 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     ProcedureRecord pr;
     if (auto err = TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr)) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                     "Failed to deserialize ProcedureRecord record: {0}");
+                     "Failed to deserialize ProcedureRecord record ({1}): {0}",
+                     type_id.index);
       return nullptr;
     }
     return CreateProcedureType(type_id, pr, ct);
@@ -933,8 +942,10 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     MemberFunctionRecord mfr;
     if (auto err =
             TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfr)) {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                     "Failed to deserialize MemberFunctionRecord record: {0}");
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Symbols), std::move(err),
+          "Failed to deserialize MemberFunctionRecord record ({1}): {0}",
+          type_id.index);
       return nullptr;
     }
     return CreateFunctionType(type_id, mfr, ct);
@@ -2057,7 +2068,8 @@ void SymbolFileNativePDB::CacheGlobalBaseNames() {
               type, mfr)) {
         LLDB_LOG_ERROR(
             GetLog(LLDBLog::Symbols), std::move(err),
-            "Failed to deserialize MemberFunctionRecord record: {0}");
+            "Failed to deserialize MemberFunctionRecord record ({1}): {0}",
+            proc.FunctionType);
       } else if (!mfr.getThisType().isNoneType())
         m_func_method_names.Append(ConstString(basename), gid);
     }
