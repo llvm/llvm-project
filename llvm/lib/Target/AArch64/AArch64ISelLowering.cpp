@@ -5297,6 +5297,20 @@ SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
   EVT CastVT = VT.changeVectorElementType(
       *DAG.getContext(), Src.getValueType().getVectorElementType());
 
+  unsigned IntBits = VT.getScalarSizeInBits();
+  unsigned FPBits = CastVT.getScalarSizeInBits();
+
+  // Use FRINT32X/FRINT64X if Sve2p2 is available
+  if (Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2()) &&
+      (FPBits == 32 || FPBits == 64)) {
+    unsigned FrintOp = (IntBits == 32) ? AArch64ISD::FRINT32_MERGE_PASSTHRU
+                                       : AArch64ISD::FRINT64_MERGE_PASSTHRU;
+    SDValue Pg = getPredicateForVector(DAG, DL, CastVT);
+    SDValue Passthru = DAG.getUNDEF(CastVT);
+    SDValue FOp = DAG.getNode(FrintOp, DL, CastVT, Pg, Src, Passthru);
+    return DAG.getNode(ISD::FP_TO_SINT, DL, VT, FOp);
+  }
+
   // Round the floating-point value into a floating-point register with the
   // current rounding mode.
   SDValue FOp = DAG.getNode(ISD::FRINT, DL, CastVT, Src);
