@@ -25,39 +25,37 @@
 
 using namespace llvm;
 using namespace llvm::dwarf;
-using namespace llvm::dwarfdump;
 using namespace llvm::object;
 
 /// Pair of file index and line number representing a source location.
 typedef std::pair<uint16_t, size_t> SourceLocation;
 
+/// Adds source locations to the line set that correspond to an address range.
+static void addLines(const DWARFDebugLine::LineTable *LineTable,
+                     DenseSet<SourceLocation> &Lines, DWARFAddressRange Range) {
+  std::vector<uint32_t> Rows;
+  if (LineTable->lookupAddressRange({Range.LowPC, Range.SectionIndex},
+                                    Range.HighPC - Range.LowPC, Rows)) {
+    for (const auto &RowI : Rows) {
+      const auto Row = LineTable->Rows[RowI];
+      // Lookup can return addresses below the LowPC - filter these out.
+      if (Row.Address.Address < Range.LowPC)
+        continue;
+      const auto FileIndex = Row.File;
+
+      const auto Line = Row.Line;
+      if (Line) // Ignore zero lines.
+        Lines.insert({FileIndex, Line});
+    }
+  }
+}
+
 /// Returns the set of source lines covered by a variable's debug information,
 /// computed by intersecting the variable's location ranges and the containing
 /// scope's address ranges.
 static DenseSet<SourceLocation>
-computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
-                        const DWARFDebugLine::LineTable *const LineTable,
-                        bool LTCov) {
-  /// Adds source locations to the set that correspond to an address range.
-  auto addLines = [](const DWARFDebugLine::LineTable *LineTable,
-                     DenseSet<SourceLocation> &Lines, DWARFAddressRange Range) {
-    std::vector<uint32_t> Rows;
-    if (LineTable->lookupAddressRange({Range.LowPC, Range.SectionIndex},
-                                      Range.HighPC - Range.LowPC, Rows)) {
-      for (const auto &RowI : Rows) {
-        const auto Row = LineTable->Rows[RowI];
-        // Lookup can return addresses below the LowPC - filter these out.
-        if (Row.Address.Address < Range.LowPC)
-          continue;
-        const auto FileIndex = Row.File;
-
-        const auto Line = Row.Line;
-        if (Line) // Ignore zero lines.
-          Lines.insert({FileIndex, Line});
-      }
-    }
-  };
-
+computeVariableCoverage(DWARFDie VariableDIE,
+                        const DWARFDebugLine::LineTable *const LineTable) {
   // The optionals below will be empty if no address ranges were found, and
   // present (but containing an empty set) if ranges were found but contained no
   // source locations, in order to distinguish the two cases.
@@ -73,17 +71,15 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
       }
     }
   } else {
-    consumeError(Locations.takeError());
     // If the variable is optimized out and has no DW_AT_location, return an
     // empty set instead of falling back to the parent scope's address ranges.
-    if (!LTCov)
-      return {};
+    consumeError(Locations.takeError());
+    return {};
   }
 
   // DW_AT_location attribute may contain overly broad address ranges, or none
   // at all, so we also consider the parent scope's address ranges if present.
-  auto ParentRanges = LTCov ? VariableDIE.getAddressRanges()
-                            : VariableDIE.getParent().getAddressRanges();
+  auto ParentRanges = VariableDIE.getParent().getAddressRanges();
   std::optional<DenseSet<SourceLocation>> ParentLines;
   if (ParentRanges) {
     ParentLines = DenseSet<SourceLocation>();
@@ -99,6 +95,22 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
     llvm::set_intersect(*Lines, *ParentLines);
 
   return Lines.value_or(DenseSet<SourceLocation>());
+}
+
+/// Returns the set of source lines present in the line table for a subroutine.
+static DenseSet<SourceLocation>
+computeSubroutineCoverage(DWARFDie SubroutineDIE,
+                          const DWARFDebugLine::LineTable *const LineTable) {
+  auto Ranges = SubroutineDIE.getAddressRanges();
+  DenseSet<SourceLocation> Lines = DenseSet<SourceLocation>();
+  if (Ranges) {
+    for (const auto &R : Ranges.get())
+      addLines(LineTable, Lines, R);
+  } else {
+    consumeError(Ranges.takeError());
+  }
+
+  return Lines;
 }
 
 static const SmallVector<DWARFDie> getParentSubroutines(DWARFDie DIE) {
@@ -230,7 +242,7 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
         if (!Key)
           continue;
 
-        const auto Cov = computeVariableCoverage(*BaselineCtx, Die, LT, false);
+        const auto Cov = computeVariableCoverage(Die, LT);
 
         auto Result = BaselineVars.insert({*Key, Cov});
         if (!Result.second)
@@ -257,7 +269,7 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
       if (!Key)
         continue;
 
-      const auto Cov = computeVariableCoverage(DICtx, Die, LT, false);
+      const auto Cov = computeVariableCoverage(Die, LT);
 
       VarCoverage VarCov = {Parents, Cov.size(), 0, 0, 0, 1, false};
 
@@ -271,7 +283,7 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
           for (const auto &L : Cov)
             VarCov.Missing += (1 - BCov.count(L));
 
-          const auto LTCov = computeVariableCoverage(DICtx, Parent, LT, true);
+          const auto LTCov = computeSubroutineCoverage(Parent, LT);
 
           for (const auto &L : BCov)
             VarCov.LTCov += LTCov.count(L);
@@ -290,7 +302,7 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
      << (CombineInstances ? "InstanceCount" : "InlChain")
      << "\tVariable\tDecl\tLinesCovered";
   if (BaselineCtx)
-    OS << "\tBaseline\tCoveredRatio\tLT\tLTRatio";
+    OS << "\tBaseline\tCoveredRatio\tLinesPresent\tLinesPresentRatio";
   OS << "\n";
 
   if (CombineInstances) {

@@ -291,12 +291,13 @@ a tab-separated table containing the following columns:
       - `CoveredRatio` (empty if :option:`--coverage-baseline` is not
         specified) ==> Ratio of the coverage compared to the baseline
         (calculated as `LinesCovered/Baseline`)
-      - `LT` (empty if :option:`--coverage-baseline` is not specified) ==>
-        Number of source lines covered in the variable's baseline debug
-        information that are also present in the input file's line table
-      - `LTRatio` (empty if :option:`--coverage-baseline` is not specified) ==>
-        Ratio of the line table coverage compared to the baseline (calculated
-        as `LT/Baseline`)
+      - `LinesPresent` (empty if :option:`--coverage-baseline` is not
+        specified) ==> Number of source lines covered in the variable's
+        baseline debug information that are also present in the input file's
+        line table
+      - `LinesPresentRatio` (empty if :option:`--coverage-baseline` is not
+        specified) ==> Ratio of the line table coverage compared to the
+        baseline (calculated as `LinesPresent/Baseline`)
 
 EXIT STATUS
 -----------
