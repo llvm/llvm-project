@@ -47,6 +47,22 @@ DWARFASTParserSwift::DWARFASTParserSwift(
 
 DWARFASTParserSwift::~DWARFASTParserSwift() {}
 
+/// Returns true if the DIE represents a protocol annotated with @_marker.
+static bool IsMarkerProtocol(const DWARFDIE &die) {
+  if (die.Tag() != llvm::dwarf::DW_TAG_structure_type)
+    return false;
+  for (DWARFDIE child : die.children()) {
+    if (child.Tag() != llvm::dwarf::DW_TAG_LLVM_annotation)
+      continue;
+    const char *name =
+        child.GetAttributeValueAsString(llvm::dwarf::DW_AT_name, nullptr);
+    if (llvm::StringRef(name) == "$swift_marker")
+      return child.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_const_value,
+                                               0) != 0;
+  }
+  return false;
+}
+
 static llvm::StringRef GetTypedefName(const DWARFDIE &die) {
   if (die.Tag() != llvm::dwarf::DW_TAG_typedef)
     return {};
@@ -188,7 +204,8 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       if (auto wrapped_type = get_type(die.GetFirstChild())) {
         // Create a unique pointer for the type + fixed buffer flag.
         type_sp = wrapped_type->GetSymbolFile()->CopyType(wrapped_type);
-        type_sp->SetPayload(TypePayloadSwift(true));
+        type_sp->SetPayload(
+            TypePayloadSwift(TypePayloadSwift::Options::FixedValueBuffer));
         return type_sp;
       }
     }
@@ -262,6 +279,9 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         // read the size from DWARF.
         dwarf_byte_size, nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl,
         compiler_type, Type::ResolveState::Full);
+    if (IsMarkerProtocol(die))
+      type_sp->SetPayload(
+          TypePayloadSwift(TypePayloadSwift::Options::IsMarkerProtocol));
   }
 
   // Cache this type.
