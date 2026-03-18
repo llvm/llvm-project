@@ -2022,12 +2022,10 @@ define i64 @blsi_cflag_64(i64 %x, i64 %y) nounwind {
   ret i64 %cond
 }
 
-define i64 @blsi64_not(i64 %x) {
+define i64 @blsi64_not(i64 %x) nounwind {
 ; X86-LABEL: blsi64_not:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl %edx, %edx
@@ -2039,7 +2037,6 @@ define i64 @blsi64_not(i64 %x) {
 ; X86-NEXT:    notl %edx
 ; X86-NEXT:    notl %eax
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: blsi64_not:
@@ -2059,7 +2056,7 @@ define i64 @blsi64_not(i64 %x) {
   ret i64 %not
 }
 
-define i32 @blsi32_not(i32 %x) {
+define i32 @blsi32_not(i32 %x) nounwind {
 ; X86-LABEL: blsi32_not:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
