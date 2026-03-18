@@ -652,6 +652,94 @@ define <vscale x 2 x i64> @test_insert_first_into_zero_nxv2i64(i64 %x) {
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 8 x half> @test_insert_first_into_zero_nxv8f16(half %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 8 x half> zeroinitializer, half %x, i64 0
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 4 x half> @test_insert_first_into_zero_nxv4f16(half %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    index z1.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.s, w8
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov z1.h, p0/m, h0
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x half> zeroinitializer, half %x, i32 0
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 2 x half> @test_insert_first_into_zero_nxv2f16(half %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    index z1.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov z1.h, p0/m, h0
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x half> zeroinitializer, half %x, i32 0
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 8 x bfloat> @test_insert_first_into_zero_nxv8bf16(bfloat %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 8 x bfloat> zeroinitializer, bfloat %x, i64 0
+  ret <vscale x 8 x bfloat> %res
+}
+
+define <vscale x 4 x bfloat> @test_insert_first_into_zero_nxv4bf16(bfloat %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    index z1.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.s, w8
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov z1.h, p0/m, h0
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x bfloat> zeroinitializer, bfloat %x, i32 0
+  ret <vscale x 4 x bfloat> %res
+}
+
+define <vscale x 2 x bfloat> @test_insert_first_into_zero_nxv2bf16(bfloat %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    index z1.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov z1.h, p0/m, h0
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x bfloat> zeroinitializer, bfloat %x, i32 0
+  ret <vscale x 2 x bfloat> %res
+}
+
 define <vscale x 4 x float> @test_insert_first_into_zero_nxv4f32(float %x) {
 ; CHECK-LABEL: test_insert_first_into_zero_nxv4f32:
 ; CHECK:       // %bb.0:
@@ -659,6 +747,22 @@ define <vscale x 4 x float> @test_insert_first_into_zero_nxv4f32(float %x) {
 ; CHECK-NEXT:    ret
   %res = insertelement <vscale x 4 x float> zeroinitializer, float %x, i64 0
   ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x float> @test_insert_first_into_zero_nxv2f32(float %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    index z1.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov z1.s, p0/m, s0
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x float> zeroinitializer, float %x, i32 0
+  ret <vscale x 2 x float> %res
 }
 
 define <vscale x 2 x double> @test_insert_first_into_zero_nxv2f64(double %x) {
