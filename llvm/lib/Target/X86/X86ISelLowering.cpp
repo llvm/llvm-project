@@ -1,4 +1,3 @@
-// I
 //===-- X86ISelLowering.cpp - X86 DAG Lowering Implementation -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -28834,11 +28833,9 @@ Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
   if (Reg)
     return Reg;
 
-  if (Subtarget.is64Bit()) {
-    Reg = MatchRegisterName(RegName);
-    if (!Subtarget.isRegisterReservedByUser(Reg))
-      Reg = Register();
-  }
+  Reg = MatchRegisterName(RegName);
+  if (!Subtarget.isRegisterReservedByUser(Reg))
+    Reg = Register();
 
   return Reg;
 }
@@ -61592,7 +61589,8 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
                                  ? ISD::SEXTLOAD
                                  : ISD::ZEXTLOAD;
       EVT MemVT = VT.changeVectorElementType(*DAG.getContext(), SVT);
-      if (TLI.isLoadExtLegal(Ext, VT, MemVT)) {
+      if (TLI.isLoadLegal(VT, MemVT, Ld->getAlign(), Ld->getAddressSpace(), Ext,
+                          false)) {
         SDValue Load = DAG.getExtLoad(
             Ext, DL, VT, Ld->getChain(), Ld->getBasePtr(), Ld->getPointerInfo(),
             MemVT, Ld->getBaseAlign(), Ld->getMemOperand()->getFlags());

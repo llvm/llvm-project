@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98,cxx98-14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11,cxx98-14,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11,cxx98-14,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify=expected,cxx98,cxx98-14
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify=expected,since-cxx11,cxx98-14,cxx11-14
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify=expected,since-cxx11,cxx98-14,cxx11-14
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify=expected,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify=expected,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify=expected,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple -verify=expected,since-cxx11,since-cxx17
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)

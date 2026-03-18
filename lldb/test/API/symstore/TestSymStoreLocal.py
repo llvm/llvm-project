@@ -59,14 +59,14 @@ class MockedSymStore:
 
     def __exit__(self, *exc_info):
         """
-        Clean up and delete original exe so next make won't skip link command.
+        Remove symstore and reset settings
         """
         shutil.rmtree(self._tmp)
-        os.remove(self._test.getBuildArtifact(self._exe))
         self._test.runCmd("settings clear plugin.symbol-locator.symstore")
 
 
 class SymStoreLocalTests(TestBase):
+    SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def build_inferior(self):
@@ -96,7 +96,6 @@ class SymStoreLocalTests(TestBase):
         exe, sym = self.build_inferior()
         with MockedSymStore(self, exe, sym):
             self.try_breakpoint(exe, should_have_loc=False)
-            self.runCmd("quit", check=False)
 
     def test_external_lookup_off(self):
         """
@@ -108,7 +107,6 @@ class SymStoreLocalTests(TestBase):
                 f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
             )
             self.try_breakpoint(exe, ext_lookup=False, should_have_loc=False)
-            self.runCmd("quit", check=False)
 
     def test_local_dir(self):
         """
@@ -120,4 +118,3 @@ class SymStoreLocalTests(TestBase):
                 f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
             )
             self.try_breakpoint(exe, should_have_loc=True)
-            self.runCmd("quit", check=False)
