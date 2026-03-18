@@ -499,6 +499,13 @@ public:
   /// Return DebugLoc of this UserValue.
   const DebugLoc &getDebugLoc() { return dl; }
 
+  /// Return true if any numbered location is a virtual register.
+  bool hasVirtualRegLocations() const {
+    return any_of(locations, [](const MachineOperand &Loc) {
+      return Loc.isReg() && Loc.getReg().isVirtual();
+    });
+  }
+
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
 
@@ -1872,7 +1879,10 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   SpillOffsetMap SpillOffsets;
   for (auto &userValue : userValues) {
     LLVM_DEBUG(userValue->print(dbgs(), TRI));
-    userValue->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets);
+    if (userValue->hasVirtualRegLocations())
+      userValue->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets);
+    else
+      SpillOffsets.clear();
     userValue->emitDebugValues(VRM, *LIS, *TII, *TRI, SpillOffsets,
                                BBSkipInstsMap);
   }
@@ -2030,6 +2040,8 @@ void LiveDebugVariables::LDVImpl::resolveAssignedLocations(VirtRegMap &VRM) {
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   SpillOffsetMap SpillOffsets;
   for (auto &UV : userValues) {
+    if (!UV->hasVirtualRegLocations())
+      continue;
     LLVM_DEBUG(UV->print(dbgs(), TRI));
     UV->rewriteLocations(VRM, *MF, *TII, *TRI, SpillOffsets,
                          /*KeepUnassigned=*/true);
