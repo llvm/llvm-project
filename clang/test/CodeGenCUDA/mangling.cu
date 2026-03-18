@@ -1,19 +1,13 @@
 // REQUIRES: nvptx-registered-target
 
-// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -x cuda -emit-cir -target-sdk-version=12.3 %s -o %t.cir %}
-// RUN: %if cir-enabled %{ FileCheck --check-prefix=CIR-HOST --input-file=%t.cir %s %}
-// RUN: %if cir-enabled %{ %clang_cc1 -triple nvptx64-nvidia-cuda -fclangir -fcuda-is-device -emit-cir -target-sdk-version=12.3 %s -o %t.cir %}
-// RUN: %if cir-enabled %{ FileCheck --check-prefix=CIR-DEVICE --input-file=%t.cir %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -x cuda -emit-cir -target-sdk-version=12.3 %s -o - | FileCheck --check-prefix=CIR-HOST %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple nvptx64-nvidia-cuda -fclangir -fcuda-is-device -emit-cir -target-sdk-version=12.3 %s -o - | FileCheck --check-prefix=CIR-DEVICE %s %}
 
-// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -x cuda -emit-llvm -target-sdk-version=12.3 %s -o %t.ll %}
-// RUN: %if cir-enabled %{ FileCheck --check-prefix=LLVM-HOST --input-file=%t.ll %s %}
-// RUN: %if cir-enabled %{ %clang_cc1 -triple nvptx64-nvidia-cuda -fclangir -fcuda-is-device -emit-llvm -target-sdk-version=12.3 %s -o %t.ll %}
-// RUN: %if cir-enabled %{ FileCheck --check-prefix=LLVM-DEVICE --input-file=%t.ll %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -x cuda -emit-llvm -target-sdk-version=12.3 %s -o - | FileCheck --check-prefix=LLVM-HOST %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple nvptx64-nvidia-cuda -fclangir -fcuda-is-device -emit-llvm -target-sdk-version=12.3 %s -o - | FileCheck --check-prefix=LLVM-DEVICE %s %}
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x cuda -emit-llvm -target-sdk-version=12.3 %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG-HOST --input-file=%t.ll %s
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -target-sdk-version=12.3 %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG-DEVICE --input-file=%t.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x cuda -emit-llvm -target-sdk-version=12.3 %s -o - | FileCheck --check-prefix=OGCG-HOST %s
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -target-sdk-version=12.3 %s -o - | FileCheck --check-prefix=OGCG-DEVICE %s
 
 #include "Inputs/cuda.h"
 
@@ -54,7 +48,7 @@ namespace ns {
 // LLVM-DEVICE: define {{.*}} @_ZN2ns21cpp_device_function_2EiPif
 // OGCG-DEVICE: define {{.*}} @_ZN2ns21cpp_device_function_2EiPif
     __device__ void cpp_device_function_2(int a, int* b, float c) {}
-}
+} // namespace ns
 
 // CIR-HOST:   cir.func {{.*}} @_Z36__device_stub__cpp_global_function_1iPif
 // CIR-DEVICE: cir.func {{.*}} @_Z21cpp_global_function_1iPif
@@ -129,4 +123,4 @@ extern "C" {
 // LLVM-DEVICE: define {{.*}} @c_device_function_2
 // OGCG-DEVICE: define {{.*}} @c_device_function_2
     __device__ void c_device_function_2(int a, int* b, float c) {}
-}
+} // extern "C"
