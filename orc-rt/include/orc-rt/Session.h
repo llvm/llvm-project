@@ -13,11 +13,11 @@
 #ifndef ORC_RT_SESSION_H
 #define ORC_RT_SESSION_H
 
-#include "orc-rt/ControllerInterface.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorProcessInfo.h"
 #include "orc-rt/LockedAccess.h"
 #include "orc-rt/Service.h"
+#include "orc-rt/SimpleSymbolTable.h"
 #include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
@@ -139,10 +139,6 @@ public:
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
-  /// Controller interface symbols map.
-  auto controllerInterface() { return LockedAccess(CI, M); }
-  auto controllerInterface() const { return LockedAccess(CI, M); }
-
   /// Initiate session shutdown.
   ///
   /// Runs shutdown on registered resources in reverse order.
@@ -216,7 +212,6 @@ private:
 
   mutable std::mutex M;
   std::vector<std::unique_ptr<Service>> Services;
-  ControllerInterface CI;
   std::unique_ptr<ShutdownInfo> SI;
 };
 

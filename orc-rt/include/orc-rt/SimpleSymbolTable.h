@@ -1,4 +1,4 @@
-//===--- ControllerInterface.h -- Controller Interface Symtab ---*- C++ -*-===//
+//===------- SimpleSymbolTable.h -- Simple Symbol Table ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Controller interface symbol table.
+// Simple symbol table.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_CONTROLLERINTERFACE_H
-#define ORC_RT_CONTROLLERINTERFACE_H
+#ifndef ORC_RT_SIMPLESYMBOLTABLE_H
+#define ORC_RT_SIMPLESYMBOLTABLE_H
 
 #include "orc-rt/Error.h"
 #include <string>
@@ -23,10 +23,9 @@
 
 namespace orc_rt {
 
-/// A symbol table defining the interface exposed by the ORC runtime to the
-/// controller. Symbols are added via addSymbolsUnique, which rejects
-/// duplicates with an error.
-class ControllerInterface {
+/// A simple string-to-pointer symbol table. Symbols are added via
+/// addSymbolsUnique, which rejects duplicates with an error.
+class SimpleSymbolTable {
 public:
   using SymbolTable = std::unordered_map<std::string, const void *>;
   using iterator = SymbolTable::const_iterator;
@@ -48,34 +47,41 @@ public:
   /// symbols in NewSymbols are unique (i.e. not previously defined).
   ///
   /// NewSymbols must not contain any internal duplicates.
-  template <typename SymbolRangeT>
-  Error addSymbolsUnique(SymbolRangeT &&NewSymbols) {
+  template <typename SymbolRangeT> Error addUnique(SymbolRangeT &&NewSymbols) {
 
-    // First check for duplicates, error out if any are found.
+    // First check for incompatible duplicate definitions (duplicates are
+    // only permitted if they resolve to the same address). Error out if any
+    // incompatible defs are found.
     {
-      std::vector<std::string_view> Dups;
-      for (auto &[Name, Addr] : NewSymbols)
+      std::vector<std::string_view> IncompatibleDefs;
+      for (auto &[Name, Addr] : NewSymbols) {
+        auto I = Symbols.find(Name);
+        if (I == Symbols.end() || I->second == Addr)
+          continue;
         if (Symbols.count(Name))
-          Dups.push_back(Name);
-      if (!Dups.empty())
-        return makeDuplicatesError(std::move(Dups));
+          IncompatibleDefs.push_back(Name);
+      }
+      if (!IncompatibleDefs.empty())
+        return makeIncompatibleDefsError(std::move(IncompatibleDefs));
     }
 
     // No duplicates. Add entries.
     for (auto &P : NewSymbols) {
-      [[maybe_unused]] bool Added = Symbols.insert(P).second;
-      assert(Added && "NewSymbols contains duplicate definitions");
+      [[maybe_unused]] auto [I, Added] = Symbols.insert(P);
+      assert((Added || I->second == P.second) &&
+             "NewSymbols contains incompatible definitions");
     }
 
     return Error::success();
   }
 
 private:
-  static Error makeDuplicatesError(std::vector<std::string_view> Dups);
+  static Error
+  makeIncompatibleDefsError(std::vector<std::string_view> IncompatibleDefs);
 
   SymbolTable Symbols;
 };
 
 } // namespace orc_rt
 
-#endif // ORC_RT_CONTROLLERINTERFACE_H
+#endif // ORC_RT_SIMPLESYMBOLTABLE_H
