@@ -604,6 +604,23 @@ def get_token_from_cli(runner: CommandRunner) -> str:
     return result.stdout.strip().decode("utf-8")
 
 
+def get_git_config_options() -> argparse.Namespace:
+    # We do not use a runner here as we need to run this before we know what
+    # flags we want to pass to the runner.
+    try:
+        process = subprocess.run(
+            ["git", "config", "--list"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        args = argparse.Namespace()
+        for line in process.stdout.decode("utf-8").split("\n"):
+            if line.startswith("git-llvm-push."):
+                line_parts = line.split("=")
+                setattr(args, line_parts[0][14:].replace("-", "_"), line_parts[1])
+        return args
+    except:
+        return argparse.Namespace()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create and land a stack of Pull Requests."
@@ -671,7 +688,8 @@ def main() -> None:
         help="Print only essential output and errors.",
     )
 
-    args = parser.parse_args()
+    git_config_args = get_git_config_options()
+    args = parser.parse_args(None, git_config_args)
 
     command_runner = CommandRunner(
         dry_run=args.dry_run, verbose=args.verbose, quiet=args.quiet
