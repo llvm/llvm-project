@@ -58,7 +58,9 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
@@ -1423,8 +1425,7 @@ bool Module::IsLoadedInTarget(Target *target) {
   return false;
 }
 
-bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
-                                           Stream &feedback_stream) {
+bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
   if (!target) {
     error = Status::FromErrorString("invalid destination Target");
     return false;
@@ -1441,6 +1442,12 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
   if (script_language == eScriptLanguageNone)
     return true;
 
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
+  if (!script_interpreter) {
+    error = Status::FromErrorString("invalid ScriptInterpreter");
+    return false;
+  }
+
   PlatformSP platform_sp(target->GetPlatform());
 
   if (!platform_sp) {
@@ -1448,18 +1455,16 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
     return false;
   }
 
+  StreamString feedback_stream;
   FileSpecList file_specs = platform_sp->LocateExecutableScriptingResources(
       target, *this, feedback_stream);
+
+  if (!feedback_stream.Empty())
+    debugger.ReportWarning(feedback_stream.GetString().str(), debugger.GetID());
 
   const uint32_t num_specs = file_specs.GetSize();
   if (num_specs == 0)
     return true;
-
-  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
-  if (!script_interpreter) {
-    error = Status::FromErrorString("invalid ScriptInterpreter");
-    return false;
-  }
 
   for (uint32_t i = 0; i < num_specs; ++i) {
     FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
@@ -1467,8 +1472,10 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
       continue;
 
     if (should_load == eLoadScriptFromSymFileWarn) {
-      feedback_stream.Format(R"(
-warning: '{0}' contains a debug script. To run this script in this debug session:
+      // clang-format off
+      debugger.ReportWarning(
+          llvm::formatv(
+R"('{0}' contains a debug script. To run this script in this debug session:
 
     command script import "{1}"
 
@@ -1476,8 +1483,10 @@ To run all discovered debug scripts in this session:
 
     settings set target.load-script-from-symbol-file true
 )",
-                             GetFileSpec().GetFileNameStrippingExtension(),
-                             scripting_fspec.GetPath());
+              GetFileSpec().GetFileNameStrippingExtension(),
+              scripting_fspec.GetPath()),
+          debugger.GetID());
+      // clang-format on
 
       return false;
     }
@@ -1546,9 +1555,9 @@ bool Module::MatchesModuleSpec(const ModuleSpec &module_ref) {
   return true;
 }
 
-bool Module::FindSourceFile(const FileSpec &orig_spec,
-                            FileSpec &new_spec) const {
+bool Module::FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  LoadPrefixMapsIfNeeded();
   if (auto remapped = m_source_mappings.FindFile(orig_spec)) {
     new_spec = *remapped;
     return true;
@@ -1556,8 +1565,68 @@ bool Module::FindSourceFile(const FileSpec &orig_spec,
   return false;
 }
 
-std::optional<std::string> Module::RemapSourceFile(llvm::StringRef path) const {
+void Module::AddPrefixMapSearchDir(FileSpec dir) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  m_prefix_map_search_dirs.insert(ConstString(dir.GetPath()));
+}
+
+void Module::LoadPrefixMapsIfNeeded() {
+  // Must be called with m_mutex held.
+  if (m_prefix_map_search_dirs.empty())
+    return;
+
+  Log *log = GetLog(LLDBLog::Object | LLDBLog::Modules);
+  llvm::vfs::FileSystem &vfs = *llvm::vfs::getRealFileSystem();
+  // Track visited directories so two starting paths that share ancestors
+  // don't redundantly walk the same directory.
+  llvm::DenseSet<ConstString> searched;
+  for (ConstString start_cs : m_prefix_map_search_dirs) {
+    for (FileSpec current(start_cs.GetStringRef());;) {
+      ConstString directory_cs(current.GetPath());
+      if (!searched.insert(directory_cs).second)
+        break;
+      FileSpec map_file(current);
+      map_file.AppendPathComponent("compilation-prefix-map.json");
+      llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> file =
+          vfs.openFileForRead(map_file.GetPath());
+      if (file && *file) {
+        LLDB_LOG(log, "found compilation-prefix-map.json at {0}",
+                 map_file.GetPath());
+        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buf =
+            (*file)->getBuffer(map_file.GetPath());
+        if (buf && *buf) {
+          llvm::Expected<llvm::json::Value> val =
+              llvm::json::parse((*buf)->getBuffer());
+          if (!val) {
+            LLDB_LOG_ERROR(log, val.takeError(), "failed to parse {1}: {0}",
+                           map_file.GetPath());
+            continue;
+          }
+          if (llvm::json::Object *obj = val->getAsObject()) {
+            for (const llvm::json::Object::value_type &kv : *obj)
+              if (std::optional<llvm::StringRef> to = kv.second.getAsString()) {
+                LLDB_LOG(log, "applying prefix map: '{0}' -> '{1}'", kv.first,
+                         *to);
+                m_source_mappings.AppendUnique(kv.first.str(), to->str(),
+                                               /*notify=*/false);
+              }
+          }
+        }
+        break;
+      }
+      FileSpec parent = current;
+      parent.RemoveLastPathComponent();
+      if (parent == current)
+        break;
+      current = parent;
+    }
+  }
+  m_prefix_map_search_dirs.clear();
+}
+
+std::optional<std::string> Module::RemapSourceFile(llvm::StringRef path) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  LoadPrefixMapsIfNeeded();
   if (auto remapped = m_source_mappings.RemapPath(path))
     return remapped->GetPath();
   return {};

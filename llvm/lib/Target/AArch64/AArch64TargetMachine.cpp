@@ -251,8 +251,8 @@ LLVMInitializeAArch64Target() {
   initializeAArch64CollectLOHLegacyPass(PR);
   initializeAArch64CompressJumpTablesLegacyPass(PR);
   initializeAArch64ConditionalComparesPass(PR);
-  initializeAArch64ConditionOptimizerPass(PR);
-  initializeAArch64DeadRegisterDefinitionsPass(PR);
+  initializeAArch64ConditionOptimizerLegacyPass(PR);
+  initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
   initializeAArch64ExpandPseudoPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptPass(PR);
@@ -817,7 +817,7 @@ void AArch64PassConfig::addMachineSSAOptimization() {
 
 bool AArch64PassConfig::addILPOpts() {
   if (EnableCondOpt)
-    addPass(createAArch64ConditionOptimizerPass());
+    addPass(createAArch64ConditionOptimizerLegacyPass());
   if (EnableCCMP)
     addPass(createAArch64ConditionalCompares());
   if (EnableMCR)
@@ -941,7 +941,7 @@ void AArch64PassConfig::addPostBBSections() {
 void AArch64PassConfig::addPreEmitPass2() {
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
-  addPass(createUnpackMachineBundles(nullptr));
+  addPass(createUnpackMachineBundlesLegacy(nullptr));
 }
 
 bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {

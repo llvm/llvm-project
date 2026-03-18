@@ -215,6 +215,9 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::AddressingModelOperand,
                                  MAI.Addr, *ST);
 
+  if (MAI.Mem == SPIRV::MemoryModel::VulkanKHR)
+    MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_vulkan_memory_model);
+
   if (!ST->isShader()) {
     // TODO: check if it's required by default.
     MAI.ExtInstSetMap[static_cast<unsigned>(
@@ -869,7 +872,8 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
                       Capability::GroupNonUniformBallot,
                       Capability::GroupNonUniformClustered,
                       Capability::GroupNonUniformShuffle,
-                      Capability::GroupNonUniformShuffleRelative});
+                      Capability::GroupNonUniformShuffleRelative,
+                      Capability::GroupNonUniformQuad});
 
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
     addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
@@ -940,7 +944,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl, Capability::MinLod,
-                    Capability::ImageGatherExtended});
+                    Capability::ImageGatherExtended, Capability::Addresses,
+                    Capability::VulkanMemoryModelKHR});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1673,6 +1678,9 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpGroupNonUniformQuadSwap:
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformQuad);
+    break;
   case SPIRV::OpImageQueryFormat: {
     Register ResultReg = MI.getOperand(0).getReg();
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
