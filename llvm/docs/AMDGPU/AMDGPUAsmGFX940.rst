@@ -571,8 +571,6 @@ MUBUF
     buffer_store_lds_dword                  :ref:`srsrc<amdgpu_synid_gfx940_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx940_soffset_d856a0>`            :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
     buffer_store_short             :ref:`vdata<amdgpu_synid_gfx940_vdata_fa7dbd>`,   :ref:`vaddr<amdgpu_synid_gfx940_vaddr_7a736f>`,   :ref:`srsrc<amdgpu_synid_gfx940_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx940_soffset_d856a0>`   :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
     buffer_store_short_d16_hi      :ref:`vdata<amdgpu_synid_gfx940_vdata_fa7dbd>`,   :ref:`vaddr<amdgpu_synid_gfx940_vaddr_7a736f>`,   :ref:`srsrc<amdgpu_synid_gfx940_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx940_soffset_d856a0>`   :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
-    buffer_wbinvl1                 :ref:`vdata<amdgpu_synid_gfx940_vdata_fa7dbd>`,   :ref:`vaddr<amdgpu_synid_gfx940_vaddr_7a736f>`,   :ref:`srsrc<amdgpu_synid_gfx940_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx940_soffset_d856a0>`   :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
-    buffer_wbinvl1_vol             :ref:`vdata<amdgpu_synid_gfx940_vdata_fa7dbd>`,   :ref:`vaddr<amdgpu_synid_gfx940_vaddr_7a736f>`,   :ref:`srsrc<amdgpu_synid_gfx940_srsrc_e73d16>`,   :ref:`soffset<amdgpu_synid_gfx940_soffset_d856a0>`   :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
     buffer_wbl2                                                         :ref:`offset12<amdgpu_synid_flat_offset12>` :ref:`offen<amdgpu_synid_offen>` :ref:`idxen<amdgpu_synid_idxen>` :ref:`lds<amdgpu_synid_lds>` :ref:`sc0<amdgpu_synid_sc0>` :ref:`sc1<amdgpu_synid_sc1>` :ref:`nt<amdgpu_synid_nt>`
 
 SMEM
@@ -889,17 +887,6 @@ SOPP
     s_ttracedata
     s_waitcnt                      :ref:`simm16<amdgpu_synid_gfx940_simm16_218bea>`
     s_wakeup
-
-VINTRP
-------
-
-.. parsed-literal::
-
-    **INSTRUCTION**                    **DST**       **SRC0**      **SRC1**
-    \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
-    v_interp_mov_f32               :ref:`vdst<amdgpu_synid_gfx940_vdst_89680f>`,     :ref:`vsrc<amdgpu_synid_gfx940_vsrc>`,     :ref:`attr<amdgpu_synid_gfx940_attr>`
-    v_interp_p1_f32                :ref:`vdst<amdgpu_synid_gfx940_vdst_89680f>`,     :ref:`vsrc<amdgpu_synid_gfx940_vsrc>`,     :ref:`attr<amdgpu_synid_gfx940_attr>`
-    v_interp_p2_f32                :ref:`vdst<amdgpu_synid_gfx940_vdst_89680f>`,     :ref:`vsrc<amdgpu_synid_gfx940_vsrc>`,     :ref:`attr<amdgpu_synid_gfx940_attr>`
 
 VOP1
 ----
