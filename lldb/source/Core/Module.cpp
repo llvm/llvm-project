@@ -1440,6 +1440,12 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
   if (script_language == eScriptLanguageNone)
     return true;
 
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
+  if (!script_interpreter) {
+    error = Status::FromErrorString("invalid ScriptInterpreter");
+    return false;
+  }
+
   PlatformSP platform_sp(target->GetPlatform());
 
   if (!platform_sp) {
@@ -1457,12 +1463,6 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error) {
   const uint32_t num_specs = file_specs.GetSize();
   if (num_specs == 0)
     return true;
-
-  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
-  if (!script_interpreter) {
-    error = Status::FromErrorString("invalid ScriptInterpreter");
-    return false;
-  }
 
   for (uint32_t i = 0; i < num_specs; ++i) {
     FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
