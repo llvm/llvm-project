@@ -733,7 +733,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         return_name = "(Return Value)"
         verify_locals = {
-            return_name: {"equals": {"type": "int", "value": "300"}},
+            return_name: {"equals": {"type": "int", "value": "300"}, "readOnly": True},
             "argc": {},
             "argv": {},
             "pt": {"readOnly": True},

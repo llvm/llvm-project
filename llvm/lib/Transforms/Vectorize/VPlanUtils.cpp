@@ -410,9 +410,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   }
 
   if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
-    auto *CanonicalIV = EnclosingRegion->getCanonicalIV();
-    // Canonical IV chain is uniform.
-    if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
+    // Canonical IV is uniform.
+    if (V == EnclosingRegion->getCanonicalIV())
       return true;
   }
 

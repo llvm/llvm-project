@@ -495,7 +495,7 @@ void t_new_var_size3(size_t n) {
 // CHECK:  cir.func {{.*}} @_Z15t_new_var_size3m
 // CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
 // CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.mul.overflow %[[N]], %[[ELEMENT_SIZE]] : !u64i -> !u64i
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
@@ -524,7 +524,7 @@ void t_new_var_size4(int n) {
 // CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
 // CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
 // CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.mul.overflow %[[N_SIZE_T]], %[[ELEMENT_SIZE]] : !u64i -> !u64i
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
@@ -551,19 +551,14 @@ void t_new_var_size5(int n) {
   auto p = new double[n][2][3];
 }
 
-// NUM_ELEMENTS isn't used in this case because there is no cookie. It isn't
-// used in the allocation size because the allocation size is calculated with
-// the element size and the fixed size dimensions already combined (6 * 8 = 48).
-// We don't DCE NUM_ELEMENTS because it's not a constant, but later
-// optimizations will eliminate it.
+// The allocation size is calculated with the element size and the fixed size
+// dimensions already combined (6 * 8 = 48).
 
 // CHECK:  cir.func {{.*}} @_Z15t_new_var_size5i
 // CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
 // CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s32i -> !u64i
 // CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<48> : !u64i
-// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
-// CHECK:    %[[NUM_ELEMENTS_MULTIPLIER:.*]] = cir.const #cir.int<6>
-// CHECK:    %[[NUM_ELEMENTS:.*]] = cir.mul %[[N_SIZE_T]], %[[NUM_ELEMENTS_MULTIPLIER]] : !u64i
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.mul.overflow %[[N_SIZE_T]], %[[ELEMENT_SIZE]] : !u64i -> !u64i
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
@@ -596,7 +591,7 @@ void t_new_var_size6(int n) {
 // CHECK:    %[[MIN_SIZE:.*]] = cir.const #cir.int<3> : !u64i
 // CHECK:    %[[LT_MIN_SIZE:.*]] = cir.cmp lt %[[N_SIZE_T]], %[[MIN_SIZE]] : !u64i
 // CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.mul.overflow %[[N_SIZE_T]], %[[ELEMENT_SIZE]] : !u64i -> !u64i
 // CHECK:    %[[ANY_OVERFLOW:.*]] = cir.or %[[LT_MIN_SIZE]], %[[OVERFLOW]] : !cir.bool
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[ANY_OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
@@ -666,7 +661,7 @@ void t_new_var_size7(__int128 n) {
 // CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
 // CHECK:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N]] : !s128i -> !u64i
 // CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N_SIZE_T]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[RESULT:.*]], %[[OVERFLOW:.*]] = cir.mul.overflow %[[N_SIZE_T]], %[[ELEMENT_SIZE]] : !u64i -> !u64i
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[OVERFLOW]] then %[[ALL_ONES]] else %[[RESULT]] : (!cir.bool, !u64i, !u64i)
 // CHECK:    %[[PTR:.*]] = cir.call @_Znam(%[[ALLOC_SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef})
@@ -696,9 +691,9 @@ void t_new_var_size_nontrivial(size_t n) {
 // CHECK:  cir.func {{.*}} @_Z25t_new_var_size_nontrivialm
 // CHECK:    %[[N:.*]] = cir.load{{.*}} %[[ARG_ALLOCA:.*]]
 // CHECK:    %[[ELEMENT_SIZE:.*]] = cir.const #cir.int<4> : !u64i
-// CHECK:    %[[SIZE_WITHOUT_COOKIE:.*]], %[[OVERFLOW:.*]] = cir.binop.overflow(mul, %[[N]], %[[ELEMENT_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[SIZE_WITHOUT_COOKIE:.*]], %[[OVERFLOW:.*]] = cir.mul.overflow %[[N]], %[[ELEMENT_SIZE]] : !u64i -> !u64i
 // CHECK:    %[[COOKIE_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CHECK:    %[[SIZE:.*]], %[[OVERFLOW2:.*]] = cir.binop.overflow(add, %[[SIZE_WITHOUT_COOKIE]], %[[COOKIE_SIZE]]) : !u64i, (!u64i, !cir.bool)
+// CHECK:    %[[SIZE:.*]], %[[OVERFLOW2:.*]] = cir.add.overflow %[[SIZE_WITHOUT_COOKIE]], %[[COOKIE_SIZE]] : !u64i -> !u64i
 // CHECK:    %[[ANY_OVERFLOW:.*]] = cir.or %[[OVERFLOW]], %[[OVERFLOW2]] : !cir.bool
 // CHECK:    %[[ALL_ONES:.*]] = cir.const #cir.int<18446744073709551615> : !u64i
 // CHECK:    %[[ALLOC_SIZE:.*]] = cir.select if %[[ANY_OVERFLOW]] then %[[ALL_ONES]] else %[[SIZE]] : (!cir.bool, !u64i, !u64i)

@@ -80,6 +80,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_erfc.cl
   math/clc_exp.cl
   math/clc_exp2.cl
+  math/clc_exp2_fast.cl
   math/clc_exp10.cl
   math/clc_exp_helper.cl
   math/clc_expm1.cl
@@ -114,6 +115,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_lgamma_r.cl
   math/clc_log.cl
   math/clc_log2.cl
+  math/clc_log2_fast.cl
   math/clc_log10.cl
   math/clc_log1p.cl
   math/clc_logb.cl
@@ -163,6 +165,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_tanpi.cl
   math/clc_tgamma.cl
   math/clc_trunc.cl
+  mem_fence/clc_mem_fence.cl
   misc/clc_shuffle.cl
   misc/clc_shuffle2.cl
   relational/clc_all.cl

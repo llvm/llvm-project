@@ -235,10 +235,8 @@ define <2 x i64> @mul_v2i64(<2 x i64> %a) {
 ;
 ; CHECK-SVE-LABEL: mul_v2i64:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    mov z1.d, #123 // =0x7b
-; CHECK-SVE-NEXT:    ptrue p0.d, vl2
 ; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-SVE-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; CHECK-SVE-NEXT:    mul z0.d, z0.d, #123
 ; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
