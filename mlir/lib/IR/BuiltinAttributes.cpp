@@ -362,6 +362,8 @@ StringAttr SymbolRefAttr::getLeafReference() const {
 // IntegerAttr
 //===----------------------------------------------------------------------===//
 
+const APInt &IntegerAttr::getValueRef() const { return getImpl()->value; }
+
 int64_t IntegerAttr::getInt() const {
   assert((getType().isIndex() || getType().isSignlessInteger()) &&
          "must be signless integer");
@@ -383,7 +385,7 @@ uint64_t IntegerAttr::getUInt() const {
 APSInt IntegerAttr::getAPSInt() const {
   assert(!getType().isSignlessInteger() &&
          "Signless integers don't carry a sign for APSInt");
-  return APSInt(getValue(), getType().isUnsignedInteger());
+  return APSInt(getValueRef(), getType().isUnsignedInteger());
 }
 
 LogicalResult IntegerAttr::verify(function_ref<InFlightDiagnostic()> emitError,

@@ -184,7 +184,7 @@ unsigned mlirIntegerAttrGetValueNumWords(MlirAttribute attr) {
 }
 
 void mlirIntegerAttrGetValueWords(MlirAttribute attr, uint64_t *words) {
-  const APInt &value = llvm::cast<IntegerAttr>(unwrap(attr)).getValue();
+  const APInt &value = llvm::cast<IntegerAttr>(unwrap(attr)).getValueRef();
   unsigned numWords = value.getNumWords();
   const uint64_t *rawData = value.getRawData();
   std::copy(rawData, rawData + numWords, words);
