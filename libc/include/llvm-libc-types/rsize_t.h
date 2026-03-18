@@ -13,7 +13,7 @@
 
 #ifdef LIBC_HAS_ANNEX_K
 
-#include "./size_t.h"
+#include "size_t.h"
 
 typedef size_t rsize_t;
 
