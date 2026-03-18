@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_RSIZE_T_H
 #define LLVM_LIBC_TYPES_RSIZE_T_H
 
+#include "../llvm-libc-macros/annex-k-macros.h"
+
 #ifdef LIBC_HAS_ANNEX_K
 
 #include "./size_t.h"
