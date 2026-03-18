@@ -11,6 +11,7 @@
 
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUPALMetadata.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCStreamer.h"
 
 namespace llvm {
@@ -104,6 +105,15 @@ public:
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) {}
 
+  /// Emit a per-function resource usage entry into the
+  /// .AMDGPU.resource_info section, along with callee relocations.
+  virtual void emitResourceUsageEntry(MCSymbol *FnSym, uint32_t NumVGPR,
+                                      uint32_t NumAGPR, uint32_t NumSGPR,
+                                      uint32_t NumNamedBarrier,
+                                      uint32_t PrivateSegmentSize,
+                                      uint32_t Flags,
+                                      ArrayRef<MCSymbol *> Callees = {}) {}
+
   static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
 
@@ -168,11 +178,20 @@ public:
                              const MCExpr *NextVGPR, const MCExpr *NextSGPR,
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) override;
+
+  void emitResourceUsageEntry(MCSymbol *FnSym, uint32_t NumVGPR,
+                              uint32_t NumAGPR, uint32_t NumSGPR,
+                              uint32_t NumNamedBarrier,
+                              uint32_t PrivateSegmentSize, uint32_t Flags,
+                              ArrayRef<MCSymbol *> Callees = {}) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
   const MCSubtargetInfo &STI;
   MCStreamer &Streamer;
+
+  // Counter for computing relocation offsets.
+  unsigned ResourceInfoEntryCount = 0;
 
   void EmitNote(StringRef Name, const MCExpr *DescSize, unsigned NoteType,
                 function_ref<void(MCELFStreamer &)> EmitDesc);
@@ -221,6 +240,12 @@ public:
                              const MCExpr *NextVGPR, const MCExpr *NextSGPR,
                              const MCExpr *ReserveVCC,
                              const MCExpr *ReserveFlatScr) override;
+
+  void emitResourceUsageEntry(MCSymbol *FnSym, uint32_t NumVGPR,
+                              uint32_t NumAGPR, uint32_t NumSGPR,
+                              uint32_t NumNamedBarrier,
+                              uint32_t PrivateSegmentSize, uint32_t Flags,
+                              ArrayRef<MCSymbol *> Callees = {}) override;
 };
 }
 #endif

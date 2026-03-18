@@ -31,6 +31,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "Utils/SIDefinesUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -756,6 +757,34 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                      IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasIndirectCall,
                      OutContext, IsLocal));
+  }
+
+  // Emit per-function local resource usage and callee info into
+  // .AMDGPU.resource_info section.
+  {
+    uint32_t Flags = 0;
+    Flags |= (ResourceUsage->UsesVCC ? 1u : 0u) << 0;
+    Flags |= (ResourceUsage->UsesFlatScratch ? 1u : 0u) << 1;
+    Flags |= (ResourceUsage->HasDynamicallySizedStack ? 1u : 0u) << 2;
+    Flags |= (ResourceUsage->HasRecursion ? 1u : 0u) << 3;
+    Flags |= (ResourceUsage->HasIndirectCall ? 1u : 0u) << 4;
+
+    // Collect unique callee symbols.
+    SmallVector<MCSymbol *, 8> CalleeSyms;
+    SmallPtrSet<const Function *, 8> SeenCallees;
+    for (const Function *Callee : ResourceUsage->Callees) {
+      if (SeenCallees.insert(Callee).second)
+        CalleeSyms.push_back(MF.getTarget().getSymbol(Callee));
+    }
+
+    // Emit function local resource usage info. Does not contain any callee
+    // propagated resource info, users of this section info should be able to
+    // gather all resource info and walk the callgraph to combine for any
+    // callee resource info.
+    getTargetStreamer()->emitResourceUsageEntry(
+        CurrentFnSym, ResourceUsage->NumVGPR, ResourceUsage->NumAGPR,
+        ResourceUsage->NumExplicitSGPR, ResourceUsage->NumNamedBarrier,
+        ResourceUsage->PrivateSegmentSize, Flags, CalleeSyms);
   }
 
   // Emit _dvgpr$ symbol when appropriate.

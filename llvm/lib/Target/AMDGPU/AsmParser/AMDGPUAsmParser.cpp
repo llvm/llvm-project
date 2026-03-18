@@ -1422,6 +1422,7 @@ private:
   bool ParseDirectivePALMetadataBegin();
   bool ParseDirectivePALMetadata();
   bool ParseDirectiveAMDGPULDS();
+  bool ParseDirectiveAMDGPUResourceUsage();
 
   /// Common code to parse out a block of text (typically YAML) between start and
   /// end directives.
@@ -6741,6 +6742,108 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
   return false;
 }
 
+/// ParseDirectiveAMDGPUResourceUsage
+///   ::= .amdgpu_resource_usage <symbol>
+///         .num_vgpr <int>
+///         .num_agpr <int>
+///         .num_sgpr <int>
+///         .named_barrier <int>
+///         .private_seg_size <int>
+///         .uses_vcc <int>
+///         .uses_flat_scratch <int>
+///         .has_dyn_sized_stack <int>
+///         .has_recursion <int>
+///         .has_indirect_call <int>
+///         .callee <symbol>  (zero or more)
+///       .end_amdgpu_resource_usage
+bool AMDGPUAsmParser::ParseDirectiveAMDGPUResourceUsage() {
+  StringRef SymName;
+  if (getParser().parseIdentifier(SymName))
+    return TokError("expected symbol name after .amdgpu_resource_usage");
+
+  StringSet<> Seen;
+  MCSymbol *FnSym = getContext().getOrCreateSymbol(SymName);
+
+  uint32_t NumVGPR = 0, NumAGPR = 0, NumSGPR = 0;
+  uint32_t NumNamedBarrier = 0, PrivateSegmentSize = 0;
+  uint32_t UsesVCC = 0, UsesFlatScratch = 0, HasDynSizedStack = 0;
+  uint32_t HasRecursion = 0, HasIndirectCall = 0;
+  SmallVector<MCSymbol *, 4> Callees;
+
+  while (true) {
+    while (trySkipToken(AsmToken::EndOfStatement))
+      ;
+
+    StringRef ID;
+    if (!parseId(ID, "expected field directive or .end_amdgpu_resource_usage"))
+      return true;
+
+    if (ID == ".end_amdgpu_resource_usage")
+      break;
+
+    if (ID == ".callee") {
+      StringRef CalleeName;
+      if (getParser().parseIdentifier(CalleeName))
+        return TokError("expected symbol name after .callee");
+      Callees.push_back(getContext().getOrCreateSymbol(CalleeName));
+      continue;
+    }
+
+    if (!Seen.insert(ID).second)
+      return TokError("resource usage directives already declared");
+
+    int64_t Val;
+    if (getParser().parseAbsoluteExpression(Val))
+      return true;
+    if (Val < 0)
+      return TokError("value must be non-negative");
+
+    if (ID == ".num_vgpr")
+      NumVGPR = Val;
+    else if (ID == ".num_agpr")
+      NumAGPR = Val;
+    else if (ID == ".num_sgpr")
+      NumSGPR = Val;
+    else if (ID == ".named_barrier")
+      NumNamedBarrier = Val;
+    else if (ID == ".private_seg_size")
+      PrivateSegmentSize = Val;
+    else if (ID == ".uses_vcc")
+      UsesVCC = Val;
+    else if (ID == ".uses_flat_scratch")
+      UsesFlatScratch = Val;
+    else if (ID == ".has_dyn_sized_stack")
+      HasDynSizedStack = Val;
+    else if (ID == ".has_recursion")
+      HasRecursion = Val;
+    else if (ID == ".has_indirect_call")
+      HasIndirectCall = Val;
+    else
+      return TokError("unknown field '" + ID + "' in .amdgpu_resource_usage");
+  }
+
+  for (StringRef StrRef :
+       {".num_vgpr", ".num_agpr", ".num_sgpr", ".named_barrier",
+        ".private_seg_size", ".uses_vcc", ".uses_flat_scratch",
+        ".has_dyn_sized_stack", ".has_recursion", ".has_indirect_call"}) {
+    if (!Seen.contains(StrRef))
+      return TokError("requires " + StrRef +
+                      " directive in .amdgpu_resource_usage");
+  }
+
+  uint32_t Flags = 0;
+  Flags |= (UsesVCC ? 1u : 0u) << 0;
+  Flags |= (UsesFlatScratch ? 1u : 0u) << 1;
+  Flags |= (HasDynSizedStack ? 1u : 0u) << 2;
+  Flags |= (HasRecursion ? 1u : 0u) << 3;
+  Flags |= (HasIndirectCall ? 1u : 0u) << 4;
+
+  getTargetStreamer().emitResourceUsageEntry(
+      FnSym, NumVGPR, NumAGPR, NumSGPR, NumNamedBarrier, PrivateSegmentSize,
+      Flags, Callees);
+  return false;
+}
+
 bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
 
@@ -6783,6 +6886,9 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == PALMD::AssemblerDirective)
     return ParseDirectivePALMetadata();
+
+  if (IDVal == ".amdgpu_resource_usage")
+    return ParseDirectiveAMDGPUResourceUsage();
 
   return true;
 }

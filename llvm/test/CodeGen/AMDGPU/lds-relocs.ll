@@ -9,6 +9,9 @@
 ; ELF-NEXT:     0x{{[0-9A-F]*}} R_AMDGPU_ABS32_LO lds.external
 ; ELF-NEXT:     0x{{[0-9A-F]*}} R_AMDGPU_ABS32_LO lds.defined
 ; ELF-NEXT:   }
+; ELF-NEXT:   Section (6) .rel.AMDGPU.resource_info {
+; ELF-NEXT:     0x0 R_AMDGPU_NONE test_basic
+; ELF-NEXT:   }
 ; ELF-NEXT: ]
 
 ; ELF:      Symbol {

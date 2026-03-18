@@ -10,6 +10,19 @@
 ; RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=OBJ %s
 
 ; OBJ:       Relocations [
+; OBJ-NEXT:   Section (5) .rel.AMDGPU.resource_info {
+; OBJ-NEXT:     0x0 R_AMDGPU_NONE uniform_conditional_max_short_forward_branch
+; OBJ-NEXT:     0x18 R_AMDGPU_NONE uniform_conditional_min_long_forward_branch
+; OBJ-NEXT:     0x30 R_AMDGPU_NONE uniform_conditional_min_long_forward_vcnd_branch
+; OBJ-NEXT:     0x48 R_AMDGPU_NONE min_long_forward_vbranch
+; OBJ-NEXT:     0x60 R_AMDGPU_NONE long_backward_sbranch
+; OBJ-NEXT:     0x78 R_AMDGPU_NONE uniform_unconditional_min_long_forward_branch
+; OBJ-NEXT:     0x90 R_AMDGPU_NONE uniform_unconditional_min_long_backward_branch
+; OBJ-NEXT:     0xA8 R_AMDGPU_NONE expand_requires_expand
+; OBJ-NEXT:     0xC0 R_AMDGPU_NONE uniform_inside_divergent
+; OBJ-NEXT:     0xD8 R_AMDGPU_NONE analyze_mask_branch
+; OBJ-NEXT:     0xF0 R_AMDGPU_NONE long_branch_hang
+; OBJ-NEXT:   }
 ; OBJ-NEXT: ]
 
 ; Restrict maximum branch to between +7 and -8 dwords
