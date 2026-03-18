@@ -5175,7 +5175,9 @@ Action *Driver::ConstructPhaseAction(
   case phases::IfsMerge:
     llvm_unreachable("ifsmerge action invalid here.");
   case phases::Depscan:
-    return C.MakeAction<DepscanJobAction>(Input, types::TY_ResponseFile);
+    return (Args.getLastArgValue(options::OPT_fdepscan_EQ, "off") == "off")
+        ? Input
+        : C.MakeAction<DepscanJobAction>(Input, types::TY_ResponseFile);
   case phases::Preprocess: {
     types::ID OutputTy;
     // -M and -MM specify the dependency file name by altering the output type,

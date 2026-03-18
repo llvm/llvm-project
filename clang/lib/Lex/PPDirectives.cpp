@@ -1104,8 +1104,8 @@ OptionalFileEntryRef Preprocessor::LookupFile(
         BuildSystemModule = getCurrentModule()->IsSystem;
       } else if ((FileEnt = SourceMgr.getFileEntryRefForID(
                       SourceMgr.getMainFileID()))) {
-        auto CWD = FileMgr.getOptionalDirectoryRef(".");
-        Includers.push_back(std::make_pair(*FileEnt, *CWD));
+        if (auto CWD = FileMgr.getOptionalDirectoryRef("."))
+          Includers.push_back(std::make_pair(*FileEnt, *CWD));
       }
     } else {
       Includers.push_back(std::make_pair(*FileEnt, FileEnt->getDir()));
