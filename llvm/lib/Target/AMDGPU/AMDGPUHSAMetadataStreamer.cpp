@@ -735,7 +735,7 @@ void MetadataStreamerMsgPackV5::emitKernelAttrs(const AMDGPUTargetMachine &TM,
     Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (ST.hasGFX1250Insts())
+  if (ST.hasGFX1250A0() || ST.hasGFX1250B0())
     Kern[".gfx1250_revision"] = ST.hasGFX1250A0() ? "A0" : "B0";
 }
 
