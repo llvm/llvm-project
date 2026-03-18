@@ -359,16 +359,36 @@ try {
                     }
                     currentBuild.result = successResultStr
                 } finally {
-                    def compilerZips = findFiles( // groovylint-disable-line NoDef,VariableTypeRequired
-                        glob: "*-${env.BUILD_NUMBER}*.tar.xz"
-                    )
+                    String cmakeBuildDir = findBuildDir()
+                    def compilerZips // groovylint-disable-line NoDef,VariableTypeRequired
+                    if (cmakeBuildDir) {
+                        compilerZips = findFiles(
+                            glob: "${cmakeBuildDir}/*-${env.BUILD_NUMBER}*.tar.xz"
+                        )
+                        archiveArtifacts(
+                            allowEmptyArchive: true,
+                            artifacts: (
+                                "${cmakeBuildDir}/*_logs/**," +
+                                    "${cmakeBuildDir}/*.tar.xz," +
+                                    "${cmakeBuildDir}/*.txt," +
+                                    '*.txt'
+                            )
+                        )
+                    } else {
+                        compilerZips = findFiles(
+                            glob: "*-${env.BUILD_NUMBER}*.tar.xz"
+                        )
+                        archiveArtifacts(
+                            allowEmptyArchive: true,
+                            artifacts: '*_logs/**,*.tar.xz,*.txt'
+                        )
+                    }
                     if (compilerZips) {
                         compilerTar = compilerZips[zero].path
+                        echo('Found built compiler ' + compilerTar)
+                    } else {
+                        echo('No built compiler tar was found.')
                     }
-                    archiveArtifacts(
-                        allowEmptyArchive: true,
-                        artifacts: '*_logs/**,*.tar.xz,*.txt'
-                    )
                     cleanWs(
                         deleteDirs: true,
                         patterns: cleanExcludes
@@ -524,4 +544,19 @@ void handleBuildResult(Object result, Boolean blocking) {
         default:
             throw new RuntimeException('Unexpected downstream result: ' + resultStr)  // groovylint-disable-line LineLength,ThrowRuntimeException
     }
+}
+
+/*
+ * Code smell: this method is also in the main AOCC Build class.
+ */
+String findBuildDir() {
+    Integer zero = 0 // groovylint-disable DuplicateNumberLiteral
+    List<String> buildDirs = findFiles()
+        .findAll { f -> f.directory && f.name ==~ /.*_build$/ }*.name.sort()
+    echo("Found out-of-tree build dirs: ${buildDirs}")
+    if (buildDirs) {
+        assert buildDirs.size() == 1
+        return buildDirs[zero]
+    }
+    return null
 }
