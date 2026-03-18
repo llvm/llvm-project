@@ -75,6 +75,9 @@ void ignoreStdMaxMin() {
 struct Foo
 {
   bool x;
+  struct Y {
+    bool z;
+  } y;
   void foo()
   {
    if ((x)) {
@@ -86,6 +89,14 @@ struct Foo
      // CHECK-FIXES:    if(this->x) {
    }
   }
+  bool bar() {
+    return true;
+  }
+
+  Y fooBar() {
+    Y y{};
+    return y;
+  }
 };
 
 void memberExpr() {
@@ -93,5 +104,20 @@ void memberExpr() {
   if ((foo.x)) {
    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
    // CHECK-FIXES:    if (foo.x) {
+  }
+
+  if ((foo.y.z)) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.y.z) {
+  }
+
+  if ((foo.bar())) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.bar()) {
+  }
+
+  if((foo.fooBar().z)) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if(foo.fooBar().z) {
   }
 }
