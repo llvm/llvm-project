@@ -58,7 +58,8 @@ protected:
   void initCandidate(SchedCandidate &Cand, SUnit *SU, bool AtTop,
                      const RegPressureTracker &RPTracker,
                      const SIRegisterInfo *SRI, unsigned SGPRPressure,
-                     unsigned VGPRPressure, bool IsBottomUp);
+                     unsigned VGPRPressure, unsigned AGPRPressure,
+                     bool IsBottomUp);
 
   /// Evaluates instructions in the pending queue using a subset of scheduling
   /// heuristics.
@@ -81,6 +82,8 @@ protected:
   unsigned SGPRExcessLimit;
 
   unsigned VGPRExcessLimit;
+
+  unsigned AGPRExcessLimit;
 
   unsigned TargetOccupancy;
 
@@ -121,6 +124,8 @@ public:
   unsigned SGPRCriticalLimit;
 
   unsigned VGPRCriticalLimit;
+
+  unsigned AGPRCriticalLimit;
 
   unsigned SGPRLimitBias = 0;
 
