@@ -796,16 +796,7 @@ m_SpecificCmp(CmpPredicate MatchPred, const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-using GEPLikeRecipe_match = match_combine_or<
-    Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
-                 /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe>,
-    match_combine_or<
-        VPInstruction_match<VPInstruction::PtrAdd, Op0_t, Op1_t>,
-        VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>>>;
-
-template <typename Op0_t, typename Op1_t>
-inline GEPLikeRecipe_match<Op0_t, Op1_t> m_GetElementPtr(const Op0_t &Op0,
-                                                         const Op1_t &Op1) {
+inline auto m_GetElementPtr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_CombineOr(
       Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
                    /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe>(
@@ -823,11 +814,7 @@ m_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
       {Op0, Op1, Op2});
 }
 
-template <typename Op0_t>
-inline match_combine_or<VPInstruction_match<VPInstruction::Not, Op0_t>,
-                        AllRecipe_commutative_match<
-                            Instruction::Xor, int_pred_ty<is_all_ones>, Op0_t>>
-m_Not(const Op0_t &Op0) {
+template <typename Op0_t> inline auto m_Not(const Op0_t &Op0) {
   return m_CombineOr(m_VPInstruction<VPInstruction::Not>(Op0),
                      m_c_Binary<Instruction::Xor>(m_AllOnes(), Op0));
 }
@@ -838,10 +825,7 @@ inline auto m_c_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline match_combine_or<
-    VPInstruction_match<VPInstruction::LogicalAnd, Op0_t, Op1_t>,
-    AllRecipe_match<Instruction::Select, Op0_t, Op1_t, specific_intval<1>>>
-m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
+inline auto m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_CombineOr(
       m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1),
       m_Select(Op0, Op1, m_False()));
