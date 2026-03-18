@@ -4391,16 +4391,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     // Use ByRefElementType for by-ref reductions so that MaxDataSize matches
     // the actual data size stored in the global reduction buffer, consistent
     // with the ReductionsBufferTy struct used for GEP offsets below.
-    Type *SizeType =
-        (!IsByRef.empty() && IsByRef[En.index()] && En.value().ByRefElementType)
-            ? En.value().ByRefElementType
-            : En.value().ElementType;
-    auto Size = M.getDataLayout().getTypeStoreSize(SizeType);
-    if (Size > MaxDataSize)
-      MaxDataSize = Size;
     Type *RedTypeArg = (!IsByRef.empty() && IsByRef[En.index()])
                            ? En.value().ByRefElementType
                            : En.value().ElementType;
+    auto Size = M.getDataLayout().getTypeStoreSize(RedTypeArg);
+    if (Size > MaxDataSize)
+      MaxDataSize = Size;
     ReductionTypeArgs.emplace_back(RedTypeArg);
   }
   Value *ReductionDataSize =
