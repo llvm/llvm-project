@@ -1284,6 +1284,156 @@ entry:
 }
 
 ;###############################################################
+;#                 minimumnum                                  #
+;###############################################################
+declare float @llvm.minimumnum.f32(float, float) readnone
+declare double @llvm.minimumnum.f64(double, double) readnone
+declare x86_fp80 @llvm.minimumnum.f80(x86_fp80, x86_fp80) readnone
+
+define float @call_minimumnum_f32() sanitize_numerical_stability {
+; CHECK-LABEL: @call_minimumnum_f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.minimumnum.f32(float 1.000000e+00, float 2.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.minimumnum.f64(double 1.000000e+00, double 2.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_float_d(float [[TMP0]], double [[TMP1]], i32 1, i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext float [[TMP0]] to double
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], double [[TMP4]], double [[TMP1]]
+; CHECK-NEXT:    store i64 ptrtoint (ptr @call_minimumnum_f32 to i64), ptr @__nsan_shadow_ret_tag, align 8
+; CHECK-NEXT:    store double [[TMP5]], ptr @__nsan_shadow_ret_ptr, align 8
+; CHECK-NEXT:    ret float [[TMP0]]
+;
+entry:
+  %r = call float @llvm.minimumnum.f32(float 1.0, float 2.0)
+  ret float %r
+}
+
+define double @call_minimumnum_f64() sanitize_numerical_stability {
+; DQQ-LABEL: @call_minimumnum_f64(
+; DQQ-NEXT:  entry:
+; DQQ-NEXT:    [[TMP0:%.*]] = call double @llvm.minimumnum.f64(double 1.000000e+00, double 2.000000e+00)
+; DQQ-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP6]] to fp128
+; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[TMP0]], fp128 [[TMP1]], i32 1, i64 0)
+; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
+; DQQ-NEXT:    [[TMP4:%.*]] = fpext double [[TMP0]] to fp128
+; DQQ-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], fp128 [[TMP4]], fp128 [[TMP1]]
+; DQQ-NEXT:    store i64 ptrtoint (ptr @call_minimumnum_f64 to i64), ptr @__nsan_shadow_ret_tag, align 8
+; DQQ-NEXT:    store fp128 [[TMP5]], ptr @__nsan_shadow_ret_ptr, align 16
+; DQQ-NEXT:    ret double [[TMP0]]
+;
+; DLQ-LABEL: @call_minimumnum_f64(
+; DLQ-NEXT:  entry:
+; DLQ-NEXT:    [[TMP0:%.*]] = call double @llvm.minimumnum.f64(double 1.000000e+00, double 2.000000e+00)
+; DLQ-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DLQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_l(double [[TMP0]], x86_fp80 [[TMP1]], i32 1, i64 0)
+; DLQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
+; DLQ-NEXT:    [[TMP4:%.*]] = fpext double [[TMP0]] to x86_fp80
+; DLQ-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], x86_fp80 [[TMP4]], x86_fp80 [[TMP1]]
+; DLQ-NEXT:    store i64 ptrtoint (ptr @call_minimumnum_f64 to i64), ptr @__nsan_shadow_ret_tag, align 8
+; DLQ-NEXT:    store x86_fp80 [[TMP5]], ptr @__nsan_shadow_ret_ptr, align 16
+; DLQ-NEXT:    ret double [[TMP0]]
+;
+entry:
+  %r = call double @llvm.minimumnum.f64(double 1.0, double 2.0)
+  ret double %r
+}
+
+define x86_fp80 @call_minimumnum_f80() sanitize_numerical_stability {
+; CHECK-LABEL: @call_minimumnum_f80(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext x86_fp80 [[R]] to fp128
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], fp128 [[TMP4]], fp128 [[TMP1]]
+; CHECK-NEXT:    store i64 ptrtoint (ptr @call_minimumnum_f80 to i64), ptr @__nsan_shadow_ret_tag, align 8
+; CHECK-NEXT:    store fp128 [[TMP5]], ptr @__nsan_shadow_ret_ptr, align 16
+; CHECK-NEXT:    ret x86_fp80 [[R]]
+;
+entry:
+  %r = call x86_fp80 @llvm.minimumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+  ret x86_fp80 %r
+}
+
+;###############################################################
+;#                 maximumnum                                  #
+;###############################################################
+declare float @llvm.maximumnum.f32(float, float) readnone
+declare double @llvm.maximumnum.f64(double, double) readnone
+declare x86_fp80 @llvm.maximumnum.f80(x86_fp80, x86_fp80) readnone
+
+define float @call_maximumnum_f32() sanitize_numerical_stability {
+; CHECK-LABEL: @call_maximumnum_f32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.maximumnum.f32(float 1.000000e+00, float 2.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.maximumnum.f64(double 1.000000e+00, double 2.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_float_d(float [[TMP0]], double [[TMP1]], i32 1, i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext float [[TMP0]] to double
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], double [[TMP4]], double [[TMP1]]
+; CHECK-NEXT:    store i64 ptrtoint (ptr @call_maximumnum_f32 to i64), ptr @__nsan_shadow_ret_tag, align 8
+; CHECK-NEXT:    store double [[TMP5]], ptr @__nsan_shadow_ret_ptr, align 8
+; CHECK-NEXT:    ret float [[TMP0]]
+;
+entry:
+  %r = call float @llvm.maximumnum.f32(float 1.0, float 2.0)
+  ret float %r
+}
+
+define double @call_maximumnum_f64() sanitize_numerical_stability {
+; DQQ-LABEL: @call_maximumnum_f64(
+; DQQ-NEXT:  entry:
+; DQQ-NEXT:    [[TMP0:%.*]] = call double @llvm.maximumnum.f64(double 1.000000e+00, double 2.000000e+00)
+; DQQ-NEXT:    [[TMP6:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP6]] to fp128
+; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[TMP0]], fp128 [[TMP1]], i32 1, i64 0)
+; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
+; DQQ-NEXT:    [[TMP4:%.*]] = fpext double [[TMP0]] to fp128
+; DQQ-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], fp128 [[TMP4]], fp128 [[TMP1]]
+; DQQ-NEXT:    store i64 ptrtoint (ptr @call_maximumnum_f64 to i64), ptr @__nsan_shadow_ret_tag, align 8
+; DQQ-NEXT:    store fp128 [[TMP5]], ptr @__nsan_shadow_ret_ptr, align 16
+; DQQ-NEXT:    ret double [[TMP0]]
+;
+; DLQ-LABEL: @call_maximumnum_f64(
+; DLQ-NEXT:  entry:
+; DLQ-NEXT:    [[TMP0:%.*]] = call double @llvm.maximumnum.f64(double 1.000000e+00, double 2.000000e+00)
+; DLQ-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; DLQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_l(double [[TMP0]], x86_fp80 [[TMP1]], i32 1, i64 0)
+; DLQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
+; DLQ-NEXT:    [[TMP4:%.*]] = fpext double [[TMP0]] to x86_fp80
+; DLQ-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], x86_fp80 [[TMP4]], x86_fp80 [[TMP1]]
+; DLQ-NEXT:    store i64 ptrtoint (ptr @call_maximumnum_f64 to i64), ptr @__nsan_shadow_ret_tag, align 8
+; DLQ-NEXT:    store x86_fp80 [[TMP5]], ptr @__nsan_shadow_ret_ptr, align 16
+; DLQ-NEXT:    ret double [[TMP0]]
+;
+entry:
+  %r = call double @llvm.maximumnum.f64(double 1.0, double 2.0)
+  ret double %r
+}
+
+define x86_fp80 @call_maximumnum_f80() sanitize_numerical_stability {
+; CHECK-LABEL: @call_maximumnum_f80(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_longdouble_q(x86_fp80 [[R]], fp128 [[TMP1]], i32 1, i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext x86_fp80 [[R]] to fp128
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], fp128 [[TMP4]], fp128 [[TMP1]]
+; CHECK-NEXT:    store i64 ptrtoint (ptr @call_maximumnum_f80 to i64), ptr @__nsan_shadow_ret_tag, align 8
+; CHECK-NEXT:    store fp128 [[TMP5]], ptr @__nsan_shadow_ret_ptr, align 16
+; CHECK-NEXT:    ret x86_fp80 [[R]]
+;
+entry:
+  %r = call x86_fp80 @llvm.maximumnum.f80(x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK40008000000000000000)
+  ret x86_fp80 %r
+}
+
+;###############################################################
 ;#                  copysign                                   #
 ;###############################################################
 declare float @llvm.copysign.f32(float, float) readnone

@@ -332,7 +332,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # Set a variable value whose name is a real child value, like "pt.x"
         # and verify the value by reading it
         varRef = varref_dict["pt"]
-        self.set_variable(varRef, "x", 111)
+        self.set_variable(varRef, "x", "g_global - 12")
         response = self.dap_server.request_variables(varRef, start=0, count=1)
         value = response["body"]["variables"][0]["value"]
         self.assertEqual(
