@@ -419,6 +419,10 @@ StorageLocation &locForValue(const RecordStorageLocation &OptionalLoc) {
   return OptionalLoc.getSyntheticField("value");
 }
 
+StorageLocation &locForAssertResultSuccess(const RecordStorageLocation &AssertResultLoc) {
+  return AssertResultLoc.getSyntheticField("success");
+}
+
 /// Sets `HasValueVal` as the symbolic value that represents the "has_value"
 /// property of the optional at `OptionalLoc`.
 void setHasValue(RecordStorageLocation &OptionalLoc, BoolValue &HasValueVal,
@@ -919,15 +923,15 @@ void transferOptionalAndNulloptCmp(const clang::CXXOperatorCallExpr *CmpExpr,
 void transferAssertionResultOperatorBoolCall(const CXXMemberCallExpr *Expr,
                                              const MatchFinder::MatchResult &,
                                              LatticeTransferState &State) {
-  auto *RecordLoc = getImplicitObjectLocation(*Expr, State.Env);
-  if (RecordLoc == nullptr)
+  auto *AssertResultLoc = getImplicitObjectLocation(*Expr, State.Env);
+  if (AssertResultLoc == nullptr)
     return;
 
-  BoolValue *HasVal = getHasValue(State.Env, RecordLoc);
-  if (HasVal == nullptr)
+  BoolValue *SuccessVal = State.Env.get<BoolValue>(locForAssertResultSuccess(*AssertResultLoc));
+  if (SuccessVal == nullptr)
     return;
 
-  State.Env.setValue(*Expr, *HasVal);
+  State.Env.setValue(*Expr, *SuccessVal);
 }
 
 void transferAssertionResultConstructFromBoolCall(
@@ -936,12 +940,12 @@ void transferAssertionResultConstructFromBoolCall(
   assert(ConstructExpr->getNumArgs() > 0);
   const Expr *Arg = ConstructExpr->getArg(0)->IgnoreImplicit();
 
-  BoolValue *HasVal = State.Env.get<BoolValue>(*Arg);
-  if (HasVal == nullptr)
+  BoolValue *SuccessVal = State.Env.get<BoolValue>(*Arg);
+  if (SuccessVal == nullptr)
     return;
 
   auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
-  State.Env.setValue(locForHasValue(ResultLoc), *HasVal);
+  State.Env.setValue(locForAssertResultSuccess(ResultLoc), *SuccessVal);
 }
 
 void transferAssertionResultConstructFromOptionalCall(
@@ -960,7 +964,7 @@ void transferAssertionResultConstructFromOptionalCall(
     return;
 
   auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
-  State.Env.setValue(locForHasValue(ResultLoc), *HasVal);
+  State.Env.setValue(locForAssertResultSuccess(ResultLoc), *HasVal);
 }
 
 std::optional<StatementMatcher>
@@ -1290,7 +1294,7 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
   Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
       [&Ctx](QualType Ty) -> llvm::StringMap<QualType> {
         if (isAssertionResultType(Ty))
-          return {{"has_value", Ctx.BoolTy}};
+          return {{"success", Ctx.BoolTy}};
 
         const CXXRecordDecl *Optional =
             getOptionalBaseClass(Ty->getAsCXXRecordDecl());
