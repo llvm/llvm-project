@@ -7942,7 +7942,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
     if (CurContext->isRecord()) {
       if (SC == SC_Static) {
-        if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
+        if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
           // Walk up the enclosing DeclContexts to check for any that are
           // incompatible with static data members.
           const DeclContext *FunctionOrMethod = nullptr;
@@ -7964,6 +7964,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             Diag(D.getIdentifierLoc(),
                  diag::err_static_data_member_not_allowed_in_local_class)
                 << Name << RD->getDeclName() << RD->getTagKind();
+            Invalid = true;
+            RD->setInvalidDecl();
           } else if (AnonStruct) {
             // C++ [class.static.data]p4: Unnamed classes and classes contained
             // directly or indirectly within unnamed classes shall not contain
@@ -21214,9 +21216,14 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
 bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
                                     bool &Visible) {
   Visible = hasVisibleDefinition(D, Suggested);
+  // Accoding to [basic.def.odr]p16, it is not allowed to have duplicated definition
+  // for declaratins which is attached to named modules.
+  // We only did this if the current module is named module as we have better
+  // diagnostics for declarations in global module and named modules.
+  if (getCurrentModule() && getCurrentModule()->isNamedModule() &&
+      D->isInNamedModule())
+    return false;
   // The redefinition of D in the **current** TU is allowed if D is invisible or
-  // D is defined in the global module of other module units. We didn't check if
-  // it is in global module as, we'll check the redefinition in named module
-  // later with better diagnostic message.
+  // D is defined in the global module of other module units.
   return D->isInAnotherModuleUnit() || !Visible;
 }

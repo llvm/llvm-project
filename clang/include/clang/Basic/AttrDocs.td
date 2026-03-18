@@ -6013,6 +6013,25 @@ TUs where it is used.
 This attribute can be used on static and non-static member functions of class
 templates, static data members of class templates and member classes of class
 templates.
+
+**Interaction with __declspec(dllexport/dllimport)**
+
+For a DLL platform (i.e., Windows), this attribute also means "this member will
+never be exported or imported". Despite its name, this semantics applies to
+implicit instantiations and non-template entities as well.
+
+  .. code-block:: c++
+
+    // in <exception>
+    class __declspec(dllimport) nested_exception {
+      ...
+    public:
+      __attribute__((exclude_from_explicit_instantiation))
+      exception_ptr nested_ptr() const noexcept { ... }
+    };
+
+In this case, ``nested_exception::nested_ptr`` will never be attempted to be
+imported.
   }];
 }
 
