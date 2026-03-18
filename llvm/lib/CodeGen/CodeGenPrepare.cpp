@@ -1460,9 +1460,7 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
   if (!SrcInst)
     return false;
 
-  // 1. Identify the target scenario:
-  // We only handle cross-block, movable, scalar-to-vector casts with matching
-  // sizes.
+  // Identify the target scenario:
   bool IsCrossBlock = (SrcInst->getParent() != BCI->getParent());
   bool IsMovable = !SrcInst->isTerminator();
 
@@ -1474,7 +1472,7 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
   if (!IsCrossBlock || !IsMovable || !IsScalarToVector || !IsSameSize)
     return false;
 
-  // 2. Evaluate the benefit:
+  // Evaluate the benefit:
   EVT SrcVT = TLI.getValueType(DL, SrcInst->getType());
   EVT DestVT = TLI.getValueType(DL, BCI->getType());
 
@@ -1488,8 +1486,7 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
   if (!IsDestLegal || !ReducesPressure)
     return false;
 
-  // 3. Safely perform the hoisting:
-  // PHI nodes must remain at the top of the block, so we insert after them.
+  // Safely perform the hoisting:
   BasicBlock *SrcBB = SrcInst->getParent();
   auto InsertPt = isa<PHINode>(SrcInst) ? SrcBB->getFirstInsertionPt()
                                         : std::next(SrcInst->getIterator());
