@@ -10,5 +10,5 @@
 #include "clc/math/clc_nextup.h"
 #include "clc/relational/clc_isnan.h"
 
-#define __CLC_BODY <clc_nextup.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_nextup.inc"
+#include "clc/math/gentype.inc"
