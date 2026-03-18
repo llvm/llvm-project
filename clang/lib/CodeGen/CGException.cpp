@@ -161,6 +161,8 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
   case ObjCRuntime::GNUstep:
     if (T.isOSCygMing())
       return EHPersonality::GNU_CPlusPlus_SEH;
+    else if (T.isWasm())
+      return EHPersonality::GNU_Wasm_CPlusPlus;
     else if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
       return EHPersonality::GNUstep_ObjC;
     [[fallthrough]];
@@ -200,7 +202,8 @@ static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
 static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
                                                  const CodeGenOptions &CGOpts,
                                                  const LangOptions &L) {
-  if (Target.getTriple().isWindowsMSVCEnvironment())
+  auto Triple = Target.getTriple();
+  if (Triple.isWindowsMSVCEnvironment())
     return EHPersonality::MSVC_CxxFrameHandler3;
 
   switch (L.ObjCRuntime.getKind()) {
@@ -218,8 +221,12 @@ static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
     return getObjCPersonality(Target, CGOpts, L);
 
   case ObjCRuntime::GNUstep:
-    return Target.getTriple().isOSCygMing() ? EHPersonality::GNU_CPlusPlus_SEH
-                                            : EHPersonality::GNU_ObjCXX;
+    if (Triple.isWasm())
+      return EHPersonality::GNU_Wasm_CPlusPlus;
+    else if (Triple.isOSCygMing())
+      return EHPersonality::GNU_CPlusPlus_SEH;
+    else
+      return EHPersonality::GNU_ObjCXX;
 
   // The GCC runtime's personality function inherently doesn't support
   // mixed EH.  Use the ObjC personality just to avoid returning null.
@@ -1201,11 +1208,33 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
   }
 }
 
-void CodeGenFunction::popCatchScope() {
+llvm::BasicBlock *CodeGenFunction::popCatchScope() {
   EHCatchScope &catchScope = cast<EHCatchScope>(*EHStack.begin());
+  llvm::BasicBlock *dispatchBlock = catchScope.getCachedEHDispatchBlock();
   if (catchScope.hasEHBranches())
     emitCatchDispatchBlock(*this, catchScope);
   EHStack.popCatch();
+  return dispatchBlock;
+}
+
+void CodeGenFunction::WasmEmitFallthroughRethrow(
+    llvm::BasicBlock *WasmCatchStartBlock) {
+  assert(WasmCatchStartBlock);
+  // Navigate for the "rethrow" block. For CXX exceptions this was created in
+  // emitWasmCatchPadBlock(). Wasm uses landingpad-style conditional branches
+  // to compare selectors, so we follow the false destination for each of the
+  // cond branches to reach the rethrow block.
+  llvm::BasicBlock *RethrowBlock = WasmCatchStartBlock;
+  while (llvm::Instruction *TI = RethrowBlock->getTerminator()) {
+    auto *BI = cast<llvm::BranchInst>(TI);
+    assert(BI->isConditional());
+    RethrowBlock = BI->getSuccessor(1);
+  }
+  assert(RethrowBlock != WasmCatchStartBlock && RethrowBlock->empty());
+  Builder.SetInsertPoint(RethrowBlock);
+  llvm::Function *RethrowInCatchFn =
+      CGM.getIntrinsic(llvm::Intrinsic::wasm_rethrow);
+  EmitNoreturnRuntimeCallOrInvoke(RethrowInCatchFn, {});
 }
 
 void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
@@ -1314,27 +1343,8 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
       Builder.CreateBr(ContBB);
   }
 
-  // Because in wasm we merge all catch clauses into one big catchpad, in case
-  // none of the types in catch handlers matches after we test against each of
-  // them, we should unwind to the next EH enclosing scope. We generate a call
-  // to rethrow function here to do that.
   if (EHPersonality::get(*this).isWasmPersonality() && !HasCatchAll) {
-    assert(WasmCatchStartBlock);
-    // Navigate for the "rethrow" block we created in emitWasmCatchPadBlock().
-    // Wasm uses landingpad-style conditional branches to compare selectors, so
-    // we follow the false destination for each of the cond branches to reach
-    // the rethrow block.
-    llvm::BasicBlock *RethrowBlock = WasmCatchStartBlock;
-    while (llvm::Instruction *TI = RethrowBlock->getTerminator()) {
-      auto *BI = cast<llvm::BranchInst>(TI);
-      assert(BI->isConditional());
-      RethrowBlock = BI->getSuccessor(1);
-    }
-    assert(RethrowBlock != WasmCatchStartBlock && RethrowBlock->empty());
-    Builder.SetInsertPoint(RethrowBlock);
-    llvm::Function *RethrowInCatchFn =
-        CGM.getIntrinsic(llvm::Intrinsic::wasm_rethrow);
-    EmitNoreturnRuntimeCallOrInvoke(RethrowInCatchFn, {});
+    WasmEmitFallthroughRethrow(WasmCatchStartBlock);
   }
 
   EmitBlock(ContBB);
