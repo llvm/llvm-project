@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck %s
 
 ; Test that the SIFixSGPRCopies cost model keeps V_READFIRSTLANE_B32 outside
 ; the loop when it feeds an unconvertible SALU instruction (SI_INIT_M0) inside

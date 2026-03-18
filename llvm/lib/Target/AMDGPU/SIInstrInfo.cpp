@@ -7461,23 +7461,11 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize SI_INIT_M0
-  if (MI.getOpcode() == AMDGPU::SI_INIT_M0) {
-    MachineOperand &Src = MI.getOperand(0);
-    if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
-      Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
-    return CreatedBB;
-  }
-
-  // Legalize S_BITREPLICATE, S_QUADMASK and S_WQM
-  if (MI.getOpcode() == AMDGPU::S_BITREPLICATE_B64_B32 ||
-      MI.getOpcode() == AMDGPU::S_QUADMASK_B32 ||
-      MI.getOpcode() == AMDGPU::S_QUADMASK_B64 ||
-      MI.getOpcode() == AMDGPU::S_WQM_B32 ||
-      MI.getOpcode() == AMDGPU::S_WQM_B64 ||
-      MI.getOpcode() == AMDGPU::S_INVERSE_BALLOT_U32 ||
-      MI.getOpcode() == AMDGPU::S_INVERSE_BALLOT_U64) {
-    MachineOperand &Src = MI.getOperand(1);
+  // Legalize instructions with no VALU equivalent — insert readlane for
+  // any VGPR source operand.
+  if (needsReadlaneOnVALUConversion(MI)) {
+    unsigned SrcIdx = MI.getOpcode() == AMDGPU::SI_INIT_M0 ? 0 : 1;
+    MachineOperand &Src = MI.getOperand(SrcIdx);
     if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
       Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
     return CreatedBB;
