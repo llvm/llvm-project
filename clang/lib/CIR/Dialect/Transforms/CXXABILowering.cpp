@@ -73,60 +73,58 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
   return llvm::TypeSwitch<mlir::Attribute, bool>(attr)
       // These attributes just have a type, so they are legal if their type is.
       .Case<cir::ZeroAttr>(
-          [tc](cir::ZeroAttr za) { return tc.isLegal(za.getType()); })
+          [&tc](cir::ZeroAttr za) { return tc.isLegal(za.getType()); })
       .Case<cir::PoisonAttr>(
-          [tc](cir::PoisonAttr pa) { return tc.isLegal(pa.getType()); })
+          [&tc](cir::PoisonAttr pa) { return tc.isLegal(pa.getType()); })
       .Case<cir::UndefAttr>(
-          [tc](cir::UndefAttr uda) { return tc.isLegal(uda.getType()); })
+          [&tc](cir::UndefAttr uda) { return tc.isLegal(uda.getType()); })
       .Case<mlir::TypeAttr>(
-          [tc](mlir::TypeAttr ta) { return tc.isLegal(ta.getValue()); })
+          [&tc](mlir::TypeAttr ta) { return tc.isLegal(ta.getValue()); })
       .Case<cir::ConstPtrAttr>(
-          [tc](cir::ConstPtrAttr cpa) { return tc.isLegal(cpa.getType()); })
+          [&tc](cir::ConstPtrAttr cpa) { return tc.isLegal(cpa.getType()); })
       .Case<cir::CXXCtorAttr>(
-          [tc](cir::CXXCtorAttr ca) { return tc.isLegal(ca.getType()); })
+          [&tc](cir::CXXCtorAttr ca) { return tc.isLegal(ca.getType()); })
       .Case<cir::CXXDtorAttr>(
-          [tc](cir::CXXDtorAttr da) { return tc.isLegal(da.getType()); })
+          [&tc](cir::CXXDtorAttr da) { return tc.isLegal(da.getType()); })
       .Case<cir::CXXAssignAttr>(
-          [tc](cir::CXXAssignAttr aa) { return tc.isLegal(aa.getType()); })
+          [&tc](cir::CXXAssignAttr aa) { return tc.isLegal(aa.getType()); })
 
       // Collection attributes are legal if ALL of the attributes in them are
       // also legal.
-      .Case<mlir::ArrayAttr>([tc](mlir::ArrayAttr array) {
-        return std::all_of(array.getValue().begin(), array.getValue().end(),
-                           [tc](mlir::Attribute attr) {
-                             return isCXXABIAttributeLegal(tc, attr);
-                           });
+      .Case<mlir::ArrayAttr>([&tc](mlir::ArrayAttr array) {
+        return llvm::all_of(array.getValue(), [&tc](mlir::Attribute attr) {
+          return isCXXABIAttributeLegal(tc, attr);
+        });
       })
-      .Case<mlir::DictionaryAttr>([tc](mlir::DictionaryAttr dict) {
-        return std::all_of(dict.getValue().begin(), dict.getValue().end(),
-                           [tc](mlir::NamedAttribute na) {
-                             return isCXXABIAttributeLegal(tc, na.getValue());
-                           });
+      .Case<mlir::DictionaryAttr>([&tc](mlir::DictionaryAttr dict) {
+        return llvm::all_of(dict.getValue(), [&tc](mlir::NamedAttribute na) {
+          return isCXXABIAttributeLegal(tc, na.getValue());
+        });
       })
       // These attributes have sub-attributes that we should check for legality.
-      .Case<cir::ConstArrayAttr>([tc](cir::ConstArrayAttr array) {
+      .Case<cir::ConstArrayAttr>([&tc](cir::ConstArrayAttr array) {
         return tc.isLegal(array.getType()) &&
                isCXXABIAttributeLegal(tc, array.getElts());
       })
-      .Case<cir::GlobalViewAttr>([tc](cir::GlobalViewAttr gva) {
+      .Case<cir::GlobalViewAttr>([&tc](cir::GlobalViewAttr gva) {
         return tc.isLegal(gva.getType()) &&
                isCXXABIAttributeLegal(tc, gva.getIndices());
       })
-      .Case<cir::VTableAttr>([tc](cir::VTableAttr vta) {
+      .Case<cir::VTableAttr>([&tc](cir::VTableAttr vta) {
         return tc.isLegal(vta.getType()) &&
                isCXXABIAttributeLegal(tc, vta.getData());
       })
-      .Case<cir::TypeInfoAttr>([tc](cir::TypeInfoAttr tia) {
+      .Case<cir::TypeInfoAttr>([&tc](cir::TypeInfoAttr tia) {
         return tc.isLegal(tia.getType()) &&
                isCXXABIAttributeLegal(tc, tia.getData());
       })
-      .Case<cir::DynamicCastInfoAttr>([tc](cir::DynamicCastInfoAttr dcia) {
+      .Case<cir::DynamicCastInfoAttr>([&tc](cir::DynamicCastInfoAttr dcia) {
         return isCXXABIAttributeLegal(tc, dcia.getSrcRtti()) &&
                isCXXABIAttributeLegal(tc, dcia.getDestRtti()) &&
                isCXXABIAttributeLegal(tc, dcia.getRuntimeFunc()) &&
                isCXXABIAttributeLegal(tc, dcia.getBadCastFunc());
       })
-      .Case<cir::ConstRecordAttr>([tc](cir::ConstRecordAttr cra) {
+      .Case<cir::ConstRecordAttr>([&tc](cir::ConstRecordAttr cra) {
         return tc.isLegal(cra.getType()) &&
                isCXXABIAttributeLegal(tc, cra.getMembers());
       })
@@ -153,43 +151,43 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
 
   return llvm::TypeSwitch<mlir::Attribute, mlir::Attribute>(attr)
       // These attributes just have a type, so convert just the type.
-      .Case<cir::ZeroAttr>([tc](cir::ZeroAttr za) {
+      .Case<cir::ZeroAttr>([&tc](cir::ZeroAttr za) {
         return cir::ZeroAttr::get(tc.convertType(za.getType()));
       })
-      .Case<cir::PoisonAttr>([tc](cir::PoisonAttr pa) {
+      .Case<cir::PoisonAttr>([&tc](cir::PoisonAttr pa) {
         return cir::PoisonAttr::get(tc.convertType(pa.getType()));
       })
-      .Case<cir::UndefAttr>([tc](cir::UndefAttr uda) {
+      .Case<cir::UndefAttr>([&tc](cir::UndefAttr uda) {
         return cir::UndefAttr::get(tc.convertType(uda.getType()));
       })
-      .Case<mlir::TypeAttr>([tc](mlir::TypeAttr ta) {
+      .Case<mlir::TypeAttr>([&tc](mlir::TypeAttr ta) {
         return mlir::TypeAttr::get(tc.convertType(ta.getValue()));
       })
-      .Case<cir::ConstPtrAttr>([tc](cir::ConstPtrAttr cpa) {
+      .Case<cir::ConstPtrAttr>([&tc](cir::ConstPtrAttr cpa) {
         return cir::ConstPtrAttr::get(tc.convertType(cpa.getType()),
                                       cpa.getValue());
       })
-      .Case<cir::CXXCtorAttr>([tc](cir::CXXCtorAttr ca) {
+      .Case<cir::CXXCtorAttr>([&tc](cir::CXXCtorAttr ca) {
         return cir::CXXCtorAttr::get(tc.convertType(ca.getType()),
                                      ca.getCtorKind(), ca.getIsTrivial());
       })
-      .Case<cir::CXXDtorAttr>([tc](cir::CXXDtorAttr da) {
+      .Case<cir::CXXDtorAttr>([&tc](cir::CXXDtorAttr da) {
         return cir::CXXDtorAttr::get(tc.convertType(da.getType()),
                                      da.getIsTrivial());
       })
-      .Case<cir::CXXAssignAttr>([tc](cir::CXXAssignAttr aa) {
+      .Case<cir::CXXAssignAttr>([&tc](cir::CXXAssignAttr aa) {
         return cir::CXXAssignAttr::get(tc.convertType(aa.getType()),
                                        aa.getAssignKind(), aa.getIsTrivial());
       })
       // Collection attributes need to transform all of the attributes inside of
       // them.
-      .Case<mlir::ArrayAttr>([tc, ctx](mlir::ArrayAttr array) {
+      .Case<mlir::ArrayAttr>([&tc, ctx](mlir::ArrayAttr array) {
         llvm::SmallVector<mlir::Attribute> elts;
         for (mlir::Attribute a : array.getValue())
           elts.push_back(rewriteAttribute(tc, ctx, a));
         return mlir::ArrayAttr::get(ctx, elts);
       })
-      .Case<mlir::DictionaryAttr>([tc, ctx](mlir::DictionaryAttr dict) {
+      .Case<mlir::DictionaryAttr>([&tc, ctx](mlir::DictionaryAttr dict) {
         llvm::SmallVector<mlir::NamedAttribute> elts;
         for (mlir::NamedAttribute na : dict.getValue())
           elts.emplace_back(na.getName(),
@@ -198,31 +196,32 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
         return mlir::DictionaryAttr::get(ctx, elts);
       })
       // These attributes have sub-attributes that need converting too.
-      .Case<cir::ConstArrayAttr>([tc, ctx](cir::ConstArrayAttr array) {
+      .Case<cir::ConstArrayAttr>([&tc, ctx](cir::ConstArrayAttr array) {
         return cir::ConstArrayAttr::get(
             ctx, tc.convertType(array.getType()),
             rewriteAttribute(tc, ctx, array.getElts()),
             array.getTrailingZerosNum());
       })
-      .Case<cir::GlobalViewAttr>([tc, ctx](cir::GlobalViewAttr gva) {
+      .Case<cir::GlobalViewAttr>([&tc, ctx](cir::GlobalViewAttr gva) {
         return cir::GlobalViewAttr::get(
             tc.convertType(gva.getType()), gva.getSymbol(),
             mlir::cast<mlir::ArrayAttr>(
                 rewriteAttribute(tc, ctx, gva.getIndices())));
       })
-      .Case<cir::VTableAttr>([tc, ctx](cir::VTableAttr vta) {
+      .Case<cir::VTableAttr>([&tc, ctx](cir::VTableAttr vta) {
         return cir::VTableAttr::get(
             tc.convertType(vta.getType()),
             mlir::cast<mlir::ArrayAttr>(
                 rewriteAttribute(tc, ctx, vta.getData())));
       })
-      .Case<cir::TypeInfoAttr>([tc, ctx](cir::TypeInfoAttr tia) {
+      .Case<cir::TypeInfoAttr>([&tc, ctx](cir::TypeInfoAttr tia) {
         return cir::TypeInfoAttr::get(
             tc.convertType(tia.getType()),
             mlir::cast<mlir::ArrayAttr>(
                 rewriteAttribute(tc, ctx, tia.getData())));
       })
-      .Case<cir::DynamicCastInfoAttr>([tc, ctx](cir::DynamicCastInfoAttr dcia) {
+      .Case<cir::DynamicCastInfoAttr>([&tc,
+                                       ctx](cir::DynamicCastInfoAttr dcia) {
         return cir::DynamicCastInfoAttr::get(
             mlir::cast<cir::GlobalViewAttr>(
                 rewriteAttribute(tc, ctx, dcia.getSrcRtti())),
@@ -230,7 +229,7 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
                 rewriteAttribute(tc, ctx, dcia.getDestRtti())),
             dcia.getRuntimeFunc(), dcia.getBadCastFunc(), dcia.getOffsetHint());
       })
-      .Case<cir::ConstRecordAttr>([tc, ctx](cir::ConstRecordAttr cra) {
+      .Case<cir::ConstRecordAttr>([&tc, ctx](cir::ConstRecordAttr cra) {
         return cir::ConstRecordAttr::get(
             ctx, tc.convertType(cra.getType()),
             mlir::cast<mlir::ArrayAttr>(
@@ -356,7 +355,7 @@ mlir::LogicalResult CIRCastOpABILowering::matchAndRewrite(
       if (mlir::isa<cir::DataMemberType>(srcTy))
         loweredResult = lowerModule->getCXXABI().lowerDataMemberBitcast(
             op, destTy, adaptor.getSrc(), rewriter);
-      else if (mlir::isa<cir::MethodType>(srcTy))
+      else
         loweredResult = lowerModule->getCXXABI().lowerMethodBitcast(
             op, destTy, adaptor.getSrc(), rewriter);
       rewriter.replaceOp(op, loweredResult);
@@ -367,7 +366,7 @@ mlir::LogicalResult CIRCastOpABILowering::matchAndRewrite(
       if (mlir::isa<cir::DataMemberType>(srcTy))
         loweredResult = lowerModule->getCXXABI().lowerDataMemberToBoolCast(
             op, adaptor.getSrc(), rewriter);
-      else if (mlir::isa<cir::MethodType>(srcTy))
+      else
         loweredResult = lowerModule->getCXXABI().lowerMethodToBoolCast(
             op, adaptor.getSrc(), rewriter);
       rewriter.replaceOp(op, loweredResult);
@@ -793,9 +792,11 @@ class CIRABITypeConverter : public mlir::TypeConverter {
           type.getContext(), convertRecordMemberTypes(type), type.getPacked(),
           type.getPadded(), type.getKind());
 
+    assert(!type.isIncomplete() || type.getMembers().empty());
+
     // If the type has already been converted, we can just return, since there
-    // is nothing to do. Also, if is incomplete, it can't have invalid members!
-    // So we can skip transforming it.
+    // is nothing to do. Also, if it is incomplete, it can't have invalid
+    // members! So we can skip transforming it.
     if (type.isIncomplete() || type.isABIConvertedRecord())
       return type;
 
@@ -901,9 +902,8 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
         if (!typeConverter.isLegal(op))
           return false;
 
-        bool attrs = std::all_of(
-            op->getAttrs().begin(), op->getAttrs().end(),
-            [&typeConverter](const mlir::NamedAttribute &a) {
+        bool attrs = llvm::all_of(
+            op->getAttrs(), [&typeConverter](const mlir::NamedAttribute &a) {
               return isCXXABIAttributeLegal(typeConverter, a.getValue());
             });
 
@@ -919,9 +919,8 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
         if (!typeConverter.isLegal(op))
           return false;
 
-        bool attrs = std::all_of(
-            op->getAttrs().begin(), op->getAttrs().end(),
-            [&typeConverter](const mlir::NamedAttribute &a) {
+        bool attrs = llvm::all_of(
+            op->getAttrs(), [&typeConverter](const mlir::NamedAttribute &a) {
               return isCXXABIAttributeLegal(typeConverter, a.getValue());
             });
 
@@ -934,11 +933,10 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 
   // Some CIR ops needs special checking for legality
   target.addDynamicallyLegalOp<cir::FuncOp>([&typeConverter](cir::FuncOp op) {
-    bool attrs = std::all_of(op->getAttrs().begin(), op->getAttrs().end(),
-                             [&typeConverter](const mlir::NamedAttribute &a) {
-                               return isCXXABIAttributeLegal(typeConverter,
-                                                             a.getValue());
-                             });
+    bool attrs = llvm::all_of(
+        op->getAttrs(), [&typeConverter](const mlir::NamedAttribute &a) {
+          return isCXXABIAttributeLegal(typeConverter, a.getValue());
+        });
 
     return attrs && typeConverter.isLegal(op.getFunctionType());
   });

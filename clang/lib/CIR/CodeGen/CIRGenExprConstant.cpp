@@ -1637,10 +1637,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
     if (ty->isRecordType()) {
       if (const auto *e = dyn_cast_or_null<CXXConstructExpr>(d.getInit())) {
         const CXXConstructorDecl *cd = e->getConstructor();
-        // FIXME: we should probably model this more closely to C++ than
-        // just emitting a global with zero init (mimic what we do for trivial
-        // assignments and whatnots). Since this is for globals shouldn't
-        // be a problem for the near future.
         if (cd->isTrivial() && cd->isDefaultConstructor())
           return cgm.emitNullConstantAttr(d.getType());
       }
