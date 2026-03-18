@@ -6406,8 +6406,9 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
 /// with the multiplicative inverse of the constant.
 /// Ref: "Hacker's Delight" by Henry Warren, 2nd Edition, p. 242
 static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
-                              const SDLoc &dl, SelectionDAG &DAG,
+                              SelectionDAG &DAG,
                               SmallVectorImpl<SDNode *> &Created) {
+  SDLoc dl(N);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
@@ -6468,8 +6469,9 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
 /// with the multiplicative inverse of the constant.
 /// Ref: "Hacker's Delight" by Henry Warren, 2nd Edition, p. 242
 static SDValue BuildExactUDIV(const TargetLowering &TLI, SDNode *N,
-                              const SDLoc &dl, SelectionDAG &DAG,
+                              SelectionDAG &DAG,
                               SmallVectorImpl<SDNode *> &Created) {
+  SDLoc dl(N);
   EVT VT = N->getValueType(0);
   EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
   EVT ShSVT = ShVT.getScalarType();
@@ -6597,6 +6599,10 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalization,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
+  // If the sdiv has an 'exact' bit we can use a simpler lowering.
+  if (N->getFlags().hasExact())
+    return BuildExactSDIV(*this, N, DAG, Created);
+
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
@@ -6622,10 +6628,6 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
         !isOperationLegal(ISD::MUL, MulVT))
       return SDValue();
   }
-
-  // If the sdiv has an 'exact' bit we can use a simpler lowering.
-  if (N->getFlags().hasExact())
-    return BuildExactSDIV(*this, N, dl, DAG, Created);
 
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
 
@@ -6765,6 +6767,10 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalization,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
+  // If the udiv has an 'exact' bit we can use a simpler lowering.
+  if (N->getFlags().hasExact())
+    return BuildExactUDIV(*this, N, DAG, Created);
+
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
@@ -6790,10 +6796,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
         !isOperationLegal(ISD::MUL, MulVT))
       return SDValue();
   }
-
-  // If the udiv has an 'exact' bit we can use a simpler lowering.
-  if (N->getFlags().hasExact())
-    return BuildExactUDIV(*this, N, dl, DAG, Created);
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
