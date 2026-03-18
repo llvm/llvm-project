@@ -25,7 +25,7 @@ using namespace VPlanPatternMatch;
 #define DEBUG_TYPE "vplan"
 
 VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
-    : Ctx(Plan.getContext()), DataLayout(Plan.getDataLayout()) {
+    : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {
   if (auto LoopRegion = Plan.getVectorLoopRegion()) {
     if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
             &LoopRegion->getEntryBasicBlock()->front())) {
@@ -125,7 +125,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::LastActiveLane:
     // Assume that the maximum possible number of elements in a vector fits
     // within the index type for the default address space.
-    return DataLayout.getIndexType(Ctx, 0);
+    return DL.getIndexType(Ctx, 0);
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
