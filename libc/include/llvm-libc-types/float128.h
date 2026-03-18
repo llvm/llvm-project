@@ -31,6 +31,10 @@ typedef __float128 float128;
 #elif (LDBL_MANT_DIG == 113)
 #define LIBC_TYPES_HAS_FLOAT128
 typedef long double float128;
+#else
+#define LIBC_TYPES_HAS_FLOAT128
+#include "src/__support/FPUtil/float128.h"
+typedef LIBC_NAMESPACE::fputil::Float128 float128;
 #endif
 
 #endif // LLVM_LIBC_TYPES_FLOAT128_H
