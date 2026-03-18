@@ -7357,11 +7357,12 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
           E->getStorageDuration() == SD_Thread) && "not a global temporary");
   const auto *VD = cast<VarDecl>(E->getExtendingDecl());
 
-  // If we're not materializing a subobject of the temporary, keep the
-  // cv-qualifiers from the type of the MaterializeTemporaryExpr.
-  QualType MaterializedType = Init->getType();
-  if (Init == E->getSubExpr())
-    MaterializedType = E->getType();
+  // Keep cv-qualifiers from the MaterializeTemporaryExpr on the storage type.
+  // The initializer expression may have had rvalue subobject adjustments
+  // stripped, which can drop top-level qualifiers that are still part of the
+  // materialized temporary's type.
+  QualType MaterializedType = getContext().getQualifiedType(
+      Init->getType(), E->getType().getQualifiers());
 
   CharUnits Align = getContext().getTypeAlignInChars(MaterializedType);
 

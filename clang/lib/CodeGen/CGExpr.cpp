@@ -1935,30 +1935,13 @@ CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
   const ValueDecl *Value = RefExpr->getDecl();
 
   // The value needs to be an enum constant or a constant variable.
-  // For BindingDecls backed by a holding variable, UnderlyingVar points to
-  // that holding variable and is used below for debug-value emission.
   ConstantEmissionKind CEK;
-  const VarDecl *UnderlyingVar = nullptr;
   if (isa<ParmVarDecl>(Value)) {
     CEK = CEK_None;
   } else if (const auto *var = dyn_cast<VarDecl>(Value)) {
     CEK = checkVarTypeForConstantEmission(var->getType());
-    UnderlyingVar = var;
   } else if (isa<EnumConstantDecl>(Value)) {
     CEK = CEK_AsValueOnly;
-  } else if (const auto *BD = dyn_cast<BindingDecl>(Value)) {
-    // For structured binding elements from tuple-like decompositions, the
-    // binding is backed by a hidden holding variable (the "reference
-    // temporary"). Use the holding variable's type to decide whether we
-    // can constant-emit. Without this, static constexpr pack bindings used
-    // as array indices always materialise as loads from their reference-
-    // temporary globals, blocking constant folding and vectorisation.
-    if (VarDecl *HV = BD->getHoldingVar()) {
-      CEK = checkVarTypeForConstantEmission(HV->getType());
-      UnderlyingVar = HV;
-    } else {
-      CEK = CEK_None;
-    }
   } else {
     CEK = CEK_None;
   }
@@ -2017,8 +2000,8 @@ CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
 
   // Make sure we emit a debug reference to the global variable.
   // This should probably fire even for
-  if (UnderlyingVar) {
-    if (!getContext().DeclMustBeEmitted(UnderlyingVar))
+  if (isa<VarDecl>(Value)) {
+    if (!getContext().DeclMustBeEmitted(cast<VarDecl>(Value)))
       EmitDeclRefExprDbgValue(RefExpr, result.Val);
   } else {
     assert(isa<EnumConstantDecl>(Value));
