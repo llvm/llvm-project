@@ -1,4 +1,4 @@
-//===- ControllerInterface.cpp --------------------------------------------===//
+//===- SimpleSymbolTable.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/ControllerInterface.h
+// Contains the implementation of APIs in the orc-rt/SimpleSymbolTable.h
 // header.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/ControllerInterface.h"
+#include "orc-rt/SimpleSymbolTable.h"
 #include "orc-rt/iterator_range.h"
 
 #include <algorithm>
 
 namespace orc_rt {
 
-Error ControllerInterface::makeDuplicatesError(
+Error SimpleSymbolTable::makeDuplicatesError(
     std::vector<std::string_view> Dups) {
   std::sort(Dups.begin(), Dups.end());
   std::string ErrMsg = "Could not add duplicate symbols: [ ";
