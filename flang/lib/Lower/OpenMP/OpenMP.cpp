@@ -3802,8 +3802,8 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
   // Extract the typed assignment from the parser-level instance, if
   // the combiner is an assignment statement (as opposed to a call).
   const evaluate::Assignment *assign = nullptr;
-  const auto &instance = std::get<parser::OmpStylizedInstance::Instance>(
-      parserInst.t);
+  const auto &instance =
+      std::get<parser::OmpStylizedInstance::Instance>(parserInst.t);
   if (const auto *assignStmt =
           std::get_if<parser::AssignmentStmt>(&instance.u)) {
     if (auto *wrapper = assignStmt->typedAssignment.get())
@@ -3814,9 +3814,10 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
   const StylizedInstance &inst = combiner.v.front();
   semantics::SomeExpr evalExpr = std::get<StylizedInstance::Instance>(inst.t);
 
-  genCombinerCB = [&, evalExpr, assign](fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Type type, mlir::Value lhs,
-                                mlir::Value rhs, bool isByRef) {
+  genCombinerCB = [&, evalExpr, assign](fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Type type,
+                                        mlir::Value lhs, mlir::Value rhs,
+                                        bool isByRef) {
     lower::SymMapScope scope(symTable);
     mlir::Value ompOutVar;
     for (const Object &object : std::get<StylizedInstance::Variables>(inst.t)) {
@@ -3860,7 +3861,8 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
     // When the combiner assigns to a component (e.g. omp_out%x = ...),
     // the RHS is a scalar intrinsic type and the existing convertExprToValue
     // path handles it correctly.
-    bool rhsIsDerived = assign && assign->rhs.GetType() &&
+    bool rhsIsDerived =
+        assign && assign->rhs.GetType() &&
         assign->rhs.GetType()->category() == common::TypeCategory::Derived;
     if (rhsIsDerived && isByRef &&
         mlir::isa<fir::RecordType>(fir::unwrapRefType(lhs.getType()))) {
@@ -3916,8 +3918,8 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
               // The result type won't match the reduction variable type,
               // so store to omp_out via hlfir.assign and skip the
               // whole-variable fir.store below.
-              if (isByRef && exprResult.getType() !=
-                                 fir::unwrapRefType(lhs.getType())) {
+              if (isByRef &&
+                  exprResult.getType() != fir::unwrapRefType(lhs.getType())) {
                 hlfir::Entity lhsEntity{ompOutVar};
                 hlfir::AssignOp::create(builder, loc, exprResult, lhsEntity);
                 return mlir::Value{};
@@ -4071,7 +4073,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         redOp.u);
 
     ReductionProcessor::GenCombinerCBTy genCombinerCB =
-        processReductionCombiner(converter, symTable, semaCtx, combiner, parserInst);
+        processReductionCombiner(converter, symTable, semaCtx, combiner,
+                                 parserInst);
     ReductionProcessor::GenInitValueCBTy genInitValueCB;
     ClauseProcessor cp(converter, semaCtx, clauses);
     cp.processInitializer(symTable, genInitValueCB);
