@@ -213,6 +213,7 @@ define i64 @lzcnt128(ptr %p) nounwind {
 ; X64-NOT:     testq
 ; X64-NEXT:    cmovbq %rcx, %rax
 ; X64-NEXT:    retq
+;
   %a = load i128, ptr %p, align 8
   %cnt = tail call i128 @llvm.ctlz.i128(i128 %a, i1 true)
   %res = trunc i128 %cnt to i64
@@ -251,4 +252,231 @@ define i64 @lzcnt128_no_lzcnt(ptr %p) nounwind {
   %cnt = tail call i128 @llvm.ctlz.i128(i128 %a, i1 true)
   %res = trunc i128 %cnt to i64
   ret i64 %res
+}
+
+define i32 @clz_i128_issue32709_swap(i64 %x_lo, i64 %x_hi) {
+; X32-LABEL: clz_i128_issue32709_swap:
+; X32:       # %bb.0:
+; X32-NEXT:    lzcntq %rsi, %rcx
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    lzcntq %rdi, %rax
+; X32-NOT:     testq
+; X32-NEXT:    cmovael %edx, %ecx
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    # kill: def $eax killed $eax killed $rax
+; X32-NEXT:    retq
+;
+; X64-LABEL: clz_i128_issue32709_swap:
+; X64:       # %bb.0:
+; X64-NEXT:    lzcntq %rsi, %rcx
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    lzcntq %rdi, %rax
+; X64-NOT:     testq
+; X64-NEXT:    cmovael %edx, %ecx
+; X64-NEXT:    addl %ecx, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+  %a = tail call i64 @llvm.ctlz.i64(i64 %x_lo, i1 false)
+  %b = tail call i64 @llvm.ctlz.i64(i64 %x_hi, i1 false)
+  %is_nonzero = icmp ne i64 %x_lo, 0
+  %sel = select i1 %is_nonzero, i64 0, i64 %b
+  %sum = add nuw nsw i64 %sel, %a
+  %res = trunc i64 %sum to i32
+  ret i32 %res
+}
+
+; Same fold via COND_E: CMOV(0, CTLZ(x), E, CMP(x,0)) -> CMOV(CTLZ(x), 0, AE, LZCNT(x).flags)
+; The inverted condition (icmp eq instead of ne) produces COND_E; the fold handles both.
+define i32 @clz_i128_issue32709_swap_cond_e(i64 %x_lo, i64 %x_hi) {
+; X32-LABEL: clz_i128_issue32709_swap_cond_e:
+; X32:       # %bb.0:
+; X32-NEXT:    lzcntq %rsi, %rcx
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    lzcntq %rdi, %rax
+; X32-NOT:     testq
+; X32-NEXT:    cmovael %edx, %ecx
+; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    # kill: def $eax killed $eax killed $rax
+; X32-NEXT:    retq
+;
+; X64-LABEL: clz_i128_issue32709_swap_cond_e:
+; X64:       # %bb.0:
+; X64-NEXT:    lzcntq %rsi, %rcx
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    lzcntq %rdi, %rax
+; X64-NOT:     testq
+; X64-NEXT:    cmovael %edx, %ecx
+; X64-NEXT:    addl %ecx, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+  %a = tail call i64 @llvm.ctlz.i64(i64 %x_lo, i1 false)
+  %b = tail call i64 @llvm.ctlz.i64(i64 %x_hi, i1 false)
+  %is_zero = icmp eq i64 %x_lo, 0
+  %sel = select i1 %is_zero, i64 %b, i64 0
+  %sum = add nuw nsw i64 %sel, %a
+  %res = trunc i64 %sum to i32
+  ret i32 %res
+}
+
+; Verify that i128 ctlz on a register arg (i1 true) uses LZCNT's CF to avoid
+; a redundant TEST. Emitted by ExpandIntRes_CTLZ for register-based i128.
+; Note: X86 (32-bit) splits i128 into 4 i32 chunks and uses branches.
+define i32 @lzcnt128_reg_true(i128 %x) nounwind {
+; X32-LABEL: lzcnt128_reg_true:
+; X32:       # %bb.0:
+; X32-NEXT:    lzcntq %rdi, %rcx
+; X32-NEXT:    addl $64, %ecx
+; X32-NEXT:    lzcntq %rsi, %rax
+; X32-NOT:     testq
+; X32-NEXT:    cmovbl %ecx, %eax
+; X32-NEXT:    # kill: def $eax killed $eax killed $rax
+; X32-NEXT:    retq
+;
+; X64-LABEL: lzcnt128_reg_true:
+; X64:       # %bb.0:
+; X64-NEXT:    lzcntq %rdi, %rcx
+; X64-NEXT:    addl $64, %ecx
+; X64-NEXT:    lzcntq %rsi, %rax
+; X64-NOT:     testq
+; X64-NEXT:    cmovbl %ecx, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+;
+; X32-NOLZCNT-LABEL: lzcnt128_reg_true:
+; X32-NOLZCNT:       # %bb.0:
+; X32-NOLZCNT-NEXT:    bsrq %rsi, %rcx
+; X32-NOLZCNT-NEXT:    xorl $63, %ecx
+; X32-NOLZCNT-NEXT:    bsrq %rdi, %rax
+; X32-NOLZCNT-NEXT:    xorl $63, %eax
+; X32-NOLZCNT-NEXT:    orl $64, %eax
+; X32-NOLZCNT-NEXT:    testq %rsi, %rsi
+; X32-NOLZCNT-NOT:     cmovbl
+; X32-NOLZCNT-NEXT:    cmovnel %ecx, %eax
+; X32-NOLZCNT-NEXT:    # kill: def $eax killed $eax killed $rax
+; X32-NOLZCNT-NEXT:    retq
+;
+; X64-NOLZCNT-LABEL: lzcnt128_reg_true:
+; X64-NOLZCNT:       # %bb.0:
+; X64-NOLZCNT-NEXT:    bsrq %rsi, %rcx
+; X64-NOLZCNT-NEXT:    xorl $63, %ecx
+; X64-NOLZCNT-NEXT:    bsrq %rdi, %rax
+; X64-NOLZCNT-NEXT:    xorl $63, %eax
+; X64-NOLZCNT-NEXT:    orl $64, %eax
+; X64-NOLZCNT-NEXT:    testq %rsi, %rsi
+; X64-NOLZCNT-NOT:     cmovbl
+; X64-NOLZCNT-NEXT:    cmovnel %ecx, %eax
+; X64-NOLZCNT-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NOLZCNT-NEXT:    retq
+  %cnt = tail call i128 @llvm.ctlz.i128(i128 %x, i1 true)
+  %res = trunc i128 %cnt to i32
+  ret i32 %res
+}
+
+; Verify that i128 ctlz on a register arg (i1 false, Rust u128::leading_zeros)
+; also uses LZCNT's CF to avoid a redundant TEST.
+define i32 @lzcnt128_reg_false(i128 %x) nounwind {
+; X32-LABEL: lzcnt128_reg_false:
+; X32:       # %bb.0:
+; X32-NEXT:    lzcntq %rdi, %rcx
+; X32-NEXT:    addl $64, %ecx
+; X32-NEXT:    lzcntq %rsi, %rax
+; X32-NOT:     testq
+; X32-NEXT:    cmovbl %ecx, %eax
+; X32-NEXT:    # kill: def $eax killed $eax killed $rax
+; X32-NEXT:    retq
+;
+; X64-LABEL: lzcnt128_reg_false:
+; X64:       # %bb.0:
+; X64-NEXT:    lzcntq %rdi, %rcx
+; X64-NEXT:    addl $64, %ecx
+; X64-NEXT:    lzcntq %rsi, %rax
+; X64-NOT:     testq
+; X64-NEXT:    cmovbl %ecx, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+;
+; X32-NOLZCNT-LABEL: lzcnt128_reg_false:
+; X32-NOLZCNT:       # %bb.0:
+; X32-NOLZCNT-NEXT:    bsrq %rsi, %rcx
+; X32-NOLZCNT-NEXT:    xorl $63, %ecx
+; X32-NOLZCNT-NEXT:    movl $127, %eax
+; X32-NOLZCNT-NEXT:    bsrq %rdi, %rax
+; X32-NOLZCNT-NEXT:    xorl $63, %eax
+; X32-NOLZCNT-NEXT:    addl $64, %eax
+; X32-NOLZCNT-NEXT:    testq %rsi, %rsi
+; X32-NOLZCNT-NOT:     cmovbl
+; X32-NOLZCNT-NEXT:    cmovnel %ecx, %eax
+; X32-NOLZCNT-NEXT:    # kill: def $eax killed $eax killed $rax
+; X32-NOLZCNT-NEXT:    retq
+;
+; X64-NOLZCNT-LABEL: lzcnt128_reg_false:
+; X64-NOLZCNT:       # %bb.0:
+; X64-NOLZCNT-NEXT:    bsrq %rsi, %rcx
+; X64-NOLZCNT-NEXT:    xorl $63, %ecx
+; X64-NOLZCNT-NEXT:    movl $127, %eax
+; X64-NOLZCNT-NEXT:    bsrq %rdi, %rax
+; X64-NOLZCNT-NEXT:    xorl $63, %eax
+; X64-NOLZCNT-NEXT:    addl $64, %eax
+; X64-NOLZCNT-NEXT:    testq %rsi, %rsi
+; X64-NOLZCNT-NOT:     cmovbl
+; X64-NOLZCNT-NEXT:    cmovnel %ecx, %eax
+; X64-NOLZCNT-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NOLZCNT-NEXT:    retq
+  %cnt = tail call i128 @llvm.ctlz.i128(i128 %x, i1 false)
+  %res = trunc i128 %cnt to i32
+  ret i32 %res
+}
+
+; Negative tests: verify the fold does NOT fire when correctness can't be guaranteed.
+
+; Pattern 2 guard: IfArm's CTLZ operates on lo, but CmpSrc is hi.
+; Using LZCNT(hi).CF to select between CTLZ(lo) values would return LZCNT(hi)
+; instead of CTLZ(lo) when hi is nonzero - wrong result.
+define i32 @no_fold_wrong_ctlz_src(i64 %lo, i64 %hi) {
+; X64-LABEL: no_fold_wrong_ctlz_src:
+; X64:       # %bb.0:
+; X64-NEXT:    lzcntq %rdi, %rcx
+; X64-NEXT:    leal 64(%rcx), %eax
+; X64-NEXT:    testq %rsi, %rsi
+; X64-NOT:     cmovbl
+; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    retq
+  %a = tail call i64 @llvm.ctlz.i64(i64 %lo, i1 false)
+  %b = add i64 %a, 64
+  %cmp = icmp ne i64 %hi, 0
+  %sel = select i1 %cmp, i64 %a, i64 %b
+  %res = trunc i64 %sel to i32
+  ret i32 %res
+}
+
+; Pattern 1 guard: IfArm is 1, not 0 - the zero-arm pattern requires IfArm == 0.
+define i64 @no_fold_nonzero_if_arm(i64 %lo, i64 %hi) {
+; X64-LABEL: no_fold_nonzero_if_arm:
+; X64:       # %bb.0:
+; X64-NEXT:    lzcntq %rsi, %rcx
+; X64-NEXT:    testq %rdi, %rdi
+; X64-NEXT:    movl $1, %eax
+; X64-NOT:     cmovael
+; X64-NEXT:    cmoveq %rcx, %rax
+; X64-NEXT:    retq
+  %b = tail call i64 @llvm.ctlz.i64(i64 %hi, i1 false)
+  %cmp = icmp ne i64 %lo, 0
+  %sel = select i1 %cmp, i64 1, i64 %b
+  ret i64 %sel
+}
+
+; Pattern 1 guard: ElseArm is not ctlz-like - no CF to reuse.
+define i64 @no_fold_else_not_ctlz(i64 %lo, i64 %hi) {
+; X64-LABEL: no_fold_else_not_ctlz:
+; X64:       # %bb.0:
+; X64-NEXT:    leaq 5(%rsi), %rcx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    testq %rdi, %rdi
+; X64-NOT:     cmovael
+; X64-NEXT:    cmoveq %rcx, %rax
+; X64-NEXT:    retq
+  %inc = add i64 %hi, 5
+  %cmp = icmp ne i64 %lo, 0
+  %sel = select i1 %cmp, i64 0, i64 %inc
+  ret i64 %sel
 }
