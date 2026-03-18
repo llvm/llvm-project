@@ -1,4 +1,4 @@
-//===-- Definition of size_t types ----------------------------------------===//
+//===-- Definition of rsize_t types ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
