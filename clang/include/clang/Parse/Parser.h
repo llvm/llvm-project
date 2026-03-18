@@ -354,6 +354,10 @@ public:
   /// Note that this routine emits an error if you call it with ::new or
   /// ::delete as the current tokens, so only call it in contexts where these
   /// are invalid.
+  ///
+  /// \param IsAddressOfOperand A hint indicating whether the current token
+  /// sequence is likely part of an address-of operation. Used by code
+  /// completion to filter results; may not be set by all callers.
   bool
   TryAnnotateTypeOrScopeToken(ImplicitTypenameContext AllowImplicitTypename =
                                   ImplicitTypenameContext::No,
@@ -3856,6 +3860,9 @@ private:
   /// of address-of gets special treatment due to member pointers. NotCastExpr
   /// is set to true if the token is not the start of a cast-expression, and no
   /// diagnostic is emitted in this case and no tokens are consumed.
+  /// In addition, isAddressOfOperand is propagated to SemaCodeCompletion
+  /// as a heuristic for function completions (to provide different behavior
+  /// when the user is likely taking the address of a function vs. calling it).
   ///
   /// \verbatim
   ///       cast-expression: [C99 6.5.4]
@@ -4567,6 +4574,14 @@ private:
   /// nested-name-specifier, if any.
   ///
   /// \param OnlyNamespace If true, only considers namespaces in lookup.
+  ///
+  /// \param IsAddressOfOperand A hint indicating the expression is part of
+  /// an address-of operation (e.g. '&'). Used by code completion to filter
+  /// results; may not be set by all callers.
+  ///
+  /// \param IsInDeclarationContext A hint indicating whether the current
+  /// context is likely a declaration. Used by code completion to filter
+  /// results; may not be set by all callers.
   ///
   ///
   /// \returns true if there was an error parsing a scope specifier

@@ -596,6 +596,7 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
     EXPECT_THAT(Results.Completions,
                 Contains(AllOf(named("method"), signature("(int name) const"),
                                snippetSuffix(""))));
+    // We don't have any arguments to deduce against if this isn't a call.
     EXPECT_THAT(
         Results.Completions,
         Contains(AllOf(named("generic"),

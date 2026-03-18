@@ -1510,25 +1510,6 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
   R.FunctionCanBeCall = canFunctionBeCalled(R.getDeclaration(), BaseExprType) &&
                         !IsAddressOfOperand;
 
-  // We need to force IsAddressOfOperand when completing a ScopeSpecifier
-  // for non static member function that could be a call.
-  if (!IsInDeclarationContext && !IsAddressOfOperand) { // it may be a call
-    const CXXMethodDecl *Method =
-        llvm::dyn_cast<clang::CXXMethodDecl>(R.Declaration);
-    if (!Method) {
-      if (auto *FTD =
-              llvm::dyn_cast<clang::FunctionTemplateDecl>(R.Declaration)) {
-        Method = llvm::dyn_cast<clang::CXXMethodDecl>(FTD->getTemplatedDecl());
-      }
-    }
-    if (Method) {
-      // No call completion after :: for non static member function.
-      if (!Method->isStatic() && BaseExprType.isNull()) {
-        R.FunctionCanBeCall = false;
-      }
-    }
-  }
-
   // Insert this result into the set of results.
   Results.push_back(R);
 
@@ -1778,6 +1759,9 @@ class CodeCompletionDeclConsumer : public VisibleDeclConsumer {
   CXXRecordDecl *NamingClass;
   QualType BaseType;
   std::vector<FixItHint> FixIts;
+  bool IsInDeclarationContext;
+  // Completion is invoked after an identifier preceded by '&'.
+  bool IsAddressOfOperand;
 
 public:
   CodeCompletionDeclConsumer(
@@ -1805,8 +1789,8 @@ public:
     this->IsInDeclarationContext = IsInDeclarationContext;
   }
 
-  void setIsAddressOfOperand(bool isAddressOfOperand) {
-    IsAddressOfOperand = isAddressOfOperand;
+  void setIsAddressOfOperand(bool IsAddressOfOperand) {
+    this->IsAddressOfOperand = IsAddressOfOperand;
   }
 
   void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
@@ -1824,8 +1808,6 @@ public:
   }
 
 private:
-  bool IsInDeclarationContext;
-  bool IsAddressOfOperand;
   bool IsAccessible(NamedDecl *ND, DeclContext *Ctx) {
     // Naming class to use for access check. In most cases it was provided
     // explicitly (e.g. member access (lhs.foo) or qualified lookup (X::)),
@@ -3311,9 +3293,10 @@ static std::string GetDefaultValueString(const ParmVarDecl *Param,
 static void AddFunctionParameterChunks(
     Preprocessor &PP, const PrintingPolicy &Policy,
     const FunctionDecl *Function, CodeCompletionBuilder &Result,
-    unsigned Start = 0, bool InOptional = false,
-    bool AsInformativeChunk = false, bool IsInDeclarationContext = false) {
+    unsigned Start = 0, bool InOptional = false, bool FunctionCanBeCall = true,
+    bool IsInDeclarationContext = false) {
   bool FirstParameter = true;
+  bool AsInformativeChunk = !(FunctionCanBeCall || IsInDeclarationContext);
 
   for (unsigned P = Start, N = Function->getNumParams(); P != N; ++P) {
     const ParmVarDecl *Param = Function->getParamDecl(P);
@@ -3858,7 +3841,7 @@ CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
       Result.AddInformativeChunk("(");
     AddFunctionParameterChunks(PP, Policy, Function, Result, /*Start=*/0,
                                /*InOptional=*/false,
-                               /*AsInformativeChunk=*/!InsertParameters,
+                               /*FunctionCanBeCall=*/FunctionCanBeCall,
                                /*IsInDeclarationContext=*/DeclaringEntity);
     if (InsertParameters)
       Result.AddChunk(CodeCompletionString::CK_RightParen);
@@ -3960,7 +3943,7 @@ CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
       Result.AddInformativeChunk("(");
     AddFunctionParameterChunks(PP, Policy, Function, Result, /*Start=*/0,
                                /*InOptional=*/false,
-                               /*AsInformativeChunk=*/!InsertParameters,
+                               /*FunctionCanBeCall=*/FunctionCanBeCall,
                                /*IsInDeclarationContext=*/DeclaringEntity);
     if (InsertParameters)
       Result.AddChunk(CodeCompletionString::CK_RightParen);
@@ -6969,19 +6952,18 @@ void SemaCodeCompletion::CodeCompleteQualifiedId(
   // resolves to a dependent record.
   DeclContext *Ctx = SemaRef.computeDeclContext(SS, /*EnteringContext=*/true);
 
-  std::optional<Sema::ContextRAII> SavedContext;
+  std::optional<Sema::ContextRAII> SimulateContext;
   // When completing a definition, simulate that we are in class scope to access
   // private methods.
   if (IsInDeclarationContext && Ctx != nullptr)
-    SavedContext.emplace(SemaRef, Ctx);
+    SimulateContext.emplace(SemaRef, Ctx);
 
   // Try to instantiate any non-dependent declaration contexts before
   // we look in them. Bail out if we fail.
   NestedNameSpecifier NNS = SS.getScopeRep();
   if (NNS && !NNS.isDependent()) {
-    if (Ctx == nullptr || SemaRef.RequireCompleteDeclContext(SS, Ctx)) {
+    if (Ctx == nullptr || SemaRef.RequireCompleteDeclContext(SS, Ctx))
       return;
-    }
   }
 
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
@@ -7029,7 +7011,7 @@ void SemaCodeCompletion::CodeCompleteQualifiedId(
                                /*IncludeDependentBases=*/true,
                                CodeCompleter->loadExternal());
   }
-  SavedContext.reset();
+  SimulateContext.reset();
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
                             Results.getCompletionContext(), Results.data(),
                             Results.size());
