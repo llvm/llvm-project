@@ -122,10 +122,10 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
       }
     } else if ((T->isPointerType() &&
                 !T->getPointeeType().isConstQualified()) ||
-               T->isArrayType() || T->isRecordType())
+               T->isArrayType() || T->isRecordType()) {
       markCanNotBeConst(VD->getInit(), true);
-    else if (T->isLValueReferenceType() &&
-             !T->getPointeeType().isConstQualified())
+    } else if (T->isLValueReferenceType() &&
+               !T->getPointeeType().isConstQualified())
       markCanNotBeConst(VD->getInit(), false);
   }
 }
