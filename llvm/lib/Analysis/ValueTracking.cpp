@@ -9705,8 +9705,9 @@ bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
       if (match(RHS, m_c_NUWAdd(m_Specific(LHS), m_Value(V))))
         return CanEq ? true
                      : (m = match(V, m_APInt(C)),
-                        assert(!C->isZero() && "x + 0 should be folded before"),
-                        m);
+                        m && (assert(!C->isZero() &&
+                                     "x + 0 should be folded before"),
+                              true));
       // LHS u<= LHS *_{nuw} C for any C (C = 0,1 should be folded before)
       // ult: cannot exclude LHS == 0
       if (CanEq && (match(RHS, m_NUWMul(m_Specific(LHS), m_APInt(C))) ||
@@ -9716,7 +9717,7 @@ bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
       // LHS u<  LHS |_{disjoint} C for any C (C = 0 should be folded before)
       if (CanEq ? match(RHS, m_c_Or(m_Specific(LHS), m_Value()))
                 : match(RHS, m_c_DisjointOr(m_Specific(LHS), m_APInt(C)))) {
-        assert(!C->isZero() && "x | 0 should be folded before");
+        assert((CanEq || !C->isZero()) && "x | 0 should be folded before");
         return true;
       }
       // LHS u<= LHS <<_{nuw} V for any V (V < 0 is UB)
@@ -9726,11 +9727,11 @@ bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
       // LHS u<= (V <<_{nuw} LHS) for any V
       // LHS u<  (C <<_{nuw} LHS) for any C (C = 0 should be folded before)
       if (match(RHS, m_NUWShl(m_Value(V), m_Specific(LHS))))
-        return CanEq
-                   ? true
-                   : (m = match(V, m_APInt(C)),
-                      assert(!C->isZero() && "0 << V should be folded before"),
-                      m);
+        return CanEq ? true
+                     : (m = match(V, m_APInt(C)),
+                        m && (assert(!C->isZero() &&
+                                     "0 << V should be folded before"),
+                              true));
 
       // LHS u<= umax(LHS, V) for any V
       if (CanEq && match(RHS, m_UMax(m_Value(), m_Value())))
@@ -9743,8 +9744,9 @@ bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
       if (match(LHS, m_NUWSub(m_Specific(RHS), m_Value(V))))
         return CanEq ? true
                      : (m = match(V, m_APInt(C)),
-                        assert(!C->isZero() && "x - 0 should be folded before"),
-                        m);
+                        m && (assert(!C->isZero() &&
+                                     "x - 0 should be folded before"),
+                              true));
       // (RHS >> V) u<= RHS for any V (V < 0 is UB)
       // ult: cannot exclude RHS == 0
       if (CanEq && match(LHS, m_LShr(m_Specific(RHS), m_Value(V))))
