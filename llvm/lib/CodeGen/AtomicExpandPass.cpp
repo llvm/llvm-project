@@ -1940,9 +1940,7 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I,
   ArrayRef<RTLIB::Libcall> Libcalls = GetRMWLibcall(I->getOperation());
 
   unsigned Size = getAtomicOpSize(I);
-  SmallString<32> AtomicOpName;
-  AtomicOpName += "atomicrmw ";
-  AtomicOpName += I->getOperationName(I->getOperation());
+  auto AtomicOpName = (Twine("atomicrmw ") + I->getOperationName(I->getOperation())).str();
 
   bool Success = false;
   if (!Libcalls.empty())
@@ -1972,7 +1970,7 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I,
           NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
 
           // ...and then expand the CAS into a libcall.
-          expandAtomicCASToLibcall(Pair, AtomicOpName.str(), MetadataSrc,
+          expandAtomicCASToLibcall(Pair, AtomicOpName, MetadataSrc,
                                    FailureReason);
         });
   }
