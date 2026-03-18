@@ -51,7 +51,9 @@ protected:
 
 /// A reusable client that can perform HTTPRequests through a network socket.
 class HTTPClient {
+#if defined(LLVM_ENABLE_CURL) || defined(_WIN32)
   void *Handle = nullptr;
+#endif
 
 public:
   HTTPClient();

@@ -150,6 +150,9 @@ llvm::Error downloadFileHTTP(llvm::StringRef url, FileDownloadHandler dest) {
   Request.FollowRedirects = true;
 
   llvm::HTTPClient Client;
+
+  // TODO: Since PDBs can be huge, we should distinguish between resolve,
+  // connect, send and receive.
   Client.setTimeout(std::chrono::seconds(60));
 
   if (llvm::Error Err = Client.perform(Request, dest))
@@ -165,11 +168,36 @@ llvm::Error downloadFileHTTP(llvm::StringRef url, FileDownloadHandler dest) {
   return llvm::Error::success();
 }
 
+bool has_unsafe_characters(llvm::StringRef s) {
+  for (unsigned char c : s) {
+    // RFC 3986 unreserved characters are safe for file names and URLs.
+    if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+        (c >= '0' && c <= '9') || c == '-' || c == '.' || c == '_' ||
+        c == '~') {
+      continue;
+    }
+
+    return true;
+  }
+
+  // Avoid path semantics issues.
+  return s == "." || s == "..";
+}
+
 std::optional<FileSpec>
 requestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
                                   llvm::StringRef pdb_name) {
   using namespace llvm::sys;
   Log *log = GetLog(LLDBLog::Symbols);
+
+  //// Make sure URL will be valid, portable, and compatible with symbol servers
+  if (has_unsafe_characters(pdb_name)) {
+    LLDB_LOGV(log,
+              "Rejecting HTTP lookup for PDB file due to unsafe characters in "
+              "name: {0}",
+              pdb_name);
+    return {};
+  }
 
   // Construct the path for local storage. Configurable cache coming soon.
   llvm::SmallString<128> cache_file;
@@ -214,6 +242,9 @@ std::optional<FileSpec> locateSymStoreEntry(llvm::StringRef base_url,
                                             llvm::StringRef pdb_name) {
   if (base_url.starts_with("http://") || base_url.starts_with("https://"))
     return requestFileFromSymStoreServerHTTP(base_url, key, pdb_name);
+
+  if (base_url.starts_with("file://"))
+    base_url = base_url.drop_front(7);
 
   return findFileInLocalSymStore(base_url, key, pdb_name);
 }

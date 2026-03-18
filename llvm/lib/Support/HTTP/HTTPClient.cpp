@@ -23,6 +23,9 @@
 #ifdef LLVM_ENABLE_CURL
 #include <curl/curl.h>
 #endif
+#ifdef _WIN32
+#include "llvm/Support/ConvertUTF.h"
+#endif
 
 using namespace llvm;
 
@@ -163,16 +166,6 @@ struct WinHTTPSession {
   }
 };
 
-bool convertUTF8ToWide(StringRef Utf8, std::wstring &Wide) {
-  int WideLen =
-      MultiByteToWideChar(CP_UTF8, 0, Utf8.data(), Utf8.size(), nullptr, 0);
-  if (WideLen <= 0)
-    return false;
-  Wide.resize(WideLen);
-  MultiByteToWideChar(CP_UTF8, 0, Utf8.data(), Utf8.size(), &Wide[0], WideLen);
-  return true;
-}
-
 bool parseURL(StringRef Url, std::wstring &Host, std::wstring &Path,
               INTERNET_PORT &Port, bool &Secure) {
   // Parse URL: http://host:port/path
@@ -196,9 +189,9 @@ bool parseURL(StringRef Url, std::wstring &Host, std::wstring &Path,
   StringRef HostStr =
       (ColonPos != StringRef::npos) ? HostPort.substr(0, ColonPos) : HostPort;
 
-  if (!convertUTF8ToWide(HostStr, Host))
+  if (!llvm::ConvertUTF8toWide(HostStr, Host))
     return false;
-  if (!convertUTF8ToWide(PathPart, Path))
+  if (!llvm::ConvertUTF8toWide(PathPart, Path))
     return false;
 
   if (ColonPos != StringRef::npos) {
@@ -249,6 +242,12 @@ Error HTTPClient::perform(const HTTPRequest &Request,
   if (Request.Method != HTTPMethod::GET)
     return createStringError(errc::invalid_argument,
                              "Only GET requests are supported.");
+  for (const std::string &Header : Request.Headers)
+    if (Header.find("\r") != std::string::npos ||
+        Header.find("\n") != std::string::npos) {
+      return createStringError(errc::invalid_argument,
+                               "Unsafe request can lead to header injection.");
+    }
 
   WinHTTPSession *Session = static_cast<WinHTTPSession *>(Handle);
 
@@ -266,6 +265,18 @@ Error HTTPClient::perform(const HTTPRequest &Request,
                   WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
   if (!Session->SessionHandle)
     return createStringError(errc::io_error, "Failed to open WinHTTP session");
+
+  // Prevent fallback to TLS 1.0/1.1
+  DWORD SecureProtocols =
+      WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;
+  if (!WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_SECURE_PROTOCOLS,
+                        &SecureProtocols, sizeof(SecureProtocols)))
+    return createStringError(errc::io_error, "Failed to set secure protocols");
+
+  // Use HTTP/2 if available
+  DWORD EnableHttp2 = WINHTTP_PROTOCOL_FLAG_HTTP2;
+  WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL,
+                   &EnableHttp2, sizeof(EnableHttp2));
 
   // Create connection
   Session->ConnectHandle =
@@ -286,10 +297,26 @@ Error HTTPClient::perform(const HTTPRequest &Request,
   if (!Session->RequestHandle)
     return createStringError(errc::io_error, "Failed to open HTTP request");
 
+  // Enforce checks that certificate wasn't revoked.
+  DWORD EnableRevocationChecks = WINHTTP_ENABLE_SSL_REVOCATION;
+  if (!WinHttpSetOption(Session->RequestHandle, WINHTTP_OPTION_ENABLE_FEATURE,
+                        &EnableRevocationChecks,
+                        sizeof(EnableRevocationChecks)))
+    return createStringError(errc::io_error,
+                             "Failed to enable certificate revocation checks");
+
+  // Explicitly enforce default validation. This protects against insecure
+  // overrides like SECURITY_FLAG_IGNORE_UNKNOWN_CA.
+  DWORD SecurityFlags = 0;
+  if (!WinHttpSetOption(Session->RequestHandle, WINHTTP_OPTION_SECURITY_FLAGS,
+                        &SecurityFlags, sizeof(SecurityFlags)))
+    return createStringError(errc::io_error,
+                             "Failed to enforce security flags");
+
   // Add headers
   for (const std::string &Header : Request.Headers) {
     std::wstring WideHeader;
-    if (!convertUTF8ToWide(Header, WideHeader))
+    if (!llvm::ConvertUTF8toWide(Header, WideHeader))
       continue;
     WinHttpAddRequestHeaders(Session->RequestHandle, WideHeader.c_str(),
                              static_cast<DWORD>(WideHeader.length()),
