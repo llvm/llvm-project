@@ -8242,20 +8242,9 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     unsigned LegalWidth = LegalVT.getScalarSizeInBits();
     unsigned MaxChunk = std::min<unsigned>(LegalWidth, BitWidth);
 
-    // We want to search for a chunk width 'I' such that 2^I % Divisor == 1.
-    // To do this efficiently, we first calculated 2^MaxChunk % Divisor and
-    // "step down" to 2^(I-1) % Divisor by multiplying by the modular inverse
-    // of 2.
-
-    // Precompute 2^MaxChunk mod Divisor
-    APInt Mod =
-        APInt::getOneBitSet(Divisor.getBitWidth(), MaxChunk).urem(Divisor);
-
-    // Since Divisor is odd, modular inverse of 2 is (Divisor + 1) / 2
-    APInt Inv2 = (Divisor + 1).lshr(1);
-
     // Search for I where 2^I % Divisor == 1
     for (unsigned I = MaxChunk, E = MaxChunk / 2; I > E; --I) {
+      APInt Mod = APInt::getOneBitSet(Divisor.getBitWidth(), I).urem(Divisor);
       if (Mod.isOne()) {
         // Ensure (NumChunks * MaxChunkValue) doesn't overflow LegalVT
         unsigned NumChunks = divideCeil(BitWidth, I);
@@ -8271,7 +8260,6 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
           break;
         }
       }
-      Mod = (Mod * Inv2).urem(Divisor);
     }
 
     if (!BestChunkWidth)
