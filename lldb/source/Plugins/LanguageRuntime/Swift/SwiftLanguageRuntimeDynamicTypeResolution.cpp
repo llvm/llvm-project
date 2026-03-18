@@ -1933,8 +1933,7 @@ CompilerType SwiftLanguageRuntime::GetBaseClass(CompilerType class_ty) {
   if (!tr_ts)
     return {};
   auto type_ref_or_err =
-      reflection_ctx->GetTypeRef(class_ty.GetMangledTypeName().GetStringRef(),
-                                 tr_ts->GetDescriptorFinder());
+      reflection_ctx->GetTypeRef(class_ty.GetMangledTypeName().GetStringRef());
   if (!type_ref_or_err) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions | LLDBLog::Types),
                    type_ref_or_err.takeError(), "{0}");
@@ -2164,8 +2163,7 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
           });
 
       // Build a TypeRef from the demangle tree.
-      auto type_ref_or_err = reflection_ctx->GetTypeRef(
-          dem, pack_element, ts->GetDescriptorFinder());
+      auto type_ref_or_err = reflection_ctx->GetTypeRef(dem, pack_element);
       if (!type_ref_or_err)
         return type_ref_or_err.takeError();
       auto &type_ref = *type_ref_or_err;
@@ -2902,8 +2900,7 @@ CompilerType SwiftLanguageRuntime::BindGenericTypeParameters(
   if (!tr_ts)
     return unbound_type;
 
-  auto type_ref_or_err = reflection_ctx->GetTypeRef(
-      dem, unbound_node, tr_ts->GetDescriptorFinder());
+  auto type_ref_or_err = reflection_ctx->GetTypeRef(dem, unbound_node);
   if (!type_ref_or_err) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions | LLDBLog::Types),
                    type_ref_or_err.takeError(),
@@ -2929,8 +2926,8 @@ CompilerType SwiftLanguageRuntime::BindGenericTypeParameters(
       return;
     }
 
-    auto type_ref_or_err = reflection_ctx->GetTypeRef(
-        type.GetMangledTypeName().GetStringRef(), tr_ts->GetDescriptorFinder());
+    auto type_ref_or_err =
+        reflection_ctx->GetTypeRef(type.GetMangledTypeName().GetStringRef());
     if (!type_ref_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Expressions | LLDBLog::Types),
@@ -3026,8 +3023,7 @@ SwiftLanguageRuntime::BindGenericTypeParameters(StackFrame &stack_frame,
     return get_canonical();
 
   // Build a TypeRef from the demangle tree.
-  auto type_ref_or_err =
-      reflection_ctx->GetTypeRef(dem, canonical, ts.GetDescriptorFinder());
+  auto type_ref_or_err = reflection_ctx->GetTypeRef(dem, canonical);
   if (!type_ref_or_err)
     return llvm::joinErrors(
         llvm::createStringError("cannot bind generic parameters"),
@@ -3708,8 +3704,7 @@ SwiftLanguageRuntime::GetTypeRef(CompilerType type,
   if (!reflection_ctx)
     return llvm::createStringError("no reflection context");
 
-  auto type_ref_or_err = reflection_ctx->GetTypeRef(
-      dem, node, module_holder->GetDescriptorFinder());
+  auto type_ref_or_err = reflection_ctx->GetTypeRef(dem, node);
   if (!type_ref_or_err)
     return llvm::joinErrors(
         llvm::createStringError("cannot get typeref for type %s",
@@ -3947,8 +3942,7 @@ SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
         auto mangling = swift_demangle::GetMangledName(dem, child, flavor);
         if (!mangling.isSuccess())
           continue;
-        auto type_ref_or_err = reflection_ctx->GetTypeRef(
-            mangling.result(), tr_ts->GetDescriptorFinder());
+        auto type_ref_or_err = reflection_ctx->GetTypeRef(mangling.result());
         if (!type_ref_or_err) {
           LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), type_ref_or_err.takeError(),
                           "{0}");

@@ -84,11 +84,10 @@ public:
           std::optional<llvm::sys::MemoryBlock> FileBuffer,
           llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
   virtual llvm::Expected<const swift::reflection::TypeRef &>
-  GetTypeRef(llvm::StringRef mangled_type_name,
-             swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  GetTypeRef(llvm::StringRef mangled_type_name) = 0;
   virtual llvm::Expected<const swift::reflection::TypeRef &>
-  GetTypeRef(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-             swift::reflection::DescriptorFinder *descriptor_finder) = 0;
+  GetTypeRef(swift::Demangle::Demangler &dem,
+             swift::Demangle::NodePointer node) = 0;
   virtual llvm::Expected<const swift::reflection::RecordTypeInfo &>
   GetClassInstanceTypeInfo(
       const swift::reflection::TypeRef &type_ref,
