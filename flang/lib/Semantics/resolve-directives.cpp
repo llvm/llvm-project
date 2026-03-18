@@ -239,6 +239,11 @@ public:
     GetContext().withinConstruct = true;
   }
 
+  bool Pre(const parser::OpenACCWaitConstruct &);
+  void Post(const parser::OpenACCWaitConstruct &) { PopContext(); }
+  bool Pre(const parser::OpenACCAtomicConstruct &);
+  void Post(const parser::OpenACCAtomicConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenACCCacheConstruct &);
   void Post(const parser::OpenACCCacheConstruct &) { PopContext(); }
 
@@ -1618,6 +1623,19 @@ void AccAttributeVisitor::AllowOnlyVariable(const parser::AccObject &object) {
           [&](const auto &name) {},
       },
       object.u);
+}
+
+bool AccAttributeVisitor::Pre(const parser::OpenACCWaitConstruct &x) {
+  const auto &verbatim{std::get<parser::Verbatim>(x.t)};
+  PushContext(verbatim.source, llvm::acc::Directive::ACCD_wait);
+  ClearDataSharingAttributeObjects();
+  return true;
+}
+
+bool AccAttributeVisitor::Pre(const parser::OpenACCAtomicConstruct &x) {
+  PushContext(x.source, llvm::acc::Directive::ACCD_atomic);
+  ClearDataSharingAttributeObjects();
+  return true;
 }
 
 bool AccAttributeVisitor::Pre(const parser::OpenACCCacheConstruct &x) {
