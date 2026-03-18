@@ -60,6 +60,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include <sstream>
 
 using namespace llvm;
 
@@ -107,55 +108,56 @@ static bool IsRegMemConstraint(StringRef Constraint) {
 /// Tag "rm" output constraints with '*' to signify that they default to a
 /// memory location.
 static std::pair<std::string, bool>
-ConvertConstraintsToMemory(StringRef ConstraintStr) {
-  auto I = ConstraintStr.begin(), E = ConstraintStr.end();
-  std::string Out;
-  raw_string_ostream O(Out);
-  bool HasRegMem = false;
+convertConstraintsToMemory(StringRef ConstraintStr) {
+  std::vector<std::string> Constraints;
+  Constraints.reserve(ConstraintStr.count(',') + 1);
 
-  while (I != E) {
+  std::istringstream OS(ConstraintStr.str());
+  std::string Constraint;
+  while (std::getline(OS, Constraint, ','))
+    Constraints.push_back(Constraint);
+
+  bool HasRegMem = false;
+  for (auto &Constraint : Constraints) {
+    std::string NewConstraint;
+
+    auto I = Constraint.begin(), E = Constraint.end();
     bool IsOutput = false;
     bool HasIndirect = false;
+
     if (*I == '=') {
-      O << *I;
-      IsOutput = true;
-      ++I;
-      if (I == E)
+      if (Constraint.size() == 1)
         return {};
+      ++I;
+      NewConstraint += '=';
+      IsOutput = true;
     }
     if (*I == '*') {
-      O << '*';
-      HasIndirect = true;
-      ++I;
-      if (I == E)
+      if (Constraint.size() == 1)
         return {};
+      ++I;
+      NewConstraint += '*';
+      HasIndirect = true;
     }
     if (*I == '+') {
-      O << '+';
-      IsOutput = true;
-      ++I;
-      if (I == E)
+      if (Constraint.size() == 1)
         return {};
+      ++I;
+      NewConstraint += '+';
+      IsOutput = true;
     }
 
-    auto Comma = std::find(I, E, ',');
-    std::string Sub(I, Comma);
-    if (IsRegMemConstraint(Sub)) {
+    if (IsRegMemConstraint(std::string(I, E))) {
       HasRegMem = true;
       if (IsOutput && !HasIndirect)
-        O << '*';
+        NewConstraint += '*';
     }
 
-    O << Sub;
-
-    if (Comma == E)
-      break;
-
-    O << ',';
-    I = Comma + 1;
+    NewConstraint += std::string(I, E);
+    Constraint = NewConstraint;
   }
 
-  return {Out, HasRegMem};
+  return {llvm::join(Constraints, ","), HasRegMem};
 }
 
 /// Build a map of tied constraints. TiedOutput[i] = j means Constraint i is an
@@ -183,7 +185,7 @@ BuildTiedConstraintMap(const InlineAsm::ConstraintInfoVector &Constraints,
 static void ProcessOutputConstraint(
     const InlineAsm::ConstraintInfo &C, Type *RetTy, unsigned OutputIdx,
     IRBuilder<> &EntryBuilder, SmallVectorImpl<Value *> &NewArgs,
-    SmallVectorImpl<Type *> &NewArgTypes, SmallVectorImpl<Type *> &NewRetTypes,
+    SmallVectorImpl<Type *> &NewRetTypes,
     SmallVectorImpl<std::pair<unsigned, Type *>> &ElementTypeAttrs,
     SmallVectorImpl<AllocaInst *> &OutputAllocas, unsigned ConstraintIdx) {
   Type *SlotTy = RetTy;
@@ -195,7 +197,6 @@ static void ProcessOutputConstraint(
     // argument.
     AllocaInst *Slot = EntryBuilder.CreateAlloca(SlotTy, nullptr, "asm_mem");
     NewArgs.push_back(Slot);
-    NewArgTypes.push_back(Slot->getType());
     ElementTypeAttrs.push_back({NewArgs.size() - 1, SlotTy});
     OutputAllocas[ConstraintIdx] = Slot;
     // No return value for this output since it's now an out-parameter.
@@ -211,8 +212,7 @@ static void ProcessInputConstraint(const InlineAsm::ConstraintInfo &C,
                                    ArrayRef<AllocaInst *> OutputAllocas,
                                    unsigned ConstraintIdx, IRBuilder<> &Builder,
                                    IRBuilder<> &EntryBuilder,
-                                   SmallVectorImpl<Value *> &NewArgs,
-                                   SmallVectorImpl<Type *> &NewArgTypes) {
+                                   SmallVectorImpl<Value *> &NewArgs) {
   Type *ArgTy = ArgVal->getType();
 
   if (TiedOutput[ConstraintIdx] != -1) {
@@ -225,7 +225,6 @@ static void ProcessInputConstraint(const InlineAsm::ConstraintInfo &C,
       // Pass the alloca pointer as the argument, instead of ArgVal. This
       // ensures the tied "0" constraint matches the "*m" output.
       NewArgs.push_back(Slot);
-      NewArgTypes.push_back(Slot->getType());
       return;
     }
   }
@@ -236,11 +235,9 @@ static void ProcessInputConstraint(const InlineAsm::ConstraintInfo &C,
     AllocaInst *Slot = EntryBuilder.CreateAlloca(ArgTy, nullptr, "asm_mem");
     Builder.CreateStore(ArgVal, Slot);
     NewArgs.push_back(Slot);
-    NewArgTypes.push_back(Slot->getType());
   } else {
     // Unchanged
     NewArgs.push_back(ArgVal);
-    NewArgTypes.push_back(ArgTy);
   }
 }
 
@@ -259,10 +256,13 @@ static Type *BuildReturnType(ArrayRef<Type *> NewRetTypes,
 /// Create the new inline assembly call with converted constraints.
 static CallInst *CreateNewInlineAsm(
     InlineAsm *IA, const std::string &NewConstraintStr, Type *NewRetTy,
-    const SmallVectorImpl<Type *> &NewArgTypes,
     const SmallVectorImpl<Value *> &NewArgs,
     const SmallVectorImpl<std::pair<unsigned, Type *>> &ElementTypeAttrs,
     CallBase *CB, IRBuilder<> &Builder, LLVMContext &Context) {
+  SmallVector<Type *> NewArgTypes;
+  llvm::for_each(NewArgs,
+                 [&](Value *V) { NewArgTypes.push_back(V->getType()); });
+
   FunctionType *NewFTy = FunctionType::get(NewRetTy, NewArgTypes, false);
   InlineAsm *NewIA = InlineAsm::get(
       NewFTy, IA->getAsmString(), NewConstraintStr, IA->hasSideEffects(),
@@ -272,6 +272,7 @@ static CallInst *CreateNewInlineAsm(
   NewCall->setCallingConv(CB->getCallingConv());
   NewCall->setAttributes(CB->getAttributes());
   NewCall->setDebugLoc(CB->getDebugLoc());
+  NewCall->copyMetadata(*CB);
 
   for (const auto &[Index, Ty] : ElementTypeAttrs)
     NewCall->addParamAttr(Index,
@@ -341,7 +342,7 @@ static bool ProcessInlineAsm(Function &F, CallBase *CB) {
   const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
 
   const auto &[NewConstraintStr, HasRegMem] =
-      ConvertConstraintsToMemory(IA->getConstraintString());
+      convertConstraintsToMemory(IA->getConstraintString());
   if (!HasRegMem)
     return false;
 
@@ -350,7 +351,6 @@ static bool ProcessInlineAsm(Function &F, CallBase *CB) {
 
   // Collect new arguments and return types.
   SmallVector<Value *, 8> NewArgs;
-  SmallVector<Type *, 8> NewArgTypes;
   SmallVector<Type *, 2> NewRetTypes;
   SmallVector<std::pair<unsigned, Type *>, 8> ElementTypeAttrs;
 
@@ -376,21 +376,20 @@ static bool ProcessInlineAsm(Function &F, CallBase *CB) {
         // Pass it through to the new call.
         Value *ArgVal = CB->getArgOperand(ArgNo);
         NewArgs.push_back(ArgVal);
-        NewArgTypes.push_back(ArgVal->getType());
         // Preserve element type attribute if present.
         if (auto *Ty = CB->getParamElementType(ArgNo))
           ElementTypeAttrs.push_back({NewArgs.size() - 1, Ty});
         ArgNo++;
       } else {
         ProcessOutputConstraint(C, CB->getType(), OutputIdx, EntryBuilder,
-                                NewArgs, NewArgTypes, NewRetTypes,
-                                ElementTypeAttrs, OutputAllocas, I);
+                                NewArgs, NewRetTypes, ElementTypeAttrs,
+                                OutputAllocas, I);
         OutputIdx++;
       }
     } else if (C.Type == InlineAsm::isInput) {
       Value *ArgVal = CB->getArgOperand(ArgNo);
       ProcessInputConstraint(C, ArgVal, TiedOutput, OutputAllocas, I, Builder,
-                             EntryBuilder, NewArgs, NewArgTypes);
+                             EntryBuilder, NewArgs);
       ArgNo++;
     }
   }
@@ -400,7 +399,7 @@ static bool ProcessInlineAsm(Function &F, CallBase *CB) {
 
   // Create the new inline assembly call.
   CallInst *NewCall =
-      CreateNewInlineAsm(IA, NewConstraintStr, NewRetTy, NewArgTypes, NewArgs,
+      CreateNewInlineAsm(IA, NewConstraintStr, NewRetTy, NewArgs,
                          ElementTypeAttrs, CB, Builder, F.getContext());
 
   // Reconstruct the return value and update users.
