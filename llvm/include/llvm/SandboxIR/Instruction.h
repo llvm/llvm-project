@@ -68,7 +68,6 @@ protected:
   friend class ShuffleVectorInst;  // For getTopmostLLVMInstruction().
   friend class ExtractValueInst;   // For getTopmostLLVMInstruction().
   friend class InsertValueInst;    // For getTopmostLLVMInstruction().
-  friend class BranchInst;         // For getTopmostLLVMInstruction().
   friend class LoadInst;           // For getTopmostLLVMInstruction().
   friend class StoreInst;          // For getTopmostLLVMInstruction().
   friend class ReturnInst;         // For getTopmostLLVMInstruction().
@@ -387,7 +386,6 @@ template <typename LLVMT> class SingleLLVMInstructionImpl : public Instruction {
   friend class CallBase;
   friend class FuncletPadInst;
   friend class CmpInst;
-  friend class BranchInst;
 
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
