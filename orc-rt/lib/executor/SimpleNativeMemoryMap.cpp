@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/SimpleNativeMemoryMap.h"
+#include "orc-rt/Session.h"
 #include <sstream>
 
 #if defined(__APPLE__) || defined(__linux__)
@@ -23,6 +24,27 @@
 #endif
 
 namespace orc_rt {
+
+Expected<std::unique_ptr<SimpleNativeMemoryMap>>
+SimpleNativeMemoryMap::Create(Session &S, SimpleSymbolTable &ST,
+                              const char *InstanceName,
+                              SimpleSymbolTable::MutatorFn AddInterface) {
+
+  std::unique_ptr<SimpleNativeMemoryMap> Instance(new SimpleNativeMemoryMap());
+
+  SimpleSymbolTable SNMMST;
+  if (auto Err = AddInterface(SNMMST))
+    return Err;
+  std::pair<const char *, const void *> InstanceSym[] = {
+      {InstanceName, static_cast<const void *>(Instance.get())}};
+  if (auto Err = SNMMST.addUnique(InstanceSym))
+    return std::move(Err);
+
+  if (auto Err = ST.addUnique(SNMMST))
+    return std::move(Err);
+
+  return std::move(Instance);
+}
 
 void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
                                     size_t Size) {
