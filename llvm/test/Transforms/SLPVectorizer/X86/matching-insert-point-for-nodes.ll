@@ -6,42 +6,35 @@ define i32 @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[BB24:.*]] ], [ 0, %[[BB]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ [[TMP16:%.*]], %[[BB24]] ], [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ [[TMP14:%.*]], %[[BB24:.*]] ], [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x i32> [ [[TMP13:%.*]], %[[BB24]] ], [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB]] ]
 ; CHECK-NEXT:    br i1 false, label %[[BB4:.*]], label %[[BB11:.*]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ zeroinitializer, %[[BB1]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ [[TMP0]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ zeroinitializer, %[[BB1]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ [[TMP0]], %[[BB1]] ]
 ; CHECK-NEXT:    br label %[[BB19:.*]]
 ; CHECK:       [[BB11]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB12:.*]], label %[[BB16:.*]]
 ; CHECK:       [[BB12]]:
-; CHECK-NEXT:    [[OR:%.*]] = or i32 0, [[PHI3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 poison, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[OR]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i32> [[TMP1]], <i32 poison, i32 poison, i32 0, i32 0>
 ; CHECK-NEXT:    br label %[[BB13:.*]]
 ; CHECK:       [[BB13]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ [[TMP4]], %[[BB12]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i32> [ [[TMP4]], %[[BB12]] ]
 ; CHECK-NEXT:    br label %[[BB16]]
 ; CHECK:       [[BB16]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB11]] ], [ [[TMP5]], %[[BB13]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB11]] ], [ [[TMP5]], %[[BB13]] ]
 ; CHECK-NEXT:    br label %[[BB19]]
 ; CHECK:       [[BB19]]:
-; CHECK-NEXT:    [[PHI20:%.*]] = phi i32 [ 0, %[[BB4]] ], [ [[TMP12]], %[[BB16]] ]
-; CHECK-NEXT:    [[PHI21:%.*]] = phi i32 [ 0, %[[BB4]] ], [ [[TMP11]], %[[BB16]] ]
 ; CHECK-NEXT:    [[PHI22:%.*]] = phi double [ 0.000000e+00, %[[BB4]] ], [ 0.000000e+00, %[[BB16]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> poison, i32 [[PHI21]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP10]], <4 x i32> <i32 poison, i32 poison, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB4]] ], [ [[TMP6]], %[[BB16]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i32> [[TMP7]], <i32 poison, i32 poison, i32 0, i32 0>
 ; CHECK-NEXT:    br label %[[BB24]]
 ; CHECK:       [[BB24]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 poison, i32 -1>, i32 [[PHI20]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = lshr <4 x i32> [[TMP13]], <i32 poison, i32 poison, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP15:%.*]] = and <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>, [[TMP14]]
-; CHECK-NEXT:    [[TMP16]] = lshr <4 x i32> [[TMP8]], [[TMP15]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], <i32 poison, i32 poison, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[TMP9]], <i32 poison, i32 poison, i32 0, i32 -1>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP14]] = lshr <4 x i32> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP13]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:
