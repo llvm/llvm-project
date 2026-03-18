@@ -920,7 +920,6 @@ def AArch64trn1      : SDNode<"AArch64ISD::TRN1", SDT_AArch64Zip>;
 def AArch64trn2      : SDNode<"AArch64ISD::TRN2", SDT_AArch64Zip>;
 
 // Vector immediate moves
-def AArch64movi_edit : SDNode<"AArch64ISD::MOVIedit", SDT_AArch64MOVIedit>;
 def AArch64movi_shift : SDNode<"AArch64ISD::MOVIshift", SDT_AArch64MOVIshift>;
 def AArch64movi_msl : SDNode<"AArch64ISD::MOVImsl", SDT_AArch64MOVIshift>;
 def AArch64mvni_shift : SDNode<"AArch64ISD::MVNIshift", SDT_AArch64MOVIshift>;
@@ -8708,24 +8707,26 @@ def FMOVv8f16_ns : SIMDModifiedImmVectorNoShift<1, 0, 1, 0b1111, V128, fpimm8,
 
 // AdvSIMD MOVI
 
+def AdvSIMDModImmType10 : ComplexPattern<vAny, 1, "SelectAdvSIMDModImmType10", [AArch64dup]>;
+
 // EDIT byte mask: scalar
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def MOVID      : SIMDModifiedImmScalarNoShift<0, 1, 0b1110, "movi",
                     [(set FPR64:$Rd, simdimmtype10:$imm8)]>;
-// The movi_edit node has the immediate value already encoded, so we use
-// a plain imm0_255 here.
-def : Pat<(f64 (AArch64movi_edit imm0_255:$shift)),
-          (MOVID imm0_255:$shift)>;
+
+foreach VT = [v8i8, v4i16, v2i32, v1i64, v4f16, v2f32, v1f64, v4bf16] in
+  def : Pat<(VT (AdvSIMDModImmType10 imm0_255:$imm8)),
+            (MOVID imm0_255:$imm8)>;
 
 // EDIT byte mask: 2d
-
-// The movi_edit node has the immediate value already encoded, so we use
-// a plain imm0_255 in the pattern
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1110, V128,
                                                 simdimmtype10,
-                                                "movi", ".2d",
-                   [(set (v2i64 V128:$Rd), (AArch64movi_edit imm0_255:$imm8))]>;
+                                                "movi", ".2d", []>;
+
+foreach VT = [v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64, v8bf16] in
+  def : Pat<(VT (AdvSIMDModImmType10 imm0_255:$imm8)),
+            (MOVIv2d_ns imm0_255:$imm8)>;
 
 let Predicates = [HasNEON] in {
 def : Pat<(f128 fpimm0), (f128 (MOVIv2d_ns (i32 0)))>;

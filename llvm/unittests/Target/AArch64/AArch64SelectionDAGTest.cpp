@@ -563,22 +563,6 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   auto N165 = DAG->getConstant(0x000000A5, Loc, IntSca32VT);
   KnownBits Known;
 
-  auto OpMOVIedit64 = DAG->getNode(AArch64ISD::MOVIedit, Loc, IntVec64VT, N165);
-  Known = DAG->computeKnownBits(OpMOVIedit64);
-  EXPECT_EQ(Known.Zero, APInt(64, 0x00FF00FFFF00FF00));
-  EXPECT_EQ(Known.One, APInt(64, 0xFF00FF0000FF00FF));
-
-  auto OpMOVIedit128 =
-      DAG->getNode(AArch64ISD::MOVIedit, Loc, Int2Vec64VT, N165);
-  Known = DAG->computeKnownBits(OpMOVIedit128);
-  EXPECT_EQ(Known.Zero, APInt(64, 0x00FF00FFFF00FF00));
-  EXPECT_EQ(Known.One, APInt(64, 0xFF00FF0000FF00FF));
-
-  auto FrMOVIedit128 = DAG->getFreeze(OpMOVIedit128);
-  Known = DAG->computeKnownBits(FrMOVIedit128);
-  EXPECT_EQ(Known.Zero, APInt(64, 0x00FF00FFFF00FF00));
-  EXPECT_EQ(Known.One, APInt(64, 0xFF00FF0000FF00FF));
-
   auto N264 = DAG->getConstant(264, Loc, IntSca32VT);
   auto OpMOVImsl64 =
       DAG->getNode(AArch64ISD::MOVImsl, Loc, Int2Vec32VT, N165, N264);

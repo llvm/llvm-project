@@ -212,6 +212,8 @@ public:
     return true;
   }
 
+  bool SelectAdvSIMDModImmType10(SDValue N, SDValue &Imm);
+
   bool SelectDupZeroOrUndef(SDValue N) {
     switch(N->getOpcode()) {
     case ISD::UNDEF:
@@ -635,8 +637,6 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N) {
   if (N->getOpcode() == AArch64ISD::DUP)
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
       return Const->getAPIntValue().trunc(SplatWidth);
-  // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
-  // in AArch64ISelLowering. AArch64ISD::MOVIedit support will allow more folds.
   return std::nullopt;
 }
 
@@ -7951,6 +7951,25 @@ bool AArch64DAGToDAGISel::SelectCmpBranchExtOperand(SDValue N, SDValue &Reg,
     Reg = N.getOperand(0);
     ExtType =
         CurDAG->getTargetConstant(getExtendEncoding(ET), SDLoc(N), MVT::i32);
+    return true;
+  }
+
+  return false;
+}
+
+bool AArch64DAGToDAGISel::SelectAdvSIMDModImmType10(SDValue N, SDValue &Imm) {
+  if (N->getOpcode() != AArch64ISD::DUP ||
+      !isa<ConstantSDNode>(N->getOperand(0)))
+    return false;
+
+  unsigned ScalarSize = N->getValueType(0).getScalarSizeInBits();
+  APInt ScalarImm = N->getConstantOperandAPInt(0).trunc(ScalarSize);
+  APInt VectorImm = APInt::getSplat(64, ScalarImm);
+
+  uint64_t Value = VectorImm.getZExtValue();
+  if (AArch64_AM::isAdvSIMDModImmType10(Value)) {
+    Value = AArch64_AM::encodeAdvSIMDModImmType10(Value);
+    Imm = CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i32);
     return true;
   }
 

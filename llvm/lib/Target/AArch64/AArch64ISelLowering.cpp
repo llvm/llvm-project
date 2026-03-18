@@ -2828,12 +2828,6 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
         Known.getBitWidth(), ~(~Op->getConstantOperandVal(0) << ShiftAmt)));
     break;
   }
-  case AArch64ISD::MOVIedit: {
-    Known = KnownBits::makeConstant(APInt(
-        Known.getBitWidth(),
-        AArch64_AM::decodeAdvSIMDModImmType10(Op->getConstantOperandVal(0))));
-    break;
-  }
   case AArch64ISD::MVNIshift: {
     Known = KnownBits::makeConstant(
         APInt(Known.getBitWidth(),
@@ -15516,20 +15510,26 @@ static bool resolveBuildVector(BuildVectorSDNode *BVN, APInt &CnstBits,
 }
 
 // Try 64-bit splatted SIMD immediate.
-static SDValue tryAdvSIMDModImm64(unsigned NewOp, SDValue Op, SelectionDAG &DAG,
-                                 const APInt &Bits) {
+static SDValue tryAdvSIMDModImm64(SDValue Op, SelectionDAG &DAG,
+                                  const APInt &Bits) {
   if (Bits.getHiBits(64) == Bits.getLoBits(64)) {
-    uint64_t Value = Bits.zextOrTrunc(64).getZExtValue();
-    EVT VT = Op.getValueType();
-    MVT MovTy = (VT.getSizeInBits() == 128) ? MVT::v2i64 : MVT::f64;
+    APInt SplatVal = Bits.trunc(64);
 
-    if (AArch64_AM::isAdvSIMDModImmType10(Value)) {
-      Value = AArch64_AM::encodeAdvSIMDModImmType10(Value);
+    if (AArch64_AM::isAdvSIMDModImmType10(SplatVal.getZExtValue())) {
+      EVT VT = Op.getValueType();
+      EVT SplatVT = (VT.getSizeInBits() == 128) ? MVT::v2i64 : MVT::v1i64;
+
+      // Pick a more natural (requires minimal casting) integer type.
+      if (Bits.isSplat(VT.getScalarSizeInBits())) {
+        SplatVT = VT.changeVectorElementTypeToInteger();
+        SplatVal = SplatVal.trunc(SplatVT.getScalarSizeInBits());
+      }
 
       SDLoc DL(Op);
-      SDValue Mov =
-          DAG.getNode(NewOp, DL, MovTy, DAG.getConstant(Value, DL, MVT::i32));
-      return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Mov);
+      MVT ScalarVT = SplatVT.getScalarSizeInBits() == 64 ? MVT::i64 : MVT::i32;
+      SDValue Scalar = DAG.getConstant(SplatVal.getZExtValue(), DL, ScalarVT);
+      SDValue Splat = DAG.getNode(AArch64ISD::DUP, DL, SplatVT, Scalar);
+      return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Splat);
     }
   }
 
@@ -16080,8 +16080,7 @@ static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
   if (resolveBuildVector(BVN, DefBits, UndefBits)) {
     auto TryMOVIWithBits = [&](APInt DefBits) {
       SDValue NewOp;
-      if ((NewOp =
-               tryAdvSIMDModImm64(AArch64ISD::MOVIedit, Op, DAG, DefBits)) ||
+      if ((NewOp = tryAdvSIMDModImm64(Op, DAG, DefBits)) ||
           (NewOp =
                tryAdvSIMDModImm32(AArch64ISD::MOVIshift, Op, DAG, DefBits)) ||
           (NewOp =
@@ -22137,7 +22136,6 @@ static SDValue tryExtendDUPToExtractHigh(SDValue N, SelectionDAG &DAG) {
   case AArch64ISD::DUPLANE64:
   case AArch64ISD::MOVI:
   case AArch64ISD::MOVIshift:
-  case AArch64ISD::MOVIedit:
   case AArch64ISD::MOVImsl:
   case AArch64ISD::MVNIshift:
   case AArch64ISD::MVNImsl:
@@ -33244,8 +33242,8 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
 
   // TODO: Add more target nodes.
   switch (Op.getOpcode()) {
+  case AArch64ISD::DUP:
   case AArch64ISD::MOVI:
-  case AArch64ISD::MOVIedit:
   case AArch64ISD::MOVImsl:
   case AArch64ISD::MOVIshift:
   case AArch64ISD::MVNImsl:
@@ -33264,15 +33262,8 @@ bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
          Op.getOpcode() == AArch64ISD::MOVI ||
          Op.getOpcode() == AArch64ISD::MOVIshift ||
          Op.getOpcode() == AArch64ISD::MOVImsl ||
-         Op.getOpcode() == AArch64ISD::MOVIedit ||
          Op.getOpcode() == AArch64ISD::MVNIshift ||
          Op.getOpcode() == AArch64ISD::MVNImsl ||
-         // Ignoring fneg(movi(0)), because if it is folded to FPConstant(-0.0),
-         // ISel will select fmov(mov i64 0x8000000000000000), resulting in a
-         // fmov from fpr to gpr, which is more expensive than fneg(movi(0))
-         (Op.getOpcode() == ISD::FNEG &&
-          Op.getOperand(0).getOpcode() == AArch64ISD::MOVIedit &&
-          Op.getOperand(0).getConstantOperandVal(0) == 0) ||
          (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           Op.getOperand(0).getOpcode() == AArch64ISD::DUP) ||
          TargetLowering::isTargetCanonicalConstantNode(Op);

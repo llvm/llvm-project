@@ -497,6 +497,10 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
       continue;
 
     const Record *InstPatOp = InstPatNode.getOperator();
+    // Only SDNode operators can be mapped to a SelectionDAG opcode name.
+    if (!InstPatOp->isSubClassOf("SDNode"))
+      continue;
+
     StringRef OpcodeName = CGP.getSDNodeInfo(InstPatOp).getEnumName();
     MVT RetVT = MVT::isVoid;
     if (InstPatNode.getNumTypes())
