@@ -114,7 +114,7 @@ public:
   void onShutdown(Service::OnCompleteFn OnComplete) override;
 
 private:
-  SimpleNativeMemoryMap() = default;
+  SimpleNativeMemoryMap(Session &S) : S(S) {}
 
   struct SlabInfo {
     SlabInfo(size_t Size) : Size(Size) {}
@@ -133,6 +133,7 @@ private:
   Error recordDeallocActions(void *Base,
                              std::vector<AllocAction> DeallocActions);
 
+  Session &S;
   std::mutex M;
   std::map<void *, SlabInfo> Slabs;
 };
