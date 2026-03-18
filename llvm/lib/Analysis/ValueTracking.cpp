@@ -9614,7 +9614,7 @@ bool isTrueIntPredicate(CmpInst::Predicate Pred, const Value *LHS,
           cast<OverflowingBinaryOperator>(RHS)->hasNoUnsignedWrap())
         return true;
       // LHS s<= LHS | C         if C >= 0
-      // LHS s<  LHS |_{disjoint} C for any C (C = 0 should be folded before)
+      // LHS s<  LHS |_{disjoint} C if C > 0 (C = 0 should be folded before)
       if (CanEq ? match(RHS, m_c_Or(m_Specific(LHS), m_APInt(C)))
                 : match(RHS, m_c_DisjointOr(m_Specific(LHS), m_APInt(C)))) {
         return C->isNonNegative();
