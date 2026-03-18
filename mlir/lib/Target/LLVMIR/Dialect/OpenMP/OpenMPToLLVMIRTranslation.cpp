@@ -4632,6 +4632,22 @@ static Operation *getGlobalOpFromValue(Value value) {
   return nullptr;
 }
 
+static Value getBaseValueForTypeLookup(Value value) {
+  while (Operation *op = value.getDefiningOp()) {
+    if (auto addrCast = dyn_cast_if_present<LLVM::AddrSpaceCastOp>(op))
+      value = addrCast.getOperand();
+    else if (op->getName().getIdentifier()) {
+      if (op->getNumOperands() > 0)
+        value = op->getOperand(0);
+      else
+        break;
+    } else {
+      break;
+    }
+  }
+  return value;
+}
+
 static llvm::SmallString<64>
 getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
                              llvm::OpenMPIRBuilder &ompBuilder) {
@@ -7474,6 +7490,94 @@ convertTargetAllocMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+static LogicalResult
+convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
+                    LLVM::ModuleTranslation &moduleTranslation) {
+  auto allocateDirOp = cast<omp::AllocateDirOp>(opInst);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::DataLayout dataLayout = llvmModule->getDataLayout();
+  SmallVector<Value> vars = allocateDirOp.getVarList();
+  std::optional<int64_t> alignAttr = allocateDirOp.getAlign();
+
+  llvm::Value *allocator;
+  if (auto allocatorVar = allocateDirOp.getAllocator()) {
+    allocator = moduleTranslation.lookupValue(allocatorVar);
+    if (allocator->getType()->isIntegerTy())
+      allocator = builder.CreateIntToPtr(allocator, builder.getPtrTy());
+    else if (allocator->getType()->isPointerTy())
+      allocator =
+          builder.CreatePointerBitCastOrAddrSpaceCast(allocator, builder.getPtrTy());
+  } else {
+    allocator = llvm::ConstantPointerNull::get(builder.getPtrTy());
+  }
+
+  SmallVector<std::pair<llvm::CallInst *, llvm::Value *>> allocatedVars;
+
+  for (Value var : vars) {
+    llvm::Type *llvmVarTy = moduleTranslation.convertType(var.getType());
+
+    // Opaque pointers lose element type. Trace to GlobalOp for type
+    // Falls back to llvmVarTy when not from a global.
+    llvm::Type *typeToInspect = llvmVarTy;
+    if (llvmVarTy->isPointerTy()) {
+      Value baseVar = getBaseValueForTypeLookup(var);
+      if (Operation *globalOp = getGlobalOpFromValue(baseVar)) {
+        if (auto gop = dyn_cast<LLVM::GlobalOp>(globalOp))
+          typeToInspect =
+              moduleTranslation.convertType(gop.getGlobalType());
+      }
+    }
+
+    llvm::Value *size;
+    if (auto arrTy = llvm::dyn_cast<llvm::ArrayType>(typeToInspect)) {
+      llvm::Value *elementCount = builder.getInt64(1);
+      llvm::Type *currentType = arrTy;
+      while (auto nestedArrTy = llvm::dyn_cast<llvm::ArrayType>(currentType)) {
+        elementCount = builder.CreateMul(
+            elementCount, builder.getInt64(nestedArrTy->getNumElements()));
+        currentType = nestedArrTy->getElementType();
+      }
+      uint64_t elemSizeInBits = dataLayout.getTypeSizeInBits(currentType);
+      size = builder.CreateMul(elementCount,
+                              builder.getInt64(elemSizeInBits / 8));
+    } else {
+      size = builder.getInt64(
+          dataLayout.getTypeStoreSize(typeToInspect).getFixedValue());
+    }
+
+    uint64_t alignValue =
+        alignAttr ? alignAttr.value()
+                  : dataLayout.getABITypeAlign(typeToInspect).value();
+    llvm::Value *alignConst = builder.getInt64(alignValue);
+    // Align the size: ((size + align - 1) / align) * align
+    size = builder.CreateAdd(size, builder.getInt64(alignValue - 1), "", true);
+    size = builder.CreateUDiv(size, alignConst);
+    size = builder.CreateMul(size, alignConst, "", true);
+
+    std::string allocName =
+        ompBuilder->createPlatformSpecificName({".void.addr"});
+    llvm::CallInst *allocCall;
+    if (alignAttr.has_value()) {
+      allocCall = ompBuilder->createOMPAlignedAlloc(
+          ompLoc, builder.getInt64(alignAttr.value()), size, allocator, allocName);
+    } else {
+      allocCall = ompBuilder->createOMPAlloc(ompLoc, size, allocator, allocName);
+    }
+    allocatedVars.push_back({allocCall, allocator});
+  }
+
+  // Register __kmpc_free calls to be emitted before the block terminator.
+  Block *block = allocateDirOp->getBlock();
+  for (auto &alloc : allocatedVars)
+    moduleTranslation.registerPendingOmpAllocateFree(block, alloc.first,
+                                                    alloc.second);
+
+  return success();
+}
+
 static llvm::Function *getOmpTargetFree(llvm::IRBuilderBase &builder,
                                         llvm::Module *llvmModule) {
   llvm::Type *ptrTy = builder.getPtrTy(0);
@@ -7718,6 +7822,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::TargetFreeMemOp) {
             return convertTargetFreeMemOp(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::AllocateDirOp) {
+            return convertAllocateDirOp(*op, builder, moduleTranslation);
           })
           .Default([&](Operation *inst) {
             return inst->emitError()
