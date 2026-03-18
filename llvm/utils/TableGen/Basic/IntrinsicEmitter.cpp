@@ -351,7 +351,7 @@ static std::optional<uint32_t> encodePacked(const TypeSigTy &TypeSig) {
 ///     (offset | MSB_sentinel).
 ///     SequenceToOffsetTable<> lays all sequences contiguously in one byte
 ///     array and assigns each a start offset. It appends an implicit 0-byte
-///     terminator after each sequence.
+///     terminator after each sequence (which is the IIT_Done token).
 ///     Sequences sharing a common suffix - for example, two intrinsics both
 ///     ending in [..., IIT_I32(4), IIT_I32(4), 0] - overlap in the buffer,
 ///     so the shared trailing bytes are stored only once, reducing table size.

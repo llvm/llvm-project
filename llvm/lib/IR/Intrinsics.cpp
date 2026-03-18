@@ -351,7 +351,7 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_ARG: {
     // IIT_ARG is the primary token for overloaded intrinsics, each "any"-typed
     // parameter or return type is encoded as IIT_ARG + ArgInfo.
-    // ArgInfo byte: bits[4:0] = argument index, bits[7:5] = argument kind.
+    // ArgInfo byte: bits[2:0] = argument kind, bits[7:3] = argument index.
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Argument, ArgInfo));
     return;

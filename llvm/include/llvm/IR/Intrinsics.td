@@ -232,6 +232,7 @@ def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 // IIT constants and utils
 //===----------------------------------------------------------------------===//
 // IIT (Intrinsic Information Table) Encoding
+//
 // Each intrinsic's type signature is encoded at build time (when tblgen
 // converts .td files to .inc) and decoded at runtime (when LLVM compiles IR)
 // via 3 cooperating components:
@@ -250,14 +251,13 @@ def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 //      followed by the recursive encoding of the element type:
 //        <4 x i32>  -> [IIT_V4, IIT_I32] (= 10, 4)
 //    - Overloaded positions are encoded as IIT_ARG (= 15) followed by an
-//      ArgInfo byte where bits[7:5] identify the accepted type family.
-//        llvm_anyint_ty at overload-index 0  -> [IIT_ARG, 0x20]
-//    - For constraints that are dependent on types of other arguments, the
-//      ArgInfo byte encodes both which previously-seen type position this must
-//      match (bits[4:0] = argument index) and how it relates to that type
-//      (bits[7:5] = kind: 0=same, 1=extend, 2=trunc, 3=sext, 4=zext, 5=any, 
-//      6=ptr_to, 7=vec_of). 
-//        LLVMMatchType<0>  -> [IIT_ARG, 0x00]
+//      ArgInfo byte where bits[2:0] identify the accepted type family 
+//      (1=AnyInt, 2=AnyFloat, 3=AnyVec, 4=AnyPtr) and bits[7:3] hold
+//      the overload slot index:
+//        llvm_anyint_ty at overload-index 0  -> [IIT_ARG, 0x01]
+//    - Positions whose type must match an overloaded slot use IIT_ARG with
+//      bits[2:0] = 7 (MatchType) and bits[7:3] = the slot index to match:
+//        LLVMMatchType<0>  -> [IIT_ARG, 0x07]
 //    - Multi-value returns are prefixed with IIT_STRUCT (= 21) and a count 
 //      byte encoding N-2 (minimum 2 fields -> 0, maximum 257 fields -> 255), 
 //      followed by the encoding of each field type:
