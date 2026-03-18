@@ -44,3 +44,9 @@
 #include "clc/math/gentype.inc"
 
 #endif
+
+#ifdef cl_khr_fp16
+#define __CLC_HALF_ONLY
+#define __CLC_BODY "clc_sincos_helpers_fp16.inc"
+#include "clc/math/gentype.inc"
+#endif
