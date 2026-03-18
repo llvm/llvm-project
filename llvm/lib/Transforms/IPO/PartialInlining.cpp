@@ -816,7 +816,7 @@ PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
       break;
     }
 
-    if (I.isLifetimeStartOrEnd() || isa<PseudoProbeInst>(I))
+    if (I.isLifetimeStartOrEnd())
       continue;
 
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {

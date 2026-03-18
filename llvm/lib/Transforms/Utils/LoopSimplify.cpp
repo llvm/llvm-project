@@ -640,7 +640,7 @@ ReprocessLoop:
       bool AnyInvariant = false;
       for (auto I = ExitingBlock->begin(); &*I != BI;) {
         Instruction *Inst = &*I++;
-        if (Inst == CI || isa<PseudoProbeInst>(Inst))
+        if (Inst == CI)
           continue;
         if (!L->makeLoopInvariant(
                 Inst, AnyInvariant,

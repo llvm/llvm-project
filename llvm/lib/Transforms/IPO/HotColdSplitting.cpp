@@ -288,7 +288,7 @@ static InstructionCost getOutliningBenefit(ArrayRef<BasicBlock *> Region,
   InstructionCost Benefit = 0;
   for (BasicBlock *BB : Region)
     for (Instruction &I : *BB)
-      if (&I != BB->getTerminator() && !isa<PseudoProbeInst>(I))
+      if (&I != BB->getTerminator())
         Benefit +=
             TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
 

@@ -18,7 +18,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -80,7 +79,7 @@ bool isAsmOnly(const Function &F) {
   for (const auto &BB : F)
     for (const auto &I : drop_end(BB)) {
       const auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB || (!CB->isInlineAsm() && !isa<PseudoProbeInst>(CB)))
+      if (!CB || !CB->isInlineAsm())
         return false;
     }
   return true;

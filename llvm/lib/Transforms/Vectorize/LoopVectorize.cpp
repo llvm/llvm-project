@@ -5183,8 +5183,7 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     for (Instruction &I : *BB) {
       // Skip ignored values.
       if (ValuesToIgnore.count(&I) || ValuesToIgnoreForVF.count(&I) ||
-          (VF.isVector() && VecValuesToIgnore.count(&I)) ||
-          isa<PseudoProbeInst>(I))
+          (VF.isVector() && VecValuesToIgnore.count(&I)))
         continue;
 
       InstructionCost C = getInstructionCost(&I, VF);
