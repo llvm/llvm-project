@@ -314,8 +314,8 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
   MCRegister SrcReg1 = MI.getOperand(0).getReg();
-  MCOperand Src2 = MI.getOperand(1);
-  MCOperand SrcSymbol = MI.getOperand(2);
+  const MCOperand &Src2 = MI.getOperand(1);
+  const MCOperand &SrcSymbol = MI.getOperand(2);
   unsigned Opcode = MI.getOpcode();
   bool IsEqTest =
       Opcode == RISCV::PseudoLongBNE || Opcode == RISCV::PseudoLongBEQ;
