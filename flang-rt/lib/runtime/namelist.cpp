@@ -172,7 +172,7 @@ static RT_API_ATTRS bool HandleSubscripts(IoStatementState &io,
   char32_t comma{GetComma(io)};
 
   // Read subscripts, but don't exceed rank to prevent buffer overrun.
-  for (int Rank = source.rank(); ch && *ch != ')' && j <= Rank; ++j) {
+  for (int rank{source.rank()}; ch && *ch != ')' && j <= rank; ++j) {
     SubscriptValue dimLower{0}, dimUpper{0}, dimStride{0};
     if (j < maxRank && j < source.rank()) {
       const Dimension &dim{source.GetDimension(j)};
