@@ -67,15 +67,11 @@ static PluginProperties &GetGlobalPluginProperties() {
 SymbolLocatorSymStore::SymbolLocatorSymStore() : SymbolLocator() {}
 
 void SymbolLocatorSymStore::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(
-        GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
-        nullptr, LocateExecutableSymbolFile, nullptr, nullptr,
-        SymbolLocatorSymStore::DebuggerInitialize);
-    llvm::HTTPClient::initialize();
-  });
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
+      nullptr, LocateExecutableSymbolFile, nullptr, nullptr,
+      SymbolLocatorSymStore::DebuggerInitialize);
+  llvm::HTTPClient::initialize();
 }
 
 void SymbolLocatorSymStore::DebuggerInitialize(Debugger &debugger) {
@@ -130,7 +126,7 @@ public:
   virtual ~FileDownloadHandler() = default;
 
   llvm::Error handleBodyChunk(llvm::StringRef data) override {
-    // Propagate error from ctor
+    // Propagate error from ctor.
     if (m_ec)
       return llvm::createStringError(m_ec, "Failed to open file for writing");
     m_stream.write(data.data(), data.size());
@@ -190,7 +186,7 @@ requestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
   using namespace llvm::sys;
   Log *log = GetLog(LLDBLog::Symbols);
 
-  // Make sure URL will be valid, portable, and compatible with symbol servers
+  // Make sure URL will be valid, portable, and compatible with symbol servers.
   if (has_unsafe_characters(pdb_name)) {
     Debugger::ReportWarning(llvm::formatv(
         "Rejecting HTTP lookup for PDB file due to unsafe characters in "
