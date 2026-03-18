@@ -209,6 +209,7 @@ class VirtRegRewriter {
   LiveDebugVariables *DebugVars = nullptr;
   DenseSet<Register> RewriteRegs;
   bool ClearVirtRegs;
+  bool ResolveDebugLocs;
 
   void rewrite();
   void addMBBLiveIns();
@@ -222,11 +223,11 @@ class VirtRegRewriter {
       MCRegister PhysReg, const MachineInstr &MI) const;
 
 public:
-  VirtRegRewriter(bool ClearVirtRegs, SlotIndexes *Indexes, LiveIntervals *LIS,
-                  LiveRegMatrix *LRM, VirtRegMap *VRM,
-                  LiveDebugVariables *DebugVars)
+  VirtRegRewriter(bool ClearVirtRegs, bool ResolveDebugLocs,
+                  SlotIndexes *Indexes, LiveIntervals *LIS, LiveRegMatrix *LRM,
+                  VirtRegMap *VRM, LiveDebugVariables *DebugVars)
       : Indexes(Indexes), LIS(LIS), LRM(LRM), VRM(VRM), DebugVars(DebugVars),
-        ClearVirtRegs(ClearVirtRegs) {}
+        ClearVirtRegs(ClearVirtRegs), ResolveDebugLocs(ResolveDebugLocs) {}
 
   bool run(MachineFunction &);
 };
@@ -235,8 +236,10 @@ class VirtRegRewriterLegacy : public MachineFunctionPass {
 public:
   static char ID;
   bool ClearVirtRegs;
-  VirtRegRewriterLegacy(bool ClearVirtRegs = true)
-      : MachineFunctionPass(ID), ClearVirtRegs(ClearVirtRegs) {}
+  bool ResolveDebugLocs;
+  VirtRegRewriterLegacy(bool ClearVirtRegs = true, bool ResolveDebugLocs = true)
+      : MachineFunctionPass(ID), ClearVirtRegs(ClearVirtRegs),
+        ResolveDebugLocs(ResolveDebugLocs) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -294,7 +297,8 @@ bool VirtRegRewriterLegacy::runOnMachineFunction(MachineFunction &MF) {
   LiveDebugVariables &DebugVars =
       getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
 
-  VirtRegRewriter R(ClearVirtRegs, &Indexes, &LIS, &LRM, &VRM, &DebugVars);
+  VirtRegRewriter R(ClearVirtRegs, ResolveDebugLocs, &Indexes, &LIS, &LRM, &VRM,
+                    &DebugVars);
   return R.run(MF);
 }
 
@@ -310,7 +314,8 @@ VirtRegRewriterPass::run(MachineFunction &MF,
   LiveDebugVariables &DebugVars =
       MFAM.getResult<LiveDebugVariablesAnalysis>(MF);
 
-  VirtRegRewriter R(ClearVirtRegs, &Indexes, &LIS, &LRM, &VRM, &DebugVars);
+  VirtRegRewriter R(ClearVirtRegs, ResolveDebugLocs, &Indexes, &LIS, &LRM, &VRM,
+                    &DebugVars);
   if (!R.run(MF))
     return PreservedAnalyses::all();
 
@@ -356,7 +361,7 @@ bool VirtRegRewriter::run(MachineFunction &fn) {
     // replaced. Remove the virtual registers and release all the transient data.
     VRM->clearAllVirt();
     MRI->clearVirtRegs();
-  } else {
+  } else if (ResolveDebugLocs) {
     // Capture the current VRM mappings into LDV's internal data at intermediate
     // rewriter passes in multi-stage RA pipelines. This pre-resolves debug
     // locations for register classes allocated in this stage before VRM is
@@ -785,6 +790,7 @@ void VirtRegRewriterPass::printPipeline(
     OS << "<no-clear-vregs>";
 }
 
-FunctionPass *llvm::createVirtRegRewriter(bool ClearVirtRegs) {
-  return new VirtRegRewriterLegacy(ClearVirtRegs);
+FunctionPass *llvm::createVirtRegRewriter(bool ClearVirtRegs,
+                                          bool ResolveDebugLocs) {
+  return new VirtRegRewriterLegacy(ClearVirtRegs, ResolveDebugLocs);
 }
