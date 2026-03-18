@@ -258,15 +258,11 @@ template <typename ContextT> class GenericCycleInfoCompute {
 
   DFSInfo getDFSInfo(BlockT *B) const {
     unsigned Number = GraphTraits<BlockT *>::getNumber(B);
-    if (Number < BlockDFSInfo.size())
-      return BlockDFSInfo[Number];
-    return {};
+    return BlockDFSInfo[Number];
   }
 
   DFSInfo &getOrInsertDFSInfo(BlockT *B) {
     unsigned Number = GraphTraits<BlockT *>::getNumber(B);
-    if (Number >= BlockDFSInfo.size())
-      BlockDFSInfo.resize(Number + 1);
     return BlockDFSInfo[Number];
   }
 
@@ -467,7 +463,7 @@ void GenericCycleInfoCompute<ContextT>::dfs(FunctionT *F, BlockT *EntryBlock) {
   unsigned Counter = 0;
   TraverseStack.emplace_back(EntryBlock);
 
-  BlockDFSInfo.reserve(GraphTraits<FunctionT *>::getMaxNumber(F));
+  BlockDFSInfo.resize(GraphTraits<FunctionT *>::getMaxNumber(F));
   do {
     BlockT *Block = TraverseStack.back();
     LLVM_DEBUG(errs() << "DFS visiting block: " << Info.Context.print(Block)
