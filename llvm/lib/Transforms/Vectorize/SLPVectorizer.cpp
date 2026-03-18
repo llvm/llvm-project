@@ -1238,9 +1238,8 @@ public:
     MaskType InterchangeableMask = OpcodeInMaskForm;
     ConstantInt *CI = isBinOpWithConstantInt(I).first;
     if (CI) {
-      constexpr MaskType CanBeAll = XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
-                                    MulBIT | AShrBIT | ShlBIT | LShrBIT |
-                                    UDivBIT;
+      constexpr MaskType CanBeAll =
+          XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
       const APInt &CIValue = CI->getValue();
       switch (Opcode) {
       case Instruction::Shl:
@@ -1249,7 +1248,7 @@ public:
         break;
       case Instruction::LShr:
         if (CIValue.ult(CIValue.getBitWidth()))
-          InterchangeableMask = CIValue.isZero() ? CanBeAll : UDivBIT | LShrBIT;
+          InterchangeableMask = UDivBIT | LShrBIT;
         break;
       case Instruction::Mul:
         if (CIValue.isOne()) {
@@ -1260,10 +1259,6 @@ public:
           InterchangeableMask = MulBIT | ShlBIT;
         break;
       case Instruction::UDiv:
-        if (CIValue.isOne()) {
-          InterchangeableMask = CanBeAll;
-          break;
-        }
         if (CIValue.isPowerOf2())
           InterchangeableMask = UDivBIT | LShrBIT;
         break;
