@@ -3939,9 +3939,9 @@ public:
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPDerivedIVSC)
 
-  /// Generate the transformed value of the induction at offset StartValue (1.
-  /// operand) + IV (2. operand) * StepValue (3, operand).
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("Expected prior expansion of this recipe");
+  }
 
   /// Return the cost of this VPDerivedIVRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -3953,7 +3953,10 @@ public:
   Type *getScalarType() const { return getStartValue()->getType(); }
 
   VPIRValue *getStartValue() const { return cast<VPIRValue>(getOperand(0)); }
+  VPValue *getIndex() const { return getOperand(1); }
   VPValue *getStepValue() const { return getOperand(2); }
+  const FPMathOperator *getFPBinOp() const { return FPBinOp; }
+  InductionDescriptor::InductionKind getInductionKind() const { return Kind; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
