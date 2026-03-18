@@ -1200,24 +1200,9 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       [=](vector::MultiDimReductionOp op) -> bool {
         return !isValidSubgroupMultiReductionOp(op);
       });
-  // vector::CreateMaskOp is legal only if it has no result layout attribute.
-  target.addDynamicallyLegalOp<vector::CreateMaskOp>(
-      [=](vector::CreateMaskOp op) -> bool {
-        return !xegpu::getTemporaryLayout(op->getOpResult(0));
-      });
-  // vector::ConstantMaskOp is legal only if it has no result layout attribute.
-  target.addDynamicallyLegalOp<vector::ConstantMaskOp>(
-      [=](vector::ConstantMaskOp op) -> bool {
-        return !xegpu::getTemporaryLayout(op->getOpResult(0));
-      });
-  // vector::TransposeOp is legal only if it has no result layout attribute.
-  target.addDynamicallyLegalOp<vector::TransposeOp>(
-      [=](vector::TransposeOp op) -> bool {
-        return !xegpu::getTemporaryLayout(op->getOpResult(0));
-      });
-  // vector::BitCastOp is legal only if it has no result layout attribute.
-  target.addDynamicallyLegalOp<vector::BitCastOp>(
-      [=](vector::BitCastOp op) -> bool {
+  target.addDynamicallyLegalOp<vector::CreateMaskOp, vector::ConstantMaskOp,
+                               vector::TransposeOp, vector::BitCastOp>(
+      [=](Operation *op) -> bool {
         return !xegpu::getTemporaryLayout(op->getOpResult(0));
       });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
