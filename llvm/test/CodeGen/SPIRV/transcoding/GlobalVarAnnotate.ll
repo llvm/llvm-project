@@ -1,5 +1,10 @@
+; Test that llvm.global.annotations on both functions and global variables
+; are translated to OpDecorate UserSemantic in SPIR-V.
+
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpDecorate %[[#FUNC:]] UserSemantic "annotation_on_function"
 ; CHECK-DAG: OpDecorate %[[#GVAR:]] UserSemantic "annotation_on_global_var"
