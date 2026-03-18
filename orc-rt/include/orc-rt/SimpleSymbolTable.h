@@ -1,4 +1,4 @@
-//===--- ControllerInterface.h -- Controller Interface Symtab ---*- C++ -*-===//
+//===------- SimpleSymbolTable.h -- Simple Symbol Table ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Controller interface symbol table.
+// Simple symbol table.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_CONTROLLERINTERFACE_H
-#define ORC_RT_CONTROLLERINTERFACE_H
+#ifndef ORC_RT_SIMPLESYMBOLTABLE_H
+#define ORC_RT_SIMPLESYMBOLTABLE_H
 
 #include "orc-rt/Error.h"
 #include <string>
@@ -23,10 +23,9 @@
 
 namespace orc_rt {
 
-/// A symbol table defining the interface exposed by the ORC runtime to the
-/// controller. Symbols are added via addSymbolsUnique, which rejects
-/// duplicates with an error.
-class ControllerInterface {
+/// A simple string-to-pointer symbol table. Symbols are added via
+/// addSymbolsUnique, which rejects duplicates with an error.
+class SimpleSymbolTable {
 public:
   using SymbolTable = std::unordered_map<std::string, const void *>;
   using iterator = SymbolTable::const_iterator;
@@ -78,4 +77,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_CONTROLLERINTERFACE_H
+#endif // ORC_RT_SIMPLESYMBOLTABLE_H

@@ -410,11 +410,11 @@ TEST(SessionTest, ControllerInterfaceWithRef) {
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             noErrors);
   int X = 0, Y = 0;
-  S.controllerInterface().with_ref([&](ControllerInterface &CI) {
+  S.controllerInterface().with_ref([&](SimpleSymbolTable &ST) {
     std::pair<const char *, void *> Syms[] = {
         {"orc_rt_A", static_cast<void *>(&X)},
         {"orc_rt_B", static_cast<void *>(&Y)}};
-    cantFail(CI.addSymbolsUnique(Syms));
+    cantFail(ST.addSymbolsUnique(Syms));
   });
 
   EXPECT_EQ(S.controllerInterface()->at("orc_rt_A"), &X);

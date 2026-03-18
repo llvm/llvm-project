@@ -1,4 +1,4 @@
-//===- ControllerInterfaceTest.cpp ----------------------------------------===//
+//===- SimpleSymbolTableTest.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests for orc-rt's ControllerInterface.h APIs.
+// Tests for orc-rt's SimpleSymbolTable.h APIs.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/ControllerInterface.h"
+#include "orc-rt/SimpleSymbolTable.h"
 #include "gtest/gtest.h"
 
 #include <set>
@@ -18,65 +18,65 @@
 
 using namespace orc_rt;
 
-TEST(ControllerInterfaceTest, EmptyByDefault) {
-  ControllerInterface CI;
-  EXPECT_TRUE(CI.empty());
-  EXPECT_EQ(CI.size(), 0U);
-  EXPECT_EQ(CI.begin(), CI.end());
+TEST(SimpleSymbolTableTest, EmptyByDefault) {
+  SimpleSymbolTable ST;
+  EXPECT_TRUE(ST.empty());
+  EXPECT_EQ(ST.size(), 0U);
+  EXPECT_EQ(ST.begin(), ST.end());
 }
 
-TEST(ControllerInterfaceTest, AddSymbolsUnique) {
-  ControllerInterface CI;
+TEST(SimpleSymbolTableTest, AddSymbolsUnique) {
+  SimpleSymbolTable ST;
   int X = 0, Y = 0;
   std::pair<const char *, void *> Syms[] = {{"orc_rt_A", &X}, {"orc_rt_B", &Y}};
 
-  auto Err = CI.addSymbolsUnique(Syms);
+  auto Err = ST.addSymbolsUnique(Syms);
   EXPECT_FALSE(Err) << "Unexpected error adding unique symbols";
 
-  EXPECT_EQ(CI.size(), 2U);
-  EXPECT_FALSE(CI.empty());
-  EXPECT_TRUE(CI.count("orc_rt_A"));
-  EXPECT_TRUE(CI.count("orc_rt_B"));
-  EXPECT_EQ(CI.at("orc_rt_A"), &X);
-  EXPECT_EQ(CI.at("orc_rt_B"), &Y);
+  EXPECT_EQ(ST.size(), 2U);
+  EXPECT_FALSE(ST.empty());
+  EXPECT_TRUE(ST.count("orc_rt_A"));
+  EXPECT_TRUE(ST.count("orc_rt_B"));
+  EXPECT_EQ(ST.at("orc_rt_A"), &X);
+  EXPECT_EQ(ST.at("orc_rt_B"), &Y);
 }
 
-TEST(ControllerInterfaceTest, AddConstPointers) {
-  ControllerInterface CI;
+TEST(SimpleSymbolTableTest, AddConstPointers) {
+  SimpleSymbolTable ST;
   const int X = 42;
   const int Y = 7;
   std::pair<const char *, const void *> Syms[] = {{"orc_rt_A", &X},
                                                   {"orc_rt_B", &Y}};
-  cantFail(CI.addSymbolsUnique(Syms));
+  cantFail(ST.addSymbolsUnique(Syms));
 
-  EXPECT_EQ(CI.at("orc_rt_A"), &X);
-  EXPECT_EQ(CI.at("orc_rt_B"), &Y);
+  EXPECT_EQ(ST.at("orc_rt_A"), &X);
+  EXPECT_EQ(ST.at("orc_rt_B"), &Y);
 }
 
-TEST(ControllerInterfaceTest, AddSymbolsUniqueMultipleCalls) {
-  ControllerInterface CI;
+TEST(SimpleSymbolTableTest, AddSymbolsUniqueMultipleCalls) {
+  SimpleSymbolTable ST;
   int X = 0, Y = 0;
 
   std::pair<const char *, void *> First[] = {{"orc_rt_A", &X}};
   std::pair<const char *, void *> Second[] = {{"orc_rt_B", &Y}};
 
-  cantFail(CI.addSymbolsUnique(First));
-  cantFail(CI.addSymbolsUnique(Second));
+  cantFail(ST.addSymbolsUnique(First));
+  cantFail(ST.addSymbolsUnique(Second));
 
-  EXPECT_EQ(CI.size(), 2U);
-  EXPECT_EQ(CI.at("orc_rt_A"), &X);
-  EXPECT_EQ(CI.at("orc_rt_B"), &Y);
+  EXPECT_EQ(ST.size(), 2U);
+  EXPECT_EQ(ST.at("orc_rt_A"), &X);
+  EXPECT_EQ(ST.at("orc_rt_B"), &Y);
 }
 
-TEST(ControllerInterfaceTest, AddSymbolsUniqueDuplicateRejected) {
-  ControllerInterface CI;
+TEST(SimpleSymbolTableTest, AddSymbolsUniqueDuplicateRejected) {
+  SimpleSymbolTable ST;
   int X = 0, Y = 0;
 
   std::pair<const char *, void *> First[] = {{"orc_rt_A", &X}};
-  cantFail(CI.addSymbolsUnique(First));
+  cantFail(ST.addSymbolsUnique(First));
 
   std::pair<const char *, void *> Second[] = {{"orc_rt_A", &Y}};
-  auto Err = CI.addSymbolsUnique(Second);
+  auto Err = ST.addSymbolsUnique(Second);
   EXPECT_TRUE(Err.isA<StringError>());
 
   auto ErrMsg = toString(std::move(Err));
@@ -84,20 +84,20 @@ TEST(ControllerInterfaceTest, AddSymbolsUniqueDuplicateRejected) {
       << "Error message should mention the duplicate symbol name";
 
   // Original not overwritten.
-  EXPECT_EQ(CI.at("orc_rt_A"), &X);
+  EXPECT_EQ(ST.at("orc_rt_A"), &X);
 }
 
-TEST(ControllerInterfaceTest, AddSymbolsUniqueMultipleDuplicates) {
-  ControllerInterface CI;
+TEST(SimpleSymbolTableTest, AddSymbolsUniqueMultipleDuplicates) {
+  SimpleSymbolTable ST;
   int X = 0, Y = 0, Z = 0;
 
   std::pair<const char *, void *> First[] = {{"orc_rt_A", &X},
                                              {"orc_rt_B", &Y}};
-  cantFail(CI.addSymbolsUnique(First));
+  cantFail(ST.addSymbolsUnique(First));
 
   std::pair<const char *, void *> Second[] = {{"orc_rt_A", &Z},
                                               {"orc_rt_B", &Z}};
-  auto Err = CI.addSymbolsUnique(Second);
+  auto Err = ST.addSymbolsUnique(Second);
   EXPECT_TRUE(Err.isA<StringError>());
 
   auto ErrMsg = toString(std::move(Err));
@@ -105,38 +105,38 @@ TEST(ControllerInterfaceTest, AddSymbolsUniqueMultipleDuplicates) {
   EXPECT_NE(ErrMsg.find("orc_rt_B"), std::string::npos);
 
   // Originals not overwritten.
-  EXPECT_EQ(CI.at("orc_rt_A"), &X);
-  EXPECT_EQ(CI.at("orc_rt_B"), &Y);
+  EXPECT_EQ(ST.at("orc_rt_A"), &X);
+  EXPECT_EQ(ST.at("orc_rt_B"), &Y);
 }
 
-TEST(ControllerInterfaceTest, AddSymbolsUniqueAllOrNothing) {
-  ControllerInterface CI;
+TEST(SimpleSymbolTableTest, AddSymbolsUniqueAllOrNothing) {
+  SimpleSymbolTable ST;
   int X = 0, Y = 0, Z = 0;
 
   std::pair<const char *, void *> First[] = {{"orc_rt_existing", &X}};
-  cantFail(CI.addSymbolsUnique(First));
+  cantFail(ST.addSymbolsUnique(First));
 
   // One new, one duplicate — neither should be added.
   std::pair<const char *, void *> Second[] = {{"orc_rt_new", &Y},
                                               {"orc_rt_existing", &Z}};
-  auto Err = CI.addSymbolsUnique(Second);
+  auto Err = ST.addSymbolsUnique(Second);
   EXPECT_TRUE(Err.isA<StringError>());
   consumeError(std::move(Err));
 
-  EXPECT_EQ(CI.size(), 1U);
-  EXPECT_EQ(CI.at("orc_rt_existing"), &X);
-  EXPECT_FALSE(CI.count("orc_rt_new"));
+  EXPECT_EQ(ST.size(), 1U);
+  EXPECT_EQ(ST.at("orc_rt_existing"), &X);
+  EXPECT_FALSE(ST.count("orc_rt_new"));
 }
 
-TEST(ControllerInterfaceTest, Iteration) {
-  ControllerInterface CI;
+TEST(SimpleSymbolTableTest, Iteration) {
+  SimpleSymbolTable ST;
   int X = 0, Y = 0, Z = 0;
   std::pair<const char *, void *> Syms[] = {
       {"orc_rt_A", &X}, {"orc_rt_B", &Y}, {"orc_rt_C", &Z}};
-  cantFail(CI.addSymbolsUnique(Syms));
+  cantFail(ST.addSymbolsUnique(Syms));
 
   std::set<std::string> Names;
-  for (auto &[Name, Addr] : CI)
+  for (auto &[Name, Addr] : ST)
     Names.insert(Name);
 
   EXPECT_EQ(Names.size(), 3U);

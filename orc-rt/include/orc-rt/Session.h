@@ -13,11 +13,11 @@
 #ifndef ORC_RT_SESSION_H
 #define ORC_RT_SESSION_H
 
-#include "orc-rt/ControllerInterface.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorProcessInfo.h"
 #include "orc-rt/LockedAccess.h"
 #include "orc-rt/Service.h"
+#include "orc-rt/SimpleSymbolTable.h"
 #include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
@@ -216,7 +216,7 @@ private:
 
   mutable std::mutex M;
   std::vector<std::unique_ptr<Service>> Services;
-  ControllerInterface CI;
+  SimpleSymbolTable CI;
   std::unique_ptr<ShutdownInfo> SI;
 };
 
