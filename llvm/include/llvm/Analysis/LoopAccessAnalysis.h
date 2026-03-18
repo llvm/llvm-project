@@ -567,7 +567,8 @@ public:
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
-  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands);
+  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands,
+                               PredicatedScalarEvolution &PSE, Loop &L);
 
   /// Returns the checks that generateChecks created. They can be used to ensure
   /// no read/write accesses overlap across all loop iterations.
@@ -636,6 +637,11 @@ private:
   /// between two different groups. This will clear the CheckingGroups vector
   /// and re-compute it.
   void groupChecks(MemoryDepChecker::DepCandidates &DepCands);
+
+  /// Attempt to merge checking groups that share a base pointer and differ
+  /// by stencil functions of loop-invariant strides. This reduces runtime
+  /// checks for multi-dimensional stencil-like access patterns.
+  void mergeStencilGroups(PredicatedScalarEvolution &PSE, Loop &L);
 
   /// Generate the checks and return them.
   SmallVector<RuntimePointerCheck, 4> generateChecks();
