@@ -3190,6 +3190,22 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       OldRecipes.push_back(R);
     }
   }
+
+  // Replace remaining (HeaderMask && Mask) with vp.merge (True, Mask,
+  // False, EVL)
+  for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+    VPValue *Mask;
+    if (match(U, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask)))) {
+      auto *LogicalAnd = cast<VPInstruction>(U);
+      auto *Merge = new VPWidenIntrinsicRecipe(
+          Intrinsic::vp_merge, {Plan.getTrue(), Mask, Plan.getFalse(), EVL},
+          TypeInfo.inferScalarType(Mask), {}, {}, LogicalAnd->getDebugLoc());
+      Merge->insertBefore(LogicalAnd);
+      LogicalAnd->replaceAllUsesWith(Merge);
+      OldRecipes.push_back(LogicalAnd);
+    }
+  }
+
   // Erase old recipes at the end so we don't invalidate TypeInfo.
   for (VPRecipeBase *R : reverse(OldRecipes)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
