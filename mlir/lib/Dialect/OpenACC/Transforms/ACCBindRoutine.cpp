@@ -116,7 +116,7 @@ public:
                 getRoutineInfoAttrName())) {
           if (routineInfo.getAccRoutines().size() > 1) {
             (void)accSupport.emitNYI(callOp.getLoc(),
-                                     "handle multiple acc routines");
+                                     "multiple `acc routine`s");
             failed = true;
             return;
           }
