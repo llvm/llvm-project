@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s readability-isolate-declaration %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-isolate-declaration %t
 #include <vector>
 
 template <typename T1, typename T2>
@@ -30,20 +30,7 @@ struct SomeClass {
   SomeClass(int value);
 };
 
-namespace std {
-
-class string {
-public:
-  string() = default;
-  string(const char *) {}
-};
-
-namespace string_literals {
-string operator""s(const char *, decltype(sizeof(int))) {
-  return string();
-}
-} // namespace string_literals
-} // namespace std
+#include <string>
 
 namespace Types {
 typedef int MyType;

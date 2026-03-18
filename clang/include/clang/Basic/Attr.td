@@ -4715,17 +4715,15 @@ def OMPDeclareTargetDecl : InheritableAttr {
   let SemaHandler = 0;
   let Subjects = SubjectList<[Function, SharedVar]>;
   let Documentation = [OMPDeclareTargetDocs];
-  let Args = [
-    EnumArgument<"MapType", "MapTypeTy", /*is_string=*/false,
-                 [ "to", "enter", "link" ],
-                 [ "MT_To", "MT_Enter", "MT_Link" ]>,
-    EnumArgument<"DevType", "DevTypeTy", /*is_string=*/false,
-                 [ "host", "nohost", "any" ],
-                 [ "DT_Host", "DT_NoHost", "DT_Any" ]>,
-    ExprArgument<"IndirectExpr">,
-    BoolArgument<"Indirect">,
-    UnsignedArgument<"Level">
-  ];
+  let Args = [EnumArgument<
+                  "MapType", "MapTypeTy",
+                  /*is_string=*/false, ["to", "enter", "link", "local"],
+                  ["MT_To", "MT_Enter", "MT_Link", "MT_Local"]>,
+              EnumArgument<"DevType", "DevTypeTy",
+                           /*is_string=*/false, ["host", "nohost", "any"],
+                           ["DT_Host", "DT_NoHost", "DT_Any"]>,
+              ExprArgument<"IndirectExpr">, BoolArgument<"Indirect">,
+              UnsignedArgument<"Level">];
   let AdditionalMembers = [{
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
     static std::optional<MapTypeTy>
@@ -4734,6 +4732,15 @@ def OMPDeclareTargetDecl : InheritableAttr {
     static std::optional<DevTypeTy> getDeviceType(const ValueDecl *VD);
     static std::optional<SourceLocation> getLocation(const ValueDecl *VD);
   }];
+}
+
+def OMPTargetIndirectCall : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  // The attribute is added to the VarDecl of the function pointer used in
+  // an indirect call in a OMP target region.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
 }
 
 def OMPAllocateDecl : InheritableAttr {
@@ -5392,4 +5399,11 @@ def OverflowBehavior : TypeAttr {
   let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
                              "variables, typedefs, and data members">;
   let Documentation = [Undocumented];
+}
+
+def Personality : InheritableAttr {
+  let Spellings = [Clang<"personality">];
+  let Args = [DeclArgument<Function, "Routine">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [PersonalityDocs];
 }

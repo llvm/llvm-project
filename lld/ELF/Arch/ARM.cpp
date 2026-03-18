@@ -25,11 +25,17 @@ using namespace lld;
 using namespace lld::elf;
 using namespace llvm::object;
 
+// Cortex-M Security Extensions. Prefix for functions that should be exported
+// for the non-secure world.
+constexpr char ACLESESYM_PREFIX[] = "__acle_se_";
+constexpr int ACLESESYM_SIZE = 8;
+
 namespace {
 class ARM final : public TargetInfo {
 public:
   ARM(Ctx &);
   uint32_t calcEFlags() const override;
+  void initTargetSpecificSections() override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -64,6 +70,33 @@ private:
                       int group, bool check) const;
 };
 enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
+
+struct CmseSGVeneer {
+  CmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
+               std::optional<uint64_t> addr = std::nullopt)
+      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
+  static const size_t size{ACLESESYM_SIZE};
+  std::optional<uint64_t> getAddr() const { return entAddr; };
+
+  Symbol *sym;
+  Symbol *acleSeSym;
+  uint64_t offset = 0;
+  const std::optional<uint64_t> entAddr;
+};
+
+struct ArmCmseSGSection : SyntheticSection {
+  ArmCmseSGSection(Ctx &ctx);
+  bool isNeeded() const override { return !entries.empty(); }
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+  void addSGVeneer(Symbol *sym, Symbol *ext_sym);
+  void addMappingSymbol();
+  void finalizeContents() override;
+  uint64_t impLibMaxAddr = 0;
+  SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
+  SmallVector<std::unique_ptr<CmseSGVeneer>, 0> sgVeneers;
+  uint64_t newEntries = 0;
+};
 } // namespace
 
 ARM::ARM(Ctx &ctx) : TargetInfo(ctx) {
@@ -106,6 +139,11 @@ uint32_t ARM::calcEFlags() const {
   // but we don't have any firm guarantees of conformance. Linux AArch64
   // kernels (as of 2016) require an EABI version to be set.
   return EF_ARM_EABI_VER5 | abiFloatType | armBE8;
+}
+
+void ARM::initTargetSpecificSections() {
+  ctx.in.armCmseSGSection = std::make_unique<ArmCmseSGSection>(ctx);
+  ctx.inputSections.push_back(ctx.in.armCmseSGSection.get());
 }
 
 // Only needed to support relocations used by relocateNonAlloc and
@@ -254,8 +292,7 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       rs.handleTlsIe<false>(R_GOT_PC, type, offset, addend, sym);
       continue;
     case R_ARM_TLS_GD32:
-      sym.setFlags(NEEDS_TLSGD);
-      sec.addReloc({R_TLSGD_PC, type, offset, addend, &sym});
+      rs.handleTlsGd(R_TLSGD_PC, R_NONE, R_NONE, type, offset, addend, sym);
       continue;
     case R_ARM_TLS_LDM32:
       ctx.needsTlsLd.store(true, std::memory_order_relaxed);
@@ -1444,20 +1481,20 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
     return;
   // Only secure symbols with values equal to that of it's non-secure
   // counterpart needs to be in the .gnu.sgstubs section.
-  std::unique_ptr<ArmCmseSGVeneer> ss;
+  std::unique_ptr<CmseSGVeneer> ss;
   auto it = ctx.symtab->cmseImportLib.find(sym->getName());
   if (it != ctx.symtab->cmseImportLib.end()) {
     Defined *impSym = it->second;
-    ss = std::make_unique<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
+    ss = std::make_unique<CmseSGVeneer>(sym, acleSeSym, impSym->value);
   } else {
-    ss = std::make_unique<ArmCmseSGVeneer>(sym, acleSeSym);
+    ss = std::make_unique<CmseSGVeneer>(sym, acleSeSym);
     ++newEntries;
   }
   sgVeneers.emplace_back(std::move(ss));
 }
 
 void ArmCmseSGSection::writeTo(uint8_t *buf) {
-  for (std::unique_ptr<ArmCmseSGVeneer> &s : sgVeneers) {
+  for (std::unique_ptr<CmseSGVeneer> &s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(ctx, p + 0, 0xe97f); // SG
     write16(ctx, p + 2, 0xe97f);

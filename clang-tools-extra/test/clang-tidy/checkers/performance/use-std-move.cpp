@@ -3,13 +3,7 @@
 // Definitions used in the tests
 // -----------------------------
 
-namespace std {
-template<class T> struct remove_reference { typedef T type; };
-template<class T> struct remove_reference<T&> { typedef T type; };
-template<class T> struct remove_reference<T&&> { typedef T type; };
-template< class T >
-constexpr typename remove_reference<T>::type&& move( T&& t ) noexcept;
-}
+#include <utility>
 
 struct NonTrivialMoveAssign {
   NonTrivialMoveAssign() = default;
@@ -33,6 +27,18 @@ struct NoMoveAssign {
   NoMoveAssign& operator=(NoMoveAssign&&) = delete;
 };
 
+struct NoDefaultedMoveAssign {
+  NoDefaultedMoveAssign& operator=(const NoDefaultedMoveAssign&);
+  NoDefaultedMoveAssign& operator=(NoDefaultedMoveAssign&&) = default;
+  NoMoveAssign Field;
+};
+
+struct PrivateMoveAssign {
+  PrivateMoveAssign& operator=(const PrivateMoveAssign&);
+  private:
+  PrivateMoveAssign& operator=(PrivateMoveAssign&&);
+};
+
 template<class T>
 void use(T&) {}
 
@@ -42,6 +48,7 @@ void use(T&) {}
 void ConvertibleNonTrivialMoveAssign(NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
+  // CHECK-FIXES: target = std::move(source);
 }
 
 void NonProfitableNonTrivialMoveAssignPointer(NonTrivialMoveAssign*& target, NonTrivialMoveAssign* source) {
@@ -52,6 +59,7 @@ void NonProfitableNonTrivialMoveAssignPointer(NonTrivialMoveAssign*& target, Non
 void ConvertibleNonTrivialMoveAssignFromLValue(NonTrivialMoveAssign& target, NonTrivialMoveAssign&& source) {
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
+  // CHECK-FIXES: target = std::move(source);
 }
 
 // Check moving already moved values
@@ -74,12 +82,14 @@ struct SomeRecord {
 void ConvertibleNonTrivialMoveAssignWithinMethod(NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
+  // CHECK-FIXES: target = std::move(source);
 }
 };
 
 auto ConvertibleNonTrivialMoveAssignWithinLambda = [](NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
+  // CHECK-FIXES: target = std::move(source);
 };
 
 void SomeFunction(NonTrivialMoveAssign source0, NonTrivialMoveAssign const &source1) {
@@ -105,6 +115,7 @@ void ConvertibleNonTrivialMoveAssignShadowing(NonTrivialMoveAssign& target, NoMo
     NonTrivialMoveAssign source;
     // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
     target = source;
+    // CHECK-FIXES: target = std::move(source);
   }
 }
 
@@ -147,6 +158,7 @@ void NonConvertibleNonTrivialMoveAssignFromConst(NonTrivialMoveAssign& target) {
   NonTrivialMoveAssign source;
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
+  // CHECK-FIXES: target = std::move(source);
 }
 
 void NonConvertibleNonTrivialMoveAssignFromStatic(NonTrivialMoveAssign& target) {
@@ -189,6 +201,7 @@ void ConvertibleNonTrivialMoveAssignToStatic(NonTrivialMoveAssign source) {
   static NonTrivialMoveAssign target;
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
+  // CHECK-FIXES: target = std::move(source);
 }
 
 struct ConvertibleNonTrivialMoveAssignToMember {
@@ -196,6 +209,7 @@ struct ConvertibleNonTrivialMoveAssignToMember {
   void NonConvertibleNonTrivialMoveAssignFromStatic(NonTrivialMoveAssign source) {
     // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
     target = source;
+    // CHECK-FIXES: target = std::move(source);
   }
 };
 
@@ -203,18 +217,21 @@ void ConvertibleNonTrivialMoveAssignToExtern(NonTrivialMoveAssign source) {
   extern NonTrivialMoveAssign target;
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
+  // CHECK-FIXES: target = std::move(source);
 }
 
 void ConvertibleNonTrivialMoveAssignToTLS(NonTrivialMoveAssign source) {
   thread_local NonTrivialMoveAssign target;
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
+  // CHECK-FIXES: target = std::move(source);
 }
 
 NonTrivialMoveAssign global_target;
 void ConvertibleNonTrivialMoveAssignToGlobal(NonTrivialMoveAssign source) {
   // CHECK-MESSAGES: [[@LINE+1]]:19: warning: 'source' could be moved here [performance-use-std-move]
   global_target = source;
+  // CHECK-FIXES: global_target = std::move(source);
 }
 
 void NonConvertibleNonTrivialMoveAssignRValue(NonTrivialMoveAssign& target, NonTrivialMoveAssign const& source) {
@@ -234,6 +251,7 @@ void ConvertibleNonTrivialMoveAssignWithBranching(bool cond, NonTrivialMoveAssig
   if(cond) {
     // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
     target = source;
+    // CHECK-FIXES: target = std::move(source);
   }
 }
 
@@ -249,11 +267,13 @@ void ConvertibleNonTrivialMoveAssignBothBranches(bool cond, NonTrivialMoveAssign
   if(cond) {
     // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
     target = source;
+    // CHECK-FIXES: target = std::move(source);
   }
   else {
     source.stuff();
     // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
     target = source;
+    // CHECK-FIXES: target = std::move(source);
   }
 }
 
@@ -268,6 +288,21 @@ void NonConvertibleNonTrivialMoveAssignInLoop(NonTrivialMoveAssign& target, NonT
   for(int i = 0; i < 10; ++i)
     target = source;
 }
+
+// Check moving incomplete definition
+// ----------------------------------
+
+struct fwd_cls;
+struct fwd_cls {
+  void ConvertibleNonTrivialMoveAssignReferecingForwardDecl(fwd_cls src) {
+    // CHECK-MESSAGES: [[@LINE+2]]:13: warning: 'src' could be moved here [performance-use-std-move]
+    // CHECK-FIXES: *this = std::move(src);
+    *this = src;
+  }
+  fwd_cls &operator=(const fwd_cls &C);
+  fwd_cls &operator=(fwd_cls &&);
+};
+
 
 // Check moving for invalid / non profitable type or operation
 // -----------------------------------------------------------
@@ -285,4 +320,79 @@ void NonProfitableTrivialTypeAssign(int& target, int source) {
 void InvalidMoveAssign(NoMoveAssign& target, NoMoveAssign source) {
   // No message expected, moving is deleted.
   target = source;
+}
+
+void InvalidPrivateMoveAssign(PrivateMoveAssign& target, PrivateMoveAssign source) {
+  // No message expected, moving is private.
+  target = source;
+}
+
+void DeletedDefaultMoveAssign(NoDefaultedMoveAssign& target, NoDefaultedMoveAssign source) {
+  // No message expected, default move is invalid.
+  target = source;
+}
+
+// Check moving within control-flow
+// --------------------------------
+
+void ConvertibleNonTrivialMoveAssignWithinTestPred(bool pred, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  target = source;
+  // CHECK-FIXES: target = std::move(source);
+  if (pred)
+    target = target;
+}
+
+void NonConvertibleNonTrivialMoveAssignWithinTestPred(bool pred, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  target = source;
+  if (pred)
+    source.stuff();
+}
+
+void ConvertibleNonTrivialMoveAssignWithinTestBothPred(bool pred, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  target = source;
+  // CHECK-FIXES: target = std::move(source);
+  if (pred)
+    target = target;
+  else
+    target.stuff();
+}
+
+void NonConvertibleNonTrivialMoveAssignWithinLoop(unsigned count, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  while(--count)
+    target = source;
+}
+
+void ConvertibleNonTrivialMoveAssignWithinTestMultiplePred(bool pred0, bool pred1, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  if(pred0) {
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
+    target = source;
+    // CHECK-FIXES: target = std::move(source);
+  }
+  else {
+    if (pred1) {
+      // CHECK-MESSAGES: [[@LINE+1]]:16: warning: 'source' could be moved here [performance-use-std-move]
+      target = source;
+      // CHECK-FIXES: target = std::move(source);
+    }
+    else {
+      target.stuff();
+    }
+  }
+}
+
+void NonConvertibleNonTrivialMoveAssignWithinTestMultiplePred(bool pred0, bool pred1, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  target = source;
+  if(pred0) {
+    target.stuff();
+  }
+  else {
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
+    target = source;
+    // CHECK-FIXES: target = std::move(source);
+    if (pred1) {
+      target.stuff();
+    }
+  }
 }

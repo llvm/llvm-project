@@ -441,7 +441,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
   switch (MI.getOpcode()) {
   case TargetOpcode::G_CONSTANT: {
     Register Dst = MI.getOperand(0).getReg();
-    LLT DstTy = MRI.getType(Dst);
+    [[maybe_unused]] LLT DstTy = MRI.getType(Dst);
     assert(MRI.getRegBank(Dst) == &AArch64::GPRRegBank && DstTy.isScalar() &&
            DstTy.getSizeInBits() < 32 &&
            "Expected a scalar smaller than 32 bits on a GPR.");
@@ -619,7 +619,9 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqrdmlah:
   case Intrinsic::aarch64_neon_sqrdmlsh:
   case Intrinsic::aarch64_neon_sqrdmulh:
+  case Intrinsic::aarch64_neon_uqadd:
   case Intrinsic::aarch64_neon_sqadd:
+  case Intrinsic::aarch64_neon_uqsub:
   case Intrinsic::aarch64_neon_sqsub:
   case Intrinsic::aarch64_neon_srshl:
   case Intrinsic::aarch64_neon_urshl:

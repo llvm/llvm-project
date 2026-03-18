@@ -100,6 +100,14 @@ private:
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
+  llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
+
+  /// A queue of (optional) vtables to consider emitting.
+  std::vector<const CXXRecordDecl *> deferredVTables;
+
+  /// A queue of (optional) vtables that may be emitted opportunistically.
+  std::vector<const CXXRecordDecl *> opportunisticVTables;
+
   void createCUDARuntime();
 
   /// A helper for constructAttributeList that handles return attributes.
@@ -273,6 +281,9 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Get or create a thunk function with the given name and type.
+  cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
+
   /// Return the mlir::GlobalViewAttr for the address of the given global.
   cir::GlobalViewAttr getAddrOfGlobalVarAttr(const VarDecl *d);
 
@@ -385,7 +396,8 @@ public:
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
-                                           LValueBaseInfo *baseInfo = nullptr);
+                                           LValueBaseInfo *baseInfo = nullptr,
+                                           bool forPointeeType = false);
 
   /// Returns the minimum object size for an object of the given class type
   /// (or a class derived from it).
@@ -483,6 +495,10 @@ public:
   /// type. Also emit proper debug info for cast types.
   void emitExplicitCastExprType(const ExplicitCastExpr *e,
                                 CIRGenFunction *cgf = nullptr);
+
+  void addDeferredVTable(const CXXRecordDecl *rd) {
+    deferredVTables.push_back(rd);
+  }
 
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
@@ -596,6 +612,9 @@ public:
   // or if they are alias to each other.
   cir::FuncOp codegenCXXStructor(clang::GlobalDecl gd);
 
+  bool lookupRepresentativeDecl(llvm::StringRef mangledName,
+                                clang::GlobalDecl &gd) const;
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
@@ -605,6 +624,10 @@ public:
   // related attributes.
   bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
 
+  /// Replace all uses of the old global with the new global, updating types
+  /// and references as needed. Erases the old global when done.
+  void replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV);
+
   void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
                                                  cir::FuncOp newFn);
 
@@ -613,7 +636,16 @@ public:
                          clang::GlobalDecl gd, bool forVTable,
                          bool dontDefer = false, bool isThunk = false,
                          ForDefinition_t isForDefinition = NotForDefinition,
-                         mlir::ArrayAttr extraAttrs = {});
+                         mlir::NamedAttrList extraAttrs = {});
+
+  cir::FuncOp getOrCreateCIRFunction(llvm::StringRef mangledName,
+                                     mlir::Type funcType, clang::GlobalDecl gd,
+                                     bool forVTable,
+                                     mlir::NamedAttrList extraAttrs) {
+    return getOrCreateCIRFunction(mangledName, funcType, gd, forVTable,
+                                  /*dontDefer=*/false, /*isThunk=*/false,
+                                  NotForDefinition, extraAttrs);
+  }
 
   cir::FuncOp createCIRFunction(mlir::Location loc, llvm::StringRef name,
                                 cir::FuncType funcType,
@@ -629,7 +661,8 @@ public:
                                const clang::FunctionDecl *funcDecl);
 
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
-                                    mlir::ArrayAttr = {}, bool isLocal = false,
+                                    mlir::NamedAttrList extraAttrs = {},
+                                    bool isLocal = false,
                                     bool assumeConvergent = false);
 
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
@@ -652,6 +685,16 @@ public:
 
   /// Emit any needed decls for which code generation was deferred.
   void emitDeferred();
+
+  bool shouldOpportunisticallyEmitVTables();
+  /// Emit any vtables which we deferred and still have a use for.
+  void emitDeferredVTables();
+
+  /// Try to emit external vtables as available_externally if they have emitted
+  /// all inlined virtual functions.  It runs after EmitDeferred() and therefore
+  /// is not allowed to create new references to things that need to be emitted
+  /// lazily.
+  void emitVTablesOpportunistically();
 
   /// Helper for `emitDeferred` to apply actual codegen.
   void emitGlobalDecl(const clang::GlobalDecl &d);

@@ -240,16 +240,14 @@ bool ScriptInterpreterLua::LoadScriptingModule(
 }
 
 void ScriptInterpreterLua::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(),
-                                  lldb::eScriptLanguageLua, CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(),
+                                lldb::eScriptLanguageLua, CreateInstance);
 }
 
-void ScriptInterpreterLua::Terminate() {}
+void ScriptInterpreterLua::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::Error ScriptInterpreterLua::EnterSession(user_id_t debugger_id) {
   if (m_session_is_active)

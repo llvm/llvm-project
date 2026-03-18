@@ -27,6 +27,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-private-forward.h"
@@ -455,7 +456,7 @@ public:
   ///          (e.g., a public and internal SDK).
   virtual llvm::Expected<std::pair<XcodeSDK, bool>>
   GetSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -471,7 +472,7 @@ public:
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(Module &module) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -480,9 +481,10 @@ public:
   ///
   /// \param[in] unit The CU
   ///
-  /// \returns A parsed XcodeSDK object if successful, an Error otherwise. 
-  virtual llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::createStringError(
+  /// \returns A parsed XcodeSDK object if successful, an Error otherwise.
+  virtual llvm::Expected<XcodeSDK>
+  GetSDKPathFromDebugInfo(CompileUnit & /*unit*/) {
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -497,7 +499,7 @@ public:
   ///          Xcode SDK.
   virtual llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
-    return llvm::createStringError(
+    return llvm::make_error<UnimplementedError>(
         llvm::formatv("{0} not implemented for '{1}' platform.",
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
@@ -679,6 +681,9 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string
+          *separated_error_output, // Pass nullptr to have error and command
+                                   // output combined in command_output.
       const Timeout<std::micro> &timeout);
 
   virtual lldb_private::Status RunShellCommand(
@@ -690,6 +695,9 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string
+          *separated_error_output, // Pass nullptr to have error and command
+                                   // output combined in command_output.
       const Timeout<std::micro> &timeout);
 
   virtual void SetLocalCacheDirectory(const char *local);

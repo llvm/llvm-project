@@ -339,28 +339,16 @@ define i1 @nonnull2(ptr %a) {
 ; if the assume is control dependent on something else
 
 define i1 @nonnull3(ptr %a, i1 %control) {
-; FIXME: in the BUNDLES version we could duplicate the load and keep the assume nonnull.
-; DEFAULT-LABEL: @nonnull3(
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
-; DEFAULT-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
-; DEFAULT:       taken:
-; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; DEFAULT-NEXT:    ret i1 false
-; DEFAULT:       not_taken:
-; DEFAULT-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
-; DEFAULT-NEXT:    ret i1 [[RVAL_2]]
-;
-; BUNDLES-LABEL: @nonnull3(
-; BUNDLES-NEXT:  entry:
-; BUNDLES-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
-; BUNDLES:       taken:
-; BUNDLES-NEXT:    ret i1 false
-; BUNDLES:       not_taken:
-; BUNDLES-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; BUNDLES-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
-; BUNDLES-NEXT:    ret i1 [[RVAL_2]]
+; FIXME: we could duplicate the load and keep the assume nonnull.
+; CHECK-LABEL: @nonnull3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       not_taken:
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
+; CHECK-NEXT:    ret i1 [[RVAL_2]]
 ;
 entry:
   %load = load ptr, ptr %a
@@ -380,18 +368,11 @@ not_taken:
 ; interrupted by an exception being thrown
 
 define i1 @nonnull4(ptr %a) {
-; DEFAULT-LABEL: @nonnull4(
-; DEFAULT-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; DEFAULT-NEXT:    tail call void @escape(ptr [[LOAD]])
-; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
-; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; DEFAULT-NEXT:    ret i1 false
-;
-; BUNDLES-LABEL: @nonnull4(
-; BUNDLES-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; BUNDLES-NEXT:    tail call void @escape(ptr [[LOAD]])
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
-; BUNDLES-NEXT:    ret i1 false
+; CHECK-LABEL: @nonnull4(
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    tail call void @escape(ptr [[LOAD]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
+; CHECK-NEXT:    ret i1 false
 ;
   %load = load ptr, ptr %a
   ;; This call may throw!
@@ -515,27 +496,15 @@ define i32 @PR40940(<4 x i8> %x) {
 }
 
 define i1 @nonnull3A(ptr %a, i1 %control) {
-; DEFAULT-LABEL: @nonnull3A(
-; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; DEFAULT-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
-; DEFAULT:       taken:
-; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
-; DEFAULT-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; DEFAULT-NEXT:    ret i1 [[CMP]]
-; DEFAULT:       not_taken:
-; DEFAULT-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
-; DEFAULT-NEXT:    ret i1 [[RVAL_2]]
-;
-; BUNDLES-LABEL: @nonnull3A(
-; BUNDLES-NEXT:  entry:
-; BUNDLES-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
-; BUNDLES:       taken:
-; BUNDLES-NEXT:    ret i1 true
-; BUNDLES:       not_taken:
-; BUNDLES-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; BUNDLES-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
-; BUNDLES-NEXT:    ret i1 [[RVAL_2]]
+; CHECK-LABEL: @nonnull3A(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       not_taken:
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
+; CHECK-NEXT:    ret i1 [[RVAL_2]]
 ;
 entry:
   %load = load ptr, ptr %a
@@ -635,16 +604,8 @@ not_taken:
 }
 
 define void @nonnull_only_ephemeral_use(ptr %p) {
-; DEFAULT-LABEL: @nonnull_only_ephemeral_use(
-; DEFAULT-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[A]], null
-; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; DEFAULT-NEXT:    ret void
-;
-; BUNDLES-LABEL: @nonnull_only_ephemeral_use(
-; BUNDLES-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[A]]) ]
-; BUNDLES-NEXT:    ret void
+; CHECK-LABEL: @nonnull_only_ephemeral_use(
+; CHECK-NEXT:    ret void
 ;
   %a = load ptr, ptr %p
   %cmp = icmp ne ptr %a, null

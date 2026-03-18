@@ -306,7 +306,6 @@ public:
 
   const ExplodedNodeSet &getResults() const { return Frontier; }
 
-  const NodeBuilderContext &getContext() const { return C; }
   bool hasGeneratedNodes() const { return HasGeneratedNodes; }
 
   void takeNodes(const ExplodedNodeSet &S) {
@@ -339,8 +338,9 @@ class IndirectGotoNodeBuilder : public NodeBuilder {
   const Expr *Target;
 
 public:
-  IndirectGotoNodeBuilder(ExplodedNodeSet &DstSet, NodeBuilderContext &Ctx,
-                          const Expr *Tgt, const CFGBlock *Dispatch)
+  IndirectGotoNodeBuilder(ExplodedNodeSet &DstSet,
+                          const NodeBuilderContext &Ctx, const Expr *Tgt,
+                          const CFGBlock *Dispatch)
       : NodeBuilder(DstSet, Ctx), DispatchBlock(*Dispatch), Target(Tgt) {}
 
   using iterator = CFGBlock::const_succ_iterator;

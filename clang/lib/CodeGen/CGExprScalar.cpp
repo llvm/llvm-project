@@ -405,7 +405,8 @@ public:
   /// the sign of the value. It is not UB, so we use the value after conversion.
   /// NOTE: Src and Dst may be the exact same value! (point to the same thing)
   void EmitIntegerSignChangeCheck(Value *Src, QualType SrcType, Value *Dst,
-                                  QualType DstType, SourceLocation Loc);
+                                  QualType DstType, SourceLocation Loc,
+                                  bool OBTrapInvolved = false);
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are LLVM scalar types.
@@ -1303,8 +1304,10 @@ EmitIntegerSignChangeCheckHelper(Value *Src, QualType SrcType, Value *Dst,
 
 void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
                                                    Value *Dst, QualType DstType,
-                                                   SourceLocation Loc) {
-  if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange))
+                                                   SourceLocation Loc,
+                                                   bool OBTrapInvolved) {
+  if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange) &&
+      !OBTrapInvolved)
     return;
 
   llvm::Type *SrcTy = Src->getType();
@@ -1389,6 +1392,16 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
     CheckKind = ICCK_SignedIntegerTruncationOrSignChange;
     Checks.emplace_back(Check.second);
     // If the comparison result is 'i1 false', then the truncation was lossy.
+  }
+
+  if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange)) {
+    if (OBTrapInvolved) {
+      llvm::Value *Combined = Check.second.first;
+      for (const auto &C : Checks)
+        Combined = Builder.CreateAnd(Combined, C.first);
+      CGF.EmitTrapCheck(Combined, CheckHandler);
+    }
+    return;
   }
 
   llvm::Constant *StaticArgs[] = {
@@ -1828,9 +1841,10 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     EmitIntegerTruncationCheck(Src, NoncanonicalSrcType, Res,
                                NoncanonicalDstType, Loc, OBTrapInvolved);
 
-  if (Opts.EmitImplicitIntegerSignChangeChecks)
+  if (Opts.EmitImplicitIntegerSignChangeChecks ||
+      (OBTrapInvolved && !OBWrapInvolved))
     EmitIntegerSignChangeCheck(Src, NoncanonicalSrcType, Res,
-                               NoncanonicalDstType, Loc);
+                               NoncanonicalDstType, Loc, OBTrapInvolved);
 
   return Res;
 }
@@ -2322,6 +2336,14 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
   unsigned ResElts = cast<llvm::FixedVectorType>(VType)->getNumElements();
 
+  // For column-major matrix types, we insert elements directly at their
+  // column-major positions rather than inserting sequentially and shuffling.
+  const ConstantMatrixType *ColMajorMT = nullptr;
+  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
+      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                LangOptions::MatrixMemoryLayout::MatrixColMajor)
+    ColMajorMT = MT;
+
   // Loop over initializers collecting the Value for each, and remembering
   // whether the source was swizzle (ExtVectorElementExpr).  This will allow
   // us to fold the shuffle for the swizzle into the shuffle for the vector
@@ -2376,7 +2398,11 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
           }
         }
       }
-      V = Builder.CreateInsertElement(V, Init, Builder.getInt32(CurIdx),
+      unsigned InsertIdx =
+          ColMajorMT
+              ? ColMajorMT->mapRowMajorToColumnMajorFlattenedIndex(CurIdx)
+              : CurIdx;
+      V = Builder.CreateInsertElement(V, Init, Builder.getInt32(InsertIdx),
                                       "vecinit");
       VIsPoisonShuffle = false;
       ++CurIdx;
@@ -2446,10 +2472,14 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
   // Emit remaining default initializers
   for (/* Do not initialize i*/; CurIdx < ResElts; ++CurIdx) {
-    Value *Idx = Builder.getInt32(CurIdx);
+    unsigned InsertIdx =
+        ColMajorMT ? ColMajorMT->mapRowMajorToColumnMajorFlattenedIndex(CurIdx)
+                   : CurIdx;
+    Value *Idx = Builder.getInt32(InsertIdx);
     llvm::Value *Init = llvm::Constant::getNullValue(EltTy);
     V = Builder.CreateInsertElement(V, Init, Idx, "vecinit");
   }
+
   return V;
 }
 
@@ -2525,7 +2555,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
                                       QualType DestTy, SourceLocation Loc) {
   SmallVector<LValue, 16> LoadList;
   CGF.FlattenAccessAndTypeLValue(SrcVal, LoadList);
-  // Dest is either a vector or a builtin?
+  // Dest is either a vector, constant matrix, or a builtin
   // if its a vector create a temp alloca to store into and return that
   if (auto *VecTy = DestTy->getAs<VectorType>()) {
     assert(LoadList.size() >= VecTy->getNumElements() &&
@@ -2550,20 +2580,26 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
+    bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
     llvm::Value *V = CGF.Builder.CreateLoad(
         CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
-    // V is an allocated temporary to build the truncated matrix into.
-    for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
-      unsigned ColMajorIndex =
-          (I % MatTy->getNumRows()) * MatTy->getNumColumns() +
-          (I / MatTy->getNumRows());
-      RValue RVal = CGF.EmitLoadOfLValue(LoadList[ColMajorIndex], Loc);
-      assert(RVal.isScalar() &&
-             "All flattened source values should be scalars.");
-      llvm::Value *Cast = CGF.EmitScalarConversion(
-          RVal.getScalarVal(), LoadList[ColMajorIndex].getType(),
-          MatTy->getElementType(), Loc);
-      V = CGF.Builder.CreateInsertElement(V, Cast, I);
+    // V is an allocated temporary for constructing the matrix.
+    for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
+      for (unsigned Col = 0, CE = MatTy->getNumColumns(); Col < CE; Col++) {
+        // When interpreted as a matrix, \p LoadList is *always* row-major order
+        // regardless of the default matrix memory layout.
+        unsigned LoadIdx = MatTy->getRowMajorFlattenedIndex(Row, Col);
+        RValue RVal = CGF.EmitLoadOfLValue(LoadList[LoadIdx], Loc);
+        assert(RVal.isScalar() &&
+               "All flattened source values should be scalars.");
+        llvm::Value *Cast = CGF.EmitScalarConversion(
+            RVal.getScalarVal(), LoadList[LoadIdx].getType(),
+            MatTy->getElementType(), Loc);
+        unsigned MatrixIdx = MatTy->getFlattenedIndex(Row, Col, IsRowMajor);
+        V = CGF.Builder.CreateInsertElement(V, Cast, MatrixIdx);
+      }
     }
     return V;
   }
@@ -2637,6 +2673,22 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // expects. It is desirable to remove this iff a better solution is found.
     if (auto A = dyn_cast<llvm::Argument>(Src); A && A->hasStructRetAttr())
       return CGF.performAddrSpaceCast(Src, DstTy);
+
+    // FIXME: Similarly to the sret case above, we need to handle BitCasts that
+    // involve implicit address space conversions. This arises when the source
+    // language lacks explicit address spaces, but the target's data layout
+    // assigns different address spaces (e.g., program address space for
+    // function pointers). Since Sema operates on Clang types (which don't carry
+    // this information) and selects CK_BitCast, we must detect the address
+    // space mismatch here in CodeGen when lowering to LLVM types. The most
+    // common case is casting function pointers (which get the program AS from
+    // the data layout) to/from object pointers (which use the default AS).
+    // Ideally, this would be resolved at a higher level, but that would require
+    // exposing data layout details to Sema.
+    if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+        SrcTy->getPointerAddressSpace() != DstTy->getPointerAddressSpace()) {
+      return CGF.performAddrSpaceCast(Src, DstTy);
+    }
 
     assert(
         (!SrcTy->isPtrOrPtrVectorTy() || !DstTy->isPtrOrPtrVectorTy() ||
@@ -3101,18 +3153,19 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
            "Destination type must be a matrix or builtin type.");
     Value *Mat = Visit(E);
     if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
-      SmallVector<int> Mask;
+      SmallVector<int> Mask(MatTy->getNumElementsFlattened());
       unsigned NumCols = MatTy->getNumColumns();
       unsigned NumRows = MatTy->getNumRows();
-      unsigned ColOffset = NumCols;
-      if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
-        ColOffset = SrcMatTy->getNumColumns();
-      for (unsigned R = 0; R < NumRows; R++) {
-        for (unsigned C = 0; C < NumCols; C++) {
-          unsigned I = R * ColOffset + C;
-          Mask.push_back(I);
-        }
-      }
+      auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>();
+      assert(SrcMatTy && "Source type must be a matrix type.");
+      assert(NumRows <= SrcMatTy->getNumRows());
+      assert(NumCols <= SrcMatTy->getNumColumns());
+      bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                        LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      for (unsigned R = 0; R < NumRows; R++)
+        for (unsigned C = 0; C < NumCols; C++)
+          Mask[MatTy->getFlattenedIndex(R, C, IsRowMajor)] =
+              SrcMatTy->getFlattenedIndex(R, C, IsRowMajor);
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }
@@ -4172,7 +4225,9 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
   if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
       !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
-      Ops.mayHaveIntegerOverflow() && !Ops.Ty.isWrapType()) {
+      Ops.mayHaveIntegerOverflow() && !Ops.Ty.isWrapType() &&
+      !CGF.getContext().isTypeIgnoredBySanitizer(
+          SanitizerKind::SignedIntegerOverflow, Ops.Ty)) {
     llvm::IntegerType *Ty = cast<llvm::IntegerType>(Zero->getType());
 
     llvm::Value *IntMin =

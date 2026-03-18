@@ -19,13 +19,13 @@ body: |
   ; CHECK-NEXT:   $vgpr10_vgpr11_vgpr12_vgpr13 = DS_READ_B128 $vgpr0, 0, 0, implicit $m0, implicit $exec
   ; CHECK-NEXT:   $vgpr28 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
   ; CHECK-NEXT:   $vgpr32 = DS_READ_B32 $vgpr0, 0, 0, implicit $m0, implicit $exec
+  ; CHECK-NEXT:   S_WAIT_DSCNT 0
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr10_vgpr11_vgpr12_vgpr13, $vgpr28, $vgpr32
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_WAIT_DSCNT 2
   ; CHECK-NEXT:   $vgpr50 = V_ADD_F32_e32 $vgpr10, $vgpr11, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_WAIT_DSCNT 1
   ; CHECK-NEXT:   $vgpr51 = V_ADD_F32_e32 $vgpr28, $vgpr28, implicit $mode, implicit $exec

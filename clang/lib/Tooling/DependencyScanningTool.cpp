@@ -11,7 +11,10 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/TargetParser/Host.h"
@@ -211,7 +214,7 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
     void handleProvidedAndRequiredStdCXXModules(
         std::optional<P1689ModuleInfo> Provided,
         std::vector<P1689ModuleInfo> Requires) override {
-      Rule.Provides = Provided;
+      Rule.Provides = std::move(Provided);
       if (Rule.Provides)
         Rule.Provides->SourcePath = Filename.str();
       Rule.Requires = std::move(Requires);
@@ -235,6 +238,10 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
                                    ModuleOutputKind Kind) override {
       return "";
     }
+
+    std::unique_ptr<DependencyActionController> clone() const override {
+      return std::make_unique<P1689ActionController>();
+    }
   };
 
   P1689Rule Rule;
@@ -248,6 +255,63 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   if (!MakeformatOutputPath.empty())
     Consumer.printDependencies(MakeformatOutput);
   return Rule;
+}
+
+static std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+                 std::vector<std::string>>
+initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                           ArrayRef<std::string> CommandLine,
+                           StringRef WorkingDirectory,
+                           llvm::MemoryBufferRef TUBuffer) {
+  // Reset what might have been modified in the previous worker invocation.
+  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+
+  auto OverlayFS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
+  auto InputPath = TUBuffer.getBufferIdentifier();
+  InMemoryFS->addFile(
+      InputPath, 0, llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer()));
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
+
+  OverlayFS->pushOverlay(InMemoryOverlay);
+  std::vector<std::string> ModifiedCommandLine(CommandLine);
+  ModifiedCommandLine.emplace_back(InputPath);
+
+  return std::make_pair(OverlayFS, ModifiedCommandLine);
+}
+
+static std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+                 std::vector<std::string>>
+initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                         ArrayRef<std::string> CommandLine,
+                         StringRef WorkingDirectory) {
+  // Reset what might have been modified in the previous worker invocation.
+  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+
+  // If we're scanning based on a module name alone, we don't expect the client
+  // to provide us with an input file. However, the driver really wants to have
+  // one. Let's just make it up to make the driver happy.
+  auto OverlayFS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
+  StringRef FakeInputPath("module-include.input");
+  // The fake input buffer is read-only, and it is used to produce
+  // unique source locations for the diagnostics. Therefore sharing
+  // this global buffer across threads is ok.
+  static const std::string FakeInput(
+      clang::tooling::CompilerInstanceWithContext::MaxNumOfQueries, ' ');
+  InMemoryFS->addFile(FakeInputPath, 0,
+                      llvm::MemoryBuffer::getMemBuffer(FakeInput));
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
+  OverlayFS->pushOverlay(InMemoryOverlay);
+
+  std::vector<std::string> ModifiedCommandLine(CommandLine);
+  ModifiedCommandLine.emplace_back(FakeInputPath);
+
+  return std::make_pair(OverlayFS, ModifiedCommandLine);
 }
 
 std::optional<TranslationUnitDeps>
@@ -282,17 +346,13 @@ DependencyScanningTool::getModuleDependencies(
     StringRef ModuleName, ArrayRef<std::string> CommandLine, StringRef CWD,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput) {
-  if (auto Error =
-          initializeCompilerInstanceWithContextOrError(CWD, CommandLine))
+  auto MaybeCIWithContext = CompilerInstanceWithContext::initializeOrError(
+      *this, CWD, CommandLine, LookupModuleOutput);
+  if (auto Error = MaybeCIWithContext.takeError())
     return Error;
 
-  auto Result = computeDependenciesByNameWithContextOrError(
+  return MaybeCIWithContext->computeDependenciesByNameOrError(
       ModuleName, AlreadySeen, LookupModuleOutput);
-
-  if (auto Error = finalizeCompilerInstanceWithContextOrError())
-    return Error;
-
-  return Result;
 }
 
 static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
@@ -317,49 +377,68 @@ static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
   return std::nullopt;
 }
 
-bool DependencyScanningTool::initializeWorkerCIWithContextFromCommandline(
-    DependencyScanningWorker &Worker, StringRef CWD,
-    ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
+std::optional<CompilerInstanceWithContext>
+CompilerInstanceWithContext::initializeFromCommandline(
+    DependencyScanningTool &Tool, StringRef CWD,
+    ArrayRef<std::string> CommandLine, DependencyActionController &Controller,
+    DiagnosticConsumer &DC) {
+  auto [OverlayFS, ModifiedCommandLine] =
+      initVFSForByNameScanning(&Tool.Worker.getVFS(), CommandLine, CWD);
+  auto DiagEngineWithCmdAndOpts =
+      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
+                                                      OverlayFS, DC);
+
   if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
     // The input command line is already a -cc1 invocation; initialize the
     // compiler instance directly from it.
-    return Worker.initializeCompilerInstanceWithContext(CWD, CommandLine, DC);
+    CompilerInstanceWithContext CIWithContext(Tool.Worker, CWD, CommandLine);
+    if (!CIWithContext.initialize(
+            Controller, std::move(DiagEngineWithCmdAndOpts), OverlayFS))
+      return std::nullopt;
+    return std::move(CIWithContext);
   }
 
   // The input command line is either a driver-style command line, or
   // ill-formed. In this case, we will first call the Driver to build a -cc1
   // command line for this compilation or diagnose any ill-formed input.
-  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
-      &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
-  auto DiagEngineWithCmdAndOpts =
-      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
-                                                      OverlayFS, DC);
-
   const auto MaybeFirstCC1 = getFirstCC1CommandLine(
       ModifiedCommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
   if (!MaybeFirstCC1)
-    return false;
+    return std::nullopt;
 
-  return Worker.initializeCompilerInstanceWithContext(
-      CWD, *MaybeFirstCC1, std::move(DiagEngineWithCmdAndOpts), OverlayFS);
+  std::vector<std::string> CC1CommandLine(MaybeFirstCC1->begin(),
+                                          MaybeFirstCC1->end());
+  CompilerInstanceWithContext CIWithContext(Tool.Worker, CWD,
+                                            std::move(CC1CommandLine));
+  if (!CIWithContext.initialize(Controller, std::move(DiagEngineWithCmdAndOpts),
+                                OverlayFS))
+    return std::nullopt;
+  return std::move(CIWithContext);
 }
 
-llvm::Error
-DependencyScanningTool::initializeCompilerInstanceWithContextOrError(
-    StringRef CWD, ArrayRef<std::string> CommandLine) {
-  DiagPrinterWithOS =
+llvm::Expected<CompilerInstanceWithContext>
+CompilerInstanceWithContext::initializeOrError(
+    DependencyScanningTool &Tool, StringRef CWD,
+    ArrayRef<std::string> CommandLine,
+    LookupModuleOutputCallback LookupModuleOutput) {
+  // It might seem wasteful to create fresh controller just for initializing the
+  // compiler instance, but repeated calls to computeDependenciesByNameOrError()
+  // do that as well, so this gets amortized.
+  CallbackActionController Controller(LookupModuleOutput);
+  auto DiagPrinterWithOS =
       std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
 
-  bool Result = initializeWorkerCIWithContextFromCommandline(
-      Worker, CWD, CommandLine, DiagPrinterWithOS->DiagPrinter);
-
-  if (Result)
-    return llvm::Error::success();
+  auto Result = initializeFromCommandline(Tool, CWD, CommandLine, Controller,
+                                          DiagPrinterWithOS->DiagPrinter);
+  if (Result) {
+    Result->DiagPrinterWithOS = std::move(DiagPrinterWithOS);
+    return std::move(*Result);
+  }
   return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
 }
 
 llvm::Expected<TranslationUnitDeps>
-DependencyScanningTool::computeDependenciesByNameWithContextOrError(
+CompilerInstanceWithContext::computeDependenciesByNameOrError(
     StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
@@ -367,15 +446,172 @@ DependencyScanningTool::computeDependenciesByNameWithContextOrError(
   // We need to clear the DiagnosticOutput so that each by-name lookup
   // has a clean diagnostics buffer.
   DiagPrinterWithOS->DiagnosticOutput.clear();
-  if (Worker.computeDependenciesByNameWithContext(ModuleName, Consumer,
-                                                  Controller))
+  if (computeDependencies(ModuleName, Consumer, Controller))
     return Consumer.takeTranslationUnitDeps();
   return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
 }
 
-llvm::Error
-DependencyScanningTool::finalizeCompilerInstanceWithContextOrError() {
-  if (Worker.finalizeCompilerInstanceWithContext())
-    return llvm::Error::success();
-  return makeErrorFromDiagnosticsOS(*DiagPrinterWithOS);
+bool CompilerInstanceWithContext::initialize(
+    DependencyActionController &Controller,
+    std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
+  assert(DiagEngineWithDiagOpts && "Valid diagnostics engine required!");
+  DiagEngineWithCmdAndOpts = std::move(DiagEngineWithDiagOpts);
+  DiagConsumer = DiagEngineWithCmdAndOpts->DiagEngine->getClient();
+
+#ifndef NDEBUG
+  assert(OverlayFS && "OverlayFS required!");
+  bool SawDepFS = false;
+  OverlayFS->visit([&](llvm::vfs::FileSystem &VFS) {
+    SawDepFS |= &VFS == Worker.DepFS.get();
+  });
+  assert(SawDepFS && "OverlayFS not based on DepFS");
+#endif
+
+  OriginalInvocation = createCompilerInvocation(
+      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine);
+  if (!OriginalInvocation) {
+    DiagEngineWithCmdAndOpts->DiagEngine->Report(
+        diag::err_fe_expected_compiler_job)
+        << llvm::join(CommandLine, " ");
+    return false;
+  }
+
+  if (any(Worker.Service.getOpts().OptimizeArgs &
+          ScanningOptimizations::Macros))
+    canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
+
+  // Create the CompilerInstance.
+  std::shared_ptr<ModuleCache> ModCache =
+      makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
+  CIPtr = std::make_unique<CompilerInstance>(
+      createScanCompilerInvocation(*OriginalInvocation, Worker.Service,
+                                   Controller),
+      Worker.PCHContainerOps, std::move(ModCache));
+  auto &CI = *CIPtr;
+
+  initializeScanCompilerInstance(
+      CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
+      Worker.Service, Worker.DepFS);
+
+  StableDirs = getInitialStableDirs(CI);
+  auto MaybePrebuiltModulesASTMap =
+      computePrebuiltModulesASTMap(CI, StableDirs);
+  if (!MaybePrebuiltModulesASTMap)
+    return false;
+
+  PrebuiltModuleASTMap = std::move(*MaybePrebuiltModulesASTMap);
+  OutputOpts = createDependencyOutputOptions(*OriginalInvocation);
+
+  // We do not create the target in initializeScanCompilerInstance because
+  // setting it here is unique for by-name lookups. We create the target only
+  // once here, and the information is reused for all computeDependencies calls.
+  // We do not need to call createTarget explicitly if we go through
+  // CompilerInstance::ExecuteAction to perform scanning.
+  CI.createTarget();
+
+  return true;
+}
+
+bool CompilerInstanceWithContext::computeDependencies(
+    StringRef ModuleName, DependencyConsumer &Consumer,
+    DependencyActionController &Controller) {
+  if (SrcLocOffset >= MaxNumOfQueries)
+    llvm::report_fatal_error("exceeded maximum by-name scans for worker");
+
+  assert(CIPtr && "CIPtr must be initialized before calling this method");
+  auto &CI = *CIPtr;
+
+  // We need to reset the diagnostics, so that the diagnostics issued
+  // during a previous computeDependencies call do not affect the current call.
+  // If we do not reset, we may inherit fatal errors from a previous call.
+  CI.getDiagnostics().Reset();
+
+  // We create this cleanup object because computeDependencies may exit
+  // early with errors.
+  llvm::scope_exit CleanUp([&]() {
+    CI.clearDependencyCollectors();
+    // The preprocessor may not be created at the entry of this method,
+    // but it must have been created when this method returns, whether
+    // there are errors during scanning or not.
+    CI.getPreprocessor().removePPCallbacks();
+  });
+
+  auto MDC = initializeScanInstanceDependencyCollector(
+      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
+      Worker.Service,
+      /* The MDC's constructor makes a copy of the OriginalInvocation, so
+      we can pass it in without worrying that it might be changed across
+      invocations of computeDependencies. */
+      *OriginalInvocation, Controller, PrebuiltModuleASTMap, StableDirs);
+
+  CompilerInvocation ModuleInvocation(*OriginalInvocation);
+  if (!Controller.initialize(CI, ModuleInvocation))
+    return false;
+
+  if (!SrcLocOffset) {
+    // When SrcLocOffset is zero, we are at the beginning of the fake source
+    // file. In this case, we call BeginSourceFile to initialize.
+    std::unique_ptr<FrontendAction> Action =
+        std::make_unique<PreprocessOnlyAction>();
+    auto *InputFile = CI.getFrontendOpts().Inputs.begin();
+    bool ActionBeginSucceeded = Action->BeginSourceFile(CI, *InputFile);
+    assert(ActionBeginSucceeded && "Action BeginSourceFile must succeed");
+    (void)ActionBeginSucceeded;
+  }
+
+  Preprocessor &PP = CI.getPreprocessor();
+  SourceManager &SM = PP.getSourceManager();
+  FileID MainFileID = SM.getMainFileID();
+  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
+  SourceLocation IDLocation = FileStart.getLocWithOffset(SrcLocOffset);
+  PPCallbacks *CB = nullptr;
+  if (!SrcLocOffset) {
+    // We need to call EnterSourceFile when SrcLocOffset is zero to initialize
+    // the preprocessor.
+    bool PPFailed = PP.EnterSourceFile(MainFileID, nullptr, SourceLocation());
+    assert(!PPFailed && "Preprocess must be able to enter the main file.");
+    (void)PPFailed;
+    CB = MDC->getPPCallbacks();
+  } else {
+    // When SrcLocOffset is non-zero, the preprocessor has already been
+    // initialized through a previous call of computeDependencies. We want to
+    // preserve the PP's state, hence we do not call EnterSourceFile again.
+    MDC->attachToPreprocessor(PP);
+    CB = MDC->getPPCallbacks();
+
+    FileID PrevFID;
+    SrcMgr::CharacteristicKind FileType = SM.getFileCharacteristic(IDLocation);
+    CB->LexedFileChanged(MainFileID,
+                         PPChainedCallbacks::LexedFileChangeReason::EnterFile,
+                         FileType, PrevFID, IDLocation);
+  }
+
+  // FIXME: Scan modules asynchronously here as well.
+
+  SrcLocOffset++;
+  SmallVector<IdentifierLoc, 2> Path;
+  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
+  Path.emplace_back(IDLocation, ModuleID);
+  auto ModResult = CI.loadModule(IDLocation, Path, Module::Hidden, false);
+
+  assert(CB && "Must have PPCallbacks after module loading");
+  CB->moduleImport(SourceLocation(), Path, ModResult);
+  // Note that we are calling the CB's EndOfMainFile function, which
+  // forwards the results to the dependency consumer.
+  // It does not indicate the end of processing the fake file.
+  CB->EndOfMainFile();
+
+  if (!ModResult)
+    return false;
+
+  MDC->applyDiscoveredDependencies(ModuleInvocation);
+
+  if (!Controller.finalize(CI, ModuleInvocation))
+    return false;
+
+  Consumer.handleBuildCommand(
+      {CommandLine[0], ModuleInvocation.getCC1CommandLine()});
+
+  return true;
 }

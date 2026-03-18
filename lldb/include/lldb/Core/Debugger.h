@@ -76,6 +76,7 @@ struct TestingProperties : public Properties {
   TestingProperties();
   bool GetInjectVarLocListError() const;
   static TestingProperties &GetGlobalTestingProperties();
+  static void AppendGlobalTestingPropertiesTo(Debugger &debugger);
 };
 #endif
 
@@ -99,10 +100,6 @@ public:
   static lldb::DebuggerSP
   CreateInstance(lldb::LogOutputCallback log_callback = nullptr,
                  void *baton = nullptr);
-
-  static lldb::TargetSP FindTargetWithProcessID(lldb::pid_t pid);
-
-  static lldb::TargetSP FindTargetWithProcess(Process *process);
 
   static void Initialize(LoadPluginCallbackType load_plugin_callback);
 
