@@ -18385,8 +18385,8 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   // Try to form CSINV etc.
   unsigned Opcode;
   bool InvertCond;
-  SDValue CSetOp = matchCSET(Opcode, InvertCond, TrueVal, FalseVal, Subtarget);
-  if (CSetOp) {
+  if (SDValue CSetOp =
+          matchCSET(Opcode, InvertCond, TrueVal, FalseVal, Subtarget)) {
     if (InvertCond) {
       ARMCC::CondCodes CondCode =
           (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
