@@ -166,11 +166,16 @@ public:
   }
 
   /// Set the ControllerAccess object.
-  void setController(std::shared_ptr<ControllerAccess> CA);
+  void attach(std::shared_ptr<ControllerAccess> CA);
 
   /// Disconnect the ControllerAccess object.
-  void detachFromController();
+  void detach();
 
+  /// Call a tagged handler in the Controller.
+  ///
+  /// This method can be called directly, but is expected to be more commonly
+  /// called by the WrapperFunction::call method using a CallViaSession object
+  /// (see below).
   void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) {
     if (auto TmpCA = CA)
@@ -178,6 +183,30 @@ public:
     else
       OnComplete(WrapperFunctionBuffer::createOutOfBandError(
           "no controller attached"));
+  }
+
+  /// Provides an async method interface to call, via the given Session, the
+  /// controller handler with the given tag.
+  ///
+  /// Useable as a Caller implementation with WrapperFunction::call.
+  class CallViaSession {
+  public:
+    CallViaSession(Session &S, HandlerTag T) : S(S), T(T) {}
+
+    void operator()(OnCallHandlerCompleteFn &&HandleResult,
+                    WrapperFunctionBuffer ArgBytes) {
+      S.callController(std::move(HandleResult), T, std::move(ArgBytes));
+    }
+
+  private:
+    Session &S;
+    HandlerTag T;
+  };
+
+  /// Get a WrapperFunction::call-compatible Caller that will call through to
+  /// the handler with the given tag.
+  CallViaSession callViaSession(HandlerTag T) noexcept {
+    return CallViaSession(*this, T);
   }
 
 private:
@@ -213,20 +242,6 @@ private:
   mutable std::mutex M;
   std::vector<std::unique_ptr<Service>> Services;
   std::unique_ptr<ShutdownInfo> SI;
-};
-
-class CallViaSession {
-public:
-  CallViaSession(Session &S, Session::HandlerTag T) : S(S), T(T) {}
-
-  void operator()(Session::OnCallHandlerCompleteFn &&HandleResult,
-                  WrapperFunctionBuffer ArgBytes) {
-    S.callController(std::move(HandleResult), T, std::move(ArgBytes));
-  }
-
-private:
-  Session &S;
-  Session::HandlerTag T;
 };
 
 } // namespace orc_rt
