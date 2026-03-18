@@ -4474,8 +4474,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
             &Exiting->back(),
             m_BranchOnCount(m_Add(m_Specific(CanIV), m_Specific(&Plan.getUF())),
                             m_VPValue())))
-      return VF.isScalable() ? ElementCount::getScalable(1)
-                             : ElementCount::getFixed(1);
+      return ElementCount::get(1, VF.isScalable());
     return VF;
   };
 
