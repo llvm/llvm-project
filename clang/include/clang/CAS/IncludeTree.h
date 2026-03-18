@@ -453,6 +453,7 @@ public:
 
   class ExportList;
   class LinkLibraryList;
+  class RequirementList;
 
   struct ModuleFlags {
     bool IsFramework : 1;
@@ -504,6 +505,11 @@ public:
       return getReference(*Index);
     return std::nullopt;
   }
+  std::optional<ObjectRef> getRequirementsRef() const {
+    if (std::optional<unsigned> Index = getRequirementsIndex())
+      return getReference(*Index);
+    return std::nullopt;
+  }
 
   /// The list of modules that this submodule re-exports.
   Expected<std::optional<ExportList>> getExports();
@@ -511,13 +517,17 @@ public:
   /// The list of modules that this submodule re-exports.
   Expected<std::optional<LinkLibraryList>> getLinkLibraries();
 
+  /// The list of requirements for this module (e.g. "requires cplusplus").
+  Expected<std::optional<RequirementList>> getRequirements();
+
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
   static Expected<Module> create(ObjectStore &DB, StringRef ModuleName,
                                  StringRef ExportAs, ModuleFlags Flags,
                                  ArrayRef<ObjectRef> Submodules,
                                  std::optional<ObjectRef> ExportList,
-                                 std::optional<ObjectRef> LinkLibraries);
+                                 std::optional<ObjectRef> LinkLibraries,
+                                 std::optional<ObjectRef> Requirements);
 
   static bool isValid(const ObjectProxy &Node) {
     if (!IncludeTreeBase::isValid(Node))
@@ -539,8 +549,10 @@ private:
   StringRef dataAfterFlags() const { return getData().drop_front(2); }
   bool hasExports() const;
   bool hasLinkLibraries() const;
+  bool hasRequirements() const;
   std::optional<unsigned> getExportsIndex() const;
   std::optional<unsigned> getLinkLibrariesIndex() const;
+  std::optional<unsigned> getRequirementsIndex() const;
 
   explicit Module(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
     assert(isValid(*this));
@@ -666,6 +678,53 @@ private:
   }
 
   friend class IncludeTreeBase<LinkLibraryList>;
+  friend class Module;
+};
+
+/// The set of feature requirements for a module (e.g. "requires cplusplus").
+/// Stored as a single blob: for each requirement, a state byte (0 or 1)
+/// followed by a null-terminated feature name.
+class IncludeTree::Module::RequirementList
+    : public IncludeTreeBase<RequirementList> {
+public:
+  static constexpr StringRef getNodeKind() { return "ReqL"; }
+
+  struct Requirement {
+    StringRef FeatureName;
+    bool RequiredState;
+  };
+
+  /// Calls \p CB for each requirement.
+  llvm::Error
+  forEachRequirement(llvm::function_ref<llvm::Error(Requirement)> CB);
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+  static Expected<RequirementList> create(ObjectStore &DB,
+                                          ArrayRef<Requirement> Requirements);
+
+  static bool isValid(const ObjectProxy &Node) {
+    if (!IncludeTreeBase::isValid(Node))
+      return false;
+    IncludeTreeBase Base(Node);
+    return Base.getNumReferences() == 0;
+  }
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
+    auto Node = DB.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+
+private:
+  explicit RequirementList(ObjectProxy Node)
+      : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
+  }
+
+  friend class IncludeTreeBase<RequirementList>;
   friend class Module;
 };
 
