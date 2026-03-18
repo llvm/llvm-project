@@ -1878,8 +1878,8 @@ void Ripple::padToTargetSIMDWidth() {
   /// PaddedLength number of elements.
   /// Note: The following things must be true about \p V:
   /// - V should be a constant, OR,
-  /// - V must be an instruction previously padded and must have its record in
-  /// InstToPadded, InstToPaddedLength.
+  /// - V must be an instruction previously padded with its natural padded
+  /// length and must have its record in InstToPadded.
   auto GetPaddedV =
       [this, &GetPaddedLength](
           Value *V, const unsigned PaddedLength,
@@ -1953,32 +1953,15 @@ void Ripple::padToTargetSIMDWidth() {
         return It->second;
       }
       auto NaturalPaddedLngthI = GetPaddedLength(I);
-
-      Instruction *VWithDifferentPad = nullptr;
-      unsigned SourceLength = 0;
-      if (auto ItNat = InstToPadded.find({I, NaturalPaddedLngthI});
-          ItNat != InstToPadded.end()) {
-        VWithDifferentPad = dyn_cast<Instruction>(ItNat->second);
-        if (!VWithDifferentPad) {
-          llvm_unreachable("Expected instruction in InstToPadded mapping");
-        }
-        SourceLength = NaturalPaddedLngthI;
-      } else {
-        // No existing mapping for the natural padded length. Treat the
-        // original instruction as the base and create a pad directly.
-        VWithDifferentPad = I;
-        auto *IType = I->getType();
-        if (!IType->isVectorTy()) {
-          // For scalar types, no padding needed - return as-is
-          InstToPadded.insert_or_assign({I, PaddedLength}, I);
-          return I;
-        }
-        SourceLength =
-            cast<VectorType>(IType)->getElementCount().getFixedValue();
-      }
+      // Note: the contract offered by `InstToPadded` is that an input
+      // Instruction, Inst, must have been padded with its
+      // "GetPaddedLength(Inst)" earlier to calling this routine.
+      auto *VWithDifferentPad =
+          dyn_cast<Instruction>(InstToPadded.at({I, NaturalPaddedLngthI}));
 
       std::vector<int> MaskEls(PaddedLength, -1);
-      for (unsigned IEl = 0; IEl < std::min(PaddedLength, SourceLength); ++IEl)
+      for (unsigned IEl = 0; IEl < std::min(PaddedLength, NaturalPaddedLngthI);
+           ++IEl)
         MaskEls[IEl] = IEl;
 
       LLVM_DEBUG(dbgs() << "[padToTargetSIMD] Expanding " << *VWithDifferentPad
@@ -1993,10 +1976,7 @@ void Ripple::padToTargetSIMDWidth() {
           VWithDifferentPad, MaskEls, VWithDifferentPad->getName() + ".pad");
       // step 3. restore insertion point.
       irBuilder.restoreIP(OldIP);
-      // Record both the target padded length and, if missing, the natural pad
-      // length for subsequent re-use.
-      if (InstToPadded.find({I, NaturalPaddedLngthI}) == InstToPadded.end())
-        InstToPadded.insert_or_assign({I, NaturalPaddedLngthI}, PaddedV);
+
       InstToPadded.insert_or_assign({I, PaddedLength}, PaddedV);
       return PaddedV;
     }
@@ -2473,15 +2453,10 @@ void Ripple::padToTargetSIMDWidth() {
 
       SmallVector<Value *> Operands(IntrnscInst->arg_begin(),
                                     IntrnscInst->arg_end());
-      unsigned PaddedLength = GetMaxPaddedLength(Operands);
-      if (IntrnscInst->getType()->isVectorTy()) {
-        auto [EVTType, LegalVT] = GetEvtLegalTypes(IntrnscInst);
-        PaddedLength = std::max(PaddedLength, LegalVT.getVectorNumElements());
-      }
-
       if (IntrnscInst->getIntrinsicID() == Intrinsic::masked_load) {
-        unsigned UnpaddedLength =
-            GetEvtLegalTypes(IntrnscInst).first.getVectorNumElements();
+        auto [EVTType, LegalVT] = GetEvtLegalTypes(IntrnscInst);
+        auto PaddedLength = LegalVT.getVectorNumElements();
+        auto UnpaddedLength = EVTType.getVectorNumElements();
         irBuilder.SetInsertPoint(IntrnscInst);
         auto *NewLoadTy = VectorType::get(
             IntrnscInst->getType()->getScalarType(), PaddedLength, false);
@@ -2509,20 +2484,14 @@ void Ripple::padToTargetSIMDWidth() {
 
         InstToPadded.insert_or_assign({IntrnscInst, PaddedLength},
                                       NewMaskedLoad);
-        // If the intrinsic’s natural padded length differs, also record a
-        // mapping for that length by slicing the newly created load.
-        auto NaturalPaddedLength = GetPaddedLength(IntrnscInst);
-        if (NaturalPaddedLength != PaddedLength) {
-          auto *NewNaturallyPaddedMaskedLoad = ExtractStartingSubVec(
-              irBuilder, NewMaskedLoad, NaturalPaddedLength);
-          InstToPadded.insert_or_assign({IntrnscInst, NaturalPaddedLength},
-                                        NewNaturallyPaddedMaskedLoad);
-        }
         InstructionsToRemove.push_back(IntrnscInst);
       } else if (IntrnscInst->getIntrinsicID() == Intrinsic::masked_store) {
+        auto [EVTType, LegalVT] =
+            GetEvtLegalTypes(IntrnscInst->getArgOperand(0));
+        auto PaddedLength = LegalVT.getVectorNumElements();
+        auto UnpaddedLength = EVTType.getVectorNumElements();
+
         irBuilder.SetInsertPoint(IntrnscInst);
-        auto UnpaddedLength = GetEvtLegalTypes(IntrnscInst->getArgOperand(0))
-                                  .first.getVectorNumElements();
 
         Value *NewVal = GetPaddedV(IntrnscInst->getArgOperand(0), PaddedLength,
                                    InstToPadded);
@@ -2538,26 +2507,16 @@ void Ripple::padToTargetSIMDWidth() {
                                 PaddedMask->getName() + ".pad");
         Align AlignVal(IntrnscInst->getParamAlign(1).valueOrOne());
 
-        auto *NewMaskedStore = irBuilder.CreateMaskedStore(
+        [[maybe_unused]] auto *NewMaskedStore = irBuilder.CreateMaskedStore(
             NewVal, IntrnscInst->getArgOperand(1), AlignVal, NewMask);
-        // Also record mappings for the store value at both lengths to avoid
-        // later repad failures.
-        InstToPadded.insert_or_assign({IntrnscInst, PaddedLength},
-                                      NewMaskedStore);
-        auto NaturalPaddedLength =
-            GetPaddedLength(IntrnscInst->getArgOperand(0));
-        if (NaturalPaddedLength != PaddedLength) {
-          auto *NewNaturallyPaddedStoreVal =
-              ExtractStartingSubVec(irBuilder, NewVal, NaturalPaddedLength);
-          if (auto *StoreValInst =
-                  dyn_cast<Instruction>(IntrnscInst->getArgOperand(0))) {
-            InstToPadded.insert_or_assign({StoreValInst, NaturalPaddedLength},
-                                          NewNaturallyPaddedStoreVal);
-          }
-        }
+        LLVM_DEBUG(dbgs() << "[PadToTargetSIMD] Maked Store, " << *IntrnscInst
+                          << " was replaced with " << *NewMaskedStore
+                          << ".\n";);
         InstructionsToRemove.push_back(IntrnscInst);
       } else if (IntrnscInst->getIntrinsicID() == Intrinsic::masked_gather) {
-        unsigned UnpaddedLength =
+        auto PaddedLength =
+            GetMaxPaddedLength({IntrnscInst->getArgOperand(0), IntrnscInst});
+        auto UnpaddedLength =
             GetEvtLegalTypes(IntrnscInst).first.getVectorNumElements();
 
         irBuilder.SetInsertPoint(IntrnscInst);
@@ -2600,6 +2559,8 @@ void Ripple::padToTargetSIMDWidth() {
 
         InstructionsToRemove.push_back(IntrnscInst);
       } else if (IntrnscInst->getIntrinsicID() == Intrinsic::masked_scatter) {
+        auto PaddedLength = GetMaxPaddedLength(
+            {IntrnscInst->getArgOperand(0), IntrnscInst->getArgOperand(1)});
         auto UnpaddedLength = GetEvtLegalTypes(IntrnscInst->getArgOperand(0))
                                   .first.getVectorNumElements();
         irBuilder.SetInsertPoint(IntrnscInst);
@@ -2708,6 +2669,11 @@ void Ripple::padToTargetSIMDWidth() {
       } else if (auto VectorIntrnscId = getVectorIntrinsicIDForCall(
                      IntrnscInst, &targetLibraryInfo);
                  VectorIntrnscId != Intrinsic::not_intrinsic) {
+        unsigned PaddedLength = GetMaxPaddedLength(Operands);
+        if (IntrnscInst->getType()->isVectorTy()) {
+          auto [EVTType, LegalVT] = GetEvtLegalTypes(IntrnscInst);
+          PaddedLength = std::max(PaddedLength, LegalVT.getVectorNumElements());
+        }
 
         auto *NewTy = VectorType::get(IntrnscInst->getType()->getScalarType(),
                                       PaddedLength, false);
