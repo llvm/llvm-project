@@ -14,6 +14,7 @@
 #define ORC_RT_SIMPLESYMBOLTABLE_H
 
 #include "orc-rt/Error.h"
+#include "orc-rt/move_only_function.h"
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -29,6 +30,8 @@ class SimpleSymbolTable {
 public:
   using SymbolTable = std::unordered_map<std::string, const void *>;
   using iterator = SymbolTable::const_iterator;
+
+  using MutatorFn = move_only_function<Error(SimpleSymbolTable &)>;
 
   bool empty() const noexcept { return Symbols.empty(); }
   size_t size() const noexcept { return Symbols.size(); }

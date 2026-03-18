@@ -403,6 +403,12 @@ typedef enum {
   LLVMAtomicRMWBinOpFMinimum, /**< Sets the value if it's smaller than the
                            original using an floating point comparison and
                            return the old one */
+  LLVMAtomicRMWBinOpFMaximumNum, /**< Sets the value if it's greater than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpFMinimumNum, /**< Sets the value if it's smaller than the
+                           original using an floating point comparison and
+                           return the old one */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {

@@ -15,21 +15,9 @@
 #include "orc-rt/TaskDispatcher.h"
 #include "gtest/gtest.h"
 
+#include "CommonTestUtils.h"
+
 using namespace orc_rt;
-
-static ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
-  return ExecutorProcessInfo("arm64-apple-darwin", 16384);
-}
-
-class NoDispatcher : public TaskDispatcher {
-public:
-  void dispatch(std::unique_ptr<Task> T) override {
-    assert(false && "strictly no dispatching!");
-  }
-  void shutdown() override {}
-};
-
-static void noErrors(Error Err) { cantFail(std::move(Err)); }
 
 TEST(BootstrapInfoTest, ExplicitConstruction) {
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
