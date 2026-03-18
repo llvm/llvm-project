@@ -51,8 +51,7 @@ scf::ExecuteRegionOp wrapMultiBlockRegionWithSCFExecuteRegionImpl(
 template <typename... TerminatorOps>
 scf::ExecuteRegionOp
 wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
-                                         Location loc,
-                                         RewriterBase &rewriter) {
+                                         Location loc, RewriterBase &rewriter) {
   return wrapMultiBlockRegionWithSCFExecuteRegionImpl(
       region, mapping, loc, rewriter,
       [](Operation *op) { return isa<TerminatorOps...>(op); });

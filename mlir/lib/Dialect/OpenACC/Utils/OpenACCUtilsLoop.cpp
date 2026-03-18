@@ -298,9 +298,8 @@ scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp,
                         mapping);
 
   if (!loopOp.getRegion().hasOneBlock()) {
-    auto exeRegion =
-        wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp>(
-            loopOp.getRegion(), mapping, loc, rewriter);
+    auto exeRegion = wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp>(
+        loopOp.getRegion(), mapping, loc, rewriter);
     if (!exeRegion) {
       rewriter.eraseOp(parallelOp);
       return nullptr;
