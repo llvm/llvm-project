@@ -412,13 +412,28 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   return Base::properlyDominates(ParentA, ParentB);
 }
 
-bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI,
-                                        unsigned OverrideMaxNumRegs) const {
-  return any_of(MaxLocalUsers, [&TTI, &OverrideMaxNumRegs](auto &LU) {
-    return LU.second > (OverrideMaxNumRegs > 0
-                            ? OverrideMaxNumRegs
-                            : TTI.getNumberOfRegisters(LU.first));
-  });
+InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
+                                           unsigned OverrideMaxNumRegs) const {
+  InstructionCost Cost;
+  for (const auto &[RegClass, MaxUsers] : MaxLocalUsers) {
+    unsigned AvailableRegs = OverrideMaxNumRegs > 0
+                                 ? OverrideMaxNumRegs
+                                 : Ctx.TTI.getNumberOfRegisters(RegClass);
+    if (MaxUsers > AvailableRegs) {
+      // Assume that for each register used past what's available we get one
+      // spill and reload.
+      unsigned Spills = MaxUsers - AvailableRegs;
+      InstructionCost SpillCost =
+          Ctx.TTI.getRegisterClassSpillCost(RegClass, Ctx.CostKind) +
+          Ctx.TTI.getRegisterClassReloadCost(RegClass, Ctx.CostKind);
+      InstructionCost TotalCost = Spills * SpillCost;
+      LLVM_DEBUG(dbgs() << "LV(REG): Cost of " << TotalCost << " from "
+                        << Spills << " spills of "
+                        << Ctx.TTI.getRegisterClassName(RegClass) << "\n");
+      Cost += TotalCost;
+    }
+  }
+  return Cost;
 }
 
 SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
