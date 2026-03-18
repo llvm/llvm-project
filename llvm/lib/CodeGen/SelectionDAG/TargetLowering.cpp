@@ -6406,9 +6406,8 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
 /// with the multiplicative inverse of the constant.
 /// Ref: "Hacker's Delight" by Henry Warren, 2nd Edition, p. 242
 static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
-                              SelectionDAG &DAG,
+                              const SDLoc &dl, SelectionDAG &DAG,
                               SmallVectorImpl<SDNode *> &Created) {
-  SDLoc dl(N);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
@@ -6469,9 +6468,8 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
 /// with the multiplicative inverse of the constant.
 /// Ref: "Hacker's Delight" by Henry Warren, 2nd Edition, p. 242
 static SDValue BuildExactUDIV(const TargetLowering &TLI, SDNode *N,
-                              SelectionDAG &DAG,
+                              const SDLoc &dl, SelectionDAG &DAG,
                               SmallVectorImpl<SDNode *> &Created) {
-  SDLoc dl(N);
   EVT VT = N->getValueType(0);
   EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
   EVT ShSVT = ShVT.getScalarType();
@@ -6599,11 +6597,12 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalization,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
+  SDLoc dl(N);
+
   // If the sdiv has an 'exact' bit we can use a simpler lowering.
   if (N->getFlags().hasExact())
-    return BuildExactSDIV(*this, N, DAG, Created);
+    return BuildExactSDIV(*this, N, dl, DAG, Created);
 
-  SDLoc dl(N);
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
@@ -6767,11 +6766,12 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalization,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
+  SDLoc dl(N);
+
   // If the udiv has an 'exact' bit we can use a simpler lowering.
   if (N->getFlags().hasExact())
-    return BuildExactUDIV(*this, N, DAG, Created);
+    return BuildExactUDIV(*this, N, dl, DAG, Created);
 
-  SDLoc dl(N);
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
