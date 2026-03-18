@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/ExecutorProcessInfo.h"
+#include "orc-rt/Math.h"
 
+#include <cassert>
 #include <cstring>
 #include <unistd.h>
 
@@ -20,7 +22,10 @@ namespace orc_rt {
 
 ExecutorProcessInfo::ExecutorProcessInfo(std::string Triple,
                                          size_t PageSize) noexcept
-    : Triple(std::move(Triple)), PageSize(PageSize) {}
+    : Triple(std::move(Triple)), PageSize(PageSize) {
+  assert(!this->Triple.empty() && "triple cannot be empty");
+  assert(isPowerOf2(this->PageSize) && "page-size is not a power of two");
+}
 
 /// Create an ExecutorProcessInfo, auto-detecting property values.
 Expected<ExecutorProcessInfo> ExecutorProcessInfo::Detect() noexcept {
@@ -66,6 +71,10 @@ Expected<size_t> ExecutorProcessInfo::detectPageSize() noexcept {
   long PageSize = sysconf(_SC_PAGESIZE);
   if (PageSize == -1)
     return make_error<StringError>(strerror(errno));
+  if (!isPowerOf2(PageSize))
+    return make_error<StringError>("reported page size " +
+                                   std::to_string(PageSize) +
+                                   " is not a power of two");
   return static_cast<size_t>(PageSize);
 }
 
