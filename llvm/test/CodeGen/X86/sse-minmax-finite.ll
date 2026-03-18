@@ -56,7 +56,8 @@ define double @olt_inverse(double %x, double %y)  {
 define double @oge(double %x, double %y)  {
 ; CHECK-LABEL: oge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxsd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan oge double %x, %y
   %d = select i1 %c, double %x, double %y
@@ -66,7 +67,8 @@ define double @oge(double %x, double %y)  {
 define double @ole(double %x, double %y)  {
 ; CHECK-LABEL: ole:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minsd %xmm1, %xmm0
+; CHECK-NEXT:    minsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ole double %x, %y
   %d = select i1 %c, double %x, double %y
@@ -80,8 +82,7 @@ define double @oge_inverse(double %x, double %y)  {
 ; RELAX-NEXT:    retq
 ; CHECK-LABEL: oge_inverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    minsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan oge double %x, %y
   %d = select i1 %c, double %y, double %x
@@ -95,8 +96,7 @@ define double @ole_inverse(double %x, double %y)  {
 ; RELAX-NEXT:    retq
 ; CHECK-LABEL: ole_inverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ole double %x, %y
   %d = select i1 %c, double %y, double %x
@@ -153,7 +153,8 @@ define double @oge_x(double %x)  {
 ; CHECK-LABEL: oge_x:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    maxsd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan oge double %x, 0.000000e+00
   %d = select i1 %c, double %x, double 0.000000e+00
@@ -164,7 +165,8 @@ define double @ole_x(double %x)  {
 ; CHECK-LABEL: ole_x:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    minsd %xmm1, %xmm0
+; CHECK-NEXT:    minsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ole double %x, 0.000000e+00
   %d = select i1 %c, double %x, double 0.000000e+00
@@ -180,8 +182,7 @@ define double @oge_inverse_x(double %x)  {
 ; CHECK-LABEL: oge_inverse_x:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    minsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    minsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan oge double %x, 0.000000e+00
   %d = select i1 %c, double 0.000000e+00, double %x
@@ -197,8 +198,7 @@ define double @ole_inverse_x(double %x)  {
 ; CHECK-LABEL: ole_inverse_x:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ole double %x, 0.000000e+00
   %d = select i1 %c, double 0.000000e+00, double %x
@@ -258,7 +258,8 @@ define double @ult_inverse(double %x, double %y)  {
 define double @uge(double %x, double %y)  {
 ; CHECK-LABEL: uge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxsd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan uge double %x, %y
   %d = select i1 %c, double %x, double %y
@@ -268,7 +269,8 @@ define double @uge(double %x, double %y)  {
 define double @ule(double %x, double %y)  {
 ; CHECK-LABEL: ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minsd %xmm1, %xmm0
+; CHECK-NEXT:    minsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ule double %x, %y
   %d = select i1 %c, double %x, double %y
@@ -278,8 +280,7 @@ define double @ule(double %x, double %y)  {
 define double @uge_inverse(double %x, double %y)  {
 ; CHECK-LABEL: uge_inverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    minsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan uge double %x, %y
   %d = select i1 %c, double %y, double %x
@@ -289,8 +290,7 @@ define double @uge_inverse(double %x, double %y)  {
 define double @ule_inverse(double %x, double %y)  {
 ; CHECK-LABEL: ule_inverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ule double %x, %y
   %d = select i1 %c, double %y, double %x
@@ -357,7 +357,8 @@ define double @uge_x(double %x)  {
 ; CHECK-LABEL: uge_x:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    maxsd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan uge double %x, 0.000000e+00
   %d = select i1 %c, double %x, double 0.000000e+00
@@ -368,7 +369,8 @@ define double @ule_x(double %x)  {
 ; CHECK-LABEL: ule_x:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    minsd %xmm1, %xmm0
+; CHECK-NEXT:    minsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ule double %x, 0.000000e+00
   %d = select i1 %c, double %x, double 0.000000e+00
@@ -379,8 +381,7 @@ define double @uge_inverse_x(double %x)  {
 ; CHECK-LABEL: uge_inverse_x:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    minsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    minsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan uge double %x, 0.000000e+00
   %d = select i1 %c, double 0.000000e+00, double %x
@@ -391,8 +392,7 @@ define double @ule_inverse_x(double %x)  {
 ; CHECK-LABEL: ule_inverse_x:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ule double %x, 0.000000e+00
   %d = select i1 %c, double 0.000000e+00, double %x
@@ -446,7 +446,9 @@ define double @olt_inverse_y(double %x)  {
 define double @oge_y(double %x)  {
 ; CHECK-LABEL: oge_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    maxsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan oge double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -456,7 +458,9 @@ define double @oge_y(double %x)  {
 define double @ole_y(double %x)  {
 ; CHECK-LABEL: ole_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    minsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ole double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -470,9 +474,7 @@ define double @oge_inverse_y(double %x)  {
 ; RELAX-NEXT:    retq
 ; CHECK-LABEL: oge_inverse_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
-; CHECK-NEXT:    minsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan oge double %x, -0.000000e+00
   %d = select i1 %c, double -0.000000e+00, double %x
@@ -486,9 +488,7 @@ define double @ole_inverse_y(double %x)  {
 ; RELAX-NEXT:    retq
 ; CHECK-LABEL: ole_inverse_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
-; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ole double %x, -0.000000e+00
   %d = select i1 %c, double -0.000000e+00, double %x
@@ -550,7 +550,9 @@ define double @ult_inverse_y(double %x)  {
 define double @uge_y(double %x)  {
 ; CHECK-LABEL: uge_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    maxsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan uge double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -560,7 +562,9 @@ define double @uge_y(double %x)  {
 define double @ule_y(double %x)  {
 ; CHECK-LABEL: ule_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    minsd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ule double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -570,9 +574,7 @@ define double @ule_y(double %x)  {
 define double @uge_inverse_y(double %x)  {
 ; CHECK-LABEL: uge_inverse_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
-; CHECK-NEXT:    minsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan uge double %x, -0.000000e+00
   %d = select i1 %c, double -0.000000e+00, double %x
@@ -582,9 +584,7 @@ define double @uge_inverse_y(double %x)  {
 define double @ule_inverse_y(double %x)  {
 ; CHECK-LABEL: ule_inverse_y:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
-; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = fcmp nnan ule double %x, -0.000000e+00
   %d = select i1 %c, double -0.000000e+00, double %x
@@ -608,9 +608,7 @@ define double @clampTo3k_a(double %x)  {
 define double @clampTo3k_b(double %x)  {
 ; CHECK-LABEL: clampTo3k_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [3.0E+3,0.0E+0]
-; CHECK-NEXT:    minsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fcmp nnan uge double %x, 3.000000e+03
   %y = select i1 %t0, double 3.000000e+03, double %x
@@ -632,9 +630,7 @@ define double @clampTo3k_c(double %x)  {
 define double @clampTo3k_d(double %x)  {
 ; CHECK-LABEL: clampTo3k_d:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [3.0E+3,0.0E+0]
-; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fcmp nnan ule double %x, 3.000000e+03
   %y = select i1 %t0, double 3.000000e+03, double %x
@@ -656,9 +652,7 @@ define double @clampTo3k_e(double %x)  {
 define double @clampTo3k_f(double %x)  {
 ; CHECK-LABEL: clampTo3k_f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [3.0E+3,0.0E+0]
-; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fcmp nnan ule double %x, 3.000000e+03
   %y = select i1 %t0, double 3.000000e+03, double %x
@@ -680,9 +674,7 @@ define double @clampTo3k_g(double %x)  {
 define double @clampTo3k_h(double %x)  {
 ; CHECK-LABEL: clampTo3k_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [3.0E+3,0.0E+0]
-; CHECK-NEXT:    minsd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %t0 = fcmp nnan uge double %x, 3.000000e+03
   %y = select i1 %t0, double 3.000000e+03, double %x
@@ -692,7 +684,8 @@ define double @clampTo3k_h(double %x)  {
 define <2 x double> @test_maxpd(<2 x double> %x, <2 x double> %y)  {
 ; CHECK-LABEL: test_maxpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxpd %xmm1, %xmm0
+; CHECK-NEXT:    maxpd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %max_is_x = fcmp nnan oge <2 x double> %x, %y
   %max = select <2 x i1> %max_is_x, <2 x double> %x, <2 x double> %y
@@ -702,7 +695,8 @@ define <2 x double> @test_maxpd(<2 x double> %x, <2 x double> %y)  {
 define <2 x double> @test_minpd(<2 x double> %x, <2 x double> %y)  {
 ; CHECK-LABEL: test_minpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minpd %xmm1, %xmm0
+; CHECK-NEXT:    minpd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %min_is_x = fcmp nnan ole <2 x double> %x, %y
   %min = select <2 x i1> %min_is_x, <2 x double> %x, <2 x double> %y
@@ -712,7 +706,8 @@ define <2 x double> @test_minpd(<2 x double> %x, <2 x double> %y)  {
 define <4 x float> @test_maxps(<4 x float> %x, <4 x float> %y)  {
 ; CHECK-LABEL: test_maxps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxps %xmm1, %xmm0
+; CHECK-NEXT:    maxps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %max_is_x = fcmp nnan oge <4 x float> %x, %y
   %max = select <4 x i1> %max_is_x, <4 x float> %x, <4 x float> %y
@@ -722,7 +717,8 @@ define <4 x float> @test_maxps(<4 x float> %x, <4 x float> %y)  {
 define <4 x float> @test_minps(<4 x float> %x, <4 x float> %y)  {
 ; CHECK-LABEL: test_minps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minps %xmm1, %xmm0
+; CHECK-NEXT:    minps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %min_is_x = fcmp nnan ole <4 x float> %x, %y
   %min = select <4 x i1> %min_is_x, <4 x float> %x, <4 x float> %y
@@ -732,7 +728,8 @@ define <4 x float> @test_minps(<4 x float> %x, <4 x float> %y)  {
 define <2 x float> @test_maxps_illegal_v2f32(<2 x float> %x, <2 x float> %y)  {
 ; CHECK-LABEL: test_maxps_illegal_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxps %xmm1, %xmm0
+; CHECK-NEXT:    maxps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %max_is_x = fcmp nnan oge <2 x float> %x, %y
   %max = select <2 x i1> %max_is_x, <2 x float> %x, <2 x float> %y
@@ -742,7 +739,8 @@ define <2 x float> @test_maxps_illegal_v2f32(<2 x float> %x, <2 x float> %y)  {
 define <2 x float> @test_minps_illegal_v2f32(<2 x float> %x, <2 x float> %y)  {
 ; CHECK-LABEL: test_minps_illegal_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minps %xmm1, %xmm0
+; CHECK-NEXT:    minps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %min_is_x = fcmp nnan ole <2 x float> %x, %y
   %min = select <2 x i1> %min_is_x, <2 x float> %x, <2 x float> %y
@@ -752,7 +750,8 @@ define <2 x float> @test_minps_illegal_v2f32(<2 x float> %x, <2 x float> %y)  {
 define <3 x float> @test_maxps_illegal_v3f32(<3 x float> %x, <3 x float> %y)  {
 ; CHECK-LABEL: test_maxps_illegal_v3f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    maxps %xmm1, %xmm0
+; CHECK-NEXT:    maxps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %max_is_x = fcmp nnan oge <3 x float> %x, %y
   %max = select <3 x i1> %max_is_x, <3 x float> %x, <3 x float> %y
@@ -762,7 +761,8 @@ define <3 x float> @test_maxps_illegal_v3f32(<3 x float> %x, <3 x float> %y)  {
 define <3 x float> @test_minps_illegal_v3f32(<3 x float> %x, <3 x float> %y)  {
 ; CHECK-LABEL: test_minps_illegal_v3f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    minps %xmm1, %xmm0
+; CHECK-NEXT:    minps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %min_is_x = fcmp nnan ole <3 x float> %x, %y
   %min = select <3 x i1> %min_is_x, <3 x float> %x, <3 x float> %y
