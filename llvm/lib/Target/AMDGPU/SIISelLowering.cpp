@@ -5957,14 +5957,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     bool IsWave32 = ST.isWave32();
     unsigned MovOpcForExec = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-    if (Stratergy == WAVE_REDUCE_STRATEGY::DPP && !ST.hasDPP()) {
-      MachineFunction *MF = BB.getParent();
-      LLVMContext &Ctx = MF->getFunction().getContext();
-      Ctx.diagnose(DiagnosticInfoUnsupported(
-          MF->getFunction(),
-          "Target does not support DPP; falling back to iterative reduction",
-          MI.getDebugLoc(), DS_Warning));
-    }
     if (Stratergy == WAVE_REDUCE_STRATEGY::ITERATIVE ||
         !ST.hasDPP()) { // If target doesn't support DPP operations, default to
                         // iterative stratergy
