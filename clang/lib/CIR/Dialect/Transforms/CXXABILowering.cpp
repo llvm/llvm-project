@@ -452,56 +452,55 @@ mlir::LogicalResult CIRVTableGetTypeInfoOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
-// Prepare the type converter for the CXXABI lowering pass.
-// Even though this is a CIR-to-CIR pass, we are eliminating some CIR types.
-static void prepareCXXABITypeConverter(mlir::TypeConverter &converter,
-                                       mlir::DataLayout &dataLayout,
-                                       cir::LowerModule &lowerModule) {
-  converter.addConversion([&](mlir::Type type) -> mlir::Type { return type; });
-  // This is necessary in order to convert CIR pointer types that are pointing
-  // to CIR types that we are lowering in this pass.
-  converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    mlir::Type loweredPointeeType = converter.convertType(type.getPointee());
-    if (!loweredPointeeType)
-      return {};
-    return cir::PointerType::get(type.getContext(), loweredPointeeType,
-                                 type.getAddrSpace());
-  });
-  converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
-    mlir::Type loweredElementType =
-        converter.convertType(type.getElementType());
-    if (!loweredElementType)
-      return {};
-    return cir::ArrayType::get(loweredElementType, type.getSize());
-  });
+// A type to handle type conversion for the CXXABILowering pass.
+class CIRABITypeConverter : public mlir::TypeConverter {
+public:
+  CIRABITypeConverter(mlir::DataLayout &dataLayout,
+                      cir::LowerModule &lowerModule) {
+    addConversion([&](mlir::Type type) -> mlir::Type { return type; });
+    // This is necessary in order to convert CIR pointer types that are
+    // pointing to CIR types that we are lowering in this pass.
+    addConversion([&](cir::PointerType type) -> mlir::Type {
+      mlir::Type loweredPointeeType = convertType(type.getPointee());
+      if (!loweredPointeeType)
+        return {};
+      return cir::PointerType::get(type.getContext(), loweredPointeeType,
+                                   type.getAddrSpace());
+    });
+    addConversion([&](cir::ArrayType type) -> mlir::Type {
+      mlir::Type loweredElementType = convertType(type.getElementType());
+      if (!loweredElementType)
+        return {};
+      return cir::ArrayType::get(loweredElementType, type.getSize());
+    });
 
-  converter.addConversion([&](cir::DataMemberType type) -> mlir::Type {
-    mlir::Type abiType =
-        lowerModule.getCXXABI().lowerDataMemberType(type, converter);
-    return converter.convertType(abiType);
-  });
-  converter.addConversion([&](cir::MethodType type) -> mlir::Type {
-    mlir::Type abiType =
-        lowerModule.getCXXABI().lowerMethodType(type, converter);
-    return converter.convertType(abiType);
-  });
-  // This is necessary in order to convert CIR function types that have argument
-  // or return types that use CIR types that we are lowering in this pass.
-  converter.addConversion([&](cir::FuncType type) -> mlir::Type {
-    llvm::SmallVector<mlir::Type> loweredInputTypes;
-    loweredInputTypes.reserve(type.getNumInputs());
-    if (mlir::failed(
-            converter.convertTypes(type.getInputs(), loweredInputTypes)))
-      return {};
+    addConversion([&](cir::DataMemberType type) -> mlir::Type {
+      mlir::Type abiType =
+          lowerModule.getCXXABI().lowerDataMemberType(type, *this);
+      return convertType(abiType);
+    });
+    addConversion([&](cir::MethodType type) -> mlir::Type {
+      mlir::Type abiType = lowerModule.getCXXABI().lowerMethodType(type, *this);
+      return convertType(abiType);
+    });
+    // This is necessary in order to convert CIR function types that have
+    // argument or return types that use CIR types that we are lowering in
+    // this pass.
+    addConversion([&](cir::FuncType type) -> mlir::Type {
+      llvm::SmallVector<mlir::Type> loweredInputTypes;
+      loweredInputTypes.reserve(type.getNumInputs());
+      if (mlir::failed(convertTypes(type.getInputs(), loweredInputTypes)))
+        return {};
 
-    mlir::Type loweredReturnType = converter.convertType(type.getReturnType());
-    if (!loweredReturnType)
-      return {};
+      mlir::Type loweredReturnType = convertType(type.getReturnType());
+      if (!loweredReturnType)
+        return {};
 
-    return cir::FuncType::get(loweredInputTypes, loweredReturnType,
-                              /*isVarArg=*/type.getVarArg());
-  });
-}
+      return cir::FuncType::get(loweredInputTypes, loweredReturnType,
+                                /*isVarArg=*/type.getVarArg());
+    });
+  }
+};
 
 static void
 populateCXXABIConversionTarget(mlir::ConversionTarget &target,
@@ -616,8 +615,7 @@ void CXXABILoweringPass::runOnOperation() {
   }
 
   mlir::DataLayout dataLayout(mod);
-  mlir::TypeConverter typeConverter;
-  prepareCXXABITypeConverter(typeConverter, dataLayout, *lowerModule);
+  CIRABITypeConverter typeConverter(dataLayout, *lowerModule);
 
   mlir::RewritePatternSet patterns(ctx);
   patterns.add<CIRGenericCXXABILoweringPattern>(patterns.getContext(),
