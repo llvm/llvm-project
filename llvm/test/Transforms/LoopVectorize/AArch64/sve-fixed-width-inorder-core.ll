@@ -17,9 +17,11 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-CA510:       [[VECTOR_MEMCHECK]]:
 ; CHECK-CA510-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[A2]]
-; CHECK-CA510-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-CA510-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-CA510-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 31
 ; CHECK-CA510-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[B3]]
-; CHECK-CA510-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-CA510-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-CA510-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP7]], 31
 ; CHECK-CA510-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-CA510-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA510:       [[VECTOR_PH]]:
@@ -81,9 +83,11 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-CA520:       [[VECTOR_MEMCHECK]]:
 ; CHECK-CA520-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[A2]]
-; CHECK-CA520-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-CA520-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-CA520-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 31
 ; CHECK-CA520-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[B3]]
-; CHECK-CA520-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-CA520-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-CA520-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP7]], 31
 ; CHECK-CA520-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-CA520-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA520:       [[VECTOR_PH]]:
@@ -145,9 +149,11 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-CA320:       [[VECTOR_MEMCHECK]]:
 ; CHECK-CA320-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[A2]]
-; CHECK-CA320-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-CA320-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-CA320-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP13]], 31
 ; CHECK-CA320-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[B3]]
-; CHECK-CA320-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-CA320-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-CA320-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP14]], 31
 ; CHECK-CA320-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-CA320-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-CA320:       [[VECTOR_PH]]:

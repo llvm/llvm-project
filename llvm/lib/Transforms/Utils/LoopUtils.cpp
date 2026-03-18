@@ -2260,6 +2260,8 @@ Value *llvm::addDiffRuntimeChecks(
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+    assert(IC * AccessSize > 0 &&
+           "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
     // Compute VF * IC * AccessSize.
     auto *VFTimesICTimesSize =
@@ -2276,9 +2278,14 @@ Value *llvm::addDiffRuntimeChecks(
     if (IsConflict)
       continue;
 
-    IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
+    // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 < Diff <u Threshold,
+    // to exclude Diff == 0 (equal pointers are a safe).
+    auto *One = ConstantInt::get(Ty, 1);
+    IsConflict = ChkBuilder.CreateICmpULT(
+        ChkBuilder.CreateSub(Diff, One),
+        ChkBuilder.CreateSub(VFTimesICTimesSize, One), "diff.check");
     SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
+
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

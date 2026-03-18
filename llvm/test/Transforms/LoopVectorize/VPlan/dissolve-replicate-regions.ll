@@ -17,7 +17,8 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; SCALAR-EMPTY:
 ; SCALAR-NEXT:  ir-bb<vector.memcheck>:
 ; SCALAR-NEXT:    IR   %0 = sub i64 %dst1, %ptr2
-; SCALAR-NEXT:    IR   %diff.check = icmp ult i64 %0, 2
+; SCALAR-NEXT:    IR   %1 = sub i64 %0, 1
+; SCALAR-NEXT:    IR   %diff.check = icmp ult i64 %1, 1
 ; SCALAR-NEXT:    EMIT branch-on-cond ir<%diff.check>
 ; SCALAR-NEXT:  Successor(s): scalar.ph, vector.ph
 ; SCALAR-EMPTY:
@@ -93,7 +94,8 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:  ir-bb<vector.memcheck>:
 ; VECTOR-NEXT:    IR   %0 = sub i64 %dst1, %ptr2
-; VECTOR-NEXT:    IR   %diff.check = icmp ult i64 %0, 4
+; VECTOR-NEXT:    IR   %1 = sub i64 %0, 1
+; VECTOR-NEXT:    IR   %diff.check = icmp ult i64 %1, 3
 ; VECTOR-NEXT:    EMIT branch-on-cond ir<%diff.check>
 ; VECTOR-NEXT:  Successor(s): scalar.ph, vector.ph
 ; VECTOR-EMPTY:

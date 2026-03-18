@@ -653,9 +653,11 @@ define i32 @sum_arrays_outside_use(ptr %B, ptr %A, ptr %C, i32 %N)  {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[C1]], [[B2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP2]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP2]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP8]], 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[C1]], [[A3]]
-; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i32 [[TMP3]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP3]], 1
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i32 [[TMP5]], 7
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[_LR_PH_I]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

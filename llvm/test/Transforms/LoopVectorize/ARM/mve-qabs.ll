@@ -14,8 +14,8 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    br i1 [[CMP_NOT19]], label %[[WHILE_END:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
 ; CHECK:       [[WHILE_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 16
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PSRC2]], [[PDST1]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i32 [[TMP0]], -16
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[DIFF_CHECK]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -106,8 +106,8 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    br i1 [[CMP_NOT20]], label %[[WHILE_END:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
 ; CHECK:       [[WHILE_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 8
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PSRC2]], [[PDST1]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i32 [[TMP0]], -16
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[DIFF_CHECK]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -200,8 +200,8 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    br i1 [[CMP_NOT14]], label %[[WHILE_END:.*]], label %[[WHILE_BODY_PREHEADER:.*]]
 ; CHECK:       [[WHILE_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PSRC2]], [[PDST1]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i32 [[TMP0]], -16
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[DIFF_CHECK]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
