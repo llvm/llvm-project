@@ -1633,7 +1633,19 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCWaitConstruct &x) {
 }
 
 bool AccAttributeVisitor::Pre(const parser::OpenACCAtomicConstruct &x) {
-  PushContext(x.source, llvm::acc::Directive::ACCD_atomic);
+  const auto &verbatimSource = common::visit(
+      common::visitors{
+          [&](const parser::AccAtomicUpdate &atomic) {
+            const auto &optVerbatim =
+                std::get<std::optional<parser::Verbatim>>(atomic.t);
+            return optVerbatim ? optVerbatim->source : x.source;
+          },
+          [&](const auto &atomic) {
+            return std::get<parser::Verbatim>(atomic.t).source;
+          },
+      },
+      x.u);
+  PushContext(verbatimSource, llvm::acc::Directive::ACCD_atomic);
   ClearDataSharingAttributeObjects();
   return true;
 }
