@@ -356,6 +356,12 @@ bool VirtRegRewriter::run(MachineFunction &fn) {
     // replaced. Remove the virtual registers and release all the transient data.
     VRM->clearAllVirt();
     MRI->clearVirtRegs();
+  } else {
+    // Capture the current VRM mappings into LDV's internal data at intermediate
+    // rewriter passes in multi-stage RA pipelines. This pre-resolves debug
+    // locations for register classes allocated in this stage before VRM is
+    // potentially re-initialized by subsequent allocation stages.
+    DebugVars->resolveAssignedLocations(VRM);
   }
 
   return true;
