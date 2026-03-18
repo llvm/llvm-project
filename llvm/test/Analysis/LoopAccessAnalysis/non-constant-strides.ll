@@ -4,13 +4,8 @@
 define void @known_safe(ptr %p, i8 %a) {
 ; CHECK-LABEL: 'known_safe'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep.ld, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep.st, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -47,13 +42,8 @@ exit:
 define void @known_safe_byte_geps(ptr %p, i8 %a) {
 ; CHECK-LABEL: 'known_safe_byte_geps'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep.ld, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep.st, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -92,15 +82,21 @@ exit:
 define void @safe_if_non_zero(ptr %p, i8 %a) {
 ; CHECK-LABEL: 'safe_if_non_zero'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep.ld, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep.st, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.st = getelementptr inbounds i64, ptr %p.out, i64 %idx
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.ld = getelementptr inbounds i64, ptr %p, i64 %idx
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: (((1024 * (zext i8 %a to i64))<nuw><nsw> + %p) umin ((2040 * (zext i8 %a to i64))<nuw><nsw> + %p)) High: (8 + (((1024 * (zext i8 %a to i64))<nuw><nsw> + %p) umax ((2040 * (zext i8 %a to i64))<nuw><nsw> + %p))))
+; CHECK-NEXT:            Member: {((1024 * (zext i8 %a to i64))<nuw><nsw> + %p),+,(8 * (zext i8 %a to i64))<nuw><nsw>}<nw><%header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (((1016 * (zext i8 %a to i64))<nuw><nsw> + %p) umin %p) High: (8 + (((1016 * (zext i8 %a to i64))<nuw><nsw> + %p) umax %p)))
+; CHECK-NEXT:            Member: {%p,+,(8 * (zext i8 %a to i64))<nuw><nsw>}<nuw><%header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -135,15 +131,21 @@ exit:
 define void @safe_if_non_zero_byte_gep(ptr %p, i8 %a) {
 ; CHECK-LABEL: 'safe_if_non_zero_byte_gep'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep.ld, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep.st, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.st = getelementptr inbounds i8, ptr %p.out, i64 %idx
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.ld = getelementptr inbounds i8, ptr %p, i64 %idx
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: (((1024 * (zext i8 %a to i64))<nuw><nsw> + %p) umin ((2040 * (zext i8 %a to i64))<nuw><nsw> + %p)) High: (8 + (((1024 * (zext i8 %a to i64))<nuw><nsw> + %p) umax ((2040 * (zext i8 %a to i64))<nuw><nsw> + %p))))
+; CHECK-NEXT:            Member: {((1024 * (zext i8 %a to i64))<nuw><nsw> + %p),+,(8 * (zext i8 %a to i64))<nuw><nsw>}<%header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (((1016 * (zext i8 %a to i64))<nuw><nsw> + %p) umin %p) High: (8 + (((1016 * (zext i8 %a to i64))<nuw><nsw> + %p) umax %p)))
+; CHECK-NEXT:            Member: {%p,+,(8 * (zext i8 %a to i64))<nuw><nsw>}<%header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -224,15 +226,21 @@ exit:
 define void @offset_dep_check_sufficient(ptr %p, i8 %a, i64 %offset) {
 ; CHECK-LABEL: 'offset_dep_check_sufficient'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep.ld, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep.st, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.st = getelementptr inbounds i64, ptr %p.out, i64 %idx
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.ld = getelementptr inbounds i64, ptr %p, i64 %idx
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: (((8 * %offset) + %p) umin (1016 + (8 * %offset) + (1016 * (zext i8 %a to i64))<nuw><nsw> + %p)) High: (8 + (((8 * %offset) + %p) umax (1016 + (8 * %offset) + (1016 * (zext i8 %a to i64))<nuw><nsw> + %p))))
+; CHECK-NEXT:            Member: {((8 * %offset) + %p),+,(8 + (8 * (zext i8 %a to i64))<nuw><nsw>)<nuw><nsw>}<nw><%header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((1016 + (1016 * (zext i8 %a to i64))<nuw><nsw> + %p) umin %p) High: (8 + ((1016 + (1016 * (zext i8 %a to i64))<nuw><nsw> + %p) umax %p)))
+; CHECK-NEXT:            Member: {%p,+,(8 + (8 * (zext i8 %a to i64))<nuw><nsw>)<nuw><nsw>}<nuw><%header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -315,15 +323,21 @@ exit:
 define void @needs_non_zero_stride_and_distance_checks(ptr %p, i8 %a, i64 %offset) {
 ; CHECK-LABEL: 'needs_non_zero_stride_and_distance_checks'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep.ld, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep.st, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.st = getelementptr inbounds i64, ptr %p.out, i64 %idx
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.ld = getelementptr inbounds i64, ptr %p, i64 %idx
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: (((8 * %offset) + %p) umin ((8 * %offset) + (1016 * (zext i8 %a to i64))<nuw><nsw> + %p)) High: (8 + (((8 * %offset) + %p) umax ((8 * %offset) + (1016 * (zext i8 %a to i64))<nuw><nsw> + %p))))
+; CHECK-NEXT:            Member: {((8 * %offset) + %p),+,(8 * (zext i8 %a to i64))<nuw><nsw>}<nw><%header>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (((1016 * (zext i8 %a to i64))<nuw><nsw> + %p) umin %p) High: (8 + (((1016 * (zext i8 %a to i64))<nuw><nsw> + %p) umax %p)))
+; CHECK-NEXT:            Member: {%p,+,(8 * (zext i8 %a to i64))<nuw><nsw>}<nuw><%header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
