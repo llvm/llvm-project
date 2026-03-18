@@ -436,7 +436,8 @@ void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
 }
 
 void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
-                                       const MCSubtargetInfo &, raw_ostream &O) {
+                                       const MCSubtargetInfo &,
+                                       raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
   assert(Op.isExpr() && "Call prototype is not an MCExpr?");
   const MCExpr *Expr = Op.getExpr();

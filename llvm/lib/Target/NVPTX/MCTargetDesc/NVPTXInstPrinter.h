@@ -36,23 +36,18 @@ public:
   static const char *getRegisterName(MCRegister Reg);
   // End
 
-  void printOperand(const MCInst *MI, unsigned OpNo,
-                    const MCSubtargetInfo &STI, raw_ostream &O);
+  void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                    raw_ostream &O);
   void printCvtMode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
-                    raw_ostream &O,
-                    StringRef Modifier = {});
+                    raw_ostream &O, StringRef Modifier = {});
   void printCmpMode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
-                    raw_ostream &O,
-                    StringRef Modifier = {});
+                    raw_ostream &O, StringRef Modifier = {});
   void printAtomicCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
-                       raw_ostream &O,
-                       StringRef Modifier = {});
+                       raw_ostream &O, StringRef Modifier = {});
   void printMmaCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
-                    raw_ostream &O,
-                    StringRef Modifier = {});
+                    raw_ostream &O, StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
-                       raw_ostream &O,
-                       StringRef Modifier = {});
+                       raw_ostream &O, StringRef Modifier = {});
   void printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
                                 const MCSubtargetInfo &STI, raw_ostream &O);
   void printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
@@ -67,9 +62,8 @@ public:
                              const MCSubtargetInfo &STI, raw_ostream &O);
   void printCTAGroup(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                      raw_ostream &O);
-  void printCallOperand(const MCInst *MI, int OpNum,
-                        const MCSubtargetInfo &STI, raw_ostream &O,
-                        StringRef Modifier = {});
+  void printCallOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                        raw_ostream &O, StringRef Modifier = {});
   void printFTZFlag(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O);
 
