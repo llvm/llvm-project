@@ -113,6 +113,10 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
                   ConversionPatternRewriter &rewriter) const final {
     constexpr StringLiteral funcName = "_Z7barrierj";
 
+    if (!op->getParentOfType<FunctionOpInterface>())
+      return rewriter.notifyMatchFailure(
+    op, "must be nested in a function body before LLVM-SPIRV lowering");
+
     Operation *moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
     assert(moduleOp && "Expecting module");
     Type flagTy = rewriter.getI32Type();
