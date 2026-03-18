@@ -51,4 +51,4 @@
 // RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE %s
 //      PROFILE: ld.lld
-// PROFILE-SAME: "[[RESOURCE_DIR:.+]]/lib/amdgcn-amd-amdhsa/libclang_rt.profile.a"
+// PROFILE-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"
