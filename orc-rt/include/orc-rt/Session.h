@@ -166,10 +166,10 @@ public:
   }
 
   /// Set the ControllerAccess object.
-  void setController(std::shared_ptr<ControllerAccess> CA);
+  void attach(std::shared_ptr<ControllerAccess> CA);
 
   /// Disconnect the ControllerAccess object.
-  void detachFromController();
+  void detach();
 
   void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) {
