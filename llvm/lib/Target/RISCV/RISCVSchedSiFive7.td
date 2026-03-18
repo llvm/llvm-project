@@ -346,7 +346,8 @@ multiclass SiFive7WriteResBase<int VLEN,
     def : WriteRes<WriteIMul32, [PipeB]>;
   }
 
-  // Integer division
+  // IDiv / IRem in a 32-bit core should have the same latency and throughput
+  // as IDiv32 / IRem32 in a 64-bit core.
   def SiFive7RV64IDivRemSchedWriteRes : SchedWriteRes<[PipeB, IDiv]> {
     let Latency = 66;
     let ReleaseAtCycles = [1, 65];
@@ -360,6 +361,7 @@ multiclass SiFive7WriteResBase<int VLEN,
     SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # "SiFive7RV64IDivRemSchedWriteRes")]>
   ]>;
 
+  // Integer division
   def : SchedAlias<WriteIDiv, !cast<SchedWrite>(NAME # "SiFive7IDivRemSchedWriteVariant")>;
   def : WriteRes<WriteIDiv32,  [PipeB, IDiv]> {
     let Latency = 34;
