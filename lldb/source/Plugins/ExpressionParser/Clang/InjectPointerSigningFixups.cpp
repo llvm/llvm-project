@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // On arm64e, Clang emits ConstantPtrAuth expressions in global initializers
-// to represent signed pointers. These are normally resolved by the static
+// to represent signed pointers. These are normally resolved by the dynamic
 // linker, but LLDB's JIT does not run the linker, so they must be resolved
 // manually. This pass replaces each ConstantPtrAuth in a global initializer
 // with the unsigned pointer and emits a constructor function that signs the
@@ -50,8 +50,8 @@ struct PtrAuthFixup {
   ConstantPtrAuth *CPA;
   SmallVector<unsigned> Indices;
   PtrAuthFixup(GlobalVariable *GV, ConstantPtrAuth *CPA,
-               SmallVector<unsigned> Indices)
-      : GV(GV), CPA(CPA), Indices(Indices) {}
+               const SmallVectorImpl<unsigned> &Indices)
+      : GV(GV), CPA(CPA), Indices(Indices.begin(), Indices.end()) {}
 };
 } // namespace
 
@@ -59,7 +59,7 @@ struct PtrAuthFixup {
 /// When found, record the global variable containing the ConstantPtrAuth and
 /// the index path to reach it within the initializer.
 static void findPtrAuth(Constant *C, GlobalVariable &GV,
-                        SmallVector<unsigned> &Indices,
+                        SmallVectorImpl<unsigned> &Indices,
                         SmallVectorImpl<PtrAuthFixup> &Fixups) {
   if (auto *CPA = dyn_cast<ConstantPtrAuth>(C)) {
     Fixups.emplace_back(&GV, CPA, Indices);
