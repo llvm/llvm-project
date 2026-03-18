@@ -30,7 +30,7 @@ SimpleNativeMemoryMap::Create(Session &S, SimpleSymbolTable &ST,
                               const char *InstanceName,
                               SimpleSymbolTable::MutatorFn AddInterface) {
 
-  std::unique_ptr<SimpleNativeMemoryMap> Instance(new SimpleNativeMemoryMap());
+  std::unique_ptr<SimpleNativeMemoryMap> Instance(new SimpleNativeMemoryMap(S));
 
   SimpleSymbolTable SNMMST;
   if (auto Err = AddInterface(SNMMST))
@@ -48,8 +48,7 @@ SimpleNativeMemoryMap::Create(Session &S, SimpleSymbolTable &ST,
 
 void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
                                     size_t Size) {
-  // FIXME: Get page size from session object.
-  if (Size % (64 * 1024)) {
+  if (Size % S.processInfo().pageSize()) {
     return OnComplete(make_error<StringError>(
         (std::ostringstream()
          << "SimpleNativeMemoryMap error: reserved size " << std::hex << Size
@@ -225,9 +224,8 @@ void SimpleNativeMemoryMap::onShutdown(Service::OnCompleteFn OnComplete) {
 void SimpleNativeMemoryMap::releaseNext(OnReleaseCompleteFn &&OnComplete,
                                         std::vector<void *> Addrs,
                                         bool AnyError, Error LastErr) {
-  // TODO: Log error?
   if (LastErr) {
-    consumeError(std::move(LastErr));
+    S.reportError(std::move(LastErr));
     AnyError |= true;
   }
 
@@ -254,9 +252,8 @@ void SimpleNativeMemoryMap::releaseNext(OnReleaseCompleteFn &&OnComplete,
 void SimpleNativeMemoryMap::deinitializeNext(
     OnDeinitializeCompleteFn &&OnComplete, std::vector<void *> Addrs,
     bool AnyError, Error LastErr) {
-  // TODO: Log error?
   if (LastErr) {
-    consumeError(std::move(LastErr));
+    S.reportError(std::move(LastErr));
     AnyError |= true;
   }
 
