@@ -1575,7 +1575,7 @@ void Module::LoadPrefixMapsIfNeeded() {
   if (m_prefix_map_search_dirs.empty())
     return;
 
-  Log *log = GetLog(LLDBLog::Symbols);
+  Log *log = GetLog(LLDBLog::Object | LLDBLog::Modules);
   llvm::vfs::FileSystem &vfs = *llvm::vfs::getRealFileSystem();
   // Track visited directories so two starting paths that share ancestors
   // don't redundantly walk the same directory.
@@ -1597,17 +1597,19 @@ void Module::LoadPrefixMapsIfNeeded() {
         if (buf && *buf) {
           llvm::Expected<llvm::json::Value> val =
               llvm::json::parse((*buf)->getBuffer());
-          if (val) {
-            if (llvm::json::Object *obj = val->getAsObject()) {
-              for (const llvm::json::Object::value_type &kv : *obj)
-                if (std::optional<llvm::StringRef> to =
-                        kv.second.getAsString()) {
-                  LLDB_LOG(log, "applying prefix map: '{0}' -> '{1}'", kv.first,
-                           *to);
-                  m_source_mappings.AppendUnique(kv.first.str(), to->str(),
-                                                 /*notify=*/false);
-                }
-            }
+          if (!val) {
+            LLDB_LOG_ERROR(log, val.takeError(), "failed to parse {1}: {0}",
+                           map_file.GetPath());
+            continue;
+          }
+          if (llvm::json::Object *obj = val->getAsObject()) {
+            for (const llvm::json::Object::value_type &kv : *obj)
+              if (std::optional<llvm::StringRef> to = kv.second.getAsString()) {
+                LLDB_LOG(log, "applying prefix map: '{0}' -> '{1}'", kv.first,
+                         *to);
+                m_source_mappings.AppendUnique(kv.first.str(), to->str(),
+                                               /*notify=*/false);
+              }
           }
         }
         break;
