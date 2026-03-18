@@ -18,14 +18,15 @@
 
 namespace orc_rt {
 
-Error SimpleSymbolTable::makeDuplicatesError(
-    std::vector<std::string_view> Dups) {
-  std::sort(Dups.begin(), Dups.end());
-  std::string ErrMsg = "Could not add duplicate symbols: [ ";
-  ErrMsg += Dups.front();
-  for (auto &Dup : iterator_range(std::next(Dups.begin()), Dups.end())) {
+Error SimpleSymbolTable::makeIncompatibleDefsError(
+    std::vector<std::string_view> IncompatibleDefs) {
+  std::sort(IncompatibleDefs.begin(), IncompatibleDefs.end());
+  std::string ErrMsg = "Incompatible definitions for symbols: [ ";
+  ErrMsg += IncompatibleDefs.front();
+  for (auto &Def : iterator_range(std::next(IncompatibleDefs.begin()),
+                                  IncompatibleDefs.end())) {
     ErrMsg += ", ";
-    ErrMsg += Dup;
+    ErrMsg += Def;
   }
   ErrMsg += " ]";
   return make_error<StringError>(std::move(ErrMsg));

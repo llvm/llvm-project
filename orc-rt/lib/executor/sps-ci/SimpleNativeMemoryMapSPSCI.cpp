@@ -97,7 +97,7 @@ static std::pair<const char *, const void *>
             orc_rt_sps_ci_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper)};
 
 Error addSimpleNativeMemoryMap(SimpleSymbolTable &ST) {
-  return ST.addSymbolsUnique(orc_rt_sps_ci_SimpleNativeMemoryMap_sps_interface);
+  return ST.addUnique(orc_rt_sps_ci_SimpleNativeMemoryMap_sps_interface);
 }
 
 } // namespace sps_ci
