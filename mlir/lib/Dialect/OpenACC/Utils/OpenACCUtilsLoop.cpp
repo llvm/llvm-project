@@ -14,7 +14,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -147,17 +146,15 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
 }
 
 /// Wrap a multi-block region with scf.execute_region.
-scf::ExecuteRegionOp
-wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
-                                         Location loc, RewriterBase &rewriter,
-                                         bool convertFuncReturn) {
+scf::ExecuteRegionOp wrapMultiBlockRegionWithSCFExecuteRegionImpl(
+    Region &region, IRMapping &mapping, Location loc, RewriterBase &rewriter,
+    function_ref<bool(Operation *)> isTerminatorToReplace) {
   SmallVector<Operation *> terminators;
   for (Block &block : region.getBlocks()) {
     if (block.empty())
       continue;
     Operation *term = block.getTerminator();
-    if ((convertFuncReturn && isa<func::ReturnOp>(*term)) ||
-        isa<acc::YieldOp>(*term))
+    if (isTerminatorToReplace(term))
       terminators.push_back(term);
   }
   SmallVector<Type> resultTypes;
@@ -301,8 +298,9 @@ scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp,
                         mapping);
 
   if (!loopOp.getRegion().hasOneBlock()) {
-    auto exeRegion = wrapMultiBlockRegionWithSCFExecuteRegion(
-        loopOp.getRegion(), mapping, loc, rewriter);
+    auto exeRegion =
+        wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp>(
+            loopOp.getRegion(), mapping, loc, rewriter);
     if (!exeRegion) {
       rewriter.eraseOp(parallelOp);
       return nullptr;
@@ -333,8 +331,8 @@ convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp,
       "builder insertion point must not be inside the loop being converted");
 
   IRMapping mapping;
-  return wrapMultiBlockRegionWithSCFExecuteRegion(loopOp.getRegion(), mapping,
-                                                  loopOp->getLoc(), rewriter);
+  return wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp>(
+      loopOp.getRegion(), mapping, loopOp->getLoc(), rewriter);
 }
 
 } // namespace acc

@@ -661,7 +661,8 @@ TEST_F(OpenACCUtilsLoopTest,
   b.setInsertionPointAfter(parallelOp.get());
   IRMapping mapping;
   scf::ExecuteRegionOp exeRegionOp =
-      wrapMultiBlockRegionWithSCFExecuteRegion(region, mapping, loc, b);
+      wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp>(region, mapping,
+                                                             loc, b);
 
   ASSERT_TRUE(exeRegionOp);
 
@@ -729,7 +730,8 @@ TEST_F(OpenACCUtilsLoopTest,
   b.setInsertionPointAfter(parallelOp.get());
   IRMapping mapping;
   scf::ExecuteRegionOp exeRegionOp =
-      wrapMultiBlockRegionWithSCFExecuteRegion(region, mapping, loc, b);
+      wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp>(region, mapping,
+                                                             loc, b);
 
   ASSERT_TRUE(exeRegionOp);
 
@@ -806,8 +808,9 @@ TEST_F(OpenACCUtilsLoopTest,
 
   b.setInsertionPointAfter(funcOp);
   IRMapping mapping;
-  scf::ExecuteRegionOp exeRegionOp = wrapMultiBlockRegionWithSCFExecuteRegion(
-      region, mapping, loc, b, /*convertFuncReturn=*/true);
+  scf::ExecuteRegionOp exeRegionOp =
+      wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp, func::ReturnOp>(
+          region, mapping, loc, b);
 
   ASSERT_TRUE(exeRegionOp);
 
@@ -873,8 +876,9 @@ TEST_F(OpenACCUtilsLoopTest,
 
   b.setInsertionPointAfter(funcOp);
   IRMapping mapping;
-  scf::ExecuteRegionOp exeRegionOp = wrapMultiBlockRegionWithSCFExecuteRegion(
-      region, mapping, loc, b, /*convertFuncReturn=*/true);
+  scf::ExecuteRegionOp exeRegionOp =
+      wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp, func::ReturnOp>(
+          region, mapping, loc, b);
 
   ASSERT_TRUE(exeRegionOp);
 

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -99,8 +100,10 @@ ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
     rewriter.setInsertionPointToEnd(entryBlock);
     YieldOp::create(rewriter, loc, yieldOperands);
   } else {
-    auto exeRegion = mlir::acc::wrapMultiBlockRegionWithSCFExecuteRegion(
-        regionToClone, mapping, loc, rewriter, /*convertFuncReturn=*/true);
+    auto exeRegion =
+        mlir::acc::wrapMultiBlockRegionWithSCFExecuteRegion<acc::YieldOp,
+                                                            func::ReturnOp>(
+            regionToClone, mapping, loc, rewriter);
     if (!exeRegion) {
       rewriter.eraseOp(computeRegion);
       return nullptr;
