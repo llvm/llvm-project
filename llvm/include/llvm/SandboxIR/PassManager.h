@@ -34,7 +34,7 @@ class Value;
 template <typename ParentPass, typename ContainedPass>
 class PassManager : public ParentPass {
 public:
-  // CreatePassFunc(StringRef PassName, StringRef PassArgs).
+  // CreatePassFunc(StringRef PassName, StringRef PassArgs, StringRef AuxArg)
   using CreatePassFunc = std::function<std::unique_ptr<ContainedPass>(
       StringRef, StringRef, StringRef)>;
 

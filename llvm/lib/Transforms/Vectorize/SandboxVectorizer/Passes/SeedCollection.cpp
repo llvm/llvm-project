@@ -40,7 +40,8 @@ SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
     if (AuxArg != DiffTypesArgStr) {
       std::string ErrStr;
       raw_string_ostream ErrSS(ErrStr);
-      ErrSS << "SeedCollection only supports '" << DiffTypesArgStr << "' !\n";
+      ErrSS << "SeedCollection only supports '" << DiffTypesArgStr
+            << "' aux argument!\n";
       reportFatalUsageError(ErrStr.c_str());
     }
     AllowDiffTypes = true;
