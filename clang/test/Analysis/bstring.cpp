@@ -121,8 +121,11 @@ void memset1_inheritance() {
 #ifdef SUPPRESS_OUT_OF_BOUND
 void memset2_inheritance_field() {
   Derived d;
-  // FIXME: The analyzer should stop analysis after memset. The argument to
-  // sizeof should be Derived::d_mem.
+  // FIXME: This example wrongly calls `memset` on the derived field, with the
+  // size parameter that has the size of the whole derived class. The analysis
+  // should stop at that point as this is UB.
+  // This test asserts the current behavior of treating the not set part as
+  // UNKNOWN.
   memset(&d.d_mem, 0, sizeof(Derived));
   clang_analyzer_eval(d.b_mem == 0); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(d.d_mem == 0); // expected-warning{{UNKNOWN}}
@@ -130,8 +133,12 @@ void memset2_inheritance_field() {
 
 void memset3_inheritance_field() {
   Derived d;
-  // FIXME: The analyzer should stop analysis after memset. The argument to
-  // sizeof should be Derived::b_mem.
+  // FIXME: Here we are setting the field of the base with the size of the
+  // Derived class. By the letter of the standard this is UB, but practically
+  // this only touches memory it is supposed to with the above class
+  // definitions. If we were to be strict the analysis should stop here.
+  // This test asserts the current behavior of nevertheless treating the
+  // wrongly set field as correctly set to 0.
   memset(&d.b_mem, 0, sizeof(Derived));
   clang_analyzer_eval(d.b_mem == 0); // expected-warning{{TRUE}}
   clang_analyzer_eval(d.d_mem == 0); // expected-warning{{TRUE}}
@@ -198,8 +205,12 @@ public:
 #ifdef SUPPRESS_OUT_OF_BOUND
 void memset8_virtual_inheritance_field() {
   DerivedVirtual d;
-  // FIXME: The analyzer should stop analysis after memset. The argument to
-  // sizeof should be Derived::b_mem.
+  // FIXME: This example wrongly calls `memset` on the derived field, with the
+  // size parameter that has the size of the whole derived class. The analysis
+  // should stop at that point as this is UB. The situation is further
+  // complicated by the fact the base base a virtual function.
+  // This test asserts the current behavior of treating the not set part as
+  // UNKNOWN.
   memset(&d.b_mem, 0, sizeof(Derived));
   clang_analyzer_eval(d.b_mem == 0); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(d.d_mem == 0); // expected-warning{{UNKNOWN}}

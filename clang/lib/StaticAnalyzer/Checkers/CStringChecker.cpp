@@ -577,8 +577,11 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
   auto [StInBound, StOutBound] = state->assumeInBoundDual(*Idx, Size);
   if (StOutBound && !StInBound) {
     // FIXME: We detected a fatal error here, we should stop the analysis even
-    // if we choose not to emit a report here. However, as long as our
-    // out-of-bounds checker is in alpha, let's just pretend nothing happened.
+    // if we choose not to emit a report here. Instead, we choose to continue
+    // the analysis with a slightly broken state, so that other checkers can
+    // still emit possibly relevant reports. One such checker would be the
+    // alpha.unix.cstring.OutOfBounds. Sinking the state here could lead to
+    // loss reports from those checkers.
     if (!OutOfBounds.isEnabled())
       return state;
 
@@ -704,8 +707,11 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
       return nullptr;
     }
     // FIXME: We detected a fatal error here, we should stop the analysis even
-    // if we choose not to emit a report here. However, as long as our overlap
-    // checker is in alpha, let's just pretend nothing happened.
+    // if we choose not to emit a report here. Instead, we choose to continue
+    // the analysis with a slightly broken state, so that other checkers can
+    // still emit possibly relevant reports. One such checker would be the
+    // alpha.unix.cstring.OutOfBounds. Sinking the state here could lead to
+    // loss reports from those checkers.
     return state;
   }
 
