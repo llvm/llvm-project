@@ -255,7 +255,7 @@ define void @outer_cannot_hoist(ptr nocapture noundef %dst, ptr nocapture nounde
 ; CHECK:      Calculating cost of runtime checks:
 ; CHECK-NOT:  We expect runtime memory checks to be hoisted out of the outer loop.
 ; CHECK:      Total cost of runtime checks: 7
-; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:8
+; CHECK: LV: Minimum required TC for runtime checks to be profitable:8
 entry:
   br label %outer.loop
 
