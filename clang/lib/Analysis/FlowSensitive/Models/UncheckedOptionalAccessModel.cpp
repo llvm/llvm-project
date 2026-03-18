@@ -928,8 +928,8 @@ void transferAssertionResultOperatorBoolCall(const CXXMemberCallExpr *Expr,
   if (AssertResultLoc == nullptr)
     return;
 
-  if (BoolValue *SuccessVal =
-      State.Env.get<BoolValue>(locForAssertResultSuccess(*AssertResultLoc))) {
+  if (BoolValue *SuccessVal = State.Env.get<BoolValue>(
+          locForAssertResultSuccess(*AssertResultLoc))) {
     State.Env.setValue(*Expr, *SuccessVal);
   }
 }
