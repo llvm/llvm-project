@@ -419,7 +419,8 @@ StorageLocation &locForValue(const RecordStorageLocation &OptionalLoc) {
   return OptionalLoc.getSyntheticField("value");
 }
 
-StorageLocation &locForAssertResultSuccess(const RecordStorageLocation &AssertResultLoc) {
+StorageLocation &
+locForAssertResultSuccess(const RecordStorageLocation &AssertResultLoc) {
   return AssertResultLoc.getSyntheticField("success");
 }
 
@@ -927,7 +928,8 @@ void transferAssertionResultOperatorBoolCall(const CXXMemberCallExpr *Expr,
   if (AssertResultLoc == nullptr)
     return;
 
-  BoolValue *SuccessVal = State.Env.get<BoolValue>(locForAssertResultSuccess(*AssertResultLoc));
+  BoolValue *SuccessVal =
+      State.Env.get<BoolValue>(locForAssertResultSuccess(*AssertResultLoc));
   if (SuccessVal == nullptr)
     return;
 
