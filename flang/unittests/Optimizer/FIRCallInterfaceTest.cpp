@@ -250,3 +250,165 @@ TEST_F(
   EXPECT_EQ(callOp.getOperand(1), argVal);
   EXPECT_FALSE(callOp->getAttr(fir::CallOp::getCalleeAttrNameStr()));
 }
+
+static ArrayAttr makeArgAttrs(
+    MLIRContext *ctx, llvm::ArrayRef<DictionaryAttr> dicts) {
+  llvm::SmallVector<Attribute> attrs(dicts.begin(), dicts.end());
+  return ArrayAttr::get(ctx, attrs);
+}
+
+static DictionaryAttr makeTestArgDict(MLIRContext *ctx, StringRef value) {
+  return DictionaryAttr::get(ctx,
+      {NamedAttribute(
+          StringAttr::get(ctx, "test.attr"), StringAttr::get(ctx, value))});
+}
+
+TEST_F(
+    FIRCallInterfaceTest, setCalleeFromCallable_directToDirect_withArgAttrs) {
+  OpBuilder builder(&context);
+  auto loc = builder.getUnknownLoc();
+  auto i32Ty = builder.getI32Type();
+  auto funcType = builder.getFunctionType({i32Ty}, {});
+  auto containerType = builder.getFunctionType({funcType, i32Ty}, {});
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
+  Value argVal = block->getArgument(1);
+
+  // Direct call with one argument and arg_attrs.
+  auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
+  auto callOp = fir::CallOp::create(builder, loc, callTargetRef,
+      llvm::ArrayRef<mlir::Type>{}, ValueRange{argVal});
+  callOp->setAttr(callOp.getArgAttrsAttrName(),
+      makeArgAttrs(&context, {makeTestArgDict(&context, "arg0")}));
+  ASSERT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 1u);
+
+  // Switch to another direct callee
+  auto newCallTargetRef = FlatSymbolRefAttr::get(&context, "other_target");
+  callOp.setCalleeFromCallable(newCallTargetRef);
+
+  EXPECT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
+  EXPECT_EQ(llvm::cast<SymbolRefAttr>(callOp.getCallableForCallee())
+                .getRootReference()
+                .getValue(),
+      "other_target");
+  EXPECT_EQ(callOp.getNumOperands(), 1u);
+  EXPECT_EQ(callOp.getOperand(0), argVal);
+  ArrayAttr argAttrs = callOp.getArgAttrsAttr();
+  ASSERT_TRUE(argAttrs);
+  ASSERT_EQ(argAttrs.size(), 1u);
+  EXPECT_EQ(llvm::cast<DictionaryAttr>(argAttrs[0]).get("test.attr"),
+      StringAttr::get(&context, "arg0"));
+}
+
+TEST_F(
+    FIRCallInterfaceTest, setCalleeFromCallable_directToIndirect_withArgAttrs) {
+  OpBuilder builder(&context);
+  auto loc = builder.getUnknownLoc();
+  auto i32Ty = builder.getI32Type();
+  auto funcType = builder.getFunctionType({i32Ty}, {});
+  auto containerType = builder.getFunctionType({funcType, i32Ty}, {});
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
+  Value calleeVal = block->getArgument(0);
+  Value argVal = block->getArgument(1);
+
+  // Direct call with one argument and arg_attrs for that argument.
+  auto callTargetRef = FlatSymbolRefAttr::get(&context, "target");
+  auto callOp = fir::CallOp::create(builder, loc, callTargetRef,
+      llvm::ArrayRef<mlir::Type>{}, ValueRange{argVal});
+  callOp->setAttr(callOp.getArgAttrsAttrName(),
+      makeArgAttrs(&context, {makeTestArgDict(&context, "arg0")}));
+  ASSERT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 1u);
+
+  // Switch to indirect
+  callOp.setCalleeFromCallable(calleeVal);
+
+  EXPECT_TRUE(isValue(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 2u);
+  EXPECT_EQ(callOp.getOperand(0), calleeVal);
+  EXPECT_EQ(callOp.getOperand(1), argVal);
+  ArrayAttr argAttrs = callOp.getArgAttrsAttr();
+  ASSERT_TRUE(argAttrs);
+  ASSERT_EQ(argAttrs.size(), 2u);
+  // First entry is empty dict for callee.
+  EXPECT_TRUE(llvm::cast<DictionaryAttr>(argAttrs[0]).empty());
+  // Second entry preserves the argument's attribute.
+  auto argDict = llvm::cast<DictionaryAttr>(argAttrs[1]);
+  EXPECT_EQ(argDict.get("test.attr"), StringAttr::get(&context, "arg0"));
+}
+
+TEST_F(
+    FIRCallInterfaceTest, setCalleeFromCallable_indirectToDirect_withArgAttrs) {
+  OpBuilder builder(&context);
+  auto loc = builder.getUnknownLoc();
+  auto i32Ty = builder.getI32Type();
+  auto funcType = builder.getFunctionType({i32Ty}, {});
+  auto containerType = builder.getFunctionType({funcType, i32Ty}, {});
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
+  Value calleeVal = block->getArgument(0);
+  Value argVal = block->getArgument(1);
+
+  // Indirect call with callee + one argument
+  auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
+      llvm::ArrayRef<mlir::Type>{}, ValueRange{calleeVal, argVal});
+  callOp->setAttr(callOp.getArgAttrsAttrName(),
+      makeArgAttrs(&context,
+          {DictionaryAttr::get(&context, {}),
+              makeTestArgDict(&context, "arg0")}));
+  ASSERT_TRUE(isValue(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 2u);
+
+  // Switch to direct
+  auto callTargetRef = FlatSymbolRefAttr::get(&context, "direct_target");
+  callOp.setCalleeFromCallable(callTargetRef);
+
+  EXPECT_TRUE(isSymbolRef(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 1u);
+  EXPECT_EQ(callOp.getOperand(0), argVal);
+  ArrayAttr argAttrs = callOp.getArgAttrsAttr();
+  ASSERT_TRUE(argAttrs);
+  ASSERT_EQ(argAttrs.size(), 1u);
+  EXPECT_EQ(llvm::cast<DictionaryAttr>(argAttrs[0]).get("test.attr"),
+      StringAttr::get(&context, "arg0"));
+}
+
+TEST_F(FIRCallInterfaceTest,
+    setCalleeFromCallable_indirectToIndirect_withArgAttrs) {
+  OpBuilder builder(&context);
+  auto loc = builder.getUnknownLoc();
+  auto i32Ty = builder.getI32Type();
+  auto funcType = builder.getFunctionType({i32Ty}, {});
+  auto containerType = builder.getFunctionType({funcType, funcType, i32Ty}, {});
+  auto [func, block] =
+      createModuleWithFunction(builder, loc, "container", containerType);
+  Value callee0 = block->getArgument(0);
+  Value callee1 = block->getArgument(1);
+  Value argVal = block->getArgument(2);
+
+  // Indirect call with one argument and arg_attrs
+  auto callOp = fir::CallOp::create(builder, loc, SymbolRefAttr{},
+      llvm::ArrayRef<mlir::Type>{}, ValueRange{callee0, argVal});
+  callOp->setAttr(callOp.getArgAttrsAttrName(),
+      makeArgAttrs(&context,
+          {DictionaryAttr::get(&context, {}),
+              makeTestArgDict(&context, "arg0")}));
+  ASSERT_TRUE(isValue(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 2u);
+
+  // Switch to other indirect callee
+  callOp.setCalleeFromCallable(callee1);
+
+  EXPECT_TRUE(isValue(callOp.getCallableForCallee()));
+  EXPECT_EQ(callOp.getNumOperands(), 2u);
+  EXPECT_EQ(callOp.getOperand(0), callee1);
+  EXPECT_EQ(callOp.getOperand(1), argVal);
+  ArrayAttr argAttrs = callOp.getArgAttrsAttr();
+  ASSERT_TRUE(argAttrs);
+  ASSERT_EQ(argAttrs.size(), 2u);
+  EXPECT_TRUE(llvm::cast<DictionaryAttr>(argAttrs[0]).empty());
+  EXPECT_EQ(llvm::cast<DictionaryAttr>(argAttrs[1]).get("test.attr"),
+      StringAttr::get(&context, "arg0"));
+}
