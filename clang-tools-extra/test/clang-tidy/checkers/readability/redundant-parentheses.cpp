@@ -71,3 +71,27 @@ void ignoreStdMaxMin() {
   (std::max)(1,2);
   (std::min)(1,2);
 }
+
+struct Foo
+{
+  bool x;
+  void foo()
+  {
+   if ((x)) {
+     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant parentheses around expression [readability-redundant-parentheses]
+     // CHECK-FIXES:    if (x) {
+   }
+   if((this->x)) {
+     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+     // CHECK-FIXES:    if(this->x) {
+   }
+  }
+};
+
+void memberExpr() {
+  Foo foo{};
+  if ((foo.x)) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.x) {
+  }
+}
