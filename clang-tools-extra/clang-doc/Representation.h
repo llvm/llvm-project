@@ -20,6 +20,7 @@
 #include "clang/Tooling/Execution.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ilist_node.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/StringSaver.h"
@@ -158,7 +159,7 @@ CommentKind stringToCommentKind(llvm::StringRef KindStr);
 llvm::StringRef commentKindToString(CommentKind Kind);
 
 // A representation of a parsed comment.
-struct CommentInfo {
+struct CommentInfo : public llvm::ilist_node<CommentInfo> {
   CommentInfo() = default;
   CommentInfo(CommentInfo &Other) = delete;
   CommentInfo(CommentInfo &&Other) = default;
@@ -388,7 +389,7 @@ struct MemberTypeInfo : public FieldTypeInfo {
   bool IsStatic = false;
 };
 
-struct Location {
+struct Location : public llvm::ilist_node<Location> {
   Location(int StartLineNumber = 0, int EndLineNumber = 0,
            StringRef Filename = StringRef(), bool IsFileInRootDir = false)
       : Filename(internString(Filename)), StartLineNumber(StartLineNumber),
@@ -509,7 +510,7 @@ struct SymbolInfo : public Info {
   bool IsStatic = false;
 };
 
-struct FriendInfo : SymbolInfo {
+struct FriendInfo : public SymbolInfo, public llvm::ilist_node<FriendInfo> {
   FriendInfo() : SymbolInfo(InfoType::IT_friend) {}
   FriendInfo(SymbolID USR) : SymbolInfo(InfoType::IT_friend, USR) {}
   FriendInfo(const InfoType IT, const SymbolID &USR,
@@ -525,7 +526,7 @@ struct FriendInfo : SymbolInfo {
   bool IsClass = false;
 };
 
-struct VarInfo : SymbolInfo {
+struct VarInfo : public SymbolInfo, public llvm::ilist_node<VarInfo> {
   VarInfo() : SymbolInfo(InfoType::IT_variable) {}
   explicit VarInfo(SymbolID USR) : SymbolInfo(InfoType::IT_variable, USR) {}
 
@@ -536,7 +537,7 @@ struct VarInfo : SymbolInfo {
 
 // TODO: Expand to allow for documenting templating and default args.
 // Info for functions.
-struct FunctionInfo : public SymbolInfo {
+struct FunctionInfo : public SymbolInfo, public llvm::ilist_node<FunctionInfo> {
   FunctionInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_function, USR) {}
 
@@ -597,7 +598,7 @@ struct RecordInfo : public SymbolInfo {
 };
 
 // Info for typedef and using statements.
-struct TypedefInfo : public SymbolInfo {
+struct TypedefInfo : public SymbolInfo, public llvm::ilist_node<TypedefInfo> {
   TypedefInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_typedef, USR) {}
 
@@ -661,7 +662,7 @@ struct EnumValueInfo {
 
 // TODO: Expand to allow for documenting templating.
 // Info for types.
-struct EnumInfo : public SymbolInfo {
+struct EnumInfo : public SymbolInfo, public llvm::ilist_node<EnumInfo> {
   EnumInfo() : SymbolInfo(InfoType::IT_enum) {}
   EnumInfo(SymbolID USR) : SymbolInfo(InfoType::IT_enum, USR) {}
 
@@ -678,7 +679,7 @@ struct EnumInfo : public SymbolInfo {
   llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
 };
 
-struct ConceptInfo : public SymbolInfo {
+struct ConceptInfo : public SymbolInfo, public llvm::ilist_node<ConceptInfo> {
   ConceptInfo() : SymbolInfo(InfoType::IT_concept) {}
   ConceptInfo(SymbolID USR) : SymbolInfo(InfoType::IT_concept, USR) {}
 
