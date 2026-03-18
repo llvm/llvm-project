@@ -12,6 +12,7 @@
 #include "TargetLowering/LowerModule.h"
 
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
+#include "mlir/Dialect/OpenMP/OpenMPOpsDialect.h.inc"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
@@ -45,9 +46,10 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
   if (!attr)
     return true;
 
-  // None of the OpenACC attributes contain a type of concern, so we can
+  // None of the OpenACC/OMP attributes contain a type of concern, so we can
   // just treat them as legal.
-  if (isa<mlir::acc::OpenACCDialect>(attr.getDialect()))
+  if (isa<mlir::acc::OpenACCDialect, mlir::omp::OpenMPDialect>(
+          attr.getDialect()))
     return true;
 
   // These attributes either don't contain a type, or don't contain a type that
