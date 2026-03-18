@@ -225,19 +225,26 @@ public:
           }
         }
 
-        if (CI.Length == MaxClauseLength ||
-            (CI.Length && Type != HARDCLAUSE_INTERNAL &&
-             Type != HARDCLAUSE_IGNORE &&
-             (Type != CI.Type ||
-              // Note that we lie to shouldClusterMemOps about the size of the
-              // cluster. When shouldClusterMemOps is called from the machine
-              // scheduler it limits the size of the cluster to avoid increasing
-              // register pressure too much, but this pass runs after register
-              // allocation so there is no need for that kind of limit.
-              // We also lie about the Offset and OffsetIsScalable parameters,
-              // as they aren't used in the SIInstrInfo implementation.
-              !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
-                                        2, 2)))) {
+        const bool HasActiveClause = CI.Length;
+        const bool HitLengthLimit = CI.Length == MaxClauseLength;
+
+        const bool IsClauseCandidate =
+            Type != HARDCLAUSE_INTERNAL && Type != HARDCLAUSE_IGNORE;
+
+        // Note that we lie to shouldClusterMemOps about the size of the
+        // cluster. When shouldClusterMemOps is called from the machine
+        // scheduler it limits the size of the cluster to avoid increasing
+        // register pressure too much, but this pass runs after register
+        // allocation so there is no need for that kind of limit.
+        // We also lie about the Offset and OffsetIsScalable parameters,
+        // as they aren't used in the SIInstrInfo implementation.
+        const bool TypeOrBaseMismatch =
+            HasActiveClause && IsClauseCandidate &&
+            (Type != CI.Type ||
+             !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
+                                       2, 2));
+
+        if (HitLengthLimit || TypeOrBaseMismatch) {
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();
