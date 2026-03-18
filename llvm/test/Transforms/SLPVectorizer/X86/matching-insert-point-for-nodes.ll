@@ -33,7 +33,7 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], <i32 poison, i32 poison, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[TMP9]], <i32 poison, i32 poison, i32 0, i32 -1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP14]] = lshr <4 x i32> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP14]] = add <4 x i32> [[TMP11]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP13]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
@@ -81,7 +81,7 @@ bb19:
 bb24:
   %lshr = lshr i32 %phi20, 0
   %and = and i32 %lshr, 0
-  %lshr25 = lshr i32 %phi, %and
+  %lshr25 = add i32 %phi, %and
   %or26 = or i32 0, %or23
   br label %bb1
 }
