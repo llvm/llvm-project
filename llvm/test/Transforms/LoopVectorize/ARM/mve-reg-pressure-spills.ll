@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -mcpu=cortex-m55 -passes=loop-vectorize -disable-output -debug-only=loop-vectorize,vplan -vectorizer-consider-reg-pressure=false %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-NOPRESSURE
 ; RUN: opt -mcpu=cortex-m55 -passes=loop-vectorize -disable-output -debug-only=loop-vectorize,vplan -vectorizer-consider-reg-pressure=true %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PRESSURE
 
