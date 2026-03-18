@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Error.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
@@ -100,7 +101,8 @@ public:
 
   CompilandIndexItem *GetCompiland(uint16_t modi);
 
-  llvm::SmallString<64> GetMainSourceFile(const CompilandIndexItem &item) const;
+  llvm::Expected<llvm::SmallString<64>>
+  GetMainSourceFile(const CompilandIndexItem &item) const;
 };
 } // namespace npdb
 } // namespace lldb_private
