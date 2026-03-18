@@ -12,6 +12,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Type.h"
 
 namespace llvm {
@@ -46,6 +47,7 @@ class VPTypeAnalysis {
   /// count).
   Type *CanonicalIVTy;
   LLVMContext &Ctx;
+  const DataLayout &DataLayout;
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
   Type *inferScalarTypeForRecipe(const VPInstruction *R);
