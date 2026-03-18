@@ -8959,13 +8959,12 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       {
         const APFloat *InnerC, *OuterC;
         if (match(RHSC, m_APFloat(OuterC))) {
-          if (match(LHSI,
-                    m_OrdOrUnordFMax(m_Value(X), m_APFloat(InnerC)))) {
+          if (match(LHSI, m_OrdOrUnordFMax(m_Value(X), m_APFloat(InnerC)))) {
             if ((Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE) &&
                 OuterC->compare(*InnerC) == APFloat::cmpGreaterThan)
               return new FCmpInst(Pred, X, RHSC);
-          } else if (match(LHSI, m_OrdOrUnordFMin(m_Value(X),
-                                                   m_APFloat(InnerC)))) {
+          } else if (match(LHSI,
+                           m_OrdOrUnordFMin(m_Value(X), m_APFloat(InnerC)))) {
             if ((Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE) &&
                 OuterC->compare(*InnerC) == APFloat::cmpLessThan)
               return new FCmpInst(Pred, X, RHSC);
