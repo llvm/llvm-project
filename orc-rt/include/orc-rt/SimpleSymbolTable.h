@@ -67,8 +67,9 @@ public:
 
     // No duplicates. Add entries.
     for (auto &P : NewSymbols) {
-      [[maybe_unused]] bool Added = Symbols.insert(P).second;
-      assert(Added && "NewSymbols contains duplicate definitions");
+      [[maybe_unused]] auto [I, Added] = Symbols.insert(P);
+      assert((Added || I->second == P.second) &&
+             "NewSymbols contains incompatible definitions");
     }
 
     return Error::success();
