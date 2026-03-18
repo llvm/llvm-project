@@ -4250,10 +4250,44 @@ output, given the original flags.
    ``a * (c / b)`` can be rewritten into ``a / (b / c)``.
 
 ``contract``
-   Allow floating-point contraction (e.g., fusing a multiply followed by an
-   addition into a fused multiply-and-add). This does not enable reassociation
-   to form arbitrary contractions. For example, ``(a*b) + (c*d) + e`` can not
-   be transformed into ``(a*b) + ((c*d) + e)`` to create two fma operations.
+   Allows a sequence of instructions to be contracted into a new sequence that
+   abides by the following rules:
+
+   - The two sequences must compute the same value if both were evaluated at
+     infinite range and precision, taking into account value range restrictions
+     implied by fast-math flags or other known floating-point class inference.
+     For example, a contraction of ``x / sqrt(x)`` to ``sqrt(x)`` requires
+     that ``x`` be neither ``-0.0`` nor an infinite value.
+   - The new sequence may contain at most one instruction that rounds its
+     result. Instructions like ``fneg`` or ``llvm.fabs`` that operate only on
+     the sign bit do not cause any rounding. Intrinsics like ``llvm.ldexp`` may
+     round their results only if the infinite-range result's exponent is below
+     the minimum exponent for that type. Most floating-point instructions round
+     their results.
+   - The new sequence must not reassociate any intermediate instructions without
+     the ``reassoc`` flag also being specified. Additionally, the input sequence
+     must not be reassociated to enable a contraction opportunity without the
+     ``reassoc`` flag. For example, ``((a*b) + (c*d)) + e`` cannot be
+     transformed into ``(a*b) + ((c*d) + e)`` to form
+     ``fma(a, b, fma(c, d, e))`` if the ``reassoc`` flag is not present.
+   - The new sequence must not involve a call to an incorrectly-rounded math
+     library function (for example, ``sin``) or equivalent LLVM intrinsic. The
+     original sequence may contain such a call, but the new sequence must not.
+     An example of a legal contraction is ``pow(x, 0.5)`` may be contracted
+     to ``sqrt(x)`` if x is known not to be negative (including ``-0.0``), as
+     ``sqrt`` is a correctly-rounded math function, even though ``pow`` is not.
+     An example of a illegal contraction is ``sin(x) / cos(x)`` must not be
+     contracted to ``tan(x)``, as ``tan`` is an incorrectly-rounded math
+     function.
+
+   The primary use case of floating-point contraction is to transform a multiply
+   followed by an addition into a fused multiply-and-add instruction. That
+   non-rounding instructions can be included in the transformation also allows
+   for contraction to instructions like x86's ``vfmsub`` family of instructions,
+   even if represented as IR-equivalent ``fma(a, b, fneg(c))``. However, the
+   rules are generic enough to include other legal transformations. For example,
+   it is legal to contract ``fpext(fptrunc(x))`` pairs to just ``x`` if both the
+   ``fpext`` and ``fptrunc`` instructions have the ``contract`` flag on them.
 
 .. _fastmath_afn:
 
