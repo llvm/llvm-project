@@ -167,14 +167,35 @@ gpu.module @test {
 
 // -----
 gpu.module @test {
+  // CHECK-LABEL: broadcast_both_leadingdims_innerdims
+  gpu.func @broadcast_both_leadingdims_innerdims(%arg0: memref<32x2x192xf32>, %arg1: memref<32x2x192xf32>, %arg2: memref<32x2x192xf32>) kernel attributes {known_block_size = array<i32: 768, 1, 1>, known_grid_size = array<i32: 16, 1, 1>} {
+    // CHECK: arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 6, 1], sg_data = [1, 1, 1, 32]>} dense<true> : vector<2x2x6x32xi1>
+    %cst = arith.constant dense<true> : vector<2x2x6x32xi1>
+    // CHECK: arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 6, 1], sg_data = [1, 1, 1, 32]>} dense<1.000000e+00> : vector<2x2x6x32xf32>
+    %cst_0 = arith.constant dense<1.000000e+00> : vector<2x2x6x32xf32>
+    %intptr = memref.extract_aligned_pointer_as_index %arg2 : memref<32x2x192xf32> -> index
+    %0 = arith.index_cast %intptr : index to i64
+    // CHECK: vector.step {layout_result_0 = #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [2, 2, 6, 1], sg_data = [1, 1, 1, 1]>, dims = [0, 1]>, dims = [1]>} : vector<6xindex>
+    %1 = vector.step : vector<6xindex>
+    // CHECK: vector.shape_cast {{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [2, 2, 6, 1], sg_data = [1, 1, 1, 1]>, dims = [0, 1]>} : vector<6xindex> to vector<6x1xindex>
+    %2 = vector.shape_cast %1 : vector<6xindex> to vector<6x1xindex>
+    // CHECK: vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 6, 1], sg_data = [1, 1, 1, 32]>} : vector<6x1xindex> to vector<2x2x6x32xindex>
+    %3 = vector.broadcast %2 : vector<6x1xindex> to vector<2x2x6x32xindex>
+    xegpu.store %cst_0, %0[%3], %cst <{layout = #xegpu.layout<sg_layout = [2, 2, 6, 1], sg_data = [1, 1, 1, 32]>}> : vector<2x2x6x32xf32>, i64, vector<2x2x6x32xindex>, vector<2x2x6x32xi1>
+    gpu.return
+  }
+}
+
+// -----
+gpu.module @test {
   // CHECK-LABEL: for_loop_dpas
   gpu.func @for_loop_dpas(%arg0: memref<2048x8192xf16>, %arg1: memref<8192x4096xf16>, %arg2: memref<2048x4096xf32>) kernel attributes {known_block_size = array<i32: 8, 1, 16>} {
     %cst = arith.constant dense<0.000000e+00> : vector<128x128xf32>
     %c128 = arith.constant 128 : index
     %c8192 = arith.constant 8192 : index
     %c0 = arith.constant 0 : index
-    %block_id_x = gpu.block_id  x
-    %block_id_y = gpu.block_id  y
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
     %0 = affine.apply affine_map<()[s0] -> (s0 * 128)>()[%block_id_x]
     %1 = affine.apply affine_map<()[s0] -> (s0 * 128)>()[%block_id_y]
     // CHECK: %2 = scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (vector<128x128xf32>) {
@@ -222,8 +243,8 @@ gpu.module @test {
     %c16 = arith.constant 16 : index
     %c8192 = arith.constant 8192 : index
     %c0 = arith.constant 0 : index
-    %block_id_x = gpu.block_id  x
-    %block_id_y = gpu.block_id  y
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
     %4 = xegpu.create_nd_tdesc %arg0 : memref<2048x8192xf16> -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
     %5 = xegpu.load_nd %4[%block_id_x, %c0]  : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<32x16xf16>
     %6 = xegpu.create_nd_tdesc %arg1 : memref<8192x4096xf16> -> !xegpu.tensor_desc<16x64xf16, #xegpu.block_tdesc_attr<boundary_check = false>>

@@ -436,8 +436,9 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     offset = llvm::alignTo(offset, byteAlign);
     mlir::LLVM::DIDerivedTypeAttr tyAttr = mlir::LLVM::DIDerivedTypeAttr::get(
         context, llvm::dwarf::DW_TAG_member,
-        mlir::StringAttr::get(context, fieldName), elemTy, byteSize * 8,
-        byteAlign * 8, offset * 8, /*optional<address space>=*/std::nullopt,
+        mlir::StringAttr::get(context, fieldName), /*file=*/nullptr, /*line=*/0,
+        /*scope=*/nullptr, elemTy, byteSize * 8, byteAlign * 8, offset * 8,
+        /*optional<address space>=*/std::nullopt,
         /*flags=*/mlir::LLVM::DIFlags::Zero,
         /*extra data=*/nullptr);
     elements.push_back(tyAttr);
@@ -479,7 +480,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertTupleType(
     offset = llvm::alignTo(offset, byteAlign);
     mlir::LLVM::DIDerivedTypeAttr tyAttr = mlir::LLVM::DIDerivedTypeAttr::get(
         context, llvm::dwarf::DW_TAG_member, mlir::StringAttr::get(context, ""),
-        elemTy, byteSize * 8, byteAlign * 8, offset * 8,
+        /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy, byteSize * 8,
+        byteAlign * 8, offset * 8,
         /*optional<address space>=*/std::nullopt,
         /*flags=*/mlir::LLVM::DIFlags::Zero,
         /*extra data=*/nullptr);
@@ -673,7 +675,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
 
   return mlir::LLVM::DIDerivedTypeAttr::get(
       context, llvm::dwarf::DW_TAG_pointer_type,
-      mlir::StringAttr::get(context, ""), elTyAttr, /*sizeInBits=*/ptrSize * 8,
+      mlir::StringAttr::get(context, ""), /*file=*/nullptr, /*line=*/0,
+      /*scope=*/nullptr, elTyAttr, /*sizeInBits=*/ptrSize * 8,
       /*alignInBits=*/0, /*offset=*/0,
       /*optional<address space>=*/std::nullopt,
       /*flags=*/mlir::LLVM::DIFlags::Zero, /*extra data=*/nullptr);
@@ -743,7 +746,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
 
     return mlir::LLVM::DIDerivedTypeAttr::get(
         context, llvm::dwarf::DW_TAG_pointer_type,
-        mlir::StringAttr::get(context, ""), subroutineTy,
+        mlir::StringAttr::get(context, ""), /*file=*/nullptr, /*line=*/0,
+        /*scope=*/nullptr, subroutineTy,
         /*sizeInBits=*/ptrSize * 8, /*alignInBits=*/0, /*offset=*/0,
         /*optional<address space>=*/std::nullopt,
         /*flags=*/mlir::LLVM::DIFlags::Zero, /*extra data=*/nullptr);

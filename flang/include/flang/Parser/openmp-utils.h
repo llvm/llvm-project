@@ -296,14 +296,28 @@ struct ExecutionPartIterator {
   using IteratorType = Block::const_iterator;
   using IteratorRange = llvm::iterator_range<IteratorType>;
 
+  // An iterator range with a third iterator indicating a position inside
+  // the range.
+  struct IteratorGauge : public IteratorRange {
+    IteratorGauge(IteratorType b, IteratorType e)
+        : IteratorRange(b, e), at(b) {}
+    IteratorGauge(IteratorRange r) : IteratorRange(r), at(r.begin()) {}
+
+    bool atEnd() const { return at == end(); }
+    IteratorType at;
+  };
+
   struct Construct {
     Construct(IteratorType b, IteratorType e, const ExecutionPartConstruct *c)
-        : range(b, e), owner(c) {}
+        : location(b, e), owner(c) {}
     template <typename R>
     Construct(const R &r, const ExecutionPartConstruct *c)
-        : range(r), owner(c) {}
+        : location(r), owner(c) {}
     Construct(const Construct &c) = default;
-    IteratorRange range;
+    // The original range of the construct with the current position in it.
+    // The location.at is the construct currently being pointed at, or
+    // stepped into.
+    IteratorGauge location;
     const ExecutionPartConstruct *owner;
   };
 
@@ -332,6 +346,7 @@ struct ExecutionPartIterator {
 
   bool valid() const { return !stack_.empty(); }
 
+  const std::vector<Construct> &stack() const { return stack_; }
   decltype(auto) operator*() const { return *at(); }
   bool operator==(const ExecutionPartIterator &other) const {
     if (valid() != other.valid()) {
@@ -339,7 +354,7 @@ struct ExecutionPartIterator {
     }
     // Invalid iterators are considered equal.
     return !valid() ||
-        stack_.back().range.begin() == other.stack_.back().range.begin();
+        stack_.back().location.at == other.stack_.back().location.at;
   }
   bool operator!=(const ExecutionPartIterator &other) const {
     return !(*this == other);
@@ -368,7 +383,7 @@ struct ExecutionPartIterator {
   using iterator_category = std::forward_iterator_tag;
 
 private:
-  IteratorType at() const { return stack_.back().range.begin(); };
+  IteratorType at() const { return stack_.back().location.at; };
 
   // If the iterator is not at a legal location, keep advancing it until
   // it lands at a legal location or becomes invalid.

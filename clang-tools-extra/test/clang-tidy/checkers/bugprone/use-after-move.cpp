@@ -11,37 +11,12 @@
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
+#include <utility>
+#include <memory>
+
 typedef decltype(nullptr) nullptr_t;
 
 namespace std {
-typedef unsigned size_t;
-
-template <typename T>
-struct unique_ptr {
-  unique_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-  T& operator[](size_t i) const;
-};
-
-template <typename T>
-struct shared_ptr {
-  shared_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-};
-
-template <typename T>
-struct weak_ptr {
-  weak_ptr();
-  bool expired() const;
-};
 
 template <typename T>
 struct optional {
@@ -111,41 +86,6 @@ DECLARE_STANDARD_CONTAINER(unordered_multiset);
 DECLARE_STANDARD_CONTAINER(unordered_multimap);
 
 typedef basic_string<char> string;
-
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept {
-  return static_cast<typename remove_reference<_Tp>::type &&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type&& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
 
 } // namespace std
 
@@ -258,7 +198,7 @@ void standardSmartPtr() {
     // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
-    std::unique_ptr<A> ptr;
+    std::unique_ptr<A[]> ptr;
     std::move(ptr);
     ptr[0];
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved

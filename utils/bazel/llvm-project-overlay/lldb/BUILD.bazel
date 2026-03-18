@@ -139,6 +139,9 @@ expand_template(
         # TODO: treesitter support
         "#cmakedefine01 LLDB_ENABLE_TREESITTER": "#define LLDB_ENABLE_TREESITTER 0",
 
+        # Would cause tests to run with MTE.
+        "#cmakedefine01 LLDB_ENABLE_MTE": "#define LLDB_ENABLE_MTE 0",
+
         # Defaults that could be configurable if needed
         "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
         "#cmakedefine01 LLDB_ENABLE_PROTOCOL_SERVERS": "#define LLDB_ENABLE_PROTOCOL_SERVERS 1",
@@ -979,6 +982,9 @@ cc_library(
         ["tools/debugserver/source/**/*.cpp"],
         exclude = ["tools/debugserver/source/debugserver.cpp"],
     ),
+    copts = [
+        "-Wno-vla-cxx-extension",
+    ],
     local_defines = ["LLDB_USE_OS_LOG"],
     tags = ["nobuildkite"],
     deps = [
@@ -1021,6 +1027,9 @@ cc_binary(
         "tools/debugserver/source/debugserver.cpp",
         ":debugserver_version_gen",
         ":mach_gen",
+    ],
+    copts = [
+        "-Wno-vla-cxx-extension",
     ],
     tags = ["nobuildkite"],
     target_compatible_with = select({

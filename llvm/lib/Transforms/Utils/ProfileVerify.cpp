@@ -58,7 +58,7 @@ public:
     if (succ_size(&BB) < 2)
       return nullptr;
     auto *Term = BB.getTerminator();
-    return (isa<BranchInst>(Term) || isa<SwitchInst>(Term) ||
+    return (isa<CondBrInst>(Term) || isa<SwitchInst>(Term) ||
             isa<IndirectBrInst>(Term) || isa<CallBrInst>(Term))
                ? Term
                : nullptr;

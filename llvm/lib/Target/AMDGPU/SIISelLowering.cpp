@@ -196,6 +196,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
+  setMinFunctionAlignment(Align(4));
+  setPrefFunctionAlignment(Align(STI.getInstCacheLineSize()));
+
   // The boolean content concept here is too inflexible. Compares only ever
   // really produce a 1-bit result. Any copy/extend from these will turn into a
   // select, and zext/1 or sext/-1 are equally cheap. Arbitrarily choose 0/1, as
@@ -8625,7 +8628,7 @@ static bool isKnownNonNull(SDValue Val, SelectionDAG &DAG,
     return true;
 
   if (auto *ConstVal = dyn_cast<ConstantSDNode>(Val))
-    return ConstVal->getSExtValue() != TM.getNullPointerValue(AddrSpace);
+    return ConstVal->getSExtValue() != AMDGPU::getNullPointerValue(AddrSpace);
 
   // TODO: Search through arithmetic, handle arguments and loads
   // marked nonnull.
@@ -8679,7 +8682,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return Ptr;
 
-      unsigned NullVal = TM.getNullPointerValue(DestAS);
+      unsigned NullVal = AMDGPU::getNullPointerValue(DestAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
       SDValue NonNull = DAG.getSetCC(SL, MVT::i1, Src, FlatNullPtr, ISD::SETNE);
 
@@ -8730,7 +8733,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
         return CvtPtr;
 
-      unsigned NullVal = TM.getNullPointerValue(SrcAS);
+      unsigned NullVal = AMDGPU::getNullPointerValue(SrcAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
 
       SDValue NonNull =
@@ -15397,7 +15400,8 @@ static ConstantFPSDNode *getSplatConstantFP(SDValue Op) {
 
 SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
                                                   const SDLoc &SL, SDValue Op0,
-                                                  SDValue Op1) const {
+                                                  SDValue Op1,
+                                                  bool IsKnownNoNaNs) const {
   ConstantFPSDNode *K1 = getSplatConstantFP(Op1);
   if (!K1)
     return SDValue();
@@ -15454,7 +15458,7 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
     // then give the other result, which is different from med3 with a NaN
     // input.
     SDValue Var = Op0.getOperand(0);
-    if (!DAG.isKnownNeverSNaN(Var))
+    if (!IsKnownNoNaNs && !DAG.isKnownNeverSNaN(Var))
       return SDValue();
 
     const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
@@ -15572,7 +15576,8 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
        (VT == MVT::v2bf16 && Subtarget->hasBF16PackedInsts()) ||
        (VT == MVT::v2f16 && Subtarget->hasVOP3PInsts())) &&
       Op0.hasOneUse()) {
-    if (SDValue Res = performFPMed3ImmCombine(DAG, SDLoc(N), Op0, Op1))
+    if (SDValue Res = performFPMed3ImmCombine(DAG, SDLoc(N), Op0, Op1,
+                                              N->getFlags().hasNoNaNs()))
       return Res;
   }
 

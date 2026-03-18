@@ -26,34 +26,51 @@ using namespace orc_rt;
 using ::testing::Eq;
 using ::testing::Optional;
 
-class MockResourceManager : public ResourceManager {
+class MockService : public Service {
 public:
   enum class Op { Detach, Shutdown };
 
-  static Error alwaysSucceed(Op) { return Error::success(); }
+  static void noop(Op) {}
 
-  MockResourceManager(std::optional<size_t> &DetachOpIdx,
-                      std::optional<size_t> &ShutdownOpIdx, size_t &OpIdx,
-                      move_only_function<Error(Op)> GenResult = alwaysSucceed)
+  MockService(std::optional<size_t> &DetachOpIdx,
+              std::optional<size_t> &ShutdownOpIdx, size_t &OpIdx,
+              move_only_function<void(Op)> GenResult = noop)
       : DetachOpIdx(DetachOpIdx), ShutdownOpIdx(ShutdownOpIdx), OpIdx(OpIdx),
         GenResult(std::move(GenResult)) {}
 
   void onDetach(OnCompleteFn OnComplete) override {
     DetachOpIdx = OpIdx++;
-    OnComplete(GenResult(Op::Detach));
+    GenResult(Op::Detach);
+    OnComplete();
   }
 
   void onShutdown(OnCompleteFn OnComplete) override {
     ShutdownOpIdx = OpIdx++;
-    OnComplete(GenResult(Op::Shutdown));
+    GenResult(Op::Shutdown);
+    OnComplete();
   }
 
 private:
   std::optional<size_t> &DetachOpIdx;
   std::optional<size_t> &ShutdownOpIdx;
   size_t &OpIdx;
-  move_only_function<Error(Op)> GenResult;
+  move_only_function<void(Op)> GenResult;
 };
+
+class ConfigurableService : public Service {
+public:
+  ConfigurableService(int ConstructorOption) {}
+
+  void onDetach(OnCompleteFn OnComplete) override { OnComplete(); }
+
+  void onShutdown(OnCompleteFn OnComplete) override { OnComplete(); }
+
+  void doMoreConfig(int) noexcept {}
+};
+
+static ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
+  return ExecutorProcessInfo("arm64-apple-darwin", 16384);
+}
 
 class NoDispatcher : public TaskDispatcher {
 public:
@@ -261,14 +278,15 @@ private:
 static void noErrors(Error Err) { cantFail(std::move(Err)); }
 
 TEST(SessionTest, TrivialConstructionAndDestruction) {
-  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
 }
 
 TEST(SessionTest, ReportError) {
   Error E = Error::success();
   cantFail(std::move(E)); // Force error into checked state.
 
-  Session S(std::make_unique<NoDispatcher>(),
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             [&](Error Err) { E = std::move(Err); });
   S.reportError(make_error<StringError>("foo"));
 
@@ -281,7 +299,8 @@ TEST(SessionTest, ReportError) {
 TEST(SessionTest, DispatchTask) {
   int X = 0;
   std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  Session S(mockExecutorProcessInfo(),
+            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
 
   EXPECT_EQ(Tasks.size(), 0U);
   S.dispatch(makeGenericTask([&]() { ++X; }));
@@ -292,15 +311,16 @@ TEST(SessionTest, DispatchTask) {
   EXPECT_EQ(X, 1);
 }
 
-TEST(SessionTest, SingleResourceManager) {
+TEST(SessionTest, SingleService) {
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx;
   std::optional<size_t> ShutdownOpIdx;
 
   {
-    Session S(std::make_unique<NoDispatcher>(), noErrors);
-    S.addResourceManager(std::make_unique<MockResourceManager>(
-        DetachOpIdx, ShutdownOpIdx, OpIdx));
+    Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+              noErrors);
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
   }
 
   EXPECT_EQ(OpIdx, 1U);
@@ -308,16 +328,17 @@ TEST(SessionTest, SingleResourceManager) {
   EXPECT_THAT(ShutdownOpIdx, Optional(Eq(0)));
 }
 
-TEST(SessionTest, MultipleResourceManagers) {
+TEST(SessionTest, MultipleServices) {
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx[3];
   std::optional<size_t> ShutdownOpIdx[3];
 
   {
-    Session S(std::make_unique<NoDispatcher>(), noErrors);
+    Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+              noErrors);
     for (size_t I = 0; I != 3; ++I)
-      S.addResourceManager(std::make_unique<MockResourceManager>(
-          DetachOpIdx[I], ShutdownOpIdx[I], OpIdx));
+      S.addService(std::make_unique<MockService>(DetachOpIdx[I],
+                                                 ShutdownOpIdx[I], OpIdx));
   }
 
   EXPECT_EQ(OpIdx, 3U);
@@ -330,7 +351,7 @@ TEST(SessionTest, MultipleResourceManagers) {
 
 TEST(SessionTest, ExpectedShutdownSequence) {
   // Check that Session shutdown results in...
-  // 1. ResourceManagers being shut down.
+  // 1. Services being shut down.
   // 2. The TaskDispatcher being shut down.
   // 3. A call to OnShutdownComplete.
 
@@ -341,7 +362,8 @@ TEST(SessionTest, ExpectedShutdownSequence) {
   bool DispatcherShutDown = false;
   bool SessionShutdownComplete = false;
   std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(
+  Session S(mockExecutorProcessInfo(),
+            std::make_unique<EnqueueingDispatcher>(
                 Tasks,
                 [&]() {
                   EXPECT_TRUE(ShutdownOpIdx);
@@ -350,8 +372,8 @@ TEST(SessionTest, ExpectedShutdownSequence) {
                   DispatcherShutDown = true;
                 }),
             noErrors);
-  S.addResourceManager(
-      std::make_unique<MockResourceManager>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+  S.addService(
+      std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
 
   S.shutdown([&]() {
     EXPECT_TRUE(DispatcherShutDown);
@@ -362,11 +384,61 @@ TEST(SessionTest, ExpectedShutdownSequence) {
   EXPECT_TRUE(SessionShutdownComplete);
 }
 
+TEST(SessionTest, AddServiceAndUseRef) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  auto &CS = S.addService(std::make_unique<ConfigurableService>(42));
+  CS.doMoreConfig(1);
+}
+
+TEST(SessionTest, CreateServiceAndUseRef) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  auto &CS = S.createService<ConfigurableService>(42);
+  CS.doMoreConfig(1);
+}
+
+TEST(SessionTest, ControllerInterfaceContainsSessionByDefault) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  ASSERT_TRUE(S.controllerInterface()->count("orc_rt_SessionInstance"));
+  EXPECT_EQ(S.controllerInterface()->at("orc_rt_SessionInstance"),
+            static_cast<void *>(&S));
+}
+
+TEST(SessionTest, ControllerInterfaceWithRef) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  int X = 0, Y = 0;
+  S.controllerInterface().with_ref([&](ControllerInterface &CI) {
+    std::pair<const char *, void *> Syms[] = {
+        {"orc_rt_A", static_cast<void *>(&X)},
+        {"orc_rt_B", static_cast<void *>(&Y)}};
+    cantFail(CI.addSymbolsUnique(Syms));
+  });
+
+  EXPECT_EQ(S.controllerInterface()->at("orc_rt_A"), &X);
+  EXPECT_EQ(S.controllerInterface()->at("orc_rt_B"), &Y);
+}
+
+TEST(SessionTest, ControllerInterfaceConstAccess) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  int X = 0;
+  std::pair<const char *, void *> Syms[] = {{"orc_rt_X", &X}};
+  cantFail(S.controllerInterface()->addSymbolsUnique(Syms));
+
+  const Session &CS = S;
+  ASSERT_TRUE(CS.controllerInterface()->count("orc_rt_X"));
+  EXPECT_EQ(CS.controllerInterface()->at("orc_rt_X"), &X);
+}
+
 TEST(ControllerAccessTest, Basics) {
   // Test that we can set the ControllerAccess implementation and still shut
   // down as expected.
   std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  Session S(mockExecutorProcessInfo(),
+            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
   S.setController(CA);
 
@@ -388,7 +460,8 @@ static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
 TEST(ControllerAccessTest, ValidCallToController) {
   // Simulate a call to a controller handler.
   std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  Session S(mockExecutorProcessInfo(),
+            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
   S.setController(CA);
 
@@ -407,7 +480,8 @@ TEST(ControllerAccessTest, ValidCallToController) {
 TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
   // Expect calls to the controller prior to attaching to fail.
   std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  Session S(mockExecutorProcessInfo(),
+            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -426,7 +500,8 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
 TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   // Expect calls to the controller prior to attaching to fail.
   std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  Session S(mockExecutorProcessInfo(),
+            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
   S.setController(CA);
 
@@ -449,7 +524,8 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
 TEST(ControllerAccessTest, CallFromController) {
   // Simulate a call from the controller.
   std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  Session S(mockExecutorProcessInfo(),
+            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
   S.setController(CA);
 
@@ -468,7 +544,8 @@ TEST(ControllerAccessTest, CallFromController) {
 TEST(ControllerAccessTest, RedundantAsyncShutdown) {
   // Check that redundant calls to shutdown have their callbacks run.
   std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  Session S(mockExecutorProcessInfo(),
+            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   S.waitForShutdown();
 
   bool RedundantCallbackRan = false;

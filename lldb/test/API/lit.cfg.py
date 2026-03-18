@@ -300,6 +300,9 @@ if is_configured("enabled_plugins"):
     for plugin in config.enabled_plugins:
         dotest_cmd += ["--enable-plugin", plugin]
 
+if getattr(config, "lldb_enable_mte", False):
+    dotest_cmd += ["--enable-mte"]
+
 # `dotest` args come from three different sources:
 # 1. Derived by CMake based on its configs (LLDB_TEST_COMMON_ARGS), which end
 # up in `dotest_common_args_str`.

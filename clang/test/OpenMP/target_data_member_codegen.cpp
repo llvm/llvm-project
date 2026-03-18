@@ -25,8 +25,8 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK-DAG: [[SIZES:@.+]] = private unnamed_addr constant [1 x i64] [i64 {{8|4}}]
-// CHECK-DAG: [[MAPTYPES:@.+]] = private unnamed_addr constant [1 x i64] [i64 3]
+// CHECK-DAG: [[SIZES:@.+]] = private unnamed_addr constant [2 x i64] [i64 {{8|4}}, i64 0]
+// CHECK-DAG: [[MAPTYPES:@.+]] = private unnamed_addr constant [2 x i64] [i64 3, i64 288]
 struct S {
     double *p;
 };

@@ -1151,14 +1151,14 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       Value *Acc = Builder.CreateLoad(Addr);
       CallOps.push_back(Acc);
     }
-    if (BuiltinID == PPC::BI__builtin_mma_dmmr ||
-        BuiltinID == PPC::BI__builtin_mma_dmxor ||
-        BuiltinID == PPC::BI__builtin_mma_disassemble_dmr ||
+    if (BuiltinID == PPC::BI__builtin_dmmr ||
+        BuiltinID == PPC::BI__builtin_dmxor ||
+        BuiltinID == PPC::BI__builtin_disassemble_dmr ||
         BuiltinID == PPC::BI__builtin_mma_dmsha2hash) {
       Address Addr = EmitPointerWithAlignment(E->getArg(1));
       Ops[1] = Builder.CreateLoad(Addr);
     }
-    if (BuiltinID == PPC::BI__builtin_mma_disassemble_dmr)
+    if (BuiltinID == PPC::BI__builtin_disassemble_dmr)
       return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
     for (unsigned i=1; i<Ops.size(); i++)
       CallOps.push_back(Ops[i]);
@@ -1385,6 +1385,20 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_ldat_cond),
                               {Op0, Op1});
+  }
+  case PPC::BI__builtin_amo_lwat_csne_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_lwat_csne),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_ldat_csne_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_ldat_csne),
+                              {Op0, Op1, Op2});
   }
   case PPC::BI__builtin_amo_stwat_s: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

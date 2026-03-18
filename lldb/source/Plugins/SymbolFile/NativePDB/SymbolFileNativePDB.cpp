@@ -169,8 +169,6 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   if (expected_info->getGuid() != guid)
     return nullptr;
 
-  LLDB_LOG(GetLog(LLDBLog::Symbols), "Loading {0} for {1}", pdb->getFilePath(),
-           exe_path);
   return pdb;
 }
 
@@ -397,6 +395,11 @@ uint32_t SymbolFileNativePDB::CalculateAbilities() {
 
     if (!pdb_file)
       return 0;
+
+    LLDB_LOG(
+        GetLog(LLDBLog::Symbols), "Loading {0} for {1}",
+        pdb_file->getFilePath(),
+        m_objfile_sp->GetModule()->GetObjectFile()->GetFileSpec().GetPath());
 
     auto expected_index = PdbIndex::create(pdb_file);
     if (!expected_index) {
@@ -2405,6 +2408,7 @@ size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
     VariableSP variable;
     switch (variable_cvs.kind()) {
     case S_REGREL32:
+    case S_REGREL32_INDIR:
     case S_REGISTER:
     case S_LOCAL:
       variable = GetOrCreateLocalVariable(block_id, child_sym_id, is_param);

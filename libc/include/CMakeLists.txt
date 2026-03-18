@@ -498,6 +498,7 @@ add_header_macro(
     .llvm-libc-types.Elf32_Versym
     .llvm-libc-types.Elf32_Word
     .llvm-libc-types.Elf32_Xword
+    .llvm-libc-types.Elf32_auxv_t
     .llvm-libc-types.Elf64_Addr
     .llvm-libc-types.Elf64_Chdr
     .llvm-libc-types.Elf64_Dyn
@@ -520,6 +521,7 @@ add_header_macro(
     .llvm-libc-types.Elf64_Versym
     .llvm-libc-types.Elf64_Word
     .llvm-libc-types.Elf64_Xword
+    .llvm-libc-types.Elf64_auxv_t
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys
@@ -680,7 +682,6 @@ add_header_macro(
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
-    .llvm-libc-types.struct_sockaddr_un
 )
 
 add_header_macro(
@@ -757,6 +758,15 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
+  sys_un
+  ../libc/include/sys/un.yaml
+  sys/un.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_sockaddr_un
 )
 
 add_header_macro(

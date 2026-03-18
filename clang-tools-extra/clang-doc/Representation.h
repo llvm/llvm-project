@@ -21,11 +21,43 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include <array>
+#include <memory>
 #include <optional>
 #include <string>
 
 namespace clang {
 namespace doc {
+
+// An abstraction for owned pointers. Initially mapped to OwnedPtr,
+// to be eventually transitioned to bare pointers in an arena.
+template <typename T> using OwnedPtr = std::unique_ptr<T>;
+
+// An abstraction for vectors that are populated and read sequentially.
+// To be eventually transitioned to llvm::ArrayRef for arena storage.
+template <typename T> using OwningArray = std::vector<T>;
+
+// An abstraction for lists that are dynamically managed (inserted/removed).
+// To be eventually transitioned to llvm::simple_ilist.
+template <typename T> using OwningVec = std::vector<T>;
+
+// An abstraction for dynamic lists of owned pointers.
+// To be eventually transitioned to llvm::simple_ilist<T*> or similar.
+template <typename T> using OwningPtrVec = std::vector<OwnedPtr<T>>;
+
+// An abstraction for arrays of owned pointers.
+// To be eventually transitioned to arena-allocated arrays of bare pointers.
+template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
+
+// A helper function to create an owned pointer, abstracting away the memory
+// allocation mechanism.
+template <typename T, typename... Args>
+OwnedPtr<T> allocatePtr(Args &&...args) {
+  return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
+// A helper function to access the underlying pointer from an owned pointer,
+// abstracting away the pointer dereferencing mechanism.
+template <typename T> T *getPtr(const OwnedPtr<T> &O) { return O.get(); }
 
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
@@ -89,7 +121,7 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  std::vector<std::unique_ptr<CommentInfo>>
+  OwningPtrVec<CommentInfo>
       Children;              // List of child comments for this CommentInfo.
   SmallString<8> Direction;  // Parameter direction (for (T)ParamCommand).
   SmallString<16> Name;      // Name of the comment (for Verbatim and HTML).
@@ -187,13 +219,13 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  std::vector<Reference> Namespaces;
-  std::vector<Reference> Records;
-  std::vector<FunctionInfo> Functions;
-  std::vector<EnumInfo> Enums;
-  std::vector<TypedefInfo> Typedefs;
-  std::vector<ConceptInfo> Concepts;
-  std::vector<VarInfo> Variables;
+  OwningVec<Reference> Namespaces;
+  OwningVec<Reference> Records;
+  OwningVec<FunctionInfo> Functions;
+  OwningVec<EnumInfo> Enums;
+  OwningVec<TypedefInfo> Typedefs;
+  OwningVec<ConceptInfo> Concepts;
+  OwningVec<VarInfo> Variables;
 
   void sort();
 };
@@ -236,7 +268,7 @@ struct TemplateSpecializationInfo {
   SymbolID SpecializationOf;
 
   // Template parameters applying to the specialized record/function.
-  std::vector<TemplateParamInfo> Params;
+  OwningVec<TemplateParamInfo> Params;
 };
 
 struct ConstraintInfo {
@@ -252,11 +284,11 @@ struct ConstraintInfo {
 // or an explicit template specialization.
 struct TemplateInfo {
   // May be empty for non-partial specializations.
-  std::vector<TemplateParamInfo> Params;
+  OwningVec<TemplateParamInfo> Params;
 
   // Set when this is a specialization of another record/function.
   std::optional<TemplateSpecializationInfo> Specialization;
-  std::vector<ConstraintInfo> Constraints;
+  OwningVec<ConstraintInfo> Constraints;
 };
 
 // Info for field types.
@@ -291,7 +323,7 @@ struct MemberTypeInfo : public FieldTypeInfo {
                     Other.Description);
   }
 
-  std::vector<CommentInfo> Description;
+  OwningVec<CommentInfo> Description;
 
   // Access level associated with this info (public, protected, private, none).
   // AS_public is set as default because the bitcode writer requires the enum
@@ -376,7 +408,7 @@ struct Info {
   InfoType IT = InfoType::IT_default;
 
   // Comment description of this decl.
-  std::vector<CommentInfo> Description;
+  OwningVec<CommentInfo> Description;
 
   SmallVector<Context, 4> Contexts;
 };
@@ -501,11 +533,10 @@ struct RecordInfo : public SymbolInfo {
   llvm::SmallVector<Reference, 4>
       VirtualParents; // List of virtual base/parent records.
 
-  std::vector<BaseRecordInfo>
-      Bases; // List of base/parent records; this includes inherited methods and
-             // attributes
+  OwningVec<BaseRecordInfo> Bases; // List of base/parent records; this includes
+                                   // inherited methods and attributes
 
-  std::vector<FriendInfo> Friends;
+  OwningVec<FriendInfo> Friends;
 
   ScopeChildren Children;
 };
@@ -569,7 +600,7 @@ struct EnumValueInfo {
   SmallString<16> ValueExpr;
 
   /// Comment description of this field.
-  std::vector<CommentInfo> Description;
+  OwningVec<CommentInfo> Description;
 };
 
 // TODO: Expand to allow for documenting templating.
@@ -616,7 +647,7 @@ struct Index : public Reference {
   std::optional<SmallString<16>> JumpToSection;
   llvm::StringMap<Index> Children;
 
-  std::vector<const Index *> getSortedChildren() const;
+  OwningVec<const Index *> getSortedChildren() const;
   void sort();
 };
 
@@ -625,8 +656,7 @@ struct Index : public Reference {
 // A standalone function to call to merge a vector of infos into one.
 // This assumes that all infos in the vector are of the same type, and will fail
 // if they are different.
-llvm::Expected<std::unique_ptr<Info>>
-mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
+llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values);
 
 struct ClangDocContext {
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,

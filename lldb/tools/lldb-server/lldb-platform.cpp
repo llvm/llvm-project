@@ -206,13 +206,12 @@ static Status parse_listen_host_port(Socket::SocketProtocol &protocol,
 static Status save_socket_id_to_file(const std::string &socket_id,
                                      const FileSpec &file_spec) {
   FileSpec temp_file_spec(file_spec.GetDirectory().GetStringRef());
-  Status error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
-  if (error.Fail())
+  Status status(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
+  if (status.Fail())
     return Status::FromErrorStringWithFormat(
         "Failed to create directory %s: %s", temp_file_spec.GetPath().c_str(),
-        error.AsCString());
+        status.AsCString());
 
-  Status status;
   if (auto Err = llvm::writeToOutput(file_spec.GetPath(),
                                      [&socket_id](llvm::raw_ostream &OS) {
                                        OS << socket_id;
@@ -231,9 +230,9 @@ static Status ListenGdbConnectionsIfNeeded(
     return Status();
 
   gdb_sock = std::make_unique<TCPSocket>(/*should_close=*/true);
-  Status error = gdb_sock->Listen(gdb_address, backlog);
-  if (error.Fail())
-    return error;
+  Status status = gdb_sock->Listen(gdb_address, backlog);
+  if (status.Fail())
+    return status;
 
   if (gdbserver_port == 0)
     gdbserver_port = gdb_sock->GetLocalPortNumber();
@@ -253,24 +252,24 @@ AcceptGdbConnectionsIfNeeded(const FileSpec &debugserver_path,
   return gdb_sock->Accept(main_loop, [debugserver_path, gdbserver_port,
                                       &args](std::unique_ptr<Socket> sock_up) {
     Log *log = GetLog(LLDBLog::Platform);
-    Status error;
-    SharedSocket shared_socket(sock_up.get(), error);
-    if (error.Fail()) {
-      LLDB_LOGF(log, "gdbserver SharedSocket failed: %s", error.AsCString());
+    Status status;
+    SharedSocket shared_socket(sock_up.get(), status);
+    if (status.Fail()) {
+      LLDB_LOGF(log, "gdbserver SharedSocket failed: %s", status.AsCString());
       return;
     }
     lldb::pid_t child_pid = LLDB_INVALID_PROCESS_ID;
     std::string socket_name;
     GDBRemoteCommunicationServerPlatform platform(
         debugserver_path, Socket::ProtocolTcp, gdbserver_port);
-    error = platform.LaunchGDBServer(args, child_pid, socket_name,
-                                     shared_socket.GetSendableFD());
-    if (error.Success() && child_pid != LLDB_INVALID_PROCESS_ID) {
-      error = shared_socket.CompleteSending(child_pid);
-      if (error.Fail()) {
+    status = platform.LaunchGDBServer(args, child_pid, socket_name,
+                                      shared_socket.GetSendableFD());
+    if (status.Success() && child_pid != LLDB_INVALID_PROCESS_ID) {
+      status = shared_socket.CompleteSending(child_pid);
+      if (status.Fail()) {
         Host::Kill(child_pid, SIGTERM);
         LLDB_LOGF(log, "gdbserver CompleteSending failed: %s",
-                  error.AsCString());
+                  status.AsCString());
         return;
       }
     }
@@ -285,19 +284,19 @@ static void client_handle(GDBRemoteCommunicationServerPlatform &platform,
   if (args.GetArgumentCount() > 0) {
     lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
     std::string socket_name;
-    Status error = platform.LaunchGDBServer(args, pid, socket_name,
-                                            SharedSocket::kInvalidFD);
-    if (error.Success())
+    Status status = platform.LaunchGDBServer(args, pid, socket_name,
+                                             SharedSocket::kInvalidFD);
+    if (status.Success())
       platform.SetPendingGdbServer(socket_name);
     else
-      fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
+      fprintf(stderr, "failed to start gdbserver: %s\n", status.AsCString());
   }
 
   bool interrupt = false;
   bool done = false;
-  Status error;
+  Status status;
   while (!interrupt && !done) {
-    if (platform.GetPacketAndSendResponse(std::nullopt, error, interrupt,
+    if (platform.GetPacketAndSendResponse(std::nullopt, status, interrupt,
                                           done) !=
         GDBRemoteCommunication::PacketResult::Success)
       break;
@@ -312,10 +311,10 @@ static Status spawn_process(const char *progname, const FileSpec &prog,
                             const std::string &log_file,
                             const StringRef log_channels, MainLoop &main_loop,
                             bool multi_client) {
-  Status error;
-  SharedSocket shared_socket(conn_socket, error);
-  if (error.Fail())
-    return error;
+  Status status;
+  SharedSocket shared_socket(conn_socket, status);
+  if (status.Fail())
+    return status;
 
   ProcessLaunchInfo launch_info;
 
@@ -376,9 +375,9 @@ static Status spawn_process(const char *progname, const FileSpec &prog,
   std::string cmd;
   self_args.GetCommandString(cmd);
 
-  error = Host::LaunchProcess(launch_info);
-  if (error.Fail())
-    return error;
+  status = Host::LaunchProcess(launch_info);
+  if (status.Fail())
+    return status;
 
   lldb::pid_t child_pid = launch_info.GetProcessID();
   if (child_pid == LLDB_INVALID_PROCESS_ID)
@@ -387,10 +386,10 @@ static Status spawn_process(const char *progname, const FileSpec &prog,
   LLDB_LOG(GetLog(LLDBLog::Platform), "lldb-platform launched '{0}', pid={1}",
            cmd, child_pid);
 
-  error = shared_socket.CompleteSending(child_pid);
-  if (error.Fail()) {
+  status = shared_socket.CompleteSending(child_pid);
+  if (status.Fail()) {
     Host::Kill(child_pid, SIGTERM);
-    return error;
+    return status;
   }
 
   return Status();
@@ -432,7 +431,7 @@ int main_platform(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
-  Status error;
+  Status status;
   shared_fd_t fd = SharedSocket::kInvalidFD;
   uint16_t gdbserver_port = 0;
   FileSpec socket_file;
@@ -530,9 +529,9 @@ int main_platform(int argc, char *argv[]) {
   if (fd != SharedSocket::kInvalidFD) {
     // Child process will handle the connection and exit.
     NativeSocket sockfd;
-    error = SharedSocket::GetNativeSocket(fd, sockfd);
-    if (error.Fail()) {
-      LLDB_LOGF(log, "lldb-platform child: %s", error.AsCString());
+    status = SharedSocket::GetNativeSocket(fd, sockfd);
+    if (status.Fail()) {
+      LLDB_LOGF(log, "lldb-platform child: %s", status.AsCString());
       return socket_error;
     }
 
@@ -576,21 +575,21 @@ int main_platform(int argc, char *argv[]) {
   std::string address;
   std::string gdb_address;
   uint16_t platform_port = 0;
-  error = parse_listen_host_port(protocol, listen_host_port, address,
-                                 platform_port, gdb_address, gdbserver_port);
-  if (error.Fail()) {
-    printf("Failed to parse listen address: %s\n", error.AsCString());
+  status = parse_listen_host_port(protocol, listen_host_port, address,
+                                  platform_port, gdb_address, gdbserver_port);
+  if (status.Fail()) {
+    printf("Failed to parse listen address: %s\n", status.AsCString());
     return socket_error;
   }
 
-  std::unique_ptr<Socket> platform_sock = Socket::Create(protocol, error);
-  if (error.Fail()) {
-    printf("Failed to create platform socket: %s\n", error.AsCString());
+  std::unique_ptr<Socket> platform_sock = Socket::Create(protocol, status);
+  if (status.Fail()) {
+    printf("Failed to create platform socket: %s\n", status.AsCString());
     return socket_error;
   }
-  error = platform_sock->Listen(address, backlog);
-  if (error.Fail()) {
-    printf("Failed to listen platform: %s\n", error.AsCString());
+  status = platform_sock->Listen(address, backlog);
+  if (status.Fail()) {
+    printf("Failed to listen platform: %s\n", status.AsCString());
     return socket_error;
   }
   if (protocol == Socket::ProtocolTcp && platform_port == 0)
@@ -598,24 +597,24 @@ int main_platform(int argc, char *argv[]) {
         static_cast<TCPSocket *>(platform_sock.get())->GetLocalPortNumber();
 
   if (socket_file) {
-    error = save_socket_id_to_file(
+    status = save_socket_id_to_file(
         protocol == Socket::ProtocolTcp
             ? (platform_port ? llvm::to_string(platform_port) : "")
             : address,
         socket_file);
-    if (error.Fail()) {
+    if (status.Fail()) {
       fprintf(stderr, "failed to write socket id to %s: %s\n",
-              socket_file.GetPath().c_str(), error.AsCString());
+              socket_file.GetPath().c_str(), status.AsCString());
       return EXIT_FAILURE;
     }
   }
 
   std::unique_ptr<TCPSocket> gdb_sock;
   // Update gdbserver_port if it is still 0 and protocol is tcp.
-  error = ListenGdbConnectionsIfNeeded(protocol, gdb_sock, gdb_address,
-                                       gdbserver_port);
-  if (error.Fail()) {
-    printf("Failed to listen gdb: %s\n", error.AsCString());
+  status = ListenGdbConnectionsIfNeeded(protocol, gdb_sock, gdb_address,
+                                        gdbserver_port);
+  if (status.Fail()) {
+    printf("Failed to listen gdb: %s\n", status.AsCString());
     return socket_error;
   }
 
@@ -627,15 +626,15 @@ int main_platform(int argc, char *argv[]) {
                         log_channels, &main_loop, multi_client,
                         &platform_handles](std::unique_ptr<Socket> sock_up) {
               printf("Connection established.\n");
-              Status error = spawn_process(
+              Status status = spawn_process(
                   progname, HostInfo::GetProgramFileSpec(), sock_up.get(),
                   gdbserver_port, inferior_arguments, log_file, log_channels,
                   main_loop, multi_client);
-              if (error.Fail()) {
+              if (status.Fail()) {
                 Log *log = GetLog(LLDBLog::Platform);
-                LLDB_LOGF(log, "spawn_process failed: %s", error.AsCString());
+                LLDB_LOGF(log, "spawn_process failed: %s", status.AsCString());
                 WithColor::error()
-                    << "spawn_process failed: " << error.AsCString() << "\n";
+                    << "spawn_process failed: " << status.AsCString() << "\n";
                 if (!multi_client)
                   main_loop.RequestTermination();
               }
