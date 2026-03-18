@@ -1466,6 +1466,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_sethalt,
                     amdgcn_s_setprio,
                     amdgcn_s_sleep,
+                    amdgcn_s_ttracedata_imm,
                     amdgcn_s_wait_asynccnt,
                     amdgcn_s_wait_bvhcnt,
                     amdgcn_s_wait_dscnt,
@@ -1480,6 +1481,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_waitcnt,
                     amdgcn_wave_barrier})
       .Any({{}, {{}, {}}});
+
+  addRulesForIOpcs({amdgcn_s_ttracedata}).Any({{}, {{}, {IntrId, SgprB32_M0}}});
 
   // This is "intrinsic lane mask" it was set to i32/i64 in llvm-ir.
   addRulesForIOpcs({amdgcn_end_cf})
