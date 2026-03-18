@@ -18,7 +18,8 @@ UseStdBitCheck::UseStdBitCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {}
+                      areDiagsSelfContained()),
+      StrictMode(Options.get("StrictMode", false)) {}
 
 void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
   const auto MakeBinaryOperatorMatcher = [](auto Op) {
@@ -94,11 +95,13 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
 
   // Rotating an integer by a fixed amount
   Finder->addMatcher(
-      BitwiseOr(ShiftLeft(BindDeclRef("v"),
-                          integerLiteral().bind("shift_left_amount")),
-                ShiftRight(BoundDeclRef("v"),
-                           integerLiteral().bind("shift_right_amount")))
-          .bind("rotate_expr"),
+      traverse(
+          TK_AsIs,
+          BitwiseOr(ShiftLeft(BindDeclRef("v"),
+                              integerLiteral().bind("shift_left_amount")),
+                    ShiftRight(BoundDeclRef("v"),
+                               integerLiteral().bind("shift_right_amount")))
+              .bind("rotate_expr")),
       this);
 }
 
@@ -110,10 +113,21 @@ void UseStdBitCheck::registerPPCallbacks(const SourceManager &SM,
 
 void UseStdBitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+  Options.store(Opts, "StrictMode", StrictMode);
+}
+
+static const Expr *GetParentExprOrSelf(const Expr *E, ASTContext &Context) {
+  ParentMapContext &PMap = Context.getParentMapContext();
+  DynTypedNodeList P = PMap.getParents(*E);
+  if (P.size() != 1)
+    return nullptr;
+
+  const Expr *ParentE = P[0].get<Expr>();
+  return ParentE ? ParentE : E;
 }
 
 void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
-  const ASTContext &Context = *Result.Context;
+  ASTContext &Context = *Result.Context;
   const SourceManager &Source = Context.getSourceManager();
 
   if (const auto *MatchedExpr =
@@ -155,11 +169,20 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
                   Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
     }
   } else if (const auto *MatchedExpr =
-                 Result.Nodes.getNodeAs<BinaryOperator>("rotate_expr")) {
+                 Result.Nodes.getNodeAs<Expr>("rotate_expr")) {
+    // Detect if the expression is an explicit cast. If that's the case we don't
+    // need to insert a cast.
+    const Expr *ParentExprOrSelf = GetParentExprOrSelf(MatchedExpr, Context);
+    bool HasExplicitIntegerCast = false;
+    if (const auto *CE = dyn_cast<CastExpr>(ParentExprOrSelf)) {
+      HasExplicitIntegerCast =
+          CE->getType()->isIntegerType() && !isa<ImplicitCastExpr>(CE);
+    }
+
     const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
-    const auto ShiftLeftAmount =
+    const llvm::APInt ShiftLeftAmount =
         Result.Nodes.getNodeAs<IntegerLiteral>("shift_left_amount")->getValue();
-    const auto ShiftRightAmount =
+    const llvm::APInt ShiftRightAmount =
         Result.Nodes.getNodeAs<IntegerLiteral>("shift_right_amount")
             ->getValue();
     const uint64_t MatchedVarSize =
@@ -174,8 +197,11 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
     if (MatchedVarSize != (ShiftLeftAmount + ShiftRightAmount))
       return;
 
+    // Only insert cast if the operand is the result is not subject to cast and
+    // some implicit promotion happened.
     const bool NeedsIntCast =
-        MatchedExpr->getType() != MatchedVarDecl->getType();
+        StrictMode && !HasExplicitIntegerCast &&
+        Context.getTypeSize(MatchedExpr->getType()) > MatchedVarSize;
     const bool IsRotl = ShiftRightAmount.sge(ShiftLeftAmount);
 
     const StringRef ReplacementFuncName = IsRotl ? "rotl" : "rotr";
@@ -184,17 +210,24 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
     auto Diag = diag(MatchedExpr->getBeginLoc(), "use 'std::%0' instead")
                 << ReplacementFuncName;
     if (auto R = MatchedExpr->getSourceRange();
-        !R.getBegin().isMacroID() && !R.getEnd().isMacroID()) {
-      Diag << FixItHint::CreateReplacement(
-                  MatchedExpr->getSourceRange(),
-                  llvm::formatv("{3}std::{0}({1}, {2})", ReplacementFuncName,
-                                MatchedVarDecl->getName(),
-                                ReplacementShiftAmount,
-                                NeedsIntCast ? "(int)" : "")
-                      .str())
-           << IncludeInserter.createIncludeInsertion(
-                  Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
-    }
+        R.getBegin().isMacroID() && !R.getEnd().isMacroID())
+      return;
+
+    const SourceLocation PreviousLocation =
+        MatchedExpr->getBeginLoc().getLocWithOffset(-1);
+    const bool NeedsSpace =
+        isAlphanumeric(*Source.getCharacterData(PreviousLocation));
+
+    Diag << FixItHint::CreateReplacement(
+                MatchedExpr->getSourceRange(),
+                llvm::formatv("{3}{4}std::{0}({1}, {2}){5}",
+                              ReplacementFuncName, MatchedVarDecl->getName(),
+                              ReplacementShiftAmount, NeedsSpace ? " " : "",
+                              NeedsIntCast ? "static_cast<int>(" : "",
+                              NeedsIntCast ? ")" : "")
+                    .str())
+         << IncludeInserter.createIncludeInsertion(
+                Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
 
   } else {
     llvm_unreachable("unexpected match");
