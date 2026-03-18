@@ -543,18 +543,8 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
   const ReturnInst *Ret = dyn_cast<ReturnInst>(Term);
 
   // The block must end in a return statement or unreachable.
-  //
-  // FIXME: Decline tailcall if it's not guaranteed and if the block ends in
-  // an unreachable, for now. The way tailcall optimization is currently
-  // implemented means it will add an epilogue followed by a jump. That is
-  // not profitable. Also, if the callee is a special function (e.g.
-  // longjmp on x86), it can end up causing miscompilation that has not
-  // been fully understood.
-  if (!Ret && ((!TM.Options.GuaranteedTailCallOpt &&
-                Call.getCallingConv() != CallingConv::Tail &&
-                Call.getCallingConv() != CallingConv::SwiftTail) ||
-               !isa<UnreachableInst>(Term)))
-    return false;
+  if (!Ret && !isa<UnreachableInst>(Term))
+      return false;
 
   // If I will have a chain, make sure no other instruction that will have a
   // chain interposes between I and the return.
