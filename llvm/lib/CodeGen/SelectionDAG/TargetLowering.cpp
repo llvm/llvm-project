@@ -8245,16 +8245,14 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     // Search for I where 2^I % Divisor == 1
     for (unsigned I = MaxChunk, E = MaxChunk / 2; I > E; --I) {
       APInt Mod = APInt::getOneBitSet(Divisor.getBitWidth(), I).urem(Divisor);
+
       if (Mod.isOne()) {
         // Ensure (NumChunks * MaxChunkValue) doesn't overflow LegalVT
         unsigned NumChunks = divideCeil(BitWidth, I);
-        // if the ChunkWidth (I) plus the Potential Carry Bits is less than the
-        // Register Width, we have enough "slack" at the top of the
-        // register to let the carries pile up safely.
-        // Adding NumChunks I-bit values can produce at most
-        //   ceil(log2(NumChunks)) carry bits.
-        // Therefore the total number of bits required for the sum is:
-        //   I + ceil(log2(NumChunks)) <= LegalWidth
+
+        // Ensure the sum won't overflow the hardware register (LegalWidth).
+        // Summing N chunks adds ceil(log2(N)) extra carry bits to the width.
+        // Safety check: Base Chunk Width (I) + Carry Bits <= Register Width.
         if (I + llvm::bit_width(NumChunks - 1) <= LegalWidth) {
           BestChunkWidth = I;
           break;
