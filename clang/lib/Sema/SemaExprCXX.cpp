@@ -3448,7 +3448,8 @@ void Sema::DeclareGlobalNewDelete() {
     // Add to the std namespace so that the module merger can find it via
     // noload_lookup and merge it with the module's explicit definition.
     // We want the created EnumDecl to be available for redeclaration lookups,
-    // but not for regular name lookups (same pattern as getOrCreateStdNamespace).
+    // but not for regular name lookups (same pattern as
+    // getOrCreateStdNamespace).
     getOrCreateStdNamespace()->addDecl(AlignValT);
 
     StdAlignValT = AlignValT;
