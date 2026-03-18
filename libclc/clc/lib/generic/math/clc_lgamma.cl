@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
-#include <clc/math/clc_lgamma_r.h>
+#include "clc/internal/clc.h"
+#include "clc/math/clc_lgamma_r.h"
 
-#define __CLC_BODY <clc_lgamma.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_lgamma.inc"
+#include "clc/math/gentype.inc"
