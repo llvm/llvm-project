@@ -164,7 +164,7 @@ protected:
         std::forward<OnCompleteFn>(OnComplete), SNMM.get(), Bases);
   }
 
-  ControllerInterface CI;
+  SimpleSymbolTable CI;
   std::unique_ptr<SimpleNativeMemoryMap> SNMM;
 };
 
