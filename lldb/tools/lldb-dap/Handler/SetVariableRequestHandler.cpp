@@ -83,8 +83,8 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   // so always insert a new one to get its variablesReference.
   // is_permanent is false because debug console does not support
   // setVariable request.
-  const var_ref_t new_var_ref =
-      dap.reference_storage.Insert(variable, /*is_permanent=*/false);
+  const var_ref_t new_var_ref = dap.reference_storage.Insert(
+      variable, /*is_permanent=*/false, /*is_internal=*/false);
   if (variable.MightHaveChildren()) {
     body.variablesReference = new_var_ref;
     if (desc.type_obj.IsArrayType())

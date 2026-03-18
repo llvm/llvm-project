@@ -495,3 +495,15 @@ if(OFFLOAD_INCLUDE_TESTS)
 endif()
 
 add_subdirectory(utils)
+# Expose a high-level target to build the offloading runtimes.
+# This is used in pre-commit CI to run a build of the libraries without requiring
+# to invoke the check-* targets.
+add_custom_target(offload
+  COMMENT "Building offloading runtime libraries and plugins"
+)
+if(TARGET omptarget)
+  add_dependencies(offload omptarget)
+endif()
+if(TARGET LLVMOffload)
+  add_dependencies(offload LLVMOffload)
+endif()
