@@ -654,7 +654,7 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
       // We should only have one =r return for the made up ASM type.
       CB->setCalledOperand(InlineAsm::get(
           NewFnTy, ASM->getAsmString(),
-          ASM->getConstraintString().substr(MaybeConstraints.find_last_of('=')),
+          MaybeConstraints.substr(MaybeConstraints.find_last_of('=')),
           ASM->hasSideEffects(), ASM->isAlignStack(), ASM->getDialect(),
           ASM->canThrow()));
     }
