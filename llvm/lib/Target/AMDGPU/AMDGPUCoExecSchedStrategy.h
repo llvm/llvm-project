@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCOEXECSCHEDSTRATEGY_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCOEXECSCHEDSTRATEGY_H
 
+#include "GCNHazardRecognizer.h"
 #include "GCNSchedStrategy.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
@@ -285,13 +286,25 @@ protected:
   const SIRegisterInfo *SRI;
   const TargetSchedModel *SchedModel;
   SmallVector<HardwareUnitInfo, 8> HWUInfo;
+  DenseMap<MachineInstr *, unsigned> CarriedLatencies;
 
-  /// Walk over the region and collect total usage per HardwareUnit.
-  void collectHWUIPressure();
+  /// Walk over the region and collect characteristics for the various
+  /// heuristics.
+  void collectRegionSummary();
 
   /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
-  /// SU.
-  unsigned getHWUICyclesForInst(SUnit *SU);
+  /// SU
+  unsigned getHWUICyclesForSU(SUnit *SU);
+  /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
+  /// MI
+  unsigned getHWUICyclesForMI(MachineInstr *MI);
+
+  /// Estimate the block carried latency from loads for a given \p SU. This is
+  /// essentially global scheduling info that our local scheduling
+  /// infrastructure lacks the necessary infrastructure to accurately measure.
+  /// Thus, this method just attempts to find a reasonable upper bound for
+  /// carried load latency to avoid long stalls.
+  unsigned getCarriedLatency(SUnit *SU);
 
 public:
   CandidateHeuristics() = default;
@@ -310,6 +323,12 @@ public:
   /// priority are first. Priority is determined by maximizing coexecution and
   /// keeping the critical HardwareUnit busy.
   void sortHWUIResources();
+
+  unsigned getStructuralStallCycles(SchedBoundary &Zone, SUnit *SU);
+
+  bool tryEffectiveStall(GenericSchedulerBase::SchedCandidate &TryCand,
+                         GenericSchedulerBase::SchedCandidate &Cand,
+                         SchedBoundary &Zone);
 
   /// Check for critical resource consumption. Prefer the candidate that uses
   /// the most prioritized HardwareUnit. If both candidates use the same
@@ -334,8 +353,6 @@ public:
 
 class AMDGPUCoExecSchedStrategy final : public GCNSchedStrategy {
 protected:
-  bool tryEffectiveStall(SchedCandidate &Cand, SchedCandidate &TryCand,
-                         SchedBoundary &Zone);
   AMDGPU::AMDGPUSchedReason LastAMDGPUReason = AMDGPU::AMDGPUSchedReason::None;
   CandidateHeuristics Heurs;
 

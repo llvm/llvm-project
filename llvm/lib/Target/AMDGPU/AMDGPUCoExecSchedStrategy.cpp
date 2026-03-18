@@ -201,8 +201,12 @@ CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
   return nullptr;
 }
 
-unsigned CandidateHeuristics::getHWUICyclesForInst(SUnit *SU) {
+unsigned CandidateHeuristics::getHWUICyclesForSU(SUnit *SU) {
   assert(SchedModel && SchedModel->hasInstrSchedModel());
+  MachineInstr *MI = SU->getInstr();
+  // Loads and stores are not pipelined
+  if (MI->mayLoadOrStore())
+    return SchedModel->computeInstrLatency(MI, false);
   unsigned ReleaseAtCycle = 0;
   const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
   for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
@@ -217,7 +221,23 @@ void CandidateHeuristics::updateForScheduling(SUnit *SU) {
   HardwareUnitInfo *HWUI =
       getHWUIFromFlavor(classifyFlavor(*SU->getInstr(), *SII));
   assert(HWUI);
-  HWUI->markScheduled(SU, getHWUICyclesForInst(SU));
+  HWUI->markScheduled(SU, getHWUICyclesForSU(SU));
+}
+
+unsigned CandidateHeuristics::getHWUICyclesForMI(MachineInstr *MI) {
+  assert(SchedModel && SchedModel->hasInstrSchedModel());
+  // Loads and stores are not pipelined
+  if (MI->mayLoadOrStore())
+    return SchedModel->computeInstrLatency(MI, false);
+
+  unsigned ReleaseAtCycle = 0;
+  const MCSchedClassDesc *SC = SchedModel->resolveSchedClass(MI);
+  for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
+                                     PE = SchedModel->getWriteProcResEnd(SC);
+       PI != PE; ++PI) {
+    ReleaseAtCycle = std::max(ReleaseAtCycle, (unsigned)PI->ReleaseAtCycle);
+  }
+  return ReleaseAtCycle;
 }
 
 void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
@@ -242,16 +262,77 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
   HWUInfo[(int)InstructionFlavor::TRANS].setProducesCoexecWindow(true);
   HWUInfo[(int)InstructionFlavor::DS].setBufferSize(DefaultBufferSizes::DS);
 
-  collectHWUIPressure();
+  collectRegionSummary();
 }
 
-void CandidateHeuristics::collectHWUIPressure() {
+unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
+  MachineInstr *MI = SU->getInstr();
+  unsigned CarriedLatency = 0;
+  for (auto &Op : MI->operands()) {
+    if (!Op.isReg())
+      continue;
+    if (!Op.isUse())
+      continue;
+    auto Reg = Op.getReg();
+    if (!Reg.isVirtual())
+      continue;
+
+    for (auto &Def : DAG->MRI.def_instructions(Reg)) {
+      // We don't have the proper modelling to accurately measure all carried
+      // latency. Just try to measure carried latency for long latency loads to
+      // avoid long stalls.
+      if (!Def.mayLoad())
+        continue;
+
+      unsigned Latency = getHWUICyclesForMI(&Def);
+
+      // Load is carried across block
+      if (Def.getParent() != MI->getParent()) {
+        bool FoundUseInDefBlock = false;
+        for (auto &Use : DAG->MRI.use_nodbg_instructions(Reg)) {
+          if (Use.getParent() != Def.getParent())
+            continue;
+
+          SlotIndex DefIdx = DAG->getLIS()->getInstructionIndex(Def);
+          SlotIndex UseIdx = DAG->getLIS()->getInstructionIndex(Use);
+          // We have a use of this load in the def block that occurs after the
+          // load. In this case we must wait for the load in the def block, and
+          // we do not have any carried latency from this load.
+          if (SlotIndex::isEarlierInstr(DefIdx, UseIdx)) {
+            FoundUseInDefBlock = true;
+            break;
+          }
+        }
+        if (!FoundUseInDefBlock)
+          CarriedLatency = std::max(Latency, CarriedLatency);
+
+        continue;
+      }
+
+      assert(Def.getParent() == MI->getParent());
+      // Load is in the same block
+      SlotIndex LoadIdx = DAG->getLIS()->getInstructionIndex(Def);
+      SlotIndex UseIdx = DAG->getLIS()->getInstructionIndex(*MI);
+      // The load occurs after this use -- the latency is carried across loop
+      // backedge.
+      if (SlotIndex::isEarlierInstr(UseIdx, LoadIdx))
+        CarriedLatency = std::max(Latency, CarriedLatency);
+    }
+  }
+  return CarriedLatency;
+}
+
+void CandidateHeuristics::collectRegionSummary() {
   if (!SchedModel || !SchedModel->hasInstrSchedModel())
     return;
 
   for (auto &SU : DAG->SUnits) {
-    const InstructionFlavor Flavor = classifyFlavor(*SU.getInstr(), *SII);
-    HWUInfo[(int)(Flavor)].insert(&SU, getHWUICyclesForInst(&SU));
+    MachineInstr *MI = SU.getInstr();
+    const InstructionFlavor Flavor = classifyFlavor(*MI, *SII);
+    HWUInfo[(int)(Flavor)].insert(&SU, getHWUICyclesForSU(&SU));
+    unsigned CarriedLatency = getCarriedLatency(&SU);
+    if (CarriedLatency)
+      CarriedLatencies[MI] = CarriedLatency;
   }
 
   for (auto &HWUI : HWUInfo) {
@@ -297,6 +378,85 @@ void CandidateHeuristics::sortHWUIResources() {
     return static_cast<unsigned>(A.getType()) <
            static_cast<unsigned>(B.getType());
   });
+}
+
+unsigned CandidateHeuristics::getStructuralStallCycles(SchedBoundary &Zone,
+                                                       SUnit *SU) {
+  // Only implemented for top-down scheduling currently.
+  if (!Zone.isTop() || !SU)
+    return 0;
+
+  MachineInstr *MI = SU->getInstr();
+  unsigned CurrCycle = Zone.getCurrCycle();
+  unsigned Stall = 0;
+
+  // Query SchedModel for resource stalls (unbuffered resources).
+  if (SchedModel->hasInstrSchedModel() && SU->hasReservedResource) {
+    const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
+    for (const MCWriteProcResEntry &PE :
+         make_range(SchedModel->getWriteProcResBegin(SC),
+                    SchedModel->getWriteProcResEnd(SC))) {
+      unsigned NextAvail =
+          Zone.getNextResourceCycle(SC, PE.ProcResourceIdx, PE.ReleaseAtCycle,
+                                    PE.AcquireAtCycle)
+              .first;
+      if (NextAvail > CurrCycle)
+        Stall = std::max(Stall, NextAvail - CurrCycle);
+    }
+  }
+
+  // Query HazardRecognizer for sequence-dependent hazard penalties.
+  if (Zone.HazardRec && Zone.HazardRec->isEnabled()) {
+    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec);
+    Stall = std::max(Stall, HR->getHazardWaitStates(MI));
+  }
+
+  return Stall;
+}
+
+
+bool CandidateHeuristics::tryEffectiveStall(
+    GenericSchedulerBase::SchedCandidate &Cand,
+    GenericSchedulerBase::SchedCandidate &TryCand, SchedBoundary &Zone) {
+  // Treat structural and latency stalls as a single scheduling cost for the
+  // current cycle.
+  struct StallCosts {
+    unsigned Ready = 0;
+    unsigned Structural = 0;
+    unsigned Latency = 0;
+    unsigned Effective = 0;
+    unsigned Carried = 0;
+  };
+
+  unsigned CurrCycle = Zone.getCurrCycle();
+  auto GetStallCosts = [&](SUnit *SU) {
+    unsigned ReadyCycle = Zone.isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
+    StallCosts Costs;
+    Costs.Ready = ReadyCycle > CurrCycle ? ReadyCycle - CurrCycle : 0;
+    Costs.Structural = getStructuralStallCycles(Zone, SU);
+    Costs.Latency = Zone.getLatencyStallCycles(SU);
+    unsigned TryCarriedLatency = CarriedLatencies.contains(TryCand.SU->getInstr())
+                                   ? CarriedLatencies[TryCand.SU->getInstr()]
+                                   : 0;
+    Costs.Carried = TryCarriedLatency > CurrCycle ? TryCarriedLatency - CurrCycle : 0;
+
+    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Carried});
+    return Costs;
+  };
+
+  StallCosts TryCosts = GetStallCosts(TryCand.SU);
+  StallCosts CandCosts = GetStallCosts(Cand.SU);
+
+  LLVM_DEBUG(if (TryCosts.Effective || CandCosts.Effective) {
+    dbgs() << "Effective stalls: try=" << TryCosts.Effective
+           << " (ready=" << TryCosts.Ready << ", struct=" << TryCosts.Structural
+           << ", lat=" << TryCosts.Latency << ", carried=" << TryCosts.Carried << ") cand=" << CandCosts.Effective
+           << " (ready=" << CandCosts.Ready
+           << ", struct=" << CandCosts.Structural << ", carried=" << CandCosts.Carried
+           << ", lat=" << CandCosts.Latency << ")\n";
+  });
+
+  return tryLess(TryCosts.Effective, CandCosts.Effective, TryCand, Cand, AMDGPUCoExecSchedStrategy::Stall);
 }
 
 bool CandidateHeuristics::tryCriticalResourceDependency(
@@ -630,7 +790,7 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
   if (SameBoundary) {
     // Compare candidates by the stall they would introduce if
     // scheduled in the current cycle.
-    if (tryEffectiveStall(Cand, TryCand, *Zone))
+    if (Heurs.tryEffectiveStall(Cand, TryCand, *Zone))
       return TryCand.Reason != NoCand;
 
     Heurs.sortHWUIResources();
@@ -691,66 +851,6 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
   }
 
   return false;
-}
-
-bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
-                                                  SchedCandidate &TryCand,
-                                                  SchedBoundary &Zone) {
-  auto getBufferFullStalls = [this,
-                              &Zone](SUnit *SU) -> unsigned {
-    InstructionFlavor Flavor = classifyFlavor(
-        *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
-    HardwareUnitInfo *HWUI = Heurs.getHWUIFromFlavor(Flavor);
-
-    if (HWUI->getBufferSize() <= 1)
-      return 0;
-
-    // getBufferAvailableCycle assumes top-down scheduling.
-    assert(Zone.isTop());
-    unsigned CurrCycle = Zone.getCurrCycle();
-    unsigned BufferReadyCycle = HWUI->getBufferAvailableCycle(CurrCycle);
-    if (BufferReadyCycle <= CurrCycle)
-      return 0;
-
-    return BufferReadyCycle - CurrCycle;
-  };
-
-  // Treat structural and latency stalls as a single scheduling cost for the
-  // current cycle.
-  struct StallCosts {
-    unsigned Ready = 0;
-    unsigned Structural = 0;
-    unsigned Latency = 0;
-    unsigned Effective = 0;
-    unsigned Buffer = 0;
-  };
-
-  unsigned CurrCycle = Zone.getCurrCycle();
-  auto GetStallCosts = [&](SUnit *SU) {
-    unsigned ReadyCycle = Zone.isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
-    StallCosts Costs;
-    Costs.Ready = ReadyCycle > CurrCycle ? ReadyCycle - CurrCycle : 0;
-    Costs.Structural = getStructuralStallCycles(Zone, SU);
-    Costs.Latency = Zone.getLatencyStallCycles(SU);
-    Costs.Buffer = getBufferFullStalls(SU);
-    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Buffer});
-    return Costs;
-  };
-
-  StallCosts TryCosts = GetStallCosts(TryCand.SU);
-  StallCosts CandCosts = GetStallCosts(Cand.SU);
-
-  LLVM_DEBUG(if (TryCosts.Effective || CandCosts.Effective) {
-    dbgs() << "Effective stalls: try=" << TryCosts.Effective
-           << " (ready=" << TryCosts.Ready << ", struct=" << TryCosts.Structural
-           << ", lat=" << TryCosts.Latency << ", buffer=" << TryCosts.Buffer
-           << ") cand=" << CandCosts.Effective << " (ready=" << CandCosts.Ready
-           << ", struct=" << CandCosts.Structural
-           << ", lat=" << CandCosts.Latency << ", buffer=" << CandCosts.Buffer
-           << ")\n";
-  });
-
-  return tryLess(TryCosts.Effective, CandCosts.Effective, TryCand, Cand, Stall);
 }
 
 ScheduleDAGInstrs *

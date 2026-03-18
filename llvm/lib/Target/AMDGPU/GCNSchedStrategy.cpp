@@ -231,43 +231,6 @@ void GCNSchedStrategy::getRegisterPressures(
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
 }
 
-unsigned GCNSchedStrategy::getStructuralStallCycles(SchedBoundary &Zone,
-                                                    SUnit *SU) const {
-  // Only implemented for top-down scheduling currently.
-  if (!Zone.isTop() || !SU)
-    return 0;
-
-  MachineInstr *MI = SU->getInstr();
-  unsigned CurrCycle = Zone.getCurrCycle();
-  unsigned Stall = 0;
-
-  // Query SchedModel for resource stalls (unbuffered resources).
-  if (SchedModel->hasInstrSchedModel() && SU->hasReservedResource) {
-    const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
-    for (const MCWriteProcResEntry &PE :
-         make_range(SchedModel->getWriteProcResBegin(SC),
-                    SchedModel->getWriteProcResEnd(SC))) {
-      unsigned NextAvail =
-          Zone.getNextResourceCycle(SC, PE.ProcResourceIdx, PE.ReleaseAtCycle,
-                                    PE.AcquireAtCycle)
-              .first;
-      if (NextAvail > CurrCycle)
-        Stall = std::max(Stall, NextAvail - CurrCycle);
-    }
-  }
-
-  // Query HazardRecognizer for sequence-dependent hazard penalties.
-  // AMDGPU currently installs GCNHazardRecognizer for MI scheduling only in
-  // the post-RA configuration without vreg liveness.
-  if (!DAG->hasVRegLiveness() && Zone.HazardRec &&
-      Zone.HazardRec->isEnabled()) {
-    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec);
-    Stall = std::max(Stall, HR->getHazardWaitStates(MI));
-  }
-
-  return Stall;
-}
-
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
                                      const RegPressureTracker &RPTracker,
