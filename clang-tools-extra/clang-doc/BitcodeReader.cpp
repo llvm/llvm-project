@@ -28,6 +28,12 @@ static llvm::Error decodeRecord(const Record &R,
   return llvm::Error::success();
 }
 
+static llvm::Error decodeRecord(const Record &R, llvm::StringRef &Field,
+                                llvm::StringRef Blob) {
+  Field = internString(Blob);
+  return llvm::Error::success();
+}
+
 static llvm::Error decodeRecord(const Record &R, SymbolID &Field,
                                 llvm::StringRef Blob) {
   if (R[0] != BitCodeConstants::USRHashSize)
@@ -123,11 +129,10 @@ static llvm::Error decodeRecord(const Record &R, FieldId &Field,
                                  "invalid value for FieldId");
 }
 
-static llvm::Error
-decodeRecord(const Record &R,
-             llvm::SmallVectorImpl<llvm::SmallString<16>> &Field,
-             llvm::StringRef Blob) {
-  Field.push_back(Blob);
+static llvm::Error decodeRecord(const Record &R,
+                                llvm::SmallVectorImpl<llvm::StringRef> &Field,
+                                llvm::StringRef Blob) {
+  Field.push_back(internString(Blob));
   return llvm::Error::success();
 }
 
