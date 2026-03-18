@@ -595,16 +595,16 @@ def check_prerequisites(runner: CommandRunner) -> None:
         raise LlvmPrError("This script must be run inside a git repository.")
     runner.print("Prerequisites met.")
 
+def get_token_from_cli(runner: CommandRunner) -> str:
+    runner.print("Getting token...")
+    result = runner.run_command(["gh", "auth", "token"], capture_output=True, read_only=True)
+    return result.stdout.strip().decode("utf-8")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create and land a stack of Pull Requests."
     )
-
-    command_runner = CommandRunner()
-    token = os.getenv(LLVM_GITHUB_TOKEN_VAR)
-    if not token:
-        raise LlvmPrError(f"{LLVM_GITHUB_TOKEN_VAR} environment variable not set.")
 
     parser.add_argument(
         "--base",
@@ -640,6 +640,11 @@ def main() -> None:
         default=[DEFAULT_LABEL],
         help=f"Set the PR labels (default: {DEFAULT_LABEL}).",
     )
+    parser.add_argument(
+        "--use-gh-cli-token",
+        action="store_true",
+        help="Automatically get a token from gh CLI."
+    )
     merging = parser.add_mutually_exclusive_group()
     merging.add_argument(
         "--no-merge", action="store_true", help="Create PRs but do not merge them."
@@ -669,6 +674,13 @@ def main() -> None:
         dry_run=args.dry_run, verbose=args.verbose, quiet=args.quiet
     )
     check_prerequisites(command_runner)
+    token = None
+    if args.use_gh_cli_token:
+        token = get_token_from_cli(command_runner)
+    else:
+        token = os.getenv(LLVM_GITHUB_TOKEN_VAR)
+    if not token:
+        raise LlvmPrError(f"{LLVM_GITHUB_TOKEN_VAR} environment variable not set.")
 
     github_api = GitHubAPI(command_runner, token)
     if not args.login:

@@ -1400,8 +1400,6 @@ private:
 // Create scopes for OpenACC constructs
 class AccVisitor : public virtual DeclarationVisitor {
 public:
-  explicit AccVisitor(SemanticsContext &context) : context_{context} {}
-
   void AddAccSourceRange(const parser::CharBlock &);
 
   static bool NeedsScope(const parser::OpenACCBlockConstruct &);
@@ -1472,9 +1470,6 @@ public:
   }
 
   void CopySymbolWithDevice(const parser::Name *name);
-
-private:
-  SemanticsContext &context_;
 };
 
 bool AccVisitor::NeedsScope(const parser::OpenACCBlockConstruct &x) {
@@ -1505,12 +1500,10 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
 }
 
 void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
-  // When CUDA Fortran is enabled together with OpenACC, new
-  // symbols are created for the one appearing in the use_device
-  // clause. These new symbols have the CUDA Fortran device
-  // attribute.
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
-      name && name->symbol) {
+  // For CUDA Fortran interoperability, new symbols are created for the ones
+  // appearing in the use_device clause. These new symbols have the CUDA Fortran
+  // device attribute.
+  if (name && name->symbol) {
     if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
       name->symbol = copy;
       if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
@@ -2174,8 +2167,7 @@ public:
 
   ResolveNamesVisitor(
       SemanticsContext &context, ImplicitRulesMap &rules, Scope &top)
-      : BaseVisitor{context, *this, rules}, AccVisitor(context),
-        topScope_{top} {
+      : BaseVisitor{context, *this, rules}, topScope_{top} {
     PushScope(top);
   }
 

@@ -8201,13 +8201,17 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                                  DAG.getConstant(Mask, dl, HiLoVT));
       }
 
-      LL = DAG.getNode(
-          ISD::OR, dl, HiLoVT,
-          DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
-                      DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
-          DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
-                      DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
-                                                 HiLoVT, dl)));
+      if (isOperationLegal(ISD::FSHR, HiLoVT))
+        LL = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
+                         DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+      else
+        LL = DAG.getNode(
+            ISD::OR, dl, HiLoVT,
+            DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
+                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
+            DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
+                        DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
+                                                   HiLoVT, dl)));
       LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
     }
@@ -12994,9 +12998,11 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
   if (ResultVT.bitsGT(VecEltVT)) {
     // If the result type of vextract is wider than the load, then issue an
     // extending load instead.
-    ISD::LoadExtType ExtType = isLoadExtLegal(ISD::ZEXTLOAD, ResultVT, VecEltVT)
-                                   ? ISD::ZEXTLOAD
-                                   : ISD::EXTLOAD;
+    ISD::LoadExtType ExtType =
+        isLoadLegal(ResultVT, VecEltVT, Alignment,
+                    OriginalLoad->getAddressSpace(), ISD::ZEXTLOAD, false)
+            ? ISD::ZEXTLOAD
+            : ISD::EXTLOAD;
     Load = DAG.getExtLoad(ExtType, DL, ResultVT, OriginalLoad->getChain(),
                           NewPtr, MPI, VecEltVT, Alignment,
                           OriginalLoad->getMemOperand()->getFlags(),
