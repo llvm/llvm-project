@@ -834,23 +834,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     if (Symbol->getIsParameter())
       Symbol->setTag(dwarf::DW_TAG_formal_parameter);
 
-    LVElement *Element = LogicalVisitor->getElement(StreamTPI, Local.Type);
-    if (Element && Element->getIsScoped()) {
-      // We have a local type. Find its parent function.
-      LVScope *Parent = Symbol->getFunctionParent();
-      // The element representing the type has been already finalized. If
-      // the type is an aggregate type, its members have been already added.
-      // As the type is local, its level will be changed.
-
-      // FIXME: Currently the algorithm used to scope lambda functions is
-      // incorrect. Before we allocate the type at this scope, check if is
-      // already allocated in other scope.
-      if (!Element->getParentScope()) {
-        Parent->addElement(Element);
-        Element->updateLevel(Parent);
-      }
-    }
-    Symbol->setType(Element);
+    setLocalVariableType(Symbol, Local.Type);
   }
 
   return Error::success();
@@ -884,23 +868,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     if (Symbol->getIsParameter())
       Symbol->setTag(dwarf::DW_TAG_formal_parameter);
 
-    LVElement *Element = LogicalVisitor->getElement(StreamTPI, Local.Type);
-    if (Element && Element->getIsScoped()) {
-      // We have a local type. Find its parent function.
-      LVScope *Parent = Symbol->getFunctionParent();
-      // The element representing the type has been already finalized. If
-      // the type is an aggregate type, its members have been already added.
-      // As the type is local, its level will be changed.
-
-      // FIXME: Currently the algorithm used to scope lambda functions is
-      // incorrect. Before we allocate the type at this scope, check if is
-      // already allocated in other scope.
-      if (!Element->getParentScope()) {
-        Parent->addElement(Element);
-        Element->updateLevel(Parent);
-      }
-    }
-    Symbol->setType(Element);
+    setLocalVariableType(Symbol, Local.Type);
   }
 
   return Error::success();
@@ -935,23 +903,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     if (Symbol->getIsParameter())
       Symbol->setTag(dwarf::DW_TAG_formal_parameter);
 
-    LVElement *Element = LogicalVisitor->getElement(StreamTPI, Local.Type);
-    if (Element && Element->getIsScoped()) {
-      // We have a local type. Find its parent function.
-      LVScope *Parent = Symbol->getFunctionParent();
-      // The element representing the type has been already finalized. If
-      // the type is an aggregate type, its members have been already added.
-      // As the type is local, its level will be changed.
-
-      // FIXME: Currently the algorithm used to scope lambda functions is
-      // incorrect. Before we allocate the type at this scope, check if is
-      // already allocated in other scope.
-      if (!Element->getParentScope()) {
-        Parent->addElement(Element);
-        Element->updateLevel(Parent);
-      }
-    }
-    Symbol->setType(Element);
+    setLocalVariableType(Symbol, Local.Type);
   }
 
   return Error::success();
@@ -1485,17 +1437,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, LocalSym &Local) {
     if (Symbol->getIsParameter())
       Symbol->setTag(dwarf::DW_TAG_formal_parameter);
 
-    LVElement *Element = LogicalVisitor->getElement(StreamTPI, Local.Type);
-    if (Element && Element->getIsScoped()) {
-      // We have a local type. Find its parent function.
-      LVScope *Parent = Symbol->getFunctionParent();
-      // The element representing the type has been already finalized. If
-      // the type is an aggregate type, its members have been already added.
-      // As the type is local, its level will be changed.
-      Parent->addElement(Element);
-      Element->updateLevel(Parent);
-    }
-    Symbol->setType(Element);
+    setLocalVariableType(Symbol, Local.Type);
 
     // The CodeView records (S_DEFFRAME_*) describing debug location for
     // this symbol, do not have any direct reference to it. Those records
@@ -1769,6 +1711,26 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, CallerSym &Caller) {
     }
   });
   return Error::success();
+}
+
+void LVSymbolVisitor::setLocalVariableType(LVSymbol *Symbol, TypeIndex TI) {
+  LVElement *Element = LogicalVisitor->getElement(StreamTPI, TI);
+  if (Element && Element->getIsScoped()) {
+    // We have a local type. Find its parent function.
+    LVScope *Parent = Symbol->getFunctionParent();
+    // The element representing the type has been already finalized. If
+    // the type is an aggregate type, its members have been already added.
+    // As the type is local, its level will be changed.
+
+    // FIXME: Currently the algorithm used to scope lambda functions is
+    // incorrect. Before we allocate the type at this scope, check if is
+    // already allocated in other scope.
+    if (!Element->getParentScope()) {
+      Parent->addElement(Element);
+      Element->updateLevel(Parent);
+    }
+  }
+  Symbol->setType(Element);
 }
 
 #undef DEBUG_TYPE

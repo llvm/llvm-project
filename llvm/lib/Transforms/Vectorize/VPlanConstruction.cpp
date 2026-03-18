@@ -184,7 +184,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
   VPIRBuilder.setInsertPoint(VPBB);
   // TODO: Model and preserve debug intrinsics in VPlan.
-  for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
+  for (Instruction &InstRef : *BB) {
     Instruction *Inst = &InstRef;
 
     // There shouldn't be any VPValue for Inst at this point. Otherwise, we
@@ -192,16 +192,16 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
     assert(!IRDef2VPValue.count(Inst) &&
            "Instruction shouldn't have been visited.");
 
-    if (auto *Br = dyn_cast<BranchInst>(Inst)) {
+    if (isa<UncondBrInst>(Inst))
+      // Skip the rest of the Instruction processing for Branch instructions.
+      continue;
+
+    if (auto *Br = dyn_cast<CondBrInst>(Inst)) {
       // Conditional branch instruction are represented using BranchOnCond
       // recipes.
-      if (Br->isConditional()) {
-        VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
-        VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst, {},
-                                 VPIRMetadata(*Inst), Inst->getDebugLoc());
-      }
-
-      // Skip the rest of the Instruction processing for Branch instructions.
+      VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
+      VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst, {},
+                               VPIRMetadata(*Inst), Inst->getDebugLoc());
       continue;
     }
 
@@ -330,15 +330,11 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
       VPBB->setSuccessors(Succs);
       continue;
     }
-    auto *BI = cast<BranchInst>(BB->getTerminator());
-    unsigned NumSuccs = succ_size(BB);
-    if (NumSuccs == 1) {
-      VPBB->setOneSuccessor(getOrCreateVPBB(BB->getSingleSuccessor()));
+    if (auto *BI = dyn_cast<UncondBrInst>(BB->getTerminator())) {
+      VPBB->setOneSuccessor(getOrCreateVPBB(BI->getSuccessor()));
       continue;
     }
-    assert(BI->isConditional() && NumSuccs == 2 && BI->isConditional() &&
-           "block must have conditional branch with 2 successors");
-
+    auto *BI = cast<CondBrInst>(BB->getTerminator());
     BasicBlock *IRSucc0 = BI->getSuccessor(0);
     BasicBlock *IRSucc1 = BI->getSuccessor(1);
     VPBasicBlock *Successor0 = getOrCreateVPBB(IRSucc0);
@@ -706,12 +702,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
     const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
-  // Retrieve the header manually from the intial plain-CFG VPlan.
-  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
-      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
-  assert(VPDominatorTree(Plan).dominates(HeaderVPBB,
-                                         HeaderVPBB->getPredecessors()[1]) &&
-         "header must dominate its latch");
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
 
   auto CreateHeaderPhiRecipe = [&](VPPhi *PhiR) -> VPHeaderPHIRecipe * {
     // TODO: Gradually replace uses of underlying instruction by analyses on
@@ -755,9 +746,9 @@ void VPlanTransforms::createHeaderPhiRecipes(
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
-  for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
+  assert(isa<VPCanonicalIVPHIRecipe>(HeaderVPBB->front()) &&
+         "first recipe must be canonical IV phi");
+  for (VPRecipeBase &R : make_early_inc_range(drop_begin(HeaderVPBB->phis()))) {
     auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
@@ -971,9 +962,7 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
   }
 }
 
-void VPlanTransforms::addMiddleCheck(VPlan &Plan,
-                                     bool RequiresScalarEpilogueCheck,
-                                     bool TailFolded) {
+void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   // If MiddleVPBB has a single successor then the original loop does not exit
@@ -1006,9 +995,7 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan,
   DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
-  if (!RequiresScalarEpilogueCheck)
-    Cmp = Plan.getFalse();
-  else if (TailFolded)
+  if (TailFolded)
     Cmp = Plan.getTrue();
   else
     Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),

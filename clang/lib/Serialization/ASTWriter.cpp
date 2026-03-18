@@ -1567,6 +1567,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Implicit suff len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
@@ -1593,6 +1594,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(0);
         Record.push_back(0);
         Record.push_back(0);
+        Record.push_back(0);
       } else {
         // If we have calculated signature, there is no need to store
         // the size or timestamp.
@@ -1601,6 +1603,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
         llvm::append_range(Blob, M.Signature);
 
+        Record.push_back(M.FileName.getImplicitModuleSuffixLength());
         AddPathBlob(M.FileName, Record, Blob);
       }
 
@@ -1694,9 +1697,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
-  SmallString<256> HSOpts_ModuleCachePath;
-  normalizeModuleCachePath(PP.getFileManager(), HSOpts.ModuleCachePath,
-                           HSOpts_ModuleCachePath);
+  StringRef HSOpts_ModuleCachePath =
+      PP.getHeaderSearchInfo().getNormalizedModuleCachePath();
 
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
@@ -1710,10 +1712,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   Record.push_back(HSOpts.UseStandardSystemIncludes);
   Record.push_back(HSOpts.UseStandardCXXIncludes);
   Record.push_back(HSOpts.UseLibcxx);
-  // Write out the specific module cache path that contains the module files.
-  // FIXME: We already wrote out the normalized cache path. Just write the
-  // context hash (unless suppressed).
-  AddString(PP.getHeaderSearchInfo().getSpecificModuleCachePath(), Record);
+  AddString(PP.getHeaderSearchInfo().getContextHash(), Record);
   Stream.EmitRecord(HEADER_SEARCH_OPTIONS, Record);
 
   // Preprocessor options.
@@ -4085,6 +4084,10 @@ void ASTWriter::handleVTable(CXXRecordDecl *RD) {
   PendingEmittingVTables.push_back(RD);
 }
 
+void ASTWriter::addTouchedModuleFile(serialization::ModuleFile *MF) {
+  TouchedModuleFiles.insert(MF);
+}
+
 //===----------------------------------------------------------------------===//
 // DeclContext's Name Lookup Table Serialization
 //===----------------------------------------------------------------------===//
@@ -4129,6 +4132,7 @@ public:
            "have reference to loaded module file but no chain?");
 
     using namespace llvm::support;
+    Writer.addTouchedModuleFile(F);
     endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
                             llvm::endianness::little);
   }
@@ -4326,14 +4330,6 @@ static bool isTULocalInNamedModules(NamedDecl *D) {
   return D->getLinkageInternal() == Linkage::Internal;
 }
 
-static NamedDecl *getLocalRedecl(NamedDecl *D) {
-  for (auto *RD : D->redecls())
-    if (!RD->isFromASTFile())
-      return cast<NamedDecl>(RD);
-
-  return D;
-}
-
 class ASTDeclContextNameLookupTrait
     : public ASTDeclContextNameTrivialLookupTrait {
 public:
@@ -4406,13 +4402,6 @@ public:
     auto AddDecl = [this](NamedDecl *D) {
       NamedDecl *DeclForLocalLookup =
           getDeclForLocalLookup(Writer.getLangOpts(), D);
-
-      // Namespace may have many redeclarations in many TU.
-      // Also, these namespaces are symmetric. So that we try to use
-      // the local redecl if any.
-      if (isa<NamespaceDecl>(DeclForLocalLookup) &&
-          DeclForLocalLookup->isFromASTFile())
-        DeclForLocalLookup = getLocalRedecl(DeclForLocalLookup);
 
       if (Writer.getDoneWritingDeclsAndTypes() &&
           !Writer.wasDeclEmitted(DeclForLocalLookup))
@@ -4535,6 +4524,7 @@ public:
            "have reference to loaded module file but no chain?");
 
     using namespace llvm::support;
+    Writer.addTouchedModuleFile(F);
     endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
                             llvm::endianness::little);
   }
@@ -6155,7 +6145,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
         // relocatable files. We probably should call
         // `PreparePathForOutput(M.FileName)` to properly support relocatable
         // PCHs.
-        StringRef Name = M.isModule() ? M.ModuleName : M.FileName;
+        StringRef Name = M.isModule() ? M.ModuleName : M.FileName.str();
         LE.write<uint16_t>(Name.size());
         Out.write(Name.data(), Name.size());
 

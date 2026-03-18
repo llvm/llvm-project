@@ -14,7 +14,6 @@
 #include "llvm/Support/Endian.h"
 
 #if defined(__FreeBSD__) && defined(__amd64__)
-#include <cstddef>
 #include <machine/pcb.h>
 #endif
 

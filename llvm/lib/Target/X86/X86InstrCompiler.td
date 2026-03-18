@@ -1426,6 +1426,14 @@ def : Pat<(X86tcret (i64 texternalsym:$dst), timm:$off),
           (TCRETURNdi64 texternalsym:$dst, timm:$off)>,
           Requires<[IsLP64]>;
 
+def : Pat<(X86tcret (i64 (X86Wrapper tglobaladdr:$dst)), timm:$off),
+          (TCRETURNdi64 tglobaladdr:$dst, timm:$off)>,
+          Requires<[IsNotPIC, HasJMPABS]>;
+
+def : Pat<(X86tcret (i64 (X86Wrapper texternalsym:$dst)), timm:$off),
+          (TCRETURNdi64 texternalsym:$dst, timm:$off)>,
+          Requires<[IsNotPIC, HasJMPABS]>;
+
 // Normal calls, with various flavors of addresses.
 def : Pat<(X86call (i32 tglobaladdr:$dst)),
           (CALLpcrel32 tglobaladdr:$dst)>;
@@ -1587,13 +1595,15 @@ let Predicates = [NoNDD] in {
             (SUB16ri GR16:$src1, -128)>;
   def : Pat<(add GR32:$src1, 128),
             (SUB32ri GR32:$src1, -128)>;
-  def : Pat<(add GR64:$src1, 128),
-            (SUB64ri32 GR64:$src1, -128)>;
 
   def : Pat<(X86add_flag_nocf GR16:$src1, 128),
             (SUB16ri GR16:$src1, -128)>;
   def : Pat<(X86add_flag_nocf GR32:$src1, 128),
             (SUB32ri GR32:$src1, -128)>;
+}
+let Predicates = [NoNDDI] in {
+  def : Pat<(add GR64:$src1, 128),
+            (SUB64ri32 GR64:$src1, -128)>;
   def : Pat<(X86add_flag_nocf GR64:$src1, 128),
             (SUB64ri32 GR64:$src1, -128)>;
 }
@@ -1602,13 +1612,15 @@ let Predicates = [HasNDD] in {
             (SUB16ri_ND GR16:$src1, -128)>;
   def : Pat<(add GR32:$src1, 128),
             (SUB32ri_ND GR32:$src1, -128)>;
-  def : Pat<(add GR64:$src1, 128),
-            (SUB64ri32_ND GR64:$src1, -128)>;
 
   def : Pat<(X86add_flag_nocf GR16:$src1, 128),
             (SUB16ri_ND GR16:$src1, -128)>;
   def : Pat<(X86add_flag_nocf GR32:$src1, 128),
             (SUB32ri_ND GR32:$src1, -128)>;
+}
+let Predicates = [HasNDDI] in {
+  def : Pat<(add GR64:$src1, 128),
+            (SUB64ri32_ND GR64:$src1, -128)>;
   def : Pat<(X86add_flag_nocf GR64:$src1, 128),
             (SUB64ri32_ND GR64:$src1, -128)>;
 }
@@ -1619,12 +1631,12 @@ def : Pat<(store (add (loadi32 addr:$dst), 128), addr:$dst),
 def : Pat<(store (add (loadi64 addr:$dst), 128), addr:$dst),
           (SUB64mi32 addr:$dst, -128)>;
 let Predicates = [HasNDD] in {
-  def : Pat<(add (loadi16 addr:$src), 128),
-            (SUB16mi_ND addr:$src, -128)>;
-  def : Pat<(add (loadi32 addr:$src), 128),
-            (SUB32mi_ND addr:$src, -128)>;
-  def : Pat<(add (loadi64 addr:$src), 128),
-            (SUB64mi32_ND addr:$src, -128)>;
+  def : Pat<(add (loadi16 ndd_addr:$src), 128),
+            (SUB16mi_ND ndd_addr:$src, -128)>;
+  def : Pat<(add (loadi32 ndd_addr:$src), 128),
+            (SUB32mi_ND ndd_addr:$src, -128)>;
+  def : Pat<(add (loadi64 ndd_addr:$src), 128),
+            (SUB64mi32_ND ndd_addr:$src, -128)>;
 }
 
 // The same trick applies for 32-bit immediate fields in 64-bit
@@ -1635,7 +1647,7 @@ let Predicates = [NoNDD] in {
   def : Pat<(X86add_flag_nocf GR64:$src1, 0x0000000080000000),
             (SUB64ri32 GR64:$src1, 0xffffffff80000000)>;
 }
-let Predicates = [HasNDD] in {
+let Predicates = [HasNDDI] in {
   def : Pat<(add GR64:$src1, 0x0000000080000000),
             (SUB64ri32_ND GR64:$src1, 0xffffffff80000000)>;
   def : Pat<(X86add_flag_nocf GR64:$src1, 0x0000000080000000),
@@ -1644,8 +1656,8 @@ let Predicates = [HasNDD] in {
 def : Pat<(store (add (loadi64 addr:$dst), 0x0000000080000000), addr:$dst),
           (SUB64mi32 addr:$dst, 0xffffffff80000000)>;
 let Predicates = [HasNDD] in {
-  def : Pat<(add(loadi64 addr:$src), 0x0000000080000000),
-            (SUB64mi32_ND addr:$src, 0xffffffff80000000)>;
+  def : Pat<(add(loadi64 ndd_addr:$src), 0x0000000080000000),
+            (SUB64mi32_ND ndd_addr:$src, 0xffffffff80000000)>;
 }
 
 // Depositing value to 8/16 bit subreg:
@@ -1937,14 +1949,14 @@ multiclass MaskedShiftAmountPats<SDNode frag> {
             (!cast<Instruction>(NAME # "64mCL") addr:$dst)>;
 
   let Predicates = [HasNDD] in {
-    def : Pat<(frag (loadi8 addr:$src), (shiftMask32 CL)),
-              (!cast<Instruction>(NAME # "8mCL_ND") addr:$src)>;
-    def : Pat<(frag (loadi16 addr:$src), (shiftMask32 CL)),
-              (!cast<Instruction>(NAME # "16mCL_ND") addr:$src)>;
-    def : Pat<(frag (loadi32 addr:$src), (shiftMask32 CL)),
-              (!cast<Instruction>(NAME # "32mCL_ND") addr:$src)>;
-    def : Pat<(frag (loadi64 addr:$src), (shiftMask64 CL)),
-              (!cast<Instruction>(NAME # "64mCL_ND") addr:$src)>;
+    def : Pat<(frag (loadi8 ndd_addr:$src), (shiftMask32 CL)),
+              (!cast<Instruction>(NAME # "8mCL_ND") ndd_addr:$src)>;
+    def : Pat<(frag (loadi16 ndd_addr:$src), (shiftMask32 CL)),
+              (!cast<Instruction>(NAME # "16mCL_ND") ndd_addr:$src)>;
+    def : Pat<(frag (loadi32 ndd_addr:$src), (shiftMask32 CL)),
+              (!cast<Instruction>(NAME # "32mCL_ND") ndd_addr:$src)>;
+    def : Pat<(frag (loadi64 ndd_addr:$src), (shiftMask64 CL)),
+              (!cast<Instruction>(NAME # "64mCL_ND") ndd_addr:$src)>;
   }
 }
 
@@ -1991,14 +2003,14 @@ multiclass MaskedRotateAmountPats<SDNode frag> {
             (!cast<Instruction>(NAME # "64mCL") addr:$dst)>;
 
   let Predicates = [HasNDD] in {
-    def : Pat<(frag (loadi8 addr:$src), (shiftMask8 CL)),
-              (!cast<Instruction>(NAME # "8mCL_ND") addr:$src)>;
-    def : Pat<(frag (loadi16 addr:$src), (shiftMask16 CL)),
-              (!cast<Instruction>(NAME # "16mCL_ND") addr:$src)>;
-    def : Pat<(frag (loadi32 addr:$src), (shiftMask32 CL)),
-              (!cast<Instruction>(NAME # "32mCL_ND") addr:$src)>;
-    def : Pat<(frag (loadi64 addr:$src), (shiftMask64 CL)),
-              (!cast<Instruction>(NAME # "64mCL_ND") addr:$src)>;
+    def : Pat<(frag (loadi8 ndd_addr:$src), (shiftMask8 CL)),
+              (!cast<Instruction>(NAME # "8mCL_ND") ndd_addr:$src)>;
+    def : Pat<(frag (loadi16 ndd_addr:$src), (shiftMask16 CL)),
+              (!cast<Instruction>(NAME # "16mCL_ND") ndd_addr:$src)>;
+    def : Pat<(frag (loadi32 ndd_addr:$src), (shiftMask32 CL)),
+              (!cast<Instruction>(NAME # "32mCL_ND") ndd_addr:$src)>;
+    def : Pat<(frag (loadi64 ndd_addr:$src), (shiftMask64 CL)),
+              (!cast<Instruction>(NAME # "64mCL_ND") ndd_addr:$src)>;
   }
 }
 
@@ -2064,8 +2076,8 @@ defm : OneBitPats<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
 // EFLAGS-defining Patterns
 //===----------------------------------------------------------------------===//
 
-multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
-  let Predicates = [p] in {
+multiclass EFLAGSDefiningPats<string suffix, Predicate PredNDD, Predicate PredNDDI, bit ndd> {
+  let Predicates = [PredNDD] in {
     // add reg, reg
     def : Pat<(add GR8 :$src1, GR8 :$src2), (!cast<Instruction>(ADD8rr#suffix) GR8 :$src1, GR8 :$src2)>;
     def : Pat<(add GR16:$src1, GR16:$src2), (!cast<Instruction>(ADD16rr#suffix) GR16:$src1, GR16:$src2)>;
@@ -2073,20 +2085,19 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
     def : Pat<(add GR64:$src1, GR64:$src2), (!cast<Instruction>(ADD64rr#suffix) GR64:$src1, GR64:$src2)>;
 
     // add reg, mem
-    def : Pat<(add GR8:$src1, (loadi8 addr:$src2)),
-              (!cast<Instruction>(ADD8rm#suffix) GR8:$src1, addr:$src2)>;
-    def : Pat<(add GR16:$src1, (loadi16 addr:$src2)),
-              (!cast<Instruction>(ADD16rm#suffix) GR16:$src1, addr:$src2)>;
-    def : Pat<(add GR32:$src1, (loadi32 addr:$src2)),
-              (!cast<Instruction>(ADD32rm#suffix) GR32:$src1, addr:$src2)>;
-    def : Pat<(add GR64:$src1, (loadi64 addr:$src2)),
-              (!cast<Instruction>(ADD64rm#suffix) GR64:$src1, addr:$src2)>;
+    def : Pat<(add GR8:$src1, (loadi8 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(ADD8rm#suffix) GR8:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(add GR16:$src1, (loadi16 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(ADD16rm#suffix) GR16:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(add GR32:$src1, (loadi32 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(ADD32rm#suffix) GR32:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(add GR64:$src1, (loadi64 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(ADD64rm#suffix) GR64:$src1, !if(ndd, ndd_addr, addr):$src2)>;
 
     // add reg, imm
     def : Pat<(add GR8 :$src1, imm:$src2), (!cast<Instruction>(ADD8ri#suffix) GR8:$src1 , imm:$src2)>;
     def : Pat<(add GR16:$src1, imm:$src2), (!cast<Instruction>(ADD16ri#suffix) GR16:$src1, imm:$src2)>;
     def : Pat<(add GR32:$src1, imm:$src2), (!cast<Instruction>(ADD32ri#suffix) GR32:$src1, imm:$src2)>;
-    def : Pat<(add GR64:$src1, i64immSExt32:$src2), (!cast<Instruction>(ADD64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
 
     // sub reg, reg
     def : Pat<(sub GR8 :$src1, GR8 :$src2), (!cast<Instruction>(SUB8rr#suffix)  GR8 :$src1, GR8 :$src2)>;
@@ -2095,14 +2106,14 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
     def : Pat<(sub GR64:$src1, GR64:$src2), (!cast<Instruction>(SUB64rr#suffix) GR64:$src1, GR64:$src2)>;
 
     // sub reg, mem
-    def : Pat<(sub GR8:$src1, (loadi8 addr:$src2)),
-              (!cast<Instruction>(SUB8rm#suffix) GR8:$src1, addr:$src2)>;
-    def : Pat<(sub GR16:$src1, (loadi16 addr:$src2)),
-              (!cast<Instruction>(SUB16rm#suffix) GR16:$src1, addr:$src2)>;
-    def : Pat<(sub GR32:$src1, (loadi32 addr:$src2)),
-              (!cast<Instruction>(SUB32rm#suffix) GR32:$src1, addr:$src2)>;
-    def : Pat<(sub GR64:$src1, (loadi64 addr:$src2)),
-              (!cast<Instruction>(SUB64rm#suffix) GR64:$src1, addr:$src2)>;
+    def : Pat<(sub GR8:$src1, (loadi8 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(SUB8rm#suffix) GR8:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(sub GR16:$src1, (loadi16 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(SUB16rm#suffix) GR16:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(sub GR32:$src1, (loadi32 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(SUB32rm#suffix) GR32:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(sub GR64:$src1, (loadi64 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(SUB64rm#suffix) GR64:$src1, !if(ndd, ndd_addr, addr):$src2)>;
 
     // sub reg, imm
     def : Pat<(sub GR8:$src1, imm:$src2),
@@ -2111,8 +2122,6 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
               (!cast<Instruction>(SUB16ri#suffix) GR16:$src1, imm:$src2)>;
     def : Pat<(sub GR32:$src1, imm:$src2),
               (!cast<Instruction>(SUB32ri#suffix) GR32:$src1, imm:$src2)>;
-    def : Pat<(sub GR64:$src1, i64immSExt32:$src2),
-              (!cast<Instruction>(SUB64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
 
     // sub 0, reg
     def : Pat<(X86sub_flag 0, GR8 :$src), (!cast<Instruction>(NEG8r#suffix)  GR8 :$src)>;
@@ -2129,12 +2138,12 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
               (!cast<Instruction>(IMUL64rr#suffix) GR64:$src1, GR64:$src2)>;
 
     // mul reg, mem
-    def : Pat<(mul GR16:$src1, (loadi16 addr:$src2)),
-              (!cast<Instruction>(IMUL16rm#suffix) GR16:$src1, addr:$src2)>;
-    def : Pat<(mul GR32:$src1, (loadi32 addr:$src2)),
-              (!cast<Instruction>(IMUL32rm#suffix) GR32:$src1, addr:$src2)>;
-    def : Pat<(mul GR64:$src1, (loadi64 addr:$src2)),
-              (!cast<Instruction>(IMUL64rm#suffix) GR64:$src1, addr:$src2)>;
+    def : Pat<(mul GR16:$src1, (loadi16 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(IMUL16rm#suffix) GR16:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(mul GR32:$src1, (loadi32 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(IMUL32rm#suffix) GR32:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(mul GR64:$src1, (loadi64 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(IMUL64rm#suffix) GR64:$src1, !if(ndd, ndd_addr, addr):$src2)>;
 
     // or reg/reg.
     def : Pat<(or GR8 :$src1, GR8 :$src2), (!cast<Instruction>(OR8rr#suffix)  GR8 :$src1, GR8 :$src2)>;
@@ -2143,14 +2152,14 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
     def : Pat<(or GR64:$src1, GR64:$src2), (!cast<Instruction>(OR64rr#suffix) GR64:$src1, GR64:$src2)>;
 
     // or reg/mem
-    def : Pat<(or GR8:$src1, (loadi8 addr:$src2)),
-              (!cast<Instruction>(OR8rm#suffix) GR8:$src1, addr:$src2)>;
-    def : Pat<(or GR16:$src1, (loadi16 addr:$src2)),
-              (!cast<Instruction>(OR16rm#suffix) GR16:$src1, addr:$src2)>;
-    def : Pat<(or GR32:$src1, (loadi32 addr:$src2)),
-              (!cast<Instruction>(OR32rm#suffix) GR32:$src1, addr:$src2)>;
-    def : Pat<(or GR64:$src1, (loadi64 addr:$src2)),
-              (!cast<Instruction>(OR64rm#suffix) GR64:$src1, addr:$src2)>;
+    def : Pat<(or GR8:$src1, (loadi8 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(OR8rm#suffix) GR8:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(or GR16:$src1, (loadi16 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(OR16rm#suffix) GR16:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(or GR32:$src1, (loadi32 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(OR32rm#suffix) GR32:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(or GR64:$src1, (loadi64 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(OR64rm#suffix) GR64:$src1, !if(ndd, ndd_addr, addr):$src2)>;
 
     // or reg/imm
     def : Pat<(or GR8:$src1 , imm:$src2), (!cast<Instruction>(OR8ri#suffix)  GR8 :$src1, imm:$src2)>;
@@ -2166,14 +2175,14 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
     def : Pat<(xor GR64:$src1, GR64:$src2), (!cast<Instruction>(XOR64rr#suffix) GR64:$src1, GR64:$src2)>;
 
     // xor reg/mem
-    def : Pat<(xor GR8:$src1, (loadi8 addr:$src2)),
-              (!cast<Instruction>(XOR8rm#suffix) GR8:$src1, addr:$src2)>;
-    def : Pat<(xor GR16:$src1, (loadi16 addr:$src2)),
-              (!cast<Instruction>(XOR16rm#suffix) GR16:$src1, addr:$src2)>;
-    def : Pat<(xor GR32:$src1, (loadi32 addr:$src2)),
-              (!cast<Instruction>(XOR32rm#suffix) GR32:$src1, addr:$src2)>;
-    def : Pat<(xor GR64:$src1, (loadi64 addr:$src2)),
-              (!cast<Instruction>(XOR64rm#suffix) GR64:$src1, addr:$src2)>;
+    def : Pat<(xor GR8:$src1, (loadi8 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(XOR8rm#suffix) GR8:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(xor GR16:$src1, (loadi16 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(XOR16rm#suffix) GR16:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(xor GR32:$src1, (loadi32 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(XOR32rm#suffix) GR32:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(xor GR64:$src1, (loadi64 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(XOR64rm#suffix) GR64:$src1, !if(ndd, ndd_addr, addr):$src2)>;
 
     // xor reg/imm
     def : Pat<(xor GR8:$src1, imm:$src2),
@@ -2192,14 +2201,14 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
     def : Pat<(and GR64:$src1, GR64:$src2), (!cast<Instruction>(AND64rr#suffix) GR64:$src1, GR64:$src2)>;
 
     // and reg/mem
-    def : Pat<(and GR8:$src1, (loadi8 addr:$src2)),
-              (!cast<Instruction>(AND8rm#suffix) GR8:$src1, addr:$src2)>;
-    def : Pat<(and GR16:$src1, (loadi16 addr:$src2)),
-              (!cast<Instruction>(AND16rm#suffix) GR16:$src1, addr:$src2)>;
-    def : Pat<(and GR32:$src1, (loadi32 addr:$src2)),
-              (!cast<Instruction>(AND32rm#suffix) GR32:$src1, addr:$src2)>;
-    def : Pat<(and GR64:$src1, (loadi64 addr:$src2)),
-              (!cast<Instruction>(AND64rm#suffix) GR64:$src1, addr:$src2)>;
+    def : Pat<(and GR8:$src1, (loadi8 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(AND8rm#suffix) GR8:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(and GR16:$src1, (loadi16 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(AND16rm#suffix) GR16:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(and GR32:$src1, (loadi32 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(AND32rm#suffix) GR32:$src1, !if(ndd, ndd_addr, addr):$src2)>;
+    def : Pat<(and GR64:$src1, (loadi64 !if(ndd, ndd_addr, addr):$src2)),
+              (!cast<Instruction>(AND64rm#suffix) GR64:$src1, !if(ndd, ndd_addr, addr):$src2)>;
 
     // and reg/imm
     def : Pat<(and GR8:$src1, imm:$src2),
@@ -2212,36 +2221,45 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
               (!cast<Instruction>(AND64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
   }
 
+  let Predicates = [PredNDDI] in {
+    def : Pat<(add GR64:$src1, i64immSExt32:$src2), (!cast<Instruction>(ADD64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
+    def : Pat<(sub GR64:$src1, i64immSExt32:$src2),
+              (!cast<Instruction>(SUB64ri32#suffix) GR64:$src1, i64immSExt32:$src2)>;
+  }
+
   // Increment/Decrement reg.
   // Do not make INC/DEC if it is slow
-  let Predicates = [UseIncDec, p] in {
+  let Predicates = [UseIncDec, PredNDD] in {
     def : Pat<(add GR8:$src, 1),   (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
     def : Pat<(add GR16:$src, 1),  (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
     def : Pat<(add GR32:$src, 1),  (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
-    def : Pat<(add GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
     def : Pat<(add GR8:$src, -1),  (!cast<Instruction>(DEC8r#suffix) GR8:$src)>;
     def : Pat<(add GR16:$src, -1), (!cast<Instruction>(DEC16r#suffix) GR16:$src)>;
     def : Pat<(add GR32:$src, -1), (!cast<Instruction>(DEC32r#suffix) GR32:$src)>;
-    def : Pat<(add GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
 
     def : Pat<(X86add_flag_nocf GR8:$src, -1),  (!cast<Instruction>(DEC8r#suffix) GR8:$src)>;
     def : Pat<(X86add_flag_nocf GR16:$src, -1), (!cast<Instruction>(DEC16r#suffix) GR16:$src)>;
     def : Pat<(X86add_flag_nocf GR32:$src, -1), (!cast<Instruction>(DEC32r#suffix) GR32:$src)>;
-    def : Pat<(X86add_flag_nocf GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
     def : Pat<(X86sub_flag_nocf GR8:$src, -1),  (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
     def : Pat<(X86sub_flag_nocf GR16:$src, -1), (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
     def : Pat<(X86sub_flag_nocf GR32:$src, -1), (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
-    def : Pat<(X86sub_flag_nocf GR64:$src, -1), (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
 
     def : Pat<(or_is_add GR8:$src, 1),   (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
     def : Pat<(or_is_add GR16:$src, 1),  (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
     def : Pat<(or_is_add GR32:$src, 1),  (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
+  }
+
+  let Predicates = [UseIncDec, PredNDDI] in {
+    def : Pat<(add GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
+    def : Pat<(add GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
+    def : Pat<(X86add_flag_nocf GR64:$src, -1), (!cast<Instruction>(DEC64r#suffix) GR64:$src)>;
+    def : Pat<(X86sub_flag_nocf GR64:$src, -1), (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
     def : Pat<(or_is_add GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
   }
 }
 
-defm : EFLAGSDefiningPats<"", NoNDD>;
-defm : EFLAGSDefiningPats<"_ND", HasNDD>;
+defm : EFLAGSDefiningPats<"", NoNDD, NoNDDI, 0>;
+defm : EFLAGSDefiningPats<"_ND", HasNDD, HasNDDI, 1>;
 
 let Predicates = [HasZU] in {
   // zext (mul reg/mem, imm) -> imulzu

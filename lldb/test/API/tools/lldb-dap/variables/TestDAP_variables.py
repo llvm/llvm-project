@@ -332,7 +332,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # Set a variable value whose name is a real child value, like "pt.x"
         # and verify the value by reading it
         varRef = varref_dict["pt"]
-        self.set_variable(varRef, "x", 111)
+        self.set_variable(varRef, "x", "g_global - 12")
         response = self.dap_server.request_variables(varRef, start=0, count=1)
         value = response["body"]["variables"][0]["value"]
         self.assertEqual(
@@ -699,14 +699,29 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         }
         if enableSyntheticChildDebugging:
             verify_children["[raw]"] = {
-                "contains": {"type": ["vector"]},
+                "equals": {"type": "std::vector<int>", "value": "size=5"},
                 "readOnly": True,
             }
 
         children = self.dap_server.request_variables(locals[2]["variablesReference"])[
             "body"
         ]["variables"]
-        self.verify_variables(verify_children, children)
+        varref_dict = {}
+        self.verify_variables(verify_children, children, varref_dict)
+
+        if enableSyntheticChildDebugging:
+            self.assertIn(
+                "small_vector",
+                varref_dict,
+                "'evaluateName' for '[raw]' field should be the original variable name.",
+            )
+            raw_children = self.dap_server.request_variables(
+                varref_dict["small_vector"]
+            )
+            self.assertTrue(
+                len(raw_children["body"]["variables"]) > 0,
+                "Expected std::vector to contain a raw underlying value with internal properties.",
+            )
 
     @skipIfWindows
     def test_return_variables(self):
@@ -718,7 +733,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         return_name = "(Return Value)"
         verify_locals = {
-            return_name: {"equals": {"type": "int", "value": "300"}},
+            return_name: {"equals": {"type": "int", "value": "300"}, "readOnly": True},
             "argc": {},
             "argv": {},
             "pt": {"readOnly": True},

@@ -55,6 +55,7 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
@@ -708,20 +709,9 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
   }
 
   if (auto *DA = getDLLAttr(D); DA && !DA->isInherited()) {
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
-      if (RD->isTemplated()) {
-        S.Diag(DA->getLoc(),
-               diag::warn_dllattr_ignored_exclusion_takes_precedence)
-            << DA << AL;
-        D->dropAttrs<DLLExportAttr, DLLImportAttr>();
-      } else {
-        S.Diag(AL.getLoc(), diag::warn_attribute_ignored_in_non_template) << AL;
-        return;
-      }
-    } else {
-      S.Diag(AL.getLoc(), diag::warn_attribute_ignored_on_non_member) << AL;
-      return;
-    }
+    S.Diag(DA->getLoc(), diag::warn_dllattr_ignored_exclusion_takes_precedence)
+        << DA << AL;
+    D->dropAttrs<DLLExportAttr, DLLImportAttr>();
   }
 
   D->addAttr(::new (S.Context)
@@ -3642,6 +3632,10 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams,
                                       AL.getLoc()))
       return;
+  } else if (S.Context.getTargetInfo().getTriple().isOSAIX()) {
+    if (S.PPC().checkTargetClonesAttr(Params, Locations, NewParams,
+                                      AL.getLoc()))
+      return;
   }
   Params.clear();
   for (auto &SmallStr : NewParams)
@@ -6489,19 +6483,10 @@ static void handleDLLAttr(Sema &S, Decl *D, const ParsedAttr &A) {
   }
 
   if (auto *EA = D->getAttr<ExcludeFromExplicitInstantiationAttr>()) {
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
-      if (RD->isTemplated()) {
-        S.Diag(A.getRange().getBegin(),
-               diag::warn_dllattr_ignored_exclusion_takes_precedence)
-            << A << EA;
-        return;
-      }
-      S.Diag(EA->getLoc(), diag::warn_attribute_ignored_in_non_template) << EA;
-      D->dropAttr<ExcludeFromExplicitInstantiationAttr>();
-    } else {
-      S.Diag(EA->getLoc(), diag::warn_attribute_ignored_on_non_member) << EA;
-      D->dropAttr<ExcludeFromExplicitInstantiationAttr>();
-    }
+    S.Diag(A.getRange().getBegin(),
+           diag::warn_dllattr_ignored_exclusion_takes_precedence)
+        << A << EA;
+    return;
   }
 
   Attr *NewAttr = A.getKind() == ParsedAttr::AT_DLLExport

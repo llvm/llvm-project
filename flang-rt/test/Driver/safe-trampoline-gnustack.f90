@@ -11,9 +11,7 @@
 ! RUN: llvm-readelf -lW %t | FileCheck %s
 
 ! Ensure GNU_STACK exists and has RW flags (no E).
-! CHECK: GNU_STACK
-! CHECK-SAME: RW
-! CHECK-NOT: RWE
+! CHECK: GNU_STACK{{.*}}RW{{[^E]|$}}
 
 subroutine host_proc(x, res)
   implicit none
