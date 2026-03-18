@@ -5,32 +5,32 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Test that LSR doesn't create a chain of IV increments for instructions used only by llvm.assume.
 ; The loop should keep a single IV with a +2 step rather than  splitting into two +1 increments.
-define void @main(ptr addrspace(1) %ptr, i64 %0, i64 %1) {
+define void @main(ptr %ptr) {
 ; CHECK-LABEL: define void @main(
-; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
+; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LATCH:.*]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP7]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP3]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP7]], 3
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR]], i64 [[TMP4]]
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr addrspace(1) [[SCEVGEP2]], i64 -8
-; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i64, ptr addrspace(1) [[SCEVGEP3]] unordered, align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP2]], i64 -8
+; CHECK-NEXT:    [[TMP5:%.*]] = load atomic i64, ptr [[SCEVGEP3]] unordered, align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[EXIT:.*]], label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP7]], [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP7]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP8]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP7]], 3
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load atomic i64, ptr addrspace(1) [[SCEVGEP1]] unordered, align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP1]], [[TMP10]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load atomic i64, ptr [[SCEVGEP1]] unordered, align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[EXIT]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw i64 [[TMP7]], 2
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[TMP7]], 2
 ; CHECK-NEXT:    br label %[[HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -39,25 +39,25 @@ entry:
   br label %header
 
 header:                                              ; preds = %latch, %entry
-  %3 = phi i64 [ %23, %latch ], [ 0, %entry ]
-  %4 = icmp ult i64 %3, %0
-  call void @llvm.assume(i1 %4)
-  %5 = getelementptr i64, ptr addrspace(1) %ptr, i64 %3
-  %6 = load atomic i64, ptr addrspace(1) %5 unordered, align 8
-  %7 = icmp eq i64 %1, %6
-  br i1 %7, label %exit, label %body
+  %iv = phi i64 [ %iv.next, %latch ], [ 0, %entry ]
+  %range_chk0 = icmp ult i64 %iv, 10
+  call void @llvm.assume(i1 %range_chk0)
+  %gep0 = getelementptr i64, ptr %ptr, i64 %iv
+  %target0 = load atomic i64, ptr %gep0 unordered, align 8
+  %check0 = icmp eq i64 %target0, 0
+  br i1 %check0, label %exit, label %body
 
 body:                                              ; preds = %header
-  %8 = add i64 %3, 1
-  %9 = icmp ult i64 %8, %0
-  call void @llvm.assume(i1 %9)
-  %10 = getelementptr i64, ptr addrspace(1) %ptr, i64 %8
-  %11 = load atomic i64, ptr addrspace(1) %10 unordered, align 8
-  %12 = icmp eq i64 %1, %11
-  br i1 %12, label %exit, label %latch
+  %iv.inc = add i64 %iv, 1
+  %range_chk1 = icmp ult i64 %iv.inc, 10
+  call void @llvm.assume(i1 %range_chk1)
+  %gep1 = getelementptr i64, ptr %ptr, i64 %iv.inc
+  %target1 = load atomic i64, ptr %gep1 unordered, align 8
+  %check1 = icmp eq i64 %target1, 0
+  br i1 %check1, label %exit, label %latch
 
 latch:                                              ; preds = %bb4
-  %23 = add nuw nsw i64 %3, 2
+  %iv.next = add nuw nsw i64 %iv, 2
   br label %header
 
 exit:                                              ; preds = %bb4, %bb3, %body, %header
