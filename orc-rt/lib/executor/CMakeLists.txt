@@ -2,6 +2,7 @@ set(files
   AllocAction.cpp
   ControllerInterface.cpp
   Error.cpp
+  ExecutorProcessInfo.cpp
   QueueingTaskDispatcher.cpp
   RTTI.cpp
   Service.cpp

@@ -348,8 +348,60 @@ public:
     VisitInitListExpr(e->getUpdater());
   }
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitAbstractConditionalOperator");
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+    CIRGenFunction::OpaqueValueMapping binding(cgf, e);
+    CIRGenFunction::ConditionalEvaluation eval(cgf);
+
+    // Save whether the destination's lifetime is externally managed.
+    bool isExternallyDestructed = dest.isExternallyDestructed();
+    bool destructNonTrivialCStruct =
+        !isExternallyDestructed &&
+        e->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
+    isExternallyDestructed |= destructNonTrivialCStruct;
+
+    cgf.emitIfOnBoolExpr(
+        e->getCond(),
+        /*thenBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          eval.beginEvaluation();
+          {
+            CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                  b.getInsertionBlock()};
+            cgf.curLexScope->setAsTernary();
+            dest.setExternallyDestructed(isExternallyDestructed);
+            assert(!cir::MissingFeatures::incrementProfileCounter());
+            Visit(e->getTrueExpr());
+            cir::YieldOp::create(b, loc);
+          }
+          eval.endEvaluation();
+        },
+        loc,
+        /*elseBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          eval.beginEvaluation();
+          {
+            CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                  b.getInsertionBlock()};
+            cgf.curLexScope->setAsTernary();
+
+            // If the result of an agg expression is unused, then the emission
+            // of the LHS might need to create a destination slot. That's fine
+            // with us, and we can safely emit the RHS into the same slot, but
+            // we shouldn't claim that it's already being destructed.
+            dest.setExternallyDestructed(isExternallyDestructed);
+            assert(!cir::MissingFeatures::incrementProfileCounter());
+            Visit(e->getFalseExpr());
+            cir::YieldOp::create(b, loc);
+          }
+          eval.endEvaluation();
+        },
+        loc);
+
+    if (destructNonTrivialCStruct)
+      cgf.cgm.errorNYI(
+          e->getSourceRange(),
+          "Abstract conditional aggregate: destructNonTrivialCStruct");
   }
   void VisitChooseExpr(const ChooseExpr *e) { Visit(e->getChosenSubExpr()); }
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {

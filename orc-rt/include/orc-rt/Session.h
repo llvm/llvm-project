@@ -15,6 +15,7 @@
 
 #include "orc-rt/ControllerInterface.h"
 #include "orc-rt/Error.h"
+#include "orc-rt/ExecutorProcessInfo.h"
 #include "orc-rt/LockedAccess.h"
 #include "orc-rt/Service.h"
 #include "orc-rt/TaskDispatcher.h"
@@ -117,7 +118,7 @@ public:
   ///
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
-  Session(std::unique_ptr<TaskDispatcher> Dispatcher,
+  Session(ExecutorProcessInfo EPI, std::unique_ptr<TaskDispatcher> Dispatcher,
           ErrorReporterFn ReportError);
 
   // Sessions are not copyable or moveable.
@@ -127,6 +128,10 @@ public:
   Session &operator=(Session &&) = delete;
 
   ~Session();
+
+  /// Provides information about the host process that the Session is running
+  /// in.
+  const ExecutorProcessInfo &processInfo() const noexcept { return EPI; }
 
   /// Dispatch a task using the Session's TaskDispatcher.
   void dispatch(std::unique_ptr<Task> T) { Dispatcher->dispatch(std::move(T)); }
@@ -204,6 +209,7 @@ private:
   static void wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
                             orc_rt_WrapperFunctionBuffer ResultBytes);
 
+  ExecutorProcessInfo EPI;
   std::unique_ptr<TaskDispatcher> Dispatcher;
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
