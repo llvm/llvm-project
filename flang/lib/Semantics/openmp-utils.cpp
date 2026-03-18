@@ -532,6 +532,11 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
       instance.u);
 }
 
+parser::Message &Reason::AttachTo(parser::Message &msg) {
+  msgs.AttachTo(msg);
+  return msg;
+}
+
 std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version) {
@@ -550,19 +555,42 @@ std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
   return {std::nullopt, Reason()};
 }
 
+template <typename T>
+static std::pair<std::optional<int64_t>, Reason>
+GetNumArgumentsWithReasonForType(
+    const parser::OmpClause &clause, const std::string &name) {
+  if (auto *args{parser::Unwrap<std::list<T>>(clause.u)}) {
+    auto num{static_cast<int64_t>(args->size())};
+    Reason reason;
+    reason.Say(clause.source,
+        "%s clause was specified with %" PRId64 " arguments"_because_en_US,
+        name.c_str(), num);
+    return {num, std::move(reason)};
+  }
+  return {std::nullopt, Reason()};
+}
+
 std::pair<std::optional<int64_t>, Reason> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version) {
   if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
-    using ArgumentList = std::list<parser::ScalarIntExpr>;
-    if (auto *args{parser::Unwrap<ArgumentList>(clause->u)}) {
-      std::string name{GetUpperName(clauseId, version)};
-      auto num{static_cast<int64_t>(args->size())};
-      Reason reason;
-      reason.Say(clause->source,
-          "%s clause was specified with %" PRId64 " arguments"_because_en_US,
-          name.c_str(), num);
-      return {num, std::move(reason)};
+    std::string name{GetUpperName(clauseId, version)};
+    // Try the types used for list items.
+    {
+      using Ty = parser::ScalarIntExpr;
+      if (auto [num, reason]{
+              GetNumArgumentsWithReasonForType<Ty>(*clause, name)};
+          num) {
+        return {num, std::move(reason)};
+      }
+    }
+    {
+      using Ty = parser::ScalarIntConstantExpr;
+      if (auto [num, reason]{
+              GetNumArgumentsWithReasonForType<Ty>(*clause, name)};
+          num) {
+        return {num, std::move(reason)};
+      }
     }
   }
   return {std::nullopt, Reason()};
@@ -789,9 +817,20 @@ std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
     switch (dir) {
     case llvm::omp::Directive::OMPD_interchange: {
       // Get the length of the argument list to PERMUTATION.
-      auto [num, reason]{GetNumArgumentsWithReason(
-          beginSpec, llvm::omp::Clause::OMPC_permutation, version)};
-      return {num, true, std::move(reason)};
+      if (parser::omp::FindClause(
+              beginSpec, llvm::omp::Clause::OMPC_permutation)) {
+        auto [num, reason]{GetNumArgumentsWithReason(
+            beginSpec, llvm::omp::Clause::OMPC_permutation, version)};
+        return {num, true, std::move(reason)};
+      }
+      // PERMUTATION not specified, assume PERMUTATION(2, 1).
+      std::string name{parser::omp::GetUpperName(
+          llvm::omp::Clause::OMPC_permutation, version)};
+      Reason reason;
+      reason.Say(beginSpec.source,
+          "%s clause was not specified, %s(2, 1) was assumed"_because_en_US,
+          name.c_str(), name.c_str());
+      return {2, true, std::move(reason)};
     }
     case llvm::omp::Directive::OMPD_stripe:
     case llvm::omp::Directive::OMPD_tile: {
@@ -799,7 +838,6 @@ std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
       auto [num, reason]{GetNumArgumentsWithReason(
           beginSpec, llvm::omp::Clause::OMPC_sizes, version)};
       return {num, true, std::move(reason)};
-      return {std::nullopt, true, Reason()};
     }
     case llvm::omp::Directive::OMPD_fuse: {
       // Get the value from the argument to DEPTH.

@@ -1,7 +1,8 @@
 set(files
   AllocAction.cpp
-  ControllerInterface.cpp
+  SimpleSymbolTable.cpp
   Error.cpp
+  ExecutorProcessInfo.cpp
   QueueingTaskDispatcher.cpp
   RTTI.cpp
   Service.cpp
