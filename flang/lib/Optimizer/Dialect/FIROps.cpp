@@ -1366,10 +1366,8 @@ void fir::CallOp::setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
         // of attributes is one more than number of operands.
         assert(argAttrs.size() == getNumOperands() + 1 &&
                "arg_attrs must be one-per-operand");
-        llvm::SmallVector<mlir::Attribute> newAttrs;
-        for (const mlir::Attribute *it = argAttrs.begin() + 1;
-             it != argAttrs.end(); ++it)
-          newAttrs.push_back(*it);
+        llvm::SmallVector<mlir::Attribute> newAttrs(argAttrs.begin() + 1,
+                                                    argAttrs.end());
         if (newAttrs.empty())
           (*this)->removeAttr(getArgAttrsAttrName());
         else
@@ -1393,9 +1391,9 @@ void fir::CallOp::setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
       assert(argAttrs.size() == getNumOperands() - 1 &&
              "arg_attrs must be one-per-operand");
       llvm::SmallVector<mlir::Attribute> newAttrs;
+      newAttrs.reserve(1 + argAttrs.size());
       newAttrs.push_back(mlir::DictionaryAttr::get(getContext(), {}));
-      for (auto a : argAttrs)
-        newAttrs.push_back(a);
+      newAttrs.append(argAttrs.begin(), argAttrs.end());
       (*this)->setAttr(getArgAttrsAttrName(),
                        mlir::ArrayAttr::get(getContext(), newAttrs));
     }
