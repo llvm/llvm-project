@@ -127,10 +127,8 @@ class SymStoreTests(TestBase):
         Check that breakpoint doesn't resolve with external lookup disabled.
         """
         exe, sym = self.build_inferior()
-        with MockedSymStore(self, exe, sym) as symstore_dir:
-            self.runCmd(
-                f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
-            )
+        with MockedSymStore(self, exe, sym) as dir:
+            self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {dir}")
             self.try_breakpoint(exe, ext_lookup=False, should_have_loc=False)
 
     def test_local_dir(self):
@@ -138,10 +136,8 @@ class SymStoreTests(TestBase):
         Check that breakpoint resolves with local SymStore.
         """
         exe, sym = self.build_inferior()
-        with MockedSymStore(self, exe, sym) as symstore_dir:
-            self.runCmd(
-                f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
-            )
+        with MockedSymStore(self, exe, sym) as dir:
+            self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {dir}")
             self.try_breakpoint(exe, should_have_loc=True)
 
     def test_http(self):
@@ -149,9 +145,7 @@ class SymStoreTests(TestBase):
         Check that breakpoint hits with remote SymStore.
         """
         exe, sym = self.build_inferior()
-        with MockedSymStore(self, exe, sym) as symstore_dir:
-            with HTTPServer(symstore_dir) as url:
-                self.runCmd(
-                    f"settings set plugin.symbol-locator.symstore.urls {url}"
-                )
+        with MockedSymStore(self, exe, sym) as dir:
+            with HTTPServer(dir) as url:
+                self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {url}")
                 self.try_breakpoint(exe, should_have_loc=True)
