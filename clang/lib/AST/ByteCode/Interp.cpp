@@ -1903,8 +1903,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   if (!Ptr.isFunctionPointer())
     return Invalid(S, OpPC);
 
-  const FunctionPointer &FuncPtr = Ptr.asFunctionPointer();
-  const Function *F = FuncPtr.getFunction();
+  const Function *F = Ptr.asFunctionPointer().Func;
   assert(F);
   // Don't allow calling block pointers.
   if (!F->getDecl())

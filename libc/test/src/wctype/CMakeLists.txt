@@ -101,3 +101,13 @@ add_libc_test(
   DEPENDS
     libc.src.wctype.iswupper
 )
+
+add_libc_test(
+  iswpunct_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswpunct_test.cpp
+  DEPENDS
+    libc.src.wctype.iswpunct
+)

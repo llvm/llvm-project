@@ -5008,9 +5008,11 @@ TEST_F(FormatTest, FormatTryCatch) {
 }
 
 TEST_F(FormatTest, FormatTryAsAVariable) {
-  verifyFormat("int try;");
-  verifyFormat("int try, size;");
-  verifyFormat("try = foo();");
+  auto Style = getLLVMStyle(FormatStyle::LK_C);
+  verifyFormat("int try;", Style);
+  verifyFormat("int try, size;", Style);
+  verifyFormat("try = foo();", Style);
+
   verifyFormat("if (try < size) {\n  return true;\n}");
 
   verifyFormat("int catch;");
@@ -5018,7 +5020,7 @@ TEST_F(FormatTest, FormatTryAsAVariable) {
   verifyFormat("catch = foo();");
   verifyFormat("if (catch < size) {\n  return true;\n}");
 
-  FormatStyle Style = getLLVMStyle();
+  Style.Language = FormatStyle::LK_Cpp;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterFunction = true;
   Style.BraceWrapping.BeforeCatch = true;
@@ -6700,6 +6702,13 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "#endif\n"
                "\n"
                "#define FGHIJK",
+               Style);
+
+  verifyFormat("#ifndef FOO_H\n"
+               "#define FOO_H\n"
+               "#include <iostream>\n"
+               "#endif\n"
+               "// comment",
                Style);
 }
 
@@ -17343,6 +17352,16 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
   verifyFormat("int aaaaaaaaaa = bbbbbbbbbbbbbbbbbbbb\n"
                "               + cccccccccccccccccccc;",
                Tab);
+
+  Tab.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Tab.BraceWrapping.BeforeLambdaBody = true;
+  verifyNoChange("example(\n"
+                 "\t[]\n"
+                 "\t{\n"
+                 "\t\t// foo\n"
+                 "\t\t// bar\n"
+                 "\t});",
+                 Tab);
 }
 
 TEST_F(FormatTest, ZeroTabWidth) {
