@@ -723,3 +723,30 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Rank-0 linalg.generic (no iteration dimensions) should produce a silenceable
+// error because tiling generates no loops.
+
+func.func @tile_rank0_no_loops(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.generic {
+    indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>],
+    iterator_types = []}
+    ins(%arg0 : tensor<f32>) outs(%arg1 : tensor<f32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %in, %out : f32
+    linalg.yield %1 : f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{tiling did not generate any loops}}
+    %forall, %tiled_generic = transform.structured.tile_using_forall %0 tile_sizes [1]
+          : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
