@@ -1209,4 +1209,3 @@ define <16 x i8> @PR143238(<16 x i8> %a0) {
   %mask = and <16 x i8> %sdiv, splat (i8 1)
   ret <16 x i8> %mask
 }
-
