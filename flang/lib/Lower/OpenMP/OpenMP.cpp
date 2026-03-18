@@ -3915,13 +3915,22 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
               // omp_out%x = omp_out%x + omp_in%x), the assignment was
               // not performed during expression lowering since
               // convertExprToValue only evaluates the RHS value.
-              // The result type won't match the reduction variable type,
-              // so store to omp_out via hlfir.assign and skip the
-              // whole-variable fir.store below.
+              // The result type won't match the reduction variable type.
+              // Use the typed assignment LHS to store to the correct
+              // component, then skip the whole-variable fir.store below.
               if (isByRef &&
                   exprResult.getType() != fir::unwrapRefType(lhs.getType())) {
-                hlfir::Entity lhsEntity{ompOutVar};
-                hlfir::AssignOp::create(builder, loc, exprResult, lhsEntity);
+                if (assign) {
+                  lower::StatementContext assignCtx;
+                  hlfir::Entity lhsEntity = lower::convertExprToHLFIR(
+                      loc, converter, assign->lhs, symTable, assignCtx);
+                  hlfir::AssignOp::create(builder, loc, exprResult, lhsEntity);
+                  assignCtx.finalizeAndPop();
+                } else {
+                  // Fallback: store to omp_out directly (shouldn't normally
+                  // happen for well-formed component-level combiners).
+                  fir::StoreOp::create(builder, loc, exprResult, ompOutVar);
+                }
                 return mlir::Value{};
               }
               return exprResult;

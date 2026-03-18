@@ -31,6 +31,7 @@ end program test
 ! CHECK:   %[[IN_X:.*]] = hlfir.designate %[[OMP_IN]]#0{"x"} : (!fir.ref<[[TY]]>) -> !fir.ref<i32>
 ! CHECK:   %[[IN_X_VAL:.*]] = fir.load %[[IN_X]] : !fir.ref<i32>
 ! CHECK:   %[[ADD:.*]] = arith.addi %[[OUT_X_VAL]], %[[IN_X_VAL]] : i32
-! CHECK:   hlfir.assign %[[ADD]] to %[[OMP_OUT]]#0 : i32, !fir.ref<[[TY]]>
+! CHECK:   %[[OUT_X2:.*]] = hlfir.designate %[[OMP_OUT]]#0{"x"} : (!fir.ref<[[TY]]>) -> !fir.ref<i32>
+! CHECK:   hlfir.assign %[[ADD]] to %[[OUT_X2]] : i32, !fir.ref<i32>
 ! CHECK:   omp.yield(%[[ARG0]] : !fir.ref<[[TY]]>)
 ! CHECK: }
