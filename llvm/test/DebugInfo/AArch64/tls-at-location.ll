@@ -1,10 +1,10 @@
-; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu --aarch64-emit-debug-tls-location -filetype=obj < %s \
+; RUN: llc -O0 -mtriple=aarch64 --aarch64-emit-debug-tls-location -filetype=obj < %s \
 ; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=TLS
 
-; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu --aarch64-emit-debug-tls-location=0 -filetype=obj < %s \
+; RUN: llc -O0 -mtriple=aarch64 --aarch64-emit-debug-tls-location=0 -filetype=obj < %s \
 ; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=NO-TLS
 
-; RUN: llc -O0 -mtriple=aarch64-non-linux-gnu -filetype=obj < %s \
+; RUN: llc -O0 -mtriple=aarch64 -filetype=obj < %s \
 ; RUN:     | llvm-dwarfdump - | FileCheck %s --check-prefix=NO-TLS
 
 ; TLS: .debug_info contents:
