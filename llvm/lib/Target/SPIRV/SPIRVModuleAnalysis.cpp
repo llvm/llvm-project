@@ -495,6 +495,8 @@ MCRegister SPIRVModuleAnalysis::handleVariable(
   MCRegister GReg = MAI.getNextIDRegister();
   It->second = GReg;
   MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
+  if (const auto *GV = dyn_cast<GlobalVariable>(GObj))
+    MAI.GVarMap[GV] = GReg;
   return GReg;
 }
 

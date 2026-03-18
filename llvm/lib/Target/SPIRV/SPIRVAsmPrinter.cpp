@@ -690,15 +690,16 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
       // The first field of the struct contains a pointer to
       // the annotated variable.
       Value *AnnotatedVar = CS->getOperand(0)->stripPointerCasts();
-      if (!isa<Function>(AnnotatedVar))
-        report_fatal_error("Unsupported value in llvm.global.annotations");
-      Function *Func = cast<Function>(AnnotatedVar);
-      MCRegister Reg = MAI->getFuncReg(Func);
+      MCRegister Reg;
+      if (auto *Func = dyn_cast<Function>(AnnotatedVar))
+        Reg = MAI->getFuncReg(Func);
+      else if (auto *GV = dyn_cast<GlobalVariable>(AnnotatedVar))
+        Reg = MAI->getGVarReg(GV);
       if (!Reg.isValid()) {
         std::string DiagMsg;
         raw_string_ostream OS(DiagMsg);
         AnnotatedVar->print(OS);
-        DiagMsg = "Unknown function in llvm.global.annotations: " + DiagMsg;
+        DiagMsg = "Unsupported value in llvm.global.annotations: " + DiagMsg;
         report_fatal_error(DiagMsg.c_str());
       }
 
