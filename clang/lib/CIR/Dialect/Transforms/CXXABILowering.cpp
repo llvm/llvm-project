@@ -45,8 +45,8 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
   if (!attr)
     return true;
 
-  // None of the OpenACC attributes contain a type of concern, so we can just
-  // treat them as legal.
+  // None of the OpenACC attributes contain a type of concern, so we can
+  // just treat them as legal.
   if (isa<mlir::acc::OpenACCDialect>(attr.getDialect()))
     return true;
 
@@ -277,7 +277,12 @@ public:
                     [typeConverter](mlir::Region &region) {
                       return typeConverter->isLegal(&region);
                     });
-    if (operandsAndResultsLegal && regionsLegal) {
+    bool attrsLegal =
+        llvm::all_of(op->getAttrs(), [typeConverter](mlir::NamedAttribute na) {
+          return isCXXABIAttributeLegal(*typeConverter, na.getValue());
+        });
+
+    if (operandsAndResultsLegal && regionsLegal && attrsLegal) {
       // The operation does not have any CXXABI-dependent operands or results,
       // the match fails.
       return mlir::failure();
