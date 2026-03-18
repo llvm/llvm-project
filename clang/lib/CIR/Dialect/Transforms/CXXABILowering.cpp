@@ -170,30 +170,57 @@ mlir::LogicalResult CIRCastOpABILowering::matchAndRewrite(
 
   return mlir::failure();
 }
+// Helper function to lower a value for things like an initializer.
+static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
+                                         const mlir::DataLayout &layout,
+                                         const mlir::TypeConverter &tc,
+                                         mlir::Type ty,
+                                         mlir::Attribute initVal) {
+  if (mlir::isa<cir::DataMemberType>(ty)) {
+    auto dataMemberVal = mlir::cast_if_present<cir::DataMemberAttr>(initVal);
+    return lowerModule->getCXXABI().lowerDataMemberConstant(dataMemberVal,
+                                                            layout, tc);
+  }
+  if (mlir::isa<cir::MethodType>(ty)) {
+    auto methodVal = mlir::cast_if_present<cir::MethodAttr>(initVal);
+    return lowerModule->getCXXABI().lowerMethodConstant(methodVal, layout, tc);
+  }
+
+  if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
+    auto loweredArrTy = mlir::cast<cir::ArrayType>(tc.convertType(arrTy));
+    // TODO(cir): there are other types that can appear here inside of record
+    // members that we should handle. Those will come in a follow-up patch to
+    // minimize changes here.
+    if (!initVal)
+      return {};
+    auto arrayVal = mlir::cast<cir::ConstArrayAttr>(initVal);
+    auto arrayElts = mlir::cast<ArrayAttr>(arrayVal.getElts());
+    SmallVector<mlir::Attribute> loweredElements;
+    loweredElements.reserve(arrTy.getSize());
+    for (const mlir::Attribute &attr : arrayElts) {
+      auto typedAttr = cast<mlir::TypedAttr>(attr);
+      loweredElements.push_back(lowerInitialValue(
+          lowerModule, layout, tc, typedAttr.getType(), typedAttr));
+    }
+
+    return cir::ConstArrayAttr::get(
+        loweredArrTy, mlir::ArrayAttr::get(ty.getContext(), loweredElements),
+        arrayVal.getTrailingZerosNum());
+  }
+
+  llvm_unreachable("inputs to cir.global/constant in ABI lowering must be data "
+                   "member or method");
+}
 
 mlir::LogicalResult CIRConstantOpABILowering::matchAndRewrite(
     cir::ConstantOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
 
-  if (mlir::isa<cir::DataMemberType>(op.getType())) {
-    auto dataMember = mlir::cast<cir::DataMemberAttr>(op.getValue());
-    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
-    mlir::TypedAttr abiValue = lowerModule->getCXXABI().lowerDataMemberConstant(
-        dataMember, layout, *getTypeConverter());
-    rewriter.replaceOpWithNewOp<ConstantOp>(op, abiValue);
-    return mlir::success();
-  }
-
-  if (mlir::isa<cir::MethodType>(op.getType())) {
-    auto method = mlir::cast<cir::MethodAttr>(op.getValue());
-    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
-    mlir::TypedAttr abiValue = lowerModule->getCXXABI().lowerMethodConstant(
-        method, layout, *getTypeConverter());
-    rewriter.replaceOpWithNewOp<ConstantOp>(op, abiValue);
-    return mlir::success();
-  }
-
-  llvm_unreachable("constant operand is not an CXXABI-dependent type");
+  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  mlir::TypedAttr newValue = lowerInitialValue(
+      lowerModule, layout, *getTypeConverter(), op.getType(), op.getValue());
+  rewriter.replaceOpWithNewOp<ConstantOp>(op, newValue);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRCmpOpABILowering::matchAndRewrite(
@@ -261,41 +288,8 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
 
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
 
-  mlir::Attribute loweredInit;
-  if (mlir::isa<cir::DataMemberType>(ty)) {
-    cir::DataMemberAttr init =
-        mlir::cast_if_present<cir::DataMemberAttr>(op.getInitialValueAttr());
-    loweredInit = lowerModule->getCXXABI().lowerDataMemberConstant(
-        init, layout, *getTypeConverter());
-  } else if (mlir::isa<cir::MethodType>(ty)) {
-    cir::MethodAttr init =
-        mlir::cast_if_present<cir::MethodAttr>(op.getInitialValueAttr());
-    loweredInit = lowerModule->getCXXABI().lowerMethodConstant(
-        init, layout, *getTypeConverter());
-  } else if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
-    auto init = mlir::cast<cir::ConstArrayAttr>(op.getInitialValueAttr());
-    auto arrayElts = mlir::cast<ArrayAttr>(init.getElts());
-    SmallVector<mlir::Attribute> loweredElements;
-    loweredElements.reserve(arrTy.getSize());
-    for (const mlir::Attribute &attr : arrayElts) {
-      if (auto methodAttr = mlir::dyn_cast<cir::MethodAttr>(attr)) {
-        mlir::Attribute loweredElt =
-            lowerModule->getCXXABI().lowerMethodConstant(methodAttr, layout,
-                                                         *getTypeConverter());
-        loweredElements.push_back(loweredElt);
-      } else {
-        llvm_unreachable("array of data member lowering is NYI");
-      }
-    }
-    auto loweredArrTy =
-        mlir::cast<cir::ArrayType>(getTypeConverter()->convertType(arrTy));
-    loweredInit = cir::ConstArrayAttr::get(
-        loweredArrTy,
-        mlir::ArrayAttr::get(rewriter.getContext(), loweredElements));
-  } else {
-    llvm_unreachable(
-        "inputs to cir.global in ABI lowering must be data member or method");
-  }
+  mlir::Attribute loweredInit = lowerInitialValue(
+      lowerModule, layout, *getTypeConverter(), ty, op.getInitialValueAttr());
 
   auto newOp = mlir::cast<cir::GlobalOp>(rewriter.clone(*op.getOperation()));
   newOp.setInitialValueAttr(loweredInit);
