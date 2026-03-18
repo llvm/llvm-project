@@ -327,6 +327,8 @@ SystemZ Support
 - Add support for `#pragma export` for z/OS.  This is a pragma used to export functions and variables
   with external linkage from shared libraries.  It provides compatibility with the IBM XL C/C++
   compiler.
+- Fixed an assertion failure in the preprocessor when encountering ``::template operator`` during tentative parsing. (#GH186582)
+
 
 DWARF Support in Clang
 ----------------------

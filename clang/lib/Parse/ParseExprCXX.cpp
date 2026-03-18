@@ -286,7 +286,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // we already annotated the template-id.
         if (ParseUnqualifiedIdOperator(SS, EnteringContext, ObjectType,
                                        TemplateName)) {
-          TPA.Commit();
+          TPA.Revert();
           break;
         }
 
@@ -295,7 +295,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
           Diag(TemplateName.getSourceRange().getBegin(),
                diag::err_id_after_template_in_nested_name_spec)
             << TemplateName.getSourceRange();
-          TPA.Commit();
+          TPA.Revert();
           break;
         }
       } else {
