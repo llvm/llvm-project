@@ -558,8 +558,6 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_MOVI) {
   auto Int8Vec16VT = MVT::v8i16;
   auto Int2Vec32VT = MVT::v2i32;
   auto Int4Vec32VT = MVT::v4i32;
-  auto IntVec64VT = MVT::v1i64;
-  auto Int2Vec64VT = MVT::v2i64;
   auto N165 = DAG->getConstant(0x000000A5, Loc, IntSca32VT);
   KnownBits Known;
 
