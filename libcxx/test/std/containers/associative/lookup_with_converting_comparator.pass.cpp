@@ -33,17 +33,36 @@ struct S {
 };
 
 template <class Container>
-void test(Container& c) {
-  S v(1);
-  assert(c.find(v) == c.end());
-  assert(c.count(v) == 0);
-  assert(c.lower_bound(v) == c.end());
-  assert(c.upper_bound(v) == c.end());
-  assert(c.equal_range(v).first == c.end());
-  assert(c.equal_range(v).second == c.end());
+void test(Container& container) {
+  // non-const
+  {
+    Container& c = container;
+    S v(1);
+    assert(c.find(v) == c.end());
+    assert(c.count(v) == 0);
+    assert(c.lower_bound(v) == c.end());
+    assert(c.upper_bound(v) == c.end());
+    assert(c.equal_range(v).first == c.end());
+    assert(c.equal_range(v).second == c.end());
 #if TEST_STD_VER >= 20
-  assert(!c.contains(v));
+    assert(!c.contains(v));
 #endif
+  }
+
+  // const
+  {
+    Container const& c = container;
+    S v(1);
+    assert(c.find(v) == c.end());
+    assert(c.count(v) == 0);
+    assert(c.lower_bound(v) == c.end());
+    assert(c.upper_bound(v) == c.end());
+    assert(c.equal_range(v).first == c.end());
+    assert(c.equal_range(v).second == c.end());
+#if TEST_STD_VER >= 20
+    assert(!c.contains(v));
+#endif
+  }
 }
 
 int main(int, char**) {
