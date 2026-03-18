@@ -5,7 +5,6 @@ Lit configuration file for libclc tests.
 import os
 
 import lit.formats
-
 from lit.llvm import llvm_config
 
 # Configuration file for the 'lit' test runner.
@@ -13,8 +12,8 @@ from lit.llvm import llvm_config
 # name: The name of this test suite.
 config.name = "libclc"
 
-# testFormat: The test format to use to interpret tests.
-config.test_format = lit.formats.ShTest(True)
+# test format
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [".test"]
@@ -36,8 +35,12 @@ if "PATH" in os.environ:
 else:
     config.environment["PATH"] = config.llvm_tools_dir
 
+for target in config.libclc_targets_to_build.split():
+    if target:
+        arch = target.split("-")[0]
+        config.available_features.add(arch)
+
+llvm_config.use_default_substitutions()
+
 # Define substitutions for the test files
 config.substitutions.append(("%libclc_library_dir", config.libclc_library_dir))
-
-tools = ["llvm-nm"]
-llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)

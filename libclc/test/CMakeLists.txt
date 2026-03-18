@@ -1,4 +1,5 @@
 set(LLVM_TOOLS_DIR ${LLVM_TOOLS_BINARY_DIR})
+string(REPLACE ";" " " LIBCLC_TARGETS_TO_BUILD "${LIBCLC_TARGETS_TO_BUILD}")
 
 set(LIBCLC_TEST_DEPS
   libclc-opencl-builtins
