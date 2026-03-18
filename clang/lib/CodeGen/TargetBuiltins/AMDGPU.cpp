@@ -56,9 +56,6 @@ Value *EmitAMDGPUDispatchPtr(CodeGenFunction &CGF,
                              const CallExpr *E = nullptr) {
   auto *F = CGF.CGM.getIntrinsic(Intrinsic::amdgcn_dispatch_ptr);
   auto *Call = CGF.Builder.CreateCall(F);
-  Call->addRetAttr(
-      Attribute::getWithDereferenceableBytes(Call->getContext(), 64));
-  Call->addRetAttr(Attribute::getWithAlignment(Call->getContext(), Align(4)));
   if (!E)
     return Call;
   QualType BuiltinRetType = E->getType();
@@ -77,6 +74,122 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
   return Call;
 }
 
+static llvm::Intrinsic::ID getAMDGPUWorkGroupID(CodeGenFunction &CGF,
+                                                unsigned Index) {
+  switch (Index) {
+  case 0:
+    return llvm::Intrinsic::amdgcn_workgroup_id_x;
+  case 1:
+    return llvm::Intrinsic::amdgcn_workgroup_id_y;
+  case 2:
+    return llvm::Intrinsic::amdgcn_workgroup_id_z;
+  default:
+    llvm_unreachable("unhandled index");
+  }
+}
+
+static void setNoundefInvariantLoad(llvm::LoadInst *Ld) {
+  Ld->setMetadata(llvm::LLVMContext::MD_noundef,
+                  llvm::MDNode::get(Ld->getContext(), {}));
+  Ld->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                  llvm::MDNode::get(Ld->getContext(), {}));
+}
+
+static void addMaxWorkGroupSizeRangeMetadata(CodeGenFunction &CGF,
+                                             llvm::LoadInst *GroupSize) {
+  llvm::MDBuilder MDHelper(CGF.getLLVMContext());
+  llvm::MDNode *RNode = MDHelper.createRange(
+      APInt(16, 1), APInt(16, CGF.getTarget().getMaxOpenCLWorkGroupSize() + 1));
+  GroupSize->setMetadata(llvm::LLVMContext::MD_range, RNode);
+  setNoundefInvariantLoad(GroupSize);
+}
+
+static Value *emitAMDGPUWorkGroupSizeV5(CodeGenFunction &CGF, unsigned Index) {
+  llvm::Value *ImplicitArgPtr = EmitAMDGPUImplicitArgPtr(CGF);
+
+  // offsetof(amdhsa_implicit_kernarg_v5, block_count[Index])
+  unsigned BlockCountOffset = 0 + Index * 4;
+  // offsetof(amdhsa_implicit_kernarg_v5, group_size[Index])
+  unsigned GroupSizeOffset = 12 + Index * 2;
+  // offsetof(amdhsa_implicit_kernarg_v5, remainder[Index])
+  unsigned RemainderOffset = 18 + Index * 2;
+
+  if (CGF.CGM.getLangOpts().OffloadUniformBlock) {
+    // Indexing the implicit kernarg segment.
+    llvm::Value *GroupSizeGEP = CGF.Builder.CreateConstInBoundsGEP1_64(
+        CGF.Int8Ty, ImplicitArgPtr, GroupSizeOffset);
+    llvm::LoadInst *GroupSize = CGF.Builder.CreateLoad(
+        Address(GroupSizeGEP, CGF.Int16Ty, CharUnits::fromQuantity(2)));
+
+    addMaxWorkGroupSizeRangeMetadata(CGF, GroupSize);
+
+    return CGF.Builder.CreateZExt(GroupSize, CGF.Int32Ty);
+  }
+
+  llvm::Value *BlockCountGEP = CGF.Builder.CreateConstGEP1_64(
+      CGF.Int8Ty, ImplicitArgPtr, BlockCountOffset);
+  llvm::LoadInst *BlockCount = CGF.Builder.CreateLoad(
+      Address(BlockCountGEP, CGF.Int32Ty, CharUnits::fromQuantity(4)));
+  setNoundefInvariantLoad(BlockCount);
+
+  llvm::Value *WorkgroupID =
+      CGF.Builder.CreateIntrinsic(getAMDGPUWorkGroupID(CGF, Index), {});
+  llvm::Value *IsFull = CGF.Builder.CreateICmpULT(WorkgroupID, BlockCount);
+
+  llvm::Value *StructOffset = CGF.Builder.CreateSelect(
+      IsFull, ConstantInt::get(CGF.Int32Ty, GroupSizeOffset),
+      ConstantInt::get(CGF.Int32Ty, RemainderOffset));
+
+  llvm::Value *SizeGEP =
+      CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, ImplicitArgPtr, StructOffset);
+  llvm::LoadInst *Size = CGF.Builder.CreateLoad(
+      Address(SizeGEP, CGF.Int16Ty, CharUnits::fromQuantity(2)));
+  addMaxWorkGroupSizeRangeMetadata(CGF, Size);
+  setNoundefInvariantLoad(Size);
+
+  return CGF.Builder.CreateZExt(Size, CGF.Int32Ty);
+}
+
+static Value *emitAMDGPUWorkGroupSizeV4(CodeGenFunction &CGF, unsigned Index) {
+  llvm::Value *DispatchPtr = EmitAMDGPUDispatchPtr(CGF);
+
+  // Indexing the HSA kernel_dispatch_packet struct.
+  llvm::Value *GroupSizeGEP = CGF.Builder.CreateConstInBoundsGEP1_64(
+      CGF.Int8Ty, DispatchPtr, 4 + Index * 2);
+  llvm::LoadInst *GroupSizeLD = CGF.Builder.CreateLoad(
+      Address(GroupSizeGEP, CGF.Int16Ty, CharUnits::fromQuantity(2)));
+
+  addMaxWorkGroupSizeRangeMetadata(CGF, GroupSizeLD);
+
+  llvm::Value *GroupSize = CGF.Builder.CreateZExt(GroupSizeLD, CGF.Int32Ty);
+
+  if (CGF.CGM.getLangOpts().OffloadUniformBlock)
+    return GroupSize;
+
+  llvm::Value *WorkgroupID =
+      CGF.Builder.CreateIntrinsic(getAMDGPUWorkGroupID(CGF, Index), {});
+
+  llvm::Value *GridSizeGEP = CGF.Builder.CreateConstInBoundsGEP1_64(
+      CGF.Int8Ty, DispatchPtr, 12 + Index * 4);
+  llvm::LoadInst *GridSize = CGF.Builder.CreateLoad(
+      Address(GridSizeGEP, CGF.Int32Ty, CharUnits::fromQuantity(4)));
+
+  llvm::MDBuilder MDB(CGF.getLLVMContext());
+
+  // Known non-zero.
+  GridSize->setMetadata(llvm::LLVMContext::MD_range,
+                        MDB.createRange(APInt(32, 1), APInt::getZero(32)));
+  GridSize->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                        llvm::MDNode::get(CGF.getLLVMContext(), {}));
+
+  llvm::Value *Mul = CGF.Builder.CreateMul(WorkgroupID, GroupSize);
+  llvm::Value *Remainder = CGF.Builder.CreateSub(GridSize, Mul);
+
+  llvm::Value *IsPartial = CGF.Builder.CreateICmpULT(Remainder, GroupSize);
+
+  return CGF.Builder.CreateSelect(IsPartial, Remainder, GroupSize);
+}
+
 // \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.
 /// Emit code based on Code Object ABI version.
 /// COV_4    : Emit code to use dispatch ptr
@@ -85,11 +198,9 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
 ///            and use its value for COV_4 or COV_5+ approach. It is used for
 ///            compiling device libraries in an ABI-agnostic way.
 Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
-  llvm::LoadInst *LD;
-
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
-  // Do not emit __oclc_ABI_version references with non-empty environment.
+  // Do not emit __oclc_ABI_version references with non-empt environment.
   if (Cov == CodeObjectVersionKind::COV_None &&
       CGF.getTarget().getTriple().hasEnvironment())
     Cov = CodeObjectVersionKind::COV_6;
@@ -114,41 +225,14 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
         ABIVersion,
         llvm::ConstantInt::get(CGF.Int32Ty, CodeObjectVersionKind::COV_5));
 
-    // Indexing the implicit kernarg segment.
-    Value *ImplicitGEP = CGF.Builder.CreateConstGEP1_32(
-        CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), 12 + Index * 2);
-
-    // Indexing the HSA kernel_dispatch_packet struct.
-    Value *DispatchGEP = CGF.Builder.CreateConstGEP1_32(
-        CGF.Int8Ty, EmitAMDGPUDispatchPtr(CGF), 4 + Index * 2);
-
-    auto Result = CGF.Builder.CreateSelect(IsCOV5, ImplicitGEP, DispatchGEP);
-    LD = CGF.Builder.CreateLoad(
-        Address(Result, CGF.Int16Ty, CharUnits::fromQuantity(2)));
-  } else {
-    Value *GEP = nullptr;
-    if (Cov >= CodeObjectVersionKind::COV_5) {
-      // Indexing the implicit kernarg segment.
-      GEP = CGF.Builder.CreateConstGEP1_32(
-          CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), 12 + Index * 2);
-    } else {
-      // Indexing the HSA kernel_dispatch_packet struct.
-      GEP = CGF.Builder.CreateConstGEP1_32(
-          CGF.Int8Ty, EmitAMDGPUDispatchPtr(CGF), 4 + Index * 2);
-    }
-    LD = CGF.Builder.CreateLoad(
-        Address(GEP, CGF.Int16Ty, CharUnits::fromQuantity(2)));
+    llvm::Value *V5Impl = emitAMDGPUWorkGroupSizeV5(CGF, Index);
+    llvm::Value *V4Impl = emitAMDGPUWorkGroupSizeV4(CGF, Index);
+    return CGF.Builder.CreateSelect(IsCOV5, V5Impl, V4Impl);
   }
 
-  llvm::MDBuilder MDHelper(CGF.getLLVMContext());
-  llvm::MDNode *RNode = MDHelper.createRange(APInt(16, 1),
-      APInt(16, CGF.getTarget().getMaxOpenCLWorkGroupSize() + 1));
-  LD->setMetadata(llvm::LLVMContext::MD_range, RNode);
-  LD->setMetadata(llvm::LLVMContext::MD_noundef,
-                  llvm::MDNode::get(CGF.getLLVMContext(), {}));
-  LD->setMetadata(llvm::LLVMContext::MD_invariant_load,
-                  llvm::MDNode::get(CGF.getLLVMContext(), {}));
-  return LD;
+  return Cov >= CodeObjectVersionKind::COV_5
+             ? emitAMDGPUWorkGroupSizeV5(CGF, Index)
+             : emitAMDGPUWorkGroupSizeV4(CGF, Index);
 }
 
 // \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.

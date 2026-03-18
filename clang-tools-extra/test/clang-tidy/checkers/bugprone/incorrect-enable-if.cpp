@@ -1,17 +1,7 @@
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s bugprone-incorrect-enable-if %t
 // RUN: %check_clang_tidy -std=c++20-or-later -check-suffix=CXX20 %s bugprone-incorrect-enable-if %t
 
-// NOLINTBEGIN
-namespace std {
-template <bool B, class T = void> struct enable_if { };
-
-template <class T> struct enable_if<true, T> { typedef T type; };
-
-template <bool B, class T = void>
-using enable_if_t = typename enable_if<B, T>::type;
-
-} // namespace std
-// NOLINTEND
+#include <utility>
 
 template <typename T, typename = typename std::enable_if<T::some_value>::type>
 void valid_function1() {}

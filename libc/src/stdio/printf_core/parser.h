@@ -292,7 +292,7 @@ public:
         WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
       case ('s'):
-        WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, char *, conv_index);
+        WRITE_ARG_VAL_SIMPLEST(section.conv_val_ptr, void *, conv_index);
         break;
       default:
         // if the conversion is undefined, change this to a raw section.

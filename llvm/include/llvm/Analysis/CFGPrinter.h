@@ -235,13 +235,12 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   static std::string getEdgeSourceLabel(const BasicBlock *Node,
                                         const_succ_iterator I) {
     // Label source of conditional branches with "T" or "F"
-    if (const BranchInst *BI = dyn_cast<BranchInst>(Node->getTerminator()))
-      if (BI->isConditional())
-        return (I == succ_begin(Node)) ? "T" : "F";
+    if (isa<CondBrInst>(Node->getTerminator()))
+      return (I == succ_begin(Node)) ? "T" : "F";
 
     // Label source of switch edges with the associated value.
     if (const SwitchInst *SI = dyn_cast<SwitchInst>(Node->getTerminator())) {
-      unsigned SuccNo = I.getSuccessorIndex();
+      unsigned SuccNo = std::distance(succ_begin(SI), I);
 
       if (SuccNo == 0)
         return "def";
@@ -273,8 +272,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     if (!CFGInfo->showEdgeWeights())
       return "";
 
-    unsigned OpNo = I.getSuccessorIndex();
     const Instruction *TI = Node->getTerminator();
+    unsigned OpNo = std::distance(succ_begin(TI), I);
     BasicBlock *SuccBB = TI->getSuccessor(OpNo);
     auto BranchProb = CFGInfo->getBPI()->getEdgeProbability(Node, SuccBB);
     double WeightPercent = ((double)BranchProb.getNumerator()) /
@@ -311,7 +310,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     if (!WeightsNode)
       return TTAttr;
 
-    OpNo = I.getSuccessorIndex() + 1;
+    OpNo += 1;
     if (OpNo >= WeightsNode->getNumOperands())
       return TTAttr;
     ConstantInt *Weight =
