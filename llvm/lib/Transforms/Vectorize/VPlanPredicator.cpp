@@ -141,9 +141,8 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
 
   // Reuse the mask of the immediate dominator if the VPBB post-dominates it.
-  // This isn't "just" an optimization but is necessary for the
-  // post-dom-frontier-based mask creation to avoid (backward) tarversing the
-  // CFG past the loop header.
+  // This is also necessary to avoid traversing past the loop header in the post
+  // dominance frontier below.
   auto *IDom = VPDT.getNode(VPBB)->getIDom();
   assert(IDom && "Block in loop must have immediate dominator");
   auto *IDomBB = cast<VPBasicBlock>(IDom->getBlock());
@@ -152,21 +151,25 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
     return;
   }
 
-  // Identify all branches/edges that **directly** control VPBB's mask, i.e.,
-  //   * control flow does not re-converge before reaching VPBB
-  //   * control flow does not branch further beore reaching VPBB
+  // Identify all edges that **directly** control VPBB's mask, i.e.,
+  //   * control flow does not fully reconverge before reaching VPBB
+  //   * control flow does not branch further before reaching VPBB
   // Those conditional branches originate exactly in the post-dominance frontier
   // of VPBB, with the edge destinations being post-dominated by VPBB.
 
   VPValue *BlockMask = nullptr;
-  assert(VPPDF.find(VPBB) != VPPDF.end() &&
+  auto It = VPPDF.find(VPBB);
+  assert(It != VPPDF.end() &&
          "PostDomFrontier cannot be empty because header mask should have been "
-         "re-used via IDom logic above.");
-  auto FrontierBlocks = VPPDF.find(VPBB)->second;
+         "reused via IDom logic above.");
+  auto FrontierBlocks = It->second;
   for (VPBlockBase *FrontierBB : FrontierBlocks) {
+    assert(FrontierBB->getParent() == VPBB->getParent() &&
+           "IDom logic above should have prevented going outside loop region "
+           "here!");
     // Switch can have multiple edges to the same successor, don't need to "or"
     // it more than once.
-    SmallPtrSet<VPBlockBase *, 4> ProcessedSuccessors;
+    SmallPtrSet<VPBlockBase *, 4> Visited;
 
     for (auto *Succ : FrontierBB->successors()) {
       if (!VPPDT.dominates(VPBB, Succ))
@@ -175,7 +178,7 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
         // through another block in the post-dom-frontier.
         continue;
 
-      if (!ProcessedSuccessors.insert(Succ).second)
+      if (!Visited.insert(Succ).second)
         continue;
 
       VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(FrontierBB),
@@ -184,9 +187,8 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
           BlockMask ? Builder.createOr(BlockMask, EdgeMask, {}) : EdgeMask;
     }
   }
-  assert(
-      BlockMask &&
-      "Header mask re-use expected to have happenned using IDom logic above.");
+  assert(BlockMask &&
+         "Header mask reuse expected to have happened using IDom logic above.");
 
   setBlockInMask(VPBB, BlockMask);
 }
