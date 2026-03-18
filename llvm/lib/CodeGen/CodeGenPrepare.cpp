@@ -1451,41 +1451,51 @@ static bool SinkCast(CastInst *CI) {
   return MadeChange;
 }
 
-/// Check if this bitcast converts a large illegal integer to a legal vector.
-/// If so, hoist it to the source block to avoid register splitting across
-/// basic block boundaries, which improves code generation.
-///
-/// Return true if the bitcast was hoisted.
+/// Hoist bitcasts to their source block if it reduces register pressure.
+/// This prevents large illegal scalars from being split across basic blocks
+/// by converting them into legal vectors early.
 static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
                             const DataLayout &DL) {
-  Value *Src = BCI->getOperand(0);
-
-  // 1. Only hoist if the source is an instruction in a different basic block.
-  auto *SrcInst = dyn_cast<Instruction>(Src);
-  if (!SrcInst || BCI->getParent() == SrcInst->getParent())
+  auto *SrcInst = dyn_cast<Instruction>(BCI->getOperand(0));
+  if (!SrcInst)
     return false;
 
-  Type *SrcTy = Src->getType();
-  Type *DestTy = BCI->getType();
+  // 1. Identify the target scenario:
+  // We only handle cross-block, movable, scalar-to-vector casts with matching
+  // sizes.
+  bool IsCrossBlock = (SrcInst->getParent() != BCI->getParent());
+  bool IsMovable = !SrcInst->isTerminator();
 
-  // 2. Convert to EVT to check target-specific type legality.
-  EVT SrcVT = TLI.getValueType(DL, SrcTy);
-  EVT DestVT = TLI.getValueType(DL, DestTy);
+  bool IsScalarToVector =
+      !SrcInst->getType()->isVectorTy() && BCI->getType()->isVectorTy();
+  bool IsSameSize = DL.getTypeSizeInBits(SrcInst->getType()) ==
+                    DL.getTypeSizeInBits(BCI->getType());
 
-  // 3. Criterion: Hoist if bitcasting an illegal integer to a legal vector.
-  // This prevents the large integer from being split across block boundaries.
-  if (SrcTy->isIntegerTy() && !TLI.isTypeLegal(SrcVT) && DestTy->isVectorTy() &&
-      TLI.isTypeLegal(DestVT)) {
+  if (!IsCrossBlock || !IsMovable || !IsScalarToVector || !IsSameSize)
+    return false;
 
-    // 4. Ensure bitwidths match and perform hoisting.
-    if (DL.getTypeSizeInBits(SrcTy) == DL.getTypeSizeInBits(DestTy)) {
-      if (isa<LoadInst>(SrcInst)) {
-        BCI->moveAfter(SrcInst);
-        return true;
-      }
-    }
-  }
-  return false;
+  // 2. Evaluate the benefit:
+  EVT SrcVT = TLI.getValueType(DL, SrcInst->getType());
+  EVT DestVT = TLI.getValueType(DL, BCI->getType());
+
+  unsigned SrcRegs = TLI.getNumRegisters(BCI->getContext(), SrcVT);
+  unsigned DestRegs = TLI.getNumRegisters(BCI->getContext(), DestVT);
+
+  // Only hoist if the target vector is hardware-legal and it saves registers.
+  bool IsDestLegal = TLI.isTypeLegal(DestVT);
+  bool ReducesPressure = (SrcRegs > DestRegs);
+
+  if (!IsDestLegal || !ReducesPressure)
+    return false;
+
+  // 3. Safely perform the hoisting:
+  // PHI nodes must remain at the top of the block, so we insert after them.
+  BasicBlock *SrcBB = SrcInst->getParent();
+  auto InsertPt = isa<PHINode>(SrcInst) ? SrcBB->getFirstInsertionPt()
+                                        : std::next(SrcInst->getIterator());
+
+  BCI->moveBefore(*SrcBB, InsertPt);
+  return true;
 }
 
 /// If the specified cast instruction is a noop copy (e.g. it's casting from
