@@ -218,11 +218,6 @@ static cl::opt<bool> VectorizeCopyableElements(
     cl::desc("Try to replace values with the idempotent instructions for "
              "better vectorization."));
 
-static cl::opt<unsigned> LoopAwareTripCount(
-    "slp-cost-loop-trip-count", cl::init(2), cl::Hidden,
-    cl::desc("Loop trip count, considered by the cost model during "
-             "modeling (0=loops are ignored and considered flat code)"));
-
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -267,8 +262,9 @@ static Type *getValueType(Value *V) {
     return SI->getValueOperand()->getType();
   if (auto *CI = dyn_cast<CmpInst>(V))
     return CI->getOperand(0)->getType();
-  if (auto *IE = dyn_cast<InsertElementInst>(V))
-    return IE->getOperand(1)->getType();
+  if (!SLPReVec)
+    if (auto *IE = dyn_cast<InsertElementInst>(V))
+      return IE->getOperand(1)->getType();
   return V->getType();
 }
 
@@ -949,7 +945,7 @@ namespace {
 /// converted to another instruction with same semantics. For example, x << 1 is
 /// equal to x * 2. x * 1 is equal to x | 0.
 class BinOpSameOpcodeHelper {
-  using MaskType = std::uint_fast16_t;
+  using MaskType = std::uint_fast32_t;
   /// Sort SupportedOp because it is used by binary_search.
   constexpr static std::initializer_list<unsigned> SupportedOp = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
@@ -957,15 +953,15 @@ class BinOpSameOpcodeHelper {
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
                 "SupportedOp is not sorted.");
   enum : MaskType {
-    ShlBIT = 0b1,
-    AShrBIT = 0b10,
-    MulBIT = 0b100,
-    AddBIT = 0b1000,
-    SubBIT = 0b10000,
-    AndBIT = 0b100000,
-    OrBIT = 0b1000000,
-    XorBIT = 0b10000000,
-    MainOpBIT = 0b100000000,
+    ShlBIT = 1,
+    AShrBIT = 1 << 1,
+    MulBIT = 1 << 2,
+    AddBIT = 1 << 3,
+    SubBIT = 1 << 4,
+    AndBIT = 1 << 5,
+    OrBIT = 1 << 6,
+    XorBIT = 1 << 7,
+    MainOpBIT = 1 << 8,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
   /// Return a non-nullptr if either operand of I is a ConstantInt.
@@ -2026,10 +2022,11 @@ public:
   /// Vectorize the tree but with the list of externally used values \p
   /// ExternallyUsedValues. Values in this MapVector can be replaced but the
   /// generated extractvalue instructions.
-  Value *vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
-                       Instruction *ReductionRoot = nullptr,
-                       ArrayRef<std::tuple<Value *, unsigned, bool, bool>>
-                           VectorValuesAndScales = {});
+  Value *
+  vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
+                Instruction *ReductionRoot = nullptr,
+                ArrayRef<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
+                    VectorValuesAndScales = {});
 
   /// \returns the cost incurred by unwanted spills and fills, caused by
   /// holding live values over call sites.
@@ -2166,7 +2163,6 @@ public:
     PostponedGathers.clear();
     ValueToGatherNodes.clear();
     TreeEntryToStridedPtrInfoMap.clear();
-    LoopNest.clear();
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
@@ -3583,7 +3579,7 @@ public:
   template <typename T>
   void removeInstructionsAndOperands(
       ArrayRef<T *> DeadVals,
-      ArrayRef<std::tuple<Value *, unsigned, bool, bool>>
+      ArrayRef<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
           VectorValuesAndScales) {
     SmallVector<WeakTrackingVH> DeadInsts;
     for (T *V : DeadVals) {
@@ -3651,10 +3647,10 @@ public:
         if (auto *OpI = dyn_cast<Instruction>(OpV))
           if (!DeletedInstructions.contains(OpI) &&
               (!OpI->getType()->isVectorTy() ||
-               none_of(VectorValuesAndScales,
-                       [&](const std::tuple<Value *, unsigned, bool, bool> &V) {
-                         return std::get<0>(V) == OpI;
-                       })) &&
+               none_of(
+                   VectorValuesAndScales,
+                   [&](const std::tuple<WeakTrackingVH, unsigned, bool, bool>
+                           &V) { return std::get<0>(V) == OpI; })) &&
               isInstructionTriviallyDead(OpI, TLI))
             DeadInsts.push_back(OpI);
       }
@@ -3768,15 +3764,6 @@ private:
   /// \returns Cast context for the given graph node.
   TargetTransformInfo::CastContextHint
   getCastContextHint(const TreeEntry &TE) const;
-
-  /// \returns the scale of the given tree entry to the loop iteration.
-  /// \p Scalar is the scalar value from the entry, if using the parent for the
-  /// external use.
-  /// \p U is the user of the vectorized value from the entry, if using the
-  /// parent for the external use.
-  unsigned getScaleToLoopIterations(const TreeEntry &TE,
-                                    Value *Scalar = nullptr,
-                                    Instruction *U = nullptr) const;
 
   /// \returns the cost of the vectorizable entry.
   InstructionCost getEntryCost(const TreeEntry *E,
@@ -4715,10 +4702,6 @@ private:
   SmallDenseMap<const TreeEntry *,
                 std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
       CompressEntryToData;
-
-  /// The loop nest, used to check if only a single loop nest is vectorized, not
-  /// multiple, to avoid side-effects from the loop-aware cost model.
-  SmallVector<const Loop *> LoopNest;
 
   /// This POD struct describes one external user in the vectorized tree.
   struct ExternalUser {
@@ -10307,72 +10290,12 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   return {IntrinsicCost, LibCost};
 }
 
-/// Find the innermost loop starting from \p L, for which at least a single
-/// value in \p VL is not invariant.
-static const Loop *findInnermostNonInvariantLoop(const Loop *L,
-                                                 ArrayRef<Value *> VL) {
-  assert(L && "Expected valid loop");
-  auto IsLoopInvariant = [&](const Loop *L, ArrayRef<Value *> VL) {
-    return all_of(VL, [&](Value *V) { return L->isLoopInvariant(V); });
-  };
-  while (L && IsLoopInvariant(L, VL))
-    L = L->getParentLoop();
-  return L;
-}
-
-/// Get the loop nest for the given loop.
-static SmallVector<const Loop *> getLoopNest(const Loop *L) {
-  assert(L && "Expected valid loop");
-  SmallVector<const Loop *> LoopNest;
-  if (LoopAwareTripCount == 0)
-    return LoopNest;
-  while (L) {
-    LoopNest.push_back(L);
-    L = L->getParentLoop();
-  }
-  SmallVector<const Loop *> Res(LoopNest.rbegin(), LoopNest.rend());
-  return Res;
-}
-
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     const InstructionsState &S, ArrayRef<Value *> VL,
     bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
     SmallVectorImpl<Value *> &PointerOps, StridedPtrInfo &SPtrInfo) {
   assert(S.getMainOp() &&
          "Expected instructions with same/alternate opcodes only.");
-
-  // Check the loop nest. We need to be sure we handle a single loop nest at a
-  // time to avoid incorrect cost estimation because of the loop aware cost
-  // model.
-  if (VectorizableTree.empty()) {
-    assert(LoopNest.empty() && "Expected empty loop nest");
-    // Process the first node? Initial fill of the loop nest.
-    BasicBlock *Parent = S.getMainOp()->getParent();
-    if (const Loop *L = LI->getLoopFor(Parent)) {
-      L = findInnermostNonInvariantLoop(L, VL);
-      if (L)
-        LoopNest = getLoopNest(L);
-    }
-  } else {
-    BasicBlock *Parent = S.getMainOp()->getParent();
-    if (const Loop *L = LI->getLoopFor(Parent)) {
-      // Check that the new loop nest is not involved.
-      // Otherwise, mark it as a gather node.
-      L = findInnermostNonInvariantLoop(L, VL);
-      if (L) {
-        SmallVector<const Loop *> NewLoopNest = getLoopNest(L);
-        for (const auto [L1, L2] : zip(LoopNest, NewLoopNest)) {
-          if (L1 != L2) {
-            LLVM_DEBUG(dbgs() << "SLP: Different loop nest.\n");
-            return TreeEntry::NeedToGather;
-          }
-        }
-        if (NewLoopNest.size() > LoopNest.size())
-          LoopNest.append(std::next(NewLoopNest.begin(), LoopNest.size()),
-                          NewLoopNest.end());
-      }
-    }
-  }
 
   unsigned ShuffleOrOp =
       S.isAltShuffle() ? (unsigned)Instruction::ShuffleVector : S.getOpcode();
@@ -13344,8 +13267,6 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   if (ScalarTy->isVectorTy())
     return false;
   const unsigned Sz = DL->getTypeSizeInBits(ScalarTy);
-  if (!isPowerOf2_64(Sz))
-    return false;
   const TreeEntry *LhsTE = getOperandEntry(&TE, /*Idx=*/0);
   const TreeEntry *RhsTE = getOperandEntry(&TE, /*Idx=*/1);
   // Lhs should be zext i<stride> to I<sz>.
@@ -13357,7 +13278,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
     return false;
   Type *SrcScalarTy = cast<ZExtInst>(LhsTE->getMainOp())->getSrcTy();
   unsigned Stride = DL->getTypeSizeInBits(SrcScalarTy);
-  if (!isPowerOf2_64(Stride) || Stride >= Sz)
+  if (!isPowerOf2_64(Stride) || Stride >= Sz || Sz % Stride != 0 ||
+      !isPowerOf2_64(LhsTE->getVectorFactor()))
     return false;
   if (!(RhsTE->isGather() && RhsTE->ReorderIndices.empty() &&
         RhsTE->ReuseShuffleIndices.empty() && !MinBWs.contains(RhsTE)))
@@ -13409,6 +13331,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       return false;
   }
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  auto *SrcType = IntegerType::getIntNTy(ScalarTy->getContext(),
+                                         Stride * LhsTE->getVectorFactor());
   FastMathFlags FMF;
   SmallPtrSet<Value *, 4> CheckedExtracts;
   auto *VecTy = getWidenedType(ScalarTy, TE.getVectorFactor());
@@ -13424,7 +13348,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
           getWidenedType(SrcScalarTy, LhsTE->getVectorFactor()), CastCtx,
           CostKind);
   InstructionCost BitcastCost = TTI->getCastInstrCost(
-      Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx, CostKind);
+      Instruction::BitCast, SrcType, SrcVecTy, CastCtx, CostKind);
   if (!Order.empty()) {
     fixupOrderingIndices(Order);
     SmallVector<int> Mask;
@@ -13436,9 +13360,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   constexpr unsigned ByteSize = 8;
   if (!Order.empty() && isReverseOrder(Order) &&
       DL->getTypeSizeInBits(SrcScalarTy) == ByteSize) {
-    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ScalarTy, {ScalarTy});
+    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
     InstructionCost BSwapCost =
-        TTI->getCastInstrCost(Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx,
+        TTI->getCastInstrCost(Instruction::BitCast, SrcType, SrcVecTy, CastCtx,
                               CostKind) +
         TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
     if (BSwapCost <= BitcastCost) {
@@ -13452,10 +13376,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
           SrcTE->getOpcode() == Instruction::Load && !SrcTE->isAltShuffle() &&
           all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
         auto *LI = cast<LoadInst>(SrcTE->getMainOp());
-        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ScalarTy,
-                                          {ScalarTy});
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
         InstructionCost BSwapCost =
-            TTI->getMemoryOpCost(Instruction::Load, ScalarTy, LI->getAlign(),
+            TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
                                  LI->getPointerAddressSpace(), CostKind) +
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         if (BSwapCost <= BitcastCost) {
@@ -13476,13 +13399,17 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
         all_of(SrcTE->Scalars, [](Value *V) { return V->hasOneUse(); })) {
       auto *LI = cast<LoadInst>(SrcTE->getMainOp());
       BitcastCost =
-          TTI->getMemoryOpCost(Instruction::Load, ScalarTy, LI->getAlign(),
+          TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
                                LI->getPointerAddressSpace(), CostKind);
       VecCost +=
           TTI->getMemoryOpCost(Instruction::Load, SrcVecTy, LI->getAlign(),
                                LI->getPointerAddressSpace(), CostKind);
       ForLoads = true;
     }
+  }
+  if (SrcType != ScalarTy) {
+    BitcastCost += TTI->getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
+                                         TTI::CastContextHint::None, CostKind);
   }
   return BitcastCost < VecCost;
 }
@@ -15153,65 +15080,6 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
   return TTI::CastContextHint::None;
 }
 
-/// Get the assumed loop trip count for the loop \p L.
-static unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE) {
-  if (LoopAwareTripCount == 0)
-    return 1;
-  unsigned Scale = SE.getSmallConstantTripCount(L);
-  if (Scale == 0)
-    Scale = getLoopEstimatedTripCount(const_cast<Loop *>(L)).value_or(0);
-  if (Scale != 0) {
-    // Multiple exiting blocks - choose the minimum between trip count (scale)
-    // and LoopAwareTripCount, since the multiple exit loops can be terminated
-    // early.
-    if (!L->getExitingBlock())
-      return std::min<unsigned>(LoopAwareTripCount, Scale);
-    return Scale;
-  }
-  return LoopAwareTripCount;
-}
-
-unsigned BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
-                                           Instruction *U) const {
-  unsigned Scale = 1;
-  if (TE.State == TreeEntry::SplitVectorize)
-    return Scale;
-  BasicBlock *Parent = nullptr;
-  if (U) {
-    Parent = U->getParent();
-  } else if (TE.isGather()) {
-    EdgeInfo EI = TE.UserTreeIndex;
-    while (EI.UserTE) {
-      if (EI.UserTE->isGather()) {
-        EI = EI.UserTE->UserTreeIndex;
-        continue;
-      }
-      if (EI.UserTE->State == TreeEntry::Vectorize &&
-          EI.UserTE->getOpcode() == Instruction::PHI) {
-        auto *PH = cast<PHINode>(EI.UserTE->getMainOp());
-        Parent = PH->getIncomingBlock(EI.EdgeIdx);
-      } else {
-        Parent = EI.UserTE->getMainOp()->getParent();
-      }
-      break;
-    }
-    if (!Parent)
-      return Scale;
-  } else {
-    Parent = TE.getMainOp()->getParent();
-  }
-  if (const Loop *L = LI->getLoopFor(Parent)) {
-    L = findInnermostNonInvariantLoop(L, Scalar ? ArrayRef(Scalar)
-                                                : ArrayRef(TE.Scalars));
-    if (L) {
-      SmallVector<const Loop *> Nest = getLoopNest(L);
-      for (const Loop *L : reverse(Nest))
-        Scale *= getLoopTripCount(L, *SE);
-    }
-  }
-  return Scale;
-}
-
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -16718,14 +16586,10 @@ InstructionCost BoUpSLP::getSpillCost() {
     if (It != MinBWs.end())
       ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
     auto *VecTy = getWidenedType(ScalarTy, Op->getVectorFactor());
-    unsigned Scale = getScaleToLoopIterations(*Op);
-    InstructionCost KeepLiveCost = TTI->getCostOfKeepingLiveOverCall(VecTy);
-    KeepLiveCost *= Scale;
-    Cost += KeepLiveCost;
+    Cost += TTI->getCostOfKeepingLiveOverCall(VecTy);
     if (ScalarTy->isVectorTy()) {
       // Handle revec dead vector instructions.
-      Cost -= Op->Scalars.size() * TTI->getCostOfKeepingLiveOverCall(ScalarTy) *
-              Scale;
+      Cost -= Op->Scalars.size() * TTI->getCostOfKeepingLiveOverCall(ScalarTy);
     }
   };
   // Memoize the relationship between blocks, i.e. if there is (at least one)
@@ -17114,8 +16978,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     assert((!TE.isGather() || TE.Idx == 0 || TE.UserTreeIndex) &&
            "Expected gather nodes with users only.");
 
-    InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts) *
-                        getScaleToLoopIterations(TE);
+    InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
     Cost += C;
     NodesCosts.try_emplace(&TE, C);
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C << " for bundle "
@@ -17441,8 +17304,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       continue;
     if (!NodesCosts.contains(TE.get())) {
       InstructionCost C =
-          getEntryCost(TE.get(), VectorizedVals, CheckedExtracts) *
-          getScaleToLoopIterations(*TE.get());
+          getEntryCost(TE.get(), VectorizedVals, CheckedExtracts);
       NodesCosts.try_emplace(TE.get(), C);
     }
   }
@@ -17494,21 +17356,7 @@ template <typename T> struct ShuffledInsertData {
 InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
                                      InstructionCost ReductionCost) {
-  InstructionCost Cost = TreeCost;
-
-  Instruction *ReductionRoot = nullptr;
-  if (UserIgnoreList) {
-    const auto It = find_if(*UserIgnoreList, IsaPred<Instruction>);
-    assert(It != UserIgnoreList->end() && "Expected reduction instruction.");
-    ReductionRoot = cast<Instruction>(*It);
-    // Scale reduction cost to the factor of the loop nest trip count.
-    ReductionCost *=
-        getScaleToLoopIterations(*VectorizableTree.front().get(),
-                                 /*Scalar=*/nullptr, ReductionRoot);
-  }
-
-  // Add the cost for reduction.
-  Cost += ReductionCost;
+  InstructionCost Cost = TreeCost + ReductionCost;
 
   if (Cost >= -SLPCostThreshold &&
       none_of(ExternalUses, [](const ExternalUser &EU) {
@@ -17799,9 +17647,6 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       }
     }
 
-    ExtraCost *= getScaleToLoopIterations(EU.E, EU.Scalar,
-                                          cast_or_null<Instruction>(EU.User));
-
     ExtractCost += ExtraCost;
   }
   // Insert externals for extract of operands of casts to be emitted as scalars
@@ -17838,12 +17683,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           assert(SLPReVec && "Only supported by REVEC.");
           SrcTy = getWidenedType(SrcTy, VecTy->getNumElements());
         }
-        InstructionCost CastCost =
-            TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
-                                  TTI::CastContextHint::None,
-                                  TTI::TCK_RecipThroughput) *
-            getScaleToLoopIterations(Root, /*Scalar=*/nullptr, ReductionRoot);
-        Cost += CastCost;
+        Cost += TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
+                                      TTI::CastContextHint::None,
+                                      TTI::TCK_RecipThroughput);
       }
     }
   }
@@ -17926,7 +17768,6 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             })) {
           InstructionCost C =
               ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, FTy, Mask);
-          C *= getScaleToLoopIterations(*TEs.front());
           LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                             << " for final shuffle of insertelement "
                                "external users.\n";
@@ -17945,7 +17786,6 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         auto *FTy = getWidenedType(TEs.back()->Scalars.front()->getType(), VF);
         InstructionCost C =
             ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, FTy, Mask);
-        C *= getScaleToLoopIterations(*TEs.back());
         LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                           << " for final shuffle of vector node and external "
                              "insertelement users.\n";
@@ -17999,6 +17839,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         auto *DstVecTy =
             getWidenedType(Builder.getIntNTy(DstSize), E.getVectorFactor());
         TTI::CastContextHint CCH = getCastContextHint(E);
+        InstructionCost CastCost;
         switch (E.getOpcode()) {
         case Instruction::SExt:
         case Instruction::ZExt:
@@ -18010,11 +17851,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         default:
           break;
         }
-        InstructionCost CastCost =
-            TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
-                                  TTI::TCK_RecipThroughput) *
-            getScaleToLoopIterations(*VectorizableTree.front().get(),
-                                     /*Scalar=*/nullptr, ReductionRoot);
+        CastCost += TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
+                                          TTI::TCK_RecipThroughput);
         Cost += CastCost;
         LLVM_DEBUG(dbgs() << "SLP: Adding cost " << CastCost
                           << " for final resize for reduction from " << SrcVecTy
@@ -18038,10 +17876,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       OS << *SpillCost;
     else
       OS << "<skipped>";
-    OS << ".\nSLP: Extract Cost = " << ExtractCost << ".\n";
-    if (ReductionRoot)
-      OS << "SLP:  Reduction Cost = " << ReductionCost << ".\n";
-    OS << "SLP: Total Cost = " << Cost << ".\n";
+    OS << ".\nSLP: Extract Cost = " << ExtractCost << ".\n"
+       << "SLP: Total Cost = " << Cost << ".\n";
   }
   LLVM_DEBUG(dbgs() << Str);
   if (ViewSLPTree)
@@ -18214,7 +18050,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     return false;
   };
   const EdgeInfo TEUseEI = GetUserEntry(TE);
-  if (!TEUseEI)
+  if (!TEUseEI || (TEUseEI.UserTE->Idx == 0 && TEUseEI.UserTE->isGather() &&
+                   !TEUseEI.UserTE->hasState()))
     return std::nullopt;
   const Instruction *TEInsertPt = &getLastInstructionInBundle(TEUseEI.UserTE);
   const BasicBlock *TEInsertBlock = nullptr;
@@ -21793,7 +21630,8 @@ Value *BoUpSLP::vectorizeTree() {
 Value *BoUpSLP::vectorizeTree(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     Instruction *ReductionRoot,
-    ArrayRef<std::tuple<Value *, unsigned, bool, bool>> VectorValuesAndScales) {
+    ArrayRef<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
+        VectorValuesAndScales) {
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
   EntryToLastInstruction.clear();
@@ -22491,11 +22329,17 @@ Value *BoUpSLP::vectorizeTree(
     IRBuilder<>::InsertPointGuard Guard(Builder);
     Builder.SetInsertPoint(ReductionRoot->getParent(),
                            ReductionRoot->getIterator());
-    Vec = Builder.CreateIntCast(
-        Vec,
-        VectorType::get(Builder.getIntNTy(ReductionBitWidth),
-                        cast<VectorType>(Vec->getType())->getElementCount()),
-        It->second.second);
+    if (isReducedBitcastRoot() || isReducedCmpBitcastRoot()) {
+      Vec = Builder.CreateIntCast(Vec, Builder.getIntNTy(ReductionBitWidth),
+                                  It->second.second);
+
+    } else {
+      Vec = Builder.CreateIntCast(
+          Vec,
+          VectorType::get(Builder.getIntNTy(ReductionBitWidth),
+                          cast<VectorType>(Vec->getType())->getElementCount()),
+          It->second.second);
+    }
   }
   return Vec;
 }
@@ -25444,7 +25288,8 @@ class HorizontalReduction {
   const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
   /// Contains vector values for reduction including their scale factor and
   /// signedness. The last bool is true, if the value was reduced in-tree.
-  SmallVector<std::tuple<Value *, unsigned, bool, bool>> VectorValuesAndScales;
+  SmallVector<std::tuple<WeakTrackingVH, unsigned, bool, bool>>
+      VectorValuesAndScales;
 
   static bool isCmpSelMinMax(Instruction *I) {
     return match(I, m_Select(m_Cmp(), m_Value(), m_Value())) &&
@@ -28498,6 +28343,8 @@ bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {
         const SCEV *SCEVI = SE->getSCEV(GEPList[I]);
         for (int J = I + 1; J < E && Candidates.size() > 1; ++J) {
           auto *GEPJ = GEPList[J];
+          if (!Candidates.count(GEPJ))
+            continue;
           const SCEV *SCEVJ = SE->getSCEV(GEPList[J]);
           if (isa<SCEVConstant>(SE->getMinusSCEV(SCEVI, SCEVJ))) {
             Candidates.remove(GEPI);

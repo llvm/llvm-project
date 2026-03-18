@@ -10,25 +10,22 @@
 ;   A[i] = 2;
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist. For example, each store will access A[0] when i
-; is 1 and 0 respectively.
-; The root cause is that the product of the BTC and the coefficient
-; ((1LL << 62) - 1 and 2) overflows in a signed sense.
+; There is a dependency between the two stores, for example, each store 
+; will access A[0] when i is 1 and 0 respectively.
 define void @symbolicrdiv_prod_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'symbolicrdiv_prod_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
 ; CHECK-SYMBOLIC-RDIV-LABEL: 'symbolicrdiv_prod_ovfl'
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
 ;
@@ -72,22 +69,19 @@ exit:
 ;   offset1 -= 1;
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist. For example,
+; There is a dependency between the two stores, for example,
 ;
 ;  memory access           | i == 2^61 | i == 2^61 + 2^59 | i == 2^61 + 2^60
 ; -------------------------|-----------|------------------|-------------------
 ;  A[2*i - 2^62] (offset0) |           | A[2^60]          | A[2^61]
 ;  A[-i + 2^62]  (offset1) | A[2^61]   |                  | A[2^60]
 ;
-; The root cause is that the calculation of the differenct between the two
-; constants (-2^62 and 2^62) overflows in a signed sense.
 define void @symbolicrdiv_delta_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'symbolicrdiv_delta_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
@@ -95,7 +89,7 @@ define void @symbolicrdiv_delta_ovfl(ptr %A) {
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
 ;

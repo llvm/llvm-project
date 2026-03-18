@@ -5056,12 +5056,6 @@ template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this, ScopeKind::FullExpression);
 
-  // If we won't destroy the toplevel scope, check for memory leaks first.
-  if (!DestroyToplevelScope) {
-    if (!this->emitCheckAllocations(E))
-      return false;
-  }
-
   auto maybeDestroyLocals = [&]() -> bool {
     if (DestroyToplevelScope)
       return RootScope.destroyLocals() && this->emitCheckAllocations(E);
@@ -5102,7 +5096,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
     return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  return maybeDestroyLocals() && this->emitCheckAllocations(E) && false;
+  return maybeDestroyLocals() && false;
 }
 
 template <class Emitter>
@@ -5782,10 +5776,12 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (DiscardResult)
     return true;
 
-  if (this->LambdaThisCapture.Offset > 0) {
-    if (this->LambdaThisCapture.IsPtr)
-      return this->emitGetThisFieldPtr(this->LambdaThisCapture.Offset, E);
-    return this->emitGetPtrThisField(this->LambdaThisCapture.Offset, E);
+  if constexpr (!std::is_same_v<Emitter, EvalEmitter>) {
+    if (this->LambdaThisCapture.Offset > 0) {
+      if (this->LambdaThisCapture.IsPtr)
+        return this->emitGetThisFieldPtr(this->LambdaThisCapture.Offset, E);
+      return this->emitGetPtrThisField(this->LambdaThisCapture.Offset, E);
+    }
   }
 
   // In some circumstances, the 'this' pointer does not actually refer to the
@@ -6119,11 +6115,13 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
-  {
-    LocalScope<Emitter> CondScope(this);
-    if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl))
-        return false;
+  // Start of the loop body {
+  LocalScope<Emitter> CondScope(this);
+
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt()) {
+    if (!visitDeclStmt(CondDecl))
+      return false;
+  }
 
     if (!this->visitBool(Cond))
       return false;
@@ -6139,12 +6137,14 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
 
     if (!CondScope.destroyLocals())
       return false;
-  }
-  if (!this->jump(CondLabel))
-    return false;
-  this->fallthrough(EndLabel);
-  this->emitLabel(EndLabel);
-  return WholeLoopScope.destroyLocals();
+    // } End of loop body.
+
+    if (!this->jump(CondLabel))
+      return false;
+    this->fallthrough(EndLabel);
+    this->emitLabel(EndLabel);
+
+    return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
@@ -7497,14 +7497,16 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     return this->visitDeclRef(D, E);
   };
 
-  // Lambda captures.
-  if (auto It = this->LambdaCaptures.find(D);
-      It != this->LambdaCaptures.end()) {
-    auto [Offset, IsPtr] = It->second;
+  if constexpr (!std::is_same_v<Emitter, EvalEmitter>) {
+    // Lambda captures.
+    if (auto It = this->LambdaCaptures.find(D);
+        It != this->LambdaCaptures.end()) {
+      auto [Offset, IsPtr] = It->second;
 
-    if (IsPtr)
-      return this->emitGetThisFieldPtr(Offset, E);
-    return this->emitGetPtrThisField(Offset, E);
+      if (IsPtr)
+        return this->emitGetThisFieldPtr(Offset, E);
+      return this->emitGetPtrThisField(Offset, E);
+    }
   }
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E);

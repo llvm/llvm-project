@@ -394,6 +394,8 @@ View Reassigned(View a) {
   return a;
 }
 
+namespace lambda_captures {
+
 struct NoSuggestionForThisCapturedByLambda {
   MyObj s;
   bool cond;
@@ -403,3 +405,21 @@ struct NoSuggestionForThisCapturedByLambda {
     };
   }
 };
+
+void Foo(int, int*, const MyObj&, View);
+
+auto implicit_ref_capture(int integer, int* ptr,
+                          const MyObj& ref, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+                          View view) {
+  return [&]() { Foo(integer, ptr, ref, view); }; // expected-warning 3 {{address of stack memory is returned later}} \
+                                                  // expected-note 3 {{returned here}} \
+                                                  // expected-note {{param returned here}}
+}
+
+auto implicit_value_capture(int integer,
+                            int* ptr, // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+                            const MyObj& ref,
+                            View view) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return [=]() { Foo(integer, ptr, ref, view); }; // expected-note 2 {{param returned here}}
+}
+} // namespace lambda_captures

@@ -647,7 +647,6 @@ static void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
       rewriter.splitBlock(callBlock, std::next(callOp->getIterator()));
 
   // Build the try_call to replace the original call.
-  // TODO(cir): Preserve function and argument attributes.
   rewriter.setInsertionPoint(callOp);
   cir::TryCallOp tryCallOp;
   if (callOp.isIndirect()) {
@@ -664,6 +663,28 @@ static void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
     tryCallOp =
         cir::TryCallOp::create(rewriter, loc, callOp.getCalleeAttr(), resType,
                                normalDest, unwindDest, callOp.getArgOperands());
+  }
+
+  // Copy all attributes from the original call except those already set by
+  // TryCallOp::create or that are operation-specific and should not be copied.
+  llvm::StringRef excludedAttrs[] = {
+      CIRDialect::getCalleeAttrName(), // Set by create()
+      CIRDialect::getOperandSegmentSizesAttrName(),
+  };
+#ifndef NDEBUG
+  // We don't expect to ever see any of these attributes on a call that we
+  // converted to a try_call.
+  llvm::StringRef unexpectedAttrs[] = {
+      CIRDialect::getNoThrowAttrName(),
+      CIRDialect::getNoUnwindAttrName(),
+  };
+#endif
+  for (mlir::NamedAttribute attr : callOp->getAttrs()) {
+    if (llvm::is_contained(excludedAttrs, attr.getName()))
+      continue;
+    assert(!llvm::is_contained(unexpectedAttrs, attr.getName()) &&
+           "unexpected attribute on converted call");
+    tryCallOp->setAttr(attr.getName(), attr.getValue());
   }
 
   // Replace uses of the call result with the try_call result.

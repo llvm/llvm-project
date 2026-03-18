@@ -3272,10 +3272,13 @@ LogicalResult ShuffleOp::verify() {
 }
 
 LogicalResult
-ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
+ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location> loc,
                             ShuffleOp::Adaptor adaptor,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
-  auto v1Type = llvm::cast<VectorType>(adaptor.getV1().getType());
+  auto v1Type = llvm::dyn_cast<VectorType>(adaptor.getV1().getType());
+  if (!v1Type) {
+    return emitOptionalError(loc, "expected vector type");
+  }
   auto v1Rank = v1Type.getRank();
   // Construct resulting type: leading dimension matches mask
   // length, all trailing dimensions match the operands.

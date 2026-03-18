@@ -120,6 +120,12 @@ def int_dx_resource_samplelevel
                              llvm_float_ty, llvm_any_ty],
                             [IntrReadMem]>;
 
+def int_dx_resource_load_level
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_any_ty, llvm_any_ty, llvm_any_ty,
+                             llvm_any_ty],
+                            [IntrReadMem]>;
+
 def int_dx_resource_samplecmp
     : DefaultAttrsIntrinsic<[llvm_any_ty],
                             [llvm_any_ty, llvm_any_ty, llvm_any_ty,
@@ -231,6 +237,7 @@ def int_dx_wave_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i1_ty], [IntrCon
 def int_dx_wave_ballot : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [llvm_i1_ty], [IntrConvergent, IntrNoMem]>;
 def int_dx_wave_getlaneindex : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrConvergent, IntrNoMem]>;
 def int_dx_wave_reduce_or : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
+def int_dx_wave_reduce_xor : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
 def int_dx_wave_reduce_max : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
 def int_dx_wave_reduce_umax : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;
 def int_dx_wave_reduce_min : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem]>;

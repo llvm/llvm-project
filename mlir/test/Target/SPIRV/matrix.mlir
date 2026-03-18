@@ -54,6 +54,13 @@ spirv.module Physical64 Vulkan requires #spirv.vce<v1.3, [Shader, Linkage, Coope
     %result = spirv.VectorTimesMatrix %arg0, %arg1 : vector<3xf32>, !spirv.matrix<4 x vector<3xf32>> -> vector<4xf32>
     spirv.ReturnValue %result : vector<4xf32>
   }
+
+  // CHECK-LABEL: @outer_product_1
+  spirv.func @outer_product_1(%arg0: vector<3xf32>, %arg1: vector<2xf32>) -> !spirv.matrix<2 x vector<3xf32>> "None" {
+    // CHECK: {{%.*}} = spirv.OuterProduct {{%.*}}, {{%.*}} : vector<3xf32>, vector<2xf32> -> !spirv.matrix<2 x vector<3xf32>>
+    %result = spirv.OuterProduct %arg0, %arg1 : vector<3xf32>, vector<2xf32> -> !spirv.matrix<2 x vector<3xf32>>
+    spirv.ReturnValue %result : !spirv.matrix<2 x vector<3xf32>>
+  }
   
   // CHECK-LABEL: @matrix_times_matrix_1
   spirv.func @matrix_times_matrix_1(%arg0: !spirv.matrix<3 x vector<3xf32>>, %arg1: !spirv.matrix<3 x vector<3xf32>>) -> !spirv.matrix<3 x vector<3xf32>> "None"{

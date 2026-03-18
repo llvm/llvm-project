@@ -1568,6 +1568,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
     }
     for (auto VT : {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1}) {
+      setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
+                         Custom);
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
     }
@@ -2004,7 +2006,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::VSCALE, MVT::i32, Custom);
 
     for (auto VT : {MVT::v16i1, MVT::v8i1, MVT::v4i1, MVT::v2i1})
-      setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
+      setOperationAction(
+          {ISD::INTRINSIC_WO_CHAIN, ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON},
+          VT, Custom);
   }
 
   // Handle partial reduction operations
@@ -7018,24 +7022,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         ADDLV, DAG.getConstant(0, DL, MVT::i64));
     return EXTRACT_VEC_ELT;
   }
-  case Intrinsic::experimental_cttz_elts: {
-    SDValue CttzOp = Op.getOperand(1);
-    EVT VT = CttzOp.getValueType();
-    assert(VT.getVectorElementType() == MVT::i1 && "Expected MVT::i1");
-
-    if (VT.isFixedLengthVector()) {
-      // We can use SVE instructions to lower this intrinsic by first creating
-      // an SVE predicate register mask from the fixed-width vector.
-      VT = getTypeToTransformTo(*DAG.getContext(), VT);
-      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, CttzOp);
-      CttzOp = convertFixedMaskToScalableVector(Mask, DAG);
-    }
-
-    SDValue Pg = getPredicateForVector(DAG, DL, VT);
-    SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, Pg, CttzOp);
-    return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
-  }
   case Intrinsic::experimental_vector_match: {
     return LowerVectorMatch(Op, DAG);
   }
@@ -7118,7 +7104,8 @@ bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   // results in just one set of predicate unpacks at the start, instead of
   // multiple sets of vector unpacks after each load.
   if (auto *Ld = dyn_cast<MaskedLoadSDNode>(ExtVal->getOperand(0))) {
-    if (!isLoadExtLegalOrCustom(ISD::ZEXTLOAD, ExtVT, Ld->getValueType(0))) {
+    if (!isLoadLegalOrCustom(ExtVT, Ld->getValueType(0), Ld->getAlign(),
+                             Ld->getAddressSpace(), ISD::ZEXTLOAD, false)) {
       // Disable extending masked loads for fixed-width for now, since the code
       // quality doesn't look great.
       if (!ExtVT.isScalableVector())
@@ -8498,6 +8485,26 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerCLMUL(Op, DAG);
   case ISD::FCANONICALIZE:
     return LowerFCANONICALIZE(Op, DAG);
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON: {
+    SDLoc DL(Op);
+    SDValue CttzOp = Op.getOperand(0);
+    EVT VT = CttzOp.getValueType();
+    assert(VT.getVectorElementType() == MVT::i1 && "Expected MVT::i1");
+
+    if (VT.isFixedLengthVector()) {
+      // We can use SVE instructions to lower this intrinsic by first creating
+      // an SVE predicate register mask from the fixed-width vector.
+      VT = getTypeToTransformTo(*DAG.getContext(), VT);
+      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, CttzOp);
+      CttzOp = convertFixedMaskToScalableVector(Mask, DAG);
+    }
+
+    SDValue Pg = getPredicateForVector(DAG, DL, VT);
+    SDValue NewCttzElts =
+        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, Pg, CttzOp);
+    return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
+  }
   }
 }
 
@@ -16044,10 +16051,9 @@ static SDValue trySVESplat64(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc DL(Op);
-  SDValue SplatVal = DAG.getSplatVector(MVT::nxv2i64, DL,
-                                        DAG.getConstant(Val64, DL, MVT::i64));
-  SDValue Res = convertFromScalableVector(DAG, MVT::v2i64, SplatVal);
-  return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Res);
+  SDValue SplatVal = DAG.getNode(AArch64ISD::DUP, DL, MVT::v2i64,
+                                 DAG.getConstant(Val64, DL, MVT::i64));
+  return DAG.getNode(AArch64ISD::NVCAST, DL, VT, SplatVal);
 }
 
 static SDValue ConstantBuildVector(SDValue Op, SelectionDAG &DAG,
@@ -21999,11 +22005,16 @@ performInsertSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   EVT VecVT = Vec.getValueType();
   EVT SubVT = SubVec.getValueType();
 
-  // Promote fixed length vector zeros.
+  // Promote fixed length vector constants.
   if (VecVT.isScalableVector() && SubVT.isFixedLengthVector() &&
-      Vec.isUndef() && isZerosVector(SubVec.getNode()))
-    return VecVT.isInteger() ? DAG.getConstant(0, DL, VecVT)
-                             : DAG.getConstantFP(0, DL, VecVT);
+      Vec.isUndef()) {
+    SDValue SplatVal = DAG.getSplatValue(SubVec);
+    if (auto C = dyn_cast_or_null<ConstantSDNode>(SplatVal))
+      return DAG.getConstant(C->getAPIntValue(), DL, VecVT);
+
+    if (auto C = dyn_cast_or_null<ConstantFPSDNode>(SplatVal))
+      return DAG.getConstantFP(C->getValueAPF(), DL, VecVT);
+  }
 
   // Only do this for legal fixed vector types.
   if (!VecVT.isFixedLengthVector() ||
@@ -23366,6 +23377,31 @@ static SDValue performAddTruncShiftCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::ADD, DL, VT, Trunc, Shift);
 }
 
+// Fold ADD(SBC(Y, 0, W), C) -> SBC(Y, -C, W)
+// SBC(Y, 0, W) = Y - 0 - ~carry = Y + carry - 1
+// Adding C:  Y + carry - 1 + C = Y - (-C) - ~carry = SBC(Y, -C, W)
+static SDValue performAddWithSBCCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::ADD)
+    return SDValue();
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDValue SBC = N->getOperand(0);
+  SDValue C = N->getOperand(1);
+  // ADD is commutative; operands may be on either side.
+  if (SBC.getOpcode() != AArch64ISD::SBC)
+    std::swap(SBC, C);
+  if (SBC.getOpcode() != AArch64ISD::SBC || !SBC.hasOneUse())
+    return SDValue();
+  if (!isNullConstant(SBC.getOperand(1)))
+    return SDValue();
+  // AArch64 SBC (non-flag-setting) has only one output; no flags guard needed.
+  SDLoc DL(N);
+  return DAG.getNode(AArch64ISD::SBC, DL, VT, SBC.getOperand(0),
+                     DAG.getNegative(C, DL, VT), SBC.getOperand(2));
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -23391,7 +23427,8 @@ static SDValue performAddSubCombine(SDNode *N,
     return Val;
   if (SDValue Val = performAddTruncShiftCombine(N, DCI.DAG))
     return Val;
-
+  if (SDValue Val = performAddWithSBCCombine(N, DCI.DAG))
+    return Val;
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
     return Val;
 

@@ -272,7 +272,7 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
 
   // Check scheduled(), setScheduled().
   EXPECT_FALSE(N0->scheduled());
-  N0->setScheduled(true);
+  N0->setScheduled();
   EXPECT_TRUE(N0->scheduled());
 }
 
@@ -867,7 +867,7 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
     sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
     DAG.extend({S2, S2});
     auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
-    S2N->setScheduled(true);
+    S2N->setScheduled();
 
     DAG.extend({S1, S1});
     auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
@@ -1017,7 +1017,7 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %arg) {
   EXPECT_EQ(S1MemN->getNumUnscheduledSuccs(), 1u);
   EXPECT_EQ(S2MemN->getNumUnscheduledSuccs(), 0u);
   // Mark S2 as scheduled and erase it.
-  S2MemN->setScheduled(true);
+  S2MemN->setScheduled();
   S2->eraseFromParent();
   EXPECT_EQ(DAG.getNode(S2), nullptr);
   // Check that we did not update S1's UnscheduledSuccs
@@ -1259,7 +1259,7 @@ define void @foo(i8 %v0) {
 #ifndef NDEBUG
   EXPECT_TRUE(Add0N->validUnscheduledSuccs());
 #endif
-  Add0N->setScheduled(true);
+  Add0N->setScheduled();
 #ifndef NDEBUG
   EXPECT_FALSE(Add0N->validUnscheduledSuccs());
   EXPECT_DEATH(Add0N->getNumUnscheduledSuccs(), ".*");
@@ -1268,7 +1268,7 @@ define void @foo(i8 %v0) {
 #ifndef NDEBUG
   EXPECT_TRUE(Add1N->validUnscheduledSuccs());
 #endif
-  Add1N->setScheduled(true);
+  Add1N->setScheduled();
 #ifndef NDEBUG
   EXPECT_FALSE(Add1N->validUnscheduledSuccs());
   EXPECT_DEATH(Add1N->getNumUnscheduledSuccs(), ".*");

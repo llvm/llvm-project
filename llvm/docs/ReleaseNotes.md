@@ -83,6 +83,13 @@ Changes to LLVM infrastructure
 * Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
   `llvm/utils/reduce_pipeline.py`.
 
+* The ``Br`` opcode was split into two opcodes separating unconditional
+  (``UncondBr``) and conditional (``CondBr``) branches.
+
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``getOperand`` or
+  ``setOperand`` to access successors.
+
 Changes to building LLVM
 ------------------------
 
@@ -159,6 +166,7 @@ Changes to the RISC-V Backend
 * `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
 * Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
   Reordering Structured Data) extension.
+* `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -184,6 +192,12 @@ Changes to the Python bindings
 
 Changes to the C API
 --------------------
+
+* Replaced opcode ``LLVMBr`` with ``LLVMUncondBr`` and ``LLVMCondBr``.
+
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``LLVMGetOperand``
+  or ``LLVMSetOperand`` to access successors.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
