@@ -229,7 +229,8 @@ template <class T> static const T *chooseDefinitionRedecl(const T *Tmpl) {
 // attribute.
 //
 // The function handles specializations (and partial specializations) of
-// class templates. For any other decl, it returns the input unchagned.
+// class and function templates.
+// For any other decl, it returns the input unchagned.
 static const Decl *
 preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
   // For function template specializations (including instantiated friend
