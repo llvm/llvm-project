@@ -5110,6 +5110,13 @@ bool IRTranslatorImpl::runOnMachineFunction(
     const LibcallLoweringInfo *LibcallInfo, SSPLayoutInfo *StackProtectorInfo) {
   MF = &CurMF;
   const Function &F = MF->getFunction();
+
+  // Make sure oracle functions are deleted.
+  if (F.hasFnAttribute("oracle-function")) {
+    MF->getFunction().setLinkage(GlobalValue::AvailableExternallyLinkage);
+    return false;
+  }
+
   ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
   CLI = MF->getSubtarget().getCallLowering();
   SPInfo = StackProtectorInfo;
