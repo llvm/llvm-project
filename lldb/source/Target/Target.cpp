@@ -3159,7 +3159,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   // Also collect unified hooks that fire on process stop.
   std::vector<HookSP> active_unified_hooks;
   for (auto &[_, hook] : m_hooks) {
-    if (hook->IsActive() && hook->FiresOn(Hook::kProcessStop) &&
+    if (hook->IsEnabled() && hook->FiresOn(Hook::kProcessStop) &&
         (!at_initial_stop || hook->GetRunAtInitialStop()))
       active_unified_hooks.push_back(hook);
   }
@@ -4318,10 +4318,11 @@ Target::Hook::Hook(lldb::TargetSP target_sp, lldb::user_id_t uid)
     : UserID(uid), m_target_sp(std::move(target_sp)) {}
 
 Target::Hook::Hook(const Hook &rhs)
-    : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp), m_active(rhs.m_active),
-      m_event_mask(rhs.m_event_mask), m_sc_specifier_sp(rhs.m_sc_specifier_sp),
-      m_auto_continue(rhs.m_auto_continue),
+    : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
+      m_enabled(rhs.m_enabled), m_trigger_mask(rhs.m_trigger_mask),
+      m_sc_specifier_sp(rhs.m_sc_specifier_sp),
       m_at_initial_stop(rhs.m_at_initial_stop),
+      m_auto_continue(rhs.m_auto_continue),
       m_suppress_output(rhs.m_suppress_output) {
   if (rhs.m_thread_spec_up)
     m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
@@ -4358,24 +4359,26 @@ void Target::Hook::GetDescription(Stream &s,
     return;
   s.IndentMore();
   s.Indent();
-  s.Printf("State: %s\n", m_active ? "enabled" : "disabled");
+  s.Printf("State: %s\n", m_enabled ? "enabled" : "disabled");
 
-  if (m_event_mask != kModulesLoaded) {
+  {
     std::string fires_on;
-    if (m_event_mask & kModulesLoaded)
+    if (m_trigger_mask & kModulesLoaded)
       fires_on += "load";
-    if (m_event_mask & kModulesUnloaded) {
+    if (m_trigger_mask & kModulesUnloaded) {
       if (!fires_on.empty())
         fires_on += ", ";
       fires_on += "unload";
     }
-    if (m_event_mask & kProcessStop) {
+    if (m_trigger_mask & kProcessStop) {
       if (!fires_on.empty())
         fires_on += ", ";
       fires_on += "stop";
     }
-    s.Indent();
-    s.Printf("Fires on: %s\n", fires_on.c_str());
+    if (!fires_on.empty()) {
+      s.Indent();
+      s.Printf("Triggers: %s\n", fires_on.c_str());
+    }
   }
 
   if (m_auto_continue)
@@ -4675,31 +4678,31 @@ Target::HookSP Target::GetHookAtIndex(size_t index) {
   return iter->second;
 }
 
-bool Target::SetHookActiveStateByID(lldb::user_id_t uid, bool active_state) {
+bool Target::SetHookEnabledStateByID(lldb::user_id_t uid, bool enabled) {
   auto iter = m_hooks.find(uid);
   if (iter == m_hooks.end())
     return false;
-  iter->second->SetIsActive(active_state);
+  iter->second->SetIsEnabled(enabled);
   return true;
 }
 
-void Target::SetAllHooksActiveState(bool active_state) {
+void Target::SetAllHooksEnabledState(bool enabled) {
   for (auto &[_, hook] : m_hooks)
-    hook->SetIsActive(active_state);
+    hook->SetIsEnabled(enabled);
 }
 
 void Target::RunModuleHooks(bool is_load) {
   if (m_hooks.empty())
     return;
 
-  uint32_t event = is_load ? Hook::kModulesLoaded : Hook::kModulesUnloaded;
+  uint32_t trigger = is_load ? Hook::kModulesLoaded : Hook::kModulesUnloaded;
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
 
   for (auto &[_, hook_sp] : m_hooks) {
-    if (!hook_sp->IsActive())
+    if (!hook_sp->IsEnabled())
       continue;
-    if (!hook_sp->FiresOn(event))
+    if (!hook_sp->FiresOn(trigger))
       continue;
     if (is_load)
       hook_sp->HandleModuleLoaded(output_sp);

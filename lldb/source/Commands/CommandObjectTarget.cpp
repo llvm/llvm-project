@@ -5318,201 +5318,15 @@ public:
         m_use_one_liner = true;
         m_one_liner.push_back(std::string(option_arg));
         break;
+      case 'L':
+        m_on_load = true;
+        break;
       case 'u':
         m_on_unload = true;
         break;
       case 'S':
         m_on_stop = true;
         break;
-      default:
-        llvm_unreachable("unhandled option");
-      }
-      return error;
-    }
-
-    void OptionParsingStarting(ExecutionContext *execution_context) override {
-      m_use_one_liner = false;
-      m_one_liner.clear();
-      m_on_unload = false;
-      m_on_stop = false;
-    }
-
-    std::vector<std::string> m_one_liner;
-    bool m_use_one_liner = false;
-    bool m_on_unload = false;
-    bool m_on_stop = false;
-  };
-
-  CommandObjectTargetHookAdd(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "target hook add",
-            "Add a hook to be executed on target lifecycle events.",
-            "target hook add"),
-        IOHandlerDelegateMultiline("DONE",
-                                   IOHandlerDelegate::Completion::LLDBCommand),
-        m_python_class_options("scripted hook", false, 'P') {
-    SetHelpLong(R"help(
-Hooks fire on target lifecycle events. By default, hooks fire when modules are
-loaded into the target. Use --on-unload (-u) to also fire on module unload, and
---on-stop (-S) to also fire when the process stops.
-
-Command-based hooks:
-
-    target hook add -o "script print('module loaded')"
-    target hook add -u -o "script print('module event')"
-    target hook add -S -o "bt"
-    target hook add -u -S -o "script print('all events')"
-
-Use 'target hook add-filter' to add stop-event filters to an existing hook:
-
-    target hook add -S -o "bt"
-    target hook add-filter -s mylib.so -n main 1
-
-Python-based hooks:
-
-    target hook add -P mymodule.MyHook
-    target hook add -u -S -P mymodule.MyHook
-
-The Python class should implement:
-
-    class MyHook:
-        def __init__(self, target, extra_args, internal_dict):
-            self.target = target
-        def handle_module_loaded(self, stream):    # required
-            pass
-        def handle_module_unloaded(self, stream):  # optional
-            pass
-        def handle_stop(self, exe_ctx, stream):    # optional, return bool
-            return True  # True = should_stop
-
-handle_module_loaded is required. handle_module_unloaded is only called when
---on-unload is specified. handle_stop is only called when --on-stop is
-specified and should return True to stop or False to continue.
-)help");
-    m_all_options.Append(&m_python_class_options,
-                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_2);
-    m_all_options.Append(&m_options);
-    m_all_options.Finalize();
-  }
-
-  ~CommandObjectTargetHookAdd() override = default;
-
-  Options *GetOptions() override { return &m_all_options; }
-
-protected:
-  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    if (interactive) {
-      if (lldb::LockableStreamFileSP output_sp =
-              io_handler.GetOutputStreamFileSP()) {
-        LockedStreamFile locked_stream = output_sp->Lock();
-        locked_stream.PutCString(
-            "Enter your hook command(s). Type 'DONE' to end.\n");
-      }
-    }
-  }
-
-  void IOHandlerInputComplete(IOHandler &io_handler,
-                              std::string &line) override {
-    if (m_hook_sp) {
-      if (line.empty()) {
-        if (lldb::LockableStreamFileSP error_sp =
-                io_handler.GetErrorStreamFileSP()) {
-          LockedStreamFile locked_stream = error_sp->Lock();
-          locked_stream.Printf("error: hook #%" PRIu64
-                               " aborted, no commands.\n",
-                               m_hook_sp->GetID());
-        }
-        GetTarget().UndoCreateHook(m_hook_sp->GetID());
-      } else {
-        auto *hook = static_cast<Target::HookCommandLine *>(m_hook_sp.get());
-        hook->SetActionFromString(line);
-        if (lldb::LockableStreamFileSP output_sp =
-                io_handler.GetOutputStreamFileSP()) {
-          LockedStreamFile locked_stream = output_sp->Lock();
-          locked_stream.Printf("Hook #%" PRIu64 " added.\n",
-                               m_hook_sp->GetID());
-        }
-      }
-      m_hook_sp.reset();
-    }
-    io_handler.SetIsDone(true);
-  }
-
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    m_hook_sp.reset();
-    Target &target = GetTarget();
-
-    Target::Hook::HookKind hook_kind;
-    if (m_python_class_options.GetName().empty())
-      hook_kind = Target::Hook::HookKind::CommandBased;
-    else
-      hook_kind = Target::Hook::HookKind::ScriptBased;
-
-    Target::HookSP new_hook_sp = target.CreateHook(hook_kind);
-
-    // Build event mask.
-    uint32_t event_mask = Target::Hook::kModulesLoaded;
-    if (m_options.m_on_unload)
-      event_mask |= Target::Hook::kModulesUnloaded;
-    if (m_options.m_on_stop)
-      event_mask |= Target::Hook::kProcessStop;
-    new_hook_sp->SetEventMask(event_mask);
-
-    if (m_options.m_use_one_liner) {
-      auto *hook = static_cast<Target::HookCommandLine *>(new_hook_sp.get());
-      hook->SetActionFromStrings(m_options.m_one_liner);
-      result.AppendMessageWithFormat("Hook #%" PRIu64 " added.\n",
-                                     new_hook_sp->GetID());
-    } else if (!m_python_class_options.GetName().empty()) {
-      auto *hook = static_cast<Target::HookScripted *>(new_hook_sp.get());
-      Status callback_error =
-          hook->SetScriptCallback(m_python_class_options.GetName(),
-                                  m_python_class_options.GetStructuredData());
-      if (callback_error.Fail()) {
-        result.AppendErrorWithFormat("error: couldn't add hook: %s\n",
-                                     callback_error.AsCString());
-        target.UndoCreateHook(new_hook_sp->GetID());
-        return;
-      }
-      result.AppendMessageWithFormat("Hook #%" PRIu64 " added.\n",
-                                     new_hook_sp->GetID());
-    } else {
-      m_hook_sp = new_hook_sp;
-      m_interpreter.GetLLDBCommandsFromIOHandler("> ",   // prompt
-                                                 *this); // delegate
-    }
-    result.SetStatus(eReturnStatusSuccessFinishNoResult);
-  }
-
-private:
-  CommandOptions m_options;
-  OptionGroupPythonClassWithDict m_python_class_options;
-  OptionGroupOptions m_all_options;
-  Target::HookSP m_hook_sp;
-};
-
-#pragma mark CommandObjectTargetHookAddFilter
-
-#define LLDB_OPTIONS_target_hook_add_filter
-#include "CommandOptions.inc"
-
-class CommandObjectTargetHookAddFilter : public CommandObjectParsed {
-public:
-  class CommandOptions : public Options {
-  public:
-    CommandOptions() = default;
-    ~CommandOptions() override = default;
-
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_target_hook_add_filter_options);
-    }
-
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
-      const int short_option =
-          g_target_hook_add_filter_options[option_idx].short_option;
-      switch (short_option) {
       case 's':
         m_module_name = std::string(option_arg);
         m_sym_ctx_specified = true;
@@ -5606,6 +5420,11 @@ public:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_use_one_liner = false;
+      m_one_liner.clear();
+      m_on_load = false;
+      m_on_unload = false;
+      m_on_stop = false;
       m_sym_ctx_specified = false;
       m_thread_specified = false;
       m_module_name.clear();
@@ -5622,6 +5441,13 @@ public:
       m_at_initial_stop = true;
     }
 
+    std::vector<std::string> m_one_liner;
+    bool m_use_one_liner = false;
+    bool m_on_load = false;
+    bool m_on_unload = false;
+    bool m_on_stop = false;
+
+    // Filter options (for stop trigger).
     bool m_sym_ctx_specified = false;
     bool m_thread_specified = false;
     std::string m_module_name;
@@ -5638,60 +5464,128 @@ public:
     bool m_at_initial_stop = true;
   };
 
-  CommandObjectTargetHookAddFilter(CommandInterpreter &interpreter)
+  CommandObjectTargetHookAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(
-            interpreter, "target hook add-filter",
-            "Add stop-event filters to an existing hook.",
-            "target hook add-filter [<filter-options>] <hook-id>") {
+            interpreter, "target hook add",
+            "Add a hook to be executed on target lifecycle events.",
+            "target hook add"),
+        IOHandlerDelegateMultiline("DONE",
+                                   IOHandlerDelegate::Completion::LLDBCommand),
+        m_python_class_options("scripted hook", false, 'P') {
     SetHelpLong(R"help(
-Adds stop-event filters to an existing hook. Filters control when the hook's
-stop handler fires based on the current execution context (module, function,
-source file/line, thread, etc.).
+Hooks fire on target lifecycle events. At least one trigger must be specified:
+--on-load (-L), --on-unload (-u), or --on-stop (-S). Multiple triggers can be
+combined.
 
-If the hook does not already fire on process stop, the stop event is
-automatically added to its event mask.
+Command-based hooks:
 
-Examples:
-
+    target hook add -L -o "script print('module loaded')"
+    target hook add -L -u -o "script print('module event')"
     target hook add -S -o "bt"
-    target hook add-filter -s mylib.so 1
+    target hook add -L -u -S -o "script print('all events')"
 
-    target hook add -S -o "bt"
-    target hook add-filter -n main -G true 1
+Stop-event filters can be specified inline:
+
+    target hook add -S -s mylib.so -n main -o "bt"
+    target hook add -S -G true -o "thread info"
+
+Python-based hooks:
+
+    target hook add -L -P mymodule.MyHook
+    target hook add -L -u -S -P mymodule.MyHook
+
+The Python class should implement:
+
+    class MyHook:
+        def __init__(self, target, extra_args, internal_dict):
+            self.target = target
+        def handle_module_loaded(self, stream):    # for --on-load
+            pass
+        def handle_module_unloaded(self, stream):  # for --on-unload
+            pass
+        def handle_stop(self, exe_ctx, stream):    # for --on-stop, return bool
+            return True  # True = should_stop
+
+Each handler is only called for the triggers that were specified.
 )help");
-    AddSimpleArgumentList(eArgTypeStopHookID);
+    m_all_options.Append(&m_python_class_options,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_2);
+    m_all_options.Append(&m_options);
+    m_all_options.Finalize();
   }
 
-  ~CommandObjectTargetHookAddFilter() override = default;
+  ~CommandObjectTargetHookAdd() override = default;
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_all_options; }
 
 protected:
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(
+            "Enter your hook command(s). Type 'DONE' to end.\n");
+      }
+    }
+  }
+
+  void IOHandlerInputComplete(IOHandler &io_handler,
+                              std::string &line) override {
+    if (m_hook_sp) {
+      if (line.empty()) {
+        if (lldb::LockableStreamFileSP error_sp =
+                io_handler.GetErrorStreamFileSP()) {
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf("error: hook #%" PRIu64
+                               " aborted, no commands.\n",
+                               m_hook_sp->GetID());
+        }
+        GetTarget().UndoCreateHook(m_hook_sp->GetID());
+      } else {
+        auto *hook = static_cast<Target::HookCommandLine *>(m_hook_sp.get());
+        hook->SetActionFromString(line);
+        if (lldb::LockableStreamFileSP output_sp =
+                io_handler.GetOutputStreamFileSP()) {
+          LockedStreamFile locked_stream = output_sp->Lock();
+          locked_stream.Printf("Hook #%" PRIu64 " added.\n",
+                               m_hook_sp->GetID());
+        }
+      }
+      m_hook_sp.reset();
+    }
+    io_handler.SetIsDone(true);
+  }
+
   void DoExecute(Args &command, CommandReturnObject &result) override {
+    m_hook_sp.reset();
     Target &target = GetTarget();
 
-    if (command.GetArgumentCount() != 1) {
-      result.AppendError("exactly one hook id is required.");
+    // At least one trigger must be specified.
+    if (!m_options.m_on_load && !m_options.m_on_unload &&
+        !m_options.m_on_stop) {
+      result.AppendError("at least one trigger must be specified: "
+                         "--on-load (-L), --on-unload (-u), or --on-stop (-S)");
       return;
     }
 
-    lldb::user_id_t hook_id;
-    if (!llvm::to_integer(command.GetArgumentAtIndex(0), hook_id)) {
-      result.AppendErrorWithFormat("invalid hook id: \"%s\".\n",
-                                   command.GetArgumentAtIndex(0));
-      return;
-    }
+    Target::Hook::HookKind hook_kind;
+    if (m_python_class_options.GetName().empty())
+      hook_kind = Target::Hook::HookKind::CommandBased;
+    else
+      hook_kind = Target::Hook::HookKind::ScriptBased;
 
-    Target::HookSP hook_sp = target.GetHookByID(hook_id);
-    if (!hook_sp) {
-      result.AppendErrorWithFormat("unknown hook id: \"%" PRIu64 "\".\n",
-                                   hook_id);
-      return;
-    }
+    Target::HookSP new_hook_sp = target.CreateHook(hook_kind);
 
-    // Automatically add the stop event if not already present.
-    if (!hook_sp->FiresOn(Target::Hook::kProcessStop))
-      hook_sp->AddEvent(Target::Hook::kProcessStop);
+    // Build trigger mask from explicit flags.
+    uint32_t trigger_mask = 0;
+    if (m_options.m_on_load)
+      trigger_mask |= Target::Hook::kModulesLoaded;
+    if (m_options.m_on_unload)
+      trigger_mask |= Target::Hook::kModulesUnloaded;
+    if (m_options.m_on_stop)
+      trigger_mask |= Target::Hook::kProcessStop;
+    new_hook_sp->SetTriggerMask(trigger_mask);
 
     // Set up symbol context specifier if filter options were provided.
     if (m_options.m_sym_ctx_specified) {
@@ -5726,7 +5620,7 @@ protected:
             m_options.m_function_name.c_str(),
             SymbolContextSpecifier::eFunctionSpecified);
 
-      hook_sp->SetSCSpecifier(specifier_up.release());
+      new_hook_sp->SetSCSpecifier(specifier_up.release());
     }
 
     // Set up thread specifier.
@@ -5745,19 +5639,43 @@ protected:
       if (!m_options.m_queue_name.empty())
         thread_spec->SetQueueName(m_options.m_queue_name.c_str());
 
-      hook_sp->SetThreadSpecifier(thread_spec);
+      new_hook_sp->SetThreadSpecifier(thread_spec);
     }
 
-    hook_sp->SetAutoContinue(m_options.m_auto_continue);
-    hook_sp->SetRunAtInitialStop(m_options.m_at_initial_stop);
+    new_hook_sp->SetAutoContinue(m_options.m_auto_continue);
+    new_hook_sp->SetRunAtInitialStop(m_options.m_at_initial_stop);
 
-    result.AppendMessageWithFormat("Filter added to hook #%" PRIu64 ".\n",
-                                   hook_id);
+    if (m_options.m_use_one_liner) {
+      auto *hook = static_cast<Target::HookCommandLine *>(new_hook_sp.get());
+      hook->SetActionFromStrings(m_options.m_one_liner);
+      result.AppendMessageWithFormat("Hook #%" PRIu64 " added.\n",
+                                     new_hook_sp->GetID());
+    } else if (!m_python_class_options.GetName().empty()) {
+      auto *hook = static_cast<Target::HookScripted *>(new_hook_sp.get());
+      Status callback_error =
+          hook->SetScriptCallback(m_python_class_options.GetName(),
+                                  m_python_class_options.GetStructuredData());
+      if (callback_error.Fail()) {
+        result.AppendErrorWithFormat("error: couldn't add hook: %s\n",
+                                     callback_error.AsCString());
+        target.UndoCreateHook(new_hook_sp->GetID());
+        return;
+      }
+      result.AppendMessageWithFormat("Hook #%" PRIu64 " added.\n",
+                                     new_hook_sp->GetID());
+    } else {
+      m_hook_sp = new_hook_sp;
+      m_interpreter.GetLLDBCommandsFromIOHandler("> ",   // prompt
+                                                 *this); // delegate
+    }
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
 private:
   CommandOptions m_options;
+  OptionGroupPythonClassWithDict m_python_class_options;
+  OptionGroupOptions m_all_options;
+  Target::HookSP m_hook_sp;
 };
 
 #pragma mark CommandObjectTargetHookDelete
@@ -5815,42 +5733,43 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
 
-    // Check if the first argument is an event type name for per-event
-    // toggling: module-loaded, module-unloaded, stop-hook.
-    uint32_t event_type = 0;
+    // Check if the first argument is a trigger name for per-trigger
+    // toggling: load, unload, stop.
+    uint32_t trigger_type = 0;
     size_t id_start_idx = 0;
 
     if (command.GetArgumentCount() > 0) {
       llvm::StringRef first_arg = command.GetArgumentAtIndex(0);
-      if (first_arg == "module-loaded") {
-        event_type = Target::Hook::kModulesLoaded;
+      if (first_arg == "load") {
+        trigger_type = Target::Hook::kModulesLoaded;
         id_start_idx = 1;
-      } else if (first_arg == "module-unloaded") {
-        event_type = Target::Hook::kModulesUnloaded;
+      } else if (first_arg == "unload") {
+        trigger_type = Target::Hook::kModulesUnloaded;
         id_start_idx = 1;
-      } else if (first_arg == "stop-hook") {
-        event_type = Target::Hook::kProcessStop;
+      } else if (first_arg == "stop") {
+        trigger_type = Target::Hook::kProcessStop;
         id_start_idx = 1;
       }
     }
 
-    // If no hook IDs given (after possibly consuming event type), apply to all.
+    // If no hook IDs given (after possibly consuming trigger name), apply to
+    // all.
     if (command.GetArgumentCount() == id_start_idx) {
-      if (event_type) {
-        // Per-event toggle on all hooks.
+      if (trigger_type) {
+        // Per-trigger toggle on all hooks.
         size_t num_hooks = target.GetNumHooks();
         for (size_t i = 0; i < num_hooks; i++) {
           Target::HookSP hook_sp = target.GetHookAtIndex(i);
           if (!hook_sp)
             continue;
           if (m_enable)
-            hook_sp->AddEvent(event_type);
+            hook_sp->AddTrigger(trigger_type);
           else
-            hook_sp->RemoveEvent(event_type);
+            hook_sp->RemoveTrigger(trigger_type);
         }
       } else {
         // Whole-hook toggle on all hooks.
-        target.SetAllHooksActiveState(m_enable);
+        target.SetAllHooksEnabledState(m_enable);
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
@@ -5865,8 +5784,8 @@ protected:
         return;
       }
 
-      if (event_type) {
-        // Per-event toggle on a specific hook.
+      if (trigger_type) {
+        // Per-trigger toggle on a specific hook.
         Target::HookSP hook_sp = target.GetHookByID(user_id);
         if (!hook_sp) {
           result.AppendErrorWithFormat("unknown hook id: \"%s\".\n",
@@ -5874,12 +5793,12 @@ protected:
           return;
         }
         if (m_enable)
-          hook_sp->AddEvent(event_type);
+          hook_sp->AddTrigger(trigger_type);
         else
-          hook_sp->RemoveEvent(event_type);
+          hook_sp->RemoveTrigger(trigger_type);
       } else {
         // Whole-hook toggle.
-        if (!target.SetHookActiveStateByID(user_id, m_enable)) {
+        if (!target.SetHookEnabledStateByID(user_id, m_enable)) {
           result.AppendErrorWithFormat("unknown hook id: \"%s\".\n",
                                        command.GetArgumentAtIndex(i));
           return;
@@ -5932,21 +5851,18 @@ public:
             "target hook <subcommand> [<subcommand-options>]") {
     LoadSubCommand(
         "add", CommandObjectSP(new CommandObjectTargetHookAdd(interpreter)));
-    LoadSubCommand(
-        "add-filter",
-        CommandObjectSP(new CommandObjectTargetHookAddFilter(interpreter)));
     LoadSubCommand("delete", CommandObjectSP(new CommandObjectTargetHookDelete(
                                  interpreter)));
     LoadSubCommand("disable",
                    CommandObjectSP(new CommandObjectTargetHookEnableDisable(
                        interpreter, false, "target hook disable",
-                       "Disable a hook or a specific event on a hook.",
-                       "target hook disable [<event-type>] [<id> ...]")));
+                       "Disable a hook or a specific trigger on a hook.",
+                       "target hook disable [<trigger>] [<id> ...]")));
     LoadSubCommand("enable",
                    CommandObjectSP(new CommandObjectTargetHookEnableDisable(
                        interpreter, true, "target hook enable",
-                       "Enable a hook or a specific event on a hook.",
-                       "target hook enable [<event-type>] [<id> ...]")));
+                       "Enable a hook or a specific trigger on a hook.",
+                       "target hook enable [<trigger>] [<id> ...]")));
     LoadSubCommand(
         "list", CommandObjectSP(new CommandObjectTargetHookList(interpreter)));
   }

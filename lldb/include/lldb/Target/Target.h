@@ -1659,10 +1659,9 @@ public:
 
   // Target Hooks
   //
-  // Hooks fire on lifecycle events. By default, they fire when modules
-  // are loaded into the target (via ModulesDidLoad). They can also fire
-  // on module unload (via ModulesDidUnload) and on process stop (via
-  // RunStopHooks), controlled by the event mask.
+  // Hooks fire on target lifecycle events. Each hook must explicitly specify
+  // which triggers it responds to via --on-load, --on-unload, and/or --on-stop.
+  // All trigger types are coequal, meaning none is privileged or implied by default.
   class Hook : public UserID {
   public:
     Hook(const Hook &rhs);
@@ -1670,11 +1669,9 @@ public:
 
     enum class HookKind : uint32_t { CommandBased = 0, ScriptBased };
 
-    /// Event mask bits controlling when this hook fires.
-    // FIXME: Add more event types as needed, e.g.:
-    //  kProcessExited (fires when the process exits).
-    //  kProcessDetached (fires when the debugger detaches).
-    enum EventMask : uint32_t {
+    /// Individual trigger bits. Combine with OR to form a trigger mask.
+    // FIXME: Add kProcessExit, kProcessDetach, etc. as needed.
+    enum TriggerBit : uint32_t {
       kModulesLoaded = (1u << 0),
       kModulesUnloaded = (1u << 1),
       kProcessStop = (1u << 2),
@@ -1682,14 +1679,14 @@ public:
 
     lldb::TargetSP &GetTarget() { return m_target_sp; }
 
-    bool IsActive() { return m_active; }
-    void SetIsActive(bool is_active) { m_active = is_active; }
+    bool IsEnabled() { return m_enabled; }
+    void SetIsEnabled(bool enabled) { m_enabled = enabled; }
 
-    uint32_t GetEventMask() const { return m_event_mask; }
-    void SetEventMask(uint32_t mask) { m_event_mask = mask; }
-    void AddEvent(uint32_t event) { m_event_mask |= event; }
-    void RemoveEvent(uint32_t event) { m_event_mask &= ~event; }
-    bool FiresOn(uint32_t event) const { return m_event_mask & event; }
+    uint32_t GetTriggerMask() const { return m_trigger_mask; }
+    void SetTriggerMask(uint32_t mask) { m_trigger_mask = mask; }
+    void AddTrigger(uint32_t trigger) { m_trigger_mask |= trigger; }
+    void RemoveTrigger(uint32_t trigger) { m_trigger_mask &= ~trigger; }
+    bool FiresOn(uint32_t trigger) const { return m_trigger_mask & trigger; }
 
     // Filter fields
 
@@ -1705,42 +1702,49 @@ public:
     void SetThreadSpecifier(ThreadSpec *specifier);
     ThreadSpec *GetThreadSpecifier() { return m_thread_spec_up.get(); }
 
-    void SetAutoContinue(bool auto_continue) {
-      m_auto_continue = auto_continue;
-    }
-    bool GetAutoContinue() const { return m_auto_continue; }
-
     void SetRunAtInitialStop(bool at_initial_stop) {
       m_at_initial_stop = at_initial_stop;
     }
     bool GetRunAtInitialStop() const { return m_at_initial_stop; }
+
+    // Reaction settings
+
+    void SetAutoContinue(bool auto_continue) {
+      m_auto_continue = auto_continue;
+    }
+    bool GetAutoContinue() const { return m_auto_continue; }
 
     void SetSuppressOutput(bool suppress_output) {
       m_suppress_output = suppress_output;
     }
     bool GetSuppressOutput() const { return m_suppress_output; }
 
-    // Event handler methods
+    // Event handler methods (default no-ops)
 
-    virtual void HandleModuleLoaded(lldb::StreamSP output) = 0;
-    virtual void HandleModuleUnloaded(lldb::StreamSP output) = 0;
+    virtual void HandleModuleLoaded(lldb::StreamSP output) {}
+    virtual void HandleModuleUnloaded(lldb::StreamSP output) {}
 
     /// Called when the process stops. Returns a StopHookResult indicating
     /// whether the process should remain stopped or continue.
     virtual StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
-                                                lldb::StreamSP output) = 0;
+                                                lldb::StreamSP output) {
+      return StopHook::StopHookResult::NoPreference;
+    }
 
     virtual void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
 
   protected:
     lldb::TargetSP m_target_sp;
-    bool m_active = true;
-    uint32_t m_event_mask = kModulesLoaded; // Default: fire on load only
+    bool m_enabled = true;
+    uint32_t m_trigger_mask = 0; // No default, triggers must be explicit.
 
+    // Filters
     lldb::SymbolContextSpecifierSP m_sc_specifier_sp;
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
-    bool m_auto_continue = false;
     bool m_at_initial_stop = true;
+
+    // Reaction settings
+    bool m_auto_continue = false;
     bool m_suppress_output = false;
 
     Hook(lldb::TargetSP target_sp, lldb::user_id_t uid);
@@ -1812,9 +1816,9 @@ public:
 
   HookSP GetHookByID(lldb::user_id_t uid);
 
-  bool SetHookActiveStateByID(lldb::user_id_t uid, bool active_state);
+  bool SetHookEnabledStateByID(lldb::user_id_t uid, bool enabled);
 
-  void SetAllHooksActiveState(bool active_state);
+  void SetAllHooksEnabledState(bool enabled);
 
   size_t GetNumHooks() const { return m_hooks.size(); }
 

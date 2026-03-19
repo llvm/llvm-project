@@ -1907,72 +1907,72 @@ let Command = "target hook add" in {
         Arg<"OneLiner">,
         Desc<"Add a command for the hook. Can be specified more than "
              "once, and commands will be run in the order they appear.">;
+  def target_hook_add_on_load
+      : Option<"on-load", "L">,
+        Desc<"Fire the hook when modules are ${L}oaded.">;
   def target_hook_add_on_unload
       : Option<"on-unload", "u">,
-        Desc<"Also fire the hook when modules are ${u}nloaded.">;
+        Desc<"Fire the hook when modules are ${u}nloaded.">;
   def target_hook_add_on_stop
       : Option<"on-stop", "S">,
-        Desc<"Also fire the hook when the process ${S}tops.">;
-}
-
-let Command = "target hook add_filter" in {
-  def target_hook_add_filter_shlib
+        Desc<"Fire the hook when the process ${S}tops.">;
+  def target_hook_add_shlib
       : Option<"shlib", "s">,
         Arg<"ShlibName">,
         Completion<"Module">,
         Desc<"Set the module within which the stop handler is to be run.">;
-  def target_hook_add_filter_thread_index
+  def target_hook_add_thread_index
       : Option<"thread-index", "x">,
         Arg<"ThreadIndex">,
         Desc<"The stop handler is run only for the thread whose inde${x} "
              "matches this argument.">;
-  def target_hook_add_filter_thread_id
+  def target_hook_add_thread_id
       : Option<"thread-id", "t">,
         Arg<"ThreadID">,
         Desc<"The stop handler is run only for the ${t}hread whose TID "
              "matches this argument.">;
-  def target_hook_add_filter_thread_name
+  def target_hook_add_thread_name
       : Option<"thread-name", "T">,
         Arg<"ThreadName">,
         Desc<"The stop handler is run only for the ${T}hread whose thread "
              "name matches this argument.">;
-  def target_hook_add_filter_queue_name
+  def target_hook_add_queue_name
       : Option<"queue-name", "q">,
         Arg<"QueueName">,
         Desc<"The stop handler is run only for threads in the ${q}ueue whose "
              "name is given by this argument.">;
-  def target_hook_add_filter_file
+  def target_hook_add_file
       : Option<"file", "f">,
         Arg<"Filename">,
         Desc<"Specify the source ${f}ile within which the stop handler is "
              "to be run.">,
         Completion<"SourceFile">;
-  def target_hook_add_filter_start_line
+  def target_hook_add_start_line
       : Option<"start-line", "l">,
         Arg<"LineNum">,
         Desc<"Set the start of the ${l}ine range for which the stop handler "
              "is to be run.">;
-  def target_hook_add_filter_end_line
+  def target_hook_add_end_line
       : Option<"end-line", "e">,
         Arg<"LineNum">,
         Desc<"Set the ${e}nd of the line range for which the stop handler "
              "is to be run.">;
-  def target_hook_add_filter_classname
+  def target_hook_add_classname
       : Option<"classname", "c">,
         Arg<"ClassName">,
         Desc<"Specify the ${c}lass within which the stop handler is to "
              "be run.">;
-  def target_hook_add_filter_name
+  def target_hook_add_name
       : Option<"name", "n">,
         Arg<"FunctionName">,
         Desc<"Set the function ${n}ame within which the stop handler will "
              "be run.">,
         Completion<"Symbol">;
-  def target_hook_add_filter_auto_continue
+  def target_hook_add_auto_continue
       : Option<"auto-continue", "G">,
         Arg<"Boolean">,
         Desc<"The hook will auto-continue after running its stop handler.">;
-  def target_hook_add_filter_at_initial_stop
+  def target_hook_add_at_initial_stop
       : Option<"at-initial-stop", "I">,
         Arg<"Boolean">,
         Desc<"Whether the stop handler will trigger when lldb ${I}nitially "
