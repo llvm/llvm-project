@@ -35,7 +35,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_tan(__CLC_GENTYPE x) {
   __CLC_GENTYPE r0;
   __CLC_INTN regn = __clc_argReductionS(&r0, absx);
 
-  __CLC_GENTYPE t = __clc_tan_reduced_eval(r0, regn & 1);
+  __CLC_GENTYPE t = __clc_tan_reduced_eval(r0, (regn & 1) != 0);
 
   return __CLC_AS_FLOATN(__CLC_AS_UINTN(t) ^ x_signbit);
 }
