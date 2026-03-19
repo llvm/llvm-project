@@ -506,6 +506,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.MCOptions.RelocSectionSym = CodeGenOpts.getRelocSectionSym();
   Options.MCOptions.ImplicitMapSyms = CodeGenOpts.ImplicitMapSyms;
   Options.MCOptions.X86RelaxRelocations = CodeGenOpts.X86RelaxRelocations;
+  Options.MCOptions.LargeEHEncoding = CodeGenOpts.LargeEHEncoding;
   Options.MCOptions.CompressDebugSections =
       CodeGenOpts.getCompressDebugSections();
   if (CodeGenOpts.OutputAsmVariant != 3) // 3 (default): not specified

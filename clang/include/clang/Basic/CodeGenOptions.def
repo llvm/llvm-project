@@ -250,6 +250,7 @@ VALUE_CODEGENOPT(MCDCMaxTVs, 32, 0x7FFFFFFE, Benign) ///< MC/DC Maximum test vec
   /// If -fpcc-struct-return or -freg-struct-return is specified.
 ENUM_CODEGENOPT(StructReturnConvention, StructReturnConventionKind, 2, SRCK_Default, Benign)
 
+CODEGENOPT(LargeEHEncoding   , 1, 0, Benign) ///< Use 8-byte pointer size for x86_64 EH encodings.
 CODEGENOPT(RelaxAll          , 1, 0, Benign) ///< Relax all machine code instructions.
 CODEGENOPT(RelaxedAliasing   , 1, 0, Benign) ///< Set when -fno-strict-aliasing is enabled.
 CODEGENOPT(PointerTBAA       , 1, 1, Benign) ///< Whether or not to use distinct TBAA tags for pointers.

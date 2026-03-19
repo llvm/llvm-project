@@ -1243,6 +1243,13 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     }
   }
 
+  // Forward -mlarge-eh-encoding to the LTO plugin so LLD uses sdata8 EH
+  // encodings during LTO code generation.
+  if (Args.hasFlag(options::OPT_mlarge_eh_encoding,
+                   options::OPT_mno_large_eh_encoding, false))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-large-eh-encoding"));
+
   // Pass an option to enable split machine functions.
   if (auto *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
                                 options::OPT_fno_split_machine_functions)) {

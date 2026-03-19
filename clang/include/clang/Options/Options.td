@@ -5959,6 +5959,13 @@ def mred_zone : Flag<["-"], "mred-zone">, Group<m_Group>;
 def mtls_direct_seg_refs : Flag<["-"], "mtls-direct-seg-refs">, Group<m_Group>,
   HelpText<"Enable direct TLS access through segment registers (default)">;
 def mregparm_EQ : Joined<["-"], "mregparm=">, Group<m_Group>;
+def mlarge_eh_encoding : Flag<["-"], "mlarge-eh-encoding">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"Force 8-byte pointer size for all x86_64 ELF EH encodings">,
+  MarshallingInfoFlag<CodeGenOpts<"LargeEHEncoding">>;
+def mno_large_eh_encoding : Flag<["-"], "mno-large-eh-encoding">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"Do not force 8-byte pointer size for all x86_64 ELF EH encodings (default)">;
 def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"(integrated-as) Relax all machine instructions">,
