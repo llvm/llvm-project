@@ -36,13 +36,21 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   DiagnosticDetail::SourceLocation sloc = {
       FileSpec{}, /*line=*/1, static_cast<uint16_t>(loc + 1),
       err_len,    false,      /*in_user_input=*/true};
-  std::string rendered_msg =
-      llvm::formatv("<user expression 0>:1:{0}: {1}\n   1 | {2}\n     | ^",
-                    loc + 1, message, expr);
+  StreamString rendered_msg(false);
+  auto msg = llvm::formatv("<user expression>:1:{0}: {1}\n    1 | {2}\n      |",
+                           loc + 1, message, expr);
+  rendered_msg << msg.str();
+  for (uint32_t i = 0; i <= loc; i++)
+    rendered_msg << " ";
+  rendered_msg << "^";
+  for (uint32_t i = 1; i < err_len; i++)
+    rendered_msg << "~";
+  std::string rendered_str = rendered_msg.GetString().str();
+
   m_detail.source_location = sloc;
   m_detail.severity = lldb::eSeverityError;
   m_detail.message = message;
-  m_detail.rendered = std::move(rendered_msg);
+  m_detail.rendered = std::move(rendered_str);
 }
 
 llvm::Expected<lldb::TypeSystemSP>
