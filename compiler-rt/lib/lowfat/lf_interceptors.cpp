@@ -22,6 +22,7 @@ using namespace __sanitizer;
 namespace __lowfat {
 extern bool lowfat_inited;
 extern bool lowfat_recover;
+extern bool lowfat_right_align;
 } // namespace __lowfat
 
 // DlsymAlloc handles allocations that happen before our runtime is initialized
@@ -105,11 +106,20 @@ INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
     // For system pointers, we don't know exact old size, copy 'size' bytes.
     uptr copy_size = size;
     if (old_is_lowfat) {
-      uptr old_size = __lowfat::GetSize((uptr)ptr);
-      if (old_size < copy_size)
-        copy_size = old_size;
+      uptr old_class_size = __lowfat::GetSize((uptr)ptr);
+      if (old_class_size < copy_size)
+        copy_size = old_class_size;
     }
-    internal_memcpy(new_ptr, ptr, copy_size);
+    // In right-align mode the returned pointer is offset within its slot:
+    //   ptr = slot_base + (class_size - requested_size)
+    // Copying 'copy_size' bytes from 'ptr' would read past the slot end.
+    // Instead copy from the slot base so we stay within the mapped region.
+    // The user data starts at ptr, but copying from the base is safe since
+    // the left padding is zeroed on allocation and belongs to the same slot.
+    const void *copy_src = __lowfat::lowfat_right_align && old_is_lowfat
+                               ? (const void *)__lowfat::GetBase((uptr)ptr)
+                               : ptr;
+    internal_memcpy(new_ptr, copy_src, copy_size);
     // Free old
     if (old_is_lowfat)
       __lowfat::Deallocate(ptr);

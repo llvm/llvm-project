@@ -611,6 +611,29 @@ bool LowFatSanitizer::run() {
     Modified = true;
   }
 
+  // Emit a module constructor that calls __lf_set_right_align(1) so the
+  // runtime allocator right-aligns objects within their size-class slot.
+  // Right-aligning places the object's right edge at the slot boundary,
+  // making off-by-one overflows detectable at the cost of a left-side
+  // blind spot of (class_size - requested_size) bytes.
+  if (Options.Mode == LowFatSanitizerOptions::LowFatMode::RightAlign) {
+    LLVMContext &Ctx = M.getContext();
+    FunctionType *SetRightAlignTy =
+        FunctionType::get(Type::getVoidTy(Ctx), {Type::getInt32Ty(Ctx)}, false);
+    FunctionCallee SetRightAlignFn =
+        M.getOrInsertFunction("__lf_set_right_align", SetRightAlignTy);
+    Function *Ctor = Function::Create(
+        FunctionType::get(Type::getVoidTy(Ctx), false),
+        GlobalValue::InternalLinkage, "__lowfat_set_right_align_ctor", &M);
+    BasicBlock *BB = BasicBlock::Create(Ctx, "entry", Ctor);
+    IRBuilder<> CtorBuilder(BB);
+    CtorBuilder.CreateCall(SetRightAlignFn,
+                           {ConstantInt::get(Type::getInt32Ty(Ctx), 1)});
+    CtorBuilder.CreateRetVoid();
+    appendToGlobalCtors(M, Ctor, /*Priority=*/0);
+    Modified = true;
+  }
+
   return Modified;
 }
 

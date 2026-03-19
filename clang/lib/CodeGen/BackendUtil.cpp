@@ -115,7 +115,9 @@ static cl::opt<LowFatSanitizerOptions::LowFatMode> LowFatMode(
         clEnumValN(LowFatSanitizerOptions::LowFatMode::Fast, "fast",
                    "Instrument at OptimizerLastEP (least overhead)"),
         clEnumValN(LowFatSanitizerOptions::LowFatMode::Safe, "safe",
-                   "Barrier at PipelineStartEP + instrument at OptimizerLastEP")));
+                   "Barrier at PipelineStartEP + instrument at OptimizerLastEP"),
+        clEnumValN(LowFatSanitizerOptions::LowFatMode::RightAlign, "right-align",
+                   "Right-align allocations within class slots to catch right-side OOB")));
 
 // Experiment to mark cold functions as optsize/minsize/optnone.
 // TODO: remove once this is exposed as a proper driver flag.

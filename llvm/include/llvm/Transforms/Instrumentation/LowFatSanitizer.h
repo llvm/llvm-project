@@ -17,8 +17,11 @@ struct LowFatSanitizerOptions {
   bool Recover = false;
 
   enum class LowFatMode {
-    Fast, /// instrument at OptimizerLastEP
-    Safe, /// Barrier at PipelineStartEP + instrument at OptimizerLastEP
+    Fast,       /// instrument at OptimizerLastEP
+    Safe,       /// Barrier at PipelineStartEP + instrument at OptimizerLastEP
+    RightAlign, /// Fast instrumentation + right-align allocations within class
+                /// slots to improve detection of right-side (overflow) OOB at
+                /// the cost of a blind spot on the left (underflow) side.
   };
   LowFatMode Mode = LowFatMode::Fast;
 

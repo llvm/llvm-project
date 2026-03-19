@@ -34,6 +34,13 @@ bool lowfat_inited = false;
 // interceptor-level OOB (memset/memcpy/memmove) warns-and-continues or aborts.
 bool lowfat_recover = false;
 
+// Set to true when -lowfat-mode=right-align is active. Instructs Allocate()
+// to right-align objects within their size-class slot so the object's right
+// edge coincides with the slot boundary. This makes off-by-one overflows
+// detectable (right OOB is caught) at the cost of a left-side blind spot of
+// (class_size - requested_size) bytes.
+bool lowfat_right_align = false;
+
 // Maximum number of size classes across both modes.
 // In POW2-only mode kNumSizeClasses=27; with a custom config it can be up to
 // LOWFAT_MAX_ARRAY_SIZE. We size the static arrays at compile time using
@@ -183,6 +190,15 @@ static bool InitMemoryRegions() {
 // Allocate from a LowFat region
 // First checks the free list, then falls back to bump allocation.
 // Thread-safe: protected by per-size-class spin mutex.
+//
+// In right-align mode, returns slot_base + (class_size - requested_size) so
+// the object's right edge coincides with the slot boundary. The bounds check
+// (ptr - GetBase(ptr)) < class_size is still correct: GetBase() recovers
+// slot_base via mask/magic since slot_base is always class-aligned, and any
+// access past slot_base+class_size fails the check.
+//
+// The free list always stores slot bases (not right-aligned pointers) so that
+// freed blocks can be reused with a different offset for a new request size.
 void *Allocate(uptr size) {
   if (size == 0)
     size = 1;
@@ -195,31 +211,43 @@ void *Allocate(uptr size) {
 
   SpinMutexLock lock(&region_locks[class_index]);
 
-  // 1. Try free list first
+  uptr slot_base;
+
+  // 1. Try free list first (stores slot bases)
   FreeBlock *block = free_lists[class_index];
   if (block) {
     free_lists[class_index] = block->next;
-    // Zero the memory (free list pointer was stored here)
+    slot_base = (uptr)block;
+    // Zero the entire slot (free list pointer was stored at slot_base)
     internal_memset(block, 0, alloc_size);
-    return (void *)block;
+  } else {
+    // 2. Fall back to bump allocation
+    uptr region_end = GetRegionStart(class_index) + kRegionSize;
+    uptr addr = region_next_alloc[class_index];
+
+    if (addr + alloc_size > region_end) {
+      // Region exhausted: fall back to standard libc-style allocation.
+      // The resulting pointer will not be a LowFat pointer (wide-bounds).
+      return (void *)InternalAlloc(size);
+    }
+
+    region_next_alloc[class_index] = addr + alloc_size;
+    slot_base = addr;
   }
 
-  // 2. Fall back to bump allocation
-  uptr region_end = GetRegionStart(class_index) + kRegionSize;
-  uptr addr = region_next_alloc[class_index];
-
-  if (addr + alloc_size > region_end) {
-    // Region exhausted: fall back to standard libc-style allocation.
-    // The resulting pointer will not be a LowFat pointer (wide-bounds).
-    return (void *)InternalAlloc(size);
-  }
-
-  region_next_alloc[class_index] = addr + alloc_size;
-  return (void *)addr;
+  // In right-align mode shift the returned pointer so the object's right
+  // edge sits at the slot boundary, making overflows immediately detectable.
+  if (lowfat_right_align)
+    return (void *)(slot_base + (alloc_size - size));
+  return (void *)slot_base;
 }
 
-// Free a LowFat allocation by pushing it onto the free list.
+// Free a LowFat allocation by pushing its slot base onto the free list.
 // Thread-safe: protected by per-size-class spin mutex.
+//
+// We always push the slot base (GetBase(ptr)) rather than ptr itself so that
+// freed slots can be reused with a different right-align offset for a new
+// request size, and so the free list is consistent regardless of mode.
 void Deallocate(void *ptr) {
   if (!ptr)
     return;
@@ -233,11 +261,14 @@ void Deallocate(void *ptr) {
   }
 
   uptr region = GetRegionIndex(addr);
+  // Recover the slot base: in right-align mode ptr is offset within the slot;
+  // in normal mode GetBase(addr) == addr since allocations are class-aligned.
+  uptr slot_base = GetBase(addr);
 
   SpinMutexLock lock(&region_locks[region]);
 
-  // Push to the head of the free list for this size class
-  FreeBlock *block = (FreeBlock *)ptr;
+  // Push slot base to the head of the free list for this size class
+  FreeBlock *block = (FreeBlock *)slot_base;
   block->next = free_lists[region];
   free_lists[region] = block;
 }
@@ -277,6 +308,11 @@ extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lf_set_recover(int recover) {
   __lowfat::lowfat_recover = (recover != 0);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __lf_set_right_align(int right_align) {
+  __lowfat::lowfat_right_align = (right_align != 0);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
