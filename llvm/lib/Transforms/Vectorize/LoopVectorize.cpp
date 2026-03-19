@@ -3948,8 +3948,10 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   // To avoid the need for FP division:
   //      (CostA / EstimatedWidthA) < (CostB / EstimatedWidthB)
   // <=>  (CostA * EstimatedWidthB) < (CostB * EstimatedWidthA)
+  bool GenerallyLowerCost =
+      CmpFn(CostA * EstimatedWidthB, CostB * EstimatedWidthA);
   if (!MaxTripCount)
-    return CmpFn(CostA * EstimatedWidthB, CostB * EstimatedWidthA);
+    return GenerallyLowerCost;
 
   auto GetCostForTC = [MaxTripCount, HasTail](unsigned VF,
                                               InstructionCost VectorCost,
@@ -3970,7 +3972,14 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
 
   auto RTCostA = GetCostForTC(EstimatedWidthA, CostA, A.ScalarCost);
   auto RTCostB = GetCostForTC(EstimatedWidthB, CostB, B.ScalarCost);
-  return CmpFn(RTCostA, RTCostB);
+  bool LowerCost = CmpFn(RTCostA, RTCostB);
+  LLVM_DEBUG(if (LowerCost != GenerallyLowerCost) {
+    dbgs() << "LV: VF " << (LowerCost ? A.Width : B.Width)
+           << " has lower cost than VF " << (LowerCost ? B.Width : A.Width)
+           << " when taking the loop trip count of " << MaxTripCount
+           << " into consideration.\n";
+  });
+  return LowerCost;
 }
 
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
