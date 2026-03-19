@@ -56,7 +56,7 @@ static bool IsMarkerProtocol(const DWARFDIE &die) {
       continue;
     const char *name =
         child.GetAttributeValueAsString(llvm::dwarf::DW_AT_name, nullptr);
-    if (llvm::StringRef(name) == "$swift_marker")
+    if (llvm::StringRef(name) == "swift.MarkerProtocol")
       return child.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_const_value,
                                                0) != 0;
   }
@@ -279,9 +279,25 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         // read the size from DWARF.
         dwarf_byte_size, nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl,
         compiler_type, Type::ResolveState::Full);
+
     if (IsMarkerProtocol(die))
       type_sp->SetPayload(
           TypePayloadSwift(TypePayloadSwift::Options::IsMarkerProtocol));
+
+    // If this is a protocol composition, force parsing the protocols which this
+    // type is composed  of. We want to make sure we parse every marker protocol
+    // since that will be important when looking up type information via
+    // reflection context.
+    if (TypeSystemSwiftTypeRef::IsProtocolComposition(
+            compiler_type.GetMangledTypeName())) {
+      for (auto child : die.children()) {
+        if (child.Tag() == llvm::dwarf::DW_TAG_inheritance) {
+          DWARFDIE type =
+              child.GetAttributeValueAsReferenceDIE(llvm::dwarf::DW_AT_type);
+          ParseTypeFromDWARF(sc, type, nullptr);
+        }
+      }
+    }
   }
 
   // Cache this type.

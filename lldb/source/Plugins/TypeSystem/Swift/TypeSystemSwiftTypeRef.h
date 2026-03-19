@@ -320,11 +320,23 @@ public:
   lldb::TypeSP GetCachedType(ConstString mangled);
   lldb::TypeSP GetCachedType(lldb::opaque_compiler_type_t type);
   void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp);
+  bool IsMarkerProtocol(ConstString mangled_name);
+  /// Remove marker protocols from a protocol list in a demangle tree.
+  /// Marker protocols are compile-time concepts only and the reflection
+  /// context does not expect them as input. Note: this mutates \p node
+  /// in place.
+  llvm::Expected<swift::Demangle::NodePointer>
+  RemoveMarkerProtocols(swift::Demangle::Demangler &dem,
+                        swift::Demangle::NodePointer node,
+                        swift::Mangle::ManglingFlavor flavor);
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
   /// Determine whether this is a builtin SIMD type.
   static bool IsSIMDType(CompilerType type);
   static bool IsOptionalType(lldb::opaque_compiler_type_t type);
+  /// Determine whether the mangled name refers to a protocol composition
+  /// (i.e., a ProtocolList with more than one Type child in its TypeList).
+  static bool IsProtocolComposition(llvm::StringRef mangled_name);
   static CompilerType GetOptionalType(CompilerType type);
   /// Like \p IsImportedType(), but even returns Clang types that are also Swift
   /// builtins (int <-> Swift.Int) as Clang types.
