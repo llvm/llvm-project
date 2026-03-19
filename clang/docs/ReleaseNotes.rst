@@ -163,6 +163,8 @@ Non-comprehensive list of changes in this release
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 
+- Added header ``endian.h`` which contains byte order helpers specified in POSIX
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
@@ -375,6 +377,7 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
+- Fixed a assertion when __block is used on global variables in C mode. (#GH183974)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

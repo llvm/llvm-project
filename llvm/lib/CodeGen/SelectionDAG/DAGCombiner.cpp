@@ -20236,8 +20236,8 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
     // Ideally this should be folded into SimplifySetCC and not
     // here. For now, grab a handle to N so we don't lose it from
     // replacements interal to the visit.
-    HandleSDNode XORHandle(N);
     while (N.getOpcode() == ISD::XOR) {
+      HandleSDNode XORHandle(N);
       SDValue Tmp = visitXOR(N.getNode());
       // No simplification done.
       if (!Tmp.getNode())
@@ -26996,9 +26996,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   // Combine an extract of an extract into a single extract_subvector.
   // ext (ext X, C), 0 --> ext X, C
   if (ExtIdx == 0 && V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
-    // The index has to be a multiple of the new result type's known minimum
-    // vector length.
-    if (V.getConstantOperandVal(1) % NVT.getVectorMinNumElements() == 0 &&
+    // Both indices must have the same scaling factor and C has to be a
+    // multiple of the new result type's known minimum vector length.
+    if (V.getValueType().isScalableVector() == NVT.isScalableVector() &&
+        V.getConstantOperandVal(1) % NVT.getVectorMinNumElements() == 0 &&
         TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
                                     V.getConstantOperandVal(1)) &&
         TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT)) {

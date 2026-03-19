@@ -1509,7 +1509,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    if (Subtarget->hasF16F32DOT()) {
+    if (Subtarget->hasF16F32DOT() || Subtarget->hasFP16FML()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v2f32,
                                 MVT::v4f16, Legal);
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
@@ -2039,7 +2039,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // Handle floating-point partial reduction
-    if (Subtarget->hasSVE2p1() || Subtarget->hasSME2()) {
+    if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8f16, Legal);
       // We can use SVE2p1 fdot to emulate the fixed-length variant.

@@ -208,7 +208,6 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   subgroup/sub_group_broadcast.cl
   subgroup/sub_group_reduce.cl
   subgroup/subgroup.cl
-  subnormal_config.cl
   synchronization/sub_group_barrier.cl
   synchronization/work_group_barrier.cl
   workitem/get_enqueued_local_size.cl
