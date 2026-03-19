@@ -184,7 +184,8 @@ static void ProcessOutputConstraint(
     IRBuilder<> &EntryBuilder, SmallVectorImpl<Value *> &NewArgs,
     SmallVectorImpl<Type *> &NewRetTypes,
     SmallVectorImpl<std::pair<unsigned, Type *>> &ElementTypeAttrs,
-    SmallVectorImpl<AllocaInst *> &OutputAllocas, unsigned ConstraintIdx) {
+    SmallVectorImpl<std::pair<AllocaInst *, Type *>> &OutputAllocas,
+    unsigned ConstraintIdx) {
   Type *SlotTy = RetTy;
   if (StructType *ST = dyn_cast<StructType>(RetTy))
     SlotTy = ST->getElementType(OutputIdx);
@@ -195,7 +196,7 @@ static void ProcessOutputConstraint(
     AllocaInst *Slot = EntryBuilder.CreateAlloca(SlotTy, nullptr, "asm_mem");
     NewArgs.push_back(Slot);
     ElementTypeAttrs.push_back({NewArgs.size() - 1, SlotTy});
-    OutputAllocas[ConstraintIdx] = Slot;
+    OutputAllocas[ConstraintIdx] = std::make_pair(Slot, SlotTy);
     // No return value for this output since it's now an out-parameter.
   } else {
     // Unchanged, still an output return value.
@@ -206,7 +207,8 @@ static void ProcessOutputConstraint(
 /// Process an input constraint, handling tied constraints and conversions.
 static void ProcessInputConstraint(
     const InlineAsm::ConstraintInfo &C, Value *ArgVal, Type *InputElementType,
-    ArrayRef<int> TiedOutput, ArrayRef<AllocaInst *> OutputAllocas,
+    ArrayRef<int> TiedOutput,
+    ArrayRef<std::pair<AllocaInst *, Type *>> OutputAllocas,
     unsigned ConstraintIdx, IRBuilder<> &Builder, IRBuilder<> &EntryBuilder,
     SmallVectorImpl<Value *> &NewArgs,
     SmallVectorImpl<std::pair<unsigned, Type *>> &ElementTypeAttrs) {
@@ -214,7 +216,7 @@ static void ProcessInputConstraint(
 
   if (TiedOutput[ConstraintIdx] != -1) {
     int MatchIdx = TiedOutput[ConstraintIdx];
-    if (AllocaInst *Slot = OutputAllocas[MatchIdx]) {
+    if (auto [Slot, _] = OutputAllocas[MatchIdx]; Slot) {
       // The matched output was converted to memory. Store this input into the
       // alloca.
       Builder.CreateStore(ArgVal, Slot);
@@ -254,11 +256,11 @@ static Type *BuildReturnType(ArrayRef<Type *> NewRetTypes,
 }
 
 /// Create the new inline assembly call with converted constraints.
-static CallInst *CreateNewInlineAsm(
-    InlineAsm *IA, const std::string &NewConstraintStr, Type *NewRetTy,
-    const SmallVectorImpl<Value *> &NewArgs,
-    const SmallVectorImpl<std::pair<unsigned, Type *>> &ElementTypeAttrs,
-    CallBase *CB, IRBuilder<> &Builder, LLVMContext &Context) {
+static CallInst *
+CreateNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
+                   Type *NewRetTy, ArrayRef<Value *> NewArgs,
+                   ArrayRef<std::pair<unsigned, Type *>> ElementTypeAttrs,
+                   CallBase *CB, IRBuilder<> &Builder, LLVMContext &Context) {
   SmallVector<Type *> NewArgTypes;
   llvm::for_each(NewArgs,
                  [&](Value *V) { NewArgTypes.push_back(V->getType()); });
@@ -285,9 +287,8 @@ static CallInst *CreateNewInlineAsm(
 static Value *
 ReconstructReturnValue(Type *RetTy, CallInst *NewCall,
                        const InlineAsm::ConstraintInfoVector &Constraints,
-                       const SmallVectorImpl<AllocaInst *> &OutputAllocas,
-                       const SmallVectorImpl<Type *> &NewRetTypes,
-                       IRBuilder<> &Builder) {
+                       ArrayRef<std::pair<AllocaInst *, Type *>> OutputAllocas,
+                       ArrayRef<Type *> NewRetTypes, IRBuilder<> &Builder) {
   if (RetTy->isVoidTy())
     return nullptr;
 
@@ -302,9 +303,9 @@ ReconstructReturnValue(Type *RetTy, CallInst *NewCall,
         continue;
 
       Value *Val = nullptr;
-      if (AllocaInst *Slot = OutputAllocas[I]) {
+      if (auto [Slot, SlotTy] = OutputAllocas[I]; Slot) {
         // Converted to memory. Load from alloca.
-        Val = Builder.CreateLoad(Slot->getAllocatedType(), Slot);
+        Val = Builder.CreateLoad(SlotTy, Slot);
       } else {
         // Not converted. Extract from NewCall return.
         if (NewRetTypes.size() == 1) {
@@ -331,8 +332,8 @@ ReconstructReturnValue(Type *RetTy, CallInst *NewCall,
     }
   }
 
-  if (AllocaInst *Slot = OutputAllocas[OutConstraintIdx])
-    return Builder.CreateLoad(Slot->getAllocatedType(), Slot);
+  if (auto [Slot, SlotTy] = OutputAllocas[OutConstraintIdx]; Slot)
+    return Builder.CreateLoad(SlotTy, Slot);
 
   return NewCall;
 }
@@ -358,7 +359,8 @@ static bool ProcessInlineAsm(Function &F, CallBase *CB) {
   // flat Constraints list (not by output index), so that both
   // ProcessOutputConstraint and ReconstructReturnValue can look up entries
   // using the same constraint index.
-  SmallVector<AllocaInst *, 8> OutputAllocas(Constraints.size(), nullptr);
+  SmallVector<std::pair<AllocaInst *, Type *>, 8> OutputAllocas(
+      Constraints.size(), std::make_pair(nullptr, nullptr));
 
   // Build tied constraint map.
   SmallVector<int, 8> TiedOutput(Constraints.size(), -1);
