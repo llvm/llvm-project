@@ -323,15 +323,19 @@ void GenericCycleInfo<ContextT>::verifyBlockNumberEpoch(
 
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::addToBlockMap(BlockT *Block, CycleT *Cycle) {
+  // The caller should ensure that BlockMap is large enough.
   verifyBlockNumberEpoch(Block->getParent());
   unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
-  if (Number >= BlockMap.size())
-    BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()));
   BlockMap[Number] = Cycle;
 }
 
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
+  // Make sure BlockMap is large enough for the new block.
+  unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
+  if (Number >= BlockMap.size())
+    BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()));
+
   // FixMe: Appending NewBlock is fine as a set of blocks in a cycle. When
   // printing, cycle NewBlock is at the end of list but it should be in the
   // middle to represent actual traversal of a cycle.
@@ -526,6 +530,7 @@ void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   GenericCycleInfoCompute<ContextT> Compute(*this);
   Context = ContextT(&F);
   BlockNumberEpoch = GraphTraits<FunctionT *>::getNumberEpoch(&F);
+  BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(&F));
 
   LLVM_DEBUG(errs() << "Computing cycles for function: " << F.getName()
                     << "\n");
