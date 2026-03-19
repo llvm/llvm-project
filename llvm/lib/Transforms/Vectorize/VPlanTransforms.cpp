@@ -6124,13 +6124,6 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
       Range);
 }
 
-static VPWidenRecipe *matchWidenBinaryOperator(VPValue *Value) {
-  if (auto WidenR = dyn_cast<VPWidenRecipe>(Value))
-    if (Instruction::isBinaryOp(WidenR->getOpcode()))
-      return WidenR;
-  return nullptr;
-}
-
 static TTI::PartialReductionExtendKind
 getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
   return TTI::getPartialReductionExtendKind(Cast->getOpcode());
@@ -6177,9 +6170,6 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
     }
   }
 
-  // The rest of the matching assumes `Op` is a (possibly extended/negated)
-  // binary operation.
-
   if (!Op->hasOneUse())
     return std::nullopt;
 
@@ -6188,9 +6178,12 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   if (match(Op, m_Sub(m_ZeroInt(), m_VPValue(NegatedOp))))
     Op = NegatedOp;
 
-  VPWidenRecipe *BinOp = matchWidenBinaryOperator(Op);
-  if (!BinOp)
+  VPWidenRecipe *BinOp = dyn_cast<VPWidenRecipe>(Op);
+  if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
     return std::nullopt;
+
+  // The rest of the matching assumes `Op` is a (possibly extended/negated)
+  // binary operation.
 
   VPValue *LHS = BinOp->getOperand(0);
   VPValue *RHS = BinOp->getOperand(1);
