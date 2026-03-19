@@ -13,13 +13,10 @@ define void @Test(i32) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP0:%.*]], [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[LOCAL_8_43_US1]]
 ; CHECK-NEXT:    [[VAL_44]] = add i32 [[LOCAL_8_43_US1]], 14910
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> <i32 poison, i32 14910>, i32 [[OP_RDX]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[LOCAL_8_43_US1]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = and <2 x i32> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[OP_RDX1]], i32 0
+; CHECK-NEXT:    [[TMP10]] = insertelement <2 x i32> [[TMP5]], i32 [[VAL_44]], i32 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 ; FORCE_REDUCTION-LABEL: @Test(

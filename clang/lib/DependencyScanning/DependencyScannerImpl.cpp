@@ -150,8 +150,7 @@ public:
   /// Check the header search options for a given module when considering
   /// if the module comes from stable directories.
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override {
 
     auto PrebuiltMapEntry = PrebuiltModulesASTMap.try_emplace(CurrentFile);
@@ -615,7 +614,7 @@ struct AsyncModuleCompile : PPCallbacks {
 
     HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
     ModuleCache &ModCache = CI.getModuleCache();
-    std::string ModuleFileName = HS.getCachedModuleFileName(M);
+    ModuleFileName ModuleFileName = HS.getCachedModuleFileName(M);
 
     uint64_t Timestamp = ModCache.getModuleTimestamp(ModuleFileName);
     // Someone else already built/validated the PCM.
