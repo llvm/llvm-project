@@ -230,6 +230,43 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
+/// Collect either replicated Loads or Stores grouped by their address SCEV.
+template <unsigned Opcode>
+static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
+collectGroupedReplicateMemOps(
+    VPlan &Plan, PredicatedScalarEvolution &PSE, const Loop *L,
+    function_ref<bool(VPReplicateRecipe *)> FilterFn) {
+  static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
+                "Only Load and Store opcodes supported");
+  constexpr bool IsLoad = (Opcode == Instruction::Load);
+  SmallDenseMap<const SCEV *, SmallVector<VPReplicateRecipe *, 4>>
+      RecipesByAddress;
+  for (VPBlockBase *Block :
+       vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry())) {
+    auto *VPBB = cast<VPBasicBlock>(Block);
+    for (VPRecipeBase &R : *VPBB) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (!RepR || RepR->getOpcode() != Opcode || !FilterFn(RepR))
+        continue;
+
+      // For loads, operand 0 is address; for stores, operand 1 is address.
+      VPValue *Addr = RepR->getOperand(IsLoad ? 0 : 1);
+      const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
+      if (!isa<SCEVCouldNotCompute>(AddrSCEV))
+        RecipesByAddress[AddrSCEV].push_back(RepR);
+    }
+  }
+  auto Groups = to_vector(RecipesByAddress.values());
+  VPDominatorTree VPDT(Plan);
+  for (auto &Group : Groups) {
+    // Sort mem ops by dominance order, with earliest (most dominating) first.
+    stable_sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
+      return VPDT.properlyDominates(A, B);
+    });
+  }
+  return Groups;
+}
+
 /// Return true if we do not know how to (mechanically) hoist or sink \p R out
 /// of a loop region.
 static bool cannotHoistOrSinkRecipe(const VPRecipeBase &R) {
@@ -1373,6 +1410,16 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
 
+  // x && (x && y) -> x && y
+  if (match(Def, m_LogicalAnd(m_VPValue(X),
+                              m_LogicalAnd(m_Deferred(X), m_VPValue()))))
+    return Def->replaceAllUsesWith(Def->getOperand(1));
+
+  // x && (y && x) -> x && y
+  if (match(Def, m_LogicalAnd(m_VPValue(X),
+                              m_LogicalAnd(m_VPValue(Y), m_Deferred(X)))))
+    return Def->replaceAllUsesWith(Builder.createLogicalAnd(X, Y));
+
   // x && !x -> 0
   if (match(Def, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
     return Def->replaceAllUsesWith(Plan->getFalse());
@@ -2440,6 +2487,7 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
 bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
                                                   VPBuilder &LoopBuilder) {
   VPDominatorTree VPDT(Plan);
+  VPTypeAnalysis TypeInfo(Plan);
 
   SmallVector<VPFirstOrderRecurrencePHIRecipe *> RecurrencePhis;
   for (VPRecipeBase &R :
@@ -2493,8 +2541,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
 
       VPBuilder B(cast<VPInstruction>(U));
       VPValue *LastActiveLane = cast<VPInstruction>(U)->getOperand(0);
-      VPValue *Zero = Plan.getConstantInt(64, 0);
-      VPValue *One = Plan.getConstantInt(64, 1);
+      Type *Ty = TypeInfo.inferScalarType(LastActiveLane);
+      VPValue *Zero = Plan.getConstantInt(Ty, 0);
+      VPValue *One = Plan.getConstantInt(Ty, 1);
       VPValue *PenultimateIndex = B.createSub(LastActiveLane, One);
       VPValue *PenultimateLastIter =
           B.createNaryOp(VPInstruction::ExtractLane,
@@ -3105,8 +3154,9 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 
   if (match(&CurRecipe, m_LastActiveLane(m_Specific(HeaderMask)))) {
     Type *Ty = TypeInfo.inferScalarType(CurRecipe.getVPSingleValue());
-    VPValue *ZExt =
-        VPBuilder(&CurRecipe).createScalarCast(Instruction::ZExt, &EVL, Ty, DL);
+    VPValue *ZExt = VPBuilder(&CurRecipe)
+                        .createScalarZExtOrTrunc(
+                            &EVL, Ty, TypeInfo.inferScalarType(&EVL), DL);
     return new VPInstruction(
         Instruction::Sub, {ZExt, Plan->getConstantInt(Ty, 1)},
         VPIRFlags::getDefaultFlags(Instruction::Sub), {}, DL);
@@ -3143,6 +3193,22 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       OldRecipes.push_back(R);
     }
   }
+
+  // Replace remaining (HeaderMask && Mask) with vp.merge (True, Mask,
+  // False, EVL)
+  for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+    VPValue *Mask;
+    if (match(U, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask)))) {
+      auto *LogicalAnd = cast<VPInstruction>(U);
+      auto *Merge = new VPWidenIntrinsicRecipe(
+          Intrinsic::vp_merge, {Plan.getTrue(), Mask, Plan.getFalse(), EVL},
+          TypeInfo.inferScalarType(Mask), {}, {}, LogicalAnd->getDebugLoc());
+      Merge->insertBefore(LogicalAnd);
+      LogicalAnd->replaceAllUsesWith(Merge);
+      OldRecipes.push_back(LogicalAnd);
+    }
+  }
+
   // Erase old recipes at the end so we don't invalidate TypeInfo.
   for (VPRecipeBase *R : reverse(OldRecipes)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
@@ -4016,7 +4082,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
             LastActiveL->getDebugLoc(), "first.inactive.lane");
 
         // Subtract 1 to get the last active lane.
-        VPValue *One = Plan.getConstantInt(64, 1);
+        VPValue *One =
+            Plan.getConstantInt(TypeInfo.inferScalarType(FirstInactiveLane), 1);
         VPValue *LastLane =
             Builder.createSub(FirstInactiveLane, One,
                               LastActiveL->getDebugLoc(), "last.active.lane");
@@ -4032,7 +4099,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         assert(VPI->isMasked() &&
                "Unmasked MaskedCond should be simplified earlier");
         VPI->replaceAllUsesWith(Builder.createNaryOp(
-            VPInstruction::LogicalAnd, {VPI->getOperand(0), VPI->getMask()}));
+            VPInstruction::LogicalAnd, {VPI->getMask(), VPI->getOperand(0)}));
         ToRemove.push_back(VPI);
         continue;
       }
@@ -4723,33 +4790,17 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
   constexpr bool IsLoad = (Opcode == Instruction::Load);
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPDominatorTree VPDT(Plan);
   VPTypeAnalysis TypeInfo(Plan);
-
-  // Group predicated operations by their address SCEV.
-  DenseMap<const SCEV *, SmallVector<VPReplicateRecipe *>> RecipesByAddress;
-  for (VPBlockBase *Block : vp_depth_first_shallow(LoopRegion->getEntry())) {
-    auto *VPBB = cast<VPBasicBlock>(Block);
-    for (VPRecipeBase &R : *VPBB) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || RepR->getOpcode() != Opcode || !RepR->isPredicated())
-        continue;
-
-      // For loads, operand 0 is address; for stores, operand 1 is address.
-      VPValue *Addr = RepR->getOperand(IsLoad ? 0 : 1);
-      const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
-      if (!isa<SCEVCouldNotCompute>(AddrSCEV))
-        RecipesByAddress[AddrSCEV].push_back(RepR);
-    }
-  }
 
   // For each address, collect operations with the same or complementary masks.
   SmallVector<SmallVector<VPReplicateRecipe *, 4>> AllGroups;
   auto GetLoadStoreValueType = [&](VPReplicateRecipe *Recipe) {
     return TypeInfo.inferScalarType(IsLoad ? Recipe : Recipe->getOperand(0));
   };
-  for (auto &[Addr, Recipes] : RecipesByAddress) {
+  auto Groups = collectGroupedReplicateMemOps<Opcode>(
+      Plan, PSE, L,
+      [](VPReplicateRecipe *RepR) { return RepR->isPredicated(); });
+  for (auto Recipes : Groups) {
     if (Recipes.size() < 2)
       continue;
 
@@ -4784,11 +4835,6 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
 
       if (HasComplementaryMask) {
         assert(Group.size() >= 2 && "must have at least 2 entries");
-        // Sort replicates by dominance order, with earliest (most dominating)
-        // first.
-        sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
-          return VPDT.properlyDominates(A, B);
-        });
         AllGroups.push_back(std::move(Group));
       }
     }
@@ -5218,7 +5264,7 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
 /// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
 /// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
 /// is defined at \p Idx of a load interleave group.
-static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
+static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
                           VPValue *OpV, unsigned Idx, bool IsScalable) {
   VPValue *Member0Op = WideMember0->getOperand(OpIdx);
   VPRecipeBase *Member0OpR = Member0Op->getDefiningRecipe();
@@ -5236,14 +5282,14 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 
 static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
   SmallVector<VPValue *> Ops0;
-  auto *WideMember0 = dyn_cast<VPWidenRecipe>(Ops[0]);
+  auto *WideMember0 = dyn_cast<VPSingleDefRecipe>(Ops[0]);
   if (!WideMember0)
     return false;
-
-  for (const auto &[_, V] : enumerate(Ops)) {
-    auto *R = dyn_cast<VPWidenRecipe>(V);
-    if (!R || R->getOpcode() != WideMember0->getOpcode() ||
-        R->getNumOperands() > 2)
+  for (VPValue *V : Ops) {
+    if (!isa<VPWidenRecipe, VPWidenCastRecipe>(V))
+      return false;
+    auto *R = cast<VPSingleDefRecipe>(V);
+    if (getOpcodeOrIntrinsicID(R) != getOpcodeOrIntrinsicID(WideMember0))
       return false;
   }
 
@@ -5333,7 +5379,8 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
   if (isAlreadyNarrow(V))
     return V;
 
-  if (auto *WideMember0 = dyn_cast<VPWidenRecipe>(R)) {
+  if (isa<VPWidenRecipe, VPWidenCastRecipe>(R)) {
+    auto *WideMember0 = cast<VPSingleDefRecipe>(R);
     for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
       WideMember0->setOperand(
           Idx,

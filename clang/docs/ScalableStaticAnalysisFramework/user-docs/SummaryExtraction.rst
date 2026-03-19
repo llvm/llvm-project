@@ -13,6 +13,8 @@ Two flags control summary extraction:
 
 - ``--ssaf-extract-summaries=<name1>,<name2>,...``: Comma-separated list of summary extractor names to enable.
 - ``--ssaf-tu-summary-file=<path>.<format>``: Output file for the extracted summaries. The file extension selects the serialization format (e.g. ``.json``).
+- ``--ssaf-list-extractors``: List the available summary extractors.
+- ``--ssaf-list-formats``: List the available serialization formats.
 
 Example invocation:
 
@@ -21,6 +23,8 @@ Example invocation:
   clang --ssaf-extract-summaries=MyAwesomeAnalysis \
         --ssaf-tu-summary-file=my-tu-summary.json \
         -c input.cpp -o input.o
+
+  clang --ssaf-list-extractors --ssaf-list-formats
 
 Diagnostics
 ***********

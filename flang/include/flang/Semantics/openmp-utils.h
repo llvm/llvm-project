@@ -16,6 +16,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Parser/message.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -25,8 +26,10 @@
 
 #include <optional>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace Fortran::semantics {
 class Scope;
@@ -109,29 +112,75 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
+/// A representation of a "because" message.
+struct Reason {
+  parser::Messages msgs;
+
+  template <typename... Ts> Reason &Say(Ts &&...args) {
+    msgs.Say(std::forward<Ts>(args)...);
+    return *this;
+  };
+  operator bool() const { return !msgs.empty(); }
+  parser::Message &AttachTo(parser::Message &msg);
+};
+
+std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
+    unsigned version);
+std::pair<std::optional<int64_t>, Reason> GetNumArgumentsWithReason(
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
+    unsigned version);
+
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
 
+// Return the depth of the affected nests:
+//   {affected-depth, must-be-perfect-nest, reason}.
+std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
+// Return the range of the affected nests in the sequence:
+//   {first, count, reason}.
+// If the range is "the whole sequence", the return value will be {1, -1, ...}.
+std::tuple<std::optional<int64_t>, std::optional<int64_t>, Reason>
+GetAffectedLoopRangeWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
+
+// Count the required loop count from range. If count == -1, return -1,
+// indicating all loops in the sequence.
+std::optional<int64_t> GetRequiredCount(
+    std::optional<int64_t> first, std::optional<int64_t> count);
+
 struct LoopSequence {
-  LoopSequence(
-      const parser::ExecutionPartConstruct &root, bool allowAllLoops = false);
+  LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,
+      bool allowAllLoops = false);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
-  LoopSequence(const R &range, bool allowAllLoops = false)
-      : allowAllLoops_(allowAllLoops) {
+  LoopSequence(const R &range, unsigned version, bool allowAllLoops = false)
+      : version_(version), allowAllLoops_(allowAllLoops) {
     entry_ = std::make_unique<Construct>(range, nullptr);
     createChildrenFromRange(entry_->location);
-    length_ = calculateLength();
+    precalculate();
   }
+
+  struct Depth {
+    // If this sequence is a nest, the depth of the Canonical Loop Nest rooted
+    // at this sequence. Otherwise unspecified.
+    std::optional<int64_t> semantic;
+    // If this sequence is a nest, the depth of the perfect Canonical Loop Nest
+    // rooted at this sequence. Otherwise unspecified.
+    std::optional<int64_t> perfect;
+  };
 
   bool isNest() const { return length_ && *length_ == 1; }
   std::optional<int64_t> length() const { return length_; }
+  Depth depth() const { return depth_; }
   const std::vector<LoopSequence> &children() const { return children_; }
 
 private:
   using Construct = ExecutionPartIterator::Construct;
 
-  LoopSequence(std::unique_ptr<Construct> entry, bool allowAllLoops);
+  LoopSequence(
+      std::unique_ptr<Construct> entry, unsigned version, bool allowAllLoops);
 
   template <typename R, typename = std::enable_if_t<is_range_v<R>>>
   void createChildrenFromRange(const R &range) {
@@ -145,15 +194,31 @@ private:
       ExecutionPartIterator::IteratorType begin,
       ExecutionPartIterator::IteratorType end);
 
-  std::optional<int64_t> calculateLength() const;
-  std::optional<int64_t> sumOfChildrenLengths() const;
+  /// Precalculate length and depth.
+  void precalculate();
 
-  // Precalculated length of the sequence. Note that this is different from
-  // the number of children because a child may result in a sequence, for
-  // example a fuse with a reduced loop range. The length of that sequence
-  // adds to the length of the owning LoopSequence.
+  std::optional<int64_t> calculateLength() const;
+  std::optional<int64_t> getNestedLength() const;
+  Depth calculateDepths() const;
+  Depth getNestedDepths() const;
+
+  /// True if the sequence contains any code (besides transformable loops)
+  /// that is not a valid intervening code.
+  bool hasInvalidIC_{false};
+  /// True if the sequence contains any code (besides transformable loops)
+  /// that is not a valid transparent code.
+  bool hasOpaqueIC_{false};
+
+  /// Precalculated length of the sequence. Note that this is different from
+  /// the number of children because a child may result in a sequence, for
+  /// example a fuse with a reduced loop range. The length of that sequence
+  /// adds to the length of the owning LoopSequence.
   std::optional<int64_t> length_;
+  /// Precalculated depths. Only meaningful if the sequence is a nest.
+  Depth depth_;
+
   // The core structure of the class:
+  unsigned version_; // Needed for GetXyzWithReason
   bool allowAllLoops_;
   std::unique_ptr<Construct> entry_;
   std::vector<LoopSequence> children_;

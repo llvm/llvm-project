@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/bf16fma.h"
-#include "src/__support/FPUtil/FMA.h"
-#include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/bf16fma.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(bfloat16, bf16fma, (double x, double y, double z)) {
-  return fputil::fma<bfloat16>(x, y, z);
+  return math::bf16fma(x, y, z);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

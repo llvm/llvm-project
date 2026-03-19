@@ -44,6 +44,7 @@ module {
     %35 = cir.add sat %32, %33: !u32i
     %36 = cir.sub sat %32, %33: !u32i  
     %37 = cir.max %32, %33 : !u32i
+    %38 = cir.min %32, %33 : !u32i
     cir.return
   }
 }
@@ -59,6 +60,7 @@ module {
 // MLIR: = llvm.intr.uadd.sat{{.*}}(i32, i32) -> i32
 // MLIR: = llvm.intr.usub.sat{{.*}}(i32, i32) -> i32 
 // MLIR: = llvm.intr.umax
+// MLIR: = llvm.intr.umin
 
 // LLVM: = mul i32
 // LLVM: = udiv i32
@@ -71,3 +73,4 @@ module {
 // LLVM: = call i32 @llvm.uadd.sat.i32
 // LLVM: = call i32 @llvm.usub.sat.i32
 // LLVM: = call i32 @llvm.umax.i32
+// LLVM: = call i32 @llvm.umin.i32

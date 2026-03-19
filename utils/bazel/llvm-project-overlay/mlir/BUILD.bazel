@@ -12910,6 +12910,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":AsmParser",
         ":ComplexDialect",
         ":DialectUtils",
         ":IR",
@@ -13825,6 +13826,7 @@ cc_library(
         ":CallOpInterfaces",
         ":ControlFlowDialect",
         ":ControlFlowInterfaces",
+        ":DataLayoutInterfaces",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
