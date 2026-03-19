@@ -490,7 +490,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       // First pass: Match consumer's layout on non-reduction dimensions
       for (int i = 0; i < srcRank; i++) {
         if (!llvm::is_contained(reductionDims, i) &&
-            consumerIdx < consumerSgLayout.size()) {
+            consumerIdx < static_cast<int>(consumerSgLayout.size())) {
           sgLayout[i] = consumerSgLayout[consumerIdx];
           assert((srcShape[i] % sgLayout[i] == 0) &&
                  "source shape not divisible by consumer sg_layout");
