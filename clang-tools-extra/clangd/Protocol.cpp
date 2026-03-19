@@ -209,7 +209,7 @@ bool fromJSON(const llvm::json::Value &Params, ChangeAnnotation &R,
          O.map("needsConfirmation", R.needsConfirmation) &&
          O.mapOptional("description", R.description);
 }
-llvm::json::Value toJSON(const ChangeAnnotation &CA) {
+llvm::json::Value toJSON(const ChangeAnnotation & CA) {
   llvm::json::Object Result{{"label", CA.label}};
   if (CA.needsConfirmation)
     Result["needsConfirmation"] = *CA.needsConfirmation;
