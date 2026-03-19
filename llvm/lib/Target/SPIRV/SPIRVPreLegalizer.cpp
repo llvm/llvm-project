@@ -770,10 +770,6 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 
       Register TruncReg = Trunc.defs().begin()->getReg();
       MRI.replaceRegWith(TruncReg, DefReg);
-      // for (auto It = ++Trunc.getIterator();
-      //      isSpvIntrinsic(*It, Intrinsic::spv_extractv); ++It)
-      //   if (It->getOperand(2).getReg() == TruncReg)
-      //     It->getOperand(2).setReg(DefReg);
       invalidateAndEraseMI(GR, &Trunc);
       invalidateAndEraseMI(GR, &Copy);
     }
