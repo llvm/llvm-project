@@ -13,7 +13,7 @@ jobs:
     name: Build lldb (alpine static)
     runs-on: ubuntu-24.04
     container:
-      image: alpine:3.20
+      image: alpine:3.23
     env:
       SCCACHE_DIR: ${{ github.workspace }}/.cache/sccache
       CCACHE_BASEDIR: ${{ github.workspace }}/.cache/sccache
@@ -92,7 +92,9 @@ jobs:
             -DLLVM_ENABLE_PROJECTS="lldb" \
             -DLLVM_ENABLE_LTO="${LTO_MODE}" \
             -DLLVM_BUILD_LLVM_DYLIB=OFF \
+            -DLLVM_BUILD_TOOLS=OFF \
             -DLLVM_LINK_LLVM_DYLIB=OFF \
+            -DLLVM_TARGETS_TO_BUILD="X86" \
             -DBUILD_SHARED_LIBS=OFF \
             -DLLDB_ENABLE_PYTHON=OFF \
             -DLLVM_ENABLE_TERMINFO=ON \
