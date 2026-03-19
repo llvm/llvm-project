@@ -6353,6 +6353,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
+    if ((getTarget().getTriple().isNVPTX() ||
+         getTarget().getTriple().isAMDGCN()) &&
+        CGM.getLangOpts().UseEmissaryPrint)
+      return EmitEmissaryExec(E);
     if (getTarget().getTriple().isNVPTX() ||
         getTarget().getTriple().isAMDGCN() ||
         (getTarget().getTriple().isSPIRV() &&
@@ -6364,7 +6368,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           getLangOpts().HIP)
         return EmitAMDGPUDevicePrintfCallExpr(E);
     }
-
     break;
   case Builtin::BI__builtin_canonicalize:
   case Builtin::BI__builtin_canonicalizef:

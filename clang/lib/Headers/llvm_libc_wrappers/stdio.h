@@ -14,6 +14,7 @@
 #endif
 
 #include_next <stdio.h>
+#ifndef __USE_EMISSARY_PRINT__
 
 #if defined(__HIP__) || defined(__CUDA__)
 #define __LIBC_ATTRS __attribute__((device))
@@ -49,4 +50,5 @@ __LIBC_ATTRS extern FILE *stdout;
 
 #undef __LIBC_ATTRS
 
+#endif // #ifndef  __USE_EMISSARY_PRINT__
 #endif // __CLANG_LLVM_LIBC_WRAPPERS_STDIO_H__

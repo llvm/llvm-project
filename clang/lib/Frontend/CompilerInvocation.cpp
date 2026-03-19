@@ -3997,6 +3997,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                                        DiagnosticsEngine &Diags) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
+  Opts.UseEmissaryPrint =
+      Args.hasFlag(options::OPT_fuse_emissary_print,
+                   options::OPT_fno_use_emissary_print, false);
+
   if (IK.getFormat() == InputKind::Precompiled ||
       IK.getLanguage() == Language::LLVM_IR ||
       IK.getLanguage() == Language::CIR) {
