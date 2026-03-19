@@ -400,25 +400,28 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 ///   1. Subgroup layout - Row reduction on 2D tensor:
 ///      srcShape=[32, 128], reductionDims=[1], resShape=[32], subgroupSize=16,
 ///      workgroupSize=32
-///      Consumer Layout:
-///      #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
-///      [1]>}
-////     Result Layout: #xegpu.slice<#xegpu.layout<sg_layout=[4, 8],
-///      sg_data=[8, 16]>, dims = [1]>} Note that the sg_layout is reused but
-///      sg_data needs to be adjusted to evenly distribute the source tensor
-///      tile among the reduction dim.
+///      * Consumer Layout:
+///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
+///        [1]>}
+////     * Result Layout:
+///        #xegpu.slice<#xegpu.layout<sg_layout=[4, 8],sg_data=[8, 16]>, dims =
+///        [1]>}
+///      Note that the sg_layout is reused but sg_data needs to be adjusted to
+///      evenly distribute the source tensor tile among the reduction dim.
+///
 ///   2. Subgroup layout - Same example above but consumer doesn't have a
 ///   reusable slice layout.
-///      Consumer Layout:
-///      #xegpu.layout<sgLayout=[32], sgData=[1]>
-///      Result Layout:
-///      #xegpu.slice<#xegpu.layout<sgLayout=[32,1], sgData=[1, 64]>, dims =
-///      [1]>}
-///      Consumer Layout:
-///      #xegpu.slice<#xegpu.layout<sgLayout=[8, 2, 4], sgData=[4, 64, 32]>,
-///      dims = [1, 2]>} Result Layout:
-///      #xegpu.slice<#xegpu.layout<sgLayout=[8,4], sgData=[4, 32]>, dims =
-///      [1]>}
+///      * Consumer Layout:
+///        #xegpu.layout<sgLayout=[32], sgData=[1]>
+///      * Result Layout:
+///        #xegpu.slice<#xegpu.layout<sgLayout=[32,1], sgData=[1, 64]>, dims =
+///        [1]>}
+///      * Consumer Layout:
+///        #xegpu.slice<#xegpu.layout<sgLayout=[8, 2, 4], sgData=[4, 64, 32]>,
+///      dims = [1, 2]>}
+///      * Result Layout:
+///        #xegpu.slice<#xegpu.layout<sgLayout=[8,4], sgData=[4, 32]>, dims =
+///        [1]>}
 ///      Note that the consumer's layout can't be directly reused as is.
 ///      So the algorithm distributes all subgroups on non reduction dimensions
 ///      first and then distribute remaining subgroups on the reduction
