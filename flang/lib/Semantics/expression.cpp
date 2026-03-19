@@ -5195,7 +5195,7 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
   // ArrayElement only after Analyze(expr) has run.
   if (isProcedureCall_ && result && result->Rank() == 0) {
     if (const auto *ae{parser::Unwrap<parser::ArrayElement>(expr)}) {
-      const auto &baseName{parser::GetLastName(ae->Base())};
+      const auto &baseName{parser::GetFirstName(ae->Base())};
       if (baseName.symbol) {
         const auto &sym{baseName.symbol->GetUltimate()};
         if (semantics::IsNamedConstant(sym) && sym.Rank() > 0) {
