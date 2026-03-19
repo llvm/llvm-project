@@ -339,6 +339,18 @@ public:
     return cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
+  /// Get constant address of a global variable as an MLIR attribute.
+  /// This overload converts raw int64_t indices to an ArrayAttr.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
+                                        cir::GlobalOp globalOp,
+                                        llvm::ArrayRef<int64_t> indices) {
+    llvm::SmallVector<mlir::Attribute> attrs;
+    for (int64_t ind : indices)
+      attrs.push_back(getI64IntegerAttr(ind));
+    mlir::ArrayAttr arAttr = mlir::ArrayAttr::get(getContext(), attrs);
+    return getGlobalViewAttr(type, globalOp, arAttr);
+  }
+
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global,
                               bool threadLocal = false) {
     assert(!cir::MissingFeatures::addressSpace());

@@ -691,6 +691,92 @@ static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
     gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
 }
 
+static llvm::SmallVector<int64_t> indexesOfArrayAttr(mlir::ArrayAttr indexes) {
+  llvm::SmallVector<int64_t> inds;
+  for (mlir::Attribute i : indexes) {
+    auto ind = mlir::cast<mlir::IntegerAttr>(i);
+    inds.push_back(ind.getValue().getSExtValue());
+  }
+  return inds;
+}
+
+static bool isViewOnGlobal(cir::GlobalOp glob, cir::GlobalViewAttr view) {
+  return view.getSymbol().getValue() == glob.getSymName();
+}
+
+static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
+                                               cir::GlobalOp newGlob,
+                                               cir::GlobalViewAttr attr,
+                                               mlir::Type oldTy) {
+  // If the attribute does not require indexes or it is not a global view on
+  // the global we're replacing, keep the original attribute.
+  if (!attr.getIndices() || !isViewOnGlobal(newGlob, attr))
+    return attr;
+
+  llvm::SmallVector<int64_t> oldInds = indexesOfArrayAttr(attr.getIndices());
+  llvm::SmallVector<int64_t> newInds;
+  CIRGenBuilderTy &bld = cgm.getBuilder();
+  const cir::CIRDataLayout &layout = cgm.getDataLayout();
+  mlir::Type newTy = newGlob.getSymType();
+
+  uint64_t offset =
+      bld.computeOffsetFromGlobalViewIndices(layout, oldTy, oldInds);
+  bld.computeGlobalViewIndicesFromFlatOffset(offset, newTy, layout, newInds);
+  cir::PointerType newPtrTy;
+
+  if (isa<cir::RecordType>(oldTy))
+    newPtrTy = cir::PointerType::get(newTy);
+  else if (isa<cir::ArrayType>(oldTy))
+    newPtrTy = cast<cir::PointerType>(attr.getType());
+
+  if (newPtrTy)
+    return bld.getGlobalViewAttr(newPtrTy, newGlob, newInds);
+
+  // This may be unreachable in practice, but keep it as errorNYI while CIR
+  // is still under development.
+  cgm.errorNYI("Unhandled type in createNewGlobalView");
+  return {};
+}
+
+static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
+                                       mlir::Type oldTy,
+                                       mlir::Attribute oldInit) {
+  if (auto oldView = mlir::dyn_cast<cir::GlobalViewAttr>(oldInit))
+    return createNewGlobalView(cgm, newGlob, oldView, oldTy);
+
+  auto getNewInitElements =
+      [&](mlir::ArrayAttr oldElements) -> mlir::ArrayAttr {
+    llvm::SmallVector<mlir::Attribute> newElements;
+    for (mlir::Attribute elt : oldElements) {
+      if (auto view = mlir::dyn_cast<cir::GlobalViewAttr>(elt))
+        newElements.push_back(createNewGlobalView(cgm, newGlob, view, oldTy));
+      else if (mlir::isa<cir::ConstArrayAttr, cir::ConstRecordAttr>(elt))
+        newElements.push_back(getNewInitValue(cgm, newGlob, oldTy, elt));
+      else
+        newElements.push_back(elt);
+    }
+    return mlir::ArrayAttr::get(cgm.getBuilder().getContext(), newElements);
+  };
+
+  if (auto oldArray = mlir::dyn_cast<cir::ConstArrayAttr>(oldInit)) {
+    mlir::Attribute newElements =
+        getNewInitElements(mlir::cast<mlir::ArrayAttr>(oldArray.getElts()));
+    return cgm.getBuilder().getConstArray(
+        newElements, mlir::cast<cir::ArrayType>(oldArray.getType()));
+  }
+  if (auto oldRecord = mlir::dyn_cast<cir::ConstRecordAttr>(oldInit)) {
+    mlir::ArrayAttr newMembers = getNewInitElements(oldRecord.getMembers());
+    auto recordTy = mlir::cast<cir::RecordType>(oldRecord.getType());
+    return cgm.getBuilder().getConstRecordOrZeroAttr(
+        newMembers, recordTy.getPacked(), recordTy.getPadded(), recordTy);
+  }
+
+  // This may be unreachable in practice, but keep it as errorNYI while CIR
+  // is still under development.
+  cgm.errorNYI("Unhandled type in getNewInitValue");
+  return {};
+}
+
 // We want to replace a global value, but because of CIR's typed pointers,
 // we need to update the existing uses to reflect the new type, not just replace
 // them directly.
@@ -724,8 +810,19 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
       mlir::Value cast =
           builder.createBitcast(getGlobalOp->getLoc(), useOpResultValue, ptrTy);
       useOpResultValue.replaceAllUsesExcept(cast, cast.getDefiningOp());
-    } else {
-      errorNYI(userOp->getLoc(), "Replace global op use in global view attr");
+    } else if (auto glob = dyn_cast<cir::GlobalOp>(userOp)) {
+      if (auto init = glob.getInitialValue()) {
+        mlir::Attribute nw = getNewInitValue(*this, newGV, oldTy, init.value());
+        glob.setInitialValueAttr(nw);
+      }
+    } else if (auto c = dyn_cast<cir::ConstantOp>(userOp)) {
+      mlir::Attribute init = getNewInitValue(*this, newGV, oldTy, c.getValue());
+      auto typedAttr = mlir::cast<mlir::TypedAttr>(init);
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointAfter(c);
+      auto newUser = cir::ConstantOp::create(builder, c.getLoc(), typedAttr);
+      c.replaceAllUsesWith(newUser.getOperation());
+      c.erase();
     }
   }
 

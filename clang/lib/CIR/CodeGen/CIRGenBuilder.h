@@ -680,6 +680,11 @@ public:
       int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
       llvm::SmallVectorImpl<int64_t> &indices);
 
+  // Convert high-level indices (e.g. from GlobalViewAttr) to byte offset.
+  uint64_t computeOffsetFromGlobalViewIndices(const cir::CIRDataLayout &layout,
+                                              mlir::Type ty,
+                                              llvm::ArrayRef<int64_t> indices);
+
   /// Creates a versioned global variable. If the symbol is already taken, an ID
   /// will be appended to the symbol. The returned global must always be queried
   /// for its name so it can be referenced correctly.
