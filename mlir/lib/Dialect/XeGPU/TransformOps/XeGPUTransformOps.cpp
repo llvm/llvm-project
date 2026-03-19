@@ -320,11 +320,11 @@ void transform::SetDescLayoutOp::getEffects(
   modifiesPayload(effects);
 }
 
-void transform::SetOpLayoutAttrOp::build(
+void transform::SetAnchorLayoutOp::build(
     OpBuilder &builder, OperationState &ostate, Value target, int64_t index,
     ArrayRef<OpFoldResult> mixedSgLayout, ArrayRef<OpFoldResult> mixedSgData,
     ArrayRef<OpFoldResult> mixedInstData, ArrayRef<int32_t> order,
-    ArrayRef<int64_t> sliceDims, bool result, bool operand) {
+    ArrayRef<int64_t> sliceDims) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
   dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
@@ -340,13 +340,11 @@ void transform::SetOpLayoutAttrOp::build(
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
         /*order=*/order,
-        /*slice_dims=*/sliceDims,
-        /*result=*/result,
-        /*operand=*/operand);
+        /*slice_dims=*/sliceDims);
 }
 
 DiagnosedSilenceableFailure
-transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
+transform::SetAnchorLayoutOp::apply(transform::TransformRewriter &rewriter,
                                     transform::TransformResults &results,
                                     transform::TransformState &state) {
   auto targetOps = state.getPayloadOps(getTarget());
@@ -356,18 +354,7 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   }
   Operation *target = *targetOps.begin();
 
-  bool resultTarget = getResult();
-  bool operandTarget = getOperand();
-
   int64_t index = getIndex();
-  if (resultTarget && index >= target->getNumResults()) {
-    return emitSilenceableFailure(getLoc())
-           << "Index exceeds the number of op results";
-  }
-  if (operandTarget && index >= target->getNumOperands()) {
-    return emitSilenceableFailure(getLoc())
-           << "Index exceeds the number of op operands";
-  }
 
   xegpu::LayoutAttr layoutAttr = nullptr;
   auto status = getLayoutAttrFromOperands(
@@ -385,13 +372,7 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Set layout attribute
-  if (resultTarget) {
-    // op result
-    xegpu::setDistributeLayoutAttr(target->getResult(index), layout);
-  } else if (operandTarget) {
-    // op operand
-    xegpu::setDistributeLayoutAttr(target->getOpOperand(index), layout);
-  } else if (auto dpasOp = dyn_cast<xegpu::DpasOp>(target)) {
+  if (auto dpasOp = dyn_cast<xegpu::DpasOp>(target)) {
     // dpas op is a special case where layout needs to be set for A, B, and C
     if (index == 0)
       dpasOp.getProperties().layout_a = layout;
@@ -419,20 +400,13 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   return DiagnosedSilenceableFailure::success();
 }
 
-void transform::SetOpLayoutAttrOp::getEffects(
+void transform::SetAnchorLayoutOp::getEffects(
     ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsHandle(getTargetMutable(), effects);
   onlyReadsHandle(getSgLayoutMutable(), effects);
   onlyReadsHandle(getSgDataMutable(), effects);
   onlyReadsHandle(getInstDataMutable(), effects);
   modifiesPayload(effects);
-}
-
-LogicalResult transform::SetOpLayoutAttrOp::verify() {
-  if (getResult() && getOperand()) {
-    return emitOpError("Cannot set both result and operand simultaneously.");
-  }
-  return success();
 }
 
 void transform::SetGPULaunchThreadsOp::build(

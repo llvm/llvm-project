@@ -154,8 +154,8 @@ def set_desc_layout(
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
-class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
-    """Specialization for SetOpLayoutAttrOp class."""
+class SetAnchorLayoutOp(SetAnchorLayoutOp):
+    """Specialization for SetAnchorLayoutOp class."""
 
     def __init__(
         self,
@@ -167,8 +167,6 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
         order: Optional[MixedInt] = None,
         slice_dims: Optional[MixedInt] = None,
         index: Optional[Union[int, Attribute]] = None,
-        result: Optional[Union[bool, Attribute]] = None,
-        operand: Optional[Union[bool, Attribute]] = None,
         loc=None,
         ip=None,
     ):
@@ -199,14 +197,12 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
             order=order,
             slice_dims=slice_dims,
             index=index,
-            result=result,
-            operand=operand,
             loc=loc,
             ip=ip,
         )
 
 
-def set_op_layout_attr(
+def set_anchor_layout(
     target: Union[Operation, Value],
     sg_layout: MixedValues,
     sg_data: MixedValues,
@@ -215,12 +211,10 @@ def set_op_layout_attr(
     order: Optional[MixedInt] = None,
     slice_dims: Optional[MixedInt] = None,
     index: Optional[Union[int, Attribute]] = None,
-    result: Optional[Union[bool, Attribute]] = None,
-    operand: Optional[Union[bool, Attribute]] = None,
     loc=None,
     ip=None,
-) -> SetOpLayoutAttrOp:
-    return SetOpLayoutAttrOp(
+) -> SetAnchorLayoutOp:
+    return SetAnchorLayoutOp(
         target,
         sg_layout,
         sg_data,
@@ -228,8 +222,6 @@ def set_op_layout_attr(
         order=order,
         slice_dims=slice_dims,
         index=index,
-        result=result,
-        operand=operand,
         loc=loc,
         ip=ip,
     )

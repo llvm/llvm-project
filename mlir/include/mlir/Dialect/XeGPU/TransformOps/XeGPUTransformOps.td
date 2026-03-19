@@ -122,22 +122,21 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   }];
 }
 
-def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
+def SetAnchorLayoutOp : Op<Transform_Dialect, "xegpu.set_anchor_layout", [
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   TransformOpInterface
 ]> {
 
-  let summary = "Set xegpu.layout attribute of an op.";
+  let summary = "Set anchor layout of an op.";
   let description = [{
-    Sets the `xegpu.layout` attribute of an op. By default it sets the anchor
-    layout for XeGPU ops that support it. If `result=true` or `operand=true`,
-    it sets the `layout_result_{index}` or `layout_operand_{index}` attribute,
-    respectively, applicable to any op. The target operand/result value is
-    defined by the `index` argument. The layout is defined by the `sg_layout`,
-    `sg_data` and optional `inst_data` attributes. If `slice_dims` is provided,
-    the `xegpu.layout` attribute is wrapped in an `xegpu.slice<..., dims=slice_dims>`
-    attribute.
+    Sets the `xegpu.layout` anchor layout for XeGPU ops that support it. The
+    target operand value can be set by the `index` argument (currently only
+    applicable to a DPAS op). The layout is defined by the `sg_layout`,
+    `sg_data` and optional `inst_data` and `order` attributes. If `slice_dims`
+    is provided, the `xegpu.layout` attribute is wrapped in an
+    `xegpu.slice<..., dims=slice_dims>` attribute. Emits a silenceable failure
+    if the target op does not support anchor layouts.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
@@ -149,9 +148,7 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sg_data,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_inst_data,
                    DefaultValuedOptionalAttr<DenseI32ArrayAttr, "{}">:$order,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$slice_dims,
-                   DefaultValuedAttr<UnitAttr, "false">:$result,
-                   DefaultValuedAttr<UnitAttr, "false">:$operand
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$slice_dims
                    );
 
   let results = (outs);
@@ -162,14 +159,12 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
                    "ArrayRef<OpFoldResult>":$mixedSgData,
                    "ArrayRef<OpFoldResult>":$mixedInstData,
                    "ArrayRef<int32_t>":$order,
-                   "ArrayRef<int64_t>":$sliceDims,
-                   CArg<"bool", "false">:$result,
-                   CArg<"bool", "false">:$operand
+                   "ArrayRef<int64_t>":$sliceDims
                    )>,
   ];
 
   let assemblyFormat = [{
-    $target (`result` $result^)? (`operand` $operand^)? (`index` `=` $index^)?
+    $target (`index` `=` $index^)?
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
     `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
     (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
@@ -197,8 +192,6 @@ def SetOpLayoutAttrOp : Op<Transform_Dialect, "xegpu.set_op_layout_attr", [
       return getMixedValues(getStaticInstData(), getInstData(), b);
     }
   }];
-
-  let hasVerifier = 1;
 }
 
 def SetGPULaunchThreadsOp
