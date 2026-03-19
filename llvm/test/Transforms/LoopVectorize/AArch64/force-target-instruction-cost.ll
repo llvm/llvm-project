@@ -59,8 +59,6 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST1:       [[VECTOR_PH]]:
 ; COST1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[START]], 32
 ; COST1-NEXT:    [[N_VEC:%.*]] = sub i64 [[START]], [[N_MOD_VF]]
-; COST1-NEXT:    [[IND_END:%.*]] = sub i64 [[START]], [[N_VEC]]
-; COST1-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC]]
 ; COST1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST1:       [[VECTOR_BODY]]:
 ; COST1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -75,6 +73,8 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[START]], [[N_VEC]]
 ; COST1-NEXT:    br i1 [[CMP_N]], [[EXIT_LOOPEXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; COST1:       [[VEC_EPILOG_ITER_CHECK]]:
+; COST1-NEXT:    [[IND_END:%.*]] = sub i64 [[START]], [[N_VEC]]
+; COST1-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC]]
 ; COST1-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; COST1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF4:![0-9]+]]
 ; COST1:       [[VEC_EPILOG_PH]]:
@@ -112,8 +112,6 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST10:       [[VECTOR_PH]]:
 ; COST10-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[START]], 16
 ; COST10-NEXT:    [[N_VEC:%.*]] = sub i64 [[START]], [[N_MOD_VF]]
-; COST10-NEXT:    [[IND_END:%.*]] = sub i64 [[START]], [[N_VEC]]
-; COST10-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC]]
 ; COST10-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST10:       [[VECTOR_BODY]]:
 ; COST10-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -126,6 +124,8 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST10-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[START]], [[N_VEC]]
 ; COST10-NEXT:    br i1 [[CMP_N]], [[EXIT_LOOPEXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; COST10:       [[VEC_EPILOG_ITER_CHECK]]:
+; COST10-NEXT:    [[IND_END:%.*]] = sub i64 [[START]], [[N_VEC]]
+; COST10-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[N_VEC]]
 ; COST10-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
 ; COST10-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF4:![0-9]+]]
 ; COST10:       [[VEC_EPILOG_PH]]:
