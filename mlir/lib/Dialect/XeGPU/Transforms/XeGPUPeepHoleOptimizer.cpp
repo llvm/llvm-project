@@ -428,6 +428,8 @@ class MultiRed2dOpPattern
   matchAndRewrite(vector::MultiDimReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto sourceVecType = reductionOp.getSourceVectorType();
+    if (reductionOp.getReductionDims().size() != 2)
+      return rewriter.notifyMatchFailure(reductionOp, "Expected 2D reduction");
     auto resLayout = xegpu::getDistributeLayoutAttr(reductionOp.getResult());
     // Retrieve and order dims for 1D decomposition (prefer intra-lane first).
     auto dims = llvm::to_vector(reductionOp.getReductionDims());
@@ -443,17 +445,12 @@ class MultiRed2dOpPattern
     SmallVector<int64_t> accShape(sourceVecType.getShape());
     accShape.erase(accShape.begin() + intraLaneDim);
     Type eTy = sourceVecType.getElementType();
-    Attribute eVal;
-    if (eTy.isFloat())
-      eVal = FloatAttr::get(eTy, 0.0);
-    else
-      eVal = IntegerAttr::get(eTy, 0);
-    Value const_zero = arith::ConstantOp::create(
-        rewriter, loc,
-        DenseElementsAttr::get(VectorType::get(accShape, eTy), eVal));
+    Value constNeutralVal = xegpu::createReductionNeutralValue(
+        rewriter, loc, VectorType::get(accShape, eTy), reductionOp.getKind());
+
     Value intraLaneReduced = vector::MultiDimReductionOp::create(
         rewriter, loc, reductionOp.getKind(), reductionOp.getSource(),
-        const_zero, ArrayRef<int64_t>(intraLaneDim));
+        constNeutralVal, ArrayRef<int64_t>(intraLaneDim));
 
     // Adjust crossLaneDim after the first reduction.
     if (crossLaneDim > intraLaneDim)
