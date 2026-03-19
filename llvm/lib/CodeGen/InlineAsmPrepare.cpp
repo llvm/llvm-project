@@ -122,7 +122,6 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
     std::string NewConstraint;
 
     auto I = Constraint.begin(), E = Constraint.end();
-    bool IsOutput = false;
     bool HasIndirect = false;
 
     if (*I == '=') {
@@ -130,7 +129,6 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
         return {};
       ++I;
       NewConstraint += '=';
-      IsOutput = true;
     }
     if (*I == '*') {
       if (Constraint.size() == 1)
@@ -144,12 +142,11 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
         return {};
       ++I;
       NewConstraint += '+';
-      IsOutput = true;
     }
 
     if (IsRegMemConstraint(std::string(I, E))) {
       HasRegMem = true;
-      if (IsOutput && !HasIndirect)
+      if (!HasIndirect)
         NewConstraint += '*';
     }
 
@@ -207,12 +204,12 @@ static void ProcessOutputConstraint(
 }
 
 /// Process an input constraint, handling tied constraints and conversions.
-static void ProcessInputConstraint(const InlineAsm::ConstraintInfo &C,
-                                   Value *ArgVal, ArrayRef<int> TiedOutput,
-                                   ArrayRef<AllocaInst *> OutputAllocas,
-                                   unsigned ConstraintIdx, IRBuilder<> &Builder,
-                                   IRBuilder<> &EntryBuilder,
-                                   SmallVectorImpl<Value *> &NewArgs) {
+static void ProcessInputConstraint(
+    const InlineAsm::ConstraintInfo &C, Value *ArgVal, Type *InputElementType,
+    ArrayRef<int> TiedOutput, ArrayRef<AllocaInst *> OutputAllocas,
+    unsigned ConstraintIdx, IRBuilder<> &Builder, IRBuilder<> &EntryBuilder,
+    SmallVectorImpl<Value *> &NewArgs,
+    SmallVectorImpl<std::pair<unsigned, Type *>> &ElementTypeAttrs) {
   Type *ArgTy = ArgVal->getType();
 
   if (TiedOutput[ConstraintIdx] != -1) {
@@ -229,15 +226,18 @@ static void ProcessInputConstraint(const InlineAsm::ConstraintInfo &C,
     }
   }
 
-  if (C.hasRegMemConstraints()) {
+  if (C.hasRegMemConstraints() && !C.isIndirect) {
     // Converted to memory constraint. Create alloca, store input, pass pointer
     // as argument.
     AllocaInst *Slot = EntryBuilder.CreateAlloca(ArgTy, nullptr, "asm_mem");
     Builder.CreateStore(ArgVal, Slot);
     NewArgs.push_back(Slot);
+    ElementTypeAttrs.push_back({NewArgs.size() - 1, ArgTy});
   } else {
     // Unchanged
     NewArgs.push_back(ArgVal);
+    if (InputElementType)
+      ElementTypeAttrs.push_back({NewArgs.size() - 1, InputElementType});
   }
 }
 
@@ -388,8 +388,9 @@ static bool ProcessInlineAsm(Function &F, CallBase *CB) {
       }
     } else if (C.Type == InlineAsm::isInput) {
       Value *ArgVal = CB->getArgOperand(ArgNo);
-      ProcessInputConstraint(C, ArgVal, TiedOutput, OutputAllocas, I, Builder,
-                             EntryBuilder, NewArgs);
+      ProcessInputConstraint(C, ArgVal, CB->getParamElementType(ArgNo),
+                             TiedOutput, OutputAllocas, I, Builder,
+                             EntryBuilder, NewArgs, ElementTypeAttrs);
       ArgNo++;
     }
   }
