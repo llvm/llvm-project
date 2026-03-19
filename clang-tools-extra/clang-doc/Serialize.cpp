@@ -1013,8 +1013,7 @@ void Serializer::parseFriends(RecordInfo &RI, const CXXRecordDecl *D) {
     if (auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(ActualDecl)) {
       FunctionInfo TempInfo;
       parseParameters(TempInfo, FuncDecl);
-      F.Params.emplace();
-      F.Params = std::move(TempInfo.Params);
+      F.Params = allocateArray<FieldTypeInfo>(TempInfo.Params, TransientArena);
       F.ReturnType = getTypeInfoForType(FuncDecl->getReturnType(),
                                         FuncDecl->getLangOpts());
     }
