@@ -121,7 +121,8 @@ add_library(embed-libcxx-headers-lib OBJECT)
 set_target_properties(embed-libcxx-headers-lib PROPERTIES
   CXX_STANDARD 17
   CXX_STANDARD_REQUIRED Yes
-  CXX_EXTENSIONS No)
+  CXX_EXTENSIONS No
+  POSITION_INDEPENDENT_CODE ON)
 add_dependencies(embed-libcxx-headers-lib embed-libcxx-headers)
 target_sources(embed-libcxx-headers-lib PRIVATE ${GEN_LIBCXX_FILE})
 

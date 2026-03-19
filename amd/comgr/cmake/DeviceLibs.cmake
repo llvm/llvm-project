@@ -91,7 +91,8 @@ add_library(embed-resource-dir-lib OBJECT)
 set_target_properties(embed-resource-dir-lib PROPERTIES
   CXX_STANDARD 17
   CXX_STANDARD_REQUIRED Yes
-  CXX_EXTENSIONS No)
+  CXX_EXTENSIONS No
+  POSITION_INDEPENDENT_CODE ON)
 add_dependencies(embed-resource-dir-lib embed-resource-dir)
 target_sources(embed-resource-dir-lib PRIVATE ${GEN_RESOURCE_DIR_FILE})
 
