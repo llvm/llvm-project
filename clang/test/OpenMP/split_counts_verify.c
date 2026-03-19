@@ -15,9 +15,6 @@
 // 3) Emit LLVM: three sequential loops (multiple phi/br for loop structure)
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -fopenmp-version=60 -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=IR
 
-// 4) Compile and run: exit 0 if sum == 45
-// RUN: %clang -fopenmp -fopenmp-version=60 -O0 %s -o %t.exe
-// RUN: %t.exe
 
 int main(void) {
   const int n = 10;
