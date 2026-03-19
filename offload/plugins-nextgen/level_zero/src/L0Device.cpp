@@ -1233,7 +1233,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   for (auto [Name, Priority] : Funcs) {
     GlobalTy FunctionAddr(Name.str(), sizeof(void *), &FunctionPtrs[Idx++]);
     if (auto Err = Handler.readGlobalFromDevice(*this, Image, FunctionAddr))
-      return handleErr(std::move(Err));
+      return HandleErr(std::move(Err));
   }
 
   if (auto Err = dataSubmit(GlobalPtrStart, FunctionPtrs.data(),
