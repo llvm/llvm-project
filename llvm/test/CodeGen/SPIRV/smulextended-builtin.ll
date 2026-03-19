@@ -11,115 +11,86 @@
 ; CHECK-SPIRV-DAG:                    [[ushort:%[a-z0-9_]+]] = OpTypeInt 16
 ; CHECK-SPIRV-DAG:                      [[uint:%[a-z0-9_]+]] = OpTypeInt 32
 ; CHECK-SPIRV-DAG:                     [[ulong:%[a-z0-9_]+]] = OpTypeInt 64
-; CHECK-SPIRV-DAG:                      [[void:%[a-z0-9_]+]] = OpTypeVoid
 ; CHECK-SPIRV-DAG:                  [[i8struct:%[a-z0-9_]+]] = OpTypeStruct [[uchar]] [[uchar]]
-; CHECK-SPIRV-DAG:    [[_ptr_Function_i8struct:%[a-z0-9_]+]] = OpTypePointer Function [[i8struct]]
 ; CHECK-SPIRV-DAG:                 [[i16struct:%[a-z0-9_]+]] = OpTypeStruct [[ushort]] [[ushort]]
-; CHECK-SPIRV-DAG:   [[_ptr_Function_i16struct:%[a-z0-9_]+]] = OpTypePointer Function [[i16struct]]
 ; CHECK-SPIRV-DAG:                 [[i32struct:%[a-z0-9_]+]] = OpTypeStruct [[uint]] [[uint]]
-; CHECK-SPIRV-DAG:   [[_ptr_Function_i32struct:%[a-z0-9_]+]] = OpTypePointer Function [[i32struct]]
 ; CHECK-SPIRV-DAG:                 [[i64struct:%[a-z0-9_]+]] = OpTypeStruct [[ulong]] [[ulong]]
-; CHECK-SPIRV-DAG:   [[_ptr_Function_i64struct:%[a-z0-9_]+]] = OpTypePointer Function [[i64struct]]
 ; CHECK-SPIRV-DAG:                    [[v4uint:%[a-z0-9_]+]] = OpTypeVector [[uint]] 4
 ; CHECK-SPIRV-DAG:                 [[vecstruct:%[a-z0-9_]+]] = OpTypeStruct [[v4uint]] [[v4uint]]
-; CHECK-SPIRV-DAG:   [[_ptr_Function_vecstruct:%[a-z0-9_]+]] = OpTypePointer Function [[vecstruct]]
-; CHECK-SPIRV-DAG:    [[_ptr_Generic_i32struct:%[a-z0-9_]+]] = OpTypePointer Generic [[i32struct]]
 
-define spir_func void @test_builtin_smulextcc(i8 %a, i8 %b) {
+define spir_func %i8struct @test_builtin_smulextcc(i8 %a, i8 %b) {
   entry:
-  %0 = alloca %i8struct
-  call void @_Z20__spirv_SMulExtendedcc(ptr sret (%i8struct) %0, i8 %a, i8 %b)
-  ret void
+  %0 = call %i8struct @_Z20__spirv_SMulExtendedcc(i8 %a, i8 %b)
+  ret %i8struct %0
 }
-; CHECK-SPIRV:           [[a:%[a-z0-9_]+]] = OpFunctionParameter [[uchar]]
-; CHECK-SPIRV:           [[b:%[a-z0-9_]+]] = OpFunctionParameter [[uchar]]
-; CHECK-SPIRV:       [[entry:%[a-z0-9_]+]] = OpLabel
-; CHECK-SPIRV:      [[var_11:%[a-z0-9_]+]] = OpVariable [[_ptr_Function_i8struct]] Function
-; CHECK-SPIRV:      [[var_12:%[a-z0-9_]+]] = OpSMulExtended [[i8struct]] [[a]] [[b]]
-; CHECK-SPIRV:                               OpStore [[var_11]] [[var_12]]
-; CHECK-SPIRV:                               OpReturn
-; CHECK-SPIRV:                               OpFunctionEnd
+; CHECK-SPIRV:             [[a:%[a-z0-9_]+]] = OpFunctionParameter [[uchar]]
+; CHECK-SPIRV-NEXT:        [[b:%[a-z0-9_]+]] = OpFunctionParameter [[uchar]]
+; CHECK-SPIRV-NEXT:    [[entry:%[a-z0-9_]+]] = OpLabel
+; CHECK-SPIRV-NEXT:      [[res:%[a-z0-9_]+]] = OpSMulExtended [[i8struct]] [[a]] [[b]]
+; CHECK-SPIRV-NEXT:                            OpReturnValue [[res]]
+; CHECK-SPIRV-NEXT:                            OpFunctionEnd
 
-define spir_func void @test_builtin_smulextss(i16 %a, i16 %b) {
+define spir_func %i16struct @test_builtin_smulextss(i16 %a, i16 %b) {
   entry:
-  %0 = alloca %i16struct
-  call void @_Z20__spirv_SMulExtendedss(ptr sret (%i16struct) %0, i16 %a, i16 %b)
-  ret void
+  %0 = call %i16struct @_Z20__spirv_SMulExtendedss(i16 %a, i16 %b)
+  ret %i16struct %0
 }
-; CHECK-SPIRV:         [[a_0:%[a-z0-9_]+]] = OpFunctionParameter [[ushort]]
-; CHECK-SPIRV:         [[b_0:%[a-z0-9_]+]] = OpFunctionParameter [[ushort]]
-; CHECK-SPIRV:     [[entry_0:%[a-z0-9_]+]] = OpLabel
-; CHECK-SPIRV:      [[var_21:%[a-z0-9_]+]] = OpVariable [[_ptr_Function_i16struct]] Function
-; CHECK-SPIRV:      [[var_22:%[a-z0-9_]+]] = OpSMulExtended [[i16struct]] [[a_0]] [[b_0]]
-; CHECK-SPIRV:                               OpStore [[var_21]] [[var_22]]
-; CHECK-SPIRV:                               OpReturn
-; CHECK-SPIRV:                               OpFunctionEnd
+; CHECK-SPIRV:             [[a_0:%[a-z0-9_]+]] = OpFunctionParameter [[ushort]]
+; CHECK-SPIRV-NEXT:        [[b_0:%[a-z0-9_]+]] = OpFunctionParameter [[ushort]]
+; CHECK-SPIRV-NEXT:    [[entry_0:%[a-z0-9_]+]] = OpLabel
+; CHECK-SPIRV-NEXT:      [[res_0:%[a-z0-9_]+]] = OpSMulExtended [[i16struct]] [[a_0]] [[b_0]]
+; CHECK-SPIRV-NEXT:                              OpReturnValue [[res_0]]
+; CHECK-SPIRV-NEXT:                              OpFunctionEnd
 
-define spir_func void @test_builtin_smulextii(i32 %a, i32 %b) {
+define spir_func %i32struct @test_builtin_smulextii(i32 %a, i32 %b) {
   entry:
-  %0 = alloca %i32struct
-  call void @_Z20__spirv_SMulExtendedii(ptr sret (%i32struct) %0, i32 %a, i32 %b)
-  ret void
+  %0 = call %i32struct @_Z20__spirv_SMulExtendedii(i32 %a, i32 %b)
+  ret %i32struct %0
 }
-; CHECK-SPIRV:         [[a_1:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
-; CHECK-SPIRV:         [[b_1:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
-; CHECK-SPIRV:     [[entry_1:%[a-z0-9_]+]] = OpLabel
-; CHECK-SPIRV:      [[var_31:%[a-z0-9_]+]] = OpVariable [[_ptr_Function_i32struct]] Function
-; CHECK-SPIRV:      [[var_32:%[a-z0-9_]+]] = OpSMulExtended [[i32struct]] [[a_1]] [[b_1]]
-; CHECK-SPIRV:                               OpStore [[var_31]] [[var_32]]
-; CHECK-SPIRV:                               OpReturn
-; CHECK-SPIRV:                               OpFunctionEnd
+; CHECK-SPIRV:             [[a_1:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
+; CHECK-SPIRV-NEXT:        [[b_1:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
+; CHECK-SPIRV-NEXT:    [[entry_1:%[a-z0-9_]+]] = OpLabel
+; CHECK-SPIRV-NEXT:      [[res_1:%[a-z0-9_]+]] = OpSMulExtended [[i32struct]] [[a_1]] [[b_1]]
+; CHECK-SPIRV-NEXT:                              OpReturnValue [[res_1]]
+; CHECK-SPIRV-NEXT:                              OpFunctionEnd
 
-define spir_func void @test_builtin_smulextll(i64 %a, i64 %b) {
+define spir_func %i64struct @test_builtin_smulextll(i64 %a, i64 %b) {
   entry:
-  %0 = alloca %i64struct
-  call void @_Z20__spirv_SMulExtendedll(ptr sret (%i64struct) %0, i64 %a, i64 %b)
-  ret void
+  %0 = call %i64struct @_Z20__spirv_SMulExtendedll(i64 %a, i64 %b)
+  ret %i64struct %0
 }
-; CHECK-SPIRV:         [[a_2:%[a-z0-9_]+]] = OpFunctionParameter [[ulong]]
-; CHECK-SPIRV:         [[b_2:%[a-z0-9_]+]] = OpFunctionParameter [[ulong]]
-; CHECK-SPIRV:     [[entry_2:%[a-z0-9_]+]] = OpLabel
-; CHECK-SPIRV:      [[var_41:%[a-z0-9_]+]] = OpVariable [[_ptr_Function_i64struct]] Function
-; CHECK-SPIRV:      [[var_42:%[a-z0-9_]+]] = OpSMulExtended [[i64struct]] [[a_2]] [[b_2]]
-; CHECK-SPIRV:                               OpStore [[var_41]] [[var_42]]
-; CHECK-SPIRV:                               OpReturn
-; CHECK-SPIRV:                               OpFunctionEnd
+; CHECK-SPIRV:             [[a_2:%[a-z0-9_]+]] = OpFunctionParameter [[ulong]]
+; CHECK-SPIRV-NEXT:        [[b_2:%[a-z0-9_]+]] = OpFunctionParameter [[ulong]]
+; CHECK-SPIRV-NEXT:    [[entry_2:%[a-z0-9_]+]] = OpLabel
+; CHECK-SPIRV-NEXT:      [[res_2:%[a-z0-9_]+]] = OpSMulExtended [[i64struct]] [[a_2]] [[b_2]]
+; CHECK-SPIRV-NEXT:                              OpReturnValue [[res_2]]
+; CHECK-SPIRV-NEXT:                              OpFunctionEnd
 
-define spir_func void @test_builtin_smulextDv4_xS_(<4 x i32> %a, <4 x i32> %b) {
+define spir_func %vecstruct @test_builtin_smulextDv4_xS_(<4 x i32> %a, <4 x i32> %b) {
   entry:
-  %0 = alloca %vecstruct
-  call void @_Z20__spirv_SMulExtendedDv4_iS_(ptr sret (%vecstruct) %0, <4 x i32> %a, <4 x i32> %b)
-  ret void
+  %0 = call %vecstruct @_Z20__spirv_SMulExtendedDv4_iS_(<4 x i32> %a, <4 x i32> %b)
+  ret %vecstruct %0
 }
-; CHECK-SPIRV:         [[a_3:%[a-z0-9_]+]] = OpFunctionParameter [[v4uint]]
-; CHECK-SPIRV:         [[b_3:%[a-z0-9_]+]] = OpFunctionParameter [[v4uint]]
-; CHECK-SPIRV:     [[entry_3:%[a-z0-9_]+]] = OpLabel
-; CHECK-SPIRV:      [[var_51:%[a-z0-9_]+]] = OpVariable [[_ptr_Function_vecstruct]] Function
-; CHECK-SPIRV:      [[var_52:%[a-z0-9_]+]] = OpSMulExtended [[vecstruct]] [[a_3]] [[b_3]]
-; CHECK-SPIRV:                               OpStore [[var_51]] [[var_52]]
-; CHECK-SPIRV:                               OpReturn
-; CHECK-SPIRV:                               OpFunctionEnd
+; CHECK-SPIRV:             [[a_3:%[a-z0-9_]+]] = OpFunctionParameter [[v4uint]]
+; CHECK-SPIRV-NEXT:        [[b_3:%[a-z0-9_]+]] = OpFunctionParameter [[v4uint]]
+; CHECK-SPIRV-NEXT:    [[entry_3:%[a-z0-9_]+]] = OpLabel
+; CHECK-SPIRV-NEXT:      [[res_3:%[a-z0-9_]+]] = OpSMulExtended [[vecstruct]] [[a_3]] [[b_3]]
+; CHECK-SPIRV-NEXT:                              OpReturnValue [[res_3]]
+; CHECK-SPIRV-NEXT:                              OpFunctionEnd
 
-%struct.anon = type { i32, i32 }
-
-define spir_func void @test_builtin_smulext_anon(i32 %a, i32 %b) {
+define spir_func %i32struct @test_builtin_smulext_same_arg(i32 %a) {
   entry:
-  %0 = alloca %struct.anon
-  %1 = addrspacecast ptr %0 to ptr addrspace(4)
-  call spir_func void @_Z20__spirv_SMulExtendedIiiE4anonIT_T0_ES1_S2_(ptr addrspace(4) sret(%struct.anon) align 4 %1, i32 %a, i32 %b)
-  ret void
+  %0 = call %i32struct @_Z20__spirv_SMulExtendedii(i32 %a, i32 %a)
+  ret %i32struct %0
 }
-; CHECK-SPIRV:        [[a_4:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
-; CHECK-SPIRV:        [[b_4:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
-; CHECK-SPIRV:    [[entry_4:%[a-z0-9_]+]] = OpLabel
-; CHECK-SPIRV:     [[var_59:%[a-z0-9_]+]] = OpVariable [[_ptr_Function_i32struct]] Function
-; CHECK-SPIRV:     [[var_61:%[a-z0-9_]+]] = OpPtrCastToGeneric [[_ptr_Generic_i32struct]] [[var_59]]
-; CHECK-SPIRV:     [[var_62:%[a-z0-9_]+]] = OpSMulExtended [[i32struct]] [[a_4]] [[b_4]]
-; CHECK-SPIRV:                              OpStore [[var_61]] [[var_62]]
+; CHECK-SPIRV:             [[a_4:%[a-z0-9_]+]] = OpFunctionParameter [[uint]]
+; CHECK-SPIRV-NEXT:    [[entry_4:%[a-z0-9_]+]] = OpLabel
+; CHECK-SPIRV-NEXT:      [[res_4:%[a-z0-9_]+]] = OpSMulExtended [[i32struct]] [[a_4]] [[a_4]]
+; CHECK-SPIRV-NEXT:                              OpReturnValue [[res_4]]
+; CHECK-SPIRV-NEXT:                              OpFunctionEnd
 
-declare void @_Z20__spirv_SMulExtendedIiiE4anonIT_T0_ES1_S2_(ptr addrspace(4) sret(%struct.anon) align 4, i32, i32)
-declare void @_Z20__spirv_SMulExtendedcc(ptr sret(%i8struct), i8, i8)
-declare void @_Z20__spirv_SMulExtendedss(ptr sret(%i16struct), i16, i16)
-declare void @_Z20__spirv_SMulExtendedii(ptr sret(%i32struct), i32, i32)
-declare void @_Z20__spirv_SMulExtendedll(ptr sret(%i64struct), i64, i64)
-declare void @_Z20__spirv_SMulExtendedDv4_iS_(ptr sret (%vecstruct), <4 x i32>, <4 x i32>)
+declare %i8struct @_Z20__spirv_SMulExtendedcc(i8, i8)
+declare %i16struct @_Z20__spirv_SMulExtendedss(i16, i16)
+declare %i32struct @_Z20__spirv_SMulExtendedii(i32, i32)
+declare %i64struct @_Z20__spirv_SMulExtendedll(i64, i64)
+declare %vecstruct @_Z20__spirv_SMulExtendedDv4_iS_(<4 x i32>, <4 x i32>)

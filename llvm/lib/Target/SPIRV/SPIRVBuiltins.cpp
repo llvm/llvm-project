@@ -1997,11 +1997,10 @@ static bool generateICarryBorrowInst(const SPIRV::IncomingCall *Call,
 }
 
 // We expect a builtin
-//     Name(ptr sret([RetType]) %result, Type %operand1, Type %operand2)
-// where %result is a pointer to where the result of the builtin execution
-// is to be stored, and generate the following instructions:
+//     RetType Name(Type %operand1, Type %operand2)
+// where RetType is a struct with two members of the same type as the operands,
+// and generate the following instruction:
 //     Res = Opcode RetType Operand1 Operand2
-//     OpStore RetVariable Res
 static bool generateMulExtendedInst(const SPIRV::IncomingCall *Call,
                                     MachineIRBuilder &MIRBuilder,
                                     SPIRVGlobalRegistry *GR) {
@@ -2011,36 +2010,28 @@ static bool generateMulExtendedInst(const SPIRV::IncomingCall *Call,
   assert((Opcode == SPIRV::OpUMulExtended || Opcode == SPIRV::OpSMulExtended) &&
          "Expected OpUMulExtended or OpSMulExtended");
 
-  Register SRetReg = Call->Arguments[0];
-  SPIRVTypeInst PtrRetType = GR->getSPIRVTypeForVReg(SRetReg);
-  SPIRVTypeInst RetType = GR->getPointeeType(PtrRetType);
-  if (!RetType)
-    report_fatal_error("The first parameter must be a pointer");
-  if (RetType->getOpcode() != SPIRV::OpTypeStruct)
+  SPIRVTypeInst RetType = Call->ReturnType;
+  if (!RetType || RetType->getOpcode() != SPIRV::OpTypeStruct)
     report_fatal_error("Expected struct type result for the extended "
                        "multiplication builtins");
 
-  SPIRVTypeInst OpType1 = GR->getSPIRVTypeForVReg(Call->Arguments[1]);
-  SPIRVTypeInst OpType2 = GR->getSPIRVTypeForVReg(Call->Arguments[2]);
+  SPIRVTypeInst OpType1 = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
+  SPIRVTypeInst OpType2 = GR->getSPIRVTypeForVReg(Call->Arguments[1]);
   if (!OpType1 || !OpType2 || OpType1 != OpType2)
     report_fatal_error("Operands must have the same type");
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-  Register ResReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  Register ResReg = Call->ReturnRegister;
   if (const TargetRegisterClass *DstRC =
-          MRI->getRegClassOrNull(Call->Arguments[1])) {
+          MRI->getRegClassOrNull(Call->Arguments[0])) {
     MRI->setRegClass(ResReg, DstRC);
-    MRI->setType(ResReg, MRI->getType(Call->Arguments[1]));
-  } else {
-    MRI->setType(ResReg, LLT::scalar(64));
   }
   GR->assignSPIRVTypeToVReg(RetType, ResReg, MIRBuilder.getMF());
   MIRBuilder.buildInstr(Opcode)
       .addDef(ResReg)
       .addUse(GR->getSPIRVTypeID(RetType))
-      .addUse(Call->Arguments[1])
-      .addUse(Call->Arguments[2]);
-  MIRBuilder.buildInstr(SPIRV::OpStore).addUse(SRetReg).addUse(ResReg);
+      .addUse(Call->Arguments[0])
+      .addUse(Call->Arguments[1]);
   return true;
 }
 
