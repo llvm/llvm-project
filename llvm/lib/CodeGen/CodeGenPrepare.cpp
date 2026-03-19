@@ -1450,16 +1450,14 @@ static bool SinkCast(CastInst *CI) {
   return MadeChange;
 }
 
-/// Hoist bitcasts to their source block if it reduces register pressure.
-/// This prevents large illegal scalars from being split across basic blocks
-/// by converting them into legal vectors early.
+// Only hoist scalar-to-vector to avoid breaking backend patterns like atomics.
 static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
                             const DataLayout &DL) {
   auto *SrcInst = dyn_cast<Instruction>(BCI->getOperand(0));
   if (!SrcInst)
     return false;
 
-  // Identify the target scenario:
+  // Identify the target scenario.
   bool IsCrossBlock = (SrcInst->getParent() != BCI->getParent());
   bool IsMovable = !SrcInst->isTerminator();
 
@@ -1471,7 +1469,7 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
   if (!IsCrossBlock || !IsMovable || !IsScalarToVector || !IsSameSize)
     return false;
 
-  // Evaluate the benefit:
+  // Evaluate the benefit.
   EVT SrcVT = TLI.getValueType(DL, SrcInst->getType());
   EVT DestVT = TLI.getValueType(DL, BCI->getType());
 
@@ -1479,13 +1477,11 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
   unsigned DestRegs = TLI.getNumRegisters(BCI->getContext(), DestVT);
 
   // Only hoist if the target vector is hardware-legal and it saves registers.
-  bool IsDestLegal = TLI.isTypeLegal(DestVT);
-  bool ReducesPressure = (SrcRegs > DestRegs);
-
-  if (!IsDestLegal || !ReducesPressure)
+  if (!TLI.isTypeLegal(DestVT) || SrcRegs <= DestRegs)
     return false;
 
-  // Safely perform the hoisting:
+  // Move the bitcast. If the source is a PHI, we must insert after the
+  // PHI block to maintain SSA integrity.
   BasicBlock *SrcBB = SrcInst->getParent();
   auto InsertPt = isa<PHINode>(SrcInst) ? SrcBB->getFirstInsertionPt()
                                         : std::next(SrcInst->getIterator());
