@@ -5,6 +5,7 @@
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("//llvm:lit_test.bzl", "package_path")
+load("//llvm:targets.bzl", "llvm_targets")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
 
 package(
@@ -741,7 +742,6 @@ cc_library(
     srcs = glob(["lib/Dialect/GPU/*.cpp"]),
     includes = ["lib/Dialect/Test"],
     deps = [
-        "//llvm:NVPTXCodeGen",
         "//llvm:Support",
         "//mlir:AMDGPUDialect",
         "//mlir:AMDGPUUtils",
@@ -780,7 +780,7 @@ cc_library(
         "//mlir:VectorDialect",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",
-    ],
+    ] + (["//llvm:NVPTXCodeGen"] if "NVPTX" in llvm_targets else []),
 )
 
 cc_library(
