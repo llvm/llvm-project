@@ -1,3 +1,0 @@
-; RUN: llvm-nm -u "%libclc_library_dir/amdgcn-amd-amdhsa-llvm/libclc.bc" 2>&1 | FileCheck %s --allow-empty
-
-; CHECK-NOT: {{.+}}

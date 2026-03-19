@@ -5,15 +5,14 @@ Lit configuration file for libclc tests.
 import os
 
 import lit.formats
-from lit.llvm import llvm_config
 
 # Configuration file for the 'lit' test runner.
 
 # name: The name of this test suite.
 config.name = "libclc"
 
-# test format
-config.test_format = lit.formats.ShTest()
+# testFormat: The test format to use to interpret tests.
+config.test_format = lit.formats.ShTest(True)
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [".test"]
@@ -22,7 +21,8 @@ config.suffixes = [".test"]
 config.excludes = ["CMakeLists.txt"]
 
 # test_source_root: The root path where tests are located.
-config.test_source_root = os.path.dirname(__file__)
+# For per-target tests, this is the target's test directory.
+config.test_source_root = config.libclc_obj_root
 
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = config.libclc_obj_root
@@ -35,12 +35,12 @@ if "PATH" in os.environ:
 else:
     config.environment["PATH"] = config.llvm_tools_dir
 
-for target in config.libclc_targets_to_build.split():
-    if target:
-        arch = target.split("-")[0]
-        config.available_features.add(arch)
-
-llvm_config.use_default_substitutions()
-
 # Define substitutions for the test files
 config.substitutions.append(("%libclc_library_dir", config.libclc_library_dir))
+config.substitutions.append(("%llvm_tools_dir", config.llvm_tools_dir))
+config.substitutions.append(
+    (
+        "%check_external_funcs",
+        os.path.join(config.libclc_test_root, "check_external_funcs.sh"),
+    )
+)
