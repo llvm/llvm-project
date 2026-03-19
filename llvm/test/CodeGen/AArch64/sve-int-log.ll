@@ -676,3 +676,51 @@ vector.body:
 for.cond.cleanup:
   ret void
 }
+
+define void @array_xor_not_v4i32(ptr %a, <4 x i32> %m) {
+; SVE-LABEL: array_xor_not_v4i32:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    mvn v0.16b, v0.16b
+; SVE-NEXT:    mov x8, xzr
+; SVE-NEXT:  .LBB45_1: // %for.body
+; SVE-NEXT:    // =>This Inner Loop Header: Depth=1
+; SVE-NEXT:    ldr q1, [x0, x8]
+; SVE-NEXT:    eor v1.16b, v1.16b, v0.16b
+; SVE-NEXT:    str q1, [x0, x8]
+; SVE-NEXT:    add x8, x8, #16
+; SVE-NEXT:    cmp x8, #1, lsl #12 // =4096
+; SVE-NEXT:    b.ne .LBB45_1
+; SVE-NEXT:  // %bb.2: // %for.cond.cleanup
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: array_xor_not_v4i32:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    mov x8, xzr
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:  .LBB45_1: // %for.body
+; SVE2-NEXT:    // =>This Inner Loop Header: Depth=1
+; SVE2-NEXT:    ldr q1, [x0, x8]
+; SVE2-NEXT:    bsl2n z1.d, z1.d, z1.d, z0.d
+; SVE2-NEXT:    str q1, [x0, x8]
+; SVE2-NEXT:    add x8, x8, #16
+; SVE2-NEXT:    cmp x8, #1, lsl #12 // =4096
+; SVE2-NEXT:    b.ne .LBB45_1
+; SVE2-NEXT:  // %bb.2: // %for.cond.cleanup
+; SVE2-NEXT:    ret
+entry:
+  %invariant.op = xor <4 x i32> %m, splat (i32 -1)
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [16 x i8], ptr %a, i64 %indvars.iv
+  %0 = load <4 x i32>, ptr %arrayidx, align 16
+  %xor.reass.reass = xor <4 x i32> %0, %invariant.op
+  store <4 x i32> %xor.reass.reass, ptr %arrayidx, align 16
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 256
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
