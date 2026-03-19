@@ -8,21 +8,9 @@
 define void @splat_i16x8(i16 %v, ptr noalias %p) {
 ; SIMD128-LABEL: @splat_i16x8(
 ; SIMD128-NEXT:  entry:
-; SIMD128-NEXT:    store i16 [[V:%.*]], ptr [[P:%.*]], align 1
-; SIMD128-NEXT:    [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 2
-; SIMD128-NEXT:    store i16 [[V]], ptr [[IDX1]], align 1
-; SIMD128-NEXT:    [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 4
-; SIMD128-NEXT:    store i16 [[V]], ptr [[IDX2]], align 1
-; SIMD128-NEXT:    [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 6
-; SIMD128-NEXT:    store i16 [[V]], ptr [[IDX3]], align 1
-; SIMD128-NEXT:    [[IDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 8
-; SIMD128-NEXT:    store i16 [[V]], ptr [[IDX4]], align 1
-; SIMD128-NEXT:    [[IDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 10
-; SIMD128-NEXT:    store i16 [[V]], ptr [[IDX5]], align 1
-; SIMD128-NEXT:    [[IDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 12
-; SIMD128-NEXT:    store i16 [[V]], ptr [[IDX6]], align 1
-; SIMD128-NEXT:    [[IDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 14
-; SIMD128-NEXT:    store i16 [[V]], ptr [[IDX7]], align 1
+; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[V:%.*]], i32 0
+; SIMD128-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <8 x i32> zeroinitializer
+; SIMD128-NEXT:    store <8 x i16> [[TMP1]], ptr [[P:%.*]], align 1
 ; SIMD128-NEXT:    ret void
 ;
 ; NO-SIMD128-LABEL: @splat_i16x8(
