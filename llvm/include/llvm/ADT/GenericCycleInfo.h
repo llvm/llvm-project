@@ -266,9 +266,10 @@ public:
 
 private:
   ContextT Context;
+  unsigned BlockNumberEpoch;
 
-  /// Map basic blocks to their inner-most containing cycle.
-  DenseMap<BlockT *, CycleT *> BlockMap;
+  /// Map basic block numbers to their inner-most containing cycle.
+  SmallVector<CycleT *> BlockMap;
 
   /// Top-level cycles discovered by any DFS.
   ///
@@ -281,6 +282,9 @@ private:
   /// Note: This is an incomplete operation that does not update the depth of
   /// the subtree.
   void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
+
+  void verifyBlockNumberEpoch(const FunctionT *Fn) const;
+  void addToBlockMap(BlockT *Block, CycleT *Cycle);
 
 public:
   GenericCycleInfo() = default;
