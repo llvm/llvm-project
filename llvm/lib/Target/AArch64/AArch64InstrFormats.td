@@ -2140,6 +2140,10 @@ class SystemXtI<string asm>
   let Inst{15-12} = Cn;
   let Inst{11-8}  = Cm;
   let Inst{7-5}   = op2;
+
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
 }
 
 class SystemLXtI<bit L, string asm>
