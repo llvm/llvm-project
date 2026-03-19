@@ -4126,8 +4126,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return true;
   }
   case Intrinsic::spv_named_boolean_spec_constant: {
-    auto Opcode = I.getOperand(3).getImm()
-        ? SPIRV::OpSpecConstantTrue : SPIRV::OpSpecConstantFalse;
+    auto Opcode = I.getOperand(3).getImm() ? SPIRV::OpSpecConstantTrue
+                                           : SPIRV::OpSpecConstantFalse;
 
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
                    .addDef(I.getOperand(0).getReg())
