@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGCXXABI.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
@@ -62,8 +63,21 @@ CodeGenModule::getPointerAuthDeclDiscriminator(GlobalDecl Declaration) {
   uint16_t &EntityHash = PtrAuthDiscriminatorHashes[Declaration];
 
   if (EntityHash == 0) {
-    StringRef Name = getMangledName(Declaration);
-    EntityHash = llvm::getPointerAuthStableSipHash(Name);
+    const auto *ND = cast<NamedDecl>(Declaration.getDecl());
+    // If the declaration has an AsmLabelAttr (e.g., LLDB expression evaluator
+    // attaches one to map imported decls to debuggee symbols), the asm label
+    // would be used as the mangled name, producing a wrong discriminator.
+    // Compute the real C++ mangled name instead so the discriminator matches
+    // what the original translation unit used.
+    if (ND->hasAttr<AsmLabelAttr>()) {
+      SmallString<256> Buffer;
+      llvm::raw_svector_ostream Out(Buffer);
+      getCXXABI().getMangleContext().mangleCXXName(Declaration, Out);
+      EntityHash = llvm::getPointerAuthStableSipHash(Out.str());
+    } else {
+      StringRef Name = getMangledName(Declaration);
+      EntityHash = llvm::getPointerAuthStableSipHash(Name);
+    }
   }
 
   return EntityHash;
