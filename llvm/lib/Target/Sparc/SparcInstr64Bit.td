@@ -230,7 +230,7 @@ defm LDSW   : LoadA<"ldsw", 0b001000, 0b011000, sextloadi32, I64Regs, i64>;
 // 64-bit stores.
 defm STX    : StoreA<"stx", 0b001110, 0b011110, store, I64Regs, i64>;
 
-} // Predicates = [Is64Bit]
+} // Predicates = [HasV9]
 
 let Predicates = [Is64Bit] in {
 
