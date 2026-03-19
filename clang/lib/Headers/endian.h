@@ -28,7 +28,6 @@
 #define PDP_ENDIAN __ORDER_PDP_ENDIAN__
 #define BYTE_ORDER __BYTE_ORDER__
 
-
 // Define some compatibility macros if they are not defined.
 #ifndef __BYTE_ORDER
 #define __BYTE_ORDER BYTE_ORDER
