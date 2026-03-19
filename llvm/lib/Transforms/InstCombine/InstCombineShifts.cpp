@@ -580,9 +580,8 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt,
 }
 
 /// See if we can compute the specified value, but shifted logically to the left
-/// or right by some number of bits. This should return true if the
-/// transformation maintains correctness. For right shifts, this requires the
-/// transformation is lossless (i.e. no non-zero bits are shifted out). This is
+/// or right by some number of bits. This should return true if the expression
+/// can be computed for the same cost as the current expression tree. This is
 /// used to eliminate extraneous shifting from things like:
 ///      %C = shl i128 %A, 64
 ///      %D = shl i128 %B, 96
@@ -596,8 +595,6 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
   // We can always evaluate immediate constants shifted left. For right shifts,
   // the constant must be a multiple of 2^NumBits to avoid losing information.
   if (match(V, m_ImmConstant())) {
-    if (ShiftOp == Instruction::Shl)
-      return true;
     const APInt *C;
     if (match(V, m_APIntAllowPoison(C)))
       return C->countr_zero() >= NumBits;
@@ -650,8 +647,7 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
   }
   case Instruction::Add: {
     auto *BinOp = cast<BinaryOperator>(I);
-    if (ShiftOp == Instruction::Shl ||
-        (ShiftOp == Instruction::LShr && BinOp->hasNoUnsignedWrap()) ||
+    if ((ShiftOp == Instruction::LShr && BinOp->hasNoUnsignedWrap()) ||
         (ShiftOp == Instruction::AShr && BinOp->hasNoSignedWrap()))
       return canEvaluateShifted(I->getOperand(0), NumBits, ShiftOp, I) &&
              canEvaluateShifted(I->getOperand(1), NumBits, ShiftOp, I);
