@@ -619,17 +619,6 @@ Instruction input.
 
 *Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`m0<amdgpu_synid_m0>`
 
-.. _amdgpu_synid_gfx940_src1_6802ce:
-
-src1
-----
-
-Instruction input.
-
-*Size:* 1 dword.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`
-
 .. _amdgpu_synid_gfx940_src1_be4895:
 
 src1
@@ -784,34 +773,12 @@ Instruction input.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`, :ref:`fconst<amdgpu_synid_fconst>`
 
-.. _amdgpu_synid_gfx940_srsrc_e73d16:
+.. _amdgpu_synid_gfx940_srsrc:
 
 srsrc
 -----
 
 Buffer resource constant which defines the address and characteristics of the buffer in memory.
-
-*Size:* 4 dwords.
-
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
-
-.. _amdgpu_synid_gfx940_srsrc_79ffcd:
-
-srsrc
------
-
-Image resource constant which defines the location of the image buffer in memory, its dimensions, tiling, and data format.
-
-*Size:* 8 dwords.
-
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`ttmp<amdgpu_synid_ttmp>`
-
-.. _amdgpu_synid_gfx940_ssamp:
-
-ssamp
------
-
-Sampler constant used to specify filtering options applied to the image data after it is read.
 
 *Size:* 4 dwords.
 
@@ -916,22 +883,7 @@ Instruction input.
 
 *Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`flat_scratch<amdgpu_synid_flat_scratch>`, :ref:`xnack_mask<amdgpu_synid_xnack_mask>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`exec<amdgpu_synid_exec>`, :ref:`vccz<amdgpu_synid_vccz>`, :ref:`execz<amdgpu_synid_execz>`, :ref:`scc<amdgpu_synid_scc>`, :ref:`fconst<amdgpu_synid_fconst>`, :ref:`literal<amdgpu_synid_literal>`
 
-.. _amdgpu_synid_gfx940_vaddr_5d0b42:
-
-vaddr
------
-
-Image address which includes from one to four dimensional coordinates and other data used to locate a position in the image.
-
-*Size:* 1, 2, 3, 4, 8 or 16 dwords. Actual size depends on opcode, specific image being handled and :ref:`a16<amdgpu_synid_a16>`.
-
-    Note 1. Image format and dimensions are encoded in the image resource constant but not in the instruction.
-
-    Note 2. Actually image address size may vary from 1 to 13 dwords, but assembler currently supports a limited range of register sequences.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`
-
-.. _amdgpu_synid_gfx940_vaddr_7a736f:
+.. _amdgpu_synid_gfx940_vaddr:
 
 vaddr
 -----
@@ -957,20 +909,6 @@ Vector condition code.
 *Size:* 1 dword.
 
 *Operands:* :ref:`vcc<amdgpu_synid_vcc>`
-
-.. _amdgpu_synid_gfx940_vdata_a5f23e:
-
-vdata
------
-
-Image data to store by an *image_store* instruction.
-
-*Size:* depends on :ref:`dmask<amdgpu_synid_dmask>` and :ref:`d16<amdgpu_synid_d16>`:
-
-* :ref:`dmask<amdgpu_synid_dmask>` may specify from 1 to 4 data elements. Each data element occupies either 32 bits or 16 bits depending on :ref:`d16<amdgpu_synid_d16>`.
-* :ref:`d16<amdgpu_synid_d16>` specifies that data in registers are packed; each value occupies 16 bits.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
 
 .. _amdgpu_synid_gfx940_vdata_2a60db:
 
@@ -1017,46 +955,6 @@ Optionally may serve as an output data:
 
 *Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
 
-.. _amdgpu_synid_gfx940_vdata_2a143d:
-
-vdata
------
-
-Input data for an atomic instruction.
-
-Optionally may serve as an output data:
-
-* If :ref:`glc<amdgpu_synid_glc>` is specified, gets the memory value before the operation.
-
-*Size:* depends on :ref:`dmask<amdgpu_synid_dmask>` and :ref:`tfe<amdgpu_synid_tfe>`:
-
-* :ref:`dmask<amdgpu_synid_dmask>` may specify 1 data element for 32-bit-per-pixel surfaces or 2 data elements for 64-bit-per-pixel surfaces. Each data element occupies 1 dword.
-* :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
-
-  Note: the surface data format is indicated in the image resource constant but not in the instruction.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
-
-.. _amdgpu_synid_gfx940_vdata_576598:
-
-vdata
------
-
-Input data for an atomic instruction.
-
-Optionally may serve as an output data:
-
-* If :ref:`glc<amdgpu_synid_glc>` is specified, gets the memory value before the operation.
-
-*Size:* depends on :ref:`dmask<amdgpu_synid_dmask>` and :ref:`tfe<amdgpu_synid_tfe>`:
-
-* :ref:`dmask<amdgpu_synid_dmask>` may specify 2 data elements for 32-bit-per-pixel surfaces or 4 data elements for 64-bit-per-pixel surfaces. Each data element occupies 1 dword.
-* :ref:`tfe<amdgpu_synid_tfe>` adds 1 dword if specified.
-
-  Note: the surface data format is indicated in the image resource constant but not in the instruction.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
-
 .. _amdgpu_synid_gfx940_vdata_fa7dbd:
 
 vdata
@@ -1098,20 +996,6 @@ vdata
 Instruction output.
 
 *Size:* 4 dwords.
-
-*Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
-
-.. _amdgpu_synid_gfx940_vdata_a507a0:
-
-vdata
------
-
-Instruction output.
-
-*Size:* depends on :ref:`dmask<amdgpu_synid_dmask>` and :ref:`d16<amdgpu_synid_d16>`:
-
-* :ref:`dmask<amdgpu_synid_dmask>` may specify from 1 to 4 data elements. Each data element occupies either 32 bits or 16 bits depending on :ref:`d16<amdgpu_synid_d16>`.
-* :ref:`d16<amdgpu_synid_d16>` specifies that data in registers are packed; each value occupies 16 bits.
 
 *Operands:* :ref:`v<amdgpu_synid_v>`, :ref:`a<amdgpu_synid_a>`
 
