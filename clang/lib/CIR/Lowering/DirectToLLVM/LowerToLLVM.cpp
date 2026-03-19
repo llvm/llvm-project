@@ -4691,10 +4691,25 @@ mlir::LogicalResult CIRToLLVMMemChrOpLowering::matchAndRewrite(
                                         /*isVarArg=*/false);
   llvm::StringRef fnName = "memchr";
   createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnTy);
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+
+  mlir::Builder b(rewriter.getContext());
+  auto noundefAttr = b.getNamedAttr("llvm.noundef", b.getUnitAttr());
+  auto noundefDict = mlir::DictionaryAttr::get(rewriter.getContext(),
+                                               llvm::ArrayRef(noundefAttr));
+  SmallVector<mlir::Attribute> argAttrs(3, noundefDict);
+  auto argAttrsArr = mlir::ArrayAttr::get(rewriter.getContext(), argAttrs);
+
+  auto modOp = op->getParentOfType<mlir::ModuleOp>();
+  if (auto fn = mlir::dyn_cast_or_null<mlir::LLVM::LLVMFuncOp>(
+          mlir::SymbolTable::lookupSymbolIn(modOp, fnName)))
+    if (!fn->hasAttr("arg_attrs"))
+      fn->setAttr("arg_attrs", argAttrsArr);
+
+  auto newCall = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
       op, mlir::TypeRange{llvmPtrTy}, fnName,
       mlir::ValueRange{adaptor.getSrc(), adaptor.getPattern(),
                        adaptor.getLen()});
+  newCall->setAttr("arg_attrs", argAttrsArr);
   return mlir::success();
 }
 
