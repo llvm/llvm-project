@@ -967,8 +967,8 @@ def testInvalidOperationStrSoftFails():
         except MLIRError as e:
             # CHECK: Exception: <
             # CHECK:   Verification failed:
-            # CHECK:   'builtin.module' op requires one region
-            # CHECK:   see current operation:
+            # CHECK:   error: unknown: 'builtin.module' op requires one region
+            # CHECK:    note: unknown: see current operation:
             # CHECK:     "builtin.module"() ({
             # CHECK:     ^bb0:
             # CHECK:     }, {

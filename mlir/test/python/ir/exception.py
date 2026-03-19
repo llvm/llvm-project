@@ -31,9 +31,9 @@ def test_exception():
     except MLIRError as e:
         # CHECK: Exception: <
         # CHECK:   Unable to parse operation assembly:
-        # CHECK:   "use": operand #0 does not dominate this use
-        # CHECK:   "use": see current operation: "test.use"(%0) : (i64) -> ()
-        # CHECK:   "def": operand defined here (op in the same block)
+        # CHECK:   error: "use": operand #0 does not dominate this use
+        # CHECK:    note: "use": see current operation: "test.use"(%0) : (i64) -> ()
+        # CHECK:    note: "def": operand defined here (op in the same block)
         # CHECK: >
         print(f"Exception: <{e}>")
 
