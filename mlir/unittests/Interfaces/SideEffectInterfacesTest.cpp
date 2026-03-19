@@ -91,7 +91,8 @@ TEST(SideEffectResourceTest, CustomHierarchyIsaCast) {
   EXPECT_EQ(TestGrandchildResource::get()->getParent(),
             TestChildResource::get());
   EXPECT_EQ(TestChildResource::get()->getParent(), TestRootResource::get());
-  EXPECT_EQ(TestRootResource::get()->getParent(), nullptr);
+  EXPECT_EQ(TestRootResource::get()->getParent(), AnyResource::get());
+  EXPECT_EQ(AnyResource::get()->getParent(), nullptr);
 
   // isSubresourceOf
   EXPECT_TRUE(
@@ -112,7 +113,7 @@ TEST(SideEffectResourceTest, CustomHierarchyIsaCast) {
 }
 
 TEST(SideEffectResourceTest, DisjointnessAndGetParent) {
-  EXPECT_EQ(DefaultResource::get()->getParent(), nullptr);
+  EXPECT_EQ(DefaultResource::get()->getParent(), AnyResource::get());
   EXPECT_EQ(AutomaticAllocationScopeResource::get()->getParent(),
             DefaultResource::get());
   EXPECT_TRUE(DefaultResource::get()->isDisjointFrom(TestRootResource::get()));

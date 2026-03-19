@@ -127,8 +127,8 @@ public:
   /// Return a string name of the resource.
   virtual StringRef getName() const = 0;
 
-  /// Return the parent resource in the hierarchy, or nullptr for a root.
-  virtual Resource *getParent() const { return nullptr; }
+  /// Return the parent resource in the hierarchy.
+  virtual Resource *getParent() const;
 
   /// Returns true if this resource is addressable (effects on it can alias
   /// pointer-based memory). Default is true.
@@ -175,7 +175,20 @@ private:
   TypeID id;
 };
 
-/// A conservative default resource kind.
+/// Special kind of resource that includes all other resources
+/// regardless of whether they are addressable or not.
+/// It might be used to specify an effect on all resources.
+struct AnyResource : public Resource::Base<AnyResource> {
+  StringRef getName() const final { return "<AnyResource>"; }
+  Resource *getParent() const override { return nullptr; }
+};
+
+/// All resources that do not override getParent() have AnyResource
+/// as their parent so that none of the resources is disjoint
+/// from AnyResource.
+inline Resource *Resource::getParent() const { return AnyResource::get(); }
+
+/// A conservative default addressable resource kind.
 struct DefaultResource : public Resource::Base<DefaultResource> {
   DefaultResource() = default;
   StringRef getName() const override { return "<Default>"; }
