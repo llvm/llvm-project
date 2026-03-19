@@ -313,7 +313,7 @@ TEST_F(SimpleNativeMemoryMapSPSCITest, ReserveInitializeDetachShutdown) {
   EXPECT_EQ(SentinelValue, 0U);
 
   std::future<void> DetachResult;
-  SNMM->onDetach(waitFor(DetachResult));
+  SNMM->onDetach(waitFor(DetachResult), /* ShutdownRequested */ false);
   DetachResult.get();
 
   EXPECT_EQ(SentinelValue, 0);

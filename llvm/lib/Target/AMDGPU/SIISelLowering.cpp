@@ -2384,7 +2384,7 @@ SDValue SITargetLowering::getLDSKernelId(SelectionDAG &DAG,
 
   Function &F = DAG.getMachineFunction().getFunction();
   std::optional<uint32_t> KnownSize =
-      AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
+      AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(F);
   if (KnownSize.has_value())
     return DAG.getConstant(*KnownSize, SL, MVT::i32);
   return SDValue();
@@ -3931,7 +3931,7 @@ void SITargetLowering::passSpecialInputs(
       InputReg = getImplicitArgPtr(DAG, DL);
     } else if (InputID == AMDGPUFunctionArgInfo::LDS_KERNEL_ID) {
       std::optional<uint32_t> Id =
-          AMDGPUMachineFunction::getLDSKernelIdMetadata(F);
+          AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(F);
       if (Id.has_value()) {
         InputReg = DAG.getConstant(*Id, DL, ArgVT);
       } else {
@@ -9457,7 +9457,7 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, PtrLo, PtrHi);
 }
 
-SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
+SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                              SDValue Op,
                                              SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);

@@ -80,97 +80,6 @@ static Status ExceptionMaskValidator(const char *string, void *unused) {
   return {};
 }
 
-namespace {
-/// Holds an lldb_private::Module name and a "sanitized" version
-/// of it for the purposes of loading a script of that name by
-/// the relevant ScriptInterpreter.
-///
-/// E.g., for Python the sanitized name can't include:
-/// * Special characters: '-', ' ', '.'
-/// * Python keywords
-class SanitizedScriptingModuleName {
-public:
-  SanitizedScriptingModuleName(llvm::StringRef name,
-                               ScriptInterpreter &script_interpreter)
-      : m_original_name(name), m_sanitized_name(name.str()) {
-    // FIXME: for Python, don't allow certain characters in imported module
-    // filenames. Theoretically, different scripting languages may have
-    // different sets of forbidden tokens in filenames, and that should
-    // be dealt with by each ScriptInterpreter. For now, just replace dots
-    // with underscores. In order to support anything other than Python
-    // this will need to be reworked.
-    llvm::replace(m_sanitized_name, '.', '_');
-    llvm::replace(m_sanitized_name, ' ', '_');
-    llvm::replace(m_sanitized_name, '-', '_');
-    llvm::replace(m_sanitized_name, '+', 'x');
-
-    if (script_interpreter.IsReservedWord(m_sanitized_name.c_str())) {
-      m_conflicting_keyword = m_sanitized_name;
-      m_sanitized_name.insert(m_sanitized_name.begin(), '_');
-    }
-  }
-
-  /// Returns \c true if this name is a keyword in the associated scripting
-  /// language.
-  bool IsKeyword() const { return !m_conflicting_keyword.empty(); }
-
-  /// Returns \c true if the original name has been sanitized (i.e., required
-  /// changes).
-  bool RequiredSanitization() const {
-    return m_sanitized_name != m_original_name;
-  }
-
-  llvm::StringRef GetSanitizedName() const { return m_sanitized_name; }
-  llvm::StringRef GetOriginalName() const { return m_original_name; }
-  llvm::StringRef GetConflictingKeyword() const {
-    return m_conflicting_keyword;
-  }
-
-  /// If we did some replacements of reserved characters, and a
-  /// file with the untampered name exists, then warn the user
-  /// that the file as-is shall not be loaded.
-  void WarnIfInvalidUnsanitizedScriptExists(Stream &os,
-                                            const FileSpec &original_fspec,
-                                            const FileSpec &fspec) const {
-    if (!RequiredSanitization())
-      return;
-
-    // Path to unsanitized script name doesn't exist. Nothing to warn about.
-    if (!FileSystem::Instance().Exists(original_fspec))
-      return;
-
-    std::string reason_for_complaint =
-        IsKeyword() ? llvm::formatv("conflicts with the keyword '{0}'",
-                                    GetConflictingKeyword())
-                          .str()
-                    : "contains reserved characters";
-
-    if (FileSystem::Instance().Exists(fspec))
-       os.Format(
-            "debug script '{0}' cannot be loaded because '{1}' {2}. "
-            "Ignoring '{1}' and loading '{3}' instead.\n",
-            original_fspec.GetPath(), original_fspec.GetFilename(),
-            std::move(reason_for_complaint), fspec.GetFilename());
-    else
-      os.Format(
-            "debug script '{0}' cannot be loaded because '{1}' {2}. "
-            "If you intend to have this script loaded, please rename it to "
-            "'{3}' and retry.\n",
-            original_fspec.GetPath(), original_fspec.GetFilename(),
-            std::move(reason_for_complaint), fspec.GetFilename());
-  }
-
-private:
-  llvm::StringRef m_original_name;
-  std::string m_sanitized_name;
-
-  /// If the m_sanitized_name conflicts with a keyword for the ScriptInterpreter
-  /// language associated with this SanitizedScriptingModuleName, is set to the
-  /// conflicting keyword. Empty otherwise.
-  std::string m_conflicting_keyword;
-};
-} // namespace
-
 /// Destructor.
 ///
 /// The destructor is virtual since this class is designed to be
@@ -297,9 +206,11 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
 
   FileSpecList file_list;
   while (module_spec.GetFilename()) {
-    SanitizedScriptingModuleName sanitized_name(
-        module_spec.GetFilename().GetStringRef(),
-        *target.GetDebugger().GetScriptInterpreter());
+    ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
+        target.GetDebugger()
+            .GetScriptInterpreter()
+            ->GetSanitizedScriptingModuleName(
+                module_spec.GetFilename().GetStringRef());
 
     StreamString path_string;
     StreamString original_path_string;
@@ -319,8 +230,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     FileSpec orig_script_fspec(original_path_string.GetString());
     FileSystem::Instance().Resolve(orig_script_fspec);
 
-    sanitized_name.WarnIfInvalidUnsanitizedScriptExists(
-        feedback_stream, orig_script_fspec, script_fspec);
+    WarnIfInvalidUnsanitizedScriptExists(feedback_stream, sanitized_name,
+                                         orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
       file_list.Append(script_fspec);
