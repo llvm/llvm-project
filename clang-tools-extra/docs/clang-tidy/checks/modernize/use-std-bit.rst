@@ -18,3 +18,27 @@ Expression                     Replacement
 ``x << 3 | x >> 61``           ``std::rotl(x, 3)``
 ``x << 61 | x >> 3``           ``std::rotr(x, 3)``
 ============================== =======================
+
+Options
+-------
+
+.. option:: StrictMode
+
+  When set to ``true`` (default is ``false``), insert explicit cast to make sure the
+  type of the substituted expression is unchanged. Example:
+
+  .. code:: c++
+
+    auto foo(unsigned char x) {
+      return x << 3 | x >> 5;
+    }
+
+  Becomes:
+
+  .. code:: c++
+
+    #include <bit>
+
+    auto foo(unsigned char x) {
+      return static_cast<int>(std::rotl(x, 3));
+    }
