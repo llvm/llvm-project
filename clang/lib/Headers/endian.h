@@ -28,6 +28,21 @@
 #define PDP_ENDIAN __ORDER_PDP_ENDIAN__
 #define BYTE_ORDER __BYTE_ORDER__
 
+
+// Define some compatibility macros if they are not defined.
+#ifndef __BYTE_ORDER
+#define __BYTE_ORDER BYTE_ORDER
+#endif
+#ifndef __LITTLE_ENDIAN
+#define __LITTLE_ENDIAN LITTLE_ENDIAN
+#endif
+#ifndef __BIG_ENDIAN
+#define __BIG_ENDIAN BIG_ENDIAN
+#endif
+#ifndef __PDP_ENDIAN
+#define __PDP_ENDIAN PDP_ENDIAN
+#endif
+
 #if BYTE_ORDER == LITTLE_ENDIAN
 
 #define htobe16(x)                                                             \
