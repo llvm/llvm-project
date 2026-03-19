@@ -27,7 +27,6 @@ config.test_format = lit.formats.ShTest(not use_lit_shell)
 config.suffixes = [
     ".c",
     ".cpp",
-    ".cppm",
     ".hpp",
     ".m",
     ".mm",
