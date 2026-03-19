@@ -2145,6 +2145,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                              std::optional<Expr *> OptArraySize,
                              SourceRange DirectInitRange, Expr *Initializer) {
   SourceRange TypeRange = AllocTypeInfo->getTypeLoc().getSourceRange();
+  SourceLocation TypeRangeStartLoc = TypeRange.getBegin();
   SourceLocation StartLoc = Range.getBegin();
 
   Expr *ArraySize = OptArraySize.value_or(nullptr);
@@ -2187,15 +2188,15 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     //       initialized (8.5); if no initialization is performed,
     //       the object has indeterminate value
     case CXXNewInitializationStyle::None:
-      return InitializationKind::CreateDefault(TypeRange.getBegin());
+      return InitializationKind::CreateDefault(TypeRangeStartLoc);
     //     - Otherwise, the new-initializer is interpreted according to the
     //       initialization rules of 8.5 for direct-initialization.
     case CXXNewInitializationStyle::Parens:
-      return InitializationKind::CreateDirect(TypeRange.getBegin(),
+      return InitializationKind::CreateDirect(TypeRangeStartLoc,
                                               DirectInitRange.getBegin(),
                                               DirectInitRange.getEnd());
     case CXXNewInitializationStyle::Braces:
-      return InitializationKind::CreateDirectList(TypeRange.getBegin(),
+      return InitializationKind::CreateDirectList(TypeRangeStartLoc,
                                                   Initializer->getBeginLoc(),
                                                   Initializer->getEndLoc());
     }
@@ -2208,7 +2209,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       isa<DeducedTemplateSpecializationType>(Deduced)) {
     if (OptArraySize) {
       SourceLocation ArraySizeExprLoc =
-          ArraySize ? ArraySize->getExprLoc() : TypeRange.getBegin();
+          ArraySize ? ArraySize->getExprLoc() : TypeRangeStartLoc;
       SourceRange ArraySizeSourceRange =
           ArraySize ? ArraySize->getSourceRange() : TypeRange;
       return ExprError(
@@ -2277,11 +2278,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     }
   }
 
-  if (CheckAllocatedType(AllocType, TypeRange.getBegin(), TypeRange))
+  if (CheckAllocatedType(AllocType, TypeRangeStartLoc, TypeRange))
     return ExprError();
 
-  if (OptArraySize &&
-      !checkArrayElementAlignment(AllocType, TypeRange.getBegin()))
+  if (OptArraySize && !checkArrayElementAlignment(AllocType, TypeRangeStartLoc))
     return ExprError();
 
   // In ARC, infer 'retaining' for the allocated
