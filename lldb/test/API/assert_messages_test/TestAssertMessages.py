@@ -23,7 +23,7 @@ class AssertMessagesTestCase(TestBase):
         else:
             self.fail("Initial expect should have raised AssertionError!")
 
-    @expectedFailureAll(remote=True)
+    @expectedFailureAll(oslist=no_match(["linux"]), remote=True)
     def test_createTestTarget(self):
         try:
             self.createTestTarget("doesnt_exist")

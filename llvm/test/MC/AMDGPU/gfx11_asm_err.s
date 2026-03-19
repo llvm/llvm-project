@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s -filetype=null 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
 
 s_delay_alu
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
@@ -74,20 +74,6 @@ v_cvt_f16_u16_e64_dpp v5, s1 row_shl:1 row_mask:0xf bank_mask:0xf
 ; disallow space between colons
 v_dual_mul_f32 v0, v0, v2 : : v_dual_mul_f32 v1, v1, v3
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: unknown token in expression
-
-// On GFX11, v_dot8_i32_i4 is a valid SP3 alias for v_dot8_i32_iu4.
-// However, we intentionally leave it unimplemented because on other
-// processors v_dot8_i32_i4 denotes an instruction of a different
-// behaviour, which is considered potentially dangerous.
-v_dot8_i32_i4 v0, v1, v2, v3
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
-
-// On GFX11, v_dot4_i32_i8 is a valid SP3 alias for v_dot4_i32_iu8.
-// However, we intentionally leave it unimplemented because on other
-// processors v_dot4_i32_i8 denotes an instruction of a different
-// behaviour, which is considered potentially dangerous.
-v_dot4_i32_i8 v0, v1, v2, v3
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_dot4c_i32_i8 v0, v1, v2
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -170,20 +156,20 @@ s_load_b96 s[20:22], s[2:3], s0
 s_buffer_load_b96 s[20:22], s[4:7], s0
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-v_mov_b16 v0.l, s0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+s_wait_event -1
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid immediate: only 16-bit values are legal
 
-v_mov_b16 v0.l, ttmp0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+s_wait_event 65537
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid immediate: only 16-bit values are legal
 
-v_mov_b16 v0.l, a0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+s_wait_event NOT_EVENT
+// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: expected structured immediate or an absolute expression
 
-v_mov_b16 v0.l, s0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+s_wait_event { export_ready: 0 }
+// GFX11: :[[@LINE-1]]:16: error: unknown field
 
-v_mov_b16 v0.l, ttmp0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+s_wait_event { export_ready: 1 }
+// GFX11: :[[@LINE-1]]:16: error: unknown field
 
-v_mov_b16 v0.l, a0.h
-// GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+s_wait_event { dont_wait_export_ready: 2 }
+// GFX11: :[[@LINE-1]]:40: error: invalid bit value: only 1-bit values are legal

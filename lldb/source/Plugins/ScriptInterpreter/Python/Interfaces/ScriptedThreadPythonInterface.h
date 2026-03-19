@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPYTHONINTERFACE_H
-
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPYTHONINTERFACE_H
 
 #include "ScriptedPythonInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
@@ -28,9 +24,10 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
-  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
-    return llvm::SmallVector<llvm::StringLiteral>(
-        {"get_stop_reason", "get_register_context"});
+  llvm::SmallVector<AbstractMethodRequirement>
+  GetAbstractMethodRequirements() const override {
+    return llvm::SmallVector<AbstractMethodRequirement>(
+        {{"get_stop_reason"}, {"get_register_context"}});
   }
 
   lldb::tid_t GetThreadID() override;
@@ -50,8 +47,12 @@ public:
   std::optional<std::string> GetRegisterContext() override;
 
   StructuredData::ArraySP GetExtendedInfo() override;
+
+  std::optional<std::string> GetScriptedFramePluginName() override;
+
+protected:
+  lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() override;
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPYTHONINTERFACE_H

@@ -1,9 +1,9 @@
-! Offloading test checking interaction of pointer
-! and target with target where 3-D bounds have
-! been specified
+! Offloading test checking interaction of pointer and target with target where
+! 3-D bounds have been specified
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! XFAIL: intelgpu
 program main
     integer, pointer :: inArray(:,:,:)
     integer, pointer :: outArray(:,:,:)

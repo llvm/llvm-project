@@ -9,6 +9,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -26,14 +27,15 @@ TEST(BuildCompilerInvocationTest, RecoverMultipleJobs) {
   std::vector<const char *> Args = {"clang", "--target=macho", "-arch",  "i386",
                                     "-arch", "x86_64",         "foo.cpp"};
   clang::IgnoringDiagConsumer D;
+  clang::DiagnosticOptions DiagOpts;
   CreateInvocationOptions Opts;
   Opts.RecoverOnError = true;
-  Opts.Diags = clang::CompilerInstance::createDiagnostics(new DiagnosticOptions,
+  Opts.VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  Opts.Diags = clang::CompilerInstance::createDiagnostics(*Opts.VFS, DiagOpts,
                                                           &D, false);
-  Opts.VFS = new llvm::vfs::InMemoryFileSystem();
   std::unique_ptr<CompilerInvocation> CI = createInvocation(Args, Opts);
   ASSERT_TRUE(CI);
-  EXPECT_THAT(CI->TargetOpts->Triple, testing::StartsWith("i386-"));
+  EXPECT_THAT(CI->getTargetOpts().Triple, testing::StartsWith("i386-"));
 }
 
 // buildInvocationFromCommandLine should not translate -include to -include-pch,
@@ -45,9 +47,9 @@ TEST(BuildCompilerInvocationTest, ProbePrecompiled) {
   FS->addFile("foo.h.pch", 0, llvm::MemoryBuffer::getMemBuffer(""));
 
   clang::IgnoringDiagConsumer D;
+  clang::DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> CommandLineDiagsEngine =
-      clang::CompilerInstance::createDiagnostics(new DiagnosticOptions, &D,
-                                                 false);
+      clang::CompilerInstance::createDiagnostics(*FS, DiagOpts, &D, false);
   // Default: ProbePrecompiled=false
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = CommandLineDiagsEngine;

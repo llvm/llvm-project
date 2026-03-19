@@ -10,7 +10,7 @@
 ; RUN: cat %t4 | FileCheck %s
 
 ; CHECK:      - [[NUM_FUNCS:[0-9]+]] function definitions and 0 function declarations imported from
-; CHECK-NEXT: - [[NUM_VARS:[0-9]+]] global vars definition and 0 global vars declaration imported from
+; CHECK-NEXT: - [[NUM_VARS:[0-9]+]] global vars imported from
 
 ; CHECK:      [[NUM_FUNCS]] function-import - Number of functions imported in backend
 ; CHECK-NEXT: [[NUM_FUNCS]] function-import - Number of functions thin link decided to import

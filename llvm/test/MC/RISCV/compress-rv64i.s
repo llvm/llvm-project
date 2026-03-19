@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple riscv64 -mattr=+c -show-encoding < %s \
 # RUN:   | FileCheck -check-prefixes=CHECK-ALIAS %s
 # RUN: llvm-mc -triple riscv64 -mattr=+c -show-encoding \
-# RUN:   -riscv-no-aliases < %s | FileCheck -check-prefixes=CHECK-INST %s
+# RUN:   -M no-aliases < %s | FileCheck -check-prefixes=CHECK-INST %s
 # RUN: llvm-mc -triple riscv64 -mattr=+c -filetype=obj < %s \
 # RUN:   | llvm-objdump  --triple=riscv64 --mattr=+c --no-print-imm-hex -d - \
 # RUN:   | FileCheck -check-prefixes=CHECK-BYTES,CHECK-ALIAS %s

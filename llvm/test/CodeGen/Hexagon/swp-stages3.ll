@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=2 < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -pipeliner-max-stages=2 < %s
 ; REQUIRES: asserts
 
 ; Test that the compiler doesn't seg fault due to incorrect names in epilog.

@@ -107,24 +107,6 @@
 ///    The 2nd source tile. Max size is 1024 Bytes.
 #define _tile_cmmrlfp16ps(dst, a, b) __builtin_ia32_tcmmrlfp16ps(dst, a, b)
 
-/// Perform matrix multiplication of two tiles containing complex elements and
-///    accumulate the results into a packed single precision tile.
-///
-/// \param m
-///    The number of rows in the first tile and the number of rows in the result
-///    tile.
-/// \param n
-///    The number of columns in the second tile and the number of columns in the
-///    result tile.
-/// \param k
-///    The number of columns in the first tile and the number of rows in the
-///    second tile.
-/// \param dst
-///    Pointer to the destination tile where the result will be stored.
-/// \param src1
-///    Pointer to the first source tile.
-/// \param src2
-///    Pointer to the second source tile.
 static __inline__ _tile1024i __DEFAULT_FN_ATTRS_COMPLEX
 _tile_cmmimfp16ps_internal(unsigned short m, unsigned short n, unsigned short k,
                            _tile1024i dst, _tile1024i src1, _tile1024i src2) {
@@ -153,9 +135,8 @@ _tile_cmmrlfp16ps_internal(unsigned short m, unsigned short n, unsigned short k,
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
 ///    The 2nd source tile. Max size is 1024 Bytes.
-__DEFAULT_FN_ATTRS_COMPLEX
-static void __tile_cmmimfp16ps(__tile1024i *dst, __tile1024i src0,
-                               __tile1024i src1) {
+static __inline__ void __DEFAULT_FN_ATTRS_COMPLEX
+__tile_cmmimfp16ps(__tile1024i *dst, __tile1024i src0, __tile1024i src1) {
   dst->tile = _tile_cmmimfp16ps_internal(src0.row, src1.col, src0.col,
                                          dst->tile, src0.tile, src1.tile);
 }
@@ -176,9 +157,8 @@ static void __tile_cmmimfp16ps(__tile1024i *dst, __tile1024i src0,
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
 ///    The 2nd source tile. Max size is 1024 Bytes.
-__DEFAULT_FN_ATTRS_COMPLEX
-static void __tile_cmmrlfp16ps(__tile1024i *dst, __tile1024i src0,
-                               __tile1024i src1) {
+static __inline__ void __DEFAULT_FN_ATTRS_COMPLEX
+__tile_cmmrlfp16ps(__tile1024i *dst, __tile1024i src0, __tile1024i src1) {
   dst->tile = _tile_cmmrlfp16ps_internal(src0.row, src1.col, src0.col,
                                          dst->tile, src0.tile, src1.tile);
 }

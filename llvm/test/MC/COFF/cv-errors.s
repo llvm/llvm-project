@@ -3,45 +3,45 @@
 .text
 foo:
 .cv_file a
-# CHECK: error: expected file number in '.cv_file' directive
+# CHECK: error: expected file number
 # CHECK-NOT: error:
 .cv_file 0 "t.cpp"
 # CHECK: error: file number less than one
 # CHECK-NOT: error:
 .cv_func_id x
-# CHECK: error: expected function id in '.cv_func_id' directive
+# CHECK: error: expected function id
 # CHECK-NOT: error:
 .cv_func_id -1
-# CHECK: error: expected function id in '.cv_func_id' directive
+# CHECK: error: expected function id
 # CHECK-NOT: error:
 .cv_func_id 0xFFFFFFFFFFFFFFFF
 # CHECK: error: expected function id within range [0, UINT_MAX)
 # CHECK-NOT: error:
 .cv_inline_site_id x
-# CHECK: error: expected function id in '.cv_inline_site_id' directive
+# CHECK: error: expected function id
 # CHECK-NOT: error:
 
 .cv_file 1 "t.cpp"
 .cv_func_id 0
 
 .cv_inline_site_id 0 0 0 0 0 0
-# CHECK: error: expected 'within' identifier in '.cv_inline_site_id' directive
+# CHECK: error: expected 'within' identifier
 # CHECK-NOT: error:
 
 .cv_inline_site_id 0 within a
-# CHECK: error: expected function id in '.cv_inline_site_id' directive
+# CHECK: error: expected function id
 # CHECK-NOT: error:
 
 .cv_inline_site_id 0 within 0 x
-# CHECK: error: expected 'inlined_at' identifier in '.cv_inline_site_id' directive
+# CHECK: error: expected 'inlined_at' identifier
 # CHECK-NOT: error:
 
 .cv_inline_site_id 0 within 0 inlined_at 0 0 0
-# CHECK: error: file number less than one in '.cv_inline_site_id' directive
+# CHECK: error: file number less than one
 # CHECK-NOT: error:
 
 .cv_inline_site_id 0 within 0 inlined_at 10 0 0
-# CHECK: error: unassigned file number in '.cv_inline_site_id' directive
+# CHECK: error: unassigned file number
 # CHECK-NOT: error:
 
 .cv_inline_site_id 0 within 0 inlined_at 1 1 1

@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRFROMF_H
 #define LLVM_LIBC_SRC_STDLIB_STRFROMF_H
 
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int strfromf(char *__restrict s, size_t n, const char *__restrict format,
              float fp);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_STRFROMF_H

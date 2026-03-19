@@ -245,8 +245,6 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
     // 'encoding':'uint' , 'format':'hex'         , 'set': 0, 'ehframe' : 2,
     // 'dwarf' : 2, 'generic':'arg4', 'alt-name':'arg4', },
     RegisterInfo reg_info;
-    std::vector<uint32_t> value_regs;
-    std::vector<uint32_t> invalidate_regs;
     memset(&reg_info, 0, sizeof(reg_info));
 
     llvm::StringRef name_val;
@@ -460,8 +458,8 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   // Now update all value_regs with each register info as needed
   const size_t num_regs = m_regs.size();
   for (size_t i = 0; i < num_regs; ++i) {
-    if (m_value_regs_map.find(i) != m_value_regs_map.end())
-      m_regs[i].value_regs = m_value_regs_map[i].data();
+    if (auto it = m_value_regs_map.find(i); it != m_value_regs_map.end())
+      m_regs[i].value_regs = it->second.data();
     else
       m_regs[i].value_regs = nullptr;
   }
@@ -497,10 +495,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
        pos != end; ++pos) {
     if (pos->second.size() > 1) {
       llvm::sort(pos->second);
-      reg_num_collection::iterator unique_end =
-          std::unique(pos->second.begin(), pos->second.end());
-      if (unique_end != pos->second.end())
-        pos->second.erase(unique_end, pos->second.end());
+      pos->second.erase(llvm::unique(pos->second), pos->second.end());
     }
     assert(!pos->second.empty());
     if (pos->second.back() != LLDB_INVALID_REGNUM)
@@ -509,8 +504,9 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
 
   // Now update all invalidate_regs with each register info as needed
   for (size_t i = 0; i < num_regs; ++i) {
-    if (m_invalidate_regs_map.find(i) != m_invalidate_regs_map.end())
-      m_regs[i].invalidate_regs = m_invalidate_regs_map[i].data();
+    if (auto it = m_invalidate_regs_map.find(i);
+        it != m_invalidate_regs_map.end())
+      m_regs[i].invalidate_regs = it->second.data();
     else
       m_regs[i].invalidate_regs = nullptr;
   }

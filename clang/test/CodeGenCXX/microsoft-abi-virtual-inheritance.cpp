@@ -80,6 +80,15 @@ B::~B() {
   // CHECK2: call x86_thiscallcc void @"??1VBase@@UAE@XZ"(ptr {{[^,]*}} %[[VBASE_i8]])
   // CHECK2: ret
 
+  // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??0B@test2@@QAE@XZ"
+  // CHECK2:           (ptr {{[^,]*}} returned align 4 dereferenceable(4) %this, i32 noundef %is_most_derived)
+  // CHECK2: call x86_thiscallcc noundef ptr @"??0A@test2@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
+  // CHECK2: ret
+
+  // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_GD@pr36921@@UAEPAXI@Z"(
+  // CHECK2:   %[[THIS_RELOAD:.*]] = load ptr, ptr
+  // CHECK2:   %[[THIS_ADJ_i8:.*]] = getelementptr inbounds i8, ptr %[[THIS_RELOAD]], i32 -4
+
   // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_GB@@UAEPAXI@Z"
   // CHECK2:   store ptr %{{.*}}, ptr %[[THIS_ADDR:.*]], align 4
   // CHECK2:   %[[THIS_i8:.*]] = getelementptr inbounds i8, ptr %[[THIS_PARAM_i8:.*]], i32 -8
@@ -111,7 +120,7 @@ void B::foo() {
 // CHECK: %[[VBOFFSET32:.*]] = load i32, ptr %[[VBENTRY]]
 // CHECK: %[[VBOFFSET:.*]] = add nsw i32 0, %[[VBOFFSET32]]
 // CHECK: %[[VBASE_i8:.*]] = getelementptr inbounds i8, ptr %[[THIS_ADJ_i8]], i32 %[[VBOFFSET]]
-// CHECK: %[[FIELD:.*]] = getelementptr inbounds %struct.VBase, ptr %[[VBASE_i8]], i32 0, i32 1
+// CHECK: %[[FIELD:.*]] = getelementptr inbounds nuw %struct.VBase, ptr %[[VBASE_i8]], i32 0, i32 1
 // CHECK: store i32 42, ptr %[[FIELD]], align 4
 //
 // CHECK: ret void
@@ -292,11 +301,6 @@ void callC() { C x; }
 // CHECK: call x86_thiscallcc noundef ptr @"??0B@test2@@QAE@XZ"(ptr {{[^,]*}} %{{.*}}, i32 noundef 0)
 // CHECK: call x86_thiscallcc noundef ptr @"??0A@test2@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
 // CHECK: ret
-
-// CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??0B@test2@@QAE@XZ"
-// CHECK2:           (ptr {{[^,]*}} returned align 4 dereferenceable(4) %this, i32 noundef %is_most_derived)
-// CHECK2: call x86_thiscallcc noundef ptr @"??0A@test2@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
-// CHECK2: ret
 
 }
 
@@ -480,9 +484,6 @@ struct B {
 struct C : virtual B {};
 struct D : virtual A, C {};
 D d;
-// CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??_GD@pr36921@@UAEPAXI@Z"(
-// CHECK2:   %[[THIS_RELOAD:.*]] = load ptr, ptr
-// CHECK2:   %[[THIS_ADJ_i8:.*]] = getelementptr inbounds i8, ptr %[[THIS_RELOAD]], i32 -4
 }
 
 namespace issue_60465 {
@@ -502,9 +503,9 @@ B::~B() {
 // must not have 'align 8', since at least B's copy of A is only 'align 4'.
 // CHECK-LABEL: define dso_local x86_thiscallcc void @"??1B@issue_60465@@UAE@XZ"(ptr noundef %this)
 // CHECK:   %[[THIS_ADJ_i8:.*]] = getelementptr inbounds i8, ptr %{{.*}}, i32 -12
-// CHECK:   %[[X:.*]] = getelementptr inbounds %"struct.issue_60465::B", ptr %[[THIS_ADJ_i8]], i32 0, i32 1
+// CHECK:   %[[X:.*]] = getelementptr inbounds nuw %"struct.issue_60465::B", ptr %[[THIS_ADJ_i8]], i32 0, i32 1
 // CHECK:   store ptr null, ptr %[[X]], align 4
-// CHECK:   %[[Y:.*]] = getelementptr inbounds %"struct.issue_60465::B", ptr %[[THIS_ADJ_i8]], i32 0, i32 2
+// CHECK:   %[[Y:.*]] = getelementptr inbounds nuw %"struct.issue_60465::B", ptr %[[THIS_ADJ_i8]], i32 0, i32 2
 // CHECK:   store ptr null, ptr %[[Y]], align 8
   x = nullptr;
   y = nullptr;

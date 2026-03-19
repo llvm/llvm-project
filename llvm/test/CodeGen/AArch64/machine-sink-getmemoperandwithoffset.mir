@@ -1,8 +1,8 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-sink -o - %s | FileCheck %s
 --- |
-  define i8 @g() {
+  define i8 @g(i1 %arg) {
   else.7:
-    br i1 undef, label %then.8, label %else.8, !make.implicit !0
+    br i1 %arg, label %then.8, label %else.8, !make.implicit !0
 
   then.8:                                           ; preds = %else.8, %else.7
     %merge = phi i8 [ 1, %else.7 ], [ 0, %else.8 ]

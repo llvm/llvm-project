@@ -31,9 +31,9 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH_US:%.*]]
 ; CHECK:       for.end.us:
 ; CHECK-NEXT:    [[ARRAYIDX9_US:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV33:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX9_US]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX9_US]], align 4, !llvm.mem.parallel_loop_access [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[ADD10_US:%.*]] = add nsw i32 [[TMP3]], 3
-; CHECK-NEXT:    store i32 [[ADD10_US]], ptr [[ARRAYIDX9_US]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    store i32 [[ADD10_US]], ptr [[ARRAYIDX9_US]], align 4, !llvm.mem.parallel_loop_access [[META0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT34:%.*]] = add i64 [[INDVARS_IV33]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV35:%.*]] = trunc i64 [[INDVARS_IV_NEXT34]] to i32
 ; CHECK-NEXT:    [[EXITCOND36:%.*]] = icmp eq i32 [[LFTR_WIDEIV35]], [[M]]
@@ -44,9 +44,9 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[ADD4_US:%.*]] = add i32 [[ADD_US:%.*]], [[TMP4]]
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD4_US]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM_US]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4, !llvm.mem.parallel_loop_access [[META0]]
 ; CHECK-NEXT:    [[ADD5_US:%.*]] = add nsw i32 [[TMP5]], 1
-; CHECK-NEXT:    store i32 [[ADD5_US]], ptr [[ARRAYIDX7_US:%.*]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    store i32 [[ADD5_US]], ptr [[ARRAYIDX7_US:%.*]], align 4, !llvm.mem.parallel_loop_access [[META0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT30]] = add i64 [[INDVARS_IV29]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV31:%.*]] = trunc i64 [[INDVARS_IV_NEXT30]] to i32
 ; CHECK-NEXT:    [[EXITCOND32:%.*]] = icmp eq i32 [[LFTR_WIDEIV31]], [[M]]
@@ -71,15 +71,13 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[ADD_US]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[ADD_US]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP13]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP15]], align 4
+; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP17]], i32 3
-; CHECK-NEXT:    store i32 [[TMP18]], ptr [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access !0
+; CHECK-NEXT:    store i32 [[TMP18]], ptr [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -216,7 +214,7 @@ for.end15:                                        ; preds = %for.end.us, %entry
   ret void
 }
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 
 !3 = !{!4, !5}
 !4 = !{!4}

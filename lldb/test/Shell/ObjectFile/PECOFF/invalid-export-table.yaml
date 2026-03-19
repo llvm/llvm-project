@@ -4,7 +4,7 @@
 # RUN: yaml2obj %s -o %t.exe
 # RUN: %lldb %t.exe 2>&1 | FileCheck %s
 
-# CHECK: error: '{{.*}}' doesn't contain any {{.*}} platform architectures
+# CHECK: error: '{{.*}}' is not a valid executable
 --- !COFF
 OptionalHeader:
   AddressOfEntryPoint: 4096

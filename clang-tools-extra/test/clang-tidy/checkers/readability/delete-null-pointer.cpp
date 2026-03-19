@@ -10,7 +10,7 @@ struct Templ {
       delete mem;
     // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: 'if' statement is unnecessary;
     // CHECK-FIXES: // t1
-    // CHECK-FIXES-NEXT: {{^    }}// t2
+    // CHECK-FIXES-NEXT: // t2
     // CHECK-FIXES-NEXT: delete mem;
   }
   T mem;
@@ -24,7 +24,7 @@ struct TemplPtr {
       delete mem;
     // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: 'if' statement is unnecessary;
     // CHECK-FIXES: // t3
-    // CHECK-FIXES-NEXT: {{^    }}// t4
+    // CHECK-FIXES-NEXT: // t4
     // CHECK-FIXES-NEXT: delete mem;
   }
   T *mem;
@@ -45,7 +45,7 @@ struct NeverInstantiated {
       delete mem;
     // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: 'if' statement is unnecessary;
     // CHECK-FIXES: // t1
-    // CHECK-FIXES-NEXT: {{^    }}// t2
+    // CHECK-FIXES-NEXT: // t2
     // CHECK-FIXES-NEXT: delete mem;
   }
   T mem;
@@ -59,7 +59,7 @@ struct NeverInstantiatedPtr {
       delete mem;
     // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: 'if' statement is unnecessary;
     // CHECK-FIXES: // t3
-    // CHECK-FIXES-NEXT: {{^    }}// t4
+    // CHECK-FIXES-NEXT: // t4
     // CHECK-FIXES-NEXT: delete mem;
   }
   T *mem;
@@ -72,7 +72,7 @@ void f() {
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
 
   // CHECK-FIXES: int *ps = 0;
-  // CHECK-FIXES-NEXT: {{^  }}// #0
+  // CHECK-FIXES-NEXT: // #0
   // CHECK-FIXES-NEXT: delete ps;
 
   int *p = 0;
@@ -83,10 +83,10 @@ void f() {
   } // #3
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
 
-  // CHECK-FIXES: {{^  }}// #1
-  // CHECK-FIXES-NEXT: {{^  }}// #2
+  // CHECK-FIXES: // #1
+  // CHECK-FIXES-NEXT: // #2
   // CHECK-FIXES-NEXT: delete p;
-  // CHECK-FIXES-NEXT: {{^  }}// #3
+  // CHECK-FIXES-NEXT: // #3
 
   int *p2 = new int[3];
   // #4
@@ -95,7 +95,7 @@ void f() {
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary;
 
   // CHECK-FIXES: // #4
-  // CHECK-FIXES-NEXT: {{^  }}// #5
+  // CHECK-FIXES-NEXT: // #5
   // CHECK-FIXES-NEXT: delete[] p2;
 
   int *p3 = 0;
@@ -136,7 +136,7 @@ void f() {
       if (mp) // #6
         delete mp;
       // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
-      // CHECK-FIXES: {{^      }}// #6
+      // CHECK-FIXES: // #6
       // CHECK-FIXES-NEXT: delete mp;
     }
     int *mp;

@@ -1,35 +1,34 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
+// RUN:   }}' -- \
+// RUN:   -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
+// RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
+// RUN:   }}' -- \
+// RUN:   -fno-delayed-template-parsing
+
+#include <utility>
+#include <memory>
 
 typedef decltype(nullptr) nullptr_t;
 
 namespace std {
-typedef unsigned size_t;
 
 template <typename T>
-struct unique_ptr {
-  unique_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-  T& operator[](size_t i) const;
+struct optional {
+  optional();
+  T& operator*();
+  const T& operator*() const;
+  void reset();
 };
 
-template <typename T>
-struct shared_ptr {
-  shared_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-};
-
-template <typename T>
-struct weak_ptr {
-  weak_ptr();
-  bool expired() const;
+struct any {
+  any();
+  void reset();
 };
 
 template <typename T1, typename T2>
@@ -88,41 +87,6 @@ DECLARE_STANDARD_CONTAINER(unordered_multimap);
 
 typedef basic_string<char> string;
 
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept {
-  return static_cast<typename remove_reference<_Tp>::type &&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type&& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
-
 } // namespace std
 
 class A {
@@ -135,6 +99,7 @@ public:
   A &operator=(A &&);
 
   void foo() const;
+  void bar(int i) const;
   int getInt() const;
 
   operator bool() const;
@@ -233,7 +198,7 @@ void standardSmartPtr() {
     // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
-    std::unique_ptr<A> ptr;
+    std::unique_ptr<A[]> ptr;
     std::move(ptr);
     ptr[0];
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
@@ -254,6 +219,14 @@ void standardSmartPtr() {
     ptr->foo();
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
     // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
+  }
+  {
+    std::optional<A> opt;
+    std::move(opt);
+    A val = *opt;
+    (void)val;
+    // CHECK-NOTES: [[@LINE-2]]:14: warning: 'opt' used after it was moved
+    // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
   }
   {
     // std::weak_ptr<> cannot be dereferenced directly, so we only check that
@@ -574,6 +547,19 @@ void useAndMoveInLoop() {
       // CHECK-NOTES: [[@LINE+2]]:7: note: move occurred here
       // CHECK-NOTES: [[@LINE-3]]:7: note: the use happens in a later loop
       std::move(a);
+    }
+  }
+  // Same as above, but the use and the move are in different CFG blocks.
+  {
+    A a;
+    for (int i = 0; i < 10; ++i) {
+      if (i < 10)
+        a.foo();
+      // CHECK-NOTES: [[@LINE-1]]:9: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE+3]]:9: note: move occurred here
+      // CHECK-NOTES: [[@LINE-3]]:9: note: the use happens in a later loop
+      if (i < 10)
+        std::move(a);
     }
   }
   // However, this case shouldn't be flagged -- the scope of the declaration of
@@ -979,10 +965,10 @@ void standardContainerAssignIsReinit() {
   }
 }
 
-// Resetting the standard smart pointer types using reset() is treated as a
+// Resetting the standard smart owning types using reset() is treated as a
 // re-initialization. (We don't test std::weak_ptr<> because it can't be
 // dereferenced directly.)
-void standardSmartPointerResetIsReinit() {
+void resetIsReinit() {
   {
     std::unique_ptr<A> ptr;
     std::move(ptr);
@@ -994,6 +980,20 @@ void standardSmartPointerResetIsReinit() {
     std::move(ptr);
     ptr.reset(new A);
     *ptr;
+  }
+  {
+    std::optional<A> opt;
+    std::move(opt);
+    opt.reset();
+    std::optional<A> opt2 = opt;
+    (void)opt2;
+  }
+  {
+    std::any a;
+    std::move(a);
+    a.reset();
+    std::any a2 = a;
+    (void)a2;
   }
 }
 
@@ -1352,6 +1352,40 @@ void ifWhileAndSwitchSequenceInitDeclAndCondition() {
   }
 }
 
+// In a function call, the expression that determines the callee is sequenced
+// before the arguments -- but only in C++17 and later.
+namespace CalleeSequencedBeforeArguments {
+int consumeA(std::unique_ptr<A> a);
+int consumeA(A &&a);
+
+void calleeSequencedBeforeArguments() {
+  {
+    std::unique_ptr<A> a;
+    a->bar(consumeA(std::move(a)));
+    // CHECK-NOTES-CXX11: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES-CXX11: [[@LINE-2]]:21: note: move occurred here
+    // CHECK-NOTES-CXX11: [[@LINE-3]]:5: note: the use and move are unsequenced
+  }
+  {
+    std::unique_ptr<A> a;
+    std::unique_ptr<A> getArg(std::unique_ptr<A> a);
+    getArg(std::move(a))->bar(a->getInt());
+    // CHECK-NOTES: [[@LINE-1]]:31: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:12: note: move occurred here
+    // CHECK-NOTES-CXX11: [[@LINE-3]]:31: note: the use and move are unsequenced
+  }
+  {
+    A a;
+    // Nominally, the callee `a.bar` is evaluated before the argument
+    // `consumeA(std::move(a))`, but in effect `a` is only accessed after the
+    // call to `A::bar()` happens, i.e. after the argument has been evaluted.
+    a.bar(consumeA(std::move(a)));
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
+  }
+}
+} // namespace CalleeSequencedBeforeArguments
+
 // Some statements in templates (e.g. null, break and continue statements) may
 // be shared between the uninstantiated and instantiated versions of the
 // template and therefore have multiple parents. Make sure the sequencing code
@@ -1469,7 +1503,6 @@ public:
         // CHECK-NOTES: [[@LINE-1]]:11: warning: 'val' used after it was moved
         s{std::move(val)} {} // wrong order
   // CHECK-NOTES: [[@LINE-1]]:9: note: move occurred here
-  // CHECK-NOTES: [[@LINE-4]]:11: note: the use happens in a later loop iteration than the move
 
 private:
   bool a;
@@ -1562,3 +1595,114 @@ void create() {
 }
 
 } // namespace issue82023
+
+namespace custom_invalidation
+{
+
+template<class T = int>
+struct Database {
+  template<class...>
+  void CloseConnection(T = T()) {}
+  template<class...>
+  static void StaticCloseConnection(Database&, T = T()) {}
+  template<class...>
+  friend void FriendCloseConnection(Database&, T = T()) {}
+  void Query();
+};
+
+void FreeCloseConnection(Database<int>&) {}
+
+void Run() {
+  using DB = Database<>;
+
+  DB db1;
+  db1.CloseConnection();
+  db1.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db1' used after it was invalidated by 'CloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:7: note: invalidation occurred here
+
+  DB db2;
+  DB::StaticCloseConnection(db2);
+  db2.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was invalidated by 'StaticCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db3;
+  DB().StaticCloseConnection(db3);
+  db3.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db3' used after it was invalidated by 'StaticCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db4;
+  FriendCloseConnection(db4);
+  db4.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db4' used after it was invalidated by 'FriendCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db5;
+  FriendCloseConnection(db5, /*disconnect timeout*/ 5);
+  db5.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db5' used after it was invalidated by 'FriendCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db6;
+  FreeCloseConnection(db6);
+  db6.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db6' used after it was invalidated by 'FreeCloseConnection'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+}
+
+} // namespace custom_invalidation
+
+namespace custom_reinitialization {
+
+template <class T = int>
+struct Database {
+  template <class... Args>
+  void Reset(T = T(), Args &&...) {}
+  template <class... Args>
+  static void StaticReset(Database &, T = T(), Args &&...) {}
+  template <class... Args>
+  friend void FriendReset(Database &, T = T(), Args &&...) {}
+  void Query(T = T()) {}
+};
+
+template <class T = int>
+void RegularReset(Database<T> &d, T = T()) {}
+
+void Run() {
+  using DB = Database<>;
+
+  DB db1;
+  std::move(db1);
+  db1.Reset();
+  db1.Query();
+
+  DB db2;
+  std::move(db2);
+  db2.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
+  db2.Reset();
+
+  DB db3;
+  std::move(db3);
+  DB::StaticReset(db3);
+  db3.Query();
+
+  DB db4;
+  std::move(db4);
+  FriendReset(db4);
+  db4.Query();
+
+  DB db5;
+  std::move(db5);
+  db5.Reset(0, 1.5, "extra");
+  db5.Query();
+
+  DB db6;
+  std::move(db6);
+  RegularReset(db6);
+  db6.Query();
+}
+} // namespace custom_reinitialization

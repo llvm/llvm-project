@@ -18,7 +18,7 @@
 
 #if __riscv_xlen == 32
 
-#ifndef __riscv_32e
+#ifndef __riscv_abi_rve
 
   .globl  __riscv_save_12
   .type   __riscv_save_12,@function
@@ -98,24 +98,33 @@ __riscv_save_0:
 
   .globl  __riscv_save_2
   .type   __riscv_save_2,@function
-  .globl  __riscv_save_1
-  .type   __riscv_save_1,@function
-  .globl  __riscv_save_0
-  .type   __riscv_save_0,@function
 __riscv_save_2:
-__riscv_save_1:
-__riscv_save_0:
   addi    sp, sp, -12
   sw      s1,  0(sp)
   sw      s0,  4(sp)
   sw      ra,  8(sp)
   jr      t0
 
+  .globl  __riscv_save_1
+  .type   __riscv_save_1,@function
+__riscv_save_1:
+  addi    sp, sp, -8
+  sw      s0,  0(sp)
+  sw      ra,  4(sp)
+  jr      t0
+
+  .globl  __riscv_save_0
+  .type   __riscv_save_0,@function
+__riscv_save_0:
+  addi    sp, sp, -4
+  sw      ra,  0(sp)
+  jr      t0
+
 #endif
 
 #elif __riscv_xlen == 64
 
-#ifndef __riscv_64e
+#ifndef __riscv_abi_rve
 
   .globl  __riscv_save_12
   .type   __riscv_save_12,@function
@@ -208,18 +217,27 @@ __riscv_save_0:
 
   .globl  __riscv_save_2
   .type   __riscv_save_2,@function
+__riscv_save_2:
+  addi    sp, sp, -24
+  sw      s1, 0(sp)
+  sw      s0, 8(sp)
+  sw      ra, 16(sp)
+  jr      t0
+
   .globl  __riscv_save_1
   .type   __riscv_save_1,@function
+__riscv_save_1:
+  addi    sp, sp, -16
+  sw      s0, 0(sp)
+  sw      ra, 8(sp)
+  jr      t0
+
   .globl  __riscv_save_0
   .type   __riscv_save_0,@function
-__riscv_save_2:
-__riscv_save_1:
 __riscv_save_0:
-  addi   sp, sp, -24
-  sd     s1, 0(sp)
-  sd     s0, 8(sp)
-  sd     ra, 16(sp)
-  jr     t0
+  addi    sp, sp, -8
+  sw      ra,  0(sp)
+  jr      t0
 
 #endif
 

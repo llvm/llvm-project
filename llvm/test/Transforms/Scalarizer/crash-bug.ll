@@ -3,14 +3,14 @@
 
 ; Don't crash
 
-define void @foo() {
-; CHECK-LABEL: define void @foo() {
+define void @foo(i1 %arg) {
+; CHECK-LABEL: define void @foo(i1 %arg) {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[BB2_VEC_I1:%.*]] = phi i16 [ 200, [[TMP0:%.*]] ], [ [[BB2_VEC_I1]], [[BB2:%.*]] ]
-; CHECK-NEXT:    br i1 undef, label [[BB3:%.*]], label [[BB2]]
+; CHECK-NEXT:    br i1 %arg, label [[BB3:%.*]], label [[BB2]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
 ;
@@ -22,7 +22,7 @@ bb2:                                        ; preds = %bb1
 
 bb1:                                        ; preds = %bb2, %0
   %bb1_vec = phi <2 x i16> [ <i16 100, i16 200>, %0 ], [ %bb2_vec, %bb2 ]
-  br i1 undef, label %bb3, label %bb2
+  br i1 %arg, label %bb3, label %bb2
 
 bb3:
   ret void

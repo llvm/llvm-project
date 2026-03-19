@@ -4,7 +4,7 @@ target triple = "x86_64-apple-macosx10"
 
 ; This function contains a cmp instruction with two users.
 ; Hoisting the last use requires trimming the EFLAGS live range to the second.
-define void @rdar13353090(ptr %plane, i64 %_x1, i64 %_x2) {
+define void @rdar13353090(ptr %plane, i64 %_x1, i64 %_x2, i1 %arg) {
 entry:
   %cmp = icmp ult i64 %_x1, %_x2
   %cond = select i1 %cmp, i64 %_x1, i64 %_x2
@@ -33,7 +33,7 @@ for.body34.i:                                     ; preds = %for.inc39.i, %if.th
 
 for.inc39.i:                                      ; preds = %for.body34.i
   %inc41.i = add i64 %index.178.i, 1
-  br i1 undef, label %return, label %for.body34.i
+  br i1 %arg, label %return, label %for.body34.i
 
 return:                                           ; preds = %for.inc39.i, %for.body34.i, %land.lhs.true21, %entry
   ret void

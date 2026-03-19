@@ -58,12 +58,6 @@ const RegisterBankInfo::ValueMapping ValueMappings[] = {
 M68kRegisterBankInfo::M68kRegisterBankInfo(const TargetRegisterInfo &TRI)
     : M68kGenRegisterBankInfo() {}
 
-const RegisterBank &
-M68kRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                             LLT) const {
-  return getRegBank(M68k::GPRRegBankID);
-}
-
 const RegisterBankInfo::InstructionMapping &
 M68kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   auto Opc = MI.getOpcode();

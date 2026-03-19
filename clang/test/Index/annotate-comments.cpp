@@ -204,9 +204,9 @@ void isdoxy45(void);
 /// Ggg. IS_DOXYGEN_END
 void isdoxy46(void);
 
-/// isdoxy47 IS_DOXYGEN_SINGLE
+/// IS_DOXYGEN_NOT_ATTACHED
 #define FOO
-void isdoxy47(void);
+void notdoxy47(void);
 
 /// IS_DOXYGEN_START Aaa bbb
 /// \param ccc
@@ -330,7 +330,6 @@ void isdoxy54(int);
 // CHECK: annotate-comments.cpp:185:6: FunctionDecl=isdoxy44:{{.*}} BriefComment=[IS_DOXYGEN_START Aaa bbb ccc.]
 // CHECK: annotate-comments.cpp:195:6: FunctionDecl=isdoxy45:{{.*}} BriefComment=[Ddd eee. Fff.]
 // CHECK: annotate-comments.cpp:205:6: FunctionDecl=isdoxy46:{{.*}} BriefComment=[Ddd eee. Fff.]
-// CHECK: annotate-comments.cpp:209:6: FunctionDecl=isdoxy47:{{.*}} isdoxy47 IS_DOXYGEN_SINGLE
 // CHECK: annotate-comments.cpp:214:6: FunctionDecl=isdoxy48:{{.*}} BriefComment=[IS_DOXYGEN_START Aaa bbb]
 // CHECK: annotate-comments.cpp:218:6: FunctionDecl=isdoxy49:{{.*}} BriefComment=[IS_DOXYGEN_START Aaa]
 // CHECK: annotate-comments.cpp:222:6: FunctionDecl=isdoxy50:{{.*}} BriefComment=[Returns ddd IS_DOXYGEN_END]

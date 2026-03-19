@@ -41,7 +41,7 @@ final.suspend:
 pre.exit:
   br label %exit
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 unreach:
   unreachable
@@ -78,7 +78,7 @@ declare token @llvm.coro.save(ptr) #2
 declare ptr @llvm.coro.frame() #3
 declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
-declare i1 @llvm.coro.end(ptr, i1, token) #2
+declare void @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
 declare i8 @switch_result()

@@ -27,6 +27,8 @@
 #include "Diagnostics.h"
 #include "FS.h"
 #include "Headers.h"
+#include "ModulesBuilder.h"
+
 #include "clang-include-cleaner/Record.h"
 #include "support/Path.h"
 #include "clang/Basic/SourceManager.h"
@@ -101,7 +103,7 @@ struct PreambleData {
   // Target options used when building the preamble. Changes in target can cause
   // crashes when deserializing preamble, this enables consumers to use the
   // same target (without reparsing CompileCommand).
-  std::shared_ptr<TargetOptions> TargetOpts = nullptr;
+  std::unique_ptr<TargetOptions> TargetOpts = nullptr;
   PrecompiledPreamble Preamble;
   std::vector<Diag> Diags;
   // Processes like code completions and go-to-definitions will need #include
@@ -109,6 +111,8 @@ struct PreambleData {
   IncludeStructure Includes;
   // Captures #include-mapping information in #included headers.
   std::shared_ptr<const include_cleaner::PragmaIncludes> Pragmas;
+  // Information about required module files for this preamble.
+  std::unique_ptr<PrerequisiteModules> RequiredModules;
   // Macros defined in the preamble section of the main file.
   // Users care about headers vs main-file, not preamble vs non-preamble.
   // These should be treated as main-file entities e.g. for code completion.

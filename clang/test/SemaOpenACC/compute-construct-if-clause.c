@@ -27,7 +27,7 @@ void BoolExpr(int *I, float *F) {
 #pragma acc kernels if (Array)
   while(0);
 
-  // expected-warning@+4{{incompatible pointer types assigning to 'int *' from 'float *'}}
+  // expected-error@+4{{incompatible pointer types assigning to 'int *' from 'float *'}}
   // expected-warning@+3{{using the result of an assignment as a condition without parentheses}}
   // expected-note@+2{{place parentheses around the assignment to silence this warning}}
   // expected-note@+1{{use '==' to turn this assignment into an equality comparison}}
@@ -43,24 +43,17 @@ void BoolExpr(int *I, float *F) {
 #pragma acc kernels if (*I < *F)
   while(0);
 
-  // expected-warning@+2{{OpenACC construct 'data' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
+  // expected-error@+1{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
 #pragma acc data if (*I < *F)
   while(0);
-  // expected-warning@+2{{OpenACC construct 'parallel loop' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
 #pragma acc parallel loop if (*I < *F)
-  while(0);
-  // expected-warning@+2{{OpenACC construct 'serial loop' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
+  for(int i = 0; i < 5; ++i);
 #pragma acc serial loop if (*I < *F)
-  while(0);
-  // expected-warning@+2{{OpenACC construct 'kernels loop' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented}}
+  for(int i = 0; i < 5; ++i);
 #pragma acc kernels loop if (*I < *F)
-  while(0);
+  for(int i = 0; i < 5; ++i);
 
   // expected-error@+1{{OpenACC 'if' clause is not valid on 'loop' directive}}
 #pragma acc loop if(I)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

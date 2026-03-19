@@ -52,13 +52,20 @@ def Linalg_Dialect : Dialect {
         kMemoizedIndexingMapsAttrName = "linalg.memoized_indexing_maps";
 
     using RegionBuilderFunType = llvm::function_ref<
-      void(ImplicitLocOpBuilder &b, Block &, ArrayRef<NamedAttribute>)>;
+      void(ImplicitLocOpBuilder &b, Block &, ArrayRef<NamedAttribute>,
+           function_ref<InFlightDiagnostic()>)>;
     RegionBuilderFunType getRegionBuilder(StringRef name) {
       return namedStructuredOpRegionBuilders.lookup(name);
     }
     private:
       llvm::StringMap<RegionBuilderFunType> namedStructuredOpRegionBuilders;
   }];
+}
+
+// Define the attribute enums matching elementwise op kind (e.g., add).
+def ElementwiseKindAttr : EnumAttr<Linalg_Dialect,
+                                   ElementwiseKind, "elementwise_kind"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 // Define the function attribute enums matching the OpDSL functions.

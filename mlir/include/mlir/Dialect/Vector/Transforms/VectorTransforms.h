@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 
 namespace mlir {
 class MLIRContext;
@@ -114,6 +115,22 @@ FailureOr<Value>
 castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
                                  MaskingOpInterface maskingOp,
                                  RewriterBase &rewriter);
+
+// Structure to hold the range of `vector.vscale`.
+struct VscaleRange {
+  unsigned vscaleMin;
+  unsigned vscaleMax;
+};
+
+/// Attempts to eliminate redundant vector masks by replacing them with all-true
+/// constants at the top of the function (which results in the masks folding
+/// away). Note: Currently, this only runs for vector.create_mask ops and
+/// requires `vscaleRange`. If `vscaleRange` is not provided this transform does
+/// nothing. This is because these redundant masks are much more likely for
+/// scalable code which requires memref/tensor dynamic sizes, whereas fixed-size
+/// code has static sizes, so simpler folds remove the masks.
+void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
+                          std::optional<VscaleRange> vscaleRange = {});
 
 } // namespace vector
 } // namespace mlir

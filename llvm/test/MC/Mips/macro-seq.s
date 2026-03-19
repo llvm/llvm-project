@@ -1,7 +1,6 @@
 # RUN: llvm-mc -triple=mips -mcpu=mips1 < %s | FileCheck --check-prefixes=ALL,MIPS32 %s
 # RUN: llvm-mc -triple=mips -mcpu=mips64 < %s | FileCheck --check-prefixes=ALL,MIPS64 %s
 
-# ALL: .text
 seq $2, $11, $0
 # ALL: sltiu $2, $11, 1
 seq $2, $0, $11

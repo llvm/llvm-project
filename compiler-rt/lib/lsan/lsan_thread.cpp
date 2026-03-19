@@ -18,6 +18,7 @@
 #include "lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include "sanitizer_common/sanitizer_thread_history.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
@@ -35,12 +36,12 @@ static ThreadContextBase *CreateThreadContext(u32 tid) {
 }
 
 void InitializeThreads() {
-  static ALIGNED(alignof(
-      ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
+  alignas(alignof(ThreadRegistry)) static char
+      thread_registry_placeholder[sizeof(ThreadRegistry)];
   thread_registry =
       new (thread_registry_placeholder) ThreadRegistry(CreateThreadContext);
 
-  static ALIGNED(alignof(ThreadArgRetval)) char
+  alignas(alignof(ThreadArgRetval)) static char
       thread_arg_retval_placeholder[sizeof(ThreadArgRetval)];
   thread_arg_retval = new (thread_arg_retval_placeholder) ThreadArgRetval();
 }
@@ -65,7 +66,7 @@ u32 ThreadCreate(u32 parent_tid, bool detached, void *arg) {
   return thread_registry->CreateThread(0, detached, parent_tid, arg);
 }
 
-void ThreadContextLsanBase::ThreadStart(u32 tid, tid_t os_id,
+void ThreadContextLsanBase::ThreadStart(u32 tid, ThreadID os_id,
                                         ThreadType thread_type, void *arg) {
   thread_registry->StartThread(tid, os_id, thread_type, arg);
 }
@@ -79,7 +80,7 @@ void EnsureMainThreadIDIsCorrect() {
 
 ///// Interface to the common LSan module. /////
 
-void GetThreadExtraStackRangesLocked(tid_t os_id,
+void GetThreadExtraStackRangesLocked(ThreadID os_id,
                                      InternalMmapVector<Range> *ranges) {}
 void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
@@ -98,15 +99,21 @@ ThreadRegistry *GetLsanThreadRegistryLocked() {
   return thread_registry;
 }
 
-void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
+void GetRunningThreadsLocked(InternalMmapVector<ThreadID> *threads) {
   GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
       [](ThreadContextBase *tctx, void *threads) {
         if (tctx->status == ThreadStatusRunning) {
-          reinterpret_cast<InternalMmapVector<tid_t> *>(threads)->push_back(
+          reinterpret_cast<InternalMmapVector<ThreadID> *>(threads)->push_back(
               tctx->os_id);
         }
       },
       threads);
+}
+
+void PrintThreads() {
+  InternalScopedString out;
+  PrintThreadHistory(*thread_registry, out);
+  Report("%s\n", out.data());
 }
 
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {

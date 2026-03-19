@@ -1,6 +1,6 @@
 ; RUN: llvm-dis < %s.bc | FileCheck %s
 
-define void @loop_nesting() convergent {
+define void @loop_nesting(i1 %arg) convergent {
 A:
   ; CHECK-LABEL: A:
   ; CHECK: [[A:%.*]] = call token @llvm.experimental.convergence.entry()
@@ -13,7 +13,7 @@ B:
   ; CHECK: [[B:%.*]] = call token @llvm.experimental.convergence.anchor()
   ;
   %b = call token @llvm.experimental.convergence.anchor()
-  br i1 undef, label %C, label %D
+  br i1 %arg, label %C, label %D
 
 C:
   ; CHECK-LABEL: C:
@@ -29,7 +29,7 @@ D:
   ; CHECK:  call void @f() [ "convergencectrl"(token [[B]]) ]
   ;
   call void @f() [ "convergencectrl"(token %b) ]
-  br i1 undef, label %B, label %E
+  br i1 %arg, label %B, label %E
 
 E:
   ret void

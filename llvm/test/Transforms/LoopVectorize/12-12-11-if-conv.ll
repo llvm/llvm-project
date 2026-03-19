@@ -5,8 +5,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK-LABEL: @foo(
 ;CHECK: icmp eq <4 x i32>
 ;CHECK: select <4 x i1>
-;CHECK: ret i32
-define i32 @foo(i32 %x, i32 %t, ptr nocapture %A) nounwind uwtable ssp {
+;CHECK: ret void
+define void @foo(i32 %x, i32 %t, ptr nocapture %A) nounwind uwtable ssp {
 entry:
   %cmp10 = icmp sgt i32 %x, 0
   br i1 %cmp10, label %for.body, label %for.end
@@ -35,5 +35,5 @@ if.end:                                           ; preds = %for.body, %if.then
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %if.end, %entry
-  ret i32 undef
+  ret void
 }

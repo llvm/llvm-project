@@ -11,7 +11,7 @@ define i32 @test1(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { i32, i1 } [[SADD]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[SADD_RESULT:%.*]] = extractvalue { i32, i1 } [[SADD]], 0
@@ -49,7 +49,7 @@ define i32 @test2(i32 %a, i32 %b, ptr %P) nounwind ssp {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[ADD_OFF]], 4294967295
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2]]
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR3]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV9:%.*]] = trunc i64 [[ADD]] to i32
@@ -86,7 +86,7 @@ define i64 @test3(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], -4294967296
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2]]
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR3]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i64 [[ADD]]
@@ -116,7 +116,7 @@ define zeroext i8 @test4(i8 signext %a, i8 signext %b) nounwind ssp {
 ; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i8, i1 } [[SADD]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2]]
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[SADD_RESULT:%.*]] = extractvalue { i8, i1 } [[SADD]], 0
@@ -150,7 +150,7 @@ define i32 @test8(i64 %a, i64 %b) nounwind ssp {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], -4294967296
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR2]]
+; CHECK-NEXT:    tail call void @throwAnExceptionOrWhatever() #[[ATTR3]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CONV9:%.*]] = trunc i64 [[ADD]] to i32
@@ -171,3 +171,91 @@ if.end:
   ret i32 %conv9
 }
 
+define i32 @uadd_no_overflow(i32 %a, i32 %b) {
+; CHECK-LABEL: @uadd_no_overflow(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %val = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  %ov = extractvalue { i32, i1 } %val, 1
+  %nowrap = xor i1 %ov, true
+  tail call void @llvm.assume(i1 %nowrap)
+  %res = extractvalue { i32, i1 } %val, 0
+  ret i32 %res
+}
+
+define i32 @smul_no_overflow(i32 %a, i32 %b) {
+; CHECK-LABEL: @smul_no_overflow(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %val = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %a, i32 %b)
+  %ov = extractvalue { i32, i1 } %val, 1
+  %nowrap = xor i1 %ov, true
+  tail call void @llvm.assume(i1 %nowrap)
+  %res = extractvalue { i32, i1 } %val, 0
+  ret i32 %res
+}
+
+define i32 @smul_overflow(i32 %a, i32 %b) {
+; CHECK-LABEL: @smul_overflow(
+; CHECK-NEXT:    [[VAL:%.*]] = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[VAL]], 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[OV]])
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[VAL]], 0
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %val = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %a, i32 %b)
+  %ov = extractvalue { i32, i1 } %val, 1
+  tail call void @llvm.assume(i1 %ov)
+  %res = extractvalue { i32, i1 } %val, 0
+  ret i32 %res
+}
+
+define i32 @uadd_no_overflow_invalid1(i32 %a, i32 %b, i1 %cond) {
+; CHECK-LABEL: @uadd_no_overflow_invalid1(
+; CHECK-NEXT:    [[VAL:%.*]] = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[VAL]], 0
+; CHECK-NEXT:    call void @use(i32 [[RES]])
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[VAL]], 1
+; CHECK-NEXT:    [[NOWRAP:%.*]] = xor i1 [[OV]], true
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NOWRAP]])
+; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 0
+;
+  %val = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  %res = extractvalue { i32, i1 } %val, 0
+  call void @use(i32 %res)
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  %ov = extractvalue { i32, i1 } %val, 1
+  %nowrap = xor i1 %ov, true
+  tail call void @llvm.assume(i1 %nowrap)
+  ret i32 %res
+if.else:
+  ret i32 0
+}
+
+define i32 @uadd_no_overflow_invalid2(i32 %a, i32 %b, i1 %cond) {
+; CHECK-LABEL: @uadd_no_overflow_invalid2(
+; CHECK-NEXT:    [[VAL:%.*]] = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[VAL]], 1
+; CHECK-NEXT:    [[NOWRAP:%.*]] = xor i1 [[OV]], true
+; CHECK-NEXT:    call void @use(i32 0)
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NOWRAP]])
+; CHECK-NEXT:    [[RES:%.*]] = extractvalue { i32, i1 } [[VAL]], 0
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %val = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  %ov = extractvalue { i32, i1 } %val, 1
+  %nowrap = xor i1 %ov, true
+  call void @use(i32 0) ; It is not guaranteed to transfer execution to its successors
+  tail call void @llvm.assume(i1 %nowrap)
+  %res = extractvalue { i32, i1 } %val, 0
+  ret i32 %res
+}
+
+declare void @use(i32)

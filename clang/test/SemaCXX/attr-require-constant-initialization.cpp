@@ -337,6 +337,11 @@ constexpr TestCtor<NotC> inval_constexpr(42); // expected-error {{must be initia
 ATTR constexpr TestCtor<NotC> inval_constexpr2(42); // expected-error {{must be initialized by a constant expression}}
 // expected-note@-1 {{in call to 'TestCtor(42)'}}
 
+[[gnu::constructor]] void ctor() {}
+// expected-warning@-1 {{declaration requires a global constructor}}
+[[gnu::destructor]] void dtor() {}
+// expected-warning@-1 {{declaration requires a global destructor}}
+
 #elif defined(TEST_THREE)
 #if defined(__cplusplus)
 #error This test requires C

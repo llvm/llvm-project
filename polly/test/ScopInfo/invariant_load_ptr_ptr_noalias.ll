@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=tbaa '-passes=print<polly-function-scops>' -polly-invariant-load-hoisting=true -polly-ignore-aliasing \
-; RUN:                -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=tbaa '-passes=polly-custom<scops>' -polly-print-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Note: The order of the invariant accesses is important because A is the
 ;       base pointer of tmp3 and we will generate code in the same order as

@@ -13,11 +13,11 @@
 
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
@@ -25,7 +25,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 using namespace clang;
@@ -461,9 +460,8 @@ static bool isInCoroutineStmt(const Stmt *DeadStmt, const CFGBlock *Block) {
   const Stmt *CoroStmt = nullptr;
   // Find the first coroutine statement after the DeadStmt in the block.
   bool AfterDeadStmt = false;
-  for (CFGBlock::const_iterator I = Block->begin(), E = Block->end(); I != E;
-       ++I)
-    if (std::optional<CFGStmt> CS = I->getAs<CFGStmt>()) {
+  for (const CFGElement &Elem : *Block)
+    if (std::optional<CFGStmt> CS = Elem.getAs<CFGStmt>()) {
       const Stmt *S = CS->getStmt();
       if (S == DeadStmt)
         AfterDeadStmt = true;
@@ -476,17 +474,19 @@ static bool isInCoroutineStmt(const Stmt *DeadStmt, const CFGBlock *Block) {
     }
   if (!CoroStmt)
     return false;
-  struct Checker : RecursiveASTVisitor<Checker> {
+  struct Checker : DynamicRecursiveASTVisitor {
     const Stmt *DeadStmt;
     bool CoroutineSubStmt = false;
-    Checker(const Stmt *S) : DeadStmt(S) {}
-    bool VisitStmt(const Stmt *S) {
+    Checker(const Stmt *S) : DeadStmt(S) {
+      // Statements captured in the CFG can be implicit.
+      ShouldVisitImplicitCode = true;
+    }
+
+    bool VisitStmt(Stmt *S) override {
       if (S == DeadStmt)
         CoroutineSubStmt = true;
       return true;
     }
-    // Statements captured in the CFG can be implicit.
-    bool shouldVisitImplicitCode() const { return true; }
   };
   Checker checker(DeadStmt);
   checker.TraverseStmt(const_cast<Stmt *>(CoroStmt));

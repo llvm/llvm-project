@@ -26,22 +26,16 @@ class SimplifyRegionLitePass
 public:
   void runOnOperation() override;
 };
-
-class DummyRewriter : public mlir::PatternRewriter {
-public:
-  DummyRewriter(mlir::MLIRContext *ctx) : mlir::PatternRewriter(ctx) {}
-};
-
 } // namespace
 
 void SimplifyRegionLitePass::runOnOperation() {
   auto op = getOperation();
   auto regions = op->getRegions();
   mlir::RewritePatternSet patterns(op.getContext());
-  DummyRewriter rewriter(op.getContext());
   if (regions.empty())
     return;
 
+  mlir::PatternRewriter rewriter(op.getContext());
   (void)mlir::eraseUnreachableBlocks(rewriter, regions);
   (void)mlir::runRegionDCE(rewriter, regions);
 }

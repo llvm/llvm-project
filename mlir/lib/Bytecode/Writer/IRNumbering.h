@@ -50,11 +50,11 @@ struct AttrTypeNumbering {
 };
 struct AttributeNumbering : public AttrTypeNumbering {
   AttributeNumbering(Attribute value) : AttrTypeNumbering(value) {}
-  Attribute getValue() const { return value.get<Attribute>(); }
+  Attribute getValue() const { return cast<Attribute>(value); }
 };
 struct TypeNumbering : public AttrTypeNumbering {
   TypeNumbering(Type value) : AttrTypeNumbering(value) {}
-  Type getValue() const { return value.get<Type>(); }
+  Type getValue() const { return cast<Type>(value); }
 };
 
 //===----------------------------------------------------------------------===//

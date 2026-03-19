@@ -1,0 +1,95 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc complex.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+[
+    libc_test(
+        name = func_name + "_test",
+        srcs = [
+            "CImagTest.h",
+            func_name + "_test.cpp",
+        ],
+        deps = ["//libc:func_name".replace("func_name", func_name)] + [
+            "//libc:hdr_math_macros",
+            "//libc/test/UnitTest:fp_test_helpers",
+        ],
+    )
+    for func_name in [
+        "cimag",
+        "cimagf",
+        "cimagl",
+        "cimagf128",
+        "cimagf16",
+    ]
+]
+
+[
+    libc_test(
+        name = func_name + "_test",
+        srcs = [
+            "ConjTest.h",
+            func_name + "_test.cpp",
+        ],
+        deps = ["//libc:func_name".replace("func_name", func_name)] + [
+            "//libc:hdr_math_macros",
+            "//libc/test/UnitTest:fp_test_helpers",
+        ],
+    )
+    for func_name in [
+        "conj",
+        "conjf",
+        "conjl",
+        "conjf128",
+        "conjf16",
+    ]
+]
+
+[
+    libc_test(
+        name = func_name + "_test",
+        srcs = [
+            "CprojTest.h",
+            func_name + "_test.cpp",
+        ],
+        deps = ["//libc:func_name".replace("func_name", func_name)] + [
+            "//libc:hdr_math_macros",
+            "//libc/test/UnitTest:fp_test_helpers",
+        ] + (["//libc/utils/MPCWrapper:mpc_wrapper"] if func_name == "cprojf" else []),
+    )
+    for func_name in [
+        "cproj",
+        "cprojf",
+        "cprojl",
+        "cprojf128",
+        "cprojf16",
+    ]
+]
+
+[
+    libc_test(
+        name = func_name + "_test",
+        srcs = [
+            "CRealTest.h",
+            func_name + "_test.cpp",
+        ],
+        deps = ["//libc:func_name".replace("func_name", func_name)] + [
+            "//libc:hdr_math_macros",
+            "//libc/test/UnitTest:fp_test_helpers",
+        ],
+    )
+    for func_name in [
+        "creal",
+        "crealf",
+        "creall",
+        "crealf128",
+        "crealf16",
+    ]
+]

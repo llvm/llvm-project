@@ -8,8 +8,13 @@
 ## GD to IE relaxation.
 # RUN: not ld.lld %t.o %t1.so -o /dev/null 2>&1 | FileCheck -DINPUT=%t.o %s
 
-# CHECK: error: [[INPUT]]:(.text+0x0): R_X86_64_GOTPC32_TLSDESC must be used in leaq x@tlsdesc(%rip), %REG
+# CHECK: error: [[INPUT]]:(.text+0x0): R_X86_64_GOTPC32_TLSDESC/R_X86_64_CODE_4_GOTPC32_TLSDESC must be used in leaq x@tlsdesc(%rip), %REG
+# CHECK-NEXT: error: [[INPUT]]:(.text+0xd): R_X86_64_GOTPC32_TLSDESC/R_X86_64_CODE_4_GOTPC32_TLSDESC must be used in leaq x@tlsdesc(%rip), %REG
 
 leaq a@tlsdesc(%rbx), %rdx
 call *a@tlscall(%rdx)
+movl %fs:(%rax), %eax
+
+leaq a@tlsdesc(%r16), %r20
+call *a@tlscall(%r20)
 movl %fs:(%rax), %eax

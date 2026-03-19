@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/RWMutex.h"
 #include <memory>
 #include <vector>
@@ -49,43 +50,36 @@ class PassRegistry {
 
 public:
   PassRegistry() = default;
-  ~PassRegistry();
+  LLVM_ABI ~PassRegistry();
 
   /// getPassRegistry - Access the global registry object, which is
   /// automatically initialized at application launch and destroyed by
   /// llvm_shutdown.
-  static PassRegistry *getPassRegistry();
+  LLVM_ABI static PassRegistry *getPassRegistry();
 
   /// getPassInfo - Look up a pass' corresponding PassInfo, indexed by the pass'
   /// type identifier (&MyPass::ID).
-  const PassInfo *getPassInfo(const void *TI) const;
+  LLVM_ABI const PassInfo *getPassInfo(const void *TI) const;
 
   /// getPassInfo - Look up a pass' corresponding PassInfo, indexed by the pass'
   /// argument string.
-  const PassInfo *getPassInfo(StringRef Arg) const;
+  LLVM_ABI const PassInfo *getPassInfo(StringRef Arg) const;
 
   /// registerPass - Register a pass (by means of its PassInfo) with the
   /// registry.  Required in order to use the pass with a PassManager.
-  void registerPass(const PassInfo &PI, bool ShouldFree = false);
-
-  /// registerAnalysisGroup - Register an analysis group (or a pass implementing
-  // an analysis group) with the registry.  Like registerPass, this is required
-  // in order for a PassManager to be able to use this group/pass.
-  void registerAnalysisGroup(const void *InterfaceID, const void *PassID,
-                             PassInfo &Registeree, bool isDefault,
-                             bool ShouldFree = false);
+  LLVM_ABI void registerPass(const PassInfo &PI, bool ShouldFree = false);
 
   /// enumerateWith - Enumerate the registered passes, calling the provided
   /// PassRegistrationListener's passEnumerate() callback on each of them.
-  void enumerateWith(PassRegistrationListener *L);
+  LLVM_ABI void enumerateWith(PassRegistrationListener *L);
 
   /// addRegistrationListener - Register the given PassRegistrationListener
   /// to receive passRegistered() callbacks whenever a new pass is registered.
-  void addRegistrationListener(PassRegistrationListener *L);
+  LLVM_ABI void addRegistrationListener(PassRegistrationListener *L);
 
   /// removeRegistrationListener - Unregister a PassRegistrationListener so that
   /// it no longer receives passRegistered() callbacks.
-  void removeRegistrationListener(PassRegistrationListener *L);
+  LLVM_ABI void removeRegistrationListener(PassRegistrationListener *L);
 };
 
 } // end namespace llvm

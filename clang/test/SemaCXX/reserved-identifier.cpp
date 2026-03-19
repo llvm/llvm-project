@@ -76,7 +76,8 @@ namespace {
 int _barbatruc; // no-warning
 }
 
-long double operator"" _BarbeBleue(long double) // expected-warning {{identifier '_BarbeBleue' is reserved because it starts with '_' followed by a capital letter}}
+long double operator"" _BarbeBleue(long double) // expected-warning {{identifier '_BarbeBleue' is reserved because it starts with '_' followed by a capital letter}}\
+                                                // expected-warning {{identifier '_BarbeBleue' preceded by whitespace in a literal operator declaration is deprecated}}
 {
   return 0.;
 }
@@ -86,10 +87,11 @@ long double operator""_SacreBleu(long double) // no-warning
   return 0.;
 }
 
-long double sacrebleu = operator"" _SacreBleu(1.2); // expected-warning {{identifier '_SacreBleu' is reserved because it starts with '_' followed by a capital letter}}
+long double sacrebleu = operator"" _SacreBleu(1.2); // expected-warning {{identifier '_SacreBleu' is reserved because it starts with '_' followed by a capital letter}} \
+                                                    // expected-warning {{identifier '_SacreBleu' preceded by whitespace in a literal operator declaration is deprecated}}
 long double sangbleu = operator""_SacreBleu(1.2);   // no-warning
 
-void operator"" _lowercase(unsigned long long); // no-warning
+void operator"" _lowercase(unsigned long long); // expected-warning {{identifier '_lowercase' preceded by whitespace in a literal operator declaration is deprecated}}
 void operator""_lowercase(unsigned long long); // no-warning
 
 struct _BarbeRouge { // expected-warning {{identifier '_BarbeRouge' is reserved because it starts with '_' followed by a capital letter}}

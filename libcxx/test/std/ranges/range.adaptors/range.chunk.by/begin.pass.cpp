@@ -18,6 +18,7 @@
 #include <utility>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "types.h"
 
 struct Range : std::ranges::view_base {

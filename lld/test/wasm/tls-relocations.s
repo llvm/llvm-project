@@ -66,7 +66,7 @@ tls_sym:
 # ASM-NEXT:                 i32.const 16
 # ASM-NEXT:                 memory.init 0, 0
 # call to __wasm_apply_tls_relocs
-# ASM-NEXT:                 call  4
+# ASM-NEXT:                 call  3
 # ASM-NEXT:                 end
 
 # ASM: <__wasm_apply_tls_relocs>:

@@ -14,15 +14,12 @@
 #include <concepts>
 
 #include <array>
+#include <cstddef>
 #include <deque>
 #include <forward_list>
 #include <list>
 #include <map>
-#include <memory>
 #include <optional>
-#include <set>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "test_macros.h"
@@ -110,7 +107,12 @@ static_assert(!check_equality_comparable_with < int,
               int (S::*)() const volatile&& noexcept > ());
 
 static_assert(check_equality_comparable_with<int*, int*>());
+// Array comparisons are ill-formed in C++26, but Clang doesn't implement this yet.
+#if TEST_STD_VER <= 23 || defined(TEST_COMPILER_CLANG)
 static_assert(check_equality_comparable_with<int*, int[5]>());
+#else
+static_assert(!check_equality_comparable_with<int*, int[5]>());
+#endif
 static_assert(!check_equality_comparable_with<int*, int (*)()>());
 static_assert(!check_equality_comparable_with<int*, int (&)()>());
 static_assert(!check_equality_comparable_with<int*, int (S::*)()>());
@@ -151,7 +153,12 @@ static_assert(
 static_assert(!check_equality_comparable_with < int*,
               int (S::*)() const volatile&& noexcept > ());
 
+// Array comparisons are ill-formed in C++26, but Clang doesn't implement this yet.
+#if TEST_STD_VER <= 23 || defined(TEST_COMPILER_CLANG)
 static_assert(check_equality_comparable_with<int[5], int[5]>());
+#else
+static_assert(!check_equality_comparable_with<int[5], int[5]>());
+#endif
 static_assert(!check_equality_comparable_with<int[5], int (*)()>());
 static_assert(!check_equality_comparable_with<int[5], int (&)()>());
 static_assert(!check_equality_comparable_with<int[5], int (S::*)()>());
@@ -945,7 +952,12 @@ static_assert(
 
 static_assert(!check_equality_comparable_with<std::nullptr_t, int>());
 static_assert(check_equality_comparable_with<std::nullptr_t, int*>());
+// Array comparisons are ill-formed in C++26, but Clang doesn't implement this yet.
+#if TEST_STD_VER <= 23 || defined(TEST_COMPILER_CLANG)
 static_assert(check_equality_comparable_with<std::nullptr_t, int[5]>());
+#else
+static_assert(!check_equality_comparable_with<std::nullptr_t, int[5]>());
+#endif
 static_assert(check_equality_comparable_with<std::nullptr_t, int (*)()>());
 static_assert(check_equality_comparable_with<std::nullptr_t, int (&)()>());
 static_assert(check_equality_comparable_with<std::nullptr_t, int (S::*)()>());
@@ -1119,4 +1131,14 @@ static_assert(
     std::common_reference_with<one_way_ne const&, explicit_operators const&>);
 static_assert(
     !check_equality_comparable_with<one_way_ne, explicit_operators>());
+
+// P2404
+static_assert(check_equality_comparable_with<move_only_equality_with_int, int>());
+static_assert(check_equality_comparable_with<std::unique_ptr<int>, std::nullptr_t>());
+// TODO: Clang is broken, see https://llvm.org/PR171438
+#if defined(TEST_COMPILER_CLANG) && !defined(TEST_COMPILER_APPLE_CLANG)
+static_assert(check_equality_comparable_with<nonmovable_equality_with_int, int>());
+#else
+static_assert(!check_equality_comparable_with<nonmovable_equality_with_int, int>());
+#endif
 } // namespace types_fit_for_purpose

@@ -1,26 +1,32 @@
 ## Test that only debug sections are kept with --only-keep-debug.
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-strip --only-keep-debug %t
-# RUN: obj2yaml %t | FileCheck %s
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: llvm-strip --only-keep-debug %t.wasm -o %t2.wasm
+# RUN: obj2yaml %t2.wasm | FileCheck %s -check-prefixes=CHECK,STRIPTYPE,STRIPFOO
 
 ## Test that keep-section overrides only-keep-debug.
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-strip --only-keep-debug --keep-section=foo %t
-# RUN: obj2yaml %t | FileCheck --implicit-check-not=Name --check-prefix=CHECK --check-prefix=KEEP %s
+# RUN: llvm-strip --only-keep-debug --keep-section=foo %t.wasm -o %t3.wasm
+# RUN: obj2yaml %t3.wasm | FileCheck --implicit-check-not=Name --check-prefixes=CHECK,STRIPTYPE,KEEPFOO %s
 
 ## Test that keep-section overrides only-keep-debug, even for known sections.
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-strip --only-keep-debug --keep-section=TYPE %t
-# RUN: obj2yaml %t | FileCheck --implicit-check-not=Name --check-prefix=CHECK --check-prefix=KEEPTYPE %s
+# RUN: llvm-strip --only-keep-debug --keep-section=TYPE %t.wasm -o %t4.wasm
+# RUN: obj2yaml %t4.wasm | FileCheck --implicit-check-not=Name --check-prefixes=CHECK,KEEPTYPE,STRIPFOO %s
 
 # CHECK:      Sections:
-# KEEPTYPE:     - Type: TYPE
-# CHECK-NOT:    - Type: TYPE
-# CHECK:        - Type: CUSTOM
-# CHECK-NEXT:     Name: .debug_info
-# CHECK:        - Type: CUSTOM
-# CHECK-NEXT:     Name: .debug_line
-# KEEP:           Name: foo
+# KEEPTYPE:       - Type: TYPE
+# STRIPTYPE-NOT:  - Type: TYPE
+# STRIPTYPE:      - Type: CUSTOM
+# STRIPTYPE-NEXT:   Name: .objcopy.removed
+# CHECK:          - Type: CUSTOM
+# CHECK-NEXT:       Name: .debug_info
+# CHECK:          - Type: CUSTOM
+# CHECK-NEXT:       Name: .objcopy.removed
+# CHECK:          - Type: CUSTOM
+# CHECK-NEXT:       Name: .objcopy.removed
+# CHECK:          - Type: CUSTOM
+# CHECK-NEXT:       Name: .debug_line
+# CHECK:          - Type: CUSTOM
+# KEEPFOO-NEXT:     Name: foo
+# STRIPFOO-NEXT:    Name: .objcopy.removed
 
 ## Test that remove-section overrides only-keep-debug.
 # RUN: yaml2obj %s -o %t

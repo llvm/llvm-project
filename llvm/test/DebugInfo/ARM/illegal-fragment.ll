@@ -8,7 +8,7 @@ target triple = "thumbv7s-apple-ios5.0.0"
 %struct.vm_object = type { i64 }
 
 ; Function Attrs: nounwind ssp
-define void @f(ptr %object, ptr nocapture readonly %start) local_unnamed_addr #0 !dbg !11 {
+define void @f(ptr %object, ptr nocapture readonly %start, i1 %arg) local_unnamed_addr #0 !dbg !11 {
 entry:
   tail call void @llvm.dbg.value(metadata ptr %object, metadata !21, metadata !DIExpression()), !dbg !27
   tail call void @llvm.dbg.value(metadata ptr %start, metadata !22, metadata !DIExpression()), !dbg !28
@@ -17,7 +17,7 @@ entry:
   ; This debug value cannot safely be split into two 32-bit pieces.
   ; CHECK-NOT: DW_AT_name(offset)
   tail call void @llvm.dbg.value(metadata i32 undef, metadata !23, metadata !DIExpression()), !dbg !31
-  br i1 undef, label %for.end, label %for.body.lr.ph, !dbg !31
+  br i1 %arg, label %for.end, label %for.body.lr.ph, !dbg !31
 
 for.body.lr.ph:                                   ; preds = %entry
   %0 = load i64, ptr %start, align 4, !dbg !33

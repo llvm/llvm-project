@@ -1,7 +1,9 @@
-;;; llvm-mode.el --- Major mode for the LLVM assembler language.
+;;; llvm-mode.el --- Major mode for the LLVM assembler language -*- lexical-binding: t -*-
 
 ;; Maintainer:  The LLVM team, http://llvm.org/
 ;; Version: 1.0
+;; Homepage: http://llvm.org/
+;; Package-Requires: ((emacs "24.3"))
 
 ;;; Commentary:
 
@@ -32,9 +34,9 @@
    `(,(regexp-opt
        '("alwaysinline" "argmemonly" "allocsize" "builtin" "cold" "convergent" "dereferenceable" "dereferenceable_or_null" "hot" "immarg" "inaccessiblememonly"
          "inaccessiblemem_or_argmemonly" "inalloca" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin" "nonnull" "nocapture"
-         "nocallback" "nocf_check" "noduplicate" "nofree" "noimplicitfloat" "noinline" "nomerge" "nonlazybind" "noprofile" "noredzone" "noreturn"
+         "nocallback" "nocf_check" "noduplicate" "noext" "nofree" "noimplicitfloat" "noinline" "nomerge" "nonlazybind" "noprofile" "noredzone" "noreturn"
          "norecurse" "nosync" "noundef" "nounwind" "nosanitize_bounds" "nosanitize_coverage" "null_pointer_is_valid" "optdebug" "optforfuzzing" "optnone" "optsize" "preallocated" "readnone" "readonly" "returned" "returns_twice"
-         "shadowcallstack" "signext" "speculatable" "speculative_load_hardening" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
+         "shadowcallstack" "signext" "speculatable" "speculative_load_hardening" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_alloc_token" "sanitize_hwaddress" "sanitize_memtag"
          "sanitize_thread" "sanitize_memory" "strictfp" "swifterror" "uwtable" "vscale_range" "willreturn" "writeonly" "zeroext") 'symbols) . font-lock-constant-face)
    ;; Variables
    '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
@@ -61,6 +63,8 @@
    `(,(concat "\\<" llvm-mode-primitive-type-regexp "\\>") . font-lock-type-face)
    ;; Integer literals
    '("\\b[-]?[0-9]+\\b" . font-lock-preprocessor-face)
+   ;; Values that can appear in a vec
+   '("\\b\\(true\\|false\\|null\\|undef\\|poison\\|none\\)\\b" . font-lock-keyword-face)
    ;; Floating point constants
    '("\\b[-+]?[0-9]+.[0-9]*\\([eE][-+]?[0-9]+\\)?\\b" . font-lock-preprocessor-face)
    ;; Hex constants
@@ -74,7 +78,7 @@
          "private" "internal" "weak" "weak_odr" "linkonce" "linkonce_odr" "available_externally" "appending" "common" "extern_weak" "external"
          "uninitialized" "implementation" "..."
          ;; Values
-         "true" "false" "null" "undef" "zeroinitializer" "none" "c" "asm" "blockaddress" "poison"
+         "zeroinitializer" "c" "asm" "blockaddress"
 
          ;; Calling conventions
          "ccc" "fastcc" "coldcc" "anyregcc" "preserve_mostcc" "preserve_allcc"

@@ -19,9 +19,8 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[FCVT_W_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s32) = COPY $f10_f
-    %1:gprb(s32) = G_FPTOSI %0(s32)
-    %2:gprb(s64) = G_ANYEXT %1(s32)
-    $x10 = COPY %2(s64)
+    %1:gprb(s64) = G_FCVT_W_RV64 %0(s32), 1
+    $x10 = COPY %1(s64)
     PseudoRET implicit $x10
 
 ...
@@ -42,9 +41,8 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[FCVT_WU_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s32) = COPY $f10_f
-    %1:gprb(s32) = G_FPTOUI %0(s32)
-    %2:gprb(s64) = G_ANYEXT %1(s32)
-    $x10 = COPY %2(s64)
+    %1:gprb(s64) = G_FCVT_WU_RV64 %0(s32), 1
+    $x10 = COPY %1(s64)
     PseudoRET implicit $x10
 
 ...
@@ -109,9 +107,8 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[FCVT_W_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s64) = COPY $f10_d
-    %1:gprb(s32) = G_FPTOSI %0(s64)
-    %2:gprb(s64) = G_ANYEXT %1(s32)
-    $x10 = COPY %2(s64)
+    %1:gprb(s64) = G_FCVT_W_RV64 %0(s64), 1
+    $x10 = COPY %1(s64)
     PseudoRET implicit $x10
 
 ...
@@ -132,9 +129,8 @@ body:             |
     ; CHECK-NEXT: $x10 = COPY [[FCVT_WU_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:fprb(s64) = COPY $f10_d
-    %1:gprb(s32) = G_FPTOUI %0(s64)
-    %2:gprb(s64) = G_ANYEXT %1(s32)
-    $x10 = COPY %2(s64)
+    %1:gprb(s64) = G_FCVT_WU_RV64 %0(s64), 1
+    $x10 = COPY %1(s64)
     PseudoRET implicit $x10
 
 ...

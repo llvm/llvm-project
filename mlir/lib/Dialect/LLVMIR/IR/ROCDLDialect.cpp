@@ -23,12 +23,8 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
 using namespace ROCDL;
@@ -185,6 +181,15 @@ void RawBufferAtomicUMinOp::print(mlir::OpAsmPrinter &p) {
 // ROCDLDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct ROCDLInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 // TODO: This should be the llvm.rocdl dialect once this is supported.
 void ROCDLDialect::initialize() {
   addOperations<
@@ -199,6 +204,7 @@ void ROCDLDialect::initialize() {
 
   // Support unknown operations because not all ROCDL operations are registered.
   allowUnknownOperations();
+  addInterfaces<ROCDLInlinerInterface>();
   declarePromisedInterface<gpu::TargetAttrInterface, ROCDLTargetAttr>();
 }
 
@@ -234,8 +240,8 @@ ROCDLTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     emitError() << "The target chip cannot be empty.";
     return failure();
   }
-  if (abiVersion != "400" && abiVersion != "500") {
-    emitError() << "Invalid ABI version, it must be either `400` or `500`.";
+  if (abiVersion != "400" && abiVersion != "500" && abiVersion != "600") {
+    emitError() << "Invalid ABI version, it must be `400`, `500` or '600'.";
     return failure();
   }
   if (files && !llvm::all_of(files, [](::mlir::Attribute attr) {

@@ -56,7 +56,7 @@ define <4 x ptr> @test4(<4 x ptr> %a) {
 
 define <4 x ptr> @test5() {
 ; CHECK-LABEL: define <4 x ptr> @test5() {
-; CHECK-NEXT:    ret <4 x ptr> getelementptr (i8, <4 x ptr> <ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 2 to ptr), ptr inttoptr (i64 3 to ptr), ptr inttoptr (i64 4 to ptr)>, <4 x i64> <i64 1, i64 1, i64 1, i64 1>)
+; CHECK-NEXT:    ret <4 x ptr> getelementptr (i8, <4 x ptr> <ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 2 to ptr), ptr inttoptr (i64 3 to ptr), ptr inttoptr (i64 4 to ptr)>, <4 x i64> splat (i64 1))
 ;
   %c = inttoptr <4 x i64> <i64 1, i64 2, i64 3, i64 4> to <4 x ptr>
   %gep = getelementptr i8, <4 x ptr> %c, <4 x i32> <i32 1, i32 1, i32 1, i32 1>

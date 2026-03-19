@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s
+; RUN: llc -mtriple=hexagon -O2 < %s
 ; REQUIRES: asserts
 
 ; Test that the dead and kill flags are not added incorrectly during the

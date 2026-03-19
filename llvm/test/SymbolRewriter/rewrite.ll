@@ -46,6 +46,12 @@ $source_comdat_variable = comdat largest
 $source_comdat_variable_1 = comdat nodeduplicate
 @source_comdat_variable_1 = global i32 64, comdat($source_comdat_variable_1)
 
+declare void @"?source_bad_regex_function"()
+
+@"?source_bad_regex_variable" = external global i32
+
+@"?source_bad_regex_alias" = alias void (ptr), ptr @_ZN1SC2Ev
+
 ; CHECK: $target_comdat_function = comdat any
 ; CHECK: $target_comdat_function_1 = comdat exactmatch
 ; CHECK: $target_comdat_variable = comdat largest
@@ -61,6 +67,12 @@ $source_comdat_variable_1 = comdat nodeduplicate
 ; CHECK-NOT: @source_comdat_variable = global i32 32, comdat
 ; CHECK: @target_comdat_variable_1 = global i32 64, comdat
 ; CHECK-NOT: @source_comdat_variable_1 = global i32 64, comdat
+
+; CHECK: @target_bad_regex_variable = external global i32
+; CHECK-NOT: @"?source_bad_regex_variable" = external global i32
+
+; CHECK: @target_bad_regex_alias = alias void (ptr), ptr @_ZN1SC2Ev
+; CHECK-NOT: @"?source_bad_regex_alias" = alias void (ptr), ptr @_ZN1SC2Ev
 
 ; CHECK: declare void @target_function()
 ; CHECK-NOT: declare void @source_function()
@@ -90,3 +102,5 @@ $source_comdat_variable_1 = comdat nodeduplicate
 ; CHECK: define dllexport void @target_comdat_function_1() comdat
 ; CHECK-NOT: define dllexport void @source_comdat_function_1() comdat
 
+; CHECK: declare void @target_bad_regex_function()
+; CHECK-NOT: declare void @"?source_bad_regex_function"()

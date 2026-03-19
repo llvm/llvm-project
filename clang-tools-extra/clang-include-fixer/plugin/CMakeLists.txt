@@ -1,4 +1,4 @@
-add_clang_library(clangIncludeFixerPlugin
+add_clang_library(clangIncludeFixerPlugin STATIC
   IncludeFixerPlugin.cpp
 
   LINK_LIBS

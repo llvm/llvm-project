@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -12,7 +13,7 @@ namespace std {
     const T *p; size_t n;
     initializer_list(const T *p, size_t n);
   };
-}
+} // namespace std
 
 namespace cwg930 { // cwg930: 2.7
 #if __cplusplus >= 201103L
@@ -48,7 +49,7 @@ namespace cwg948 { // cwg948: 3.7
      while (constexpr A i = 0) { }
   }
 #endif
-}
+} // namespace cwg948
 
 namespace cwg952 { // cwg952: 2.8
 namespace example1 {
@@ -58,29 +59,33 @@ struct A {
 struct B : private A { // #cwg952-B
 };
 struct C : B {
-  void f() {
-    I i1;
-    // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
-    //   expected-note@#cwg952-B {{constrained by private inheritance here}}
-    //   expected-note@#cwg952-I {{member is declared here}}
-  }
-  I i2;
+  void f();
+  I i1;
   // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
   //   expected-note@#cwg952-B {{constrained by private inheritance here}}
   //   expected-note@#cwg952-I {{member is declared here}}
   struct D {
-    I i3;
+    I i2;
     // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
     //   expected-note@#cwg952-B {{constrained by private inheritance here}}
     //   expected-note@#cwg952-I {{member is declared here}}
-    void g() {
-      I i4;
-      // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
-      //   expected-note@#cwg952-B {{constrained by private inheritance here}}
-      //   expected-note@#cwg952-I {{member is declared here}}
-    }
+    void g();
   };
 };
+
+void C::f() {
+  I i3;
+  // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
+  //   expected-note@#cwg952-B {{constrained by private inheritance here}}
+  //   expected-note@#cwg952-I {{member is declared here}}
+}
+
+void C::D::g() {
+  I i4;
+  // expected-error@-1 {{'I' is a private member of 'cwg952::example1::A'}}
+  //   expected-note@#cwg952-B {{constrained by private inheritance here}}
+  //   expected-note@#cwg952-I {{member is declared here}}
+}
 } // namespace example1
 namespace example2 {
 struct A {
@@ -93,15 +98,65 @@ struct B : A {
 } // namespace example2
 } // namespace cwg952
 
-namespace cwg974 { // cwg974: yes
+namespace cwg960 { // cwg960: 3.0
+struct a {};
+class A {
+#if __cplusplus >= 201103L
+  // Check lvalue ref vs rvalue ref vs pointer.
+  virtual a& rvalue_ref();
+  virtual a&& lvalue_ref();
+  virtual a& rvalue_vs_lvalue_ref(); // #cwg960-A-rvalue_vs_lvalue_ref
+  virtual a&& lvalue_vs_rvalue_ref(); // #cwg960-A-lvalue_vs_rvalue_ref
+  virtual a& rvalue_ref_vs_pointer(); // #cwg960-A-rvalue_ref_vs_pointer
+  virtual a* pointer_vs_rvalue_ref(); // #cwg960-A-pointer_vs_rvalue_ref
+  virtual a&& lvalue_ref_vs_pointer(); // #cwg960-A-lvalue_ref_vs_pointer
+  virtual a* pointer_vs_lvalue_ref(); // #cwg960-A-pointer_vs_lvalue_ref
+#endif
+};
+
+class B : A {
+#if __cplusplus >= 201103L
+  // Check lvalue ref vs rvalue ref vs pointer.
+  a& rvalue_ref() override;
+  a&& lvalue_ref() override;
+
+  a&& rvalue_vs_lvalue_ref() override; 
+  // since-cxx11-error@-1 {{virtual function 'rvalue_vs_lvalue_ref' has a different return type ('a &&') than the function it overrides (which has return type 'a &')}}
+  //   since-cxx11-note@#cwg960-A-rvalue_vs_lvalue_ref {{overridden virtual function is here}}
+
+  a& lvalue_vs_rvalue_ref() override;
+  // since-cxx11-error@-1 {{virtual function 'lvalue_vs_rvalue_ref' has a different return type ('a &') than the function it overrides (which has return type 'a &&')}}
+  //   since-cxx11-note@#cwg960-A-lvalue_vs_rvalue_ref {{overridden virtual function is here}}
+
+  a* rvalue_ref_vs_pointer() override;
+  // since-cxx11-error@-1 {{virtual function 'rvalue_ref_vs_pointer' has a different return type ('a *') than the function it overrides (which has return type 'a &')}}
+  //   since-cxx11-note@#cwg960-A-rvalue_ref_vs_pointer {{overridden virtual function is here}}
+
+  a& pointer_vs_rvalue_ref() override;
+  // since-cxx11-error@-1 {{virtual function 'pointer_vs_rvalue_ref' has a different return type ('a &') than the function it overrides (which has return type 'a *')}}
+  //   since-cxx11-note@#cwg960-A-pointer_vs_rvalue_ref {{overridden virtual function is here}}
+
+  a* lvalue_ref_vs_pointer() override;
+  // since-cxx11-error@-1 {{virtual function 'lvalue_ref_vs_pointer' has a different return type ('a *') than the function it overrides (which has return type 'a &&')}}
+  //   since-cxx11-note@#cwg960-A-lvalue_ref_vs_pointer {{overridden virtual function is here}}
+
+  a&& pointer_vs_lvalue_ref() override;
+  // since-cxx11-error@-1 {{virtual function 'pointer_vs_lvalue_ref' has a different return type ('a &&') than the function it overrides (which has return type 'a *')}}
+  //   since-cxx11-note@#cwg960-A-pointer_vs_lvalue_ref {{overridden virtual function is here}}
+#endif
+};
+
+} // namespace cwg960
+
+namespace cwg974 { // cwg974: 3.3
 #if __cplusplus >= 201103L
   void test() {
     auto lam = [](int x = 42) { return x; };
   }
 #endif
-}
+} // namespace cwg974
 
-namespace cwg977 { // cwg977: yes
+namespace cwg977 { // cwg977: 2.7
 enum E { e = E() }; // #cwg977-E
 #if !defined(_WIN32) || defined(__MINGW32__)
 // expected-error@#cwg977-E {{invalid use of incomplete type 'E'}}
@@ -147,4 +202,4 @@ namespace cwg990 { // cwg990: 3.5
   };
   D d{};
 #endif
-}
+} // namespace cwg990

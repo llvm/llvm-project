@@ -44,7 +44,12 @@ class MCSymbolMachO : public MCSymbol {
 
 public:
   MCSymbolMachO(const MCSymbolTableEntry *Name, bool isTemporary)
-      : MCSymbol(SymbolKindMachO, Name, isTemporary) {}
+      : MCSymbol(Name, isTemporary) {}
+
+  bool isExternal() const { return IsExternal; }
+  void setExternal(bool Value) const { IsExternal = Value; }
+  bool isPrivateExtern() const { return IsPrivateExtern; }
+  void setPrivateExtern(bool Value) { IsPrivateExtern = Value; }
 
   // Reference type methods.
 
@@ -109,6 +114,18 @@ public:
     setFlags(Value & SF_DescFlagsMask);
   }
 
+  // Check whether a particular symbol is visible to the linker and is required
+  // in the symbol table, or whether it can be discarded by the assembler. This
+  // also effects whether the assembler treats the label as potentially defining
+  // a separate atom.
+  bool isSymbolLinkerVisible() const {
+    // Non-temporary labels should always be visible to the linker.
+    if (!isTemporary())
+      return true;
+
+    return isUsedInReloc();
+  }
+
   /// Get the encoded value of the flags as they will be emitted in to
   /// the MachO binary
   uint16_t getEncodedFlags(bool EncodeAsAltEntry) const {
@@ -134,8 +151,6 @@ public:
 
     return Flags;
   }
-
-  static bool classof(const MCSymbol *S) { return S->isMachO(); }
 };
 }
 

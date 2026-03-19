@@ -90,18 +90,18 @@ public:
   void wait(unique_lock<mutex> &lock, Predicate pred);
   template <class Clock, class Duration>
   cv_status wait_until(unique_lock<mutex> &lock,
-                       const chrono::time_point<Clock, Duration> &abs_time){};
+                       const chrono::time_point<Clock, Duration> &abs_time){ return cv_status::no_timeout; };
   template <class Clock, class Duration, class Predicate>
   bool wait_until(unique_lock<mutex> &lock,
                   const chrono::time_point<Clock, Duration> &abs_time,
-                  Predicate pred){};
+                  Predicate pred){ return false; };
   template <class Rep, class Period>
   cv_status wait_for(unique_lock<mutex> &lock,
-                     const chrono::duration<Rep, Period> &rel_time){};
+                     const chrono::duration<Rep, Period> &rel_time){ return cv_status::no_timeout; };
   template <class Rep, class Period, class Predicate>
   bool wait_for(unique_lock<mutex> &lock,
                 const chrono::duration<Rep, Period> &rel_time,
-                Predicate pred){};
+                Predicate pred){ return false; };
 };
 
 } // namespace std

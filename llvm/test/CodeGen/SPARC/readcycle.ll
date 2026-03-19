@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=sparc -mcpu=gr740 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=sparc -mcpu=gr740 -verify-machineinstrs | FileCheck %s
 ; CHECK: rd %asr23, %o1
 ; CHECK: mov %g0, %o0
 

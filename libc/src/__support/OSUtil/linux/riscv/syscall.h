@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_RISCV_SYSCALL_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #define REGISTER_DECL_0                                                        \
   register long a7 __asm__("a7") = number;                                     \
@@ -42,7 +43,7 @@
 #define SYSCALL_INSTR(input_constraint)                                        \
   LIBC_INLINE_ASM("ecall\n\t" : "=r"(a0) : input_constraint : "memory")
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE long syscall_impl(long number) {
   REGISTER_DECL_0;
@@ -89,7 +90,7 @@ LIBC_INLINE long syscall_impl(long number, long arg1, long arg2, long arg3,
   return a0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #undef REGISTER_DECL_0
 #undef REGISTER_DECL_1

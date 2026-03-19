@@ -4,4 +4,4 @@
         .global func1
 _func1:
         adr r0, _func2
-@ CHECK-ERROR: :[[#@LINE-1]]:9: error: unsupported relocation type
+@ CHECK-ERROR: :[[#@LINE-1]]:17: error: unsupported relocation type

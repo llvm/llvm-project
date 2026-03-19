@@ -9,16 +9,19 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h" // string_length
 
 #include <stddef.h> // size_t
-#include <stdlib.h> // malloc, free
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // This class mimics std::string but does not intend to be a full fledged
@@ -64,7 +67,8 @@ public:
       : string(cstr, ::LIBC_NAMESPACE::internal::string_length(cstr)) {}
   LIBC_INLINE string(size_t size_, char value) {
     resize(size_);
-    inline_memset((void *)buffer_, value, size_);
+    static_assert(sizeof(char) == sizeof(uint8_t));
+    inline_memset((void *)buffer_, static_cast<uint8_t>(value), size_);
   }
 
   LIBC_INLINE string &operator=(const string &other) {
@@ -128,13 +132,16 @@ public:
     // by 8 is cheap. We guard the extension so the operation doesn't overflow.
     if (new_capacity < SIZE_MAX / 11)
       new_capacity = new_capacity * 11 / 8;
+
     if (void *Ptr = ::realloc(buffer_ == get_empty_string() ? nullptr : buffer_,
                               new_capacity)) {
       buffer_ = static_cast<char *>(Ptr);
       capacity_ = new_capacity;
-    } else {
-      __builtin_unreachable(); // out of memory
+      return;
     }
+    // Out of memory: this is not handled in current implementation,
+    // We trap the program and exits.
+    __builtin_trap();
   }
 
   LIBC_INLINE void resize(size_t size) {
@@ -225,6 +232,6 @@ LIBC_INLINE string to_string(unsigned long long value) {
 // LIBC_INLINE string to_string(long double value);
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H

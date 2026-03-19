@@ -20,6 +20,7 @@ static_assert(__is_literal(VectorExt), "fail");
 //    [...]
 //    -- a class type that has all of the following properties:
 //        -- it has a trivial destructor
+//           [P0784R7 changed the condition to "constexpr destructor" in C++20]
 //        -- every constructor call and full-expression in the
 //           brace-or-equal-initializers for non-static data members (if an) is
 //           a constant expression,
@@ -106,5 +107,72 @@ void test() {
   foo();
 }
 
+}
+#endif
+
+#if __cplusplus >= 201103L
+namespace GH85550 {
+struct HasDefaultCtorAndNonConstexprDtor {
+  constexpr HasDefaultCtorAndNonConstexprDtor() = default;
+  ~HasDefaultCtorAndNonConstexprDtor() {}
+};
+
+union UnionWithNonLiteralMember {
+  HasDefaultCtorAndNonConstexprDtor x;
+  int y;
+
+  constexpr UnionWithNonLiteralMember() : x{} {}
+};
+#if __cplusplus >= 202002L
+static_assert(__is_literal(UnionWithNonLiteralMember), "fail");
+#else
+static_assert(!__is_literal(UnionWithNonLiteralMember), "fail");
+#endif
+
+union UnionWithNonLiteralMemberExplicitDtor1 {
+  HasDefaultCtorAndNonConstexprDtor x;
+  int y;
+  // expected-note@-2 {{destructor of 'UnionWithNonLiteralMemberExplicitDtor1' is implicitly deleted because variant field 'x' has a non-trivial destructor}}
+
+  constexpr UnionWithNonLiteralMemberExplicitDtor1() : x{} {}
+  ~UnionWithNonLiteralMemberExplicitDtor1() = default; // expected-warning {{explicitly defaulted destructor is implicitly deleted}}
+  // expected-note@-1 {{replace 'default' with 'delete'}}
+};
+#if __cplusplus >= 202002L
+static_assert(__is_literal(UnionWithNonLiteralMemberExplicitDtor1), "fail");
+#else
+static_assert(!__is_literal(UnionWithNonLiteralMemberExplicitDtor1), "fail");
+#endif
+
+union UnionWithNonLiteralMemberExplicitDtor2 {
+  HasDefaultCtorAndNonConstexprDtor x;
+  int y;
+
+  constexpr UnionWithNonLiteralMemberExplicitDtor2() : x{} {}
+  ~UnionWithNonLiteralMemberExplicitDtor2() = delete;
+};
+static_assert(!__is_literal(UnionWithNonLiteralMemberExplicitDtor2), "fail");
+
+#if __cplusplus >= 202002L
+union UnionWithNonLiteralMemberConstexprDtor1 {
+  HasDefaultCtorAndNonConstexprDtor x;
+  int y;
+  // expected-note@-2 {{destructor of 'UnionWithNonLiteralMemberConstexprDtor1' is implicitly deleted because variant field 'x' has a non-trivial destructor}}
+
+  constexpr UnionWithNonLiteralMemberConstexprDtor1() : x{} {}
+  constexpr ~UnionWithNonLiteralMemberConstexprDtor1() = default; // expected-warning {{explicitly defaulted destructor is implicitly deleted}}
+  // expected-note@-1 {{replace 'default' with 'delete'}}
+};
+static_assert(__is_literal(UnionWithNonLiteralMemberConstexprDtor1), "fail");
+
+union UnionWithNonLiteralMemberConstexprDtor2 {
+  HasDefaultCtorAndNonConstexprDtor x;
+  int y;
+
+  constexpr UnionWithNonLiteralMemberConstexprDtor2() : x{} {}
+  constexpr ~UnionWithNonLiteralMemberConstexprDtor2() = delete;
+};
+static_assert(__is_literal(UnionWithNonLiteralMemberConstexprDtor2), "fail");
+#endif
 }
 #endif

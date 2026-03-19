@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVMCTARGETDESC_H
 
 #include "llvm/Support/DataTypes.h"
-#include <memory>
+#include <cassert>
 
 namespace llvm {
 class MCAsmBackend;
@@ -33,8 +33,6 @@ MCCodeEmitter *createSPIRVMCCodeEmitter(const MCInstrInfo &MCII,
 MCAsmBackend *createSPIRVAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
-
-std::unique_ptr<MCObjectTargetWriter> createSPIRVObjectTargetWriter();
 } // namespace llvm
 
 // Defines symbolic names for SPIR-V registers.  This defines a mapping from
@@ -49,5 +47,12 @@ std::unique_ptr<MCObjectTargetWriter> createSPIRVObjectTargetWriter();
 
 #define GET_SUBTARGETINFO_ENUM
 #include "SPIRVGenSubtargetInfo.inc"
+
+namespace llvm::SPIRV {
+inline unsigned getIDFromRegister(unsigned Reg) {
+  assert(Reg & (1U << 31));
+  return Reg & ~(1U << 31);
+}
+} // namespace llvm::SPIRV
 
 #endif // LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVMCTARGETDESC_H

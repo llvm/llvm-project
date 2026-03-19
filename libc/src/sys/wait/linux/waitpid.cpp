@@ -9,10 +9,11 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 
+#include "src/__support/macros/config.h"
 #include "src/sys/wait/wait4Impl.h"
 #include "src/sys/wait/waitpid.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(pid_t, waitpid, (pid_t pid, int *wait_status, int options)) {
   auto result = internal::wait4impl(pid, wait_status, options, 0);
@@ -23,4 +24,4 @@ LLVM_LIBC_FUNCTION(pid_t, waitpid, (pid_t pid, int *wait_status, int options)) {
   return result.value();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

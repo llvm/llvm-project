@@ -32,7 +32,7 @@ using llvm::dynamicAPIntFromInt64;
 static void normalizeDivisionByGCD(MutableArrayRef<DynamicAPInt> dividend,
                                    DynamicAPInt &divisor) {
   assert(divisor > 0 && "divisor must be non-negative!");
-  if (divisor == 0 || dividend.empty())
+  if (dividend.empty())
     return;
   // We take the absolute value of dividend's coefficients to make sure that
   // `gcd` is positive.
@@ -52,8 +52,8 @@ static void normalizeDivisionByGCD(MutableArrayRef<DynamicAPInt> dividend,
   }
 
   // Normalize the dividend and the denominator.
-  std::transform(dividend.begin(), dividend.end(), dividend.begin(),
-                 [gcd](DynamicAPInt &n) { return floorDiv(n, gcd); });
+  llvm::transform(dividend, dividend.begin(),
+                  [gcd](DynamicAPInt &n) { return floorDiv(n, gcd); });
   divisor /= gcd;
 }
 
@@ -95,10 +95,10 @@ static void normalizeDivisionByGCD(MutableArrayRef<DynamicAPInt> dividend,
 /// If successful, `expr` is set to dividend of the division and `divisor` is
 /// set to the denominator of the division, which will be positive.
 /// The final division expression is normalized by GCD.
-static bool getDivRepr(const IntegerRelation &cst, unsigned pos,
-                       unsigned ubIneq, unsigned lbIneq,
-                       MutableArrayRef<DynamicAPInt> expr,
-                       DynamicAPInt &divisor) {
+static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
+                                unsigned ubIneq, unsigned lbIneq,
+                                MutableArrayRef<DynamicAPInt> expr,
+                                DynamicAPInt &divisor) {
 
   assert(pos <= cst.getNumVars() && "Invalid variable position");
   assert(ubIneq <= cst.getNumInequalities() &&
@@ -120,7 +120,7 @@ static bool getDivRepr(const IntegerRelation &cst, unsigned pos,
       break;
 
   if (i < e)
-    return false;
+    return failure();
 
   // Then, check if the constant term is of the proper form.
   // Due to the form of the upper/lower bound inequalities, the sum of their
@@ -132,7 +132,7 @@ static bool getDivRepr(const IntegerRelation &cst, unsigned pos,
   // Check if `c` satisfies the condition `0 <= c <= divisor - 1`.
   // This also implictly checks that `divisor` is positive.
   if (!(0 <= c && c <= divisor - 1)) // NOLINT
-    return false;
+    return failure();
 
   // The inequality pair can be used to extract the division.
   // Set `expr` to the dividend of the division except the constant term, which
@@ -147,7 +147,7 @@ static bool getDivRepr(const IntegerRelation &cst, unsigned pos,
   expr.back() = cst.atIneq(ubIneq, cst.getNumCols() - 1) + c;
   normalizeDivisionByGCD(expr, divisor);
 
-  return true;
+  return success();
 }
 
 /// Check if the pos^th variable can be represented as a division using
@@ -161,9 +161,10 @@ static bool getDivRepr(const IntegerRelation &cst, unsigned pos,
 /// If successful, `expr` is set to dividend of the division and `divisor` is
 /// set to the denominator of the division. The final division expression is
 /// normalized by GCD.
-static bool getDivRepr(const IntegerRelation &cst, unsigned pos, unsigned eqInd,
-                       MutableArrayRef<DynamicAPInt> expr,
-                       DynamicAPInt &divisor) {
+static LogicalResult getDivRepr(const IntegerRelation &cst, unsigned pos,
+                                unsigned eqInd,
+                                MutableArrayRef<DynamicAPInt> expr,
+                                DynamicAPInt &divisor) {
 
   assert(pos <= cst.getNumVars() && "Invalid variable position");
   assert(eqInd <= cst.getNumEqualities() && "Invalid equality position");
@@ -174,7 +175,7 @@ static bool getDivRepr(const IntegerRelation &cst, unsigned pos, unsigned eqInd,
   // Equality must involve the pos-th variable and hence `tempDiv` != 0.
   DynamicAPInt tempDiv = cst.atEq(eqInd, pos);
   if (tempDiv == 0)
-    return false;
+    return failure();
   int signDiv = tempDiv < 0 ? -1 : 1;
 
   // The divisor is always a positive integer.
@@ -187,7 +188,7 @@ static bool getDivRepr(const IntegerRelation &cst, unsigned pos, unsigned eqInd,
   expr.back() = -signDiv * cst.atEq(eqInd, cst.getNumCols() - 1);
   normalizeDivisionByGCD(expr, divisor);
 
-  return true;
+  return success();
 }
 
 // Returns `false` if the constraints depends on a variable for which an
@@ -238,7 +239,7 @@ MaybeLocalRepr presburger::computeSingleVarRepr(
   for (unsigned ubPos : ubIndices) {
     for (unsigned lbPos : lbIndices) {
       // Attempt to get divison representation from ubPos, lbPos.
-      if (!getDivRepr(cst, pos, ubPos, lbPos, dividend, divisor))
+      if (getDivRepr(cst, pos, ubPos, lbPos, dividend, divisor).failed())
         continue;
 
       if (!checkExplicitRepresentation(cst, foundRepr, dividend, pos))
@@ -251,7 +252,7 @@ MaybeLocalRepr presburger::computeSingleVarRepr(
   }
   for (unsigned eqPos : eqIndices) {
     // Attempt to get divison representation from eqPos.
-    if (!getDivRepr(cst, pos, eqPos, dividend, divisor))
+    if (getDivRepr(cst, pos, eqPos, dividend, divisor).failed())
       continue;
 
     if (!checkExplicitRepresentation(cst, foundRepr, dividend, pos))
@@ -317,7 +318,7 @@ presburger::getDivUpperBound(ArrayRef<DynamicAPInt> dividend,
   assert(divisor > 0 && "divisor must be positive!");
   assert(dividend[localVarIdx] == 0 &&
          "Local to be set to division must have zero coeff!");
-  SmallVector<DynamicAPInt, 8> ineq(dividend.begin(), dividend.end());
+  SmallVector<DynamicAPInt, 8> ineq(dividend);
   ineq[localVarIdx] = -divisor;
   return ineq;
 }
@@ -330,8 +331,7 @@ presburger::getDivLowerBound(ArrayRef<DynamicAPInt> dividend,
   assert(dividend[localVarIdx] == 0 &&
          "Local to be set to division must have zero coeff!");
   SmallVector<DynamicAPInt, 8> ineq(dividend.size());
-  std::transform(dividend.begin(), dividend.end(), ineq.begin(),
-                 std::negate<DynamicAPInt>());
+  llvm::transform(dividend, ineq.begin(), std::negate<DynamicAPInt>());
   ineq[localVarIdx] = divisor;
   ineq.back() += divisor - 1;
   return ineq;
@@ -360,6 +360,8 @@ void presburger::normalizeDiv(MutableArrayRef<DynamicAPInt> num,
                               DynamicAPInt &denom) {
   assert(denom > 0 && "denom must be positive!");
   DynamicAPInt gcd = llvm::gcd(gcdRange(num), denom);
+  if (gcd == 1)
+    return;
   for (DynamicAPInt &coeff : num)
     coeff /= gcd;
   denom /= gcd;
@@ -519,15 +521,13 @@ void DivisionRepr::dump() const { print(llvm::errs()); }
 SmallVector<DynamicAPInt, 8>
 presburger::getDynamicAPIntVec(ArrayRef<int64_t> range) {
   SmallVector<DynamicAPInt, 8> result(range.size());
-  std::transform(range.begin(), range.end(), result.begin(),
-                 dynamicAPIntFromInt64);
+  llvm::transform(range, result.begin(), dynamicAPIntFromInt64);
   return result;
 }
 
 SmallVector<int64_t, 8> presburger::getInt64Vec(ArrayRef<DynamicAPInt> range) {
   SmallVector<int64_t, 8> result(range.size());
-  std::transform(range.begin(), range.end(), result.begin(),
-                 int64fromDynamicAPInt);
+  llvm::transform(range, result.begin(), int64fromDynamicAPInt);
   return result;
 }
 
@@ -552,8 +552,7 @@ std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
   auto getCoeff = [](ArrayRef<Fraction> arr, unsigned i) -> Fraction {
     if (i < arr.size())
       return arr[i];
-    else
-      return 0;
+    return 0;
   };
 
   std::vector<Fraction> convolution;
@@ -562,11 +561,11 @@ std::vector<Fraction> presburger::multiplyPolynomials(ArrayRef<Fraction> a,
     Fraction sum(0, 1);
     for (unsigned l = 0; l <= k; ++l)
       sum += getCoeff(a, l) * getCoeff(b, k - l);
-    convolution.push_back(sum);
+    convolution.emplace_back(sum);
   }
   return convolution;
 }
 
 bool presburger::isRangeZero(ArrayRef<Fraction> arr) {
-  return llvm::all_of(arr, [&](Fraction f) { return f == 0; });
+  return llvm::all_of(arr, [](const Fraction &f) { return f == 0; });
 }

@@ -1,4 +1,4 @@
-; RUN: llc -disable-lsr -march=hexagon -enable-aa-sched-mi -O2 < %s
+; RUN: llc -disable-lsr -mtriple=hexagon -enable-aa-sched-mi -O2 < %s
 ; REQUIRES: asserts
 
 ; Test when there is a Phi operand that is defined by another Phi, but

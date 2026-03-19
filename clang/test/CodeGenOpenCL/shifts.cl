@@ -47,7 +47,7 @@ typedef __attribute__((ext_vector_type(4))) int int4;
 
 //OPT: @vectorVectorTest
 int4 vectorVectorTest(int4 a,int4 b) {
-  //OPT: [[VM:%.+]] = and <4 x i32> %b, <i32 31, i32 31, i32 31, i32 31>
+  //OPT: [[VM:%.+]] = and <4 x i32> %b, splat (i32 31)
   //OPT-NEXT: [[VC:%.+]] = shl <4 x i32> %a, [[VM]]
   int4 c = a << b;
   //OPT-NEXT: [[VF:%.+]] = add <4 x i32> [[VC]], <i32 2, i32 4, i32 16, i32 8>
@@ -62,10 +62,10 @@ int4 vectorVectorTest(int4 a,int4 b) {
 int4 vectorScalarTest(int4 a,int b) {
   //NOOPT: [[SP0:%.+]] = insertelement <4 x i32> poison
   //NOOPT: [[SP1:%.+]] = shufflevector <4 x i32> [[SP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-  //NOOPT: [[VSM:%.+]] = and <4 x i32> [[SP1]], <i32 31, i32 31, i32 31, i32 31>
+  //NOOPT: [[VSM:%.+]] = and <4 x i32> [[SP1]], splat (i32 31)
   //NOOPT: [[VSC:%.+]] = shl <4 x i32> [[VSS:%.+]], [[VSM]]
   int4 c = a << b;
-  //NOOPT: [[VSF:%.+]] = shl <4 x i32> [[VSC1:%.+]], <i32 2, i32 2, i32 2, i32 2>
+  //NOOPT: [[VSF:%.+]] = shl <4 x i32> [[VSC1:%.+]], splat (i32 2)
   //NOOPT: [[VSA:%.+]] = add <4 x i32> [[VSC2:%.+]], [[VSF]]
   int4 d = {1, 1, 1, 1};
   int4 f = c + (d << 34);

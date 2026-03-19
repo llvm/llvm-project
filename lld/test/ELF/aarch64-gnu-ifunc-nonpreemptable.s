@@ -1,5 +1,5 @@
 # REQUIRES: aarch64
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 
 # RUN: ld.lld --no-relax %t.o -o %t
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefix=PDE

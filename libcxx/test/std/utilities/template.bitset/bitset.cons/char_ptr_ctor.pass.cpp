@@ -12,9 +12,10 @@
 //                     charT zero = charT('0'), charT one = charT('1')); // constexpr since C++23
 
 #include <bitset>
-#include <cassert>
 #include <algorithm> // for 'min' and 'max'
+#include <cassert>
 #include <stdexcept> // for 'invalid_argument'
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -70,6 +71,35 @@ TEST_CONSTEXPR_CXX23 void test_char_pointer_ctor()
         assert(v[i] == (s[M - 1 - i] == 'b'));
     for (std::size_t i = 10; i < v.size(); ++i)
         assert(v[i] == false);
+  }
+  // Verify that this constructor doesn't read over the given bound.
+  // See https://llvm.org/PR143684
+  {
+    const char not_null_terminated[] = {'1', '0', '1', '0', '1', '0', '1', '0', '1', '0'};
+    std::bitset<N> v(not_null_terminated, 10);
+    std::size_t M = std::min<std::size_t>(v.size(), 10);
+    for (std::size_t i = 0; i < M; ++i)
+      assert(v[i] == (not_null_terminated[M - 1 - i] == '1'));
+    for (std::size_t i = 10; i < v.size(); ++i)
+      assert(!v[i]);
+  }
+  {
+    const char not_null_terminated[] = {'1', 'a', '1', 'a', '1', 'a', '1', 'a', '1', 'a'};
+    std::bitset<N> v(not_null_terminated, 10, 'a');
+    std::size_t M = std::min<std::size_t>(v.size(), 10);
+    for (std::size_t i = 0; i < M; ++i)
+      assert(v[i] == (not_null_terminated[M - 1 - i] == '1'));
+    for (std::size_t i = 10; i < v.size(); ++i)
+      assert(!v[i]);
+  }
+  {
+    const char not_null_terminated[] = {'b', 'a', 'b', 'a', 'b', 'a', 'b', 'a', 'b', 'a'};
+    std::bitset<N> v(not_null_terminated, 10, 'a', 'b');
+    std::size_t M = std::min<std::size_t>(v.size(), 10);
+    for (std::size_t i = 0; i < M; ++i)
+      assert(v[i] == (not_null_terminated[M - 1 - i] == 'b'));
+    for (std::size_t i = 10; i < v.size(); ++i)
+      assert(!v[i]);
   }
 }
 

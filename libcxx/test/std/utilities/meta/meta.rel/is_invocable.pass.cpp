@@ -18,12 +18,11 @@
 // Fn and all types in the template parameter pack ArgTypes shall be
 //  complete types, cv void, or arrays of unknown bound.
 
-#include <type_traits>
+#include <cstddef>
 #include <functional>
 #include <memory>
+#include <type_traits>
 #include <vector>
-
-#include "test_macros.h"
 
 struct Tag {};
 struct DerFromTag : Tag {};

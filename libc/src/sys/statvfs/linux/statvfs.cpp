@@ -9,9 +9,10 @@
 #include "src/sys/statvfs/statvfs.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/sys/statvfs/linux/statfs_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, statvfs,
                    (const char *__restrict path,
@@ -25,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, statvfs,
   return result ? 0 : -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

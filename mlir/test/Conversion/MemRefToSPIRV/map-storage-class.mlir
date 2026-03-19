@@ -1,5 +1,6 @@
 // RUN: mlir-opt -split-input-file -allow-unregistered-dialect -map-memref-spirv-storage-class='client-api=vulkan' -verify-diagnostics %s -o - | FileCheck %s --check-prefix=VULKAN
 // RUN: mlir-opt -split-input-file -allow-unregistered-dialect -map-memref-spirv-storage-class='client-api=opencl' -verify-diagnostics %s -o - | FileCheck %s --check-prefix=OPENCL
+// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -map-memref-spirv-storage-class -verify-diagnostics %s -o - | FileCheck %s
 
 // Vulkan Mappings:
 //   0 -> StorageBuffer
@@ -7,6 +8,14 @@
 //   2 -> [null]
 //   3 -> Workgroup
 //   4 -> Uniform
+//   5 -> Private
+//   6 -> Function
+//   7 -> PushConstant
+//   8 -> UniformConstant
+//   9 -> Input
+//   10 -> Output
+//   11 -> PhysicalStorageBuffer
+//   12 -> Image
 
 // OpenCL Mappings:
 //   0 -> CrossWorkgroup
@@ -14,6 +23,9 @@
 //   2 -> [null]
 //   3 -> Workgroup
 //   4 -> UniformConstant
+//   5 -> Private
+//   6 -> Function
+//   7 -> Image
 
 // VULKAN-LABEL: func @operand_result
 // OPENCL-LABEL: func @operand_result
@@ -30,6 +42,15 @@ func.func @operand_result() {
   // VULKAN: memref<*xf16, #spirv.storage_class<Uniform>>
   // OPENCL: memref<*xf16, #spirv.storage_class<UniformConstant>>
   %3 = "dialect.memref_producer"() : () -> (memref<*xf16, 4>)
+  // VULKAN: memref<*xf16, #spirv.storage_class<Private>>
+  // OPENCL: memref<*xf16, #spirv.storage_class<Private>>
+  %4 = "dialect.memref_producer"() : () -> (memref<*xf16, 5>)
+  // VULKAN: memref<*xf16, #spirv.storage_class<Function>>
+  // OPENCL: memref<*xf16, #spirv.storage_class<Function>>
+  %5 = "dialect.memref_producer"() : () -> (memref<*xf16, 6>)
+  // VULKAN: memref<*xf16, #spirv.storage_class<PushConstant>>
+  // OPENCL: memref<*xf16, #spirv.storage_class<Image>>
+  %6 = "dialect.memref_producer"() : () -> (memref<*xf16, 7>)
 
 
   "dialect.memref_consumer"(%0) : (memref<f32>) -> ()
@@ -42,6 +63,15 @@ func.func @operand_result() {
   // VULKAN: memref<*xf16, #spirv.storage_class<Uniform>>
   // OPENCL: memref<*xf16, #spirv.storage_class<UniformConstant>>
   "dialect.memref_consumer"(%3) : (memref<*xf16, 4>) -> ()
+  // VULKAN: memref<*xf16, #spirv.storage_class<Private>>
+  // OPENCL: memref<*xf16, #spirv.storage_class<Private>>
+  "dialect.memref_consumer"(%4) : (memref<*xf16, 5>) -> ()
+  // VULKAN: memref<*xf16, #spirv.storage_class<Function>>
+  // OPENCL: memref<*xf16, #spirv.storage_class<Function>>
+  "dialect.memref_consumer"(%5) : (memref<*xf16, 6>) -> ()
+  // VULKAN: memref<*xf16, #spirv.storage_class<PushConstant>>
+  // OPENCL: memref<*xf16, #spirv.storage_class<Image>>
+  "dialect.memref_consumer"(%6) : (memref<*xf16, 7>) -> ()
 
   return
 }

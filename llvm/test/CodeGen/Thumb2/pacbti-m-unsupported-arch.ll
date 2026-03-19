@@ -22,10 +22,4 @@ entry:
 ; CHECK-PACBTI:       pacbti
 declare dso_local i32 @g(i32)
 
-attributes #0 = { noinline nounwind }
-
-!llvm.module.flags = !{!0, !1, !2}
-
-!0 = !{i32 8, !"branch-target-enforcement", i32 1}
-!1 = !{i32 8, !"sign-return-address", i32 1}
-!2 = !{i32 8, !"sign-return-address-all", i32 0}
+attributes #0 = { noinline nounwind "sign-return-address"="non-leaf" "branch-target-enforcement" }

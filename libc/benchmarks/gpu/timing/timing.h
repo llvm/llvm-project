@@ -12,7 +12,7 @@
 #include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
-#error "amdgpu not yet supported"
+#include "amdgpu/timing.h"
 #elif defined(LIBC_TARGET_ARCH_IS_NVPTX)
 #include "nvptx/timing.h"
 #else

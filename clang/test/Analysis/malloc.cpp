@@ -1,39 +1,35 @@
 // RUN: %clang_analyze_cc1 -w -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
-// RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
-// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintPropagation \
 // RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 // RUN: %clang_analyze_cc1 -w -verify %s \
 // RUN:   -triple i386-unknown-linux-gnu \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
-// RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
-// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintPropagation \
 // RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 // RUN: %clang_analyze_cc1 -w -verify %s -DTEST_INLINABLE_ALLOCATORS \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
-// RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
-// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintPropagation \
 // RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 // RUN: %clang_analyze_cc1 -w -verify %s -DTEST_INLINABLE_ALLOCATORS \
 // RUN:   -triple i386-unknown-linux-gnu \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
-// RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
-// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintPropagation \
 // RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 #include "Inputs/system-header-simulator-cxx.h"

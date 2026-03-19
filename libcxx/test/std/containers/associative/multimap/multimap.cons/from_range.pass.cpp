@@ -22,11 +22,9 @@
 #include "test_macros.h"
 
 void test_duplicates() {
-  using T = std::pair<const int, char>;
-  std::array input = {
-    T{1, 'a'}, T{2, 'a'}, T{3, 'a'}, T{3, 'b'}, T{3, 'c'}, T{2, 'b'}, T{4, 'a'}
-  };
-  auto c = std::multimap<int, char>(std::from_range, input);
+  using T          = std::pair<const int, char>;
+  std::array input = {T{1, 'a'}, T{2, 'a'}, T{3, 'a'}, T{3, 'b'}, T{3, 'c'}, T{2, 'b'}, T{4, 'a'}};
+  auto c           = std::multimap<int, char>(std::from_range, input);
   assert(std::ranges::is_permutation(input, c));
 }
 

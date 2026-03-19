@@ -20,7 +20,7 @@ class CStringsTestCase(TestBase):
 
         self.runCmd("process launch", RUN_SUCCEEDED)
 
-        self.expect("expression -- a[2]", patterns=["\((const )?char\) \$0 = 'c'"])
+        self.expect("expression -- a[2]", patterns=[r"\((const )?char\) \$0 = 'c'"])
 
         self.expect("expression -- z[2]", startstr="(const char) $1 = 'x'")
 

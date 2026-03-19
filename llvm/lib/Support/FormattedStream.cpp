@@ -75,6 +75,13 @@ void formatted_raw_ostream::UpdatePosition(const char *Ptr, size_t Size) {
   // Now scan the rest of the buffer.
   unsigned NumBytes;
   for (const char *End = Ptr + Size; Ptr < End; Ptr += NumBytes) {
+    // Fast path for printable ASCII characters without special handling.
+    if (*Ptr >= 0x20 && *Ptr <= 0x7e) {
+      NumBytes = 1;
+      ++Column;
+      continue;
+    }
+
     NumBytes = getNumBytesForUTF8(*Ptr);
 
     // The buffer might end part way through a UTF-8 code unit sequence for a

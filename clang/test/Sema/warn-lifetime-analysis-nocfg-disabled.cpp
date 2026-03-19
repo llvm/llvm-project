@@ -21,3 +21,7 @@ MyIntPointer g() {
   MyIntOwner o;
   return o; // No warning, it is disabled.
 }
+
+void h(MyIntPointer p) {
+  p = MyIntOwner(); //  No warning, it is disabled.
+}

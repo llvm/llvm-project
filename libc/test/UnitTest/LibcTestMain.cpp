@@ -43,7 +43,15 @@ TestOptions parseOptions(int argc, char **argv) {
 
 } // anonymous namespace
 
-extern "C" int main(int argc, char **argv, char **envp) {
+// The C++ standard forbids declaring the main function with a linkage specifier
+// outisde of 'freestanding' mode, only define the linkage for hermetic tests.
+#if __STDC_HOSTED__
+#define TEST_MAIN int main
+#else
+#define TEST_MAIN extern "C" int main
+#endif
+
+TEST_MAIN(int argc, char **argv, char **envp) {
   LIBC_NAMESPACE::testing::argc = argc;
   LIBC_NAMESPACE::testing::argv = argv;
   LIBC_NAMESPACE::testing::envp = envp;

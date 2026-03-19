@@ -14,7 +14,9 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-AIX-NEXT:    slwi 3, 3, 8
 ; CHECK-AIX-NEXT:    neg 3, 3
 ; CHECK-AIX-NEXT:    lwz 6, 0(3)
-; CHECK-AIX-NEXT:    sth 3, -16(1)
+; CHECK-AIX-NEXT:    sldi 3, 3, 48
+; CHECK-AIX-NEXT:    std 3, -16(1)
+; CHECK-AIX-NEXT:    std 3, -8(1)
 ; CHECK-AIX-NEXT:    addi 3, 1, -16
 ; CHECK-AIX-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-AIX-NEXT:    srwi 3, 4, 16
@@ -24,9 +26,11 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-AIX-NEXT:    mullw 3, 3, 4
 ; CHECK-AIX-NEXT:    li 4, 0
 ; CHECK-AIX-NEXT:    neg 3, 3
+; CHECK-AIX-NEXT:    sldi 3, 3, 48
 ; CHECK-AIX-NEXT:    vsplth 2, 2, 0
 ; CHECK-AIX-NEXT:    stxvw4x 34, 0, 4
-; CHECK-AIX-NEXT:    sth 3, -32(1)
+; CHECK-AIX-NEXT:    std 3, -32(1)
+; CHECK-AIX-NEXT:    std 3, -24(1)
 ; CHECK-AIX-NEXT:    addi 3, 1, -32
 ; CHECK-AIX-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-AIX-NEXT:    vsplth 2, 2, 0

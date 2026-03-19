@@ -1,3 +1,8 @@
+// AIX does not support env -u.
+// TODO(boomanaiden154): Reenable AIX support once we use the internal shell by
+// default.
+// UNSUPPORTED: system-aix
+
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: cd %t

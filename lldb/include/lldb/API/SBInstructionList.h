@@ -54,6 +54,11 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+  // Writes assembly instructions to `description` with load addresses using
+  // `exe_ctx`.
+  bool GetDescription(lldb::SBStream &description,
+                      lldb::SBExecutionContext &exe_ctx);
+
   bool DumpEmulationForAllInstructions(const char *triple);
 
 protected:
@@ -62,8 +67,8 @@ protected:
   friend class SBTarget;
 
   void SetDisassembler(const lldb::DisassemblerSP &opaque_sp);
-  bool GetDescription(lldb_private::Stream &description);
-
+  bool GetDescription(lldb_private::Stream &description,
+                      lldb_private::ExecutionContext *exe_ctx = nullptr);
 
 private:
   lldb::DisassemblerSP m_opaque_sp;

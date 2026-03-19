@@ -298,8 +298,6 @@ template <> std::string getName(const Any &WrappedIR) {
     return (*F)->getName().str();
   if (const auto *const *L = llvm::any_cast<const Loop *>(&WrappedIR))
     return (*L)->getName().str();
-  if (const auto *const *L = llvm::any_cast<const LoopNest *>(&WrappedIR))
-    return (*L)->getName().str();
   if (const auto *const *C =
           llvm::any_cast<const LazyCallGraph::SCC *>(&WrappedIR))
     return (*C)->getName();

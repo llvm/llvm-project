@@ -12,7 +12,7 @@
 //   complex<T>
 //   operator*(const complex<T>& lhs, const complex<T>& rhs); // constexpr in C++20
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=5000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
 
 #include <complex>
 #include <cassert>

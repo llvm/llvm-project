@@ -12,15 +12,13 @@ using namespace clang;
 
 namespace {
 
-class CXXOperatorCallExprTraverser
-  : public ExpectedLocationVisitor<CXXOperatorCallExprTraverser> {
+class CXXOperatorCallExprTraverser : public ExpectedLocationVisitor {
 public:
   // Use Traverse, not Visit, to check that data recursion optimization isn't
   // bypassing the call of this function.
-  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *CE) {
+  bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *CE) override {
     Match(getOperatorSpelling(CE->getOperator()), CE->getExprLoc());
-    return ExpectedLocationVisitor<CXXOperatorCallExprTraverser>::
-        TraverseCXXOperatorCallExpr(CE);
+    return ExpectedLocationVisitor::TraverseCXXOperatorCallExpr(CE);
   }
 };
 

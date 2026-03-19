@@ -9,8 +9,7 @@ The linker supports ELF (Unix), PE/COFF (Windows), Mach-O (macOS) and
 WebAssembly in descending order of completeness. Internally, LLD consists of
 several different linkers. The ELF port is the one that will be described in
 this document. The PE/COFF port is complete, including
-Windows debug info (PDB) support. The WebAssembly port is still a work in
-progress (See :doc:`WebAssembly`).
+Windows debug info (PDB) support.
 
 Features
 --------
@@ -125,30 +124,6 @@ not, run ``readelf --string-dump .comment <output-file>`` and examine the
 output. If the string "Linker: LLD" is included in the output, you are
 using LLD.
 
-History
--------
-
-Here is a brief project history of the ELF and COFF ports.
-
-- May 2015: We decided to rewrite the COFF linker and did that.
-  Noticed that the new linker is much faster than the MSVC linker.
-
-- July 2015: The new ELF port was developed based on the COFF linker
-  architecture.
-
-- September 2015: The first patches to support MIPS and AArch64 landed.
-
-- October 2015: Succeeded to self-host the ELF port. We have noticed
-  that the linker was faster than the GNU linkers, but we weren't sure
-  at the time if we would be able to keep the gap as we would add more
-  features to the linker.
-
-- July 2016: Started working on improving the linker script support.
-
-- December 2016: Succeeded to build the entire FreeBSD base system
-  including the kernel. We had widen the performance gap against the
-  GNU linkers.
-
 Internals
 ---------
 
@@ -171,3 +146,4 @@ document soon.
    ELF/start-stop-gc
    ELF/warn_backrefs
    MachO/index
+   DTLTO

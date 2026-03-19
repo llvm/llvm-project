@@ -1164,8 +1164,9 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
     ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
     ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
     ompt_callbacks.ompt_callback(ompt_callback_work)(
-        ompt_work_loop, ompt_scope_begin, &(team_info->parallel_data),
-        &(task_info->task_data), pr->u.p.tc, OMPT_LOAD_RETURN_ADDRESS(gtid));
+        ompt_get_work_schedule(pr->schedule), ompt_scope_begin,
+        &(team_info->parallel_data), &(task_info->task_data), pr->u.p.tc,
+        OMPT_LOAD_RETURN_ADDRESS(gtid));
   }
 #endif
   KMP_PUSH_PARTITIONED_TIMER(OMP_loop_dynamic);
@@ -2121,8 +2122,8 @@ int __kmp_dispatch_next_algorithm(int gtid,
       ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);              \
       ompt_task_info_t *task_info = __ompt_get_task_info_object(0);            \
       ompt_callbacks.ompt_callback(ompt_callback_work)(                        \
-          ompt_work_loop, ompt_scope_end, &(team_info->parallel_data),         \
-          &(task_info->task_data), 0, codeptr);                                \
+          ompt_get_work_schedule(pr->schedule), ompt_scope_end,                \
+          &(team_info->parallel_data), &(task_info->task_data), 0, codeptr);   \
     }                                                                          \
   }
 #define OMPT_LOOP_DISPATCH(lb, ub, st, status)                                 \

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -mcpu=hexagonv62  -run-pass amode-opt %s -o -
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv62 -run-pass amode-opt %s -o -
 # REQUIRES: asserts
 #
 # This test merely checks if the pass that optimizes addressing modes in the

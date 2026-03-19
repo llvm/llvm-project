@@ -6,7 +6,7 @@
 #include "Inputs/cuda.h"
 
 // PGOGEN-NOT: @__profn_{{.*kernel.*}} =
-// COVMAP-COUNT-2: section "__llvm_covfun", comdat
+// COVMAP-COUNT-33: section "__llvm_covfun", comdat
 // COVMAP-NOT: section "__llvm_covfun", comdat
 // MAPPING-NOT: {{.*dfn.*}}:
 // MAPPING-NOT: {{.*kernel.*}}:

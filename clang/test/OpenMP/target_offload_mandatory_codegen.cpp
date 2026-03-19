@@ -31,36 +31,47 @@ void host_dev(int device) {
 // MANDATORY-LABEL: define {{[^@]+}}@_Z4hostv
 // MANDATORY-SAME: () #[[ATTR0]] {
 // MANDATORY-NEXT:  entry:
+// MANDATORY-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 8
+// MANDATORY-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
+// MANDATORY-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // MANDATORY-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
-// MANDATORY-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// MANDATORY-NEXT:    store i32 3, ptr [[TMP0]], align 4
-// MANDATORY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// MANDATORY-NEXT:    store i32 0, ptr [[TMP1]], align 4
-// MANDATORY-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// MANDATORY-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP0]], align 8
+// MANDATORY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP1]], align 8
+// MANDATORY-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 0
 // MANDATORY-NEXT:    store ptr null, ptr [[TMP2]], align 8
-// MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP3]], align 8
-// MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP4]], align 8
-// MANDATORY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP5]], align 8
-// MANDATORY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP6]], align 8
-// MANDATORY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP7]], align 8
-// MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// MANDATORY-NEXT:    store i64 0, ptr [[TMP8]], align 8
-// MANDATORY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// MANDATORY-NEXT:    store i64 0, ptr [[TMP9]], align 8
-// MANDATORY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// MANDATORY-NEXT:    store [3 x i32] [i32 -1, i32 0, i32 0], ptr [[TMP10]], align 4
-// MANDATORY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// MANDATORY-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP11]], align 4
-// MANDATORY-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// MANDATORY-NEXT:    store i32 0, ptr [[TMP12]], align 4
-// MANDATORY-NEXT:    [[TMP13:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4hostv_l12.region_id, ptr [[KERNEL_ARGS]])
-// MANDATORY-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
-// MANDATORY-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// MANDATORY-NEXT:    store i32 4, ptr [[TMP5]], align 4
+// MANDATORY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// MANDATORY-NEXT:    store i32 1, ptr [[TMP6]], align 4
+// MANDATORY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// MANDATORY-NEXT:    store ptr [[TMP3]], ptr [[TMP7]], align 8
+// MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// MANDATORY-NEXT:    store ptr [[TMP4]], ptr [[TMP8]], align 8
+// MANDATORY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// MANDATORY-NEXT:    store ptr @.offload_sizes, ptr [[TMP9]], align 8
+// MANDATORY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// MANDATORY-NEXT:    store ptr @.offload_maptypes, ptr [[TMP10]], align 8
+// MANDATORY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP11]], align 8
+// MANDATORY-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP12]], align 8
+// MANDATORY-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// MANDATORY-NEXT:    store i64 0, ptr [[TMP13]], align 8
+// MANDATORY-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// MANDATORY-NEXT:    store i64 0, ptr [[TMP14]], align 8
+// MANDATORY-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// MANDATORY-NEXT:    store [3 x i32] [i32 -1, i32 0, i32 0], ptr [[TMP15]], align 4
+// MANDATORY-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// MANDATORY-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP16]], align 4
+// MANDATORY-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// MANDATORY-NEXT:    store i32 0, ptr [[TMP17]], align 4
+// MANDATORY-NEXT:    [[TMP18:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4hostv_l12.region_id, ptr [[KERNEL_ARGS]])
+// MANDATORY-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
+// MANDATORY-NEXT:    br i1 [[TMP19]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // MANDATORY:       omp_offload.failed:
 // MANDATORY-NEXT:    unreachable
 // MANDATORY:       omp_offload.cont:
@@ -71,42 +82,53 @@ void host_dev(int device) {
 // MANDATORY-SAME: (i1 noundef zeroext [[COND:%.*]]) #[[ATTR0]] {
 // MANDATORY-NEXT:  entry:
 // MANDATORY-NEXT:    [[COND_ADDR:%.*]] = alloca i8, align 1
+// MANDATORY-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 8
+// MANDATORY-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
+// MANDATORY-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // MANDATORY-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
-// MANDATORY-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[COND]] to i8
-// MANDATORY-NEXT:    store i8 [[FROMBOOL]], ptr [[COND_ADDR]], align 1
+// MANDATORY-NEXT:    [[STOREDV:%.*]] = zext i1 [[COND]] to i8
+// MANDATORY-NEXT:    store i8 [[STOREDV]], ptr [[COND_ADDR]], align 1
 // MANDATORY-NEXT:    [[TMP0:%.*]] = load i8, ptr [[COND_ADDR]], align 1
-// MANDATORY-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
-// MANDATORY-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
+// MANDATORY-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// MANDATORY-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // MANDATORY:       omp_if.then:
-// MANDATORY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// MANDATORY-NEXT:    store i32 3, ptr [[TMP1]], align 4
-// MANDATORY-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// MANDATORY-NEXT:    store i32 0, ptr [[TMP2]], align 4
-// MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// MANDATORY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP1]], align 8
+// MANDATORY-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP2]], align 8
+// MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 0
 // MANDATORY-NEXT:    store ptr null, ptr [[TMP3]], align 8
-// MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP4]], align 8
-// MANDATORY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP5]], align 8
-// MANDATORY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP6]], align 8
-// MANDATORY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP7]], align 8
-// MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP8]], align 8
-// MANDATORY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// MANDATORY-NEXT:    store i64 0, ptr [[TMP9]], align 8
-// MANDATORY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// MANDATORY-NEXT:    store i64 0, ptr [[TMP10]], align 8
-// MANDATORY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// MANDATORY-NEXT:    store [3 x i32] [i32 -1, i32 0, i32 0], ptr [[TMP11]], align 4
-// MANDATORY-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// MANDATORY-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP12]], align 4
-// MANDATORY-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// MANDATORY-NEXT:    store i32 0, ptr [[TMP13]], align 4
-// MANDATORY-NEXT:    [[TMP14:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7host_ifb_l17.region_id, ptr [[KERNEL_ARGS]])
-// MANDATORY-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
-// MANDATORY-NEXT:    br i1 [[TMP15]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// MANDATORY-NEXT:    store i32 4, ptr [[TMP6]], align 4
+// MANDATORY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// MANDATORY-NEXT:    store i32 1, ptr [[TMP7]], align 4
+// MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// MANDATORY-NEXT:    store ptr [[TMP4]], ptr [[TMP8]], align 8
+// MANDATORY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// MANDATORY-NEXT:    store ptr [[TMP5]], ptr [[TMP9]], align 8
+// MANDATORY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// MANDATORY-NEXT:    store ptr @.offload_sizes.1, ptr [[TMP10]], align 8
+// MANDATORY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// MANDATORY-NEXT:    store ptr @.offload_maptypes.2, ptr [[TMP11]], align 8
+// MANDATORY-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP12]], align 8
+// MANDATORY-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP13]], align 8
+// MANDATORY-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// MANDATORY-NEXT:    store i64 0, ptr [[TMP14]], align 8
+// MANDATORY-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// MANDATORY-NEXT:    store i64 0, ptr [[TMP15]], align 8
+// MANDATORY-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// MANDATORY-NEXT:    store [3 x i32] [i32 -1, i32 0, i32 0], ptr [[TMP16]], align 4
+// MANDATORY-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// MANDATORY-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP17]], align 4
+// MANDATORY-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// MANDATORY-NEXT:    store i32 0, ptr [[TMP18]], align 4
+// MANDATORY-NEXT:    [[TMP19:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z7host_ifb_l17.region_id, ptr [[KERNEL_ARGS]])
+// MANDATORY-NEXT:    [[TMP20:%.*]] = icmp ne i32 [[TMP19]], 0
+// MANDATORY-NEXT:    br i1 [[TMP20]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // MANDATORY:       omp_offload.failed:
 // MANDATORY-NEXT:    unreachable
 // MANDATORY:       omp_offload.cont:
@@ -122,41 +144,52 @@ void host_dev(int device) {
 // MANDATORY-NEXT:  entry:
 // MANDATORY-NEXT:    [[DEVICE_ADDR:%.*]] = alloca i32, align 4
 // MANDATORY-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
+// MANDATORY-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 8
+// MANDATORY-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
+// MANDATORY-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // MANDATORY-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // MANDATORY-NEXT:    store i32 [[DEVICE]], ptr [[DEVICE_ADDR]], align 4
 // MANDATORY-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DEVICE_ADDR]], align 4
 // MANDATORY-NEXT:    store i32 [[TMP0]], ptr [[DOTCAPTURE_EXPR_]], align 4
-// MANDATORY-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// MANDATORY-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
-// MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// MANDATORY-NEXT:    store i32 3, ptr [[TMP3]], align 4
-// MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// MANDATORY-NEXT:    store i32 0, ptr [[TMP4]], align 4
-// MANDATORY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP5]], align 8
-// MANDATORY-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP6]], align 8
-// MANDATORY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP7]], align 8
-// MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP8]], align 8
-// MANDATORY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP9]], align 8
-// MANDATORY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
-// MANDATORY-NEXT:    store ptr null, ptr [[TMP10]], align 8
-// MANDATORY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
-// MANDATORY-NEXT:    store i64 0, ptr [[TMP11]], align 8
-// MANDATORY-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
-// MANDATORY-NEXT:    store i64 0, ptr [[TMP12]], align 8
-// MANDATORY-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
-// MANDATORY-NEXT:    store [3 x i32] [i32 -1, i32 0, i32 0], ptr [[TMP13]], align 4
-// MANDATORY-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
-// MANDATORY-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP14]], align 4
-// MANDATORY-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
-// MANDATORY-NEXT:    store i32 0, ptr [[TMP15]], align 4
-// MANDATORY-NEXT:    [[TMP16:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 [[TMP2]], i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8host_devi_l22.region_id, ptr [[KERNEL_ARGS]])
-// MANDATORY-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP16]], 0
-// MANDATORY-NEXT:    br i1 [[TMP17]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
+// MANDATORY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP1]], align 8
+// MANDATORY-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP2]], align 8
+// MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 0
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP3]], align 8
+// MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
+// MANDATORY-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// MANDATORY-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP6]] to i64
+// MANDATORY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
+// MANDATORY-NEXT:    store i32 4, ptr [[TMP8]], align 4
+// MANDATORY-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
+// MANDATORY-NEXT:    store i32 1, ptr [[TMP9]], align 4
+// MANDATORY-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
+// MANDATORY-NEXT:    store ptr [[TMP4]], ptr [[TMP10]], align 8
+// MANDATORY-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 3
+// MANDATORY-NEXT:    store ptr [[TMP5]], ptr [[TMP11]], align 8
+// MANDATORY-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 4
+// MANDATORY-NEXT:    store ptr @.offload_sizes.3, ptr [[TMP12]], align 8
+// MANDATORY-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 5
+// MANDATORY-NEXT:    store ptr @.offload_maptypes.4, ptr [[TMP13]], align 8
+// MANDATORY-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 6
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP14]], align 8
+// MANDATORY-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 7
+// MANDATORY-NEXT:    store ptr null, ptr [[TMP15]], align 8
+// MANDATORY-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 8
+// MANDATORY-NEXT:    store i64 0, ptr [[TMP16]], align 8
+// MANDATORY-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 9
+// MANDATORY-NEXT:    store i64 0, ptr [[TMP17]], align 8
+// MANDATORY-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 10
+// MANDATORY-NEXT:    store [3 x i32] [i32 -1, i32 0, i32 0], ptr [[TMP18]], align 4
+// MANDATORY-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 11
+// MANDATORY-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP19]], align 4
+// MANDATORY-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
+// MANDATORY-NEXT:    store i32 0, ptr [[TMP20]], align 4
+// MANDATORY-NEXT:    [[TMP21:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 [[TMP7]], i32 -1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z8host_devi_l22.region_id, ptr [[KERNEL_ARGS]])
+// MANDATORY-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
+// MANDATORY-NEXT:    br i1 [[TMP22]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // MANDATORY:       omp_offload.failed:
 // MANDATORY-NEXT:    unreachable
 // MANDATORY:       omp_offload.cont:

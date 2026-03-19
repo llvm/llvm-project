@@ -8,10 +8,17 @@ MemorySanitizer
 Introduction
 ============
 
-MemorySanitizer is a detector of uninitialized reads. It consists of a
+MemorySanitizer is a detector of uninitialized memory use. It consists of a
 compiler instrumentation module and a run-time library.
 
 Typical slowdown introduced by MemorySanitizer is **3x**.
+
+Here is a not comprehensive of list cases when MemorySanitizer will report an error:
+
+* Uninitialized value was used in a conditional branch.
+* Uninitialized pointer was used for memory accesses.
+* Uninitialized value was passed or returned from a function call, which is considered an undefined behavior. The check can be disabled with ``-fno-sanitize-memory-param-retval``.
+* Uninitialized data was passed into some libc calls.
 
 How to build
 ============
@@ -94,6 +101,59 @@ positives and therefore should be used with care, and only if absolutely
 required; for example for certain code that cannot tolerate any instrumentation
 and resulting side-effects. This attribute overrides ``no_sanitize("memory")``.
 
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+* A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.
+* An `always_inline` function will adopt the instrumentation status of the function it is inlined into.
+* Forcibly combining `no_sanitize` and ``__attribute__((always_inline))`` is not supported, and will often lead to unexpected results. To avoid mixing these attributes, use:
+
+. code-block:: c
+
+    // Note, __has_feature test for sanitizers is deprecated, and Clang will support __SANITIZE_<sanitizer>__ similar to GCC.
+    #if __has_feature(memory_sanitizer) || defined(__SANITIZE_MEMORY__) || ... <other sanitizers>
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED
+    #else
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED __attribute__((always_inline))
+    #endif
+
+Explicit Sanitizer Checks with ``__builtin_allow_sanitize_check``
+-----------------------------------------------------------------
+
+The ``__builtin_allow_sanitize_check("memory")`` builtin can be used to
+conditionally execute code depending on whether MemorySanitizer checks are
+enabled and permitted by the current policy (after inlining). This is
+particularly useful for inserting explicit, sanitizer-specific checks around
+operations like syscalls or inline assembly, which might otherwise be unchecked
+by the sanitizer.
+
+Example:
+
+.. code-block:: c
+
+    void __msan_check_mem_is_initialized(const void *, size_t);
+
+    inline __attribute__((always_inline))
+    void my_send(void *addr, size_t size) {
+      if (__builtin_allow_sanitize_check("memory"))
+        __msan_check_mem_is_initialized(addr, size);
+      // ... syscall or other logic where MSan may not see the access ...
+      send(addr, size);
+    }
+
+    void instrumented_function() {
+      ...
+      my_send(buf, sizeof(buf)); // checks are active
+      ...
+    }
+
+    __attribute__((no_sanitize("memory")))
+    void uninstrumented_function() {
+      ...
+      my_send(buf, sizeof(buf)); // checks are skipped
+      ...
+    }
+
 Ignorelist
 ----------
 
@@ -169,7 +229,7 @@ for `lifetime <https://eel.is/c++draft/basic.life#1>`_ definition.
 
 This feature can be disabled with either:
 
-#. Pass addition Clang option ``-fno-sanitize-memory-use-after-dtor`` during
+#. Pass additional Clang option ``-fno-sanitize-memory-use-after-dtor`` during
    compilation.
 #. Set environment variable `MSAN_OPTIONS=poison_in_dtor=0` before running
    the program.
@@ -190,6 +250,14 @@ to run MemorySanitizer-instrumented programs linked with
 uninstrumented libc. For example, the authors were able to bootstrap
 MemorySanitizer-instrumented Clang compiler by linking it with
 self-built instrumented libc++ (as a replacement for libstdc++).
+
+Security Considerations
+=======================
+
+MemorySanitizer is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+MemorySanitizer's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
 
 Supported Platforms
 ===================

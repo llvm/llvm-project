@@ -11,6 +11,7 @@
 #include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -20,7 +21,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
-
 #include <atomic>
 #include <thread>
 
@@ -198,7 +198,7 @@ TEST(ReleaseModelRunner, ModelSelectorNoInputFeaturePresent) {
   LLVMContext Ctx;
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
-  EXPECT_DEATH(std::make_unique<ReleaseModeModelRunner<AdditionAOTModel>>(
+  EXPECT_DEATH((void)std::make_unique<ReleaseModeModelRunner<AdditionAOTModel>>(
                    Ctx, Inputs, "", makeOptions().setModelSelector(M2Selector)),
                "A model selector was specified but the underlying model does "
                "not expose a model_selector input");
@@ -209,7 +209,7 @@ TEST(ReleaseModelRunner, ModelSelectorNoSelectorGiven) {
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
   EXPECT_DEATH(
-      std::make_unique<ReleaseModeModelRunner<ComposedAOTModel>>(
+      (void)std::make_unique<ReleaseModeModelRunner<ComposedAOTModel>>(
           Ctx, Inputs, "", makeOptions()),
       "A model selector was not specified but the underlying model requires "
       "selecting one because it exposes a model_selector input");

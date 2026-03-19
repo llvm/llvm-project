@@ -48,7 +48,7 @@ void vector_literals_valid() {
   //CHECK: shufflevector <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>, <4 x i32> %{{.+}}, <4 x i32> <i32 0, i32 4, i32 5, i32 6>
   int4 a_1_3 = (int4)(1, (int3)(2, 3, 4));
 
-  //CHECK: store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr %a
+  //CHECK: store <4 x i32> splat (i32 1), ptr %a
   int4 a = (int4)(1);
 
   //CHECK: load <4 x i32>, ptr %a
@@ -60,7 +60,7 @@ void vector_literals_valid() {
   //CHECK: shufflevector <8 x i32> %{{.+}}, <8 x i32> %{{.+}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   int8 b = (int8)(1, 2, a.xy, a);
 
-  //CHECK: store <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, ptr %V2
+  //CHECK: store <4 x float> splat (float 1.000000e+00), ptr %V2
   float4 V2 = (float4)(1);
 }
 

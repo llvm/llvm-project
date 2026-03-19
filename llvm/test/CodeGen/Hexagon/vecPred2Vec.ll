@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; CHECK: q{{[0-3]}} = vand(v{{[0-9]+}},r{{[0-9]+}})
 ; CHECK: q{{[0-3]}} = vand(v{{[0-9]+}},r{{[0-9]+}})
 ; CHECK: q{{[0-3]}} = and(q{{[0-3]}},q{{[0-3]}})

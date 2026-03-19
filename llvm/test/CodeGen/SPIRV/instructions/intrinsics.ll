@@ -1,4 +1,4 @@
-; RUN: llc -O0 %s -mtriple=spirv32-unknown-unknown -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 %s -mtriple=spirv32-unknown-unknown -o - | FileCheck %s
 
 declare float @llvm.fabs.f32(float)
 declare float @llvm.rint.f32(float)

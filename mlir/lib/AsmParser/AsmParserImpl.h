@@ -206,6 +206,16 @@ public:
     return success(parser.consumeIf(Token::question));
   }
 
+  /// Parses a '/' token.
+  ParseResult parseSlash() override {
+    return parser.parseToken(Token::slash, "expected '/'");
+  }
+
+  /// Parses a '/' if present.
+  ParseResult parseOptionalSlash() override {
+    return success(parser.consumeIf(Token::slash));
+  }
+
   /// Parses a '*' token.
   ParseResult parseStar() override {
     return parser.parseToken(Token::star, "expected '*'");
@@ -226,6 +236,16 @@ public:
     return success(parser.consumeIf(Token::plus));
   }
 
+  /// Parses a '-' token.
+  ParseResult parseMinus() override {
+    return parser.parseToken(Token::minus, "expected '-'");
+  }
+
+  /// Parses a '-' token if present.
+  ParseResult parseOptionalMinus() override {
+    return success(parser.consumeIf(Token::minus));
+  }
+
   /// Parse a '|' token.
   ParseResult parseVerticalBar() override {
     return parser.parseToken(Token::vertical_bar, "expected '|'");
@@ -238,13 +258,7 @@ public:
 
   /// Parses a quoted string token if present.
   ParseResult parseOptionalString(std::string *string) override {
-    if (!parser.getToken().is(Token::string))
-      return failure();
-
-    if (string)
-      *string = parser.getToken().getStringValue();
-    parser.consumeToken();
-    return success();
+    return parser.parseOptionalString(string);
   }
 
   /// Parses a Base64 encoded string of bytes.
@@ -277,34 +291,13 @@ public:
                          APFloat &result) override {
     bool isNegative = parser.consumeIf(Token::minus);
     Token curTok = parser.getToken();
-    SMLoc loc = curTok.getLoc();
-
-    // Check for a floating point value.
-    if (curTok.is(Token::floatliteral)) {
-      auto val = curTok.getFloatingPointValue();
-      if (!val)
-        return emitError(loc, "floating point value too large");
-      parser.consumeToken(Token::floatliteral);
-      result = APFloat(isNegative ? -*val : *val);
-      bool losesInfo;
-      result.convert(semantics, APFloat::rmNearestTiesToEven, &losesInfo);
-      return success();
-    }
-
-    // Check for a hexadecimal float value.
-    if (curTok.is(Token::integer)) {
-      std::optional<APFloat> apResult;
-      if (failed(parser.parseFloatFromIntegerLiteral(
-              apResult, curTok, isNegative, semantics,
-              APFloat::semanticsSizeInBits(semantics))))
-        return failure();
-
-      result = *apResult;
-      parser.consumeToken(Token::integer);
-      return success();
-    }
-
-    return emitError(loc, "expected floating point literal");
+    std::optional<APFloat> apResult;
+    if (failed(parser.parseFloatFromLiteral(apResult, curTok, isNegative,
+                                            semantics)))
+      return failure();
+    parser.consumeToken();
+    result = *apResult;
+    return success();
   }
 
   /// Parse a floating point value from the stream.
@@ -320,6 +313,11 @@ public:
   /// Parse an optional integer value from the stream.
   OptionalParseResult parseOptionalInteger(APInt &result) override {
     return parser.parseOptionalInteger(result);
+  }
+
+  /// Parse an optional integer value from the stream.
+  OptionalParseResult parseOptionalDecimalInteger(APInt &result) override {
+    return parser.parseOptionalDecimalInteger(result);
   }
 
   /// Parse a list of comma-separated items with an optional delimiter.  If a
@@ -361,13 +359,7 @@ public:
 
   /// Parse a keyword, if present, into 'keyword'.
   ParseResult parseOptionalKeyword(StringRef *keyword) override {
-    // Check that the current token is a keyword.
-    if (!parser.isCurrentTokenAKeyword())
-      return failure();
-
-    *keyword = parser.getTokenSpelling();
-    parser.consumeToken();
-    return success();
+    return parser.parseOptionalKeyword(keyword);
   }
 
   /// Parse a keyword if it is one of the 'allowedKeywords'.
@@ -393,13 +385,7 @@ public:
 
   /// Parse an optional keyword or string and set instance into 'result'.`
   ParseResult parseOptionalKeywordOrString(std::string *result) override {
-    StringRef keyword;
-    if (succeeded(parseOptionalKeyword(&keyword))) {
-      *result = keyword.str();
-      return success();
-    }
-
-    return parseOptionalString(result);
+    return parser.parseOptionalKeywordOrString(result);
   }
 
   //===--------------------------------------------------------------------===//
@@ -520,7 +506,7 @@ public:
       return parser.emitError() << "dialect '" << dialect->getNamespace()
                                 << "' does not expect resource handles";
     }
-    StringRef resourceName;
+    std::string resourceName;
     return parser.parseResourceHandle(interface, resourceName);
   }
 

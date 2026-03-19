@@ -23,7 +23,7 @@ void test() {
 // CHECK: blocks.c:9:18: TypeRef=struct foo:4:8 Extent=[9:18 - 9:21]
 // CHECK: blocks.c:9:28: CompoundStmt= Extent=[9:28 - 9:58]
 // CHECK: blocks.c:9:30: ReturnStmt= Extent=[9:30 - 9:55]
-// CHECK: blocks.c:9:37: BinaryOperator= Extent=[9:37 - 9:55]
+// CHECK: blocks.c:9:37: BinaryOperator=+ Extent=[9:37 - 9:55]
 // CHECK: blocks.c:9:37: CStyleCastExpr= Extent=[9:37 - 9:51]
 // CHECK: blocks.c:9:38: TypeRef=int_t:3:13 Extent=[9:38 - 9:43]
 // CHECK: blocks.c:9:50: MemberRefExpr=x:4:19 SingleRefName=[9:50 - 9:51] RefName=[9:50 - 9:51] Extent=[9:45 - 9:51]
@@ -31,4 +31,3 @@ void test() {
 // CHECK: blocks.c:9:54: DeclRefExpr=i:8:11 Extent=[9:54 - 9:55]
 // CHECK: blocks.c:9:59: UnaryOperator= Extent=[9:59 - 9:64]
 // CHECK: blocks.c:9:60: DeclRefExpr=_foo:7:21 Extent=[9:60 - 9:64]
-

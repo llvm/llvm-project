@@ -1,3 +1,206 @@
+add_object_library(
+  file_internal
+  SRCS
+    file_internal.cpp
+  HDRS
+    file_internal.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.CPP.string_view
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  vfprintf_internal
+  HDRS
+    vfprintf_internal.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
+    libc.src.__support.arg_list
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.string_view
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.osutil
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.stdio.printf_core.core_structs
+)
+
+add_header_library(
+  vfscanf_internal
+  HDRS
+    vfscanf_internal.h
+  DEPENDS
+    .file_internal
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
+    libc.src.__support.arg_list
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.string_view
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.osutil
+    libc.src.stdio.scanf_core.reader
+    libc.src.stdio.scanf_core.scanf_main
+)
+
+add_entrypoint_object(
+  feof
+  SRCS
+    feof.cpp
+  HDRS
+    ../feof.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  ferror
+  SRCS
+    ferror.cpp
+  HDRS
+    ../ferror.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  fgetc
+  SRCS
+    fgetc.cpp
+  HDRS
+    ../fgetc.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getc
+  SRCS
+    getc.cpp
+  HDRS
+    ../getc.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.stdio.baremetal.fgetc
+)
+
+add_entrypoint_object(
+  fflush
+  SRCS
+    fflush.cpp
+  HDRS
+    ../fflush.h
+  DEPENDS
+    .file_internal
+)
+
+add_entrypoint_object(
+  fgets
+  SRCS
+    fgets.cpp
+  HDRS
+    ../fgets.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    ../fprintf.h
+  DEPENDS
+    .vfprintf_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.__support.arg_list
+)
+
+add_entrypoint_object(
+  fputc
+  SRCS
+    fputc.cpp
+  HDRS
+    ../fputc.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fputs
+  SRCS
+    fputs.cpp
+  HDRS
+    ../fputc.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fread
+  SRCS
+    fread.cpp
+  HDRS
+    ../fread.h
+  DEPENDS
+    .file_internal
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fscanf
+  SRCS
+    fscanf.cpp
+  HDRS
+    ../fscanf.h
+  DEPENDS
+    .vfscanf_internal
+    libc.src.__support.arg_list
+)
+
+add_entrypoint_object(
+  fwrite
+  SRCS
+    fwrite.cpp
+  HDRS
+    ../fwrite.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getchar
+  SRCS
+    getchar.cpp
+  HDRS
+    ../getchar.h
+  DEPENDS
+    .file_internal
+    .stdin
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
 add_entrypoint_object(
   remove
   SRCS
@@ -15,10 +218,9 @@ add_entrypoint_object(
   HDRS
     ../printf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
+    .stdout
+    .vfprintf_internal
     libc.src.__support.arg_list
-    libc.src.__support.OSUtil.osutil
 )
 
 add_entrypoint_object(
@@ -28,8 +230,119 @@ add_entrypoint_object(
   HDRS
     ../putchar.h
   DEPENDS
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.CPP.string_view
+    .file_internal
+    .stdout
+    libc.hdr.stdio_macros
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  putc
+  SRCS
+    putc.cpp
+  HDRS
+    ../putc.h
+  DEPENDS
+    .file_internal
+    .stdout
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  ungetc
+  SRCS
+    ungetc.cpp
+  HDRS
+    ../ungetc.h
+  DEPENDS
+    .file_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  puts
+  SRCS
+    puts.cpp
+  HDRS
+    ../puts.h
+  DEPENDS
+    .file_internal
+    .stdout
+    libc.hdr.stdio_macros
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  scanf
+  SRCS
+    scanf.cpp
+  HDRS
+    ../scanf.h
+  DEPENDS
+    .stdin
+    .vfscanf_internal
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
+    libc.src.__support.arg_list
+)
+
+add_entrypoint_object(
+  stdin
+  SRCS
+    stdin.cpp
+  HDRS
+    ../stdin.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  stdout
+  SRCS
+    stdout.cpp
+  HDRS
+    ../stdout.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  stderr
+  SRCS
+    stderr.cpp
+  HDRS
+    ../stderr.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  vfprintf
+  SRCS
+    vfprintf.cpp
+  HDRS
+    ../vfprintf.h
+  DEPENDS
+    .vfprintf_internal
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.src.__support.arg_list
+)
+
+add_entrypoint_object(
+  vfscanf
+  SRCS
+    vfscanf.cpp
+  HDRS
+    ../vfscanf.h
+  DEPENDS
+    .vfscanf_internal
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
+    libc.src.__support.arg_list
 )
 
 add_entrypoint_object(
@@ -39,8 +352,21 @@ add_entrypoint_object(
   HDRS
     ../vprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
+    .stdout
+    .vfprintf_internal
+    libc.hdr.stdio_macros
     libc.src.__support.arg_list
-    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  vscanf
+  SRCS
+    vscanf.cpp
+  HDRS
+    ../vscanf.h
+  DEPENDS
+    .stdin
+    .vfscanf_internal
+    libc.hdr.stdio_macros
+    libc.src.__support.arg_list
 )

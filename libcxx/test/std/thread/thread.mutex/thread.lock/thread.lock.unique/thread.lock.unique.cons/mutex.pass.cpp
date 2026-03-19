@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
-// ALLOW_RETRIES: 2
 
 // <mutex>
 
@@ -19,45 +16,22 @@
 //     -> unique_lock<_Mutex>;  // C++17
 
 #include <cassert>
-#include <chrono>
-#include <cstdlib>
 #include <mutex>
-#include <thread>
 
-#include "make_test_thread.h"
+#include "checking_mutex.h"
 #include "test_macros.h"
 
-std::mutex m;
+int main(int, char**) {
+  checking_mutex mux;
 
-typedef std::chrono::system_clock Clock;
-typedef Clock::time_point time_point;
-typedef Clock::duration duration;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::nanoseconds ns;
-
-void f()
-{
-    time_point t0 = Clock::now();
-    time_point t1;
-    {
-    std::unique_lock<std::mutex> ul(m);
-    t1 = Clock::now();
-    }
-    ns d = t1 - t0 - ms(250);
-    assert(d < ms(50));  // within 50ms
-}
-
-int main(int, char**)
-{
-    m.lock();
-    std::thread t = support::make_test_thread(f);
-    std::this_thread::sleep_for(ms(250));
-    m.unlock();
-    t.join();
+  {
+    std::unique_lock<checking_mutex> lock(mux);
+    assert(mux.current_state == checking_mutex::locked_via_lock);
+  }
+  assert(mux.current_state == checking_mutex::unlocked);
 
 #if TEST_STD_VER >= 17
-    std::unique_lock ul(m);
-    static_assert((std::is_same<decltype(ul), std::unique_lock<decltype(m)>>::value), "" );
+  static_assert(std::is_same_v<std::unique_lock<checking_mutex>, decltype(std::unique_lock{mux})>, "");
 #endif
 
   return 0;

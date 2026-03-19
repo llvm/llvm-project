@@ -4,6 +4,8 @@
 ; RUN: opt < %t -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -sample-profile-remove-probe -S | FileCheck %s -check-prefix=REMOVE-PROBE
 
 ; REMOVE-PROBE-NOT: call void @llvm.pseudoprobe
+; REMOVE-PROBE-NOT: !llvm.pseudo_probe_desc
+; REMOVE-PROBE:     !DILexicalBlockFile({{.*}}, discriminator: 0)
 
 define dso_local i32 @foo(i32 %x, ptr %f) #0 !dbg !4 {
 entry:

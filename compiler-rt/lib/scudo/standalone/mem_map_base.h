@@ -35,6 +35,8 @@ public:
     DCHECK((Addr == getBase()) || (Addr + Size == getBase() + getCapacity()));
     invokeImpl(&Derived::unmapImpl, Addr, Size);
   }
+  // A default implementation to unmap all pages.
+  void unmap() { unmap(getBase(), getCapacity()); }
 
   // This is used to remap a mapped range (either from map() or dispatched from
   // ReservedMemory). For example, we have reserved several pages and then we
@@ -68,6 +70,21 @@ public:
     DCHECK((From >= getBase()) && (From + Size <= getBase() + getCapacity()));
     invokeImpl(&Derived::releaseAndZeroPagesToOSImpl, From, Size);
   }
+
+  // Get the total number of resident pages for From to From + Size.
+  // This function can run slowly, and is only expected to be called
+  // from getStats functions where performance does not matter. From represents
+  // the absolute address of the start of a memory region, not a relative offset
+  // from getBase().
+  s64 getResidentPages(uptr From, uptr Size) {
+    if (!isAllocated()) {
+      return 0;
+    }
+    DCHECK((From >= getBase()) && (From + Size <= getBase() + getCapacity()));
+    return invokeImpl(&Derived::getResidentPagesImpl, From, Size);
+  }
+
+  s64 getResidentPages() { return getResidentPages(getBase(), getCapacity()); }
 
   uptr getBase() { return invokeImpl(&Derived::getBaseImpl); }
   uptr getCapacity() { return invokeImpl(&Derived::getCapacityImpl); }

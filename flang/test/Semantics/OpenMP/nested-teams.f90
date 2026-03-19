@@ -58,7 +58,7 @@ program main
 
   !$omp target
   !$omp teams
-  !ERROR: Only `DISTRIBUTE` or `PARALLEL` regions are allowed to be strictly nested inside `TEAMS` region.
+  !ERROR: Only `DISTRIBUTE`, `PARALLEL`, or `LOOP` regions are allowed to be strictly nested inside `TEAMS` region.
   !ERROR: TEAMS region can only be strictly nested within the implicit parallel region or TARGET region
   !$omp teams
   a = 3.14
@@ -67,6 +67,7 @@ program main
   !$omp end target
 
   !$omp target teams
+  !ERROR: Only `DISTRIBUTE`, `PARALLEL`, or `LOOP` regions are allowed to be strictly nested inside `TEAMS` region.
   !ERROR: TEAMS region can only be strictly nested within the implicit parallel region or TARGET region
   !$omp teams
   a = 3.14

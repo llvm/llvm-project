@@ -4,7 +4,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
+// RUN: %dexter --fail-lt 1.0 -w %dexter_lldb_args --binary %t -- %s
 
 //// Check that escaped local 'param' in function 'fun' has sensible debug info
 //// after the escaping function 'use' gets arg promotion (int* -> int). Currently

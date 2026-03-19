@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Make sure we generate a hardware loop and pipeline the inner loop using
 ; 4 packets, which is equivalent to the hand-coded version.

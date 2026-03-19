@@ -321,6 +321,18 @@ define i16 @mul_add_to_mul_9(i16 %a) {
   ret i16 %add
 }
 
+@g = external global i8
+
+define i32 @shl_add_to_shl_constexpr() {
+; CHECK-LABEL: @shl_add_to_shl_constexpr(
+; CHECK-NEXT:    [[ADD:%.*]] = shl i32 ptrtoint (ptr @g to i32), 2
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %shl = shl i32 ptrtoint (ptr @g to i32), 1
+  %add = add i32 %shl, %shl
+  ret i32 %add
+}
+
 ; This test and the next test verify that when a range metadata is attached to
 ; llvm.cttz, ValueTracking correctly intersects the range specified by the
 ; metadata and the range implied by the intrinsic.
@@ -452,7 +464,7 @@ define i8 @add_of_mul(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @add_of_mul(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MB1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[SUM:%.*]] = mul i8 [[MB1]], [[X:%.*]]
+; CHECK-NEXT:    [[SUM:%.*]] = mul i8 [[X:%.*]], [[MB1]]
 ; CHECK-NEXT:    ret i8 [[SUM]]
 ;
   entry:
@@ -497,4 +509,79 @@ define i32 @sub_undemanded_low_bits(i32 %x) {
   %sub = sub i32 %or, 1616
   %shr = lshr i32 %sub, 4
   ret i32 %shr
+}
+
+define i32 @rhs_undemanded_low_bits_exact_boundary(i32 %x) {
+; CHECK-LABEL: @rhs_undemanded_low_bits_exact_boundary(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = add i32 [[SHL]], 32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 %x, 4
+  %add = add i32 %shl, 47  ; 47 = 32 + 15
+  %and = and i32 %add, -16 ; 0xFFFFFFF0 (Low 4bits masked out)
+  ret i32 %and
+}
+
+define i32 @rhs_undemanded_low_bits_overshift_collision(i32 %x) {
+; CHECK-LABEL: @rhs_undemanded_low_bits_overshift_collision(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], 288
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %shl = shl i32 %x, 8
+  %add = add i32 %shl, 303  ; 303 = 256 + 32 + 15
+  %and = and i32 %add, -16  ; 0xFFFFFFF0
+  ret i32 %and
+}
+
+define i32 @rhs_undemanded_low_bits_undershift(i32 %x) {
+; CHECK-LABEL: @rhs_undemanded_low_bits_undershift(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], 44
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], -16
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 %x, 2
+  %add = add i32 %shl, 47
+  %and = and i32 %add, -16 ; 0xFFFFFFF0
+  ret i32 %and
+}
+
+define <2 x i32> @rhs_undemanded_low_bits_vector(<2 x i32> %x) {
+; CHECK-LABEL: @rhs_undemanded_low_bits_vector(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[X:%.*]], splat (i32 4)
+; CHECK-NEXT:    [[AND:%.*]] = add <2 x i32> [[SHL]], splat (i32 32)
+; CHECK-NEXT:    ret <2 x i32> [[AND]]
+;
+  %shl = shl <2 x i32> %x, <i32 4, i32 4>
+  %add = add <2 x i32> %shl, <i32 47, i32 47>
+  %and = and <2 x i32> %add, <i32 -16, i32 -16>
+  ret <2 x i32> %and
+}
+
+; Negative tests
+define i32 @rhs_undemanded_low_bits_negative_lsb_demanded(i32 %x) {
+; CHECK-LABEL: @rhs_undemanded_low_bits_negative_lsb_demanded(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], 47
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], -15
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %shl = shl i32 %x, 4
+  %add = add i32 %shl, 47  ; 47 = 0010 1111
+  %and = and i32 %add, -15 ; Mask = ...1111 0001 (Bit 0 is kept!)
+  ret i32 %and
+}
+
+define i32 @rhs_undemanded_low_bits_negative_unknown_lhs(i32 %x) {
+; CHECK-LABEL: @rhs_undemanded_low_bits_negative_unknown_lhs(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 47
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], -16
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  ; No shift here
+  %add = add i32 %x, 47
+  %and = and i32 %add, -16
+  ret i32 %and
 }

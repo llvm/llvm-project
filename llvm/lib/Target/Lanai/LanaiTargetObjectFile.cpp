@@ -7,11 +7,8 @@
 
 #include "LanaiTargetObjectFile.h"
 
-#include "LanaiSubtarget.h"
-#include "LanaiTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -117,12 +114,12 @@ bool LanaiTargetObjectFile::isConstantInSmallSection(const DataLayout &DL,
 }
 
 MCSection *LanaiTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
   if (isConstantInSmallSection(DL, C))
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
-                                                            Alignment);
+                                                            Alignment, F);
 }

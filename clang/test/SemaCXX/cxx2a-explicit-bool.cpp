@@ -75,11 +75,11 @@ struct D {
 template <typename T> struct E {
   // expected-note@-1+ {{candidate constructor}}
   explicit((T{}, false))
-  // expected-error@-1 {{illegal initializer type 'void'}}
+  // expected-error@-1 {{cannot create object of function type 'void ()'}}
   E(int);
 };
 
-E<void> e = 1;
+E<void ()> e = 1;
 // expected-error@-1 {{no viable conversion}}
 // expected-note@-2 {{in instantiation of}}
 

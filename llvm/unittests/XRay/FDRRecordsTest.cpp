@@ -158,7 +158,6 @@ TEST(XRayFDRTest, IndexAndVerifyBlocks) {
     }
   }
 
-  OS.flush();
   EXPECT_THAT(Output, Not(Eq("")));
 }
 

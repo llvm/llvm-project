@@ -3,7 +3,7 @@
 # RUN: llvm-mc --filetype=obj --triple x86_64 %s -o %tmain.o --defsym MAIN=0
 # RUN: llvm-mc --filetype=obj --triple x86_64 %s -o %thelper.o
 # RUN: %clang %cflags %tmain.o %thelper.o -o %tmain.exe
-# RUN: llvm-bolt %tmain.exe -o %tmain.exe.bolt --update-debug-sections
+# RUN: llvm-bolt %tmain.exe -o %tmain.exe.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
 # RUN: llvm-dwarfdump --debug-info %tmain.exe.bolt > %tout.text
 # RUN: llvm-dwarfdump --show-section-sizes %tmain.exe >> %tout.text
 # RUN: llvm-dwarfdump --show-section-sizes %tmain.exe.bolt >> %tout.text

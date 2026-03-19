@@ -28,7 +28,7 @@ These features are:
 <p>End-User Features:</p>
 
 <ul>
-<li><a href="#performance">Fast compiles and low memory use</a></li>
+<li><a href="#performance">Fast compilation and low memory use</a></li>
 <li><a href="#expressivediags">Expressive diagnostics</a></li>
 <li><a href="#gcccompat">GCC compatibility</a></li>
 </ul>
@@ -39,7 +39,7 @@ These features are:
 <li><a href="#libraryarch">Library based architecture</a></li>
 <li><a href="#diverseclients">Support diverse clients</a></li>
 <li><a href="#ideintegration">Integration with IDEs</a></li>
-<li><a href="#license">Use the LLVM 'BSD' License</a></li>
+<li><a href="#license">Use the LLVM 'Apache 2' License</a></li>
 </ul>
 
 <p>Internal Design and Implementation:</p>
@@ -59,7 +59,7 @@ These features are:
 
 
 <!--=======================================================================-->
-<h3><a name="performance">Fast compiles and Low Memory Use</a></h3>
+<h3><a name="performance">Fast compilation and Low Memory Use</a></h3>
 <!--=======================================================================-->
 
 <p>A major focus of our work on clang is to make it fast, light and scalable.
@@ -156,7 +156,7 @@ requires clean layering, decent design, and keeping the libraries independent of
 any specific client."</p></blockquote>
 
 <p>
-Currently, clang is divided into the following libraries and tool:
+Currently, clang is divided into the following libraries and tools:
 </p>
 
 <ul>
@@ -183,7 +183,7 @@ Currently, clang is divided into the following libraries and tool:
     levels.</li>
 </ul>
 
-<p>As an example of the power of this library based design....  If you wanted to
+<p>Some examples of the power of this library based design are: If you wanted to
 build a preprocessor, you would take the Basic and Lexer libraries. If you want
 an indexer, you would take the previous two and add the Parser library and
 some actions for indexing. If you want a refactoring, static analysis, or
@@ -208,7 +208,7 @@ problem in clang.</p>
 <p>The problem with this goal is that different clients have very different
 requirements.  Consider code generation, for example: a simple front-end that
 parses for code generation must analyze the code for validity and emit code
-in some intermediate form to pass off to a optimizer or backend.  Because
+in some intermediate form to pass off to an optimizer or backend.  Because
 validity analysis and code generation can largely be done on the fly, there is
 not hard requirement that the front-end actually build up a full AST for all
 the expressions and statements in the code.  TCC and GCC are examples of
@@ -246,7 +246,7 @@ when we realize we made a mistake.</p>
 <!--=======================================================================-->
 
 <p>
-We believe that Integrated Development Environments (IDE's) are a great way
+We believe that Integrated Development Environments (IDEs) are a great way
 to pull together various pieces of the development puzzle, and aim to make clang
 work well in such an environment.  The chief advantage of an IDE is that they
 typically have visibility across your entire project and are long-lived
@@ -349,7 +349,7 @@ parser which must be bugfixed and maintained independently of each other.</p>
  variants</a></h3>
 <!--=======================================================================-->
 
-<p>When you start work on implementing a language, you find out that there is a
+<p>When you begin implementing a language, you find out that there is a
 huge gap between how the language works and how most people understand it to
 work.  This gap is the difference between a normal programmer and a (scary?
 super-natural?) "language lawyer", who knows the ins and outs of the language

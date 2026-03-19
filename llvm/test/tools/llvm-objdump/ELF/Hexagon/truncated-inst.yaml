@@ -1,0 +1,26 @@
+## Test disassembling of truncated instructions.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --disassemble-all %t 2>&1 | FileCheck %s
+
+# CHECK:      0000000 <.data>:
+# CHECK-NEXT:       0: 55 <unknown>
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_HEXAGON
+Sections:
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x1
+    Content:         55
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .data
+      - Name:            .strtab
+      - Name:            .shstrtab
+...

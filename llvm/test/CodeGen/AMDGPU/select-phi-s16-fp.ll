@@ -15,14 +15,12 @@ define void @phi_vec1half_to_f32_with_const_folding(ptr addrspace(1) %dst) #0 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:  ; %bb.1: ; %bb
-; CHECK-NEXT:    v_cvt_f16_f32_e64 v2, s4
-; CHECK-NEXT:    s_mov_b32 s7, 0xf000
-; CHECK-NEXT:    s_mov_b32 s6, 0
-; CHECK-NEXT:    s_mov_b32 s4, s6
-; CHECK-NEXT:    s_mov_b32 s5, s6
-; CHECK-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64 offset:2
-; CHECK-NEXT:    v_cvt_f16_f32_e64 v2, s4
-; CHECK-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
+; CHECK-NEXT:    s_mov_b32 s11, 0xf000
+; CHECK-NEXT:    s_mov_b32 s10, 0
+; CHECK-NEXT:    s_mov_b32 s8, s10
+; CHECK-NEXT:    s_mov_b32 s9, s10
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    buffer_store_short v2, v[0:1], s[8:11], 0 addr64 offset:2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -48,17 +46,13 @@ define void @phi_vec1half_to_f32(ptr addrspace(1) %src, ptr addrspace(1) %dst) #
 ; CHECK-NEXT:    s_mov_b32 s4, s6
 ; CHECK-NEXT:    s_mov_b32 s5, s6
 ; CHECK-NEXT:    buffer_load_ushort v0, v[0:1], s[4:7], 0 addr64
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cvt_f32_f16_e64 v0, v0
 ; CHECK-NEXT:  ; %bb.1: ; %bb
-; CHECK-NEXT:    v_cvt_f16_f32_e64 v0, v0
 ; CHECK-NEXT:    s_mov_b32 s7, 0xf000
 ; CHECK-NEXT:    s_mov_b32 s6, 0
 ; CHECK-NEXT:    s_mov_b32 s4, s6
 ; CHECK-NEXT:    s_mov_b32 s5, s6
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_short v0, v[2:3], s[4:7], 0 addr64 offset:2
-; CHECK-NEXT:    v_cvt_f16_f32_e64 v0, s4
-; CHECK-NEXT:    buffer_store_short v0, v[2:3], s[4:7], 0 addr64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:

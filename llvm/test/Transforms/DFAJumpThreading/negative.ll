@@ -218,9 +218,45 @@ for.end:
 declare i32 @arbitrary_function()
 
 ; Don't confuse %state.2 for the initial switch value.
+; [ 3, %case2 ] can still be threaded.
 define i32 @negative6(i32 %init) {
-; REMARK: SwitchNotPredictable
-; REMARK-NEXT: negative6
+; CHECK-LABEL: define i32 @negative6(
+; CHECK-SAME: i32 [[INIT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INIT]], 0
+; CHECK-NEXT:    br label %[[LOOP_2:.*]]
+; CHECK:       [[LOOP_2]]:
+; CHECK-NEXT:    [[STATE_2:%.*]] = call i32 @arbitrary_function()
+; CHECK-NEXT:    br label %[[LOOP_3:.*]]
+; CHECK:       [[LOOP_3]]:
+; CHECK-NEXT:    [[STATE:%.*]] = phi i32 [ [[STATE_2]], %[[LOOP_2]] ]
+; CHECK-NEXT:    switch i32 [[STATE]], label %[[INFLOOP_I:.*]] [
+; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
+; CHECK-NEXT:      i32 3, label %[[CASE3:.*]]
+; CHECK-NEXT:      i32 4, label %[[CASE4:.*]]
+; CHECK-NEXT:      i32 0, label %[[CASE0:.*]]
+; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[LOOP_3_JT3:.*]]:
+; CHECK-NEXT:    [[STATE_JT3:%.*]] = phi i32 [ 3, %[[CASE2]] ]
+; CHECK-NEXT:    br label %[[CASE3]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    br label %[[LOOP_3_JT3]]
+; CHECK:       [[CASE3]]:
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_2_BACKEDGE:.*]], label %[[CASE4]]
+; CHECK:       [[CASE4]]:
+; CHECK-NEXT:    br label %[[LOOP_2_BACKEDGE]]
+; CHECK:       [[LOOP_2_BACKEDGE]]:
+; CHECK-NEXT:    br label %[[LOOP_2]]
+; CHECK:       [[CASE0]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[CASE1]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[INFLOOP_I]]:
+; CHECK-NEXT:    br label %[[INFLOOP_I]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 0
+;
 entry:
   %cmp = icmp eq i32 %init, 0
   br label %loop.2

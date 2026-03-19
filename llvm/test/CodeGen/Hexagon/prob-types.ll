@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; This was aborting in Machine Loop Invariant Code Motion,

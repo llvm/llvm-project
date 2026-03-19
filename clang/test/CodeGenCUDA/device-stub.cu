@@ -175,7 +175,7 @@ __device__ void device_use() {
 // HIP-SAME: section ".hipFatBinSegment"
 // * variable to save GPU binary handle after initialization
 // CUDANORDC: @__[[PREFIX]]_gpubin_handle = internal global ptr null
-// HIPNEF: @__[[PREFIX]]_gpubin_handle_{{[0-9a-f]+}} = external hidden global ptr, align 8
+// HIPNEF: @__[[PREFIX]]_gpubin_handle_{{[0-9a-f]+}} = internal global ptr null, align 8
 // * constant unnamed string with NVModuleID
 // CUDARDC: [[MODULE_ID_GLOBAL:@.*]] = private constant
 // CUDARDC-SAME: c"[[MODULE_ID:.+]]\00", section "__nv_module_id", align 32

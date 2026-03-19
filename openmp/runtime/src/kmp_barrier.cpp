@@ -205,6 +205,31 @@ void distributedBarrier::init(size_t nthr) {
     team_icvs = __kmp_allocate(sizeof(kmp_internal_control_t));
 }
 
+void distributedBarrier::deallocate(distributedBarrier *db) {
+  for (int i = 0; i < MAX_ITERS; ++i) {
+    if (db->flags[i])
+      KMP_INTERNAL_FREE(db->flags[i]);
+    db->flags[i] = NULL;
+  }
+  if (db->go) {
+    KMP_INTERNAL_FREE(db->go);
+    db->go = NULL;
+  }
+  if (db->iter) {
+    KMP_INTERNAL_FREE(db->iter);
+    db->iter = NULL;
+  }
+  if (db->sleep) {
+    KMP_INTERNAL_FREE(db->sleep);
+    db->sleep = NULL;
+  }
+  if (db->team_icvs) {
+    __kmp_free(db->team_icvs);
+    db->team_icvs = NULL;
+  }
+  KMP_ALIGNED_FREE(db);
+}
+
 // This function is used only when KMP_BLOCKTIME is not infinite.
 // static
 void __kmp_dist_barrier_wakeup(enum barrier_type bt, kmp_team_t *team,
@@ -444,7 +469,8 @@ static void __kmp_dist_barrier_release(
       next_go = my_current_iter + distributedBarrier::MAX_ITERS;
       my_go_index = tid / b->threads_per_go;
       if (this_thr->th.th_used_in_team.load() == 3) {
-        KMP_COMPARE_AND_STORE_ACQ32(&(this_thr->th.th_used_in_team), 3, 1);
+        (void)KMP_COMPARE_AND_STORE_ACQ32(&(this_thr->th.th_used_in_team), 3,
+                                          1);
       }
       // Check if go flag is set
       if (b->go[my_go_index].go.load() != next_go) {
@@ -1805,8 +1831,34 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
     // It is OK to report the barrier state after the barrier begin callback.
     // According to the OMPT specification, a compliant implementation may
     // even delay reporting this state until the barrier begins to wait.
-    this_thr->th.ompt_thread_info.state = ompt_state_wait_barrier;
+    auto *ompt_thr_info = &this_thr->th.ompt_thread_info;
+    switch (barrier_kind) {
+    case ompt_sync_region_barrier_explicit:
+      ompt_thr_info->state = ompt_state_wait_barrier_explicit;
+      break;
+    case ompt_sync_region_barrier_implicit_workshare:
+      ompt_thr_info->state = ompt_state_wait_barrier_implicit_workshare;
+      break;
+    case ompt_sync_region_barrier_implicit_parallel:
+      ompt_thr_info->state = ompt_state_wait_barrier_implicit_parallel;
+      break;
+    case ompt_sync_region_barrier_teams:
+      ompt_thr_info->state = ompt_state_wait_barrier_teams;
+      break;
+    case ompt_sync_region_barrier_implementation:
+      [[fallthrough]];
+    default:
+      ompt_thr_info->state = ompt_state_wait_barrier_implementation;
+    }
   }
+#endif
+
+#if ENABLE_LIBOMPTARGET
+  // Give an opportunity to the offload runtime to make progress and create
+  // proxy tasks if necessary
+  if (UNLIKELY(kmp_target_sync_cb != NULL))
+    (*kmp_target_sync_cb)(
+        NULL, gtid, KMP_TASKDATA_TO_TASK(this_thr->th.th_current_task), NULL);
 #endif
 
   if (!team->t.t_serialized) {
@@ -1871,8 +1923,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
         break;
       }
       case bp_hyper_bar: {
-        // don't set branch bits to 0; use linear
-        KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]);
         __kmp_hyper_barrier_gather(bt, this_thr, gtid, tid,
                                    reduce USE_ITT_BUILD_ARG(itt_sync_obj));
         break;
@@ -1883,8 +1933,6 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
         break;
       }
       case bp_tree_bar: {
-        // don't set branch bits to 0; use linear
-        KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]);
         __kmp_tree_barrier_gather(bt, this_thr, gtid, tid,
                                   reduce USE_ITT_BUILD_ARG(itt_sync_obj));
         break;
@@ -2213,20 +2261,24 @@ void __kmp_join_barrier(int gtid) {
       codeptr = team->t.ompt_team_info.master_return_address;
     my_task_data = OMPT_CUR_TASK_DATA(this_thr);
     my_parallel_data = OMPT_CUR_TEAM_DATA(this_thr);
+    ompt_sync_region_t sync_kind = ompt_sync_region_barrier_implicit_parallel;
+    ompt_state_t ompt_state = ompt_state_wait_barrier_implicit_parallel;
+    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league) {
+      sync_kind = ompt_sync_region_barrier_teams;
+      ompt_state = ompt_state_wait_barrier_teams;
+    }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
-          ompt_sync_region_barrier_implicit, ompt_scope_begin, my_parallel_data,
-          my_task_data, codeptr);
+          sync_kind, ompt_scope_begin, my_parallel_data, my_task_data, codeptr);
     }
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
-          ompt_sync_region_barrier_implicit, ompt_scope_begin, my_parallel_data,
-          my_task_data, codeptr);
+          sync_kind, ompt_scope_begin, my_parallel_data, my_task_data, codeptr);
     }
     if (!KMP_MASTER_TID(ds_tid))
       this_thr->th.ompt_thread_info.task_data = *OMPT_CUR_TASK_DATA(this_thr);
 #endif
-    this_thr->th.ompt_thread_info.state = ompt_state_wait_barrier_implicit;
+    this_thr->th.ompt_thread_info.state = ompt_state;
   }
 #endif
 
@@ -2274,7 +2326,6 @@ void __kmp_join_barrier(int gtid) {
     break;
   }
   case bp_hyper_bar: {
-    KMP_ASSERT(__kmp_barrier_gather_branch_bits[bs_forkjoin_barrier]);
     __kmp_hyper_barrier_gather(bs_forkjoin_barrier, this_thr, gtid, tid,
                                NULL USE_ITT_BUILD_ARG(itt_sync_obj));
     break;
@@ -2285,7 +2336,6 @@ void __kmp_join_barrier(int gtid) {
     break;
   }
   case bp_tree_bar: {
-    KMP_ASSERT(__kmp_barrier_gather_branch_bits[bs_forkjoin_barrier]);
     __kmp_tree_barrier_gather(bs_forkjoin_barrier, this_thr, gtid, tid,
                               NULL USE_ITT_BUILD_ARG(itt_sync_obj));
     break;
@@ -2488,8 +2538,10 @@ void __kmp_fork_barrier(int gtid, int tid) {
   }
 
 #if OMPT_SUPPORT
+  ompt_state_t ompt_state = this_thr->th.ompt_thread_info.state;
   if (ompt_enabled.enabled &&
-      this_thr->th.ompt_thread_info.state == ompt_state_wait_barrier_implicit) {
+      (ompt_state == ompt_state_wait_barrier_teams ||
+       ompt_state == ompt_state_wait_barrier_implicit_parallel)) {
     int ds_tid = this_thr->th.th_info.ds.ds_tid;
     ompt_data_t *task_data = (team)
                                  ? OMPT_CUR_TASK_DATA(this_thr)
@@ -2501,15 +2553,16 @@ void __kmp_fork_barrier(int gtid, int tid) {
         (ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait) ||
          ompt_callbacks.ompt_callback(ompt_callback_sync_region)))
       codeptr = team ? team->t.ompt_team_info.master_return_address : NULL;
+    ompt_sync_region_t sync_kind = ompt_sync_region_barrier_implicit_parallel;
+    if (this_thr->th.ompt_thread_info.parallel_flags & ompt_parallel_league)
+      sync_kind = ompt_sync_region_barrier_teams;
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
-          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, task_data,
-          codeptr);
+          sync_kind, ompt_scope_end, NULL, task_data, codeptr);
     }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
-          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, task_data,
-          codeptr);
+          sync_kind, ompt_scope_end, NULL, task_data, codeptr);
     }
 #endif
     if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {

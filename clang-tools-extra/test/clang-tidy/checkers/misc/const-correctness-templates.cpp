@@ -14,7 +14,7 @@ void type_dependent_variables() {
 
   int value_int = 42;
   // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'value_int' of type 'int' can be declared 'const'
-  // CHECK-FIXES: int const value_int
+  // CHECK-FIXES: int const value_int = 42;
 }
 void instantiate_template_cases() {
   type_dependent_variables<int>();

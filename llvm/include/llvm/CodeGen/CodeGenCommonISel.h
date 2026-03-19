@@ -218,10 +218,14 @@ findSplitPointForStackProtector(MachineBasicBlock *BB,
 /// Evaluates if the specified FP class test is better performed as the inverse
 /// (i.e. fewer instructions should be required to lower it).  An example is the
 /// test "inf|normal|subnormal|zero", which is an inversion of "nan".
+///
 /// \param Test The test as specified in 'is_fpclass' intrinsic invocation.
+/// \param UseFCmp The intention is to perform the comparison using
+/// floating-point compare instructions which check for nan.
+///
 /// \returns The inverted test, or fcNone, if inversion does not produce a
 /// simpler test.
-FPClassTest invertFPClassTestIfSimpler(FPClassTest Test);
+FPClassTest invertFPClassTestIfSimpler(FPClassTest Test, bool UseFCmp);
 
 /// Assuming the instruction \p MI is going to be deleted, attempt to salvage
 /// debug users of \p MI by writing the effect of \p MI in a DIExpression.

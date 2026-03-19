@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -debug < %s
+; RUN: llc -mtriple=hexagon -debug < %s
 ; REQUIRES: asserts
 
 target triple = "hexagon"

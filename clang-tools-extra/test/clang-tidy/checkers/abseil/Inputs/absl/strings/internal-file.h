@@ -10,7 +10,7 @@ std::string StringsFunction(std::string s1) { return s1; }
 class SomeContainer {};
 namespace strings_internal {
 void InternalFunction() {}
-template <class P> P InternalTemplateFunction(P a) {}
+template <class P> void InternalTemplateFunction(P a) { int; }
 } // namespace strings_internal
 
 namespace container_internal {

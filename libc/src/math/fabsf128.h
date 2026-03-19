@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_MATH_FABSF128_H
 #define LLVM_LIBC_SRC_MATH_FABSF128_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 float128 fabsf128(float128 x);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_FABSF128_H

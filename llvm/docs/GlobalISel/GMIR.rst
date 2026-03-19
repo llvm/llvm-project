@@ -26,7 +26,7 @@ Generic Machine Instructions
   Reference.
 
 Whereas MIR deals largely in Target Instructions and only has a small set of
-target independent opcodes such as ``COPY``, ``PHI``, and ``REG_SEQUENCE``,
+target-independent opcodes such as ``COPY``, ``PHI``, and ``REG_SEQUENCE``,
 gMIR defines a rich collection of ``Generic Opcodes`` which are target
 independent and describe operations which are typically supported by targets.
 One example is ``G_ADD`` which is the generic opcode for an integer addition.

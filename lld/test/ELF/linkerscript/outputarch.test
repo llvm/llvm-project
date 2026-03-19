@@ -1,5 +1,13 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-freebsd /dev/null -o %t1
-# RUN: ld.lld -shared -o %t2 %t1 %s
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o a.o
+# RUN: ld.lld -shared -T 1.lds a.o
 
+#--- 1.lds
 OUTPUT_ARCH(All data written here is ignored)
+
+#--- unclosed.lds
+OUTPUT_ARCH(All
+
+# RUN: not ld.lld -shared -T unclosed.lds a.o 2>&1 | FileCheck %s --check-prefix=UNCLOSED
+# UNCLOSED: error: unclosed.lds:1: unexpected EOF

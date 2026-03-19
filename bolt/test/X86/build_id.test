@@ -1,0 +1,8 @@
+// This test checks that relocation addend used to address build_id fields
+// is properly disassembled by BOLT.
+
+RUN: yaml2obj %p/Inputs/build_id.yaml &> %t.exe
+RUN: llvm-bolt -print-disasm --print-only=print_build_id %t.exe -o %t.bolt | \
+RUN:   FileCheck %s
+
+CHECK: leaq build_id_note+16(%rip), %rbx

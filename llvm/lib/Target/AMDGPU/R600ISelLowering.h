@@ -81,7 +81,7 @@ private:
   SDValue lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 
@@ -116,7 +116,7 @@ private:
   SDNode *PostISelFolding(MachineSDNode *N, SelectionDAG &DAG) const override;
 
   TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
 };
 
 } // End namespace llvm;

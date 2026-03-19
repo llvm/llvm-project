@@ -9,11 +9,12 @@
 #include "src/math/remquof16.h"
 #include "src/__support/FPUtil/DivisionAndRemainderOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, remquof16, (float16 x, float16 y, int *exp)) {
   return fputil::remquo(x, y, *exp);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

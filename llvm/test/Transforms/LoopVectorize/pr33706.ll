@@ -7,7 +7,7 @@
 
 define void @PR33706(ptr nocapture readonly %arg, ptr nocapture %arg1, i32 %arg2) local_unnamed_addr {
 ; CHECK-LABEL: define void @PR33706
-; CHECK-SAME: (ptr nocapture readonly [[ARG:%.*]], ptr nocapture [[ARG1:%.*]], i32 [[ARG2:%.*]]) local_unnamed_addr {
+; CHECK-SAME: (ptr readonly captures(none) [[ARG:%.*]], ptr captures(none) [[ARG1:%.*]], i32 [[ARG2:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @global.1, align 4
 ; CHECK-NEXT:    [[VAR_TMP3:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 190

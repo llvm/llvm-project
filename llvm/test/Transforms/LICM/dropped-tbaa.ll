@@ -24,7 +24,7 @@ define void @foo(ptr %data, ptr %addend) #0 {
 ; CHECK-NEXT:    [[CONV_I:%.*]] = sitofp i32 [[TMP2]] to double
 entry:
   %i = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.start.p0(ptr %i) #2
   store i32 0, ptr %i, align 4, !tbaa !1
   br i1 true, label %for.body.lr.ph, label %for.cond.cleanup
 
@@ -35,7 +35,7 @@ for.cond.for.cond.cleanup_crit_edge:              ; preds = %for.inc
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond.for.cond.cleanup_crit_edge, %entry
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.end.p0(ptr %i) #2
   br label %for.end
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.inc
@@ -67,8 +67,8 @@ for.end:                                          ; preds = %for.cond.cleanup
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
+declare void @llvm.lifetime.start.p0(ptr nocapture) #0
+declare void @llvm.lifetime.end.p0(ptr nocapture) #0
 
 attributes #0 = { argmemonly nounwind }
 

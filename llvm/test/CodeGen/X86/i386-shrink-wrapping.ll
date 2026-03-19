@@ -30,7 +30,7 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; ENABLE-NEXT:    movl (%eax), %eax
 ; ENABLE-NEXT:    testl %eax, %eax
 ; ENABLE-NEXT:    je LBB0_4
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB0_3: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    jmp LBB0_3
@@ -70,7 +70,7 @@ define i32 @eflagsLiveInPrologue() #0 {
 ; DISABLE-NEXT:    movl (%eax), %eax
 ; DISABLE-NEXT:    testl %eax, %eax
 ; DISABLE-NEXT:    je LBB0_4
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB0_3: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    jmp LBB0_3
@@ -130,5 +130,5 @@ for.end:                                          ; preds = %for.cond.preheader
 ; Function Attrs: nounwind
 declare i32 @varfunc(ptr nocapture readonly, ...) #0
 
-attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse" "use-soft-float"="false" }
 attributes #1 = { nounwind }

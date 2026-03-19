@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
 /// \file / This file provides routines used by LLVM's value numbering passes to
 /// perform various forms of value extraction from memory when the types are not
 /// identical.  For example, given
@@ -17,12 +18,15 @@
 /// These routines know how to tell whether they can do that (the analyze*
 /// routines), and can also insert the necessary IR to do it (the get*
 /// routines).
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_UTILS_VNCOERCION_H
 #define LLVM_TRANSFORMS_UTILS_VNCOERCION_H
 
 namespace llvm {
 class Constant;
+class Function;
 class StoreInst;
 class LoadInst;
 class MemIntrinsic;
@@ -31,11 +35,12 @@ class IRBuilderBase;
 class Value;
 class Type;
 class DataLayout;
+
 namespace VNCoercion {
 /// Return true if CoerceAvailableValueToLoadType would succeed if it was
 /// called.
 bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
-                                     const DataLayout &DL);
+                                     Function *F);
 
 /// If we saw a store of a value to memory, and then a load from a must-aliased
 /// pointer of a different type, try to coerce the stored value to the loaded
@@ -44,7 +49,7 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
 ///
 /// If we can't do it, return null.
 Value *coerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
-                                      IRBuilderBase &IRB, const DataLayout &DL);
+                                      IRBuilderBase &IRB, Function *F);
 
 /// This function determines whether a value for the pointer LoadPtr can be
 /// extracted from the store at DepSI.
@@ -75,7 +80,7 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
 /// It inserts instructions to do so at InsertPt, and returns the extracted
 /// value.
 Value *getValueForLoad(Value *SrcVal, unsigned Offset, Type *LoadTy,
-                            Instruction *InsertPt, const DataLayout &DL);
+                       Instruction *InsertPt, Function *F);
 // This is the same as getValueForLoad, except it performs no insertion.
 // It only allows constant inputs.
 Constant *getConstantValueForLoad(Constant *SrcVal, unsigned Offset,
@@ -92,6 +97,7 @@ Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
 // It returns nullptr if it cannot produce a constant.
 Constant *getConstantMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
                                          Type *LoadTy, const DataLayout &DL);
-}
-}
-#endif
+} // namespace VNCoercion
+} // namespace llvm
+
+#endif // LLVM_TRANSFORMS_UTILS_VNCOERCION_H

@@ -81,6 +81,6 @@ attributes #0 = {
 
 ; attributes to drop
 attributes #1 = {
-  alignstack=16 convergent inaccessiblememonly inaccessiblemem_or_argmemonly naked
+  alignstack=16 convergent inaccessiblememonly inaccessiblemem_or_argmemonly
   noreturn readonly argmemonly returns_twice speculatable "thunk"
 }

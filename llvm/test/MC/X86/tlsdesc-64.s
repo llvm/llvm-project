@@ -17,3 +17,15 @@
 leaq a@tlsdesc(%rip), %rax
 call *a@tlscall(%rax)
 addq %fs:0, %rax
+
+# PRINT:      leaq a@tlsdesc(%rip), %r16
+# PRINT-NEXT: callq *a@tlscall(%r16)
+
+# CHECK:      12: leaq (%rip), %r16  # 0x1a <{{.*}}>
+# CHECK-NEXT:   0000000000000016: R_X86_64_CODE_4_GOTPC32_TLSDESC a-0x4
+# CHECK-NEXT: 1a: callq *(%r16)
+# CHECK-NEXT:   000000000000001a: R_X86_64_TLSDESC_CALL a
+
+leaq a@tlsdesc(%rip), %r16
+call *a@tlscall(%r16)
+addq %fs:0, %r16

@@ -1,12 +1,13 @@
-; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=2 -disable-packetizer < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -pipeliner-max-stages=2 -disable-packetizer < %s | FileCheck %s
 
 ; Test that the early start and late start values are computed correctly
 ; when a Phi depends on another Phi. In this case, they should occur in
 ; the same stage.
 
 ; CHECK-DAG: [[REG3:(r[0-9]+)]] = add([[REG1:(r[0-9]+)]],#-1)
-; CHECK-DAG: [[REG2:(r[0-9]+)]] = add([[REG1]],#-1)
-; CHECK-DAG: loop0(.LBB0_[[LOOP:.]],[[REG3]])
+; CHECK-DAG: [[REG2:(r[0-9]+)]] = add([[REG4:(r[0-9]+)]],#-1)
+; CHECK-DAG: loop0(.LBB0_[[LOOP:.]],[[REG2]])
+; CHECK-NOT: = [[REG3]]
 ; CHECK-NOT: = [[REG2]]
 ; CHECK: .LBB0_[[LOOP]]:
 ; CHECK: }{{[ \t]*}}:endloop

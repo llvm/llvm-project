@@ -17,10 +17,10 @@ for.cond.cleanup:                                 ; preds = %if.end
 
 ; CHECK-LABEL: test
 ; CHECK: vector.body:
-; CHECK: %{{.*}} = sdiv <2 x i32> %{{.*}}, <i32 11, i32 11>
-; CHECK: %{{.*}} = udiv <2 x i32> %{{.*}}, <i32 13, i32 13>
-; CHECK: %{{.*}} = srem <2 x i32> %{{.*}}, <i32 17, i32 17>
-; CHECK: %{{.*}} = urem <2 x i32> %{{.*}}, <i32 19, i32 19>
+; CHECK: %{{.*}} = sdiv <2 x i32> %{{.*}}, splat (i32 11)
+; CHECK: %{{.*}} = udiv <2 x i32> %{{.*}}, splat (i32 13)
+; CHECK: %{{.*}} = srem <2 x i32> %{{.*}}, splat (i32 17)
+; CHECK: %{{.*}} = urem <2 x i32> %{{.*}}, splat (i32 19)
 ; CHECK-NOT: %{{.*}} = sdiv <2 x i32> %{{.*}}, <i32 0, i32 0>
 ; CHECK-NOT: %{{.*}} = udiv <2 x i32> %{{.*}}, <i32 0, i32 0>
 ; CHECK-NOT: %{{.*}} = srem <2 x i32> %{{.*}}, <i32 0, i32 0>

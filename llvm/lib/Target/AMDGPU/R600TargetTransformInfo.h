@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This file a TargetTransformInfo::Concept conforming object specific to the
+/// This file a TargetTransformInfoImplBase conforming object specific to the
 /// R600 target machine. It uses the target's detailed information to
 /// provide more precise answers to certain TTI queries, while letting the
 /// target independent and default TTI implementations handle the rest.
@@ -23,7 +23,6 @@
 namespace llvm {
 
 class R600Subtarget;
-class AMDGPUTargetLowering;
 
 class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
   using BaseT = BasicTTIImplBase<R600TTIImpl>;
@@ -32,38 +31,41 @@ class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
   friend BaseT;
 
   const R600Subtarget *ST;
-  const AMDGPUTargetLowering *TLI;
+  const TargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
 
 public:
   explicit R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
   const R600Subtarget *getST() const { return ST; }
-  const AMDGPUTargetLowering *getTLI() const { return TLI; }
+  const TargetLowering *getTLI() const { return TLI; }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const override;
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const override;
   unsigned getHardwareNumberOfRegisters(bool Vec) const;
-  unsigned getNumberOfRegisters(bool Vec) const;
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const;
-  unsigned getMinVectorRegisterBitWidth() const;
-  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
+  unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const override;
+  unsigned getMinVectorRegisterBitWidth() const override;
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override;
   bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes, Align Alignment,
                                   unsigned AddrSpace) const;
   bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes, Align Alignment,
-                                   unsigned AddrSpace) const;
+                                   unsigned AddrSpace) const override;
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
-                                    unsigned AddrSpace) const;
-  unsigned getMaxInterleaveFactor(ElementCount VF);
+                                    unsigned AddrSpace) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                 const Instruction *I = nullptr);
+                                 const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0, Value *Op1);
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *ValTy, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
 };
 
 } // end namespace llvm

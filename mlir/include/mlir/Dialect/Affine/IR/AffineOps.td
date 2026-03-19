@@ -16,6 +16,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -35,26 +36,31 @@ class Affine_Op<string mnemonic, list<Trait> traits = []> :
 def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineYieldOp">;
 
-def AffineApplyOp : Affine_Op<"apply", [Pure]> {
+def AffineApplyOp : Affine_Op<"apply",
+    [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "affine apply operation";
   let description = [{
     The `affine.apply` operation applies an [affine mapping](#affine-maps)
     to a list of SSA values, yielding a single SSA value. The number of
-    dimension and symbol arguments to `affine.apply` must be equal to the
+    dimension and symbol operands to `affine.apply` must be equal to the
     respective number of dimensional and symbolic inputs to the affine mapping;
     the affine mapping has to be one-dimensional, and so the `affine.apply`
     operation always returns one value. The input operands and result must all
     have ‘index’ type.
 
+    An operand that is a valid dimension as per the [rules on valid affine
+    dimensions and symbols](#restrictions-on-dimensions-and-symbols)
+    cannot be used as a symbolic operand.
+
     Example:
 
     ```mlir
-    #map10 = affine_map<(d0, d1) -> (d0 floordiv 8 + d1 floordiv 128)>
+    #map = affine_map<(d0, d1) -> (d0 floordiv 8 + d1 floordiv 128)>
     ...
-    %1 = affine.apply #map10 (%s, %t)
+    %1 = affine.apply #map (%s, %t)
 
     // Inline example.
-    %2 = affine.apply affine_map<(i)[s0] -> (i+s0)> (%42)[%n]
+    %2 = affine.apply affine_map<(i)[s0] -> (i + s0)> (%42)[%n]
     ```
   }];
   let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$mapOperands);
@@ -122,7 +128,7 @@ def AffineForOp : Affine_Op<"for",
       "getLoopUpperBounds", "getYieldedValuesMutable",
       "replaceWithAdditionalYields"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
-     ["getEntrySuccessorOperands"]>]> {
+     ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "for operation";
   let description = [{
     Syntax:
@@ -239,17 +245,16 @@ def AffineForOp : Affine_Op<"for",
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins "int64_t":$lowerBound, "int64_t":$upperBound,
-      CArg<"int64_t", "1">:$step, CArg<"ValueRange", "std::nullopt">:$iterArgs,
-      CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
-           "nullptr">:$bodyBuilder)>,
-    OpBuilder<(ins "ValueRange":$lbOperands, "AffineMap":$lbMap,
-      "ValueRange":$ubOperands, "AffineMap":$ubMap, CArg<"int64_t", "1">:$step,
-      CArg<"ValueRange", "std::nullopt">:$iterArgs,
-      CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
-           "nullptr">:$bodyBuilder)>
-  ];
+  let builders =
+      [OpBuilder<(ins "int64_t":$lowerBound, "int64_t":$upperBound,
+           CArg<"int64_t", "1">:$step, CArg<"ValueRange", "{}">:$iterArgs,
+           CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
+                "nullptr">:$bodyBuilder)>,
+       OpBuilder<(ins "ValueRange":$lbOperands, "AffineMap":$lbMap,
+           "ValueRange":$ubOperands, "AffineMap":$ubMap,
+           CArg<"int64_t", "1">:$step, CArg<"ValueRange", "{}">:$iterArgs,
+           CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
+                "nullptr">:$bodyBuilder)>];
 
   let extraClassDeclaration = [{
     /// Defining the function type we use for building the body of affine.for.
@@ -327,7 +332,6 @@ def AffineForOp : Affine_Op<"for",
     Speculation::Speculatability getSpeculatability();
   }];
 
-  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasRegionVerifier = 1;
@@ -336,7 +340,8 @@ def AffineForOp : Affine_Op<"for",
 def AffineIfOp : Affine_Op<"if",
                            [ImplicitAffineTerminator, RecursivelySpeculatable,
                             RecursiveMemoryEffects, NoRegionArguments,
-                            DeclareOpInterfaceMethods<RegionBranchOpInterface>
+                            DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                ["getSuccessorInputs"]>
                            ]> {
   let summary = "if-then-else operation";
   let description = [{
@@ -407,7 +412,8 @@ def AffineIfOp : Affine_Op<"if",
     }
     ```
   }];
-  let arguments = (ins Variadic<AnyType>);
+  let arguments = (ins Variadic<AnyType>,
+                       IntegerSetAttr:$condition);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$thenRegion, AnyRegion:$elseRegion);
 
@@ -711,7 +717,7 @@ def AffineParallelOp : Affine_Op<"parallel",
     operand_range getUpperBoundsOperands();
     AffineValueMap getUpperBoundsValueMap();
 
-    /// Sets elements fo the loop upper bound.
+    /// Sets elements of the loop upper bound.
     void setUpperBounds(ValueRange operands, AffineMap map);
 
     void setSteps(ArrayRef<int64_t> newSteps);
@@ -915,9 +921,7 @@ def AffineYieldOp : Affine_Op<"yield", [Pure, Terminator, ReturnLike,
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [
-    OpBuilder<(ins), [{ build($_builder, $_state, std::nullopt); }]>
-  ];
+  let builders = [OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let hasVerifier = 1;
@@ -963,7 +967,7 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
     (see [vector.transfer_read](../Vector/#vectortransfer_read-mlirvectortransferreadop)).
   }];
 
-  let results = (outs AnyVector:$result);
+  let results = (outs AnyVectorOfNonZeroRank:$result);
 
   let builders = [
     /// Builds an affine vector load op with the specified map and operands.
@@ -998,7 +1002,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
     elemental type, supplied as its second operand.
     The index for each memref dimension is an affine expression of loop
     induction variables and symbols. These indices determine the start position
-    of the write within the memref. The shape of th input vector determines the
+    of the write within the memref. The shape of the input vector determines the
     shape of the slice written to the memref. This slice is contiguous along the
     respective dimensions of the shape. Strided vector stores will be supported
     in the future.
@@ -1030,7 +1034,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
     (see [vector.transfer_write](../Vector/#vectortransfer_write-mlirvectortransferwriteop)).
   }];
 
-  let arguments = (ins AnyVector:$value,
+  let arguments = (ins AnyVectorOfNonZeroRank:$value,
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$memref,
       Variadic<Index>:$indices,
@@ -1059,8 +1063,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 // AffineDelinearizeIndexOp
 //===----------------------------------------------------------------------===//
 
-def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
-    [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
   let summary = "delinearize an index";
   let description = [{
     The `affine.delinearize_index` operation takes a single index value and
@@ -1082,20 +1085,491 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
     %indices_1 = affine.apply #map1()[%linear_index]
     %indices_2 = affine.apply #map2()[%linear_index]
     ```
+
+    In other words, `%0:3 = affine.delinearize_index %x into (B, C)` produces
+    `%0 = {%x / (B * C), (%x mod (B * C)) / C, %x mod C}`.
+
+    The basis may either contain `N` or `N-1` elements, where `N` is the number of results.
+    If there are N basis elements, the first one will not be used during computations,
+    but may be used during analysis and canonicalization to eliminate terms from
+    the `affine.delinearize_index` or to enable conclusions about the total size of
+    `%linear_index`.
+
+    If the basis is fully provided, the delinearize_index operation is said to "have
+    an outer bound". The builders assume that an `affine.delinearize_index` has
+    an outer bound by default, as this is how the operation was initially defined.
+
+    That is, the example above could also have been written
+    ```mlir
+    %0:3 = affine.delinearize_index %linear_index into (244, 244) : index, index
+    ```
+
+    Note that, for symmetry with `getPaddedBasis()`, if `hasOuterBound` is `true`
+    when one of the `OpFoldResult` builders is called but the first element of the
+    basis is `nullptr`, that first element is ignored and the builder proceeds as if
+    there was no outer bound.
+
+    Due to the constraints of affine maps, all the basis elements must
+    be strictly positive. A dynamic basis element being 0 or negative causes
+    undefined behavior.
+
+    As with other affine operations, lowerings of delinearize_index may assume
+    that the underlying computations do not overflow the index type in a signed sense
+    - that is, the product of all basis elements is positive as an `index` as well.
   }];
 
-  let arguments = (ins Index:$linear_index, Variadic<Index>:$basis);
+  let arguments = (ins Index:$linear_index,
+    Variadic<Index>:$dynamic_basis,
+    DenseI64ArrayAttr:$static_basis);
   let results = (outs Variadic<Index>:$multi_index);
 
   let assemblyFormat = [{
-    $linear_index `into` ` ` `(` $basis `)` attr-dict `:` type($multi_index)
+    $linear_index `into`
+    custom<DynamicIndexList>($dynamic_basis, $static_basis, "{}", "::mlir::AsmParser::Delimiter::Paren")
+    attr-dict `:` type($multi_index)
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$linear_index, "ArrayRef<OpFoldResult>":$basis)>
+    OpBuilder<(ins "Value":$linear_index, "ValueRange":$dynamic_basis, "ArrayRef<int64_t>":$static_basis, CArg<"bool", "true">:$hasOuterBound)>,
+    OpBuilder<(ins "Value":$linear_index, "ValueRange":$basis, CArg<"bool", "true">:$hasOuterBound)>,
+    OpBuilder<(ins "Value":$linear_index, "ArrayRef<OpFoldResult>":$basis, CArg<"bool", "true">:$hasOuterBound)>,
+    OpBuilder<(ins "Value":$linear_index, "ArrayRef<int64_t>":$basis, CArg<"bool", "true">:$hasOuterBound)>
   ];
 
+  let extraClassDeclaration = [{
+    /// Return true if the basis includes a bound on the first index input.
+    bool hasOuterBound() {
+      return getMultiIndex().size() == getStaticBasis().size();
+    }
+
+    /// Returns a vector with all the static and dynamic basis values.
+    SmallVector<OpFoldResult> getMixedBasis() {
+      OpBuilder builder(getContext());
+      return ::mlir::getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
+    }
+
+    /// Return a vector that contains the basis of the operation, removing
+    /// the outer bound if one is present.
+    SmallVector<OpFoldResult> getEffectiveBasis();
+
+    /// Return the vector with one basis element per result of the operation. If
+    /// there is no outer bound specified, the leading entry of this result will be
+    /// nullptr.
+    SmallVector<OpFoldResult> getPaddedBasis();
+  }];
+
   let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AffineLinearizeIndexOp
+//===----------------------------------------------------------------------===//
+def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
+    [Pure, AttrSizedOperandSegments]> {
+  let summary = "linearize an index";
+  let description = [{
+    The `affine.linearize_index` operation takes a sequence of index values and a
+    basis of the same length and linearizes the indices using that basis.
+
+    That is, for indices `%idx_0` to `%idx_{N-1}` and basis elements `b_0`
+    (or `b_1`) up to `b_{N-1}` it computes
+
+    ```
+    sum(i = 0 to N-1) %idx_i * product(j = i + 1 to N-1) B_j
+    ```
+
+    In other words, `%0 = affine.linearize_index [%z, %y, %x] by (Z, Y, X)`
+    gives `%0 = %x + %y * X + %z * X * Y`, or `%0 = %x + X * (%y + Y * (%z))`.
+
+    The basis may either have `N` or `N-1` elements, where `N` is the number of
+    inputs to linearize_index. If `N` inputs are provided, the first one is not used
+    in computation, but may be used during analysis or canonicalization as a bound
+    on `%idx_0`.
+
+    If all `N` basis elements are provided, the linearize_index operation is said to
+    "have an outer bound".
+
+    As a convenience, and for symmetry with `getPaddedBasis()`, if the first
+    element of a set of `OpFoldResult`s passed to the builders of this operation is
+    `nullptr`, that element is ignored.
+
+    If the `disjoint` property is present, this is an optimization hint that,
+    for all `i`, `0 <= %idx_i < B_i` - that is, no index affects any other index,
+    except that `%idx_0` may be negative to make the index as a whole negative.
+    In addition, `disjoint` is an assertion that all bases elements are non-negative.
+
+    Note that the outputs of `affine.delinearize_index` are, by definition, `disjoint`.
+
+    As with other affine ops, undefined behavior occurs if the linearization
+    computation overflows in the signed sense.
+
+    Example:
+
+    ```mlir
+    %linear_index = affine.linearize_index [%index_0, %index_1, %index_2] by (2, 3, 5) : index
+    // Same effect
+    %linear_index = affine.linearize_index [%index_0, %index_1, %index_2] by (3, 5) : index
+    ```
+
+    In the above example, `%linear_index` conceptually holds the following:
+
+    ```mlir
+    #map = affine_map<()[s0, s1, s2] -> (s0 * 15 + s1 * 5 + s2)>
+    %linear_index = affine.apply #map()[%index_0, %index_1, %index_2]
+    ```
+  }];
+
+  let arguments = (ins Variadic<Index>:$multi_index,
+    Variadic<Index>:$dynamic_basis,
+    DenseI64ArrayAttr:$static_basis,
+    UnitProp:$disjoint);
+  let results = (outs Index:$linear_index);
+
+  let assemblyFormat = [{
+    (`disjoint` $disjoint^)? ` `
+    `[` $multi_index `]` `by`
+    custom<DynamicIndexList>($dynamic_basis, $static_basis, "{}", "::mlir::AsmParser::Delimiter::Paren")
+    attr-dict `:` type($linear_index)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "ValueRange":$multi_index, "ValueRange":$basis, CArg<"bool", "false">:$disjoint)>,
+    OpBuilder<(ins "ValueRange":$multi_index, "ArrayRef<OpFoldResult>":$basis, CArg<"bool", "false">:$disjoint)>,
+    OpBuilder<(ins "ValueRange":$multi_index, "ArrayRef<int64_t>":$basis, CArg<"bool", "false">:$disjoint)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return true if the basis includes a bound on the first index input.
+    bool hasOuterBound() {
+      return getMultiIndex().size() == getStaticBasis().size();
+    }
+
+    /// Return a vector with all the static and dynamic basis values.
+    SmallVector<OpFoldResult> getMixedBasis() {
+      OpBuilder builder(getContext());
+      return ::mlir::getMixedValues(getStaticBasis(), getDynamicBasis(), builder);
+    }
+
+    /// Return a vector that contains the basis of the operation, removing
+    /// the outer bound if one is present.
+    SmallVector<OpFoldResult> getEffectiveBasis();
+
+    /// Return the vector with one basis element per index operand of the operation.
+    /// If there is no outer bound specified, the leading entry of this basis will be
+    /// nullptr.
+    SmallVector<OpFoldResult> getPaddedBasis();
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AffineDmaStartOp
+//===----------------------------------------------------------------------===//
+
+def AffineDmaStartOp : Affine_Op<"dma_start", [
+    MemRefsNormalizable,
+    DeclareOpInterfaceMethods<AffineMapAccessInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "affine dma start operation";
+  let description = [{
+    The `affine.dma_start` op starts a non-blocking DMA operation that
+    transfers data from a source memref to a destination memref. The source and
+    destination memref need not be of the same dimensionality, but need to have
+    the same elemental type. The operands include the source and destination
+    memref's each followed by its indices, size of the data transfer in terms of
+    the number of elements (of the elemental type of the memref), a tag memref
+    with its indices, and optionally at the end, a stride and a
+    number_of_elements_per_stride arguments. The tag location is used by an
+    `affine.dma_wait` to check for completion. The indices of the source memref,
+    destination memref, and the tag memref have the same restrictions as any
+    affine.load/store. In particular, index for each memref dimension must be an
+    affine expression of loop induction variables and symbols.
+
+    The optional stride arguments should be of 'index' type, and specify a
+    stride for the slower memory space (memory space with a lower memory space
+    id), transferring chunks of number_of_elements_per_stride every stride until
+    %num_elements are transferred. Either both or no stride arguments should be
+    specified. The value of 'num_elements' must be a multiple of
+    'number_of_elements_per_stride'. If the source and destination locations
+    overlap the behavior of this operation is not defined.
+
+    Example:
+
+    ```mlir
+    %num_elements = arith.constant 256
+    %idx = arith.constant 0 : index
+    %tag = memref.alloc() : memref<1xi32, 4>
+    affine.dma_start %src[%i + 3, %j], %dst[%k + 7, %l], %tag[%idx],
+      %num_elements :
+        memref<40x128xf32, 0>, memref<2x1024xf32, 1>, memref<1xi32, 2>
+
+    // If %stride and %num_elt_per_stride are specified, the DMA is expected to
+    // transfer %num_elt_per_stride elements every %stride elements apart from
+    // memory space 0 until %num_elements are transferred.
+    affine.dma_start %src[%i, %j], %dst[%k, %l], %tag[%idx], %num_elements,
+      %stride, %num_elt_per_stride : ...
+    ```
+  }];
+
+  let arguments = (ins
+    Variadic<AnyType>,
+    AffineMapAttr:$src_map,
+    AffineMapAttr:$dst_map,
+    AffineMapAttr:$tag_map);
+
+  let results = (outs);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$srcMemRef, "AffineMap":$srcMap,
+      "ValueRange":$srcIndices, "Value":$destMemRef, "AffineMap":$dstMap,
+      "ValueRange":$destIndices, "Value":$tagMemRef, "AffineMap":$tagMap,
+      "ValueRange":$tagIndices, "Value":$numElements,
+      CArg<"Value", "nullptr">:$stride,
+      CArg<"Value", "nullptr">:$elementsPerStride)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Returns the operand index of the source memref.
+    unsigned getSrcMemRefOperandIndex() { return 0; }
+
+    /// Returns the source MemRefType for this DMA operation.
+    Value getSrcMemRef() { return getOperand(getSrcMemRefOperandIndex()); }
+    OpOperand &getSrcMemRefMutable() {
+      return getOperation()->getOpOperand(getSrcMemRefOperandIndex());
+    }
+    MemRefType getSrcMemRefType() {
+      return ::llvm::cast<MemRefType>(getSrcMemRef().getType());
+    }
+
+    /// Returns the rank (number of indices) of the source MemRefType.
+    unsigned getSrcMemRefRank() { return getSrcMemRefType().getRank(); }
+
+    /// Returns the source memref affine map indices for this DMA operation.
+    operand_range getSrcIndices() {
+      return {operand_begin() + getSrcMemRefOperandIndex() + 1,
+              operand_begin() + getSrcMemRefOperandIndex() + 1 +
+                  getSrcMap().getNumInputs()};
+    }
+
+    /// Returns the memory space of the source memref.
+    unsigned getSrcMemorySpace() {
+      return ::llvm::cast<MemRefType>(getSrcMemRef().getType())
+          .getMemorySpaceAsInt();
+    }
+
+    /// Returns the operand index of the destination memref.
+    unsigned getDstMemRefOperandIndex() {
+      return getSrcMemRefOperandIndex() + 1 + getSrcMap().getNumInputs();
+    }
+
+    /// Returns the destination MemRefType for this DMA operation.
+    Value getDstMemRef() { return getOperand(getDstMemRefOperandIndex()); }
+    OpOperand &getDstMemRefMutable() {
+      return getOperation()->getOpOperand(getDstMemRefOperandIndex());
+    }
+    MemRefType getDstMemRefType() {
+      return ::llvm::cast<MemRefType>(getDstMemRef().getType());
+    }
+
+    /// Returns the rank (number of indices) of the destination MemRefType.
+    unsigned getDstMemRefRank() {
+      return ::llvm::cast<MemRefType>(getDstMemRef().getType()).getRank();
+    }
+
+    /// Returns the memory space of the destination memref.
+    unsigned getDstMemorySpace() {
+      return ::llvm::cast<MemRefType>(getDstMemRef().getType())
+          .getMemorySpaceAsInt();
+    }
+
+    /// Returns the destination memref indices for this DMA operation.
+    operand_range getDstIndices() {
+      return {operand_begin() + getDstMemRefOperandIndex() + 1,
+              operand_begin() + getDstMemRefOperandIndex() + 1 +
+                  getDstMap().getNumInputs()};
+    }
+
+    /// Returns the operand index of the tag memref.
+    unsigned getTagMemRefOperandIndex() {
+      return getDstMemRefOperandIndex() + 1 + getDstMap().getNumInputs();
+    }
+
+    /// Returns the tag MemRef for this DMA operation.
+    Value getTagMemRef() { return getOperand(getTagMemRefOperandIndex()); }
+    OpOperand &getTagMemRefMutable() {
+      return getOperation()->getOpOperand(getTagMemRefOperandIndex());
+    }
+    MemRefType getTagMemRefType() {
+      return ::llvm::cast<MemRefType>(getTagMemRef().getType());
+    }
+
+    /// Returns the rank (number of indices) of the tag MemRefType.
+    unsigned getTagMemRefRank() {
+      return ::llvm::cast<MemRefType>(getTagMemRef().getType()).getRank();
+    }
+
+    /// Returns the tag memref indices for this DMA operation.
+    operand_range getTagIndices() {
+      return {operand_begin() + getTagMemRefOperandIndex() + 1,
+              operand_begin() + getTagMemRefOperandIndex() + 1 +
+                  getTagMap().getNumInputs()};
+    }
+
+    /// Returns the number of elements being transferred by this DMA operation.
+    Value getNumElements() {
+      return getOperand(getTagMemRefOperandIndex() + 1 +
+                        getTagMap().getNumInputs());
+    }
+
+    /// Implements the AffineMapAccessInterface.
+    /// Returns the AffineMapAttr associated with 'memref'.
+    NamedAttribute getAffineMapAttrForMemRef(Value memref) {
+      if (memref == getSrcMemRef())
+        return {StringAttr::get(getContext(), getSrcMapAttrStrName()),
+                getSrcMapAttr()};
+      if (memref == getDstMemRef())
+        return {StringAttr::get(getContext(), getDstMapAttrStrName()),
+                getDstMapAttr()};
+      assert(memref == getTagMemRef() &&
+             "DmaStartOp expected source, destination or tag memref");
+      return {StringAttr::get(getContext(), getTagMapAttrStrName()),
+              getTagMapAttr()};
+    }
+
+    /// Returns true if this is a DMA from a faster memory space to a slower one.
+    bool isDestMemorySpaceFaster() {
+      return (getSrcMemorySpace() < getDstMemorySpace());
+    }
+
+    /// Returns true if this is a DMA from a slower memory space to a faster one.
+    bool isSrcMemorySpaceFaster() {
+      return (getDstMemorySpace() < getSrcMemorySpace());
+    }
+
+    /// Returns the operand position of either the source or destination memref
+    /// depending on which is at the higher level of the memory hierarchy.
+    unsigned getFasterMemPos() {
+      assert(isSrcMemorySpaceFaster() || isDestMemorySpaceFaster());
+      return isSrcMemorySpaceFaster() ? 0 : getDstMemRefOperandIndex();
+    }
+
+    static StringRef getSrcMapAttrStrName() { return "src_map"; }
+    static StringRef getDstMapAttrStrName() { return "dst_map"; }
+    static StringRef getTagMapAttrStrName() { return "tag_map"; }
+
+    /// Returns true if this DMA operation is strided, returns false otherwise.
+    bool isStrided() {
+      return getNumOperands() !=
+             getTagMemRefOperandIndex() + 1 + getTagMap().getNumInputs() + 1;
+    }
+
+    /// Returns the stride value for this DMA operation.
+    Value getStride() {
+      if (!isStrided())
+        return nullptr;
+      return getOperand(getNumOperands() - 1 - 1);
+    }
+
+    /// Returns the number of elements to transfer per stride for this DMA op.
+    Value getNumElementsPerStride() {
+      if (!isStrided())
+        return nullptr;
+      return getOperand(getNumOperands() - 1);
+    }
+
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AffineDmaWaitOp
+//===----------------------------------------------------------------------===//
+
+def AffineDmaWaitOp : Affine_Op<"dma_wait", [
+    MemRefsNormalizable,
+    DeclareOpInterfaceMethods<AffineMapAccessInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "affine dma wait operation";
+  let description = [{
+    The `affine.dma_wait` op blocks until the completion of a DMA operation
+    associated with the tag element `%tag[%index]`. `%tag` is a memref, and
+    `%index` has to be an index with the same restrictions as any load/store
+    index. In particular, index for each memref dimension must be an affine
+    expression of loop induction variables and symbols. `%num_elements` is the
+    number of elements associated with the DMA operation.
+
+    Example:
+
+    ```mlir
+    affine.dma_start %src[%i, %j], %dst[%k, %l], %tag[%index], %num_elements :
+      memref<2048xf32, 0>, memref<256xf32, 1>, memref<1xi32, 2>
+    ...
+    affine.dma_wait %tag[%index], %num_elements : memref<1xi32, 2>
+    ```
+  }];
+
+  let arguments = (ins
+    Variadic<AnyType>,
+    AffineMapAttr:$tag_map);
+
+  let results = (outs);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$tagMemRef, "AffineMap":$tagMap,
+      "ValueRange":$tagIndices, "Value":$numElements)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Returns the tag MemRef associated with the DMA operation being waited on.
+    Value getTagMemRef() { return getOperand(0); }
+    OpOperand &getTagMemRefMutable() {
+      return getOperation()->getOpOperand(0);
+    }
+    MemRefType getTagMemRefType() {
+      return ::llvm::cast<MemRefType>(getTagMemRef().getType());
+    }
+
+    /// Returns the tag memref index for this DMA operation.
+    operand_range getTagIndices() {
+      return {operand_begin() + 1,
+              operand_begin() + 1 + getTagMap().getNumInputs()};
+    }
+
+    /// Returns the rank (number of indices) of the tag memref.
+    unsigned getTagMemRefRank() {
+      return ::llvm::cast<MemRefType>(getTagMemRef().getType()).getRank();
+    }
+
+    /// Implements the AffineMapAccessInterface. Returns the AffineMapAttr
+    /// associated with 'memref'.
+    NamedAttribute getAffineMapAttrForMemRef(Value memref) {
+      assert(memref == getTagMemRef());
+      return {StringAttr::get(getContext(), getTagMapAttrStrName()),
+              getTagMapAttr()};
+    }
+
+    /// Returns the number of elements transferred by the associated DMA op.
+    Value getNumElements() {
+      return getOperand(1 + getTagMap().getNumInputs());
+    }
+
+    static StringRef getTagMapAttrStrName() { return "tag_map"; }
+
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 #endif // AFFINE_OPS

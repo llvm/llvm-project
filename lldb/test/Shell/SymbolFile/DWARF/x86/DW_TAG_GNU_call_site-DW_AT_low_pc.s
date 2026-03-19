@@ -27,6 +27,7 @@
 #   return 0;
 # }
 
+	.att_syntax
 	.text
 .Ltext0:
 	.type	b, @function

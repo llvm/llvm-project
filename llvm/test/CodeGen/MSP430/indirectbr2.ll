@@ -1,4 +1,4 @@
-; RUN: llc -march=msp430 < %s | FileCheck %s
+; RUN: llc -mtriple=msp430 < %s | FileCheck %s
 @C.0.2070 = private constant [5 x ptr] [ptr blockaddress(@foo, %L1), ptr blockaddress(@foo, %L2), ptr blockaddress(@foo, %L3), ptr blockaddress(@foo, %L4), ptr blockaddress(@foo, %L5)] ; <[5 x i8*]*> [#uses=1]
 
 define internal i16 @foo(i16 %i) nounwind {

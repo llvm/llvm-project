@@ -74,7 +74,7 @@ func.func @constant_out_of_range() {
 
 func.func @constant_invalid_scalable_1d_vec_initialization() {
 ^bb0:
-  // expected-error@+1 {{'arith.constant' op intializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
+  // expected-error@+1 {{'arith.constant' op initializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
   %c = arith.constant dense<[0, 1]> : vector<[2] x i32>
   return
 }
@@ -83,7 +83,7 @@ func.func @constant_invalid_scalable_1d_vec_initialization() {
 
 func.func @constant_invalid_scalable_2d_vec_initialization() {
 ^bb0:
-  // expected-error@+1 {{'arith.constant' op intializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
+  // expected-error@+1 {{'arith.constant' op initializing scalable vectors with elements attribute is not supported unless it's a vector splat}}
   %c = arith.constant dense<[[3, 3], [1, 1]]> : vector<2 x [2] x i32>
   return
 }
@@ -130,14 +130,14 @@ func.func @func_with_ops(f32) {
 
 func.func @func_with_ops(f32) {
 ^bb0(%a : f32):
-  // expected-error@+1 {{'arith.addi' op operand #0 must be signless-integer-like}}
+  // expected-error@+1 {{'arith.addi' op operand #0 must be signless-non-zero-bitwidth-integer-like}}
   %sf = arith.addi %a, %a : f32
 }
 
 // -----
 
 func.func @func_with_ops(%a: f32) {
-  // expected-error@+1 {{'arith.addui_extended' op operand #0 must be signless-integer-like}}
+  // expected-error@+1 {{'arith.addui_extended' op operand #0 must be signless-non-zero-bitwidth-integer-like}}
   %r:2 = arith.addui_extended %a, %a : f32, i32
   return
 }
@@ -202,7 +202,7 @@ func.func @func_with_ops(i32, i32) {
 // Integer comparisons are not recognized for float types.
 func.func @func_with_ops(f32, f32) {
 ^bb0(%a : f32, %b : f32):
-  %r = arith.cmpi eq, %a, %b : f32 // expected-error {{'lhs' must be signless-integer-like, but got 'f32'}}
+  %r = arith.cmpi eq, %a, %b : f32 // expected-error {{'lhs' must be signless-non-zero-bitwidth-integer-like, but got 'f32'}}
 }
 
 // -----
@@ -242,7 +242,7 @@ func.func @func_with_ops() {
 // -----
 
 func.func @invalid_cmp_shape(%idx : () -> ()) {
-  // expected-error@+1 {{'lhs' must be signless-integer-like, but got '() -> ()'}}
+  // expected-error@+1 {{'lhs' must be signless-non-zero-bitwidth-integer-like, but got '() -> ()'}}
   %cmp = arith.cmpi eq, %idx, %idx : () -> ()
 
 // -----
@@ -352,7 +352,7 @@ func.func @index_cast_index_to_index(%arg0: index) {
 // -----
 
 func.func @index_cast_float(%arg0: index, %arg1: f32) {
-  // expected-error@+1 {{op result #0 must be signless-integer-like or memref of signless-integer, but got 'f32'}}
+  // expected-error@+1 {{op result #0 must be signless-non-zero-bitwidth-integer-like or memref of signless-integer, but got 'f32'}}
   %0 = arith.index_cast %arg0 : index to f32
   return
 }
@@ -360,7 +360,7 @@ func.func @index_cast_float(%arg0: index, %arg1: f32) {
 // -----
 
 func.func @index_cast_float_to_index(%arg0: f32) {
-  // expected-error@+1 {{op operand #0 must be signless-integer-like or memref of signless-integer, but got 'f32'}}
+  // expected-error@+1 {{op operand #0 must be signless-non-zero-bitwidth-integer-like or memref of signless-integer, but got 'f32'}}
   %0 = arith.index_cast %arg0 : f32 to index
   return
 }
@@ -852,4 +852,167 @@ func.func @select_tensor_encoding(
   // expected-error @+1 {{'arith.select' op expected condition type to have the same shape as the result type}}
   %0 = arith.select %arg0, %arg1, %arg2 : tensor<8xi1, "bar">, tensor<8xi32, "foo">
   return %0 : tensor<8xi32, "foo">
+}
+
+// -----
+
+func.func @bitcast_index_0(%arg0 : i64) -> index {
+  // expected-error @+1 {{'arith.bitcast' op result #0 must be non-zero-bitwidth-signless-integer-or-float-like or memref of non-zero-bitwidth signless integer or float, but got 'index'}}
+  %0 = arith.bitcast %arg0 : i64 to index
+  return %0 : index
+}
+
+// -----
+
+func.func @bitcast_index_1(%arg0 : index) -> i64 {
+  // expected-error @+1 {{'arith.bitcast' op operand #0 must be non-zero-bitwidth-signless-integer-or-float-like or memref of non-zero-bitwidth signless integer or float, but got 'index'}}
+  %0 = arith.bitcast %arg0 : index to i64
+  return %0 : i64
+}
+
+// -----
+
+func.func @select_vector_condition_scalar_operands(%arg0: vector<1xi1>, %arg1: i32) {
+  // expected-error @+1 {{'arith.select' op failed to verify that condition is signless i1 or has matching shape}}
+  %0 = arith.select %arg0, %arg1, %arg1 : vector<1xi1>, i32
+  return
+}
+
+// -----
+
+// Verify that i0 (zero-bitwidth integer) is rejected by arith integer ops.
+
+func.func @addi_i0(%a: i0, %b: i0) -> i0 {
+  // expected-error @+1 {{'arith.addi' op operand #0 must be signless-non-zero-bitwidth-integer-like, but got 'i0'}}
+  %0 = arith.addi %a, %b : i0
+  return %0 : i0
+}
+
+// -----
+
+func.func @addi_vector_i0(%a: vector<4xi0>, %b: vector<4xi0>) -> vector<4xi0> {
+  // expected-error @+1 {{'arith.addi' op operand #0 must be signless-non-zero-bitwidth-integer-like, but got 'vector<4xi0>'}}
+  %0 = arith.addi %a, %b : vector<4xi0>
+  return %0 : vector<4xi0>
+}
+
+// -----
+
+func.func @trunci_to_i0(%a: i32) -> i0 {
+  // expected-error @+1 {{'arith.trunci' op result #0 must be signless-fixed-width-integer-like, but got 'i0'}}
+  %0 = arith.trunci %a : i32 to i0
+  return %0 : i0
+}
+
+// -----
+
+func.func @extsi_from_i0(%a: i0) -> i16 {
+  // expected-error @+1 {{'arith.extsi' op operand #0 must be signless-fixed-width-integer-like, but got 'i0'}}
+  %0 = arith.extsi %a : i0 to i16
+  return %0 : i16
+}
+
+// -----
+
+func.func @extui_from_i0(%a: i0) -> i16 {
+  // expected-error @+1 {{'arith.extui' op operand #0 must be signless-fixed-width-integer-like, but got 'i0'}}
+  %0 = arith.extui %a : i0 to i16
+  return %0 : i16
+}
+
+// -----
+
+func.func @cmpi_i0(%a: i0, %b: i0) -> i1 {
+  // expected-error @+1 {{'lhs' must be signless-non-zero-bitwidth-integer-like, but got 'i0'}}
+  %0 = arith.cmpi eq, %a, %b : i0
+  return %0 : i1
+}
+
+// -----
+
+// Arith_TotalIntBinaryOp (andi, ori, xori, maxsi, maxui, minsi, minui,
+// floordivsi, remui, remsi).
+func.func @andi_i0(%a: i0, %b: i0) -> i0 {
+  // expected-error @+1 {{'arith.andi' op operand #0 must be signless-non-zero-bitwidth-integer-like, but got 'i0'}}
+  %0 = arith.andi %a, %b : i0
+  return %0 : i0
+}
+
+// -----
+
+// Arith_IntBinaryOpWithExactFlag (divsi, divui, shrsi, shrui).
+func.func @divsi_i0(%a: i0, %b: i0) -> i0 {
+  // expected-error @+1 {{'arith.divsi' op operand #0 must be signless-non-zero-bitwidth-integer-like, but got 'i0'}}
+  %0 = arith.divsi %a, %b : i0
+  return %0 : i0
+}
+
+// -----
+
+// Arith_IntBinaryOp (ceildivsi, ceildivui).
+func.func @ceildivsi_i0(%a: i0, %b: i0) -> i0 {
+  // expected-error @+1 {{'arith.ceildivsi' op operand #0 must be signless-non-zero-bitwidth-integer-like, but got 'i0'}}
+  %0 = arith.ceildivsi %a, %b : i0
+  return %0 : i0
+}
+
+// -----
+
+func.func @mulsi_extended_i0(%a: i0, %b: i0) -> (i0, i0) {
+  // expected-error @+1 {{'arith.mulsi_extended' op operand #0 must be signless-non-zero-bitwidth-integer-like, but got 'i0'}}
+  %0:2 = arith.mulsi_extended %a, %b : i0
+  return %0#0, %0#1 : i0, i0
+}
+
+// -----
+
+func.func @mului_extended_i0(%a: i0, %b: i0) -> (i0, i0) {
+  // expected-error @+1 {{'arith.mului_extended' op operand #0 must be signless-non-zero-bitwidth-integer-like, but got 'i0'}}
+  %0:2 = arith.mului_extended %a, %b : i0
+  return %0#0, %0#1 : i0, i0
+}
+
+// -----
+
+// IToFCastOp (sitofp, uitofp) — cast FROM i0.
+func.func @sitofp_i0(%a: i0) -> f32 {
+  // expected-error @+1 {{'arith.sitofp' op operand #0 must be signless-fixed-width-integer-like, but got 'i0'}}
+  %0 = arith.sitofp %a : i0 to f32
+  return %0 : f32
+}
+
+// -----
+
+// FToICastOp (fptosi, fptoui) — cast TO i0.
+func.func @fptosi_i0(%a: f32) -> i0 {
+  // expected-error @+1 {{'arith.fptosi' op result #0 must be signless-fixed-width-integer-like, but got 'i0'}}
+  %0 = arith.fptosi %a : f32 to i0
+  return %0 : i0
+}
+
+// -----
+
+// arith.bitcast rejects i0 source and result.
+func.func @bitcast_i0(%a: i0) -> i0 {
+  // expected-error @+1 {{'arith.bitcast' op operand #0 must be non-zero-bitwidth-signless-integer-or-float-like or memref of non-zero-bitwidth signless integer or float, but got 'i0'}}
+  %0 = arith.bitcast %a : i0 to i0
+  return %0 : i0
+}
+
+// -----
+
+// arith.index_cast rejects i0.
+func.func @index_cast_i0(%a: i0) -> index {
+  // expected-error @+1 {{'arith.index_cast' op operand #0 must be signless-non-zero-bitwidth-integer-like or memref of signless-integer, but got 'i0'}}
+  %0 = arith.index_cast %a : i0 to index
+  return %0 : index
+}
+
+// -----
+
+// arith.index_castui rejects i0.
+func.func @index_castui_i0(%a: i0) -> index {
+  // expected-error @+1 {{'arith.index_castui' op operand #0 must be signless-non-zero-bitwidth-integer-like or memref of signless-integer, but got 'i0'}}
+  %0 = arith.index_castui %a : i0 to index
+  return %0 : index
 }

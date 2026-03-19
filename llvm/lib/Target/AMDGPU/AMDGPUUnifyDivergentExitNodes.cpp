@@ -21,7 +21,6 @@
 
 #include "AMDGPUUnifyDivergentExitNodes.h"
 #include "AMDGPU.h"
-#include "SIDefines.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -75,10 +74,7 @@ public:
 class AMDGPUUnifyDivergentExitNodes : public FunctionPass {
 public:
   static char ID;
-  AMDGPUUnifyDivergentExitNodes() : FunctionPass(ID) {
-    initializeAMDGPUUnifyDivergentExitNodesPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUUnifyDivergentExitNodes() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 };
@@ -168,8 +164,8 @@ BasicBlock *AMDGPUUnifyDivergentExitNodesImpl::unifyReturnBlockSet(
 
     // Remove and delete the return inst.
     BB->getTerminator()->eraseFromParent();
-    BranchInst::Create(NewRetBlock, BB);
-    Updates.push_back({DominatorTree::Insert, BB, NewRetBlock});
+    UncondBrInst::Create(NewRetBlock, BB);
+    Updates.emplace_back(DominatorTree::Insert, BB, NewRetBlock);
   }
 
   if (RequireAndPreserveDomTree)
@@ -185,14 +181,52 @@ BasicBlock *AMDGPUUnifyDivergentExitNodesImpl::unifyReturnBlockSet(
   return NewRetBlock;
 }
 
+static BasicBlock *
+createDummyReturnBlock(Function &F,
+                       SmallVector<BasicBlock *, 4> &ReturningBlocks) {
+  BasicBlock *DummyReturnBB =
+      BasicBlock::Create(F.getContext(), "DummyReturnBlock", &F);
+  Type *RetTy = F.getReturnType();
+  Value *RetVal = RetTy->isVoidTy() ? nullptr : PoisonValue::get(RetTy);
+  ReturnInst::Create(F.getContext(), RetVal, DummyReturnBB);
+  ReturningBlocks.push_back(DummyReturnBB);
+  return DummyReturnBB;
+}
+
+/// Handle conditional branch instructions (-> 2 targets) and callbr
+/// instructions with N targets.
+static void handleNBranch(Function &F, BasicBlock *BB, Instruction *BI,
+                          BasicBlock *DummyReturnBB,
+                          std::vector<DominatorTree::UpdateType> &Updates) {
+  SmallVector<BasicBlock *, 2> Successors(successors(BB));
+
+  // Create a new transition block to hold the conditional branch.
+  BasicBlock *TransitionBB = BB->splitBasicBlock(BI, "TransitionBlock");
+
+  Updates.reserve(Updates.size() + 2 * Successors.size() + 2);
+
+  // 'Successors' become successors of TransitionBB instead of BB,
+  // and TransitionBB becomes a single successor of BB.
+  Updates.emplace_back(DominatorTree::Insert, BB, TransitionBB);
+  for (BasicBlock *Successor : Successors) {
+    Updates.emplace_back(DominatorTree::Insert, TransitionBB, Successor);
+    Updates.emplace_back(DominatorTree::Delete, BB, Successor);
+  }
+
+  // Create a branch that will always branch to the transition block and
+  // references DummyReturnBB.
+  BB->getTerminator()->eraseFromParent();
+  CondBrInst::Create(ConstantInt::getTrue(F.getContext()), TransitionBB,
+                     DummyReturnBB, BB);
+  Updates.emplace_back(DominatorTree::Insert, BB, DummyReturnBB);
+}
+
 bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
                                             const PostDominatorTree &PDT,
                                             const UniformityInfo &UA) {
-  assert(hasOnlySimpleTerminator(F) && "Unsupported block terminator.");
-
   if (PDT.root_size() == 0 ||
-      (PDT.root_size() == 1 &&
-       !isa<BranchInst>(PDT.getRoot()->getTerminator())))
+      (PDT.root_size() == 1 && !isa<UncondBrInst, CondBrInst, CallBrInst>(
+                                   PDT.getRoot()->getTerminator())))
     return false;
 
   // Loop over all of the blocks in a function, tracking all of the blocks that
@@ -216,53 +250,35 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
       PDT.roots(), [&](auto BB) { return !isUniformlyReached(UA, *BB); });
 
   for (BasicBlock *BB : PDT.roots()) {
-    if (isa<ReturnInst>(BB->getTerminator())) {
+    Instruction *Term = BB->getTerminator();
+    if (auto *RI = dyn_cast<ReturnInst>(Term)) {
+      auto *CI = dyn_cast_or_null<CallInst>(RI->getPrevNode());
+      if (CI && CI->isMustTailCall())
+        continue;
       if (HasDivergentExitBlock)
         ReturningBlocks.push_back(BB);
-    } else if (isa<UnreachableInst>(BB->getTerminator())) {
+    } else if (isa<UnreachableInst>(Term)) {
       if (HasDivergentExitBlock)
         UnreachableBlocks.push_back(BB);
-    } else if (BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator())) {
+    } else if (UncondBrInst *BI = dyn_cast<UncondBrInst>(Term)) {
+      if (!DummyReturnBB)
+        DummyReturnBB = createDummyReturnBlock(F, ReturningBlocks);
 
-      ConstantInt *BoolTrue = ConstantInt::getTrue(F.getContext());
-      if (DummyReturnBB == nullptr) {
-        DummyReturnBB = BasicBlock::Create(F.getContext(),
-                                           "DummyReturnBlock", &F);
-        Type *RetTy = F.getReturnType();
-        Value *RetVal = RetTy->isVoidTy() ? nullptr : PoisonValue::get(RetTy);
-        ReturnInst::Create(F.getContext(), RetVal, DummyReturnBB);
-        ReturningBlocks.push_back(DummyReturnBB);
-      }
-
-      if (BI->isUnconditional()) {
-        BasicBlock *LoopHeaderBB = BI->getSuccessor(0);
-        BI->eraseFromParent(); // Delete the unconditional branch.
-        // Add a new conditional branch with a dummy edge to the return block.
-        BranchInst::Create(LoopHeaderBB, DummyReturnBB, BoolTrue, BB);
-        Updates.push_back({DominatorTree::Insert, BB, DummyReturnBB});
-      } else { // Conditional branch.
-        SmallVector<BasicBlock *, 2> Successors(successors(BB));
-
-        // Create a new transition block to hold the conditional branch.
-        BasicBlock *TransitionBB = BB->splitBasicBlock(BI, "TransitionBlock");
-
-        Updates.reserve(Updates.size() + 2 * Successors.size() + 2);
-
-        // 'Successors' become successors of TransitionBB instead of BB,
-        // and TransitionBB becomes a single successor of BB.
-        Updates.push_back({DominatorTree::Insert, BB, TransitionBB});
-        for (BasicBlock *Successor : Successors) {
-          Updates.push_back({DominatorTree::Insert, TransitionBB, Successor});
-          Updates.push_back({DominatorTree::Delete, BB, Successor});
-        }
-
-        // Create a branch that will always branch to the transition block and
-        // references DummyReturnBB.
-        BB->getTerminator()->eraseFromParent();
-        BranchInst::Create(TransitionBB, DummyReturnBB, BoolTrue, BB);
-        Updates.push_back({DominatorTree::Insert, BB, DummyReturnBB});
-      }
+      BasicBlock *LoopHeaderBB = BI->getSuccessor();
+      BI->eraseFromParent(); // Delete the unconditional branch.
+      // Add a new conditional branch with a dummy edge to the return block.
+      CondBrInst::Create(ConstantInt::getTrue(F.getContext()), LoopHeaderBB,
+                         DummyReturnBB, BB);
+      Updates.emplace_back(DominatorTree::Insert, BB, DummyReturnBB);
       Changed = true;
+    } else if (isa<CondBrInst, CallBrInst>(Term)) {
+      if (!DummyReturnBB)
+        DummyReturnBB = createDummyReturnBlock(F, ReturningBlocks);
+
+      handleNBranch(F, BB, Term, DummyReturnBB, Updates);
+      Changed = true;
+    } else {
+      llvm_unreachable("unsupported block terminator");
     }
   }
 
@@ -280,8 +296,8 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
       for (BasicBlock *BB : UnreachableBlocks) {
         // Remove and delete the unreachable inst.
         BB->getTerminator()->eraseFromParent();
-        BranchInst::Create(UnreachableBlock, BB);
-        Updates.push_back({DominatorTree::Insert, BB, UnreachableBlock});
+        UncondBrInst::Create(UnreachableBlock, BB);
+        Updates.emplace_back(DominatorTree::Insert, BB, UnreachableBlock);
       }
       Changed = true;
     }
@@ -295,8 +311,8 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
       // Remove and delete the unreachable inst.
       UnreachableBlock->getTerminator()->eraseFromParent();
 
-      Function *UnreachableIntrin =
-        Intrinsic::getDeclaration(F.getParent(), Intrinsic::amdgcn_unreachable);
+      Function *UnreachableIntrin = Intrinsic::getOrInsertDeclaration(
+          F.getParent(), Intrinsic::amdgcn_unreachable);
 
       // Insert a call to an intrinsic tracking that this is an unreachable
       // point, in case we want to kill the active lanes or something later.

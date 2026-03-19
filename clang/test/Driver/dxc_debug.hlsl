@@ -11,4 +11,5 @@
 // CHECK: "-cc1"
 // CHECK-CV-SAME: -gcodeview
 // CHECK-SAME: "-debug-info-kind=constructor"
-// CHECK-DWARF-SAME: -dwarf-version
+// Make sure dwarf-version is 4.
+// CHECK-DWARF-SAME: -dwarf-version=4

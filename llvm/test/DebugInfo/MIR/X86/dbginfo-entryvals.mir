@@ -1,5 +1,5 @@
-# RUN: llc -run-pass=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | FileCheck %s
-# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -verify-machineinstrs -mtriple=x86_64 -o - %s | FileCheck %s
+# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -verify-machineinstrs -mtriple=x86_64 -o - %s | FileCheck %s
 #
 #extern void fn2(int);
 #
