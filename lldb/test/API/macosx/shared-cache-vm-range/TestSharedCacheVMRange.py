@@ -29,8 +29,8 @@ class SharedCacheVMRangeTestCase(TestBase):
 
         ci.HandleCommand("process plugin packet send jGetSharedCacheInfo:{}", res)
 
-        # packet: jGetSharedCacheInfo:{} 
-        # response: 
+        # packet: jGetSharedCacheInfo:{}
+        # response:
         # {
         #   "shared_cache_base_address": 6572900352,
         #   "shared_cache_uuid": "674DB25A-34B2-3C56-8BD4-7D78005B2F2E",
@@ -55,7 +55,7 @@ class SharedCacheVMRangeTestCase(TestBase):
         sym = symctx.GetSymbol()
         self.assertTrue(sym.IsValid())
         addr = sym.GetStartAddress()
-        load_addr = addr.GetLoadAddress(target)
+        printf_load_addr = addr.GetLoadAddress(target)
 
-        self.assertGreater(load_addr, start)
-        self.assertLess(load_addr, end)
+        self.assertGreater(printf_load_addr, start)
+        self.assertLess(printf_load_addr, end)
