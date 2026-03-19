@@ -417,3 +417,17 @@ func.func @narrow_loop_bounds() {
   }
   return
 }
+
+// Ensure affine.for with a non-constant (dynamic) upper bound doesn't crash.
+// affine.for implements LoopLikeOpInterface but getLoopUpperBounds() returns
+// nullopt for non-constant bounds, which must be handled gracefully.
+func.func private @use_index(index) -> ()
+// CHECK-LABEL: func @affine_for_dynamic_bound
+func.func @affine_for_dynamic_bound(%n: index) {
+  // CHECK: affine.for %[[IV:.*]] = 0 to %{{.*}} {
+  affine.for %i = 0 to %n {
+    // CHECK: func.call @use_index(%[[IV]])
+    func.call @use_index(%i) : (index) -> ()
+  }
+  return
+}

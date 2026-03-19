@@ -74,9 +74,10 @@ ObjectContainerUniversalMachO::ObjectContainerUniversalMachO(
 ObjectContainerUniversalMachO::~ObjectContainerUniversalMachO() = default;
 
 bool ObjectContainerUniversalMachO::ParseHeader() {
-  bool success = ParseHeader(*m_extractor_sp.get(), m_header, m_fat_archs);
+  bool success = ParseHeader(*m_extractor_sp, m_header, m_fat_archs);
   // We no longer need any data, we parsed all we needed to parse and cached it
-  // in m_header and m_fat_archs
+  // in m_header and m_fat_archs.  Need to have an empty DataExtractor for code
+  // that assumes it is non-null.
   m_extractor_sp = std::make_shared<DataExtractor>();
   return success;
 }

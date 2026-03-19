@@ -502,30 +502,30 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
-# X86Vector dialect.
+# X86 dialect.
 ##---------------------------------------------------------------------------##
 
 gentbl_filegroup(
-    name = "X86VectorPyGen",
+    name = "X86PyGen",
     tbl_outs = {
-        "mlir/dialects/_x86vector_ops_gen.py": [
+        "mlir/dialects/_x86_ops_gen.py": [
             "-gen-python-op-bindings",
-            "-bind-dialect=x86vector",
+            "-bind-dialect=x86",
         ],
     },
     tblgen = "//mlir:mlir-tblgen",
-    td_file = "mlir/dialects/X86Vector.td",
+    td_file = "mlir/dialects/X86.td",
     deps = [
         "//mlir:OpBaseTdFiles",
-        "//mlir:X86VectorTdFiles",
+        "//mlir:X86TdFiles",
     ],
 )
 
 filegroup(
-    name = "X86VectorPyFiles",
+    name = "X86PyFiles",
     srcs = [
-        "mlir/dialects/x86vector.py",
-        ":X86VectorPyGen",
+        "mlir/dialects/x86.py",
+        ":X86PyGen",
     ],
 )
 
@@ -1323,16 +1323,16 @@ gentbl_filegroup(
 )
 
 gentbl_filegroup(
-    name = "X86VectorTransformOpsPyGen",
-    tbl_outs = {"mlir/dialects/_x86vector_transform_ops_gen.py": [
+    name = "X86TransformOpsPyGen",
+    tbl_outs = {"mlir/dialects/_x86_transform_ops_gen.py": [
         "-gen-python-op-bindings",
         "-bind-dialect=transform",
-        "-dialect-extension=x86vector_transform",
+        "-dialect-extension=x86_transform",
     ]},
     tblgen = "//mlir:mlir-tblgen",
-    td_file = "mlir/dialects/X86VectorTransformOps.td",
+    td_file = "mlir/dialects/X86TransformOps.td",
     deps = [
-        "//mlir:X86VectorTransformOpsTdFiles",
+        "//mlir:X86TransformOpsTdFiles",
     ],
 )
 
@@ -1546,7 +1546,7 @@ filegroup(
         ":TransformSMTExtensionOpsPyGen",
         ":VectorTransformEnumPyGen",
         ":VectorTransformOpsPyGen",
-        ":X86VectorTransformOpsPyGen",
+        ":X86TransformOpsPyGen",
         ":XeGPUTransformOpsPyGen",
     ],
 )

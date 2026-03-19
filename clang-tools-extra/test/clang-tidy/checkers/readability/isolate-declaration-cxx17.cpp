@@ -1,4 +1,5 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s readability-isolate-declaration %t
+#include <vector>
 
 template <typename T1, typename T2>
 struct pair {
@@ -29,29 +30,7 @@ struct SomeClass {
   SomeClass(int value);
 };
 
-namespace std {
-template <typename T>
-class initializer_list { const T *a, *b; };
-
-template <typename T>
-class vector {
-public:
-  vector() = default;
-  vector(initializer_list<T> init) {}
-};
-
-class string {
-public:
-  string() = default;
-  string(const char *) {}
-};
-
-namespace string_literals {
-string operator""s(const char *, decltype(sizeof(int))) {
-  return string();
-}
-} // namespace string_literals
-} // namespace std
+#include <string>
 
 namespace Types {
 typedef int MyType;

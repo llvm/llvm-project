@@ -4,10 +4,6 @@
 Full Host Build
 ===============
 
-.. contents:: Table of Contents
-   :depth: 1
-   :local:
-
 .. note::
    Fullbuild requires running headergen, which is a python program that depends on
    pyyaml. The minimum versions are listed on the :ref:`header_generation`

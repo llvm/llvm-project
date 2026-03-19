@@ -2564,14 +2564,22 @@ entry:
 }
 
 define <2 x fp128> @loaddup_str_v2fp128(ptr %p) {
-; CHECK-LABEL: loaddup_str_v2fp128:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    adrp x8, .LCPI155_0
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI155_0]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    str q2, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_str_v2fp128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    adrp x8, .LCPI155_0
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI155_0]
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    str q2, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_str_v2fp128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    str q2, [x0]
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load fp128, ptr %p
   %b = insertelement <2 x fp128> poison, fp128 %a, i64 0
@@ -2618,15 +2626,24 @@ entry:
 }
 
 define <3 x fp128> @loaddup_str_v3fp128(ptr %p) {
-; CHECK-LABEL: loaddup_str_v3fp128:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    adrp x8, .LCPI159_0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI159_0]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov v2.16b, v0.16b
-; CHECK-NEXT:    str q3, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_str_v3fp128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    adrp x8, .LCPI159_0
+; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI159_0]
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    mov v2.16b, v0.16b
+; CHECK-SD-NEXT:    str q3, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_str_v3fp128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    str q3, [x0]
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load fp128, ptr %p
   %b = insertelement <3 x fp128> poison, fp128 %a, i64 0
@@ -2676,16 +2693,26 @@ entry:
 }
 
 define <4 x fp128> @loaddup_str_v4fp128(ptr %p) {
-; CHECK-LABEL: loaddup_str_v4fp128:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    adrp x8, .LCPI163_0
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI163_0]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov v2.16b, v0.16b
-; CHECK-NEXT:    mov v3.16b, v0.16b
-; CHECK-NEXT:    str q4, [x0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_str_v4fp128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr q0, [x0]
+; CHECK-SD-NEXT:    adrp x8, .LCPI163_0
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI163_0]
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    mov v2.16b, v0.16b
+; CHECK-SD-NEXT:    mov v3.16b, v0.16b
+; CHECK-SD-NEXT:    str q4, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_str_v4fp128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr q0, [x0]
+; CHECK-GI-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    mov v2.16b, v0.16b
+; CHECK-GI-NEXT:    mov v3.16b, v0.16b
+; CHECK-GI-NEXT:    str q4, [x0]
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load fp128, ptr %p
   %b = insertelement <4 x fp128> poison, fp128 %a, i64 0

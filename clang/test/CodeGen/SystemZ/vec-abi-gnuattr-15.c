@@ -11,5 +11,5 @@ void fun(v4i32 Arg, v4i32 *Dst) {
   *Dst = Arg;
 }
 
-//CHECK: !llvm.module.flags = !{!0, !1}
+//CHECK: !llvm.module.flags = !{!0}
 //CHECK: !0 = !{i32 2, !"s390x-visible-vector-ABI", i32 1}

@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
-#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -46,7 +45,9 @@ class DFAPacketizer;
 class InstrItineraryData;
 class LiveIntervals;
 class LiveVariables;
+class MachineCycleInfo;
 class MachineLoop;
+class MachineLoopInfo;
 class MachineMemOperand;
 class MachineModuleInfo;
 class MachineRegisterInfo;
@@ -1785,7 +1786,8 @@ public:
   /// Allocate and return a hazard recognizer to use for by non-scheduling
   /// passes.
   virtual ScheduleHazardRecognizer *
-  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const {
+  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF,
+                                     MachineLoopInfo *MLI) const {
     return nullptr;
   }
 

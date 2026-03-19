@@ -755,18 +755,16 @@ public:
       simple_ilist<MemoryAccess, ilist_tag<MSSAHelpers::DefsOnlyTag>>;
 
   /// Return the list of MemoryAccess's for a given basic block.
-  ///
-  /// This list is not modifiable by the user.
-  const AccessList *getBlockAccesses(const BasicBlock *BB) const {
-    return getWritableBlockAccesses(BB);
+  AccessList *getBlockAccesses(const BasicBlock *BB) const {
+    auto It = PerBlockAccesses.find(BB);
+    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
   }
 
   /// Return the list of MemoryDef's and MemoryPhi's for a given basic
   /// block.
-  ///
-  /// This list is not modifiable by the user.
-  const DefsList *getBlockDefs(const BasicBlock *BB) const {
-    return getWritableBlockDefs(BB);
+  DefsList *getBlockDefs(const BasicBlock *BB) const {
+    auto It = PerBlockDefs.find(BB);
+    return It == PerBlockDefs.end() ? nullptr : It->second.get();
   }
 
   /// Given two memory accesses in the same basic block, determine
@@ -810,18 +808,6 @@ protected:
       IterT Blocks, VerificationLevel = VerificationLevel::Fast) const;
   template <typename IterT> void verifyDominationNumbers(IterT Blocks) const;
   template <typename IterT> void verifyPrevDefInPhis(IterT Blocks) const;
-
-  // This is used by the use optimizer and updater.
-  AccessList *getWritableBlockAccesses(const BasicBlock *BB) const {
-    auto It = PerBlockAccesses.find(BB);
-    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
-  }
-
-  // This is used by the use optimizer and updater.
-  DefsList *getWritableBlockDefs(const BasicBlock *BB) const {
-    auto It = PerBlockDefs.find(BB);
-    return It == PerBlockDefs.end() ? nullptr : It->second.get();
-  }
 
   // These is used by the updater to perform various internal MemorySSA
   // machinsations.  They do not always leave the IR in a correct state, and
@@ -1121,9 +1107,6 @@ public:
                                           BatchAAResults &) override;
 };
 
-using MemoryAccessPair = std::pair<MemoryAccess *, MemoryLocation>;
-using ConstMemoryAccessPair = std::pair<const MemoryAccess *, MemoryLocation>;
-
 /// Iterator base class used to implement const and non-const iterators
 /// over the defining accesses of a MemoryAccess.
 template <class T>
@@ -1217,6 +1200,35 @@ template <> struct GraphTraits<Inverse<MemoryAccess *>> {
   static ChildIteratorType child_end(NodeRef N) { return N->user_end(); }
 };
 
+struct UpwardDefsElem {
+  MemoryAccess *MA;
+  MemoryLocation Loc;
+  bool MayBeCrossIteration;
+};
+
+template <> struct DenseMapInfo<UpwardDefsElem> {
+  static inline UpwardDefsElem getEmptyKey() {
+    return {DenseMapInfo<MemoryAccess *>::getEmptyKey(),
+            DenseMapInfo<MemoryLocation>::getEmptyKey(), false};
+  }
+
+  static inline UpwardDefsElem getTombstoneKey() {
+    return {DenseMapInfo<MemoryAccess *>::getTombstoneKey(),
+            DenseMapInfo<MemoryLocation>::getTombstoneKey(), false};
+  }
+
+  static unsigned getHashValue(const UpwardDefsElem &Val) {
+    return hash_combine(DenseMapInfo<MemoryAccess *>::getHashValue(Val.MA),
+                        DenseMapInfo<MemoryLocation>::getHashValue(Val.Loc),
+                        Val.MayBeCrossIteration);
+  }
+
+  static bool isEqual(const UpwardDefsElem &LHS, const UpwardDefsElem &RHS) {
+    return LHS.MA == RHS.MA && LHS.Loc == RHS.Loc &&
+           LHS.MayBeCrossIteration == RHS.MayBeCrossIteration;
+  }
+};
+
 /// Provide an iterator that walks defs, giving both the memory access,
 /// and the current pointer location, updating the pointer location as it
 /// changes due to phi node translation.
@@ -1228,20 +1240,21 @@ template <> struct GraphTraits<Inverse<MemoryAccess *>> {
 class upward_defs_iterator
     : public iterator_facade_base<upward_defs_iterator,
                                   std::forward_iterator_tag,
-                                  const MemoryAccessPair> {
+                                  const UpwardDefsElem> {
   using BaseT = upward_defs_iterator::iterator_facade_base;
 
 public:
-  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT)
-      : DefIterator(Info.first), Location(Info.second),
-        OriginalAccess(Info.first), DT(DT) {
-    CurrentPair.first = nullptr;
+  upward_defs_iterator(const UpwardDefsElem &Elem, DominatorTree *DT)
+      : DefIterator(Elem.MA), Location(Elem.Loc), OriginalAccess(Elem.MA),
+        DT(DT) {
+    CurrentElem.MA = nullptr;
+    CurrentElem.MayBeCrossIteration = Elem.MayBeCrossIteration;
 
-    WalkingPhi = Info.first && isa<MemoryPhi>(Info.first);
-    fillInCurrentPair();
+    WalkingPhi = Elem.MA && isa<MemoryPhi>(Elem.MA);
+    fillInCurrentElem();
   }
 
-  upward_defs_iterator() { CurrentPair.first = nullptr; }
+  upward_defs_iterator() { CurrentElem.MA = nullptr; }
 
   bool operator==(const upward_defs_iterator &Other) const {
     return DefIterator == Other.DefIterator;
@@ -1250,7 +1263,7 @@ public:
   std::iterator_traits<BaseT>::reference operator*() const {
     assert(DefIterator != OriginalAccess->defs_end() &&
            "Tried to access past the end of our iterator");
-    return CurrentPair;
+    return CurrentElem;
   }
 
   using BaseT::operator++;
@@ -1259,7 +1272,7 @@ public:
            "Tried to access past the end of the iterator");
     ++DefIterator;
     if (DefIterator != OriginalAccess->defs_end())
-      fillInCurrentPair();
+      fillInCurrentElem();
     return *this;
   }
 
@@ -1271,10 +1284,15 @@ private:
   /// MemoryLocation during execution of the containing function.
   LLVM_ABI bool IsGuaranteedLoopInvariant(const Value *Ptr) const;
 
-  void fillInCurrentPair() {
-    CurrentPair.first = *DefIterator;
-    CurrentPair.second = Location;
-    if (WalkingPhi && Location.Ptr) {
+  void fillInCurrentElem() {
+    CurrentElem.MA = *DefIterator;
+    CurrentElem.Loc = Location;
+    // No need for phi translation or handling of cross-iteration dependences
+    // if we're not walking past a phi.
+    if (!WalkingPhi)
+      return;
+
+    if (Location.Ptr) {
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getDataLayout(), nullptr);
@@ -1282,21 +1300,27 @@ private:
       if (Value *Addr =
               Translator.translateValue(OriginalAccess->getBlock(),
                                         DefIterator.getPhiArgBlock(), DT, true))
-        if (Addr != CurrentPair.second.Ptr)
-          CurrentPair.second = CurrentPair.second.getWithNewPtr(Addr);
+        if (Addr != CurrentElem.Loc.Ptr)
+          CurrentElem.Loc = CurrentElem.Loc.getWithNewPtr(Addr);
 
       // Mark size as unknown, if the location is not guaranteed to be
       // loop-invariant for any possible loop in the function. Setting the size
       // to unknown guarantees that any memory accesses that access locations
       // after the pointer are considered as clobbers, which is important to
       // catch loop carried dependences.
-      if (!IsGuaranteedLoopInvariant(CurrentPair.second.Ptr))
-        CurrentPair.second = CurrentPair.second.getWithNewSize(
+      if (!IsGuaranteedLoopInvariant(CurrentElem.Loc.Ptr))
+        // TODO: We should be using MayBeCrossIteration here as well.
+        CurrentElem.Loc = CurrentElem.Loc.getWithNewSize(
             LocationSize::beforeOrAfterPointer());
+    } else {
+      // We can't easily analyze invariance for calls, so conservatively assume
+      // they may be introducing cross-iteration dependences for any phi
+      // translation.
+      CurrentElem.MayBeCrossIteration = true;
     }
   }
 
-  MemoryAccessPair CurrentPair;
+  UpwardDefsElem CurrentElem;
   memoryaccess_def_iterator DefIterator;
   MemoryLocation Location;
   MemoryAccess *OriginalAccess = nullptr;
@@ -1304,15 +1328,15 @@ private:
   bool WalkingPhi = false;
 };
 
-inline upward_defs_iterator
-upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT) {
+inline upward_defs_iterator upward_defs_begin(const UpwardDefsElem &Pair,
+                                              DominatorTree &DT) {
   return upward_defs_iterator(Pair, &DT);
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
 
 inline iterator_range<upward_defs_iterator>
-upward_defs(const MemoryAccessPair &Pair, DominatorTree &DT) {
+upward_defs(const UpwardDefsElem &Pair, DominatorTree &DT) {
   return make_range(upward_defs_begin(Pair, DT), upward_defs_end());
 }
 

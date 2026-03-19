@@ -995,7 +995,7 @@ static void processBlockAddr(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 
 static bool isImplicitFallthrough(MachineBasicBlock &MBB) {
   if (MBB.empty())
-    return true;
+    return MBB.getNextNode() != nullptr;
 
   // Branching SPIR-V intrinsics are not detected by this generic method.
   // Thus, we can only trust negative result.

@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
+#include "llvm/IR/Value.h"
 #include <cstdint>
 
 using namespace clang;
@@ -326,8 +327,68 @@ public:
     Visit(e->getRHS());
   }
   void VisitBinCmp(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinCmp");
+    assert(cgf.getContext().hasSameType(e->getLHS()->getType(),
+                                        e->getRHS()->getType()));
+    const ComparisonCategoryInfo &cmpInfo =
+        cgf.getContext().CompCategories.getInfoForType(e->getType());
+    assert(cmpInfo.Record->isTriviallyCopyable() &&
+           "cannot copy non-trivially copyable aggregate");
+
+    QualType argTy = e->getLHS()->getType();
+
+    if (!argTy->isIntegralOrEnumerationType() && !argTy->isRealFloatingType() &&
+        !argTy->isNullPtrType() && !argTy->isPointerType() &&
+        !argTy->isMemberPointerType() && !argTy->isAnyComplexType())
+      cgf.cgm.errorNYI(e->getBeginLoc(), "aggregate three-way comparison");
+
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    CIRGenBuilderTy builder = cgf.getBuilder();
+
+    if (e->getType()->isAnyComplexType())
+      cgf.cgm.errorNYI(e->getBeginLoc(), "VisitBinCmp: complex type");
+
+    if (e->getType()->isAggregateType())
+      cgf.cgm.errorNYI(e->getBeginLoc(), "VisitBinCmp: aggregate type");
+
+    mlir::Value lhs = cgf.emitAnyExpr(e->getLHS()).getValue();
+    mlir::Value rhs = cgf.emitAnyExpr(e->getRHS()).getValue();
+
+    mlir::Value resultScalar;
+    if (argTy->isNullPtrType()) {
+      resultScalar =
+          builder.getConstInt(loc, cmpInfo.getEqualOrEquiv()->getIntValue());
+    } else {
+      llvm::APSInt ltRes = cmpInfo.getLess()->getIntValue();
+      llvm::APSInt eqRes = cmpInfo.getEqualOrEquiv()->getIntValue();
+      llvm::APSInt gtRes = cmpInfo.getGreater()->getIntValue();
+      if (!cmpInfo.isPartial()) {
+        cir::CmpOrdering ordering = cmpInfo.isStrong()
+                                        ? cir::CmpOrdering::Strong
+                                        : cir::CmpOrdering::Weak;
+        resultScalar = builder.createThreeWayCmpTotalOrdering(
+            loc, lhs, rhs, ltRes, eqRes, gtRes, ordering);
+      } else {
+        // Partial ordering.
+        llvm::APSInt unorderedRes = cmpInfo.getUnordered()->getIntValue();
+        resultScalar = builder.createThreeWayCmpPartialOrdering(
+            loc, lhs, rhs, ltRes, eqRes, gtRes, unorderedRes);
+      }
+    }
+
+    // Create the return value in the destination slot.
+    ensureDest(loc, e->getType());
+    LValue destLVal = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+
+    // Emit the address of the first (and only) field in the comparison category
+    // type, and initialize it from the constant integer value produced above.
+    const FieldDecl *resultField = *cmpInfo.Record->field_begin();
+    LValue fieldLVal = cgf.emitLValueForFieldInitialization(
+        destLVal, resultField, resultField->getName());
+    cgf.emitStoreThroughLValue(RValue::get(resultScalar), fieldLVal);
+
+    // All done! The result is in the dest slot.
   }
+
   void VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXRewrittenBinaryOperator");
@@ -348,8 +409,60 @@ public:
     VisitInitListExpr(e->getUpdater());
   }
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitAbstractConditionalOperator");
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+    CIRGenFunction::OpaqueValueMapping binding(cgf, e);
+    CIRGenFunction::ConditionalEvaluation eval(cgf);
+
+    // Save whether the destination's lifetime is externally managed.
+    bool isExternallyDestructed = dest.isExternallyDestructed();
+    bool destructNonTrivialCStruct =
+        !isExternallyDestructed &&
+        e->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
+    isExternallyDestructed |= destructNonTrivialCStruct;
+
+    cgf.emitIfOnBoolExpr(
+        e->getCond(),
+        /*thenBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          eval.beginEvaluation();
+          {
+            CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                  b.getInsertionBlock()};
+            cgf.curLexScope->setAsTernary();
+            dest.setExternallyDestructed(isExternallyDestructed);
+            assert(!cir::MissingFeatures::incrementProfileCounter());
+            Visit(e->getTrueExpr());
+            cir::YieldOp::create(b, loc);
+          }
+          eval.endEvaluation();
+        },
+        loc,
+        /*elseBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          eval.beginEvaluation();
+          {
+            CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                  b.getInsertionBlock()};
+            cgf.curLexScope->setAsTernary();
+
+            // If the result of an agg expression is unused, then the emission
+            // of the LHS might need to create a destination slot. That's fine
+            // with us, and we can safely emit the RHS into the same slot, but
+            // we shouldn't claim that it's already being destructed.
+            dest.setExternallyDestructed(isExternallyDestructed);
+            assert(!cir::MissingFeatures::incrementProfileCounter());
+            Visit(e->getFalseExpr());
+            cir::YieldOp::create(b, loc);
+          }
+          eval.endEvaluation();
+        },
+        loc);
+
+    if (destructNonTrivialCStruct)
+      cgf.cgm.errorNYI(
+          e->getSourceRange(),
+          "Abstract conditional aggregate: destructNonTrivialCStruct");
   }
   void VisitChooseExpr(const ChooseExpr *e) { Visit(e->getChosenSubExpr()); }
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {
@@ -378,17 +491,62 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXInheritedCtorInitExpr");
   }
+
+  /// Emit the initializer for a std::initializer_list initialized with a
+  /// real initializer list.
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXStdInitializerListExpr");
+    ASTContext &ctx = cgf.getContext();
+    CIRGenBuilderTy builder = cgf.getBuilder();
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+    LValue array = cgf.emitLValue(e->getSubExpr());
+    assert(array.isSimple() && "initializer_list array not a simple lvalue");
+    Address arrayPtr = array.getAddress();
+
+    const ConstantArrayType *arrayType =
+        ctx.getAsConstantArrayType(e->getSubExpr()->getType());
+    assert(arrayType && "std::initializer_list constructed from non-array");
+
+    auto *record = e->getType()->castAsRecordDecl();
+    RecordDecl::field_iterator field = record->field_begin();
+    assert(field != record->field_end() &&
+           ctx.hasSameType(field->getType()->getPointeeType(),
+                           arrayType->getElementType()) &&
+           "Expected std::initializer_list first field to be const E *");
+
+    // Start pointer.
+    AggValueSlot dest = ensureSlot(loc, e->getType());
+    LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+    LValue start =
+        cgf.emitLValueForFieldInitialization(destLV, *field, field->getName());
+
+    mlir::Value arrayStart = arrayPtr.emitRawPointer();
+    cgf.emitStoreThroughLValue(RValue::get(arrayStart), start);
+    ++field;
+    assert(field != record->field_end() &&
+           "Expected std::initializer_list to have two fields");
+
+    cir::ConstantOp size = builder.getConstInt(loc, arrayType->getSize());
+    LValue endOrLength =
+        cgf.emitLValueForFieldInitialization(destLV, *field, field->getName());
+    if (ctx.hasSameType(field->getType(), ctx.getSizeType())) {
+      // Length.
+      cgf.emitStoreThroughLValue(RValue::get(size), endOrLength);
+    } else {
+      cgf.cgm.errorNYI(
+          "Aggregate VisitCXXStdInitializerListExpr: field type != sizeTy");
+      return;
+    }
+
+    assert(++field == record->field_end() &&
+           "Expected std::initializer_list to only have two fields");
   }
+
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXScalarValueInitExpr");
   }
-  void VisitCXXTypeidExpr(CXXTypeidExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXTypeidExpr");
-  }
+  void VisitCXXTypeidExpr(CXXTypeidExpr *e) { emitAggLoadOfLValue(e); }
   void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *e) {
     Visit(e->getSubExpr());
   }
