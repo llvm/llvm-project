@@ -1,0 +1,75 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --types %t.pdb | FileCheck %s
+
+# Test that forward references can be found (requires type hashes).
+
+# CHECK:       0x1002 | LF_STRUCTURE [size = 36] `Foo`
+# CHECK-NEXT:           unique name: `.?AUFoo@@`
+# CHECK-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
+# CHECK-NEXT:           options: forward ref (-> 0x1006) | has unique name, sizeof 0
+# CHECK:       0x1006 | LF_STRUCTURE [size = 36] `Foo`
+# CHECK-NEXT:           unique name: `.?AUFoo@@`
+
+---
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [  ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      116
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4096
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            Foo
+        UniqueName:      '.?AUFoo@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4098
+        Attrs:           65548
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4098
+        ThisType:        4099
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4096
+        ThisPointerAdjustment: 0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     0
+            Name:            a
+        - Kind:            LF_ONEMETHOD
+          OneMethod:
+            Type:            4100
+            Attrs:           259
+            VFTableOffset:   -1
+            Name:            Foo
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     2
+        Options:         [ None, HasConstructorOrDestructor, HasUniqueName ]
+        FieldList:       4101
+        Name:            Foo
+        UniqueName:      '.?AUFoo@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+...
