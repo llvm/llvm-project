@@ -25,7 +25,8 @@ LLVM_LIBC_FUNCTION(char *, strndup, (const char *src, size_t size)) {
   if (len > size)
     len = size;
   AllocChecker ac;
-  char *dest = new (ac) char[len + 1];
+  char *dest =
+      reinterpret_cast<char *>(AllocChecker::alloc(len + 1, ac));
   if (!ac)
     return nullptr;
   inline_memcpy(dest, src, len + 1);

@@ -13,11 +13,10 @@
 #include "condition_variable_linux.h"
 
 #include "atomic_helpers.h"
+#include "libc_pal.h"
 
 #include <limits.h>
 #include <linux/futex.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 
 namespace scudo {
 
@@ -29,8 +28,8 @@ void ConditionVariableLinux::notifyAllImpl(UNUSED HybridMutex &M) {
   // `Counter` to futex waiting queue `M` so that the awoken threads won't be
   // blocked again due to locked `M` by current thread.
   if (LastNotifyAll != V) {
-    syscall(SYS_futex, reinterpret_cast<uptr>(&Counter), FUTEX_WAKE_PRIVATE,
-            INT_MAX, nullptr, nullptr, 0);
+    LibcPAL::systemCall(SYS_futex, reinterpret_cast<uptr>(&Counter),
+                        FUTEX_WAKE_PRIVATE, INT_MAX, nullptr, nullptr, 0);
   }
 
   LastNotifyAll = V + 1;
@@ -42,8 +41,8 @@ void ConditionVariableLinux::waitImpl(HybridMutex &M) {
 
   // TODO: Use ScopedUnlock when it's supported.
   M.unlock();
-  syscall(SYS_futex, reinterpret_cast<uptr>(&Counter), FUTEX_WAIT_PRIVATE, V,
-          nullptr, nullptr, 0);
+  LibcPAL::systemCall(SYS_futex, reinterpret_cast<uptr>(&Counter),
+                      FUTEX_WAIT_PRIVATE, V, nullptr, nullptr, 0);
   M.lock();
 }
 

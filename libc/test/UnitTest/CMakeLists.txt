@@ -64,6 +64,7 @@ add_unittest_framework_library(
     LibcTest.cpp
     LibcTestMain.cpp
     TestLogger.cpp
+    UnitTestUtils.cpp
   HDRS
     LibcTest.h
     Test.h
@@ -81,6 +82,11 @@ add_unittest_framework_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
 )
+
+if(LLVM_LIBC_INCLUDE_INTERNAL_SCUDO)
+  target_compile_definitions(LibcTest.unit
+                             PRIVATE LIBC_TESTS_USE_INTERNAL_SCUDO_ALLOCATOR)
+endif()
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
 if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "darwin")
@@ -104,6 +110,11 @@ add_unittest_framework_library(
   DEPENDS
     libc.hdr.stdint_proxy
 )
+
+if(LLVM_LIBC_INCLUDE_INTERNAL_SCUDO)
+  target_compile_definitions(LibcHermeticTestSupport.hermetic
+                             PRIVATE LIBC_TESTS_USE_INTERNAL_SCUDO_ALLOCATOR)
+endif()
 
 add_header_library(
   string_utils

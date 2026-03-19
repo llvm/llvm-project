@@ -43,6 +43,12 @@ struct TestThreadArgs {
 static LIBC_NAMESPACE::AllocChecker global_ac;
 static LIBC_NAMESPACE::cpp::Atomic<long> global_thr_count = 0;
 
+#ifdef LIBC_TESTS_USE_INTERNAL_SCUDO_ALLOCATOR
+static constexpr size_t STACK_RUNTIME_HEADROOM = 2 * EXEC_PAGESIZE;
+#else
+static constexpr size_t STACK_RUNTIME_HEADROOM = 1024;
+#endif
+
 static void *successThread(void *Arg) {
   pthread_t th = LIBC_NAMESPACE::pthread_self();
   auto *thread = reinterpret_cast<LIBC_NAMESPACE::Thread *>(&th);
@@ -102,10 +108,16 @@ static void *successThread(void *Arg) {
             thread->attrib->detach_state.load() ==
                 static_cast<uint32_t>(LIBC_NAMESPACE::DetachState::DETACHED));
 
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(expec_attrs), 0);
+  ASSERT_ERRNO_SUCCESS();
+
+  // Arg is malloced, so free.
+  delete th_arg;
+
   {
     // Allocate some bytes on the stack on most of the stack and make sure we
     // have read/write permissions on the memory.
-    size_t test_stacksize = expec_stacksize - 1024;
+    size_t test_stacksize = expec_stacksize - STACK_RUNTIME_HEADROOM;
     volatile uint8_t *bytes_on_stack =
         (volatile uint8_t *)__builtin_alloca(test_stacksize);
 
@@ -124,11 +136,6 @@ static void *successThread(void *Arg) {
   // [stack - expec_guardsize, stack) is both mapped and has PROT_NONE
   // permissions. Maybe we can read from /proc/{self}/map?
 
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(expec_attrs), 0);
-  ASSERT_ERRNO_SUCCESS();
-
-  // Arg is malloced, so free.
-  delete th_arg;
   global_thr_count.fetch_sub(1);
   return ret;
 }

@@ -117,8 +117,8 @@ void HybridMutex::lockSlow() {
   if (V != Sleeping)
     V = atomic_exchange(&M, Sleeping, memory_order_acquire);
   while (V != Unlocked) {
-    LibcPAL::syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAIT_PRIVATE,
-                     Sleeping, nullptr, nullptr, 0);
+    LibcPAL::systemCall(SYS_futex, reinterpret_cast<uptr>(&M),
+                        FUTEX_WAIT_PRIVATE, Sleeping, nullptr, nullptr, 0);
     V = atomic_exchange(&M, Sleeping, memory_order_acquire);
   }
 }
@@ -126,8 +126,8 @@ void HybridMutex::lockSlow() {
 void HybridMutex::unlock() {
   if (atomic_fetch_sub(&M, 1U, memory_order_release) != Locked) {
     atomic_store(&M, Unlocked, memory_order_release);
-    LibcPAL::syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAKE_PRIVATE,
-                     1, nullptr, nullptr, 0);
+    LibcPAL::systemCall(SYS_futex, reinterpret_cast<uptr>(&M),
+                        FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
   }
 }
 
@@ -166,7 +166,7 @@ u32 getThreadID() {
 #if SCUDO_ANDROID
   return static_cast<u32>(LibcPAL::gettid());
 #else
-  return static_cast<u32>(LibcPAL::syscall(SYS_gettid));
+  return static_cast<u32>(LibcPAL::systemCall(SYS_gettid));
 #endif
 }
 
@@ -180,8 +180,8 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
 #define GRND_NONBLOCK 1
 #endif
   // Up to 256 bytes, getrandom will not be interrupted.
-  ReadBytes = LibcPAL::syscall(SYS_getrandom, Buffer, Length,
-                               Blocking ? 0 : GRND_NONBLOCK);
+  ReadBytes = LibcPAL::systemCall(SYS_getrandom, Buffer, Length,
+                                  Blocking ? 0 : GRND_NONBLOCK);
   if (ReadBytes == static_cast<ssize_t>(Length))
     return true;
   // If this system call is not implemented in the kernel, then we will try

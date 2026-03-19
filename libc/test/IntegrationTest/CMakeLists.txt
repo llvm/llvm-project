@@ -17,3 +17,8 @@ add_object_library(
     libc.src.__support.macros.properties.architectures
     ${arch_specific_deps}
 )
+
+if(LLVM_LIBC_INCLUDE_INTERNAL_SCUDO)
+  target_compile_definitions(libc.test.IntegrationTest.test
+                             PRIVATE LIBC_TESTS_USE_INTERNAL_SCUDO_ALLOCATOR)
+endif()

@@ -89,6 +89,27 @@ function(_get_hermetic_test_compile_options output_var)
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
 
+function(_append_internal_scudo_allocator_test_deps output_var)
+  set(deps ${${output_var}})
+  if(LLVM_LIBC_INCLUDE_INTERNAL_SCUDO)
+    foreach(dep IN ITEMS
+            libc.src.stdlib.malloc
+            libc.src.stdlib.free
+            libc.src.stdlib.realloc
+            libc.src.stdlib.calloc
+            libc.src.stdlib.aligned_alloc
+            libc.src.stdlib.posix_memalign
+            libc.src.string.strlen
+            libc.src.string.strncmp
+            libc.src.sys.auxv.getauxval)
+      if(TARGET ${dep})
+        list(APPEND deps ${dep})
+      endif()
+    endforeach()
+  endif()
+  set(${output_var} ${deps} PARENT_SCOPE)
+endfunction()
+
 # This is a helper function and not a build rule. It is to be used by the
 # various test rules to generate the full list of object files
 # recursively produced by "add_entrypoint_object" and "add_object_library"
@@ -225,6 +246,12 @@ function(create_libc_unittest fq_target_name)
     list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
                              libc.test.UnitTest.ErrnoSetterMatcher)
   endif()
+  if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_INCLUDE_INTERNAL_SCUDO AND
+     TARGET libc.startup.${LIBC_TARGET_OS}.${LIBC_TARGET_ARCHITECTURE}.tls)
+    list(APPEND fq_deps_list
+         libc.startup.${LIBC_TARGET_OS}.${LIBC_TARGET_ARCHITECTURE}.tls)
+  endif()
+  _append_internal_scudo_allocator_test_deps(fq_deps_list)
   list(REMOVE_DUPLICATES fq_deps_list)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
@@ -523,6 +550,7 @@ function(add_integration_test test_name)
       libc.src.strings.bcmp
       libc.src.strings.bzero
   )
+  _append_internal_scudo_allocator_test_deps(fq_deps_list)
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # __stack_chk_fail should always be included if supported to allow building
@@ -727,6 +755,7 @@ function(add_libc_hermetic test_name)
       libc.src.strings.bcmp
       libc.src.strings.bzero
   )
+  _append_internal_scudo_allocator_test_deps(fq_deps_list)
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # __stack_chk_fail should always be included if supported to allow building

@@ -109,13 +109,15 @@ void FlagParser::parseString(const char *S) {
 }
 
 inline bool parseBool(const char *Value, bool *b) {
-  if (strncmp(Value, "0", 1) == 0 || strncmp(Value, "no", 2) == 0 ||
-      strncmp(Value, "false", 5) == 0) {
+  if (LibcPAL::strncmp(Value, "0", 1) == 0 ||
+      LibcPAL::strncmp(Value, "no", 2) == 0 ||
+      LibcPAL::strncmp(Value, "false", 5) == 0) {
     *b = false;
     return true;
   }
-  if (strncmp(Value, "1", 1) == 0 || strncmp(Value, "yes", 3) == 0 ||
-      strncmp(Value, "true", 4) == 0) {
+  if (LibcPAL::strncmp(Value, "1", 1) == 0 ||
+      LibcPAL::strncmp(Value, "yes", 3) == 0 ||
+      LibcPAL::strncmp(Value, "true", 4) == 0) {
     *b = true;
     return true;
   }
@@ -130,8 +132,8 @@ void FlagParser::parseStringPair(const char *Name, const char *Value) {
 bool FlagParser::runHandler(const char *Name, const char *Value,
                             const char Sep) {
   for (u32 I = 0; I < NumberOfFlags; ++I) {
-    const uptr Len = strlen(Flags[I].Name);
-    if (strncmp(Name, Flags[I].Name, Len) != 0 || Name[Len] != Sep)
+    const uptr Len = LibcPAL::strlen(Flags[I].Name);
+    if (LibcPAL::strncmp(Name, Flags[I].Name, Len) != 0 || Name[Len] != Sep)
       continue;
     bool Ok = false;
     switch (Flags[I].Type) {

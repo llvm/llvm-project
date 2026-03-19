@@ -14,6 +14,7 @@
 #include "internal_defs.h"
 
 #if defined(LIBC_FULL_BUILD)
+#include "src/__support/threads/callonce.h"
 #include "src/__support/threads/thread.h"
 #endif
 
@@ -24,6 +25,7 @@
 #if (SCUDO_LINUX || SCUDO_TRUSTY) &&                                           \
     !defined(SCUDO_USE_LLVM_LIBC_INTERNAL_HEADERS)
 #include <errno.h>
+#include <string.h>
 #include <sys/auxv.h>
 #endif
 
@@ -53,6 +55,7 @@
 #include "src/__support/time/clock_gettime.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
+#include "src/string/memory_utils/inline_strcmp.h"
 #include "src/string/string_length.h"
 #if SCUDO_LINUX
 #include "hdr/sys_auxv_macros.h"
@@ -101,8 +104,10 @@ public:
   static constexpr uptr kMmapFailed = static_cast<uptr>(-1);
 #if defined(LIBC_FULL_BUILD)
   using PThreadKeyT = unsigned int;
+  using PThreadOnceT = LIBC_NAMESPACE::CallOnceFlag;
 #else
   using PThreadKeyT = pthread_key_t;
+  using PThreadOnceT = pthread_once_t;
 #endif
   static int geterrno() { return libc_errno; }
   static void seterrno(int ErrorNum) { libc_errno = ErrorNum; }
@@ -127,6 +132,13 @@ public:
   }
   static size_t strlen(const char *Str) {
     return LIBC_NAMESPACE::internal::string_length(Str);
+  }
+  static int strncmp(const char *LHS, const char *RHS, size_t Count) {
+    auto Comp = [](char L, char R) -> int {
+      return static_cast<unsigned char>(L) -
+             static_cast<unsigned char>(R);
+    };
+    return LIBC_NAMESPACE::inline_strncmp(LHS, RHS, Count, Comp);
   }
   static void *memcpy(void *Dst, const void *Src, size_t Count) {
     LIBC_NAMESPACE::inline_memcpy(Dst, Src, Count);
@@ -167,6 +179,20 @@ public:
                                                                          : EINVAL;
 #else
     return ::pthread_setspecific(Key, Value);
+#endif
+  }
+#if defined(LIBC_FULL_BUILD)
+  static constexpr PThreadOnceT initPThreadOnce() {
+    return PThreadOnceT(LIBC_NAMESPACE::callonce_impl::NOT_CALLED);
+  }
+#else
+  static PThreadOnceT initPThreadOnce() { return PTHREAD_ONCE_INIT; }
+#endif
+  static int pthread_once(PThreadOnceT *Flag, void (*Func)(void)) {
+#if defined(LIBC_FULL_BUILD)
+    return LIBC_NAMESPACE::callonce(Flag, Func);
+#else
+    return ::pthread_once(Flag, Func);
 #endif
   }
 
@@ -211,7 +237,8 @@ public:
     (void)Name;
     return nullptr;
   }
-  template <typename... Args> static long syscall(long Number, Args... args) {
+  template <typename... Args>
+  static long systemCall(long Number, Args... args) {
     return doSyscall<long>(Number, args...);
   }
   static int clock_gettime(clockid_t ClockID, timespec *TS) {
@@ -237,7 +264,12 @@ public:
     }
     return 0;
   }
-  static int cpuCount(const cpu_set_t *Mask) { return CPU_COUNT(Mask); }
+  static int cpuCount(const cpu_set_t *Mask) {
+    int Count = 0;
+    for (uptr I = 0; I < ARRAY_SIZE(Mask->__mask); ++I)
+      Count += __builtin_popcountl(Mask->__mask[I]);
+    return Count;
+  }
   static pid_t gettid() { return LIBC_NAMESPACE::internal::gettid(); }
   static int open(const char *Path, int Flags) {
     return unwrapErrorOr(LIBC_NAMESPACE::linux_syscalls::open(Path, Flags, 0));
@@ -274,8 +306,10 @@ struct LibcPAL {
   static constexpr uptr kMmapFailed = static_cast<uptr>(-1);
 #if defined(LIBC_FULL_BUILD)
   using PThreadKeyT = unsigned int;
+  using PThreadOnceT = LIBC_NAMESPACE::CallOnceFlag;
 #else
   using PThreadKeyT = pthread_key_t;
+  using PThreadOnceT = pthread_once_t;
 #endif
   static int geterrno() { return errno; }
   static void seterrno(int ErrorNum) { errno = ErrorNum; }
@@ -287,6 +321,9 @@ struct LibcPAL {
   }
   static char *strerror(int ErrorNum) { return ::strerror(ErrorNum); }
   static size_t strlen(const char *Str) { return ::strlen(Str); }
+  static int strncmp(const char *LHS, const char *RHS, size_t Count) {
+    return ::strncmp(LHS, RHS, Count);
+  }
   static void *memcpy(void *Dst, const void *Src, size_t Count) {
     return ::memcpy(Dst, Src, Count);
   }
@@ -326,6 +363,20 @@ struct LibcPAL {
     return ::pthread_setspecific(Key, Value);
 #endif
   }
+  static PThreadOnceT initPThreadOnce() {
+#if defined(LIBC_FULL_BUILD)
+    return PThreadOnceT(LIBC_NAMESPACE::callonce_impl::NOT_CALLED);
+#else
+    return PTHREAD_ONCE_INIT;
+#endif
+  }
+  static int pthread_once(PThreadOnceT *Flag, void (*Func)(void)) {
+#if defined(LIBC_FULL_BUILD)
+    return LIBC_NAMESPACE::callonce(Flag, Func);
+#else
+    return ::pthread_once(Flag, Func);
+#endif
+  }
 
 #if SCUDO_LINUX
   static void abort() { ::abort(); }
@@ -341,12 +392,12 @@ struct LibcPAL {
     return ::madvise(Addr, Size, Advice);
   }
   static char *getenv(const char *Name) { return ::getenv(Name); }
-  static long syscall(long Number) { return ::syscall(Number); }
-  static long syscall(long Number, uptr Arg1, int Arg2, u32 Arg3, void *Arg4,
-                      void *Arg5, u32 Arg6) {
+  static long systemCall(long Number) { return ::syscall(Number); }
+  static long systemCall(long Number, uptr Arg1, int Arg2, u32 Arg3,
+                         void *Arg4, void *Arg5, u32 Arg6) {
     return ::syscall(Number, Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
   }
-  static long syscall(long Number, void *Arg1, uptr Arg2, unsigned Arg3) {
+  static long systemCall(long Number, void *Arg1, uptr Arg2, unsigned Arg3) {
     return ::syscall(Number, Arg1, Arg2, Arg3);
   }
   static int clock_gettime(clockid_t ClockID, timespec *TS) {

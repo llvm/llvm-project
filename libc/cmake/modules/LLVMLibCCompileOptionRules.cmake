@@ -159,6 +159,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_COPT_PRINTF_DISABLE_BITINT")
   endif()
 
+  if(LLVM_LIBC_INCLUDE_INTERNAL_SCUDO)
+    list(APPEND config_options "-DLIBC_INTERNAL_USE_SCUDO_ALLOCATOR")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 

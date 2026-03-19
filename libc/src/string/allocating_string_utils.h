@@ -26,7 +26,7 @@ template <typename T> LIBC_INLINE cpp::optional<T *> strdup(const T *src) {
     return cpp::nullopt;
   size_t len = string_length(src) + 1;
   AllocChecker ac;
-  T *newstr = new (ac) T[len];
+  T *newstr = reinterpret_cast<T *>(AllocChecker::alloc(len * sizeof(T), ac));
   if (!ac)
     return cpp::nullopt;
   inline_memcpy(newstr, src, len * sizeof(T));

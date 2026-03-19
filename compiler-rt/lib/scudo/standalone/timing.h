@@ -10,6 +10,7 @@
 #define SCUDO_TIMING_H_
 
 #include "common.h"
+#include "libc_pal.h"
 #include "mutex.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
@@ -19,7 +20,6 @@
 #define __STDC_FORMAT_MACROS 1
 #endif
 #include <inttypes.h>
-#include <string.h>
 
 namespace scudo {
 
@@ -98,9 +98,9 @@ public:
   Timer getOrCreateTimer(const char *Name) EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
 
-    CHECK_LT(strlen(Name), MaxLenOfTimerName);
+    CHECK_LT(LibcPAL::strlen(Name), MaxLenOfTimerName);
     for (u32 I = 0; I < NumAllocatedTimers; ++I) {
-      if (strncmp(Name, Timers[I].Name, MaxLenOfTimerName) == 0)
+      if (LibcPAL::strncmp(Name, Timers[I].Name, MaxLenOfTimerName) == 0)
         return Timer(*this, I);
     }
 
