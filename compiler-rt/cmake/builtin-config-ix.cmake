@@ -297,4 +297,7 @@ else()
   set(COMPILER_RT_HAS_CRT FALSE)
 endif()
 
+if (NOT BUILTIN_SUPPORTED_ARCH)
+  message(FATAL_ERROR "Requested architecture is not supported by compiler-rt builtins")
+endif()
 message(STATUS "Builtin supported architectures: ${BUILTIN_SUPPORTED_ARCH}")
