@@ -193,7 +193,7 @@ X86PostLegalizerCombinerPass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
   if (MF.getProperties().hasFailedISel())
     return PreservedAnalyses::all();
-  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
+  assert(MF.getProperties().hasLegalized() && "Expected a legalized function.");
   const Function &F = MF.getFunction();
 
   GISelValueTracking VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
@@ -208,7 +208,8 @@ X86PostLegalizerCombinerPass::run(MachineFunction &MF,
 
   X86PostLegalizerCombinerImpl Impl(MF, CInfo, nullptr, VT, CSEInfo.get(),
                                     RuleConfig, &MDT);
-  Impl.combineMachineInstrs();
+  if (!Impl.combineMachineInstrs())
+    return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
