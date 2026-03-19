@@ -34,7 +34,7 @@ enum X86MachineCombinerPattern : unsigned {
 
 namespace X86 {
 
-enum AsmComments {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // For instr that was compressed from EVEX to LEGACY.
   AC_EVEX_2_LEGACY = MachineInstr::TAsmComments,
   // For instr that was compressed from EVEX to VEX.
