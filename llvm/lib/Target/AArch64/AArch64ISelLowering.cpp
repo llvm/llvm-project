@@ -5301,8 +5301,9 @@ SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
   unsigned FPBits = CastVT.getScalarSizeInBits();
 
   // Use FRINT32X/FRINT64X if Sve2p2 is available
-  if (Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2()) &&
+  if (Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSVE2p2() &&
       (FPBits == 32 || FPBits == 64)) {
+    assert(IntBits == 32 || IntBits == 64);
     unsigned FrintOp = (IntBits == 32) ? AArch64ISD::FRINT32_MERGE_PASSTHRU
                                        : AArch64ISD::FRINT64_MERGE_PASSTHRU;
     SDValue Pg = getPredicateForVector(DAG, DL, CastVT);
