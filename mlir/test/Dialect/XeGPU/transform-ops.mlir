@@ -372,8 +372,9 @@ module attributes {transform.with_named_sequence} {
     %func = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %0 = transform.structured.match ops{["xegpu.dpas"]} in %func : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_operand %0[0] : (!transform.any_op) -> !transform.any_value
+    %2 = transform.xegpu.get_load_op %1 : (!transform.any_value) -> !transform.any_op
     // CHECK: transform.xegpu.insert_prefetch %{{.*}}
-    %2 = transform.xegpu.insert_prefetch %1 nb_prefetch = 1 : (!transform.any_value) -> !transform.any_op
+    %3 = transform.xegpu.insert_prefetch %2 nb_prefetch = 1 : (!transform.any_op) -> !transform.any_op
     transform.apply_patterns to %func {
       transform.apply_patterns.canonicalization
     } : !transform.any_op
@@ -419,9 +420,10 @@ module attributes {transform.with_named_sequence} {
     %func = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %0 = transform.structured.match ops{["xegpu.dpas"]} in %func : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_operand %0[0] : (!transform.any_op) -> !transform.any_value
+    %2 = transform.xegpu.get_load_op %1 : (!transform.any_value) -> !transform.any_op
     %nb = transform.param.constant 2 : i64 -> !transform.param<i64>
     // CHECK: transform.xegpu.insert_prefetch %{{.*}}
-    %2 = transform.xegpu.insert_prefetch %1 nb_prefetch = %nb :  (!transform.any_value, !transform.param<i64>) -> !transform.any_op
+    %3 = transform.xegpu.insert_prefetch %2 nb_prefetch = %nb :  (!transform.any_op, !transform.param<i64>) -> !transform.any_op
     transform.apply_patterns to %func {
       transform.apply_patterns.canonicalization
     } : !transform.any_op

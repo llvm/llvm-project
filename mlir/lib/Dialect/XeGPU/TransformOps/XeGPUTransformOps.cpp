@@ -350,12 +350,12 @@ DiagnosedSilenceableFailure
 transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
                                    transform::TransformResults &results,
                                    transform::TransformState &state) {
-  auto targetValues = state.getPayloadValues(getTarget());
-  if (!llvm::hasSingleElement(targetValues))
+  auto targetOps = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(targetOps))
     return emitDefiniteFailure()
-           << "requires exactly one target value handle (got "
-           << llvm::range_size(targetValues) << ")";
-  auto value = *targetValues.begin();
+           << "requires exactly one target op handle (got "
+           << llvm::range_size(targetOps) << ")";
+  auto target = *targetOps.begin();
 
   int64_t nbPrefetch = getStaticNbPrefetch();
   if (getDynamicNbPrefetch()) {
@@ -374,11 +374,13 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
     return emitSilenceableFailure(getLoc())
            << "nb_prefetch must be a positive integer.";
 
-  // Find load operation of the operand.
-  auto maybeLoadOp = findProducerOfType<xegpu::LoadNdOp>(value);
-  if (!maybeLoadOp)
-    return emitSilenceableFailure(getLoc()) << "Could not find load op.";
-  auto loadOp = *maybeLoadOp;
+  // Cast target to load op.
+  auto maybeLoadOp = dyn_cast<xegpu::LoadNdOp>(target);
+  if (!maybeLoadOp) {
+    return emitSilenceableFailure(getLoc()) << "Expected xegpu.load_nd op, got "
+                                          << target->getName();
+  }
+  auto loadOp = maybeLoadOp;
   if (loadOp.getMixedOffsets().size() == 0) {
     auto diag = emitSilenceableFailure(getLoc())
                 << "Load op must have offsets.";
@@ -396,7 +398,7 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Find descriptor op.
-  auto maybeDescOp = findProducerOfType<xegpu::CreateNdDescOp>(value);
+  auto maybeDescOp = findProducerOfType<xegpu::CreateNdDescOp>(loadOp.getResult());
   if (!maybeDescOp)
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;

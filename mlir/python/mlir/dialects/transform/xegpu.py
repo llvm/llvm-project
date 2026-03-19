@@ -168,7 +168,7 @@ class InsertPrefetchOp(InsertPrefetchOp):
 
     def __init__(
         self,
-        target: Value,
+        target: Union[Operation, Value],
         *,
         nb_prefetch: Optional[MixedInt] = 1,
         loc=None,
@@ -194,7 +194,7 @@ class InsertPrefetchOp(InsertPrefetchOp):
 
 
 def insert_prefetch(
-    target: Value,
+    target: Union[Operation, Value],
     *,
     nb_prefetch: Optional[MixedInt] = 1,
     loc=None,

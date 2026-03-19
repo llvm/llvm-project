@@ -95,8 +95,9 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["xegpu.dpas"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_operand %0[2] : (!transform.any_op) -> !transform.any_value
+    %2 = transform.xegpu.get_load_op %1 : (!transform.any_value) -> !transform.any_op
     // expected-error@below {{Load op is not contained in a scf.for loop.}}
-    %2 = transform.xegpu.insert_prefetch %1 nb_prefetch = 1 : (!transform.any_value) -> !transform.any_op
+    %3 = transform.xegpu.insert_prefetch %2 nb_prefetch = 1 : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
