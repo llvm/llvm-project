@@ -938,15 +938,19 @@ void VPlanTransforms::createInLoopReductionRecipes(
 }
 
 void VPlanTransforms::handleEarlyExits(VPlan &Plan,
-                                       bool HasUncountableEarlyExit) {
+                                       UncountableExitStyle Style) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
-  VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
+  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
 
-  if (HasUncountableEarlyExit) {
-    handleUncountableEarlyExits(Plan, cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
-                                MiddleVPBB);
+  // TODO: We would like to detect uncountable exits and stores within loops
+  //       with such exits from the VPlan alone. Exit detection can be moved
+  //       here from handleUncountableEarlyExits, but we need to improve
+  //       detection of recipes which may write to memory.
+  if (Style != UncountableExitStyle::NoUncountableExit) {
+    // TODO: Check target preference for style.
+    handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB, Style);
     return;
   }
 
