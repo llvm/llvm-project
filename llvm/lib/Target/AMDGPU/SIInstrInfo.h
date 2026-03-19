@@ -1370,6 +1370,7 @@ public:
                          StringRef &ErrInfo) const override;
 
   unsigned getVALUOp(const MachineInstr &MI) const;
+  unsigned getVALUOp(unsigned Opc) const;
 
   void insertScratchExecCopy(MachineFunction &MF, MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,

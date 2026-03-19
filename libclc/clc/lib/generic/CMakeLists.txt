@@ -193,6 +193,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   shared/clc_qualifier.cl
   shared/clc_vload.cl
   shared/clc_vstore.cl
+  subnormal_config.cl
   subgroup/sub_group_barrier.cl
   workitem/clc_get_global_id.cl
   workitem/clc_get_global_linear_id.cl

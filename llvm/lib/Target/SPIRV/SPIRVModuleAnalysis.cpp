@@ -872,7 +872,8 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
                       Capability::GroupNonUniformBallot,
                       Capability::GroupNonUniformClustered,
                       Capability::GroupNonUniformShuffle,
-                      Capability::GroupNonUniformShuffleRelative});
+                      Capability::GroupNonUniformShuffleRelative,
+                      Capability::GroupNonUniformQuad});
 
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
     addAvailableCaps({Capability::DotProduct, Capability::DotProductInputAll,
@@ -1677,6 +1678,9 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpGroupNonUniformQuadSwap:
+    Reqs.addCapability(SPIRV::Capability::GroupNonUniformQuad);
+    break;
   case SPIRV::OpImageQueryFormat: {
     Register ResultReg = MI.getOperand(0).getReg();
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();

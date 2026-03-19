@@ -10,8 +10,8 @@
 #define __CLC_MATH_CLC_NEXTUP_H__
 
 #define __CLC_FUNCTION __clc_nextup
-#define __CLC_BODY <clc/shared/unary_decl.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/unary_decl.inc"
+#include "clc/math/gentype.inc"
 
 #undef __CLC_FUNCTION
 
