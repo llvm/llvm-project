@@ -9,6 +9,7 @@ libclc_configure_source_list(_clspv_sources
   conversion/convert_int2float.cl
   conversion/convert_integer.cl
   math/fma.cl
+  math/nextafter.cl
   shared/vstore_half.cl
 )
 
@@ -68,7 +69,6 @@ libclc_configure_source_list(_gen_sources
   math/minmag.cl
   math/modf.cl
   math/nan.cl
-  math/nextafter.cl
   math/pow.cl
   math/pown.cl
   math/powr.cl
