@@ -17,16 +17,14 @@ foreach(t ${LIBCLC_TARGETS_TO_BUILD})
   endif()
 
   # Get the output file from the target property
-  get_target_property(target_file libclc-${t} TARGET_FILE)
-  get_filename_component(output_file ${target_file} NAME)
+  set(target_file "$<TARGET_PROPERTY:libclc-${t},TARGET_FILE>")
+  set(output_file "$<PATH:GET_FILENAME,${target_file}>")
 
   set(LIBCLC_TARGET_TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/${t})
   file(MAKE_DIRECTORY ${LIBCLC_TARGET_TEST_DIR})
-  file(WRITE ${LIBCLC_TARGET_TEST_DIR}/check-external-funcs.test
-"; RUN: llvm-nm -u \"%libclc_library_dir/${t}/${output_file}\" | FileCheck %s --allow-empty
-
-; CHECK-NOT: {{.+}}
-")
+  file(GENERATE OUTPUT ${LIBCLC_TARGET_TEST_DIR}/check-external-funcs.test
+    CONTENT "; RUN: llvm-nm -u \"%libclc_library_dir/${t}/${output_file}\" | FileCheck %s --allow-empty\n\n; CHECK-NOT: {{.+}}\n"
+  )
 
   configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
