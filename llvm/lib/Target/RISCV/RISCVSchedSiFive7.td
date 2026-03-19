@@ -346,21 +346,30 @@ multiclass SiFive7WriteResBase<int VLEN,
     def : WriteRes<WriteIMul32, [PipeB]>;
   }
 
-  // Integer division
-  def : WriteRes<WriteIDiv, [PipeB, IDiv]> {
+  // IDiv / IRem in a 32-bit core should have the same latency and throughput
+  // as IDiv32 / IRem32 in a 64-bit core.
+  def SiFive7RV64IDivRemSchedWriteRes : SchedWriteRes<[PipeB, IDiv]> {
     let Latency = 66;
     let ReleaseAtCycles = [1, 65];
   }
+  def SiFive7RV32IDivRemSchedWriteRes : SchedWriteRes<[PipeB, IDiv]> {
+    let Latency = 34;
+    let ReleaseAtCycles = [1, 33];
+  }
+  def SiFive7IDivRemSchedWriteVariant : SchedWriteVariant<[
+    SchedVar<RV32SchedPred, [!cast<SchedWriteRes>(NAME # "SiFive7RV32IDivRemSchedWriteRes")]>,
+    SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # "SiFive7RV64IDivRemSchedWriteRes")]>
+  ]>;
+
+  // Integer division
+  def : SchedAlias<WriteIDiv, !cast<SchedWrite>(NAME # "SiFive7IDivRemSchedWriteVariant")>;
   def : WriteRes<WriteIDiv32,  [PipeB, IDiv]> {
     let Latency = 34;
     let ReleaseAtCycles = [1, 33];
   }
 
   // Integer remainder
-  def : WriteRes<WriteIRem, [PipeB, IDiv]> {
-    let Latency = 66;
-    let ReleaseAtCycles = [1, 65];
-  }
+  def : SchedAlias<WriteIRem, !cast<SchedWrite>(NAME # "SiFive7IDivRemSchedWriteVariant")>;
   def : WriteRes<WriteIRem32,  [PipeB, IDiv]> {
     let Latency = 34;
     let ReleaseAtCycles = [1, 33];

@@ -23,7 +23,9 @@ void RegisterTypeBuilderClang::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-void RegisterTypeBuilderClang::Terminate() {}
+void RegisterTypeBuilderClang::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 lldb::RegisterTypeBuilderSP
 RegisterTypeBuilderClang::CreateInstance(Target &target) {

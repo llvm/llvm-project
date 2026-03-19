@@ -1332,19 +1332,6 @@ let EmitPriority = 1 in {
 // Pseudo-instructions
 //===----------------------------------------------------------------------===//
 
-class LongBcciPseudo<DAGOperand InTyImm, int size>
-    : Pseudo<(outs), (ins GPR:$rs1, InTyImm:$imm, simm21_lsb0_jal:$imm20), []>
-{
-  let Size = size;
-  let isBarrier = 1;
-  let isBranch = 1;
-  let hasSideEffects = 0;
-  let mayStore = 0;
-  let mayLoad = 0;
-  let isAsmParserOnly = 1;
-  let hasNoSchedulingInfo = 1;
-}
-
 // This will be expanded into either:
 // QC.BXXX(4 bytes) + JAL(4 bytes)
 // or
@@ -1500,10 +1487,16 @@ class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
           (OpNode GPRNoX0:$lhs, InTyImm:$Constant, (CCtoRISCVCC $cc),
                   GPRNoX0:$truev, GPRNoX0:$falsev)>;
 
+class SelectQCbiSFB<CondCode Cond, DAGOperand InTyImm, SDNodeXForm xform>
+    : Pat<(riscv_selectcc (i32 GPRNoX0:$lhs), InTyImm:$Constant, Cond:$cc,
+                          (i32 GPR:$truev), GPR:$falsev),
+          (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (xform $cc), GPRNoX0:$lhs,
+                          InTyImm:$Constant)>;
+
 let Predicates = [HasVendorXqciac, IsRV32] in {
 def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12_lo:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12_lo:$imm12)>;
-def : Pat<(i32 (add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
+def : Pat<(i32 (riscv_add_like_non_imm12 (shl GPRNoX0:$rs1, (i32 uimm5gt3:$imm)), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, uimm5gt3:$imm)>;
 def : Pat<(i32 (riscv_shl_add GPRNoX0:$rs1, (i32 tuimm5gt3:$imm), GPRNoX0:$rs2)),
           (QC_SHLADD GPRNoX0:$rs1, GPRNoX0:$rs2, tuimm5gt3:$imm)>;
@@ -1563,6 +1556,22 @@ def : PatGprNoX0GprNoX0<ushlsat, QC_SHLUSAT>;
 def : PatGprNoX0GprNoX0<sshlsat, QC_SHLSAT>;
 } // Predicates = [HasVendorXqcia, IsRV32]
 
+let Predicates = [HasShortForwardBranchImm, HasVendorXqcibi, IsRV32] in {
+def : SelectQCbiSFB<SETEQ, simm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETNE, simm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETGE, simm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETLT, simm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETULT, uimm5nonzero, CCtoQC_BccI>;
+def : SelectQCbiSFB<SETUGE, uimm5nonzero, CCtoQC_BccI>;
+
+def : SelectQCbiSFB<SETEQ, simm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETGE, simm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETLT, simm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETNE, simm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETULT, uimm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETUGE, uimm16nonzero, CCtoQC_E_BccI>;
+}
+
 /// Branches
 
 let Predicates = [HasVendorXqcibi, IsRV32] in {
@@ -1579,7 +1588,9 @@ def : Bcci48Pat<SETLT, QC_E_BLTI, simm16nonzero>;
 def : Bcci48Pat<SETGE, QC_E_BGEI, simm16nonzero>;
 def : Bcci48Pat<SETULT, QC_E_BLTUI, uimm16nonzero>;
 def : Bcci48Pat<SETUGE, QC_E_BGEUI, uimm16nonzero>;
+} // let Predicates = [HasVendorXqcibi, IsRV32]
 
+let Predicates = [HasVendorXqcibi, NoShortForwardBranchImm, IsRV32] in {
 def : SelectQCbi<SETEQ, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
 def : SelectQCbi<SETNE, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
 def : SelectQCbi<SETLT, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
@@ -1593,7 +1604,7 @@ def : SelectQCbi<SETLT, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>
 def : SelectQCbi<SETGE, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
 def : SelectQCbi<SETULT, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
 def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
-} // let Predicates = [HasVendorXqcibi, IsRV32]
+} // let Predicates = [HasVendorXqcibi, NoShortForwardBranchImm, IsRV32]
 
 def QC_EXTXForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(llvm::countr_zero(N->getZExtValue() + 1),
@@ -1654,7 +1665,7 @@ def : QCIMVCCIZeroPat<SETGE,  QC_MVGEI>;
 def : QCIMVCCIZeroPat<SETUGE, QC_MVGEUI>;
 }
 
-let Predicates = [HasVendorXqcicm, IsRV32] in {
+let Predicates = [HasVendorXqcicm, NoShortForwardBranchImm, IsRV32] in {
 // These all use *imm5nonzero because we want to use PseudoCCMOVGPR with X0 when SFB is enabled.
 // When SFB is not enabled, the `QCIMVCCIZeroPat`s above will be used if RHS=0.
 def : QCIMVCCIPat<SETEQ,  QC_MVEQI,  simm5nonzero>;
@@ -1716,15 +1727,17 @@ def : QCISELECTICCIPat<SETNE,  QC_SELECTINEI>;
 def : QCISELECTICCIPatInv<SETEQ,  QC_SELECTINEI>;
 def : QCISELECTICCIPatInv<SETNE,  QC_SELECTIEQI>;
 
+def : QCISELECTIICCPat<SETEQ,  QC_SELECTIIEQ>;
+def : QCISELECTIICCPat<SETNE,  QC_SELECTIINE>;
+} // Predicates = [HasVendorXqcics, IsRV32]
+
+let Predicates = [HasVendorXqcics, NoShortForwardBranchImm, IsRV32] in {
 def : QCISELECTICCPat<SETEQ,  QC_SELECTIEQ>;
 def : QCISELECTICCPat<SETNE,  QC_SELECTINE>;
 
 def : QCISELECTICCPatInv<SETEQ,  QC_SELECTINE>;
 def : QCISELECTICCPatInv<SETNE,  QC_SELECTIEQ>;
-
-def : QCISELECTIICCPat<SETEQ,  QC_SELECTIIEQ>;
-def : QCISELECTIICCPat<SETNE,  QC_SELECTIINE>;
-} // Predicates = [HasVendorXqcics, IsRV32]
+} // Predicates = [HasVendorXqcics, NoShortForwardBranchImm, IsRV32]
 
 // Prioritize Xqcicm over these patterns, because Xqcicm is compressible.
 let Predicates = [HasVendorXqcics, NoVendorXqcicm, IsRV32] in {

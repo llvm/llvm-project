@@ -83,6 +83,8 @@ public:
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 
+  bool isCLZForZeroUndef() const override { return false; }
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
