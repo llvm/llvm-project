@@ -1231,6 +1231,7 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
       case DiagnosticsEngine::Level::Ignored:
         llvm_unreachable("Unexpected diagnostic level!");
       }
+      llvm_unreachable("Unknown DiagnosticsEngine::Level enum");
     }();
 
     std::advance(It, DiagIndex);

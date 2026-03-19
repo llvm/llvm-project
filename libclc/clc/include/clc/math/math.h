@@ -58,16 +58,6 @@
 
 #define LOG_MAGIC_NUM_SP32 (1 + NUMEXPBITS_SP32 - EXPBIAS_SP32)
 
-_CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
-  int ix = __clc_as_int(x);
-  if (!__clc_fp32_subnormals_supported() && ((ix & EXPBITS_SP32) == 0) &&
-      ((ix & MANTBITS_SP32) != 0)) {
-    ix &= SIGNBIT_SP32;
-    x = __clc_as_float(ix);
-  }
-  return x;
-}
-
 #ifdef cl_khr_fp64
 
 #define SIGNBIT_DP64 0x8000000000000000L

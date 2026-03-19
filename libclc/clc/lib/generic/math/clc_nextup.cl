@@ -8,6 +8,7 @@
 
 #include "clc/clc_convert.h"
 #include "clc/math/clc_nextup.h"
+#include "clc/math/clc_subnormal_config.h"
 #include "clc/relational/clc_isnan.h"
 
 #define __CLC_BODY "clc_nextup.inc"

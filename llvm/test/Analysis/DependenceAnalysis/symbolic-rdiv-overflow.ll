@@ -10,7 +10,7 @@
 ;   A[i] = 2;
 ; }
 ;
-; There is a dependency between the two stores, for example, each store 
+; There is a dependency between the two stores, for example, each store
 ; will access A[0] when i is 1 and 0 respectively.
 define void @symbolicrdiv_prod_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'symbolicrdiv_prod_ovfl'
