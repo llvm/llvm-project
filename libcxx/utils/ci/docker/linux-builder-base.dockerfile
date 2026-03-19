@@ -83,11 +83,6 @@ RUN sudo apt-get update \
         xz-utils \
     && sudo rm -rf /var/lib/apt/lists/*
 
-# Install the Python dependencies needed by the test suite.
-# TODO: We should be installing from libcxx/test/requirements.txt, however
-# the Docker context doesn't easily allow us to COPY from the source tree.
-RUN python3 -m pip install --break-system-packages filecheck
-
 # These two locales are not enabled by default so generate them
 RUN <<EOF
   set -e

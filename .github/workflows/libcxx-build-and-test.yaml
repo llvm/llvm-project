@@ -56,7 +56,11 @@ jobs:
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r libcxx/test/requirements.txt
+          libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -101,7 +105,11 @@ jobs:
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r libcxx/test/requirements.txt
+          libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
@@ -156,7 +164,11 @@ jobs:
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r libcxx/test/requirements.txt
+          libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: clang-22
           CXX: clang++-22
@@ -250,7 +262,7 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Install dependencies
         run: |
-          pip install psutil
+          pip install -r libcxx/test/requirements.txt
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
         run: |
