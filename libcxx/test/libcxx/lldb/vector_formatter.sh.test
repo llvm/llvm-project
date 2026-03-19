@@ -1,0 +1,160 @@
+# REQUIRES: host-has-lldb-with-python
+# REQUIRES: has-filecheck
+# REQUIRES: has-splitfile
+# REQUIRES: optimization=none
+
+# RUN: split-file %s %{temp}
+# RUN: %{cxx} %{flags} %{temp}/main.cpp -o %t.out %{compile_flags} -g %{link_flags}
+
+# RUN: %{lldb} --no-lldbinit --batch -o "settings set target.load-script-from-symbol-file false" \
+# RUN:         -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:         -o "command script import %S/../../../utils/lldb/libcxx/libcxx.py" \
+# RUN:         -s %{temp}/lldb.commands %t.out 2>&1 | FileCheck %s
+
+# CHECK: (lldb) frame var empty
+# CHECK-NEXT: (std::vector<float>) empty = size=0 {}
+
+# CHECK: (lldb) frame var vi
+# CHECK-NEXT: (std::vector<int>) vi = size=2 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 2
+# CHECK-NEXT: }
+
+# CHECK: (lldb) frame var empty[0]
+# CHECK: array index 0 is not valid
+
+# CHECK: (lldb) continue
+# CHECK: (lldb) frame var vi
+# CHECK-NEXT: (std::vector<int>) vi = size=5 {
+# CHECK-NEXT:   [0] = 1
+# CHECK-NEXT:   [1] = 2
+# CHECK-NEXT:   [2] = 5
+# CHECK-NEXT:   [3] = 4
+# CHECK-NEXT:   [4] = 0
+# CHECK-NEXT: }
+
+# CHECK: (lldb) frame var vi[2]
+# CHECK-NEXT: (int) vi[2] = 5
+
+# CHECK: (lldb) frame var vi[0]
+# CHECK-NEXT: (int) vi[0] = 1
+
+# CHECK: (lldb) continue
+# CHECK: (lldb) frame var vi[0]
+# CHECK-NEXT: array index 0 is not valid
+
+# CHECK: (lldb) frame var vi
+# CHECK-NEXT: (std::vector<int>) vi = size=0 {}
+
+# CHECK: (lldb) continue
+# CHECK: (lldb) frame var vec_of_vec
+# CHECK-NEXT: (std::vector<std::vector<int> >) vec_of_vec = size=1 {
+# CHECK-NEXT:   [0] = size=2 {
+# CHECK-NEXT:     [0] = 10
+# CHECK-NEXT:     [1] = 11
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
+
+# CHECK: (lldb) frame var vec_of_vec[0]
+# CHECK-NEXT: (std::vector<int>) vec_of_vec[0] = size=2 {
+# CHECK-NEXT:   [0] = 10
+# CHECK-NEXT:   [1] = 11
+# CHECK-NEXT: }
+
+# CHECK: (lldb) continue
+# CHECK: (lldb) frame var vs
+# CHECK-NEXT: (std::vector<std::string>) vs = size=2 {
+# CHECK-NEXT:   [0] = "Foo"
+# CHECK-NEXT:   [1] = "Bar"
+# CHECK-NEXT: }
+
+# CHECK: (lldb) frame var vs[1]
+# CHECK-NEXT: (std::string) vs[1] = "Bar"
+
+# CHECK: (lldb) continue
+# CHECK: (lldb) frame var vec_ref
+# CHECK-NEXT: (const std::vector<int> &) vec_ref = 0x{{.*}} size=2: {
+# CHECK-NEXT:   [0] = 10
+# CHECK-NEXT:   [1] = 11
+# CHECK-NEXT: }
+
+# CHECK: (lldb) frame var vec_ref[1]
+# CHECK-NEXT: (int) vec_ref[1] = 11
+
+# CHECK: (lldb) frame var vec_ptr
+# CHECK-NEXT: (const std::vector<int> *) vec_ptr = 0x{{.*}} size=2
+
+# CHECK: (lldb) frame var vec_ptr[1]
+# CHECK-NEXT: (int) vec_ptr[1] = 11
+
+#--- main.cpp
+
+#include <vector>
+#include <string>
+
+void break_here() {}
+
+int main() {
+  std::vector<float> empty;
+  std::vector<int> vi = {1, 2};
+
+  break_here();
+
+  vi.push_back(5);
+  vi.push_back(4);
+  vi.push_back(0);
+
+  break_here();
+
+  vi.clear();
+
+  break_here();
+
+  vi.push_back(10);
+  vi.push_back(11);
+  std::vector<std::vector<int>> vec_of_vec{vi};
+
+  break_here();
+
+  std::vector<std::string>  vs{
+    "Foo",
+    "Bar"
+  };
+
+  break_here();
+
+  [[maybe_unused]] const auto &vec_ref = vi;
+  [[maybe_unused]] const auto *vec_ptr = &vi;
+
+  break_here();
+}
+
+#--- lldb.commands
+break set -p break_here -X main
+run
+frame var empty
+frame var vi
+frame var empty[0]
+
+continue
+frame var vi
+frame var vi[2]
+frame var vi[0]
+
+continue
+frame var vi[0]
+frame var vi
+
+continue
+frame var vec_of_vec
+frame var vec_of_vec[0]
+
+continue
+frame var vs
+frame var vs[1]
+
+continue
+frame var vec_ref
+frame var vec_ref[1]
+frame var vec_ptr
+frame var vec_ptr[1]
