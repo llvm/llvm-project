@@ -1519,9 +1519,10 @@ static void splitAMDGPUModule(
           }
 
           // Aliases should not be separated from their underlying object.
-          if (const auto *GA = dyn_cast<GlobalAlias>(GV))
+          if (const auto *GA = dyn_cast<GlobalAlias>(GV)) {
             if (const auto *Fn = dyn_cast<Function>(GA->getAliaseeObject()))
               return FnsInPart.contains(Fn);
+          }
 
           // Everything else goes in the first non-empty module we create.
           return ImportAllGVs || needsConservativeImport(GV);
