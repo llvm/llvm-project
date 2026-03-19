@@ -3908,7 +3908,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   const SDValue Int32VTOp = DAG.getValueType(MVT::i32);
 
   // Perform all saturation at i32 and truncate
-  if (SatWidth < DstWidth && (SatWidth <= 32)) {
+  if (SatWidth < DstWidth && SatWidth <= 32) {
     const uint64_t Int32Width = 32;
     SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, Int32VTOp);
     SDValue Int32SatVal;
@@ -3927,7 +3927,6 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
       Int32SatVal = DAG.getNode(ISD::UMIN, DL, MVT::i32, FpToInt32, MinConst);
     }
 
-    // DstWidth > Int32Width
     return DAG.getExtOrTrunc(OpOpcode == ISD::FP_TO_SINT_SAT, Int32SatVal, DL,
                              DstVT);
   }
