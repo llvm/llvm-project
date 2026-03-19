@@ -4,8 +4,8 @@
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 -stop-after=instruction-select -o - %s | FileCheck -check-prefix=GFX1250 %s
 
 ; Natural mapping
-define amdgpu_ps float @struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(i32 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
-  ; GFX8-LABEL: name: struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+define amdgpu_ps float @struct_buffer_atomic_sub_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(i32 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
+  ; GFX8-LABEL: name: struct_buffer_atomic_sub_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX8: bb.1 (%ir-block.0):
   ; GFX8-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
   ; GFX8-NEXT: {{  $}}
@@ -19,11 +19,11 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_ATOMIC_ADD_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
-  ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_BOTHEN_RTN]]
+  ; GFX8-NEXT:   [[BUFFER_ATOMIC_SUB_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_SUB_BOTHEN_RTN]]
   ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
-  ; GFX1200-LABEL: name: struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+  ; GFX1200-LABEL: name: struct_buffer_atomic_sub_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1200: bb.1 (%ir-block.0):
   ; GFX1200-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
   ; GFX1200-NEXT: {{  $}}
@@ -37,11 +37,11 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_
   ; GFX1200-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX1200-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1200-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX1200-NEXT:   [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
-  ; GFX1200-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN]]
+  ; GFX1200-NEXT:   [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1200-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN]]
   ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
-  ; GFX1250-LABEL: name: struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+  ; GFX1250-LABEL: name: struct_buffer_atomic_sub_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1250: bb.1 (%ir-block.0):
   ; GFX1250-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
   ; GFX1250-NEXT: {{  $}}
@@ -55,16 +55,16 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_
   ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX1250-NEXT:   [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN]]
+  ; GFX1250-NEXT:   [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN]]
   ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
-  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
+  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i32 %ret to float
   ret float %cast
 }
 
-define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(i32 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
-  ; GFX8-LABEL: name: struct_buffer_atomic_add_i32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+define amdgpu_ps void @struct_buffer_atomic_sub_i32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(i32 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
+  ; GFX8-LABEL: name: struct_buffer_atomic_sub_i32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX8: bb.1 (%ir-block.0):
   ; GFX8-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
   ; GFX8-NEXT: {{  $}}
@@ -78,10 +78,10 @@ define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__vgpr_val__sgpr_rsrc__
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX8-NEXT:   BUFFER_ATOMIC_ADD_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX8-NEXT:   BUFFER_ATOMIC_SUB_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
-  ; GFX1200-LABEL: name: struct_buffer_atomic_add_i32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+  ; GFX1200-LABEL: name: struct_buffer_atomic_sub_i32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1200: bb.1 (%ir-block.0):
   ; GFX1200-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
   ; GFX1200-NEXT: {{  $}}
@@ -95,10 +95,10 @@ define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__vgpr_val__sgpr_rsrc__
   ; GFX1200-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX1200-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1200-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX1200-NEXT:   BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1200-NEXT:   BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
   ; GFX1200-NEXT:   S_ENDPGM 0
   ;
-  ; GFX1250-LABEL: name: struct_buffer_atomic_add_i32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+  ; GFX1250-LABEL: name: struct_buffer_atomic_sub_i32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1250: bb.1 (%ir-block.0):
   ; GFX1250-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
   ; GFX1250-NEXT: {{  $}}
@@ -112,14 +112,14 @@ define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__vgpr_val__sgpr_rsrc__
   ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX1250-NEXT:   BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1250-NEXT:   BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
   ; GFX1250-NEXT:   S_ENDPGM 0
-  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
+  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
 }
 
-define amdgpu_ps <2 x float> @struct_buffer_atomic_add_i64__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(i64 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
-  ; GFX8-LABEL: name: struct_buffer_atomic_add_i64__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+define amdgpu_ps <2 x float> @struct_buffer_atomic_sub_i64__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(i64 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
+  ; GFX8-LABEL: name: struct_buffer_atomic_sub_i64__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX8: bb.1 (%ir-block.0):
   ; GFX8-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; GFX8-NEXT: {{  $}}
@@ -135,14 +135,14 @@ define amdgpu_ps <2 x float> @struct_buffer_atomic_add_i64__vgpr_val__sgpr_rsrc_
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_ATOMIC_ADD_X2_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_ADD_X2_BOTHEN_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
-  ; GFX8-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_ADD_X2_BOTHEN_RTN]].sub0
-  ; GFX8-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_ADD_X2_BOTHEN_RTN]].sub1
+  ; GFX8-NEXT:   [[BUFFER_ATOMIC_SUB_X2_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_SUB_X2_BOTHEN_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
+  ; GFX8-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_SUB_X2_BOTHEN_RTN]].sub0
+  ; GFX8-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_SUB_X2_BOTHEN_RTN]].sub1
   ; GFX8-NEXT:   $vgpr0 = COPY [[COPY9]]
   ; GFX8-NEXT:   $vgpr1 = COPY [[COPY10]]
   ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ;
-  ; GFX1200-LABEL: name: struct_buffer_atomic_add_i64__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+  ; GFX1200-LABEL: name: struct_buffer_atomic_sub_i64__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1200: bb.1 (%ir-block.0):
   ; GFX1200-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; GFX1200-NEXT: {{  $}}
@@ -158,14 +158,14 @@ define amdgpu_ps <2 x float> @struct_buffer_atomic_add_i64__vgpr_val__sgpr_rsrc_
   ; GFX1200-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX1200-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1200-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GFX1200-NEXT:   [[BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
-  ; GFX1200-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN_RTN]].sub0
-  ; GFX1200-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN_RTN]].sub1
+  ; GFX1200-NEXT:   [[BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vreg_64 = BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
+  ; GFX1200-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN_RTN]].sub0
+  ; GFX1200-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN_RTN]].sub1
   ; GFX1200-NEXT:   $vgpr0 = COPY [[COPY9]]
   ; GFX1200-NEXT:   $vgpr1 = COPY [[COPY10]]
   ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ;
-  ; GFX1250-LABEL: name: struct_buffer_atomic_add_i64__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+  ; GFX1250-LABEL: name: struct_buffer_atomic_sub_i64__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1250: bb.1 (%ir-block.0):
   ; GFX1250-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; GFX1250-NEXT: {{  $}}
@@ -181,19 +181,19 @@ define amdgpu_ps <2 x float> @struct_buffer_atomic_add_i64__vgpr_val__sgpr_rsrc_
   ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GFX1250-NEXT:   [[BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vreg_64_align2 = BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
-  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN_RTN]].sub0
-  ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN_RTN]].sub1
+  ; GFX1250-NEXT:   [[BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vreg_64_align2 = BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
+  ; GFX1250-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN_RTN]].sub0
+  ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN_RTN]].sub1
   ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY9]]
   ; GFX1250-NEXT:   $vgpr1 = COPY [[COPY10]]
   ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
-  %ret = call i64 @llvm.amdgcn.struct.buffer.atomic.add.i64(i64 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
+  %ret = call i64 @llvm.amdgcn.struct.buffer.atomic.sub.i64(i64 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i64 %ret to <2 x float>
   ret <2 x float> %cast
 }
 
-define amdgpu_ps void @struct_buffer_atomic_add_i64_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(i64 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
-  ; GFX8-LABEL: name: struct_buffer_atomic_add_i64_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+define amdgpu_ps void @struct_buffer_atomic_sub_i64_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset(i64 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
+  ; GFX8-LABEL: name: struct_buffer_atomic_sub_i64_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX8: bb.1 (%ir-block.0):
   ; GFX8-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; GFX8-NEXT: {{  $}}
@@ -209,10 +209,10 @@ define amdgpu_ps void @struct_buffer_atomic_add_i64_noret__vgpr_val__sgpr_rsrc__
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GFX8-NEXT:   BUFFER_ATOMIC_ADD_X2_BOTHEN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
+  ; GFX8-NEXT:   BUFFER_ATOMIC_SUB_X2_BOTHEN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
-  ; GFX1200-LABEL: name: struct_buffer_atomic_add_i64_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+  ; GFX1200-LABEL: name: struct_buffer_atomic_sub_i64_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1200: bb.1 (%ir-block.0):
   ; GFX1200-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; GFX1200-NEXT: {{  $}}
@@ -228,10 +228,10 @@ define amdgpu_ps void @struct_buffer_atomic_add_i64_noret__vgpr_val__sgpr_rsrc__
   ; GFX1200-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX1200-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1200-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GFX1200-NEXT:   BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
+  ; GFX1200-NEXT:   BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
   ; GFX1200-NEXT:   S_ENDPGM 0
   ;
-  ; GFX1250-LABEL: name: struct_buffer_atomic_add_i64_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
+  ; GFX1250-LABEL: name: struct_buffer_atomic_sub_i64_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset
   ; GFX1250: bb.1 (%ir-block.0):
   ; GFX1250-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; GFX1250-NEXT: {{  $}}
@@ -247,15 +247,15 @@ define amdgpu_ps void @struct_buffer_atomic_add_i64_noret__vgpr_val__sgpr_rsrc__
   ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX1250-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GFX1250-NEXT:   BUFFER_ATOMIC_ADD_X2_VBUFFER_BOTHEN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
+  ; GFX1250-NEXT:   BUFFER_ATOMIC_SUB_X2_VBUFFER_BOTHEN [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s64), align 1, addrspace 8)
   ; GFX1250-NEXT:   S_ENDPGM 0
-  %ret = call i64 @llvm.amdgcn.struct.buffer.atomic.add.i64(i64 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
+  %ret = call i64 @llvm.amdgcn.struct.buffer.atomic.sub.i64(i64 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
 }
 
 ; All register operands need legalization
-define amdgpu_ps float @struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset(i32 inreg %val, <4 x i32> %rsrc, i32 inreg %vindex, i32 inreg %voffset, i32 %soffset) {
-  ; GFX8-LABEL: name: struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
+define amdgpu_ps float @struct_buffer_atomic_sub_i32__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset(i32 inreg %val, <4 x i32> %rsrc, i32 inreg %vindex, i32 inreg %voffset, i32 %soffset) {
+  ; GFX8-LABEL: name: struct_buffer_atomic_sub_i32__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
   ; GFX8: bb.1 (%ir-block.0):
   ; GFX8-NEXT:   successors: %bb.2(0x80000000)
   ; GFX8-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -298,7 +298,7 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_
   ; GFX8-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_ATOMIC_ADD_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_BOTHEN_RTN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX8-NEXT:   [[BUFFER_ATOMIC_SUB_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_BOTHEN_RTN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
   ; GFX8-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
@@ -308,10 +308,10 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_
   ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.5:
-  ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_BOTHEN_RTN]]
+  ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_SUB_BOTHEN_RTN]]
   ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
-  ; GFX1200-LABEL: name: struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
+  ; GFX1200-LABEL: name: struct_buffer_atomic_sub_i32__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
   ; GFX1200: bb.1 (%ir-block.0):
   ; GFX1200-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1200-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -354,7 +354,7 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_
   ; GFX1200-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX1200-NEXT:   [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1200-NEXT:   [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
   ; GFX1200-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX1200-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX1200-NEXT: {{  $}}
@@ -364,10 +364,10 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_
   ; GFX1200-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.5:
-  ; GFX1200-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN]]
+  ; GFX1200-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN]]
   ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
-  ; GFX1250-LABEL: name: struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
+  ; GFX1250-LABEL: name: struct_buffer_atomic_sub_i32__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
   ; GFX1250: bb.1 (%ir-block.0):
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -410,7 +410,7 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_
   ; GFX1250-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX1250-NEXT:   [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1250-NEXT:   [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
   ; GFX1250-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX1250-NEXT: {{  $}}
@@ -420,16 +420,16 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__sgpr_val__vgpr_rsrc__sgpr_
   ; GFX1250-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.5:
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN]]
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN]]
   ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
-  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
+  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %cast = bitcast i32 %ret to float
   ret float %cast
 }
 
 ; All register operands need legalization
-define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset(i32 inreg %val, <4 x i32> %rsrc, i32 inreg %vindex, i32 inreg %voffset, i32 %soffset) {
-  ; GFX8-LABEL: name: struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
+define amdgpu_ps void @struct_buffer_atomic_sub_i32_noret__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset(i32 inreg %val, <4 x i32> %rsrc, i32 inreg %vindex, i32 inreg %voffset, i32 %soffset) {
+  ; GFX8-LABEL: name: struct_buffer_atomic_sub_i32_noret__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
   ; GFX8: bb.1 (%ir-block.0):
   ; GFX8-NEXT:   successors: %bb.2(0x80000000)
   ; GFX8-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -472,7 +472,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__
   ; GFX8-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX8-NEXT:   BUFFER_ATOMIC_ADD_BOTHEN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX8-NEXT:   BUFFER_ATOMIC_SUB_BOTHEN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
   ; GFX8-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
@@ -484,7 +484,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__
   ; GFX8-NEXT: bb.5:
   ; GFX8-NEXT:   S_ENDPGM 0
   ;
-  ; GFX1200-LABEL: name: struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
+  ; GFX1200-LABEL: name: struct_buffer_atomic_sub_i32_noret__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
   ; GFX1200: bb.1 (%ir-block.0):
   ; GFX1200-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1200-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -527,7 +527,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__
   ; GFX1200-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX1200-NEXT:   BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1200-NEXT:   BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
   ; GFX1200-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX1200-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX1200-NEXT: {{  $}}
@@ -539,7 +539,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__
   ; GFX1200-NEXT: bb.5:
   ; GFX1200-NEXT:   S_ENDPGM 0
   ;
-  ; GFX1250-LABEL: name: struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
+  ; GFX1250-LABEL: name: struct_buffer_atomic_sub_i32_noret__sgpr_val__vgpr_rsrc__sgpr_voffset__vgpr_soffset
   ; GFX1250: bb.1 (%ir-block.0):
   ; GFX1250-NEXT:   successors: %bb.2(0x80000000)
   ; GFX1250-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -582,7 +582,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__
   ; GFX1250-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX1250-NEXT:   BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1250-NEXT:   BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
   ; GFX1250-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX1250-NEXT: {{  $}}
@@ -593,13 +593,13 @@ define amdgpu_ps void @struct_buffer_atomic_add_i32_noret__sgpr_val__vgpr_rsrc__
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.5:
   ; GFX1250-NEXT:   S_ENDPGM 0
-  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
+  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
 }
 
 ; Natural mapping + slc
-define amdgpu_ps float @struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc(i32 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
-  ; GFX8-LABEL: name: struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
+define amdgpu_ps float @struct_buffer_atomic_sub_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc(i32 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
+  ; GFX8-LABEL: name: struct_buffer_atomic_sub_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX8: bb.1 (%ir-block.0):
   ; GFX8-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
   ; GFX8-NEXT: {{  $}}
@@ -613,11 +613,11 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX8-NEXT:   [[BUFFER_ATOMIC_ADD_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
-  ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_BOTHEN_RTN]]
+  ; GFX8-NEXT:   [[BUFFER_ATOMIC_SUB_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_SUB_BOTHEN_RTN]]
   ; GFX8-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
-  ; GFX1200-LABEL: name: struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
+  ; GFX1200-LABEL: name: struct_buffer_atomic_sub_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX1200: bb.1 (%ir-block.0):
   ; GFX1200-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
   ; GFX1200-NEXT: {{  $}}
@@ -631,11 +631,11 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_
   ; GFX1200-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX1200-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1200-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX1200-NEXT:   [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
-  ; GFX1200-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN]]
+  ; GFX1200-NEXT:   [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1200-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN]]
   ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
-  ; GFX1250-LABEL: name: struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
+  ; GFX1250-LABEL: name: struct_buffer_atomic_sub_i32__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX1250: bb.1 (%ir-block.0):
   ; GFX1250-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
   ; GFX1250-NEXT: {{  $}}
@@ -649,15 +649,15 @@ define amdgpu_ps float @struct_buffer_atomic_add_i32__vgpr_val__sgpr_rsrc__vgpr_
   ; GFX1250-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX1250-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX1250-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX1250-NEXT:   [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
-  ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_ADD_VBUFFER_BOTHEN_RTN]]
+  ; GFX1250-NEXT:   [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN:%[0-9]+]]:vgpr_32 = BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 3, implicit $exec :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+  ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_ATOMIC_SUB_VBUFFER_BOTHEN_RTN]]
   ; GFX1250-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
-  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 2)
+  %ret = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 2)
   %cast = bitcast i32 %ret to float
   ret float %cast
 }
 
-declare i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32, i32 immarg) #0
-declare i64 @llvm.amdgcn.struct.buffer.atomic.add.i64(i64, <4 x i32>, i32, i32, i32, i32 immarg) #0
+declare i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32, <4 x i32>, i32, i32, i32, i32 immarg) #0
+declare i64 @llvm.amdgcn.struct.buffer.atomic.sub.i64(i64, <4 x i32>, i32, i32, i32, i32 immarg) #0
 
 attributes #0 = { nounwind }
