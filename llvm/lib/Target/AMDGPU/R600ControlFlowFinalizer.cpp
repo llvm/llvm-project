@@ -289,7 +289,7 @@ private:
               &R600::R600_Reg128RegClass);
       }
     }
-    if ((DstRegs.find(SrcMI) == DstRegs.end())) {
+    if (!DstRegs.count(SrcMI)) {
       DstRegs.insert(DstMI);
       return true;
     }
