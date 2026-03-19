@@ -20,6 +20,7 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -28,6 +29,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 
@@ -937,8 +939,57 @@ void VPlanTransforms::createInLoopReductionRecipes(
     R->eraseFromParent();
 }
 
-void VPlanTransforms::handleEarlyExits(VPlan &Plan,
-                                       UncountableExitStyle Style) {
+/// Check if all loads in the loop are dereferenceable. Iterates over all blocks
+/// reachable from \p HeaderVPBB, skipping \p MiddleVPBB. Returns false if any
+/// non-dereferenceable load is found.
+static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
+                                       VPBasicBlock *MiddleVPBB, Loop *TheLoop,
+                                       PredicatedScalarEvolution &PSE,
+                                       DominatorTree &DT, AssumptionCache *AC) {
+  ScalarEvolution &SE = *PSE.getSE();
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(HeaderVPBB))) {
+    // Skip blocks outside the loop (exit blocks and their successors).
+    if (VPBB == MiddleVPBB)
+      continue;
+    for (VPRecipeBase &R : *VPBB) {
+      auto *VPI = dyn_cast<VPInstructionWithType>(&R);
+      if (!VPI || VPI->getOpcode() != Instruction::Load)
+        continue;
+
+      // Get the pointer SCEV for dereferenceability checking.
+      VPValue *Ptr = VPI->getOperand(0);
+      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
+      if (isa<SCEVCouldNotCompute>(PtrSCEV)) {
+        LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Found non-dereferenceable "
+                             "load with SCEVCouldNotCompute pointer\n");
+        return false;
+      }
+
+      // Check dereferenceability using the SCEV-based version.
+      Type *LoadTy = VPI->getResultType();
+      const SCEV *SizeSCEV =
+          SE.getStoreSizeOfExpr(DL.getIndexType(PtrSCEV->getType()), LoadTy);
+      auto *Load = cast<LoadInst>(VPI->getUnderlyingValue());
+      SmallVector<const SCEVPredicate *> Preds;
+      if (isDereferenceableAndAlignedInLoop(PtrSCEV, Load->getAlign(), SizeSCEV,
+                                            TheLoop, SE, DT, AC, &Preds))
+        continue;
+
+      LLVM_DEBUG(
+          dbgs() << "LV: Not vectorizing: Auto-vectorization of loops with "
+                    "potentially faulting load is not supported.\n");
+      return false;
+    }
+  }
+  return true;
+}
+
+bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
+                                       Loop *TheLoop,
+                                       PredicatedScalarEvolution &PSE,
+                                       DominatorTree &DT, AssumptionCache *AC) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
@@ -949,9 +1000,12 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
   //       here from handleUncountableEarlyExits, but we need to improve
   //       detection of recipes which may write to memory.
   if (Style != UncountableExitStyle::NoUncountableExit) {
+    if (!areAllLoadsDereferenceable(HeaderVPBB, MiddleVPBB, TheLoop, PSE, DT,
+                                    AC))
+      return false;
     // TODO: Check target preference for style.
     handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB, Style);
-    return;
+    return true;
   }
 
   // Disconnect countable early exits from the loop, leaving it with a single
@@ -969,6 +1023,7 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
+  return true;
 }
 
 void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
