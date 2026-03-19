@@ -136,6 +136,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  rsize_t
+  HDRS
+    rsize_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.rsize_t
+)
+
+add_proxy_header_library(
   size_t
   HDRS
     size_t.h

@@ -1,5 +1,13 @@
 add_header(off64_t HDR off64_t.h)
 add_header(size_t HDR size_t.h)
+add_header(
+  rsize_t
+  HDR
+    rsize_t.h
+  DEPENDS
+    .size_t
+    libc.include.llvm-libc-macros.annex_k_macros
+)
 add_header(ssize_t HDR ssize_t.h)
 add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__search_compare_t HDR __search_compare_t.h)
