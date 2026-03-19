@@ -107,7 +107,7 @@ static bool isRegMemConstraint(StringRef Constraint) {
 
 /// Tag "rm" output constraints with '*' to signify that they default to a
 /// memory location.
-static std::pair<std::string, bool>
+static std::tuple<std::string, bool, bool>
 convertConstraintsToMemory(StringRef ConstraintStr) {
   std::vector<std::string> Constraints;
   Constraints.reserve(ConstraintStr.count(',') + 1);
@@ -118,6 +118,7 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
     Constraints.push_back(Constraint);
 
   bool HasRegMem = false;
+  bool MayWriteMem = false;
   for (auto &Constraint : Constraints) {
     std::string NewConstraint;
 
@@ -146,6 +147,7 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
 
     if (isRegMemConstraint(std::string(I, E))) {
       HasRegMem = true;
+      MayWriteMem = true;
       if (!HasIndirect)
         NewConstraint += '*';
     }
@@ -154,7 +156,7 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
     Constraint = NewConstraint;
   }
 
-  return {llvm::join(Constraints, ","), HasRegMem};
+  return {llvm::join(Constraints, ","), HasRegMem, MayWriteMem};
 }
 
 /// Build a map of tied constraints. TiedOutput[i] = j means Constraint i is an
@@ -260,7 +262,8 @@ static CallInst *
 createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
                    Type *NewRetTy, ArrayRef<Value *> NewArgs,
                    ArrayRef<std::pair<unsigned, Type *>> ElementTypeAttrs,
-                   CallBase *CB, IRBuilder<> &Builder, LLVMContext &Context) {
+                   CallBase *CB, IRBuilder<> &Builder, LLVMContext &Context,
+                   bool MayWriteMem) {
   SmallVector<Type *> NewArgTypes;
   for (const auto *NewArg : NewArgs)
     NewArgTypes.push_back(NewArg->getType());
@@ -275,6 +278,9 @@ createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
   NewCall->setAttributes(CB->getAttributes());
   NewCall->setDebugLoc(CB->getDebugLoc());
   NewCall->copyMetadata(*CB);
+
+  if (MayWriteMem)
+    NewCall->setMemoryEffects(MemoryEffects::writeOnly());
 
   for (const auto &[Index, Ty] : ElementTypeAttrs)
     NewCall->addParamAttr(Index,
@@ -342,7 +348,7 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
   const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
 
-  const auto &[NewConstraintStr, HasRegMem] =
+  const auto &[NewConstraintStr, HasRegMem, MayWriteMem] =
       convertConstraintsToMemory(IA->getConstraintString());
   if (!HasRegMem)
     return false;
@@ -403,7 +409,8 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   // Create the new inline assembly call.
   CallInst *NewCall =
       createNewInlineAsm(IA, NewConstraintStr, NewRetTy, NewArgs,
-                         ElementTypeAttrs, CB, Builder, F.getContext());
+                         ElementTypeAttrs, CB, Builder, F.getContext(),
+                         MayWriteMem);
 
   // Reconstruct the return value and update users.
   if (!CB->use_empty()) {
