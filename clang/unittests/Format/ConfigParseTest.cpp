@@ -1196,6 +1196,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::ABS_Always);
   CHECK_PARSE("BreakAfterAttributes: Leave", BreakAfterAttributes,
               FormatStyle::ABS_Leave);
+  CHECK_PARSE("BreakAfterAttributes: LeaveAll", BreakAfterAttributes,
+              FormatStyle::ABS_LeaveAll);
   CHECK_PARSE("BreakAfterAttributes: Never", BreakAfterAttributes,
               FormatStyle::ABS_Never);
 

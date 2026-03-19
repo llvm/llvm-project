@@ -18,6 +18,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestCompilationPrefixMap(TestBase):
     @skipIfWindows
+    @skipIfHostIncompatibleWithTarget
     def test_compilation_prefix_map(self):
         """
         Build a binary with -fdebug-prefix-map remapping the source directory
@@ -30,8 +31,8 @@ class TestCompilationPrefixMap(TestBase):
 
         src_dir = self.getSourceDir()
 
-        log = self.getBuildArtifact("symbol.log")
-        self.runCmd('log enable lldb symbol -f "%s"' % log)
+        log = self.getBuildArtifact("module.log")
+        self.runCmd('log enable lldb module -f "%s"' % log)
 
         source_spec = lldb.SBFileSpec(os.path.join(src_dir, "main.c"))
         lldbutil.run_to_source_breakpoint(self, "return x", source_spec)
