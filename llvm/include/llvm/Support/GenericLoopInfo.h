@@ -613,8 +613,7 @@ public:
   SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder() const;
 
 private:
-  /// Verify that used block numbers are still valid. Initializes the block
-  /// number epoch and parent when no blocks exist so far.
+  /// Verify that used block numbers are still valid.
   void verifyBlockNumberEpoch(ParentT BBParent) const {
     if constexpr (GraphHasNodeNumbers<BlockT *>) {
       assert(ParentPtr == BBParent &&
