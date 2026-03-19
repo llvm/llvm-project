@@ -438,6 +438,11 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
     if (auto undefVal = mlir::dyn_cast_if_present<cir::UndefAttr>(initVal))
       return cir::UndefAttr::get(convertedTy);
 
+    // This might not be possible from Clang directly, but we can get here with
+    // hand-written IR.
+    if (auto poisonVal = mlir::dyn_cast_if_present<cir::PoisonAttr>(initVal))
+      return cir::PoisonAttr::get(convertedTy);
+
     if (auto recVal =
             mlir::dyn_cast_if_present<cir::ConstRecordAttr>(initVal)) {
       auto recordMembers = mlir::cast<ArrayAttr>(recVal.getMembers());
