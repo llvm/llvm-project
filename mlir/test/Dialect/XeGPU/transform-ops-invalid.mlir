@@ -1,24 +1,5 @@
 // RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics
 
-// CHECK-LABEL: @set_anchor_layout_multiple
-func.func @set_anchor_layout_multiple(%arg0: memref<4096x4096xf16>) {
-  %0 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>
-  %1 = xegpu.load_nd %0[0, 0]  : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
-  %2 = xegpu.load_nd %0[0, 0]  : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
-  return
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["xegpu.load_nd"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    // expected-error@below {{Requires exactly one targetOp handle (got 2)}}
-    transform.xegpu.set_anchor_layout %0 sg_layout = [8, 4] sg_data = [32, 64] : !transform.any_op
-    transform.yield
-  }
-}
-
-// -----
-
 // CHECK-LABEL: @set_anchor_layout_not_anchor_op
 func.func @set_anchor_layout_not_anchor_op(%arg0: memref<4096x4096xf16>) {
   %0 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>

@@ -224,14 +224,9 @@ transform::SetAnchorLayoutOp::apply(transform::TransformRewriter &rewriter,
                                     transform::TransformResults &results,
                                     transform::TransformState &state) {
   auto targetOps = state.getPayloadOps(getTarget());
-  if (!llvm::hasSingleElement(targetOps)) {
-    return emitDefiniteFailure() << "Requires exactly one targetOp handle (got "
-                                 << llvm::range_size(targetOps) << ")";
-  }
-  Operation *target = *targetOps.begin();
-
   int64_t index = getIndex();
 
+  // Construct layout attribute.
   xegpu::LayoutAttr layoutAttr = nullptr;
   auto status = getLayoutAttrFromOperands(
       getContext(), state, (*this), getMixedSgLayout(), getMixedSgData(),
@@ -247,31 +242,34 @@ transform::SetAnchorLayoutOp::apply(transform::TransformRewriter &rewriter,
         getContext(), layout, DenseI64ArrayAttr::get(getContext(), sliceDims));
   }
 
-  // Set layout attribute
-  if (auto dpasOp = dyn_cast<xegpu::DpasOp>(target)) {
-    // dpas op is a special case where layout needs to be set for A, B, and C
-    if (index == 0)
-      dpasOp.getProperties().layout_a = layout;
-    else if (index == 1)
-      dpasOp.getProperties().layout_b = layout;
-    else if (index == 2)
-      dpasOp.getProperties().layout_cd = layout;
-    else {
-      auto diag = emitSilenceableFailure(getLoc())
-                  << "Invalid index for setting dpas op layout: " << index;
-      diag.attachNote(target->getLoc()) << "target op";
-      return diag;
+  // Apply the layout to all target ops.
+  for (Operation *target : targetOps) {
+    // Set layout attribute
+    if (auto dpasOp = dyn_cast<xegpu::DpasOp>(target)) {
+      // dpas op is a special case where layout needs to be set for A, B, and C
+      if (index == 0)
+        dpasOp.getProperties().layout_a = layout;
+      else if (index == 1)
+        dpasOp.getProperties().layout_b = layout;
+      else if (index == 2)
+        dpasOp.getProperties().layout_cd = layout;
+      else {
+        auto diag = emitSilenceableFailure(getLoc())
+                    << "Invalid index for setting dpas op layout: " << index;
+        diag.attachNote(target->getLoc()) << "target op";
+        return diag;
+      }
+    } else {
+      // op's anchor layout.
+      auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(target);
+      if (!anchorOp) {
+        auto diag = emitSilenceableFailure(getLoc())
+                    << "Cannot set anchor layout to op: " << target->getName();
+        diag.attachNote(target->getLoc()) << "target op";
+        return diag;
+      }
+      anchorOp.setAnchorLayout(layout);
     }
-  } else {
-    // op's anchor layout.
-    auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(target);
-    if (!anchorOp) {
-      auto diag = emitSilenceableFailure(getLoc())
-                  << "Cannot set anchor layout to op: " << target->getName();
-      diag.attachNote(target->getLoc()) << "target op";
-      return diag;
-    }
-    anchorOp.setAnchorLayout(layout);
   }
   return DiagnosedSilenceableFailure::success();
 }
