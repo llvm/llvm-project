@@ -1023,7 +1023,7 @@ public:
           continue;
 
         // All three of these are optional. The first variable is allocated at
-        // zero. They are allocated by AMDGPUMachineFunction as one block.
+        // zero. They are allocated by AMDGPUMachineFunctionInfo as one block.
         // Layout:
         //{
         //  module.lds
@@ -1277,7 +1277,7 @@ private:
     }
 
     // Replace uses of ith variable with a constantexpr to the corresponding
-    // field of the instance that will be allocated by AMDGPUMachineFunction
+    // field of the instance that will be allocated by AMDGPUMachineFunctionInfo
     for (size_t I = 0; I < NumberVars; I++) {
       GlobalVariable *GV = LDSVarsToTransform[I];
       Constant *GEP = Replacement.LDSVarsToConstantGEP.at(GV);
