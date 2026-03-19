@@ -1120,6 +1120,7 @@ private:
   Symbol *ResolveOmpCommonBlockName(const parser::Name *);
   void ResolveOmpNameList(const std::list<parser::Name> &, Symbol::Flag);
   void ResolveOmpName(const parser::Name &, Symbol::Flag);
+  void PropagateOmpFlagToEquivalenceSet(const Symbol &, Symbol::Flag);
   Symbol *ResolveName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
@@ -3246,6 +3247,30 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
   }
 }
 
+void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
+    const Symbol &symbol, Symbol::Flag ompFlag) {
+  // Find the equivalence set containing this symbol
+  if (const EquivalenceSet *eqSet{FindEquivalenceSet(symbol)}) {
+    // Propagate the flag to all symbols in the equivalence set
+    for (const EquivalenceObject &eqObj : *eqSet) {
+      Symbol &eqSymbol{eqObj.symbol};
+
+      // Skip the symbol itself (already has the flag)
+      if (&eqSymbol == &symbol) {
+        continue;
+      }
+
+      // Set the OpenMP flag on the equivalenced symbol
+      if (Symbol * resolvedSymbol{ResolveOmp(eqSymbol, ompFlag, currScope())}) {
+        // Also add to the context if needed
+        if (ompFlagsRequireMark.test(ompFlag)) {
+          AddToContextObjectWithExplicitDSA(*resolvedSymbol, ompFlag);
+        }
+      }
+    }
+  }
+}
+
 void OmpAttributeVisitor::ResolveOmpCommonBlock(
     const parser::Name &name, Symbol::Flag ompFlag) {
   if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
@@ -3264,6 +3289,11 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
           AddToContextObjectWithExplicitDSA(*resolvedObject, ompFlag);
         }
         details.replace_object(*resolvedObject, index);
+
+        // Propagate the flag to symbols in the equivalence set
+        if (ompFlag == Symbol::Flag::OmpThreadprivate) {
+          PropagateOmpFlagToEquivalenceSet(*resolvedObject, ompFlag);
+        }
       }
     }
   } else {

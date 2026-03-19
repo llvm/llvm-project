@@ -1126,10 +1126,10 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
                mlir::Type varType, fir::FortranVariableFlagsEnum varAttrs) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::ModuleOp module = builder.getModule();
-  mlir::Type eleTy = mlir::cast<fir::ReferenceType>(varType).getEleTy();
+  mlir::Type eleTy = fir::unwrapRefType(varType);
   TypeInfo typeInfo(eleTy);
   std::string copyFuncName =
-      fir::getTypeAsString(eleTy, builder.getKindMap(), "_copy");
+      fir::getTypeAsString(varType, builder.getKindMap(), "_copy");
 
   if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
     return decl;

@@ -70,6 +70,13 @@ LanguageFeatureControl::LanguageFeatureControl() {
         std::move(cliOption);
   });
 
+  // Fix CLI spellings where the auto-generated hyphenation is wrong.
+  // TODO: -Wopen-mp-* should be fixed in a central place.  See
+  // see Discourse at
+  // https://discourse.llvm.org/t/openmp-misspelling-of-wopen-mp/90196.
+  ReplaceCliCanonicalSpelling(LanguageFeature::OpenMPThreadprivateEquivalence,
+      "openmp-threadprivate-equivalence");
+
   // These features must be explicitly enabled by command line options.
   disable_.set(LanguageFeature::OldDebugLines);
   disable_.set(LanguageFeature::OpenACC);
@@ -154,6 +161,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
   warnUsage_.set(UsageWarning::BadValueInDeadCode);
   warnUsage_.set(UsageWarning::MisplacedIgnoreTKR);
+  warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(
