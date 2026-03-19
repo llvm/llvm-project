@@ -165,28 +165,6 @@ getLayoutAttrFromOperands(MLIRContext *ctx, transform::TransformState &state,
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Replace xegpu.create_nd_desc op with a new one with the given layout.
-static xegpu::CreateNdDescOp
-setDescLayout(transform::TransformRewriter &rewriter,
-              xegpu::CreateNdDescOp descOp,
-              xegpu::DistributeLayoutAttr layout) {
-  assert(descOp.getMixedOffsets().size() == 0 &&
-         "create desc op with offsets is not supported");
-  auto oldTensorDesc = descOp.getType();
-  auto descType = xegpu::TensorDescType::get(
-      oldTensorDesc.getShape(), oldTensorDesc.getElementType(),
-      /*array_length=*/oldTensorDesc.getArrayLength(),
-      /*boundary_check=*/oldTensorDesc.getBoundaryCheck(),
-      /*memory_space=*/oldTensorDesc.getMemorySpace(),
-      /*layout=*/layout);
-
-  rewriter.setInsertionPointAfter(descOp);
-  auto newDescOp = rewriter.replaceOpWithNewOp<xegpu::CreateNdDescOp>(
-      descOp, descType, descOp.getSource(), descOp.getMixedSizes(),
-      descOp.getMixedStrides());
-  return newDescOp;
-}
-
 DiagnosedSilenceableFailure
 transform::GetLoadOp::apply(transform::TransformRewriter &rewriter,
                               transform::TransformResults &results,
@@ -216,85 +194,6 @@ transform::GetLoadOp::apply(transform::TransformRewriter &rewriter,
 
   results.set(llvm::cast<OpResult>(getResult()), {loadOp});
   return DiagnosedSilenceableFailure::success();
-}
-
-void transform::SetDescLayoutOp::build(OpBuilder &builder,
-                                       OperationState &result, Value target,
-                                       ArrayRef<OpFoldResult> mixedSgLayout,
-                                       ArrayRef<OpFoldResult> mixedSgData,
-                                       ArrayRef<OpFoldResult> mixedInstData,
-                                       ArrayRef<int32_t> order,
-                                       ArrayRef<int64_t> sliceDims) {
-  SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
-  SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
-  dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
-  dispatchIndexOpFoldResults(mixedSgData, dynamicSgData, staticSgData);
-  dispatchIndexOpFoldResults(mixedInstData, dynamicInstData, staticInstData);
-  build(builder, result, target.getType(),
-        /*target=*/target,
-        /*sg_layout=*/dynamicSgLayout,
-        /*sg_data=*/dynamicSgData,
-        /*inst_data=*/dynamicInstData,
-        /*static_sg_layout=*/staticSgLayout,
-        /*static_sg_data=*/staticSgData,
-        /*static_inst_data=*/staticInstData,
-        /*order=*/order,
-        /*slice_dims=*/sliceDims);
-}
-
-DiagnosedSilenceableFailure
-transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
-                                  transform::TransformResults &results,
-                                  transform::TransformState &state) {
-  auto targetOps = state.getPayloadOps(getTarget());
-  if (!llvm::hasSingleElement(targetOps)) {
-    return emitDefiniteFailure() << "requires exactly one targetOp handle (got "
-                                 << llvm::range_size(targetOps) << ")";
-  }
-  Operation *target = *targetOps.begin();
-
-  xegpu::LayoutAttr layoutAttr = nullptr;
-  auto status = getLayoutAttrFromOperands(
-      getContext(), state, (*this), getMixedSgLayout(), getMixedSgData(),
-      getMixedInstData(), getOrder(), layoutAttr);
-  if (!status.succeeded())
-    return status;
-
-  xegpu::DistributeLayoutAttr layout = layoutAttr;
-  auto sliceDims = getSliceDims();
-  if (sliceDims.size() > 0) {
-    // Wrap layoutAttr in a slice attribute.
-    layout = xegpu::SliceAttr::get(
-        getContext(), layout, DenseI64ArrayAttr::get(getContext(), sliceDims));
-  }
-
-  // For now only create_nd_desc op is supported.
-  auto descOp = dyn_cast<xegpu::CreateNdDescOp>(target);
-  if (!descOp) {
-    auto diag = emitSilenceableFailure(getLoc())
-                << "Expected a xegpu.create_nd_desc op, but got: "
-                << target->getName();
-    diag.attachNote(target->getLoc()) << "target op";
-    return diag;
-  }
-
-  // Set layout attr in desc op's return type. Replaces old desc op.
-  auto newdescOp = setDescLayout(rewriter, descOp, layout);
-
-  // Map result handles.
-  results.set(cast<OpResult>(getTransformed()), {newdescOp.getOperation()});
-
-  return DiagnosedSilenceableFailure::success();
-}
-
-void transform::SetDescLayoutOp::getEffects(
-    ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTargetMutable(), effects);
-  onlyReadsHandle(getSgLayoutMutable(), effects);
-  onlyReadsHandle(getSgDataMutable(), effects);
-  onlyReadsHandle(getInstDataMutable(), effects);
-  producesHandle(getOperation()->getOpResults(), effects);
-  modifiesPayload(effects);
 }
 
 void transform::SetAnchorLayoutOp::build(
