@@ -182,21 +182,21 @@ void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
 #if defined(__SPIRV__)
 
-[[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
+[[clang::loader_uninitialized]] volatile Local<uint32_t> namedBarrierTracker;
 
 void namedBarrierInit() {
-  atomic::store(&namedBarrierTracker, 0u, atomic::seq_cst);
+  atomic::store(&namedBarrierTracker, 0u, atomic::seq_cst, atomic::workgroup);
 }
 
 void namedBarrier() {
   uint32_t NumThreads = omp_get_num_threads();
-  uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst);
+  uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst, atomic::workgroup);
 
-  if (load == NumThreads - 1) {
-    atomic::store(&namedBarrierTracker, 0, atomic::seq_cst);
+  if (load >= NumThreads - 1) {
+    atomic::store(&namedBarrierTracker, 0u, atomic::seq_cst, atomic::workgroup);
   } else {
     do {
-      load = atomic::load(&namedBarrierTracker, atomic::seq_cst);
+      load = atomic::load(&namedBarrierTracker, atomic::seq_cst, atomic::workgroup);
     } while (load != 0);
   }
   __gpu_sync_threads();
@@ -212,14 +212,7 @@ void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   int32_t *Lock_ptr = (int32_t *)Lock;
-  bool Acquired = false;
-  int32_t Expected;
-  while (!Acquired) {
-    Expected = 0;
-    if (Expected == atomic::load(Lock_ptr, atomic::seq_cst))
-      Acquired =
-          atomic::cas(Lock_ptr, Expected, 1, atomic::seq_cst, atomic::seq_cst);
-  }
+  while (!atomic::cas(Lock_ptr, 0, 1, atomic::seq_cst, atomic::seq_cst)) {}
 }
 
 void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
