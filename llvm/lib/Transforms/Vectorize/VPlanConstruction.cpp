@@ -986,8 +986,7 @@ static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
   return true;
 }
 
-bool VPlanTransforms::handleEarlyExits(VPlan &Plan,
-                                       UncountableExitStyle Style,
+bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
                                        Loop *TheLoop,
                                        PredicatedScalarEvolution &PSE,
                                        DominatorTree &DT, AssumptionCache *AC) {

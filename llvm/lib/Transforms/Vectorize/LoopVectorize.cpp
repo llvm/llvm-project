@@ -8066,9 +8066,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                   ? UncountableExitStyle::MaskedHandleExitInScalarLoop
                   : UncountableExitStyle::ReadOnly;
 
-  if (!VPlanTransforms::handleEarlyExits(
-          *VPlan0, EEStyle, OrigLoop, PSE, *DT,
-          Legal->getAssumptionCache()))
+  if (!VPlanTransforms::handleEarlyExits(*VPlan0, EEStyle, OrigLoop, PSE, *DT,
+                                         Legal->getAssumptionCache()))
     return;
   VPlanTransforms::addMiddleCheck(*VPlan0, CM.foldTailByMasking());
   RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *VPlan0);
@@ -8367,10 +8366,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       MapVector<PHINode *, RecurrenceDescriptor>(),
       SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
       /*AllowReordering=*/false);
-  if (!VPlanTransforms::handleEarlyExits(
-          *Plan, UncountableExitStyle::NoUncountableExit, OrigLoop, PSE, *DT,
-          Legal->getAssumptionCache()))
-    return nullptr;
+  [[maybe_unused]] bool CanHandleExits = VPlanTransforms::handleEarlyExits(
+      *Plan, UncountableExitStyle::NoUncountableExit, OrigLoop, PSE, *DT,
+      Legal->getAssumptionCache());
+  assert(CanHandleExits &&
+         "early-exits are not supported in VPlan-native path");
   VPlanTransforms::addMiddleCheck(*Plan, /*TailFolded*/ false);
 
   VPlanTransforms::createLoopRegions(*Plan);
