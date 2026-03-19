@@ -341,7 +341,6 @@ void SILowerSGPRSpills::updateLaneVGPRDomInstr(
       // current spill.
       DomMBB = MDT->findNearestCommonDominator(DomMBB, MBB);
       if (DomMBB == MBB) {
-        abort();
         I->second = InsertPt;
       } else if (DomMBB != PrevInsertPt->getParent())
         I->second = &(*DomMBB->getFirstTerminator());
