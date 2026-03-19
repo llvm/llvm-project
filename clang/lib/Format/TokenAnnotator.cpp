@@ -2115,7 +2115,7 @@ private:
             TT_RequiresClauseInARequiresExpression, TT_RequiresExpression,
             TT_RequiresExpressionLParen, TT_RequiresExpressionLBrace,
             TT_CompoundRequirementLBrace, TT_BracedListLBrace,
-            TT_FunctionLikeMacro)) {
+            TT_FunctionLikeMacro, TT_AccessModifierMacro)) {
       CurrentToken->setType(TT_Unknown);
     }
     CurrentToken->Role.reset();

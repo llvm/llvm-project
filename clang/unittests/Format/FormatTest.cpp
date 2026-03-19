@@ -13320,6 +13320,25 @@ TEST_F(FormatTest, FormatsAccessModifiers) {
                NoEmptyLines);
 }
 
+TEST_F(FormatTest, AccessModifierMacros) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AccessModifierMacros.push_back("COMPREHENSIVE_O_PRIVATE");
+  Style.AccessModifierMacros.push_back("COMPREHENSIVE_O_PUBLIC");
+
+  verifyFormat("struct foo {\n"
+               "COMPREHENSIVE_O_PRIVATE:\n"
+               "  void f() {}\n"
+               "\n"
+               "COMPREHENSIVE_O_PRIVATE:\n"
+               "  int i;\n"
+               "\n"
+               "COMPREHENSIVE_O_PUBLIC:\n"
+               "  int j;\n"
+               "};",
+               Style);
+}
+
+
 TEST_F(FormatTest, FormatsAfterAccessModifiers) {
 
   FormatStyle Style = getLLVMStyle();
