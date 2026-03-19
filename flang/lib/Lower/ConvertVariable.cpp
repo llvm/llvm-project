@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/BoxAnalyzer.h"
@@ -20,6 +19,7 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -32,12 +32,15 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -47,6 +50,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
+
+static llvm::cl::opt<bool> enablePreciseInit(
+    "enable-precise-init",
+    llvm::cl::desc("Enable precise component initialization for derived types"),
+    llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
     allowAssumedRank("allow-assumed-rank",
@@ -585,15 +593,14 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     if (details && details->init()) {
       auto sym{*details->init()};
       if (sym) // Has a procedure target.
-        createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &b) {
-              Fortran::lower::StatementContext stmtCtx(
-                  /*cleanupProhibited=*/true);
-              auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
-                  converter, loc, *sym)};
-              auto castTo{builder.createConvert(loc, symTy, box)};
-              fir::HasValueOp::create(b, loc, castTo);
-            });
+        createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+          Fortran::lower::StatementContext stmtCtx(
+              /*cleanupProhibited=*/true);
+          auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
+              converter, loc, *sym)};
+          auto castTo{builder.createConvert(loc, symTy, box)};
+          fir::HasValueOp::create(b, loc, castTo);
+        });
       else { // Has NULL() target.
         createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
           auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
@@ -812,6 +819,244 @@ mustBeDefaultInitializedAtRuntime(const Fortran::lower::pft::Variable &var) {
   return Fortran::lower::hasDefaultInitialization(sym);
 }
 
+namespace {
+/// Determines if \p sym represents a complex derived type.
+/// A derived type is considered complex if it contains allocatable, pointer,
+/// or procedure pointer components, or nested complex derived types.
+static bool isComplexDerivedType(const Fortran::semantics::Symbol &sym) {
+  const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType();
+  if (!declTy || !declTy->AsDerived())
+    return false;
+  const Fortran::semantics::DerivedTypeSpec &derivedSpec = *declTy->AsDerived();
+  const Fortran::semantics::Scope *scope = derivedSpec.GetScope();
+  if (!scope)
+    return false;
+  const auto &typeDetails =
+      derivedSpec.typeSymbol().get<Fortran::semantics::DerivedTypeDetails>();
+  for (const auto &compName : typeDetails.componentNames()) {
+    auto iter = scope->find(compName);
+    if (iter == scope->cend())
+      continue;
+    const Fortran::semantics::Symbol &compSym = iter->second.get();
+    const auto *objDetails =
+        compSym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    const auto *procDetails =
+        compSym.detailsIf<Fortran::semantics::ProcEntityDetails>();
+    if (Fortran::semantics::IsAllocatableOrPointer(compSym)) {
+      return true;
+    } else if (procDetails && procDetails->init().has_value()) {
+      return true;
+    } else if (objDetails && objDetails->init() && compSym.Rank() > 0) {
+      return true;
+    } else if (isComplexDerivedType(compSym)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Performs precise, component-wise initialization for \p derivedSpec,
+/// selectively generating IR only for components that require it.
+static void genDerivedTypeComponentInit(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::DerivedTypeSpec &derivedSpec,
+    mlir::Value baseAddr, fir::RecordType recTy) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const Fortran::semantics::Scope *scope = derivedSpec.GetScope();
+  if (!scope)
+    return;
+  const auto &typeDetails =
+      derivedSpec.typeSymbol().get<Fortran::semantics::DerivedTypeDetails>();
+  for (const auto &compName : typeDetails.componentNames()) {
+    auto scopeIter = scope->find(compName);
+    if (scopeIter == scope->cend())
+      continue;
+    const Fortran::semantics::Symbol &compSym = scopeIter->second.get();
+    const auto *objDetails =
+        compSym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    const auto *procDetails =
+        compSym.detailsIf<Fortran::semantics::ProcEntityDetails>();
+    // Determine if the component requires initialization.
+    // Dynamic descriptors (pointers/allocatables) and explicitly initialized
+    // entities must be processed.
+    bool needsInit = Fortran::semantics::IsAllocatableOrPointer(compSym) ||
+                     (objDetails && objDetails->init()) ||
+                     (procDetails && procDetails->init().has_value());
+    if (!needsInit && !Fortran::lower::hasDefaultInitialization(compSym))
+      continue;
+    std::string name = converter.getRecordTypeFieldName(compSym);
+    mlir::Type compFirTy = recTy.getType(name);
+    if (!compFirTy)
+      continue;
+    // Compute the memory coordinate of the current component.
+    auto fieldIdx = builder.create<fir::FieldIndexOp>(
+        loc, fir::FieldType::get(recTy.getContext()), name, recTy,
+        mlir::ValueRange{});
+    auto compAddr =
+        builder.create<fir::CoordinateOp>(loc, builder.getRefType(compFirTy),
+                                          baseAddr, mlir::ValueRange{fieldIdx});
+
+    // Case A: Standard data components (ObjectEntityDetails).
+    if (objDetails) {
+      if (objDetails->init()) {
+        // Subcase A.1: Component has explicit initialization.
+        if (Fortran::semantics::IsPointer(compSym)) {
+          // Subcase A.1.1: Pointer with explicit target.
+          std::string globalName = fir::NameUniquer::doGenerated(
+              (converter.mangleName(derivedSpec) + fir::kNameSeparator + name +
+               fir::kNameSeparator + "init")
+                  .str());
+          fir::GlobalOp global = builder.getNamedGlobal(globalName);
+          if (!global) {
+            global = builder.createGlobal(loc, compFirTy, globalName,
+                                          builder.createInternalLinkage(),
+                                          mlir::Attribute{}, true);
+            createGlobalInitialization(
+                builder, global, [&](fir::FirOpBuilder &b) {
+                  mlir::Value initBox = Fortran::lower::genInitialDataTarget(
+                      converter, loc, compFirTy, *objDetails->init());
+                  b.create<fir::HasValueOp>(loc, initBox);
+                });
+          }
+          auto srcAddr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                                       global.getSymbol());
+          mlir::Value loadedBox = builder.create<fir::LoadOp>(loc, srcAddr);
+          builder.create<fir::StoreOp>(loc, loadedBox, compAddr);
+        } else {
+          // Subcase A.1.2: Non-pointer components with explicit initialization.
+          Fortran::lower::StatementContext stmtCtx(/*cleanupProhibited=*/true);
+          if (mlir::isa<fir::SequenceType>(compFirTy)) {
+            std::string globalName = fir::NameUniquer::doGenerated(
+                (converter.mangleName(derivedSpec) + fir::kNameSeparator +
+                 name + fir::kNameSeparator + "arr_init")
+                    .str());
+            fir::GlobalOp global = builder.getNamedGlobal(globalName);
+            if (!global) {
+              const auto &initExpr = objDetails->init().value();
+              cuf::DataAttributeAttr dataAttr = {};
+              global = Fortran::lower::tryCreatingDenseGlobal(
+                  builder, loc, compFirTy, globalName,
+                  builder.createInternalLinkage(), /*isConst=*/true, initExpr,
+                  dataAttr);
+            }
+            if (global) {
+              auto srcAddr = builder.create<fir::AddrOfOp>(
+                  loc, global.resultType(), global.getSymbol());
+              builder.create<fir::CopyOp>(loc, srcAddr, compAddr,
+                                          /*noOverlap=*/true);
+            } else {
+              Fortran::lower::StatementContext inlineCtx;
+              Fortran::lower::SymMap emptyMap;
+              hlfir::Entity lhs{compAddr};
+              hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
+                  loc, converter, objDetails->init().value(), emptyMap,
+                  inlineCtx);
+              builder.create<hlfir::AssignOp>(loc, rhs, lhs);
+            }
+          } else {
+            // Scalar component: Evaluate the expression and store directly.
+            fir::ExtendedValue exInitVal = genInitializerExprValue(
+                converter, loc, objDetails->init().value(), stmtCtx);
+            mlir::Value initVal = fir::getBase(exInitVal);
+            if (fir::isa_ref_type(initVal.getType()) &&
+                !fir::isa_ref_type(compFirTy))
+              initVal = builder.create<fir::LoadOp>(loc, initVal);
+            mlir::Value castVal =
+                builder.createConvert(loc, compFirTy, initVal);
+            builder.create<fir::StoreOp>(loc, castVal, compAddr);
+          }
+        }
+      } else if (Fortran::semantics::IsAllocatableOrPointer(compSym)) {
+        // Subcase A.2: Pointer or allocatable without initialization.
+        // Create deallocated/disassociated value.
+        std::string globalName = fir::NameUniquer::doGenerated(
+            (converter.mangleName(derivedSpec) + fir::kNameSeparator + name +
+             fir::kNameSeparator + "null_box")
+                .str());
+        fir::GlobalOp global = builder.getNamedGlobal(globalName);
+        if (!global) {
+          global = builder.createGlobal(loc, compFirTy, globalName,
+                                        builder.createInternalLinkage(),
+                                        mlir::Attribute{}, true);
+          createGlobalInitialization(
+              builder, global, [&](fir::FirOpBuilder &b) {
+                mlir::Value nullBox = fir::factory::createUnallocatedBox(
+                    b, loc, compFirTy, mlir::ValueRange{});
+                b.create<fir::HasValueOp>(loc, nullBox);
+              });
+        }
+        auto srcAddr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                                     global.getSymbol());
+        mlir::Value loadedBox = builder.create<fir::LoadOp>(loc, srcAddr);
+        builder.create<fir::StoreOp>(loc, loadedBox, compAddr);
+      } else if (Fortran::lower::hasDefaultInitialization(compSym)) {
+        // Subcase A.3: Nested derived type requires initialization.
+        // Derived type has no explicit initialization but contains
+        // components requiring initialization.
+        if (mlir::isa<fir::SequenceType>(compFirTy) &&
+            isComplexDerivedType(compSym)) {
+          // Complex derived type arrays.
+          mlir::Value box =
+              builder.createBox(loc, fir::ExtendedValue(compAddr));
+          fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+        } else if (isComplexDerivedType(compSym)) {
+          // Complex derived type scalars.
+          const Fortran::semantics::DeclTypeSpec *compDeclTy =
+              compSym.GetType();
+          auto nestedRecTy = mlir::dyn_cast<fir::RecordType>(compFirTy);
+          genDerivedTypeComponentInit(converter, loc, *compDeclTy->AsDerived(),
+                                      compAddr, nestedRecTy);
+        } else {
+          // Simple derived type scalars.
+          Fortran::lower::StatementContext stmtCtx;
+          mlir::Value initVal = genDefaultInitializerValue(
+              converter, loc, compSym, compFirTy, stmtCtx);
+          mlir::Value castVal = builder.createConvert(loc, compFirTy, initVal);
+          builder.create<fir::StoreOp>(loc, castVal, compAddr);
+        }
+      }
+    }
+    // Case B: Procedure pointers (ProcEntityDetails).
+    else if (procDetails) {
+      if (procDetails->init().has_value()) {
+        // Has a procedure or NULL() target.
+        std::string globalName = fir::NameUniquer::doGenerated(
+            (converter.mangleName(derivedSpec) + fir::kNameSeparator + name +
+             fir::kNameSeparator + "init")
+                .str());
+        fir::GlobalOp global = builder.getNamedGlobal(globalName);
+        if (!global) {
+          global = builder.createGlobal(loc, compFirTy, globalName,
+                                        builder.createInternalLinkage(),
+                                        mlir::Attribute{}, true);
+          createGlobalInitialization(
+              builder, global, [&](fir::FirOpBuilder &b) {
+                mlir::Value procBox;
+                auto targetSym = *procDetails->init();
+                if (targetSym) {
+                  procBox =
+                      Fortran::lower::convertProcedureDesignatorInitialTarget(
+                          converter, loc, *targetSym);
+                  procBox = b.createConvert(loc, compFirTy, procBox);
+                } else {
+                  procBox = fir::factory::createNullBoxProc(b, loc, compFirTy);
+                }
+                b.create<fir::HasValueOp>(loc, procBox);
+              });
+        }
+        auto srcAddr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                                     global.getSymbol());
+        mlir::Value loadedBox = builder.create<fir::LoadOp>(loc, srcAddr);
+        builder.create<fir::StoreOp>(loc, loadedBox, compAddr);
+      } else {
+        // Has no initialization.
+        continue;
+      }
+    }
+  }
+}
+} // namespace
+
 /// Call default initialization runtime routine to initialize \p var.
 void Fortran::lower::defaultInitializeAtRuntime(
     Fortran::lower::AbstractConverter &converter,
@@ -823,8 +1068,8 @@ void Fortran::lower::defaultInitializeAtRuntime(
     // 15.5.2.12 point 3, absent optional dummies are not initialized.
     // Creating descriptor/passing null descriptor to the runtime would
     // create runtime crashes.
-    auto isPresent = fir::IsPresentOp::create(builder, loc, builder.getI1Type(),
-                                              fir::getBase(exv));
+    auto isPresent = builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
+                                                      fir::getBase(exv));
     builder.genIfThen(loc, isPresent)
         .genThen([&]() {
           auto box = builder.createBox(loc, exv);
@@ -839,56 +1084,68 @@ void Fortran::lower::defaultInitializeAtRuntime(
     mlir::Type symTy = converter.genType(sym);
     const auto *details =
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-    if (details && !Fortran::semantics::IsPolymorphic(sym) &&
+    bool useFastInit =
+        details && !Fortran::semantics::IsPolymorphic(sym) &&
         declTy->category() ==
             Fortran::semantics::DeclTypeSpec::Category::TypeDerived &&
         !mlir::isa<fir::SequenceType>(symTy) &&
         !sym.test(Fortran::semantics::Symbol::Flag::OmpPrivate) &&
         !sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) &&
-        !Fortran::semantics::HasCUDAComponent(sym)) {
-      std::string globalName = fir::NameUniquer::doGenerated(
-          (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
-           fir::kDerivedTypeInitSuffix)
-              .str());
-      mlir::Location loc = genLocation(converter, sym);
-      mlir::StringAttr linkage = builder.createInternalLinkage();
-      fir::GlobalOp global = builder.getNamedGlobal(globalName);
-      if (!global && details->init()) {
-        global = builder.createGlobal(loc, symTy, globalName, linkage,
-                                      mlir::Attribute{},
-                                      /*isConst=*/true,
-                                      /*isTarget=*/false,
-                                      /*dataAttr=*/{});
-        createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &builder) {
-              Fortran::lower::StatementContext stmtCtx(
-                  /*cleanupProhibited=*/true);
-              fir::ExtendedValue initVal = genInitializerExprValue(
-                  converter, loc, details->init().value(), stmtCtx);
-              mlir::Value castTo =
-                  builder.createConvert(loc, symTy, fir::getBase(initVal));
-              fir::HasValueOp::create(builder, loc, castTo);
-            });
-      } else if (!global) {
-        global = builder.createGlobal(loc, symTy, globalName, linkage,
-                                      mlir::Attribute{},
-                                      /*isConst=*/true,
-                                      /*isTarget=*/false,
-                                      /*dataAttr=*/{});
-        createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &builder) {
-              Fortran::lower::StatementContext stmtCtx(
-                  /*cleanupProhibited=*/true);
-              mlir::Value initVal = genDefaultInitializerValue(
-                  converter, loc, sym, symTy, stmtCtx);
-              mlir::Value castTo = builder.createConvert(loc, symTy, initVal);
-              fir::HasValueOp::create(builder, loc, castTo);
-            });
+        !Fortran::semantics::HasCUDAComponent(sym);
+    if (useFastInit) {
+      if (enablePreciseInit) {
+        // Precise initialization
+        mlir::Value baseAddr = fir::getBase(exv);
+        const auto &derivedSpec = *sym.GetType()->AsDerived();
+        auto recTy = mlir::cast<fir::RecordType>(
+            fir::unwrapPassByRefType(baseAddr.getType()));
+        genDerivedTypeComponentInit(converter, loc, derivedSpec, baseAddr,
+                                    recTy);
+      } else {
+        std::string globalName = fir::NameUniquer::doGenerated(
+            (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
+             fir::kDerivedTypeInitSuffix)
+                .str());
+        mlir::Location loc = genLocation(converter, sym);
+        mlir::StringAttr linkage = builder.createInternalLinkage();
+        fir::GlobalOp global = builder.getNamedGlobal(globalName);
+        if (!global && details->init()) {
+          global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                        mlir::Attribute{},
+                                        /*isConst=*/true,
+                                        /*isTarget=*/false,
+                                        /*dataAttr=*/{});
+          createGlobalInitialization(
+              builder, global, [&](fir::FirOpBuilder &builder) {
+                Fortran::lower::StatementContext stmtCtx(
+                    /*cleanupProhibited=*/true);
+                fir::ExtendedValue initVal = genInitializerExprValue(
+                    converter, loc, details->init().value(), stmtCtx);
+                mlir::Value castTo =
+                    builder.createConvert(loc, symTy, fir::getBase(initVal));
+                builder.create<fir::HasValueOp>(loc, castTo);
+              });
+        } else if (!global) {
+          global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                        mlir::Attribute{},
+                                        /*isConst=*/true,
+                                        /*isTarget=*/false,
+                                        /*dataAttr=*/{});
+          createGlobalInitialization(
+              builder, global, [&](fir::FirOpBuilder &builder) {
+                Fortran::lower::StatementContext stmtCtx(
+                    /*cleanupProhibited=*/true);
+                mlir::Value initVal = genDefaultInitializerValue(
+                    converter, loc, sym, symTy, stmtCtx);
+                mlir::Value castTo = builder.createConvert(loc, symTy, initVal);
+                builder.create<fir::HasValueOp>(loc, castTo);
+              });
+        }
+        auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                                    global.getSymbol());
+        builder.create<fir::CopyOp>(loc, addrOf, fir::getBase(exv),
+                                    /*noOverlap=*/true);
       }
-      auto addrOf = fir::AddrOfOp::create(builder, loc, global.resultType(),
-                                          global.getSymbol());
-      fir::CopyOp::create(builder, loc, addrOf, fir::getBase(exv),
-                          /*noOverlap=*/true);
     } else {
       mlir::Value box = builder.createBox(loc, exv);
       fir::runtime::genDerivedTypeInitialize(builder, loc, box);
