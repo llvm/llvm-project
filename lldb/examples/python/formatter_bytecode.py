@@ -335,6 +335,7 @@ class BytecodeSection:
         print(
             textwrap.dedent(
                 """\
+                #if swift(>=6.3)
                 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
@@ -354,6 +355,7 @@ class BytecodeSection:
             byte_list = ", ".join(f"0x{b:02x}" for b in bs)
             print(f"{indent}{byte_list},", file=output)
         print(")", file=output)
+        print("#endif", file=output)  # swift(>=6.3)
 
 
 def assemble_file(type_name: str, input: TextIO) -> BytecodeSection:
