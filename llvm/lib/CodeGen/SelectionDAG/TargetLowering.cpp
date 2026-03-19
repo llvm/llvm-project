@@ -8272,8 +8272,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       // Save the shifted off bits if we need the remainder.
       if (Opcode != ISD::UDIV) {
         APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
-        PartialRem =
-            DAG.getNode(ISD::AND, dl, HiLoVT, LL, DAG.getConstant(Mask, dl, HiLoVT));
+        PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
+                                 DAG.getConstant(Mask, dl, HiLoVT));
       }
 
       if (isOperationLegal(ISD::FSHR, HiLoVT))
