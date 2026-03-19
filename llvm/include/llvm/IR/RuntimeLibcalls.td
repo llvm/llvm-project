@@ -374,8 +374,8 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   def POW_F80 : RuntimeLibcall;
   def POW_PPCF128 : RuntimeLibcall;
 
-  def POW_FINITE_F32 : RuntimeLibcall<Dbl, [Dbl, Dbl], "pow_finite">;
-  def POW_FINITE_F64 : RuntimeLibcall<Flt, [Flt, Flt], "powf_finite">;
+  def POW_FINITE_F32 : RuntimeLibcall<Flt, [Flt, Flt], "powf_finite">;
+  def POW_FINITE_F64 : RuntimeLibcall<Dbl, [Dbl, Dbl], "pow_finite">;
   def POW_FINITE_F128 : RuntimeLibcall<LDbl, [LDbl, LDbl], "powl_finite">;
   def POW_FINITE_F80 : RuntimeLibcall;
   def POW_FINITE_PPCF128 : RuntimeLibcall;
@@ -1166,9 +1166,9 @@ def ZDAPVJ : RuntimeLibcall<Void, [Ptr, Int], "ZdaPvj">;
 def ZDAPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Int, Int], "ZdaPvjSt11align_val_t">;
 def ZDAPVM : RuntimeLibcall<Void, [Ptr, Long], "ZdaPvm">;
 def ZDAPVMST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Long, Long], "ZdaPvmSt11align_val_t">;
-def ZDAPVRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, Ptr], "ZdlPvRKSt9nothrow_t">;
-def ZDAPVST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, IntPlus], "ZdlPvSt11align_val_t">;
-def ZDAPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, IntPlus, Ptr], "ZdlPvSt11align_val_tRKSt9nothrow_t">;
+def ZDAPVRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, Ptr], "ZdaPvRKSt9nothrow_t">;
+def ZDAPVST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, IntPlus], "ZdaPvSt11align_val_t">;
+def ZDAPVST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Void, [Ptr, IntPlus, Ptr], "ZdaPvSt11align_val_tRKSt9nothrow_t">;
 def ZDLPV : RuntimeLibcall<Void, [Ptr], "ZdlPv">;
 def ZDLPVJ : RuntimeLibcall<Void, [Ptr, Int], "ZdlPvj">;
 def ZDLPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, Int, Int], "ZdlPvjSt11align_val_t">;

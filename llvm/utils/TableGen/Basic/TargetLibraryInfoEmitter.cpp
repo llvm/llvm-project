@@ -61,12 +61,12 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoEnum(
   OS << "enum LibFunc : unsigned {\n";
   OS.indent(2) << "NotLibFunc = 0,\n";
   for (const auto *R : AllTargetLibcalls)
-    OS.indent(2) << "LibFunc_" << R->getName() << ",\n";
+    OS.indent(2) << "LibFunc_" << R->getName().drop_front(4) << ",\n";
   OS.indent(2) << "NumLibFuncs,\n";
   OS.indent(2) << "End_LibFunc = NumLibFuncs,\n";
   if (AllTargetLibcalls.size()) {
     OS.indent(2) << "Begin_LibFunc = LibFunc_"
-                 << AllTargetLibcalls[0]->getName() << ",\n";
+                 << AllTargetLibcalls[0]->getName().drop_front(4) << ",\n";
   } else {
     OS.indent(2) << "Begin_LibFunc = NotLibFunc,\n";
   }
@@ -146,7 +146,7 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
     Signature Sig;
     Sig.reserve(Tys->size() + 1);
     const Record *RetType = R->getValueAsOptionalDef("ReturnType");
-    if (RetType)
+    if (RetType && (RetType->getName() != "NoneType"))
       Sig.push_back(RetType->getName());
     for (unsigned I = 0, E = Tys->size(); I < E; ++I) {
       Sig.push_back(Tys->getElementAsRecord(I)->getName());
@@ -162,8 +162,11 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
   IfDefEmitter IfDef(OS, "GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE");
   OS << "enum FuncArgTypeID : char {\n";
   OS.indent(2) << "NoFuncArgType = 0,\n";
-  for (const auto *R : FuncTypeArgs)
+  for (const auto *R : FuncTypeArgs) {
+    if (R->getName() == "NoneType")
+      continue;
     OS.indent(2) << R->getName() << ",\n";
+  }
   OS << "};\n";
   OS << "static const FuncArgTypeID SignatureTable[] = {\n";
   SignatureTable.emit(OS, [](raw_ostream &OS, StringRef E) { OS << E; });
@@ -172,7 +175,7 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
   OS.indent(2) << SignatureTable.get(NoFuncSig) << ", //\n";
   for (const auto *R : AllTargetLibcalls) {
     OS.indent(2) << SignatureTable.get(GetSignature(R)) << ", // "
-                 << R->getName() << "\n";
+                 << R->getName().drop_front(4) << "\n";
   }
   OS << "};\n";
 }
