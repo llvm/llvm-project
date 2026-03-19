@@ -224,6 +224,18 @@ TEST(CommandLineTest, TokenizeGNUCommandLine) {
   testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input, Output);
 }
 
+TEST(CommandLineTest, TokenizeGNUCommandLineEmptyQuotes) {
+  // Explicit '' and "" should be treated as an empty string argument, as shells
+  // and gcc do.
+  const char Input1[] = R"(a b c "" d)";
+  const char *const Output1[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input1, Output1);
+
+  const char Input2[] = R"(a b c '' d)";
+  const char *const Output2[] = {"a", "b", "c", "", "d"};
+  testCommandLineTokenizer(cl::TokenizeGNUCommandLine, Input2, Output2);
+}
+
 TEST(CommandLineTest, TokenizeWindowsCommandLine1) {
   const char Input[] =
       R"(a\b c\\d e\\"f g" h\"i j\\\"k "lmn" o pqr "st \"u" \v)";
