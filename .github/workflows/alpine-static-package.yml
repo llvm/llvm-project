@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-and-package:
-    name: Build clang/lld/lldb (alpine static)
+    name: Build lldb (alpine static)
     runs-on: ubuntu-24.04
     container:
       image: alpine:3.20
@@ -44,7 +44,11 @@ jobs:
             zstd-dev \
             xz \
             xz-dev \
-            zlib-dev
+            zlib-dev \
+            ncurses-dev \
+            ncurses-static \
+            libedit-dev \
+            libedit-static 
 
       - name: Checkout source
         uses: actions/checkout@v4
@@ -82,14 +86,14 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS="-static -fuse-ld=lld" \
             -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
             -DCMAKE_MODULE_LINKER_FLAGS="-fuse-ld=lld" \
-            -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
+            -DLLVM_ENABLE_PROJECTS="lldb" \
             -DLLVM_ENABLE_LTO="${LTO_MODE}" \
             -DLLVM_BUILD_LLVM_DYLIB=OFF \
             -DLLVM_LINK_LLVM_DYLIB=OFF \
             -DBUILD_SHARED_LIBS=OFF \
             -DLLDB_ENABLE_PYTHON=OFF \
-            -DLLVM_ENABLE_TERMINFO=OFF \
-            -DLLVM_ENABLE_LIBEDIT=OFF \
+            -DLLVM_ENABLE_TERMINFO=ON \
+            -DLLVM_ENABLE_LIBEDIT=ON \
             -DLLVM_ENABLE_LIBXML2=OFF \
             -DLLVM_ENABLE_ZSTD=FORCE_ON \
             -DLLVM_INCLUDE_TESTS=OFF \
@@ -100,7 +104,7 @@ jobs:
       - name: Build
         run: |
           set -eux
-          ninja -C build clang lld lldb
+          ninja -C build lldb
 
       - name: Show sccache stats
         if: always()
@@ -116,8 +120,6 @@ jobs:
       - name: Verify static linkage (best effort)
         run: |
           set -eux
-          file package/bin/clang || true
-          file package/bin/ld.lld || true
           file package/bin/lldb || true
 
       - name: Prepare deliverables
@@ -128,41 +130,23 @@ jobs:
           cp -a package package-stripped
           mkdir -p debug_symbols
 
-          for bin in clang lldb ld.lld; do
+          for bin in lldb; do
             objcopy --only-keep-debug "package/bin/${bin}" "debug_symbols/${bin}.debug"
             strip --strip-debug "package-stripped/bin/${bin}"
           done
 
-          cp "package-stripped/bin/clang" "clang-${SHORT_SHA}"
           cp "package-stripped/bin/lldb" "lldb-${SHORT_SHA}"
-          cp "package-stripped/bin/ld.lld" "ld-${SHORT_SHA}"
-          chmod +x "clang-${SHORT_SHA}" "lldb-${SHORT_SHA}" "ld-${SHORT_SHA}"
+          chmod +x "lldb-${SHORT_SHA}"
 
           tar -C debug_symbols -czf debug_symbols.tar.gz .
 
-          echo "clang_name=clang-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "lldb_name=lldb-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "ld_name=ld-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-
-      - name: Upload clang artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.deliverables.outputs.clang_name }}
-          path: ${{ steps.deliverables.outputs.clang_name }}
-          if-no-files-found: error
+          echo "lldb_name=lldb-${SHORT_SHA}" >> "$GITHUB_OUTPUT" 
 
       - name: Upload lldb artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.deliverables.outputs.lldb_name }}
           path: ${{ steps.deliverables.outputs.lldb_name }}
-          if-no-files-found: error
-
-      - name: Upload ld artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.deliverables.outputs.ld_name }}
-          path: ${{ steps.deliverables.outputs.ld_name }}
           if-no-files-found: error
 
       - name: Upload debug symbols artifact
