@@ -58,6 +58,32 @@ void tooling::dependencies::configureInvocationForCaching(
   auto &FileSystemOpts = CI.getFileSystemOpts();
   switch (InputKind) {
   case CachingInputKind::IncludeTree: {
+    using llvm::sys::path::is_relative;
+    // The only way to get relative source paths is a relative main file or
+    // include directory, since includes are resolved relative to , and
+    // includer-relative search is relative to an already-included file.
+    bool HasRelativeIncludes = [&]{
+      if (!FileSystemOpts.WorkingDir.empty())
+        return false; // -working-directory makes all paths absolute.
+      // FIXME: this might have false positives if a relative search path is not
+      // used. Ideally we would calculate this when the include tree is built.
+      if (!HSOpts.Sysroot.empty() && is_relative(HSOpts.Sysroot))
+        return true;
+      if (is_relative(HSOpts.ResourceDir))
+        return true;
+      for (auto &Input : FrontendOpts.Inputs)
+        if (Input.isFile() && is_relative(Input.getFile()))
+          return true;
+      for (auto &Entry : HSOpts.UserEntries)
+        if (Entry.IgnoreSysRoot || HSOpts.Sysroot.empty())
+          if (is_relative(Entry.Path))
+            return true;
+      for (auto &Prefix : HSOpts.SystemHeaderPrefixes)
+        if (is_relative(Prefix.Prefix))
+          return true;
+      return false;
+    }();
+
     FrontendOpts.CASIncludeTreeID = std::move(InputID);
     FrontendOpts.Inputs.clear();
     FrontendOpts.ModuleMapFiles.clear();
@@ -96,6 +122,11 @@ void tooling::dependencies::configureInvocationForCaching(
     // Clear APINotes options.
     CI.getAPINotesOpts().ModuleSearchPaths = {};
 
+    // Reset debug compilation directory if source paths are absolute.
+    if (!HasRelativeIncludes) {
+      CodeGenOpts.DebugCompilationDir.clear();
+    }
+
     // Update output paths, and clear working directory.
     auto CWD = FileSystemOpts.WorkingDir;
     updateRelativePath(FrontendOpts.OutputFile, CWD);
@@ -103,9 +134,6 @@ void tooling::dependencies::configureInvocationForCaching(
     updateRelativePath(CI.getDiagnosticOpts().DiagnosticLogFile, CWD);
     updateRelativePath(CI.getDependencyOutputOpts().OutputFile, CWD);
     FileSystemOpts.WorkingDir.clear();
-
-    // IncludeTree always use absolute path. Do not set debug comp dir.
-    CodeGenOpts.DebugCompilationDir.clear();
     break;
   }
   case CachingInputKind::CachedCompilation: {
