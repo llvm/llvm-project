@@ -52,6 +52,35 @@ def get_desc_op(
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
+class GetLoadOp(GetLoadOp):
+    """Specialization for GetLoadOp class."""
+
+    def __init__(
+        self,
+        target: Value,
+        *,
+        loc=None,
+        ip=None,
+    ):
+        load_nd_type = transform.AnyOpType.get()
+        super().__init__(
+            load_nd_type,
+            target,
+            loc=loc,
+            ip=ip,
+        )
+
+
+def get_load_op(
+    target: Value,
+    *,
+    loc=None,
+    ip=None,
+) -> OpResult:
+    return GetLoadOp(target, loc=loc, ip=ip).result
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
 class SetDescLayoutOp(SetDescLayoutOp):
     """Specialization for SetDescLayoutOp class."""
 

@@ -62,6 +62,85 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: @get_load_op
+func.func @get_load_op(%arg0: memref<4096x4096xf16>) {
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>
+  // CHECK: xegpu.load_nd
+  // expected-remark @below {{found load_nd op}}
+  %1 = xegpu.load_nd %0[%c0, %c0]  : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
+  %2 = arith.extf %1 : vector<256x32xf16> to vector<256x32xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.extf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_operand %0[0] : (!transform.any_op) -> !transform.any_value
+    %2 = transform.xegpu.get_load_op %1 : (!transform.any_value) -> !transform.any_op
+    transform.debug.emit_remark_at %2, "found load_nd op" : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @get_load_op_c
+func.func @get_load_op_c(%arg0: memref<4096x4096xf16>, %arg1: memref<4096x4096xf16>, %arg2: memref<4096x4096xf16>) {
+  %c32 = arith.constant 32 : index
+  %c4096 = arith.constant 4096 : index
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg2 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x256xf16>
+  // expected-remark @below {{found load_nd op}}
+  %1 = xegpu.load_nd %0[%c0, %c0]  : !xegpu.tensor_desc<256x256xf16> -> vector<256x256xf16>
+  %3 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf16> -> !xegpu.tensor_desc<256x32xf16>
+  %4 = xegpu.create_nd_tdesc %arg1 : memref<4096x4096xf16> -> !xegpu.tensor_desc<32x256xf16>
+  %2 = scf.for %arg3 = %c0 to %c4096 step %c32 iter_args(%arg4 = %1) -> (vector<256x256xf16>) {
+    %5 = xegpu.load_nd %3[%c0, %arg3] : !xegpu.tensor_desc<256x32xf16> -> vector<256x32xf16>
+    %6 = xegpu.load_nd %4[%arg3, %c0] : !xegpu.tensor_desc<32x256xf16> -> vector<32x256xf16>
+    %7 = xegpu.dpas %5, %6, %arg4 : vector<256x32xf16>, vector<32x256xf16>, vector<256x256xf16> -> vector<256x256xf16>
+    scf.yield %7 : vector<256x256xf16>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["xegpu.dpas"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_operand %0[2] : (!transform.any_op) -> !transform.any_value
+    %2 = transform.xegpu.get_load_op %1 : (!transform.any_value) -> !transform.any_op
+    transform.debug.emit_remark_at %2, "found load_nd op" : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @get_load_op_1d
+func.func @get_load_op_1d(%arg0: memref<4096xf32>) {
+  %cst = arith.constant dense<true> : vector<256xi1>
+  %0 = vector.step : vector<256xindex>
+  %intptr = memref.extract_aligned_pointer_as_index %arg0 : memref<4096xf32> -> index
+  %1 = arith.index_cast %intptr : index to i64
+  // CHECK: xegpu.load %1[%0]
+  // expected-remark @below {{found load op}}
+  %2 = xegpu.load %1[%0], %cst : i64, vector<256xindex>, vector<256xi1> -> vector<256xf32>
+  %3 = arith.extf %2 : vector<256xf32> to vector<256xf64>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.extf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_operand %0[0] : (!transform.any_op) -> !transform.any_value
+    %2 = transform.xegpu.get_load_op %1 : (!transform.any_value) -> !transform.any_op
+    transform.debug.emit_remark_at %2, "found load op" : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: @set_desc_layout
 func.func @set_desc_layout(%arg0: memref<4096x4096xf16>) {
   // CHECK: %[[V0:.+]] = xegpu.create_nd_tdesc %arg0

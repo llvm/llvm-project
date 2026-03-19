@@ -210,6 +210,37 @@ transform::GetDescOp::apply(transform::TransformRewriter &rewriter,
   return DiagnosedSilenceableFailure::success();
 }
 
+DiagnosedSilenceableFailure
+transform::GetLoadOp::apply(transform::TransformRewriter &rewriter,
+                              transform::TransformResults &results,
+                              transform::TransformState &state) {
+  auto targetValues = state.getPayloadValues(getTarget());
+  if (!llvm::hasSingleElement(targetValues)) {
+    return emitDefiniteFailure()
+           << "requires exactly one target value handle (got "
+           << llvm::range_size(targetValues) << ")";
+  }
+
+  Operation* loadOp = nullptr;
+  auto maybeLoadNdOp =
+      findProducerOfType<xegpu::LoadNdOp>(*targetValues.begin());
+  if (maybeLoadNdOp) {
+    loadOp = maybeLoadNdOp->getOperation();
+  } else {
+    auto maybeLoadOp = findProducerOfType<xegpu::LoadGatherOp>(*targetValues.begin());
+    if (maybeLoadOp) {
+      loadOp = maybeLoadOp->getOperation();
+    } else {
+      return emitSilenceableFailure(getLoc())
+            << "Could not find a matching xegpu.load_nd or xegpu.load op when walking the "
+                "producer chain of the first operand.";
+    }
+  }
+
+  results.set(llvm::cast<OpResult>(getResult()), {loadOp});
+  return DiagnosedSilenceableFailure::success();
+}
+
 void transform::SetDescLayoutOp::build(OpBuilder &builder,
                                        OperationState &result, Value target,
                                        ArrayRef<OpFoldResult> mixedSgLayout,

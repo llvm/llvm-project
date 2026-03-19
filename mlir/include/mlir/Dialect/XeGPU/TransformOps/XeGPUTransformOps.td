@@ -34,6 +34,24 @@ def GetDescOp : Op<Transform_Dialect, "xegpu.get_desc_op", [
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
 }
 
+def GetLoadOp : Op<Transform_Dialect, "xegpu.get_load_op", [
+  DeclareOpInterfaceMethods<TransformOpInterface>,
+  NavigationTransformOpTrait, MemoryEffectsOpInterface
+]> {
+
+  let summary = "Get a handle to the load_nd op in producer chain of a value.";
+  let description = [{
+    Traces the producers of the given value until an `xegpu.load_nd` or
+    `xegpu.load` op is found. Returns a handle to it. Currently traces
+    producers by following only the first operand of producer ops.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$target);
+
+  let results = (outs TransformHandleTypeInterface:$loadNdHandle);
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+}
+
 def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
