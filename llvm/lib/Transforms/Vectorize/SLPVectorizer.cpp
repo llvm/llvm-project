@@ -24582,7 +24582,7 @@ public:
   /// In RangeSizes, element has not been vectorized, but due to the elements
   /// around it being vectorized, it does not have enough neighboring elements
   /// to make a chain longer than MinVF as part of the current Context
-  inline static const unsigned LocallyUnvectorizable =
+  static constexpr unsigned LocallyUnvectorizable =
       std::numeric_limits<unsigned>::max();
 
   /// For the StoreTy/Stride in the given group, what is the smallest VF
