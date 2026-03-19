@@ -576,12 +576,18 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
 
   auto [StInBound, StOutBound] = state->assumeInBoundDual(*Idx, Size);
   if (StOutBound && !StInBound) {
-    // FIXME: We detected a fatal error here, we should stop the analysis even
-    // if we choose not to emit a report here. Instead, we choose to continue
-    // the analysis with a slightly broken state, so that other checkers can
-    // still emit possibly relevant reports. One such checker would be the
-    // alpha.unix.cstring.OutOfBounds. Sinking the state here could lead to
-    // loss reports from those checkers.
+    // The analyzer determined that the access is out-of-bounds, which is
+    // a fatal error: ideally we'd return nullptr to terminate this path
+    // regardless of whether the OutOfBounds checker frontend is enabled.
+    // However, the current out-of-bounds modeling produces too many false
+    // positives, so when the frontend is disabled we return the original
+    // (unconstrained) state and let the analysis continue. This is
+    // inconsistent: returning `state` instead of `StOutBound` discards the
+    // constraint that the index is out-of-bounds, and callers cannot
+    // distinguish "we proved an error" from "we couldn't determine anything"
+    // since both return the original state.
+    // TODO: Once the OutOfBounds frontend is stable, return nullptr here
+    // unconditionally to stop the analysis on this path.
     if (!OutOfBounds.isEnabled())
       return state;
 
@@ -706,12 +712,18 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
       emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
       return nullptr;
     }
-    // FIXME: We detected a fatal error here, we should stop the analysis even
-    // if we choose not to emit a report here. Instead, we choose to continue
-    // the analysis with a slightly broken state, so that other checkers can
-    // still emit possibly relevant reports. One such checker would be the
-    // alpha.unix.cstring.OutOfBounds. Sinking the state here could lead to
-    // loss reports from those checkers.
+    // The analyzer proved that the two pointers are equal, which guarantees
+    // overlap. When BufferOverlap is disabled, we return the original state
+    // instead of nullptr (to avoid stopping the path) or stateTrue (which
+    // would encode the equality constraint). This creates an inconsistency:
+    // callers treat any non-null return as "no overlap found" and proceed
+    // with subsequent modeling (e.g. memcpy side effects), even though the
+    // operation has undefined behavior. Additionally, returning `state` instead
+    // of `stateTrue` discards the pointer-equality constraint, making the
+    // analysis less precise.
+    // FIXME: At minimum, return stateTrue to preserve the equality
+    // constraint. Ideally, return nullptr to stop the path unconditionally,
+    // since overlap is proven regardless of whether we report it.
     return state;
   }
 
@@ -780,9 +792,15 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
       emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
       return nullptr;
     }
-    // FIXME: We detected a fatal error here, we should stop the analysis even
-    // if we choose not to emit a report here. However, as long as our overlap
-    // checker is in alpha, let's just pretend nothing happened.
+    // The analyzer proved that the end of the first buffer is past the start
+    // of the second, which means the buffers overlap. This is the same
+    // inconsistency as the equal-pointers case above: when BufferOverlap is
+    // disabled, we return the original state, so callers cannot distinguish
+    // "proven overlap" from "couldn't determine anything" and will proceed
+    // to model side effects (e.g. memcpy) on a path with proven UB.
+    // Returning `stateTrue` would at least preserve the overlap constraint;
+    // returning nullptr would correctly terminate the path.
+    // FIXME: Return nullptr unconditionally once BufferOverlap is stable.
     return state;
   }
 
