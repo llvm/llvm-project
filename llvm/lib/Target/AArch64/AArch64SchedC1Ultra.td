@@ -94,7 +94,6 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 
 //===----------------------------------------------------------------------===//
 // Define customized scheduler read/write types specific to C1 Ultra.
-// TODO: Flesh out with C1 Ultra latencies and port usage.
 //===----------------------------------------------------------------------===//
 
 // Define generic 0 micro-op types.
@@ -1715,11 +1714,11 @@ def : InstRW<[C1UWrite_7c_1M_1M0_1V],
              (instregex "^(DEC|INC|SQDEC|SQINC|UQDEC|UQINC)P_ZP_[HSD]")>;
 
 // Predicate logical
-def : InstRW<[C1UWr_Pred, C1URd_Pred],
+def : InstRW<[C1UWr_Pred, C1URd_Pred, C1URd_Pred, C1URd_Pred],
              (instregex "^(AND|BIC|EOR|NAND|NOR|ORN|ORR)_PPzPP")>;
 
 // Predicate logical, flag setting
-def : InstRW<[C1UWr_Pred, C1URd_Pred],
+def : InstRW<[C1UWr_Pred, C1URd_Pred, C1URd_Pred, C1URd_Pred],
              (instregex "^(ANDS|BICS|EORS|NANDS|NORS|ORNS|ORRS)_PPzPP")>;
 
 // Predicate reverse

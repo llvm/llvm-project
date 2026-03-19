@@ -325,7 +325,78 @@ sel z0.s, p15, z1.s, z2.s
 sel z0.s, p15, z1.s, z2.s
 sel z0.s, p15, z1.s, z2.s
 sel z0.s, p15, z0.s, z1.s
-#
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN and
+and p0.b, p15/z, p1.b, p0.b
+and p0.b, p15/z, p1.b, p0.b
+and p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN ands
+ands p0.b, p15/z, p1.b, p0.b
+ands p0.b, p15/z, p1.b, p0.b
+ands p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN bic
+bic p0.b, p15/z, p1.b, p0.b
+bic p0.b, p15/z, p1.b, p0.b
+bic p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN bics
+bics p0.b, p15/z, p1.b, p0.b
+bics p0.b, p15/z, p1.b, p0.b
+bics p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN eor
+eor p0.b, p15/z, p1.b, p0.b
+eor p0.b, p15/z, p1.b, p0.b
+eor p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN eors
+eors p0.b, p15/z, p1.b, p0.b
+eors p0.b, p15/z, p1.b, p0.b
+eors p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN nand
+nand p0.b, p15/z, p1.b, p0.b
+nand p0.b, p15/z, p1.b, p0.b
+nand p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN nands
+nands p0.b, p15/z, p1.b, p0.b
+nands p0.b, p15/z, p1.b, p0.b
+nands p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN nor
+nor p0.b, p15/z, p1.b, p0.b
+nor p0.b, p15/z, p1.b, p0.b
+nor p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN nors
+nors p0.b, p15/z, p1.b, p0.b
+nors p0.b, p15/z, p1.b, p0.b
+nors p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN orn
+orn p0.b, p15/z, p1.b, p0.b
+orn p0.b, p15/z, p1.b, p0.b
+orn p0.b, p15/z, p1.b, p0.b
+# LLVM-MCA-END
+
+# LLVM-MCA-BEGIN orns
+orns p0.b, p15/z, p1.b, p0.b
+orns p0.b, p15/z, p1.b, p0.b
+orns p0.b, p15/z, p1.b, p0.b
 # LLVM-MCA-END
 
 # CHECK:      [0] Code Region - madd
@@ -2084,3 +2155,411 @@ sel z0.s, p15, z0.s, z1.s
 # CHECK-NEXT: 2.     2     1.0    1.0    1.0       sel	z0.s, p15, z1.s, z2.s
 # CHECK-NEXT: 3.     2     3.0    0.0    0.0       sel	z0.s, p15, z0.s, z1.s
 # CHECK-NEXT:        2     1.5    0.8    0.8       <total>
+
+# CHECK:      [46] Code Region - and
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   and	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       and	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [47] Code Region - ands
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   ands	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       ands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [48] Code Region - bic
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   bic	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       bic	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [49] Code Region - bics
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   bics	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       bics	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [50] Code Region - eor
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   eor	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       eor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [51] Code Region - eors
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   eors	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       eors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [52] Code Region - nand
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   nand	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       nand	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [53] Code Region - nands
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   nands	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       nands	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [54] Code Region - nor
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   nor	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       nor	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [55] Code Region - nors
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   nors	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       nors	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [56] Code Region - orn
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   orn	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       orn	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
+
+# CHECK:      [57] Code Region - orns
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      304
+# CHECK-NEXT: Total uOps:        600
+
+# CHECK:      Dispatch Width:    10
+# CHECK-NEXT: uOps Per Cycle:    1.97
+# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: Block RThroughput: 3.0
+
+# CHECK:      Timeline view:
+# CHECK-NEXT: Index     0123456789
+
+# CHECK:      [0,0]     DeeER.   .   orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,1]     D=eeER   .   orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [0,2]     D==eeER  .   orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,0]     D===eeER .   orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,1]     D====eeER.   orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: [1,2]     .D====eeER   orns	p0.b, p15/z, p1.b, p0.b
+
+# CHECK:      Average Wait times (based on the timeline view):
+# CHECK-NEXT: [0]: Executions
+# CHECK-NEXT: [1]: Average time spent waiting in a scheduler's queue
+# CHECK-NEXT: [2]: Average time spent waiting in a scheduler's queue while ready
+# CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
+
+# CHECK:            [0]    [1]    [2]    [3]
+# CHECK-NEXT: 0.     2     2.5    0.5    0.0       orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 1.     2     3.5    0.0    0.0       orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT: 2.     2     4.0    0.0    0.0       orns	p0.b, p15/z, p1.b, p0.b
+# CHECK-NEXT:        2     3.3    0.2    0.0       <total>
