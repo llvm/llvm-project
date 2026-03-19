@@ -286,6 +286,9 @@ static int run(int argc, char **argv) {
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
   llvm::scope_exit ShutdownScopeExit([]() {
+    // llvm_shutdown must be called before finalizing the time trace to
+    // ensure that time trace scopes from ManagedStatic destructors are
+    // flushed and recorded.
     llvm::llvm_shutdown();
     if (TimeTrace) {
       check(timeTraceProfilerWrite(TimeTraceFile, OutputFilename),

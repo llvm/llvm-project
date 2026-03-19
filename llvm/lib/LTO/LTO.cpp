@@ -2241,27 +2241,22 @@ struct BackgroundDeletion : llvm::DefaultThreadPool {
 
   ~BackgroundDeletion() {
     wait();
-    for (std::string &Warning : Warnings)
-      errs() << Warning;
+    for (const std::string &Warning : Warnings)
+      errs() << "warning: could not remove the file " << Warning << "\n";
   }
 
-  void remove(SmallVector<std::string> &&Files, bool TimeTraceEnabled,
-              unsigned TimeTraceGranularity) {
-    async([this, Files = std::move(Files), TTE = TimeTraceEnabled,
-           TTG = TimeTraceGranularity] {
+  void remove(SmallVector<std::string> &&Files, const Config &Conf) {
+    async([this, Files = std::move(Files), TTE = Conf.TimeTraceEnabled,
+           TTG = Conf.TimeTraceGranularity] {
       if (LLVM_ENABLE_THREADS && TTE)
         timeTraceProfilerInitialize(TTG, "Remove DTLTO temporary files");
       {
         llvm::TimeTraceScope TimeScope("Remove DTLTO temporary files");
-        for (auto &F : Files) {
+        for (const auto &F : Files) {
           std::error_code EC = sys::fs::remove(F, true);
-          if (EC && EC != std::make_error_code(
-                              std::errc::no_such_file_or_directory)) {
-            Warnings.emplace_back(
-                (Twine("warning: could not remove the file '") + F +
-                 "': " + EC.message() + "\n")
-                    .str());
-          }
+          if (EC &&
+              EC != std::make_error_code(std::errc::no_such_file_or_directory))
+            Warnings.emplace_back("'" + F + "': " + EC.message());
         }
       }
       if (LLVM_ENABLE_THREADS && TTE)
@@ -2616,8 +2611,7 @@ public:
         if (!ShouldEmitIndexFiles)
           Files.push_back(std::string(Job.SummaryIndexPath));
       }
-      BackgroundDeleter->remove(std::move(Files), Conf.TimeTraceEnabled,
-                                Conf.TimeTraceGranularity);
+      BackgroundDeleter->remove(std::move(Files), Conf);
     });
 
     const StringRef BCError = "DTLTO backend compilation: ";
