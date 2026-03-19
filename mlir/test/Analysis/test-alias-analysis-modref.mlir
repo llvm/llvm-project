@@ -92,7 +92,7 @@ func.func @addressable_write(%arg: memref<2xf32>) attributes {test.ptr = "func"}
 
 // -----
 
-// An op with no side effects (safe) does not mod-ref any memory.
+// An op with no side effects does not mod-ref any memory.
 // CHECK-LABEL: Testing : "conditional_no_effects"
 // CHECK-DAG: conditional_side_effect_op -> func.region0#0: NoModRef
 // CHECK-DAG: return -> func.region0#0: NoModRef
@@ -103,7 +103,8 @@ func.func @conditional_no_effects(%arg: memref<2xf32>) attributes {test.ptr = "f
 
 // -----
 
-// An op with read/write/free/alloc effects on AnyResource may mod-ref any memory.
+// An op with read/write/free/alloc effects on DefaultResource
+// may mod-ref any memory.
 // CHECK-LABEL: Testing : "conditional_all_effects"
 // CHECK-DAG: conditional_side_effect_op -> func.region0#0: ModRef
 // CHECK-DAG: return -> func.region0#0: NoModRef

@@ -175,29 +175,23 @@ private:
   TypeID id;
 };
 
-/// Special kind of resource that includes all other resources
-/// regardless of whether they are addressable or not.
-/// It might be used to specify an effect on all resources.
-struct AnyResource : public Resource::Base<AnyResource> {
-  StringRef getName() const final { return "<AnyResource>"; }
-  Resource *getParent() const override { return nullptr; }
-};
-
-/// All resources that do not override getParent() have AnyResource
-/// as their parent so that none of the resources is disjoint
-/// from AnyResource.
-inline Resource *Resource::getParent() const { return AnyResource::get(); }
-
-/// A conservative default addressable resource kind.
+/// The default resource kind. It serves as the root of the resource hierarchy:
+/// all resources that do not override getParent() have DefaultResource as their
+/// parent.
 struct DefaultResource : public Resource::Base<DefaultResource> {
   DefaultResource() = default;
   StringRef getName() const override { return "<Default>"; }
+  Resource *getParent() const override { return nullptr; }
 
 protected:
   /// For use when this type is the parent of another resource; allows the
   /// derived resource to pass its TypeID so the hierarchy is correct.
   DefaultResource(TypeID id) : Base(id) {}
 };
+
+/// All resources that do not override getParent() have DefaultResource
+/// as their parent.
+inline Resource *Resource::getParent() const { return DefaultResource::get(); }
 
 /// An automatic allocation-scope resource that is valid in the context of a
 /// parent AutomaticAllocationScope trait.

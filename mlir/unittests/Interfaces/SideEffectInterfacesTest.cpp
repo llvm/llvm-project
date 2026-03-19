@@ -91,8 +91,8 @@ TEST(SideEffectResourceTest, CustomHierarchyIsaCast) {
   EXPECT_EQ(TestGrandchildResource::get()->getParent(),
             TestChildResource::get());
   EXPECT_EQ(TestChildResource::get()->getParent(), TestRootResource::get());
-  EXPECT_EQ(TestRootResource::get()->getParent(), AnyResource::get());
-  EXPECT_EQ(AnyResource::get()->getParent(), nullptr);
+  EXPECT_EQ(TestRootResource::get()->getParent(), DefaultResource::get());
+  EXPECT_EQ(DefaultResource::get()->getParent(), nullptr);
 
   // isSubresourceOf
   EXPECT_TRUE(
@@ -102,21 +102,25 @@ TEST(SideEffectResourceTest, CustomHierarchyIsaCast) {
   EXPECT_FALSE(
       TestRootResource::get()->isSubresourceOf(TestGrandchildResource::get()));
 
-  // Custom hierarchy disjoint from DefaultResource
-  EXPECT_TRUE(TestRootResource::get()->isDisjointFrom(DefaultResource::get()));
-  EXPECT_FALSE(isa<DefaultResource>(TestRootResource::get()));
-  EXPECT_FALSE(isa<DefaultResource>(TestChildResource::get()));
-  EXPECT_FALSE(isa<DefaultResource>(TestGrandchildResource::get()));
+  // Custom hierarchy is a subresource of DefaultResource (the root).
+  EXPECT_FALSE(TestRootResource::get()->isDisjointFrom(DefaultResource::get()));
+  EXPECT_TRUE(TestRootResource::get()->isSubresourceOf(DefaultResource::get()));
+  EXPECT_TRUE(
+      TestGrandchildResource::get()->isSubresourceOf(DefaultResource::get()));
+  EXPECT_FALSE(
+      DefaultResource::get()->isSubresourceOf(TestRootResource::get()));
   EXPECT_FALSE(isa<TestRootResource>(DefaultResource::get()));
-  EXPECT_EQ(dyn_cast<DefaultResource>(TestGrandchildResource::get()), nullptr);
   EXPECT_EQ(dyn_cast<TestRootResource>(DefaultResource::get()), nullptr);
 }
 
 TEST(SideEffectResourceTest, DisjointnessAndGetParent) {
-  EXPECT_EQ(DefaultResource::get()->getParent(), AnyResource::get());
+  EXPECT_EQ(DefaultResource::get()->getParent(), nullptr);
   EXPECT_EQ(AutomaticAllocationScopeResource::get()->getParent(),
             DefaultResource::get());
-  EXPECT_TRUE(DefaultResource::get()->isDisjointFrom(TestRootResource::get()));
+  // TestRootResource is a subresource of DefaultResource (the root),
+  // so they are not disjoint.
+  EXPECT_FALSE(DefaultResource::get()->isDisjointFrom(TestRootResource::get()));
+  EXPECT_TRUE(TestRootResource::get()->isSubresourceOf(DefaultResource::get()));
   EXPECT_TRUE(
       TestChildResource::get()->isSubresourceOf(TestRootResource::get()));
   EXPECT_FALSE(

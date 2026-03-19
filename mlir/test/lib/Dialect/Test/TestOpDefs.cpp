@@ -510,7 +510,7 @@ void ConditionalSideEffectOp::getEffects(
   if (!getHasEffects())
     return;
 
-  SideEffects::Resource *resource = SideEffects::AnyResource::get();
+  SideEffects::Resource *resource = SideEffects::DefaultResource::get();
   effects.emplace_back(MemoryEffects::Read::get(), resource);
   effects.emplace_back(MemoryEffects::Write::get(), resource);
   effects.emplace_back(MemoryEffects::Free::get(), resource);
