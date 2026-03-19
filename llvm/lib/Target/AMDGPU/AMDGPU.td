@@ -814,6 +814,14 @@ defm WMMA128bInsts : AMDGPUSubtargetFeature<"wmma-128b-insts",
   "Has WMMA instructions where A and B matrices do not have duplicated data"
 >;
 
+defm SWMMACGfx1200Insts : AMDGPUSubtargetFeature<"swmmac-gfx1200-insts",
+  "Has GFX1200 SWMMAC instructions"
+>;
+
+defm SWMMACGfx1250Insts : AMDGPUSubtargetFeature<"swmmac-gfx1250-insts",
+  "Has GFX1250 SWMMAC instructions"
+>;
+
 defm PkFmacF16Inst : AMDGPUSubtargetFeature<"pk-fmac-f16-inst",
   "Has v_pk_fmac_f16 instruction"
 >;
@@ -1956,6 +1964,7 @@ def FeatureISAVersion11_7_0 : FeatureSet<
      FeatureFP8ConversionInsts,
      FeatureDot11Insts,
      FeatureWMMA128bInsts,
+     FeatureSWMMACGfx1200Insts,
      FeatureIEEEMinimumMaximumInsts,
      FeatureMinimum3Maximum3F32,
      FeatureMinimum3Maximum3F16])>;
@@ -1989,6 +1998,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
    FeatureWMMA128bInsts,
+   FeatureSWMMACGfx1200Insts,
    FeatureIEEEMinimumMaximumInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -2086,7 +2096,9 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
-   FeatureMcastLoadInsts
+   FeatureMcastLoadInsts,
+   FeatureSWMMACGfx1200Insts,
+   FeatureSWMMACGfx1250Insts
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<

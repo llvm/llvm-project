@@ -4083,7 +4083,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         assert(VPI->isMasked() &&
                "Unmasked MaskedCond should be simplified earlier");
         VPI->replaceAllUsesWith(Builder.createNaryOp(
-            VPInstruction::LogicalAnd, {VPI->getOperand(0), VPI->getMask()}));
+            VPInstruction::LogicalAnd, {VPI->getMask(), VPI->getOperand(0)}));
         ToRemove.push_back(VPI);
         continue;
       }
