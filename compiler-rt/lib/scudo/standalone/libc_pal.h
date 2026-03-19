@@ -23,6 +23,7 @@
 
 #if (SCUDO_LINUX || SCUDO_TRUSTY) &&                                           \
     !defined(SCUDO_USE_LLVM_LIBC_INTERNAL_HEADERS)
+#include <errno.h>
 #include <sys/auxv.h>
 #endif
 

@@ -11,6 +11,8 @@
 #include "libc_pal.h"
 #include "report.h"
 
+#include <limits.h>
+
 namespace scudo {
 
 class UnknownFlagsRegistry {
