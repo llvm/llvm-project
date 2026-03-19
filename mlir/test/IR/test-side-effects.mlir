@@ -56,5 +56,20 @@ func.func @side_effect(%arg : index) {
     test.region_yield %arg0 : index 
   } {effects = [ {effect="allocate", on_argument, test_resource} ]} : index -> index
 
+  // Known to have no memory effects (effects attr present but empty).
+  // expected-remark@+1 {{operation has no memory effects}}
+  %9 = "test.optional_side_effect_op"() {effects = []} : () -> i32
+
+  // Unknown effects (no effects attr) — the op does not cast to
+  // MemoryEffectOpInterface so the walk skips it; no diagnostic expected.
+  %10 = "test.optional_side_effect_op"() {} : () -> i32
+
+  // Known specific effects: read and write on <Default>.
+  // expected-remark@+2 {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@+1 {{found an instance of 'write' on resource '<Default>'}}
+  %11 = "test.optional_side_effect_op"() {effects = [
+    {effect="read"}, {effect="write"}
+  ]} : () -> i32
+
   func.return 
 }

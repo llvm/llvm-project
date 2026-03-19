@@ -501,6 +501,35 @@ void SideEffectOp::getEffects(
   testSideEffectOpGetEffect(getOperation(), effects);
 }
 
+//===----------------------------------------------------------------------===//
+// OptionalSideEffectOp
+//===----------------------------------------------------------------------===//
+
+bool OptionalSideEffectOp::hasKnownMemoryEffects() {
+  return (*this)->hasAttr("effects");
+}
+
+void OptionalSideEffectOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  if (!effectsAttr)
+    return;
+
+  for (Attribute element : effectsAttr) {
+    DictionaryAttr effectElement = cast<DictionaryAttr>(element);
+
+    MemoryEffects::Effect *effect =
+        StringSwitch<MemoryEffects::Effect *>(
+            cast<StringAttr>(effectElement.get("effect")).getValue())
+            .Case("allocate", MemoryEffects::Allocate::get())
+            .Case("free", MemoryEffects::Free::get())
+            .Case("read", MemoryEffects::Read::get())
+            .Case("write", MemoryEffects::Write::get());
+
+    effects.emplace_back(effect, SideEffects::DefaultResource::get());
+  }
+}
+
 void SideEffectWithRegionOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.

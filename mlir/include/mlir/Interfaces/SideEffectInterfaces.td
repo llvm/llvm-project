@@ -31,6 +31,29 @@ def MemoryEffectsOpInterface
     an operation.
   }];
   let cppNamespace = "::mlir";
+
+  let append methods = [InterfaceMethod<
+                            [{
+      Returns true if the operation instance can specify all its memory effects.
+      The implementations may override this to make MemoryEffectsOpInterface
+      support conditional, e.g. when an operation may return conservative
+      "unknown" memory effects presenting itself as if it does not support
+      MemoryEffectsOpInterface at all.
+      By default, for all operations that are declared with
+      MemoryEffectsOpInterface support this method returns true.
+    }],
+                            /*retTy=*/"bool",
+                            /*methodName=*/"hasKnownMemoryEffects",
+                            /*args=*/(ins),
+                            /*methodBody=*/"",
+                            /*defaultImplementation=*/"return true;">,
+  ];
+
+  let extraClassOf = [{
+    // If hasKnownMemoryEffects() returns true, pretend that
+    // the operation instance does not implement MemoryEffectsOpInterface.
+    return $_op.hasKnownMemoryEffects();
+  }];
 }
 
 // The base class for defining specific memory effects.

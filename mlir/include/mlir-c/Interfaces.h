@@ -113,6 +113,9 @@ typedef struct {
   /// Get memory effects callback.
   void (*getEffects)(MlirOperation op, MlirMemoryEffectInstancesList effects,
                      void *userData);
+  /// Callback that returns true iff the operation instance
+  /// can specify all its memory effects.
+  bool (*hasKnownMemoryEffects)(MlirOperation op);
   void *userData;
 } MlirMemoryEffectsOpInterfaceCallbacks;
 

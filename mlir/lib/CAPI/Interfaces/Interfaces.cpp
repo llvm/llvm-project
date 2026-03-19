@@ -213,6 +213,12 @@ public:
     callbacks.getEffects(wrap(op), cEffects, callbacks.userData);
   }
 
+  bool hasKnownMemoryEffects(Operation *op) const {
+    if (callbacks.hasKnownMemoryEffects)
+      return callbacks.hasKnownMemoryEffects(wrap(op));
+    return true;
+  }
+
 private:
   MlirMemoryEffectsOpInterfaceCallbacks callbacks;
 };
