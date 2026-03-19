@@ -94,6 +94,8 @@ public:
   ModulesBuilder &operator=(const ModulesBuilder &) = delete;
   ModulesBuilder &operator=(ModulesBuilder &&) = delete;
 
+  bool hasRequiredModules(PathRef File);
+
   std::unique_ptr<PrerequisiteModules>
   buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS &TFS);
 

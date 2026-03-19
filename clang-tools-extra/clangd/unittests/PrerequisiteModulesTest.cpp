@@ -673,6 +673,105 @@ import M;
   EXPECT_EQ(HS.PrebuiltModuleFiles, HS2.PrebuiltModuleFiles);
 }
 
+// Test that module visibility is preserved when importing modules through
+// #include'd headers. See https://github.com/llvm/llvm-project/issues/181770
+TEST_F(PrerequisiteModulesTests, ModuleImportThroughInclude) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export struct MyType {};
+  )cpp");
+
+  CDB.addFile("Header.h", R"cpp(
+import M;
+  )cpp");
+
+  CDB.addFile("Use.cpp", R"cpp(
+#include "Header.h"
+void use() {
+    MyType t;
+}
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  ParseInputs Use = getInputs("Use.cpp", CDB);
+  Use.ModulesManager = &Builder;
+
+  std::unique_ptr<CompilerInvocation> CI =
+      buildCompilerInvocation(Use, DiagConsumer);
+  EXPECT_TRUE(CI);
+
+  auto Preamble =
+      buildPreamble(getFullPath("Use.cpp"), *CI, Use, /*InMemory=*/true,
+                    /*Callback=*/nullptr);
+  EXPECT_TRUE(Preamble);
+  EXPECT_TRUE(Preamble->RequiredModules);
+
+  auto AST = ParsedAST::build(getFullPath("Use.cpp"), Use, std::move(CI), {},
+                              Preamble);
+  EXPECT_TRUE(AST);
+
+  // Verify that MyType is usable (no module_unimported_use error)
+  const NamedDecl &D = findDecl(*AST, "MyType");
+  EXPECT_TRUE(D.isFromASTFile());
+}
+
+// Test that mixing PCH and C++20 named modules doesn't cause
+// module_decl_not_at_start error when the preamble contains 'module;' with
+// #include directives followed by 'import'. See
+// https://github.com/llvm/llvm-project/issues/181770
+TEST_F(PrerequisiteModulesTests, PCHWithNamedModulesIncludeAndImport) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+  )cpp");
+
+  CDB.addFile("myheader.h", R"cpp(
+int x;
+  )cpp");
+
+  // Module B has 'module;' with #include, then imports A.
+  // This used to trigger module_decl_not_at_start error.
+  CDB.addFile("B.cppm", R"cpp(
+module;
+
+#include "myheader.h"
+
+export module B;
+
+import A;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  ParseInputs BInput = getInputs("B.cppm", CDB);
+  BInput.ModulesManager = &Builder;
+
+  std::unique_ptr<CompilerInvocation> CI =
+      buildCompilerInvocation(BInput, DiagConsumer);
+  EXPECT_TRUE(CI);
+
+  auto Preamble =
+      buildPreamble(getFullPath("B.cppm"), *CI, BInput, /*InMemory=*/true,
+                    /*Callback=*/nullptr);
+  EXPECT_TRUE(Preamble);
+  EXPECT_TRUE(Preamble->RequiredModules);
+
+  auto AST = ParsedAST::build(getFullPath("B.cppm"), BInput, std::move(CI), {},
+                              Preamble);
+  EXPECT_TRUE(AST);
+
+  // Verify no module_decl_not_at_start error
+  for (const auto &D : AST->getDiagnostics()) {
+    EXPECT_FALSE(llvm::StringRef(D.Message).contains(
+        "module declaration must occur at the start"))
+        << "Unexpected error: " << D.Message;
+  }
+}
+
 } // namespace
 } // namespace clang::clangd
 

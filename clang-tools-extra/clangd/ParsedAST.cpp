@@ -430,6 +430,15 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   const PrecompiledPreamble *PreamblePCH =
       Preamble ? &Preamble->Preamble : nullptr;
 
+  // Skip PCH when the TU requires C++20 named modules. Mixing PCH and modules
+  // may cause issues (e.g., module_decl_not_at_start error when the preamble
+  // contains 'module;' with #include directives followed by 'import').
+  // Here is a simple workaround for better user experience.
+  if (PreamblePCH && Inputs.ModulesManager &&
+      Inputs.ModulesManager->hasRequiredModules(Filename)) {
+    PreamblePCH = nullptr;
+  }
+
   // This is on-by-default in windows to allow parsing SDK headers, but it
   // breaks many features. Disable it for the main-file (not preamble).
   CI->getLangOpts().DelayedTemplateParsing = false;
@@ -459,7 +468,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // dropped later on to not pay for extra latency by processing them.
   DiagnosticConsumer *DiagConsumer = &ASTDiags;
   IgnoreDiagnostics DropDiags;
-  if (Preamble) {
+  if (PreamblePCH) {
     Patch = PreamblePatch::createFullPatch(Filename, Inputs, *Preamble);
     Patch->apply(*CI);
   }
@@ -663,7 +672,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   IncludeStructure Includes;
   include_cleaner::PragmaIncludes PI;
   // If we are using a preamble, copy existing includes.
-  if (Preamble) {
+  if (Preamble && Patch) {
     Includes = Preamble->Includes;
     Includes.MainFileIncludes = Patch->preambleIncludes();
     // Replay the preamble includes so that clang-tidy checks can see them.
@@ -682,7 +691,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // with non-preamble macros below.
   MainFileMacros Macros;
   std::vector<PragmaMark> Marks;
-  if (Preamble) {
+  if (Patch) {
     Macros = Patch->mainFileMacros();
     Marks = Patch->marks();
   }
@@ -744,7 +753,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // FIXME: Also skip generation of diagnostics altogether to speed up ast
   // builds when we are patching a stale preamble.
   // Add diagnostics from the preamble, if any.
-  if (Preamble)
+  if (Patch)
     llvm::append_range(Diags, Patch->patchedDiags());
   // Finally, add diagnostics coming from the AST.
   {
