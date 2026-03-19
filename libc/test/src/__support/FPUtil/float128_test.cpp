@@ -12,7 +12,10 @@
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/Test.h"
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/FPUtil/float128.h"
+
 using LIBC_NAMESPACE::fputil::cast;
+using LIBC_NAMESPACE::fputil::Float128;
 
 // Test: float128 is recognized as a floating-point type.
 TEST(LlvmLibcTypeTraitsTest, Float128IsFloatingPoint) {
@@ -118,4 +121,65 @@ TEST(LlvmLibcCastTest, SpecialValues) {
 
   EXPECT_TRUE(__builtin_isinf(y_inf) != 0);
   EXPECT_TRUE(__builtin_isnan(y_nan) != 0);
+}
+
+//test operators
+TEST(LlvmLibcFloat128Test, BasicArithmetic) {
+  float128 a = cast<float128>(1.5);
+  float128 b = cast<float128>(2.0);
+
+  Float128 x(a);
+  Float128 y(b);
+
+  EXPECT_TRUE((x + y) == cast<float128>(3.5));
+  EXPECT_TRUE((x - y) == cast<float128>(-0.5));
+  EXPECT_TRUE((x * y) == cast<float128>(3.0));
+  EXPECT_TRUE((x / y) == cast<float128>(0.75));
+}
+
+TEST(LlvmLibcFloat128Test, ZeroBehavior) {
+  float128 pos_zero = cast<float128>(0.0);
+  float128 neg_zero = cast<float128>(-0.0);
+
+  Float128 x(pos_zero);
+  Float128 y(neg_zero);
+
+  float128 r1 = x + y;
+  float128 r2 = x - y;
+
+  EXPECT_TRUE(r1 == 0.0);
+  EXPECT_TRUE(r2 == 0.0);
+  EXPECT_TRUE(__builtin_signbit(r2) == 0);
+}
+
+TEST(LlvmLibcFloat128Test, SpecialValues) {
+  float128 inf = cast<float128>(__builtin_inf());
+  float128 nan = cast<float128>(__builtin_nan(""));
+
+  Float128 x(inf);
+  Float128 y(nan);
+
+  EXPECT_TRUE(__builtin_isinf(x + Float128(cast<float128>(1.0))) != 0);
+  EXPECT_TRUE(__builtin_isnan(y + Float128(cast<float128>(1.0))) != 0);
+}
+
+TEST(LlvmLibcFloat128Test, PrecisionSanity) {
+  float128 a = cast<float128>(0.1);
+  float128 b = cast<float128>(0.2);
+
+  Float128 x(a);
+  Float128 y(b);
+
+  float128 r = x + y;
+
+  EXPECT_TRUE(r == a + b);
+}
+
+TEST(LlvmLibcFloat128Test, RoundTripConsistency) {
+  float128 a = cast<float128>(1.25);
+
+  Float128 x(a);
+  float128 r = x + Float128(cast<float128>(0.0));
+
+  EXPECT_TRUE(r == a);
 }
