@@ -645,10 +645,10 @@ public:
   Expected<GenericKernelTy &> constructKernel(const char *Name) override;
 
   Error callGlobalConstructors(GenericPluginTy &Plugin,
-                                DeviceImageTy &Image) override;
+                               DeviceImageTy &Image) override;
 
   Error callGlobalDestructors(GenericPluginTy &Plugin,
-                               DeviceImageTy &Image) override;
+                              DeviceImageTy &Image) override;
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
 

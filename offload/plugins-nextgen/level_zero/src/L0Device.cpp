@@ -1163,9 +1163,9 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   // more of context about this routine.
   auto handleErr = [&](Error Err) {
     std::string Buffer;
-    llvm::raw_string_ostream(Buffer) << "failed to call global "
-                                     << (IsCtor ? "constructors" : "destructors")
-                                     << " in the image";
+    llvm::raw_string_ostream(Buffer)
+        << "failed to call global " << (IsCtor ? "constructors" : "destructors")
+        << " in the image";
     return Plugin::error(ErrorCode::INVALID_BINARY, std::move(Err),
                          Buffer.c_str());
   };
