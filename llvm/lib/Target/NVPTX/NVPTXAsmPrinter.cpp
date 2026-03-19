@@ -211,7 +211,7 @@ unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
     DenseMap<unsigned, unsigned> &RegMap = VRegMapping[RC];
     unsigned RegNum = RegMap[Reg];
 
-    static_assert(MCRegister::LastPhysicalReg <= (1 << 28));
+    static_assert(MCRegister::LastPhysicalReg < (1 << 28));
 
     // Encode the register class in the upper 4 bits
     // Must be kept in sync with NVPTXInstPrinter::printRegName
