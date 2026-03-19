@@ -253,7 +253,8 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
 static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
                                         ze_kernel_handle_t zeKernel,
                                         L0LaunchEnvTy &KEnv,
-                                        CommandModeTy CommandMode) {
+                                        CommandModeTy CommandMode,
+                                        std::unique_lock<std::mutex> &Lock) {
   const auto DeviceId = l0Device.getDeviceId();
   auto *IdStr = l0Device.getZeIdCStr();
   auto CmdListOrErr = l0Device.getImmCmdList();
@@ -282,9 +283,18 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Kernel depends on %zu data copying events.\n", NumWaitEvents);
-  CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
+  Error SyncErrors = Error::success();
+  auto addError = [&](Error Err) {
+    SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
+  };
+  CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendLaunchKernel, CmdList, zeKernel,
                     &KEnv.GroupCounts, Event, NumWaitEvents, WaitEvents);
-  KEnv.KernelPR.Mtx.unlock();
+  Lock.unlock();
+  if (SyncErrors) {
+    if (auto Err = l0Device.releaseEvent(Event))
+      addError(std::move(Err));
+    return SyncErrors;
+  }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
 
@@ -292,20 +302,22 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
     AsyncQueue->WaitEvents.push_back(Event);
     AsyncQueue->KernelEvent = Event;
   } else {
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, L0DefaultTimeout);
+    CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, Event, L0DefaultTimeout);
     if (auto Err = l0Device.releaseEvent(Event))
-      return Err;
+      addError(std::move(Err));
   }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
-       IdStr);
+  if (!SyncErrors)
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+        "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
+        IdStr);
 
-  return Plugin::success();
+  return SyncErrors;
 }
 
 static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
                                       ze_kernel_handle_t zeKernel,
-                                      L0LaunchEnvTy &KEnv) {
+                                      L0LaunchEnvTy &KEnv,
+                                      std::unique_lock<std::mutex> &Lock) {
   const auto DeviceId = l0Device.getDeviceId();
   const auto *IdStr = l0Device.getZeIdCStr();
 
@@ -324,7 +336,7 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
   ze_event_handle_t Event = nullptr;
   CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
                     &KEnv.GroupCounts, Event, 0, nullptr);
-  KEnv.KernelPR.Mtx.unlock();
+  Lock.unlock();
   CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
   CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
                         CmdQueue, 1, &CmdList, nullptr);
@@ -445,7 +457,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   L0LaunchEnvTy KEnv(IsAsync, AsyncQueue, KernelPR);
 
   // Protect from kernel preparation to submission as kernels are shared.
-  KernelPR.Mtx.lock();
+  std::unique_lock<std::mutex> Lock(KernelPR.Mtx);
 
   if (auto Err = setKernelGroups(l0Device, KEnv, NumThreads, NumBlocks))
     return Err;
@@ -471,9 +483,9 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   const bool UseImmCmdList = l0Device.useImmForCompute();
   if (UseImmCmdList)
     return launchKernelWithImmCmdList(l0Device, zeKernel, KEnv,
-                                      Options.CommandMode);
+                                      Options.CommandMode, Lock);
 
-  return launchKernelWithCmdQueue(l0Device, zeKernel, KEnv);
+  return launchKernelWithCmdQueue(l0Device, zeKernel, KEnv, Lock);
 }
 
 } // namespace llvm::omp::target::plugin

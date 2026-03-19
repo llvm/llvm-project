@@ -806,6 +806,10 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
                                       bool CopyTo) {
   const bool Ordered =
       (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
+  auto CmdListOrError = getImmCopyCmdList();
+  if (!CmdListOrError)
+    return CmdListOrError.takeError();
+  const auto CmdList = *CmdListOrError;
   auto EventOrErr = getEvent();
   if (!EventOrErr)
     return EventOrErr.takeError();
@@ -823,14 +827,22 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
     else
       NumWaitEvents = 0;
   }
-  auto CmdListOrError = getImmCopyCmdList();
-  if (!CmdListOrError)
-    return CmdListOrError.takeError();
-  const auto CmdList = *CmdListOrError;
-  CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
+  
+  Error SyncErrors = Error::success();
+  auto addError = [&](Error Err) {
+    SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
+  };
+
+  CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
                     SignalEvent, NumWaitEvents, WaitEvents);
-  AsyncQueue->WaitEvents.push_back(SignalEvent);
-  return Plugin::success();
+  if (!SyncErrors)
+    AsyncQueue->WaitEvents.push_back(SignalEvent);
+  else{
+    if (auto Err = releaseEvent(SignalEvent))
+      addError(std::move(Err));
+  }
+
+  return SyncErrors;
 }
 
 /// Enqueue memory fill.
@@ -844,10 +856,18 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
     auto EventOrErr = getEvent();
     if (!EventOrErr)
       return EventOrErr.takeError();
+    Error SyncErrors = Error::success();
+    auto addError = [&](Error Err) {
+      SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
+    };
     ze_event_handle_t Event = *EventOrErr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
+    CALL_ZE_HANDLE_ERROR(addError,zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
                       PatternSize, Size, Event, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, L0DefaultTimeout);
+    if (!SyncErrors)
+      CALL_ZE_HANDLE_ERROR(addError,zeEventHostSynchronize, Event, L0DefaultTimeout);
+    if (auto Err = releaseEvent(Event))
+      addError(std::move(Err));
+    return SyncErrors;
   } else {
     auto CmdListOrErr = getCopyCmdList();
     if (!CmdListOrErr)
