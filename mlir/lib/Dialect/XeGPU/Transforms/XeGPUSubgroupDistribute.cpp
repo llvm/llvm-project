@@ -1097,10 +1097,9 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
       return isa<xegpu::LoadGatherOp>(op) &&
              warpOp.getTerminator()->getPrevNode() == op;
     });
-    if (!producedByLastLoad) {
+    if (!producedByLastLoad)
       return rewriter.notifyMatchFailure(
           warpOp, "The last op is not xegpu::LoadGatherOp");
-    }
 
     auto loadGatherOp =
         producedByLastLoad->get().getDefiningOp<xegpu::LoadGatherOp>();
