@@ -30,7 +30,7 @@ static bool mustBreakAfterAttributes(const FormatToken &Tok,
     return true;
   case FormatStyle::ABS_Never:
     return false;
-  default:
+  default: // ABS_Leave and ABS_LeaveAll
     return Tok.NewlinesBefore > 0;
   }
 }
