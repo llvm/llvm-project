@@ -41,6 +41,7 @@
 #include "math/bf16addl.h"
 #include "math/bf16div.h"
 #include "math/bf16divf.h"
+#include "math/bf16divf128.h"
 #include "math/bf16divl.h"
 #include "math/bf16fma.h"
 #include "math/bf16fmaf.h"
