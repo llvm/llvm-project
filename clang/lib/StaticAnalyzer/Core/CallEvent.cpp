@@ -562,8 +562,12 @@ std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
 
   EvalCallOptions CallOpts;
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
+  // FIXME: This code assumes that the _current_ location context and block is
+  // the location and block where this `CallExpr` is called. For a more stable
+  // solution `Engine.getNumVisitedCurrent()` should be replaced with a call to
+  // `Engine.getNumVisited(<CallerLCtx>, <CallerBlock>)`.
   SVal RetVal = Engine.computeObjectUnderConstruction(
-      getOriginExpr(), getState(), &Engine.getBuilderContext(),
+      getOriginExpr(), getState(), Engine.getNumVisitedCurrent(),
       getLocationContext(), CC, CallOpts);
   return RetVal;
 }

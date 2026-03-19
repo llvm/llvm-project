@@ -1400,8 +1400,6 @@ private:
 // Create scopes for OpenACC constructs
 class AccVisitor : public virtual DeclarationVisitor {
 public:
-  explicit AccVisitor(SemanticsContext &context) : context_{context} {}
-
   void AddAccSourceRange(const parser::CharBlock &);
 
   static bool NeedsScope(const parser::OpenACCBlockConstruct &);
@@ -1472,9 +1470,6 @@ public:
   }
 
   void CopySymbolWithDevice(const parser::Name *name);
-
-private:
-  SemanticsContext &context_;
 };
 
 bool AccVisitor::NeedsScope(const parser::OpenACCBlockConstruct &x) {
@@ -1505,15 +1500,15 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
 }
 
 void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
-  // When CUDA Fortran is enabled together with OpenACC, new
-  // symbols are created for the one appearing in the use_device
-  // clause. These new symbols have the CUDA Fortran device
-  // attribute.
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
-      name->symbol) {
-    name->symbol = currScope().CopySymbol(*name->symbol);
-    if (auto *object{name->symbol->detailsIf<ObjectEntityDetails>()}) {
-      object->set_cudaDataAttr(common::CUDADataAttr::Device);
+  // For CUDA Fortran interoperability, new symbols are created for the ones
+  // appearing in the use_device clause. These new symbols have the CUDA Fortran
+  // device attribute.
+  if (name && name->symbol) {
+    if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
+      name->symbol = copy;
+      if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
+        object->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
     }
   }
 }
@@ -1527,17 +1522,24 @@ bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
               if (const auto *name{
                       parser::GetDesignatorNameIfDataRef(designator)}) {
                 CopySymbolWithDevice(name);
-              } else {
-                if (const auto *dataRef{
-                        std::get_if<parser::DataRef>(&designator.u)}) {
-                  using ElementIndirection =
-                      common::Indirection<parser::ArrayElement>;
-                  if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
-                    const parser::ArrayElement &arrayElement{ind->value()};
-                    const parser::DataRef &base{arrayElement.Base()};
-                    if (auto *name{std::get_if<parser::Name>(&base.u)}) {
-                      CopySymbolWithDevice(name);
-                    }
+              } else if (const auto *dataRef{
+                             std::get_if<parser::DataRef>(&designator.u)}) {
+                using ElementIndirection =
+                    common::Indirection<parser::ArrayElement>;
+                using ComponentIndirection =
+                    common::Indirection<parser::StructureComponent>;
+                if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
+                  const parser::ArrayElement &arrayElement{ind->value()};
+                  const parser::DataRef &base{arrayElement.Base()};
+                  if (auto *name{std::get_if<parser::Name>(&base.u)}) {
+                    CopySymbolWithDevice(name);
+                  }
+                } else if (auto *ind{std::get_if<ComponentIndirection>(
+                               &dataRef->u)}) {
+                  const parser::StructureComponent &comp{ind->value()};
+                  const parser::DataRef &base{comp.Base()};
+                  if (auto *name{std::get_if<parser::Name>(&base.u)}) {
+                    CopySymbolWithDevice(name);
                   }
                 }
               }
@@ -1904,11 +1906,12 @@ void OmpVisitor::ResolveMapperModifier(const parser::OmpMapper &mapper) {
     auto &ultimate{symbol->GetUltimate()};
     auto *misc{ultimate.detailsIf<MiscDetails>()};
     auto *md{ultimate.detailsIf<MapperDetails>()};
-    if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
+    if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName)) {
       context().Say(mapper.v.source,
           "Name '%s' should be a mapper name"_err_en_US, mapper.v.source);
-    else
+    } else {
       mapper.v.symbol = symbol;
+    }
   } else {
     // Allow the special 'default' mapper identifier without prior
     // declaration so lowering can recognize and handle it. Emit an
@@ -2164,8 +2167,7 @@ public:
 
   ResolveNamesVisitor(
       SemanticsContext &context, ImplicitRulesMap &rules, Scope &top)
-      : BaseVisitor{context, *this, rules}, AccVisitor(context),
-        topScope_{top} {
+      : BaseVisitor{context, *this, rules}, topScope_{top} {
     PushScope(top);
   }
 

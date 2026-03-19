@@ -603,6 +603,11 @@ function(llvm_add_library name)
       message(STATUS "${name} ignored -- Loadable modules not supported on this platform.")
       return()
     endif()
+    # Disable PCH reuse for plugins if PIC is globally disabled, plugins are
+    # always PIC and reusing a non-PIC PCH causes an option mismatch.
+    if(NOT LLVM_ENABLE_PIC)
+      set(ARG_DISABLE_PCH_REUSE TRUE)
+    endif()
   else()
     if(ARG_PLUGIN_TOOL)
       message(WARNING "PLUGIN_TOOL without MODULE doesn't make sense.")
@@ -636,13 +641,16 @@ function(llvm_add_library name)
     # Do add_dependencies(obj) later due to CMake issue 14747.
     list(APPEND objlibs ${obj_name})
 
-    # Bring in the target include directories and link info from our original
-    # target. target_link_libraries propagates transitive dependencies with
-    # proper SYSTEM include handling from IMPORTED targets.
-    # target_include_directories propagates include directories set directly on
-    # the target.
-    target_link_libraries(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},LINK_LIBRARIES>)
-    target_include_directories(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>)
+    # Propagate include directories from our original target.
+    # TODO: Use $<COMPILE_ONLY:${name}> instead of this manual propagation
+    # when minimum required CMake version is 3.27 or higher.
+    target_include_directories(${obj_name} SYSTEM
+      INTERFACE $<TARGET_PROPERTY:${name},INTERFACE_SYSTEM_INCLUDE_DIRECTORIES>
+      )
+    target_include_directories(${obj_name}
+      INTERFACE $<TARGET_PROPERTY:${name},INTERFACE_INCLUDE_DIRECTORIES>
+      PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>
+      )
 
     set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
     if(ARG_DEPENDS)

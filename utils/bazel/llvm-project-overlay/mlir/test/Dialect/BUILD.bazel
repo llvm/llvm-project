@@ -9,6 +9,7 @@ package(default_visibility = ["//visibility:public"])
         name = "%s.test" % src,
         srcs = [src],
         data = [
+            "Builtin/Bytecode/builtin_fixed_0.mlirbc",
             "EmitC/tosa/td.mlir",
             "Vector/vector-sink-transform.mlir",
             "//llvm:llc",

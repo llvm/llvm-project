@@ -43,6 +43,12 @@ std::optional<DataLayout> getDataLayout(Operation *op,
 /// The `mapping` is used and updated during cloning, allowing callers to
 /// track value correspondences. Optional `output`, `kernelFuncName`,
 /// `kernelModuleName`, and `stream` arguments are forwarded to the op.
+///
+/// When `inputArgsToMap` is non-empty, it is used as the key set for the
+/// clone mapping (instead of `inputArgs`). Use this when cloning a region
+/// that references one set of values (e.g. the source function's args) while
+/// the op's operands are another set (e.g. the current block's args).
+/// `inputArgsToMap` must have the same size as `inputArgs` when provided.
 ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
                                    ValueRange inputArgs, llvm::StringRef origin,
                                    Region &regionToClone,
@@ -50,7 +56,8 @@ ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
                                    ValueRange output = {},
                                    FlatSymbolRefAttr kernelFuncName = {},
                                    FlatSymbolRefAttr kernelModuleName = {},
-                                   Value stream = {});
+                                   Value stream = {},
+                                   ValueRange inputArgsToMap = {});
 
 } // namespace acc
 } // namespace mlir

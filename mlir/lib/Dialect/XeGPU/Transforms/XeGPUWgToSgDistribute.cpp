@@ -1173,11 +1173,12 @@ struct WgToSgVectorShapeCastOp
 
       if (!sourceLayout.isSliceOf(layout))
         return rewriter.notifyMatchFailure(
-            op, "The ShapeCast op only expands dimensions, the result layout "
-                "must be a slice of the input layout, or vice versa.");
-      layoutToDistribute = layoutToDistribute.setUnitDimData(expandedUnitDims);
-      layoutToDistribute =
-          layoutToDistribute.setUnitDimLayout(expandedUnitDims);
+            op, "The ShapeCast op only expands dimensions, the input layout "
+                "must be a slice of the result layout.");
+
+      assert(layoutToDistribute.isEqualTo(
+                 layoutToDistribute.setUnitDimData(expandedUnitDims)) &&
+             "The sg_data for unit dimensions should be set as 1");
     }
 
     SmallVector<int64_t> sgShape =
@@ -1680,8 +1681,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           // Only convert RankedTensorTypes that carry an XeGPU layout encoding.
           // Plain tensors (e.g. tensor<?xi32>) have no XeGPU encoding and must
           // not be converted: VectorType does not support dynamic dimensions.
-          auto encoding =
-              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding());
+          auto encoding = dyn_cast_if_present<xegpu::DistributeLayoutAttr>(
+              type.getEncoding());
           if (!encoding)
             return std::nullopt;
 

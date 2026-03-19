@@ -9,7 +9,8 @@
 
 ; CHECK-DAG: 10 instcount - Largest number of basic blocks in a single function
 ; CHECK-DAG: 18 instcount - Largest number of instructions in a single function
-; CHECK-DAG: 8 instcount - Number of Br insts
+; CHECK-DAG: 6 instcount - Number of UncondBr insts
+; CHECK-DAG: 2 instcount - Number of CondBr insts
 ; CHECK-DAG: 6 instcount - Number of Call insts
 ; CHECK-DAG: 2 instcount - Number of ICmp insts
 ; CHECK-DAG: 2 instcount - Number of Ret insts

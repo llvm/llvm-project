@@ -30,10 +30,10 @@ define <vscale x 4 x float> @fpext_nxv4bf16_to_nxv4f32(<vscale x 4 x bfloat> %a)
 define <vscale x 8 x float> @fpext_nxv8bf16_to_nxv8f32(<vscale x 8 x bfloat> %a) {
 ; CHECK-LABEL: fpext_nxv8bf16_to_nxv8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z1.s, z0.h
-; CHECK-NEXT:    uunpkhi z2.s, z0.h
-; CHECK-NEXT:    lsl z0.s, z1.s, #16
-; CHECK-NEXT:    lsl z1.s, z2.s, #16
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    zip1 z2.h, z1.h, z0.h
+; CHECK-NEXT:    zip2 z1.h, z1.h, z0.h
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %res = fpext <vscale x 8 x bfloat> %a to <vscale x 8 x float>
   ret <vscale x 8 x float> %res
