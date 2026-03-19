@@ -11,7 +11,7 @@ define void @smax(i32 %tmp3) {
 ; CHECK-LABEL: 'smax'
 ; CHECK-NEXT:  Classifying expressions for: @smax
 ; CHECK-NEXT:    %tmp5 = phi i64 [ %tmp62, %bb61 ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb4> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
+; CHECK-NEXT:    --> {0,+,1}<%bb4> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
 ; CHECK-NEXT:    %tmp6 = trunc i64 %tmp5 to i32
 ; CHECK-NEXT:    --> {0,+,1}<%bb4> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
 ; CHECK-NEXT:    %tmp7 = shl nsw i32 %tmp6, 8
@@ -85,7 +85,7 @@ define void @smax(i32 %tmp3) {
 ; CHECK-NEXT:    %tmp59 = add nsw i64 %tmp54, 1
 ; CHECK-NEXT:    --> {(1 + undef),+,1}<nsw><%bb53> U: full-set S: full-set Exits: (zext i32 (0 smax %tmp49) to i64) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp62 = add nuw nsw i64 %tmp5, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%bb4> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
+; CHECK-NEXT:    --> {1,+,1}<%bb4> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @smax
 ; CHECK-NEXT:  Loop %bb53: backedge-taken count is (-1 + (zext i32 (0 smax %tmp49) to i64) + (-1 * undef))
 ; CHECK-NEXT:  Loop %bb53: constant max backedge-taken count is i64 -1
@@ -170,7 +170,7 @@ define void @umax(i32 %tmp3) {
 ; CHECK-LABEL: 'umax'
 ; CHECK-NEXT:  Classifying expressions for: @umax
 ; CHECK-NEXT:    %tmp5 = phi i64 [ %tmp62, %bb61 ], [ 0, %entry ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb4> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
+; CHECK-NEXT:    --> {0,+,1}<%bb4> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
 ; CHECK-NEXT:    %tmp6 = trunc i64 %tmp5 to i32
 ; CHECK-NEXT:    --> {0,+,1}<%bb4> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
 ; CHECK-NEXT:    %tmp7 = shl nsw i32 %tmp6, 8
@@ -244,7 +244,7 @@ define void @umax(i32 %tmp3) {
 ; CHECK-NEXT:    %tmp59 = add nsw i64 %tmp54, 1
 ; CHECK-NEXT:    --> {(1 + undef),+,1}<nsw><%bb53> U: full-set S: full-set Exits: (zext i32 %tmp49 to i64) LoopDispositions: { %bb53: Computable, %bb4: Variant }
 ; CHECK-NEXT:    %tmp62 = add nuw nsw i64 %tmp5, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%bb4> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
+; CHECK-NEXT:    --> {1,+,1}<%bb4> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb4: Computable, %bb53: Invariant }
 ; CHECK-NEXT:  Determining loop execution counts for: @umax
 ; CHECK-NEXT:  Loop %bb53: backedge-taken count is (-1 + (zext i32 %tmp49 to i64) + (-1 * undef))
 ; CHECK-NEXT:  Loop %bb53: constant max backedge-taken count is i64 -1

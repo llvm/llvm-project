@@ -9,19 +9,12 @@ define void @test(ptr %p, i8 %arg, i64 %arg1, i32 %arg2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[ARG]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[ARG1]], -1
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[ARG2]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[ARG1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[SEXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LOOP_IDIOM_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LATCH:%.*]] ], [ [[P]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[LATCH]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ARG2]], [[ENTRY]] ], [ [[ADD9:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[INDVAR]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IV]], 2
+; CHECK-NEXT:    [[LOOP_IDIOM_IV:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[LOOP_IDIOM_IV]], i8 0, i64 0, i1 false)
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
@@ -36,8 +29,6 @@ define void @test(ptr %p, i8 %arg, i64 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    [[ADD11:%.*]] = add i64 [[ADD]], [[SEXT10]]
 ; CHECK-NEXT:    [[ADD12:%.*]] = add i64 [[ADD11]], [[SEXT]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[ADD12]], [[IV]]
-; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LOOP_IDIOM_IV]], i64 [[TMP6]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

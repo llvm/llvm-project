@@ -40,16 +40,16 @@ define void @foo(ptr %buf, i32 %denominator, ptr %flag) local_unnamed_addr {
 ; CHECK:       while.body.lr.ph:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[BUF_ADDR_07:%.*]] = phi ptr [ [[BUF]], [[WHILE_BODY_LR_PH]] ], [ [[CALL:%.*]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[DIV]] to i64
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @theSize, align 4
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[I]], align 4
-; CHECK-NEXT:    call void @bar(ptr nonnull [[I]], i64 [[INDVARS_IV_NEXT]])
+; CHECK-NEXT:    [[INX_06:%.*]] = phi i32 [ 0, [[WHILE_BODY_LR_PH]] ], [ [[ADD:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[INX_06]], [[DIV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @theSize, align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[I]], align 4
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[ADD]] to i64
+; CHECK-NEXT:    call void @bar(ptr nonnull [[I]], i64 [[CONV]])
 ; CHECK-NEXT:    [[CALL]] = call ptr @processBuf(ptr [[BUF_ADDR_07]])
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[FLAG]], align 4
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[FLAG]], align 4
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; CHECK:       while.end.loopexit:
 ; CHECK-NEXT:    br label [[WHILE_END]]
