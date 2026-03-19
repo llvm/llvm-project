@@ -981,7 +981,7 @@ private:
       return T == X_CNT ? ScoreXCnt : ScoreDsKmCnt;
     }
 
-    bool empty() const { return ScoreDsKmCnt == 0 && ScoreXCnt == 0; }
+    bool empty() const { return !ScoreDsKmCnt && !ScoreXCnt; }
   };
 
   DenseMap<VMEMID, VMEMInfo> VMem; // VGPR + LDS DMA
