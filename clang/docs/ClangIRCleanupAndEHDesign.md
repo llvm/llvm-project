@@ -732,9 +732,9 @@ CIR operations. The operations that were used in the ClangIR incubator
 project were closely matched to the Itanium exception handling ABI. In
 order to achieve a representation that also works well for other ABIs,
 the following new operations are being proposed: `cir.eh.initiate`,
-`cir.eh.dispatch`, `cir.begin_cleanup`, and `cir.end_cleanup`. The
-`cir.begin_catch` and `cir.end_catch` operations, described above,
-are also used in the flattened form.
+`cir.eh.dispatch`, `cir.eh.terminate`, `cir.begin_cleanup`, and
+`cir.end_cleanup`. The `cir.begin_catch` and `cir.end_catch` operations,
+described above, are also used in the flattened form.
 
 Any time a cir.call operation that may throw and exception appears
 within the try region of a `cir.try` operation or within the body region
@@ -953,6 +953,91 @@ the EH cleanup block (`^bb2`), which branches to `^bb3` to perform the
 cleanup, but because we have no catch handler, we execute `cir.resume`
 after the cleanup to unwind to the function that called `someFunc()`.
 
+#### Throwing Calls in Cleanup Regions
+
+When a call in an EH cleanup region may throw an exception, it requires
+special handling. The C++ standard requires that if an exception is
+thrown during exception cleanup (i.e., while unwinding a previous
+exception), the program must call `std::terminate()`. In the flattened
+CIR, such calls are replaced with `cir.try_call` operations whose
+unwind destination contains a `cir.eh.initiate` followed by a
+`cir.eh.terminate` operation.
+
+The `cir.eh.terminate` operation is a terminator that signals the need
+for program termination due to an exception thrown during cleanup. It
+takes the `!cir.eh_token` returned by `cir.eh.initiate` and is further
+processed during EH ABI lowering, where it is replaced with target-specific
+termination code.
+
+#### Example: Cleanup with throwing destructor
+
+**C++**
+
+``` c++
+struct ThrowingDtor {
+  ~ThrowingDtor() noexcept(false);
+};
+
+void someFunc() {
+  ThrowingDtor c;
+  c.doSomething();
+}
+```
+
+**CIR**
+
+```
+cir.func @someFunc(){
+  %0 = cir.alloca !rec_ThrowingDtor, !cir.ptr<!rec_ThrowingDtor>, ["c", init]
+  cir.call @_ZN12ThrowingDtorC1Ev(%0) : (!cir.ptr<!rec_ThrowingDtor>) -> ()
+  cir.cleanup.scope {
+    cir.call @_ZN12ThrowingDtor11doSomethingEv(%0) : (!cir.ptr<!rec_ThrowingDtor>) -> ()
+    cir.yield
+  } cleanup all {
+    cir.call @_ZN12ThrowingDtorD1Ev(%0) : (!cir.ptr<!rec_ThrowingDtor>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+```
+
+**Flattened CIR**
+
+```
+cir.func @someFunc(){
+  %0 = cir.alloca !rec_ThrowingDtor, !cir.ptr<!rec_ThrowingDtor>, ["c", init]
+  cir.call @_ZN12ThrowingDtorC1Ev(%0) : (!cir.ptr<!rec_ThrowingDtor>) -> ()
+  cir.try_call @_ZN12ThrowingDtor11doSomethingEv(%0) ^bb1, ^bb2 : (!cir.ptr<!rec_ThrowingDtor>) -> ()
+^bb1 // Normal cleanup
+  cir.call @_ZN12ThrowingDtorD1Ev(%0) : (!cir.ptr<!rec_ThrowingDtor>) -> ()
+  cir.br ^bb6
+^bb2 // EH cleanup (from entry block)
+  %1 = cir.eh.initiate cleanup : !cir.eh_token
+  cir.br ^bb3(%1 : !cir.eh_token)
+^bb3(%eh_token : !cir.eh_token) // Perform cleanup
+  %2 = cir.begin_cleanup(%eh_token : !cir.eh_token) : !cir.cleanup_token
+  cir.try_call @_ZN12ThrowingDtorD1Ev(%0) ^bb4, ^bb5 : (!cir.ptr<!rec_ThrowingDtor>) -> ()
+^bb4 // Destructor completed: continue unwinding
+  cir.end_cleanup(%2 : !cir.cleanup_token)
+  cir.resume %eh_token : !cir.eh_token
+^bb5 // Destructor threw: terminate
+  %3 = cir.eh.initiate : !cir.eh_token
+  cir.eh.terminate %3 : !cir.eh_token
+^bb6 // Normal continue (from ^bb1)
+  cir.return
+}
+```
+
+In this example, the destructor for `ThrowingDtor` may throw. In the
+normal cleanup path (`^bb1`), the destructor is a regular `cir.call`
+since the exception would propagate normally. In the EH cleanup path
+(`^bb3`), the destructor call is a `cir.try_call` because if the
+destructor throws during exception unwinding, the program must
+terminate. If the destructor completes normally, the exception
+continues unwinding via `cir.resume`. If the destructor throws, control
+transfers to `^bb5`, which initiates exception handling and immediately
+terminates.
+
 #### Example: Shared cleanups
 
 **C++**
@@ -1142,7 +1227,9 @@ The Itanium exception handling ABI representation replaces the
 for the catch handlers. The `cir.begin_cleanup` and `cir.end_cleanup`
 operations are simply dropped. The `cir.begin_catch` operation becomes a
 call to `__cxa_begin_catch`. The `cir.end_catch` operation becomes a
-call to `__cxa_end_catch`.
+call to `__cxa_end_catch`. The `cir.eh.terminate` operation becomes a
+call to `__clang_call_terminate` (which calls `__cxa_begin_catch`
+followed by `std::terminate()`) and then an unreachable operation.
 
 The only operation that is specific to Itanium exception handling is
 `cir.eh.landingpad`.
