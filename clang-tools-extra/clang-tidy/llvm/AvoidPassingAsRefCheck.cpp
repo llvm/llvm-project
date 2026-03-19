@@ -66,9 +66,8 @@ void AvoidPassingAsRefCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Param || !OpType)
     return;
 
-  // We should verify if the type is exactly what we expect.
-  // The matcher `isSameOrDerivedFrom` handles inheritance.
-
+  // We should verify if the type is exactly what we expect. The matcher
+  // `isSameOrDerivedFrom` handles inheritance.
   diag(Param->getLocation(),
        "class '%0' should be passed by value, not by reference")
       << OpType->getName();
