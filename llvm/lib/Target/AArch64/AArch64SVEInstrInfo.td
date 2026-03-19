@@ -4907,12 +4907,7 @@ let Predicates = [HasNonStreamingSVE2p3_or_SME2p3] in {
 // SVE2.3 instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasNonStreamingSVE2p3] in {
-  def LUTI6_Z2ZZ : sve2_luti6_vector<"luti6">;
-  def : Pat<(nxv16i8 (int_aarch64_sve_luti6 nxv16i8:$Op1, nxv16i8:$Op2,
-                      nxv16i8:$Op3)),
-            (LUTI6_Z2ZZ (REG_SEQUENCE ZPR2, nxv16i8:$Op1, zsub0,
-                                           nxv16i8:$Op2, zsub1),
-                         nxv16i8:$Op3)>;
+  defm LUTI6_Z2ZZ : sve2_luti6_vector<"luti6", int_aarch64_sve_luti6>;
 }
 
 //===----------------------------------------------------------------------===//

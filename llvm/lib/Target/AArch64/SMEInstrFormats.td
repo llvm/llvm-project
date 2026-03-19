@@ -3921,15 +3921,19 @@ multiclass sme2_luti4_vector_vg4_index<string mnemonic> {
 }
 
 // 8-bit Look up table
-class sme2_lut_single<string asm>
-  : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
-    asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
-  bits<0> ZTt;
-  bits<5> Zd;
-  bits<5> Zn;
-  let Inst{31-10} = 0b1100000011001000010000;
-  let Inst{9-5}   = Zn;
-  let Inst{4-0}   = Zd;
+multiclass sme2_lut_single<string asm, SDPatternOperator intrinsic> {
+  def NAME : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
+                asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
+    bits<0> ZTt;
+    bits<5> Zd;
+    bits<5> Zn;
+    let Inst{31-10} = 0b1100000011001000010000;
+    let Inst{9-5}   = Zn;
+    let Inst{4-0}   = Zd;
+  }
+
+  def : Pat<(nxv16i8 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn)),
+            (!cast<Instruction>(NAME) $zt, nxv16i8:$zn)>;
 }
 
 //===----------------------------------------------------------------------===//

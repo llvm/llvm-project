@@ -500,9 +500,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2p1)
     Builder.defineMacro("__ARM_FEATURE_SVE2p1", "1");
 
-  if (HasSVE2p3)
-    Builder.defineMacro("__ARM_FEATURE_SVE2p3", "1");
-
   if (HasSVE2 && HasSVEAES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
@@ -528,9 +525,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasSME2p1)
     Builder.defineMacro("__ARM_FEATURE_SME2p1", "1");
-
-  if (HasSME2p3)
-    Builder.defineMacro("__ARM_FEATURE_SME2p3", "1");
 
   if (HasSMEF16F16)
     Builder.defineMacro("__ARM_FEATURE_SME_F16F16", "1");
@@ -913,11 +907,9 @@ void AArch64TargetInfo::computeFeatureLookup() {
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
       .Case("sve2p1", FPU & SveMode && HasSVE2p1)
-      .Case("sve2p3", FPU & SveMode && HasSVE2p3)
       .Case("sme", HasSME)
       .Case("sme2", HasSME2)
       .Case("sme2p1", HasSME2p1)
-      .Case("sme2p3", HasSME2p3)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
       .Case("sme-fa64", HasSMEFA64)
@@ -1023,15 +1015,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVE2 = true;
       HasSVE2p1 = true;
     }
-    if (Feature == "+sve2p3") {
-      FPU |= NeonMode;
-      FPU |= SveMode;
-      HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2p1 = true;
-      HasSVE2p2 = true;
-      HasSVE2p3 = true;
-    }
     if (Feature == "+sve-aes") {
       FPU |= NeonMode;
       HasFullFP16 = true;
@@ -1085,18 +1068,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSME = true;
       HasSME2 = true;
       HasSME2p1 = true;
-      HasBFloat16 = true;
-      HasFullFP16 = true;
-    }
-    if (Feature == "+sme2p3") {
-      HasSME = true;
-      HasSME2 = true;
-      HasSVE2 = true;
-      HasSVE2p1 = true;
-      HasSVE2p2 = true;
-      HasSME2p1 = true;
-      HasSME2p2 = true;
-      HasSME2p3 = true;
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
