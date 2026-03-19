@@ -1011,6 +1011,10 @@ def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, ISA_MIPS3, GPR_64, FGR_64;
 def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 ZERO_64))>, ISA_MIPS3, GPR_64,
       FGR_64;
 
+def : Pat<(setlt (i32 (bitconvert (f32 (fpround AFGR64Opnd:$src)))), 0),
+          (SLTi (MFHC1_D32 AFGR64Opnd:$src), 0)>,
+          ISA_MIPS32R2, FGR_32;
+
 def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)), 
               (PseudoCVT_D64_W GPR32Opnd:$src)>, FGR_64;
 def : MipsPat<(f32 (any_sint_to_fp GPR64Opnd:$src)),
