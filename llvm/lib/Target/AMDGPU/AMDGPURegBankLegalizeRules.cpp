@@ -1455,6 +1455,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_s_setreg})
       .Any({{_, _, S32}, {{}, {IntrId, Imm, SgprB32_ReadFirstLane}}});
 
+  addRulesForIOpcs({amdgcn_s_sendmsg, amdgcn_s_sendmsghalt})
+      .Any({{}, {{}, {IntrId, Imm, SgprB32_M0}}});
+
+  addRulesForIOpcs({amdgcn_s_sendmsg_rtn})
+      .Any({{S32}, {{Sgpr32}, {}}})
+      .Any({{S64}, {{Sgpr64}, {}}});
+
   addRulesForIOpcs({amdgcn_groupstaticsize}).Any({{S32}, {{Sgpr32}, {IntrId}}});
 
   // Intrinsics with no register operands.
