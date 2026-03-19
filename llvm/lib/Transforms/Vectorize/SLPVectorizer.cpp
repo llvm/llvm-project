@@ -18507,6 +18507,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
              "Must contain at least single gathered value.");
       assert(TEPtr->UserTreeIndex &&
              "Expected only single user of a gather node.");
+      if (any_of(TEPtr->CombinedEntriesWithIndices,
+                 [&](const auto &P) { return P.first == TE->Idx; }))
+        continue;
       const EdgeInfo &UseEI = TEPtr->UserTreeIndex;
 
       PHINode *UserPHI = (UseEI.UserTE->State != TreeEntry::SplitVectorize &&
