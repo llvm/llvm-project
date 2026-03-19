@@ -1133,6 +1133,11 @@ static cl::opt<RegisterRegAlloc::FunctionPassCtor, false,
 void TargetPassConfig::addMachinePasses() {
   AddingMachinePasses = true;
 
+  // Remove oracle functions right after ISel. This changes their linkage to
+  // available_externally so all subsequent MachineFunctionPasses skip them,
+  // avoiding wasted compile time on post-ISel optimizations.
+  addPass(createRemoveOracleFunctionsPass());
+
   // Add passes that optimize machine instructions in SSA form.
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineSSAOptimization();

@@ -53,6 +53,7 @@
 ; CHECK-NEXT:       Assignment Tracking Analysis
 ; CHECK-NEXT:       AArch64 Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
+; CHECK-NEXT:       Remove unused oracle functions
 ; CHECK-NEXT:       Local Stack Slot Allocation
 ; CHECK-NEXT:       Bundle Machine CFG Edges
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis

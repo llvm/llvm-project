@@ -185,6 +185,7 @@ LLVM_ABI void initializeLoopTermFoldPass(PassRegistry &);
 LLVM_ABI void initializeLoopUnrollPass(PassRegistry &);
 LLVM_ABI void initializeLowerAtomicLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLowerEmuTLSPass(PassRegistry &);
+LLVM_ABI void initializeRemoveOracleFunctionsPass(PassRegistry &);
 LLVM_ABI void initializeLowerGlobalDtorsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeLowerIntrinsicsPass(PassRegistry &);
 LLVM_ABI void initializeLowerInvokeLegacyPassPass(PassRegistry &);
