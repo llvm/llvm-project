@@ -17,6 +17,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "CommonTestUtils.h"
+
 #include <chrono>
 #include <deque>
 #include <future>
@@ -38,7 +40,7 @@ public:
       : DetachOpIdx(DetachOpIdx), ShutdownOpIdx(ShutdownOpIdx), OpIdx(OpIdx),
         GenResult(std::move(GenResult)) {}
 
-  void onDetach(OnCompleteFn OnComplete) override {
+  void onDetach(OnCompleteFn OnComplete, bool ShutdownRequested) override {
     DetachOpIdx = OpIdx++;
     GenResult(Op::Detach);
     OnComplete();
@@ -61,23 +63,13 @@ class ConfigurableService : public Service {
 public:
   ConfigurableService(int ConstructorOption) {}
 
-  void onDetach(OnCompleteFn OnComplete) override { OnComplete(); }
+  void onDetach(OnCompleteFn OnComplete, bool ShutdownRequested) override {
+    OnComplete();
+  }
 
   void onShutdown(OnCompleteFn OnComplete) override { OnComplete(); }
 
   void doMoreConfig(int) noexcept {}
-};
-
-static ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
-  return ExecutorProcessInfo("arm64-apple-darwin", 16384);
-}
-
-class NoDispatcher : public TaskDispatcher {
-public:
-  void dispatch(std::unique_ptr<Task> T) override {
-    assert(false && "strictly no dispatching!");
-  }
-  void shutdown() override {}
 };
 
 class EnqueueingDispatcher : public TaskDispatcher {
@@ -273,10 +265,6 @@ private:
   orc_rt_WrapperFunction Fn;
 };
 
-// Non-overloaded version of cantFail: allows easy construction of
-// move_only_functions<void(Error)>s.
-static void noErrors(Error Err) { cantFail(std::move(Err)); }
-
 TEST(SessionTest, TrivialConstructionAndDestruction) {
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             noErrors);
@@ -405,7 +393,7 @@ TEST(ControllerAccessTest, Basics) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA);
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
 
@@ -428,11 +416,11 @@ TEST(ControllerAccessTest, ValidCallToController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA);
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
@@ -450,7 +438,7 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -468,13 +456,13 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA);
 
-  S.detachFromController();
+  S.detach();
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -492,7 +480,7 @@ TEST(ControllerAccessTest, CallFromController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA);
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(

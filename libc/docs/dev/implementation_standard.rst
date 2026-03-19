@@ -34,9 +34,9 @@ example. The ``isalpha`` function will be declared in an internal header file
 
     #endif LLVM_LIBC_SRC_CTYPE_ISALPHA_H
 
-Notice that the ``isalpha`` function declaration is nested inside the namespace
-``LIBC_NAMESPACE_DECL``. All implementation constructs in LLVM-libc are declared
-within the namespace ``LIBC_NAMESPACE_DECL``.
+All LLVM-libc implementation constructs must be enclosed in the
+``LIBC_NAMESPACE_DECL`` namespace. See :ref:`code_style` for the full technical
+rationale and macro definitions.
 
 ``.cpp`` File Structure
 -----------------------

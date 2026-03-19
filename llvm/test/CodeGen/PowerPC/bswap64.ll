@@ -4,13 +4,13 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -mcpu=pwr8 -mattr=-altivec | FileCheck %s --check-prefix=POWER-8-NO-ALTIVEC
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -mcpu=pwr9 | FileCheck %s
+; RUN:   -mcpu=pwr9 | FileCheck %s --check-prefix=POWER-9
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-ibm-aix-xcoff \
-; RUN:   -mcpu=pwr9 -vec-extabi | FileCheck %s
+; RUN:   -mcpu=pwr9 -vec-extabi | FileCheck %s --check-prefix=POWER-9
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -mcpu=pwr9 -mattr=-altivec | FileCheck %s --check-prefix=NO-ALTIVEC
+; RUN:   -mcpu=pwr9 -mattr=-altivec | FileCheck %s --check-prefix=POWER-9-NO-ALTIVEC
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-ibm-aix-xcoff \
-; RUN:   -mcpu=pwr9 -mattr=-altivec | FileCheck %s --check-prefix=NO-ALTIVEC
+; RUN:   -mcpu=pwr9 -mattr=-altivec | FileCheck %s --check-prefix=POWER-9-NO-ALTIVEC
 
 declare i64 @llvm.bswap.i64(i64)
 
@@ -52,29 +52,29 @@ define i64 @bswap64(i64 %x) {
 ; POWER-8-NO-ALTIVEC-NEXT:    mr 3, 4
 ; POWER-8-NO-ALTIVEC-NEXT:    blr
 ;
-; CHECK-LABEL: bswap64:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrdd 34, 3, 3
-; CHECK-NEXT:    xxbrd 0, 34
-; CHECK-NEXT:    mffprd 3, 0
-; CHECK-NEXT:    blr
+; POWER-9-LABEL: bswap64:
+; POWER-9:       # %bb.0: # %entry
+; POWER-9-NEXT:    mtvsrdd 34, 3, 3
+; POWER-9-NEXT:    xxbrd 0, 34
+; POWER-9-NEXT:    mffprd 3, 0
+; POWER-9-NEXT:    blr
 ;
-; NO-ALTIVEC-LABEL: bswap64:
-; NO-ALTIVEC:       # %bb.0: # %entry
-; NO-ALTIVEC-NEXT:    rotldi 5, 3, 16
-; NO-ALTIVEC-NEXT:    rotldi 4, 3, 8
-; NO-ALTIVEC-NEXT:    rldimi 4, 5, 8, 48
-; NO-ALTIVEC-NEXT:    rotldi 5, 3, 24
-; NO-ALTIVEC-NEXT:    rldimi 4, 5, 16, 40
-; NO-ALTIVEC-NEXT:    rotldi 5, 3, 32
-; NO-ALTIVEC-NEXT:    rldimi 4, 5, 24, 32
-; NO-ALTIVEC-NEXT:    rotldi 5, 3, 48
-; NO-ALTIVEC-NEXT:    rldimi 4, 5, 40, 16
-; NO-ALTIVEC-NEXT:    rotldi 5, 3, 56
-; NO-ALTIVEC-NEXT:    rldimi 4, 5, 48, 8
-; NO-ALTIVEC-NEXT:    rldimi 4, 3, 56, 0
-; NO-ALTIVEC-NEXT:    mr 3, 4
-; NO-ALTIVEC-NEXT:    blr
+; POWER-9-NO-ALTIVEC-LABEL: bswap64:
+; POWER-9-NO-ALTIVEC:       # %bb.0: # %entry
+; POWER-9-NO-ALTIVEC-NEXT:    rotldi 5, 3, 16
+; POWER-9-NO-ALTIVEC-NEXT:    rotldi 4, 3, 8
+; POWER-9-NO-ALTIVEC-NEXT:    rldimi 4, 5, 8, 48
+; POWER-9-NO-ALTIVEC-NEXT:    rotldi 5, 3, 24
+; POWER-9-NO-ALTIVEC-NEXT:    rldimi 4, 5, 16, 40
+; POWER-9-NO-ALTIVEC-NEXT:    rotldi 5, 3, 32
+; POWER-9-NO-ALTIVEC-NEXT:    rldimi 4, 5, 24, 32
+; POWER-9-NO-ALTIVEC-NEXT:    rotldi 5, 3, 48
+; POWER-9-NO-ALTIVEC-NEXT:    rldimi 4, 5, 40, 16
+; POWER-9-NO-ALTIVEC-NEXT:    rotldi 5, 3, 56
+; POWER-9-NO-ALTIVEC-NEXT:    rldimi 4, 5, 48, 8
+; POWER-9-NO-ALTIVEC-NEXT:    rldimi 4, 3, 56, 0
+; POWER-9-NO-ALTIVEC-NEXT:    mr 3, 4
+; POWER-9-NO-ALTIVEC-NEXT:    blr
 entry:
   %0 = call i64 @llvm.bswap.i64(i64 %x)
   ret i64 %0
