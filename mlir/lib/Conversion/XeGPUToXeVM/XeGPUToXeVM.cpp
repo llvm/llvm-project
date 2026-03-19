@@ -1049,14 +1049,25 @@ struct ConvertXeGPUToXeVMPass
   using Base::Base;
 
   void runOnOperation() override {
-    LLVMTypeConverter typeConverter(&getContext());
+    MLIRContext *context = &getContext();
+
+    // XeVM type converter is based on LLVM type converter with the
+    // following customizations.
+    // First, type conversion rules are added for xegpu custome types,
+    // TensorDescType and MemDescType.
+    // Second, MemRefType is lowered to single integer type
+    // Third, VectorType of single element or 0D is converted to vector
+    // element type. Otherwise, vector type is flatten to 1D.
+    LowerToLLVMOptions options(context);
+    options.overrideIndexBitwidth(this->use64bitIndex ? 64 : 32);
+    LLVMTypeConverter typeConverter(context, options);
+
+    Type xevmIndexType = typeConverter.convertType(IndexType::get(context));
+    Type i32Type = IntegerType::get(context, 32);
     typeConverter.addConversion([&](VectorType type) -> Type {
-      unsigned rank = type.getRank();
-      auto elemType = type.getElementType();
-      // If the element type is index, convert it to i64.
-      if (llvm::isa<IndexType>(elemType))
-        elemType = IntegerType::get(&getContext(), 64);
+      auto elemType = typeConverter.convertType(type.getElementType());
       // If the vector rank is 0 or has a single element, return the element
+      unsigned rank = type.getRank();
       if (rank == 0 || type.getNumElements() == 1)
         return elemType;
       // Otherwise, convert the vector to a flat vector type.
@@ -1068,17 +1079,15 @@ struct ConvertXeGPUToXeVMPass
       if (type.isScattered())
         return {};
       if (type.getRank() == 1)
-        return IntegerType::get(&getContext(), 64);
-      auto i32Type = IntegerType::get(&getContext(), 32);
+        return xevmIndexType;
       return VectorType::get(8, i32Type);
     });
     // Convert MemDescType into i32 for SLM
-    typeConverter.addConversion([&](xegpu::MemDescType type) -> Type {
-      return IntegerType::get(&getContext(), 32);
-    });
+    typeConverter.addConversion(
+        [&](xegpu::MemDescType type) -> Type { return i32Type; });
 
     typeConverter.addConversion([&](MemRefType type) -> Type {
-      return IntegerType::get(&getContext(), (isSharedMemRef(type) ? 32 : 64));
+      return isSharedMemRef(type) ? i32Type : xevmIndexType;
     });
 
     // LLVM type converter puts unrealized casts for the following cases:
@@ -1289,14 +1298,14 @@ struct ConvertXeGPUToXeVMPass
     typeConverter.addTargetMaterialization(
         vectorToSingleElementMaterializationCast);
     typeConverter.addTargetMaterialization(vectorToVectorMaterializationCast);
-    ConversionTarget target(getContext());
+    ConversionTarget target(*context);
     target.addLegalDialect<xevm::XeVMDialect, LLVM::LLVMDialect,
                            vector::VectorDialect, arith::ArithDialect,
                            memref::MemRefDialect, gpu::GPUDialect,
                            index::IndexDialect>();
     target.addIllegalDialect<xegpu::XeGPUDialect>();
 
-    RewritePatternSet patterns(&getContext());
+    RewritePatternSet patterns(context);
     populateXeGPUToXeVMConversionPatterns(typeConverter, patterns);
     scf::populateSCFStructuralTypeConversionsAndLegality(typeConverter,
                                                          patterns, target);
