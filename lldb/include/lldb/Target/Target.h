@@ -1661,7 +1661,8 @@ public:
   //
   // Hooks fire on target lifecycle events. Each hook must explicitly specify
   // which triggers it responds to via --on-load, --on-unload, and/or --on-stop.
-  // All trigger types are coequal, meaning none is privileged or implied by default.
+  // All trigger types are coequal, meaning none is privileged or implied by
+  // default.
   class Hook : public UserID {
   public:
     Hook(const Hook &rhs);
