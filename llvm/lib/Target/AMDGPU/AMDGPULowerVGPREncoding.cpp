@@ -423,7 +423,7 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
            Opc == AMDGPU::S_DELAY_ALU;
   };
 
-  while (!I.isEnd() && I != I->getParent()->begin()) {
+  while (I != MBB->begin()) {
     auto Prev = std::prev(I);
     if (!isProgramStateInstr(&*Prev))
       return I;
