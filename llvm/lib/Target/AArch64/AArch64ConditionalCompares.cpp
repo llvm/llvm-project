@@ -924,9 +924,9 @@ bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
     CmpConv.convert(RemovedBlocks);
     Changed = true;
     updateDomTree(RemovedBlocks);
+    updateLoops(RemovedBlocks);
     for (MachineBasicBlock *MBB : RemovedBlocks)
       MBB->eraseFromParent();
-    updateLoops(RemovedBlocks);
   }
   return Changed;
 }
