@@ -8264,8 +8264,10 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     if (!BestChunkWidth)
       return false;
 
-    SDValue In =
-        LL ? DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH) : N->getOperand(0);
+    assert(!LL == !LH && "Expected both input halves or no input halves!");
+    if (!LL)
+      std::tie(LL, LH) = DAG.SplitScalar(N->getOperand(0), dl, HiLoVT, HiLoVT);
+
     if (TrailingZeros) {
       // Save the shifted off bits if we need the remainder.
       if (Opcode != ISD::UDIV) {
@@ -8273,13 +8275,20 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         PartialRem =
             DAG.getNode(ISD::AND, dl, HiLoVT, LL, DAG.getConstant(Mask, dl, HiLoVT));
       }
-      EVT ShiftVT = getShiftAmountTy(VT, DAG.getDataLayout());
-      In = DAG.getNode(ISD::SRL, dl, VT, In,
-                       DAG.getShiftAmountConstant(TrailingZeros, ShiftVT, dl));
 
-      std::tie(LL, LH) = DAG.SplitScalar(In, dl, HiLoVT, HiLoVT);
-    } else if (!LL) {
-      std::tie(LL, LH) = DAG.SplitScalar(In, dl, HiLoVT, HiLoVT);
+      if (isOperationLegal(ISD::FSHR, HiLoVT))
+        LL = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
+                         DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+      else
+        LL = DAG.getNode(
+            ISD::OR, dl, HiLoVT,
+            DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
+                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
+            DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
+                        DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
+                                                   HiLoVT, dl)));
+      LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
+                       DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
     }
 
     Sum = DAG.getConstant(0, dl, HiLoVT);
@@ -8287,14 +8296,28 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         APInt::getLowBitsSet(HBitWidth, BestChunkWidth), dl, HiLoVT);
 
     for (unsigned I = 0; I < BitWidth; I += BestChunkWidth) {
-      SDValue Shift = DAG.getShiftAmountConstant(I, VT, dl);
-      SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
-      // Truncate to HiLoVT
-      SDValue TruncChunk = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, Chunk);
+      SDValue Chunk;
+      if (I == 0) {
+        Chunk = LL;
+      } else if (I >= HBitWidth) {
+        Chunk =
+            DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
+                        DAG.getShiftAmountConstant(I - HBitWidth, HiLoVT, dl));
+      } else if (isOperationLegal(ISD::FSHR, HiLoVT)) {
+        Chunk = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
+                            DAG.getShiftAmountConstant(I, HiLoVT, dl));
+      } else {
+        Chunk = DAG.getNode(
+            ISD::OR, dl, HiLoVT,
+            DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
+                        DAG.getShiftAmountConstant(I, HiLoVT, dl)),
+            DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
+                        DAG.getShiftAmountConstant(HBitWidth - I, HiLoVT, dl)));
+      }
+
       // For the last chunk, we might not need a mask if it's smaller than
       // BestChunkWidth, but applying it is always safe.
-      SDValue MaskedChunk =
-          DAG.getNode(ISD::AND, dl, HiLoVT, TruncChunk, Mask);
+      SDValue MaskedChunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
       Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, MaskedChunk);
     }
   }
