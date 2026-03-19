@@ -9,6 +9,7 @@
 #include "ClangTidyProfiling.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -44,7 +45,8 @@ void ClangTidyProfiling::printUserFriendlyTable(llvm::raw_ostream &OS,
 
 void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
                                      llvm::TimerGroup &TG) {
-  assert(Storage && "We should have a filename.");
+  if (!Storage)
+    return;
   std::string TimestampStr;
   llvm::raw_string_ostream TmpOS(TimestampStr);
   TmpOS << Storage->Timestamp;
