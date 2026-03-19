@@ -388,7 +388,9 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 /// layout and data with the consumer's layout on non-reduction dimensions.
 /// Then, it distributes remaining subgroups across reduction dimensions. This
 /// avoids subgroup data redistribution overhead between the reduced result and
-/// its consumer.
+/// its consumer. When the consumer layout is a slice layout, it attempts to
+/// reuse the slice layout's parent layout for the source to further minimize
+/// potential data redistribution.
 ///
 /// InstData requries {1, ..., min(maxReduceVectorSize, srcShape),subgroupSize}
 /// Lane Layout requires {1, ..., 1, subgroupSize}
@@ -396,17 +398,31 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 ///
 /// Examples:
 ///   1. Subgroup layout - Row reduction on 2D tensor:
-///      srcShape=[32, 64], reductionDims=[1], resShape=[32], subgroupSize=16,
+///      srcShape=[32, 128], reductionDims=[1], resShape=[32], subgroupSize=16,
 ///      workgroupSize=32
 ///      Consumer Layout:
 ///      #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
-///      [1]>} Result: srcLayout with sgLayout=[4, 8], sgData=[8, 8] (matches
-///      consumer on non-reduction dim, minimizing data redistribution on
-///      reduction dim)
-///   2. Subgroup layout - Same example above but consumer has different layout:
-///      sgLayout=[32], sgData=[1]
-///      Result: srcLayout with sgLayout=[32,1], sgData=[1, 64]
-///      (distributes all subgroups on non reduction dim)
+///      [1]>}
+////     Result Layout: #xegpu.slice<#xegpu.layout<sg_layout=[4, 8],
+///      sg_data=[8, 16]>, dims = [1]>} Note that the sg_layout is reused but
+///      sg_data needs to be adjusted to evenly distribute the source tensor
+///      tile among the reduction dim.
+///   2. Subgroup layout - Same example above but consumer doesn't have a
+///   reusable slice layout.
+///      Consumer Layout:
+///      #xegpu.layout<sgLayout=[32], sgData=[1]>
+///      Result Layout:
+///      #xegpu.slice<#xegpu.layout<sgLayout=[32,1], sgData=[1, 64]>, dims =
+///      [1]>}
+///      Consumer Layout:
+///      #xegpu.slice<#xegpu.layout<sgLayout=[8, 2, 4], sgData=[4, 64, 32]>,
+///      dims = [1, 2]>} Result Layout:
+///      #xegpu.slice<#xegpu.layout<sgLayout=[8,4], sgData=[4, 32]>, dims =
+///      [1]>}
+///      Note that the consumer's layout can't be directly reused as is.
+///      So the algorithm distributes all subgroups on non reduction dimensions
+///      first and then distribute remaining subgroups on the reduction
+///      dimension.
 ///
 ///   2. InstData layout - Column reduction:
 ///      srcShape=[32, 64], reductionDims=[0], subgroupSize=16
@@ -466,24 +482,25 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
 
       SmallVector<int64_t> sgLayout(srcRank), sgData(srcRank), order(srcRank);
       int remainingSgCount = workgroupSize;
-      int consumerIdx = consumerSgLayout.size() - 1;
+      int consumerIdx = 0;
 
       // First pass: Match consumer's layout on non-reduction dimensions
-      for (int i = srcRank - 1; i >= 0; i--) {
-        if (!llvm::is_contained(reductionDims, i) && consumerIdx >= 0) {
+      for (int i = 0; i < srcRank; i++) {
+        if (!llvm::is_contained(reductionDims, i) &&
+            consumerIdx < consumerSgLayout.size()) {
           sgLayout[i] = consumerSgLayout[consumerIdx];
           assert((srcShape[i] % sgLayout[i] == 0) &&
                  "source shape not divisible by consumer sg_layout");
           sgData[i] = srcShape[i] / sgLayout[i];
           remainingSgCount /= sgLayout[i];
           order[i] = consumerOrder[consumerIdx];
-          consumerIdx--;
+          consumerIdx++;
         }
       }
 
       // Second pass: Distribute remaining subgroups across reduction dimensions
       int64_t remainOrder = consumerSgLayout.size();
-      for (int i = srcRank - 1; i >= 0; i--) {
+      for (int i = 0; i < srcRank; i++) {
         if (llvm::is_contained(reductionDims, i)) {
           sgLayout[i] =
               std::min(srcShape[i], static_cast<int64_t>(remainingSgCount));
