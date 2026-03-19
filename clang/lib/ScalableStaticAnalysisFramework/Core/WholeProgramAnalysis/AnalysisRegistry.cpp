@@ -24,9 +24,8 @@ std::vector<AnalysisName> &AnalysisRegistry::getAnalysisNames() {
   return Names;
 }
 
-bool AnalysisRegistry::contains(llvm::StringRef Name) {
-  return llvm::is_contained(getAnalysisNames(),
-                            AnalysisName(std::string(Name)));
+bool AnalysisRegistry::contains(const AnalysisName &Name) {
+  return llvm::is_contained(getAnalysisNames(), Name);
 }
 
 const std::vector<AnalysisName> &AnalysisRegistry::names() {
@@ -34,9 +33,9 @@ const std::vector<AnalysisName> &AnalysisRegistry::names() {
 }
 
 llvm::Expected<std::unique_ptr<AnalysisBase>>
-AnalysisRegistry::instantiate(llvm::StringRef Name) {
+AnalysisRegistry::instantiate(const AnalysisName &Name) {
   for (const auto &Entry : RegistryT::entries()) {
-    if (Entry.getName() == Name) {
+    if (Entry.getName() == Name.str()) {
       return std::unique_ptr<AnalysisBase>(Entry.instantiate());
     }
   }

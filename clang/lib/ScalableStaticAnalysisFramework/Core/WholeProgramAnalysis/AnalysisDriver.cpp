@@ -63,7 +63,7 @@ AnalysisDriver::toposort(llvm::ArrayRef<AnalysisName> Roots) {
         Path.push_back(Name);
 
         llvm::Expected<std::unique_ptr<AnalysisBase>> V =
-            AnalysisRegistry::instantiate(Name.str());
+            AnalysisRegistry::instantiate(Name);
         if (!V) {
           return V.takeError();
         }

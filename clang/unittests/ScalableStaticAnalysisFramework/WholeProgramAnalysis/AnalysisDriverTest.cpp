@@ -80,12 +80,24 @@ public:
 };
 
 // ---------------------------------------------------------------------------
+// Analysis names
+// ---------------------------------------------------------------------------
+
+const AnalysisName Analysis1Name("Analysis1");
+const AnalysisName Analysis2Name("Analysis2");
+const AnalysisName Analysis3Name("Analysis3");
+const AnalysisName Analysis4Name("Analysis4");
+const AnalysisName Analysis5Name("Analysis5");
+const AnalysisName CycleAName("CycleA");
+const AnalysisName CycleBName("CycleB");
+
+// ---------------------------------------------------------------------------
 // Results
 // ---------------------------------------------------------------------------
 
 class Analysis1Result final : public AnalysisResult {
 public:
-  static AnalysisName analysisName() { return AnalysisName("Analysis1"); }
+  static AnalysisName analysisName() { return Analysis1Name; }
   std::vector<std::pair<EntityId, int>> Entries;
   bool WasInitialized = false;
   bool WasFinalized = false;
@@ -93,7 +105,7 @@ public:
 
 class Analysis2Result final : public AnalysisResult {
 public:
-  static AnalysisName analysisName() { return AnalysisName("Analysis2"); }
+  static AnalysisName analysisName() { return Analysis2Name; }
   std::vector<std::pair<EntityId, int>> Entries;
   bool WasInitialized = false;
   bool WasFinalized = false;
@@ -103,14 +115,14 @@ public:
 // into the LUSummary to verify the driver silently skips it.
 class Analysis3Result final : public AnalysisResult {
 public:
-  static AnalysisName analysisName() { return AnalysisName("Analysis3"); }
+  static AnalysisName analysisName() { return Analysis3Name; }
 };
 
 // Analysis4 has a registered analysis but no data is inserted into the
 // LUSummary, so it is skipped and get() returns nullptr.
 class Analysis4Result final : public AnalysisResult {
 public:
-  static AnalysisName analysisName() { return AnalysisName("Analysis4"); }
+  static AnalysisName analysisName() { return Analysis4Name; }
   std::vector<std::pair<EntityId, int>> Entries;
   bool WasInitialized = false;
   bool WasFinalized = false;
@@ -121,7 +133,7 @@ public:
 // initialize() and that the initialize/step/finalize lifecycle is respected.
 class Analysis5Result final : public AnalysisResult {
 public:
-  static AnalysisName analysisName() { return AnalysisName("Analysis5"); }
+  static AnalysisName analysisName() { return Analysis5Name; }
   std::vector<std::string> CallSequence;
   std::vector<std::pair<EntityId, int>> Analysis1Entries;
   std::vector<std::pair<EntityId, int>> Analysis2Entries;
@@ -134,12 +146,12 @@ public:
 // any analysis executes.
 class CycleAResult final : public AnalysisResult {
 public:
-  static AnalysisName analysisName() { return AnalysisName("CycleA"); }
+  static AnalysisName analysisName() { return CycleAName; }
 };
 
 class CycleBResult final : public AnalysisResult {
 public:
-  static AnalysisName analysisName() { return AnalysisName("CycleB"); }
+  static AnalysisName analysisName() { return CycleBName; }
 };
 
 // ---------------------------------------------------------------------------
@@ -327,27 +339,28 @@ protected:
 // ---------------------------------------------------------------------------
 
 TEST(AnalysisRegistryTest, AnalysisIsRegistered) {
-  EXPECT_TRUE(AnalysisRegistry::contains("Analysis1"));
-  EXPECT_TRUE(AnalysisRegistry::contains("Analysis2"));
-  EXPECT_FALSE(AnalysisRegistry::contains("Analysis3"));
-  EXPECT_TRUE(AnalysisRegistry::contains("Analysis4"));
-  EXPECT_TRUE(AnalysisRegistry::contains("Analysis5"));
-  EXPECT_TRUE(AnalysisRegistry::contains("CycleA"));
-  EXPECT_TRUE(AnalysisRegistry::contains("CycleB"));
+  EXPECT_TRUE(AnalysisRegistry::contains(Analysis1Name));
+  EXPECT_TRUE(AnalysisRegistry::contains(Analysis2Name));
+  EXPECT_FALSE(AnalysisRegistry::contains(Analysis3Name));
+  EXPECT_TRUE(AnalysisRegistry::contains(Analysis4Name));
+  EXPECT_TRUE(AnalysisRegistry::contains(Analysis5Name));
+  EXPECT_TRUE(AnalysisRegistry::contains(CycleAName));
+  EXPECT_TRUE(AnalysisRegistry::contains(CycleBName));
 }
 
 TEST(AnalysisRegistryTest, AnalysisCanBeInstantiated) {
   constexpr auto instantiate = AnalysisRegistry::instantiate;
-  EXPECT_THAT_EXPECTED(instantiate("AnalysisNonExisting"),
-                       llvm::FailedWithMessage(
-                           "no analysis registered for 'AnalysisNonExisting'"));
-  EXPECT_THAT_EXPECTED(instantiate("Analysis1"), llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(instantiate("Analysis2"), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(
+      instantiate(AnalysisName("AnalysisNonExisting")),
+      llvm::FailedWithMessage(
+          "no analysis registered for 'AnalysisName(AnalysisNonExisting)'"));
+  EXPECT_THAT_EXPECTED(instantiate(Analysis1Name), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate(Analysis2Name), llvm::Succeeded());
   // No Analysis3 - not registered, so instantiate() would fail.
-  EXPECT_THAT_EXPECTED(instantiate("Analysis4"), llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(instantiate("Analysis5"), llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(instantiate("CycleA"), llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(instantiate("CycleB"), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate(Analysis4Name), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate(Analysis5Name), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate(CycleAName), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate(CycleBName), llvm::Succeeded());
 }
 
 // run<T...>() — processes the non-cyclic analyses in topological order.
@@ -424,9 +437,10 @@ TEST_F(AnalysisDriverTest, RunAll) {
   }
 
   // Unregistered analysis — not present in WPA.
-  EXPECT_THAT_EXPECTED(WPAOrErr->get<Analysis3Result>(),
-                       llvm::FailedWithMessage(
-                           "no result for analysis 'Analysis3' in WPASuite"));
+  EXPECT_THAT_EXPECTED(
+      WPAOrErr->get<Analysis3Result>(),
+      llvm::FailedWithMessage(
+          "no result for 'AnalysisName(Analysis3)' in WPASuite"));
 }
 
 // run(names) — processes only the analyses for the given names.
@@ -451,9 +465,10 @@ TEST_F(AnalysisDriverTest, RunByName) {
   EXPECT_TRUE(R1OrErr->WasFinalized);
 
   // Analysis2 was not requested — not present even though data exists.
-  EXPECT_THAT_EXPECTED(WPAOrErr->get<Analysis2Result>(),
-                       llvm::FailedWithMessage(
-                           "no result for analysis 'Analysis2' in WPASuite"));
+  EXPECT_THAT_EXPECTED(
+      WPAOrErr->get<Analysis2Result>(),
+      llvm::FailedWithMessage(
+          "no result for 'AnalysisName(Analysis2)' in WPASuite"));
 }
 
 // run(names) — error when a requested name has no data in LUSummary.
@@ -478,7 +493,8 @@ TEST_F(AnalysisDriverTest, RunByNameErrorMissingAnalysis) {
   // Analysis3 has data but no registered analysis.
   EXPECT_THAT_EXPECTED(
       Driver.run({AnalysisName("Analysis3")}),
-      llvm::FailedWithMessage("no analysis registered for 'Analysis3'"));
+      llvm::FailedWithMessage(
+          "no analysis registered for 'AnalysisName(Analysis3)'"));
 }
 
 // run<ResultTs...>() — type-safe subset.
@@ -503,9 +519,10 @@ TEST_F(AnalysisDriverTest, RunByType) {
   EXPECT_TRUE(R1OrErr->WasFinalized);
 
   // Analysis2 was not requested — not present even though data exists.
-  EXPECT_THAT_EXPECTED(WPAOrErr->get<Analysis2Result>(),
-                       llvm::FailedWithMessage(
-                           "no result for analysis 'Analysis2' in WPASuite"));
+  EXPECT_THAT_EXPECTED(
+      WPAOrErr->get<Analysis2Result>(),
+      llvm::FailedWithMessage(
+          "no result for 'AnalysisName(Analysis2)' in WPASuite"));
 }
 
 // run<ResultTs...>() — error when a requested type has no data in LUSummary.

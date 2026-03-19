@@ -83,8 +83,7 @@ public:
     auto It = Data.find(Name);
     if (It == Data.end()) {
       return ErrorBuilder::create(std::errc::invalid_argument,
-                                  "no result for analysis '{0}' in WPASuite",
-                                  Name.str())
+                                  "no result for '{0}' in WPASuite", Name)
           .build();
     }
     return *It->second;

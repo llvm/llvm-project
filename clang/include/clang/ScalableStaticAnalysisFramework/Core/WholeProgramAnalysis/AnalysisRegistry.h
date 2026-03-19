@@ -70,7 +70,7 @@ public:
     explicit Add(llvm::StringRef Desc)
         : Name(AnalysisT::ResultType::analysisName().str().str()),
           Node(Name, Desc) {
-      if (contains(Name)) {
+      if (contains(AnalysisT::ResultType::analysisName())) {
         ErrorBuilder::fatal("duplicate analysis registration for '{0}'", Name);
       }
       getAnalysisNames().push_back(AnalysisT::ResultType::analysisName());
@@ -85,7 +85,7 @@ public:
   };
 
   /// Returns true if an analysis is registered under \p Name.
-  static bool contains(llvm::StringRef Name);
+  static bool contains(const AnalysisName &Name);
 
   /// Returns the names of all registered analyses.
   static const std::vector<AnalysisName> &names();
@@ -93,7 +93,7 @@ public:
   /// Instantiates the analysis registered under \p Name, or returns an error
   /// if no such analysis is registered.
   static llvm::Expected<std::unique_ptr<AnalysisBase>>
-  instantiate(llvm::StringRef Name);
+  instantiate(const AnalysisName &Name);
 
 private:
   /// Returns the global list of registered analysis names.
