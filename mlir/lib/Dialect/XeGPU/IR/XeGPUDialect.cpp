@@ -409,15 +409,7 @@ LayoutAttr::computeStaticDistributedCoords(int64_t linearId,
 
   // Delinearize the linear ID using the order attribute.
   DenseI32ArrayAttr orderAttr = getOrder();
-  SmallVector<int64_t> order;
-  if (orderAttr && !orderAttr.empty()) {
-    order = llvm::map_to_vector(orderAttr.asArrayRef(), [](int32_t idx) {
-      return static_cast<int64_t>(idx);
-    });
-  } else {
-    order =
-        llvm::to_vector(llvm::reverse(llvm::seq<int64_t>(0, layoutVec.size())));
-  }
+  SmallVector<int64_t> order = getEffectiveOrderAsInt();
   SmallVector<int64_t> delinearizedId(layoutVec.size());
   int64_t remaining = linearId;
   for (size_t i = 0; i < order.size(); ++i) {
@@ -964,15 +956,7 @@ SliceAttr::computeStaticDistributedCoords(int64_t linearId,
     parentLayoutVec = parent.getEffectiveLaneLayoutAsInt();
 
   DenseI32ArrayAttr orderAttr = parent.getOrder();
-  SmallVector<int64_t> order;
-  if (orderAttr && !orderAttr.empty()) {
-    order = llvm::map_to_vector(orderAttr.asArrayRef(), [](int32_t idx) {
-      return static_cast<int64_t>(idx);
-    });
-  } else {
-    order = llvm::to_vector(
-        llvm::reverse(llvm::seq<int64_t>(0, parentLayoutVec.size())));
-  }
+  SmallVector<int64_t> order = parent.getEffectiveOrderAsInt();
   SmallVector<int64_t> allIds(parentLayoutVec.size());
   int64_t remaining = linearId;
   for (size_t i = 0; i < order.size(); ++i) {

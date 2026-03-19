@@ -279,10 +279,16 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     /*retTy=*/"SmallVector<SmallVector<int64_t>>",
                     /*methodName=*/"computeStaticDistributedCoords",
                     /*args=*/(ins "int64_t":$linearId, "ArrayRef<int64_t>":$shape)>,
-    InterfaceMethod<[{Computes the per-compute-unit shape by dividing each dimension of
-                      `shape` by the corresponding layout factor (sg_layout or
-                      lane_layout). For wrap-around dimensions where the division is uneven,
-                      the tensor tile is broadcasted to all subgroups/lanes.}],
+    InterfaceMethod<[{Computes the distributed shape for each compute unit by dividing each
+                      dimension of `shape` by the corresponding layout factor (sg_layout or
+                      lane_layout).
+                      The distributed shape represents the per-compute-unit tile. Each
+                      distribution unit is defined as the combination of layout factors and
+                      per-unit data (`subshape`, e.g., sg_data or lane_data). When `shape`
+                      spans multiple distribution units, the distributed shape may contain
+                      multiple such units.
+                      For wrap-around dimensions where the division is uneven, the tensor tile
+                      is broadcast to all subgroups/lanes.}],
                     /*retTy=*/"FailureOr<SmallVector<int64_t>>",
                     /*methodName=*/"computeDistributedShape",
                     /*args=*/(ins "SmallVector<int64_t>":$shape),
@@ -303,8 +309,8 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                           "sgdata or lanedata cannot be empty for distributed shape computation");
                       SmallVector<int64_t> distributedShape(shape.size());
                       for (auto [i, dim] : llvm::enumerate(shape)) {
-                        int64_t distri_unit = layout[i]*subShape[i];
-                        if ((dim % distri_unit) == 0) {
+                        int64_t distriUnit = layout[i]*subShape[i];
+                        if ((dim % distriUnit) == 0) {
                           // Evenly divisible case, divide the dimension by the layout factor.
                           distributedShape[i] = dim / layout[i];
                           assert((distributedShape[i] % subShape[i] == 0) &&
