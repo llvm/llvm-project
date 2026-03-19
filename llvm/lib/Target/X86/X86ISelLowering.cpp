@@ -54364,7 +54364,8 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
           (SrcVT == MVT::v2i32 && VT == MVT::v2i16) ||
           (SrcVT == MVT::v2i16 && VT == MVT::v2i8)) {
         MVT ExtVT = SrcVT == MVT::v4i16 ? MVT::v4i32 : MVT::v2i64;
-        if (TLI.isTruncStoreLegal(ExtVT, VT)) {
+        if (TLI.isTruncStoreLegal(ExtVT, VT, St->getAlign(),
+                                  St->getAddressSpace())) {
           SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, ExtVT, Src);
           return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
                                    VT, St->getMemOperand());
