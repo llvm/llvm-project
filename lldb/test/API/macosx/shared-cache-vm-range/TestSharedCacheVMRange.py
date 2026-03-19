@@ -29,7 +29,16 @@ class SharedCacheVMRangeTestCase(TestBase):
 
         ci.HandleCommand("process plugin packet send jGetSharedCacheInfo:{}", res)
 
-        # 'packet: jGetSharedCacheInfo:{} response: {"shared_cache_base_address":6572900352,"shared_cache_uuid":"674DB25A-34B2-3C56-8BD4-7D78005B2F2E","no_shared_cache":false,"shared_cache_private_cache":false,"shared_cache_path":"/System/Volumes/Preboot/Cryptexes/OS/System/Library/dyld/dyld_shared_cache_arm64e","shared_cache_size":5820792832}'
+        # packet: jGetSharedCacheInfo:{} 
+        # response: 
+        # {
+        #   "shared_cache_base_address": 6572900352,
+        #   "shared_cache_uuid": "674DB25A-34B2-3C56-8BD4-7D78005B2F2E",
+        #   "no_shared_cache": false,
+        #   "shared_cache_private_cache": false,
+        #   "shared_cache_path": "/System/Volumes/Preboot/Cryptexes/OS/System/Library/dyld/dyld_shared_cache_arm64e",
+        #   "shared_cache_size": 5820792832
+        # }
 
         self.assertTrue("response: " in res.GetOutput())
         response = re.search("response: (.+)", res.GetOutput()).group(1)
