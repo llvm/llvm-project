@@ -27,6 +27,7 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/openmp-directive-sets.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
@@ -482,14 +483,6 @@ collectScopes(semantics::SemanticsContext &semaCtx,
   return curScope;
 }
 
-static bool isPrivatizable(const semantics::Symbol &sym) {
-  return !semantics::IsProcedure(sym) &&
-         !sym.GetUltimate().has<semantics::DerivedTypeDetails>() &&
-         !sym.GetUltimate().has<semantics::NamelistDetails>() &&
-         !semantics::IsImpliedDoIndex(sym.GetUltimate()) &&
-         !semantics::IsStmtFunction(sym);
-}
-
 void DataSharingProcessor::collectPrivatizedSymbols(
     std::optional<semantics::Symbol::Flag> flag,
     const llvm::SetVector<const semantics::Symbol *> &allSymbols,
@@ -546,7 +539,8 @@ void DataSharingProcessor::collectPrivatizedSymbols(
 
   for (const auto *sym : allSymbols) {
     assert(curScope && "couldn't find current scope");
-    if (isPrivatizable(*sym) && !symbolsInNestedRegions.contains(sym) &&
+    if (semantics::omp::IsPrivatizable(*sym) &&
+        !symbolsInNestedRegions.contains(sym) &&
         !explicitlyPrivatizedSymbols.contains(sym) &&
         shouldCollectSymbol(sym) && clauseScopes.contains(&sym->owner())) {
       allPrivatizedSymbols.insert(sym);
