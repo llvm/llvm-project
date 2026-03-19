@@ -5,14 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// FIXME: These overrides are a workaround for canonicalize not working.
+//
+//===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/math/clc_flush_if_daz.h"
-#include "clc/math/clc_nextdown.h"
-#include "clc/math/clc_nextup.h"
 #include "clc/math/clc_subnormal_config.h"
-#include "clc/relational/clc_isunordered.h"
 
-#define __CLC_BODY "clc_nextafter.inc"
-#include "clc/math/gentype.inc"
+_CLC_DEF bool __clc_denormals_are_zero_fp16() { return false; }
+
+_CLC_DEF bool __clc_denormals_are_zero_fp32() { return true; }
+
+_CLC_DEF bool __clc_denormals_are_zero_fp64() { return false; }

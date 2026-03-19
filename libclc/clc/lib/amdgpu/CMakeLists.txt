@@ -15,6 +15,7 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   math/clc_half_recip.cl
   math/clc_half_rsqrt.cl
   math/clc_half_sqrt.cl
+  math/clc_get_twobypi_bits.cl
   math/clc_ldexp.cl
   math/clc_log2_fast.cl
   math/clc_native_exp.cl

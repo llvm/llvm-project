@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/math/clc_flush_if_daz.h"
-#include "clc/math/clc_nextdown.h"
-#include "clc/math/clc_nextup.h"
-#include "clc/math/clc_subnormal_config.h"
-#include "clc/relational/clc_isunordered.h"
+#include "clc/integer/clc_clz.h"
+#include "clc/math/clc_get_twobypi_bits.h"
+#include "clc/math/tables.h"
 
-#define __CLC_BODY "clc_nextafter.inc"
+#define __CLC_DOUBLE_ONLY
+#define __CLC_FUNCTION __clc_get_twobypi_bits
+#define __CLC_BODY <clc_get_twobypi_bits.inc>
 #include "clc/math/gentype.inc"

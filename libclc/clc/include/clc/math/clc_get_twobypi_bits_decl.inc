@@ -6,13 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/math/clc_flush_if_daz.h"
-#include "clc/math/clc_nextdown.h"
-#include "clc/math/clc_nextup.h"
-#include "clc/math/clc_subnormal_config.h"
-#include "clc/relational/clc_isunordered.h"
-
-#define __CLC_BODY "clc_nextafter.inc"
-#include "clc/math/gentype.inc"
+_CLC_DECL _CLC_OVERLOAD __CLC_GENTYPE
+__clc_get_twobypi_bits(__CLC_GENTYPE x, __CLC_INTN segment);

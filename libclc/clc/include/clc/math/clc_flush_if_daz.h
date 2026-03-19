@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/math/clc_flush_if_daz.h"
-#include "clc/math/clc_nextdown.h"
-#include "clc/math/clc_nextup.h"
-#include "clc/math/clc_subnormal_config.h"
-#include "clc/relational/clc_isunordered.h"
+#ifndef __CLC_MATH_CLC_FLUSH_IF_DAZ_H__
+#define __CLC_MATH_CLC_FLUSH_IF_DAZ_H__
 
-#define __CLC_BODY "clc_nextafter.inc"
+#include "clc/internal/clc.h"
+
+#define __CLC_BODY "clc/math/unary_decl.inc"
+#define __CLC_FUNCTION __clc_flush_if_daz
+
 #include "clc/math/gentype.inc"
+
+#undef __CLC_FUNCTION
+
+#endif // __CLC_MATH_CLC_FLUSH_IF_DAZ_H__
