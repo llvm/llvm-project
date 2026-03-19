@@ -348,6 +348,12 @@ public:
   constexpr static GetTypeIDFunctionTy getInterfaceID =
       &mlirMemoryEffectsOpInterfaceTypeID;
 
+  /// Override to use isa<MemoryEffectOpInterface> which respects the
+  /// instance-level extraClassOf / hasKnownMemoryEffects check.
+  static bool implementsInterface(MlirOperation operation) {
+    return mlirOperationImplementsMemoryEffectsOpInterface(operation);
+  }
+
   /// Attach a new MemoryEffectsOpInterface FallbackModel to the named
   /// operation. The FallbackModel acts as a trampoline for callbacks on the
   /// Python class.
@@ -378,6 +384,24 @@ public:
       // Invoke `pyClass.get_effects(op, effects)`.
       pyGetEffects(opview, effectsWrapper);
     };
+
+    // Set hasKnownMemoryEffects callback if the Python class defines it.
+    if (nb::hasattr(target, "has_known_memory_effects")) {
+      callbacks.hasKnownMemoryEffects = [](MlirOperation op,
+                                           void *userData) -> bool {
+        nb::handle pyClass(static_cast<PyObject *>(userData));
+        auto pyHasKnown = nb::cast<nb::callable>(
+            nb::getattr(pyClass, "has_known_memory_effects"));
+
+        PyMlirContextRef context =
+            PyMlirContext::forContext(mlirOperationGetContext(op));
+        auto opview = PyOperation::forOperation(context, op)->createOpView();
+
+        return nb::cast<bool>(pyHasKnown(opview));
+      };
+    } else {
+      callbacks.hasKnownMemoryEffects = nullptr;
+    }
 
     mlirMemoryEffectsOpInterfaceAttachFallbackModel(
         ctx->get(), mlirStringRefCreate(opName.c_str(), opName.size()),

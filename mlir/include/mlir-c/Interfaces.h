@@ -104,6 +104,11 @@ mlirInferShapedTypeOpInterfaceInferReturnTypes(
 /// Returns the interface TypeID of the MemoryEffectsOpInterface.
 MLIR_CAPI_EXPORTED MlirTypeID mlirMemoryEffectsOpInterfaceTypeID(void);
 
+/// Returns true if the operation implements MemoryEffectsOpInterface, taking
+/// into account instance-level conditions (e.g. hasKnownMemoryEffects).
+MLIR_CAPI_EXPORTED bool
+mlirOperationImplementsMemoryEffectsOpInterface(MlirOperation operation);
+
 /// Callbacks for implementing MemoryEffectsOpInterface from external code.
 typedef struct {
   /// Optional constructor for user data. Set to nullptr to disable it.
@@ -114,8 +119,8 @@ typedef struct {
   void (*getEffects)(MlirOperation op, MlirMemoryEffectInstancesList effects,
                      void *userData);
   /// Callback that returns true iff the operation instance
-  /// can specify all its memory effects.
-  bool (*hasKnownMemoryEffects)(MlirOperation op);
+  /// can specify all its memory effects. Set to nullptr to always return true.
+  bool (*hasKnownMemoryEffects)(MlirOperation op, void *userData);
   void *userData;
 } MlirMemoryEffectsOpInterfaceCallbacks;
 

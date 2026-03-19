@@ -176,6 +176,10 @@ MlirTypeID mlirMemoryEffectsOpInterfaceTypeID() {
   return wrap(MemoryEffectOpInterface::getInterfaceID());
 }
 
+bool mlirOperationImplementsMemoryEffectsOpInterface(MlirOperation operation) {
+  return isa<MemoryEffectOpInterface>(unwrap(operation));
+}
+
 /// Fallback model for the MemoryEffectsOpInterface that uses C API callbacks.
 class MemoryEffectOpInterfaceFallbackModel
     : public mlir::MemoryEffectOpInterface::FallbackModel<
@@ -215,7 +219,7 @@ public:
 
   bool hasKnownMemoryEffects(Operation *op) const {
     if (callbacks.hasKnownMemoryEffects)
-      return callbacks.hasKnownMemoryEffects(wrap(op));
+      return callbacks.hasKnownMemoryEffects(wrap(op), callbacks.userData);
     return true;
   }
 

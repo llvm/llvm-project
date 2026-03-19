@@ -57,8 +57,7 @@ public:
     }
 
     if (operation != nullptr) {
-      if (!mlirOperationImplementsInterface(*operation,
-                                            ConcreteIface::getInterfaceID())) {
+      if (!ConcreteIface::implementsInterface(*operation)) {
         std::string msg = "the operation does not implement ";
         throw nanobind::value_error((msg + ConcreteIface::pyClassName).c_str());
       }
@@ -100,6 +99,14 @@ public:
 
   /// Hook for derived classes to add class-specific bindings.
   static void bindDerived(ClassTy &cls) {}
+
+  /// Returns true if the operation implements this interface. Derived classes
+  /// may override this to account for instance-level interface availability
+  /// (e.g., when extraClassOf logic makes the interface conditional).
+  static bool implementsInterface(MlirOperation operation) {
+    return mlirOperationImplementsInterface(operation,
+                                            ConcreteIface::getInterfaceID());
+  }
 
   /// Returns `true` if this object was constructed from a subclass of OpView
   /// rather than from an operation instance.
