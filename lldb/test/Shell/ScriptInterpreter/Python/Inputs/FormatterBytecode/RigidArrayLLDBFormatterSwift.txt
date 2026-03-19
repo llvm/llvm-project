@@ -1,5 +1,3 @@
-// Generated with:
-//   examples/python/formatter_bytecode.py --compile test/Shell/ScriptInterpreter/Python/python-bytecode.test --format swift --type-name RigidArray --output test/Shell/ScriptInterpreter/Python/Inputs/FormatterBytecode/RigidArrayLLDBFormatterSwift.txt
 #if swift(>=6.3)
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 @section("__DATA_CONST,__lldbformatters")

@@ -1,5 +1,3 @@
-// Generated with:
-//   examples/python/formatter_bytecode.py --compile test/Shell/ScriptInterpreter/Python/python-bytecode.test --format c --type-name RigidArray --output test/Shell/ScriptInterpreter/Python/Inputs/FormatterBytecode/RigidArrayLLDBFormatterC.txt
 
 #ifdef __APPLE__
 #define FORMATTER_SECTION "__DATA_CONST,__lldbformatters"
