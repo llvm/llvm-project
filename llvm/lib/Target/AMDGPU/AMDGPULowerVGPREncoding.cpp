@@ -155,11 +155,6 @@ private:
   /// Last hard clause instruction.
   MachineInstr *Clause;
 
-  /// S_SET_VGPR_MSB immediately after S_SETREG_IMM32_B32 targeting MODE is
-  /// silently dropped on GFX1250. When set, the next S_SET_VGPR_MSB insertion
-  /// must be preceded by S_NOP to avoid the hazard.
-  bool NeedNopBeforeSetVGPRMSB;
-
   /// Insert mode change before \p I. \returns true if mode was changed.
   bool setMode(ModeTy NewMode, MachineBasicBlock::instr_iterator I);
 
@@ -196,6 +191,11 @@ private:
   /// instruction to encourage more coissuing.
   MachineBasicBlock::instr_iterator
   handleCoissue(MachineBasicBlock::instr_iterator I);
+
+  /// S_SET_VGPR_MSB immediately after S_SETREG_IMM32_B32 targeting MODE is
+  /// silently dropped on GFX1250. When set, the next S_SET_VGPR_MSB insertion
+  /// must be preceded by S_NOP to avoid the hazard.
+  bool needNopBeforeSetVGPRMSB(MachineBasicBlock::instr_iterator I);
 
   /// Handle S_SETREG_IMM32_B32 targeting MODE register. On certain hardware,
   /// this instruction clobbers VGPR MSB bits[12:19], so we need to restore
@@ -260,10 +260,8 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
   // current MSBs, but the next VALU needs different MSBs, so this
   // S_SET_VGPR_MSB would land right after the setreg. Insert S_NOP to
   // prevent it from being silently dropped.
-  if (NeedNopBeforeSetVGPRMSB) {
+  if (needNopBeforeSetVGPRMSB(I))
     BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_NOP)).addImm(0);
-    NeedNopBeforeSetVGPRMSB = false;
-  }
   MostRecentModeSet = BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
                           .addImm(NewMode.encode() | OldModeBits);
   LLVM_DEBUG(dbgs() << "    -> inserted new S_SET_VGPR_MSB: "
@@ -433,6 +431,26 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   return I;
 }
 
+bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
+    MachineBasicBlock::instr_iterator I) {
+  while (I != MBB->begin()) {
+    I = std::prev(I);
+    if (I->getOpcode() == AMDGPU::S_SETREG_IMM32_B32) {
+      MachineOperand *SIMM16Op =
+          TII->getNamedOperand(*I, AMDGPU::OpName::simm16);
+      auto [HwRegId, Offset, Size] =
+          AMDGPU::Hwreg::HwregEncoding::decode(SIMM16Op->getImm());
+      if (HwRegId == AMDGPU::Hwreg::ID_MODE)
+        return true;
+    }
+    if (!I->isMetaInstruction())
+      return false;
+  }
+  // FIXME: Return true if the previous MBB falls through and ends with
+  // S_SETREG_IMM32_B32.
+  return false;
+}
+
 /// Convert mode value from S_SET_VGPR_MSB format to MODE register format.
 /// S_SET_VGPR_MSB uses: (src0[0-1], src1[2-3], src2[4-5], dst[6-7])
 /// MODE register uses:  (dst[0-1], src0[2-3], src1[4-5], src2[6-7])
@@ -521,7 +539,6 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
     // via piggybacking (bits[12:19] are meaningful), so if CurrentMode changes,
     // a new s_set_vgpr_msb will be inserted after this instruction.
     MostRecentModeSet = nullptr;
-    NeedNopBeforeSetVGPRMSB = true;
     LLVM_DEBUG(dbgs() << "    -> bits[12:19] already correct, "
                          "invalidated MostRecentModeSet\n");
     return false;
@@ -557,7 +574,6 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   CurrentMode = {};
   for (auto &MBB : MF) {
     MostRecentModeSet = nullptr;
-    NeedNopBeforeSetVGPRMSB = false;
     this->MBB = &MBB;
 
     LLVM_DEBUG(dbgs() << "BB#" << MBB.getNumber() << ' ' << MBB.getName()
@@ -574,7 +590,6 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
           CurrentMode = {};
         else
           resetMode(MI.getIterator());
-        NeedNopBeforeSetVGPRMSB = false;
         continue;
       }
 
@@ -582,7 +597,6 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
         LLVM_DEBUG(dbgs() << "  inline asm: " << MI);
         if (TII->hasVGPRUses(MI))
           resetMode(MI.getIterator());
-        NeedNopBeforeSetVGPRMSB = false;
         continue;
       }
 
@@ -604,7 +618,6 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
       }
 
       Changed |= runOnMachineInstr(MI);
-      NeedNopBeforeSetVGPRMSB = false;
 
       if (ClauseRemaining)
         --ClauseRemaining;
