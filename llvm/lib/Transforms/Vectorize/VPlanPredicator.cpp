@@ -19,6 +19,8 @@
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -117,8 +119,11 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
     return setEdgeMask(Src, Dst, SrcMask);
 
   EdgeMask = Term->getOperand(0);
+  SmallVector<uint32_t, 2> BranchWeights;
+  auto *OrigProf = Term->getMetadata(LLVMContext::MD_prof);
+  extractBranchWeights(OrigProf, BranchWeights);
   assert(EdgeMask && "No Edge Mask found for condition");
-
+  MDBuilder MDB(EdgeMask->getUnderlyingValue()->getContext());
   if (Src->getSuccessors()[0] != Dst)
     EdgeMask = Builder.createNot(EdgeMask, Term->getDebugLoc());
 
@@ -127,7 +132,19 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
     // is false and EdgeMask is poison. Avoid that by using 'LogicalAnd'
     // instead which generates 'select i1 SrcMask, i1 EdgeMask, i1 false'.
     EdgeMask = Builder.createLogicalAnd(SrcMask, EdgeMask, Term->getDebugLoc());
+    SmallVector<uint32_t, 2> SrcWeights;
+    extractBranchWeights(cast<VPInstruction>(SrcMask)->getMetadata(1000),
+                         SrcWeights);
+    if (!BranchWeights.empty() && !SrcWeights.empty()) {
+      auto Neg = getDisjunctionWeights(
+          SmallVector<uint32_t, 2>{BranchWeights[1], BranchWeights[0]},
+          SmallVector<uint32_t, 2>{SrcWeights[1], SrcWeights[0]});
+      cast<VPInstruction>(EdgeMask)->setMetadata(
+          1000, MDB.createBranchWeights(fitWeights({Neg[1], Neg[0]})));
+    }
   }
+  if (!cast<VPInstruction>(EdgeMask)->getMetadata(1000))
+    cast<VPInstruction>(EdgeMask)->setMetadata(1000, OrigProf);
 
   return setEdgeMask(Src, Dst, EdgeMask);
 }
