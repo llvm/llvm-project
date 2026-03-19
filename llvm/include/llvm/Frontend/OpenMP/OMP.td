@@ -142,6 +142,7 @@ def OMPC_CopyPrivate : Clause<[Spelling<"copyprivate">]> {
   let flangClass = "OmpObjectList";
 }
 def OMPC_Counts : Clause<[Spelling<"counts">]> {
+  let clangClass = "OMPCountsClause";
 }
 def OMPC_Default : Clause<[Spelling<"default">]> {
   let clangClass = "OMPDefaultClause";
@@ -1426,7 +1427,12 @@ def OMP_Stripe : Directive<[Spelling<"stripe">]> {
   let category = CA_Executable;
 }
 def OMP_Split : Directive<[Spelling<"split">]> {
-  // TODO: Add counts clause support (OMPC_Counts)
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Counts, 60>,
+  ];
+  let requiredClauses = [
+    VersionedClause<OMPC_Counts, 60>,
+  ];
   let association = AS_LoopNest;
   let category = CA_Executable;
 }

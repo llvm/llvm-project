@@ -986,6 +986,25 @@ OMPSizesClause *OMPSizesClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPSizesClause(NumSizes);
 }
 
+OMPCountsClause *OMPCountsClause::Create(const ASTContext &C,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc,
+                                         ArrayRef<Expr *> Counts) {
+  OMPCountsClause *Clause = CreateEmpty(C, Counts.size());
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setCountsRefs(Counts);
+  return Clause;
+}
+
+OMPCountsClause *OMPCountsClause::CreateEmpty(const ASTContext &C,
+                                              unsigned NumCounts) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumCounts));
+  return new (Mem) OMPCountsClause(NumCounts);
+}
+
 OMPPermutationClause *OMPPermutationClause::Create(const ASTContext &C,
                                                    SourceLocation StartLoc,
                                                    SourceLocation LParenLoc,
@@ -1979,6 +1998,18 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
     if (!First)
       OS << ", ";
     Size->printPretty(OS, nullptr, Policy, 0);
+    First = false;
+  }
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPCountsClause(OMPCountsClause *Node) {
+  OS << "counts(";
+  bool First = true;
+  for (auto *Count : Node->getCountsRefs()) {
+    if (!First)
+      OS << ", ";
+    Count->printPretty(OS, nullptr, Policy, 0);
     First = false;
   }
   OS << ")";

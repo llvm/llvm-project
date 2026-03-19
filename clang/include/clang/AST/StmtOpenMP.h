@@ -6107,21 +6107,26 @@ public:
   /// \param C         Context of the AST.
   /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
   /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
+  /// \param Clauses   The directive's clauses (e.g. the required \c counts
+  ///                  clause).
   /// \param NumLoops  Number of affected loops (should be 1 for split).
   /// \param AssociatedStmt  The outermost associated loop.
   /// \param TransformedStmt The loop nest after splitting, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits   Helper preinits statements for the loop nest.
   static OMPSplitDirective *Create(const ASTContext &C, SourceLocation StartLoc,
-                                   SourceLocation EndLoc, Stmt *AssociatedStmt,
-                                   unsigned NumLoops, Stmt *TransformedStmt,
-                                   Stmt *PreInits);
+                                   SourceLocation EndLoc,
+                                   ArrayRef<OMPClause *> Clauses,
+                                   unsigned NumLoops, Stmt *AssociatedStmt,
+                                   Stmt *TransformedStmt, Stmt *PreInits);
 
   /// Build an empty '#pragma omp split' AST node for deserialization.
   ///
   /// \param C          Context of the AST.
-  /// \param NumLoops   Number of associated loops to allocate
-  static OMPSplitDirective *CreateEmpty(const ASTContext &C, unsigned NumLoops);
+  /// \param NumClauses Number of clauses to allocate.
+  /// \param NumLoops   Number of associated loops to allocate.
+  static OMPSplitDirective *CreateEmpty(const ASTContext &C,
+                                        unsigned NumClauses, unsigned NumLoops);
 
   /// Gets/sets the associated loops after the transformation, i.e. after
   /// de-sugaring.
