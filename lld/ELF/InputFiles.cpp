@@ -1508,8 +1508,17 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
 // readGnuProperty, but we don't have the InputSection information.
 template <typename ELFT>
 void SharedFile::parseGnuAndFeatures(const ELFFile<ELFT> &obj) {
-  if (ctx.arg.emachine != EM_AARCH64)
+  unsigned featureAndType;
+  switch (ctx.arg.emachine) {
+  case EM_AARCH64:
+    featureAndType = GNU_PROPERTY_AARCH64_FEATURE_1_AND;
+    break;
+  case EM_RISCV:
+    featureAndType = GNU_PROPERTY_RISCV_FEATURE_1_AND;
+    break;
+  default:
     return;
+  }
   const uint8_t *base = obj.base();
   auto phdrs = CHECK2(obj.program_headers(), this);
   for (auto phdr : phdrs) {
@@ -1521,8 +1530,7 @@ void SharedFile::parseGnuAndFeatures(const ELFFile<ELFT> &obj) {
       continue;
 
     ArrayRef<uint8_t> desc = note.getDesc(phdr.p_align);
-    parseGnuPropertyNote<ELFT>(ctx, *this, GNU_PROPERTY_AARCH64_FEATURE_1_AND,
-                               desc, base);
+    parseGnuPropertyNote<ELFT>(ctx, *this, featureAndType, desc, base);
   }
 }
 

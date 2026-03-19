@@ -48,10 +48,25 @@
 # REPORT-WARN: warning: f2.o: -z zicfiss-report: file does not have GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS property
 # REPORT-ERROR: error: f3.o: -z zicfiss-report: file does not have GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS property
 
+## zicfiss-report-dynamic should report any dynamic objects that does not have
+## the ZICFISS property. This also ensures the inhertance from zicfiss-report
+## is working correctly.
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfiss-report=warning -z zicfiss=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfiss-report=error -z zicfiss=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfiss-report-dynamic=none -z zicfiss=always 2>&1 | count 0
+# RUN: ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfiss-report-dynamic=warning -z zicfiss=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
+# RUN: not ld.lld f1-s.o f3-s.o out.no.so out.force.so -z zicfiss-report-dynamic=error -z zicfiss=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
+# RUN: ld.lld f1-s.o f3-s.o out.force.so -z zicfiss-report-dynamic=error -z zicfiss=always 2>&1 | count 0
+# REPORT-WARN-DYNAMIC: warning: out.no.so: ZICFISS is enabled, but this shared library lacks the necessary property note. The dynamic loader might not enable ZICFISS or refuse to load the program unless all shared library dependencies have the ZICFISS marking.
+# REPORT-WARN-DYNAMIC-NOT: {{.}}
+# REPORT-ERROR-DYNAMIC: error: out.no.so: ZICFISS is enabled, but this shared library lacks the necessary property note. The dynamic loader might not enable ZICFISS or refuse to load the program unless all shared library dependencies have the ZICFISS marking.
+# REPORT-ERROR-DYNAMIC-NOT: error:
+
 ## An invalid -z zicfiss-report option should give an error
-# RUN: not ld.lld f2-s.o f3-s.o -z zicfiss=x -z zicfiss-report=x 2>&1 | FileCheck --check-prefix=INVALID %s
+# RUN: not ld.lld f2-s.o f3-s.o -z zicfiss=x -z zicfiss-report=x -z zicfiss-report-dynamic=x 2>&1 | FileCheck --check-prefix=INVALID %s
 # INVALID: error: unknown -z zicfiss= value: x
 # INVALID: error: unknown -z zicfiss-report= value: x
+# INVALID: error: unknown -z zicfiss-report-dynamic= value: x
 
 #--- rv32-f1-s.s
 .section ".note.gnu.property", "a"
