@@ -7,7 +7,7 @@ define void @test1(i32 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ASM_MEM:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[X]], ptr [[ASM_MEM]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 asm sideeffect "mov $1, $0", "=r,*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 asm sideeffect "mov $1, $0", "=r,*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -20,7 +20,7 @@ define void @test2(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ASM_MEM:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void asm sideeffect "mov $1, $0", "=*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]])
+; CHECK-NEXT:    call void asm sideeffect "mov $1, $0", "=*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ASM_MEM]], align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
@@ -38,7 +38,7 @@ define void @test3(ptr %x_ptr) {
 ; CHECK-NEXT:    [[ASM_MEM:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_PTR]], align 4
 ; CHECK-NEXT:    store i32 [[X]], ptr [[ASM_MEM]], align 4
-; CHECK-NEXT:    call void asm sideeffect "inc $0", "=*rm,0,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]], ptr [[ASM_MEM]])
+; CHECK-NEXT:    call void asm sideeffect "inc $0", "=*rm,0,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]], ptr [[ASM_MEM]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ASM_MEM]], align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[X_PTR]], align 4
 ; CHECK-NEXT:    ret void

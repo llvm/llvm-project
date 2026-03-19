@@ -116,7 +116,7 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
     std::string NewConstraint;
 
     auto I = Constraint.begin(), E = Constraint.end();
-    bool IsInput = false;
+    bool IsTied = false;
     bool IsOutput = false;
     bool HasIndirect = false;
 
@@ -137,17 +137,16 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
     if (*I == '+') {
       ++I;
       NewConstraint += '+';
-      IsInput = true;
-      IsOutput = true;
+      IsTied = true;
     }
     if (I == E)
       return {std::string(), MemoryEffects::none()};
 
     std::string RestConstraint(I, E);
     if (isRegMemConstraint(RestConstraint)) {
-      if (IsInput)
+      if (!IsOutput || IsTied)
         NewME |= MemoryEffects::argMemOnly(ModRefInfo::Ref);
-      if (IsOutput)
+      if (IsOutput || IsTied)
         NewME |= MemoryEffects::argMemOnly(ModRefInfo::Mod);
       if (!HasIndirect)
         NewConstraint += '*';
