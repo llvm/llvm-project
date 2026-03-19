@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static constexpr llvm::StringRef DefaultExclusionStr =
+static constexpr StringRef DefaultExclusionStr =
     "::std::map;::std::unordered_map;::std::flat_map";
 
 ProBoundsAvoidUncheckedContainerAccessCheck::

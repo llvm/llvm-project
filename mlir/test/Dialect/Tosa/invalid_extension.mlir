@@ -6,192 +6,199 @@
 
 // -----
 func.func @test_argmax(%arg0: tensor<14x19xbf16>) -> tensor<14xi32> {
-  // expected-error@+1 {{'tosa.argmax' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.argmax' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.argmax %arg0 {axis = 1 : i32} : (tensor<14x19xbf16>) -> tensor<14xi32>
   return %0 : tensor<14xi32>
 }
 
 // -----
 func.func @test_avg_pool2d(%arg0: tensor<1x7x7x9xbf16>, %arg1: tensor<1xbf16>, %arg2: tensor<1xbf16>) -> tensor<1x7x7x9xbf16> {
-  // expected-error@+1 {{'tosa.avg_pool2d' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.avg_pool2d' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.avg_pool2d %arg0, %arg1, %arg2 {acc_type = f32, kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 1>} : (tensor<1x7x7x9xbf16>, tensor<1xbf16>, tensor<1xbf16>) -> tensor<1x7x7x9xbf16>
   return %0 : tensor<1x7x7x9xbf16>
 }
 
 // -----
 func.func @test_conv2d(%arg0: tensor<1x4x4x4xi8>, %arg1: tensor<8x1x1x4xi4>, %arg2: tensor<8xi32>, %arg3: tensor<1xi8>, %arg4: tensor<1xi4>) -> tensor<1x4x4x8xi32> {
-  // expected-error@+1 {{'tosa.conv2d' op illegal: requires [int4] but not enabled in target}}
+  // expected-error@+1 {{'tosa.conv2d' op illegal: requires any of [int4] profiles/extensions to be specified in the target environment}}
   %0 = tosa.conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = i32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, local_bound = true} : (tensor<1x4x4x4xi8>, tensor<8x1x1x4xi4>, tensor<8xi32>, tensor<1xi8>, tensor<1xi4>) -> tensor<1x4x4x8xi32>
   return %0 : tensor<1x4x4x8xi32>
 }
 
 // -----
 func.func @test_conv3d(%arg0: tensor<1x4x8x21x17xi16>, %arg1: tensor<34x1x1x1x17xi8>, %arg2: tensor<34xi48>, %arg3: tensor<1xi16>, %arg4: tensor<1xi8>) -> tensor<1x4x8x21x34xi48> {
-  // expected-error@+1 {{'tosa.conv3d' op illegal: requires [int16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.conv3d' op illegal: requires any of [int16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = i48, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 0, 0, 0, 0, 0>, stride = array<i64: 1, 1, 1>} : (tensor<1x4x8x21x17xi16>, tensor<34x1x1x1x17xi8>, tensor<34xi48>, tensor<1xi16>, tensor<1xi8>) -> tensor<1x4x8x21x34xi48>
   return %0 : tensor<1x4x8x21x34xi48>
 }
 
 // -----
 func.func @test_depthwise_conv2d(%arg0: tensor<1x4x4x4xbf16>, %arg1: tensor<1x1x4x2xbf16>, %arg2: tensor<8xbf16>, %arg3: tensor<1xbf16>, %arg4: tensor<1xbf16>) -> tensor<1x4x4x8xbf16> {
-  // expected-error@+1 {{'tosa.depthwise_conv2d' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.depthwise_conv2d' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x4x4x4xbf16>, tensor<1x1x4x2xbf16>, tensor<8xbf16>, tensor<1xbf16>, tensor<1xbf16>) -> tensor<1x4x4x8xbf16>
   return %0 : tensor<1x4x4x8xbf16>
 }
 
 // -----
 func.func @test_max_pool2d(%arg0: tensor<1x32x32x8xi16>) -> tensor<1x32x32x8xi16> {
-  // expected-error@+1 {{'tosa.max_pool2d' op illegal: requires [int16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.max_pool2d' op illegal: requires any of [int16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.max_pool2d %arg0 {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xi16>) -> tensor<1x32x32x8xi16>
   return %0 : tensor<1x32x32x8xi16>
 }
 
 // -----
 func.func @test_clamp(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
-  // expected-error@+1 {{'tosa.clamp' op illegal: requires [int16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.clamp' op illegal: requires any of [int16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.clamp %arg0 {min_val = 0 : i16, max_val = 1 : i16} : (tensor<13x21x3xi16>) -> tensor<13x21x3xi16>
   return %0 : tensor<13x21x3xi16>
 }
 
 // -----
 func.func @test_sigmoid(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.sigmoid' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.sigmoid' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.sigmoid %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_tanh(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.tanh' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.tanh' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.tanh %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_add(%arg0: tensor<13x21x1xbf16>, %arg1: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.add' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.add' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.add %arg0, %arg1 : (tensor<13x21x1xbf16>, tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_max(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x21x1xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.maximum' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.maximum' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.maximum %arg0, %arg1 : (tensor<13x21x3xbf16>, tensor<13x21x1xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_mul(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x1x3xbf16>, %shift: tensor<1xi8>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.mul' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.mul' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xbf16>, tensor<13x1x3xbf16>, tensor<1xi8>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_pow(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x21x1xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.pow' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.pow' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.pow %arg0, %arg1 : (tensor<13x21x3xbf16>, tensor<13x21x1xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_sub(%arg0: tensor<1x21x3xbf16>, %arg1: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.sub' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.sub' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.sub %arg0, %arg1 : (tensor<1x21x3xbf16>, tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_table(%arg0 : tensor<4x5xi16>, %arg1 : tensor<513xi16>) -> () {
-  // expected-error@+1 {{'tosa.table' op illegal: requires [int16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.table' op illegal: requires any of [int16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.table %arg0, %arg1 : (tensor<4x5xi16>, tensor<513xi16>) -> tensor<?x?xi32>
   return
 }
 
 // -----
 func.func @test_abs(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.abs' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.abs' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.abs %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_cos(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.cos' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.cos' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.cos %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_exp(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.exp' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.exp' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.exp %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_floor(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.floor' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.floor' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.floor %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_log(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.log' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.log' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.log %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_negate(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<1xbf16>, %arg2: tensor<1xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.negate' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.negate' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<13x21x3xbf16>, tensor<1xbf16>, tensor<1xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_reciprocal(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.reciprocal' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.reciprocal' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reciprocal %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_rsqrt(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.rsqrt' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.rsqrt' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.rsqrt %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_equal(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x1x3xbf16>) -> tensor<13x21x3xi1> {
-  // expected-error@+1 {{'tosa.equal' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.equal' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.equal %arg0, %arg1 : (tensor<13x21x3xbf16>, tensor<13x1x3xbf16>) -> tensor<13x21x3xi1>
   return %0 : tensor<13x21x3xi1>
 }
 
 // -----
 func.func @test_reduce_max(%arg0: tensor<13x21x3xbf16>) -> tensor<1x21x3xbf16> {
-  // expected-error@+1 {{'tosa.reduce_max' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.reduce_max' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reduce_max %arg0 {axis = 0 : i32} : (tensor<13x21x3xbf16>) -> tensor<1x21x3xbf16>
   return %0 : tensor<1x21x3xbf16>
 }
 
 // -----
 func.func @test_concat(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x21x3xbf16>) -> tensor<26x21x3xbf16> {
-  // expected-error@+1 {{'tosa.concat' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.concat' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xbf16>, tensor<13x21x3xbf16>) -> tensor<26x21x3xbf16>
   return %0 : tensor<26x21x3xbf16>
 }
 
 // -----
+func.func @test_concat(%arg0: tensor<13x21x3xi16>, %arg1: tensor<13x21x3xi16>) -> tensor<26x21x3xi16> {
+  // expected-error@+1 {{'tosa.concat' op illegal: requires any of [int16] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.concat %arg0, %arg1 {axis = 0 : i32} : (tensor<13x21x3xi16>, tensor<13x21x3xi16>) -> tensor<26x21x3xi16>
+  return %0 : tensor<26x21x3xi16>
+}
+
+// -----
 func.func @test_pad(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
   %padding = tosa.const_shape {values = dense<0> : tensor<6xindex>} : () -> !tosa.shape<6>
-  // expected-error@+1 {{'tosa.const' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xbf16>} : () -> tensor<1xbf16>
-  // expected-error@+1 {{'tosa.pad' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.pad' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.pad %arg0, %padding, %pad_const : (tensor<13x21x3xbf16>, !tosa.shape<6>, tensor<1xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
@@ -199,14 +206,14 @@ func.func @test_pad(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
 // -----
 func.func @test_reshape(%arg0: tensor<13x21x3xbf16>) -> tensor<1x819xbf16> {
   %1 = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.reshape' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.reshape' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reshape %arg0, %1 : (tensor<13x21x3xbf16>, !tosa.shape<2>) -> tensor<1x819xbf16>
   return %0 : tensor<1x819xbf16>
 }
 
 // -----
 func.func @test_reverse(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.reverse' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.reverse' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reverse %arg0 {axis = 0 : i32} : (tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
@@ -215,7 +222,7 @@ func.func @test_reverse(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xbf16> {
 func.func @test_slice(%arg0: tensor<13x21x3xbf16>) -> tensor<4x11x1xbf16> {
   %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
   %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.slice' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.slice' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xbf16>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xbf16>
   return %0 : tensor<4x11x1xbf16>
 }
@@ -223,28 +230,28 @@ func.func @test_slice(%arg0: tensor<13x21x3xbf16>) -> tensor<4x11x1xbf16> {
 // -----
 func.func @test_tile(%arg0: tensor<13x21x3xbf16>) -> tensor<39x21x6xbf16> {
   %cst = tosa.const_shape { values = dense<[3, 1, 2]> : tensor<3xindex> } : () -> !tosa.shape<3>
-  // expected-error@+1 {{'tosa.tile' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.tile' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.tile %arg0, %cst: (tensor<13x21x3xbf16>, !tosa.shape<3>) -> tensor<39x21x6xbf16>
   return %0 : tensor<39x21x6xbf16>
 }
 
 // -----
 func.func @test_transpose(%arg0: tensor<13x21x3xbf16>) -> tensor<3x13x21xbf16> {
-  // expected-error@+1 {{'tosa.transpose' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.transpose' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %1 = tosa.transpose %arg0 {perms = array<i32: 2, 0, 1>} : (tensor<13x21x3xbf16>) -> tensor<3x13x21xbf16>
   return %1 : tensor<3x13x21xbf16>
 }
 
 // -----
 func.func @test_gather(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xbf16> {
-  // expected-error@+1 {{'tosa.gather' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.gather' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xbf16>, tensor<13x26xi32>) -> tensor<13x26x3xbf16>
   return %0 : tensor<13x26x3xbf16>
 }
 
 // -----
 func.func @test_scatter(%arg0: tensor<13x26x3xbf16>, %arg1: tensor<13x26xi32>, %arg2: tensor<13x26x3xbf16>) -> tensor<13x26x3xbf16> {
-  // expected-error@+1 {{'tosa.scatter' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.scatter' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x26x3xbf16>, tensor<13x26xi32>, tensor<13x26x3xbf16>) -> tensor<13x26x3xbf16>
   return %0 : tensor<13x26x3xbf16>
 }
@@ -254,49 +261,49 @@ func.func @test_resize(%arg0: tensor<1x32x32x8xbf16>) -> tensor<1x64x64x8xbf16> 
   %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
   %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
   %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.resize' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.resize' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %1 = tosa.resize %arg0, %scale, %offset, %border { mode = BILINEAR } : (tensor<1x32x32x8xbf16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xbf16>
   return %1 : tensor<1x64x64x8xbf16>
 }
 
 // -----
 func.func @test_cast_i8_bf16(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.cast' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.cast' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi8>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_cast_bf16_i8(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xi8> {
-  // expected-error@+1 {{'tosa.cast' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.cast' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.cast %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xi8>
   return %0 : tensor<13x21x3xi8>
 }
 
 // -----
 func.func @test_cast_f32_bf16(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xbf16> {
-  // expected-error@+1 {{'tosa.cast' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.cast' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.cast %arg0 : (tensor<13x21x3xf32>) -> tensor<13x21x3xbf16>
   return %0 : tensor<13x21x3xbf16>
 }
 
 // -----
 func.func @test_fft2d(%arg0: tensor<1x4x8xf32>, %arg1: tensor<1x4x8xf32>) -> (tensor<1x4x8xf32>, tensor<1x4x8xf32>) {
-  // expected-error@+1 {{'tosa.fft2d' op illegal: requires [fft] but not enabled in target}}
+  // expected-error@+1 {{'tosa.fft2d' op illegal: requires any of [fft] profiles/extensions to be specified in the target environment}}
   %0, %1 = tosa.fft2d %arg0, %arg1 {inverse = false} : (tensor<1x4x8xf32>, tensor<1x4x8xf32>) -> (tensor<1x4x8xf32>, tensor<1x4x8xf32>)
   return %0, %1 : tensor<1x4x8xf32>, tensor<1x4x8xf32>
 }
 
 // -----
 func.func @test_const_i4() -> tensor<3x11x11x3xi4> {
-  // expected-error@+1 {{'tosa.const' op illegal: requires [int4] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const' op illegal: requires any of [int4] profiles/extensions to be specified in the target environment}}
   %0 = "tosa.const"() {values = dense<0> : tensor<3x11x11x3xi4>} : () -> tensor<3x11x11x3xi4>
   return %0 : tensor<3x11x11x3xi4>
 }
 
 // -----
 func.func @test_const_i48() -> tensor<3x11x11x3xi48> {
-  // expected-error@+1 {{'tosa.const' op illegal: requires [int16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const' op illegal: requires any of [int16] profiles/extensions to be specified in the target environment}}
   %0 = "tosa.const"() {values = dense<0> : tensor<3x11x11x3xi48>} : () -> tensor<3x11x11x3xi48>
   return %0 : tensor<3x11x11x3xi48>
 }
@@ -304,18 +311,18 @@ func.func @test_const_i48() -> tensor<3x11x11x3xi48> {
 // -----
 // CHECK-LABEL: identity
 func.func @test_identity(%arg0: tensor<13x21x3xi4>) -> tensor<13x21x3xi4> {
-  // expected-error@+1 {{'tosa.identity' op illegal: requires [int4] but not enabled in target}}
+  // expected-error@+1 {{'tosa.identity' op illegal: requires any of [int4] profiles/extensions to be specified in the target environment}}
   %0 = tosa.identity %arg0 : (tensor<13x21x3xi4>) -> tensor<13x21x3xi4>
   return %0 : tensor<13x21x3xi4>
 }
 
 // -----
 module {
-  // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
+  // expected-error@+1 {{'tosa.variable' op illegal: requires any of [variable] profiles/extensions to be specified in the target environment}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
 
   func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
-    // expected-error@+1 {{'tosa.variable_read' op illegal: requires [variable]}}
+    // expected-error@+1 {{'tosa.variable_read' op illegal: requires any of [variable] profiles/extensions to be specified in the target environment}}
     %0 = tosa.variable_read @stored_var : tensor<2x4x8xi8>
     return
   }
@@ -323,11 +330,11 @@ module {
 
 // -----
 module {
-  // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
+  // expected-error@+1 {{'tosa.variable' op illegal: requires any of [variable] profiles/extensions to be specified in the target environment}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
 
   func.func @test_variable_write_type(%arg0: tensor<2x4x8xi8>) -> () {
-    // expected-error@+1 {{'tosa.variable_write' op illegal: requires [variable]}}
+    // expected-error@+1 {{'tosa.variable_write' op illegal: requires any of [variable] profiles/extensions to be specified in the target environment}}
     tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi8>
     return
   }
@@ -335,14 +342,14 @@ module {
 
 // -----
 func.func @test_cast_bf16_i32(%arg0: tensor<13x21x3xbf16>) -> tensor<13x21x3xi32> {
-  // expected-error@+1 {{'tosa.cast' op illegal: requires [bf16] but not enabled in target}}
+  // expected-error@+1 {{'tosa.cast' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
   %0 = tosa.cast %arg0 : (tensor<13x21x3xbf16>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
 }
 
 // -----
 func.func @test_cond_if(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
-  // expected-error@+1 {{'tosa.cond_if' op illegal: requires [controlflow]}}
+  // expected-error@+1 {{'tosa.cond_if' op illegal: requires [controlflow] but not enabled in target}}
   %0 = tosa.cond_if %arg2 : tensor<i1> -> tensor<f32> {
     %1 = tosa.add %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<f32>
     tosa.yield %1 : tensor<f32>
@@ -356,7 +363,7 @@ func.func @test_cond_if(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1
 // -----
 func.func @test_while_loop(%arg0: tensor<10xi32>, %arg1: tensor<i32>) {
   %0 = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
-  // expected-error@+1 {{'tosa.while_loop' op illegal: requires [controlflow]}}
+  // expected-error@+1 {{'tosa.while_loop' op illegal: requires [controlflow] but not enabled in target}}
   %1:3 = tosa.while_loop (%arg2 = %0, %arg3 = %0, %arg4 = %arg0) : (tensor<i32>, tensor<i32>, tensor<10xi32>) -> (tensor<i32>, tensor<i32>, tensor<10xi32>) {
     %2 = tosa.greater_equal %arg3, %arg1 : (tensor<i32>, tensor<i32>) -> tensor<i1>
     %3 = tosa.logical_not %2 : (tensor<i1>) -> tensor<i1>
@@ -542,7 +549,7 @@ func.func @test_avg_pool2d_non_const_output_zp(%arg0: tensor<1x32x32x8xf32>, %ou
 // -----
 
 func.func @test_matmul_t_block_scaled(%arg0: tensor<4x8x32xf8E4M3FN>, %arg1: tensor<4x8x1xf8E8M0FNU>, %arg2: tensor<4x16x32xf8E4M3FN>, %arg3: tensor<4x16x1xf8E8M0FNU>) -> tensor<4x8x16xf32> {
-  // expected-error@+1 {{'tosa.matmul_t_block_scaled' op illegal: requires [mxfp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.matmul_t_block_scaled' op illegal: requires specification version compatible with 1.1 (got 1.0) and requires any of [mxfp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.matmul_t_block_scaled %arg0, %arg1, %arg2, %arg3 {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<4x8x32xf8E4M3FN>, tensor<4x8x1xf8E8M0FNU>, tensor<4x16x32xf8E4M3FN>, tensor<4x16x1xf8E8M0FNU>) -> tensor<4x8x16xf32>
   return %0 : tensor<4x8x16xf32>
 }
@@ -550,14 +557,14 @@ func.func @test_matmul_t_block_scaled(%arg0: tensor<4x8x32xf8E4M3FN>, %arg1: ten
 // -----
 
 func.func @test_argmax_int64(%arg0: tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64> {
-  // expected-error@+1 {{'tosa.argmax' op illegal: requires [int64] but not enabled in target}}
+  // expected-error@+1 {{'tosa.argmax' op illegal: requires specification version compatible with 1.1 (got 1.0) and requires any of [int64] profiles/extensions to be specified in the target environment}}
   %0 = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64>
   return %0 : tensor<1x13x13xi64>
 }
 
 // -----
 func.func @test_const_fp6e3m2(%arg0 : index) -> tensor<4xf6E3M2FN> {
-  // expected-error@+1 {{'tosa.const' op illegal: requires [mxfp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.const' op illegal: requires specification version compatible with 1.1 (got 1.0) and requires any of [mxfp] profiles/extensions to be specified in the target environment}}
     %0 = "tosa.const"() {values = dense<[0.0, 0.0, 0.0, 0.0]> : tensor<4xf6E3M2FN>} : () -> tensor<4xf6E3M2FN>
     return %0 : tensor<4xf6E3M2FN>
 }
@@ -565,7 +572,7 @@ func.func @test_const_fp6e3m2(%arg0 : index) -> tensor<4xf6E3M2FN> {
 // -----
 
 func.func @test_cast_from_block_scaled(%arg0: tensor<4x32xf8E5M2>, %arg1: tensor<4x1xf8E8M0FNU>) -> tensor<4x32xf32> {
-  // expected-error@+1 {{'tosa.cast_from_block_scaled' op illegal: requires [mxfp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.cast_from_block_scaled' op illegal: requires specification version compatible with 1.1 (got 1.0) and requires any of [mxfp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<4x32xf8E5M2>, tensor<4x1xf8E8M0FNU>) -> tensor<4x32xf32>
   return %0 : tensor<4x32xf32>
 }
@@ -573,7 +580,7 @@ func.func @test_cast_from_block_scaled(%arg0: tensor<4x32xf8E5M2>, %arg1: tensor
 // -----
 
 func.func @test_cast_to_block_scaled(%arg0: tensor<4x32xf32>) -> (tensor<4x32xf6E3M2FN>, tensor<4x1xf8E8M0FNU>) {
-  // expected-error@+1 {{'tosa.cast_to_block_scaled' op illegal: requires [mxfp] but not enabled in target}}
+  // expected-error@+1 {{'tosa.cast_to_block_scaled' op illegal: requires specification version compatible with 1.1 (got 1.0) and requires any of [mxfp] profiles/extensions to be specified in the target environment}}
   %0:2 = tosa.cast_to_block_scaled %arg0 {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<4x32xf32>) -> (tensor<4x32xf6E3M2FN>, tensor<4x1xf8E8M0FNU>)
   return %0#0, %0#1 : tensor<4x32xf6E3M2FN>, tensor<4x1xf8E8M0FNU>
 }
@@ -614,7 +621,7 @@ func.func @test_conv2d_block_scaled(%arg0: tensor<*xf4E2M1FN>, %arg1: tensor<*xf
   %0 = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
   %1 = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
   %2 = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.conv2d_block_scaled' op illegal: requires [mxfp_conv] but not enabled in target}}
+  // expected-error@+1 {{'tosa.conv2d_block_scaled' op illegal: requires specification version compatible with 1.1 (got 1.0) and requires any of [mxfp_conv] profiles/extensions to be specified in the target environment}}
   %3 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %0, %1, %2 {block_size = BLOCK_SIZE_32} : (tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>, tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>, tensor<*xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xf32>
   return %3 : tensor<*xf32>
 }

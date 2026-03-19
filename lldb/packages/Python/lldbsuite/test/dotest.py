@@ -469,6 +469,9 @@ def parseOptionsAndInitTestdirs():
     if args.enabled_plugins:
         configuration.enabled_plugins = args.enabled_plugins
 
+    if args.enable_mte:
+        configuration.mte_enabled = True
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [
