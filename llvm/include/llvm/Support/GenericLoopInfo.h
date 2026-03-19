@@ -530,10 +530,8 @@ template <class BlockT, class LoopT> class LoopInfoBase {
       BBMap;
 
   using ParentT = decltype(std::declval<const BlockT *>()->getParent());
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  mutable ParentT ParentPtr = nullptr;
-  mutable unsigned BlockNumberEpoch;
-#endif
+  ParentT ParentPtr = nullptr;
+  unsigned BlockNumberEpoch;
 
   std::vector<LoopT *> TopLevelLoops;
   BumpPtrAllocator LoopAllocator;
@@ -552,19 +550,15 @@ public:
       : BBMap(std::move(Arg.BBMap)),
         TopLevelLoops(std::move(Arg.TopLevelLoops)),
         LoopAllocator(std::move(Arg.LoopAllocator)) {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     ParentPtr = Arg.ParentPtr;
     BlockNumberEpoch = Arg.BlockNumberEpoch;
-#endif
     // We have to clear the arguments top level loops as we've taken ownership.
     Arg.TopLevelLoops.clear();
   }
   LoopInfoBase &operator=(LoopInfoBase &&RHS) {
     BBMap = std::move(RHS.BBMap);
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     ParentPtr = RHS.ParentPtr;
     BlockNumberEpoch = RHS.BlockNumberEpoch;
-#endif
 
     for (auto *L : TopLevelLoops)
       L->~LoopT();
@@ -577,9 +571,6 @@ public:
 
   void releaseMemory() {
     BBMap.clear();
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    ParentPtr = nullptr;
-#endif
 
     for (auto *L : TopLevelLoops)
       L->~LoopT();
@@ -625,21 +616,13 @@ private:
   /// Verify that used block numbers are still valid. Initializes the block
   /// number epoch and parent when no blocks exist so far.
   void verifyBlockNumberEpoch(ParentT BBParent) const {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     if constexpr (GraphHasNodeNumbers<BlockT *>) {
-      if (ParentPtr == nullptr)
-        ParentPtr = BBParent;
-      else
-        assert(ParentPtr == BBParent &&
-               "loop info queried with block of other function");
-      if (BBMap.empty())
-        BlockNumberEpoch = GraphTraits<ParentT>::getNumberEpoch(ParentPtr);
-      else
-        assert(BlockNumberEpoch ==
-                   GraphTraits<ParentT>::getNumberEpoch(ParentPtr) &&
-               "loop info used with outdated block numbers");
+      assert(ParentPtr == BBParent &&
+             "loop info queried with block of other function");
+      assert(BlockNumberEpoch ==
+                 GraphTraits<ParentT>::getNumberEpoch(ParentPtr) &&
+             "loop info used with outdated block numbers");
     }
-#endif
   }
 
 public:

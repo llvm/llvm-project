@@ -578,6 +578,12 @@ template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   // Postorder traversal of the dominator tree.
   const DomTreeNodeBase<BlockT> *DomRoot = DomTree.getRootNode();
+  if constexpr (GraphHasNodeNumbers<const BlockT *>) {
+    ParentPtr = DomRoot->getBlock()->getParent();
+    BlockNumberEpoch = GraphTraits<ParentT>::getNumberEpoch(ParentPtr);
+    unsigned Max = GraphTraits<ParentT>::getMaxNumber(ParentPtr);
+    BBMap.resize(Max);
+  }
   for (auto DomNode : post_order(DomRoot)) {
 
     BlockT *Header = DomNode->getBlock();

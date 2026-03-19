@@ -682,8 +682,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     MSSA->verifyMemorySSA();
 
   if (LI) {
-    SmallPtrSet<BasicBlock *, 8> Blocks;
-    Blocks.insert(L->block_begin(), L->block_end());
+    SmallPtrSet<BasicBlock *, 8> Blocks(llvm::from_range, L->blocks());
 
     // Erase the instructions and the blocks without having to worry
     // about ordering because we already dropped the references.
