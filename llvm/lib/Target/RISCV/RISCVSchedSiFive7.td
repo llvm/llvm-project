@@ -1636,6 +1636,11 @@ def SiFive7LowFPLatencies : SiFive7FPLatencies {
 }
 
 /// Models
+def SiFive7VLEN128X100Model : SiFive7SchedMachineModel<128> {
+  let FPLatencies = SiFive7LowFPLatencies;
+  let HasFastGather = true;
+}
+
 def SiFive7VLEN512Model : SiFive7SchedMachineModel<512> {
   let FPLatencies = SiFive7DefaultFPLatencies;
 }
@@ -1647,7 +1652,8 @@ def SiFive7VLEN1024X300Model : SiFive7SchedMachineModel<1024> {
 }
 
 /// Binding models to their scheduling resources.
-foreach model = [SiFive7VLEN512Model, SiFive7VLEN1024X300Model] in {
+foreach model = [SiFive7VLEN128X100Model, SiFive7VLEN512Model,
+                 SiFive7VLEN1024X300Model] in {
   let SchedModel = model in
   defm model.Name : SiFive7SchedResources<model.VLEN, model.HasDualVALU,
                                           model.FPLatencies,
@@ -1656,4 +1662,5 @@ foreach model = [SiFive7VLEN512Model, SiFive7VLEN1024X300Model] in {
 
 // Some model name aliases.
 defvar SiFive7Model = SiFive7VLEN512Model;
+defvar SiFiveX100Model = SiFive7VLEN128X100Model;
 defvar SiFiveX390Model = SiFive7VLEN1024X300Model;
