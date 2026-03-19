@@ -83,6 +83,16 @@ public:
   /// Erases all data.
   virtual void clear() = 0;
 
+  /// Returns the address range containing \p Addr if available.
+  /// This is used for assembly files where labels may not have high_pc
+  /// but the debug map has range information from symbols.
+  /// \returns the range [LowPC, HighPC) containing Addr and the relocation
+  /// adjustment, or std::nullopt if no such range exists.
+  virtual std::optional<std::tuple<uint64_t, uint64_t, int64_t>>
+  getAddressRangeForAddress(uint64_t Addr) {
+    return std::nullopt;
+  }
+
   /// This function checks whether variable has DWARF expression containing
   /// operation referencing live address(f.e. DW_OP_addr, DW_OP_addrx...).
   /// \returns first is true if the expression has an operation referencing an
