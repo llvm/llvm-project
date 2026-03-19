@@ -23,19 +23,20 @@ LLVM-libc are used; the rest "fall back" to the system library. This is the
 preferred method for most contributors as it is the fastest to build and test.
 
 To configure for an overlay build, point CMake to the ``runtimes`` directory 
-and set ``LLVM_LIBC_FULL_BUILD=OFF`` (which is the default):
+and set ``LLVM_LIBC_FULL_BUILD=OFF`` (which is the default). This will build a 
+static archive named ``libllvmlibc.a``:
 
 .. code-block:: sh
 
-   cmake -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt" \
+   cmake -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libc" \
          -DLLVM_LIBC_FULL_BUILD=OFF ...
 
 2. Full Build Mode (Standalone Library)
 ---------------------------------------
 
 In Full Build Mode, LLVM-libc is a complete replacement for the system library. 
-This is used to build a standalone ``libc.a`` for a new operating system or to 
-generate a sysroot for a specific target.
+This is used to build standalone ``libc.a`` and ``libm.a`` (with separate CMake 
+targets) for a new operating system or to generate a sysroot for a specific target.
 
 To configure for a full build, set ``LLVM_LIBC_FULL_BUILD=ON``:
 
