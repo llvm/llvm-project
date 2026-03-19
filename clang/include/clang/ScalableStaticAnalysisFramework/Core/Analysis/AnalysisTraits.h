@@ -28,6 +28,9 @@ template <typename T>
 struct HasAnalysisName<T, std::void_t<decltype(T::analysisName())>>
     : std::is_same<decltype(T::analysisName()), AnalysisName> {};
 
+template <typename T>
+inline constexpr bool HasAnalysisName_v = HasAnalysisName<T>::value;
+
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISTRAITS_H

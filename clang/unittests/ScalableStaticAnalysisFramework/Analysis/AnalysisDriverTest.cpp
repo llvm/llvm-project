@@ -129,8 +129,8 @@ public:
 };
 
 // CycleA and CycleB form a dependency cycle (CycleA → CycleB → CycleA).
-// Registered solely to exercise cycle detection in AnalysisDriver::sort().
-// initialize() and step() are unreachable stubs — the cycle is caught before
+// Registered solely to exercise cycle detection in AnalysisDriver::toposort().
+// initialize() and step() are unreachable stubs - the cycle is caught before
 // any analysis executes.
 class CycleAResult final : public AnalysisResult {
 public:
@@ -143,22 +143,14 @@ public:
 };
 
 // ---------------------------------------------------------------------------
-// Analysis destruction flags (reset in SetUp)
-// ---------------------------------------------------------------------------
-
-static bool Analysis1WasDestroyed = false;
-static bool Analysis2WasDestroyed = false;
-static bool Analysis4WasDestroyed = false;
-static bool Analysis5WasDestroyed = false;
-
-// ---------------------------------------------------------------------------
 // Analyses
 // ---------------------------------------------------------------------------
 
 class Analysis1 final
     : public SummaryAnalysis<Analysis1Result, Analysis1EntitySummary> {
 public:
-  ~Analysis1() { Analysis1WasDestroyed = true; }
+  inline static bool WasDestroyed = false;
+  ~Analysis1() { WasDestroyed = true; }
 
   llvm::Error initialize() override {
     result().WasInitialized = true;
@@ -176,12 +168,17 @@ public:
   }
 };
 
+// These static registrations are safe without SSAFBuiltinTestForceLinker.h
+// because this translation unit is compiled directly into the test binary -
+// the linker cannot dead-strip it, so all static initializers are guaranteed
+// to run.
 static AnalysisRegistry::Add<Analysis1> RegAnalysis1("Analysis for Analysis1");
 
 class Analysis2 final
     : public SummaryAnalysis<Analysis2Result, Analysis2EntitySummary> {
 public:
-  ~Analysis2() { Analysis2WasDestroyed = true; }
+  inline static bool WasDestroyed = false;
+  ~Analysis2() { WasDestroyed = true; }
 
   llvm::Error initialize() override {
     result().WasInitialized = true;
@@ -206,7 +203,8 @@ static AnalysisRegistry::Add<Analysis2> RegAnalysis2("Analysis for Analysis2");
 class Analysis4 final
     : public SummaryAnalysis<Analysis4Result, Analysis4EntitySummary> {
 public:
-  ~Analysis4() { Analysis4WasDestroyed = true; }
+  inline static bool WasDestroyed = false;
+  ~Analysis4() { WasDestroyed = true; }
 
   llvm::Error initialize() override {
     result().WasInitialized = true;
@@ -232,7 +230,8 @@ class Analysis5 final
   int StepCount = 0;
 
 public:
-  ~Analysis5() { Analysis5WasDestroyed = true; }
+  inline static bool WasDestroyed = false;
+  ~Analysis5() { WasDestroyed = true; }
 
   llvm::Error initialize(const Analysis1Result &R1, const Analysis2Result &R2,
                          const Analysis4Result &R4) override {
@@ -287,10 +286,11 @@ protected:
 
   void SetUp() override {
     NextSummaryInstanceId = 0;
-    Analysis1WasDestroyed = false;
-    Analysis2WasDestroyed = false;
-    Analysis4WasDestroyed = false;
-    Analysis5WasDestroyed = false;
+    Analysis1::WasDestroyed = false;
+    Analysis2::WasDestroyed = false;
+    // No Analysis3 - not registered, so no WasDestroyed flag.
+    Analysis4::WasDestroyed = false;
+    Analysis5::WasDestroyed = false;
   }
 
   std::unique_ptr<LUSummary> makeLUSummary() {
@@ -337,21 +337,17 @@ TEST(AnalysisRegistryTest, AnalysisIsRegistered) {
 }
 
 TEST(AnalysisRegistryTest, AnalysisCanBeInstantiated) {
-  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("AnalysisNonExisting"),
+  constexpr auto instantiate = AnalysisRegistry::instantiate;
+  EXPECT_THAT_EXPECTED(instantiate("AnalysisNonExisting"),
                        llvm::FailedWithMessage(
                            "no analysis registered for 'AnalysisNonExisting'"));
-  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis1"),
-                       llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis2"),
-                       llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis4"),
-                       llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("Analysis5"),
-                       llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("CycleA"),
-                       llvm::Succeeded());
-  EXPECT_THAT_EXPECTED(AnalysisRegistry::instantiate("CycleB"),
-                       llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate("Analysis1"), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate("Analysis2"), llvm::Succeeded());
+  // No Analysis3 - not registered, so instantiate() would fail.
+  EXPECT_THAT_EXPECTED(instantiate("Analysis4"), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate("Analysis5"), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate("CycleA"), llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(instantiate("CycleB"), llvm::Succeeded());
 }
 
 // run<T...>() — processes the non-cyclic analyses in topological order.
@@ -386,7 +382,7 @@ TEST_F(AnalysisDriverTest, RunAll) {
     EXPECT_TRUE(hasEntry(R1OrErr->Entries, E2, s1b));
     EXPECT_TRUE(R1OrErr->WasInitialized);
     EXPECT_TRUE(R1OrErr->WasFinalized);
-    EXPECT_TRUE(Analysis1WasDestroyed);
+    EXPECT_TRUE(Analysis1::WasDestroyed);
   }
 
   {
@@ -397,7 +393,7 @@ TEST_F(AnalysisDriverTest, RunAll) {
     EXPECT_TRUE(hasEntry(R2OrErr->Entries, E3, s2b));
     EXPECT_TRUE(R2OrErr->WasInitialized);
     EXPECT_TRUE(R2OrErr->WasFinalized);
-    EXPECT_TRUE(Analysis2WasDestroyed);
+    EXPECT_TRUE(Analysis2::WasDestroyed);
   }
 
   {
@@ -407,7 +403,7 @@ TEST_F(AnalysisDriverTest, RunAll) {
     EXPECT_TRUE(hasEntry(R4OrErr->Entries, E4, s4a));
     EXPECT_TRUE(R4OrErr->WasInitialized);
     EXPECT_TRUE(R4OrErr->WasFinalized);
-    EXPECT_TRUE(Analysis4WasDestroyed);
+    EXPECT_TRUE(Analysis4::WasDestroyed);
   }
 
   {
@@ -424,7 +420,7 @@ TEST_F(AnalysisDriverTest, RunAll) {
     EXPECT_TRUE(hasEntry(R5OrErr->Analysis2Entries, E3, s2b));
     EXPECT_EQ(R5OrErr->Analysis4Entries.size(), 1u);
     EXPECT_TRUE(hasEntry(R5OrErr->Analysis4Entries, E4, s4a));
-    EXPECT_TRUE(Analysis5WasDestroyed);
+    EXPECT_TRUE(Analysis5::WasDestroyed);
   }
 
   // Unregistered analysis — not present in WPA.

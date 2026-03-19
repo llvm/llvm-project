@@ -49,7 +49,7 @@ public:
   template <typename ResultT> [[nodiscard]] bool contains() const {
     static_assert(std::is_base_of_v<AnalysisResult, ResultT>,
                   "ResultT must derive from AnalysisResult");
-    static_assert(HasAnalysisName<ResultT>::value,
+    static_assert(HasAnalysisName_v<ResultT>,
                   "ResultT must have a static analysisName() method");
 
     return contains(ResultT::analysisName());
@@ -66,7 +66,7 @@ public:
   [[nodiscard]] llvm::Expected<const ResultT &> get() const {
     static_assert(std::is_base_of_v<AnalysisResult, ResultT>,
                   "ResultT must derive from AnalysisResult");
-    static_assert(HasAnalysisName<ResultT>::value,
+    static_assert(HasAnalysisName_v<ResultT>,
                   "ResultT must have a static analysisName() method");
 
     auto Result = get(ResultT::analysisName());

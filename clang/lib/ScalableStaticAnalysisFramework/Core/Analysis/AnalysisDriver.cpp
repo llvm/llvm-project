@@ -32,6 +32,11 @@ AnalysisDriver::toposort(llvm::ArrayRef<AnalysisName> Roots) {
     std::vector<AnalysisName> Path;
     std::vector<std::unique_ptr<AnalysisBase>> Result;
 
+    explicit Visitor(size_t N) {
+      Path.reserve(N);
+      Result.reserve(N);
+    }
+
     std::string formatCycle(const AnalysisName &CycleEntry) const {
       auto CycleBegin = llvm::find(Path, CycleEntry);
       std::string Cycle;
@@ -57,18 +62,24 @@ AnalysisDriver::toposort(llvm::ArrayRef<AnalysisName> Roots) {
         It->second = State::Visiting;
         Path.push_back(Name);
 
-        auto V = AnalysisRegistry::instantiate(Name.str());
+        llvm::Expected<std::unique_ptr<AnalysisBase>> V =
+            AnalysisRegistry::instantiate(Name.str());
         if (!V) {
           return V.takeError();
         }
 
-        auto Analysis = std::move(*V);
+        // Unwrap for convenience to avoid the noise of dereferencing an
+        // Expected on every subsequent access.
+        std::unique_ptr<AnalysisBase> Analysis = std::move(*V);
+
         for (const auto &Dep : Analysis->dependencyNames()) {
           if (auto Err = visit(Dep)) {
             return Err;
           }
         }
 
+        // std::map iterators are not invalidated by insertions, so It remains
+        // valid after recursive visit() calls that insert new entries.
         It->second = State::Visited;
         Path.pop_back();
         Result.push_back(std::move(Analysis));
@@ -80,7 +91,7 @@ AnalysisDriver::toposort(llvm::ArrayRef<AnalysisName> Roots) {
     }
   };
 
-  Visitor V;
+  Visitor V(Roots.size());
   for (const auto &Root : Roots) {
     if (auto Err = V.visit(Root)) {
       return std::move(Err);
@@ -176,7 +187,7 @@ llvm::Expected<WPASuite> AnalysisDriver::execute(
     }
     }
     AnalysisName Name = Analysis->analysisName();
-    Suite.Data.emplace(Name, std::move(*Analysis).result());
+    Suite.Data.emplace(std::move(Name), std::move(*Analysis).result());
   }
 
   return Suite;

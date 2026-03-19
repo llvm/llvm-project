@@ -50,8 +50,8 @@ private:
   virtual llvm::Error initialize(
       const std::map<AnalysisName, const AnalysisResult *> &DepResults) = 0;
 
-  /// Performs one pass. Returns true if another pass is needed; false when
-  /// converged.
+  /// Performs one pass.
+  /// Returns true if another pass is needed; false when converged.
   virtual llvm::Expected<bool> step() = 0;
 
   /// Called after the step() loop converges. Default is a no-op.
@@ -72,11 +72,11 @@ template <typename ResultT, typename... DepResultTs>
 class DerivedAnalysis : public DerivedAnalysisBase {
   static_assert(std::is_base_of_v<AnalysisResult, ResultT>,
                 "ResultT must derive from AnalysisResult");
-  static_assert(HasAnalysisName<ResultT>::value,
+  static_assert(HasAnalysisName_v<ResultT>,
                 "ResultT must have a static analysisName() method");
   static_assert((std::is_base_of_v<AnalysisResult, DepResultTs> && ...),
                 "Every DepResultT must derive from AnalysisResult");
-  static_assert((HasAnalysisName<DepResultTs>::value && ...),
+  static_assert((HasAnalysisName_v<DepResultTs> && ...),
                 "Every DepResultT must have a static analysisName() method");
 
   friend class AnalysisRegistry;

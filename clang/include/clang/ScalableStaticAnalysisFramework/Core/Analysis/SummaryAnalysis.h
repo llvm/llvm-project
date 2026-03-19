@@ -70,7 +70,7 @@ template <typename ResultT, typename EntitySummaryT>
 class SummaryAnalysis : public SummaryAnalysisBase {
   static_assert(std::is_base_of_v<AnalysisResult, ResultT>,
                 "ResultT must derive from AnalysisResult");
-  static_assert(HasAnalysisName<ResultT>::value,
+  static_assert(HasAnalysisName_v<ResultT>,
                 "ResultT must have a static analysisName() method");
   static_assert(std::is_base_of_v<EntitySummary, EntitySummaryT>,
                 "EntitySummaryT must derive from EntitySummary");
@@ -99,8 +99,8 @@ public:
   /// Called once per matching entity. Implement to accumulate data.
   virtual llvm::Error add(EntityId Id, const EntitySummaryT &Summary) = 0;
 
-  /// Called after all entities have been processed. Override for
-  /// post-processing.
+  /// Called after all entities have been processed.
+  /// Override for post-processing.
   virtual llvm::Error finalize() override { return llvm::Error::success(); }
 
 protected:

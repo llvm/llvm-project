@@ -8,11 +8,20 @@
 //
 // Unified registry for both SummaryAnalysis and DerivedAnalysis subclasses.
 //
-// To register an analysis, add a static Add<AnalysisT> in its translation
-// unit:
+// To register an analysis, add a static Add<AnalysisT> and an anchor source
+// in its translation unit, then add the matching anchor destination to the
+// relevant force-linker header:
 //
+//   // MyAnalysis.cpp
 //   static AnalysisRegistry::Add<MyAnalysis>
 //       Registered("One-line description of MyAnalysis");
+//
+//   volatile int SSAFMyAnalysisAnchorSource = 0;
+//
+//   // SSAFBuiltinForceLinker.h (or the relevant force-linker header)
+//   extern volatile int SSAFMyAnalysisAnchorSource;
+//   [[maybe_unused]] static int SSAFMyAnalysisAnchorDestination =
+//       SSAFMyAnalysisAnchorSource;
 //
 // The registry entry name is derived automatically from
 // MyAnalysis::analysisName(), so name-mismatch bugs are impossible.
