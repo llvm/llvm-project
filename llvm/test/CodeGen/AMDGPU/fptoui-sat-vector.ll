@@ -3267,6 +3267,10 @@ define <8 x i64> @test_unsigned_v8f16_v8i64(<8 x half> %f) {
     ret <8 x i64> %x
 }
 
+;
+; Float to unsigned 8-bit
+;
+
 define <4 x i8> @test_unsigned_v4f32_v4i8(<4 x float> %f) {
 ; GFX7-ISEL-LABEL: test_unsigned_v4f32_v4i8:
 ; GFX7-ISEL:       ; %bb.0:
