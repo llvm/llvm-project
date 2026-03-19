@@ -231,10 +231,9 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithI32Bounds) {
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithNonConstantBounds) {
   auto [module, funcOp] =
       createModuleWithFuncArgs({b.getIndexType(), b.getIndexType()});
-  Block &entryBlock = funcOp.getBody().front();
 
-  Value lb = entryBlock.getArgument(0);
-  Value ub = entryBlock.getArgument(1);
+  Value lb = funcOp.getArgument(0);
+  Value ub = funcOp.getArgument(1);
   Value step = createIndexConstant(1);
 
   acc::LoopOp loopOp = createLoopOp({lb}, {ub}, {step});
@@ -243,20 +242,16 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithNonConstantBounds) {
 
   ASSERT_TRUE(forOp);
 
-  // Lower bound should be the function argument (no cast needed for index)
-  EXPECT_EQ(forOp.getLowerBound(), lb);
+  // Normalized: lb=0, step=1, ub=tripCount (computed from dynamic bounds)
+  auto lbConst = getConstantIndex(forOp.getLowerBound());
+  ASSERT_TRUE(lbConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
 
-  // Upper bound should be ub + 1 (for inclusive -> exclusive conversion)
-  // Check it's an addi of ub and 1
-  auto ubAddOp = forOp.getUpperBound().getDefiningOp<arith::AddIOp>();
-  ASSERT_TRUE(ubAddOp);
-  EXPECT_EQ(ubAddOp.getLhs(), ub);
-  auto oneConst = getConstantIndex(ubAddOp.getRhs());
-  ASSERT_TRUE(oneConst.has_value());
-  EXPECT_EQ(*oneConst, 1);
+  auto stepConst = getConstantIndex(forOp.getStep());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*stepConst, 1);
 
-  // Step should be the constant 1
-  EXPECT_EQ(forOp.getStep(), step);
+  EXPECT_FALSE(getConstantIndex(forOp.getUpperBound()).has_value());
 }
 
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapse) {
@@ -353,10 +348,51 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForExclusiveUpperBound) {
 
   ASSERT_TRUE(forOp);
 
-  // With exclusive upper bound, ub should remain 10 (no +1 adjustment)
-  EXPECT_EQ(forOp.getLowerBound(), c0);
-  EXPECT_EQ(forOp.getUpperBound(), c10);
-  EXPECT_EQ(forOp.getStep(), c1);
+  // Normalized: lb=0, step=1, ub=tripCount
+  // For exclusive [0, 10) with step 1: tripCount = (9 - 0 + 1) / 1 = 10
+  auto lbConst = getConstantIndex(forOp.getLowerBound());
+  ASSERT_TRUE(lbConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+
+  auto ubConst = getConstantIndex(forOp.getUpperBound());
+  ASSERT_TRUE(ubConst.has_value());
+  EXPECT_EQ(*ubConst, 10);
+
+  auto stepConst = getConstantIndex(forOp.getStep());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*stepConst, 1);
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNegativeStep) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+  Value cNeg1 = createIndexConstant(-1);
+
+  // acc.loop from 10 to 1 step -1 (inclusive)
+  acc::LoopOp loopOp = createLoopOp({c10}, {c1}, {cNeg1});
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+
+  // Normalized: lb=0, step=1, ub=tripCount
+  // tripCount = (1 - 10 + (-1)) / (-1) = (-10) / (-1) = 10
+  auto lbConst = getConstantIndex(forOp.getLowerBound());
+  ASSERT_TRUE(lbConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+
+  auto ubConst = getConstantIndex(forOp.getUpperBound());
+  ASSERT_TRUE(ubConst.has_value());
+  EXPECT_EQ(*ubConst, 10);
+
+  auto stepConst = getConstantIndex(forOp.getStep());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*stepConst, 1);
+
+  EXPECT_TRUE(isa<scf::YieldOp>(forOp.getBody()->getTerminator()));
+  EXPECT_TRUE(module->verify().succeeded());
 }
 
 //===----------------------------------------------------------------------===//
@@ -803,19 +839,77 @@ TEST_F(OpenACCUtilsLoopTest,
   EXPECT_EQ(mulCount, 1u);
 }
 
-//===----------------------------------------------------------------------===//
-// Error Case Tests
-//===----------------------------------------------------------------------===//
+TEST_F(OpenACCUtilsLoopTest,
+       WrapMultiBlockRegionWithSCFExecuteRegionFuncMultipleReturnsWithResults) {
+  // Create a function with multiple blocks that each end with func.return
+  // with results. wrapMultiBlockRegionWithSCFExecuteRegion(..., true) should
+  // replace each func.return with scf.yield and produce an execute_region
+  // with the same result types.
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  b.setInsertionPointToStart(module->getBody());
 
-TEST_F(OpenACCUtilsLoopTest, UnstructuredLoopWithYieldOperandsReturnsNullptr) {
+  Type i32 = b.getI32Type();
+  auto funcType = b.getFunctionType({}, {i32});
+  auto funcOp = func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *entry = funcOp.addEntryBlock();
+  Block *thenBlock = b.createBlock(&funcOp.getBody(), funcOp.getBody().end());
+  Block *elseBlock = b.createBlock(&funcOp.getBody(), funcOp.getBody().end());
+
+  b.setInsertionPointToEnd(entry);
+  Value cond =
+      arith::ConstantOp::create(b, loc, b.getI1Type(), b.getBoolAttr(true));
+  cf::CondBranchOp::create(b, loc, cond, thenBlock, elseBlock);
+
+  b.setInsertionPointToEnd(thenBlock);
+  Value thenV = createI32Constant(1);
+  func::ReturnOp::create(b, loc, ValueRange{thenV});
+
+  b.setInsertionPointToEnd(elseBlock);
+  Value elseV = createI32Constant(3);
+  func::ReturnOp::create(b, loc, ValueRange{elseV});
+
+  Region &region = funcOp.getBody();
+  EXPECT_EQ(region.getBlocks().size(), 3u);
+
+  b.setInsertionPointAfter(funcOp);
+  IRMapping mapping;
+  scf::ExecuteRegionOp exeRegionOp = wrapMultiBlockRegionWithSCFExecuteRegion(
+      region, mapping, loc, b, /*convertFuncReturn=*/true);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  // execute_region should have one result (same as func.return operands)
+  EXPECT_EQ(exeRegionOp.getNumResults(), 1u);
+  EXPECT_TRUE(exeRegionOp.getResult(0).getType().isSignlessInteger(32));
+
+  // Cloned region should have 3 blocks
+  EXPECT_EQ(exeRegionOp.getRegion().getBlocks().size(), 3u);
+
+  // Entry block: cond_br unchanged
+  Block &exeEntry = exeRegionOp.getRegion().front();
+  EXPECT_TRUE(isa<cf::CondBranchOp>(exeEntry.getTerminator()));
+
+  // Both then and else blocks should now have scf.yield with one operand
+  unsigned yieldCount = 0;
+  for (Block &block : exeRegionOp.getRegion().getBlocks()) {
+    if (isa<scf::YieldOp>(block.getTerminator())) {
+      EXPECT_EQ(block.getTerminator()->getNumOperands(), 1u);
+      yieldCount++;
+    }
+  }
+  EXPECT_EQ(yieldCount, 2u) << "both return blocks should be scf.yield";
+}
+
+TEST_F(OpenACCUtilsLoopTest, UnstructuredLoopWithYieldOperandsSucceeds) {
   auto [module, funcOp] = createModuleWithFunc();
 
   Value c0 = createIndexConstant(0);
   Value c10 = createIndexConstant(10);
   Value c1 = createIndexConstant(1);
 
-  // Create an unstructured loop where the yield has operands (simulating
-  // a loop with results, which is not yet supported)
+  // Create an unstructured loop where the yield has operands (loop with
+  // results); conversion should succeed and produce execute_region with
+  // results.
   auto loopOp = acc::LoopOp::create(b, loc, {c0}, {c10}, {c1},
                                     acc::LoopParMode::loop_independent);
   loopOp.setInclusiveUpperboundAttr(b.getDenseBoolArrayAttr({true}));
@@ -832,28 +926,16 @@ TEST_F(OpenACCUtilsLoopTest, UnstructuredLoopWithYieldOperandsReturnsNullptr) {
     cf::BranchOp::create(b, loc, exitBlock);
 
     b.setInsertionPointToEnd(exitBlock);
-    // Create a yield with operands - this triggers the error
     Value result = createI32Constant(42);
     acc::YieldOp::create(b, loc, ValueRange{result});
   }
-  // InsertionGuard restores insertion point to after loopOp
-
-  // Use a diagnostic handler to capture the error
-  std::string errorMsg;
-  ScopedDiagnosticHandler handler(&context, [&](Diagnostic &diag) {
-    if (diag.getSeverity() == DiagnosticSeverity::Error) {
-      llvm::raw_string_ostream os(errorMsg);
-      os << diag;
-    }
-    return success();
-  });
 
   scf::ExecuteRegionOp exeRegionOp =
       convertUnstructuredACCLoopToSCFExecuteRegion(loopOp, b);
 
-  // Should return nullptr due to unsupported loop with results
-  EXPECT_FALSE(exeRegionOp);
-  EXPECT_TRUE(errorMsg.find("not yet supported") != std::string::npos);
+  ASSERT_TRUE(exeRegionOp);
+  EXPECT_EQ(exeRegionOp.getNumResults(), 1u);
+  EXPECT_TRUE(exeRegionOp.getResult(0).getType().isSignlessInteger(32));
 }
 
 //===----------------------------------------------------------------------===//

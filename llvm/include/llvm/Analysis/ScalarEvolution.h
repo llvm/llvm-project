@@ -66,6 +66,78 @@ enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
 
+class SCEV;
+
+struct SCEVUse : PointerIntPair<const SCEV *, 2> {
+  SCEVUse() : PointerIntPair() { setFromOpaqueValue(nullptr); }
+  SCEVUse(const SCEV *S) : PointerIntPair() {
+    setFromOpaqueValue(reinterpret_cast<void *>(const_cast<SCEV *>(S)));
+  }
+  SCEVUse(const SCEV *S, unsigned Flags) : PointerIntPair(S, Flags) {}
+
+  operator const SCEV *() const { return getPointer(); }
+  const SCEV *operator->() const { return getPointer(); }
+
+  void *getRawPointer() const { return getOpaqueValue(); }
+
+  unsigned getFlags() const { return getInt(); }
+
+  bool operator==(const SCEVUse &RHS) const {
+    return getRawPointer() == RHS.getRawPointer();
+  }
+
+  bool operator==(const SCEV *RHS) const { return getRawPointer() == RHS; }
+
+  /// Print out the internal representation of this scalar to the specified
+  /// stream.  This should really only be used for debugging purposes.
+  void print(raw_ostream &OS) const;
+
+  /// This method is used for debugging.
+  void dump() const;
+};
+
+/// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
+/// SmallPtrSet, among others.
+template <> struct PointerLikeTypeTraits<SCEVUse> {
+  static inline void *getAsVoidPointer(SCEVUse U) { return U.getOpaqueValue(); }
+  static inline SCEVUse getFromVoidPointer(void *P) {
+    SCEVUse U;
+    U.setFromOpaqueValue(P);
+    return U;
+  }
+
+  /// The Low bits are used by the PointerIntPair.
+  static constexpr int NumLowBitsAvailable = 0;
+};
+
+template <> struct DenseMapInfo<SCEVUse> {
+  static inline SCEVUse getEmptyKey() {
+    uintptr_t Val = static_cast<uintptr_t>(-1);
+    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
+  }
+
+  static inline SCEVUse getTombstoneKey() {
+    uintptr_t Val = static_cast<uintptr_t>(-2);
+    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
+  }
+
+  static unsigned getHashValue(SCEVUse U) {
+    return hash_value(U.getRawPointer());
+  }
+
+  static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
+    return LHS.getRawPointer() == RHS.getRawPointer();
+  }
+};
+
+template <> struct simplify_type<SCEVUse> {
+  using SimpleType = const SCEV *;
+
+  static SimpleType getSimplifiedValue(SCEVUse &Val) {
+    return Val.getPointer();
+  }
+};
+
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
 ///
@@ -144,7 +216,7 @@ public:
   LLVM_ABI Type *getType() const;
 
   /// Return operands of this SCEV expression.
-  LLVM_ABI ArrayRef<const SCEV *> operands() const;
+  LLVM_ABI ArrayRef<SCEVUse> operands() const;
 
   /// Return true if the expression is a constant zero.
   LLVM_ABI bool isZero() const;
@@ -554,6 +626,7 @@ public:
 
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
   LLVM_ABI void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
+  LLVM_ABI void registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops);
 
   /// Return true if the SCEV expression contains an undef value.
   LLVM_ABI bool containsUndefs(const SCEV *S) const;
@@ -592,46 +665,47 @@ public:
                                              unsigned Depth = 0);
   LLVM_ABI const SCEV *getCastExpr(SCEVTypes Kind, const SCEV *Op, Type *Ty);
   LLVM_ABI const SCEV *getAnyExtendExpr(const SCEV *Op, Type *Ty);
-  LLVM_ABI const SCEV *getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
+
+  LLVM_ABI const SCEV *getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
                                   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                                   unsigned Depth = 0);
-  const SCEV *getAddExpr(const SCEV *LHS, const SCEV *RHS,
+  const SCEV *getAddExpr(SCEVUse LHS, SCEVUse RHS,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
-    SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
+    SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getAddExpr(Ops, Flags, Depth);
   }
-  const SCEV *getAddExpr(const SCEV *Op0, const SCEV *Op1, const SCEV *Op2,
+  const SCEV *getAddExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
-    SmallVector<const SCEV *, 3> Ops = {Op0, Op1, Op2};
+    SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getAddExpr(Ops, Flags, Depth);
   }
-  LLVM_ABI const SCEV *getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
+  LLVM_ABI const SCEV *getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
                                   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                                   unsigned Depth = 0);
-  const SCEV *getMulExpr(const SCEV *LHS, const SCEV *RHS,
+  const SCEV *getMulExpr(SCEVUse LHS, SCEVUse RHS,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
-    SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
+    SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getMulExpr(Ops, Flags, Depth);
   }
-  const SCEV *getMulExpr(const SCEV *Op0, const SCEV *Op1, const SCEV *Op2,
+  const SCEV *getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0) {
-    SmallVector<const SCEV *, 3> Ops = {Op0, Op1, Op2};
+    SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getMulExpr(Ops, Flags, Depth);
   }
-  LLVM_ABI const SCEV *getUDivExpr(const SCEV *LHS, const SCEV *RHS);
-  LLVM_ABI const SCEV *getUDivExactExpr(const SCEV *LHS, const SCEV *RHS);
-  LLVM_ABI const SCEV *getURemExpr(const SCEV *LHS, const SCEV *RHS);
-  LLVM_ABI const SCEV *getAddRecExpr(const SCEV *Start, const SCEV *Step,
+  LLVM_ABI const SCEV *getUDivExpr(SCEVUse LHS, SCEVUse RHS);
+  LLVM_ABI const SCEV *getUDivExactExpr(SCEVUse LHS, SCEVUse RHS);
+  LLVM_ABI const SCEV *getURemExpr(SCEVUse LHS, SCEVUse RHS);
+  LLVM_ABI const SCEV *getAddRecExpr(SCEVUse Start, SCEVUse Step, const Loop *L,
+                                     SCEV::NoWrapFlags Flags);
+  LLVM_ABI const SCEV *getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
                                      const Loop *L, SCEV::NoWrapFlags Flags);
-  LLVM_ABI const SCEV *getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
-                                     const Loop *L, SCEV::NoWrapFlags Flags);
-  const SCEV *getAddRecExpr(const SmallVectorImpl<const SCEV *> &Operands,
+  const SCEV *getAddRecExpr(const SmallVectorImpl<SCEVUse> &Operands,
                             const Loop *L, SCEV::NoWrapFlags Flags) {
-    SmallVector<const SCEV *, 4> NewOp(Operands.begin(), Operands.end());
+    SmallVector<SCEVUse, 4> NewOp(Operands.begin(), Operands.end());
     return getAddRecExpr(NewOp, L, Flags);
   }
 
@@ -649,26 +723,25 @@ public:
   /// instead we use IndexExprs.
   /// \p IndexExprs The expressions for the indices.
   LLVM_ABI const SCEV *getGEPExpr(GEPOperator *GEP,
-                                  ArrayRef<const SCEV *> IndexExprs);
-  LLVM_ABI const SCEV *getGEPExpr(const SCEV *BaseExpr,
-                                  ArrayRef<const SCEV *> IndexExprs,
+                                  ArrayRef<SCEVUse> IndexExprs);
+  LLVM_ABI const SCEV *getGEPExpr(SCEVUse BaseExpr,
+                                  ArrayRef<SCEVUse> IndexExprs,
                                   Type *SrcElementTy,
                                   GEPNoWrapFlags NW = GEPNoWrapFlags::none());
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
-                                     SmallVectorImpl<const SCEV *> &Operands);
+                                     SmallVectorImpl<SCEVUse> &Operands);
   LLVM_ABI const SCEV *
-  getSequentialMinMaxExpr(SCEVTypes Kind,
-                          SmallVectorImpl<const SCEV *> &Operands);
-  LLVM_ABI const SCEV *getSMaxExpr(const SCEV *LHS, const SCEV *RHS);
-  LLVM_ABI const SCEV *getSMaxExpr(SmallVectorImpl<const SCEV *> &Operands);
-  LLVM_ABI const SCEV *getUMaxExpr(const SCEV *LHS, const SCEV *RHS);
-  LLVM_ABI const SCEV *getUMaxExpr(SmallVectorImpl<const SCEV *> &Operands);
-  LLVM_ABI const SCEV *getSMinExpr(const SCEV *LHS, const SCEV *RHS);
-  LLVM_ABI const SCEV *getSMinExpr(SmallVectorImpl<const SCEV *> &Operands);
-  LLVM_ABI const SCEV *getUMinExpr(const SCEV *LHS, const SCEV *RHS,
+  getSequentialMinMaxExpr(SCEVTypes Kind, SmallVectorImpl<SCEVUse> &Operands);
+  LLVM_ABI const SCEV *getSMaxExpr(SCEVUse LHS, SCEVUse RHS);
+  LLVM_ABI const SCEV *getSMaxExpr(SmallVectorImpl<SCEVUse> &Operands);
+  LLVM_ABI const SCEV *getUMaxExpr(SCEVUse LHS, SCEVUse RHS);
+  LLVM_ABI const SCEV *getUMaxExpr(SmallVectorImpl<SCEVUse> &Operands);
+  LLVM_ABI const SCEV *getSMinExpr(SCEVUse LHS, SCEVUse RHS);
+  LLVM_ABI const SCEV *getSMinExpr(SmallVectorImpl<SCEVUse> &Operands);
+  LLVM_ABI const SCEV *getUMinExpr(SCEVUse LHS, SCEVUse RHS,
                                    bool Sequential = false);
-  LLVM_ABI const SCEV *getUMinExpr(SmallVectorImpl<const SCEV *> &Operands,
+  LLVM_ABI const SCEV *getUMinExpr(SmallVectorImpl<SCEVUse> &Operands,
                                    bool Sequential = false);
   LLVM_ABI const SCEV *getUnknown(Value *V);
   LLVM_ABI const SCEV *getCouldNotCompute();
@@ -717,7 +790,7 @@ public:
   /// To compute the difference between two unrelated pointers, you can
   /// explicitly convert the arguments using getPtrToIntExpr(), for pointer
   /// types that support it.
-  LLVM_ABI const SCEV *getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
+  LLVM_ABI const SCEV *getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
                                     SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                                     unsigned Depth = 0);
 
@@ -773,9 +846,8 @@ public:
 
   /// Promote the operands to the wider of the types using zero-extension, and
   /// then perform a umin operation with them. N-ary function.
-  LLVM_ABI const SCEV *
-  getUMinFromMismatchedTypes(SmallVectorImpl<const SCEV *> &Ops,
-                             bool Sequential = false);
+  LLVM_ABI const SCEV *getUMinFromMismatchedTypes(SmallVectorImpl<SCEVUse> &Ops,
+                                                  bool Sequential = false);
 
   /// Transitively follow the chain of pointer-type operands until reaching a
   /// SCEV that does not have a single pointer operand. This returns a
@@ -1524,12 +1596,6 @@ private:
   /// Mark predicate values currently being processed by isImpliedCond.
   SmallPtrSet<const Value *, 6> PendingLoopPredicates;
 
-  /// Mark SCEVUnknown Phis currently being processed by getRangeRef.
-  SmallPtrSet<const PHINode *, 6> PendingPhiRanges;
-
-  /// Mark SCEVUnknown Phis currently being processed by getRangeRefIter.
-  SmallPtrSet<const PHINode *, 6> PendingPhiRangesIter;
-
   // Mark SCEVUnknown Phis currently being processed by isImpliedViaMerge.
   SmallPtrSet<const PHINode *, 6> PendingMerges;
 
@@ -2177,7 +2243,7 @@ private:
   void forgetBackedgeTakenCounts(const Loop *L, bool Predicated);
 
   /// Drop memoized information for all \p SCEVs.
-  void forgetMemoizedResults(ArrayRef<const SCEV *> SCEVs);
+  void forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs);
 
   /// Helper for forgetMemoizedResults.
   void forgetMemoizedResultsImpl(const SCEV *S);
@@ -2186,7 +2252,7 @@ private:
   /// from ValueExprMap and collect SCEV expressions in \p ToForget
   void visitAndClearUsers(SmallVectorImpl<Instruction *> &Worklist,
                           SmallPtrSetImpl<Instruction *> &Visited,
-                          SmallVectorImpl<const SCEV *> &ToForget);
+                          SmallVectorImpl<SCEVUse> &ToForget);
 
   /// Erase Value from ValueExprMap and ExprValueMap.
   void eraseValueFromMap(Value *V);
@@ -2236,12 +2302,12 @@ private:
   /// Return a scope which provides an upper bound on the defining scope for
   /// a SCEV with the operands in Ops.  The outparam Precise is set if the
   /// bound found is a precise bound (i.e. must be the defining scope.)
-  const Instruction *getDefiningScopeBound(ArrayRef<const SCEV *> Ops,
+  const Instruction *getDefiningScopeBound(ArrayRef<SCEVUse> Ops,
                                            bool &Precise);
 
   /// Wrapper around the above for cases which don't care if the bound
   /// is precise.
-  const Instruction *getDefiningScopeBound(ArrayRef<const SCEV *> Ops);
+  const Instruction *getDefiningScopeBound(ArrayRef<SCEVUse> Ops);
 
   /// Given two instructions in the same function, return true if we can
   /// prove B must execute given A executes.
@@ -2315,16 +2381,16 @@ private:
   bool canIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride, bool IsSigned);
 
   /// Get add expr already created or create a new one.
-  const SCEV *getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
+  const SCEV *getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,
                                  SCEV::NoWrapFlags Flags);
 
   /// Get mul expr already created or create a new one.
-  const SCEV *getOrCreateMulExpr(ArrayRef<const SCEV *> Ops,
+  const SCEV *getOrCreateMulExpr(ArrayRef<SCEVUse> Ops,
                                  SCEV::NoWrapFlags Flags);
 
   // Get addrec expr already created or create a new one.
-  const SCEV *getOrCreateAddRecExpr(ArrayRef<const SCEV *> Ops,
-                                    const Loop *L, SCEV::NoWrapFlags Flags);
+  const SCEV *getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops, const Loop *L,
+                                    SCEV::NoWrapFlags Flags);
 
   /// Return x if \p Val is f(x) where f is a 1-1 function.
   const SCEV *stripInjectiveFunctions(const SCEV *Val) const;
@@ -2337,6 +2403,7 @@ private:
   /// Look for a SCEV expression with type `SCEVType` and operands `Ops` in
   /// `UniqueSCEVs`.  Return if found, else nullptr.
   SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<const SCEV *> Ops);
+  SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<SCEVUse> Ops);
 
   /// Get reachable blocks in this function, making limited use of SCEV
   /// reasoning about conditions.
@@ -2345,8 +2412,7 @@ private:
 
   /// Return the given SCEV expression with a new set of operands.
   /// This preserves the origial nowrap flags.
-  const SCEV *getWithOperands(const SCEV *S,
-                              SmallVectorImpl<const SCEV *> &NewOps);
+  const SCEV *getWithOperands(const SCEV *S, SmallVectorImpl<SCEVUse> &NewOps);
 
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;

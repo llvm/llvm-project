@@ -16,18 +16,18 @@
 namespace clang {
 using namespace llvm;
 namespace doc {
-static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
+static OwnedPtr<MustacheTemplateFile> RecordTemplate = nullptr;
 
-static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
+static OwnedPtr<MustacheTemplateFile> NamespaceTemplate = nullptr;
 
-static std::unique_ptr<MustacheTemplateFile> AllFilesTemplate = nullptr;
+static OwnedPtr<MustacheTemplateFile> AllFilesTemplate = nullptr;
 
-static std::unique_ptr<MustacheTemplateFile> IndexTemplate = nullptr;
+static OwnedPtr<MustacheTemplateFile> IndexTemplate = nullptr;
 
 struct MDMustacheGenerator : public MustacheGenerator {
   static const char *Format;
   Error generateDocumentation(StringRef RootDir,
-                              StringMap<std::unique_ptr<doc::Info>> Infos,
+                              StringMap<doc::OwnedPtr<doc::Info>> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error setupTemplateFiles(const ClangDocContext &CDCtx) override;
@@ -72,7 +72,7 @@ Error MDMustacheGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
 }
 
 Error MDMustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string Dirname) {
   return MustacheGenerator::generateDocumentation(RootDir, std::move(Infos),
                                                   CDCtx, "md");

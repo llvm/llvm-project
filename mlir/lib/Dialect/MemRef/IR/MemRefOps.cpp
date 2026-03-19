@@ -1150,22 +1150,20 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
              memrefType.getDynamicDimIndex(unsignedIndex));
 
   if (auto subview = dyn_cast_or_null<SubViewOp>(definingOp)) {
-    llvm::SmallBitVector unusedDims = subview.getDroppedDims();
-    unsigned resultIndex = 0;
-    unsigned sourceRank = subview.getSourceType().getRank();
-    unsigned sourceIndex = 0;
-    for (auto i : llvm::seq<unsigned>(0, sourceRank)) {
-      if (unusedDims.test(i))
+    // The result dim is dynamic (the static case was handled above). Dropped
+    // dims always have static size 1, so dynamic source sizes are never
+    // dropped and map in order to the dynamic result dims. Find the k-th
+    // dynamic source size, where k is the dynamic dim index of the result dim.
+    unsigned dynamicResultDimIdx = memrefType.getDynamicDimIndex(unsignedIndex);
+    unsigned dynamicIdx = 0;
+    for (OpFoldResult size : subview.getMixedSizes()) {
+      if (llvm::isa<Attribute>(size))
         continue;
-      if (resultIndex == unsignedIndex) {
-        sourceIndex = i;
-        break;
-      }
-      resultIndex++;
+      if (dynamicIdx == dynamicResultDimIdx)
+        return size;
+      dynamicIdx++;
     }
-    assert(subview.isDynamicSize(sourceIndex) &&
-           "expected dynamic subview size");
-    return subview.getDynamicSize(sourceIndex);
+    return {};
   }
 
   // dim(memrefcast) -> dim

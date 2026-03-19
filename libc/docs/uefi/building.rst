@@ -4,10 +4,6 @@
 Building libc for UEFI
 ======================
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 Building LLVM libc for UEFI
 ===========================
 

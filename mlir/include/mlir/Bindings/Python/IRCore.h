@@ -10,6 +10,7 @@
 #define MLIR_BINDINGS_PYTHON_IRCORE_H
 
 #include <cstddef>
+#include <exception>
 #include <optional>
 #include <sstream>
 #include <utility>
@@ -278,7 +279,7 @@ class MLIR_PYTHON_API_EXPORTED DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Context";
+  static constexpr const char kTypeDescription[] = "_mlir.ir.Context";
   static PyMlirContext &resolve();
 };
 
@@ -524,7 +525,7 @@ class MLIR_PYTHON_API_EXPORTED DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Location";
+  static constexpr const char kTypeDescription[] = "_mlir.ir.Location";
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }
@@ -957,16 +958,12 @@ public:
     auto cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic());
     cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_type"));
-    cls.def_prop_ro_static(
-        "static_typeid",
-        [](nanobind::object & /*class*/) {
-          if (DerivedTy::getTypeIdFunction)
-            return PyTypeID(DerivedTy::getTypeIdFunction());
-          throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + std::string(" has no typeid."))
-                  .c_str());
-        },
-        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro_static("static_typeid", [](nanobind::object & /*class*/) {
+      if (DerivedTy::getTypeIdFunction)
+        return PyTypeID(DerivedTy::getTypeIdFunction());
+      throw nanobind::attribute_error(
+          (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
+    });
     cls.def_prop_ro("typeid", [](PyType &self) {
       return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
@@ -1100,16 +1097,12 @@ public:
           return PyType(attr.getContext(), mlirAttributeGetType(attr))
               .maybeDownCast();
         });
-    cls.def_prop_ro_static(
-        "static_typeid",
-        [](nanobind::object & /*class*/) -> PyTypeID {
-          if (DerivedTy::getTypeIdFunction)
-            return PyTypeID(DerivedTy::getTypeIdFunction());
-          throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + std::string(" has no typeid."))
-                  .c_str());
-        },
-        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro_static("static_typeid", [](nanobind::object & /*class*/) {
+      if (DerivedTy::getTypeIdFunction)
+        return PyTypeID(DerivedTy::getTypeIdFunction());
+      throw nanobind::attribute_error(
+          (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
+    });
     cls.def_prop_ro("typeid", [](PyAttribute &self) {
       return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
@@ -1321,12 +1314,17 @@ private:
 };
 
 /// Custom exception that allows access to error diagnostic information. This is
-/// converted to the `ir.MLIRError` python exception when thrown.
-struct MLIR_PYTHON_API_EXPORTED MLIRError {
+/// translated to the `ir.MLIRError` python exception when thrown.
+struct MLIR_PYTHON_API_EXPORTED MLIRError : std::exception {
   MLIRError(std::string message,
             std::vector<PyDiagnostic::DiagnosticInfo> &&errorDiagnostics = {})
       : message(std::move(message)),
         errorDiagnostics(std::move(errorDiagnostics)) {}
+  const char *what() const noexcept override { return message.c_str(); }
+
+  /// Bind the MLIRError exception class to the given module.
+  static void bind(nanobind::module_ &m);
+
   std::string message;
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };

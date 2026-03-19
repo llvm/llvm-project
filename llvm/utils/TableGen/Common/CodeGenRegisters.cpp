@@ -844,30 +844,25 @@ unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {
 bool CodeGenRegisterClass::Key::operator<(
     const CodeGenRegisterClass::Key &B) const {
   assert(Members && B.Members);
-  if (!IgnoreArtificialMembers)
-    return std::tie(*Members, RSI) < std::tie(*B.Members, B.RSI);
 
-  // Do the same lexicographical comparison, but ignoring
-  // artificial registers.
+  // Lexicographical comparison. Ignores artificial registers when asked.
   auto IA = Members->begin(), EA = Members->end();
   auto IB = B.Members->begin(), EB = B.Members->end();
-  while (IA != EA && IB != EB) {
-    if ((*IA)->Artificial) {
+  for (;;) {
+    while (IgnoreArtificialMembers && IA != EA && (*IA)->Artificial)
       ++IA;
-      continue;
-    }
-    if ((*IB)->Artificial) {
+    while (IgnoreArtificialMembers && IB != EB && (*IB)->Artificial)
       ++IB;
-      continue;
-    }
-    if (*IA != *IB)
-      return *IA < *IB;
+    if (IA == EA && IB == EB)
+      break;
+    if (IA == EA || IB == EB)
+      return IA == EA;
+    if (**IA != **IB)
+      return **IA < **IB;
     ++IA;
     ++IB;
   }
-  if (IA == EA && IB == EB)
-    return RSI < B.RSI;
-  return IA == EA;
+  return RSI < B.RSI;
 }
 
 // Returns true if RC is a strict subclass.
@@ -1523,7 +1518,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
   CoveringLanes = LaneBitmask::getAll();
   for (CodeGenSubRegIndex &Idx : SubRegIndices) {
     if (Idx.getComposites().empty()) {
-      if (Bit > LaneBitmask::BitWidth) {
+      if (Bit >= LaneBitmask::BitWidth) {
         PrintFatalError(
             Twine("Ran out of lanemask bits to represent subregister ") +
             Idx.getName());
@@ -2487,9 +2482,9 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     SubRegs.clear();
     TopoSigs.reset();
     for (const CodeGenRegister *Super : RC->getMembers()) {
-      const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
       if (Super->Artificial)
         continue;
+      const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
       assert(Sub && "Missing sub-register");
       SubRegs.push_back(Sub);
       TopoSigs.set(Sub->getTopoSig());
