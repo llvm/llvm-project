@@ -192,6 +192,15 @@ void genUnpackArray(Fortran::lower::AbstractConverter &converter,
                     mlir::Location loc, fir::FortranVariableOpInterface def,
                     const Fortran::semantics::Symbol &sym);
 
+/// Generate a scalar default initializer value for a derived type variable.
+/// Returns an SSA aggregate value with each component set to its default
+/// initialization (or zero if no default). This is a thin wrapper around
+/// the internal genDefaultInitializerValue utility, exposed for use by
+/// OpenMP reduction initialization.
+mlir::Value genScalarDefaultInitializerValue(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Type symTy);
+
 } // namespace lower
 } // namespace Fortran
 #endif // FORTRAN_LOWER_CONVERT_VARIABLE_H
