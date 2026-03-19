@@ -560,6 +560,11 @@ def LLVM_USHLSat : LLVM_BinarySameArgsIntrOpI<"ushl.sat">;
 // Optimization hint intrinsics.
 //
 
+def LLVM_FakeUseOp : LLVM_ZeroResultIntrOp<"fake.use"> {
+  let arguments = (ins Variadic<LLVM_Type>:$args);
+  let assemblyFormat = "$args attr-dict `:` type($args)";
+}
+
 def LLVM_AssumeOp
     : LLVM_ZeroResultIntrOp<"assume", /*overloadedOperands=*/[], /*traits=*/[],
                             /*requiresAccessGroup=*/0,

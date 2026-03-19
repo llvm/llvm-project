@@ -724,6 +724,19 @@ define void @va_intrinsics_test(ptr %0, ptr %1, ...) {
   ret void
 }
 
+; CHECK-LABEL: @fake_use
+; CHECK-SAME:  %[[VAL:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @fake_use(i32 %0, ptr %1) {
+  ; CHECK: llvm.intr.fake.use %[[VAL]] : i32
+  call void (...) @llvm.fake.use(i32 %0)
+  ; CHECK: llvm.intr.fake.use %[[PTR]] : !llvm.ptr
+  call void (...) @llvm.fake.use(ptr %1)
+  ; CHECK: llvm.intr.fake.use %[[VAL]], %[[PTR]] : i32, !llvm.ptr
+  call void (...) @llvm.fake.use(i32 %0, ptr %1)
+  ret void
+}
+
 ; CHECK-LABEL: @assume
 ; CHECK-SAME:  %[[TRUE:[a-zA-Z0-9]+]]
 define void @assume(i1 %true) {
@@ -1414,3 +1427,4 @@ declare i2 @llvm.ucmp.i2.i32(i32, i32)
 declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
 declare i2 @llvm.scmp.i2.i32(i32, i32)
 declare <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
+declare void @llvm.fake.use(...)

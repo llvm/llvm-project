@@ -457,6 +457,17 @@ llvm.func @umin_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector
   llvm.return
 }
 
+// CHECK-LABEL: @fake_use
+llvm.func @fake_use(%arg0: i32, %arg1: !llvm.ptr) {
+  // CHECK: call void (...) @llvm.fake.use(i32 %{{.*}})
+  llvm.intr.fake.use %arg0 : i32
+  // CHECK: call void (...) @llvm.fake.use(ptr %{{.*}})
+  llvm.intr.fake.use %arg1 : !llvm.ptr
+  // CHECK: call void (...) @llvm.fake.use(i32 %{{.*}}, ptr %{{.*}})
+  llvm.intr.fake.use %arg0, %arg1 : i32, !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @assume_without_opbundles
 llvm.func @assume_without_opbundles(%cond: i1) {
   // CHECK: call void @llvm.assume(i1 %{{.+}})
@@ -1496,3 +1507,4 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare range(i32 -1, 2) <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
 // CHECK-DAG: declare range(i2 -1, -2) i2 @llvm.scmp.i2.i32(i32, i32)
 // CHECK-DAG: declare range(i32 -1, 2) <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
+// CHECK-DAG: declare void @llvm.fake.use(...)
