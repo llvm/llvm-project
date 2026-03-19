@@ -29,7 +29,7 @@ public:
 
 private:
   const std::string ClassNames;
-  std::vector<std::string> ClassNameList;
+  const std::vector<StringRef> ClassNameList;
 };
 
 } // namespace clang::tidy::llvm_check

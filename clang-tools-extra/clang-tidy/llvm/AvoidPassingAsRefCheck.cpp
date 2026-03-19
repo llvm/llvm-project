@@ -18,14 +18,8 @@ namespace clang::tidy::llvm_check {
 AvoidPassingAsRefCheck::AvoidPassingAsRefCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      ClassNames(Options.get("ClassNames", "::mlir::Op")) {
-  if (!utils::options::parseStringList(ClassNames, ClassNameList) &&
-      !ClassNames.empty()) {
-    Context->getDiagnosticsEngine().Report(
-        Context->getDiagID(diag::err_invalid_option_value), SourceLocation{})
-        << "invalid value for 'ClassNames'" << ClassNames;
-  }
-}
+      ClassNameList(utils::options::parseStringList(
+          Options.get("ClassNames", "::mlir::Op"))) {}
 
 void AvoidPassingAsRefCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ClassNames", ClassNames);
@@ -35,9 +29,10 @@ void AvoidPassingAsRefCheck::registerMatchers(MatchFinder *Finder) {
   if (ClassNameList.empty())
     return;
 
-  std::vector<ast_matchers::DeclarationMatcher> Matchers;
-  for (const auto &Name : ClassNameList)
-    Matchers.push_back(isSameOrDerivedFrom(Name));
+  std::vector<ast_matchers::internal::Matcher<CXXRecordDecl>> Matchers;
+  for (const auto &Name : ClassNameList) {
+    Matchers.push_back(isSameOrDerivedFrom(std::string(Name)));
+  }
 
   // Match parameters that are references to classes derived from any class in
   // ClassNameList.

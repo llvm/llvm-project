@@ -15,12 +15,12 @@ class OtherClass {};
 
 // Should trigger warning
 void badFunction(const MyOp &op) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: MLIR Op class 'MyOp' should be passed by value, not by reference [llvm-avoid-passing-as-ref]
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: class 'MyOp' should be passed by value, not by reference [llvm-avoid-passing-as-ref]
 }
 
 // Should trigger warning logic for non-const ref too
 void badFunctionMutable(MyOp &op) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: MLIR Op class 'MyOp' should be passed by value, not by reference [llvm-avoid-passing-as-ref]
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: class 'MyOp' should be passed by value, not by reference [llvm-avoid-passing-as-ref]
 }
 
 // Good: passed by value
