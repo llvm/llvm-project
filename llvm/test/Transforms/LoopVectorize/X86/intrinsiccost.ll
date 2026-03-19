@@ -23,21 +23,15 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 64
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i64 [[N_VEC]] to i32
-; CHECK-NEXT:    [[IND_END10:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 [[N_VEC]], 2
-; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], 2
-; CHECK-NEXT:    [[IND_END15:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[OFFSET:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[OFFSET_IDX2]]
+; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[OFFSET_IDX2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 48
@@ -63,6 +57,12 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[IND_END10:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST1]]
+; CHECK-NEXT:    [[TMP12:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-NEXT:    [[IND_END15:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
@@ -153,17 +153,13 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 128
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[DOTCAST8:%.*]] = trunc i64 [[N_VEC]] to i32
-; CHECK-NEXT:    [[IND_END9:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST8]]
-; CHECK-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[IND_END14:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x i8> poison, i8 [[OFFSET:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x i8> [[BROADCAST_SPLATINSERT]], <32 x i8> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 96
@@ -189,6 +185,10 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    [[DOTCAST8:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[IND_END9:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST8]]
+; CHECK-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[IND_END14:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
