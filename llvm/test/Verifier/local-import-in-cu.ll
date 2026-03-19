@@ -1,5 +1,5 @@
 ; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
-; CHECK: function-local import in a DICompileUnit's imported entities list
+; CHECK: function-local imports are not allowed in a DICompileUnit's imported entities list
 ; CHECK: warning: ignoring invalid debug info
 
 !llvm.module.flags = !{!0}
