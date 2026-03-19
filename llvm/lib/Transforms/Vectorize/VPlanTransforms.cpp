@@ -6162,8 +6162,8 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
     if (match(CastSource, m_Mul(m_VPValue(), m_VPValue())) ||
         match(CastSource, m_FMul(m_VPValue(), m_VPValue()))) {
       // Match: ext(mul(...))
-      // Record the outer cast kind and set `Op` to the mul. We can then match
-      // this as a binary operator. Note: We can optimize out the outer extend
+      // Record the outer extend kind and set `Op` to the mul. We can then match
+      // this as a binary operation. Note: We can optimize out the outer extend
       // by widening the inner extends to match it. See
       // optimizeExtendsForPartialReduction.
       Op = CastSource;
