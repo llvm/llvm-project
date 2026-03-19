@@ -6885,7 +6885,7 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
          SkipCostComputation.contains(UI);
 }
 
-unsigned VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
+uint64_t VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
   return CM.getPredBlockCostDivisor(CostKind, BB);
 }
 
