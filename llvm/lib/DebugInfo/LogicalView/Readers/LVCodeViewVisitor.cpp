@@ -1167,9 +1167,9 @@ Error LVSymbolVisitor::visitKnownRecord(
     // Add location debug location. Operands: [Register, Offset, OffsetInUdt].
     dwarf::Attribute Attr =
         dwarf::Attribute(SymbolKind::S_DEFRANGE_REGISTER_REL);
-    uint64_t Operand1 = DefRangeRegisterRelIndir.Hdr.Register;
-    uint64_t Operand2 = DefRangeRegisterRelIndir.Hdr.BasePointerOffset;
-    uint64_t Operand3 = DefRangeRegisterRelIndir.Hdr.OffsetInUdt;
+    const uint64_t Operand1 = DefRangeRegisterRelIndir.Hdr.Register;
+    const uint64_t Operand2 = DefRangeRegisterRelIndir.Hdr.BasePointerOffset;
+    const uint64_t Operand3 = DefRangeRegisterRelIndir.Hdr.OffsetInUdt;
 
     LocalVariableAddrRange Range = DefRangeRegisterRelIndir.Range;
     LVAddress Address =
