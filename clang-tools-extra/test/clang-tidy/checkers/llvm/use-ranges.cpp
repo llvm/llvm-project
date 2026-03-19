@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s llvm-use-ranges %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s llvm-use-ranges %t
 #include <vector>
 
 // Test that the header is included

@@ -2146,12 +2146,12 @@ define hidden void @trunc_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1
 ; GFX10-NEXT:    global_load_dword v9, v[2:3], off
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v1, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-NEXT:    v_and_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v0, v9, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX10-NEXT:    v_lshlrev_b16 v1, 1, v1
-; GFX10-NEXT:    v_lshlrev_b16 v2, 2, v0
-; GFX10-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-NEXT:    v_bfe_u32 v1, v9, 8, 1
+; GFX10-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-NEXT:    v_lshlrev_b16 v2, 2, v1
+; GFX10-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX10-NEXT:    v_lshlrev_b16 v1, 3, v4
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -2175,12 +2175,12 @@ define hidden void @trunc_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX9-NEXT:    s_mov_b32 s4, 0x50205
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_lshlrev_b16_e32 v3, 3, v4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_sdwa v2, v9, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_and_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_bfe_u32 v2, v9, 8, 1
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v0, 1, v0
 ; GFX9-NEXT:    v_perm_b32 v1, v9, v4, s4
+; GFX9-NEXT:    v_lshlrev_b16_e32 v3, 3, v4
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v4, 2, v2
 ; GFX9-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v4

@@ -45,7 +45,7 @@ auto make_non_virtual() -> void (Foo::*)(int) {
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 
-// CIR-AFTER: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct {
+// CIR-AFTER: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct attributes {nothrow} {
 // CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca !rec_anon_struct, !cir.ptr<!rec_anon_struct>, ["__retval"]
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[NONVIRT_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
@@ -135,7 +135,7 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // CIR-AFTER:   %[[ADJUSTED_THIS:.*]] = cir.ptr_stride %[[THIS]], %[[ADJ]] : (!cir.ptr<!void>, !s64i) -> !cir.ptr<!void>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.extract_member %[[FUNC]][0] : !rec_anon_struct -> !s64i
 // CIR-AFTER:   %[[VIRT_BIT_TEST:.*]] = cir.and %[[METHOD_PTR]], %[[VIRT_BIT]] : !s64i
-// CIR-AFTER:   %[[IS_VIRTUAL:.*]] = cir.cmp(eq, %[[VIRT_BIT_TEST]], %[[VIRT_BIT]]) : !s64i, !cir.bool
+// CIR-AFTER:   %[[IS_VIRTUAL:.*]] = cir.cmp eq %[[VIRT_BIT_TEST]], %[[VIRT_BIT]] : !s64i
 // CIR-AFTER:   %[[CALLEE:.*]] = cir.ternary(%[[IS_VIRTUAL]], true {
 // CIR-AFTER:     %[[VTABLE_PTR:.*]] = cir.cast bitcast %[[ADJUSTED_THIS]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!s8i>>
 // CIR-AFTER:     %[[VTABLE:.*]] = cir.load %[[VTABLE_PTR]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>

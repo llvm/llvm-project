@@ -1529,6 +1529,7 @@ convertCaptureClause(const VarDecl *VD) {
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
     break;
   case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Enter:
+  case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Local:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter;
     break;
   case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Link:
@@ -7980,7 +7981,8 @@ private:
                 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
           if ((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
               ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+                *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
                CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())) {
             RequiresReference = true;
             BP = CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
@@ -8054,11 +8056,17 @@ private:
           if (!StrideExpr)
             return false;
 
+          assert(StrideExpr->getType()->isIntegerType() &&
+                 "Stride expression must be of integer type");
+
+          // If stride is not evaluatable as a constant, treat as
+          // non-contiguous.
           const auto Constant =
               StrideExpr->getIntegerConstantExpr(CGF.getContext());
           if (!Constant)
-            return false;
+            return true;
 
+          // Treat non-unitary strides as non-contiguous.
           return !Constant->isOne();
         });
 
@@ -10633,8 +10641,11 @@ emitTargetCallFallback(CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
       CapturedVars.clear();
       CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
     }
+    llvm::SmallVector<llvm::Value *, 16> Args(CapturedVars.begin(),
+                                              CapturedVars.end());
+    Args.push_back(llvm::Constant::getNullValue(CGF.Builder.getPtrTy()));
     OMPRuntime->emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn,
-                                         CapturedVars);
+                                         Args);
   }
 }
 
@@ -10870,6 +10881,22 @@ static void emitTargetCallKernelLaunch(
   MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
   CGOpenMPRuntime::TargetDataInfo Info;
   genMapInfo(D, CGF, CS, CapturedVars, OMPBuilder, CombinedInfo);
+
+  // Append a null entry for the implicit dyn_ptr argument.
+  using OpenMPOffloadMappingFlags = llvm::omp::OpenMPOffloadMappingFlags;
+  auto *NullPtr = llvm::Constant::getNullValue(CGF.Builder.getPtrTy());
+  CombinedInfo.BasePointers.push_back(NullPtr);
+  CombinedInfo.Pointers.push_back(NullPtr);
+  CombinedInfo.DevicePointers.push_back(
+      llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+  CombinedInfo.Sizes.push_back(CGF.Builder.getInt64(0));
+  CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
+                               OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+  if (!CombinedInfo.Names.empty())
+    CombinedInfo.Names.push_back(NullPtr);
+  CombinedInfo.Exprs.push_back(nullptr);
+  CombinedInfo.Mappers.push_back(nullptr);
+  CombinedInfo.DevicePtrDecls.push_back(nullptr);
 
   emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
                               /*IsNonContiguous=*/true, /*ForEndCall=*/false);
@@ -11293,7 +11320,8 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
           cast<VarDecl>(GD.getDecl()));
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
       ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-        *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+        *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+        *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
        HasRequiresUnifiedSharedMemory)) {
     DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
     return true;
@@ -11363,13 +11391,15 @@ void CGOpenMPRuntime::emitDeferredTargetDecls() const {
     if (!Res)
       continue;
     if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-         *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+         *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+         *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
         !HasRequiresUnifiedSharedMemory) {
       CGM.EmitGlobal(VD);
     } else {
       assert((*Res == OMPDeclareTargetDeclAttr::MT_Link ||
               ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
+                *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
                HasRequiresUnifiedSharedMemory)) &&
              "Expected link clause or to clause with unified memory.");
       (void)CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
@@ -11828,27 +11858,9 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
   }
 }
 
-namespace {
-  /// Kind of parameter in a function with 'declare simd' directive.
-enum ParamKindTy {
-  Linear,
-  LinearRef,
-  LinearUVal,
-  LinearVal,
-  Uniform,
-  Vector,
-};
-/// Attribute set of the parameter.
-struct ParamAttrTy {
-  ParamKindTy Kind = Vector;
-  llvm::APSInt StrideOrArg;
-  llvm::APSInt Alignment;
-  bool HasVarStride = false;
-};
-} // namespace
-
-static unsigned evaluateCDTSize(const FunctionDecl *FD,
-                                ArrayRef<ParamAttrTy> ParamAttrs) {
+static unsigned
+evaluateCDTSize(const FunctionDecl *FD,
+                ArrayRef<llvm::OpenMPIRBuilder::DeclareSimdAttrTy> ParamAttrs) {
   // Every vector variant of a SIMD-enabled function has a vector length (VLEN).
   // If OpenMP clause "simdlen" is used, the VLEN is the value of the argument
   // of that clause. The VLEN value must be power of 2.
@@ -11878,13 +11890,15 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
   } else {
     unsigned Offset = 0;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      if (ParamAttrs[Offset].Kind == Vector)
+      if (ParamAttrs[Offset].Kind ==
+          llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector)
         CDT = C.getPointerType(C.getCanonicalTagType(MD->getParent()));
       ++Offset;
     }
     if (CDT.isNull()) {
       for (unsigned I = 0, E = FD->getNumParams(); I < E; ++I) {
-        if (ParamAttrs[I + Offset].Kind == Vector) {
+        if (ParamAttrs[I + Offset].Kind ==
+            llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector) {
           CDT = FD->getParamDecl(I)->getType();
           break;
         }
@@ -11899,107 +11913,6 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
   return C.getTypeSize(CDT);
 }
 
-/// Mangle the parameter part of the vector function name according to
-/// their OpenMP classification. The mangling function is defined in
-/// section 4.5 of the AAVFABI(2021Q1).
-static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  for (const auto &ParamAttr : ParamAttrs) {
-    switch (ParamAttr.Kind) {
-    case Linear:
-      Out << 'l';
-      break;
-    case LinearRef:
-      Out << 'R';
-      break;
-    case LinearUVal:
-      Out << 'U';
-      break;
-    case LinearVal:
-      Out << 'L';
-      break;
-    case Uniform:
-      Out << 'u';
-      break;
-    case Vector:
-      Out << 'v';
-      break;
-    }
-    if (ParamAttr.HasVarStride)
-      Out << "s" << ParamAttr.StrideOrArg;
-    else if (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef ||
-             ParamAttr.Kind == LinearUVal || ParamAttr.Kind == LinearVal) {
-      // Don't print the step value if it is not present or if it is
-      // equal to 1.
-      if (ParamAttr.StrideOrArg < 0)
-        Out << 'n' << -ParamAttr.StrideOrArg;
-      else if (ParamAttr.StrideOrArg != 1)
-        Out << ParamAttr.StrideOrArg;
-    }
-
-    if (!!ParamAttr.Alignment)
-      Out << 'a' << ParamAttr.Alignment;
-  }
-
-  return std::string(Out.str());
-}
-
-static void
-emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
-                           const llvm::APSInt &VLENVal,
-                           ArrayRef<ParamAttrTy> ParamAttrs,
-                           OMPDeclareSimdDeclAttr::BranchStateTy State) {
-  struct ISADataTy {
-    char ISA;
-    unsigned VecRegSize;
-  };
-  ISADataTy ISAData[] = {
-      {
-          'b', 128
-      }, // SSE
-      {
-          'c', 256
-      }, // AVX
-      {
-          'd', 256
-      }, // AVX2
-      {
-          'e', 512
-      }, // AVX512
-  };
-  llvm::SmallVector<char, 2> Masked;
-  switch (State) {
-  case OMPDeclareSimdDeclAttr::BS_Undefined:
-    Masked.push_back('N');
-    Masked.push_back('M');
-    break;
-  case OMPDeclareSimdDeclAttr::BS_Notinbranch:
-    Masked.push_back('N');
-    break;
-  case OMPDeclareSimdDeclAttr::BS_Inbranch:
-    Masked.push_back('M');
-    break;
-  }
-  for (char Mask : Masked) {
-    for (const ISADataTy &Data : ISAData) {
-      SmallString<256> Buffer;
-      llvm::raw_svector_ostream Out(Buffer);
-      Out << "_ZGV" << Data.ISA << Mask;
-      if (!VLENVal) {
-        unsigned NumElts = evaluateCDTSize(FD, ParamAttrs);
-        assert(NumElts && "Non-zero simdlen/cdtsize expected");
-        Out << llvm::APSInt::getUnsigned(Data.VecRegSize / NumElts);
-      } else {
-        Out << VLENVal;
-      }
-      Out << mangleVectorParameters(ParamAttrs);
-      Out << '_' << Fn->getName();
-      Fn->addFnAttr(Out.str());
-    }
-  }
-}
-
 // This are the Functions that are needed to mangle the name of the
 // vector functions generated by the compiler, according to the rules
 // defined in the "Vector Function ABI specifications for AArch64",
@@ -12007,19 +11920,22 @@ emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
 // https://developer.arm.com/products/software-development-tools/hpc/arm-compiler-for-hpc/vector-function-abi.
 
 /// Maps To Vector (MTV), as defined in 4.1.1 of the AAVFABI (2021Q1).
-static bool getAArch64MTV(QualType QT, ParamKindTy Kind) {
+static bool getAArch64MTV(QualType QT,
+                          llvm::OpenMPIRBuilder::DeclareSimdKindTy Kind) {
   QT = QT.getCanonicalType();
 
   if (QT->isVoidType())
     return false;
 
-  if (Kind == ParamKindTy::Uniform)
+  if (Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::Uniform)
     return false;
 
-  if (Kind == ParamKindTy::LinearUVal || Kind == ParamKindTy::LinearRef)
+  if (Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearUVal ||
+      Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef)
     return false;
 
-  if ((Kind == ParamKindTy::Linear || Kind == ParamKindTy::LinearVal) &&
+  if ((Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear ||
+       Kind == llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearVal) &&
       !QT->isReferenceType())
     return false;
 
@@ -12052,7 +11968,9 @@ static bool getAArch64PBV(QualType QT, ASTContext &C) {
 /// Computes the lane size (LS) of a return type or of an input parameter,
 /// as defined by `LS(P)` in 3.2.1 of the AAVFABI.
 /// TODO: Add support for references, section 3.2.1, item 1.
-static unsigned getAArch64LS(QualType QT, ParamKindTy Kind, ASTContext &C) {
+static unsigned getAArch64LS(QualType QT,
+                             llvm::OpenMPIRBuilder::DeclareSimdKindTy Kind,
+                             ASTContext &C) {
   if (!getAArch64MTV(QT, Kind) && QT.getCanonicalType()->isPointerType()) {
     QualType PTy = QT.getCanonicalType()->getPointeeType();
     if (getAArch64PBV(PTy, C))
@@ -12068,7 +11986,8 @@ static unsigned getAArch64LS(QualType QT, ParamKindTy Kind, ASTContext &C) {
 // signature of the scalar function, as defined in 3.2.2 of the
 // AAVFABI.
 static std::tuple<unsigned, unsigned, bool>
-getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
+getNDSWDS(const FunctionDecl *FD,
+          ArrayRef<llvm::OpenMPIRBuilder::DeclareSimdAttrTy> ParamAttrs) {
   QualType RetType = FD->getReturnType().getCanonicalType();
 
   ASTContext &C = FD->getASTContext();
@@ -12077,7 +11996,8 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
 
   llvm::SmallVector<unsigned, 8> Sizes;
   if (!RetType->isVoidType()) {
-    Sizes.push_back(getAArch64LS(RetType, ParamKindTy::Vector, C));
+    Sizes.push_back(getAArch64LS(
+        RetType, llvm::OpenMPIRBuilder::DeclareSimdKindTy::Vector, C));
     if (!getAArch64PBV(RetType, C) && getAArch64MTV(RetType, {}))
       OutputBecomesInput = true;
   }
@@ -12100,155 +12020,43 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
                          OutputBecomesInput);
 }
 
-// Function used to add the attribute. The parameter `VLEN` is
-// templated to allow the use of "x" when targeting scalable functions
-// for SVE.
-template <typename T>
-static void addAArch64VectorName(T VLEN, StringRef LMask, StringRef Prefix,
-                                 char ISA, StringRef ParSeq,
-                                 StringRef MangledName, bool OutputBecomesInput,
-                                 llvm::Function *Fn) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << Prefix << ISA << LMask << VLEN;
-  if (OutputBecomesInput)
-    Out << "v";
-  Out << ParSeq << "_" << MangledName;
-  Fn->addFnAttr(Out.str());
-}
-
-// Helper function to generate the Advanced SIMD names depending on
-// the value of the NDS when simdlen is not present.
-static void addAArch64AdvSIMDNDSNames(unsigned NDS, StringRef Mask,
-                                      StringRef Prefix, char ISA,
-                                      StringRef ParSeq, StringRef MangledName,
-                                      bool OutputBecomesInput,
-                                      llvm::Function *Fn) {
-  switch (NDS) {
-  case 8:
-    addAArch64VectorName(8, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    addAArch64VectorName(16, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    break;
-  case 16:
-    addAArch64VectorName(4, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    addAArch64VectorName(8, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    break;
-  case 32:
-    addAArch64VectorName(2, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    addAArch64VectorName(4, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    break;
-  case 64:
-  case 128:
-    addAArch64VectorName(2, Mask, Prefix, ISA, ParSeq, MangledName,
-                         OutputBecomesInput, Fn);
-    break;
-  default:
-    llvm_unreachable("Scalar type is too wide.");
+static llvm::OpenMPIRBuilder::DeclareSimdBranch
+convertDeclareSimdBranch(OMPDeclareSimdDeclAttr::BranchStateTy State) {
+  switch (State) {
+  case OMPDeclareSimdDeclAttr::BS_Undefined:
+    return llvm::OpenMPIRBuilder::DeclareSimdBranch::Undefined;
+  case OMPDeclareSimdDeclAttr::BS_Inbranch:
+    return llvm::OpenMPIRBuilder::DeclareSimdBranch::Inbranch;
+  case OMPDeclareSimdDeclAttr::BS_Notinbranch:
+    return llvm::OpenMPIRBuilder::DeclareSimdBranch::Notinbranch;
   }
+  llvm_unreachable("unexpected declare simd branch state");
 }
 
-/// Emit vector function attributes for AArch64, as defined in the AAVFABI.
-static void emitAArch64DeclareSimdFunction(
-    CodeGenModule &CGM, const FunctionDecl *FD, unsigned UserVLEN,
-    ArrayRef<ParamAttrTy> ParamAttrs,
-    OMPDeclareSimdDeclAttr::BranchStateTy State, StringRef MangledName,
-    char ISA, unsigned VecRegSize, llvm::Function *Fn, SourceLocation SLoc) {
-
-  // Get basic data for building the vector signature.
-  const auto Data = getNDSWDS(FD, ParamAttrs);
-  const unsigned NDS = std::get<0>(Data);
-  const unsigned WDS = std::get<1>(Data);
-  const bool OutputBecomesInput = std::get<2>(Data);
-
-  // Check the values provided via `simdlen` by the user.
-  // 1. A `simdlen(1)` doesn't produce vector signatures,
+// Check the values provided via `simdlen` by the user.
+static bool validateAArch64Simdlen(CodeGenModule &CGM, SourceLocation SLoc,
+                                   unsigned UserVLEN, unsigned WDS, char ISA) {
+  // 1. A `simdlen(1)` doesn't produce vector signatures.
   if (UserVLEN == 1) {
     CGM.getDiags().Report(SLoc, diag::warn_simdlen_1_no_effect);
-    return;
+    return false;
   }
 
-  // 2. Section 3.3.1, item 1: user input must be a power of 2 for
-  // Advanced SIMD output.
+  // 2. Section 3.3.1, item 1: user input must be a power of 2 for Advanced
+  // SIMD.
   if (ISA == 'n' && UserVLEN && !llvm::isPowerOf2_32(UserVLEN)) {
     CGM.getDiags().Report(SLoc, diag::warn_simdlen_requires_power_of_2);
-    return;
+    return false;
   }
 
-  // 3. Section 3.4.1. SVE fixed lengh must obey the architectural
-  // limits.
-  if (ISA == 's' && UserVLEN != 0) {
-    if ((UserVLEN * WDS > 2048) || (UserVLEN * WDS % 128 != 0)) {
-      CGM.getDiags().Report(SLoc, diag::warn_simdlen_must_fit_lanes) << WDS;
-      return;
-    }
+  // 3. Section 3.4.1: SVE fixed length must obey the architectural limits.
+  if (ISA == 's' && UserVLEN != 0 &&
+      ((UserVLEN * WDS > 2048) || (UserVLEN * WDS % 128 != 0))) {
+    CGM.getDiags().Report(SLoc, diag::warn_simdlen_must_fit_lanes) << WDS;
+    return false;
   }
 
-  // Sort out parameter sequence.
-  const std::string ParSeq = mangleVectorParameters(ParamAttrs);
-  StringRef Prefix = "_ZGV";
-  // Generate simdlen from user input (if any).
-  if (UserVLEN) {
-    if (ISA == 's') {
-      // SVE generates only a masked function.
-      addAArch64VectorName(UserVLEN, "M", Prefix, ISA, ParSeq, MangledName,
-                           OutputBecomesInput, Fn);
-    } else {
-      assert(ISA == 'n' && "Expected ISA either 's' or 'n'.");
-      // Advanced SIMD generates one or two functions, depending on
-      // the `[not]inbranch` clause.
-      switch (State) {
-      case OMPDeclareSimdDeclAttr::BS_Undefined:
-        addAArch64VectorName(UserVLEN, "N", Prefix, ISA, ParSeq, MangledName,
-                             OutputBecomesInput, Fn);
-        addAArch64VectorName(UserVLEN, "M", Prefix, ISA, ParSeq, MangledName,
-                             OutputBecomesInput, Fn);
-        break;
-      case OMPDeclareSimdDeclAttr::BS_Notinbranch:
-        addAArch64VectorName(UserVLEN, "N", Prefix, ISA, ParSeq, MangledName,
-                             OutputBecomesInput, Fn);
-        break;
-      case OMPDeclareSimdDeclAttr::BS_Inbranch:
-        addAArch64VectorName(UserVLEN, "M", Prefix, ISA, ParSeq, MangledName,
-                             OutputBecomesInput, Fn);
-        break;
-      }
-    }
-  } else {
-    // If no user simdlen is provided, follow the AAVFABI rules for
-    // generating the vector length.
-    if (ISA == 's') {
-      // SVE, section 3.4.1, item 1.
-      addAArch64VectorName("x", "M", Prefix, ISA, ParSeq, MangledName,
-                           OutputBecomesInput, Fn);
-    } else {
-      assert(ISA == 'n' && "Expected ISA either 's' or 'n'.");
-      // Advanced SIMD, Section 3.3.1 of the AAVFABI, generates one or
-      // two vector names depending on the use of the clause
-      // `[not]inbranch`.
-      switch (State) {
-      case OMPDeclareSimdDeclAttr::BS_Undefined:
-        addAArch64AdvSIMDNDSNames(NDS, "N", Prefix, ISA, ParSeq, MangledName,
-                                  OutputBecomesInput, Fn);
-        addAArch64AdvSIMDNDSNames(NDS, "M", Prefix, ISA, ParSeq, MangledName,
-                                  OutputBecomesInput, Fn);
-        break;
-      case OMPDeclareSimdDeclAttr::BS_Notinbranch:
-        addAArch64AdvSIMDNDSNames(NDS, "N", Prefix, ISA, ParSeq, MangledName,
-                                  OutputBecomesInput, Fn);
-        break;
-      case OMPDeclareSimdDeclAttr::BS_Inbranch:
-        addAArch64AdvSIMDNDSNames(NDS, "M", Prefix, ISA, ParSeq, MangledName,
-                                  OutputBecomesInput, Fn);
-        break;
-      }
-    }
-  }
+  return true;
 }
 
 void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
@@ -12266,7 +12074,8 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
       ++ParamPos;
     }
     for (const auto *Attr : FD->specific_attrs<OMPDeclareSimdDeclAttr>()) {
-      llvm::SmallVector<ParamAttrTy, 8> ParamAttrs(ParamPositions.size());
+      llvm::SmallVector<llvm::OpenMPIRBuilder::DeclareSimdAttrTy, 8> ParamAttrs(
+          ParamPositions.size());
       // Mark uniform parameters.
       for (const Expr *E : Attr->uniforms()) {
         E = E->IgnoreParenImpCasts();
@@ -12280,7 +12089,8 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
           assert(It != ParamPositions.end() && "Function parameter not found");
           Pos = It->second;
         }
-        ParamAttrs[Pos].Kind = Uniform;
+        ParamAttrs[Pos].Kind =
+            llvm::OpenMPIRBuilder::DeclareSimdKindTy::Uniform;
       }
       // Get alignment info.
       auto *NI = Attr->alignments_begin();
@@ -12341,15 +12151,15 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
                     .getQuantity();
           }
         }
-        ParamAttrTy &ParamAttr = ParamAttrs[Pos];
+        llvm::OpenMPIRBuilder::DeclareSimdAttrTy &ParamAttr = ParamAttrs[Pos];
         if (*MI == OMPC_LINEAR_ref)
-          ParamAttr.Kind = LinearRef;
+          ParamAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef;
         else if (*MI == OMPC_LINEAR_uval)
-          ParamAttr.Kind = LinearUVal;
+          ParamAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearUVal;
         else if (IsReferenceType)
-          ParamAttr.Kind = LinearVal;
+          ParamAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearVal;
         else
-          ParamAttr.Kind = Linear;
+          ParamAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear;
         // Assuming a stride of 1, for `linear` without modifiers.
         ParamAttr.StrideOrArg = llvm::APSInt::getUnsigned(1);
         if (*SI) {
@@ -12374,7 +12184,10 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         // rescale the value of linear_step with the byte size of the
         // pointee type.
         if (!ParamAttr.HasVarStride &&
-            (ParamAttr.Kind == Linear || ParamAttr.Kind == LinearRef))
+            (ParamAttr.Kind ==
+                 llvm::OpenMPIRBuilder::DeclareSimdKindTy::Linear ||
+             ParamAttr.Kind ==
+                 llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearRef))
           ParamAttr.StrideOrArg = ParamAttr.StrideOrArg * PtrRescalingFactor;
         ++SI;
         ++MI;
@@ -12386,18 +12199,29 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         VLENVal = VLENExpr->EvaluateKnownConstInt(C);
         ExprLoc = VLENExpr->getExprLoc();
       }
-      OMPDeclareSimdDeclAttr::BranchStateTy State = Attr->getBranchState();
+      llvm::OpenMPIRBuilder::DeclareSimdBranch State =
+          convertDeclareSimdBranch(Attr->getBranchState());
       if (CGM.getTriple().isX86()) {
-        emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
+        unsigned NumElts = evaluateCDTSize(FD, ParamAttrs);
+        assert(NumElts && "Non-zero simdlen/cdtsize expected");
+        OMPBuilder.emitX86DeclareSimdFunction(Fn, NumElts, VLENVal, ParamAttrs,
+                                              State);
       } else if (CGM.getTriple().getArch() == llvm::Triple::aarch64) {
         unsigned VLEN = VLENVal.getExtValue();
-        StringRef MangledName = Fn->getName();
-        if (CGM.getTarget().hasFeature("sve"))
-          emitAArch64DeclareSimdFunction(CGM, FD, VLEN, ParamAttrs, State,
-                                         MangledName, 's', 128, Fn, ExprLoc);
-        else if (CGM.getTarget().hasFeature("neon"))
-          emitAArch64DeclareSimdFunction(CGM, FD, VLEN, ParamAttrs, State,
-                                         MangledName, 'n', 128, Fn, ExprLoc);
+        // Get basic data for building the vector signature.
+        const auto Data = getNDSWDS(FD, ParamAttrs);
+        const unsigned NDS = std::get<0>(Data);
+        const unsigned WDS = std::get<1>(Data);
+        const bool OutputBecomesInput = std::get<2>(Data);
+        if (CGM.getTarget().hasFeature("sve")) {
+          if (validateAArch64Simdlen(CGM, ExprLoc, VLEN, WDS, 's'))
+            OMPBuilder.emitAArch64DeclareSimdFunction(
+                Fn, VLEN, ParamAttrs, State, 's', NDS, OutputBecomesInput);
+        } else if (CGM.getTarget().hasFeature("neon")) {
+          if (validateAArch64Simdlen(CGM, ExprLoc, VLEN, WDS, 'n'))
+            OMPBuilder.emitAArch64DeclareSimdFunction(
+                Fn, VLEN, ParamAttrs, State, 'n', NDS, OutputBecomesInput);
+        }
       }
     }
     FD = FD->getPreviousDecl();

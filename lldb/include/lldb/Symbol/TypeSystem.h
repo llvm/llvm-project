@@ -203,6 +203,10 @@ public:
 
   virtual bool IsVoidType(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual bool HasPointerAuthQualifier(lldb::opaque_compiler_type_t type) {
+    return false;
+  }
+
   virtual bool CanPassInRegisters(const CompilerType &type) = 0;
 
   // TypeSystems can support more than one language
@@ -220,6 +224,8 @@ public:
   // AST related queries
 
   virtual uint32_t GetPointerByteSize() = 0;
+
+  virtual CompilerType GetPointerDiffType(bool is_signed) = 0;
 
   virtual unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) = 0;
 

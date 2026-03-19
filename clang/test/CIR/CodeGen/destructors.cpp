@@ -76,7 +76,7 @@ void test_array_destructor() {
 // CIR:     cir.yield
 // CIR:   } while {
 // CIR:     %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]]
-// CIR:     %[[CMP:.*]] = cir.cmp(ne, %[[ARR_CUR]], %[[ARR_END]])
+// CIR:     %[[CMP:.*]] = cir.cmp ne %[[ARR_CUR]], %[[ARR_END]]
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   }
 // CIR:   cir.cleanup.scope {
@@ -96,7 +96,7 @@ void test_array_destructor() {
 // CIR:       cir.yield
 // CIR:     } while {
 // CIR:       %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_PTR]]
-// CIR:       %[[CMP:.*]] = cir.cmp(ne, %[[ARR_CUR]], %[[BEGIN]])
+// CIR:       %[[CMP:.*]] = cir.cmp ne %[[ARR_CUR]], %[[BEGIN]]
 // CIR:       cir.condition(%[[CMP]])
 // CIR:     }
 // CIR:     cir.yield

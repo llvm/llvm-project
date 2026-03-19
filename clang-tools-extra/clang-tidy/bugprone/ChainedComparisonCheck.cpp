@@ -37,14 +37,14 @@ AST_MATCHER(CXXOperatorCallExpr,
 }
 
 struct ChainedComparisonData {
-  llvm::SmallString<256U> Name;
-  llvm::SmallVector<const Expr *, 32U> Operands;
+  SmallString<256U> Name;
+  SmallVector<const Expr *, 32U> Operands;
 
   explicit ChainedComparisonData(const Expr *Op) { extract(Op); }
 
 private:
   void add(const Expr *Operand);
-  void add(llvm::StringRef Opcode);
+  void add(StringRef Opcode);
   void extract(const Expr *Op);
   void extract(const BinaryOperator *Op);
   void extract(const CXXOperatorCallExpr *Op);
@@ -60,7 +60,7 @@ void ChainedComparisonData::add(const Expr *Operand) {
   Operands.push_back(Operand);
 }
 
-void ChainedComparisonData::add(llvm::StringRef Opcode) {
+void ChainedComparisonData::add(StringRef Opcode) {
   Name += ' ';
   Name += Opcode;
 }
@@ -148,7 +148,7 @@ void ChainedComparisonCheck::check(const MatchFinder::MatchResult &Result) {
        "chained comparison '%0' may generate unintended results, use "
        "parentheses to specify order of evaluation or a logical operator to "
        "separate comparison expressions")
-      << llvm::StringRef(Data.Name).trim() << MatchedOperator->getSourceRange();
+      << StringRef(Data.Name).trim() << MatchedOperator->getSourceRange();
 
   for (std::size_t Index = 0U; Index < Data.Operands.size(); ++Index) {
     diag(Data.Operands[Index]->getBeginLoc(), "operand 'v%0' is here",

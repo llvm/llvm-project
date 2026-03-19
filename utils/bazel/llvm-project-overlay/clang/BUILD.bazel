@@ -103,6 +103,10 @@ gentbl_cc_library(
             "include/clang/Basic/DiagnosticAllCompatIDs.inc",
             ["-gen-clang-diags-compat-ids"],
         ),
+        (
+            "include/clang/Basic/DiagnosticStableIDs.inc",
+            ["-gen-clang-diags-stable-ids"],
+        ),
     ]),
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Diagnostic.td",
@@ -686,6 +690,7 @@ cc_library(
         "include/clang/Basic/DiagnosticRefactoringKinds.inc",
         "include/clang/Basic/DiagnosticSemaKinds.inc",
         "include/clang/Basic/DiagnosticSerializationKinds.inc",
+        "include/clang/Basic/DiagnosticStableIDs.inc",
         "include/clang/Basic/arm_fp16.inc",
         "include/clang/Basic/arm_immcheck_types.inc",
         "include/clang/Basic/arm_mve_builtin_aliases.inc",
@@ -991,7 +996,25 @@ cc_library(
         ":rewrite",
         ":sema",
         ":serialization",
+        ":unified_symbol_resolution",
         "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "unified_symbol_resolution",
+    srcs = glob([
+        "lib/UnifiedSymbolResolution/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/UnifiedSymbolResolution/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":lex",
         "//llvm:Support",
     ],
 )
@@ -1304,6 +1327,7 @@ cc_library(
         ":rewrite",
         ":tooling",
         ":tooling_core",
+        ":unified_symbol_resolution",
         "//llvm:Support",
     ],
 )
@@ -1394,6 +1418,7 @@ cc_library(
         ":driver",
         ":frontend",
         ":index",
+        ":unified_symbol_resolution",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1478,6 +1503,7 @@ cc_library(
         ":static_analyzer_checkers_gen",
         ":tooling",
         ":tooling_core",
+        ":unified_symbol_resolution",
         "//llvm:Support",
     ],
 )
@@ -1589,6 +1615,8 @@ cc_library(
         ":lex",
         ":options",
         ":parse",
+        ":scalable_static_analysis_core",
+        ":scalable_static_analysis_frontend",
         ":serialization",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
@@ -1871,6 +1899,7 @@ cc_library(
         ":sema",
         ":serialization",
         ":type_nodes_gen",
+        "//llvm:ABI",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
@@ -2057,6 +2086,8 @@ cc_library(
         ":frontend",
         ":frontend_rewrite",
         ":options",
+        ":scalable_static_analysis_core",
+        ":scalable_static_analysis_frontend",
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
@@ -2085,6 +2116,7 @@ cc_library(
         ":rewrite",
         ":sema",
         ":tooling",
+        ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
@@ -2118,6 +2150,7 @@ cc_plugin_library(
         ":rewrite",
         ":sema",
         ":tooling",
+        ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
@@ -2162,6 +2195,7 @@ cc_binary(
         ":lex",
         ":libclang",
         ":serialization",
+        ":unified_symbol_resolution",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
@@ -2357,6 +2391,36 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "nvlink_wrapper_opts_gen",
+    strip_include_prefix = "tools/clang-nvlink-wrapper",
+    tbl_outs = {"tools/clang-nvlink-wrapper/NVLinkOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/clang-nvlink-wrapper/NVLinkOpts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_binary(
+    name = "clang-nvlink-wrapper",
+    srcs = glob(["tools/clang-nvlink-wrapper/*.cpp"]),
+    stamp = 0,
+    deps = [
+        ":basic",
+        ":driver",
+        ":nvlink_wrapper_opts_gen",
+        ":tooling",
+        "//llvm:BinaryFormat",
+        "//llvm:BitWriter",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:LTO",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Remarks",
+        "//llvm:Support",
+    ],
+)
+
 cc_binary(
     name = "clang-offload-bundler",
     srcs = glob(["tools/clang-offload-bundler/*.cpp"]),
@@ -2520,8 +2584,81 @@ cc_library(
         ":index",
         ":install_api",
         ":lex",
+        ":unified_symbol_resolution",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "scalable_static_analysis_core",
+    srcs = glob([
+        "lib/ScalableStaticAnalysisFramework/Core/**/*.cpp",
+        "lib/ScalableStaticAnalysisFramework/Core/**/*.h",
+    ]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Core/**/*.h"] + [
+        "include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h",
+        "include/clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h",
+    ]),
+    textual_hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Core/**/*.def"]),
+    deps = [
+        ":ast",
+        ":support",
+        ":unified_symbol_resolution",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "scalable_static_analysis_analyses",
+    srcs = glob([
+        "lib/ScalableStaticAnalysisFramework/Analyses/**/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Analyses/**/*.h"]),
+    deps = [
+        ":analysis",
+        ":ast",
+        ":basic",
+        ":scalable_static_analysis_core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "scalable_static_analysis_frontend",
+    srcs = glob([
+        "lib/ScalableStaticAnalysisFramework/Frontend/**/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Frontend/**/*.h"]),
+    deps = [
+        ":ast",
+        ":basic",
+        ":frontend",
+        ":scalable_static_analysis_core",
+        ":sema",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "clang-ssaf-format",
+    srcs = ["tools/clang-ssaf-format/SSAFFormat.cpp"],
+    deps = [
+        ":basic",
+        ":scalable_static_analysis_core",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "clang-ssaf-linker",
+    srcs = ["tools/clang-ssaf-linker/SSAFLinker.cpp"],
+    deps = [
+        ":basic",
+        ":scalable_static_analysis_core",
+        "//llvm:Option",
+        "//llvm:Support",
     ],
 )

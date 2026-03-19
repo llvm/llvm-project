@@ -111,60 +111,12 @@ public:
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput);
 
-  /// The following two methods provide a new interface to perform
-  /// by name dependency scan. The new interface's intention is to improve
-  /// dependency scanning performance when a sequence of name is looked up
-  /// with the same current working directory and the command line.
-
-  /// @brief Initializing the context and the compiler instance.
-  ///        This method must be called before calling
-  ///        computeDependenciesByNameWithContext.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @return Error if the initializaiton fails.
-  llvm::Error initializeCompilerInstanceWithContextOrError(
-      StringRef CWD, ArrayRef<std::string> CommandLine);
-
-  /// @brief Computes the dependeny for the module named ModuleName.
-  /// @param ModuleName The name of the module for which this method computes
-  ///.                  dependencies.
-  /// @param AlreadySeen This stores modules which have previously been
-  ///                    reported. Use the same instance for all calls to this
-  ///                    function for a single \c DependencyScanningTool in a
-  ///                    single build. Note that this parameter is not part of
-  ///                    the context because it can be shared across different
-  ///                    worker threads and each worker thread may update it.
-  /// @param LookupModuleOutput This function is called to fill in
-  ///                           "-fmodule-file=", "-o" and other output
-  ///                           arguments for dependencies.
-  /// @return An instance of \c TranslationUnitDeps if the scan is successful.
-  ///         Otherwise it returns an error.
-  llvm::Expected<dependencies::TranslationUnitDeps>
-  computeDependenciesByNameWithContextOrError(
-      StringRef ModuleName,
-      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::LookupModuleOutputCallback LookupModuleOutput);
-
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
-
-  /// @brief Initialize the worker's compiler instance from the commandline.
-  ///        The compiler instance only takes a `-cc1` job, so this method
-  ///        builds the `-cc1` job from the CommandLine input.
-  /// @param Worker The dependency scanning worker whose compiler instance
-  ///        with context is initialized.
-  /// @param CWD The current working directory.
-  /// @param CommandLine This command line may be a driver command or a cc1
-  ///        command.
-  /// @param DC A diagnostics consumer to report error if the initialization
-  ///        fails.
-  static bool initializeWorkerCIWithContextFromCommandline(
-      clang::dependencies::DependencyScanningWorker &Worker, StringRef CWD,
-      ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC);
 
 private:
   dependencies::DependencyScanningWorker Worker;
-  std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput>
-      DiagPrinterWithOS;
+
+  friend class CompilerInstanceWithContext;
 };
 
 /// Run the dependency scanning worker for the given driver or frontend
@@ -185,6 +137,109 @@ bool computeDependencies(
     dependencies::DependencyActionController &Controller,
     DiagnosticConsumer &DiagConsumer,
     llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
+
+class CompilerInstanceWithContext {
+  // Context
+  dependencies::DependencyScanningWorker &Worker;
+  llvm::StringRef CWD;
+  std::vector<std::string> CommandLine;
+
+  // Context - Diagnostics engine.
+  DiagnosticConsumer *DiagConsumer = nullptr;
+  std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
+      DiagEngineWithCmdAndOpts;
+  std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput>
+      DiagPrinterWithOS;
+
+  // Context - compiler invocation
+  std::unique_ptr<CompilerInvocation> OriginalInvocation;
+
+  // Context - output options
+  std::unique_ptr<DependencyOutputOptions> OutputOpts;
+
+  // Context - stable directory handling
+  llvm::SmallVector<StringRef> StableDirs;
+  dependencies::PrebuiltModulesAttrsMap PrebuiltModuleASTMap;
+
+  // Compiler Instance
+  std::unique_ptr<CompilerInstance> CIPtr;
+
+  // Source location offset.
+  int32_t SrcLocOffset = 0;
+
+  CompilerInstanceWithContext(dependencies::DependencyScanningWorker &Worker,
+                              StringRef CWD,
+                              const std::vector<std::string> &CMD)
+      : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
+
+  bool initialize(dependencies::DependencyActionController &Controller,
+                  std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
+                      DiagEngineWithDiagOpts,
+                  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
+
+public:
+  /// @brief Initialize the tool's compiler instance from the commandline.
+  ///        The compiler instance only takes a `-cc1` job, so this method
+  ///        builds the `-cc1` job from the CommandLine input.
+  /// @param Tool The dependency scanning tool whose compiler instance
+  ///        with context is initialized.
+  /// @param CWD The current working directory.
+  /// @param CommandLine This command line may be a driver command or a cc1
+  ///        command.
+  /// @param DC A diagnostics consumer to report error if the initialization
+  ///        fails.
+  static std::optional<CompilerInstanceWithContext> initializeFromCommandline(
+      DependencyScanningTool &Tool, StringRef CWD,
+      ArrayRef<std::string> CommandLine,
+      dependencies::DependencyActionController &Controller,
+      DiagnosticConsumer &DC);
+
+  /// @brief Initializing the context and the compiler instance.
+  ///        This method must be called before calling
+  ///        computeDependenciesByNameWithContext.
+  /// @param CWD The current working directory used during the scan.
+  /// @param CommandLine The commandline used for the scan.
+  /// @return Error if the initializaiton fails.
+  static llvm::Expected<CompilerInstanceWithContext> initializeOrError(
+      DependencyScanningTool &Tool, StringRef CWD,
+      ArrayRef<std::string> CommandLine,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
+
+  bool
+  computeDependencies(StringRef ModuleName,
+                      dependencies::DependencyConsumer &Consumer,
+                      dependencies::DependencyActionController &Controller);
+
+  /// @brief Computes the dependeny for the module named ModuleName.
+  /// @param ModuleName The name of the module for which this method computes
+  ///.                  dependencies.
+  /// @param AlreadySeen This stores modules which have previously been
+  ///                    reported. Use the same instance for all calls to this
+  ///                    function for a single \c DependencyScanningTool in a
+  ///                    single build. Note that this parameter is not part of
+  ///                    the context because it can be shared across different
+  ///                    worker threads and each worker thread may update it.
+  /// @param LookupModuleOutput This function is called to fill in
+  ///                           "-fmodule-file=", "-o" and other output
+  ///                           arguments for dependencies.
+  /// @return An instance of \c TranslationUnitDeps if the scan is successful.
+  ///         Otherwise it returns an error.
+  llvm::Expected<dependencies::TranslationUnitDeps>
+  computeDependenciesByNameOrError(
+      StringRef ModuleName,
+      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
+      dependencies::LookupModuleOutputCallback LookupModuleOutput);
+
+  // MaxNumOfQueries is the upper limit of the number of names the by-name
+  // scanning API (computeDependencies) can support after a
+  // CompilerInstanceWithContext is initialized. At the time of this commit, the
+  // estimated number of total unique importable names is around 3000 from
+  // Apple's SDKs. We usually import them in parallel, so it is unlikely that
+  // all names are all scanned by the same dependency scanning worker. Therefore
+  // the 64k (20x bigger than our estimate) size is sufficient to hold the
+  // unique source locations to report diagnostics per worker.
+  static const int32_t MaxNumOfQueries = 1 << 16;
+};
 
 } // end namespace tooling
 } // end namespace clang
