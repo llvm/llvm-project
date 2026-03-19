@@ -307,13 +307,10 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       if (target_sp->TargetProperties::GetLoadScriptFromSymbolFile() ==
           eLoadScriptFromSymFileTrue) {
         std::list<Status> errors;
-        StreamString feedback_stream;
-        if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
+        if (!target_sp->LoadScriptingResources(errors)) {
           lldb::StreamUP s = GetAsyncErrorStream();
           for (auto &error : errors)
             s->Printf("%s\n", error.AsCString());
-          if (feedback_stream.GetSize())
-            s->PutCString(feedback_stream.GetString());
         }
       }
     }

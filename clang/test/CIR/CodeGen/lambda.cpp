@@ -157,7 +157,7 @@ auto g() {
   };
 }
 
-// CIR: cir.func {{.*}} @_Z1gv() -> ![[REC_LAM_G:.*]] {
+// CIR: cir.func {{.*}} @_Z1gv() -> ![[REC_LAM_G:.*]] attributes {nothrow} {
 // CIR:   %[[RETVAL:.*]] = cir.alloca ![[REC_LAM_G]], !cir.ptr<![[REC_LAM_G]]>, ["__retval"]
 // CIR:   %[[I_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
 // CIR:   %[[TWELVE:.*]] = cir.const #cir.int<12> : !s32i
@@ -199,7 +199,7 @@ auto g2() {
 }
 
 // Should be same as above because of NRVO
-// CIR: cir.func {{.*}} @_Z2g2v() -> ![[REC_LAM_G2:.*]] {
+// CIR: cir.func {{.*}} @_Z2g2v() -> ![[REC_LAM_G2:.*]] attributes {nothrow} {
 // CIR:   %[[RETVAL:.*]] = cir.alloca ![[REC_LAM_G2]], !cir.ptr<![[REC_LAM_G2]]>, ["__retval", init]
 // CIR:   %[[I_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
 // CIR:   %[[TWELVE:.*]] = cir.const #cir.int<12> : !s32i

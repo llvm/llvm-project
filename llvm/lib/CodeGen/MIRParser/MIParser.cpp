@@ -461,7 +461,7 @@ public:
                             std::optional<unsigned> &TiedDefIdx,
                             bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
-  bool parseInlineAsmOperand(MachineOperand &Dest);
+  bool parseSymbolicInlineAsmOperand(unsigned OpIdx, MachineOperand &Dest);
   bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                        const Constant *&C);
   bool parseIRConstant(StringRef::iterator Loc, const Constant *&C);
@@ -1903,9 +1903,42 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
-bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
+bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
+                                             MachineOperand &Dest) {
+  assert(OpIdx >= InlineAsm::MIOp_ExtraInfo);
+  assert(Token.is(MIToken::Identifier) &&
+         "expected symbolic inline asm operand");
+
+  // Parse ExtraInfo flags.
+  if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
+    unsigned ExtraInfo = 0;
+    for (;;) {
+      if (Token.isNot(MIToken::Identifier))
+        break;
+
+      StringRef FlagName = Token.stringValue();
+      unsigned Flag = StringSwitch<unsigned>(FlagName)
+                          .Case("sideeffect", InlineAsm::Extra_HasSideEffects)
+                          .Case("mayload", InlineAsm::Extra_MayLoad)
+                          .Case("maystore", InlineAsm::Extra_MayStore)
+                          .Case("isconvergent", InlineAsm::Extra_IsConvergent)
+                          .Case("alignstack", InlineAsm::Extra_IsAlignStack)
+                          .Case("unwind", InlineAsm::Extra_MayUnwind)
+                          .Case("attdialect", 0)
+                          .Case("inteldialect", InlineAsm::Extra_AsmDialect)
+                          .Default(~0u);
+      if (Flag == ~0u)
+        return error("unknown inline asm extra info flag '" + FlagName + "'");
+
+      ExtraInfo |= Flag;
+      lex();
+    }
+
+    Dest = MachineOperand::CreateImm(ExtraInfo);
+    return false;
+  }
+
   // Parse symbolic form: kind[:constraint].
-  assert(Token.is(MIToken::Identifier) && "expected inline asm operand kind");
   StringRef KindStr = Token.stringValue();
   constexpr auto InvalidKind = static_cast<InlineAsm::Kind>(0);
   InlineAsm::Kind K =
@@ -1917,7 +1950,8 @@ bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
           .Case("imm", InlineAsm::Kind::Imm)
           .Case("mem", InlineAsm::Kind::Mem)
           .Default(InvalidKind);
-  assert(K != InvalidKind && "unknown inline asm operand kind");
+  if (K == InvalidKind)
+    return error("unknown inline asm operand kind '" + KindStr + "'");
 
   lex();
 
@@ -3172,14 +3206,12 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::Error:
     return true;
   case MIToken::Identifier: {
+    bool IsInlineAsm = OpCode == TargetOpcode::INLINEASM ||
+                       OpCode == TargetOpcode::INLINEASM_BR;
+    if (IsInlineAsm)
+      return parseSymbolicInlineAsmOperand(OpIdx, Dest);
+
     StringRef Id = Token.stringValue();
-    bool IsInlineAsmOperand = (OpCode == TargetOpcode::INLINEASM ||
-                               OpCode == TargetOpcode::INLINEASM_BR) &&
-                              OpIdx >= InlineAsm::MIOp_FirstOperand;
-    if (IsInlineAsmOperand &&
-        (Id == "regdef" || Id == "reguse" || Id == "regdef-ec" ||
-         Id == "clobber" || Id == "imm" || Id == "mem"))
-      return parseInlineAsmOperand(Dest);
     if (const auto *RegMask = PFS.Target.getRegMask(Id)) {
       Dest = MachineOperand::CreateRegMask(RegMask);
       lex();
