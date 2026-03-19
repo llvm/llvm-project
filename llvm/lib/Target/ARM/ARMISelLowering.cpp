@@ -1714,10 +1714,10 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
   case CallingConv::Fast:
   case CallingConv::CXX_FAST_TLS:
     if (!getTM().isAAPCS_ABI()) {
-      if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() && !isVarArg)
+      if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() && !isVarArg)
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
-    } else if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() &&
+    } else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
                !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
@@ -3201,11 +3201,10 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
     auto C = const_cast<Constant*>(CP->getConstVal());
     auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
-                    *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
-                    Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
-                    Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
-                    Twine(AFI->createPICLabelUId())
-                  );
+        *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
+        Twine(DAG.getDataLayout().getInternalSymbolPrefix()) + "CP" +
+            Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
+            Twine(AFI->createPICLabelUId()));
     SDValue GA = DAG.getTargetGlobalAddress(dyn_cast<GlobalValue>(GV),
                                             dl, PtrVT);
     return LowerGlobalAddress(GA, DAG);
@@ -5097,6 +5096,54 @@ bool ARMTargetLowering::isUnsupportedFloatingType(EVT VT) const {
   return false;
 }
 
+static SDValue matchCSET(unsigned &Opcode, bool &InvertCond, SDValue TrueVal,
+                         SDValue FalseVal, const ARMSubtarget *Subtarget) {
+  ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
+  ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
+  if (!CFVal || !CTVal || !Subtarget->hasV8_1MMainlineOps())
+    return SDValue();
+
+  unsigned TVal = CTVal->getZExtValue();
+  unsigned FVal = CFVal->getZExtValue();
+
+  Opcode = 0;
+  InvertCond = false;
+  if (TVal == ~FVal) {
+    Opcode = ARMISD::CSINV;
+  } else if (TVal == ~FVal + 1) {
+    Opcode = ARMISD::CSNEG;
+  } else if (TVal + 1 == FVal) {
+    Opcode = ARMISD::CSINC;
+  } else if (TVal == FVal + 1) {
+    Opcode = ARMISD::CSINC;
+    std::swap(TrueVal, FalseVal);
+    std::swap(TVal, FVal);
+    InvertCond = !InvertCond;
+  } else {
+    return SDValue();
+  }
+
+  // If one of the constants is cheaper than another, materialise the
+  // cheaper one and let the csel generate the other.
+  if (Opcode != ARMISD::CSINC &&
+      HasLowerConstantMaterializationCost(FVal, TVal, Subtarget)) {
+    std::swap(TrueVal, FalseVal);
+    std::swap(TVal, FVal);
+    InvertCond = !InvertCond;
+  }
+
+  // Attempt to use ZR checking TVal is 0, possibly inverting the condition
+  // to get there. CSINC not is invertable like the other two (~(~a) == a,
+  // -(-a) == a, but (a+1)+1 != a).
+  if (FVal == 0 && Opcode != ARMISD::CSINC) {
+    std::swap(TrueVal, FalseVal);
+    std::swap(TVal, FVal);
+    InvertCond = !InvertCond;
+  }
+
+  return TrueVal;
+}
+
 SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
@@ -5132,7 +5179,6 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
-  ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
   ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
   if (Op.getValueType().isInteger()) {
 
@@ -5153,53 +5199,26 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 
       return DAG.getNode(ISD::AND, dl, VT, LHS, Shift);
     }
+
+    // (SELECT_CC setlt, x, 0, 1, 0) -> SRL(x, bw-1)
+    if (CC == ISD::SETLT && isNullConstant(RHS) && isOneConstant(TrueVal) &&
+        isNullConstant(FalseVal) && LHS.getValueType() == VT)
+      return DAG.getNode(ISD::SRL, dl, VT, LHS,
+                         DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
   }
 
-  if (Subtarget->hasV8_1MMainlineOps() && CFVal && CTVal &&
-      LHS.getValueType() == MVT::i32 && RHS.getValueType() == MVT::i32) {
-    unsigned TVal = CTVal->getZExtValue();
-    unsigned FVal = CFVal->getZExtValue();
-    unsigned Opcode = 0;
-
-    if (TVal == ~FVal) {
-      Opcode = ARMISD::CSINV;
-    } else if (TVal == ~FVal + 1) {
-      Opcode = ARMISD::CSNEG;
-    } else if (TVal + 1 == FVal) {
-      Opcode = ARMISD::CSINC;
-    } else if (TVal == FVal + 1) {
-      Opcode = ARMISD::CSINC;
-      std::swap(TrueVal, FalseVal);
-      std::swap(TVal, FVal);
-      CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-    }
-
-    if (Opcode) {
-      // If one of the constants is cheaper than another, materialise the
-      // cheaper one and let the csel generate the other.
-      if (Opcode != ARMISD::CSINC &&
-          HasLowerConstantMaterializationCost(FVal, TVal, Subtarget)) {
-        std::swap(TrueVal, FalseVal);
-        std::swap(TVal, FVal);
+  if (LHS.getValueType() == MVT::i32) {
+    unsigned Opcode;
+    bool InvertCond;
+    if (SDValue Op =
+            matchCSET(Opcode, InvertCond, TrueVal, FalseVal, Subtarget)) {
+      if (InvertCond)
         CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-      }
-
-      // Attempt to use ZR checking TVal is 0, possibly inverting the condition
-      // to get there. CSINC not is invertable like the other two (~(~a) == a,
-      // -(-a) == a, but (a+1)+1 != a).
-      if (FVal == 0 && Opcode != ARMISD::CSINC) {
-        std::swap(TrueVal, FalseVal);
-        std::swap(TVal, FVal);
-        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-      }
-
-      // Drops F's value because we can get it by inverting/negating TVal.
-      FalseVal = TrueVal;
 
       SDValue ARMcc;
       SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
-      EVT VT = TrueVal.getValueType();
-      return DAG.getNode(Opcode, dl, VT, TrueVal, FalseVal, ARMcc, Cmp);
+      EVT VT = Op.getValueType();
+      return DAG.getNode(Opcode, dl, VT, Op, Op, ARMcc, Cmp);
     }
   }
 
@@ -5407,6 +5426,13 @@ SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
 }
 
+static SDValue getInvertedARMCondCode(SDValue ARMcc, SelectionDAG &DAG) {
+  ARMCC::CondCodes CondCode =
+      (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
+  CondCode = ARMCC::getOppositeCondition(CondCode);
+  return DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+}
+
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue Cond = Op.getOperand(1);
@@ -5431,10 +5457,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     std::tie(Value, OverflowCmp) = getARMXALUOOp(Cond, DAG, ARMcc);
 
     // Reverse the condition code.
-    ARMCC::CondCodes CondCode =
-        (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
-    CondCode = ARMCC::getOppositeCondition(CondCode);
-    ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+    ARMcc = getInvertedARMCondCode(ARMcc, DAG);
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
                        OverflowCmp);
@@ -5482,10 +5505,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
     if ((CC == ISD::SETNE) != isOneConstant(RHS)) {
       // Reverse the condition code.
-      ARMCC::CondCodes CondCode =
-          (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
-      CondCode = ARMCC::getOppositeCondition(CondCode);
-      ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+      ARMcc = getInvertedARMCondCode(ARMcc, DAG);
     }
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,

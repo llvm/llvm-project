@@ -2774,6 +2774,75 @@ namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
+static std::string formatMLIRError(const MLIRError &e) {
+  auto locStr = [](const PyLocation &loc) {
+    PyPrintAccumulator accum;
+    mlirLocationPrint(loc, accum.getCallback(), accum.getUserData());
+    std::string s = nb::cast<std::string>(nb::str(accum.join()));
+    std::string_view sv(s);
+    if (sv.size() > 5) {
+      sv.remove_prefix(4); // "loc("
+      sv.remove_suffix(1); // ")"
+    }
+    return std::string(sv);
+  };
+  auto indent = [](std::string s) {
+    size_t pos = 0;
+    while ((pos = s.find('\n', pos)) != std::string::npos) {
+      s.replace(pos, 1, "\n  ");
+      pos += 3;
+    }
+    return s;
+  };
+
+  std::ostringstream os;
+  os << e.message;
+  if (!e.errorDiagnostics.empty())
+    os << ":";
+  for (const auto &diag : e.errorDiagnostics) {
+    os << "\nerror: " << locStr(diag.location) << ": " << indent(diag.message);
+    for (const auto &note : diag.notes) {
+      os << "\n note: " << locStr(note.location) << ": "
+         << indent(note.message);
+    }
+  }
+  return os.str();
+}
+
+void MLIRError::bind(nb::module_ &m) {
+  auto cls = nb::exception<MLIRError>(m, "MLIRError", PyExc_Exception);
+  nb::register_exception_translator(
+      [](const std::exception_ptr &p, void *payload) {
+        try {
+          if (p)
+            std::rethrow_exception(p);
+        } catch (MLIRError &e) {
+          std::string formatted = formatMLIRError(e);
+          nb::object ty = nb::borrow(static_cast<PyObject *>(payload));
+          nb::object obj = ty(formatted);
+          obj.attr("_message") = nb::cast(std::move(e.message));
+          obj.attr("_error_diagnostics") =
+              nb::cast(std::move(e.errorDiagnostics));
+          PyErr_SetObject(static_cast<PyObject *>(payload), obj.ptr());
+        }
+      },
+      cls.ptr());
+  auto propertyType = nb::borrow<nb::type_object>(
+      reinterpret_cast<PyObject *>(&PyProperty_Type));
+  nb::setattr(
+      cls, "message",
+      propertyType(nb::cpp_function(
+          [](nb::object self) -> nb::str { return self.attr("_message"); },
+          nb::is_method())));
+  nb::setattr(cls, "error_diagnostics",
+              propertyType(nb::cpp_function(
+                  [](nb::object self)
+                      -> nb::typed<nb::list, PyDiagnostic::DiagnosticInfo> {
+                    return self.attr("_error_diagnostics");
+                  },
+                  nb::is_method())));
+}
+
 void populateRoot(nb::module_ &m) {
   m.attr("T") = nb::type_var("T");
   m.attr("U") = nb::type_var("U");
@@ -2791,7 +2860,8 @@ void populateRoot(nb::module_ &m) {
           },
           "dialect_namespace"_a)
       .def("_register_dialect_impl", &PyGlobals::registerDialectImpl,
-           "dialect_namespace"_a, "dialect_class"_a,
+           "dialect_namespace"_a, "dialect_class"_a, nb::kw_only(),
+           "replace"_a = false,
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
            "operation_name"_a, "operation_class"_a, nb::kw_only(),
@@ -3858,17 +3928,40 @@ void populateIRCore(nb::module_ &m) {
 
             Note:
               After erasing, any Python references to the operation become invalid.)")
-      .def("walk", &PyOperationBase::walk, "callback"_a,
-           "walk_order"_a = PyWalkOrder::PostOrder,
-           // clang-format off
-          nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder) -> None"),
-           // clang-format on
-           R"(
+      .def(
+          "walk",
+          [](PyOperationBase &self,
+             std::function<PyWalkResult(MlirOperation)> callback,
+             PyWalkOrder walkOrder, std::optional<nb::object> opClass) {
+            if (!opClass)
+              return self.walk(callback, walkOrder);
+            self.walk(
+                [&](MlirOperation mlirOp) -> PyWalkResult {
+                  nb::object opview =
+                      PyOperation::forOperation(
+                          self.getOperation().getContext(), mlirOp)
+                          ->createOpView();
+                  if (nb::isinstance(opview, *opClass))
+                    return callback(mlirOp);
+                  return PyWalkResult::Advance;
+                },
+                walkOrder);
+          },
+          "callback"_a, "walk_order"_a = PyWalkOrder::PostOrder,
+          "op_class"_a = nb::none(),
+          // clang-format off
+           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = ..., op_class: type[OpView] | None = None) -> None"),
+          // clang-format on
+          R"(
              Walks the operation tree with a callback function.
+
+             If op_class is provided, the callback is only invoked on operations
+             of that type; all other operations are skipped silently.
 
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
-               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).)");
+               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).
+               op_class: If provided, only operations of this type are passed to the callback.)");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
@@ -4930,6 +5023,9 @@ void populateIRCore(nb::module_ &m) {
   PyDynamicOpTrait::bind(m);
   PyDynamicOpTraits::IsTerminator::bind(m);
   PyDynamicOpTraits::NoTerminator::bind(m);
+
+  // MLIRError exception.
+  MLIRError::bind(m);
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

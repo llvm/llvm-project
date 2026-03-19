@@ -28,14 +28,14 @@ define void @memset_x(ptr %a, i8 %value, i64 %x) nounwind !prof !0 {
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY]], label %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION]], !prof [[PROF2:![0-9]+]]
 ; CHECK:       [[DYNAMIC_MEMSET_POST_LOOP_EXPANSION]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[X]], 0
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2:.*]], label %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION1:.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2:.*]], label %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION1:.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION]] ], [ [[TMP9:%.*]], %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    store volatile i8 [[VALUE]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i64 [[TMP9]], [[X]]
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2]], label %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION1]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2]], label %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION1]], !prof [[PROF3]]
 ; CHECK:       [[DYNAMIC_MEMSET_POST_LOOP_EXPANSION1]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -52,6 +52,6 @@ define void @memset_x(ptr %a, i8 %value, i64 %x) nounwind !prof !0 {
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1048575, i32 1}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 3, i32 1}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 2, i32 1}
 ; CHECK: [[PROF3]] = !{!"unknown", !"lower-mem-intrinsics"}
 ;.

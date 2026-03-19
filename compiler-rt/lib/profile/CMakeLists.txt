@@ -154,6 +154,16 @@ if(COMPILER_RT_PROFILE_BAREMETAL)
      -DCOMPILER_RT_PROFILE_BAREMETAL=1)
 endif()
 
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding EXTRA_FLAGS)
+  append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib EXTRA_FLAGS)
+  append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto EXTRA_FLAGS)
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                   "SHELL:-Xclang -mcode-object-version=none" EXTRA_FLAGS)
+  endif()
+endif()
+
 if(MSVC)
   # profile historically has only been supported with the static runtime
   # on windows

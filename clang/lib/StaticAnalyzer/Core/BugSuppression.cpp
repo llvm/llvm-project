@@ -9,6 +9,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -165,6 +166,55 @@ bool BugSuppression::isSuppressed(const BugReport &R) {
          isSuppressed(UniqueingLocation, DeclWithIssue, {});
 }
 
+static const ClassTemplateDecl *
+walkInstantiatedFromChain(const ClassTemplateDecl *Tmpl) {
+  // For nested member templates (e.g., S2 inside S1<T>), getInstantiatedFrom
+  // may return the member template as instantiated within an outer
+  // specialization (e.g., S2 as it appears in S1<int>).  That instantiated
+  // member template has no definition redeclaration itself; we need to walk
+  // up the member template chain to reach the primary template definition.
+  // \code
+  //   template <class> struct S1 {
+  //     template <class> struct S2 {
+  //       int i;
+  //       template <class T> int m(const S2<T>& s2) {
+  //         return s2.i;
+  //       }
+  //     };
+  //   }
+  // /code
+  const ClassTemplateDecl *MemberTmpl;
+  while ((MemberTmpl = Tmpl->getInstantiatedFromMemberTemplate())) {
+    if (Tmpl->isMemberSpecialization())
+      break;
+    Tmpl = MemberTmpl;
+  }
+  return Tmpl;
+}
+
+static const ClassTemplatePartialSpecializationDecl *walkInstantiatedFromChain(
+    const ClassTemplatePartialSpecializationDecl *PartialSpec) {
+  const ClassTemplatePartialSpecializationDecl *MemberPS;
+  while ((MemberPS = PartialSpec->getInstantiatedFromMember())) {
+    if (PartialSpec->isMemberSpecialization())
+      break;
+    PartialSpec = MemberPS;
+  }
+  return PartialSpec;
+}
+
+template <class T> static const T *chooseDefinitionRedecl(const T *Tmpl) {
+  static_assert(llvm::is_one_of<T, ClassTemplateDecl,
+                                ClassTemplatePartialSpecializationDecl>::value);
+  for (const auto *Redecl : Tmpl->redecls()) {
+    if (const T *D = cast<T>(Redecl); D->isThisDeclarationADefinition()) {
+      return D;
+    }
+  }
+  assert(false && "This template must have a redecl that is a definition");
+  return Tmpl;
+}
+
 // For template specializations, returns the primary template definition or
 // partial specialization that was used to instantiate the specialization.
 // This ensures suppression attributes on templates apply to their
@@ -178,12 +228,8 @@ bool BugSuppression::isSuppressed(const BugReport &R) {
 // back to the primary template definition, allowing us to find the suppression
 // attribute.
 //
-// The function handles two cases:
-// 1. Instantiation from a class template - searches redeclarations to find
-//    the definition (not just a forward declaration).
-// 2. Instantiation from a partial specialization - returns it directly.
-//
-// For non-template-specialization decls, returns the input unchanged.
+// The function handles specializations (and partial specializations) of
+// class templates. For any other decl, it returns the input unchagned.
 static const Decl *
 preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
   const auto *SpecializationDecl = dyn_cast<ClassTemplateSpecializationDecl>(D);
@@ -194,27 +240,13 @@ preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
   if (!InstantiatedFrom)
     return D;
 
-  // This might be a class template.
   if (const auto *Tmpl = InstantiatedFrom.dyn_cast<ClassTemplateDecl *>()) {
     // Interestingly, the source template might be a forward declaration, so we
     // need to find the definition redeclaration.
-    for (const auto *Redecl : Tmpl->redecls()) {
-      if (cast<ClassTemplateDecl>(Redecl)->isThisDeclarationADefinition()) {
-        return Redecl;
-      }
-    }
-    assert(false &&
-           "This class template must have a redecl that is a definition");
-    return D;
+    return chooseDefinitionRedecl(walkInstantiatedFromChain(Tmpl));
   }
-
-  // It might be a partial specialization.
-  const auto *PartialSpecialization =
-      InstantiatedFrom.dyn_cast<ClassTemplatePartialSpecializationDecl *>();
-
-  // The partial specialization should be a definition.
-  assert(PartialSpecialization->isThisDeclarationADefinition());
-  return PartialSpecialization;
+  return chooseDefinitionRedecl(walkInstantiatedFromChain(
+      cast<ClassTemplatePartialSpecializationDecl *>(InstantiatedFrom)));
 }
 
 bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,

@@ -193,7 +193,13 @@ static Type *classifyConstantWithOpaquePtr(const Constant *C,
 
 static void classifyGlobalCtorPointerType(const GlobalVariable &GV,
                                           PointerTypeMap &Map) {
-  const auto *CA = cast<ConstantArray>(GV.getInitializer());
+  const auto *CA = dyn_cast<ConstantArray>(GV.getInitializer());
+  if (!CA) {
+    // An empty global_ctors will be a zeroinitializer, so just skip it.
+    assert(isa<ConstantAggregateZero>(GV.getInitializer()) &&
+           "global_ctors should be a ConstantArray or ConstantAggregateZero");
+    return;
+  }
   // Type for global ctor should be array of { i32, void ()*, i8* }.
   Type *CtorArrayTy = classifyConstantWithOpaquePtr(CA, Map);
 

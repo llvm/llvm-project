@@ -17,8 +17,7 @@ define i1 @memcmp_zero(ptr %d) {
 ; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    v128.load 0:p2align=0
 ; CHECK-NEXT:    v128.any_true
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.ne
+; CHECK-NEXT:    i32.eqz
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   call void @llvm.memset.p0.i32(ptr %d, i8 0, i32 16, i1 false)
