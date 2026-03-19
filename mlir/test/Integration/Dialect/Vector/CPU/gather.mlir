@@ -1,6 +1,6 @@
 // DEFINE: %{entry_point} = main
 // DEFINE: %{run} = mlir-runner -e entry -entry-point-result=void \
-// DEFINE:         -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE:         -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 /// TEST 1. Verify default compilation (direct lowering of `vector.gather` to LLVM)
 // DEFINE: %{compile} = mlir-opt %s -test-lower-to-llvm

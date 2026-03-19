@@ -184,7 +184,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
   VPIRBuilder.setInsertPoint(VPBB);
   // TODO: Model and preserve debug intrinsics in VPlan.
-  for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
+  for (Instruction &InstRef : *BB) {
     Instruction *Inst = &InstRef;
 
     // There shouldn't be any VPValue for Inst at this point. Otherwise, we
@@ -702,7 +702,12 @@ void VPlanTransforms::createHeaderPhiRecipes(
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
     const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
-  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  // Retrieve the header manually from the intial plain-CFG VPlan.
+  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  assert(VPDominatorTree(Plan).dominates(HeaderVPBB,
+                                         HeaderVPBB->getPredecessors()[1]) &&
+         "header must dominate its latch");
 
   auto CreateHeaderPhiRecipe = [&](VPPhi *PhiR) -> VPHeaderPHIRecipe * {
     // TODO: Gradually replace uses of underlying instruction by analyses on

@@ -393,7 +393,7 @@ TEST(ControllerAccessTest, Basics) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA);
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
 
@@ -416,11 +416,11 @@ TEST(ControllerAccessTest, ValidCallToController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA);
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
@@ -438,7 +438,7 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -456,13 +456,13 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA);
 
-  S.detachFromController();
+  S.detach();
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -480,7 +480,7 @@ TEST(ControllerAccessTest, CallFromController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA);
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
