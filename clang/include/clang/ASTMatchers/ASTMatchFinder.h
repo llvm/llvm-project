@@ -144,8 +144,6 @@ public:
 
     /// Avoids matching declarations in system headers.
     bool IgnoreSystemHeaders{false};
-
-    bool SkipDeclsInModules{false};
   };
 
   MatchFinder(MatchFinderOptions Options = MatchFinderOptions());
