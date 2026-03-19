@@ -31,6 +31,7 @@ struct Align;
 class Argument;
 class Function;
 class GlobalValue;
+class MachineInstr;
 class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
@@ -1574,6 +1575,9 @@ void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
 LLVM_READNONE
 uint64_t encodeMsg(uint64_t MsgId, uint64_t OpId, uint64_t StreamId);
 
+/// Returns true if the message does not use the m0 operand.
+bool msgDoesNotUseM0(int64_t MsgId, const MCSubtargetInfo &STI);
+
 } // namespace SendMsg
 
 unsigned getInitialPSInputAddr(const Function &F);
@@ -1724,7 +1728,6 @@ bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGFX11(const MCSubtargetInfo &STI);
-bool isGFX1170(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
@@ -1987,6 +1990,18 @@ unsigned getVGPREncodingMSBs(MCRegister Reg, const MCRegisterInfo &MRI);
 /// If \p Reg is a low VGPR return a corresponding high VGPR with \p MSBs set.
 MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
                            const MCRegisterInfo &MRI);
+
+/// \returns VGPR MSBs encoded in a S_SETREG_IMM32_B32 \p MI if it sets
+/// it. If \p HasSetregVGPRMSBFixup is true then size of the ID_MODE mask is
+/// ignored.
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
+                                                   bool HasSetregVGPRMSBFixup);
+
+/// \returns VGPR MSBs encoded in a S_SETREG_IMM32_B32 \p MI if it sets
+/// it. If \p HasSetregVGPRMSBFixup is true then size of the ID_MODE mask is
+/// ignored.
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MCInst &MI,
+                                                   bool HasSetregVGPRMSBFixup);
 
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2

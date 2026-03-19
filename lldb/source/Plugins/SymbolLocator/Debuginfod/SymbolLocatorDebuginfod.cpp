@@ -15,7 +15,7 @@
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -194,9 +194,9 @@ GetFileForModule(const ModuleSpec &module_spec,
 
   Log *log = GetLog(LLDBLog::Symbols);
   auto err_message = llvm::toString(result.takeError());
-  LLDB_LOGV(log,
-            "Debuginfod failed to download symbol artifact {0} with error {1}",
-            url_path, err_message);
+  LLDB_LOG_VERBOSE(
+      log, "Debuginfod failed to download symbol artifact {0} with error {1}",
+      url_path, err_message);
   return {};
 }
 

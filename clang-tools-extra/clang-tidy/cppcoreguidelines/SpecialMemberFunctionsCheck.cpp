@@ -76,7 +76,7 @@ void SpecialMemberFunctionsCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static llvm::StringRef
+static StringRef
 toString(SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
   switch (K) {
   case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::Destructor:
@@ -101,7 +101,7 @@ toString(SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
 
 static std::string
 join(ArrayRef<SpecialMemberFunctionsCheck::SpecialMemberFunctionKind> SMFS,
-     llvm::StringRef AndOr) {
+     StringRef AndOr) {
   assert(!SMFS.empty() &&
          "List of defined or undefined members should never be empty.");
   std::string Buffer;
@@ -126,7 +126,7 @@ void SpecialMemberFunctionsCheck::check(
                 std::string(MatchedDecl->getName()));
 
   auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
-    llvm::SmallVectorImpl<SpecialMemberFunctionData> &Members =
+    SmallVectorImpl<SpecialMemberFunctionData> &Members =
         ClassWithSpecialMembers[ID];
     if (!llvm::is_contained(Members, Data))
       Members.push_back(std::move(Data));
@@ -165,7 +165,7 @@ void SpecialMemberFunctionsCheck::onEndOfTranslationUnit() {
 void SpecialMemberFunctionsCheck::checkForMissingMembers(
     const ClassDefId &ID,
     llvm::ArrayRef<SpecialMemberFunctionData> DefinedMembers) {
-  llvm::SmallVector<SpecialMemberFunctionKind, 5> MissingMembers;
+  SmallVector<SpecialMemberFunctionKind, 5> MissingMembers;
 
   auto HasMember = [&](SpecialMemberFunctionKind Kind) {
     return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
@@ -234,7 +234,7 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
   }
 
   if (!MissingMembers.empty()) {
-    llvm::SmallVector<SpecialMemberFunctionKind, 5> DefinedMemberKinds;
+    SmallVector<SpecialMemberFunctionKind, 5> DefinedMemberKinds;
     for (const auto &Data : DefinedMembers)
       if (!Data.IsImplicit)
         DefinedMemberKinds.push_back(Data.FunctionKind);

@@ -255,6 +255,7 @@ class SPIRVEmitIntrinsics
   bool shouldTryToAddMemAliasingDecoration(Instruction *Inst);
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void insertConstantsForFPFastMathDefault(Module &M);
+  Value *buildSpvUndefComposite(Type *AggrTy, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -299,6 +300,8 @@ class SPIRVEmitIntrinsics
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
+  bool processMaskedMemIntrinsic(IntrinsicInst &I);
+  bool convertMaskedMemIntrinsics(Module &M);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
 
@@ -420,9 +423,11 @@ static bool isMemInstrToReplace(Instruction *I) {
 }
 
 static bool isAggrConstForceInt32(const Value *V) {
+  bool IsAggrZero =
+      isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy();
+  bool IsUndefAggregate = isa<UndefValue>(V) && V->getType()->isAggregateType();
   return isa<ConstantArray>(V) || isa<ConstantStruct>(V) ||
-         isa<ConstantDataArray>(V) ||
-         (isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy());
+         isa<ConstantDataArray>(V) || IsAggrZero || IsUndefAggregate;
 }
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
@@ -1909,7 +1914,8 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
       return;
     } else if (isTodoType(Pointer)) {
       eraseTodoType(Pointer);
-      if (!isa<CallInst>(Pointer) && !isaGEP(Pointer)) {
+      if (!isa<CallInst>(Pointer) && !isaGEP(Pointer) &&
+          !isa<AllocaInst>(Pointer)) {
         //  If this wouldn't be the first spv_ptrcast but existing type info is
         //  uncomplete, update spv_assign_ptr_type arguments.
         if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(Pointer)) {
@@ -2266,6 +2272,36 @@ shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
   return F == &FirstDefinition;
 }
 
+Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
+                                                   IRBuilder<> &B) {
+  SmallVector<Value *, 4> Elems;
+  if (auto *ArrTy = dyn_cast<ArrayType>(AggrTy)) {
+    Type *ElemTy = ArrTy->getElementType();
+    auto *UI = B.CreateIntrinsic(Intrinsic::spv_undef, {});
+    AggrConsts[UI] = PoisonValue::get(ElemTy);
+    AggrConstTypes[UI] = ElemTy;
+    Elems.assign(ArrTy->getNumElements(), UI);
+  } else {
+    auto *StructTy = cast<StructType>(AggrTy);
+    DenseMap<Type *, Instruction *> UndefByType;
+    for (unsigned I = 0; I < StructTy->getNumElements(); ++I) {
+      Type *ElemTy = StructTy->getContainedType(I);
+      auto &Entry = UndefByType[ElemTy];
+      if (!Entry) {
+        Entry = B.CreateIntrinsic(Intrinsic::spv_undef, {});
+        AggrConsts[Entry] = PoisonValue::get(ElemTy);
+        AggrConstTypes[Entry] = ElemTy;
+      }
+      Elems.push_back(Entry);
+    }
+  }
+  auto *Composite = B.CreateIntrinsic(Intrinsic::spv_const_composite,
+                                      {B.getInt32Ty()}, Elems);
+  AggrConsts[Composite] = PoisonValue::get(AggrTy);
+  AggrConstTypes[Composite] = AggrTy;
+  return Composite;
+}
+
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
 
@@ -2279,11 +2315,14 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
     // by llvm IR general logic.
     deduceElementTypeHelper(&GV, false);
     Init = GV.getInitializer();
+    Value *InitOp = Init;
+    if (isa<UndefValue>(Init) && Init->getType()->isAggregateType())
+      InitOp = buildSpvUndefComposite(Init->getType(), B);
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
     auto *InitInst = B.CreateIntrinsic(Intrinsic::spv_init_global,
                                        {GV.getType(), Ty}, {&GV, Const});
-    InitInst->setArgOperand(1, Init);
+    InitInst->setArgOperand(1, InitOp);
   }
   if (!Init && GV.use_empty())
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
@@ -2708,7 +2747,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       continue;
     unsigned OpNo = Op.getOperandNo();
     if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
-               (II->paramHasAttr(OpNo, Attribute::ImmArg))))
+               (!II->isBundleOperand(OpNo) &&
+                II->paramHasAttr(OpNo, Attribute::ImmArg))))
       continue;
 
     if (!BPrepared) {
@@ -3281,8 +3321,100 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
   }
 }
 
+bool SPIRVEmitIntrinsics::processMaskedMemIntrinsic(IntrinsicInst &I) {
+  const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(*I.getFunction());
+
+  if (I.getIntrinsicID() == Intrinsic::masked_gather) {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      I.getContext().emitError(
+          &I, "llvm.masked.gather requires SPV_INTEL_masked_gather_scatter "
+              "extension");
+      // Replace with poison to allow compilation to continue and report error.
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+      I.eraseFromParent();
+      return true;
+    }
+
+    IRBuilder<> B(&I);
+
+    Value *Ptrs = I.getArgOperand(0);
+    Value *Mask = I.getArgOperand(1);
+    Value *Passthru = I.getArgOperand(2);
+
+    // Alignment is stored as a parameter attribute, not as a regular parameter.
+    uint32_t Alignment = I.getParamAlign(0).valueOrOne().value();
+
+    SmallVector<Value *, 4> Args = {Ptrs, B.getInt32(Alignment), Mask,
+                                    Passthru};
+    SmallVector<Type *, 4> Types = {I.getType(), Ptrs->getType(),
+                                    Mask->getType(), Passthru->getType()};
+
+    auto *NewI = B.CreateIntrinsic(Intrinsic::spv_masked_gather, Types, Args);
+    I.replaceAllUsesWith(NewI);
+    I.eraseFromParent();
+    return true;
+  }
+
+  if (I.getIntrinsicID() == Intrinsic::masked_scatter) {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      I.getContext().emitError(
+          &I, "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter "
+              "extension");
+      // Erase the intrinsic to allow compilation to continue and report error.
+      I.eraseFromParent();
+      return true;
+    }
+
+    IRBuilder<> B(&I);
+
+    Value *Values = I.getArgOperand(0);
+    Value *Ptrs = I.getArgOperand(1);
+    Value *Mask = I.getArgOperand(2);
+
+    // Alignment is stored as a parameter attribute on the ptrs parameter (arg
+    // 1).
+    uint32_t Alignment = I.getParamAlign(1).valueOrOne().value();
+
+    SmallVector<Value *, 4> Args = {Values, Ptrs, B.getInt32(Alignment), Mask};
+    SmallVector<Type *, 3> Types = {Values->getType(), Ptrs->getType(),
+                                    Mask->getType()};
+
+    B.CreateIntrinsic(Intrinsic::spv_masked_scatter, Types, Args);
+    I.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
+bool SPIRVEmitIntrinsics::convertMaskedMemIntrinsics(Module &M) {
+  bool Changed = false;
+
+  for (Function &F : make_early_inc_range(M)) {
+    if (!F.isIntrinsic())
+      continue;
+    Intrinsic::ID IID = F.getIntrinsicID();
+    if (IID != Intrinsic::masked_gather && IID != Intrinsic::masked_scatter)
+      continue;
+
+    for (User *U : make_early_inc_range(F.users())) {
+      if (auto *II = dyn_cast<IntrinsicInst>(U))
+        Changed |= processMaskedMemIntrinsic(*II);
+    }
+
+    if (F.use_empty())
+      F.eraseFromParent();
+  }
+
+  return Changed;
+}
+
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
+
+  Changed |= convertMaskedMemIntrinsics(M);
 
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);

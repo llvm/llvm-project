@@ -78,10 +78,10 @@ public:
                            bool replace = false);
 
   /// Adds a concrete implementation dialect class.
-  /// Raises an exception if the mapping already exists.
+  /// Raises an exception if the mapping already exists and replace == false.
   /// This is intended to be called by implementation code.
   void registerDialectImpl(const std::string &dialectNamespace,
-                           nanobind::object pyClass);
+                           nanobind::object pyClass, bool replace = false);
 
   /// Adds a concrete implementation operation class.
   /// Raises an exception if the mapping already exists and replace == false.

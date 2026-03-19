@@ -159,7 +159,29 @@ private:
   SValBuilder &svalBuilder;
 
   unsigned int currStmtIdx = 0;
+
+  /// Pointer to a (so-called, somewhat misnamed) NodeBuilderContext object
+  /// which has three independent roles:
+  /// - It holds a pointer to the CFGBlock that is currently under analysis.
+  ///   (This is the primary way to get the current block.)
+  /// - It holds a pointer to the current LocationContext. (This is rarely
+  ///   used, the location context is usually queried from a recent
+  ///   ExplodedNode. Unfortunately it seems that these two sources of truth
+  ///   are not always consistent.)
+  /// - It can be used for constructing `NodeBuilder`s. Practically all
+  ///   `NodeBuilder` objects are useless complications in the code, so I
+  ///   intend to replace them with direct use of `CoreEngine::makeNode`.
+  /// TODO: Eventually `currBldrCtx` should be replaced by two separate fields:
+  /// `const CFGBlock *CurrBlock` & `const LocationContext *CurrLocationContext`
+  /// that are kept up-to-date and are almost always non-null during the
+  /// analysis. I will switch to this more natural representation when
+  /// `NodeBuilder`s are eliminated from the code.
   const NodeBuilderContext *currBldrCtx = nullptr;
+  /// Historically `currBldrCtx` pointed to a local variable in some stack
+  /// frame. This field is introduced as a temporary measure to allow a gradual
+  /// transition. Only use this in {re,}setLocationContextAndBlock!
+  /// TODO: Remove this temporary hack.
+  std::optional<NodeBuilderContext> OwnedCurrBldrCtx;
 
   /// Helper object to determine if an Objective-C message expression
   /// implicitly never returns.
@@ -216,7 +238,33 @@ public:
     return &CTU;
   }
 
-  const NodeBuilderContext &getBuilderContext() {
+  // FIXME: Ideally the body of this method should look like
+  //   CurrLocationContext = LC;
+  //   CurrBlock = B;
+  // where CurrLocationContext and CurrBlock are new member variables that
+  // fulfill the roles of `currBldrCtx` in a more natural way.
+  // This implementation is a temporary measure to allow a gradual transition.
+  void setCurrLocationContextAndBlock(const LocationContext *LC,
+                                      const CFGBlock *B) {
+    // The current LocationContext and Block is reset at the beginning of
+    // dispacthWorkItem. Ideally, this method should be called only once per
+    // dipatchWorkItem call (= elementary analysis step); so the following
+    // assertion is there to catch accidental repeated calls. If the current
+    // LocationContext and Block needs to change in the middle of a single step
+    // (which currently happens only once, in processCallExit), use an explicit
+    // call to resetCurrLocationContextAndBlock.
+    assert(!currBldrCtx && !OwnedCurrBldrCtx &&
+           "The current LocationContext and Block is already set");
+    OwnedCurrBldrCtx.emplace(Engine, B, LC);
+    currBldrCtx = &*OwnedCurrBldrCtx;
+  }
+
+  void resetCurrLocationContextAndBlock() {
+    currBldrCtx = nullptr;
+    OwnedCurrBldrCtx = std::nullopt;
+  }
+
+  const NodeBuilderContext &getBuilderContext() const {
     assert(currBldrCtx);
     return *currBldrCtx;
   }
@@ -226,9 +274,35 @@ public:
     return G.getRoot()->getLocation().getLocationContext();
   }
 
+  /// Get the 'current' location context corresponding to the current work item
+  /// (elementary analysis step handled by `dispatchWorkItem`).
+  /// FIXME: This sometimes (e.g. in some `BeginFunction` callbacks) differs
+  /// from the `LocationContext` that can be obtained from different sources
+  /// (e.g. a recent `ExplodedNode`). Traditionally this location context is
+  /// only used for block count calculations (`getNumVisited`); it is probably
+  /// wise to follow this tradition until the discrepancies are resolved.
+  const LocationContext *getCurrLocationContext() const {
+    return currBldrCtx ? currBldrCtx->getLocationContext() : nullptr;
+  }
+
+  /// Get the 'current' CFGBlock corresponding to the current work item
+  /// (elementary analysis step handled by `dispatchWorkItem`).
+  const CFGBlock *getCurrBlock() const {
+    return currBldrCtx ? currBldrCtx->getBlock() : nullptr;
+  }
+
   ConstCFGElementRef getCFGElementRef() const {
-    const CFGBlock *blockPtr = currBldrCtx ? currBldrCtx->getBlock() : nullptr;
-    return {blockPtr, currStmtIdx};
+    return {getCurrBlock(), currStmtIdx};
+  }
+
+  unsigned getNumVisited(const LocationContext *LC,
+                         const CFGBlock *Block) const {
+    return Engine.WList->getBlockCounter().getNumVisited(LC->getStackFrame(),
+                                                         Block->getBlockID());
+  }
+
+  unsigned getNumVisitedCurrent() const {
+    return getNumVisited(getCurrLocationContext(), getCurrBlock());
   }
 
   /// Dump graph to the specified filename.
@@ -293,7 +367,7 @@ public:
   /// processCFGElement - Called by CoreEngine. Used to generate new successor
   ///  nodes by processing the 'effects' of a CFG element.
   void processCFGElement(const CFGElement E, ExplodedNode *Pred,
-                         unsigned StmtIdx, NodeBuilderContext *Ctx);
+                         unsigned StmtIdx);
 
   void ProcessStmt(const Stmt *S, ExplodedNode *Pred);
 
@@ -320,35 +394,30 @@ public:
   void processCFGBlockEntrance(const BlockEdge &L, const BlockEntrance &BE,
                                NodeBuilder &Builder, ExplodedNode *Pred);
 
-  void runCheckersForBlockEntrance(const NodeBuilderContext &BldCtx,
-                                   const BlockEntrance &Entrance,
+  void runCheckersForBlockEntrance(const BlockEntrance &Entrance,
                                    ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// ProcessBranch - Called by CoreEngine. Used to generate successor nodes by
   /// processing the 'effects' of a branch condition. If the branch condition
   /// is a loop condition, IterationsCompletedInLoop is the number of completed
   /// iterations (otherwise it's std::nullopt).
-  void processBranch(const Stmt *Condition, NodeBuilderContext &BuilderCtx,
-                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
-                     const CFGBlock *DstT, const CFGBlock *DstF,
+  void processBranch(const Stmt *Condition, ExplodedNode *Pred,
+                     ExplodedNodeSet &Dst, const CFGBlock *DstT,
+                     const CFGBlock *DstF,
                      std::optional<unsigned> IterationsCompletedInLoop);
 
   /// Called by CoreEngine.
   /// Used to generate successor nodes for temporary destructors depending
   /// on whether the corresponding constructor was visited.
   void processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
-                                     NodeBuilderContext &BldCtx,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst,
                                      const CFGBlock *DstT,
                                      const CFGBlock *DstF);
 
   /// Called by CoreEngine.  Used to processing branching behavior
   /// at static initializers.
-  void processStaticInitializer(const DeclStmt *DS,
-                                NodeBuilderContext& BuilderCtx,
-                                ExplodedNode *Pred,
-                                ExplodedNodeSet &Dst,
-                                const CFGBlock *DstT,
+  void processStaticInitializer(const DeclStmt *DS, ExplodedNode *Pred,
+                                ExplodedNodeSet &Dst, const CFGBlock *DstT,
                                 const CFGBlock *DstF);
 
   /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
@@ -358,29 +427,23 @@ public:
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
-  void processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
-                     ExplodedNode *Pred, ExplodedNodeSet &Dst);
+  void processSwitch(const SwitchStmt *Switch, ExplodedNode *Pred,
+                     ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has begun. Called for both inlined and top-level functions.
-  void processBeginOfFunction(NodeBuilderContext &BC,
-                              ExplodedNode *Pred, ExplodedNodeSet &Dst,
+  void processBeginOfFunction(ExplodedNode *Pred, ExplodedNodeSet &Dst,
                               const BlockEdge &L);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has ended. Called for both inlined and top-level functions.
-  void processEndOfFunction(NodeBuilderContext& BC,
-                            ExplodedNode *Pred,
-                            const ReturnStmt *RS = nullptr);
+  void processEndOfFunction(ExplodedNode *Pred, const ReturnStmt *RS = nullptr);
 
   /// Remove dead bindings/symbols before exiting a function.
-  void removeDeadOnEndOfFunction(NodeBuilderContext& BC,
-                                 ExplodedNode *Pred,
-                                 ExplodedNodeSet &Dst);
+  void removeDeadOnEndOfFunction(ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// Generate the entry node of the callee.
-  void processCallEnter(NodeBuilderContext& BC, CallEnter CE,
-                        ExplodedNode *Pred);
+  void processCallEnter(CallEnter CE, ExplodedNode *Pred);
 
   /// Generate the sequence of nodes that simulate the call exit and the post
   /// visit for CallExpr.
@@ -706,9 +769,7 @@ public:
 
   /// Return the CFG element corresponding to the worklist element
   /// that is currently being processed by ExprEngine.
-  CFGElement getCurrentCFGElement() {
-    return (*currBldrCtx->getBlock())[currStmtIdx];
-  }
+  CFGElement getCurrentCFGElement() { return (*getCurrBlock())[currStmtIdx]; }
 
   /// Create a new state in which the call return value is binded to the
   /// call origin expression.
@@ -740,7 +801,7 @@ public:
   /// A multi-dimensional array is also a continuous memory location in a
   /// row major order, so for arr[0][0] Idx is 0 and for arr[3][3] Idx is 8.
   SVal computeObjectUnderConstruction(const Expr *E, ProgramStateRef State,
-                                      const NodeBuilderContext *BldrCtx,
+                                      unsigned NumVisitedCaller,
                                       const LocationContext *LCtx,
                                       const ConstructionContext *CC,
                                       EvalCallOptions &CallOpts,
@@ -762,8 +823,8 @@ public:
       const LocationContext *LCtx, const ConstructionContext *CC,
       EvalCallOptions &CallOpts, unsigned Idx = 0) {
 
-    SVal V = computeObjectUnderConstruction(E, State, BldrCtx, LCtx, CC,
-                                            CallOpts, Idx);
+    SVal V = computeObjectUnderConstruction(E, State, BldrCtx->blockCount(),
+                                            LCtx, CC, CallOpts, Idx);
     State = updateObjectsUnderConstruction(V, E, State, LCtx, CC, CallOpts);
 
     return std::make_pair(State, V);

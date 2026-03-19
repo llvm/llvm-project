@@ -46,6 +46,15 @@ public:
   bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B);
 };
 
+/// Template specialization of the standard LLVM post-dominator tree utility for
+/// VPBlockBases.
+class VPPostDominatorTree : public PostDomTreeBase<VPBlockBase> {
+  using Base = PostDomTreeBase<VPBlockBase>;
+
+public:
+  explicit VPPostDominatorTree(VPlan &Plan) { recalculate(Plan); }
+};
+
 using VPDomTreeNode = DomTreeNodeBase<VPBlockBase>;
 
 /// Template specializations of GraphTraits for VPDomTreeNode.
