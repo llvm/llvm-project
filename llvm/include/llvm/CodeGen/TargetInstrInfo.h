@@ -1664,6 +1664,10 @@ public:
     llvm_unreachable("target did not implement shouldClusterMemOps()");
   }
 
+  // GenericScheduler: Handle non COPY/immLoad physreg defs, and maintain
+  // input order if both are biased same way.
+  virtual bool biasPRegsExtra() const { return false; }
+
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
   virtual bool
