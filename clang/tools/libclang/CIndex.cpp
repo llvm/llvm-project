@@ -2362,6 +2362,11 @@ void OMPClauseEnqueue::VisitOMPSizesClause(const OMPSizesClause *C) {
     Visitor->AddStmt(E);
 }
 
+void OMPClauseEnqueue::VisitOMPCountsClause(const OMPCountsClause *C) {
+  for (auto E : C->getCountsRefs())
+    Visitor->AddStmt(E);
+}
+
 void OMPClauseEnqueue::VisitOMPPermutationClause(
     const OMPPermutationClause *C) {
   for (auto E : C->getArgsRefs())

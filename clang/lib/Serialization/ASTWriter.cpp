@@ -8070,6 +8070,13 @@ void OMPClauseWriter::VisitOMPSizesClause(OMPSizesClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPCountsClause(OMPCountsClause *C) {
+  Record.push_back(C->getNumCounts());
+  for (Expr *Count : C->getCountsRefs())
+    Record.AddStmt(Count);
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
 void OMPClauseWriter::VisitOMPPermutationClause(OMPPermutationClause *C) {
   Record.push_back(C->getNumLoops());
   for (Expr *Size : C->getArgsRefs())
