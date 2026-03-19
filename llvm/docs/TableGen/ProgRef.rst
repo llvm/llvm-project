@@ -923,7 +923,7 @@ statements within the scope of the ``let``.
    Let:  "let" `LetList` "in" "{" `Statement`* "}"
       :| "let" `LetList` "in" `Statement`
    LetList: `LetItem` ("," `LetItem`)*
-   LetItem: [`LetMode`] `TokIdentifier` ["<" `RangeList` ">"] "=" `Value`
+   LetItem: [`LetMode`] `TokIdentifier` ["{" `RangeList` "}"] "=" `Value`
 
 The ``let`` statement establishes a scope, which is a sequence of statements
 in braces or a single statement with no braces. The bindings in the
