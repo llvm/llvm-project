@@ -2014,11 +2014,22 @@ static bool generateMulExtendedInst(const SPIRV::IncomingCall *Call,
   if (!RetType || RetType->getOpcode() != SPIRV::OpTypeStruct)
     report_fatal_error("Expected struct type result for the extended "
                        "multiplication builtins");
+  if (RetType->getNumOperands() != 3)
+    report_fatal_error("Expected struct with exactly two members for the "
+                       "extended multiplication builtins");
+  SPIRVTypeInst Member0Type =
+      GR->getSPIRVTypeForVReg(RetType->getOperand(1).getReg());
+  SPIRVTypeInst Member1Type =
+      GR->getSPIRVTypeForVReg(RetType->getOperand(2).getReg());
+  if (!Member0Type || !Member1Type || Member0Type != Member1Type)
+    report_fatal_error("Both struct members must be the same type");
 
   SPIRVTypeInst OpType1 = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
   SPIRVTypeInst OpType2 = GR->getSPIRVTypeForVReg(Call->Arguments[1]);
   if (!OpType1 || !OpType2 || OpType1 != OpType2)
     report_fatal_error("Operands must have the same type");
+  if (OpType1 != Member0Type)
+    report_fatal_error("Operand type must match the struct member type");
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   Register ResReg = Call->ReturnRegister;
