@@ -906,26 +906,23 @@ multiclass TLBITableBase {
 defm TLBI  : TLBITableBase;
 defm TLBIP : TLBITableBase;
 
-multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn, bits<4> crm,
-             bits<3> op2, RegValue reguse> {
-  def : TLBIEntry<name, op1, crn, crm, op2, reguse>;
-  def : TLBIEntry<!strconcat(name, "nXS"), op1, crn, crm, op2, reguse> {
-    let Encoding{7} = 1;
-    let ExtraRequires = ["AArch64::FeatureXS"];
-  }
-  if !eq(hasTLBIP, true) then {
-    def : TLBIPEntry<name, op1, crn, crm, op2, reguse> {
-      let ExtraRequires = ["AArch64::FeatureD128"];
-    }
-    def : TLBIPEntry<!strconcat(name, "nXS"), op1, crn, crm, op2, reguse> {
-      let Encoding{7} = 1;
-      let ExtraRequires = ["AArch64::FeatureD128"];
+multiclass TLBI_Base<string name, bits<3> op1, bits<4> crn, bits<4> crm,
+                     bits<3> op2, RegUse reguse,
+                     list<string> extra_requires = []> {
+  foreach nxs = [0, 1] in {
+    defvar VariantName = !if(nxs, !strconcat(name, "nXS"), name);
+    defvar VariantRequires = !if(nxs,
+                                 extra_requires # ["AArch64::FeatureXS"],
+                                 extra_requires);
+    def : TLBIEntry<VariantName, op1, crn, crm, op2, reguse> {
+      let Encoding{7} = nxs;
+      let ExtraRequires = VariantRequires;
     }
   }
 }
 
 multiclass TLBIP_Base<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-                      bits<3> op2, int reguse = REG_REQUIRED,
+                      bits<3> op2, SysAliasRegUse reguse = REG_REQUIRED,
                       list<string> extra_requires = ["AArch64::FeatureD128"]> {
   foreach nxs = [0, 1] in {
     // TLBIP instructions aren't gated by FeatureXS like TLBI ones
@@ -939,20 +936,45 @@ multiclass TLBIP_Base<string name, bits<3> op1, bits<4> crn, bits<4> crm,
 
 multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn,
                 bits<4> crm, bits<3> op2, int reguse = REG_REQUIRED> {
-  defm : TLBI_Base<name, op1, crn, crm, op2, reguse>;
+  foreach nxs = [0, 1] in {
+    defvar VariantName = !if(nxs, !strconcat(name, "nXS"), name);
+    def : TLBIEntry<VariantName, op1, crn, crm, op2, reguse> {
+      let Encoding{7} = nxs;
+      let ExtraRequires = !if(nxs, ["AArch64::FeatureXS"], []);
+    }
+  }
+
   if !eq(hasTLBIP, true) then {
-    defm : TLBIP_Base<name, op1, crn, crm, op2, reguse>;
+    foreach nxs = [0, 1] in {
+      defvar VariantName = !if(nxs, !strconcat(name, "nXS"), name);
+      def : TLBIPEntry<VariantName, op1, crn, crm, op2, reguse> {
+        let Encoding{7} = nxs;
+        let Requires = ["AArch64::FeatureD128"];
+      }
+    }
   }
 }
 
 multiclass TLBI_RMI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn,
                     bits<4> crm, bits<3> op2, int reguse = REG_REQUIRED> {
-  let Requires = ["AArch64::FeatureTLB_RMI"] in {
-    defm : TLBI_Base<name, op1, crn, crm, op2, reguse>;
+  foreach nxs = [0, 1] in {
+    defvar VariantName = !if(nxs, !strconcat(name, "nXS"), name);
+    def : TLBIEntry<VariantName, op1, crn, crm, op2, reguse> {
+      let Encoding{7} = nxs;
+      let Requires = !if(nxs,
+                         ["AArch64::FeatureTLB_RMI", "AArch64::FeatureXS"],
+                         ["AArch64::FeatureTLB_RMI"]);
+    }
   }
-  // TLBIP instructions aren't gated by FeatureTLB_RMI
+
   if !eq(hasTLBIP, true) then {
-    defm : TLBIP_Base<name, op1, crn, crm, op2, reguse>;
+    foreach nxs = [0, 1] in {
+      defvar VariantName = !if(nxs, !strconcat(name, "nXS"), name);
+      def : TLBIPEntry<VariantName, op1, crn, crm, op2, reguse> {
+        let Encoding{7} = nxs;
+        let Requires = ["AArch64::FeatureD128"];
+      }
+    }
   }
 }
 
@@ -1046,19 +1068,19 @@ defm : TLBI_RMI<"RVALE3OS",     1, 0b110, 0b1000, 0b0101, 0b101, REG_REQUIRED>;
 
 // Armv9-A Realm Management Extension TLBI Instructions
 let Requires = ["AArch64::FeatureRME"] in {
-//                                 op1    CRn     CRm     op2    reguse
-defm : TLBI_Base<"RPAOS",          0b110, 0b1000, 0b0100, 0b011, REG_REQUIRED>;
-defm : TLBI_Base<"RPALOS",         0b110, 0b1000, 0b0100, 0b111, REG_REQUIRED>;
-defm : TLBI_Base<"PAALLOS",        0b110, 0b1000, 0b0001, 0b100, REG_NONE>;
-defm : TLBI_Base<"PAALL",          0b110, 0b1000, 0b0111, 0b100, REG_NONE>;
+//                   hasTLBIP  op1    CRn     CRm     op2    reguse
+defm : TLBI<"RPAOS",        0, 0b110, 0b1000, 0b0100, 0b011, REG_REQUIRED>;
+defm : TLBI<"RPALOS",       0, 0b110, 0b1000, 0b0100, 0b111, REG_REQUIRED>;
+defm : TLBI<"PAALLOS",      0, 0b110, 0b1000, 0b0001, 0b100, REG_NONE>;
+defm : TLBI<"PAALL",        0, 0b110, 0b1000, 0b0111, 0b100, REG_NONE>;
 }
 
 // Armv9.5-A TLBI VMALL for Dirty State
 let Requires = ["AArch64::FeatureTLBIW"] in {
-//                                 op1    CRn     CRm     op2    reguse
-defm : TLBI_Base<"VMALLWS2E1",     0b100, 0b1000, 0b0110, 0b010, REG_NONE>;
-defm : TLBI_Base<"VMALLWS2E1IS",   0b100, 0b1000, 0b0010, 0b010, REG_OPTIONAL>;
-defm : TLBI_Base<"VMALLWS2E1OS",   0b100, 0b1000, 0b0101, 0b010, REG_OPTIONAL>;
+//                   hasTLBIP  op1    CRn     CRm     op2    reguse
+defm : TLBI<"VMALLWS2E1",   0, 0b100, 0b1000, 0b0110, 0b010, REG_NONE>;
+defm : TLBI<"VMALLWS2E1IS", 0, 0b100, 0b1000, 0b0010, 0b010, REG_OPTIONAL>;
+defm : TLBI<"VMALLWS2E1OS", 0, 0b100, 0b1000, 0b0101, 0b010, REG_OPTIONAL>;
 }
 
 //===----------------------------------------------------------------------===//
