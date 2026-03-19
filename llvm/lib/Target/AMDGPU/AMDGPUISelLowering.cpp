@@ -3910,11 +3910,10 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
     // For f16 conversion with sub-i16 saturation perform saturation
     // at i16, if available in the target. This removes the need for extra f16
     // to f32 conversion. For all the others use i32.
-    MVT ResultVT;
-    if (Subtarget->has16BitInsts() && SrcVT == MVT::f16 && SatWidth < 16)
-      ResultVT = MVT::i16;
-    else
-      ResultVT = MVT::i32;
+    MVT ResultVT =
+        Subtarget->has16BitInsts() && SrcVT == MVT::f16 && SatWidth < 16
+            ? MVT::i16
+            : MVT::i32;
 
     const SDValue ResultVTOp = DAG.getValueType(ResultVT);
     const uint64_t ResultWidth = ResultVT.getScalarSizeInBits();
