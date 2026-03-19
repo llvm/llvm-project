@@ -723,7 +723,7 @@ static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
   if (isa<cir::RecordType>(oldTy))
     newPtrTy = cir::PointerType::get(newTy);
   else if (isa<cir::ArrayType>(oldTy))
-    newPtrTy = dyn_cast<cir::PointerType>(attr.getType());
+    newPtrTy = cast<cir::PointerType>(attr.getType());
 
   if (newPtrTy)
     return bld.getGlobalViewAttr(newPtrTy, newGlob, newInds);
@@ -735,7 +735,7 @@ static cir::GlobalViewAttr createNewGlobalView(CIRGenModule &cgm,
 }
 
 static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
-                                       mlir::Type oldTy, cir::GlobalOp user,
+                                       mlir::Type oldTy,
                                        mlir::Attribute oldInit) {
   if (auto oldView = mlir::dyn_cast<cir::GlobalViewAttr>(oldInit))
     return createNewGlobalView(cgm, newGlob, oldView, oldTy);
@@ -747,7 +747,7 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
       if (auto view = mlir::dyn_cast<cir::GlobalViewAttr>(elt))
         newElements.push_back(createNewGlobalView(cgm, newGlob, view, oldTy));
       else if (mlir::isa<cir::ConstArrayAttr, cir::ConstRecordAttr>(elt))
-        newElements.push_back(getNewInitValue(cgm, newGlob, oldTy, user, elt));
+        newElements.push_back(getNewInitValue(cgm, newGlob, oldTy, elt));
       else
         newElements.push_back(elt);
     }
@@ -756,7 +756,7 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
 
   if (auto oldArray = mlir::dyn_cast<cir::ConstArrayAttr>(oldInit)) {
     mlir::Attribute newElements =
-        getNewInitElements(mlir::dyn_cast<mlir::ArrayAttr>(oldArray.getElts()));
+        getNewInitElements(mlir::cast<mlir::ArrayAttr>(oldArray.getElts()));
     return cgm.getBuilder().getConstArray(
         newElements, mlir::cast<cir::ArrayType>(oldArray.getType()));
   }
@@ -808,18 +808,17 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
       useOpResultValue.replaceAllUsesExcept(cast, cast.getDefiningOp());
     } else if (auto glob = dyn_cast<cir::GlobalOp>(userOp)) {
       if (auto init = glob.getInitialValue()) {
-        mlir::Attribute nw =
-            getNewInitValue(*this, newGV, oldTy, glob, init.value());
+        mlir::Attribute nw = getNewInitValue(*this, newGV, oldTy, init.value());
         glob.setInitialValueAttr(nw);
       }
     } else if (auto c = dyn_cast<cir::ConstantOp>(userOp)) {
-      mlir::Attribute init =
-          getNewInitValue(*this, newGV, oldTy, newGV, c.getValue());
+      mlir::Attribute init = getNewInitValue(*this, newGV, oldTy, c.getValue());
       auto typedAttr = mlir::cast<mlir::TypedAttr>(init);
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointAfter(c);
       auto newUser = cir::ConstantOp::create(builder, c.getLoc(), typedAttr);
       c.replaceAllUsesWith(newUser.getOperation());
+      c.erase();
     }
   }
 
