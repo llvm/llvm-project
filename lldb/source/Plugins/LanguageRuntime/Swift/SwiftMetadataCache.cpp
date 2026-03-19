@@ -60,8 +60,9 @@ void SwiftMetadataCache::registerModuleWithReflectionInfoID(ModuleSP module,
 
   // Nothing cached.
   if (!mem_buffer_up) {
-    LLDB_LOGV(log, "[SwiftMetadataCache] No cached file found for module {0}.",
-              module->GetFileSpec().GetFilename());
+    LLDB_LOG_VERBOSE(
+        log, "[SwiftMetadataCache] No cached file found for module {0}.",
+        module->GetFileSpec().GetFilename());
     return;
   }
 
@@ -103,8 +104,8 @@ void SwiftMetadataCache::registerModuleWithReflectionInfoID(ModuleSP module,
   auto UUID = module->GetUUID().GetBytes();
   // If the UUIDs don't match this is most likely a stale cache.
   if (cached_UUID != UUID) {
-    LLDB_LOGV(log, "[SwiftMetadataCache] Module UUID mismatch for {0}.",
-              module->GetFileSpec().GetFilename());
+    LLDB_LOG_VERBOSE(log, "[SwiftMetadataCache] Module UUID mismatch for {0}.",
+                     module->GetFileSpec().GetFilename());
     m_data_file_cache->RemoveCacheFile(module_name);
     return;
   }
@@ -116,10 +117,10 @@ void SwiftMetadataCache::registerModuleWithReflectionInfoID(ModuleSP module,
   // The offset of the hash table control structure, which follows the payload.
   uint32_t table_control_offset = 0;
   if (!header_extractor.GetU32(&read_offset, &table_control_offset, 1)) {
-    LLDB_LOGV(log,
-              "[SwiftMetadataCache] Failed to read table offset for "
-              "module {0}.",
-              module->GetFileSpec().GetFilename());
+    LLDB_LOG_VERBOSE(log,
+                     "[SwiftMetadataCache] Failed to read table offset for "
+                     "module {0}.",
+                     module->GetFileSpec().GetFilename());
     m_data_file_cache->RemoveCacheFile(module_name);
     return;
   }
@@ -134,8 +135,8 @@ void SwiftMetadataCache::registerModuleWithReflectionInfoID(ModuleSP module,
       llvm::OnDiskChainedHashTable<TypeRefInfo>::Create(
           table_control, table_contents, m_info));
 
-  LLDB_LOGV(log, "[SwiftMetadataCache] Loaded cache for module {0}.",
-            module->GetFileSpec().GetFilename());
+  LLDB_LOG_VERBOSE(log, "[SwiftMetadataCache] Loaded cache for module {0}.",
+                   module->GetFileSpec().GetFilename());
 }
 
 static bool areMangledNamesAndFieldSectionSameSize(
@@ -195,8 +196,9 @@ void SwiftMetadataCache::cacheFieldDescriptors(
 
   auto it = m_reflection_info_to_module.find(info_id);
   if (it == m_reflection_info_to_module.end()) {
-    LLDB_LOGV(log, "[SwiftMetadataCache] No module found with module id {0}.",
-              info_id);
+    LLDB_LOG_VERBOSE(log,
+                     "[SwiftMetadataCache] No module found with module id {0}.",
+                     info_id);
     return;
   }
 
@@ -231,8 +233,9 @@ void SwiftMetadataCache::cacheFieldDescriptors(
   auto filename = getTyperefCacheFileNameForModule(module);
 
   m_data_file_cache->SetCachedData(filename, encoder.GetData());
-  LLDB_LOGV(log, "[SwiftMetadataCache] Cache file written for module {0}.",
-            module->GetFileSpec().GetFilename());
+  LLDB_LOG_VERBOSE(log,
+                   "[SwiftMetadataCache] Cache file written for module {0}.",
+                   module->GetFileSpec().GetFilename());
 }
 
 std::optional<swift::remote::FieldDescriptorLocator>
@@ -248,10 +251,11 @@ SwiftMetadataCache::getFieldDescriptorLocator(const std::string &Name) {
       continue;
     auto it = cache_hash_table->find_hashed(Name, hash, &m_info);
     if (it != cache_hash_table->end()) {
-      LLDB_LOGV(log,
-                "[SwiftMetadataCache] Returning field descriptor for mangled "
-                "name {0}",
-                Name);
+      LLDB_LOG_VERBOSE(
+          log,
+          "[SwiftMetadataCache] Returning field descriptor for mangled "
+          "name {0}",
+          Name);
       auto info_id = pair.first;
       return {{info_id, *it}};
     }

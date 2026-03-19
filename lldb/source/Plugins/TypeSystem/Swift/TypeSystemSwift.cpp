@@ -91,16 +91,16 @@ bool TypeSystemSwift::CheckFlagInCU(CompileUnit *cu, const char *flag) {
       return false;
     std::string value;
     if (sym_file->GetCompileOption(flag, value, cu)) {
-      LLDB_LOGV(GetLog(LLDBLog::Types),
-                "[CheckFlagInCU] Found flag {0} in CU: {1}", flag,
-                cu->GetPrimaryFile().GetFilename().AsCString());
+      LLDB_LOG_VERBOSE(GetLog(LLDBLog::Types),
+                       "[CheckFlagInCU] Found flag {0} in CU: {1}", flag,
+                       cu->GetPrimaryFile().GetFilename().AsCString());
       return true;
     }
   }
   }
-  LLDB_LOGV(GetLog(LLDBLog::Types),
-            "[CheckFlagInCU] Did not find flag {0} in CU: {1}", flag,
-            cu->GetPrimaryFile().GetFilename().AsCString());
+  LLDB_LOG_VERBOSE(GetLog(LLDBLog::Types),
+                   "[CheckFlagInCU] Did not find flag {0} in CU: {1}", flag,
+                   cu->GetPrimaryFile().GetFilename().AsCString());
   return false;
 }
 

@@ -869,8 +869,8 @@ ExtractSwiftTypeNameFromCxxInteropType(CompilerType type) {
   auto *record_type =
       llvm::dyn_cast_or_null<clang::RecordType>(qual_type.getTypePtrOrNull());
   if (!record_type) {
-    LLDB_LOGV(log, "[ExtractSwiftTypeFromCxxInteropType] "
-                   "Type is not a record type.");
+    LLDB_LOG_VERBOSE(log, "[ExtractSwiftTypeFromCxxInteropType] "
+                          "Type is not a record type.");
     return {};
   }
 
@@ -1129,8 +1129,8 @@ SwiftLanguage::GetHardcodedSynthetics() {
       llvm::StringRef swift_type_name =
           ExtractSwiftTypeNameFromCxxInteropType(type);
       if (swift_type_name.empty()) {
-        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
-                       "Did not find Swift type.");
+        LLDB_LOG_VERBOSE(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                              "Did not find Swift type.");
         return nullptr;
       }
 
@@ -1138,23 +1138,23 @@ SwiftLanguage::GetHardcodedSynthetics() {
       ProcessSP process_sp(valobj.GetProcessSP());
       auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
       if (!swift_runtime)
-        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
-                       "Could not get the swift runtime.");
+        LLDB_LOG_VERBOSE(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                              "Could not get the swift runtime.");
 
       auto ts = TypeSystemSwiftTypeRefForExpressions::GetForTarget(
           valobj.GetTargetSP());
       if (!ts) {
-        LLDB_LOGV(log, "[Matching CxxBridgedSyntheticChildProvider] - "
-                       "Could not get the Swift scratch context.");
+        LLDB_LOG_VERBOSE(log, "[Matching CxxBridgedSyntheticChildProvider] - "
+                              "Could not get the Swift scratch context.");
         return nullptr;
       }
       CompilerType swift_type = ExtractSwiftTypeFromCxxInteropTypeName(
           type, swift_type_name, *ts, *swift_runtime);
       if (!swift_type) {
-        LLDB_LOGV(log,
-                  "[Matching CxxBridgedSyntheticChildProvider] - "
-                  "Did not find Swift type for type name \"{0}\".",
-                  swift_type_name);
+        LLDB_LOG_VERBOSE(log,
+                         "[Matching CxxBridgedSyntheticChildProvider] - "
+                         "Did not find Swift type for type name \"{0}\".",
+                         swift_type_name);
         return nullptr;
       }
 
@@ -1270,14 +1270,14 @@ SwiftLanguage::GetHardcodedSynthetics() {
           TypeSystemClang::GetQualType(original_type.GetOpaqueQualType());
       auto *decl = qual_type->getAsCXXRecordDecl();
       if (!decl) {
-        LLDB_LOGV(log, "[Matching Clang imported type] - "
-                       "Could not get decl from clang type");
+        LLDB_LOG_VERBOSE(log, "[Matching Clang imported type] - "
+                              "Could not get decl from clang type");
         return nullptr;
       }
       auto casted = valobj.Cast(original_type);
       if (!casted) {
-        LLDB_LOGV(log, "[Matching Clang imported type] - "
-                       "Could not cast value object to clang type");
+        LLDB_LOG_VERBOSE(log, "[Matching Clang imported type] - "
+                              "Could not cast value object to clang type");
         return nullptr;
       }
 

@@ -2517,8 +2517,9 @@ SymbolContext TypeSystemSwiftTypeRef::GetSymbolContext(
 SwiftASTContextSP
 TypeSystemSwiftTypeRef::GetSwiftASTContext(const SymbolContext &sc) const {
   if (!sc.module_sp) {
-    LLDB_LOGV(GetLog(LLDBLog::Types),
-              "Cannot create a SwiftASTContext without an execution context");
+    LLDB_LOG_VERBOSE(
+        GetLog(LLDBLog::Types),
+        "Cannot create a SwiftASTContext without an execution context");
     return nullptr;
   }
 
@@ -2547,8 +2548,9 @@ TypeSystemSwiftTypeRef::GetSwiftASTContext(const SymbolContext &sc) const {
 SwiftASTContextSP TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext(
     const SymbolContext &sc) const {
   if (!sc.module_sp) {
-    LLDB_LOGV(GetLog(LLDBLog::Types),
-              "Cannot create a SwiftASTContext without an execution context");
+    LLDB_LOG_VERBOSE(
+        GetLog(LLDBLog::Types),
+        "Cannot create a SwiftASTContext without an execution context");
     return nullptr;
   }
 
