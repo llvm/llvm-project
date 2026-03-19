@@ -19,5 +19,5 @@
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_signbit.h"
 
-#define __CLC_BODY <clc_ep.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_ep.inc"
+#include "clc/math/gentype.inc"

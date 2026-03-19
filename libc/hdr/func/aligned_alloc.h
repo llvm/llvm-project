@@ -11,11 +11,7 @@
 
 #ifdef LIBC_FULL_BUILD
 #include "hdr/types/size_t.h"
-#ifdef __cplusplus
-extern "C" void *aligned_alloc(size_t, size_t) noexcept;
-#else
 extern "C" void *aligned_alloc(size_t, size_t);
-#endif
 
 #else // Overlay mode
 
