@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc64le-linux-gnu -S -O0 -o - %s -target-feature +altivec -target-feature +isa-v207-instructions -target-feature +vsx -target-feature +power8-vector | FileCheck %s -check-prefix=CHECK -check-prefix=VSX
+// RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc64le-linux-gnu -S -O0 -o - %s -target-feature +isa-v207-instructions -target-feature +power8-vector | FileCheck %s -check-prefix=CHECK -check-prefix=VSX
 // RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc-linux-gnu -S -O0 -o - %s -target-feature +altivec -target-feature +isa-v207-instructions -target-feature -vsx | FileCheck %s
 
 // REQUIRES: powerpc-registered-target

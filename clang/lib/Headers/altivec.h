@@ -17879,8 +17879,8 @@ vec_xl_be(signed long long  __offset, const unsigned __int128 *__ptr) {
 }
 #endif
 #endif // __VSX__
-#else // ! __LITTLE_ENDIAN__
-  #define vec_xl_be vec_xl
+#else  // ! __LITTLE_ENDIAN__
+#define vec_xl_be vec_xl
 #endif
 
 #if defined(__POWER10_VECTOR__) && defined(__VSX__) &&                         \
@@ -18220,8 +18220,8 @@ static __inline__ void __ATTRS_o_ai vec_xst_be(vector unsigned __int128 __vec,
 }
 #endif
 #endif // VSX
-#else // ! __LITTLE_ENDIAN__
-  #define vec_xst_be vec_xst
+#else  // ! __LITTLE_ENDIAN__
+#define vec_xst_be vec_xst
 #endif
 
 #ifdef __POWER9_VECTOR__

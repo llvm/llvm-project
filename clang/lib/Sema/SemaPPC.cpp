@@ -120,14 +120,14 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)
            << TheCall->getSourceRange();
 
-  // Check if the builtin requires specific target features
+  // Check if the builtin requires specific target features.
   StringRef FeatureList(Context.BuiltinInfo.getRequiredFeatures(BuiltinID));
   if (!FeatureList.empty()) {
     const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
     llvm::StringMap<bool> CallerFeatureMap;
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
     if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
-                                                  CallerFeatureMap)) {
+                                                 CallerFeatureMap)) {
       // Get the builtin name from the CallExpr's callee
       const FunctionDecl *BuiltinDecl = TheCall->getDirectCallee();
       Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)

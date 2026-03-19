@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +altivec -target-feature +vsx -target-feature +power8-vector -target-feature +isa-v207-instructions -fsyntax-only -verify=expected,nonaix -std=c++11 -DTEST_VSX %s
+// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +power8-vector -target-feature +isa-v207-instructions -fsyntax-only -verify=expected,nonaix -std=c++11 -DTEST_VSX %s
 // RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature +altivec -fsyntax-only -verify=expected,novsx -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +vsx -target-feature +power8-vector -target-feature +isa-v207-instructions -target-cpu pwr7 -fsyntax-only -verify=expected,nonaix -std=c++11 -DTEST_VSX %s
+// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +power8-vector -target-feature +isa-v207-instructions -target-cpu pwr7 -fsyntax-only -verify=expected,nonaix -std=c++11 -DTEST_VSX %s
 // RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature -vsx -target-cpu pwr7 -fsyntax-only -verify=expected,novsx -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc-ibm-aix -target-feature +altivec -target-feature +power8-vector -target-feature +isa-v207-instructions -fsyntax-only -verify=expected,aix -std=c++11 -DTEST_VSX %s
-// RUN: %clang_cc1 -triple=powerpc64-ibm-aix -target-feature +altivec -target-feature +power8-vector -target-feature +isa-v207-instructions -fsyntax-only -verify=expected,aix -std=c++11 -DTEST_VSX %s
+// RUN: %clang_cc1 -triple=powerpc-ibm-aix -target-feature +power8-vector -target-feature +isa-v207-instructions -fsyntax-only -verify=expected,aix -std=c++11 -DTEST_VSX %s
+// RUN: %clang_cc1 -triple=powerpc64-ibm-aix -target-feature +power8-vector -target-feature +isa-v207-instructions -fsyntax-only -verify=expected,aix -std=c++11 -DTEST_VSX %s
 
 #ifdef TEST_VSX
 #include <altivec.h>
