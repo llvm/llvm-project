@@ -3739,7 +3739,8 @@ static MachineSDNode *buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
 
 static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
                                          llvm::SelectionDAG *CurDAG,
-                                         const SDLoc &DL) {
+                                         const SDLoc &DL,
+                                         const GCNSubtarget *Subtarget) {
   SmallVector<SDValue, 8> PackedElts;
   assert("unhandled Reg sequence size" &&
          (Elts.size() == 8 || Elts.size() == 16));
@@ -3752,6 +3753,26 @@ static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
     if (isExtractHiElt(Elts[i + 1], HiSrc) && LoSrc == HiSrc) {
       PackedElts.push_back(HiSrc);
     } else {
+      if (Subtarget->useRealTrue16Insts()) {
+        // FIXME-TRUE16. use reg_sequence to replace v_perm_b32
+        // Currently packing VGPR_32 for 16-bit source before passing to
+        // v_perm_b32
+        SDValue Undef = SDValue(
+            CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i16),
+            0);
+        SDValue Ops[] = {
+            CurDAG->getTargetConstant(AMDGPU::VGPR_32RegClassID, DL, MVT::i32),
+            Elts[i], CurDAG->getTargetConstant(AMDGPU::lo16, DL, MVT::i16),
+            Undef, CurDAG->getTargetConstant(AMDGPU::hi16, DL, MVT::i16)};
+
+        Elts[i] = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                                 MVT::i32, Ops),
+                          0);
+        Ops[1] = Elts[i + 1];
+        Elts[i + 1] = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE,
+                                                     DL, MVT::i32, Ops),
+                              0);
+      }
       SDValue PackLoLo = CurDAG->getTargetConstant(0x05040100, DL, MVT::i32);
       MachineSDNode *Packed =
           CurDAG->getMachineNode(AMDGPU::V_PERM_B32_e64, DL, MVT::i32,
@@ -3759,15 +3780,15 @@ static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
       PackedElts.push_back(SDValue(Packed, 0));
     }
   }
-
   return buildRegSequence32(PackedElts, CurDAG, DL);
 }
 
 static MachineSDNode *buildRegSequence(SmallVectorImpl<SDValue> &Elts,
                                        llvm::SelectionDAG *CurDAG,
-                                       const SDLoc &DL, unsigned ElementSize) {
+                                       const SDLoc &DL, unsigned ElementSize,
+                                       const GCNSubtarget *Subtarget) {
   if (ElementSize == 16)
-    return buildRegSequence16(Elts, CurDAG, DL);
+    return buildRegSequence16(Elts, CurDAG, DL, Subtarget);
   if (ElementSize == 32)
     return buildRegSequence32(Elts, CurDAG, DL);
   llvm_unreachable("Unhandled element size");
@@ -3776,7 +3797,8 @@ static MachineSDNode *buildRegSequence(SmallVectorImpl<SDValue> &Elts,
 static void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
                                  SmallVectorImpl<SDValue> &Elts, SDValue &Src,
                                  llvm::SelectionDAG *CurDAG, const SDLoc &DL,
-                                 unsigned ElementSize) {
+                                 unsigned ElementSize,
+                                 const GCNSubtarget *Subtarget) {
   if (ModOpcode == ISD::FNEG) {
     Mods |= SISrcMods::NEG;
     // Check if all elements also have abs modifier
@@ -3788,17 +3810,20 @@ static void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
     }
     if (Elts.size() != NegAbsElts.size()) {
       // Neg
-      Src = SDValue(buildRegSequence(Elts, CurDAG, DL, ElementSize), 0);
+      Src = SDValue(buildRegSequence(Elts, CurDAG, DL, ElementSize, Subtarget),
+                    0);
     } else {
       // Neg and Abs
       Mods |= SISrcMods::NEG_HI;
-      Src = SDValue(buildRegSequence(NegAbsElts, CurDAG, DL, ElementSize), 0);
+      Src = SDValue(
+          buildRegSequence(NegAbsElts, CurDAG, DL, ElementSize, Subtarget), 0);
     }
   } else {
     assert(ModOpcode == ISD::FABS);
     // Abs
     Mods |= SISrcMods::NEG_HI;
-    Src = SDValue(buildRegSequence(Elts, CurDAG, DL, ElementSize), 0);
+    Src =
+        SDValue(buildRegSequence(Elts, CurDAG, DL, ElementSize, Subtarget), 0);
   }
 }
 
@@ -3837,7 +3862,8 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16Neg(SDValue In, SDValue &Src,
 
     // All elements have neg modifier
     if (BV->getNumOperands() * 2 == EltsF16.size()) {
-      Src = SDValue(buildRegSequence16(EltsF16, CurDAG, SDLoc(In)), 0);
+      Src =
+          SDValue(buildRegSequence16(EltsF16, CurDAG, SDLoc(In), Subtarget), 0);
       Mods |= SISrcMods::NEG;
       Mods |= SISrcMods::NEG_HI;
     }
@@ -3887,8 +3913,8 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16NegAbs(SDValue In, SDValue &Src,
 
     // All elements have ModOpcode modifier
     if (BV->getNumOperands() * 2 == EltsF16.size())
-      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF16, Src, CurDAG, SDLoc(In),
-                           16);
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF16, Src, CurDAG, SDLoc(In), 16,
+                           Subtarget);
   }
 
   // mods are on v2f16 elements
@@ -3908,7 +3934,7 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16NegAbs(SDValue In, SDValue &Src,
     // All elements have ModOpcode modifier
     if (BV->getNumOperands() == EltsV2F16.size())
       selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, CurDAG, SDLoc(In),
-                           32);
+                           32, Subtarget);
   }
 
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
@@ -3936,8 +3962,8 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
 
     // All elements had ModOpcode modifier
     if (BV->getNumOperands() == EltsF32.size())
-      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF32, Src, CurDAG, SDLoc(In),
-                           32);
+      selectWMMAModsNegAbs(ModOpcode, Mods, EltsF32, Src, CurDAG, SDLoc(In), 32,
+                           Subtarget);
   }
 
   SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
