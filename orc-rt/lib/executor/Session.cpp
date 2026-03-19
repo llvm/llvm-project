@@ -16,13 +16,19 @@ namespace orc_rt {
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
+Session::Session(ExecutorProcessInfo EPI,
+                 std::unique_ptr<TaskDispatcher> Dispatcher,
+                 ErrorReporterFn ReportError)
+    : EPI(std::move(EPI)), Dispatcher(std::move(Dispatcher)),
+      ReportError(std::move(ReportError)) {}
+
 Session::~Session() { waitForShutdown(); }
 
 void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
   assert(OnShutdownComplete && "OnShutdownComplete must be set");
 
   // Safe to call concurrently / redundantly.
-  detachFromController();
+  detach();
 
   {
     std::scoped_lock<std::mutex> Lock(M);
@@ -40,7 +46,7 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
       // callbacks, then call shutdownNext below (outside the lock).
       SI = std::make_unique<ShutdownInfo>();
       SI->OnCompletes.push_back(std::move(OnShutdownComplete));
-      std::swap(SI->ResourceMgrs, ResourceMgrs);
+      std::swap(SI->Services, Services);
     }
   }
 
@@ -53,7 +59,7 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
   // OnShutdownComplete is _not_ set (i.e. was moved into the list of pending
   // handlers), and we didn't return under the lock above, so we must be
   // responsible for the shutdown. Call shutdownNext.
-  shutdownNext(Error::success());
+  shutdownNext();
 }
 
 void Session::waitForShutdown() {
@@ -63,13 +69,7 @@ void Session::waitForShutdown() {
   F.get();
 }
 
-void Session::addResourceManager(std::unique_ptr<ResourceManager> RM) {
-  std::scoped_lock<std::mutex> Lock(M);
-  assert(!SI && "addResourceManager called after shutdown");
-  ResourceMgrs.push_back(std::move(RM));
-}
-
-void Session::setController(std::shared_ptr<ControllerAccess> CA) {
+void Session::attach(std::shared_ptr<ControllerAccess> CA) {
   assert(CA && "Cannot attach null controller");
   std::scoped_lock<std::mutex> Lock(M);
   assert(!this->CA && "Cannot re-attach controller");
@@ -77,24 +77,21 @@ void Session::setController(std::shared_ptr<ControllerAccess> CA) {
   this->CA = std::move(CA);
 }
 
-void Session::detachFromController() {
+void Session::detach() {
   if (auto TmpCA = CA) {
     TmpCA->doDisconnect();
     CA = nullptr;
   }
 }
 
-void Session::shutdownNext(Error Err) {
-  if (Err)
-    reportError(std::move(Err));
-
-  if (SI->ResourceMgrs.empty())
+void Session::shutdownNext() {
+  if (SI->Services.empty())
     return shutdownComplete();
 
-  // Get the next ResourceManager to shut down.
-  auto NextRM = std::move(SI->ResourceMgrs.back());
-  SI->ResourceMgrs.pop_back();
-  NextRM->shutdown([this](Error Err) { shutdownNext(std::move(Err)); });
+  // Get the next Service to shut down.
+  auto NextSrv = std::move(SI->Services.back());
+  SI->Services.pop_back();
+  NextSrv->onShutdown([this]() { shutdownNext(); });
 }
 
 void Session::shutdownComplete() {

@@ -216,15 +216,11 @@ protected:
 };
 
 struct SpirvLoadGatherInstruction : public LoadGatherInstructionInterface {
-  int32_t getMaxLaneLoadStoreSize(int32_t bitWidth) const override {
-    return 16;
-  }
+  int32_t getMaxLaneLoadSize(int32_t bitWidth) const override { return 16; }
 };
 
 struct SpirvStoreScatterInstruction : public StoreScatterInstructionInterface {
-  int32_t getMaxLaneLoadStoreSize(int32_t bitWidth) const override {
-    return 16;
-  }
+  int32_t getMaxLaneStoreSize(int32_t bitWidth) const override { return 16; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -286,11 +282,8 @@ struct BMGuArch : public Xe2Plus {
 inline const uArch *getUArch(llvm::StringRef archName) {
   if (archName.equals_insensitive("pvc"))
     return PVCuArch::getInstance();
-  else if (archName.equals_insensitive("bmg"))
+  if (archName.equals_insensitive("bmg"))
     return BMGuArch::getInstance();
-  else
-    llvm_unreachable("No matching uArch found");
-
   return nullptr;
 }
 

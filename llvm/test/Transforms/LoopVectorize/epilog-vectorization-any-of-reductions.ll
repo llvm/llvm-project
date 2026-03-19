@@ -325,11 +325,10 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[RDX_SELECT_CMP:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 32
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 48
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP7]]
@@ -378,11 +377,10 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 ; CHECK-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT20:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI12:%.*]] = phi <4 x i1> [ [[MINMAX_IDENT_SPLAT]], [[VEC_EPILOG_PH]] ], [ [[TMP43:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX13:%.*]] = mul i64 [[INDEX11]], 16
-; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[OFFSET_IDX13]], 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[OFFSET_IDX13]], 16
 ; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[OFFSET_IDX13]], 32
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[OFFSET_IDX13]], 48
-; CHECK-NEXT:    [[NEXT_GEP14:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP26]]
+; CHECK-NEXT:    [[NEXT_GEP14:%.*]] = getelementptr i8, ptr [[START]], i64 [[OFFSET_IDX13]]
 ; CHECK-NEXT:    [[NEXT_GEP15:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[NEXT_GEP16:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP28]]
 ; CHECK-NEXT:    [[NEXT_GEP17:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP29]]

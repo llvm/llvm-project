@@ -138,20 +138,13 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   Value *BeginVal = IRB.CreateLoad(Begin->getType(), Begin, "begin");
   Value *EndVal = IRB.CreateLoad(Begin->getType(), End, "stop");
   if (!IsCtor) {
-    auto *BeginInt = IRB.CreatePtrToInt(BeginVal, IntegerType::getInt64Ty(C));
-    auto *EndInt = IRB.CreatePtrToInt(EndVal, IntegerType::getInt64Ty(C));
-    auto *SubInst = IRB.CreateSub(EndInt, BeginInt);
-    auto *Offset = IRB.CreateAShr(
-        SubInst, ConstantInt::get(IntegerType::getInt64Ty(C), 3), "offset",
-        /*IsExact=*/true);
-    auto *ValuePtr = IRB.CreateGEP(PointerType::get(C, 0), BeginVal,
-                                   ArrayRef<Value *>({Offset}));
-    EndVal = BeginVal;
+    Value *OldBeginVal = BeginVal;
     BeginVal =
-        IRB.CreateInBoundsGEP(PointerType::get(C, 0), ValuePtr,
+        IRB.CreateInBoundsGEP(PointerType::get(C, 0), EndVal,
                               ArrayRef<Value *>(ConstantInt::getAllOnesValue(
                                   IntegerType::getInt64Ty(C))),
                               "start");
+    EndVal = OldBeginVal;
   }
   IRB.CreateCondBr(
       IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_NE : ICmpInst::ICMP_UGE, BeginVal,

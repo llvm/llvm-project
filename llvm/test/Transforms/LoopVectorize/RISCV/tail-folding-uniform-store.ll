@@ -24,14 +24,11 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub nuw nsw i64 1, [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 0, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 -1, [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[ARRAYIDX13]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 [[TMP7]]
-; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[REVERSE]], ptr align 8 [[TMP9]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = sub nuw nsw i64 [[TMP10]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], -1
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[ARRAYIDX13]], i64 [[TMP7]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[REVERSE]], ptr align 8 [[TMP9]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP10]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[AVL_NEXT]], 0

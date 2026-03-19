@@ -134,10 +134,10 @@ public:
   /// `EmitLongStrLiterals` is false
   void emitStringLiteralDef(raw_ostream &OS, const Twine &Decl) const {
     assert(IsLaidOut && "Call layout() before emitStringLiteralDef()");
-    if (!EmitLongStrLiterals) {
+    if (!EmitLongStrLiterals || Size == 0) {
       OS << Decl << " = {\n";
       emit(OS, printChar);
-      OS << "  0\n};\n\n";
+      OS << "};\n\n";
       return;
     }
 

@@ -1,7 +1,10 @@
 # ClangIR Cleanup and Exception Handling Design
 
-::: {.contents local=""}
-:::
+```{contents}
+---
+local:
+---
+```
 
 ## Overview
 
@@ -333,7 +336,7 @@ cir.func @_ZN7DerivedC2Ev(%arg0: !cir.ptr<!rec_Derived>) {
   } cleanup eh {
     %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
     cir.call @_ZN4BaseD2Ev(%3) : (!cir.ptr<!rec_Base>) -> ()
-    cir.resume
+    cir.yield
   }
   cir.return
 }
@@ -350,15 +353,42 @@ the destructor. Therefore, this cleanup handler is marked as eh_only.
 Try-catch blocks will be represented, as they are in the ClangIR
 incubator project, using a `cir.try` operation.
 
+Each catch handler region and unwind region in a `cir.try` operation
+receives a `!cir.eh_token` argument representing the inflight exception.
+
+The `cir.begin_catch` operation takes a `!cir.eh_token` as an argument
+and returns two values: a `!cir.catch_token` that uniquely identifies
+this catch handler, and a pointer to the exception object. When the
+catch handler includes a source variable representing the exception
+object, the pointer returned by `cir.begin_catch` will be stored to an
+alloca object for the source variable. If the handler is a catch-all,
+the `cir.begin_catch` operation will return a pointer to void, but this
+cannot be captured by a source variable.
+
+The `cir.end_catch` operation takes a `!cir.catch_token` as an argument,
+marking the end of the catch handler. All paths through the catch
+handler must converge on a single `cir.end_catch` operation.
+
+The first operation in a catch handler region must be a `cir.begin_catch`
+operation. This must be followed by a `cir.cleanup.scope` operation,
+with the `cir.end_catch` operation in its cleanup region.
+
 ```
 cir.try {
   cir.call exception @function() : () -> ()
   cir.yield
-} catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] {
-  ...
+} catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+  %catch_token, %exn_ptr = cir.begin_catch %eh_token -> (!cir.catch_token, !cir.ptr<!cir.float>)
+  cir.cleanup.scope {
+    ...
+    cir.yield
+  } cleanup eh {
+    cir.end_catch %catch_token
+    cir.yield
+  }
   cir.yield
-} unwind {
-  cir.resume
+} unwind (%eh_token : !cir.eh_token) {
+  cir.resume %eh_token : !cir.eh_token
 }
 ```
 
@@ -385,14 +415,24 @@ void someFunc() {
 
 ```
 cir.func @someFunc(){
+  %0 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.scope {
     cir.try {
       cir.call exception @_Z1fv() : () -> ()
       cir.yield
-    } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] {
+    } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %catch_token, %1 = cir.begin_catch %eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>)
+      cir.cleanup.scope {
+        %2 = cir.load align(8) %1 : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, !cir.ptr<!rec_std3A3Aexception>
+        cir.store align(8) %2, %0 : !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token
+        cir.yield
+      }
       cir.yield
-    } unwind {
-      cir.resume
+    } unwind (%eh_token : !cir.eh_token) {
+      cir.resume %eh_token : !cir.eh_token
     }
   }
   cir.return
@@ -429,13 +469,30 @@ void someFunc() {
 
 ```
 cir.func @someFunc(){
+  %0 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.scope {
     cir.try {
       cir.call exception @_Z1fv() : () -> ()
       cir.yield
-    } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] {
+    } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %catch_token, %1 = cir.begin_catch %eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>)
+      cir.cleanup.scope {
+        %2 = cir.load align(8) %1 : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, !cir.ptr<!rec_std3A3Aexception>
+        cir.store align(8) %2, %0 : !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token
+        cir.yield
+      }
       cir.yield
-    } catch all {
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token.1, %3 = cir.begin_catch %eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token.1
+        cir.yield
+      }
       cir.yield
     }
   }
@@ -483,7 +540,14 @@ cir.func @someFunc(){
         cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
         cir.yield
       }
-    } catch all {
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %1 = cir.begin_catch %eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token
+        cir.yield
+      }
       cir.yield
     }
   }
@@ -516,15 +580,26 @@ void someFunc() {
 ```
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
+  %1 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.scope {
       cir.try {
         cir.call @_ZN9SomeClass11doSomethingEv(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-      } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] {
         cir.yield
-      } unwind {
-        cir.resume
+      } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+        %catch_token, %2 = cir.begin_catch %eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>)
+        cir.cleanup.scope {
+          %3 = cir.load align(8) %2 : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, !cir.ptr<!rec_std3A3Aexception>
+          cir.store align(8) %3, %1 : !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
+          cir.yield
+        } cleanup eh {
+          cir.end_catch %catch_token
+          cir.yield
+        }
+        cir.yield
+      } unwind (%eh_token : !cir.eh_token) {
+        cir.resume %eh_token : !cir.eh_token
       }
     }
     cir.yield
@@ -657,8 +732,9 @@ CIR operations. The operations that were used in the ClangIR incubator
 project were closely matched to the Itanium exception handling ABI. In
 order to achieve a representation that also works well for other ABIs,
 the following new operations are being proposed: `cir.eh.initiate`,
-`cir.eh.dispatch`, `cir.begin_cleanup`, `cir.end_cleanup`,
-`cir.begin_catch`, and `cir.end_catch`.
+`cir.eh.dispatch`, `cir.begin_cleanup`, and `cir.end_cleanup`. The
+`cir.begin_catch` and `cir.end_catch` operations, described above,
+are also used in the flattened form.
 
 Any time a cir.call operation that may throw and exception appears
 within the try region of a `cir.try` operation or within the body region
@@ -720,23 +796,13 @@ Finally, the cleanup block either branches to a catch dispatch block or
 executes a `cir.resume` operation to continue unwinding the exception.
 
 When an exception is caught, the catch block will receive the eh token
-for the exception being caught as an argument, and the first operation
-of the catch handling block must be a `cir.begin_catch` operation.
-
-```
-^bb6 (%token : !cir.eh_token):    
-  %catch_token, %exn_ptr = cir.begin_catch %8 -> (!cir.catch_token, !cir.ptr<!s32i>)
-```
-
-The `cir.begin_catch` operation returns two values: a new token that
-uniquely identify this catch handler, and a pointer to the exception
-object. All paths through the catch handler must converge on a single
-`cir.end_catch` operation, which marks the end of the handler.
-
-  `cir.end_catch %catch_token`
-
-The argument to the `cir.end_catch` operation is the token returned by
-the `cir.begin_catch` operation.
+for the exception being caught as an argument. The `cir.begin_catch`
+and `cir.end_catch` operations, described above in the high-level
+representation, continue to be used in the flattened form. In the
+flattened form, the `eh_token` argument to `cir.begin_catch` comes
+from the block argument rather than a region argument, and the
+`cir.end_catch` operation appears directly in the catch block rather
+than within a `cir.cleanup.scope` cleanup region.
 
 #### Example: Try-catch with cleanup
 
@@ -768,7 +834,14 @@ cir.func @someFunc(){
         cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
         cir.yield
       }
-    } catch all {
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %1 = cir.begin_catch %eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token
+        cir.yield
+      }
       cir.yield
     }
   }
@@ -869,7 +942,7 @@ cir.func @someFunc(){
   %2 = cir.begin_cleanup(%eh_token : !cir.eh_token) : !cir.cleanup_token
   cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.end_cleanup(%2 : !cir.cleanup_token)
-  cir.resume // Unwind to caller
+  cir.resume %eh_token : !cir.eh_token // Unwind to caller
 ^bb4 // Normal continue (from ^bb1)
   cir.return
 }

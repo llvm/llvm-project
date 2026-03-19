@@ -41,7 +41,7 @@
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -aarch64-enable-global-isel-at-O=-1 \
-; RUN:   | FileCheck %s --check-prefix NOT-ENABLED
+; RUN:   | FileCheck %s --check-prefix DISABLED
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \

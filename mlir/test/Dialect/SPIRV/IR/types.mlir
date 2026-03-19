@@ -120,6 +120,16 @@ func.func private @unknown_storage_class(!spirv.ptr<f32, SomeStorageClass>) -> (
 
 // -----
 
+// expected-error @+1 {{SPIR-V does not allow one-element vectors}}
+func.func private @invalid_ptr_to_vector_one_element(!spirv.ptr<vector<1xi32>, SomeStorageClass>) -> ()
+
+// -----
+
+// expected-error @+1 {{vector element type must be a SPIR-V scalar type}}
+func.func private @invalid_ptr_to_vector_index(!spirv.ptr<vector<2xindex>, SomeStorageClass>) -> ()
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // RuntimeArrayType
 //===----------------------------------------------------------------------===//
@@ -371,6 +381,12 @@ func.func private @struct_type_missing_comma(!spirv.struct<(!spirv.matrix<3 x ve
 
 // expected-error @+1 {{expected attribute value}}
 func.func private @struct_missing_member_decorator_value(!spirv.struct<(!spirv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=])>)
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/179675
+// expected-error @+1 {{member type must be a valid SPIR-V type}}
+func.func private @struct_type_non_spirv_member(!spirv.struct<(vector<2x2xi1>)>) -> ()
 
 // -----
 

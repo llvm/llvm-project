@@ -49,7 +49,7 @@ set_target_properties(flang-doc PROPERTIES FOLDER "Flang/Docs")
 set(dialect_doc_filename "FIRLangRef")
 
 set(LLVM_TARGET_DEFINITIONS FIROps.td)
-tablegen(MLIR ${dialect_doc_filename}.md -gen-op-doc)
+tablegen(MLIR ${dialect_doc_filename}.md -gen-op-doc -dialect=fir)
 set(GEN_DOC_FILE ${FLANG_BINARY_DIR}/docs/Dialect/${dialect_doc_filename}.md)
 add_custom_command(
         OUTPUT ${GEN_DOC_FILE}

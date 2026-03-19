@@ -493,6 +493,13 @@ def true_mask : PatLeaf<(riscv_vmset_vl (XLenVT srcvalue))>;
 def riscv_vmnot_vl : PatFrag<(ops node:$rs, node:$vl),
                              (riscv_vmxor_vl node:$rs, true_mask, node:$vl)>;
 
+// Match riscv_vmxor_vl+riscv_vmset_vl as an operand. By handling as a
+// ComplexPattern we can check both operands of the vmxor_vl without needing
+// tablegen to emit multiple isel patterns.
+def riscv_vmnot_vl_op : ComplexPattern<vAny, 1, "selectVMNOT_VLOp", [], [], 9> {
+  let WantsParent = true;
+}
+
 let HasMaskOp = true in {
   //  vcpop.m with additional mask and VL operands.
   def riscv_vcpop_vl : RVSDNode<"VCPOP_VL",
@@ -910,21 +917,31 @@ class VPatBinaryVL_XI<SDPatternOperator vop,
                    xop_kind:$rs2,
                    (mask_type VMV0:$vm), GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
 
+multiclass VPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
+                           list<VTypeInfo> vtilist = AllIntegerVectors,
+                           bit isSEWAware = 0,
+                           list<Predicate> ExtraPreds = []> {
+  foreach vti = vtilist in {
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
+    def : VPatBinaryVL_V<vop, instruction_name, "VV",
+                         vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                         vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                         vti.RegClass, isSEWAware>;
+    }
+  }
+}
+
 multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
                               list<VTypeInfo> vtilist = AllIntegerVectors,
                               bit isSEWAware = 0,
-                              list<Predicate> ExtraPreds = []> {
+                              list<Predicate> ExtraPreds = []> 
+    : VPatBinaryVL_VV<vop, instruction_name, vtilist, isSEWAware, ExtraPreds>{
   foreach vti = vtilist in {
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
-      def : VPatBinaryVL_V<vop, instruction_name, "VV",
-                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
-                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
-                           vti.RegClass, isSEWAware>;
-      def : VPatBinaryVL_XI<vop, instruction_name, "VX",
-                            vti.Vector, vti.Vector, vti.Vector, vti.Mask,
-                            vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
-                            SplatPat, GPR, isSEWAware>;
-    }
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    def : VPatBinaryVL_XI<vop, instruction_name, "VX",
+                          vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                          vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                          SplatPat, GPR, isSEWAware>;
   }
 }
 
@@ -1740,8 +1757,9 @@ multiclass VPatMultiplyAddVL_VV_VX<SDNode op, string instruction_name> {
   }
 }
 
-multiclass VPatWidenMultiplyAddVL_VV_VX<SDNode vwmacc_op, string instr_name> {
-  foreach vtiTowti = AllWidenableIntVectors in {
+multiclass VPatWidenMultiplyAddVL_VV<SDNode vwmacc_op, string instr_name,
+                                     list<VTypeInfoToWide> vtilist = AllWidenableIntVectors> {
+  foreach vtiTowti = vtilist in {
     defvar vti = vtiTowti.Vti;
     defvar wti = vtiTowti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
@@ -1753,6 +1771,17 @@ multiclass VPatWidenMultiplyAddVL_VV_VX<SDNode vwmacc_op, string instr_name> {
                 (!cast<Instruction>(instr_name#"_VV_"#vti.LMul.MX#"_MASK")
                     wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                     (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    }
+  }
+}
+
+multiclass VPatWidenMultiplyAddVL_VV_VX<SDNode vwmacc_op, string instr_name>
+    : VPatWidenMultiplyAddVL_VV<vwmacc_op, instr_name> {
+  foreach vtiTowti = AllWidenableIntVectors in {
+    defvar vti = vtiTowti.Vti;
+    defvar wti = vtiTowti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in {
       def : Pat<(vwmacc_op (SplatPat XLenVT:$rs1),
                            (vti.Vector vti.RegClass:$rs2),
                            (wti.Vector wti.RegClass:$rd),
@@ -1941,6 +1970,26 @@ multiclass VPatAVGADDVL_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
                 (!cast<Instruction>("PseudoVAADD"#suffix#"_VX_"#vti.LMul.MX#"_MASK")
                   vti.RegClass:$passthru, vti.RegClass:$rs1, GPR:$rs2,
                   (vti.Mask VMV0:$vm), vxrm, GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    }
+  }
+}
+
+multiclass VPatUnaryVL_V<SDPatternOperator op, string instruction_name,
+                         Predicate predicate = HasStdExtZvbb> {
+  foreach vti = AllIntegerVectors in {
+    let Predicates = !listconcat([predicate],
+                                 GetVTypePredicates<vti>.Predicates) in {
+      def : Pat<(vti.Vector (op (vti.Vector vti.RegClass:$rs1),
+                                (vti.Vector vti.RegClass:$passthru),
+                                (vti.Mask VMV0:$vm),
+                                VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_V_"#vti.LMul.MX#"_MASK")
+                   vti.RegClass:$passthru,
+                   vti.RegClass:$rs1,
+                   (vti.Mask VMV0:$vm),
+                   GPR:$vl,
+                   vti.Log2SEW,
+                   TAIL_AGNOSTIC)>;
     }
   }
 }
@@ -2786,20 +2835,17 @@ foreach mti = AllMasks in {
               (!cast<Instruction>("PseudoVMXOR_MM_" # mti.BX)
                    VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
 
-    def : Pat<(mti.Mask (riscv_vmand_vl VR:$rs1,
-                                        (riscv_vmnot_vl VR:$rs2, VLOpFrag),
+    def : Pat<(mti.Mask (riscv_vmand_vl VR:$rs1, riscv_vmnot_vl_op:$rs2,
                                         VLOpFrag)),
               (!cast<Instruction>("PseudoVMANDN_MM_" # mti.BX)
                    VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
-    def : Pat<(mti.Mask (riscv_vmor_vl VR:$rs1,
-                                       (riscv_vmnot_vl VR:$rs2, VLOpFrag),
+    def : Pat<(mti.Mask (riscv_vmor_vl VR:$rs1, riscv_vmnot_vl_op:$rs2,
                                        VLOpFrag)),
               (!cast<Instruction>("PseudoVMORN_MM_" # mti.BX)
                    VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
     // XOR is associative so we need 2 patterns for VMXNOR.
-    def : Pat<(mti.Mask (riscv_vmxor_vl (riscv_vmnot_vl VR:$rs1,
-                                                        VLOpFrag),
-                                       VR:$rs2, VLOpFrag)),
+    def : Pat<(mti.Mask (riscv_vmxor_vl riscv_vmnot_vl_op:$rs1,
+                                        VR:$rs2, VLOpFrag)),
               (!cast<Instruction>("PseudoVMXNOR_MM_" # mti.BX)
                    VR:$rs1, VR:$rs2, GPR:$vl, mti.Log2SEW)>;
 

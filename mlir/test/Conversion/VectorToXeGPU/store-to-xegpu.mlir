@@ -115,3 +115,19 @@ func.func @no_store_zero_dim_vector(%vec: vector<f32>,
 
 // CHECK-LABEL: @no_store_zero_dim_vector(
 // CHECK:       vector.store
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/181463:
+// vector.store with a memref whose element type is a vector (e.g.
+// memref<?xvector<4xf32>>) must not crash. The pass used to call
+// getElementTypeBitWidth() on the vector element type which asserts on
+// non-integer/float types; now it bails out gracefully instead.
+
+// CHECK-LABEL: @no_store_vec_element_memref(
+// CHECK:       vector.store
+func.func @no_store_vec_element_memref(%vec: vector<4xf32>,
+    %source: memref<?xvector<4xf32>>, %offset: index) {
+  vector.store %vec, %source[%offset] : memref<?xvector<4xf32>>, vector<4xf32>
+  return
+}

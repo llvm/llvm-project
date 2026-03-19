@@ -967,6 +967,8 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMaximum:
   case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
   case AtomicRMWInst::USubCond:
@@ -1881,6 +1883,8 @@ static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {
   case AtomicRMWInst::FMin:
   case AtomicRMWInst::FMaximum:
   case AtomicRMWInst::FMinimum:
+  case AtomicRMWInst::FMaximumNum:
+  case AtomicRMWInst::FMinimumNum:
   case AtomicRMWInst::FAdd:
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::UIncWrap:
@@ -1950,6 +1954,16 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
   Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
+
+  if (M->getTargetTriple().isOSWindows() && M->getTargetTriple().isX86_64() &&
+      Size == 16) {
+    // x86_64 Windows passes i128 as an XMM vector; on return, it is in
+    // XMM0, and as a parameter, it is passed indirectly. The generic lowering
+    // rules handles this correctly if we pass it as a v2i64 rather than
+    // i128. This is what Clang does in the frontend for such types as well
+    // (see WinX86_64ABIInfo::classify in Clang).
+    SizedIntTy = FixedVectorType::get(Type::getInt64Ty(Ctx), 2);
+  }
 
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
 
