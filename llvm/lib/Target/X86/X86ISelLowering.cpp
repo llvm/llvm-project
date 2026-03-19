@@ -35854,7 +35854,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::BITREVERSE: {
     EVT VT = N->getValueType(0);
-    if (N->getOpcode() == ISD::BITREVERSE && VT == MVT::i64) {
+    if (VT == MVT::i64) {
       assert((Subtarget.hasXOP() || Subtarget.hasGFNI()) &&
              "Expected XOP/GFNI");
       // We can use VPPERM/GF2P8AFFINEQB by copying to a vector register and
