@@ -23,8 +23,25 @@ _CLC_OVERLOAD _CLC_DEF __CLC_FLOATN __clc_cos(__CLC_FLOATN x) {
 
 #elif __CLC_FPSIZE == 16
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_cos(__CLC_GENTYPE x) {
-  return __CLC_CONVERT_GENTYPE(__clc_cos(__CLC_CONVERT_FLOATN(x)));
+_CLC_OVERLOAD _CLC_DEF __CLC_HALFN __clc_cos(__CLC_HALFN x) {
+  x = __clc_select(x, __CLC_GENTYPE_NAN,
+                   __CLC_CONVERT_S_GENTYPE(__clc_isinf(x)));
+
+  __CLC_HALFN absx = __clc_fabs(x);
+
+  __CLC_HALFN reduced;
+  __CLC_INTN n = __clc_argReductionS(&reduced, absx);
+
+  __CLC_SINCOS_RET_GENTYPE eval = __clc_sincos_reduced_eval(reduced);
+
+  __CLC_HALFN c = __CLC_CONVERT_S_GENTYPE((n & 1) == 0) ? eval.cos : -eval.sin;
+
+  __CLC_S_GENTYPE flip = __CLC_CONVERT_S_GENTYPE(n > 1)
+                             ? (__CLC_S_GENTYPE)SIGNBIT_FP16
+                             : (__CLC_S_GENTYPE)0;
+
+  __CLC_S_GENTYPE result_i = __CLC_AS_SHORTN(c) ^ flip;
+  return __CLC_AS_HALFN(result_i);
 }
 
 #elif __CLC_FPSIZE == 64

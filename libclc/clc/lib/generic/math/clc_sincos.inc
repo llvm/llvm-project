@@ -33,10 +33,30 @@ __clc_sincos(__CLC_FLOATN x, private __CLC_FLOATN *cos_out) {
 
 _CLC_OVERLOAD _CLC_DEF __CLC_HALFN __clc_sincos(__CLC_HALFN x,
                                                 private __CLC_HALFN *cos_out) {
-  __CLC_FLOATN cos_result;
-  __CLC_FLOATN sin_result = __clc_sincos(__CLC_CONVERT_FLOATN(x), &cos_result);
-  *cos_out = __CLC_CONVERT_HALFN(cos_result);
-  return __CLC_CONVERT_HALFN(sin_result);
+  x = __clc_select(x, __CLC_GENTYPE_NAN,
+                   __CLC_CONVERT_S_GENTYPE(__clc_isinf(x)));
+
+  __CLC_HALFN absx = __clc_fabs(x);
+
+  __CLC_HALFN reduced;
+  __CLC_INTN n = __clc_argReductionS(&reduced, absx);
+
+  __CLC_SINCOS_RET_GENTYPE eval = __clc_sincos_reduced_eval(reduced);
+
+  __CLC_HALFN s = __CLC_CONVERT_S_GENTYPE((n & 1) == 0) ? eval.sin : eval.cos;
+  __CLC_S_GENTYPE flip = __CLC_CONVERT_S_GENTYPE(n > 1)
+                             ? (__CLC_S_GENTYPE)SIGNBIT_FP16
+                             : (__CLC_S_GENTYPE)0;
+
+  __CLC_S_GENTYPE sin_result_i =
+      __CLC_AS_SHORTN(s) ^
+      (flip ^ (__CLC_AS_SHORTN(x) & (__CLC_S_GENTYPE)SIGNBIT_FP16));
+
+  __CLC_HALFN c = __CLC_CONVERT_S_GENTYPE((n & 1) == 0) ? eval.cos : -eval.sin;
+
+  __CLC_S_GENTYPE cos_result_i = __CLC_AS_SHORTN(c) ^ flip;
+  *cos_out = __CLC_AS_HALFN(cos_result_i);
+  return __CLC_AS_HALFN(sin_result_i);
 }
 
 #elif __CLC_FPSIZE == 64
