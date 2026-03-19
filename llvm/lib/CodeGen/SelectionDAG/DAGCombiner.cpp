@@ -20236,8 +20236,8 @@ SDValue DAGCombiner::rebuildSetCC(SDValue N) {
     // Ideally this should be folded into SimplifySetCC and not
     // here. For now, grab a handle to N so we don't lose it from
     // replacements interal to the visit.
-    HandleSDNode XORHandle(N);
     while (N.getOpcode() == ISD::XOR) {
+      HandleSDNode XORHandle(N);
       SDValue Tmp = visitXOR(N.getNode());
       // No simplification done.
       if (!Tmp.getNode())

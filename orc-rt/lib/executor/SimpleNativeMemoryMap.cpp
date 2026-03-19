@@ -200,7 +200,8 @@ void SimpleNativeMemoryMap::deinitializeMultiple(
                    Error::success());
 }
 
-void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete) {
+void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete,
+                                     bool ShutdownRequested) {
   // Detach is a noop for now: we just retain all actions to run at shutdown
   // time.
   OnComplete();
