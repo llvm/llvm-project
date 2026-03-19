@@ -3897,6 +3897,10 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
               convertCallToHLFIR(loc, converter, procRef, std::nullopt,
                                  symTable, stmtCtx);
               auto outVal = fir::LoadOp::create(builder, loc, ompOutVar);
+              if (isByRef) {
+                fir::StoreOp::create(builder, loc, outVal, lhs);
+                return mlir::Value{};
+              }
               return outVal;
             },
             [&](const auto &expr) -> mlir::Value {
@@ -3917,7 +3921,7 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
               // convertExprToValue only evaluates the RHS value.
               // The result type won't match the reduction variable type.
               // Use the typed assignment LHS to store to the correct
-              // component, then skip the whole-variable fir.store below.
+              // component, then skip the whole-variable store.
               if (isByRef &&
                   exprResult.getType() != fir::unwrapRefType(lhs.getType())) {
                 if (assign) {
@@ -3927,10 +3931,12 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
                   hlfir::AssignOp::create(builder, loc, exprResult, lhsEntity);
                   assignCtx.finalizeAndPop();
                 } else {
-                  // Fallback: store to omp_out directly (shouldn't normally
-                  // happen for well-formed component-level combiners).
                   fir::StoreOp::create(builder, loc, exprResult, ompOutVar);
                 }
+                return mlir::Value{};
+              }
+              if (isByRef) {
+                fir::StoreOp::create(builder, loc, exprResult, lhs);
                 return mlir::Value{};
               }
               return exprResult;
@@ -3938,8 +3944,6 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
         evalExpr.u);
     stmtCtx.finalizeAndPop();
     if (isByRef) {
-      if (result)
-        fir::StoreOp::create(builder, loc, result, lhs);
       mlir::omp::YieldOp::create(builder, loc, lhs);
     } else {
       mlir::omp::YieldOp::create(builder, loc, result);
