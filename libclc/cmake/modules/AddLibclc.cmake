@@ -57,7 +57,7 @@ function(add_libclc_builtin_library target_name)
   endforeach()
   list(REMOVE_DUPLICATES _inc_dirs)
 
-  add_library(${target_name} STATIC ${ARG_SOURCES})
+  add_library(${target_name} STATIC EXCLUDE_FROM_ALL ${ARG_SOURCES})
   target_compile_options(${target_name} PRIVATE ${ARG_COMPILE_OPTIONS})
   target_include_directories(${target_name} PRIVATE
     ${ARG_INCLUDE_DIRS} ${_inc_dirs}
