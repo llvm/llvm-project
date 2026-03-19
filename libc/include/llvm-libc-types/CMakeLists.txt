@@ -101,6 +101,15 @@ add_header(
 add_header(struct_pollfd HDR struct_pollfd.h)
 add_header(struct_rlimit HDR struct_rlimit.h DEPENDS .rlim_t)
 add_header(struct_sched_param HDR struct_sched_param.h)
+add_header(struct_sembuf HDR struct_sembuf.h)
+add_header(struct_seminfo HDR struct_seminfo.h)
+add_header(
+  struct_semid_ds
+  HDR struct_semid_ds.h
+  DEPENDS
+    .struct_ipc_perm
+    .time_t
+)
 add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
 add_header(struct_itimerval HDR struct_itimerval.h DEPENDS .struct_timeval)
 add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
