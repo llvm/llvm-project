@@ -1,4 +1,4 @@
-//===-- NVVMAnnotations - NVVM annotation utilities ------------*- C++ -*-===//
+//===-- NVVMProperties - NVVM annotation utilities -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_NVPTX_NVVANNOTATIONS_H
-#define LLVM_LIB_TARGET_NVPTX_NVVANNOTATIONS_H
+#ifndef LLVM_LIB_TARGET_NVPTX_NVVMPROPERTIES_H
+#define LLVM_LIB_TARGET_NVPTX_NVVMPROPERTIES_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CallingConv.h"

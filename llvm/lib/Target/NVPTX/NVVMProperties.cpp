@@ -1,4 +1,4 @@
-//===- NVVMAnnotations.cpp - NVVM annotation utilities --------------------===//
+//===- NVVMProperties.cpp - NVVM annotation utilities ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVVMAnnotations.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
