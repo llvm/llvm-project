@@ -48,12 +48,16 @@ func.func @test_allocatable_elemental_assign(%arg0: !fir.ref<!fir.box<!fir.heap<
 // The generated code uses genReallocIfNeeded which creates fir.if for
 // allocation checking and a loop for assignment.
 // ENABLED-NOT: hlfir.assign %{{.*}} realloc
-// ENABLED: fir.if
+// ENABLED: hlfir.elemental
+// ENABLED: %[[ORIG_MEM:.*]] = fir.box_addr %6 : (!fir.box<!fir.heap<!fir.array<?xf64>>>) -> !fir.heap<!fir.array<?xf64>>
+// ENABLED: %[[IF_RET:.*]]:2 = fir.if %[[COND:.*]] -> (i1, !fir.heap<!fir.array<?xf64>>) {
 // ENABLED: fir.do_loop
 // ENABLED: hlfir.apply
 // ENABLED: hlfir.designate
 // ENABLED: hlfir.assign %{{.*}} : f64, !fir.ref<f64>
-
+// ENABLED: fir.if %[[IF_RET]]#0 {
+// ENABLED: fir.if %[[COND]] {
+// ENABLED: fir.freemem %[[ORIG_MEM]] : !fir.heap<!fir.array<?xf64>>
 
 // Test case: Non-trivial element type should NOT be inlined
 func.func @test_allocatable_nontrivial_type(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>) {

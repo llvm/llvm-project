@@ -221,22 +221,10 @@ public:
 
     // Create a MutableBoxValue for the LHS allocatable
     mlir::Value lhsBoxRef = lhs.getFirBase();
-    mlir::Type boxType = fir::unwrapRefType(lhsType);
-    auto boxBaseType = mlir::cast<fir::BaseBoxType>(boxType);
-    mlir::Type baseTy = boxBaseType.getEleTy();
-    if (auto heapTy = mlir::dyn_cast<fir::HeapType>(baseTy))
-      baseTy = heapTy.getEleTy();
 
     // Create MutableBoxValue - for trivial types, no length params needed
-    fir::MutableBoxValue mutableBox(lhsBoxRef, /*nonDeferredParams=*/{},
+    fir::MutableBoxValue mutableBox(lhsBoxRef, /*lenParamaters=*/{},
                                     /*mutableProperties=*/{});
-
-    // Generate ones for lower bounds (Fortran default)
-    mlir::Value one =
-        builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-    llvm::SmallVector<mlir::Value> lbounds;
-    for (size_t i = 0; i < rhsExtents.size(); ++i)
-      lbounds.push_back(one);
 
     // Use genReallocIfNeeded to handle allocation/reallocation properly.
     // This implements Fortran 10.2.1.3 point 3:
@@ -247,12 +235,8 @@ public:
     // The storage handler callback performs the actual assignment loop.
     bool useWorkshare = flangomp::shouldUseWorkshareLowering(assign);
     auto storageHandler = [&](fir::ExtendedValue storage) {
-      // Create an hlfir.declare for the storage to get a proper Entity.
-      // This is necessary because hlfir::Entity requires a value from an
-      // HLFIR operation, not a raw pointer.
-      auto declare = hlfir::genDeclare(loc, builder, storage, ".tmp.assign",
-                                       /*flags=*/{});
-      hlfir::Entity lhsEntity{declare.getBase()};
+      hlfir::Entity lhsEntity{
+          fir::getBase(fir::factory::createBoxValue(builder, loc, storage))};
 
       llvm::SmallVector<mlir::Value> extents =
           fir::factory::getExtents(loc, builder, storage);
@@ -290,7 +274,7 @@ public:
                                          lenParams, storageHandler);
 
     // Finalize: free old storage if reallocated and update the mutable box
-    fir::factory::finalizeRealloc(builder, loc, mutableBox, lbounds,
+    fir::factory::finalizeRealloc(builder, loc, mutableBox, /*lbounds=*/{},
                                   /*takeLboundsIfRealloc=*/true, realloc);
 
     // Erase the original assign
