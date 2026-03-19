@@ -24654,7 +24654,7 @@ private:
     return P.first == LocallyUnvectorizable || RangeSizesByIdx[P.first] == 0;
   }
 
-  bool vfIsProfitable(unsigned Size, const SizePair &P) const {
+  bool isVFProfitable(unsigned Size, const SizePair &P) const {
     assert(P.first != LocallyUnvectorizable && RangeSizesByIdx[P.first] &&
            "Cannot check profitability of vectorized element");
     return Size >= RangeSizesByIdx[P.first];
@@ -24812,7 +24812,7 @@ bool StoreChainContext::allOfRangeProfitable(unsigned StartIdx, unsigned Length,
                                              unsigned TreeSize) const {
   return all_of(RangeSizes.slice(StartIdx, Length),
                 [TreeSize, this](const SizePair &P) {
-                  return vfIsProfitable(TreeSize, P);
+                  return isVFProfitable(TreeSize, P);
                 });
 }
 
