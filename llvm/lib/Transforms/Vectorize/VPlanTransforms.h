@@ -151,13 +151,11 @@ struct VPlanTransforms {
 
   /// Update \p Plan to account for all early exits.
   LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
-                                                 bool HasUncountableExit);
+                                                 UncountableExitStyle Style);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
-  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan,
-                                               bool RequiresScalarEpilogueCheck,
-                                               bool TailFolded);
+  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
   // Create a check to \p Plan to see if the vector loop should be executed.
   static void addMinimumIterationCheck(
@@ -321,7 +319,8 @@ struct VPlanTransforms {
   /// that determines which exit to take based on lane-by-lane semantics.
   static void handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                           VPBasicBlock *LatchVPBB,
-                                          VPBasicBlock *MiddleVPBB);
+                                          VPBasicBlock *MiddleVPBB,
+                                          UncountableExitStyle Style);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)

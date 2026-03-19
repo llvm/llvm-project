@@ -491,7 +491,8 @@ public:
   }
 
   bool isVMEM(uint32_t Opcode) const {
-    return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode);
+    return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode) ||
+           isFLAT(Opcode);
   }
 
   static bool isSOP1(const MachineInstr &MI) {
@@ -1360,6 +1361,7 @@ public:
                          StringRef &ErrInfo) const override;
 
   unsigned getVALUOp(const MachineInstr &MI) const;
+  unsigned getVALUOp(unsigned Opc) const;
 
   void insertScratchExecCopy(MachineFunction &MF, MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,

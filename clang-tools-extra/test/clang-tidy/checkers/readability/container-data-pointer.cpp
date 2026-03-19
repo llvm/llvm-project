@@ -2,27 +2,9 @@
 // RUN: %check_clang_tidy -check-suffixes=,WITH-CONFIG %s readability-container-data-pointer %t -- -config="{CheckOptions: {readability-container-data-pointer.IgnoredContainers: '::std::basic_string'}}" -- -fno-delayed-template-parsing
 
 #include <string>
+#include <type_traits>
 #include <vector>
-#include <utility>
-
-typedef __SIZE_TYPE__ size_t;
-
-namespace std {
-
-template <typename T>
-struct is_integral;
-
-template <>
-struct is_integral<size_t> {
-  static const bool value = true;
-};
-
-template <typename T>
-struct unique_ptr {
-  T &operator*() const;
-  T *operator->() const;
-};
-}
+#include <memory>
 
 template <typename T>
 void f(const T *);

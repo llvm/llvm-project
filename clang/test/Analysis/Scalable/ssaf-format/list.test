@@ -5,5 +5,5 @@
 
 // CHECK: Registered serialization formats:
 // CHECK-EMPTY:
-// CHECK-NEXT:   1. JSON  JSON serialization format
+// CHECK-NEXT:   1. json - JSON serialization format
 // CHECK-NEXT:      Analyses: (none)
