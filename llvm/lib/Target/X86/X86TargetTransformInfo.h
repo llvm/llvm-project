@@ -43,7 +43,6 @@ class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
 
       // These features don't have any intrinsics or ABI effect.
       X86::FeatureNOPL,
-      X86::FeatureCX16,
       X86::FeatureLAHFSAHF64,
 
       // Some older targets can be setup to fold unaligned loads.
