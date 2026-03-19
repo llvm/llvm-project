@@ -8281,7 +8281,12 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       EVT ShiftVT = getShiftAmountTy(VT, DAG.getDataLayout());
       In = DAG.getNode(ISD::SRL, dl, VT, In,
                        DAG.getShiftAmountConstant(TrailingZeros, ShiftVT, dl));
+
+      std::tie(LL, LH) = DAG.SplitScalar(In, dl, HiLoVT, HiLoVT);
+    } else if (!LL) {
+      std::tie(LL, LH) = DAG.SplitScalar(In, dl, HiLoVT, HiLoVT);
     }
+
     SDValue TotalSum = DAG.getConstant(0, dl, LegalVT);
     SDValue Mask = DAG.getConstant(
         APInt::getLowBitsSet(LegalWidth, BestChunkWidth), dl, LegalVT);
