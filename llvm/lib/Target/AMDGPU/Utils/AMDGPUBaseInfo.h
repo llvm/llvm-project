@@ -31,6 +31,7 @@ struct Align;
 class Argument;
 class Function;
 class GlobalValue;
+class MachineInstr;
 class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
@@ -56,6 +57,7 @@ static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
 static constexpr unsigned GFX12 = 1;
+static constexpr unsigned GFX12_5 = 1;
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -98,7 +100,7 @@ struct GcnBufferFormatInfo {
 };
 
 struct MAIInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_dgemm;
   bool is_gfx940_xdl;
 };
@@ -121,7 +123,7 @@ struct True16D16Info {
 };
 
 struct WMMAInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_wmma_xdl;
 };
 
@@ -216,9 +218,18 @@ public:
   void setTargetIDFromFeaturesString(StringRef FS);
   void setTargetIDFromTargetIDStream(StringRef TargetID);
 
+  /// Write string representation to \p OS
+  void print(raw_ostream &OS) const;
+
   /// \returns String representation of an object.
   std::string toString() const;
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const AMDGPUTargetID &TargetID) {
+  TargetID.print(OS);
+  return OS;
+}
 
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo *STI);
@@ -255,8 +266,11 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
 /// \returns Minimum flat work group size for given subtarget \p STI.
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
 
-/// \returns Maximum flat work group size for given subtarget \p STI.
-unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI);
+/// \returns Maximum flat work group size
+constexpr unsigned getMaxFlatWorkGroupSize() {
+  // Some subtargets allow encoding 2048, but this isn't tested or supported.
+  return 1024;
+}
 
 /// \returns Number of waves per work group for given subtarget \p STI and
 /// \p FlatWorkGroupSize.
@@ -416,7 +430,7 @@ inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
 }
 
 LLVM_READONLY
-int getSOPPWithRelaxation(uint16_t Opcode);
+int32_t getSOPPWithRelaxation(uint32_t Opcode);
 
 struct MIMGBaseOpcodeInfo {
   MIMGBaseOpcode BaseOpcode;
@@ -522,8 +536,8 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
                            bool IsG16Supported);
 
 struct MIMGInfo {
-  uint16_t Opcode;
-  uint16_t BaseOpcode;
+  uint32_t Opcode;
+  uint32_t BaseOpcode;
   uint8_t MIMGEncoding;
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
@@ -646,7 +660,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI);
 
 LLVM_READONLY
-int getMCOpcode(uint16_t Opcode, unsigned Gen);
+int32_t getMCOpcode(uint32_t Opcode, unsigned Gen);
 
 LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3);
@@ -1076,11 +1090,42 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
+enum InstCounterType {
+  LOAD_CNT = 0, // VMcnt prior to gfx12.
+  DS_CNT,       // LKGMcnt prior to gfx12.
+  EXP_CNT,      //
+  STORE_CNT,    // VScnt in gfx10/gfx11.
+  NUM_NORMAL_INST_CNTS,
+  SAMPLE_CNT = NUM_NORMAL_INST_CNTS, // gfx12+ only.
+  BVH_CNT,                           // gfx12+ only.
+  KM_CNT,                            // gfx12+ only.
+  X_CNT,                             // gfx1250.
+  NUM_EXTENDED_INST_CNTS,
+  VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
+  VM_VSRC,                          // gfx12+ expert mode only.
+  NUM_EXPERT_INST_CNTS,
+  NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
+};
+
+// Return an iterator over all counters between LOAD_CNT (the first counter)
+// and \c MaxCounter (exclusive, default value yields an enumeration over
+// all counters).
+iota_range<InstCounterType>
+inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS);
+
+} // namespace AMDGPU
+
+template <> struct enum_iteration_traits<AMDGPU::InstCounterType> {
+  static constexpr bool is_iterable = true;
+};
+
+namespace AMDGPU {
+
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
 /// Large values (including the maximum possible integer) can be used to
 /// represent "don't care" waits.
-struct Waitcnt {
+class Waitcnt {
   unsigned LoadCnt = ~0u; // Corresponds to Vmcnt prior to gfx12.
   unsigned ExpCnt = ~0u;
   unsigned DsCnt = ~0u;     // Corresponds to LGKMcnt prior to gfx12.
@@ -1091,6 +1136,70 @@ struct Waitcnt {
   unsigned XCnt = ~0u;      // gfx1250.
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
+
+public:
+  unsigned get(InstCounterType T) const {
+    switch (T) {
+    case LOAD_CNT:
+      return LoadCnt;
+    case EXP_CNT:
+      return ExpCnt;
+    case DS_CNT:
+      return DsCnt;
+    case STORE_CNT:
+      return StoreCnt;
+    case SAMPLE_CNT:
+      return SampleCnt;
+    case BVH_CNT:
+      return BvhCnt;
+    case KM_CNT:
+      return KmCnt;
+    case X_CNT:
+      return XCnt;
+    case VA_VDST:
+      return VaVdst;
+    case VM_VSRC:
+      return VmVsrc;
+    default:
+      llvm_unreachable("bad InstCounterType");
+    }
+  }
+  void set(InstCounterType T, unsigned Val) {
+    switch (T) {
+    case LOAD_CNT:
+      LoadCnt = Val;
+      break;
+    case EXP_CNT:
+      ExpCnt = Val;
+      break;
+    case DS_CNT:
+      DsCnt = Val;
+      break;
+    case STORE_CNT:
+      StoreCnt = Val;
+      break;
+    case SAMPLE_CNT:
+      SampleCnt = Val;
+      break;
+    case BVH_CNT:
+      BvhCnt = Val;
+      break;
+    case KM_CNT:
+      KmCnt = Val;
+      break;
+    case X_CNT:
+      XCnt = Val;
+      break;
+    case VA_VDST:
+      VaVdst = Val;
+      break;
+    case VM_VSRC:
+      VmVsrc = Val;
+      break;
+    default:
+      llvm_unreachable("bad InstCounterType");
+    }
+  }
 
   Waitcnt() = default;
   // Pre-gfx12 constructor.
@@ -1466,6 +1575,9 @@ void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
 LLVM_READNONE
 uint64_t encodeMsg(uint64_t MsgId, uint64_t OpId, uint64_t StreamId);
 
+/// Returns true if the message does not use the m0 operand.
+bool msgDoesNotUseM0(int64_t MsgId, const MCSubtargetInfo &STI);
+
 } // namespace SendMsg
 
 unsigned getInitialPSInputAddr(const Function &F);
@@ -1544,13 +1656,18 @@ constexpr bool isChainCC(CallingConv::ID CC) {
 // the hardware. Module entry points include all entry functions but also
 // include functions that can be called from other functions inside or outside
 // the current module. Module entry functions are allowed to allocate LDS.
+//
+// AMDGPU_CS_Chain is intended for externally callable chain functions, so it is
+// treated as a module entrypoint. AMDGPU_CS_ChainPreserve is used for internal
+// helper functions (e.g. retry helpers), so it is not a module entrypoint.
 LLVM_READNONE
 constexpr bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_CS_Chain:
     return true;
   default:
-    return isEntryFunctionCC(CC) || isChainCC(CC);
+    return isEntryFunctionCC(CC);
   }
 }
 
@@ -1874,6 +1991,18 @@ unsigned getVGPREncodingMSBs(MCRegister Reg, const MCRegisterInfo &MRI);
 MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
                            const MCRegisterInfo &MRI);
 
+/// \returns VGPR MSBs encoded in a S_SETREG_IMM32_B32 \p MI if it sets
+/// it. If \p HasSetregVGPRMSBFixup is true then size of the ID_MODE mask is
+/// ignored.
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
+                                                   bool HasSetregVGPRMSBFixup);
+
+/// \returns VGPR MSBs encoded in a S_SETREG_IMM32_B32 \p MI if it sets
+/// it. If \p HasSetregVGPRMSBFixup is true then size of the ID_MODE mask is
+/// ignored.
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MCInst &MI,
+                                                   bool HasSetregVGPRMSBFixup);
+
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
 // maps, one for X and one for Y component.
@@ -1932,7 +2061,7 @@ private:
   Kind AttrKind = Kind::Unknown;
 };
 
-} // end namespace AMDGPU
+} // namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,
                         const AMDGPU::IsaInfo::TargetIDSetting S);

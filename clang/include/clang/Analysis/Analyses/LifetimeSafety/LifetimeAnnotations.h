@@ -66,6 +66,20 @@ bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
 
+// Returns true if the given method is std::unique_ptr::release().
+// This is treated as a move in lifetime analysis to avoid false-positives
+// when ownership is manually transferred.
+bool isUniquePtrRelease(const CXXMethodDecl &MD);
+
+// Returns true if the given method invalidates references to container
+// elements (e.g. vector::push_back). Methods that only invalidate iterators
+// but not references (e.g. unordered_map::emplace) are not considered
+// invalidating here.
+//
+// Invalidation rules are based on:
+// https://en.cppreference.com/w/cpp/container#Iterator_invalidation
+bool isContainerInvalidationMethod(const CXXMethodDecl &MD);
+
 } // namespace clang::lifetimes
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H

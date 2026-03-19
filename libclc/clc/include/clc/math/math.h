@@ -9,8 +9,9 @@
 #ifndef __CLC_MATH_MATH_H__
 #define __CLC_MATH_MATH_H__
 
-#include <clc/clc_as_type.h>
-#include <clc/clcfunc.h>
+#include "clc/clc_as_type.h"
+#include "clc/clcfunc.h"
+#include "clc/math/clc_subnormal_config.h"
 
 #define SNAN 0x001
 #define QNAN 0x002
@@ -23,11 +24,7 @@
 #define PNOR 0x100
 #define PINF 0x200
 
-#ifdef __R600__
-#define __CLC_HAVE_HW_FMA32() (0)
-#else
 #define __CLC_HAVE_HW_FMA32() (1)
-#endif
 
 #define HAVE_BITALIGN() (0)
 #define HAVE_FAST_FMA32() (0)

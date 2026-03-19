@@ -129,9 +129,20 @@ exit:                                     ; preds = %for.body
 
 define float @select_const_f32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK-VF4IC1-LABEL: @select_const_f32_from_icmp
-; CHECK-VF4IC1-NOT: vector.body
+; CHECK-VF4IC1:      vector.body:
+; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ splat (float 3.000000e+00), %vector.ph ], [ [[VEC_SEL2:%.*]], %vector.body ]
+; CHECK-VF4IC1:        [[VEC_LOAD:%.*]] = load <vscale x 4 x i32>
+; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = icmp ne <vscale x 4 x i32> [[VEC_LOAD]], splat (i32 3)
+; CHECK-VF4IC1-NEXT:   [[VEC_ICMP_F:%.*]] = freeze <vscale x 4 x i1> [[VEC_ICMP]]
+; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[VEC_ICMP_F]])
+; CHECK-VF4IC1-NEXT:    [[VEC_SEL1:%.*]] = select i1 [[TMP8]], <vscale x 4 x i1> [[VEC_ICMP]], <vscale x 4 x i1> [[TMP4:%.*]]
+; CHECK-VF4IC1-NEXT:    [[VEC_SEL2:%.*]] = select i1 [[TMP8]], <vscale x 4 x float> splat (float 7.000000e+00), <vscale x 4 x float> [[VEC_PHI]]
+; CHECK-VF4IC1:      middle.block:
+; CHECK-VF4IC1-NEXT:   [[OR_RDX:%.*]] = call float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float> [[VEC_SEL2]], <vscale x 4 x i1> [[VEC_SEL1]], float 3.000000e+00)
+; CHECK-VF4IC1:        %cmp.n = icmp eq i64 %n, %n.vec
+
 ; CHECK-VF4IC4-LABEL: @select_const_f32_from_icmp
-; CHECK-VF4IC4-NOT: vector.body
+; CHECK-VF4IC4:      vector.body:
 entry:
   br label %for.body
 

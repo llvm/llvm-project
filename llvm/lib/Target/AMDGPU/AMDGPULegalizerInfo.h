@@ -56,6 +56,8 @@ public:
   bool legalizeFPTOI(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B, bool Signed) const;
   bool legalizeMinNumMaxNum(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeExtract(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeInsert(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 MachineIRBuilder &B) const;
   bool legalizeInsertVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -97,6 +99,9 @@ public:
                           unsigned Flags) const;
   bool legalizeFExp10Unsafe(MachineIRBuilder &B, Register Dst, Register Src,
                             unsigned Flags) const;
+
+  bool legalizeFEXPF64(MachineInstr &MI, MachineIRBuilder &B) const;
+
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,

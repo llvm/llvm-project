@@ -38,18 +38,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 class GPU_Op<string mnemonic, list<Trait> traits = []> :
     Op<GPU_Dialect, mnemonic, traits>;
 
-def GPU_Dimension : I32EnumAttr<"Dimension",
-    "a dimension, either 'x', 'y', or 'z'",
-    [
-      I32EnumAttrCase<"x", 0>,
-      I32EnumAttrCase<"y", 1>,
-      I32EnumAttrCase<"z", 2>
-    ]>{
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::gpu";
-}
-def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
-
 class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
     GPU_Op<mnemonic, !listconcat(traits, [
         Pure,
@@ -348,8 +336,14 @@ def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
 }
 
 def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
-  [AttrConstraint<Or<[IsNullAttr.predicate, DenseArrayCount<3>.predicate]>,
-    "with 3 elements (if present)">]>;
+  [AttrConstraint<Or<[IsNullAttr.predicate, And<[DenseArrayCount<3>.predicate,
+      CPred<"([](mlir::Attribute a) { "
+            "  auto arr = ::llvm::cast<::mlir::DenseI32ArrayAttr>(a).asArrayRef();"
+            "  return ::llvm::all_of(arr, [](int32_t v) { return v >= 1; });"
+            "})($_self)">]>]>,
+    "with 3 elements (if present) and all elements >= 1"
+  >]
+>;
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
@@ -612,6 +606,7 @@ def LaunchIndx : AnyTypeOf<[Index, I32, I64]>;
 
 def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
       GPU_AsyncOpInterface, AttrSizedOperandSegments,
+      DeclareOpInterfaceMethods<SymbolUserOpInterface>,
       AllTypesMatch<["gridSizeX", "gridSizeY", "gridSizeZ", "blockSizeX",
                      "blockSizeY", "blockSizeZ"]>]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
@@ -1226,7 +1221,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
 def AnyIntegerOrFloatOr1DVector :
   AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
-def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
+def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType, NoMemoryEffect]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
     The `subgroup_reduce` op reduces the values of lanes (work items) across a
@@ -2115,6 +2110,7 @@ def GPU_ElementwiseOpDivU : I32EnumAttrCase<"DIVU", 10, "divu">;
 def GPU_ElementwiseOpNEGF : I32EnumAttrCase<"NEGATEF", 11, "negatef">;
 def GPU_ElementwiseOpNEGS : I32EnumAttrCase<"NEGATES", 12, "negates">;
 def GPU_ElementwiseOpEXTF : I32EnumAttrCase<"EXTF", 13, "extf">;
+def GPU_ElementwiseOpTRUNCF : I32EnumAttrCase<"TRUNCF", 14, "truncf">;
 
 def MMAElementWise : I32EnumAttr<"MMAElementwiseOp",
   "elementwise operation to apply to mma matrix", [
@@ -2131,7 +2127,8 @@ def MMAElementWise : I32EnumAttr<"MMAElementwiseOp",
     GPU_ElementwiseOpDivU,
     GPU_ElementwiseOpNEGF,
     GPU_ElementwiseOpNEGS,
-    GPU_ElementwiseOpEXTF
+    GPU_ElementwiseOpEXTF,
+    GPU_ElementwiseOpTRUNCF
   ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::gpu";

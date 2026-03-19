@@ -279,13 +279,11 @@ multiclass SiFive7ProcResources<bit dualVALU = false> {
     def FDiv      : ProcResource<1>; // FP Division/Sqrt
 
     // Arithmetic sequencer(s)
+    // VA1 can handle any vector airthmetic instruction.
+    def VA1     : ProcResource<1>;
     if dualVALU then {
-      // VA1 can handle any vector airthmetic instruction.
-      def VA1     : ProcResource<1>;
       // VA2 generally can only handle simple vector arithmetic.
       def VA2     : ProcResource<1>;
-    } else {
-      def VA      : ProcResource<1>;
     }
 
     def VL        : ProcResource<1>; // Load sequencer
@@ -348,21 +346,30 @@ multiclass SiFive7WriteResBase<int VLEN,
     def : WriteRes<WriteIMul32, [PipeB]>;
   }
 
-  // Integer division
-  def : WriteRes<WriteIDiv, [PipeB, IDiv]> {
+  // IDiv / IRem in a 32-bit core should have the same latency and throughput
+  // as IDiv32 / IRem32 in a 64-bit core.
+  def SiFive7RV64IDivRemSchedWriteRes : SchedWriteRes<[PipeB, IDiv]> {
     let Latency = 66;
     let ReleaseAtCycles = [1, 65];
   }
+  def SiFive7RV32IDivRemSchedWriteRes : SchedWriteRes<[PipeB, IDiv]> {
+    let Latency = 34;
+    let ReleaseAtCycles = [1, 33];
+  }
+  def SiFive7IDivRemSchedWriteVariant : SchedWriteVariant<[
+    SchedVar<RV32SchedPred, [!cast<SchedWriteRes>(NAME # "SiFive7RV32IDivRemSchedWriteRes")]>,
+    SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # "SiFive7RV64IDivRemSchedWriteRes")]>
+  ]>;
+
+  // Integer division
+  def : SchedAlias<WriteIDiv, !cast<SchedWrite>(NAME # "SiFive7IDivRemSchedWriteVariant")>;
   def : WriteRes<WriteIDiv32,  [PipeB, IDiv]> {
     let Latency = 34;
     let ReleaseAtCycles = [1, 33];
   }
 
   // Integer remainder
-  def : WriteRes<WriteIRem, [PipeB, IDiv]> {
-    let Latency = 66;
-    let ReleaseAtCycles = [1, 65];
-  }
+  def : SchedAlias<WriteIRem, !cast<SchedWrite>(NAME # "SiFive7IDivRemSchedWriteVariant")>;
   def : WriteRes<WriteIRem32,  [PipeB, IDiv]> {
     let Latency = 34;
     let ReleaseAtCycles = [1, 33];
@@ -1174,37 +1181,37 @@ multiclass SiFive7WriteResBase<int VLEN,
     let Latency = Cycles,
         AcquireAtCycles = [0, 1],
         ReleaseAtCycles = [1, !add(1, Cycles)] in {
-      defm : LMULWriteResMX<"WriteVC_V_I",   [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_X",   [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_IV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_VV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_XV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_IVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_IVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_VVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_VVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_XVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_V_XVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_I",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_X",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_IV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_VV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_XV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_IVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_IVW", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_VVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_VVW", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_XVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_V_XVW", [VCQ, VA1], mx, IsWorstCase>;
       foreach f = ["FPR16", "FPR32", "FPR64"] in {
-        defm : LMULWriteResMX<"WriteVC_V_" # f # "V",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-        defm : LMULWriteResMX<"WriteVC_V_" # f # "VV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-        defm : LMULWriteResMX<"WriteVC_V_" # f # "VW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_V_" # f # "V",  [VCQ, VA1], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_V_" # f # "VV", [VCQ, VA1], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_V_" # f # "VW", [VCQ, VA1], mx, IsWorstCase>;
       }
-      defm : LMULWriteResMX<"WriteVC_I",   [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_X",   [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_IV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_VV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_XV",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_IVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_IVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_VVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_VVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_XVV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-      defm : LMULWriteResMX<"WriteVC_XVW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_I",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_X",   [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_IV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_VV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_XV",  [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_IVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_IVW", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_VVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_VVW", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_XVV", [VCQ, VA1], mx, IsWorstCase>;
+      defm : LMULWriteResMX<"WriteVC_XVW", [VCQ, VA1], mx, IsWorstCase>;
       foreach f = ["FPR16", "FPR32", "FPR64"] in {
-        defm : LMULWriteResMX<"WriteVC_" # f # "V",  [VCQ, VA1OrVA2], mx, IsWorstCase>;
-        defm : LMULWriteResMX<"WriteVC_" # f # "VV", [VCQ, VA1OrVA2], mx, IsWorstCase>;
-        defm : LMULWriteResMX<"WriteVC_" # f # "VW", [VCQ, VA1OrVA2], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_" # f # "V",  [VCQ, VA1], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_" # f # "VV", [VCQ, VA1], mx, IsWorstCase>;
+        defm : LMULWriteResMX<"WriteVC_" # f # "VW", [VCQ, VA1], mx, IsWorstCase>;
       }
     }
   }
@@ -1554,22 +1561,19 @@ multiclass SiFive7SchedResources<int vlen, bit dualVALU,
   defm SiFive7 : SiFive7ProcResources<dualVALU>;
 
   // Pull out defs from SiFive7ProcResources so we can refer to them by name.
-  defvar SiFive7PipeA = !cast<ProcResource>(NAME # SiFive7PipeA);
-  defvar SiFive7PipeB = !cast<ProcResource>(NAME # SiFive7PipeB);
-  defvar SiFive7PipeAB = !cast<ProcResGroup>(NAME # SiFive7PipeAB);
-  defvar SiFive7IDiv = !cast<ProcResource>(NAME # SiFive7IDiv);
-  defvar SiFive7FDiv = !cast<ProcResource>(NAME # SiFive7FDiv);
-  // Pass SiFive7VA for VA1 and VA1OrVA2 if there is only 1 VALU.
-  defvar SiFive7VA1 = !if (dualVALU,
-                            !cast<ProcResource>(NAME # SiFive7VA1),
-                            !cast<ProcResource>(NAME # SiFive7VA));
+  defvar SiFive7PipeA = !cast<ProcResource>(NAME # "SiFive7PipeA");
+  defvar SiFive7PipeB = !cast<ProcResource>(NAME # "SiFive7PipeB");
+  defvar SiFive7PipeAB = !cast<ProcResGroup>(NAME # "SiFive7PipeAB");
+  defvar SiFive7IDiv = !cast<ProcResource>(NAME # "SiFive7IDiv");
+  defvar SiFive7FDiv = !cast<ProcResource>(NAME # "SiFive7FDiv");
+  defvar SiFive7VA1 = !cast<ProcResource>(NAME # "SiFive7VA1");
+  // Use SiFive7VA1 for VA1OrVA2 if there is only 1 VALU.
   defvar SiFive7VA1OrVA2 = !if (dualVALU,
-                            !cast<ProcResGroup>(NAME # SiFive7VA1OrVA2),
-                            !cast<ProcResource>(NAME # SiFive7VA));
-  defvar SiFive7VA = !cast<ProcResource>(NAME # SiFive7VA);
-  defvar SiFive7VL = !cast<ProcResource>(NAME # SiFive7VL);
-  defvar SiFive7VS = !cast<ProcResource>(NAME # SiFive7VS);
-  defvar SiFive7VCQ = !cast<ProcResource>(NAME # SiFive7VCQ);
+                                !cast<ProcResGroup>(NAME # "SiFive7VA1OrVA2"),
+                                !cast<ProcResource>(NAME # "SiFive7VA1"));
+  defvar SiFive7VL = !cast<ProcResource>(NAME # "SiFive7VL");
+  defvar SiFive7VS = !cast<ProcResource>(NAME # "SiFive7VS");
+  defvar SiFive7VCQ = !cast<ProcResource>(NAME # "SiFive7VCQ");
 
   // Define WriteRes records that are the same across all SiFive7 derived
   // SchedModels.

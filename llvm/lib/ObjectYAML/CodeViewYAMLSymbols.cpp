@@ -81,6 +81,7 @@ void ScalarEnumerationTraits<SymbolKind>::enumeration(IO &io,
   auto SymbolNames = getSymbolTypeNames();
   for (const auto &E : SymbolNames)
     io.enumCase(Value, E.Name, E.Value);
+  io.enumFallback<yaml::Hex16>(Value);
 }
 
 void ScalarBitSetTraits<CompileSym2Flags>::bitset(IO &io,
@@ -551,6 +552,14 @@ template <> void SymbolRecordImpl<RegRelativeSym>::map(IO &IO) {
   IO.mapRequired("Offset", Symbol.Offset);
   IO.mapRequired("Type", Symbol.Type);
   IO.mapRequired("Register", Symbol.Register);
+  IO.mapRequired("VarName", Symbol.Name);
+}
+
+template <> void SymbolRecordImpl<RegRelativeIndirSym>::map(IO &IO) {
+  IO.mapRequired("Offset", Symbol.Offset);
+  IO.mapRequired("Type", Symbol.Type);
+  IO.mapRequired("Register", Symbol.Register);
+  IO.mapRequired("OffsetInUdt", Symbol.OffsetInUdt);
   IO.mapRequired("VarName", Symbol.Name);
 }
 

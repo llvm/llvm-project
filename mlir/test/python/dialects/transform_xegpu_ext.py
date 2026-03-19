@@ -86,6 +86,25 @@ def setDescLayoutSlice():
 
 
 @run
+def setDescLayoutOrder():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.create_nd_tdesc"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.set_desc_layout(
+            sequence.bodyTarget, sg_layout=[6, 4], sg_data=[32, 16], order=[0, 1]
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setDescLayoutOrder
+    # CHECK: %0 = transform.xegpu.set_desc_layout %
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: order = [0, 1]
+
+
+@run
 def setOpLayoutAttrOperandMinimal():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
@@ -97,15 +116,17 @@ def setOpLayoutAttrOperandMinimal():
             sequence.bodyTarget,
             sg_layout=[6, 4],
             sg_data=[32, 16],
+            operand=True,
         )
         transform.YieldOp()
     # CHECK-LABEL: TEST: setOpLayoutAttr
     # CHECK: transform.xegpu.set_op_layout_attr %
-    # NO-CHECK: index = 0
-    # NO-CHECK: result
+    # CHECK: operand
+    # CHECK-NOT: index = 0
+    # CHECK-NOT: result
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
-    # NO-CHECK: inst_data
+    # CHECK-NOT: inst_data
 
 
 @run
@@ -127,8 +148,8 @@ def setOpLayoutAttrResult():
         transform.YieldOp()
     # CHECK-LABEL: TEST: setOpLayoutAttrResult
     # CHECK: transform.xegpu.set_op_layout_attr %
-    # NO-CHECK: index = 0
     # CHECK: result
+    # CHECK-NOT: index = 0
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
@@ -154,12 +175,66 @@ def setOpLayoutAttrResultSlice():
         transform.YieldOp()
     # CHECK-LABEL: TEST: setOpLayoutAttrResultSlice
     # CHECK: transform.xegpu.set_op_layout_attr %
-    # NO-CHECK: index = 0
     # CHECK: result
+    # CHECK-NOT: index = 0
     # CHECK: sg_layout = [6, 4]
     # CHECK: sg_data = [32, 16]
     # CHECK: inst_data = [8, 16]
     # CHECK: slice_dims = [0]
+
+
+@run
+def setOpLayoutAttrResultOrder():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.set_op_layout_attr(
+            sequence.bodyTarget,
+            index=0,
+            sg_layout=[6, 4],
+            sg_data=[32, 16],
+            inst_data=[8, 16],
+            order=[0, 1],
+            result=True,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setOpLayoutAttrResultOrder
+    # CHECK: transform.xegpu.set_op_layout_attr %
+    # CHECK: result
+    # CHECK-NOT: index = 0
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: inst_data = [8, 16]
+    # CHECK: order = [0, 1]
+
+
+@run
+def setOpLayoutAttrAnchor():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        xegpu.set_op_layout_attr(
+            sequence.bodyTarget,
+            index=0,
+            sg_layout=[6, 4],
+            sg_data=[32, 16],
+            inst_data=[8, 16],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setOpLayoutAttrAnchor
+    # CHECK: transform.xegpu.set_op_layout_attr %
+    # CHECK-NOT: result
+    # CHECK-NOT: operand
+    # CHECK-NOT: index = 0
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: inst_data = [8, 16]
 
 
 @run
@@ -281,9 +356,11 @@ def ConvertLayout():
             input_sg_layout=[6, 4],
             input_sg_data=[32, 32],
             input_inst_data=[32, 16],
+            input_order=[1, 0],
             target_sg_layout=[6, 4],
             target_sg_data=[32, 32],
             target_inst_data=[8, 16],
+            target_order=[0, 1],
         )
         transform.YieldOp()
     # CHECK-LABEL: TEST: ConvertLayout
@@ -291,6 +368,8 @@ def ConvertLayout():
     # CHECK: input_sg_layout = [6, 4]
     # CHECK: input_sg_data = [32, 32]
     # CHECK: input_inst_data = [32, 16]
+    # CHECK: input_order = [1, 0]
     # CHECK: target_sg_layout = [6, 4]
     # CHECK: target_sg_data = [32, 32]
     # CHECK: target_inst_data = [8, 16]
+    # CHECK: target_order = [0, 1]

@@ -14,7 +14,7 @@ open Llvm_target
 (* Note that this takes a moment to link, so it's best to keep the number of
    individual tests low. *)
 
-let context = global_context ()
+let context = create_context ()
 let i8_type = Llvm.i8_type context
 let i32_type = Llvm.i32_type context
 let i64_type = Llvm.i64_type context
@@ -30,7 +30,7 @@ let bomb msg =
 let define_getglobal m pg =
   let fty = function_type i32_type [||] in
   let fn = define_function "getglobal" fty m in
-  let b = builder_at_end (global_context ()) (entry_block fn) in
+  let b = builder_at_end context (entry_block fn) in
   let g = build_call fty pg [||] "" b in
   ignore (build_ret g b);
   fn
@@ -38,7 +38,7 @@ let define_getglobal m pg =
 let define_plus m =
   let fn = define_function "plus" (function_type i32_type [| i32_type;
                                                              i32_type |]) m in
-  let b = builder_at_end (global_context ()) (entry_block fn) in
+  let b = builder_at_end context (entry_block fn) in
   let add = build_add (param fn 0) (param fn 1) "sum" b in
   ignore (build_ret add b);
   fn
@@ -47,7 +47,7 @@ let test_executionengine () =
   let open Ctypes in
 
   (* create *)
-  let m = create_module (global_context ()) "test_module" in
+  let m = create_module context "test_module" in
   let ee = create m in
 
   (* add plus *)
@@ -57,7 +57,7 @@ let test_executionengine () =
   ignore (define_global "globvar" (const_int i32_type 23) m);
 
   (* add module *)
-  let m2 = create_module (global_context ()) "test_module2" in
+  let m2 = create_module context "test_module2" in
   add_module m2 ee;
 
   (* add global mapping *)
@@ -110,4 +110,5 @@ let test_executionengine () =
 
 let () =
   test_executionengine ();
-  Gc.compact ()
+  Gc.compact ();
+  dispose_context context

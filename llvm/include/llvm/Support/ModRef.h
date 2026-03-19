@@ -72,8 +72,6 @@ enum class IRMemLocation {
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  FirstTarget = TargetMem0,
-  // TargetMem IDs must be at the end of the list.
   Last = TargetMem1,
 };
 
@@ -102,6 +100,11 @@ public:
   /// Returns iterator over all supported location kinds.
   static auto locations() {
     return enum_seq_inclusive(Location::First, Location::Last,
+                              force_iteration_on_noniterable_enum);
+  }
+
+  static auto targetMemLocations() {
+    return enum_seq_inclusive(Location::TargetMem0, Location::TargetMem1,
                               force_iteration_on_noniterable_enum);
   }
 
@@ -164,6 +167,29 @@ public:
     MemoryEffectsBase FRMB = none();
     FRMB.setModRef(Location::ArgMem, MR);
     FRMB.setModRef(Location::InaccessibleMem, MR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access inaccessible or errno
+  /// memory.
+  static MemoryEffectsBase
+  inaccessibleOrErrnoMemOnly(ModRefInfo InaccessibleMR = ModRefInfo::ModRef,
+                             ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::InaccessibleMem, InaccessibleMR);
+    FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
+    return FRMB;
+  }
+
+  /// Create MemoryEffectsBase that can only access inaccessible, argument or
+  /// errno memory.
+  static MemoryEffectsBase inaccessibleOrArgOrErrnoMemOnly(
+      ModRefInfo InaccessibleOrArgMR = ModRefInfo::ModRef,
+      ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::InaccessibleMem, InaccessibleOrArgMR);
+    FRMB.setModRef(Location::ArgMem, InaccessibleOrArgMR);
+    FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
     return FRMB;
   }
 
@@ -238,6 +264,15 @@ public:
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+  }
+
+  /// Whether this function only (at most) accesses inaccessible or target
+  /// memory.
+  bool onlyAccessesInaccessibleOrTargetMem() const {
+    MemoryEffectsBase ME = *this;
+    for (auto Loc : MemoryEffectsBase::targetMemLocations())
+      ME &= ME.getWithoutLoc(Loc);
+    return ME.getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
   /// Whether this function only (at most) accesses errno memory.

@@ -1416,8 +1416,11 @@ file path instead of the build system's file path.
 
   (lldb) settings set target.source-map /buildbot/path /my/path
 
-Supply a catchall directory to search for source files in.
+Supply a catchall directory to search for source files in
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: shell
 
   (gdb) directory /my/path
+
+There is no equivalent LLDB command, use ``target.source-map`` instead.

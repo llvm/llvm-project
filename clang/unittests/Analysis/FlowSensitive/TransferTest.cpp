@@ -990,8 +990,7 @@ TEST(TransferTest, BinaryOperatorAssignUnknown) {
         ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooAtCVal));
 
         EXPECT_NE(FooAtAVal, FooAtBVal);
-        // FIXME: Should be NE too.
-        EXPECT_EQ(FooAtBVal, FooAtCVal);
+        EXPECT_NE(FooAtBVal, FooAtCVal);
 
         // Check that the storage location is correctly propagated.
         auto MatchResult = match(binaryOperator().bind("bo"), ASTCtx);
@@ -1006,8 +1005,7 @@ TEST(TransferTest, BinaryOperatorAssignUnknown) {
         const Environment &EnvR = getEnvironmentAtAnnotation(Results, "r");
 
         EXPECT_FALSE(EnvQ.proves(EnvQ.arena().makeLiteral(false)));
-        // FIXME: Should be FALSE too.
-        EXPECT_TRUE(EnvR.proves(EnvR.arena().makeLiteral(false)));
+        EXPECT_FALSE(EnvR.proves(EnvR.arena().makeLiteral(false)));
       });
 }
 
@@ -1048,14 +1046,13 @@ TEST(TransferTest, BinaryOperatorAssignFloat) {
         // FIXME: Should be non-null. Floats aren't modeled at all.
         EXPECT_THAT(FooAtBVal, IsNull());
 
-        // See if the storage location is correctly propagated.
+        // Check that the storage location is correctly propagated.
         auto MatchResult =
             match(binaryOperator(hasOperatorName("=")).bind("bo"), ASTCtx);
         const auto *BO = selectFirst<BinaryOperator>("bo", MatchResult);
         ASSERT_THAT(BO, NotNull());
         const StorageLocation *BOLoc = EnvP.getStorageLocation(*BO);
-        // FIXME: Should be non-null.
-        EXPECT_THAT(BOLoc, IsNull());
+        EXPECT_THAT(BOLoc, NotNull());
       });
 }
 
@@ -3831,6 +3828,34 @@ TEST(TransferTest, StaticCastBaseToDerived) {
                   Env.getStorageLocation(*DRefDecl));
         // For DRefFromFunc, not crashing when analyzing the field accesses is
         // enough.
+      });
+}
+
+TEST(TransferTest, StaticCastBaseToDerivedUnknown) {
+  // This code used to crash.
+  std::string Code = R"(
+    struct Base {};
+    struct Derived: Base {};
+
+    Base *unknown();
+    void target() {
+      Derived *DPtr = static_cast<Derived *>(unknown());
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *DPtrDecl = findValueDecl(ASTCtx, "DPtr");
+        ASSERT_THAT(DPtrDecl, NotNull());
+
+        const auto *DPtrVal =
+            dyn_cast_or_null<PointerValue>(Env.getValue(*DPtrDecl));
+        EXPECT_THAT(DPtrVal, NotNull());
       });
 }
 

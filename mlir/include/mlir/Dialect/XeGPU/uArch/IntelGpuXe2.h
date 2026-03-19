@@ -223,14 +223,6 @@ struct SpirvStoreScatterInstruction : public StoreScatterInstructionInterface {
   int32_t getMaxLaneStoreSize(int32_t bitWidth) const override { return 16; }
 };
 
-struct LoadMatrixInstruction : public LoadMatrixInstructionInterface {
-  int32_t getMaxLaneLoadSize(int32_t bitWidth) const override { return 16; }
-};
-
-struct StoreMatrixInstruction : public StoreMatrixInstructionInterface {
-  int32_t getMaxLaneStoreSize(int32_t bitWidth) const override { return 16; }
-};
-
 //===----------------------------------------------------------------------===//
 // uArch instances
 //===----------------------------------------------------------------------===//
@@ -243,11 +235,9 @@ struct PVCuArch final : public Xe2Plus {
     static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
     static const SpirvStoreScatterInstruction storeScatterInst;
     static const SpirvLoadGatherInstruction loadGatherInst;
-    static const StoreMatrixInstruction storeMatrixInst;
-    static const LoadMatrixInstruction loadMatrixInst;
-    static const Instruction *arr[] = {
-        &dpasInst,         &loadNdInst,     &storeNdInst,     &prefetchNdInst,
-        &storeScatterInst, &loadGatherInst, &storeMatrixInst, &loadMatrixInst};
+    static const Instruction *arr[] = {&dpasInst,         &loadNdInst,
+                                       &storeNdInst,      &prefetchNdInst,
+                                       &storeScatterInst, &loadGatherInst};
     return arr;
   }
 
@@ -292,11 +282,8 @@ struct BMGuArch : public Xe2Plus {
 inline const uArch *getUArch(llvm::StringRef archName) {
   if (archName.equals_insensitive("pvc"))
     return PVCuArch::getInstance();
-  else if (archName.equals_insensitive("bmg"))
+  if (archName.equals_insensitive("bmg"))
     return BMGuArch::getInstance();
-  else
-    llvm_unreachable("No matching uArch found");
-
   return nullptr;
 }
 

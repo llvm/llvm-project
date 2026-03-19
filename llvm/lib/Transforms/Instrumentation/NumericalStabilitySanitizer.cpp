@@ -1398,14 +1398,11 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.log2.f64", Intrinsic::log2, makeX86FP80X86FP80},
     {"llvm.log2.f80", Intrinsic::log2, makeX86FP80X86FP80},
     {"llvm.fma.f32", Intrinsic::fma, makeDoubleDoubleDoubleDouble},
-
-    {"llvm.fmuladd.f32", Intrinsic::fmuladd, makeDoubleDoubleDoubleDouble},
-
     {"llvm.fma.f64", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
-
-    {"llvm.fmuladd.f64", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
-
     {"llvm.fma.f80", Intrinsic::fma, makeX86FP80X86FP80X86FP80X86FP80},
+    {"llvm.fmuladd.f32", Intrinsic::fmuladd, makeDoubleDoubleDoubleDouble},
+    {"llvm.fmuladd.f64", Intrinsic::fmuladd, makeX86FP80X86FP80X86FP80X86FP80},
+    {"llvm.fmuladd.f80", Intrinsic::fmuladd, makeX86FP80X86FP80X86FP80X86FP80},
     {"llvm.fabs.f32", Intrinsic::fabs, makeDoubleDouble},
     {"llvm.fabs.f64", Intrinsic::fabs, makeX86FP80X86FP80},
     {"llvm.fabs.f80", Intrinsic::fabs, makeX86FP80X86FP80},
@@ -1421,6 +1418,12 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.maximum.f32", Intrinsic::maximum, makeDoubleDoubleDouble},
     {"llvm.maximum.f64", Intrinsic::maximum, makeX86FP80X86FP80X86FP80},
     {"llvm.maximum.f80", Intrinsic::maximum, makeX86FP80X86FP80X86FP80},
+    {"llvm.minimumnum.f32", Intrinsic::minimumnum, makeDoubleDoubleDouble},
+    {"llvm.minimumnum.f64", Intrinsic::minimumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.minimumnum.f80", Intrinsic::minimumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.maximumnum.f32", Intrinsic::maximumnum, makeDoubleDoubleDouble},
+    {"llvm.maximumnum.f64", Intrinsic::maximumnum, makeX86FP80X86FP80X86FP80},
+    {"llvm.maximumnum.f80", Intrinsic::maximumnum, makeX86FP80X86FP80X86FP80},
     {"llvm.copysign.f32", Intrinsic::copysign, makeDoubleDoubleDouble},
     {"llvm.copysign.f64", Intrinsic::copysign, makeX86FP80X86FP80X86FP80},
     {"llvm.copysign.f80", Intrinsic::copysign, makeX86FP80X86FP80X86FP80},
@@ -1438,22 +1441,10 @@ const KnownIntrinsic::WidenedIntrinsic KnownIntrinsic::kWidenedIntrinsics[] = {
     {"llvm.rint.f80", Intrinsic::rint, makeX86FP80X86FP80},
     {"llvm.nearbyint.f32", Intrinsic::nearbyint, makeDoubleDouble},
     {"llvm.nearbyint.f64", Intrinsic::nearbyint, makeX86FP80X86FP80},
-    {"llvm.nearbyin80f64", Intrinsic::nearbyint, makeX86FP80X86FP80},
+    {"llvm.nearbyint.f80", Intrinsic::nearbyint, makeX86FP80X86FP80},
     {"llvm.round.f32", Intrinsic::round, makeDoubleDouble},
     {"llvm.round.f64", Intrinsic::round, makeX86FP80X86FP80},
     {"llvm.round.f80", Intrinsic::round, makeX86FP80X86FP80},
-    {"llvm.lround.f32", Intrinsic::lround, makeDoubleDouble},
-    {"llvm.lround.f64", Intrinsic::lround, makeX86FP80X86FP80},
-    {"llvm.lround.f80", Intrinsic::lround, makeX86FP80X86FP80},
-    {"llvm.llround.f32", Intrinsic::llround, makeDoubleDouble},
-    {"llvm.llround.f64", Intrinsic::llround, makeX86FP80X86FP80},
-    {"llvm.llround.f80", Intrinsic::llround, makeX86FP80X86FP80},
-    {"llvm.lrint.f32", Intrinsic::lrint, makeDoubleDouble},
-    {"llvm.lrint.f64", Intrinsic::lrint, makeX86FP80X86FP80},
-    {"llvm.lrint.f80", Intrinsic::lrint, makeX86FP80X86FP80},
-    {"llvm.llrint.f32", Intrinsic::llrint, makeDoubleDouble},
-    {"llvm.llrint.f64", Intrinsic::llrint, makeX86FP80X86FP80},
-    {"llvm.llrint.f80", Intrinsic::llrint, makeX86FP80X86FP80},
 };
 
 const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {
@@ -1499,6 +1490,12 @@ const KnownIntrinsic::LFEntry KnownIntrinsic::kLibfuncIntrinsics[] = {
     {LibFunc_fminf, "llvm.minnum.f32"},
     {LibFunc_fmin, "llvm.minnum.f64"},
     {LibFunc_fminl, "llvm.minnum.f80"},
+    {LibFunc_fmaximum_numf, "llvm.maximumnum.f32"},
+    {LibFunc_fmaximum_num, "llvm.maximumnum.f64"},
+    {LibFunc_fmaximum_numl, "llvm.maximumnum.f80"},
+    {LibFunc_fminimum_numf, "llvm.minimumnum.f32"},
+    {LibFunc_fminimum_num, "llvm.minimumnum.f64"},
+    {LibFunc_fminimum_numl, "llvm.minimumnum.f80"},
     {LibFunc_ceilf, "llvm.ceil.f32"},
     {LibFunc_ceil, "llvm.ceil.f64"},
     {LibFunc_ceill, "llvm.ceil.f80"},
@@ -2020,8 +2017,6 @@ static void moveFastMathFlags(Function &F,
     F.removeFnAttr(attr);                                                      \
     FMF.set##setter();                                                         \
   }
-  MOVE_FLAG("no-infs-fp-math", NoInfs)
-  MOVE_FLAG("no-nans-fp-math", NoNaNs)
   MOVE_FLAG("no-signed-zeros-fp-math", NoSignedZeros)
 #undef MOVE_FLAG
 

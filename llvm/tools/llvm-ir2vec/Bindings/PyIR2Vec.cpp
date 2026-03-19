@@ -70,6 +70,14 @@ public:
     }
   }
 
+  nb::list getFuncNames() {
+    nb::list NbFuncNames;
+    for (const Function &F : M->getFunctionDefs())
+      NbFuncNames.append(nb::str(F.getName().str().c_str()));
+
+    return NbFuncNames;
+  }
+
   nb::dict getFuncEmbMap() {
     auto ToolFuncEmbMap = Tool->getFunctionEmbeddingsMap(OutputEmbeddingMode);
 
@@ -119,6 +127,72 @@ public:
 
     return NbArray;
   }
+
+  nb::dict getBBEmbMap(const std::string &FuncName) {
+    const Function *F = M->getFunction(FuncName);
+
+    if (!F)
+      throw nb::value_error(
+          ("Function '" + FuncName + "' not found in module").c_str());
+
+    auto ToolBBEmbMap = Tool->getBBEmbeddingsMap(*F, OutputEmbeddingMode);
+
+    if (!ToolBBEmbMap)
+      throw nb::value_error(toString(ToolBBEmbMap.takeError()).c_str());
+
+    nb::dict NbBBEmbMap;
+
+    for (const auto &[BBPtr, BBEmb] : *ToolBBEmbMap) {
+      auto BBEmbVec = BBEmb.getData();
+      double *NbBBEmbVec = new double[BBEmbVec.size()];
+      std::copy(BBEmbVec.begin(), BBEmbVec.end(), NbBBEmbVec);
+
+      auto NbArray = nb::ndarray<nb::numpy, double>(
+          NbBBEmbVec, {BBEmbVec.size()},
+          nb::capsule(NbBBEmbVec, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
+          }));
+
+      NbBBEmbMap[nb::str(BBPtr->getName().str().c_str())] = NbArray;
+    }
+
+    return NbBBEmbMap;
+  }
+
+  nb::dict getInstEmbMap(const std::string &FuncName) {
+    const Function *F = M->getFunction(FuncName);
+
+    if (!F)
+      throw nb::value_error(
+          ("Function '" + FuncName + "' not found in module").c_str());
+
+    auto ToolInstEmbMap = Tool->getInstEmbeddingsMap(*F, OutputEmbeddingMode);
+
+    if (!ToolInstEmbMap)
+      throw nb::value_error(toString(ToolInstEmbMap.takeError()).c_str());
+
+    nb::dict NbInstEmbMap;
+
+    for (const auto &[InstPtr, InstEmb] : *ToolInstEmbMap) {
+      auto InstEmbVec = InstEmb.getData();
+      double *NbInstEmbVec = new double[InstEmbVec.size()];
+      std::copy(InstEmbVec.begin(), InstEmbVec.end(), NbInstEmbVec);
+
+      auto NbArray = nb::ndarray<nb::numpy, double>(
+          NbInstEmbVec, {InstEmbVec.size()},
+          nb::capsule(NbInstEmbVec, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
+          }));
+
+      std::string InstStr;
+      raw_string_ostream OS(InstStr);
+      InstPtr->print(OS);
+
+      NbInstEmbMap[nb::str(OS.str().c_str())] = NbArray;
+    }
+
+    return NbInstEmbMap;
+  }
 };
 
 } // namespace
@@ -130,14 +204,27 @@ NB_MODULE(ir2vec, m) {
       .def(nb::init<const std::string &, const std::string &,
                     const std::string &>(),
            nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"))
+      .def("getFuncNames", &PyIR2VecTool::getFuncNames,
+           "Get list of all defined functions in the module\n"
+           "Returns: list[str] - Function names")
       .def("getFuncEmbMap", &PyIR2VecTool::getFuncEmbMap,
            "Generate function-level embeddings for all functions\n"
            "Returns: dict[str, ndarray[float64]] - "
-           "{function_name: embedding}")
+           "{function_name: embedding vector}")
       .def("getFuncEmb", &PyIR2VecTool::getFuncEmb, nb::arg("funcName"),
            "Generate embedding for a single function by name\n"
            "Args: funcName (str) - IR-Name of the function\n"
-           "Returns: ndarray[float64] - Function embedding vector");
+           "Returns: ndarray[float64] - Function embedding vector")
+      .def("getBBEmbMap", &PyIR2VecTool::getBBEmbMap, nb::arg("funcName"),
+           "Generate embeddings for all basic blocks in a function\n"
+           "Args: funcName (str) - IR-Name of the function\n"
+           "Returns: dict[str, ndarray[float64]] - "
+           "{basic_block_name: embedding vector}")
+      .def("getInstEmbMap", &PyIR2VecTool::getInstEmbMap, nb::arg("funcName"),
+           "Generate embeddings for all instructions in a function\n"
+           "Args: funcName (str) - IR-Name of the function\n"
+           "Returns: dict[str, ndarray[float64]] - "
+           "{instruction_string: embedding_vector}");
 
   m.def(
       "initEmbedding",

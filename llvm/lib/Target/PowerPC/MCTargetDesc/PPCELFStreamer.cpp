@@ -82,8 +82,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
 
 void PPCELFStreamer::emitInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI) {
-  PPCMCCodeEmitter *Emitter =
-      static_cast<PPCMCCodeEmitter*>(getAssembler().getEmitterPtr());
+  auto &Emitter = static_cast<PPCMCCodeEmitter &>(getAssembler().getEmitter());
 
   // If the instruction is a part of the GOT to PC-Rel link time optimization
   // instruction pair, return a value, otherwise return std::nullopt. A true
@@ -100,7 +99,7 @@ void PPCELFStreamer::emitInstruction(const MCInst &Inst,
     emitGOTToPCRelReloc(Inst);
 
   // Special handling is only for prefixed instructions.
-  if (!Emitter->isPrefixedInstruction(Inst)) {
+  if (!Emitter.isPrefixedInstruction(Inst)) {
     MCELFStreamer::emitInstruction(Inst, STI);
     return;
   }

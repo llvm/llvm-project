@@ -260,11 +260,6 @@ private:
   bool SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
                                  SDValue &SrcMods) const;
 
-  bool SelectVOP3PMadMixModsNeg(SDValue In, SDValue &Src,
-                                SDValue &SrcMods) const;
-  bool SelectVOP3PMadMixBF16ModsNeg(SDValue In, SDValue &Src,
-                                    SDValue &SrcMods) const;
-
   bool SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1, SDValue &Src2,
                    SDValue &Tbl) const;
 
@@ -290,6 +285,7 @@ private:
   void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
+  void SelectTensorLoadStore(SDNode *N, unsigned IntrID);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);

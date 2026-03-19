@@ -129,6 +129,35 @@ SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
                                               ArrayRef<OpFoldResult> lhs,
                                               ArrayRef<OpFoldResult> rhs);
 
+/// Given an `input` value representing per-lane data, this function returns the
+/// result after performing a reduction on the input over all lanes (number of
+/// lanes given by `size`). This uses butterfly shuffles to perform the
+/// reduction in a log2(size) number of steps.
+/// NOTE: Implementation taken from TestVectorTransforms.cpp
+Value subgroupReduction(Location loc, OpBuilder &builder, Value input,
+                        vector::CombiningKind kind, uint32_t size);
+
+/// Given a `src` and an `acc` argumments from a vector::MultiDimReductionOp,
+/// lower to a set of vector::ReductionOp ops over 1D slices extracted from
+/// `src`. The reduction is performed along `reductionDim`. The result is a
+/// vector with the same shape as `acc`.
+/// TODO: Only 2D to 1D reduction is supported for now.
+Value lowerToVectorReductions(TypedValue<VectorType> src,
+                              TypedValue<VectorType> acc,
+                              vector::CombiningKind kind, int64_t reductionDim,
+                              Location loc, PatternRewriter &rewriter);
+
+/// Lowers cross-lane reductions to shuffle operations on a 2D vector.
+/// Extracts slices along the reduction dimension, performs subgroup reductions
+/// with shuffles across reductionSize work-items, and inserts the results back
+/// into an accumulator vector.
+Value lowerCrossLaneReductionToShuffles(TypedValue<VectorType> src,
+                                        TypedValue<VectorType> acc,
+                                        vector::CombiningKind kind,
+                                        int64_t reductionDim,
+                                        int64_t reductionSize, Location loc,
+                                        PatternRewriter &rewriter);
+
 /// Helper Function to find a proper instruction multiple for the user-supplied
 /// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
 /// `candidateMultiples` are uArch multiples of such shapes (i.e. block count or
