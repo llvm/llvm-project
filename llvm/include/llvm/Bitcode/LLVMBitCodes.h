@@ -816,6 +816,7 @@ enum AttributeKindCodes {
   ATTR_KIND_DENORMAL_FPENV = 106,
   ATTR_KIND_SWIFT_CORO = 107,
   ATTR_KIND_NOOUTLINE = 108,
+  ATTR_KIND_FLATTEN = 109,
 };
 
 enum ComdatSelectionKindCodes {
