@@ -3978,7 +3978,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
            << " has lower cost than VF "
            << (LowerCostWithTC ? B.Width : A.Width)
            << " when taking the cost of the remaining scalar loop iterations "
-              "into consideration for a trip count of "
+              "into consideration for a maximum trip count of "
            << MaxTripCount << ".\n";
   });
   return LowerCostWithTC;
