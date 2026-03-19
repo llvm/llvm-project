@@ -643,7 +643,7 @@ vputils::getMemoryLocation(const VPRecipeBase &R) {
   return Loc;
 }
 
-VPInstruction *vputils::findCanonicalIVIncrement(VPValue *CanIV, VPlan &Plan) {
+VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
   VPValue *Step;
   VPInstruction *Increment = nullptr;
   VPSymbolicValue &VFxUF = Plan.getVFxUF();
@@ -653,6 +653,7 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPValue *CanIV, VPlan &Plan) {
     Increment = cast<VPInstruction>(U);
   };
 
+  VPRegionValue *CanIV = Plan.getVectorLoopRegion()->getCanonicalIV();
   for (VPUser *U : CanIV->users()) {
     if (!match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))))
       continue;

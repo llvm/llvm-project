@@ -38,6 +38,7 @@ add_fp_unittest(
     libc.src.__support.math.bf16addf128
     libc.src.__support.math.bf16div
     libc.src.__support.math.bf16divf
+    libc.src.__support.math.bf16divf128
     libc.src.__support.math.bf16divl
     libc.src.__support.math.bf16fma
     libc.src.__support.math.bf16fmaf
@@ -71,6 +72,8 @@ add_fp_unittest(
     libc.src.__support.math.coshf16
     libc.src.__support.math.cospif
     libc.src.__support.math.cospif16
+    libc.src.__support.math.daddf128
+    libc.src.__support.math.daddl
     libc.src.__support.math.dfmaf128
     libc.src.__support.math.dfmal
     libc.src.__support.math.dsqrtl
@@ -134,6 +137,9 @@ add_fp_unittest(
     libc.src.__support.math.floorf128
     libc.src.__support.math.floorf16
     libc.src.__support.math.floorl
+    libc.src.__support.math.fma
+    libc.src.__support.math.fmaf
+    libc.src.__support.math.fmaf16
     libc.src.__support.math.fmabf16
     libc.src.__support.math.fmax
     libc.src.__support.math.fmaxbf16

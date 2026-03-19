@@ -104,18 +104,16 @@ struct CmpInfo {
   AArch64CC::CondCode CC;
 };
 
-class AArch64ConditionOptimizer : public MachineFunctionPass {
+class AArch64ConditionOptimizerImpl {
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineDominatorTree *DomTree;
   const MachineRegisterInfo *MRI;
 
 public:
-  static char ID;
+  bool run(MachineFunction &MF, MachineDominatorTree &MDT);
 
-  AArch64ConditionOptimizer() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+private:
   bool canAdjustCmp(MachineInstr &CmpMI);
   bool registersMatch(MachineInstr *FirstMI, MachineInstr *SecondMI);
   bool nzcvLivesOut(MachineBasicBlock *MBB);
@@ -130,6 +128,14 @@ public:
                 int ToImm);
   bool optimizeIntraBlock(MachineBasicBlock &MBB);
   bool optimizeCrossBlock(MachineBasicBlock &HBB);
+};
+
+class AArch64ConditionOptimizerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  AArch64ConditionOptimizerLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -139,19 +145,20 @@ public:
 
 } // end anonymous namespace
 
-char AArch64ConditionOptimizer::ID = 0;
+char AArch64ConditionOptimizerLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(AArch64ConditionOptimizer, "aarch64-condopt",
+INITIALIZE_PASS_BEGIN(AArch64ConditionOptimizerLegacy, "aarch64-condopt",
                       "AArch64 CondOpt Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(AArch64ConditionOptimizer, "aarch64-condopt",
+INITIALIZE_PASS_END(AArch64ConditionOptimizerLegacy, "aarch64-condopt",
                     "AArch64 CondOpt Pass", false, false)
 
-FunctionPass *llvm::createAArch64ConditionOptimizerPass() {
-  return new AArch64ConditionOptimizer();
+FunctionPass *llvm::createAArch64ConditionOptimizerLegacyPass() {
+  return new AArch64ConditionOptimizerLegacy();
 }
 
-void AArch64ConditionOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
+void AArch64ConditionOptimizerLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -159,7 +166,7 @@ void AArch64ConditionOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
 
 // Verify that the MI's immediate is adjustable and it only sets flags (pure
 // cmp)
-bool AArch64ConditionOptimizer::canAdjustCmp(MachineInstr &CmpMI) {
+bool AArch64ConditionOptimizerImpl::canAdjustCmp(MachineInstr &CmpMI) {
   unsigned ShiftAmt = AArch64_AM::getShiftValue(CmpMI.getOperand(3).getImm());
   if (!CmpMI.getOperand(2).isImm()) {
     LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << CmpMI << '\n');
@@ -177,8 +184,8 @@ bool AArch64ConditionOptimizer::canAdjustCmp(MachineInstr &CmpMI) {
 }
 
 // Ensure both compare MIs use the same register, tracing through copies.
-bool AArch64ConditionOptimizer::registersMatch(MachineInstr *FirstMI,
-                                               MachineInstr *SecondMI) {
+bool AArch64ConditionOptimizerImpl::registersMatch(MachineInstr *FirstMI,
+                                                   MachineInstr *SecondMI) {
   Register FirstReg = FirstMI->getOperand(1).getReg();
   Register SecondReg = SecondMI->getOperand(1).getReg();
   Register FirstCmpReg =
@@ -194,7 +201,7 @@ bool AArch64ConditionOptimizer::registersMatch(MachineInstr *FirstMI,
 }
 
 // Check if NZCV lives out to any successor block.
-bool AArch64ConditionOptimizer::nzcvLivesOut(MachineBasicBlock *MBB) {
+bool AArch64ConditionOptimizerImpl::nzcvLivesOut(MachineBasicBlock *MBB) {
   for (auto *SuccBB : MBB->successors()) {
     if (SuccBB->isLiveIn(AArch64::NZCV)) {
       LLVM_DEBUG(dbgs() << "NZCV live into successor "
@@ -227,7 +234,7 @@ static bool isCSINCInstruction(unsigned Opc) {
 
 // Returns the Bcc terminator if present, otherwise nullptr.
 MachineInstr *
-AArch64ConditionOptimizer::getBccTerminator(MachineBasicBlock *MBB) {
+AArch64ConditionOptimizerImpl::getBccTerminator(MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator Term = MBB->getFirstTerminator();
   if (Term == MBB->end()) {
     LLVM_DEBUG(dbgs() << "No terminator in " << printMBBReference(*MBB)
@@ -249,7 +256,7 @@ AArch64ConditionOptimizer::getBccTerminator(MachineBasicBlock *MBB) {
 // CondMI, ensuring no NZCV interference. Returns nullptr if no suitable CMP
 // is found or if adjustments are not safe.
 MachineInstr *
-AArch64ConditionOptimizer::findAdjustableCmp(MachineInstr *CondMI) {
+AArch64ConditionOptimizerImpl::findAdjustableCmp(MachineInstr *CondMI) {
   assert(CondMI && "CondMI cannot be null");
   MachineBasicBlock *MBB = CondMI->getParent();
 
@@ -318,8 +325,9 @@ static AArch64CC::CondCode getAdjustedCmp(AArch64CC::CondCode Cmp) {
 
 // Returns the adjusted immediate, opcode, and condition code for switching
 // between inclusive/exclusive forms (GT <-> GE, LT <-> LE).
-CmpInfo AArch64ConditionOptimizer::getAdjustedCmpInfo(MachineInstr *CmpMI,
-                                                      AArch64CC::CondCode Cmp) {
+CmpInfo
+AArch64ConditionOptimizerImpl::getAdjustedCmpInfo(MachineInstr *CmpMI,
+                                                  AArch64CC::CondCode Cmp) {
   unsigned Opc = CmpMI->getOpcode();
 
   bool IsSigned = Cmp == AArch64CC::GT || Cmp == AArch64CC::GE ||
@@ -357,15 +365,16 @@ CmpInfo AArch64ConditionOptimizer::getAdjustedCmpInfo(MachineInstr *CmpMI,
 }
 
 // Modifies a comparison instruction's immediate and opcode.
-void AArch64ConditionOptimizer::updateCmpInstr(MachineInstr *CmpMI, int NewImm,
-                                               unsigned NewOpc) {
+void AArch64ConditionOptimizerImpl::updateCmpInstr(MachineInstr *CmpMI,
+                                                   int NewImm,
+                                                   unsigned NewOpc) {
   CmpMI->getOperand(2).setImm(NewImm);
   CmpMI->setDesc(TII->get(NewOpc));
 }
 
 // Modifies the condition code of a conditional instruction.
-void AArch64ConditionOptimizer::updateCondInstr(MachineInstr *CondMI,
-                                                AArch64CC::CondCode NewCC) {
+void AArch64ConditionOptimizerImpl::updateCondInstr(MachineInstr *CondMI,
+                                                    AArch64CC::CondCode NewCC) {
   // Get the correct operand index for the conditional instruction
   unsigned CondOpIdx;
   switch (CondMI->getOpcode()) {
@@ -384,9 +393,9 @@ void AArch64ConditionOptimizer::updateCondInstr(MachineInstr *CondMI,
 }
 
 // Applies a comparison adjustment to a cmp/cond instruction pair.
-void AArch64ConditionOptimizer::applyCmpAdjustment(MachineInstr *CmpMI,
-                                                   MachineInstr *CondMI,
-                                                   const CmpInfo &Info) {
+void AArch64ConditionOptimizerImpl::applyCmpAdjustment(MachineInstr *CmpMI,
+                                                       MachineInstr *CondMI,
+                                                       const CmpInfo &Info) {
   updateCmpInstr(CmpMI, Info.Imm, Info.Opc);
   updateCondInstr(CondMI, Info.CC);
 }
@@ -406,9 +415,10 @@ static AArch64CC::CondCode parseCondCode(ArrayRef<MachineOperand> Cond) {
 // Adjusts one cmp instruction to another one if result of adjustment will allow
 // CSE.  Returns true if compare instruction was changed, otherwise false is
 // returned.
-bool AArch64ConditionOptimizer::adjustTo(MachineInstr *CmpMI,
-                                         AArch64CC::CondCode Cmp,
-                                         MachineInstr *To, int ToImm) {
+
+bool AArch64ConditionOptimizerImpl::adjustTo(MachineInstr *CmpMI,
+                                             AArch64CC::CondCode Cmp,
+                                             MachineInstr *To, int ToImm) {
   CmpInfo Info = getAdjustedCmpInfo(CmpMI, Cmp);
   if (Info.Imm == ToImm && Info.Opc == To->getOpcode()) {
     MachineInstr &BrMI = *CmpMI->getParent()->getFirstTerminator();
@@ -443,7 +453,7 @@ static bool isLessThan(AArch64CC::CondCode Cmp) {
 //
 // The second CMP is eliminated, enabling CSE to remove the redundant
 // comparison.
-bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
+bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
   MachineInstr *FirstCSINC = nullptr;
   MachineInstr *SecondCSINC = nullptr;
 
@@ -551,7 +561,7 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
 }
 
 // Optimize across blocks
-bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
+bool AArch64ConditionOptimizerImpl::optimizeCrossBlock(MachineBasicBlock &HBB) {
   SmallVector<MachineOperand, 4> HeadCond;
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   if (TII->analyzeBranch(HBB, TBB, FBB, HeadCond)) {
@@ -670,15 +680,23 @@ bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
   return false;
 }
 
-bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
-                    << "********** Function: " << MF.getName() << '\n');
+bool AArch64ConditionOptimizerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return AArch64ConditionOptimizerImpl().run(MF, MDT);
+}
+
+bool AArch64ConditionOptimizerImpl::run(MachineFunction &MF,
+                                        MachineDominatorTree &MDT) {
+  LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
+                    << "********** Function: " << MF.getName() << '\n');
 
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  DomTree = &MDT;
   MRI = &MF.getRegInfo();
 
   bool Changed = false;
@@ -695,4 +713,16 @@ bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+PreservedAnalyses
+AArch64ConditionOptimizerPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  bool Changed = AArch64ConditionOptimizerImpl().run(MF, MDT);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

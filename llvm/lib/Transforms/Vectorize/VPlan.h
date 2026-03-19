@@ -4515,8 +4515,11 @@ public:
   /// Indicates if NUW is set for the canonical IV increment, for loop regions.
   bool hasCanonicalIVNUW() const { return CanIVInfo->hasNUW(); }
 
-  /// Unsets NUW for the canonical IV increment, for loop regions.
-  void clearCanonicalIVNUW() { CanIVInfo->clearNUW(); }
+  /// Unsets NUW for the canonical IV increment \p Increment, for loop regions.
+  void clearCanonicalIVNUW(VPInstruction *Increment) {
+    Increment->dropPoisonGeneratingFlags();
+    CanIVInfo->clearNUW();
+  }
 };
 
 inline VPRegionBlock *VPRecipeBase::getRegion() {

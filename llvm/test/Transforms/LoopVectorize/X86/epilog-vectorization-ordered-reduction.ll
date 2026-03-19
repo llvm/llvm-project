@@ -259,6 +259,7 @@ exit:
 }
 
 ; FIXME: Should not generate dead main vector loop.
+; TODO: Should fold add of epilogue resume value of canonical IV into phi.
 define float @ordered_reduction_epilogue_dead_main_loop(ptr %p, i64 %n) "prefer-vector-width"="512" {
 ; CHECK-LABEL: define float @ordered_reduction_epilogue_dead_main_loop(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
