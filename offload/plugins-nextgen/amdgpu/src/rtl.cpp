@@ -1703,18 +1703,18 @@ struct AMDGPUEventTy {
 
   /// Clear the current recording and retained timing state.
   Error resetState() {
-    if (auto Err = releaseTimingSignal())
-      return Err;
-
     RecordedStream = nullptr;
     RecordedSlot = -1;
     RecordedSyncCycle = -1;
     TimingAgent = {0};
 
+    if (auto Err = releaseTimingSignal())
+      return Err;
+
     return Plugin::success();
   }
 
-  /// Record the state of a stream on the event.
+  /// Record the current stream point on the event.
   Error record(AMDGPUStreamTy &Stream) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
@@ -1826,8 +1826,8 @@ Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
     return Err;
   }
 
-  Event.RecordedSyncCycle = SyncCycle;
   Event.RecordedSlot = Curr;
+  Event.RecordedSyncCycle = SyncCycle;
 
   if (Queue->isProfilingEnabled()) {
     OutputSignal->increaseUseCount();
