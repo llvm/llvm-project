@@ -3091,7 +3091,7 @@ class _CXUnsavedFile(UnsavedFile):
             "'UnsavedFile' is already available to use and existing uses should "
             "be adapted to refer to it instead. '_CXUnsavedFile' will be "
             "removed in a future release.",
-            DeprecationWarning
+            DeprecationWarning,
         )
         return super().__getattribute__(attr)
 

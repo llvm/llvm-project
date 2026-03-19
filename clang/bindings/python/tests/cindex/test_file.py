@@ -69,6 +69,7 @@ int b[] = {
         self.assertNotEqual(main_file, b_file)
         self.assertNotEqual(main_file, "a.inc")
 
+
 class TestUnsavedFile(unittest.TestCase):
     def test_deprecation_warning(self):
         unsaved_file = _CXUnsavedFile()
