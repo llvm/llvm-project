@@ -240,7 +240,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
             return this->emitGetLocal(*SubExprT, It->second.Offset, E);
           } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
             if (auto It = this->Params.find(PVD); It != this->Params.end()) {
-              return this->emitGetParam(*SubExprT, It->second.Offset, E);
+              return this->emitGetParam(*SubExprT, It->second.Index, E);
             }
           }
         }
@@ -3469,7 +3469,8 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
 
     bool Fatal = true;
     if (PointeeToT && PointeeFromT) {
-      if (isIntegralType(*PointeeFromT) && isIntegralType(*PointeeToT))
+      if (isIntegerOrBoolType(*PointeeFromT) &&
+          isIntegerOrBoolType(*PointeeToT))
         Fatal = false;
       else if (E->getCastKind() == CK_LValueBitCast)
         Fatal = false;
@@ -3851,13 +3852,13 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
   // This is necessary because the calling code has pushed the pointer
   // of the correct base for  us already, but the arguments need
   // to come after.
-  unsigned Offset = align(primSize(PT_Ptr)); // instance pointer.
+  unsigned ParamIndex = 0;
   for (const ParmVarDecl *PD : Ctor->parameters()) {
     PrimType PT = this->classify(PD->getType()).value_or(PT_Ptr);
 
-    if (!this->emitGetParam(PT, Offset, E))
+    if (!this->emitGetParam(PT, ParamIndex, E))
       return false;
-    Offset += align(primSize(PT));
+    ++ParamIndex;
   }
 
   return this->emitCall(F, 0, E);
@@ -4504,7 +4505,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
     return false;
 
   PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
-  if (isIntegralType(SecondFieldT)) {
+  if (isIntegerOrBoolType(SecondFieldT)) {
     if (!this->emitConst(ArrayType->getSize(), SecondFieldT, E))
       return false;
     return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
@@ -5055,12 +5056,6 @@ template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this, ScopeKind::FullExpression);
 
-  // If we won't destroy the toplevel scope, check for memory leaks first.
-  if (!DestroyToplevelScope) {
-    if (!this->emitCheckAllocations(E))
-      return false;
-  }
-
   auto maybeDestroyLocals = [&]() -> bool {
     if (DestroyToplevelScope)
       return RootScope.destroyLocals() && this->emitCheckAllocations(E);
@@ -5101,7 +5096,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
     return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  return maybeDestroyLocals() && this->emitCheckAllocations(E) && false;
+  return maybeDestroyLocals() && false;
 }
 
 template <class Emitter>
@@ -5781,10 +5776,12 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (DiscardResult)
     return true;
 
-  if (this->LambdaThisCapture.Offset > 0) {
-    if (this->LambdaThisCapture.IsPtr)
-      return this->emitGetThisFieldPtr(this->LambdaThisCapture.Offset, E);
-    return this->emitGetPtrThisField(this->LambdaThisCapture.Offset, E);
+  if constexpr (!std::is_same_v<Emitter, EvalEmitter>) {
+    if (this->LambdaThisCapture.Offset > 0) {
+      if (this->LambdaThisCapture.IsPtr)
+        return this->emitGetThisFieldPtr(this->LambdaThisCapture.Offset, E);
+      return this->emitGetPtrThisField(this->LambdaThisCapture.Offset, E);
+    }
   }
 
   // In some circumstances, the 'this' pointer does not actually refer to the
@@ -6118,11 +6115,13 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
-  {
-    LocalScope<Emitter> CondScope(this);
-    if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl))
-        return false;
+  // Start of the loop body {
+  LocalScope<Emitter> CondScope(this);
+
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt()) {
+    if (!visitDeclStmt(CondDecl))
+      return false;
+  }
 
     if (!this->visitBool(Cond))
       return false;
@@ -6138,12 +6137,14 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
 
     if (!CondScope.destroyLocals())
       return false;
-  }
-  if (!this->jump(CondLabel))
-    return false;
-  this->fallthrough(EndLabel);
-  this->emitLabel(EndLabel);
-  return WholeLoopScope.destroyLocals();
+    // } End of loop body.
+
+    if (!this->jump(CondLabel))
+      return false;
+    this->fallthrough(EndLabel);
+    this->emitLabel(EndLabel);
+
+    return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
@@ -6604,7 +6605,7 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
     // We do the lvalue-to-rvalue conversion manually here, so no need
     // to care about references.
     PrimType ParamType = this->classify(PVD->getType()).value_or(PT_Ptr);
-    if (!this->emitGetParam(ParamType, It->second.Offset, MD))
+    if (!this->emitGetParam(ParamType, It->second.Index, MD))
       return false;
   }
 
@@ -6701,10 +6702,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (!this->emitThis(Ctor))
       return false;
 
-    const ParmVarDecl *PVD = Ctor->getParamDecl(0);
-    ParamOffset PO = this->Params[PVD]; // Must exist.
-
-    if (!this->emitGetParam(PT_Ptr, PO.Offset, Ctor))
+    if (!this->emitGetParam(PT_Ptr, /*ParamIndex=*/0, Ctor))
       return false;
 
     return this->emitMemcpy(Ctor) && this->emitPopPtr(Ctor) &&
@@ -6877,10 +6875,7 @@ bool Compiler<Emitter>::compileUnionAssignmentOperator(
   if (!this->emitThis(MD))
     return false;
 
-  const ParmVarDecl *PVD = MD->getParamDecl(0);
-  ParamOffset PO = this->Params[PVD]; // Must exist.
-
-  if (!this->emitGetParam(PT_Ptr, PO.Offset, MD))
+  if (!this->emitGetParam(PT_Ptr, /*ParamIndex=*/0, MD))
     return false;
 
   return this->emitMemcpy(MD) && this->emitRet(PT_Ptr, MD);
@@ -7043,12 +7038,12 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       if (!this->emitStoreFloat(E))
         return false;
     } else if (SubExpr->refersToBitField()) {
-      assert(isIntegralType(*T));
+      assert(isIntegerOrBoolType(*T));
       if (!this->emitPreIncBitfield(*T, E->canOverflow(), getBitWidth(SubExpr),
                                     E))
         return false;
     } else {
-      assert(isIntegralType(*T));
+      assert(isIntegerOrBoolType(*T));
       if (!this->emitPreInc(*T, E->canOverflow(), E))
         return false;
     }
@@ -7098,12 +7093,12 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       if (!this->emitStoreFloat(E))
         return false;
     } else if (SubExpr->refersToBitField()) {
-      assert(isIntegralType(*T));
+      assert(isIntegerOrBoolType(*T));
       if (!this->emitPreDecBitfield(*T, E->canOverflow(), getBitWidth(SubExpr),
                                     E))
         return false;
     } else {
-      assert(isIntegralType(*T));
+      assert(isIntegerOrBoolType(*T));
       if (!this->emitPreDec(*T, E->canOverflow(), E))
         return false;
     }
@@ -7452,9 +7447,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
       if (IsReference || !It->second.IsPtr)
-        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
+        return this->emitGetParam(classifyPrim(E), It->second.Index, E);
 
-      return this->emitGetPtrParam(It->second.Offset, E);
+      return this->emitGetPtrParam(It->second.Index, E);
     }
 
     if (!Ctx.getLangOpts().CPlusPlus23 && IsReference)
@@ -7496,14 +7491,16 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     return this->visitDeclRef(D, E);
   };
 
-  // Lambda captures.
-  if (auto It = this->LambdaCaptures.find(D);
-      It != this->LambdaCaptures.end()) {
-    auto [Offset, IsPtr] = It->second;
+  if constexpr (!std::is_same_v<Emitter, EvalEmitter>) {
+    // Lambda captures.
+    if (auto It = this->LambdaCaptures.find(D);
+        It != this->LambdaCaptures.end()) {
+      auto [Offset, IsPtr] = It->second;
 
-    if (IsPtr)
-      return this->emitGetThisFieldPtr(Offset, E);
-    return this->emitGetPtrThisField(Offset, E);
+      if (IsPtr)
+        return this->emitGetThisFieldPtr(Offset, E);
+      return this->emitGetPtrThisField(Offset, E);
+    }
   }
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E);
@@ -7625,18 +7622,18 @@ bool Compiler<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
                                                getFPOptions(E), E);
 
     // Float to integral.
-    if (isIntegralType(ToT) || ToT == PT_Bool)
+    if (isIntegerOrBoolType(ToT) || ToT == PT_Bool)
       return this->emitCastFloatingIntegral(ToT, getFPOptions(E), E);
   }
 
-  if (isIntegralType(FromT) || FromT == PT_Bool) {
+  if (isIntegerOrBoolType(FromT) || FromT == PT_Bool) {
     if (ToT == PT_IntAP)
       return this->emitCastAP(FromT, Ctx.getBitWidth(ToQT), E);
     if (ToT == PT_IntAPS)
       return this->emitCastAPS(FromT, Ctx.getBitWidth(ToQT), E);
 
     // Integral to integral.
-    if (isIntegralType(ToT) || ToT == PT_Bool)
+    if (isIntegerOrBoolType(ToT) || ToT == PT_Bool)
       return FromT != ToT ? this->emitCast(FromT, ToT, E) : true;
 
     if (ToT == PT_Float) {

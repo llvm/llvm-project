@@ -570,6 +570,26 @@ llvm.func @test_byval_global() {
 
 // -----
 
+// Check that alignment information is preserved in the memcpy when inlining
+// byval arguments.
+
+llvm.func @byval_aligned_arg(%ptr : !llvm.ptr { llvm.byval = i32, llvm.align = 16 }) {
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_byval_memcpy_alignment
+// CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]: !llvm.ptr
+llvm.func @test_byval_memcpy_alignment(%ptr : !llvm.ptr) {
+  // Verify the memcpy carries the alignment info from the byval attribute.
+  // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
+  // CHECK-SAME: {llvm.align = 16 : i64}
+  llvm.call @byval_aligned_arg(%ptr) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// -----
+
 // Check that inlining does not hoist byval allocas out of automatic allocation
 // scopes, such as parallel forall regions. Each parallel iteration must have
 // its own private copy of the byval argument.

@@ -18,6 +18,8 @@
 #include "L0Plugin.h"
 #include "L0Trace.h"
 
+#include "llvm/Object/OffloadBinary.h"
+
 namespace llvm::omp::target::plugin {
 
 using namespace llvm::omp::target;
@@ -159,6 +161,42 @@ Expected<bool> LevelZeroPluginTy::isELFCompatible(uint32_t DeviceId,
                                                   StringRef Image) const {
   uint64_t MajorVer, MinorVer;
   return isValidOneOmpImage(Image, MajorVer, MinorVer);
+}
+
+// We only need to check for formats other than ELF here.
+Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
+  switch (identify_magic(Image)) {
+  case file_magic::spirv_object:
+    // Handle SPIRV objects directly
+    return true;
+  case file_magic::offload_binary: {
+    // Handle OffloadBinary format
+    MemoryBufferRef Buffer(Image, "offload_binary");
+    auto BinariesOrErr = OffloadBinary::create(Buffer);
+    if (!BinariesOrErr)
+      return BinariesOrErr.takeError();
+
+    auto &Binaries = *BinariesOrErr;
+    if (Binaries.size() != 1)
+      return false;
+
+    const OffloadBinary *InnerBinary = Binaries[0].get();
+    ImageKind ImageKind = InnerBinary->getImageKind();
+    llvm::Triple Triple(InnerBinary->getTriple());
+
+    if (Triple.getArch() != getTripleArch())
+      return false;
+
+    if (ImageKind != llvm::object::IMG_SPIRV &&
+        ImageKind != llvm::object::IMG_Object)
+      return false;
+
+    return true;
+  }
+  default:
+    // Unknown format
+    return false;
+  }
 }
 
 Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {

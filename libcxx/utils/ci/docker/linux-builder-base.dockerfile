@@ -51,6 +51,7 @@ RUN sudo apt-get update \
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         bash \
+        build-essential \
         bzip2 \
         ccache \
         curl \
