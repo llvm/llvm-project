@@ -188,29 +188,6 @@ setDescLayout(transform::TransformRewriter &rewriter,
 }
 
 DiagnosedSilenceableFailure
-transform::GetDescOp::apply(transform::TransformRewriter &rewriter,
-                            transform::TransformResults &results,
-                            transform::TransformState &state) {
-  auto targetValues = state.getPayloadValues(getTarget());
-  if (!llvm::hasSingleElement(targetValues)) {
-    return emitDefiniteFailure()
-           << "requires exactly one target value handle (got "
-           << llvm::range_size(targetValues) << ")";
-  }
-
-  auto maybeDescOp =
-      findProducerOfType<xegpu::CreateNdDescOp>(*targetValues.begin());
-  if (!maybeDescOp) {
-    return emitSilenceableFailure(getLoc())
-           << "Could not find a matching descriptor op when walking the "
-              "producer chain of the first operand.";
-  }
-
-  results.set(llvm::cast<OpResult>(getResult()), {*maybeDescOp});
-  return DiagnosedSilenceableFailure::success();
-}
-
-DiagnosedSilenceableFailure
 transform::GetLoadOp::apply(transform::TransformRewriter &rewriter,
                               transform::TransformResults &results,
                               transform::TransformState &state) {

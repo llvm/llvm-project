@@ -17,21 +17,6 @@ def run(f):
 
 
 @run
-def getDescOp():
-    sequence = transform.SequenceOp(
-        transform.FailurePropagationMode.Propagate,
-        [],
-        transform.OperationType.get("xegpu.dpas"),
-    )
-    with InsertionPoint(sequence.body):
-        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
-        desc_handle = xegpu.get_desc_op(operand)
-        transform.YieldOp()
-    # CHECK-LABEL: TEST: getDescOp
-    # CHECK: transform.xegpu.get_desc_op %
-
-
-@run
 def getLoadOp():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
