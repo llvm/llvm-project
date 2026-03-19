@@ -8048,17 +8048,16 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
 
-  VPlanTransforms::simplifyRecipes(*VPlan0);
-  VPlanTransforms::handleEarlyExits(*VPlan0, Legal->hasUncountableEarlyExit());
-  VPlanTransforms::addMiddleCheck(*VPlan0, CM.foldTailByMasking());
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *VPlan0);
-
   // Create recipes for header phis.
   VPlanTransforms::createHeaderPhiRecipes(
       *VPlan0, PSE, *OrigLoop, Legal->getInductionVars(),
       Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
       CM.getInLoopReductions(), Hints.allowReordering());
 
+  VPlanTransforms::simplifyRecipes(*VPlan0);
+  VPlanTransforms::handleEarlyExits(*VPlan0, Legal->hasUncountableEarlyExit());
+  VPlanTransforms::addMiddleCheck(*VPlan0, CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *VPlan0);
   if (CM.foldTailByMasking())
     RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *VPlan0);
   RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize,
@@ -8349,17 +8348,16 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
 
-  VPlanTransforms::handleEarlyExits(*Plan,
-                                    /*HasUncountableExit*/ false);
-  VPlanTransforms::addMiddleCheck(*Plan, /*TailFolded*/ false);
-
-  VPlanTransforms::createLoopRegions(*Plan);
-
   VPlanTransforms::createHeaderPhiRecipes(
       *Plan, PSE, *OrigLoop, Legal->getInductionVars(),
       MapVector<PHINode *, RecurrenceDescriptor>(),
       SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
       /*AllowReordering=*/false);
+  VPlanTransforms::handleEarlyExits(*Plan,
+                                    /*HasUncountableExit*/ false);
+  VPlanTransforms::addMiddleCheck(*Plan, /*TailFolded*/ false);
+
+  VPlanTransforms::createLoopRegions(*Plan);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
