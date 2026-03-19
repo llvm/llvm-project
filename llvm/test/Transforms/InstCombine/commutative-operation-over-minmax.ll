@@ -4,11 +4,9 @@
 define i32 @sadd_min_max_assoc(i32 %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: define i32 @sadd_min_max_assoc(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    ret i32 [[TMP7]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %4 = call i32 @llvm.smin.i32(i32 %0, i32 %1)
   %5 = add i32 %2, %4
@@ -20,11 +18,9 @@ define i32 @sadd_min_max_assoc(i32 %0, i32 %1, i32 %2) {
 define i32 @or_min_max_assoc(i32 %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: define i32 @or_min_max_assoc(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    ret i32 [[TMP7]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %4 = call i32 @llvm.smin.i32(i32 %0, i32 %1)
   %5 = or i32 %2, %4
@@ -36,11 +32,9 @@ define i32 @or_min_max_assoc(i32 %0, i32 %1, i32 %2) {
 define i32 @smul_min_max_assoc(i32 %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: define i32 @smul_min_max_assoc(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    ret i32 [[TMP7]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %4 = call i32 @llvm.smin.i32(i32 %0, i32 %1)
   %5 = mul i32 %2, %4
@@ -52,11 +46,9 @@ define i32 @smul_min_max_assoc(i32 %0, i32 %1, i32 %2) {
 define i32 @uadd_min_max_assoc(i32 %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: define i32 @uadd_min_max_assoc(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP0]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    ret i32 [[TMP7]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %4 = call i32 @llvm.umin.i32(i32 %0, i32 %1)
   %5 = add i32 %2, %4
@@ -68,11 +60,9 @@ define i32 @uadd_min_max_assoc(i32 %0, i32 %1, i32 %2) {
 define i32 @umul_min_max_assoc(i32 %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: define i32 @umul_min_max_assoc(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP0]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    ret i32 [[TMP7]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %4 = call i32 @llvm.umin.i32(i32 %0, i32 %1)
   %5 = mul i32 %2, %4
