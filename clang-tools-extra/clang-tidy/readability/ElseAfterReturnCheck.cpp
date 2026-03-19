@@ -129,33 +129,13 @@ static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
   auto Remap = [&](SourceLocation Loc) {
     return Context.getSourceManager().getExpansionLoc(Loc);
   };
-  auto TokLen = [&](SourceLocation Loc) {
-    return Lexer::MeasureTokenLength(Loc, Context.getSourceManager(),
-                                     Context.getLangOpts());
-  };
 
   if (const auto *CS = dyn_cast<CompoundStmt>(Else)) {
-    Diag << tooling::fixit::createRemoval(ElseLoc);
-    const SourceLocation LBrace = CS->getLBracLoc();
-    const SourceLocation RBrace = CS->getRBracLoc();
-    const SourceLocation RangeStart =
-        Remap(LBrace).getLocWithOffset(TokLen(LBrace) + 1);
-    const SourceLocation RangeEnd = Remap(RBrace).getLocWithOffset(-1);
-
-    const StringRef Repl = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(RangeStart, RangeEnd),
-        Context.getSourceManager(), Context.getLangOpts());
-    Diag << tooling::fixit::createReplacement(CS->getSourceRange(), Repl);
+    Diag << tooling::fixit::createRemoval(ElseLoc)
+         << tooling::fixit::createRemoval(Remap(CS->getLBracLoc()))
+         << tooling::fixit::createRemoval(Remap(CS->getRBracLoc()));
   } else {
-    const SourceLocation ElseExpandedLoc = Remap(ElseLoc);
-    const SourceLocation EndLoc = Remap(Else->getEndLoc());
-
-    const StringRef Repl = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(
-            ElseExpandedLoc.getLocWithOffset(TokLen(ElseLoc) + 1), EndLoc),
-        Context.getSourceManager(), Context.getLangOpts());
-    Diag << tooling::fixit::createReplacement(
-        SourceRange(ElseExpandedLoc, EndLoc), Repl);
+    Diag << tooling::fixit::createRemoval(Remap(ElseLoc));
   }
 }
 
