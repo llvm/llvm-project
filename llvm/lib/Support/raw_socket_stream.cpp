@@ -91,9 +91,11 @@ static Expected<int> getSocketFD(StringRef SocketPath) {
   setsockopt(Socket, SOL_SOCKET, SO_PEERCRED, NULL, 0);
 #endif
   struct sockaddr_un Addr = setSocketAddr(SocketPath);
-  if (::connect(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1)
+  if (::connect(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
+    ::close(Socket);
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "Connect socket failed");
+  }
 
 #ifdef _WIN32
   return _open_osfhandle(Socket, 0);
