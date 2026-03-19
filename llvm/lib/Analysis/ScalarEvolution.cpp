@@ -8394,8 +8394,9 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     const SCEV *PtrSCEV = getSCEV(U->getOperand(0));
     if (isa<SCEVAddRecExpr>(PtrSCEV)) {
       const SCEV *Addr = getPtrToAddrExpr(PtrSCEV);
-      if (!isa<SCEVCouldNotCompute>(Addr))
-        return Addr;
+      if (!isa<SCEVCouldNotCompute>(Addr) &&
+          getTypeSizeInBits(V->getType()) <= getTypeSizeInBits(Addr->getType()))
+        return getTruncateOrNoop(Addr, V->getType());
     }
     return getUnknown(V);
   }
