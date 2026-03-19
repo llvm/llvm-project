@@ -1,0 +1,37 @@
+# REQUIRES: host-has-lldb-with-python
+# REQUIRES: has-filecheck
+# REQUIRES: has-splitfile
+# REQUIRES: optimization=none
+
+# RUN: split-file %s %{temp}
+# RUN: %{cxx} %{flags} %{temp}/main.cpp -o %t.out %{compile_flags} -g %{link_flags}
+
+# RUN: %{lldb} --no-lldbinit --batch -o "settings set target.load-script-from-symbol-file false" \
+# RUN:         -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:         -o "command script import %S/../../../utils/lldb/libcxx/libcxx.py" \
+# RUN:         -s %{temp}/lldb.commands %t.out | FileCheck %s
+#
+# CHECK:      (lldb) frame var mii
+# CHECK-NEXT: (std::map<int, int>) mii = size=2 {
+# CHECK-NEXT:   [0] = (first = 1, second = 2)
+# CHECK-NEXT:   [1] = (first = 3, second = 4)
+# CHECK-NEXT: }
+
+#--- main.cpp
+
+#include <map>
+
+int main(int, char**) {
+  std::map<int, int> mii = {
+    {1, 2},
+    {3, 4},
+  };
+
+  return 0;
+}
+
+#--- lldb.commands
+
+break set -p return -X main
+run
+frame var mii
