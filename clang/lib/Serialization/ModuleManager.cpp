@@ -156,6 +156,16 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
 
   std::optional<ModuleFileKey> FileKey = FileName.makeKey(FileMgr);
   if (!FileKey) {
+    // FIXME: This is a hack to accommodate module files in the CAS that are not
+    // on disk. Represent these explicitly in ModuleFileName.
+    if (auto *KnownBuffer =
+            getModuleCache().getInMemoryModuleCache().lookupPCM(FileName)) {
+      FileEntryRef File =
+          FileMgr.getVirtualFileRef(FileName, KnownBuffer->getBufferSize(), 0);
+      FileKey = ModuleFileKey(File);
+    }
+  }
+  if (!FileKey) {
     ErrorStr = "module file not found";
     return Missing;
   }
