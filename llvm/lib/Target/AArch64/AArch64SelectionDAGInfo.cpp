@@ -127,9 +127,9 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
                                           MachinePointerInfo SrcPtrInfo) const {
 
   // Get the constant size of the copy/set.
-  uint64_t ConstSize = 0;
+  LocationSize ConstSize = LocationSize::afterPointer();
   if (auto *C = dyn_cast<ConstantSDNode>(Size))
-    ConstSize = C->getZExtValue();
+    ConstSize = LocationSize::precise(C->getZExtValue());
 
   const bool IsSet = Opcode == AArch64::MOPSMemorySetPseudo ||
                      Opcode == AArch64::MOPSMemorySetTaggingPseudo;
