@@ -1718,7 +1718,7 @@ struct AMDGPUEventTy {
   Error record(AMDGPUStreamTy &Stream) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
-    // Ignore the last recorded stream.
+    // Discard the previous recording and retained timing state.
     if (auto Err = resetState())
       return Err;
 
@@ -1786,12 +1786,12 @@ protected:
   /// The sync cycle when the stream was recorded. Used to detect stale events.
   int64_t RecordedSyncCycle;
 
-  /// The signal of the recorded barrier marker used for timing. Null means
-  /// timing is unavailable for the current recording.
+  /// The signal of the recorded timing barrier. Null means timing is
+  /// unavailable for the current recording.
   AMDGPUSignalTy *TimingSignal;
 
-  /// The agent that owns the queue where the timing marker was recorded. A zero
-  /// handle means timing is unavailable for the current recording.
+  /// The agent that owns the queue where the timing barrier was recorded. A
+  /// zero handle means timing is unavailable for the current recording.
   hsa_agent_t TimingAgent;
 
   /// Mutex to safely access event fields.
