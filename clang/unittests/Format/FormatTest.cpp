@@ -28321,6 +28321,19 @@ TEST_F(FormatTest, BreakAfterAttributes) {
   EXPECT_EQ(Style.BreakAfterAttributes, FormatStyle::ABS_Leave);
   verifyNoChange(Code, Style);
 
+  Style.BreakAfterAttributes = FormatStyle::ABS_LeaveAll;
+  verifyNoChange("[[deprecated(\"Don't use this version\")]]\n"
+                 "[[nodiscard]]\n"
+                 "bool foo() {\n"
+                 "  return true;\n"
+                 "}\n"
+                 "\n"
+                 "[[deprecated(\"Don't use this version\")]]\n"
+                 "[[nodiscard]] bool bar() {\n"
+                 "  return true;\n"
+                 "}",
+                 Style);
+
   Style.BreakAfterAttributes = FormatStyle::ABS_Never;
   verifyFormat("[[maybe_unused]] const int i;\n"
                "[[foo([[]])]] [[maybe_unused]] int j;\n"

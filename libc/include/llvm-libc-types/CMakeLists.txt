@@ -1,5 +1,13 @@
 add_header(off64_t HDR off64_t.h)
 add_header(size_t HDR size_t.h)
+add_header(
+  rsize_t
+  HDR
+    rsize_t.h
+  DEPENDS
+    .size_t
+    libc.include.llvm-libc-macros.annex_k_macros
+)
 add_header(ssize_t HDR ssize_t.h)
 add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__search_compare_t HDR __search_compare_t.h)
@@ -29,6 +37,7 @@ add_header(double_t HDR double_t.h)
 add_header(DIR HDR DIR.h)
 add_header(dev_t HDR dev_t.h)
 add_header(div_t HDR div_t.h)
+add_header(errno_t HDR errno_t.h DEPENDS libc.include.llvm-libc-macros.annex_k_macros)
 add_header(ldiv_t HDR ldiv_t.h)
 add_header(lldiv_t HDR lldiv_t.h)
 add_header(FILE HDR FILE.h)

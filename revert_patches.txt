@@ -8,10 +8,10 @@ breaks build of hipblaslt
 breaks comgr builds
 [comgr] Auto-discover and embed libc++ headers for HIPRTC (#1696)
 ---
-needs more work
-[mlir][llvmir][OpenMP] Translate affinity clause in task construct to llvmir (#182223)
-[Clang][OpenMP] Move declare simd codegen into OMPIRBuilder (#186030)
----
 breaks smoke*
 [Reland][IR] Add initial support for the byte type (#186888)
+---
+breaks qmcpack x86
+[SLP]Add external uses estimations into tree throttling
+[SLP] Loop aware cost model/tree building
 ---
