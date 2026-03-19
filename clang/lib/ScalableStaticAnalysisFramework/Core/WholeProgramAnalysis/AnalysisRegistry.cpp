@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "llvm/ADT/STLExtras.h"
 

@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISDRIVER_H
-#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISDRIVER_H
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_ANALYSISDRIVER_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_ANALYSISDRIVER_H
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/WPASuite.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummary.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/WPASuite.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 #include <memory>
@@ -92,4 +92,4 @@ private:
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISDRIVER_H
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_ANALYSISDRIVER_H

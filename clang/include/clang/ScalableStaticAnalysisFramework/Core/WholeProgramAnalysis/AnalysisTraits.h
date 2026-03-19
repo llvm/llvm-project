@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISTRAITS_H
-#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISTRAITS_H
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_ANALYSISTRAITS_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_ANALYSISTRAITS_H
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
 #include <type_traits>
 
 namespace clang::ssaf {
@@ -33,4 +33,4 @@ inline constexpr bool HasAnalysisName_v = HasAnalysisName<T>::value;
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISTRAITS_H
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_ANALYSISTRAITS_H

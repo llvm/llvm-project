@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisDriver.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisRegistry.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/DerivedAnalysis.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/SummaryAnalysis.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisDriver.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/DerivedAnalysis.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/SummaryAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"

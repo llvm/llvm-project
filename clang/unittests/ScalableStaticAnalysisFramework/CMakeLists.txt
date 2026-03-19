@@ -1,6 +1,5 @@
 add_distinct_clang_unittest(ClangScalableAnalysisTests
   Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp
-  Analysis/AnalysisDriverTest.cpp
   ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
   EntityIdTableTest.cpp
@@ -24,6 +23,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   SummaryNameTest.cpp
   TestFixture.cpp
   TUSummaryBuilderTest.cpp
+  WholeProgramAnalysis/AnalysisDriverTest.cpp
 
   CLANG_LIBS
   clangAST

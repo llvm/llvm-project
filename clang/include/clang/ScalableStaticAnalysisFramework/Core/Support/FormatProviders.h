@@ -14,12 +14,12 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUPPORT_FORMATPROVIDERS_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUPPORT_FORMATPROVIDERS_H
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/raw_ostream.h"
 

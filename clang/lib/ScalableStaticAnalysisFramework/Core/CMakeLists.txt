@@ -3,9 +3,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangScalableStaticAnalysisFrameworkCore
-  Analysis/AnalysisDriver.cpp
-  Analysis/AnalysisName.cpp
-  Analysis/AnalysisRegistry.cpp
   ASTEntityMapping.cpp
   EntityLinker/EntityLinker.cpp
   Model/BuildNamespace.cpp
@@ -26,6 +23,9 @@ add_clang_library(clangScalableStaticAnalysisFrameworkCore
   Support/ErrorBuilder.cpp
   TUSummary/ExtractorRegistry.cpp
   TUSummary/TUSummaryBuilder.cpp
+  WholeProgramAnalysis/AnalysisDriver.cpp
+  WholeProgramAnalysis/AnalysisName.cpp
+  WholeProgramAnalysis/AnalysisRegistry.cpp
 
   LINK_LIBS
   clangAST

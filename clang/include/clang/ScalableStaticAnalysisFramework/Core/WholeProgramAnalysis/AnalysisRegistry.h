@@ -28,13 +28,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISREGISTRY_H
-#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISREGISTRY_H
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_ANALYSISREGISTRY_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_ANALYSISREGISTRY_H
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/DerivedAnalysis.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/SummaryAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/DerivedAnalysis.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/SummaryAnalysis.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Registry.h"
 #include <memory>
@@ -106,4 +106,4 @@ private:
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISREGISTRY_H
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_ANALYSISREGISTRY_H

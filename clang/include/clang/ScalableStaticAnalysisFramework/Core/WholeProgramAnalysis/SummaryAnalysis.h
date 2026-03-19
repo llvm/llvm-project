@@ -12,15 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_SUMMARYANALYSIS_H
-#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_SUMMARYANALYSIS_H
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_SUMMARYANALYSIS_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_SUMMARYANALYSIS_H
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisBase.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisResult.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisTraits.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisBase.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisResult.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisTraits.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 
@@ -125,4 +125,4 @@ private:
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_SUMMARYANALYSIS_H
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_WHOLEPROGRAMANALYSIS_SUMMARYANALYSIS_H
