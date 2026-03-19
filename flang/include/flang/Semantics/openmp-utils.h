@@ -119,7 +119,7 @@ struct Reason {
   template <typename... Ts> Reason &Say(Ts &&...args) {
     msgs.Say(std::forward<Ts>(args)...);
     return *this;
-  };
+  }
   operator bool() const { return !msgs.empty(); }
   parser::Message &AttachTo(parser::Message &msg);
 };
