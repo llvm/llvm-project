@@ -228,6 +228,7 @@ public:
   GetOptionalUnsafeRawPointerType(swift::Mangle::ManglingFlavor flavor);
   CompilerType GetUnsafeCurrentTaskType(swift::Mangle::ManglingFlavor flavor);
   CompilerType GetUInt8Type(swift::Mangle::ManglingFlavor flavor);
+  CompilerType GetAnyType(swift::Mangle::ManglingFlavor flavor);
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.
