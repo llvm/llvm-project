@@ -269,11 +269,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
-  const unsigned PragmaCount = unrollCountPragmaValue(L);
-  const bool PragmaEnableUnroll = hasUnrollEnablePragma(L);
   // If a user provided an explicit unroll pragma (with or without count),
   // override expensive trip count checks
-  if (PragmaEnableUnroll || PragmaCount > 0)
+  UnrollPragmaInfo PInfo(L);
+  if (PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0)
     UP.AllowExpensiveTripCount = true;
 }
 
