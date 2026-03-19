@@ -366,8 +366,9 @@ static void buildOverloadContext(const Record *R, OverloadContext &Ctx) {
 
 /// Build the worklist of element types to emit overloads for, sorted in
 /// canonical order (see getTypeSortPriority).
-static void buildWorklist(const Record *R, SmallVectorImpl<TypeWorkItem> &Worklist,
-                   const OverloadContext &Ctx) {
+static void buildWorklist(const Record *R,
+                          SmallVectorImpl<TypeWorkItem> &Worklist,
+                          const OverloadContext &Ctx) {
   const Record *AvailRec = R->getValueAsDef("Availability");
   std::string Availability = getVersionString(AvailRec);
   bool AvailabilityIsAtLeastSM6_2 = AvailRec->getValueAsInt("Major") > 6 ||
@@ -466,10 +467,10 @@ void emitDocComment(raw_ostream &OS, const Record *R) {
 /// Process the worklist: emit all shape variants for each type with
 /// availability annotations and #ifdef guards.
 static void emitWorklistOverloads(raw_ostream &OS, const OverloadContext &Ctx,
-                           ArrayRef<TypeWorkItem> Worklist,
-                           bool EmitScalarOverload,
-                           ArrayRef<int64_t> VectorSizes,
-                           ArrayRef<const Record *> MatrixDimensions) {
+                                  ArrayRef<TypeWorkItem> Worklist,
+                                  bool EmitScalarOverload,
+                                  ArrayRef<int64_t> VectorSizes,
+                                  ArrayRef<const Record *> MatrixDimensions) {
   bool InIfdef = false;
   for (const TypeWorkItem &Item : Worklist) {
     if (Item.NeedsIfdefGuard && !InIfdef) {
