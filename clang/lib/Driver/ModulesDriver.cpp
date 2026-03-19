@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/DirectedGraph.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1528,9 +1529,12 @@ void driver::modules::runModulesDriver(
   // TODO: Install all updated command-lines produced by the dependency scan.
   // TODO: Fix-up command-lines for named module imports.
 
-  // TODO: Sort the graph topologically before adding jobs back to the
-  // Compilation being built.
-  for (auto *N : Graph)
-    if (auto *JN = dyn_cast<JobNode>(N))
-      C.addCommand(std::move(JN->Job));
+  llvm::ReversePostOrderTraversal<CompilationGraph *> TopologicallySortedNodes(
+      &Graph);
+  assert(isa<RootNode>(*TopologicallySortedNodes.begin()) &&
+         "First node in topological order must be the root!");
+  auto TopologicallySortedJobNodes = llvm::map_range(
+      llvm::drop_begin(TopologicallySortedNodes), llvm::CastTo<JobNode>);
+  for (auto *JN : TopologicallySortedJobNodes)
+    C.addCommand(std::move(JN->Job));
 }

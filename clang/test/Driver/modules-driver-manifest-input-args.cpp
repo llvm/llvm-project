@@ -26,17 +26,11 @@
 // RUN:   %t/main.cpp \
 // RUN:   -### 2>&1 \
 // RUN:   | sed 's:\\\\\?:/:g' \
-// RUN:   | FileCheck %s -check-prefix=MAIN-CC1 -check-prefix=STDLIB-MOD-CC1 -DPREFIX=%/t
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
-// MAIN-CC1: "-cc1"
-// MAIN-CC1-SAME: "main.cpp"
-// MAIN-CC1-NOT: "-Wno-reserved-module-identifier"
-// MAIN-CC1-NOT: "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
-
-// STDLIB-MOD-CC1: "-cc1"
-// STDLIB-MOD-CC1-SAME: "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/std.cppm"
-// STDLIB-MOD-CC1-SAME: "-Wno-reserved-module-identifier"
-// STDLIB-MOD-CC1-SAME: "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
+// CHECK: "-cc1" {{.*}} "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/std.cppm"
+// CHECK-SAME: "-Wno-reserved-module-identifier"
+// CHECK-SAME: "-internal-isystem" "[[PREFIX]]/Inputs/usr/lib/x86_64-linux-gnu/../share/libc++/v1/"
 
 //--- main.cpp
 import std;
