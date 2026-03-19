@@ -946,6 +946,40 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_SPLAT_VECTOR:
     return selectSplatVector(ResVReg, ResType, I);
 
+  case TargetOpcode::G_CONCAT_VECTORS: {
+    // G_CONCAT_VECTORS with results exceeding valid SPIR-V OpTypeVector
+    // sizes (e.g., <9 x s32> from 3x3 matrix) are produced by fewerElements.
+    // Extract all scalar elements from source sub-vectors and construct
+    // the composite.
+    MachineBasicBlock &BB = *I.getParent();
+    SPIRVTypeInst ElemType = GR.getScalarOrVectorComponentType(ResType);
+    SmallVector<Register, 16> AllElems;
+    for (unsigned K = 1; K < I.getNumOperands(); ++K) {
+      Register SrcReg = I.getOperand(K).getReg();
+      SPIRVTypeInst SrcType = GR.getSPIRVTypeForVReg(SrcReg);
+      unsigned SrcNumElts = GR.getScalarOrVectorComponentCount(SrcType);
+      for (unsigned J = 0; J < SrcNumElts; ++J) {
+        Register ElemReg = MRI->createVirtualRegister(GR.getRegClass(ElemType));
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+            .addDef(ElemReg)
+            .addUse(GR.getSPIRVTypeID(ElemType))
+            .addUse(SrcReg)
+            .addImm(J)
+            .constrainAllUses(TII, TRI, RBI);
+        AllElems.push_back(ElemReg);
+      }
+    }
+    MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
+    auto MIB =
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeConstruct))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType));
+    for (Register R : AllElems)
+      MIB.addUse(R);
+    MIB.constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
+
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     MachineBasicBlock &BB = *I.getParent();
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpVectorShuffle))

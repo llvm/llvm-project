@@ -116,7 +116,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                            v3s1, v3s8, v3s16, v3s32, v3s64,
                            v4s1, v4s8, v4s16, v4s32, v4s64};
 
-  auto allScalars = {s1, s8, s16, s32, s64};
+  auto allScalars = {s1, s8, s16, s32, s64, s128};
 
   auto allScalarsAndVectors = {
       s1,    s8,    s16,   s32,   s64,    s128,   v2s1,  v2s8,
@@ -261,9 +261,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .lowerIf(vectorElementCountIsGreaterThan(1, MaxVectorSize))
       .custom();
 
-  // If the result is still illegal, the combiner should be able to remove it.
+  // Because of 4x4 matrices the largest supported concat vector size is 16.
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
-      .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes);
+      .legalIf(vectorElementCountIsLessThanOrEqualTo(0, 16));
 
   getActionDefinitionsBuilder(G_SPLAT_VECTOR)
       .legalFor(allowedVectorTypes)
@@ -339,10 +339,40 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectorsProduct);
 
-  // Extensions.
-  getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
+  getActionDefinitionsBuilder({G_TRUNC, G_SEXT, G_ANYEXT})
       .legalForCartesianProduct(allScalarsAndVectors)
       .legalIf(extendedScalarsAndVectorsProduct);
+
+  // Only vectors with valid SPIR-V OpTypeVector sizes are legal.
+  // Flattened matrix sizes (e.g., <9 x i1> from 3x3, <12 x i1> from 3x4)
+  // exceed valid OpTypeVector component counts. Use fewerElements to split
+  // into the largest valid SPIR-V vector divisor (e.g., 9->3x3, 12->3x4).
+  // The reassembly produces G_CONCAT_VECTORS with the original element count.
+  getActionDefinitionsBuilder(G_ZEXT)
+      .legalForCartesianProduct(allScalars)
+      .legalForCartesianProduct(allowedVectorTypes)
+      .legalIf(extendedScalarsAndVectorsProduct)
+      .fewerElementsIf(
+          [](const LegalityQuery &Query) {
+            const LLT Ty = Query.Types[0];
+            if (!Ty.isFixedVector())
+              return false;
+            unsigned NumElts = Ty.getNumElements();
+            return NumElts != 2 && NumElts != 3 && NumElts != 4 &&
+                   NumElts != 8 && NumElts != 16;
+          },
+          [](const LegalityQuery &Query) {
+            const LLT Ty = Query.Types[0];
+            unsigned NumElts = Ty.getNumElements();
+            // Valid SPIR-V vector sizes in descending order.
+            static const unsigned ValidSizes[] = {16, 8, 4, 3, 2};
+            for (unsigned D : ValidSizes) {
+              if (NumElts % D == 0)
+                return std::make_pair(
+                    0u, LLT::fixed_vector(D, Ty.getElementType()));
+            }
+            return std::make_pair(0u, Ty.getElementType());
+          });
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor(allPtrsScalarsAndVectors)
