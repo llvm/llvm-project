@@ -34,6 +34,3 @@ if "PATH" in os.environ:
     )
 else:
     config.environment["PATH"] = config.llvm_tools_dir
-
-# Define substitutions for the test files
-config.substitutions.append(("%libclc_library_dir", config.libclc_library_dir))

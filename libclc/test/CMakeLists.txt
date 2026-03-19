@@ -18,12 +18,11 @@ foreach(t ${LIBCLC_TARGETS_TO_BUILD})
 
   # Get the output file from the target property
   set(target_file "$<TARGET_PROPERTY:libclc-${t},TARGET_FILE>")
-  set(output_file "$<PATH:GET_FILENAME,${target_file}>")
 
   set(LIBCLC_TARGET_TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/${t})
   file(MAKE_DIRECTORY ${LIBCLC_TARGET_TEST_DIR})
   file(GENERATE OUTPUT ${LIBCLC_TARGET_TEST_DIR}/check-external-funcs.test
-    CONTENT "; RUN: llvm-nm -u \"%libclc_library_dir/${t}/${output_file}\" | FileCheck %s --allow-empty\n\n; CHECK-NOT: {{.+}}\n"
+    CONTENT "; RUN: llvm-nm -u \"${target_file}\" | FileCheck %s --allow-empty\n\n; CHECK-NOT: {{.+}}\n"
   )
 
   configure_lit_site_cfg(
