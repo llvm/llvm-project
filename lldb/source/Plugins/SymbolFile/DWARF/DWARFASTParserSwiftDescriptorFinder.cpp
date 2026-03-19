@@ -176,8 +176,9 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
   if (!lldb_type) {
     // TODO: for embedded Swift this is fine but consult other modules
     // here for general case?
-    LLDB_LOGV(GetLog(LLDBLog::Types), "Could not find type {0} in module",
-              type.GetMangledTypeName());
+    LLDB_LOG_VERBOSE(GetLog(LLDBLog::Types),
+                     "Could not find type {0} in module",
+                     type.GetMangledTypeName());
     return {};
   }
   auto die = dwarf->GetDIE(lldb_type->GetID());

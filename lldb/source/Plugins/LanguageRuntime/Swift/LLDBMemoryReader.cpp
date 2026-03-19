@@ -84,15 +84,15 @@ LLDBMemoryReader::getSymbolAddress(const std::string &name) {
 
   Log *log = GetLog(LLDBLog::Types);
 
-  LLDB_LOGV(log, "[MemoryReader] asked to retrieve the address of symbol {0}",
-            name);
+  LLDB_LOG_VERBOSE(
+      log, "[MemoryReader] asked to retrieve the address of symbol {0}", name);
 
   ConstString name_cs(name.c_str(), name.size());
   SymbolContextList sc_list;
   m_process.GetTarget().GetImages().FindSymbolsWithNameAndType(
       name_cs, lldb::eSymbolTypeAny, sc_list);
   if (!sc_list.GetSize()) {
-    LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
+    LLDB_LOG_VERBOSE(log, "[MemoryReader] symbol resolution failed {0}", name);
     return swift::remote::RemoteAddress();
   }
 
@@ -113,7 +113,8 @@ LLDBMemoryReader::getSymbolAddress(const std::string &name) {
   if (sc_list.GetSize() == 1 && sc_list.GetContextAtIndex(0, sym_ctx)) {
     if (sym_ctx.symbol) {
       auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process.GetTarget());
-      LLDB_LOGV(log, "[MemoryReader] symbol resolved to {0:x}", load_addr);
+      LLDB_LOG_VERBOSE(log, "[MemoryReader] symbol resolved to {0:x}",
+                       load_addr);
       return swift::remote::RemoteAddress(
           load_addr, swift::remote::RemoteAddress::DefaultAddressSpace);
     }
@@ -121,7 +122,7 @@ LLDBMemoryReader::getSymbolAddress(const std::string &name) {
 
   // Empty list, resolution failed.
   if (sc_list.GetSize() == 0) {
-    LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
+    LLDB_LOG_VERBOSE(log, "[MemoryReader] symbol resolution failed {0}", name);
     return swift::remote::RemoteAddress();
   }
 
@@ -136,11 +137,12 @@ LLDBMemoryReader::getSymbolAddress(const std::string &name) {
         m_process.GetTarget().ReadUnsignedIntegerFromMemory(
             load_addr, m_process.GetAddressByteSize(), 0, error, true);
     if (sym_value != other_sym_value) {
-      LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
+      LLDB_LOG_VERBOSE(log, "[MemoryReader] symbol resolution failed {0}",
+                       name);
       return swift::remote::RemoteAddress();
     }
   }
-  LLDB_LOGV(log, "[MemoryReader] symbol resolved to {0}", load_addr);
+  LLDB_LOG_VERBOSE(log, "[MemoryReader] symbol resolved to {0}", load_addr);
   return swift::remote::RemoteAddress(
       load_addr, swift::remote::RemoteAddress::DefaultAddressSpace);
 }
@@ -242,10 +244,11 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
   auto &target = m_process.GetTarget();
   Address addr;
   if (!target.ResolveLoadAddress(readValue, addr)) {
-    LLDB_LOGV(log,
-              "[MemoryReader] Could not resolve load address of pointer {0:x} "
-              "read from {1:x}.",
-              readValue, address.getRawAddress());
+    LLDB_LOG_VERBOSE(
+        log,
+        "[MemoryReader] Could not resolve load address of pointer {0:x} "
+        "read from {1:x}.",
+        readValue, address.getRawAddress());
     return process_pointer;
   }
 
@@ -305,10 +308,11 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
     return process_pointer;
   }
 
-  LLDB_LOGV(log,
-            "[MemoryReader] Successfully resolved pointer {0:x} read from "
-            "{1:x} to tagged address {2:x}.",
-            readValue, address.getRawAddress(), tagged_address);
+  LLDB_LOG_VERBOSE(
+      log,
+      "[MemoryReader] Successfully resolved pointer {0:x} read from "
+      "{1:x} to tagged address {2:x}.",
+      readValue, address.getRawAddress(), tagged_address);
   return tagged_pointer;
 }
 
@@ -327,10 +331,11 @@ LLDBMemoryReader::resolveIndirectAddressAtOffset(
   // instead.
   Log *log = GetLog(LLDBLog::Types);
 
-  LLDB_LOGV(log,
-            "[MemoryReader::resolveAddressAtOffset] Asked to resolve address "
-            "{0:x} at offset {1:x}",
-            address.getRawAddress(), offset);
+  LLDB_LOG_VERBOSE(
+      log,
+      "[MemoryReader::resolveAddressAtOffset] Asked to resolve address "
+      "{0:x} at offset {1:x}",
+      address.getRawAddress(), offset);
 
   swift::reflection::RemoteAddress offset_address = address + offset;
 
@@ -350,16 +355,16 @@ LLDBMemoryReader::resolveIndirectAddressAtOffset(
     maybeAddr = remoteAddressToLLDBAddress(offset_address);
 
   if (!maybeAddr) {
-    LLDB_LOGV(log,
-              "[MemoryReader::resolveAddressAtOffset] could not resolve "
-              "address {0:x}",
-              offset_address.getRawAddress());
+    LLDB_LOG_VERBOSE(log,
+                     "[MemoryReader::resolveAddressAtOffset] could not resolve "
+                     "address {0:x}",
+                     offset_address.getRawAddress());
     return offset_address;
   }
 
   Address lldb_offset_address = *maybeAddr;
   if (!lldb_offset_address.IsSectionOffset()) {
-    LLDB_LOGV(
+    LLDB_LOG_VERBOSE(
         log,
         "[MemoryReader::resolveAddressAtOffset] lldb offset address has no "
         "section {0:x}",
@@ -386,10 +391,11 @@ LLDBMemoryReader::resolveIndirectAddressAtOffset(
     maybe_lldb_addr = remoteAddressToLLDBAddress(address);
 
   if (!maybe_lldb_addr) {
-    LLDB_LOGV(log,
-              "[MemoryReader::resolveAddressAtOffset] could not resolve offset "
-              "address {0:x}",
-              address.getRawAddress());
+    LLDB_LOG_VERBOSE(
+        log,
+        "[MemoryReader::resolveAddressAtOffset] could not resolve offset "
+        "address {0:x}",
+        address.getRawAddress());
     return offset_address;
   }
 
@@ -427,7 +433,7 @@ LLDBMemoryReader::resolveIndirectAddressAtOffset(
   // Now, get the live address counterpart of the lldb address this function
   // started with, and add the live offset we just read to it.
   addr_t live_address = lldb_addr.GetLoadAddress(&target);
-  LLDB_LOGV(
+  LLDB_LOG_VERBOSE(
       log,
       "[MemoryReader::resolveAddressAtOffset] Succesfully resolved address "
       "into live address {0:x} and offset {1:x} resulting in address {2:x}",
@@ -453,8 +459,8 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
     auto addr = address.getRawAddress();
     auto end = llvm::SaturatingAdd(addr, size, &overflow);
     if (overflow) {
-      LLDB_LOGV(log, "[MemoryReader] address {0:x} + size {1} overflows", addr,
-                size);
+      LLDB_LOG_VERBOSE(log, "[MemoryReader] address {0:x} + size {1} overflows",
+                       addr, size);
       return ReadBytesResult::fail;
     }
     if (addr >= *m_local_buffer &&
@@ -467,8 +473,9 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
     }
   }
 
-  LLDB_LOGV(log, "[MemoryReader] asked to read {0} bytes at address {1:x}",
-            size, address.getRawAddress());
+  LLDB_LOG_VERBOSE(log,
+                   "[MemoryReader] asked to read {0} bytes at address {1:x}",
+                   size, address.getRawAddress());
   std::optional<Address> maybeAddr =
       resolveRemoteAddressFromSymbolObjectFile(address);
 
@@ -476,8 +483,8 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
     maybeAddr = remoteAddressToLLDBAddress(address);
 
   if (!maybeAddr) {
-    LLDB_LOGV(log, "[MemoryReader] could not resolve address {0:x}",
-              address.getRawAddress());
+    LLDB_LOG_VERBOSE(log, "[MemoryReader] could not resolve address {0:x}",
+                     address.getRawAddress());
     return ReadBytesResult::fail;
   }
   auto addr = *maybeAddr;
@@ -485,7 +492,8 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
     auto section = addr.GetSection();
     auto *object_file = section->GetObjectFile();
     if (object_file->GetType() == ObjectFile::Type::eTypeDebugInfo) {
-      LLDB_LOGV(log, "[MemoryReader] Reading memory from symbol rich binary");
+      LLDB_LOG_VERBOSE(log,
+                       "[MemoryReader] Reading memory from symbol rich binary");
 
       if (object_file->ReadSectionData(section.get(), addr.GetOffset(), dest,
                                        size))
@@ -495,7 +503,8 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
   }
 
   if (size > m_max_read_amount) {
-    LLDB_LOGV(log, "[MemoryReader] memory read exceeds maximum allowed size");
+    LLDB_LOG_VERBOSE(log,
+                     "[MemoryReader] memory read exceeds maximum allowed size");
     return ReadBytesResult::fail;
   }
   Target &target(m_process.GetTarget());
@@ -508,13 +517,13 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
   if (size > target.ReadMemory(addr, dest, size, error, force_live_memory,
                                /*load_addr_ptr=*/nullptr,
                                &did_read_live_memory)) {
-    LLDB_LOGV(log,
-              "[MemoryReader] memory read returned fewer bytes than asked for");
+    LLDB_LOG_VERBOSE(
+        log, "[MemoryReader] memory read returned fewer bytes than asked for");
     return ReadBytesResult::fail;
   }
   if (error.Fail()) {
-    LLDB_LOGV(log, "[MemoryReader] memory read returned error: {0}",
-              error.AsCString());
+    LLDB_LOG_VERBOSE(log, "[MemoryReader] memory read returned error: {0}",
+                     error.AsCString());
     return ReadBytesResult::fail;
   }
 
@@ -526,8 +535,8 @@ LLDBMemoryReader::readBytesImpl(swift::remote::RemoteAddress address,
     }
     return std::string(stream.GetData());
   };
-  LLDB_LOGV(log, "[MemoryReader] memory read returned data: {0}",
-            format_data(dest, size));
+  LLDB_LOG_VERBOSE(log, "[MemoryReader] memory read returned data: {0}",
+                   format_data(dest, size));
 
   return did_read_live_memory ? ReadBytesResult::success_from_memory
                               : ReadBytesResult::success_from_file;
@@ -560,8 +569,9 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
     }
     return result;
   };
-  LLDB_LOGV(log, "[MemoryReader] asked to read string data at address {0:x}",
-            address.getRawAddress());
+  LLDB_LOG_VERBOSE(log,
+                   "[MemoryReader] asked to read string data at address {0:x}",
+                   address.getRawAddress());
 
   std::optional<Address> maybeAddr =
       resolveRemoteAddressFromSymbolObjectFile(address);
@@ -570,8 +580,8 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
     maybeAddr = remoteAddressToLLDBAddress(address);
 
   if (!maybeAddr) {
-    LLDB_LOGV(log, "[MemoryReader] could not resolve address {0:x}",
-              address.getRawAddress());
+    LLDB_LOG_VERBOSE(log, "[MemoryReader] could not resolve address {0:x}",
+                     address.getRawAddress());
     return false;
   }
   auto addr = *maybeAddr;
@@ -579,11 +589,13 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
     auto section = addr.GetSection();
     auto *object_file = section->GetObjectFile();
     if (object_file->GetType() == ObjectFile::Type::eTypeDebugInfo) {
-      LLDB_LOGV(log, "[MemoryReader] Reading memory from symbol rich binary");
+      LLDB_LOG_VERBOSE(log,
+                       "[MemoryReader] Reading memory from symbol rich binary");
 
       dest = object_file->GetCStrFromSection(section.get(), addr.GetOffset());
-      LLDB_LOGV(log, "[MemoryReader] memory read returned string: \"{0}\"",
-                format_string(dest));
+      LLDB_LOG_VERBOSE(log,
+                       "[MemoryReader] memory read returned string: \"{0}\"",
+                       format_string(dest));
       return true;
     }
   }
@@ -598,12 +610,12 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
   if (error.Success()) {
     if (m_progress_callback)
       m_progress_callback(short_string(dest));
-    LLDB_LOGV(log, "[MemoryReader] memory read returned string: \"{0}\"",
-              format_string(dest));
+    LLDB_LOG_VERBOSE(log, "[MemoryReader] memory read returned string: \"{0}\"",
+                     format_string(dest));
     return true;
   }
-  LLDB_LOGV(log, "[MemoryReader] memory read returned error: {0}",
-            error.AsCString());
+  LLDB_LOG_VERBOSE(log, "[MemoryReader] memory read returned error: {0}",
+                   error.AsCString());
   return false;
 }
 
@@ -819,10 +831,11 @@ std::optional<Address> LLDBMemoryReader::remoteAddressToLLDBAddress(
   // Calculate the virtual address by finding out the slide of the associated
   // module, and adding that to the file address.
   if (resolved.GetSection()) {
-    LLDB_LOGV(log,
-              "[MemoryReader] Successfully resolved mapped address {0:x} into "
-              "file address {1:x}",
-              address.getRawAddress(), resolved.GetFileAddress());
+    LLDB_LOG_VERBOSE(
+        log,
+        "[MemoryReader] Successfully resolved mapped address {0:x} into "
+        "file address {1:x}",
+        address.getRawAddress(), resolved.GetFileAddress());
     return resolved;
   }
   auto *sec_list = module->GetSectionList();
@@ -856,11 +869,11 @@ std::optional<Address> LLDBMemoryReader::remoteAddressToLLDBAddress(
   }
 
   resolved = Address(virtual_address);
-  LLDB_LOGV(log,
-            "[MemoryReader] Could not find section with file address {0:x} "
-            "and file {1}, resolved it into virtual address {2:x}",
-            file_address, object_file->GetFileSpec().GetFilename(),
-            virtual_address);
+  LLDB_LOG_VERBOSE(
+      log,
+      "[MemoryReader] Could not find section with file address {0:x} "
+      "and file {1}, resolved it into virtual address {2:x}",
+      file_address, object_file->GetFileSpec().GetFilename(), virtual_address);
   return resolved;
 }
 
@@ -907,10 +920,11 @@ LLDBMemoryReader::resolveRemoteAddressFromSymbolObjectFile(
     auto *main_object_file = module->GetObjectFile();
     resolved = Address(file_address, main_object_file->GetSectionList());
   }
-  LLDB_LOGV(log,
-            "[MemoryReader] Successfully resolved mapped address {0:x} into "
-            "file address {1:x} from symbol object file.",
-            address.getRawAddress(), file_address);
+  LLDB_LOG_VERBOSE(
+      log,
+      "[MemoryReader] Successfully resolved mapped address {0:x} into "
+      "file address {1:x} from symbol object file.",
+      address.getRawAddress(), file_address);
   return resolved;
 }
 
