@@ -1,7 +1,6 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; XFAIL: spirv-tools
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; FIXME: re-enable when validator issue if fixed
 ; https://github.com/llvm/llvm-project/issues/186756
 
 ; CHECK-NOT: OpTypeInt 8 0
