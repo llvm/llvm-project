@@ -103,6 +103,11 @@ public:
     return true;
   }
 
+  bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *IE) {
+    diagnoseDeclFeatureAvailability(IE->getDecl(), IE->getSourceRange());
+    return true;
+  }
+
   bool VisitObjCMessageExpr(ObjCMessageExpr *OME) {
     if (auto *MD = OME->getMethodDecl())
       diagnoseDeclFeatureAvailability(MD, OME->getSourceRange());
