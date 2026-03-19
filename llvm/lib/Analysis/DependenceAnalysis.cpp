@@ -71,9 +71,6 @@ STATISTIC(TotalArrayPairs, "Array pairs tested");
 STATISTIC(NonlinearSubscriptPairs, "Nonlinear subscript pairs");
 STATISTIC(ZIVapplications, "ZIV applications");
 STATISTIC(ZIVindependence, "ZIV independence");
-STATISTIC(SubscriptsRangeApplications, "SubscriptsRange applications");
-STATISTIC(SubscriptsRangeSuccesses, "SubscriptsRange successes");
-STATISTIC(SubscriptsRangeIndependence, "SubscriptsRange independence");
 STATISTIC(StrongSIVapplications, "Strong SIV applications");
 STATISTIC(StrongSIVsuccesses, "Strong SIV successes");
 STATISTIC(StrongSIVindependence, "Strong SIV independence");
@@ -117,7 +114,6 @@ namespace {
 /// Types of dependence test routines.
 enum class DependenceTestType {
   All,
-  SubscriptsRange,
   StrongSIV,
   WeakCrossingSIV,
   ExactSIV,
@@ -138,9 +134,6 @@ static cl::opt<DependenceTestType> EnableDependenceTest(
              "dependence test routines are enabled."),
     cl::values(clEnumValN(DependenceTestType::All, "all",
                           "Enable all dependence test routines."),
-               clEnumValN(DependenceTestType::SubscriptsRange,
-                          "subscripts-range",
-                          "Enable only Subscripts Range test."),
                clEnumValN(DependenceTestType::StrongSIV, "strong-siv",
                           "Enable only Strong SIV test."),
                clEnumValN(DependenceTestType::WeakCrossingSIV,
@@ -2177,24 +2170,6 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
          banerjeeMIVtest(Src, Dst, Loops, Result);
 }
 
-// Test range intersection of subscript pair for dependence.
-// Return true if dependence disproved.
-// Can be used as a pre-test.
-bool DependenceInfo::testSubscriptsRange(const SCEV *Src,
-                                         const SCEV *Dst) const {
-  if (!isDependenceTestEnabled(DependenceTestType::SubscriptsRange))
-    return false;
-  ++SubscriptsRangeApplications;
-  ConstantRange SrcRange = SE->getSignedRange(Src);
-  ConstantRange DstRange = SE->getSignedRange(Dst);
-  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
-    ++SubscriptsRangeIndependence;
-    ++SubscriptsRangeSuccesses;
-    return true;
-  }
-  return false;
-}
-
 /// Given a SCEVMulExpr, returns its first operand if its first operand is a
 /// constant and the product doesn't overflow in a signed sense. Otherwise,
 /// returns std::nullopt. For example, given (10 * X * Y)<nsw>, it returns 10.
@@ -3274,8 +3249,12 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   // Test each subscript individually
   for (unsigned SI = 0; SI < Pairs; ++SI) {
     LLVM_DEBUG(dbgs() << "testing subscript " << SI);
-    if (testSubscriptsRange(Pair[SI].Src, Pair[SI].Dst))
+
+    ConstantRange SrcRange = SE->getSignedRange(Pair[SI].Src);
+    ConstantRange DstRange = SE->getSignedRange(Pair[SI].Dst);
+    if (SrcRange.intersectWith(DstRange).isEmptySet())
       return nullptr;
+
     switch (Pair[SI].Classification) {
     case Subscript::NonLinear:
       // ignore these, but collect loops for later
