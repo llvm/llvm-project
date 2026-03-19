@@ -198,7 +198,7 @@ iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
   return enum_seq(LOAD_CNT, MaxCounter);
 }
 
-StringLiteral instCounterTypeToStr(InstCounterType T) {
+StringLiteral getInstCounterName(InstCounterType T) {
   switch (T) {
   case LOAD_CNT:
     return "LOAD_CNT";

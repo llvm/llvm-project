@@ -1108,7 +1108,7 @@ enum InstCounterType {
   NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
 };
 
-StringLiteral instCounterTypeToStr(InstCounterType T);
+StringLiteral getInstCounterName(InstCounterType T);
 
 // Return an iterator over all counters between LOAD_CNT (the first counter)
 // and \c MaxCounter (exclusive, default value yields an enumeration over
@@ -1194,7 +1194,7 @@ public:
   void print(raw_ostream &OS) const {
     ListSeparator LS;
     for (InstCounterType T : inst_counter_types())
-      OS << LS << instCounterTypeToStr(T) << ": " << Cnt[T];
+      OS << LS << getInstCounterName(T) << ": " << Cnt[T];
     if (LS.unused())
       OS << "none";
     OS << '\n';
