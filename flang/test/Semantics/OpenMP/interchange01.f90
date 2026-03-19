@@ -34,7 +34,8 @@ subroutine insufficient_loops
   implicit none
   integer i
 
-  !ERROR: The INTERCHANGE construct must be followed by a canonical loop nest of at least 2 levels
+  !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
+  !BECAUSE: PERMUTATION clause was not specified, PERMUTATION(2, 1) was assumed
   !$omp interchange 
   do i = 1, 5
     print *, i

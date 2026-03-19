@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_sub_group_local_id.h>
+#include "clc/workitem/clc_get_sub_group_local_id.h"
 
 _CLC_OVERLOAD _CLC_DEF uint __clc_get_sub_group_local_id() {
   return __nvvm_read_ptx_sreg_laneid();

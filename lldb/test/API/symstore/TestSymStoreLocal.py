@@ -1,6 +1,5 @@
 import os
 import shutil
-import tempfile
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -16,15 +15,13 @@ currently.
 
 class MockedSymStore:
     """
-    Context Manager to populate a file structure equivalent to SymStore.exe in a
-    temporary directory.
+    Context Manager to populate a file structure equivalent to SymStore.exe
     """
 
     def __init__(self, test, exe, pdb):
         self._test = test
         self._exe = exe
         self._pdb = pdb
-        self._tmp = None
 
     def get_key_pdb(self, exe):
         """
@@ -49,25 +46,24 @@ class MockedSymStore:
         if self._test.getDebugInfo() == "pdb":
             key = self.get_key_pdb(self._exe)
         self._test.assertIsNotNone(key)
-        self._tmp = self._test.getBuildArtifact("tmp")
-        pdb_dir = os.path.join(self._tmp, self._pdb, key)
-        os.makedirs(pdb_dir)
+        symstore_dir = self._test.getBuildArtifact("symstore")
+        pdb_dir = os.path.join(symstore_dir, self._pdb, key)
+        os.makedirs(pdb_dir, exist_ok=True)
         shutil.move(
             self._test.getBuildArtifact(self._pdb),
             os.path.join(pdb_dir, self._pdb),
         )
-        return self._tmp
+        return symstore_dir
 
     def __exit__(self, *exc_info):
         """
-        Clean up and delete original exe so next make won't skip link command.
+        Reset settings
         """
-        shutil.rmtree(self._tmp)
-        os.remove(self._test.getBuildArtifact(self._exe))
         self._test.runCmd("settings clear plugin.symbol-locator.symstore")
 
 
 class SymStoreLocalTests(TestBase):
+    SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def build_inferior(self):

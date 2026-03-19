@@ -325,10 +325,8 @@ Status MinidumpFileBuilder::AddModuleList() {
       Log *log = GetLog(LLDBLog::Object);
       llvm::handleAllErrors(
           std::move(mod_size_err), [&](const llvm::ErrorInfoBase &E) {
-            if (log) {
-              LLDB_LOGF(log, "Unable to get the size of module %s: %s",
-                        module_name.c_str(), E.message().c_str());
-            }
+            LLDB_LOGF(log, "Unable to get the size of module %s: %s",
+                      module_name.c_str(), E.message().c_str());
           });
       continue;
     }
