@@ -7502,6 +7502,46 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return AtomicExpansionKind::CmpXChg;
 }
 
+bool NVPTXTargetLowering::shouldExpandAtomicRMWElementwiseInIR(
+    AtomicRMWInst *AI) const {
+  assert(AI->isElementwise() && "expected elementwise atomicrmw");
+
+  if (!STI.hasVectorAtom())
+    return true;
+
+  auto *VecTy = cast<FixedVectorType>(AI->getValOperand()->getType());
+  auto *EltTy = VecTy->getElementType();
+  auto NumElts = VecTy->getNumElements();
+
+  // Vector atomics are only supported on fadd/fmin/fmax.
+  // fadd float supports v2/v4. fadd/fmin/fmax on half/bfloat supports
+  // v2/v4/v8.
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::BinOp::FAdd:
+    if (EltTy->isFloatTy()) {
+      if (NumElts != 2 && NumElts != 4)
+        return true;
+      break;
+    }
+    [[fallthrough]];
+  case AtomicRMWInst::BinOp::FMin:
+  case AtomicRMWInst::BinOp::FMax:
+    if (!(EltTy->isHalfTy() || EltTy->isBFloatTy()) ||
+        (NumElts != 2 && NumElts != 4 && NumElts != 8))
+      return true;
+    break;
+  default:
+    return true;
+  }
+
+  // Vector atomics only support generic and global address spaces.
+  unsigned AS = AI->getPointerAddressSpace();
+  if (AS != ADDRESS_SPACE_GENERIC && AS != ADDRESS_SPACE_GLOBAL)
+    return true;
+
+  return false;
+}
+
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   // This function returns true iff the operation is emulated using a CAS-loop,

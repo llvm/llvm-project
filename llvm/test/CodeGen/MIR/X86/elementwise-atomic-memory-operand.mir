@@ -1,0 +1,27 @@
+# RUN: llc -x mir -mtriple=x86_64-linux-gnu -run-pass none -o - %s | FileCheck %s
+
+---
+name: elementwise_atomic_mmo
+legalized: true
+regBankSelected: false
+selected: false
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi, $xmm0
+
+    ; CHECK-LABEL: name: elementwise_atomic_mmo
+    ; CHECK: body:             |
+    ; CHECK-NEXT:   bb.0:
+    ; CHECK-NEXT:     liveins: $rdi, $xmm0
+    ; CHECK:     %0:_(p0) = COPY $rdi
+    ; CHECK-NEXT:     %1:_(<4 x s32>) = COPY $xmm0
+    ; CHECK-NEXT:     %2:_(<4 x s32>) = G_ATOMICRMW_ADD %0(p0), %1 :: (elementwise-atomic load store monotonic (<4 x s32>))
+    ; CHECK-NEXT:     $xmm0 = COPY %2(<4 x s32>)
+    ; CHECK-NEXT:     RET 0, implicit $xmm0
+    %0:_(p0) = COPY $rdi
+    %1:_(<4 x s32>) = COPY $xmm0
+    %2:_(<4 x s32>) = G_ATOMICRMW_ADD %0(p0), %1 :: (elementwise-atomic load store monotonic (<4 x s32>))
+    $xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit $xmm0
+...

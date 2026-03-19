@@ -2450,6 +2450,18 @@ public:
       AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
   }
 
+  /// Returns whether the IR-level AtomicExpand pass should expand atomicrmw elementwise.
+  /// If this returns true, AtomicExpand will first see if it can conservatively drop
+  /// the elementwise modifier and reuse an existing stronger whole-value `atomicrmw` lowering
+  /// by callling `shouldExpandAtomicRMWInIR()` and checking if it returns `None`. It falls
+  /// back to scalarizing the instruction into per-lane scalar atomicrmw instructions.
+  ///
+  /// RMW is the atomicrmw elementwise instruction to be expanded.
+  virtual bool shouldExpandAtomicRMWElementwiseInIR(AtomicRMWInst *RMW) const {
+    assert(RMW->isElementwise() && "expected elementwise atomicrmw");
+    return true;
+  }
+
   /// Returns how the given atomic atomicrmw should be cast by the IR-level
   /// AtomicExpand pass.
   virtual AtomicExpansionKind

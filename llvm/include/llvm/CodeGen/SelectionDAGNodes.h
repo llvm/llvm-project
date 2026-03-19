@@ -1460,6 +1460,7 @@ public:
   bool isNonTemporal() const { return MemSDNodeBits.IsNonTemporal; }
   bool isDereferenceable() const { return MemSDNodeBits.IsDereferenceable; }
   bool isInvariant() const { return MemSDNodeBits.IsInvariant; }
+  bool isElementwiseAtomic() const { return getMemOperand()->isElementwiseAtomic(); }
 
   // Returns the offset from the location of the access.
   int64_t getSrcValueOffset() const { return getMemOperand()->getOffset(); }
@@ -1663,6 +1664,8 @@ public:
     assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
     return static_cast<ISD::LoadExtType>(LoadSDNodeBits.ExtTy);
   }
+
+  bool isElementwiseAtomic() const { return getMemOperand()->isElementwiseAtomic(); }
 
   const SDValue &getBasePtr() const {
     return getOpcode() == ISD::ATOMIC_STORE ? getOperand(2) : getOperand(1);

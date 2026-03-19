@@ -1181,6 +1181,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "dereferenceable ";
   if (isInvariant())
     OS << "invariant ";
+  if (isElementwiseAtomic())
+    OS << "elementwise-atomic ";
   if (TII) {
     if (getFlags() & MachineMemOperand::MOTargetFlag1)
       OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag1)

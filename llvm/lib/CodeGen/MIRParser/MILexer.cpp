@@ -257,6 +257,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("non-temporal", MIToken::kw_non_temporal)
       .Case("dereferenceable", MIToken::kw_dereferenceable)
       .Case("invariant", MIToken::kw_invariant)
+      .Case("elementwise-atomic", MIToken::kw_elementwise_atomic)
       .Case("align", MIToken::kw_align)
       .Case("basealign", MIToken::kw_basealign)
       .Case("addrspace", MIToken::kw_addrspace)

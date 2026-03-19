@@ -154,8 +154,10 @@ public:
     MOTargetFlag2 = 1u << 7,
     MOTargetFlag3 = 1u << 8,
     MOTargetFlag4 = 1u << 9,
+    /// The memory access is an elementwise atomicrmw
+    MOElementwiseAtomic = 1u << 10,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag4)
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOElementwiseAtomic)
   };
 
 private:
@@ -302,6 +304,7 @@ public:
   bool isNonTemporal() const { return FlagVals & MONonTemporal; }
   bool isDereferenceable() const { return FlagVals & MODereferenceable; }
   bool isInvariant() const { return FlagVals & MOInvariant; }
+  bool isElementwiseAtomic() const { return FlagVals & MOElementwiseAtomic; }
 
   /// Returns true if this operation has an atomic ordering requirement of
   /// unordered or higher, false otherwise.
