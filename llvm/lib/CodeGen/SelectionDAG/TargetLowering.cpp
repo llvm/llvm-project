@@ -8243,23 +8243,18 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     unsigned BitWidth = VT.getScalarSizeInBits();
     unsigned BestChunkWidth = 0;
 
-    // Determine the legal scalar integer type for chunk operations.
-    EVT LegalVT = getTypeToTransformTo(*DAG.getContext(), VT);
-    unsigned LegalWidth = LegalVT.getScalarSizeInBits();
-    unsigned MaxChunk = std::min<unsigned>(LegalWidth, BitWidth);
-
     // Search for I where 2^I % Divisor == 1
-    for (unsigned I = MaxChunk, E = MaxChunk / 2; I > E; --I) {
+    for (unsigned I = HBitWidth - 1, E = HBitWidth / 2; I > E; --I) {
       APInt Mod = APInt::getOneBitSet(Divisor.getBitWidth(), I).urem(Divisor);
 
       if (Mod.isOne()) {
-        // Ensure (NumChunks * MaxChunkValue) doesn't overflow LegalVT
+        // Ensure (NumChunks * MaxChunkValue) doesn't overflow HiLoVT
         unsigned NumChunks = divideCeil(BitWidth, I);
 
-        // Ensure the sum won't overflow the hardware register (LegalWidth).
+        // Ensure the sum won't overflow the hardware register (HBitWidth).
         // Summing N chunks adds ceil(log2(N)) extra carry bits to the width.
         // Safety check: Base Chunk Width (I) + Carry Bits <= Register Width.
-        if (I + llvm::bit_width(NumChunks - 1) <= LegalWidth) {
+        if (I + llvm::bit_width(NumChunks - 1) <= HBitWidth) {
           BestChunkWidth = I;
           break;
         }
@@ -8274,9 +8269,9 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     if (TrailingZeros) {
       // Save the shifted off bits if we need the remainder.
       if (Opcode != ISD::UDIV) {
-        APInt Mask = APInt::getLowBitsSet(BitWidth, TrailingZeros);
+        APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
         PartialRem =
-            DAG.getNode(ISD::AND, dl, VT, In, DAG.getConstant(Mask, dl, VT));
+            DAG.getNode(ISD::AND, dl, HiLoVT, LL, DAG.getConstant(Mask, dl, HiLoVT));
       }
       EVT ShiftVT = getShiftAmountTy(VT, DAG.getDataLayout());
       In = DAG.getNode(ISD::SRL, dl, VT, In,
@@ -8287,27 +8282,22 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       std::tie(LL, LH) = DAG.SplitScalar(In, dl, HiLoVT, HiLoVT);
     }
 
-    SDValue TotalSum = DAG.getConstant(0, dl, LegalVT);
+    Sum = DAG.getConstant(0, dl, HiLoVT);
     SDValue Mask = DAG.getConstant(
-        APInt::getLowBitsSet(LegalWidth, BestChunkWidth), dl, LegalVT);
+        APInt::getLowBitsSet(HBitWidth, BestChunkWidth), dl, HiLoVT);
 
     for (unsigned I = 0; I < BitWidth; I += BestChunkWidth) {
       SDValue Shift = DAG.getShiftAmountConstant(I, VT, dl);
       SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
-      // Truncate to LegalVT
-      SDValue TruncChunk = DAG.getNode(ISD::TRUNCATE, dl, LegalVT, Chunk);
+      // Truncate to HiLoVT
+      SDValue TruncChunk = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, Chunk);
       // For the last chunk, we might not need a mask if it's smaller than
       // BestChunkWidth, but applying it is always safe.
       SDValue MaskedChunk =
-          DAG.getNode(ISD::AND, dl, LegalVT, TruncChunk, Mask);
-      TotalSum = DAG.getNode(ISD::ADD, dl, LegalVT, TotalSum, MaskedChunk);
+          DAG.getNode(ISD::AND, dl, HiLoVT, TruncChunk, Mask);
+      Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, MaskedChunk);
     }
-    Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, TotalSum);
   }
-
-  // If we didn't find a sum, we can't do the expansion.
-  if (!Sum)
-    return false;
 
   // Perform a HiLoVT urem on the Sum using truncated divisor.
   SDValue RemL =
@@ -8343,8 +8333,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       RemL = DAG.getNode(ISD::SHL, dl, HiLoVT, RemL,
                          DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
 
-      SDValue PartialRemLo = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, PartialRem);
-      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRemLo);
+      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRem);
     }
     Result.push_back(RemL);
     Result.push_back(DAG.getConstant(0, dl, HiLoVT));
