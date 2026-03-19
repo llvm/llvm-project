@@ -26,7 +26,7 @@ namespace object {
 struct BBAddrMap {
 
   // Bitfield of optional features to control the extra information
-  // emitted/encoded in the the section.
+  // emitted/encoded in the section.
   struct Features {
     bool FuncEntryCount : 1;
     bool BBFreq : 1;
@@ -124,7 +124,7 @@ struct BBAddrMap {
     uint32_t Offset = 0; // Offset of basic block relative to the base address.
     uint32_t Size = 0;   // Size of the basic block.
     Metadata MD = {false, false, false, false,
-                   false}; // Metdata for this basic block.
+                   false}; // Metadata for this basic block.
     // Offsets of end of call instructions, relative to the basic block start.
     SmallVector<uint32_t, 1> CallsiteEndOffsets;
     uint64_t Hash = 0; // Hash for this basic block.
