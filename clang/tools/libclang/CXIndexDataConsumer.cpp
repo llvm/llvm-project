@@ -506,8 +506,8 @@ void CXIndexDataConsumer::importedModule(const ImportDecl *ImportD) {
       return;
 
   OptionalFileEntryRef FE;
-  if (auto ASTFileName = Mod->getASTFileName()) {
-    FileManager &FileMgr = Ctx->getSourceManager().getFileManager();
+  if (const ModuleFileName *ASTFileName = Mod->getASTFileName()) {
+    FileManager &FileMgr = cxtu::getASTUnit(CXTU)->getFileManager();
     FE = FileMgr.getOptionalFileRef(*ASTFileName);
   }
   CXIdxImportedASTFileInfo Info = {cxfile::makeCXFile(FE), Mod,

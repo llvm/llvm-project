@@ -855,8 +855,9 @@ public:
 
   /// Set the serialized module file for the top-level module of this module.
   void setASTFileNameAndKey(ModuleFileName NewName, ModuleFileKey NewKey) {
-    assert((!getASTFileName() && !getASTFileKey()) ||
-           *getASTFileKey() == NewKey && "file path changed");
+    assert(((!getASTFileName() && !getASTFileKey()) ||
+            *getASTFileKey() == NewKey) &&
+           "file path changed");
     Module *TopLevel = getTopLevelModule();
     TopLevel->ASTFileName = NewName;
     TopLevel->ASTFileKey = NewKey;
