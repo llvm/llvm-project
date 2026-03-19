@@ -66,6 +66,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_atan2pi.cl
   math/clc_atanh.cl
   math/clc_atanpi.cl
+  math/clc_canonicalize.cl
   math/clc_cbrt.cl
   math/clc_ceil.cl
   math/clc_copysign.cl
@@ -87,6 +88,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_fabs.cl
   math/clc_fdim.cl
   math/clc_floor.cl
+  math/clc_flush_if_daz.cl
   math/clc_fma.cl
   math/clc_fmax.cl
   math/clc_fmin.cl
