@@ -710,9 +710,7 @@ def create_temporary_index(tree=None):
     gitdir = run("git", "rev-parse", "--git-dir")
     # Use a unique filename to avoid stale .lock files when concurrent git
     # operations (e.g. pre-commit hooks) race with this process.
-    fd, path = tempfile.mkstemp(
-        prefix=temp_index_basename + "-", dir=gitdir
-    )
+    fd, path = tempfile.mkstemp(prefix=temp_index_basename + "-", dir=gitdir)
     os.close(fd)
     if tree is None:
         tree = "--empty"
