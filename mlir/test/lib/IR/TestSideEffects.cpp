@@ -8,6 +8,7 @@
 
 #include "TestOps.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace mlir;
 
@@ -80,8 +81,87 @@ struct SideEffectsPass
     });
   }
 };
+/// External model that attaches MemoryEffectOpInterface to
+/// ExternalSideEffectOp. The interface is optional: hasKnownMemoryEffects
+/// returns true only when the "effects" attribute is present.
+struct ExternalSideEffectModel
+    : public MemoryEffectOpInterface::ExternalModel<
+          ExternalSideEffectModel, test::ExternalSideEffectOp> {
+  void
+  getEffects(Operation *op,
+             SmallVectorImpl<MemoryEffects::EffectInstance> &effects) const {
+    ArrayAttr effectsAttr = op->getAttrOfType<ArrayAttr>("effects");
+    if (!effectsAttr)
+      return;
+    for (Attribute element : effectsAttr) {
+      DictionaryAttr effectElement = cast<DictionaryAttr>(element);
+      MemoryEffects::Effect *effect =
+          StringSwitch<MemoryEffects::Effect *>(
+              cast<StringAttr>(effectElement.get("effect")).getValue())
+              .Case("allocate", MemoryEffects::Allocate::get())
+              .Case("free", MemoryEffects::Free::get())
+              .Case("read", MemoryEffects::Read::get())
+              .Case("write", MemoryEffects::Write::get());
+      effects.emplace_back(effect, SideEffects::DefaultResource::get());
+    }
+  }
+
+  bool hasKnownMemoryEffects(Operation *op) const {
+    return op->hasAttr("effects");
+  }
+};
+
+struct ExternalSideEffectsPass
+    : public PassWrapper<ExternalSideEffectsPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ExternalSideEffectsPass)
+
+  StringRef getArgument() const final { return "test-external-side-effects"; }
+  StringRef getDescription() const final {
+    return "Test external model for MemoryEffectsOpInterface with "
+           "hasKnownMemoryEffects";
+  }
+  void runOnOperation() override {
+    auto module = getOperation();
+
+    // Attach the external model.
+    test::ExternalSideEffectOp::attachInterface<ExternalSideEffectModel>(
+        *module.getContext());
+
+    module.walk([&](Operation *op) {
+      if (op->hasTrait<OpTrait::IsTerminator>())
+        return;
+      if (!isa<test::ExternalSideEffectOp>(op))
+        return;
+
+      bool implements = isa<MemoryEffectOpInterface>(op);
+      op->emitRemark() << "implements MemoryEffectOpInterface: "
+                       << (implements ? "true" : "false");
+
+      if (implements) {
+        auto iface = cast<MemoryEffectOpInterface>(op);
+        SmallVector<MemoryEffects::EffectInstance, 8> effects;
+        iface.getEffects(effects);
+        if (effects.empty()) {
+          op->emitRemark() << "operation has no memory effects";
+        }
+        for (auto &instance : effects) {
+          auto diag = op->emitRemark() << "found an instance of ";
+          if (isa<MemoryEffects::Read>(instance.getEffect()))
+            diag << "'read'";
+          else if (isa<MemoryEffects::Write>(instance.getEffect()))
+            diag << "'write'";
+          diag << " on resource '" << instance.getResource()->getName() << "'";
+        }
+      }
+    });
+  }
+};
+
 } // namespace
 
 namespace mlir {
-void registerSideEffectTestPasses() { PassRegistration<SideEffectsPass>(); }
+void registerSideEffectTestPasses() {
+  PassRegistration<SideEffectsPass>();
+  PassRegistration<ExternalSideEffectsPass>();
+}
 } // namespace mlir

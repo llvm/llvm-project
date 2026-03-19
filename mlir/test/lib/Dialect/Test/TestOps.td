@@ -2479,6 +2479,10 @@ def OptionalSideEffectOp
   let results = (outs AnyType:$result);
 }
 
+def ExternalSideEffectOp : TEST_Op<"external_side_effect_op"> {
+  let results = (outs AnyType:$result);
+}
+
 def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
