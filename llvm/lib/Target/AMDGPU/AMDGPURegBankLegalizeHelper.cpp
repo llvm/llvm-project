@@ -60,12 +60,12 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
 
   WaterfallInfo WFI;
   unsigned OpIdx = 0;
-  if (Mapping->DstOpMapping.size() > 0) {
+  if (!Mapping->DstOpMapping.empty()) {
     B.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
     if (!applyMappingDst(MI, OpIdx, Mapping->DstOpMapping))
       return false;
   }
-  if (Mapping->SrcOpMapping.size() > 0) {
+  if (!Mapping->SrcOpMapping.empty()) {
     B.setInstr(MI);
     if (!applyMappingSrc(MI, OpIdx, Mapping->SrcOpMapping, WFI))
       return false;
