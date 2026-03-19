@@ -583,5 +583,3 @@ vector.body:
 for.cond.cleanup:
   ret void
 }
-
-declare i64 @llvm.vscale.i64()
