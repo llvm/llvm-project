@@ -827,17 +827,17 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
     else
       NumWaitEvents = 0;
   }
-  
+
   Error SyncErrors = Error::success();
   auto addError = [&](Error Err) {
     SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
   };
 
-  CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                    SignalEvent, NumWaitEvents, WaitEvents);
+  CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendMemoryCopy, CmdList, Dst,
+                       Src, Size, SignalEvent, NumWaitEvents, WaitEvents);
   if (!SyncErrors)
     AsyncQueue->WaitEvents.push_back(SignalEvent);
-  else{
+  else {
     if (auto Err = releaseEvent(SignalEvent))
       addError(std::move(Err));
   }
@@ -861,10 +861,11 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
       SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
     };
     ze_event_handle_t Event = *EventOrErr;
-    CALL_ZE_HANDLE_ERROR(addError,zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
-                      PatternSize, Size, Event, 0, nullptr);
+    CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendMemoryFill, CmdList, Ptr,
+                         Pattern, PatternSize, Size, Event, 0, nullptr);
     if (!SyncErrors)
-      CALL_ZE_HANDLE_ERROR(addError,zeEventHostSynchronize, Event, L0DefaultTimeout);
+      CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, Event,
+                           L0DefaultTimeout);
     if (auto Err = releaseEvent(Event))
       addError(std::move(Err));
     return SyncErrors;

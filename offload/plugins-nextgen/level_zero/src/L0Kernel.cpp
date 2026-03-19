@@ -287,8 +287,9 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   auto addError = [&](Error Err) {
     SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
   };
-  CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                    &KEnv.GroupCounts, Event, NumWaitEvents, WaitEvents);
+  CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendLaunchKernel, CmdList,
+                       zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
+                       WaitEvents);
   Lock.unlock();
   if (SyncErrors) {
     if (auto Err = l0Device.releaseEvent(Event))
@@ -302,14 +303,15 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
     AsyncQueue->WaitEvents.push_back(Event);
     AsyncQueue->KernelEvent = Event;
   } else {
-    CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, Event, L0DefaultTimeout);
+    CALL_ZE_HANDLE_ERROR(addError, zeEventHostSynchronize, Event,
+                         L0DefaultTimeout);
     if (auto Err = l0Device.releaseEvent(Event))
       addError(std::move(Err));
   }
   if (!SyncErrors)
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-        "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
-        IdStr);
+         "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
+         IdStr);
 
   return SyncErrors;
 }
