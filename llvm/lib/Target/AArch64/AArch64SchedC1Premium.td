@@ -104,6 +104,8 @@ def C1PWrite_2c_1M0         : SchedWriteRes<[C1PUnitM0]> { let Latency = 2; }
 def C1PWrite_3c_1M0         : SchedWriteRes<[C1PUnitM0]> { let Latency = 3; }
 def C1PWrite_4c_1M0         : SchedWriteRes<[C1PUnitM0]> { let Latency = 4; }
 def C1PWrite_5c_1M0         : SchedWriteRes<[C1PUnitM0]> { let Latency = 5; }
+def C1PWrite_5c_1M0_5rc     : SchedWriteRes<[C1PUnitM0]>  { let Latency = 5;
+                                                            let ReleaseAtCycles = [5]; }
 def C1PWrite_12c_1M0        : SchedWriteRes<[C1PUnitM0]>  { let Latency = 12;
                                                             let ReleaseAtCycles = [12]; }
 def C1PWrite_20c_1M0        : SchedWriteRes<[C1PUnitM0]>  { let Latency = 20;
@@ -124,6 +126,10 @@ def C1PWrite_20c_1V0        : SchedWriteRes<[C1PUnitV0]> { let Latency = 20; }
 def C1PWrite_3c_1V0_1M      : SchedWriteRes<[C1PUnitV0, C1PUnitM]> { let Latency = 3; }
 def C1PWrite_3c_1V1         : SchedWriteRes<[C1PUnitV1]> { let Latency = 3; }
 def C1PWrite_5c_1V1         : SchedWriteRes<[C1PUnitV1]> { let Latency = 5; }
+def C1PWrite_5c_1V1_8rc     : SchedWriteRes<[C1PUnitV1]> {
+  let Latency = 5;
+  let ReleaseAtCycles = [8];
+}
 def C1PWrite_8c_1V1         : SchedWriteRes<[C1PUnitV1]> { let Latency = 8; }
 def C1PWrite_8c_1V1_4rc     : SchedWriteRes<[C1PUnitV1]> {
   let Latency = 8;
@@ -525,8 +531,8 @@ def : SchedAlias<WriteImm, C1PWrite_1c_1I>;
 
 // SDIV, UDIV
 // Exec latency reported as a 5..N range; model the minimum latency.
-def : SchedAlias<WriteID32,  C1PWrite_5c_1M0>;
-def : SchedAlias<WriteID64,  C1PWrite_5c_1M0>;
+def : SchedAlias<WriteID32,  C1PWrite_5c_1M0_5rc>;
+def : SchedAlias<WriteID64,  C1PWrite_5c_1M0_5rc>;
 
 def : SchedAlias<WriteIM32, C1PWrite_2c_1M>;
 def : SchedAlias<WriteIM64, C1PWrite_2c_1M>;
@@ -663,7 +669,7 @@ def : SchedAlias<WriteF,     C1PWrite_2c_1V>;
 def : SchedAlias<WriteFCmp,  C1PWrite_2c_1V01>;
 
 // FP divide, square root
-def : SchedAlias<WriteFDiv,  C1PWrite_5c_1V1>;
+def : SchedAlias<WriteFDiv,  C1PWrite_5c_1V1_8rc>;
 
 // FP divide, H-form
 def : InstRW<[C1PWrite_5c_1V1_8rc],  (instrs FDIVHrr)>;
@@ -1644,7 +1650,7 @@ def : InstRW<[C1PWrite_5c_1V_1M0], (instregex "^INSR_ZR_[BHSD]")>;
 // Logical
 def : InstRW<[C1PWrite_2c_1V],
              (instregex "^(AND|EOR|ORR)_ZI",
-                        "^(AND|BIC|EOR|ORR)_ZZZ",
+                        "^(AND|BIC|EOR|ORR|EON|NAND|NOR)_ZZZ",
                         "^EOR(BT|TB)_ZZZ_[BHSD]",
                         "^(AND|BIC|EOR|NOT|ORR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^NOT_ZPmZ_[BHSD]")>;
