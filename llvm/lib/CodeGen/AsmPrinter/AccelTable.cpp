@@ -23,7 +23,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -745,11 +744,6 @@ void AppleAccelTableStaticTypeData::emit(AsmPrinter *Asm) const {
                                           : 0);
   Asm->emitInt32(QualifiedNameHash);
 }
-
-constexpr AppleAccelTableData::Atom AppleAccelTableTypeData::Atoms[];
-constexpr AppleAccelTableData::Atom AppleAccelTableOffsetData::Atoms[];
-constexpr AppleAccelTableData::Atom AppleAccelTableStaticOffsetData::Atoms[];
-constexpr AppleAccelTableData::Atom AppleAccelTableStaticTypeData::Atoms[];
 
 #ifndef NDEBUG
 void AppleAccelTableWriter::Header::print(raw_ostream &OS) const {

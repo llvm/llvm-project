@@ -19,7 +19,7 @@ define void @test_vector_iv(i32 %x, i1 %c) {
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[X]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw <4 x i8> [[IV]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw <4 x i8> [[IV]], splat (i8 1)
 ; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x i8> [[IV_NEXT]], i8 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[E]], 100
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]

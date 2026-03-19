@@ -176,15 +176,15 @@ OpDescriptor llvm::fuzzerop::splitBlockDescriptor(unsigned Weight) {
     // Loop back on this block by replacing the unconditional forward branch
     // with a conditional with a backedge.
     if (Block != &Block->getParent()->getEntryBlock()) {
-      BranchInst::Create(Block, Next, Srcs[0],
+      CondBrInst::Create(Srcs[0], Block, Next,
                          Block->getTerminator()->getIterator());
       Block->getTerminator()->eraseFromParent();
 
       // We need values for each phi in the block. Since there isn't a good way
       // to do a variable number of input values currently, we just fill them
-      // with undef.
+      // with poison.
       for (PHINode &PHI : Block->phis())
-        PHI.addIncoming(UndefValue::get(PHI.getType()), Block);
+        PHI.addIncoming(PoisonValue::get(PHI.getType()), Block);
     }
     return nullptr;
   };
@@ -342,7 +342,7 @@ static SourcePred validShuffleVectorIndex() {
     // TODO: It's straighforward to make up reasonable values, but listing them
     // exhaustively would be insane. Come up with a couple of sensible ones.
     return std::vector<Constant *>{
-        UndefValue::get(VectorType::get(Int32Ty, FirstTy->getElementCount()))};
+        PoisonValue::get(VectorType::get(Int32Ty, FirstTy->getElementCount()))};
   };
   return {Pred, Make};
 }

@@ -16,6 +16,7 @@
 // template<class _URNG> result_type operator()(_URNG& g);
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <numeric>
 #include <random>

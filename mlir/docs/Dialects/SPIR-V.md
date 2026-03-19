@@ -388,7 +388,7 @@ This corresponds to SPIR-V [struct type][StructType]. Its syntax is
 ```
 struct-member-decoration ::= integer-literal? spirv-decoration*
 struct-type ::= `!spirv.struct<` spirv-type (`[` struct-member-decoration `]`)?
-                     (`, ` spirv-type (`[` struct-member-decoration `]`)?
+                     (`, ` spirv-type (`[` struct-member-decoration `]`)? `>`
 ```
 
 For Example,
@@ -528,7 +528,7 @@ MLIR system.
 We introduce a `spirv.mlir.selection` and `spirv.mlir.loop` op for structured selections and
 loops, respectively. The merge targets are the next ops following them. Inside
 their regions, a special terminator, `spirv.mlir.merge` is introduced for branching to
-the merge target.
+the merge target and yielding values.
 
 ### Selection
 
@@ -566,7 +566,7 @@ merge block.
 For example, for the given function
 
 ```c++
-void loop(bool cond) {
+void if(bool cond) {
   int x = 0;
   if (cond) {
     x = 1;
@@ -603,7 +603,99 @@ func.func @selection(%cond: i1) -> () {
 
   // ...
 }
+```
 
+Similarly, for the give function with a `switch` statement
+
+```c++
+void switch(int selector) {
+  int x = 0;
+  switch (selector) {
+  case 0:
+    x = 2;
+    break;
+  case 1:
+    x = 3;
+    break;
+  default:
+    x = 1;
+    break;
+  }
+  // ...
+}
+```
+
+It will be represented as
+
+```mlir
+func.func @selection(%selector: i32) -> () {
+  %zero = spirv.Constant 0: i32
+  %one = spirv.Constant 1: i32
+  %two = spirv.Constant 2: i32
+  %three = spirv.Constant 3: i32
+  %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+  spirv.mlir.selection {
+    spirv.Switch %selector : i32, [
+      default: ^default,
+      0: ^case0,
+      1: ^case1
+    ]
+  ^default:
+    spirv.Store "Function" %var, %one : i32
+    spirv.Branch ^merge
+
+  ^case0:
+    spirv.Store "Function" %var, %two : i32
+    spirv.Branch ^merge
+
+  ^case1:
+    spirv.Store "Function" %var, %three : i32
+    spirv.Branch ^merge
+
+  ^merge:
+    spirv.mlir.merge
+  }
+
+  // ...
+}
+```
+
+The selection can return values by yielding them with `spirv.mlir.merge`. This
+mechanism allows values defined within the selection region to be used outside of it.
+Without this, values that were sunk into the selection region, but used outside, would
+not be able to escape it.
+
+For example
+
+```mlir
+func.func @selection(%cond: i1) -> () {
+  %zero = spirv.Constant 0: i32
+  %var1 = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+  %var2 = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+  %yield:2 = spirv.mlir.selection -> i32, i32 {
+    spirv.BranchConditional %cond, ^then, ^else
+
+  ^then:
+    %one = spirv.Constant 1: i32
+    %three = spirv.Constant 3: i32
+    spirv.Branch ^merge(%one, %three : i32, i32)
+
+  ^else:
+    %two = spirv.Constant 2: i32
+    %four = spirv.Constant 4 : i32
+    spirv.Branch ^merge(%two, %four : i32, i32)
+
+  ^merge(%merged_1_2: i32, %merged_3_4: i32):
+    spirv.mlir.merge %merged_1_2, %merged_3_4 : i32, i32
+  }
+
+  spirv.Store "Function" %var1, %yield#0 : i32
+  spirv.Store "Function" %var2, %yield#1 : i32
+
+  spirv.Return
+}
 ```
 
 ### Loop
@@ -695,6 +787,18 @@ func.func @loop(%count : i32) -> () {
     spirv.mlir.merge
   }
   return
+}
+```
+
+Similarly to selection, loops can also yield values using `spirv.mlir.merge`. This
+mechanism allows values defined within the loop region to be used outside of it.
+
+For example
+
+```mlir
+%yielded = spirv.mlir.loop -> i32 {
+  // ...
+  spirv.mlir.merge %to_yield : i32
 }
 ```
 
@@ -1327,7 +1431,7 @@ the proper file in test/Dialect/SPIRV/.
 
 The generated op will automatically gain the logic for (de)serialization.
 However, tests still need to be coupled with the change to make sure no
-surprises. Serialization tests live in test/Dialect/SPIRV/Serialization.
+surprises (see [Add a new test](#add-a-new-test) below).
 
 ### Add a new enum
 
@@ -1367,6 +1471,40 @@ conversion][MlirDialectConversionSignatureConversion] might be needed as well.
 **Note**: The current validation rules of `spirv.module` require that all
 operations contained within its region are valid operations in the SPIR-V
 dialect.
+
+### Add a new test
+
+Currently the SPIR-V dialect has three types of tests that should be added or
+updated accordingly:
+
+1.  **Dialect tests** - Those tests check different aspects of the op in isolation.
+    They should include both positive and negative case, and exercise the verifier,
+    parser and printer. Dialect tests do not have to form a valid SPIR-V code and
+    should be kept as simple as possible. They are run with `mlir-opt`; and are
+    also used to test transformations.
+
+2.  **Target tests** - Those tests are designed to exercise serialization and
+    deserialization, so each module should be a valid SPIR-V module. (De)serialization
+    is tested using the `mlir-translate --test-spirv-roundtrip` option.
+
+    To ensure that the SPIR-V MLIR forms and serializes into a valid SPIR-V, the
+    `spriv-val` tool should be run on a serialized binary (`--serialize-spirv`).
+    This can be automated by adding a conditional validation section to the test:
+
+    ```
+    // RUN: %if spirv-tools %{ rm -rf %t %}
+    // RUN: %if spirv-tools %{ mkdir %t %}
+    // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+    // RUN: %if spirv-tools %{ spirv-val %t %}
+    ```
+
+    This sequence serializes and dumps each MLIR SPIR-V module into a separate
+    SPIR-V binary (MLIR allows multiple modules per files, however the SPIR-V
+    spec restricts each binary to a single module), and then runs `spirv-val`
+    on each of the file.
+
+3.  **Integration tests** - Those tests execute the MLIR code using the `mlir-runner`
+    to verify its functional correctness.
 
 ## Operation definitions
 

@@ -33,7 +33,7 @@ define i32 @test1(i32 %v) {
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_4: # Block address taken
+; CHECK-NEXT:  .LBB0_4: # Inline asm indirect target
 ; CHECK-NEXT:    # %two
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16

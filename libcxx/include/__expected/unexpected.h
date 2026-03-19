@@ -48,12 +48,12 @@ template <class _Err>
 struct __is_std_unexpected<unexpected<_Err>> : true_type {};
 
 template <class _Tp>
-using __valid_std_unexpected = _BoolConstant< //
-    is_object_v<_Tp> &&                       //
-    !is_array_v<_Tp> &&                       //
-    !__is_std_unexpected<_Tp>::value &&       //
-    !is_const_v<_Tp> &&                       //
-    !is_volatile_v<_Tp>                       //
+using __valid_std_unexpected _LIBCPP_NODEBUG = _BoolConstant< //
+    is_object_v<_Tp> &&                                       //
+    !is_array_v<_Tp> &&                                       //
+    !__is_std_unexpected<_Tp>::value &&                       //
+    !is_const_v<_Tp> &&                                       //
+    !is_volatile_v<_Tp>                                       //
     >;
 
 template <class _Err>
@@ -89,10 +89,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr unexpected& operator=(const unexpected&) = default;
   _LIBCPP_HIDE_FROM_ABI constexpr unexpected& operator=(unexpected&&)      = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept { return __unex_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept { return __unex_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept { return std::move(__unex_); }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept { return std::move(__unex_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept { return __unex_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept { return __unex_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept { return std::move(__unex_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept { return std::move(__unex_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void swap(unexpected& __other) noexcept(is_nothrow_swappable_v<_Err>) {
     static_assert(is_swappable_v<_Err>, "unexpected::swap requires is_swappable_v<E> to be true");
@@ -108,7 +108,7 @@ public:
 
   template <class _Err2>
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const unexpected& __x, const unexpected<_Err2>& __y) {
-    return __x.__unex_ == __y.__unex_;
+    return __x.__unex_ == __y.error();
   }
 
 private:

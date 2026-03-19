@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SingleInputSingleOutputPerf.h"
-
+#include "PerfTest.h"
 #include "src/math/exp10f16.h"
 
 // LLVM libc might be the only libc implementation with support for float16 math

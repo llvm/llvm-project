@@ -15,7 +15,6 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -53,8 +52,8 @@ static void normalizeDivisionByGCD(MutableArrayRef<DynamicAPInt> dividend,
   }
 
   // Normalize the dividend and the denominator.
-  std::transform(dividend.begin(), dividend.end(), dividend.begin(),
-                 [gcd](DynamicAPInt &n) { return floorDiv(n, gcd); });
+  llvm::transform(dividend, dividend.begin(),
+                  [gcd](DynamicAPInt &n) { return floorDiv(n, gcd); });
   divisor /= gcd;
 }
 
@@ -332,8 +331,7 @@ presburger::getDivLowerBound(ArrayRef<DynamicAPInt> dividend,
   assert(dividend[localVarIdx] == 0 &&
          "Local to be set to division must have zero coeff!");
   SmallVector<DynamicAPInt, 8> ineq(dividend.size());
-  std::transform(dividend.begin(), dividend.end(), ineq.begin(),
-                 std::negate<DynamicAPInt>());
+  llvm::transform(dividend, ineq.begin(), std::negate<DynamicAPInt>());
   ineq[localVarIdx] = divisor;
   ineq.back() += divisor - 1;
   return ineq;
@@ -523,15 +521,13 @@ void DivisionRepr::dump() const { print(llvm::errs()); }
 SmallVector<DynamicAPInt, 8>
 presburger::getDynamicAPIntVec(ArrayRef<int64_t> range) {
   SmallVector<DynamicAPInt, 8> result(range.size());
-  std::transform(range.begin(), range.end(), result.begin(),
-                 dynamicAPIntFromInt64);
+  llvm::transform(range, result.begin(), dynamicAPIntFromInt64);
   return result;
 }
 
 SmallVector<int64_t, 8> presburger::getInt64Vec(ArrayRef<DynamicAPInt> range) {
   SmallVector<int64_t, 8> result(range.size());
-  std::transform(range.begin(), range.end(), result.begin(),
-                 int64fromDynamicAPInt);
+  llvm::transform(range, result.begin(), int64fromDynamicAPInt);
   return result;
 }
 

@@ -28,7 +28,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "RISCVISelDAGToDAG.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -52,8 +51,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
   StringRef getPassName() const override {
@@ -64,13 +62,19 @@ private:
   bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
-  bool convertVMergeToVMv(MachineInstr &MI) const;
+  bool convertAllOnesVMergeToVMv(MachineInstr &MI) const;
+  bool convertSameMaskVMergeToVMv(MachineInstr &MI);
+  bool foldUndefPassthruVMV_V_V(MachineInstr &MI);
+  bool foldVMV_V_V(MachineInstr &MI);
+  bool foldVMergeToMask(MachineInstr &MI) const;
 
+  bool hasSameEEW(const MachineInstr &User, const MachineInstr &Src) const;
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
-
-  /// Maps uses of V0 to the corresponding def of V0.
-  DenseMap<const MachineInstr *, const MachineInstr *> V0Defs;
+  bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
+  Register
+  lookThruCopies(Register Reg, bool OneUseOnly = false,
+                 SmallVectorImpl<MachineInstr *> *Copies = nullptr) const;
 };
 
 } // namespace
@@ -79,6 +83,19 @@ char RISCVVectorPeephole::ID = 0;
 
 INITIALIZE_PASS(RISCVVectorPeephole, DEBUG_TYPE, "RISC-V Fold Masks", false,
                 false)
+
+/// Given \p User that has an input operand with EEW=SEW, which uses the dest
+/// operand of \p Src with an unknown EEW, return true if their EEWs match.
+bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
+                                     const MachineInstr &Src) const {
+  unsigned UserLog2SEW =
+      User.getOperand(RISCVII::getSEWOpNum(User.getDesc())).getImm();
+  unsigned SrcLog2SEW =
+      Src.getOperand(RISCVII::getSEWOpNum(Src.getDesc())).getImm();
+  unsigned SrcLog2EEW = RISCV::getDestLog2EEW(
+      TII->get(RISCV::getRVVMCOpcode(Src.getOpcode())), SrcLog2SEW);
+  return SrcLog2EEW == UserLog2SEW;
+}
 
 /// Check if an operand is an immediate or a materialized ADDI $x0, imm.
 std::optional<unsigned>
@@ -156,14 +173,8 @@ bool RISCVVectorPeephole::convertToVLMAX(MachineInstr &MI) const {
 }
 
 bool RISCVVectorPeephole::isAllOnesMask(const MachineInstr *MaskDef) const {
-  assert(MaskDef && MaskDef->isCopy() &&
-         MaskDef->getOperand(0).getReg() == RISCV::V0);
-  Register SrcReg = TRI->lookThruCopyLike(MaskDef->getOperand(1).getReg(), MRI);
-  if (!SrcReg.isVirtual())
-    return false;
-  MaskDef = MRI->getVRegDef(SrcReg);
-  if (!MaskDef)
-    return false;
+  while (MaskDef->isCopy() && MaskDef->getOperand(1).getReg().isVirtual())
+    MaskDef = MRI->getVRegDef(MaskDef->getOperand(1).getReg());
 
   // TODO: Check that the VMSET is the expected bitwidth? The pseudo has
   // undefined behaviour if it's the wrong bitwidth, so we could choose to
@@ -234,17 +245,13 @@ bool RISCVVectorPeephole::convertToWholeRegister(MachineInstr &MI) const {
   return true;
 }
 
-// Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
-// (VMV_V_V_<LMUL> false, true, vl, sew). It may decrease uses of VMSET.
-bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
+static unsigned getVMV_V_VOpcodeForVMERGE_VVM(const MachineInstr &MI) {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul:                                         \
-    NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                      \
-    break;
-  unsigned NewOpc;
+    return RISCV::PseudoVMV_V_V_##lmul;
   switch (MI.getOpcode()) {
   default:
-    return false;
+    return 0;
     CASE_VMERGE_TO_VMV(MF8)
     CASE_VMERGE_TO_VMV(MF4)
     CASE_VMERGE_TO_VMV(MF2)
@@ -253,30 +260,118 @@ bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
     CASE_VMERGE_TO_VMV(M4)
     CASE_VMERGE_TO_VMV(M8)
   }
+}
 
-  Register PassthruReg = MI.getOperand(1).getReg();
-  Register FalseReg = MI.getOperand(2).getReg();
-  // Check passthru == false (or passthru == undef)
-  if (PassthruReg != RISCV::NoRegister &&
-      TRI->lookThruCopyLike(PassthruReg, MRI) !=
-          TRI->lookThruCopyLike(FalseReg, MRI))
+/// Convert a PseudoVMERGE_VVM with an all ones mask to a PseudoVMV_V_V.
+///
+/// %x = PseudoVMERGE_VVM %passthru, %false, %true, %allones, sew, vl
+/// ->
+/// %x = PseudoVMV_V_V %passthru, %true, vl, sew, tu_mu
+bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
+  unsigned NewOpc = getVMV_V_VOpcodeForVMERGE_VVM(MI);
+  if (!NewOpc)
     return false;
-
-  assert(MI.getOperand(4).isReg() && MI.getOperand(4).getReg() == RISCV::V0);
-  if (!isAllOnesMask(V0Defs.lookup(&MI)))
+  if (!isAllOnesMask(MRI->getVRegDef(MI.getOperand(4).getReg())))
     return false;
 
   MI.setDesc(TII->get(NewOpc));
-  MI.removeOperand(1);  // Passthru operand
-  MI.tieOperands(0, 1); // Tie false to dest
-  MI.removeOperand(3);  // Mask operand
+  MI.removeOperand(2); // False operand
+  MI.removeOperand(3); // Mask operand
   MI.addOperand(
-      MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
+      MachineOperand::CreateImm(RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED));
 
   // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
   // register class for the destination and passthru operands e.g. VRNoV0 -> VR
   MRI->recomputeRegClass(MI.getOperand(0).getReg());
-  MRI->recomputeRegClass(MI.getOperand(1).getReg());
+  if (MI.getOperand(1).getReg().isValid())
+    MRI->recomputeRegClass(MI.getOperand(1).getReg());
+  return true;
+}
+
+// If \p Reg is defined by one or more COPYs of virtual registers, traverses
+// the chain and returns the root non-COPY source.
+Register RISCVVectorPeephole::lookThruCopies(
+    Register Reg, bool OneUseOnly,
+    SmallVectorImpl<MachineInstr *> *Copies) const {
+  while (MachineInstr *Def = MRI->getUniqueVRegDef(Reg)) {
+    if (!Def->isFullCopy())
+      break;
+    Register Src = Def->getOperand(1).getReg();
+    if (!Src.isVirtual())
+      break;
+    if (OneUseOnly && !MRI->hasOneNonDBGUse(Reg))
+      break;
+    if (Copies)
+      Copies->push_back(Def);
+    Reg = Src;
+  }
+  return Reg;
+}
+
+/// If a PseudoVMERGE_VVM's true operand is a masked pseudo and both have the
+/// same mask, and the masked pseudo's passthru is the same as the false
+/// operand, we can convert the PseudoVMERGE_VVM to a PseudoVMV_V_V.
+///
+/// %true = PseudoVADD_VV_M1_MASK %false, %x, %y, %mask, vl1, sew, policy
+/// %x = PseudoVMERGE_VVM %passthru, %false, %true, %mask, vl2, sew
+/// ->
+/// %true = PseudoVADD_VV_M1_MASK %false, %x, %y, %mask, vl1, sew, policy
+/// %x = PseudoVMV_V_V %passthru, %true, vl2, sew, tu_mu
+bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
+  unsigned NewOpc = getVMV_V_VOpcodeForVMERGE_VVM(MI);
+  if (!NewOpc)
+    return false;
+  MachineInstr *True = MRI->getVRegDef(MI.getOperand(3).getReg());
+
+  if (!True || True->getParent() != MI.getParent())
+    return false;
+
+  auto *TrueMaskedInfo = RISCV::getMaskedPseudoInfo(True->getOpcode());
+  if (!TrueMaskedInfo || !hasSameEEW(MI, *True))
+    return false;
+
+  Register TrueMaskReg = lookThruCopies(
+      True->getOperand(TrueMaskedInfo->MaskOpIdx + True->getNumExplicitDefs())
+          .getReg());
+  Register MIMaskReg = lookThruCopies(MI.getOperand(4).getReg());
+  if (!TrueMaskReg.isVirtual() || TrueMaskReg != MIMaskReg)
+    return false;
+
+  // Masked off lanes past TrueVL will come from False, and converting to vmv
+  // will lose these lanes unless MIVL <= TrueVL.
+  // TODO: We could relax this for False == Passthru and True policy == TU
+  const MachineOperand &MIVL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  const MachineOperand &TrueVL =
+      True->getOperand(RISCVII::getVLOpNum(True->getDesc()));
+  if (!RISCV::isVLKnownLE(MIVL, TrueVL))
+    return false;
+
+  // True's passthru needs to be equivalent to False
+  Register TruePassthruReg = True->getOperand(1).getReg();
+  Register FalseReg = MI.getOperand(2).getReg();
+  if (TruePassthruReg != FalseReg) {
+    // If True's passthru is undef see if we can change it to False
+    if (TruePassthruReg.isValid() ||
+        !MRI->hasOneUse(MI.getOperand(3).getReg()) ||
+        !ensureDominates(MI.getOperand(2), *True))
+      return false;
+    True->getOperand(1).setReg(MI.getOperand(2).getReg());
+    // If True is masked then its passthru needs to be in VRNoV0.
+    MRI->constrainRegClass(True->getOperand(1).getReg(),
+                           TII->getRegClass(True->getDesc(), 1));
+  }
+
+  MI.setDesc(TII->get(NewOpc));
+  MI.removeOperand(2); // False operand
+  MI.removeOperand(3); // Mask operand
+  MI.addOperand(
+      MachineOperand::CreateImm(RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED));
+
+  // vmv.v.v doesn't have a mask operand, so we may be able to inflate the
+  // register class for the destination and passthru operands e.g. VRNoV0 -> VR
+  MRI->recomputeRegClass(MI.getOperand(0).getReg());
+  if (MI.getOperand(1).getReg().isValid())
+    MRI->recomputeRegClass(MI.getOperand(1).getReg());
   return true;
 }
 
@@ -286,7 +381,8 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   if (!I)
     return false;
 
-  if (!isAllOnesMask(V0Defs.lookup(&MI)))
+  if (!isAllOnesMask(MRI->getVRegDef(
+          MI.getOperand(I->MaskOpIdx + MI.getNumExplicitDefs()).getReg())))
     return false;
 
   // There are two classes of pseudos in the table - compares and
@@ -296,16 +392,21 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   [[maybe_unused]] const bool HasPolicyOp =
       RISCVII::hasVecPolicyOp(MCID.TSFlags);
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
-#ifndef NDEBUG
   const MCInstrDesc &MaskedMCID = TII->get(MI.getOpcode());
-  assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
-             RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
-         "Masked and unmasked pseudos are inconsistent");
+  assert((RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ||
+          !RISCVII::hasVecPolicyOp(MCID.TSFlags)) &&
+         "Unmasked pseudo has policy but masked pseudo doesn't?");
   assert(HasPolicyOp == HasPassthru && "Unexpected pseudo structure");
-#endif
+  assert(!(HasPassthru && !RISCVII::isFirstDefTiedToFirstUse(MaskedMCID)) &&
+         "Unmasked with passthru but masked with no passthru?");
   (void)HasPolicyOp;
 
   MI.setDesc(MCID);
+
+  // Drop the policy operand if unmasked doesn't need it.
+  if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) &&
+      !RISCVII::hasVecPolicyOp(MCID.TSFlags))
+    MI.removeOperand(RISCVII::getVecPolicyOpNum(MaskedMCID));
 
   // TODO: Increment all MaskOpIdxs in tablegen by num of explicit defs?
   unsigned MaskOpIdx = I->MaskOpIdx + MI.getNumExplicitDefs();
@@ -314,12 +415,345 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   // The unmasked pseudo will no longer be constrained to the vrnov0 reg class,
   // so try and relax it to vr.
   MRI->recomputeRegClass(MI.getOperand(0).getReg());
-  unsigned PassthruOpIdx = MI.getNumExplicitDefs();
-  if (HasPassthru) {
-    if (MI.getOperand(PassthruOpIdx).getReg() != RISCV::NoRegister)
-      MRI->recomputeRegClass(MI.getOperand(PassthruOpIdx).getReg());
-  } else
-    MI.removeOperand(PassthruOpIdx);
+
+  // If the original masked pseudo had a passthru, relax it or remove it.
+  if (RISCVII::isFirstDefTiedToFirstUse(MaskedMCID)) {
+    unsigned PassthruOpIdx = MI.getNumExplicitDefs();
+    if (HasPassthru) {
+      if (MI.getOperand(PassthruOpIdx).getReg())
+        MRI->recomputeRegClass(MI.getOperand(PassthruOpIdx).getReg());
+    } else
+      MI.removeOperand(PassthruOpIdx);
+  }
+
+  return true;
+}
+
+/// Given A and B are in the same MBB, returns true if A comes before B.
+static bool dominates(MachineBasicBlock::const_iterator A,
+                      MachineBasicBlock::const_iterator B) {
+  assert(A->getParent() == B->getParent());
+  const MachineBasicBlock *MBB = A->getParent();
+  auto MBBEnd = MBB->end();
+  if (B == MBBEnd)
+    return true;
+
+  MachineBasicBlock::const_iterator I = MBB->begin();
+  for (; &*I != A && &*I != B; ++I)
+    ;
+
+  return &*I == A;
+}
+
+/// If the register in \p MO doesn't dominate \p Src, try to move \p Src so it
+/// does. Returns false if doesn't dominate and we can't move. \p MO must be in
+/// the same basic block as \Src.
+bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
+                                          MachineInstr &Src) const {
+  assert(MO.getParent()->getParent() == Src.getParent());
+  if (!MO.isReg() || !MO.getReg().isValid())
+    return true;
+
+  MachineInstr *Def = MRI->getVRegDef(MO.getReg());
+  if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
+    if (!RISCVInstrInfo::isSafeToMove(Src, *Def->getNextNode()))
+      return false;
+    Src.moveBefore(Def->getNextNode());
+  }
+
+  return true;
+}
+
+/// If a PseudoVMV_V_V's passthru is undef then we can replace it with its input
+bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMV_V_V)
+    return false;
+  if (MI.getOperand(1).getReg().isValid())
+    return false;
+
+  // If the input was a pseudo with a policy operand, we can give it a tail
+  // agnostic policy if MI's undef tail subsumes the input's.
+  MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
+  if (Src && !Src->hasUnmodeledSideEffects() &&
+      MRI->hasOneUse(MI.getOperand(2).getReg()) &&
+      RISCVII::hasVLOp(Src->getDesc().TSFlags) &&
+      RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags) && hasSameEEW(MI, *Src)) {
+    const MachineOperand &MIVL = MI.getOperand(3);
+    const MachineOperand &SrcVL =
+        Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
+
+    MachineOperand &SrcPolicy =
+        Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc()));
+
+    if (RISCV::isVLKnownLE(MIVL, SrcVL))
+      SrcPolicy.setImm(SrcPolicy.getImm() | RISCVVType::TAIL_AGNOSTIC);
+  }
+
+  MRI->constrainRegClass(MI.getOperand(2).getReg(),
+                         MRI->getRegClass(MI.getOperand(0).getReg()));
+  MRI->replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
+  MRI->clearKillFlags(MI.getOperand(2).getReg());
+  MI.eraseFromParent();
+  return true;
+}
+
+/// If a PseudoVMV_V_V is the only user of its input, fold its passthru and VL
+/// into it.
+///
+/// %x = PseudoVADD_V_V_M1 %passthru, %a, %b, %vl1, sew, policy
+/// %y = PseudoVMV_V_V_M1 %passthru, %x, %vl2, sew, policy
+///    (where %vl1 <= %vl2)
+///
+/// ->
+///
+/// %y = PseudoVADD_V_V_M1 %passthru, %a, %b, vl1, sew, policy
+bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMV_V_V)
+    return false;
+
+  MachineOperand &Passthru = MI.getOperand(1);
+
+  if (!MRI->hasOneUse(MI.getOperand(2).getReg()))
+    return false;
+
+  MachineInstr *Src = MRI->getVRegDef(MI.getOperand(2).getReg());
+  if (!Src || Src->hasUnmodeledSideEffects() ||
+      Src->getParent() != MI.getParent() ||
+      !RISCVII::isFirstDefTiedToFirstUse(Src->getDesc()) ||
+      !RISCVII::hasVLOp(Src->getDesc().TSFlags))
+    return false;
+
+  // Src's dest needs to have the same EEW as MI's input.
+  if (!hasSameEEW(MI, *Src))
+    return false;
+
+  std::optional<std::pair<unsigned, unsigned>> NeedsCommute;
+
+  // Src needs to have the same passthru as VMV_V_V
+  MachineOperand &SrcPassthru = Src->getOperand(Src->getNumExplicitDefs());
+  if (SrcPassthru.getReg().isValid() &&
+      SrcPassthru.getReg() != Passthru.getReg()) {
+    // If Src's passthru != Passthru, check if it uses Passthru in another
+    // operand and try to commute it.
+    int OtherIdx = Src->findRegisterUseOperandIdx(Passthru.getReg(), TRI);
+    if (OtherIdx == -1)
+      return false;
+    unsigned OpIdx1 = OtherIdx;
+    unsigned OpIdx2 = Src->getNumExplicitDefs();
+    if (!TII->findCommutedOpIndices(*Src, OpIdx1, OpIdx2))
+      return false;
+    NeedsCommute = {OpIdx1, OpIdx2};
+  }
+
+  // Src VL will have already been reduced if legal by RISCVVLOptimizer,
+  // so we don't need to handle a smaller source VL here.  However, the
+  // user's VL may be larger
+  MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
+  if (!RISCV::isVLKnownLE(SrcVL, MI.getOperand(3)))
+    return false;
+
+  // If the new passthru doesn't dominate Src, try to move Src so it does.
+  if (!ensureDominates(Passthru, *Src))
+    return false;
+
+  if (NeedsCommute) {
+    auto [OpIdx1, OpIdx2] = *NeedsCommute;
+    [[maybe_unused]] bool Commuted =
+        TII->commuteInstruction(*Src, /*NewMI=*/false, OpIdx1, OpIdx2);
+    assert(Commuted && "Failed to commute Src?");
+  }
+
+  if (SrcPassthru.getReg() != Passthru.getReg()) {
+    SrcPassthru.setReg(Passthru.getReg());
+    // If Src is masked then its passthru needs to be in VRNoV0.
+    if (Passthru.getReg().isValid())
+      MRI->constrainRegClass(
+          Passthru.getReg(),
+          TII->getRegClass(Src->getDesc(), SrcPassthru.getOperandNo()));
+  }
+
+  if (RISCVII::hasVecPolicyOp(Src->getDesc().TSFlags)) {
+    // If MI was tail agnostic and the VL didn't increase, preserve it.
+    int64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+    if ((MI.getOperand(5).getImm() & RISCVVType::TAIL_AGNOSTIC) &&
+        RISCV::isVLKnownLE(MI.getOperand(3), SrcVL))
+      Policy |= RISCVVType::TAIL_AGNOSTIC;
+    Src->getOperand(RISCVII::getVecPolicyOpNum(Src->getDesc())).setImm(Policy);
+  }
+
+  MRI->constrainRegClass(Src->getOperand(0).getReg(),
+                         MRI->getRegClass(MI.getOperand(0).getReg()));
+  MRI->replaceRegWith(MI.getOperand(0).getReg(), Src->getOperand(0).getReg());
+  MI.eraseFromParent();
+
+  return true;
+}
+
+/// Try to fold away VMERGE_VVM instructions into their operands:
+///
+/// %true = PseudoVADD_VV ...
+/// %x = PseudoVMERGE_VVM_M1 %false, %false, %true, %mask
+/// ->
+/// %x = PseudoVADD_VV_M1_MASK %false, ..., %mask
+///
+/// We can only fold if vmerge's passthru operand, vmerge's false operand and
+/// %true's passthru operand (if it has one) are the same. This is because we
+/// have to consolidate them into one passthru operand in the result.
+///
+/// If %true is masked, then we can use its mask instead of vmerge's if vmerge's
+/// mask is all ones.
+///
+/// The resulting VL is the minimum of the two VLs.
+///
+/// The resulting policy is the effective policy the vmerge would have had,
+/// i.e. whether or not it's passthru operand was implicit-def.
+bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMERGE_VVM)
+    return false;
+
+  // Collect chain of COPYs on True's result for later cleanup.
+  SmallVector<MachineInstr *, 4> TrueCopies;
+  Register PassthruReg = lookThruCopies(MI.getOperand(1).getReg());
+  const MachineOperand &FalseOp = MI.getOperand(2);
+  Register FalseReg = lookThruCopies(FalseOp.getReg());
+  Register TrueReg = lookThruCopies(MI.getOperand(3).getReg(),
+                                    /*OneUseOnly=*/true, &TrueCopies);
+  if (!TrueReg.isVirtual() || !MRI->hasOneUse(TrueReg))
+    return false;
+  MachineInstr &True = *MRI->getUniqueVRegDef(TrueReg);
+  if (True.getParent() != MI.getParent())
+    return false;
+  const MachineOperand &MaskOp = MI.getOperand(4);
+  MachineInstr *Mask = MRI->getUniqueVRegDef(MaskOp.getReg());
+  assert(Mask);
+
+  const RISCV::RISCVMaskedPseudoInfo *Info =
+      RISCV::lookupMaskedIntrinsicByUnmasked(True.getOpcode());
+  if (!Info)
+    return false;
+
+  // If the EEW of True is different from vmerge's SEW, then we can't fold.
+  if (!hasSameEEW(MI, True))
+    return false;
+
+  // We require that either passthru and false are the same, or that passthru
+  // is undefined.
+  if (PassthruReg && !(PassthruReg.isVirtual() && PassthruReg == FalseReg))
+    return false;
+
+  std::optional<std::pair<unsigned, unsigned>> NeedsCommute;
+
+  // If True has a passthru operand then it needs to be the same as vmerge's
+  // False, since False will be used for the result's passthru operand.
+  Register TruePassthru;
+  if (RISCVII::isFirstDefTiedToFirstUse(True.getDesc()))
+    TruePassthru =
+        lookThruCopies(True.getOperand(True.getNumExplicitDefs()).getReg());
+  if (TruePassthru && !(TruePassthru.isVirtual() && TruePassthru == FalseReg)) {
+    // If True's passthru != False, check if it uses False in another operand
+    // and try to commute it.
+    int OtherIdx = True.findRegisterUseOperandIdx(FalseReg, TRI);
+    if (OtherIdx == -1)
+      return false;
+    unsigned OpIdx1 = OtherIdx;
+    unsigned OpIdx2 = True.getNumExplicitDefs();
+    if (!TII->findCommutedOpIndices(True, OpIdx1, OpIdx2))
+      return false;
+    NeedsCommute = {OpIdx1, OpIdx2};
+  }
+
+  // Make sure it doesn't raise any observable fp exceptions, since changing the
+  // active elements will affect how fflags is set.
+  if (True.hasUnmodeledSideEffects() || True.mayRaiseFPException())
+    return false;
+
+  const MachineOperand &VMergeVL =
+      MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  const MachineOperand &TrueVL =
+      True.getOperand(RISCVII::getVLOpNum(True.getDesc()));
+
+  MachineOperand MinVL = MachineOperand::CreateImm(0);
+  if (RISCV::isVLKnownLE(TrueVL, VMergeVL))
+    MinVL = TrueVL;
+  else if (RISCV::isVLKnownLE(VMergeVL, TrueVL))
+    MinVL = VMergeVL;
+  else if (!TruePassthru && !True.mayLoadOrStore())
+    // If True's passthru is undef, we can use vmerge's vl.
+    MinVL = VMergeVL;
+  else
+    return false;
+
+  unsigned RVVTSFlags =
+      TII->get(RISCV::getRVVMCOpcode(True.getOpcode())).TSFlags;
+  if (RISCVII::elementsDependOnVL(RVVTSFlags) && !TrueVL.isIdenticalTo(MinVL))
+    return false;
+  if (RISCVII::elementsDependOnMask(RVVTSFlags) && !isAllOnesMask(Mask))
+    return false;
+
+  // Use a tumu policy, relaxing it to tail agnostic provided that the passthru
+  // operand is undefined.
+  //
+  // However, if the VL became smaller than what the vmerge had originally, then
+  // elements past VL that were previously in the vmerge's body will have moved
+  // to the tail. In that case we always need to use tail undisturbed to
+  // preserve them.
+  uint64_t Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+  if (!PassthruReg && RISCV::isVLKnownLE(VMergeVL, MinVL))
+    Policy |= RISCVVType::TAIL_AGNOSTIC;
+
+  assert(RISCVII::hasVecPolicyOp(True.getDesc().TSFlags) &&
+         "Foldable unmasked pseudo should have a policy op already");
+
+  // Make sure both mask and false dominate True and its copies, otherwise move
+  // down True so it does. VL will always dominate since if it's a register they
+  // need to be the same.
+  const MachineOperand *DomOp = &MaskOp;
+  MachineInstr *False = MRI->getUniqueVRegDef(FalseReg);
+  if (False && False->getParent() == Mask->getParent() &&
+      dominates(Mask, False))
+    DomOp = &FalseOp;
+  if (!ensureDominates(*DomOp, True))
+    return false;
+
+  if (NeedsCommute) {
+    auto [OpIdx1, OpIdx2] = *NeedsCommute;
+    [[maybe_unused]] bool Commuted =
+        TII->commuteInstruction(True, /*NewMI=*/false, OpIdx1, OpIdx2);
+    assert(Commuted && "Failed to commute True?");
+    Info = RISCV::lookupMaskedIntrinsicByUnmasked(True.getOpcode());
+  }
+
+  True.setDesc(TII->get(Info->MaskedPseudo));
+
+  // Insert the mask operand.
+  // TODO: Increment MaskOpIdx by number of explicit defs?
+  True.insert(True.operands_begin() + Info->MaskOpIdx +
+                  True.getNumExplicitDefs(),
+              MachineOperand::CreateReg(MaskOp.getReg(), false));
+
+  // Update the passthru, AVL and policy.
+  True.getOperand(True.getNumExplicitDefs()).setReg(FalseReg);
+  True.removeOperand(RISCVII::getVLOpNum(True.getDesc()));
+  True.insert(True.operands_begin() + RISCVII::getVLOpNum(True.getDesc()),
+              MinVL);
+  True.getOperand(RISCVII::getVecPolicyOpNum(True.getDesc())).setImm(Policy);
+
+  MRI->replaceRegWith(True.getOperand(0).getReg(), MI.getOperand(0).getReg());
+  // Now that True is masked, constrain its operands from vr -> vrnov0.
+  for (MachineOperand &MO : True.explicit_operands()) {
+    if (!MO.isReg() || !MO.getReg().isVirtual())
+      continue;
+    MRI->constrainRegClass(
+        MO.getReg(), True.getRegClassConstraint(MO.getOperandNo(), TII, TRI));
+  }
+  // We should clear the IsKill flag since we have a new use now.
+  MRI->clearKillFlags(FalseReg);
+  MI.eraseFromParent();
+
+  // Cleanup all the COPYs on True's value. We have to manually do this because
+  // sometimes sinking True causes these COPY to be invalid (use before define).
+  for (MachineInstr *TrueCopy : TrueCopies)
+    TrueCopy->eraseFromParent();
 
   return true;
 }
@@ -339,30 +773,21 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
 
-  // Masked pseudos coming out of isel will have their mask operand in the form:
-  //
-  // $v0:vr = COPY %mask:vr
-  // %x:vr = Pseudo_MASK %a:vr, %b:br, $v0:vr
-  //
-  // Because $v0 isn't in SSA, keep track of its definition at each use so we
-  // can check mask operands.
-  for (const MachineBasicBlock &MBB : MF) {
-    const MachineInstr *CurrentV0Def = nullptr;
-    for (const MachineInstr &MI : MBB) {
-      if (MI.readsRegister(RISCV::V0, TRI))
-        V0Defs[&MI] = CurrentV0Def;
-
-      if (MI.definesRegister(RISCV::V0, TRI))
-        CurrentV0Def = &MI;
-    }
-  }
-
   for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
+    for (MachineInstr &MI : make_early_inc_range(MBB))
+      Changed |= foldVMergeToMask(MI);
+
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
       Changed |= convertToVLMAX(MI);
       Changed |= convertToUnmasked(MI);
       Changed |= convertToWholeRegister(MI);
-      Changed |= convertVMergeToVMv(MI);
+      Changed |= convertAllOnesVMergeToVMv(MI);
+      Changed |= convertSameMaskVMergeToVMv(MI);
+      if (foldUndefPassthruVMV_V_V(MI)) {
+        Changed |= true;
+        continue; // MI is erased
+      }
+      Changed |= foldVMV_V_V(MI);
     }
   }
 

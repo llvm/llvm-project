@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
 
-#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
@@ -17,6 +16,7 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/attributes.h"
@@ -87,11 +87,17 @@ add_or_sub(InType x, InType y) {
       return OutFPBits::inf(x_bits.sign()).get_val();
     }
 
-    if (y_bits.is_inf())
-      return OutFPBits::inf(y_bits.sign()).get_val();
+    if (y_bits.is_inf()) {
+      if constexpr (IsSub)
+        return OutFPBits::inf(y_bits.sign().negate()).get_val();
+      else
+        return OutFPBits::inf(y_bits.sign()).get_val();
+    }
 
     if (x_bits.is_zero()) {
       if (y_bits.is_zero()) {
+        if (is_effectively_add)
+          return OutFPBits::zero(x_bits.sign()).get_val();
         switch (quick_get_round()) {
         case FE_DOWNWARD:
           return OutFPBits::zero(Sign::NEG).get_val();
@@ -100,21 +106,26 @@ add_or_sub(InType x, InType y) {
         }
       }
 
-      // volatile prevents Clang from converting tmp to OutType and then
-      // immediately back to InType before negating it, resulting in double
-      // rounding.
-      volatile InType tmp = y;
-      if constexpr (IsSub)
-        tmp = -tmp;
-      return static_cast<OutType>(tmp);
+      if constexpr (cpp::is_same_v<InType, bfloat16> &&
+                    cpp::is_same_v<OutType, bfloat16>) {
+        OutFPBits y_bits(y);
+        if constexpr (IsSub)
+          y_bits.set_sign(y_bits.sign().negate());
+        return y_bits.get_val();
+      } else {
+
+        // volatile prevents Clang from converting tmp to OutType and then
+        // immediately back to InType before negating it, resulting in double
+        // rounding.
+        volatile InType tmp = y;
+        if constexpr (IsSub)
+          tmp = -tmp;
+        return cast<OutType>(tmp);
+      }
     }
 
-    if (y_bits.is_zero()) {
-      volatile InType tmp = y;
-      if constexpr (IsSub)
-        tmp = -tmp;
-      return static_cast<OutType>(tmp);
-    }
+    if (y_bits.is_zero())
+      return cast<OutType>(x);
   }
 
   InType x_abs = x_bits.abs().get_val();
@@ -134,10 +145,9 @@ add_or_sub(InType x, InType y) {
   if (x_abs > y_abs) {
     result_sign = x_bits.sign();
   } else if (x_abs < y_abs) {
-    if (is_effectively_add)
-      result_sign = y_bits.sign();
-    else if (y_bits.is_pos())
-      result_sign = Sign::NEG;
+    result_sign = y_bits.sign();
+    if constexpr (IsSub)
+      result_sign = result_sign.negate();
   } else if (is_effectively_add) {
     result_sign = x_bits.sign();
   }
@@ -157,24 +167,29 @@ add_or_sub(InType x, InType y) {
 
     result_mant <<= GUARD_BITS_LEN;
   } else {
-    InStorageType max_mant = max_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
-    InStorageType min_mant = min_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
-    int alignment =
-        max_bits.get_biased_exponent() - min_bits.get_biased_exponent();
+    InStorageType max_mant = static_cast<InStorageType>(
+        max_bits.get_explicit_mantissa() << GUARD_BITS_LEN);
+    InStorageType min_mant = static_cast<InStorageType>(
+        min_bits.get_explicit_mantissa() << GUARD_BITS_LEN);
 
-    InStorageType aligned_min_mant =
-        min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN);
+    int alignment = (max_bits.get_biased_exponent() - max_bits.is_normal()) -
+                    (min_bits.get_biased_exponent() - min_bits.is_normal());
+
+    InStorageType aligned_min_mant = static_cast<InStorageType>(
+        min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN));
     bool aligned_min_mant_sticky;
 
-    if (alignment <= 3)
+    if (alignment <= GUARD_BITS_LEN)
       aligned_min_mant_sticky = false;
-    else if (alignment <= InFPBits::FRACTION_LEN + 3)
-      aligned_min_mant_sticky =
-          (min_mant << (InFPBits::STORAGE_LEN - alignment)) != 0;
-    else
+    else if (alignment > InFPBits::FRACTION_LEN + GUARD_BITS_LEN)
       aligned_min_mant_sticky = true;
+    else
+      aligned_min_mant_sticky =
+          (static_cast<InStorageType>(
+              min_mant << (InFPBits::STORAGE_LEN - alignment))) != 0;
 
-    InStorageType min_mant_sticky(static_cast<int>(aligned_min_mant_sticky));
+    InStorageType min_mant_sticky =
+        static_cast<InStorageType>(static_cast<int>(aligned_min_mant_sticky));
 
     if (is_effectively_add)
       result_mant = max_mant + (aligned_min_mant | min_mant_sticky);
@@ -182,7 +197,7 @@ add_or_sub(InType x, InType y) {
       result_mant = max_mant - (aligned_min_mant | min_mant_sticky);
   }
 
-  int result_exp = max_bits.get_exponent() - RESULT_FRACTION_LEN;
+  int result_exp = max_bits.get_explicit_exponent() - RESULT_FRACTION_LEN;
   DyadicFloat result(result_sign, result_exp, result_mant);
   return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }

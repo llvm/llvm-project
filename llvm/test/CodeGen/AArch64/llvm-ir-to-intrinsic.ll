@@ -1148,11 +1148,10 @@ define <vscale x 4 x i64> @fshl_rot_illegal_i64(<vscale x 4 x i64> %a, <vscale x
 ; CHECK-NEXT:    and z3.d, z3.d, #0x3f
 ; CHECK-NEXT:    lslr z4.d, p0/m, z4.d, z0.d
 ; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z2.d
-; CHECK-NEXT:    movprfx z2, z1
-; CHECK-NEXT:    lsl z2.d, p0/m, z2.d, z5.d
+; CHECK-NEXT:    lslr z5.d, p0/m, z5.d, z1.d
 ; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    orr z0.d, z4.d, z0.d
-; CHECK-NEXT:    orr z1.d, z2.d, z1.d
+; CHECK-NEXT:    orr z1.d, z5.d, z1.d
 ; CHECK-NEXT:    ret
   %fshl = call <vscale x 4 x i64> @llvm.fshl.nxv4i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %a, <vscale x 4 x i64> %b)
   ret <vscale x 4 x i64> %fshl
@@ -1165,9 +1164,7 @@ define <vscale x 2 x i64> @fshl_rot_const_i64(<vscale x 2 x i64> %a){
 ; CHECK-NEXT:    lsl z0.d, z0.d, #3
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 2 x i64> poison, i64 3, i32 0
-  %shuf = shufflevector <vscale x 2 x i64> %insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %fshl = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> %shuf)
+  %fshl = call <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat(i64 3))
   ret <vscale x 2 x i64> %fshl
 }
 

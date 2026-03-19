@@ -11,9 +11,12 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
+#include "src/__support/macros/properties/os.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+
+using LIBC_NAMESPACE::Sign;
 
 template <typename OutType, typename InType>
 class SubTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
@@ -33,32 +36,41 @@ public:
   using SubFunc = OutType (*)(InType, InType);
 
   void test_special_numbers(SubFunc func) {
-    EXPECT_FP_IS_NAN(func(aNaN, aNaN));
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(sNaN, sNaN), FE_INVALID);
+    EXPECT_FP_IS_NAN(func(in.aNaN, in.aNaN));
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(in.sNaN, in.sNaN), FE_INVALID);
 
     InType qnan_42 = InFPBits::quiet_nan(Sign::POS, 0x42).get_val();
-    EXPECT_FP_IS_NAN(func(qnan_42, zero));
-    EXPECT_FP_IS_NAN(func(zero, qnan_42));
+    EXPECT_FP_IS_NAN(func(qnan_42, in.zero));
+    EXPECT_FP_IS_NAN(func(in.zero, qnan_42));
 
-    EXPECT_FP_EQ(inf, func(inf, zero));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf, zero));
-    EXPECT_FP_EQ(inf, func(inf, neg_zero));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf, neg_zero));
+    EXPECT_FP_EQ(inf, func(in.inf, in.zero));
+    EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.zero));
+    EXPECT_FP_EQ(inf, func(in.inf, in.neg_zero));
+    EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.neg_zero));
+    EXPECT_FP_EQ(neg_inf, func(in.zero, in.inf));
+    EXPECT_FP_EQ(neg_inf, func(in.neg_zero, in.inf));
+    EXPECT_FP_EQ(inf, func(in.zero, in.neg_inf));
+    EXPECT_FP_EQ(inf, func(in.neg_zero, in.neg_inf));
   }
 
   void test_invalid_operations(SubFunc func) {
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(inf, inf), FE_INVALID);
-    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(neg_inf, neg_inf), FE_INVALID);
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(in.inf, in.inf), FE_INVALID);
+    EXPECT_FP_IS_NAN_WITH_EXCEPTION(func(in.neg_inf, in.neg_inf), FE_INVALID);
   }
 
   void test_range_errors(SubFunc func) {
+#ifndef LIBC_TARGET_OS_IS_WINDOWS
     using namespace LIBC_NAMESPACE::fputil::testing;
 
+    if (LIBC_NAMESPACE::fputil::get_fp_type<OutType>() ==
+        LIBC_NAMESPACE::fputil::get_fp_type<InType>())
+      return;
+
     if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(max_normal, neg_max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(in.max_normal, in.neg_max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
-      EXPECT_FP_EQ_WITH_EXCEPTION(-inf, func(neg_max_normal, max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(-inf, func(in.neg_max_normal, in.max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
 
@@ -73,10 +85,11 @@ public:
     }
 
     if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal, func(max_normal, neg_max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal,
+                                  func(in.max_normal, in.neg_max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_max_normal,
-                                  func(neg_max_normal, max_normal),
+                                  func(in.neg_max_normal, in.max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
 
       EXPECT_FP_EQ_WITH_EXCEPTION(zero,
@@ -90,9 +103,10 @@ public:
     }
 
     if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal, func(max_normal, neg_max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(max_normal,
+                                  func(in.max_normal, in.neg_max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
-      EXPECT_FP_EQ_WITH_EXCEPTION(-inf, func(neg_max_normal, max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(-inf, func(in.neg_max_normal, in.max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
 
@@ -107,11 +121,11 @@ public:
     }
 
     if (ForceRoundingMode r(RoundingMode::Upward); r.success) {
-      EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(max_normal, neg_max_normal),
+      EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(in.max_normal, in.neg_max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
       EXPECT_FP_EQ_WITH_EXCEPTION(neg_max_normal,
-                                  func(neg_max_normal, max_normal),
+                                  func(in.neg_max_normal, in.max_normal),
                                   FE_OVERFLOW | FE_INEXACT);
 
       EXPECT_FP_EQ_WITH_EXCEPTION(min_denormal,
@@ -123,11 +137,33 @@ public:
                                   FE_UNDERFLOW | FE_INEXACT);
       EXPECT_MATH_ERRNO(ERANGE);
     }
+#endif
   }
 
   void test_inexact_results(SubFunc func) {
-    func(InType(1.0), min_denormal);
+    func(InType(1.0), in.min_denormal);
     EXPECT_FP_EXCEPTION(FE_INEXACT);
+  }
+
+  void test_mixed_signs(SubFunc func) {
+    EXPECT_FP_EQ(OutType(-1.0), func(InType(1.0), InType(2.0)));
+    EXPECT_FP_EQ(OutType(3.0), func(InType(1.0), InType(-2.0)));
+    EXPECT_FP_EQ(OutType(-3.0), func(InType(-1.0), InType(2.0)));
+    EXPECT_FP_EQ(OutType(1.0), func(InType(-1.0), InType(-2.0)));
+
+    EXPECT_FP_EQ(OutType(1.0), func(InType(2.0), InType(1.0)));
+    EXPECT_FP_EQ(OutType(3.0), func(InType(2.0), InType(-1.0)));
+    EXPECT_FP_EQ(OutType(-3.0), func(InType(-2.0), InType(1.0)));
+    EXPECT_FP_EQ(OutType(-1.0), func(InType(-2.0), InType(-1.0)));
+  }
+
+  void test_signed_zero_result(SubFunc func) {
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, func(in.zero, in.neg_zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, func(in.neg_zero, in.zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, zero, neg_zero, zero,
+                              func(in.zero, in.zero));
+    EXPECT_FP_EQ_ALL_ROUNDING(zero, zero, neg_zero, zero,
+                              func(in.neg_zero, in.neg_zero));
   }
 };
 
@@ -138,6 +174,25 @@ public:
     test_invalid_operations(&func);                                            \
   }                                                                            \
   TEST_F(LlvmLibcSubTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcSubTest, InexactResults) { test_inexact_results(&func); }
+  TEST_F(LlvmLibcSubTest, InexactResults) { test_inexact_results(&func); }     \
+  TEST_F(LlvmLibcSubTest, MixedSigns) { test_mixed_signs(&func); }             \
+  TEST_F(LlvmLibcSubTest, SignedZeroResult) { test_signed_zero_result(&func); }
+
+#define LIST_SUB_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
+  using LlvmLibcSubTest##suffix = SubTest<OutType, InType>;                    \
+  TEST_F(LlvmLibcSubTest##suffix, SpecialNumbers) {                            \
+    test_special_numbers(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcSubTest##suffix, InvalidOperations) {                         \
+    test_invalid_operations(&func);                                            \
+  }                                                                            \
+  TEST_F(LlvmLibcSubTest##suffix, RangeErrors) { test_range_errors(&func); }   \
+  TEST_F(LlvmLibcSubTest##suffix, InexactResults) {                            \
+    test_inexact_results(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibcSubTest##suffix, MixedSigns) { test_mixed_signs(&func); }     \
+  TEST_F(LlvmLibcSubTest##suffix, SignedZeroResult) {                          \
+    test_signed_zero_result(&func);                                            \
+  }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_SUBTEST_H

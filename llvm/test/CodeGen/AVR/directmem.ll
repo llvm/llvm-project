@@ -1,5 +1,5 @@
-; RUN: llc -mattr=sram,addsubiw < %s -march=avr | FileCheck %s
-; RUN: llc -mattr=sram,avrtiny < %s -march=avr | FileCheck %s --check-prefix=CHECK-TINY
+; RUN: llc -mattr=sram,addsubiw < %s -mtriple=avr | FileCheck %s
+; RUN: llc -mattr=sram,avrtiny < %s -mtriple=avr | FileCheck %s --check-prefix=CHECK-TINY
 
 @char = common global i8 0
 @char.array = common global [3 x i8] zeroinitializer

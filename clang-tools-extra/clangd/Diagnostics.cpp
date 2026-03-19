@@ -9,6 +9,7 @@
 #include "Diagnostics.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
@@ -53,7 +54,8 @@ namespace {
 const char *getDiagnosticCode(unsigned ID) {
   switch (ID) {
 #define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROPU, SFINAE, NOWERROR,      \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY, STABLE_ID, \
+             LEGACY_STABLE_IDS)                                                \
   case clang::diag::ENUM:                                                      \
     return #ENUM;
 #include "clang/Basic/DiagnosticASTKinds.inc"
@@ -319,7 +321,6 @@ std::string mainMessage(const Diag &D, const ClangdDiagnosticOptions &Opts) {
       OS << "\n\n";
       printDiag(OS, Note);
     }
-  OS.flush();
   return capitalize(std::move(Result));
 }
 
@@ -335,7 +336,6 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note,
     OS << "\n\n";
     printDiag(OS, Main);
   }
-  OS.flush();
   return capitalize(std::move(Result));
 }
 
@@ -579,7 +579,17 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
   for (auto &Diag : Output) {
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
       // Warnings controlled by -Wfoo are better recognized by that name.
-      StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(Diag.ID);
+      StringRef Warning = [&] {
+        if (OrigSrcMgr) {
+          return OrigSrcMgr->getDiagnostics()
+              .getDiagnosticIDs()
+              ->getWarningOptionForDiag(Diag.ID);
+        }
+        if (!DiagnosticIDs::IsCustomDiag(Diag.ID))
+          return DiagnosticIDs{}.getWarningOptionForDiag(Diag.ID);
+        return StringRef{};
+      }();
+
       if (!Warning.empty()) {
         Diag.Name = ("-W" + Warning).str();
       } else {
@@ -670,6 +680,28 @@ static void fillNonLocationData(DiagnosticsEngine::Level DiagLevel,
                    .str();
 }
 
+static bool isDiagnosticSuppressed(const clang::Diagnostic &Diag,
+                                   const llvm::StringSet<> &Suppress,
+                                   const std::optional<LangOptions> &LangOpts) {
+  // Don't complain about header-only stuff in mainfiles if it's a header.
+  // FIXME: would be cleaner to suppress in clang, once we decide whether the
+  //        behavior should be to silently-ignore or respect the pragma.
+  if (LangOpts && Diag.getID() == diag::pp_pragma_sysheader_in_main_file &&
+      LangOpts->IsHeaderFile)
+    return true;
+
+  if (const char *CodePtr = getDiagnosticCode(Diag.getID())) {
+    if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
+      return true;
+  }
+  StringRef Warning =
+      Diag.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
+          Diag.getID());
+  if (!Warning.empty() && Suppress.contains(Warning))
+    return true;
+  return false;
+}
+
 void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
   // If the diagnostic was generated for a different SourceManager, skip it.
@@ -686,6 +718,19 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   bool OriginallyError =
       Info.getDiags()->getDiagnosticIDs()->isDefaultMappingAsError(
           Info.getID());
+
+  if (!isNote(DiagLevel)) {
+    const Config &Cfg = Config::current();
+    // Check if diagnostics is suppressed (possibly by user), before doing any
+    // adjustments.
+    if (Cfg.Diagnostics.SuppressAll ||
+        isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress, LangOpts)) {
+      DiagLevel = DiagnosticsEngine::Ignored;
+    } else if (Adjuster) {
+      // FIXME: Merge with feature modules.
+      DiagLevel = Adjuster(DiagLevel, Info);
+    }
+  }
 
   if (Info.getLocation().isInvalid()) {
     // Handle diagnostics coming from command-line arguments. The source manager
@@ -792,13 +837,12 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
           M << "'";
         }
         // Don't allow source code to inject newlines into diagnostics.
-        std::replace(Message.begin(), Message.end(), '\n', ' ');
+        llvm::replace(Message, '\n', ' ');
       }
     }
     if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
-    LastDiag->Fixes.push_back(
-        Fix{std::string(Message), std::move(Edits), {}});
+    LastDiag->Fixes.push_back(Fix{std::string(Message), std::move(Edits), {}});
     return true;
   };
 
@@ -807,9 +851,6 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     flushLastDiag();
 
     LastDiag = Diag();
-    // FIXME: Merge with feature modules.
-    if (Adjuster)
-      DiagLevel = Adjuster(DiagLevel, Info);
 
     FillDiagBase(*LastDiag);
     if (isExcluded(LastDiag->ID))
@@ -872,7 +913,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 void StoreDiags::flushLastDiag() {
   if (!LastDiag)
     return;
-  auto Finish = llvm::make_scope_exit([&, NDiags(Output.size())] {
+  llvm::scope_exit Finish([&, NDiags(Output.size())] {
     if (Output.size() == NDiags) // No new diag emitted.
       vlog("Dropped diagnostic: {0}: {1}", LastDiag->File, LastDiag->Message);
     LastDiag.reset();
@@ -894,25 +935,6 @@ void StoreDiags::flushLastDiag() {
   if (!mentionsMainFile(*LastDiag))
     return;
   Output.push_back(std::move(*LastDiag));
-}
-
-bool isBuiltinDiagnosticSuppressed(unsigned ID,
-                                   const llvm::StringSet<> &Suppress,
-                                   const LangOptions &LangOpts) {
-  // Don't complain about header-only stuff in mainfiles if it's a header.
-  // FIXME: would be cleaner to suppress in clang, once we decide whether the
-  //        behavior should be to silently-ignore or respect the pragma.
-  if (ID == diag::pp_pragma_sysheader_in_main_file && LangOpts.IsHeaderFile)
-    return true;
-
-  if (const char *CodePtr = getDiagnosticCode(ID)) {
-    if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
-      return true;
-  }
-  StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(ID);
-  if (!Warning.empty() && Suppress.contains(Warning))
-    return true;
-  return false;
 }
 
 llvm::StringRef normalizeSuppressedCode(llvm::StringRef Code) {

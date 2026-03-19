@@ -6,10 +6,10 @@
 @A = external global i8
 @B = external global ptr
 
-define ptr @Foo() {
-; CHECK-LABEL: define ptr @Foo() {
+define ptr @Foo(i1 %arg) {
+; CHECK-LABEL: define ptr @Foo(i1 %arg) {
 ; CHECK-NEXT:    store i8 0, ptr @A, align 1
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store ptr null, ptr @B, align 8
 ; CHECK-NEXT:    ret ptr null
@@ -19,7 +19,7 @@ define ptr @Foo() {
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   store i8 0, ptr @A
-  br i1 undef, label %if.then, label %if.else
+  br i1 %arg, label %if.then, label %if.else
 
 if.then:
   store ptr null, ptr @B
@@ -35,10 +35,10 @@ if.else:
 
 @GlobalVar = internal global i8 0
 
-define ptr @Fun() {
-; CHECK-LABEL: define ptr @Fun() {
+define ptr @Fun(i1 %arg) {
+; CHECK-LABEL: define ptr @Fun(i1 %arg) {
 ; CHECK-NEXT:    store i8 0, ptr @A, align 1
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store ptr null, ptr @B, align 8
 ; CHECK-NEXT:    ret ptr null
@@ -49,7 +49,7 @@ define ptr @Fun() {
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   store i8 0, ptr @A
-  br i1 undef, label %if.then, label %if.else
+  br i1 %arg, label %if.then, label %if.else
 
 if.then:
   store ptr null, ptr @B

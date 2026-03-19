@@ -54,19 +54,12 @@ struct DebugInfoDrop : public FunctionPass {
 struct DebugValueDrop : public FunctionPass {
   static char ID;
   bool runOnFunction(Function &F) override {
-    SmallVector<DbgVariableIntrinsic *, 4> Dbgs;
     for (BasicBlock &BB : F) {
-      // Remove dbg var intrinsics.
       for (Instruction &I : BB) {
-        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-          Dbgs.push_back(DVI);
-        // If there are any non-intrinsic records (DbgRecords), drop those too.
+        // If there are any debug records, drop them.
         I.dropDbgRecords();
       }
     }
-
-    for (auto &I : Dbgs)
-      I->eraseFromParent();
 
     return true;
   }

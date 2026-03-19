@@ -25,9 +25,12 @@ class FrameStatCommand(ParsedCommand):
             '--help" for detailed help.'.format(cls.program)
         )
 
-    def setup_command_definition(self):
+    def get_flags(self):
+        return lldb.eCommandRequiresFrame | lldb.eCommandProcessMustBePaused
 
-        self.ov_parser.add_option(
+    def setup_command_definition(self):
+        ov_parser = self.get_parser()
+        ov_parser.add_option(
             "i",
             "in-scope",
             help = "in_scope_only = True",
@@ -36,7 +39,7 @@ class FrameStatCommand(ParsedCommand):
             default = True,
         )
 
-        self.ov_parser.add_option(
+        ov_parser.add_option(
             "i",
             "in-scope",
             help = "in_scope_only = True",
@@ -45,7 +48,7 @@ class FrameStatCommand(ParsedCommand):
             default=True,
         )
         
-        self.ov_parser.add_option(
+        ov_parser.add_option(
             "a",
             "arguments",
             help = "arguments = True",
@@ -54,7 +57,7 @@ class FrameStatCommand(ParsedCommand):
             default = True,
         )
 
-        self.ov_parser.add_option(
+        ov_parser.add_option(
             "l",
             "locals",
             help = "locals = True",
@@ -63,13 +66,18 @@ class FrameStatCommand(ParsedCommand):
             default = True,
         )
 
-        self.ov_parser.add_option(
+        ov_parser.add_option(
             "s",
             "statics",
             help = "statics = True",
             value_type = lldb.eArgTypeBoolean,
             dest = "statics",
             default = True,
+        )
+        ov_parser.add_option(
+            "t",
+            "test-flag",
+            help="test a flag value.",
         )
 
     def get_repeat_command(self, args):
@@ -100,8 +108,9 @@ class FrameStatCommand(ParsedCommand):
             result.SetError("invalid frame")
             return
 
+        ov_parser = self.get_parser()
         variables_list = frame.GetVariables(
-            self.ov_parser.arguments, self.ov_parser.locals, self.ov_parser.statics, self.ov_parser.inscope
+            ov_parser.arguments, ov_parser.locals, ov_parser.statics, ov_parser.inscope
         )
         variables_count = variables_list.GetSize()
         if variables_count == 0:
@@ -119,6 +128,11 @@ class FrameStatCommand(ParsedCommand):
                 % (variables_count, total_size, average_size),
                 file=result,
             )
+        if ov_parser.was_set("test-flag"):
+            print("Got the test flag")
+        else:
+            print("Got no test flag")
+
         # not returning anything is akin to returning success
 
 

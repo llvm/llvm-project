@@ -4,6 +4,12 @@ program test
   abstract interface
     subroutine abstract
     end subroutine
+    !ERROR: An ABSTRACT interface may not have the same name as an intrinsic type
+    function integer()
+    end
+    !ERROR: An ABSTRACT interface may not have the same name as an intrinsic type
+    subroutine logical
+    end
   end interface
   procedure(abstract), pointer :: p
   !ERROR: Abstract procedure interface 'abstract' may not be referenced

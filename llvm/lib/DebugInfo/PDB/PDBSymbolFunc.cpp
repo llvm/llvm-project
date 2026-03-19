@@ -12,7 +12,6 @@
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
@@ -39,11 +38,8 @@ public:
     auto DataChildren = Func.findAllChildren<PDBSymbolData>();
     while (auto Child = DataChildren->getNext()) {
       if (Child->getDataKind() == PDB_DataKind::Param) {
-        std::string Name = Child->getName();
-        if (SeenNames.find(Name) != SeenNames.end())
-          continue;
-        Args.push_back(std::move(Child));
-        SeenNames.insert(Name);
+        if (SeenNames.insert(Child->getName()).second)
+          Args.push_back(std::move(Child));
       }
     }
     reset();

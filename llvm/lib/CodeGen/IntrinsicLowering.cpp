@@ -236,8 +236,10 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
     report_fatal_error("Code generator does not support intrinsic function '"+
                       Callee->getName()+"'!");
 
-  case Intrinsic::expect: {
-    // Just replace __builtin_expect(exp, c) with EXP.
+  case Intrinsic::expect:
+  case Intrinsic::expect_with_probability: {
+    // Just replace __builtin_expect(exp, c) and
+    // __builtin_expect_with_probability(exp, c, p) with EXP.
     Value *V = CI->getArgOperand(0);
     CI->replaceAllUsesWith(V);
     break;
@@ -474,7 +476,7 @@ bool IntrinsicLowering::LowerToByteSwap(CallInst *CI) {
 
   // Okay, we can do this xform, do so now.
   Module *M = CI->getModule();
-  Function *Int = Intrinsic::getDeclaration(M, Intrinsic::bswap, Ty);
+  Function *Int = Intrinsic::getOrInsertDeclaration(M, Intrinsic::bswap, Ty);
 
   Value *Op = CI->getArgOperand(0);
   Op = CallInst::Create(Int, Op, CI->getName(), CI->getIterator());

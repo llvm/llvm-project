@@ -1,0 +1,13 @@
+add_entrypoint_object(
+    clock_getres
+    SRCS
+        clock_getres.cpp
+    DEPENDS
+        libc.src.__support.time.windows.performance_counter
+        libc.src.__support.time.units
+        libc.src.__support.common
+        libc.src.__support.macros.optimization
+        libc.hdr.time_macros
+        libc.hdr.types.time_t
+        libc.hdr.types.struct_timespec
+)

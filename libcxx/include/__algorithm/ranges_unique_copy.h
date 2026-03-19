@@ -60,7 +60,7 @@ struct __unique_copy {
   }
 
   template <class _InIter, class _OutIter>
-  using __algo_tag_t = decltype(__get_algo_tag<_InIter, _OutIter>());
+  using __algo_tag_t _LIBCPP_NODEBUG = decltype(__get_algo_tag<_InIter, _OutIter>());
 
   template <input_iterator _InIter,
             sentinel_for<_InIter> _Sent,

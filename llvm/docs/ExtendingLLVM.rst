@@ -13,7 +13,7 @@ function, or a whole new instruction.
 
 When you come to this realization, stop and think. Do you really need to extend
 LLVM? Is it a new fundamental capability that LLVM does not support at its
-current incarnation or can it be synthesized from already pre-existing LLVM
+current incarnation or can it be synthesized from existing LLVM
 elements? If you are not sure, ask on the `LLVM forums
 <https://discourse.llvm.org>`_. The reason is that
 extending LLVM will get involved as you need to update all the different passes
@@ -27,7 +27,7 @@ method of choice for LLVM extension.
 
 Before you invest a significant amount of effort into a non-trivial extension,
 **ask on the list** if what you are looking to do can be done with
-already-existing infrastructure, or if maybe someone else is already working on
+existing infrastructure, or if maybe someone else is already working on
 it. You will save yourself a lot of time and effort by doing so.
 
 .. _intrinsic function:
@@ -57,12 +57,12 @@ function and then be turned into an instruction if warranted.
 
 #. ``llvm/lib/Analysis/ConstantFolding.cpp``:
 
-   If it is possible to constant fold your intrinsic, add support to it in the
+   If it is possible to constant fold your intrinsic, add support for it in the
    ``canConstantFoldCallTo`` and ``ConstantFoldCall`` functions.
 
 #. ``llvm/test/*``:
 
-   Add test cases for your test cases to the test suite
+   Add test cases for your intrinsic to the test suite
 
 Once the intrinsic has been added to the system, you must add code generator
 support for it.  Generally you must do the following steps:
@@ -72,7 +72,7 @@ Add support to the .td file for the target(s) of your choice in
 
   This is usually a matter of adding a pattern to the .td file that matches the
   intrinsic, though it may obviously require adding the instructions you want to
-  generate as well.  There are lots of examples in the PowerPC and X86 backend
+  generate as well.  There are lots of examples in the PowerPC and X86 backends
   to follow.
 
 Adding a new SelectionDAG node
@@ -90,14 +90,14 @@ complicated behavior in a single node (rotate).
 
    Add an enum value for the new SelectionDAG node.
 
-#. ``lib/CodeGen/SelectionDAG/SelectionDAG.cpp``:
+#. ``lib/CodeGen/SelectionDAG/SelectionDAGDumper.cpp``:
 
    Add code to print the node to ``getOperationName``.  If your new node can be
-    evaluated at compile time when given constant arguments (such as an add of a
-    constant with another constant), find the ``getNode`` method that takes the
-    appropriate number of arguments, and add a case for your node to the switch
-    statement that performs constant folding for nodes that take the same number
-    of arguments as your new node.
+   evaluated at compile time when given constant arguments (such as an add of a
+   constant with another constant), find the ``getNode`` method that takes the
+   appropriate number of arguments, and add a case for your node to the switch
+   statement that performs constant folding for nodes that take the same number
+   of arguments as your new node.
 
 #. ``lib/CodeGen/SelectionDAG/LegalizeDAG.cpp``:
 
@@ -115,19 +115,19 @@ complicated behavior in a single node (rotate).
 #. ``lib/CodeGen/SelectionDAG/LegalizeDAG.cpp``:
 
    If targets may support the new node being added only at certain sizes, you
-    will also need to add code to your node's case statement in ``LegalizeOp``
-    to Promote your node's operands to a larger size, and perform the correct
-    operation.  You will also need to add code to ``PromoteOp`` to do this as
-    well.  For a good example, see ``ISD::BSWAP``, which promotes its operand to
-    a wider size, performs the byteswap, and then shifts the correct bytes right
-    to emulate the narrower byteswap in the wider type.
+   will also need to add code to your node's case statement in ``LegalizeOp``
+   to Promote your node's operands to a larger size, and perform the correct
+   operation.  You will also need to add code to ``PromoteOp`` to do this as
+   well.  For a good example, see ``ISD::BSWAP``, which promotes its operand to
+   a wider size, performs the byteswap, and then shifts the correct bytes right
+   to emulate the narrower byteswap in the wider type.
 
 #. ``lib/CodeGen/SelectionDAG/LegalizeDAG.cpp``:
 
    Add a case for your node in ``ExpandOp`` to teach the legalizer how to
    perform the action represented by the new node on a value that has been split
    into high and low halves.  This case will be used to support your node with a
-   64 bit operand on a 32 bit target.
+   64-bit operand on a 32-bit target.
 
 #. ``lib/CodeGen/SelectionDAG/DAGCombiner.cpp``:
 
@@ -194,7 +194,7 @@ Adding a new instruction
 
 #. ``llvm/lib/AsmParser/LLLexer.cpp``:
 
-   add a new token to parse your instruction from assembly text file
+   add a new token to parse your instruction from an assembly text file
 
 #. ``llvm/lib/AsmParser/LLParser.cpp``:
 
@@ -207,7 +207,7 @@ Adding a new instruction
 
 #. ``llvm/lib/Bitcode/Writer/BitcodeWriter.cpp``:
 
-   add a case for your instruction and how it will be parsed from bitcode
+   add a case for your instruction and how it will be written to bitcode
 
 #. ``llvm/lib/IR/Instruction.cpp``:
 
@@ -236,7 +236,7 @@ Adding a new type
 .. warning::
 
   Adding new types changes the bitcode format, and will break compatibility with
-  currently-existing LLVM installations. Only add new types if it is absolutely
+  existing LLVM installations. Only add new types if it is absolutely
   necessary.
 
 Adding a fundamental type
@@ -284,17 +284,17 @@ Adding a derived type
 
 #. ``llvm/include/llvm/IR/DerivedTypes.h``:
 
-   add new class to represent new class in the hierarchy; add forward
+   add a new class to represent the new class in the hierarchy; add forward
    declaration to the TypeMap value type
 
 #. ``llvm/lib/IR/Type.cpp`` and ``llvm/lib/CodeGen/ValueTypes.cpp``:
 
-   add support for derived type, notably `enum TypeID` and `is`, `get` methods.
+   add support for derived type, notably ``enum TypeID`` and ``is``, ``get`` methods.
 
 #. ``llvm/include/llvm-c/Core.h`` and ``llvm/lib/IR/Core.cpp``:
 
    add enum ``LLVMTypeKind`` and modify
-   `LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty)` for the new type
+   ``LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty)`` for the new type
 
 #. ``llvm/lib/AsmParser/LLLexer.cpp``:
 

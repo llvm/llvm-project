@@ -128,7 +128,37 @@ public:
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
+
+void AIXABIInfo::appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                                         raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                         raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  const TargetInfo &TI = CGT.getTarget();
+  ParsedTargetAttr Info = TI.parseTargetAttr(AttrStr);
+
+  if (!Info.CPU.empty()) {
+    assert(Info.Features.empty() && "cannot have both a CPU and a feature");
+    Out << ".cpu_" << Info.CPU;
+    return;
+  }
+
+  assert(0 && "specifying target features on an FMV is unsupported on AIX");
+}
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
   const bool Is64Bit;
@@ -153,8 +183,8 @@ public:
 // extended to 32/64 bits.
 bool AIXABIInfo::isPromotableTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (getContext().isPromotableIntegerType(Ty))
@@ -189,7 +219,7 @@ ABIArgInfo AIXABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   if (isAggregateTypeForABI(RetTy))
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 
   return (isPromotableTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                         : ABIArgInfo::getDirect());
@@ -208,17 +238,21 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
     CharUnits CCAlign = getParamTypeAlignment(Ty);
     CharUnits TyAlign = getContext().getTypeAlignInChars(Ty);
 
-    return ABIArgInfo::getIndirect(CCAlign, /*ByVal*/ true,
-                                   /*Realign*/ TyAlign > CCAlign);
+    return ABIArgInfo::getIndirect(
+        CCAlign, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/true,
+        /*Realign=*/TyAlign > CCAlign);
   }
 
-  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                     : ABIArgInfo::getDirect());
+  return (isPromotableTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+              : ABIArgInfo::getDirect());
 }
 
 CharUnits AIXABIInfo::getParamTypeAlignment(QualType Ty) const {
@@ -290,8 +324,7 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
     ASTContext &Context = D->getASTContext();
     unsigned Alignment = Context.toBits(Context.getDeclAlign(D)) / 8;
     const auto *Ty = VarD->getType().getTypePtr();
-    const RecordDecl *RDecl =
-        Ty->isRecordType() ? Ty->getAs<RecordType>()->getDecl() : nullptr;
+    const RecordDecl *RDecl = Ty->getAsRecordDecl();
 
     bool EmitDiagnostic = UserSpecifiedTOC && GV->hasExternalLinkage();
     auto reportUnsupportedWarning = [&](bool ShouldEmitWarning, StringRef Msg) {
@@ -487,7 +520,7 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
 
   llvm::Type *DirectTy = CGF.ConvertType(Ty), *ElementTy = DirectTy;
   if (isIndirect)
-    DirectTy = CGF.UnqualPtrTy;
+    DirectTy = CGF.DefaultPtrTy;
 
   // Case 1: consume registers.
   Address RegAddr = Address::invalid();
@@ -702,8 +735,8 @@ public:
 bool
 PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (isPromotableIntegerTypeForABI(Ty))
@@ -832,7 +865,8 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
   if (Ty->isVectorType()) {
     uint64_t Size = getContext().getTypeSize(Ty);
     if (Size > 128)
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/false);
     else if (Size < 128) {
       llvm::Type *CoerceTy = llvm::IntegerType::get(getVMContext(), Size);
       return ABIArgInfo::getDirect(CoerceTy);
@@ -841,11 +875,13 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
 
   if (const auto *EIT = Ty->getAs<BitIntType>())
     if (EIT->getNumBits() > 128)
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     /*ByVal=*/true);
 
   if (isAggregateTypeForABI(Ty)) {
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                     RAA == CGCXXABI::RAA_DirectInMemory);
 
     uint64_t ABIAlign = getParamTypeAlignment(Ty).getQuantity();
     uint64_t TyAlign = getContext().getTypeAlignInChars(Ty).getQuantity();
@@ -886,13 +922,15 @@ PPC64_SVR4_ABIInfo::classifyArgumentType(QualType Ty) const {
     }
 
     // All other aggregates are passed ByVal.
-    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign),
-                                   /*ByVal=*/true,
-                                   /*Realign=*/TyAlign > ABIAlign);
+    return ABIArgInfo::getIndirect(
+        CharUnits::fromQuantity(ABIAlign),
+        /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/true, /*Realign=*/TyAlign > ABIAlign);
   }
 
-  return (isPromotableTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
-                                     : ABIArgInfo::getDirect());
+  return (isPromotableTypeForABI(Ty)
+              ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
+              : ABIArgInfo::getDirect());
 }
 
 ABIArgInfo
@@ -908,7 +946,8 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVectorType()) {
     uint64_t Size = getContext().getTypeSize(RetTy);
     if (Size > 128)
-      return getNaturalAlignIndirect(RetTy);
+      return getNaturalAlignIndirect(RetTy,
+                                     getDataLayout().getAllocaAddrSpace());
     else if (Size < 128) {
       llvm::Type *CoerceTy = llvm::IntegerType::get(getVMContext(), Size);
       return ABIArgInfo::getDirect(CoerceTy);
@@ -917,7 +956,8 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
 
   if (const auto *EIT = RetTy->getAs<BitIntType>())
     if (EIT->getNumBits() > 128)
-      return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
+      return getNaturalAlignIndirect(
+          RetTy, getDataLayout().getAllocaAddrSpace(), /*ByVal=*/false);
 
   if (isAggregateTypeForABI(RetTy)) {
     // ELFv2 homogeneous aggregates are returned as array types.
@@ -947,7 +987,7 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
     }
 
     // All other aggregates are returned indirectly.
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
   }
 
   return (isPromotableTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)

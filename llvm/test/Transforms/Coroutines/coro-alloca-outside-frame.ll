@@ -33,16 +33,15 @@ cleanup:
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
 ; %y and %alias_phi would all go to the frame, but not %x
-; CHECK:       %f.Frame = type { ptr, ptr, i64, ptr, i1 }
 ; CHECK-LABEL: @f(
 ; CHECK:         %x = alloca i64, align 8, !coro.outside.frame !0
-; CHECK-NOT:     %x.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
-; CHECK:         %y.reload.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
+; CHECK-NOT:     %x.reload.addr = getelementptr inbounds i8, ptr %hdl, i64 16
+; CHECK:         %y.reload.addr = getelementptr inbounds i8, ptr %hdl, i64 16
 ; CHECK:         %alias_phi = phi ptr [ %y.reload.addr, %merge.from.flag_false ], [ %x, %entry ]
 
 declare ptr @llvm.coro.free(token, ptr)
@@ -54,7 +53,7 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare void @print(ptr)
 declare noalias ptr @malloc(i32)

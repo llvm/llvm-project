@@ -14,6 +14,9 @@
 // [simd.class]
 // template<class U> simd(U&& value) noexcept;
 
+#include <algorithm>
+#include <experimental/simd>
+
 #include "../test_utils.h"
 
 namespace ex = std::experimental::parallelism_v2;

@@ -94,7 +94,9 @@ add_numbers:
 	addl	4(%rdx), %eax
 .Ltmp4:
 	.cv_loc	0 1 6 0
+	.seh_startepilogue
 	addq	$40, %rsp
+	.seh_endepilogue
 	retq
 .LBB0_1:
 .Ltmp5:

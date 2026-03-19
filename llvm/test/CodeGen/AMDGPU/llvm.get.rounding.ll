@@ -42,10 +42,10 @@ define i32 @func_rounding() {
 ; GFX10-LABEL: func_rounding:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_MODE, 0, 4)
-; GFX10-NEXT:    s_lshl_b32 s6, s4, 2
+; GFX10-NEXT:    s_getreg_b32 s6, hwreg(HW_REG_MODE, 0, 4)
 ; GFX10-NEXT:    s_mov_b32 s4, 0xeb24da71
 ; GFX10-NEXT:    s_mov_b32 s5, 0xc96f385
+; GFX10-NEXT:    s_lshl_b32 s6, s6, 2
 ; GFX10-NEXT:    s_lshr_b64 s[4:5], s[4:5], s6
 ; GFX10-NEXT:    s_and_b32 s4, s4, 15
 ; GFX10-NEXT:    s_add_i32 s5, s4, 4
@@ -57,10 +57,10 @@ define i32 @func_rounding() {
 ; GFX11-LABEL: func_rounding:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
-; GFX11-NEXT:    s_lshl_b32 s2, s0, 2
+; GFX11-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_MODE, 0, 4)
 ; GFX11-NEXT:    s_mov_b32 s0, 0xeb24da71
 ; GFX11-NEXT:    s_mov_b32 s1, 0xc96f385
+; GFX11-NEXT:    s_lshl_b32 s2, s2, 2
 ; GFX11-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
 ; GFX11-NEXT:    s_and_b32 s0, s0, 15
 ; GFX11-NEXT:    s_add_i32 s1, s0, 4

@@ -9,10 +9,25 @@
 #include "ClangDocTest.h"
 #include "Representation.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace doc {
+
+ClangDocContextTest::ClangDocContextTest()
+    : DiagID(new DiagnosticIDs()),
+      Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()) {}
+
+ClangDocContextTest::~ClangDocContextTest() = default;
+
+ClangDocContext ClangDocContextTest::getClangDocContext(
+    std::vector<std::string> UserStylesheets, StringRef RepositoryUrl,
+    StringRef RepositoryLinePrefix, StringRef Base) {
+  return ClangDocContext(nullptr, "test-project", false, "", "", RepositoryUrl,
+                         RepositoryLinePrefix, Base, UserStylesheets, Diags,
+                         OutputFormatTy::html, false);
+}
 
 NamespaceInfo *InfoAsNamespace(Info *I) {
   assert(I->IT == InfoType::IT_namespace);
@@ -41,8 +56,8 @@ TypedefInfo *InfoAsTypedef(Info *I) {
 
 void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
                       const std::vector<CommentInfo> &Actual);
-void CheckCommentInfo(const std::vector<std::unique_ptr<CommentInfo>> &Expected,
-                      const std::vector<std::unique_ptr<CommentInfo>> &Actual);
+void CheckCommentInfo(const std::vector<OwnedPtr<CommentInfo>> &Expected,
+                      const std::vector<OwnedPtr<CommentInfo>> &Actual);
 
 void CheckCommentInfo(const CommentInfo &Expected, const CommentInfo &Actual) {
   EXPECT_EQ(Expected.Kind, Actual.Kind);
@@ -76,8 +91,8 @@ void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
     CheckCommentInfo(Expected[Idx], Actual[Idx]);
 }
 
-void CheckCommentInfo(const std::vector<std::unique_ptr<CommentInfo>> &Expected,
-                      const std::vector<std::unique_ptr<CommentInfo>> &Actual) {
+void CheckCommentInfo(const std::vector<OwnedPtr<CommentInfo>> &Expected,
+                      const std::vector<OwnedPtr<CommentInfo>> &Actual) {
   ASSERT_EQ(Expected.size(), Actual.size());
   for (size_t Idx = 0; Idx < Actual.size(); ++Idx)
     CheckCommentInfo(*Expected[Idx], *Actual[Idx]);
@@ -118,7 +133,9 @@ void CheckSymbolInfo(SymbolInfo *Expected, SymbolInfo *Actual) {
   CheckBaseInfo(Expected, Actual);
   EXPECT_EQ(Expected->DefLoc.has_value(), Actual->DefLoc.has_value());
   if (Expected->DefLoc && Actual->DefLoc.has_value()) {
-    EXPECT_EQ(Expected->DefLoc->LineNumber, Actual->DefLoc->LineNumber);
+    EXPECT_EQ(Expected->DefLoc->StartLineNumber,
+              Actual->DefLoc->StartLineNumber);
+    EXPECT_EQ(Expected->DefLoc->EndLineNumber, Actual->DefLoc->EndLineNumber);
     EXPECT_EQ(Expected->DefLoc->Filename, Actual->DefLoc->Filename);
   }
   ASSERT_EQ(Expected->Loc.size(), Actual->Loc.size());
@@ -230,8 +247,8 @@ void CheckBaseRecordInfo(BaseRecordInfo *Expected, BaseRecordInfo *Actual) {
 void CheckIndex(Index &Expected, Index &Actual) {
   CheckReference(Expected, Actual);
   ASSERT_EQ(Expected.Children.size(), Actual.Children.size());
-  for (size_t Idx = 0; Idx < Actual.Children.size(); ++Idx)
-    CheckIndex(Expected.Children[Idx], Actual.Children[Idx]);
+  for (auto &[_, C] : Expected.Children)
+    CheckIndex(C, Actual.Children.find(llvm::toStringRef(C.USR))->second);
 }
 
 } // namespace doc

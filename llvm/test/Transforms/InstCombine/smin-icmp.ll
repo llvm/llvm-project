@@ -94,7 +94,7 @@ define i1 @sge_smin2(i32 %x, i32 %y) {
 define i1 @sge_smin3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sge_smin3(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -109,7 +109,7 @@ define i1 @sge_smin3(i32 %a, i32 %y) {
 define i1 @sge_smin4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sge_smin4(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -206,7 +206,7 @@ define i1 @slt_smin2(i32 %x, i32 %y) {
 define i1 @slt_smin3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @slt_smin3(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -221,7 +221,7 @@ define i1 @slt_smin3(i32 %a, i32 %y) {
 define i1 @slt_smin4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @slt_smin4(
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -911,7 +911,7 @@ define void @eq_smin_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[Y]], [[X]]
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP1]])
-; CHECK-NEXT:    call void @use_v2i1(<2 x i1> <i1 true, i1 true>)
+; CHECK-NEXT:    call void @use_v2i1(<2 x i1> splat (i1 true))
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> zeroinitializer)
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge <2 x i32> [[Y]], [[X]]
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP4]])
@@ -956,24 +956,24 @@ define void @eq_smin_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; icmp pred smin(C1, Y), C2 where C1 == C2
 define void @eq_smin_v2i32_constant(<2 x i32> %y) {
 ; CHECK-LABEL: @eq_smin_v2i32_constant(
-; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> <i32 10, i32 10>)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[Y]], <i32 10, i32 10>
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> splat (i32 10))
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[Y]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP1]])
-; CHECK-NEXT:    call void @use_v2i1(<2 x i1> <i1 true, i1 true>)
+; CHECK-NEXT:    call void @use_v2i1(<2 x i1> splat (i1 true))
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> zeroinitializer)
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[Y]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[Y]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP5]])
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 11)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP6]])
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP7]])
-; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt <2 x i32> [[Y]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt <2 x i32> [[Y]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp slt <2 x i32> [[Y]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp slt <2 x i32> [[Y]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP10]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1004,21 +1004,21 @@ define void @eq_smin_v2i32_constant(<2 x i32> %y) {
 ; icmp pred smin(C1, Y), C2 where C1 < C2
 define void @slt_smin_v2i32_constant(<2 x i32> %y) {
 ; CHECK-LABEL: @slt_smin_v2i32_constant(
-; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> <i32 5, i32 5>)
-; CHECK-NEXT:    call void @use_v2i1(<2 x i1> <i1 true, i1 true>)
-; CHECK-NEXT:    call void @use_v2i1(<2 x i1> <i1 true, i1 true>)
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> splat (i32 5))
+; CHECK-NEXT:    call void @use_v2i1(<2 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @use_v2i1(<2 x i1> splat (i1 true))
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> zeroinitializer)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> zeroinitializer)
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP5]])
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 11)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP6]])
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP7]])
-; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP8]])
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> zeroinitializer)
-; CHECK-NEXT:    call void @use_v2i1(<2 x i1> <i1 true, i1 true>)
+; CHECK-NEXT:    call void @use_v2i1(<2 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret void
 ;
   %cond = call <2 x i32> @llvm.smin.v2i32(<2 x i32> <i32 5, i32 5>, <2 x i32> %y)
@@ -1049,23 +1049,23 @@ define void @slt_smin_v2i32_constant(<2 x i32> %y) {
 define void @sle_smin_v2i32_constant(<2 x i32> %y) {
 ; CHECK-LABEL: @sle_smin_v2i32_constant(
 ; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> <i32 5, i32 10>)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP1]])
-; CHECK-NEXT:    call void @use_v2i1(<2 x i1> <i1 true, i1 true>)
+; CHECK-NEXT:    call void @use_v2i1(<2 x i1> splat (i1 true))
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> zeroinitializer)
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[COND]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[COND]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP5]])
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 11)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP6]])
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP7]])
-; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP10]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1096,26 +1096,26 @@ define void @sle_smin_v2i32_constant(<2 x i32> %y) {
 ; icmp pred smin(C1, Y), C2 where C1 > C2
 define void @sgt_smin_v2i32_constant(<2 x i32> %y) {
 ; CHECK-LABEL: @sgt_smin_v2i32_constant(
-; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> <i32 15, i32 15>)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[Y]], <i32 10, i32 10>
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> splat (i32 15))
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[Y]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[Y]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[Y]], splat (i32 11)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt <2 x i32> [[Y]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt <2 x i32> [[Y]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[Y]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[Y]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP5]])
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 11)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP6]])
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP7]])
-; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[Y]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[Y]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[Y]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[Y]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP10]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1147,25 +1147,25 @@ define void @sgt_smin_v2i32_constant(<2 x i32> %y) {
 define void @sge_smin_v2i32_constant(<2 x i32> %y) {
 ; CHECK-LABEL: @sge_smin_v2i32_constant(
 ; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> <i32 15, i32 10>)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[Y]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[Y]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[COND]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[COND]], splat (i32 11)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[Y]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[Y]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP5]])
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 11)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP6]])
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP7]])
-; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP10]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1197,25 +1197,25 @@ define void @sge_smin_v2i32_constant(<2 x i32> %y) {
 define void @unknown_smin_v2i32_constant(<2 x i32> %y) {
 ; CHECK-LABEL: @unknown_smin_v2i32_constant(
 ; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> <i32 5, i32 15>)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[COND]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt <2 x i32> [[COND]], splat (i32 11)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[COND]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt <2 x i32> [[COND]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP4]])
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP5]])
-; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], <i32 11, i32 11>
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult <2 x i32> [[COND]], splat (i32 11)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP6]])
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP7]])
-; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], <i32 9, i32 9>
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt <2 x i32> [[COND]], splat (i32 9)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[COND]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne <2 x i32> [[COND]], splat (i32 10)
 ; CHECK-NEXT:    call void @use_v2i1(<2 x i1> [[CMP10]])
 ; CHECK-NEXT:    ret void
 ;

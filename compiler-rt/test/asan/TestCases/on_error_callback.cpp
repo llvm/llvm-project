@@ -1,8 +1,5 @@
 // RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-// FIXME: Doesn't work with DLLs
-// XFAIL: win32-dynamic-asan
-
 #include <stdio.h>
 #include <stdlib.h>
 

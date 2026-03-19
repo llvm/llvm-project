@@ -33,6 +33,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAInteger(MlirType type);
 MLIR_CAPI_EXPORTED MlirType mlirIntegerTypeGet(MlirContext ctx,
                                                unsigned bitwidth);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirIntegerTypeGetName(void);
+
 /// Creates a signed integer type of the given bitwidth in the context. The type
 /// is owned by the context.
 MLIR_CAPI_EXPORTED MlirType mlirIntegerTypeSignedGet(MlirContext ctx,
@@ -69,6 +71,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAIndex(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirIndexTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirIndexTypeGetName(void);
+
 //===----------------------------------------------------------------------===//
 // Floating-point types.
 //===----------------------------------------------------------------------===//
@@ -78,6 +82,42 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat(MlirType type);
 
 /// Returns the bitwidth of a floating-point type.
 MLIR_CAPI_EXPORTED unsigned mlirFloatTypeGetWidth(MlirType type);
+
+/// Returns the typeID of an Float4E2M1FN type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat4E2M1FNTypeGetTypeID(void);
+
+/// Checks whether the given type is an f4E2M1FN type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat4E2M1FN(MlirType type);
+
+/// Creates an f4E2M1FN type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat4E2M1FNTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat4E2M1FNTypeGetName(void);
+
+/// Returns the typeID of an Float6E2M3FN type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat6E2M3FNTypeGetTypeID(void);
+
+/// Checks whether the given type is an f6E2M3FN type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat6E2M3FN(MlirType type);
+
+/// Creates an f6E2M3FN type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat6E2M3FNTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat6E2M3FNTypeGetName(void);
+
+/// Returns the typeID of an Float6E3M2FN type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat6E3M2FNTypeGetTypeID(void);
+
+/// Checks whether the given type is an f6E3M2FN type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat6E3M2FN(MlirType type);
+
+/// Creates an f6E3M2FN type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat6E3M2FNTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat6E3M2FNTypeGetName(void);
 
 /// Returns the typeID of an Float8E5M2 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E5M2TypeGetTypeID(void);
@@ -89,6 +129,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E5M2(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E5M2TypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E5M2TypeGetName(void);
+
 /// Returns the typeID of an Float8E4M3 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E4M3TypeGetTypeID(void);
 
@@ -98,6 +140,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E4M3(MlirType type);
 /// Creates an f8E4M3 type in the given context. The type is owned by the
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E4M3TypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E4M3TypeGetName(void);
 
 /// Returns the typeID of an Float8E4M3FN type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E4M3FNTypeGetTypeID(void);
@@ -109,6 +153,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E4M3FN(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E4M3FNTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E4M3FNTypeGetName(void);
+
 /// Returns the typeID of an Float8E5M2FNUZ type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E5M2FNUZTypeGetTypeID(void);
 
@@ -118,6 +164,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E5M2FNUZ(MlirType type);
 /// Creates an f8E5M2FNUZ type in the given context. The type is owned by the
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E5M2FNUZTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E5M2FNUZTypeGetName(void);
 
 /// Returns the typeID of an Float8E4M3FNUZ type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E4M3FNUZTypeGetTypeID(void);
@@ -129,6 +177,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E4M3FNUZ(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E4M3FNUZTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E4M3FNUZTypeGetName(void);
+
 /// Returns the typeID of an Float8E4M3B11FNUZ type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E4M3B11FNUZTypeGetTypeID(void);
 
@@ -138,6 +188,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E4M3B11FNUZ(MlirType type);
 /// Creates an f8E4M3B11FNUZ type in the given context. The type is owned by the
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E4M3B11FNUZTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E4M3B11FNUZTypeGetName(void);
 
 /// Returns the typeID of an Float8E3M4 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E3M4TypeGetTypeID(void);
@@ -149,6 +201,20 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E3M4(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirFloat8E3M4TypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E3M4TypeGetName(void);
+
+/// Returns the typeID of an Float8E8M0FNU type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloat8E8M0FNUTypeGetTypeID(void);
+
+/// Checks whether the given type is an f8E8M0FNU type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAFloat8E8M0FNU(MlirType type);
+
+/// Creates an f8E8M0FNU type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirFloat8E8M0FNUTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirFloat8E8M0FNUTypeGetName(void);
+
 /// Returns the typeID of an BFloat16 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirBFloat16TypeGetTypeID(void);
 
@@ -158,6 +224,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsABF16(MlirType type);
 /// Creates a bf16 type in the given context. The type is owned by the
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirBF16TypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirBF16TypeGetName(void);
 
 /// Returns the typeID of an Float16 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat16TypeGetTypeID(void);
@@ -169,6 +237,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAF16(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirF16TypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirF16TypeGetName(void);
+
 /// Returns the typeID of an Float32 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat32TypeGetTypeID(void);
 
@@ -178,6 +248,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAF32(MlirType type);
 /// Creates an f32 type in the given context. The type is owned by the
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirF32TypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirF32TypeGetName(void);
 
 /// Returns the typeID of an Float64 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloat64TypeGetTypeID(void);
@@ -189,6 +261,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAF64(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirF64TypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirF64TypeGetName(void);
+
 /// Returns the typeID of a TF32 type.
 MLIR_CAPI_EXPORTED MlirTypeID mlirFloatTF32TypeGetTypeID(void);
 
@@ -198,6 +272,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsATF32(MlirType type);
 /// Creates a TF32 type in the given context. The type is owned by the
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirTF32TypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirTF32TypeGetName(void);
 
 //===----------------------------------------------------------------------===//
 // None type.
@@ -213,6 +289,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsANone(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirNoneTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirNoneTypeGetName(void);
+
 //===----------------------------------------------------------------------===//
 // Complex type.
 //===----------------------------------------------------------------------===//
@@ -226,6 +304,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAComplex(MlirType type);
 /// Creates a complex type with the given element type in the same context as
 /// the element type. The type is owned by the context.
 MLIR_CAPI_EXPORTED MlirType mlirComplexTypeGet(MlirType elementType);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirComplexTypeGetName(void);
 
 /// Returns the element type of the given complex type.
 MLIR_CAPI_EXPORTED MlirType mlirComplexTypeGetElementType(MlirType type);
@@ -249,8 +329,11 @@ MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetRank(MlirType type);
 /// Checks whether the given shaped type has a static shape.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeHasStaticShape(MlirType type);
 
-/// Checks wither the dim-th dimension of the given shaped type is dynamic.
+/// Checks whether the dim-th dimension of the given shaped type is dynamic.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicDim(MlirType type, intptr_t dim);
+
+/// Checks whether the dim-th dimension of the given shaped type is static.
+MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticDim(MlirType type, intptr_t dim);
 
 /// Returns the dim-th dimension of the given ranked shaped type.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDimSize(MlirType type,
@@ -260,17 +343,25 @@ MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDimSize(MlirType type,
 /// in shaped types.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicSize(int64_t size);
 
+/// Checks whether the given shaped type dimension value is statically-sized.
+MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticSize(int64_t size);
+
 /// Returns the value indicating a dynamic size in a shaped type. Prefer
-/// mlirShapedTypeIsDynamicSize to direct comparisons with this value.
+/// mlirShapedTypeIsDynamicSize and mlirShapedTypeIsStaticSize to direct
+/// comparisons with this value.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicSize(void);
 
 /// Checks whether the given value is used as a placeholder for dynamic strides
 /// and offsets in shaped types.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicStrideOrOffset(int64_t val);
 
+/// Checks whether the given dimension value of a stride or an offset is
+/// statically-sized.
+MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticStrideOrOffset(int64_t val);
+
 /// Returns the value indicating a dynamic stride or offset in a shaped type.
-/// Prefer mlirShapedTypeGetDynamicStrideOrOffset to direct comparisons with
-/// this value.
+/// Prefer mlirShapedTypeIsDynamicStrideOrOffset and
+/// mlirShapedTypeIsStaticStrideOrOffset to direct comparisons with this value.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicStrideOrOffset(void);
 
 //===----------------------------------------------------------------------===//
@@ -289,6 +380,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAVector(MlirType type);
 MLIR_CAPI_EXPORTED MlirType mlirVectorTypeGet(intptr_t rank,
                                               const int64_t *shape,
                                               MlirType elementType);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirVectorTypeGetName(void);
 
 /// Same as "mlirVectorTypeGet" but returns a nullptr wrapping MlirType on
 /// illegal arguments, emitting appropriate diagnostics.
@@ -351,6 +444,8 @@ MLIR_CAPI_EXPORTED MlirType mlirRankedTensorTypeGet(intptr_t rank,
                                                     MlirType elementType,
                                                     MlirAttribute encoding);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirRankedTensorTypeGetName(void);
+
 /// Same as "mlirRankedTensorTypeGet" but returns a nullptr wrapping MlirType on
 /// illegal arguments, emitting appropriate diagnostics.
 MLIR_CAPI_EXPORTED MlirType mlirRankedTensorTypeGetChecked(
@@ -364,6 +459,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirRankedTensorTypeGetEncoding(MlirType type);
 /// Creates an unranked tensor type with the given element type in the same
 /// context as the element type. The type is owned by the context.
 MLIR_CAPI_EXPORTED MlirType mlirUnrankedTensorTypeGet(MlirType elementType);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirUnrankedTensorTypeGetName(void);
 
 /// Same as "mlirUnrankedTensorTypeGet" but returns a nullptr wrapping MlirType
 /// on illegal arguments, emitting appropriate diagnostics.
@@ -395,6 +492,8 @@ MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(MlirType elementType,
                                               MlirAttribute layout,
                                               MlirAttribute memorySpace);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirMemRefTypeGetName(void);
+
 /// Same as "mlirMemRefTypeGet" but returns a nullptr-wrapping MlirType o
 /// illegal arguments, emitting appropriate diagnostics.
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGetChecked(
@@ -419,6 +518,8 @@ MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeContiguousGetChecked(
 /// memory space. The type is owned by the context of element type.
 MLIR_CAPI_EXPORTED MlirType
 mlirUnrankedMemRefTypeGet(MlirType elementType, MlirAttribute memorySpace);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirUnrankedMemRefTypeGetName(void);
 
 /// Same as "mlirUnrankedMemRefTypeGet" but returns a nullptr wrapping
 /// MlirType on illegal arguments, emitting appropriate diagnostics.
@@ -460,6 +561,8 @@ MLIR_CAPI_EXPORTED MlirType mlirTupleTypeGet(MlirContext ctx,
                                              intptr_t numElements,
                                              MlirType const *elements);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirTupleTypeGetName(void);
+
 /// Returns the number of types contained in a tuple.
 MLIR_CAPI_EXPORTED intptr_t mlirTupleTypeGetNumTypes(MlirType type);
 
@@ -482,6 +585,8 @@ MLIR_CAPI_EXPORTED MlirType mlirFunctionTypeGet(MlirContext ctx,
                                                 MlirType const *inputs,
                                                 intptr_t numResults,
                                                 MlirType const *results);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirFunctionTypeGetName(void);
 
 /// Returns the number of input types.
 MLIR_CAPI_EXPORTED intptr_t mlirFunctionTypeGetNumInputs(MlirType type);
@@ -513,6 +618,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAOpaque(MlirType type);
 MLIR_CAPI_EXPORTED MlirType mlirOpaqueTypeGet(MlirContext ctx,
                                               MlirStringRef dialectNamespace,
                                               MlirStringRef typeData);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirOpaqueTypeGetName(void);
 
 /// Returns the namespace of the dialect with which the given opaque type
 /// is associated. The namespace string is owned by the context.

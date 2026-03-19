@@ -7,6 +7,6 @@
 // CHECK: BISECT: running pass (1)
 // CHECK-NOT: BISECT: running pass (1)
 // Make sure that legacy pass manager is running
-// CHECK: Instruction Selection
+// CHECK: -isel
 
 int func(int a) { return a; }

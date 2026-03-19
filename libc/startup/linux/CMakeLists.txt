@@ -89,18 +89,37 @@ endif()
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
 add_object_library(
+  gnu_property_section
+  SRCS
+    gnu_property_section.cpp
+  HDRS
+    gnu_property_section.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.config
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+)
+
+add_object_library(
   do_start
   SRCS
     do_start.cpp
   HDRS
     do_start.h
+    irelative.h
   DEPENDS
     libc.config.app_h
+    libc.hdr.elf_proxy
+    libc.hdr.link_macros
+    libc.hdr.stdint_proxy
     libc.include.sys_mman
     libc.include.sys_syscall
-    libc.include.llvm-libc-macros.link_macros
-    libc.src.__support.threads.thread
+    libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.thread
+    libc.src.__support.macros.config
+    libc.startup.linux.${LIBC_TARGET_ARCHITECTURE}.irelative
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
     libc.src.unistd.environ
@@ -115,7 +134,9 @@ merge_relocatable_object(
   crt1
   .${LIBC_TARGET_ARCHITECTURE}.start
   .${LIBC_TARGET_ARCHITECTURE}.tls
+  .${LIBC_TARGET_ARCHITECTURE}.irelative
   .do_start
+  .gnu_property_section
 )
 
 add_startup_object(
@@ -138,6 +159,5 @@ foreach(target IN LISTS startup_components)
   install(FILES $<TARGET_OBJECTS:${fq_target_name}>
           DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
           RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
-          EXCLUDE_FROM_ALL
           COMPONENT libc)
 endforeach()

@@ -21,13 +21,13 @@ static_library("Target") {
 
     #"//lldb/source/Breakpoint", # FIXME: Dependency cycle
     "//lldb/source/Core",
-    "//lldb/source/Core",
     "//lldb/source/Expression",
     "//lldb/source/Host",
     "//lldb/source/Interpreter",
     "//lldb/source/Plugins/Process/Utility",
     "//lldb/source/Symbol",
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
   ]
@@ -35,6 +35,8 @@ static_library("Target") {
   sources = [
     "ABI.cpp",
     "AssertFrameRecognizer.cpp",
+    "BorrowedStackFrame.cpp",
+    "CoreFileMemoryRanges.cpp",
     "DynamicRegisterInfo.cpp",
     "ExecutionContext.cpp",
     "InstrumentationRuntime.cpp",
@@ -71,6 +73,7 @@ static_library("Target") {
     "Statistics.cpp",
     "StopInfo.cpp",
     "StructuredDataPlugin.cpp",
+    "SyntheticFrameProvider.cpp",
     "SystemRuntime.cpp",
     "Target.cpp",
     "TargetList.cpp",
@@ -104,6 +107,5 @@ static_library("Target") {
     "UnixSignals.cpp",
     "UnwindAssembly.cpp",
     "UnwindLLDB.cpp",
-    "VerboseTrapFrameRecognizer.cpp",
   ]
 }

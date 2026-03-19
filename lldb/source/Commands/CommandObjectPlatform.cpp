@@ -78,16 +78,16 @@ public:
     case 'v': {
       if (option_arg.getAsInteger(8, m_permissions)) {
         m_permissions = 0777;
-        error.SetErrorStringWithFormat("invalid value for permissions: %s",
-                                       option_arg.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid value for permissions: %s", option_arg.str().c_str());
       }
 
     } break;
     case 's': {
       mode_t perms = ParsePermissionString(option_arg);
       if (perms == (mode_t)-1)
-        error.SetErrorStringWithFormat("invalid value for permissions: %s",
-                                       option_arg.str().c_str());
+        error = Status::FromErrorStringWithFormat(
+            "invalid value for permissions: %s", option_arg.str().c_str());
       else
         m_permissions = perms;
     } break;
@@ -489,7 +489,7 @@ public:
           File::eOpenOptionReadWrite | File::eOpenOptionCanCreate,
           perms, error);
       if (error.Success()) {
-        result.AppendMessageWithFormat("File Descriptor = %" PRIu64 "\n", fd);
+        result.AppendMessageWithFormatv("File Descriptor = {0}", fd);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -537,7 +537,7 @@ public:
       Status error;
       bool success = platform_sp->CloseFile(fd, error);
       if (success) {
-        result.AppendMessageWithFormat("file %" PRIu64 " closed.\n", fd);
+        result.AppendMessageWithFormatv("file {0} closed.", fd);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -581,8 +581,8 @@ public:
       uint64_t retcode = platform_sp->ReadFile(
           fd, m_options.m_offset, &buffer[0], m_options.m_count, error);
       if (retcode != UINT64_MAX) {
-        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
-        result.AppendMessageWithFormat("Data = \"%s\"\n", buffer.c_str());
+        result.AppendMessageWithFormatv("Return = {0}", retcode);
+        result.AppendMessageWithFormatv("Data = \"{0}\"", buffer.c_str());
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -609,13 +609,13 @@ protected:
       switch (short_option) {
       case 'o':
         if (option_arg.getAsInteger(0, m_offset))
-          error.SetErrorStringWithFormat("invalid offset: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid offset: '%s'",
+                                                    option_arg.str().c_str());
         break;
       case 'c':
         if (option_arg.getAsInteger(0, m_count))
-          error.SetErrorStringWithFormat("invalid offset: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid offset: '%s'",
+                                                    option_arg.str().c_str());
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -675,7 +675,7 @@ public:
           platform_sp->WriteFile(fd, m_options.m_offset, &m_options.m_data[0],
                                  m_options.m_data.size(), error);
       if (retcode != UINT64_MAX) {
-        result.AppendMessageWithFormat("Return = %" PRIu64 "\n", retcode);
+        result.AppendMessageWithFormatv("Return = {0}", retcode);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
         result.AppendError(error.AsCString());
@@ -702,8 +702,8 @@ protected:
       switch (short_option) {
       case 'o':
         if (option_arg.getAsInteger(0, m_offset))
-          error.SetErrorStringWithFormat("invalid offset: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid offset: '%s'",
+                                                    option_arg.str().c_str());
         break;
       case 'd':
         m_data.assign(std::string(option_arg));
@@ -828,13 +828,13 @@ public:
       Status error = platform_sp->GetFile(FileSpec(remote_file_path),
                                           FileSpec(local_file_path));
       if (error.Success()) {
-        result.AppendMessageWithFormat(
-            "successfully get-file from %s (remote) to %s (host)\n",
+        result.AppendMessageWithFormatv(
+            "successfully get-file from {0} (remote) to {1} (host)",
             remote_file_path, local_file_path);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormat("get-file failed: %s\n",
-                                       error.AsCString());
+        result.AppendMessageWithFormatv("get-file failed: {0}",
+                                        error.AsCString());
       }
     } else {
       result.AppendError("no platform currently selected\n");
@@ -875,13 +875,12 @@ public:
       std::string remote_file_path(args.GetArgumentAtIndex(0));
       user_id_t size = platform_sp->GetFileSize(FileSpec(remote_file_path));
       if (size != UINT64_MAX) {
-        result.AppendMessageWithFormat("File size of %s (remote): %" PRIu64
-                                       "\n",
-                                       remote_file_path.c_str(), size);
+        result.AppendMessageWithFormatv("File size of {0} (remote): {1}",
+                                        remote_file_path.c_str(), size);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormat(
-            "Error getting file size of %s (remote)\n",
+        result.AppendMessageWithFormatv(
+            "Error getting file size of {0} (remote)",
             remote_file_path.c_str());
       }
     } else {
@@ -925,9 +924,9 @@ public:
       Status error = platform_sp->GetFilePermissions(FileSpec(remote_file_path),
                                                      permissions);
       if (error.Success()) {
-        result.AppendMessageWithFormat(
-            "File permissions of %s (remote): 0o%04" PRIo32 "\n",
-            remote_file_path.c_str(), permissions);
+        result.AppendMessageWithFormatv(
+            "File permissions of {0} (remote): 0o{1}", remote_file_path,
+            llvm::format("%04o", permissions));
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else
         result.AppendError(error.AsCString());
@@ -969,9 +968,9 @@ public:
     if (platform_sp) {
       std::string remote_file_path(args.GetArgumentAtIndex(0));
       bool exists = platform_sp->GetFileExists(FileSpec(remote_file_path));
-      result.AppendMessageWithFormat(
-          "File %s (remote) %s\n",
-          remote_file_path.c_str(), exists ? "exists" : "does not exist");
+      result.AppendMessageWithFormatv("File {0} (remote) {1}",
+                                      remote_file_path.c_str(),
+                                      exists ? "exists" : "does not exist");
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("no platform currently selected\n");
@@ -1231,77 +1230,74 @@ protected:
     }
 
     if (platform_sp) {
-      Status error;
-      if (platform_sp) {
-        Stream &ostrm = result.GetOutputStream();
+      Stream &ostrm = result.GetOutputStream();
 
-        lldb::pid_t pid = m_options.match_info.GetProcessInfo().GetProcessID();
-        if (pid != LLDB_INVALID_PROCESS_ID) {
-          ProcessInstanceInfo proc_info;
-          if (platform_sp->GetProcessInfo(pid, proc_info)) {
-            ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
-                                                 m_options.verbose);
-            proc_info.DumpAsTableRow(ostrm, platform_sp->GetUserIDResolver(),
-                                     m_options.show_args, m_options.verbose);
-            result.SetStatus(eReturnStatusSuccessFinishResult);
-          } else {
-            result.AppendErrorWithFormat(
-                "no process found with pid = %" PRIu64 "\n", pid);
-          }
+      lldb::pid_t pid = m_options.match_info.GetProcessInfo().GetProcessID();
+      if (pid != LLDB_INVALID_PROCESS_ID) {
+        ProcessInstanceInfo proc_info;
+        if (platform_sp->GetProcessInfo(pid, proc_info)) {
+          ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
+                                               m_options.verbose);
+          proc_info.DumpAsTableRow(ostrm, platform_sp->GetUserIDResolver(),
+                                   m_options.show_args, m_options.verbose);
+          result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          ProcessInstanceInfoList proc_infos;
-          const uint32_t matches =
-              platform_sp->FindProcesses(m_options.match_info, proc_infos);
-          const char *match_desc = nullptr;
-          const char *match_name =
-              m_options.match_info.GetProcessInfo().GetName();
-          if (match_name && match_name[0]) {
-            switch (m_options.match_info.GetNameMatchType()) {
-            case NameMatch::Ignore:
-              break;
-            case NameMatch::Equals:
-              match_desc = "matched";
-              break;
-            case NameMatch::Contains:
-              match_desc = "contained";
-              break;
-            case NameMatch::StartsWith:
-              match_desc = "started with";
-              break;
-            case NameMatch::EndsWith:
-              match_desc = "ended with";
-              break;
-            case NameMatch::RegularExpression:
-              match_desc = "matched the regular expression";
-              break;
-            }
+          result.AppendErrorWithFormat(
+              "no process found with pid = %" PRIu64 "\n", pid);
+        }
+      } else {
+        ProcessInstanceInfoList proc_infos;
+        const uint32_t matches =
+            platform_sp->FindProcesses(m_options.match_info, proc_infos);
+        const char *match_desc = nullptr;
+        const char *match_name =
+            m_options.match_info.GetProcessInfo().GetName();
+        if (match_name && match_name[0]) {
+          switch (m_options.match_info.GetNameMatchType()) {
+          case NameMatch::Ignore:
+            break;
+          case NameMatch::Equals:
+            match_desc = "matched";
+            break;
+          case NameMatch::Contains:
+            match_desc = "contained";
+            break;
+          case NameMatch::StartsWith:
+            match_desc = "started with";
+            break;
+          case NameMatch::EndsWith:
+            match_desc = "ended with";
+            break;
+          case NameMatch::RegularExpression:
+            match_desc = "matched the regular expression";
+            break;
           }
+        }
 
-          if (matches == 0) {
-            if (match_desc)
-              result.AppendErrorWithFormatv(
-                  "no processes were found that {0} \"{1}\" on the \"{2}\" "
-                  "platform\n",
-                  match_desc, match_name, platform_sp->GetName());
-            else
-              result.AppendErrorWithFormatv(
-                  "no processes were found on the \"{0}\" platform\n",
-                  platform_sp->GetName());
-          } else {
-            result.AppendMessageWithFormatv(
-                "{0} matching process{1} found on \"{2}\"", matches,
-                matches > 1 ? "es were" : " was", platform_sp->GetName());
-            if (match_desc)
-              result.AppendMessageWithFormat(" whose name %s \"%s\"",
-                                             match_desc, match_name);
-            result.AppendMessageWithFormat("\n");
-            ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
-                                                 m_options.verbose);
-            for (uint32_t i = 0; i < matches; ++i) {
-              proc_infos[i].DumpAsTableRow(
-                  ostrm, platform_sp->GetUserIDResolver(), m_options.show_args,
-                  m_options.verbose);
-            }
+        if (matches == 0) {
+          if (match_desc)
+            result.AppendErrorWithFormatv(
+                "no processes were found that {0} \"{1}\" on the \"{2}\" "
+                "platform\n",
+                match_desc, match_name, platform_sp->GetName());
+          else
+            result.AppendErrorWithFormatv(
+                "no processes were found on the \"{0}\" platform\n",
+                platform_sp->GetName());
+        } else {
+          result.AppendMessageWithFormatv(
+              "{0} matching process{1} found on \"{2}\"", matches,
+              matches > 1 ? "es were" : " was", platform_sp->GetName());
+          if (match_desc)
+            result.AppendMessageWithFormat(" whose name %s \"%s\"", match_desc,
+                                           match_name);
+          result.AppendMessageWithFormat("\n");
+          ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
+                                               m_options.verbose);
+          for (uint32_t i = 0; i < matches; ++i) {
+            proc_infos[i].DumpAsTableRow(
+                ostrm, platform_sp->GetUserIDResolver(), m_options.show_args,
+                m_options.verbose);
           }
         }
       }
@@ -1328,14 +1324,14 @@ protected:
       case 'p': {
         match_info.GetProcessInfo().SetProcessID(id);
         if (!success)
-          error.SetErrorStringWithFormat("invalid process ID string: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid process ID string: '%s'", option_arg.str().c_str());
         break;
       }
       case 'P':
         match_info.GetProcessInfo().SetParentProcessID(id);
         if (!success)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid parent process ID string: '%s'",
               option_arg.str().c_str());
         break;
@@ -1343,15 +1339,15 @@ protected:
       case 'u':
         match_info.GetProcessInfo().SetUserID(success ? id : UINT32_MAX);
         if (!success)
-          error.SetErrorStringWithFormat("invalid user ID string: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid user ID string: '%s'", option_arg.str().c_str());
         break;
 
       case 'U':
         match_info.GetProcessInfo().SetEffectiveUserID(success ? id
                                                                : UINT32_MAX);
         if (!success)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid effective user ID string: '%s'",
               option_arg.str().c_str());
         break;
@@ -1359,15 +1355,15 @@ protected:
       case 'g':
         match_info.GetProcessInfo().SetGroupID(success ? id : UINT32_MAX);
         if (!success)
-          error.SetErrorStringWithFormat("invalid group ID string: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid group ID string: '%s'", option_arg.str().c_str());
         break;
 
       case 'G':
         match_info.GetProcessInfo().SetEffectiveGroupID(success ? id
                                                                 : UINT32_MAX);
         if (!success)
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid effective group ID string: '%s'",
               option_arg.str().c_str());
         break;
@@ -1630,7 +1626,7 @@ public:
       case 't':
         uint32_t timeout_sec;
         if (option_arg.getAsInteger(10, timeout_sec))
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "could not convert \"%s\" to a numeric value.",
               option_arg.str().c_str());
         else
@@ -1638,7 +1634,7 @@ public:
         break;
       case 's': {
         if (option_arg.empty()) {
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "missing shell interpreter path for option -i|--interpreter.");
           return error;
         }
@@ -1711,9 +1707,9 @@ public:
       std::string output;
       int status = -1;
       int signo = -1;
-      error = (platform_sp->RunShellCommand(m_options.m_shell_interpreter, cmd,
-                                            working_dir, &status, &signo,
-                                            &output, m_options.m_timeout));
+      error = (platform_sp->RunShellCommand(
+          m_options.m_shell_interpreter, cmd, working_dir, &status, &signo,
+          &output, nullptr, m_options.m_timeout));
       if (!output.empty())
         result.GetOutputStream().PutCString(output);
       if (status > 0) {
@@ -1734,7 +1730,7 @@ public:
     } else {
       result.GetOutputStream().Printf(
           "error: cannot run remote shell commands without a platform\n");
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "error: cannot run remote shell commands without a platform");
     }
 

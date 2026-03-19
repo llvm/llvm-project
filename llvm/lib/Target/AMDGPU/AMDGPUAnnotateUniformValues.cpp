@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -51,7 +51,7 @@ public:
       : UA(&UA), MSSA(&MSSA), AA(&AA),
         isEntryFunc(AMDGPU::isEntryFunctionCC(F.getCallingConv())) {}
 
-  void visitBranchInst(BranchInst &I);
+  void visitCondBrInst(CondBrInst &I);
   void visitLoadInst(LoadInst &I);
 
   bool changed() const { return Changed; }
@@ -59,7 +59,7 @@ public:
 
 } // End anonymous namespace
 
-void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
+void AMDGPUAnnotateUniformValues::visitCondBrInst(CondBrInst &I) {
   if (UA->isUniform(&I))
     setUniformMetadata(&I);
 }
@@ -92,10 +92,10 @@ AMDGPUAnnotateUniformValuesPass::run(Function &F,
   AMDGPUAnnotateUniformValues Impl(UI, MSSA, AA, F);
   Impl.visit(F);
 
-  PreservedAnalyses PA = PreservedAnalyses::none();
   if (!Impl.changed())
-    return PA;
+    return PreservedAnalyses::all();
 
+  PreservedAnalyses PA = PreservedAnalyses::none();
   // TODO: Should preserve nearly everything
   PA.preserveSet<CFGAnalyses>();
   return PA;

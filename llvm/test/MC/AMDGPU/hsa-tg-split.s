@@ -8,9 +8,6 @@
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000100
 // OBJDUMP-NEXT: 0030 0000ac00 80000000 00000000 00000000
 
-.text
-// ASM: .text
-
 .amdgcn_target "amdgcn-amd-amdhsa--gfx90a:xnack+"
 // ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx90a:xnack+"
 

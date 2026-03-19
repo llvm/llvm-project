@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
-// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Floating-point expressions are not supported
@@ -269,8 +269,8 @@ BB1:
 v_nop_e64
 BB2:
 s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1
-// VI: s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1 ; encoding: [0x6a,0xff,0xea,0x80,A,A,A,A]
-// VI-NEXT: ;   fixup A - offset: 4, value: (BB2+4)-BB1, kind: FK_Data_4
+// VI: s_sub_u32 vcc_lo, vcc_lo, BB2+4-BB1 ; encoding: [0x6a,0xff,0xea,0x80,A,A,A,A]
+// VI-NEXT: ;   fixup A - offset: 4, value: BB2+4-BB1, kind: FK_Data_4
 s_add_u32 vcc_lo, vcc_lo, (BB2-BB1)&4294967295
 // VI: s_add_u32 vcc_lo, vcc_lo, (BB2-BB1)&4294967295 ; encoding: [0x6a,0xff,0x6a,0x80,A,A,A,A]
 // VI-NEXT: ;   fixup A - offset: 4, value: (BB2-BB1)&4294967295, kind: FK_Data_4

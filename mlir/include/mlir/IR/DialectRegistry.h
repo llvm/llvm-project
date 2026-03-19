@@ -138,10 +138,15 @@ bool hasPromisedInterface(Dialect &dialect) {
 /// encountered.
 class DialectRegistry {
   using MapTy =
-      std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>>;
+      std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>,
+               std::less<>>;
 
 public:
   explicit DialectRegistry();
+  DialectRegistry(const DialectRegistry &) = delete;
+  DialectRegistry &operator=(const DialectRegistry &other) = delete;
+  DialectRegistry(DialectRegistry &&) = default;
+  DialectRegistry &operator=(DialectRegistry &&other) = default;
 
   template <typename ConcreteDialect>
   void insert() {

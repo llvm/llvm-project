@@ -23,8 +23,10 @@ DEFAULT_PLUGINS = [
     "ArchitecturePPC64",
     "ClangREPL",
     "CPlusPlusLanguage",
-    "CXXItaniumABI",
+    "CPPRuntime",
     "DisassemblerLLVMC",
+    "HighlighterClang",
+    "HighlighterDefault",
     "DynamicLoaderDarwinKernel",
     "DynamicLoaderHexagonDYLD",
     "DynamicLoaderMacOSXDYLD",
@@ -71,6 +73,7 @@ DEFAULT_PLUGINS = [
     "ProcessElfCore",
     "ProcessMachCore",
     "ProcessMinidump",
+    "ProtocolServerMCP",
     "RegisterTypeBuilderClang",
     "ScriptedProcess",
     "StructuredDataDarwinLog",
@@ -99,6 +102,6 @@ DEFAULT_SCRIPT_PLUGINS = [
 OBJCPP_COPTS = [
     "-std=c++{}".format(CMAKE_CXX_STANDARD),
     "-fno-objc-exceptions",
-    "-fno-objc-arc",
     "-Wno-shorten-64-to-32",
+    "-Wno-vla-cxx-extension",
 ]

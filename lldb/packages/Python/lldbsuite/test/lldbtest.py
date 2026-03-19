@@ -27,21 +27,25 @@ OK
 $
 """
 
+# FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+from __future__ import annotations
+
 # System modules
 import abc
 from functools import wraps
 import gc
-import glob
 import io
 import json
 import os.path
 import re
 import shutil
+import shlex
 import signal
 from subprocess import *
 import sys
 import time
 import traceback
+from typing import Optional, Union
 
 # Third-party modules
 import unittest
@@ -49,6 +53,7 @@ import unittest
 # LLDB modules
 import lldb
 from . import configuration
+from . import cpu_feature
 from . import decorators
 from . import lldbplatformutil
 from . import lldbtest_config
@@ -56,7 +61,6 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
-from lldbsuite.support import seven
 from lldbsuite.test_event import build_exception
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
@@ -144,6 +148,8 @@ STOPPED_DUE_TO_STEP_IN = "Process state is stopped due to step in"
 
 STOPPED_DUE_TO_WATCHPOINT = "Process should be stopped due to watchpoint"
 
+STOPPED_DUE_TO_HISTORY_BOUNDARY = "Process should be stopped due to history boundary"
+
 DATA_TYPES_DISPLAYED_CORRECTLY = "Data type(s) displayed correctly"
 
 VALID_BREAKPOINT = "Got a valid breakpoint"
@@ -173,9 +179,9 @@ VARIABLES_DISPLAYED_CORRECTLY = "Variable(s) displayed correctly"
 WATCHPOINT_CREATED = "Watchpoint created successfully"
 
 
-def CMD_MSG(str):
+def CMD_MSG(command):
     """A generic "Command '%s' did not return successfully" message generator."""
-    return "Command '%s' did not return successfully" % str
+    return f"Command '{command}' did not return successfully"
 
 
 def COMPLETION_MSG(str_before, str_after, completions):
@@ -400,25 +406,41 @@ class _BaseProcess(object, metaclass=abc.ABCMeta):
 
 class _LocalProcess(_BaseProcess):
     def __init__(self, trace_on):
-        self._proc = None
+        self._proc: Optional[Popen] = None
         self._trace_on = trace_on
         self._delayafterterminate = 0.1
 
     @property
     def pid(self):
+        assert self._proc is not None, "No process"
         return self._proc.pid
 
-    def launch(self, executable, args, extra_env):
+    @property
+    def stdout(self):
+        assert self._proc is not None, "No process"
+        return self._proc.stdout
+
+    @property
+    def stderr(self):
+        assert self._proc is not None, "No process"
+        return self._proc.stderr
+
+    def launch(self, executable, args, extra_env, **kwargs):
         env = None
         if extra_env:
             env = dict(os.environ)
             env.update([kv.split("=", 1) for kv in extra_env])
 
+        stdout = kwargs.pop("stdout", DEVNULL if not self._trace_on else None)
+        stderr = kwargs.pop("stderr", None)
+
         self._proc = Popen(
             [executable] + args,
-            stdout=open(os.devnull) if not self._trace_on else None,
+            stdout=stdout,
+            stderr=stderr,
             stdin=PIPE,
             env=env,
+            **kwargs,
         )
 
     def terminate(self):
@@ -442,11 +464,19 @@ class _LocalProcess(_BaseProcess):
             self._proc.kill()
             time.sleep(self._delayafterterminate)
 
+    def communicate(
+        self, input: Optional[str] = None, timeout: Optional[float] = None
+    ) -> tuple[bytes, bytes]:
+        return self._proc.communicate(input, timeout)
+
     def poll(self):
         return self._proc.poll()
 
     def wait(self, timeout=None):
         return self._proc.wait(timeout)
+
+    def kill(self):
+        return self._proc.kill()
 
 
 class _RemoteProcess(_BaseProcess):
@@ -458,7 +488,7 @@ class _RemoteProcess(_BaseProcess):
     def pid(self):
         return self._pid
 
-    def launch(self, executable, args, extra_env):
+    def launch(self, executable, args, extra_env, **kwargs):
         if self._install_remote:
             src_path = executable
             dst_path = lldbutil.join_remote_paths(
@@ -538,6 +568,11 @@ class Base(unittest.TestCase):
     # Time to wait before the next launching attempt in second(s).
     # Can be overridden by the LLDB_TIME_WAIT_NEXT_LAUNCH environment variable.
     timeWaitNextLaunch = 1.0
+
+    # Some test case classes require a separate build directory for each test
+    # function. Subclasses can set this to False in those cases. This slows down
+    # the test, but provides isolation where needed.
+    SHARED_BUILD_TESTCASE = True
 
     @staticmethod
     def compute_mydir(test_file):
@@ -724,7 +759,10 @@ class Base(unittest.TestCase):
         return os.path.join(configuration.test_src_root, self.mydir)
 
     def getBuildDirBasename(self):
-        return self.__class__.__module__ + "." + self.testMethodName
+        if self.SHARED_BUILD_TESTCASE:
+            return self.__class__.__module__
+        else:
+            return self.__class__.__module__ + "." + self.testMethodName
 
     def getBuildDir(self):
         """Return the full path to the current test."""
@@ -733,10 +771,10 @@ class Base(unittest.TestCase):
         )
 
     def makeBuildDir(self):
-        """Create the test-specific working directory, deleting any previous
-        contents."""
+        """Create the test-specific working directory, optionally deleting any
+        previous contents."""
         bdir = self.getBuildDir()
-        if os.path.isdir(bdir):
+        if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
             shutil.rmtree(bdir)
         lldbutil.mkdir_p(bdir)
 
@@ -748,11 +786,15 @@ class Base(unittest.TestCase):
         """Return absolute path to a file in the test's source directory."""
         return os.path.join(self.getSourceDir(), name)
 
+    def getPlatformAvailablePorts(self):
+        """Return ports available for connection to a lldb server on the remote platform."""
+        return configuration.lldb_platform_available_ports
+
     @classmethod
     def setUpCommands(cls):
         commands = [
             # First of all, clear all settings to have clean state of global properties.
-            "settings clear -all",
+            "settings clear --all",
             # Disable Spotlight lookup. The testsuite creates
             # different binaries with the same UUID, because they only
             # differ in the debug info, which is not being hashed.
@@ -771,7 +813,10 @@ class Base(unittest.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),
+            # Disable colors by default.
             "settings set use-color false",
+            # Disable the statusline by default.
+            "settings set show-statusline false",
         ]
 
         # Set any user-overridden settings.
@@ -866,13 +911,9 @@ class Base(unittest.TestCase):
         session_file = self.getLogBasenameForCurrentTest() + ".log"
         self.log_files.append(session_file)
 
-        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        self.session = encoded_file.open(session_file, "utf-8", mode="w")
-
         # Optimistically set __errored__, __failed__, __expected__ to False
         # initially.  If the test errored/failed, the session info
-        # (self.session) is then dumped into a session specific file for
-        # diagnosis.
+        # is then dumped into a session specific file for diagnosis.
         self.__cleanup_errored__ = False
         self.__errored__ = False
         self.__failed__ = False
@@ -938,16 +979,23 @@ class Base(unittest.TestCase):
             del p
         del self.subprocesses[:]
 
-    def spawnSubprocess(self, executable, args=[], extra_env=None, install_remote=True):
+    @property
+    def lastSubprocess(self) -> Optional[Union[_RemoteProcess, _LocalProcess]]:
+        return self.subprocesses[-1] if len(self.subprocesses) > 0 else None
+
+    def spawnSubprocess(
+        self, executable, args=None, extra_env=None, install_remote=True, **kwargs
+    ):
         """Creates a subprocess.Popen object with the specified executable and arguments,
         saves it in self.subprocesses, and returns the object.
         """
+        args = [] if args is None else args
         proc = (
             _RemoteProcess(install_remote)
             if lldb.remote_platform
             else _LocalProcess(self.TraceOn())
         )
-        proc.launch(executable, args, extra_env=extra_env)
+        proc.launch(executable, args, extra_env=extra_env, **kwargs)
         self.subprocesses.append(proc)
         return proc
 
@@ -991,16 +1039,14 @@ class Base(unittest.TestCase):
                     print("Command '" + cmd + "' failed!", file=sbuf)
 
         if check:
+            if not msg:
+                msg = CMD_MSG(cmd)
             output = ""
             if self.res.GetOutput():
                 output += "\nCommand output:\n" + self.res.GetOutput()
             if self.res.GetError():
                 output += "\nError output:\n" + self.res.GetError()
-            if msg:
-                msg += output
-            if cmd:
-                cmd += output
-            self.assertTrue(self.res.Succeeded(), msg if (msg) else CMD_MSG(cmd))
+            self.assertTrue(self.res.Succeeded(), msg + output)
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -1238,20 +1284,25 @@ class Base(unittest.TestCase):
         else:
             prefix = "Success"
 
+        session_file = self.getLogBasenameForCurrentTest() + ".log"
+
+        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
+        session = encoded_file.open(session_file, "utf-8", mode="w")
+
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
-                    print(traceback, file=self.session)
+                    print(traceback, file=session)
 
         import datetime
 
         print(
             "Session info generated @",
             datetime.datetime.now().ctime(),
-            file=self.session,
+            file=session,
         )
-        self.session.close()
-        del self.session
+        session.close()
+        del session
 
         # process the log files
         if prefix != "Success" or lldbtest_config.log_success:
@@ -1308,57 +1359,62 @@ class Base(unittest.TestCase):
             return True
         return False
 
-    def getCPUInfo(self):
-        triple = self.dbg.GetSelectedPlatform().GetTriple()
-
-        # TODO other platforms, please implement this function
-        if not re.match(".*-.*-linux", triple):
-            return ""
-
-        # Need to do something different for non-Linux/Android targets
-        cpuinfo_path = self.getBuildArtifact("cpuinfo")
-        if configuration.lldb_platform_name:
-            self.runCmd('platform get-file "/proc/cpuinfo" ' + cpuinfo_path)
-        else:
-            cpuinfo_path = "/proc/cpuinfo"
-
-        try:
-            with open(cpuinfo_path, "r") as f:
-                cpuinfo = f.read()
-        except:
-            return ""
-
-        return cpuinfo
-
     def isAArch64(self):
         """Returns true if the architecture is AArch64."""
         arch = self.getArchitecture().lower()
         return arch in ["aarch64", "arm64", "arm64e"]
 
+    def isARM(self):
+        """Returns true if the architecture is ARM, meaning 32-bit ARM. Which could
+        be M profile, A profile Armv7-a, or the AArch32 mode of Armv8-a."""
+        return not self.isAArch64() and (
+            self.getArchitecture().lower().startswith("arm")
+        )
+
+    def isSupported(self, cpu_feature: cpu_feature.CPUFeature):
+        triple = self.dbg.GetSelectedPlatform().GetTriple()
+        cmd_runner = self.run_platform_command
+        return cpu_feature.is_supported(triple, cmd_runner)
+
     def isAArch64SVE(self):
-        return self.isAArch64() and "sve" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.SVE)
 
     def isAArch64SME(self):
-        return self.isAArch64() and "sme" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.SME)
 
     def isAArch64SME2(self):
         # If you have sme2, you also have sme.
-        return self.isAArch64() and "sme2" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.SME2)
 
     def isAArch64SMEFA64(self):
         # smefa64 allows the use of the full A64 instruction set in streaming
         # mode. This is required by certain test programs to setup register
         # state.
-        cpuinfo = self.getCPUInfo()
-        return self.isAArch64() and "sme" in cpuinfo and "smefa64" in cpuinfo
+        return (
+            self.isAArch64()
+            and self.isSupported(cpu_feature.AArch64.SME)
+            and self.isSupported(cpu_feature.AArch64.SME_FA64)
+        )
 
     def isAArch64MTE(self):
-        return self.isAArch64() and "mte" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.MTE)
+
+    def isAArch64MTEStoreOnly(self):
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.MTE_STORE_ONLY)
+
+    def isAArch64GCS(self):
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.GCS)
 
     def isAArch64PAuth(self):
         if self.getArchitecture() == "arm64e":
             return True
-        return self.isAArch64() and "paca" in self.getCPUInfo()
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.PTR_AUTH)
+
+    def isAArch64FPMR(self):
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.FPMR)
+
+    def isAArch64POE(self):
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.POE)
 
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
@@ -1366,6 +1422,21 @@ class Base(unittest.TestCase):
             arch = self.getArchitecture().lower()
             return arch in ["aarch64", "arm64", "arm64e"]
         return False
+
+    def isLoongArch(self):
+        """Returns true if the architecture is LoongArch."""
+        arch = self.getArchitecture().lower()
+        return arch in ["loongarch64", "loongarch32"]
+
+    def isLoongArchLSX(self):
+        return self.isLoongArch() and self.isSupported(cpu_feature.Loong.LSX)
+
+    def isLoongArchLASX(self):
+        return self.isLoongArch() and self.isSupported(cpu_feature.Loong.LASX)
+
+    def isRISCV(self):
+        """Returns true if the architecture is RISCV64 or RISCV32."""
+        return self.getArchitecture() in ["riscv64", "riscv32"]
 
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
@@ -1443,9 +1514,12 @@ class Base(unittest.TestCase):
             option_str += " -C " + comp
         return option_str
 
-    def getDebugInfo(self):
+    def getVariant(self, variant_name):
         method = getattr(self, self.testMethodName)
-        return getattr(method, "debug_info", None)
+        return getattr(method, variant_name, None)
+
+    def getDebugInfo(self):
+        return self.getVariant("debug_info")
 
     def build(
         self,
@@ -1468,7 +1542,7 @@ class Base(unittest.TestCase):
         testname = self.getBuildDirBasename()
 
         module = builder_module()
-        command = builder_module().getBuildCommand(
+        command = module.getBuildCommand(
             debug_info,
             architecture,
             compiler,
@@ -1483,7 +1557,7 @@ class Base(unittest.TestCase):
         self.runBuildCommand(command)
 
     def runBuildCommand(self, command):
-        self.trace(seven.join_for_shell(command))
+        self.trace(shlex.join(command))
         try:
             output = check_output(command, stderr=STDOUT, errors="replace")
         except CalledProcessError as cpe:
@@ -1653,6 +1727,29 @@ class Base(unittest.TestCase):
             command += ["--max-size=%d" % max_size]
         self.runBuildCommand(command)
 
+    def yaml2macho_core(self, yaml_path, obj_path, uuids=None):
+        """
+        Create a Mach-O corefile at the given path from a yaml file.
+
+        Throws subprocess.CalledProcessError if the object could not be created.
+        """
+        yaml2macho_core_bin = configuration.get_yaml2macho_core_path()
+        if not yaml2macho_core_bin:
+            self.assertTrue(False, "No valid yaml2macho-core executable specified")
+        if uuids != None:
+            command = [
+                yaml2macho_core_bin,
+                "-i",
+                yaml_path,
+                "-o",
+                obj_path,
+                "-u",
+                uuids,
+            ]
+        else:
+            command = [yaml2macho_core_bin, "-i", yaml_path, "-o", obj_path]
+        self.runBuildCommand(command)
+
     def cleanup(self, dictionary=None):
         """Platform specific way to do cleanup after build."""
         module = builder_module()
@@ -1710,17 +1807,168 @@ class Base(unittest.TestCase):
 # level by using the decorator @no_debug_info_test.
 
 
+class TestVariant:
+    """Describes a test variant dimension for test method expansion.
+
+    Test variants add extra dimensions to the test matrix. When a variant is
+    registered in `_test_variants`, the `LLDBTestCaseFactory` metaclass
+    iterates over every `test*` method and, for each method that matches the
+    variant's predicate, replaces it with one copy per enabled value.
+
+    For example, a variant with values `{"a": True, "b": True}` turns
+    `test_foo` into `test_foo_a` and `test_foo_b`.  If multiple variants
+    match, the expansion is applied sequentially, producing the cross product
+    (e.g. `test_foo_dwarf_a`, `test_foo_dwarf_b`, ...).
+
+    Variant-aware `@expectedFailureAll` / `@skipIf` decorators use
+    `_xfailForVariant` / `_skipForVariant` in `decorators.py` to store
+    predicate functions in the `__variant_xfail__` / `__variant_skip__`
+    dictionaries on the **original** test method, keyed by variant name.
+    During expansion the metaclass looks up the predicate for each variant,
+    evaluates it for each value, and wraps the copy with
+    `unittest.expectedFailure` or `unittest.skip` accordingly.
+
+    At test run-time, `TestBase.setUp` calls `apply_settings` for every
+    registered variant so the test process is configured for the value that
+    the current method was expanded into.
+    """
+
+    def __init__(
+        self, name, values, predicate=None, setup_fn=None, attrs_to_preserve=()
+    ):
+        """Create a new test variant dimension.
+
+        Args:
+            name: Attribute name set on each expanded method to record which
+                value it was created for (e.g. `"debug_info"`).  Used to
+                look up xfail/skip predicates in the `__variant_xfail__`
+                / `__variant_skip__` dictionaries on the test method.
+            values: `dict[str, bool]` mapping variant value names to whether
+                they should be enabled.  Values with a `False` entry
+                are present in the dict for documentation but are skipped
+                during expansion.
+            predicate: Optional callable `(test_method) -> bool`.  When
+                given, only methods for which the predicate returns `True`
+                are expanded.  `None` means *every* test method is expanded.
+            setup_fn: Optional callable `(test_instance, variant_value)`
+                invoked from `TestBase.setUp` to apply run-time
+                configuration for the given variant value.
+            attrs_to_preserve: Tuple of attribute names that should be copied
+                from the source method to each expanded copy (e.g.
+                `("debug_info",)` so that a second-pass variant preserves
+                the debug-info value set by the first pass).
+        """
+        self.name = name
+        self.values = values
+        self.predicate = predicate
+        self.setup_fn = setup_fn
+        self.attrs_to_preserve = attrs_to_preserve
+
+    def should_expand(self, test_method):
+        """Return True if *test_method* should be expanded by this variant."""
+        if self.predicate is None:
+            return True
+        return self.predicate(test_method)
+
+    def get_enabled_values(self):
+        """Return the list of value names whose entry is True."""
+        return [n for n, enabled in self.values.items() if enabled]
+
+    def apply_settings(self, test_instance, variant_value):
+        """Configure *test_instance* for *variant_value* via the setup_fn."""
+        if self.setup_fn:
+            self.setup_fn(test_instance, variant_value)
+
+
+def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
+    """Expand test methods in *methods* along the given *variant* dimension.
+
+    Only methods whose name equals *attrname* or starts with `attrname + "_"`
+    are expanded (this keeps methods from other `test*` functions untouched
+    when multiple test methods coexist in the same `newattrs` dict).
+
+    For each matching method and each enabled value in *variant*, a new
+    wrapper method is created with the value name appended
+    (`method_name + "_" + value_name`).  The wrapper delegates to the original
+    method, carries the variant attribute, and is optionally wrapped with
+    `unittest.expectedFailure` or `unittest.skip` based on predicates
+    found in *xfail_fns* / *skip_fns*.
+
+    Args:
+        attrname: The original test method name being processed by the
+            metaclass (e.g. `"test_foo"`).
+        methods: `dict[str, callable]` of accumulated methods (`newattrs`).
+        variant: The `TestVariant` to expand along.
+        xfail_fns: `__variant_xfail__` dict from the original test method.
+        skip_fns: `__variant_skip__` dict from the original test method.
+
+    Returns:
+        A new dict with the original matching methods replaced by their
+        per-value copies.  Non-matching entries are passed through.
+    """
+    no_reason = lambda *args, **kwargs: None
+    xfail_fn = xfail_fns.get(variant.name, no_reason)
+    skip_fn = skip_fns.get(variant.name, no_reason)
+    expanded = {}
+    for method_name, method in methods.items():
+        if not method_name.startswith("test"):
+            expanded[method_name] = method
+            continue
+        if method_name != attrname and not method_name.startswith(attrname + "_"):
+            expanded[method_name] = method
+            continue
+        for value_name in variant.get_enabled_values():
+            new_name = method_name + "_" + value_name
+
+            @decorators.add_test_categories([value_name])
+            @wraps(method)
+            def variant_method(self, method=method):
+                return method(self)
+
+            variant_method.__name__ = new_name
+            setattr(variant_method, variant.name, value_name)
+
+            for attr in variant.attrs_to_preserve:
+                if hasattr(method, attr):
+                    setattr(variant_method, attr, getattr(method, attr))
+
+            xfail_reason = xfail_fn(**{variant.name: value_name})
+            if xfail_reason:
+                variant_method = unittest.expectedFailure(variant_method)
+
+            skip_reason = skip_fn(**{variant.name: value_name})
+            if skip_reason:
+                variant_method = unittest.skip(skip_reason)(variant_method)
+
+            expanded[new_name] = variant_method
+    return expanded
+
+
+_test_variants = []
+
+
 class LLDBTestCaseFactory(type):
     def __new__(cls, name, bases, attrs):
         original_testcase = super(LLDBTestCaseFactory, cls).__new__(
             cls, name, bases, attrs
         )
-        if original_testcase.NO_DEBUG_INFO_TESTCASE:
+
+        # Check if any test methods need variant expansion
+        has_variant_tests = any(
+            attrname.startswith("test")
+            and any(v.should_expand(attrvalue) for v in _test_variants)
+            for attrname, attrvalue in attrs.items()
+        )
+
+        if original_testcase.NO_DEBUG_INFO_TESTCASE and not has_variant_tests:
             return original_testcase
+
+        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+            original_testcase.SHARED_BUILD_TESTCASE = False
 
         # Default implementation for skip/xfail reason based on the debug category,
         # where "None" means to run the test as usual.
-        def no_reason(_):
+        def no_reason(*args, **kwargs):
             return None
 
         newattrs = {}
@@ -1728,48 +1976,71 @@ class LLDBTestCaseFactory(type):
             if attrname.startswith("test") and not getattr(
                 attrvalue, "__no_debug_info_test__", False
             ):
-                # If any debug info categories were explicitly tagged, assume that list to be
-                # authoritative.  If none were specified, try with all debug
-                # info formats.
-                all_dbginfo_categories = set(
-                    test_categories.debug_info_categories.keys()
-                )
-                categories = (
-                    set(getattr(attrvalue, "categories", [])) & all_dbginfo_categories
-                )
-                if not categories:
-                    categories = [
-                        category
-                        for category, can_replicate in test_categories.debug_info_categories.items()
-                        if can_replicate
-                    ]
+                # Create debug info variants unless NO_DEBUG_INFO_TESTCASE
+                if not original_testcase.NO_DEBUG_INFO_TESTCASE:
+                    # If any debug info categories were explicitly tagged, assume that list to be
+                    # authoritative.  If none were specified, try with all debug info formats.
+                    test_method_categories = set(getattr(attrvalue, "categories", []))
+                    all_dbginfo_categories = set(
+                        test_categories.debug_info_categories.keys()
+                    )
+                    dbginfo_categories = test_method_categories & all_dbginfo_categories
+                    other_categories = list(
+                        test_method_categories - all_dbginfo_categories
+                    )
+                    if not dbginfo_categories:
+                        dbginfo_categories = [
+                            category
+                            for category, enabled in test_categories.debug_info_categories.items()
+                            if enabled
+                        ]
 
-                xfail_for_debug_info_cat_fn = getattr(
-                    attrvalue, "__xfail_for_debug_info_cat_fn__", no_reason
-                )
-                skip_for_debug_info_cat_fn = getattr(
-                    attrvalue, "__skip_for_debug_info_cat_fn__", no_reason
-                )
-                for cat in categories:
+                    # PDB is off by default, because it has a lot of failures right now.
+                    # See llvm.org/pr149498
+                    if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+                        dbginfo_categories.append("pdb")
 
-                    @decorators.add_test_categories([cat])
-                    @wraps(attrvalue)
-                    def test_method(self, attrvalue=attrvalue):
-                        return attrvalue(self)
+                    xfail_fns = getattr(attrvalue, "__variant_xfail__", {})
+                    skip_fns = getattr(attrvalue, "__variant_skip__", {})
+                    xfail_for_debug_info_cat_fn = xfail_fns.get("debug_info", no_reason)
+                    skip_for_debug_info_cat_fn = skip_fns.get("debug_info", no_reason)
+                    for cat in dbginfo_categories:
 
-                    method_name = attrname + "_" + cat
-                    test_method.__name__ = method_name
-                    test_method.debug_info = cat
+                        @decorators.add_test_categories([cat])
+                        @wraps(attrvalue)
+                        def test_method(self, attrvalue=attrvalue):
+                            return attrvalue(self)
 
-                    xfail_reason = xfail_for_debug_info_cat_fn(cat)
-                    if xfail_reason:
-                        test_method = unittest.expectedFailure(test_method)
+                        method_name = attrname + "_" + cat
+                        test_method.__name__ = method_name
+                        test_method.debug_info = cat
+                        test_method.categories = other_categories + [cat]
 
-                    skip_reason = skip_for_debug_info_cat_fn(cat)
-                    if skip_reason:
-                        test_method = unittest.skip(skip_reason)(test_method)
+                        xfail_reason = xfail_for_debug_info_cat_fn(debug_info=cat)
+                        if xfail_reason:
+                            test_method = unittest.expectedFailure(test_method)
 
-                    newattrs[method_name] = test_method
+                        skip_reason = skip_for_debug_info_cat_fn(debug_info=cat)
+                        if skip_reason:
+                            test_method = unittest.skip(skip_reason)(test_method)
+
+                        newattrs[method_name] = test_method
+                else:
+                    # NO_DEBUG_INFO_TESTCASE — put method in newattrs for variant expansion
+                    newattrs[attrname] = attrvalue
+
+                # Expand test variants (e.g. additional variant dimensions)
+                for variant in _test_variants:
+                    if variant.should_expand(attrvalue):
+                        xfail_fns = getattr(attrvalue, "__variant_xfail__", {})
+                        skip_fns = getattr(attrvalue, "__variant_skip__", {})
+                        newattrs = _expand_test_variants(
+                            attrname,
+                            newattrs,
+                            variant,
+                            xfail_fns=xfail_fns,
+                            skip_fns=skip_fns,
+                        )
 
             else:
                 newattrs[attrname] = attrvalue
@@ -1831,6 +2102,13 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
     # test multiple times with various debug info types.
     NO_DEBUG_INFO_TESTCASE = False
 
+    TEST_WITH_PDB_DEBUG_INFO = False
+    """
+    Subclasses can set this to True to test with PDB in addition to the other debug info
+    types. This id off by default because many tests will fail due to missing functionality in PDB.
+    See llvm.org/pr149498.
+    """
+
     def generateSource(self, source):
         template = source + ".template"
         temp = os.path.join(self.getSourceDir(), template)
@@ -1881,6 +2159,12 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
 
         # And the result object.
         self.res = lldb.SBCommandReturnObject()
+
+        # Apply variant-specific settings.
+        for variant in _test_variants:
+            variant_value = self.getVariant(variant.name)
+            if variant_value is not None:
+                variant.apply_settings(self, variant_value)
 
     def registerSharedLibrariesWithTarget(self, target, shlibs):
         """If we are remotely running the test suite, register the shared libraries with the target so they get uploaded, otherwise do nothing
@@ -1985,7 +2269,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         """Get the working directory that should be used when launching processes for local or remote processes."""
         if lldb.remote_platform:
             # Remote tests set the platform working directory up in
-            # TestBase.setUp()
+            # Base.setUp()
             return lldb.remote_platform.GetWorkingDirectory()
         else:
             # local tests change directory into each test subdirectory
@@ -2211,18 +2495,20 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 substrs=[p],
             )
 
-    def completions_match(self, command, completions):
+    def completions_match(self, command, completions, max_completions=-1):
         """Checks that the completions for the given command are equal to the
         given list of completions"""
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
-        interp.HandleCompletion(command, len(command), 0, -1, match_strings)
+        interp.HandleCompletion(
+            command, len(command), 0, max_completions, match_strings
+        )
         # match_strings is a 1-indexed list, so we have to slice...
         self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"
         )
 
-    def completions_contain(self, command, completions):
+    def completions_contain(self, command, completions, match=True):
         """Checks that the completions for the given command contain the given
         list of completions."""
         interp = self.dbg.GetCommandInterpreter()
@@ -2230,9 +2516,16 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         interp.HandleCompletion(command, len(command), 0, -1, match_strings)
         for completion in completions:
             # match_strings is a 1-indexed list, so we have to slice...
-            self.assertIn(
-                completion, list(match_strings)[1:], "Couldn't find expected completion"
-            )
+            if match:
+                self.assertIn(
+                    completion,
+                    list(match_strings)[1:],
+                    "Couldn't find expected completion",
+                )
+            else:
+                self.assertNotIn(
+                    completion, list(match_strings)[1:], "Found unexpected completion"
+                )
 
     def filecheck(
         self, command, check_file, filecheck_options="", expect_cmd_failure=False
@@ -2244,7 +2537,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             msg="FileCheck'ing result of `{0}`".format(command),
         )
 
-        self.assertTrue((not expect_cmd_failure) == self.res.Succeeded())
+        self.assertNotEqual(expect_cmd_failure, self.res.Succeeded())
 
         # Get the error text if there was an error, and the regular text if not.
         output = self.res.GetOutput() if self.res.Succeeded() else self.res.GetError()
@@ -2292,7 +2585,17 @@ FileCheck output:
         with recording(self, trace) as sbuf:
             print(filecheck_trace, file=sbuf)
 
-        self.assertTrue(cmd_status == 0)
+        self.assertEqual(cmd_status, 0)
+
+    def filecheck_log(
+        self, log_file, check_file, filecheck_options="", expect_cmd_failure=False
+    ):
+        return self.filecheck(
+            f"platform shell -h -- cat {log_file}",
+            check_file,
+            filecheck_options,
+            expect_cmd_failure,
+        )
 
     def expect(
         self,
@@ -2319,8 +2622,9 @@ FileCheck output:
         matches the patterns contained in 'patterns'.
 
         When matching is true and ordered is true, which are both the default,
-        the strings in the substrs array have to appear in the command output
-        in the order in which they appear in the array.
+        the strings in the substrs array, and regex in the patterns array, have
+        to appear in the command output in the order in which they appear in
+        their respective array.
 
         If the keyword argument error is set to True, it signifies that the API
         client is expecting the command to fail.  In this case, the error stream
@@ -2423,9 +2727,9 @@ FileCheck output:
         if substrs and matched == matching:
             start = 0
             for substr in substrs:
-                index = output[start:].find(substr)
-                start = start + index + len(substr) if ordered and matching else 0
+                index = output.find(substr, start)
                 matched = index != -1
+                start = index + len(substr) if ordered and matched else 0
                 log_lines.append(
                     '{} sub string: "{}" ({})'.format(
                         expecting_str, substr, found_str(matched)
@@ -2436,20 +2740,21 @@ FileCheck output:
                     break
 
         if patterns and matched == matching:
+            start = 0
             for pattern in patterns:
-                matched = re.search(pattern, output)
+                pat = re.compile(pattern)
+                match = pat.search(output, start)
+                matched = bool(match)
+                start = match.end() if ordered and matched else 0
 
                 pattern_line = '{} regex pattern: "{}" ({}'.format(
                     expecting_str, pattern, found_str(matched)
                 )
-                if matched:
-                    pattern_line += ', matched "{}"'.format(matched.group(0))
+                if match:
+                    pattern_line += ', matched "{}"'.format(match.group(0))
                 pattern_line += ")"
                 log_lines.append(pattern_line)
 
-                # Convert to bool because match objects
-                # are True-ish but is not True itself
-                matched = bool(matched)
                 if matched != matching:
                     break
 
@@ -2470,6 +2775,7 @@ FileCheck output:
         result_value=None,
         result_type=None,
         result_children=None,
+        options=None,
     ):
         """
         Evaluates the given expression and verifies the result.
@@ -2479,6 +2785,7 @@ FileCheck output:
         :param result_type: The type that the expression result should have. None if the type should not be checked.
         :param result_children: The expected children of the expression result
                                 as a list of ValueChecks. None if the children shouldn't be checked.
+        :param options: Expression evaluation options. None if a default set of options should be used.
         """
         self.assertTrue(
             expr.strip() == expr,
@@ -2486,13 +2793,15 @@ FileCheck output:
         )
 
         frame = self.frame()
-        options = lldb.SBExpressionOptions()
 
-        # Disable fix-its that tests don't pass by accident.
-        options.SetAutoApplyFixIts(False)
+        if not options:
+            options = lldb.SBExpressionOptions()
 
-        # Set the usual default options for normal expressions.
-        options.SetIgnoreBreakpoints(True)
+            # Disable fix-its that tests don't pass by accident.
+            options.SetAutoApplyFixIts(False)
+
+            # Set the usual default options for normal expressions.
+            options.SetIgnoreBreakpoints(True)
 
         if self.frame().IsValid():
             options.SetLanguage(frame.GuessLanguage())

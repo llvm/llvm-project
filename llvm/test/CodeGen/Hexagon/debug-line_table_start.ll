@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This test case is little iffy. It checks for line_table_start,
 ; which in future may be completely replaced with some other label name.

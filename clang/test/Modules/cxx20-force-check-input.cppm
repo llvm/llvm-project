@@ -29,5 +29,5 @@ module;
 export module a;
 export using ::foo;
 
-// CHECK-HEADER-FAILURE: fatal error:{{.*}}foo.h' has been modified since the AST file {{.*}}was built
-// CHECK-FAILURE: fatal error:{{.*}}a.cppm' has been modified since the AST file {{.*}}was built
+// CHECK-HEADER-FAILURE: fatal error:{{.*}}foo.h' has been modified since the precompiled file {{.*}}was built
+// CHECK-FAILURE: fatal error:{{.*}}a.cppm' has been modified since the precompiled file {{.*}}was built

@@ -17,7 +17,7 @@ define i32 @_ZNK2cv12LMSolverImpl3runERKNS_17_InputOutputArrayE(i1 %cmp436) {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 8, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gprjalr = COPY $x0
-  ; CHECK-NEXT:   SD [[COPY3]], [[COPY2]], 0 :: (store (s64))
+  ; CHECK-NEXT:   SD [[COPY3]], [[COPY2]], 0 :: (store (s64) into stack)
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI $x0, 32
   ; CHECK-NEXT:   BNE [[ANDI]], $x0, %bb.3

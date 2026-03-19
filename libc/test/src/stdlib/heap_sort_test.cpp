@@ -7,10 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "SortingTest.h"
-#include "src/stdlib/heap_sort.h"
+#include "src/stdlib/qsort_util.h"
 
-void sort(const LIBC_NAMESPACE::internal::Array &array) {
-  LIBC_NAMESPACE::internal::heap_sort(array);
+void heap_sort(void *array, size_t array_size, size_t elem_size,
+               int (*compare)(const void *, const void *)) {
+
+  constexpr bool USE_QUICKSORT = false;
+
+  const auto is_less = [compare](const void *a,
+                                 const void *b) noexcept -> bool {
+    return compare(a, b) < 0;
+  };
+
+  LIBC_NAMESPACE::internal::unstable_sort_impl<USE_QUICKSORT>(
+      array, array_size, elem_size, is_less);
 }
 
-LIST_SORTING_TESTS(HeapSort, sort);
+LIST_SORTING_TESTS(HeapSort, heap_sort);

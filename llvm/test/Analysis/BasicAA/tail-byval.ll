@@ -12,4 +12,4 @@ entry:
 }
 ; FIXME: This should be Just Ref.
 ; CHECK-LABEL: Function: tailbyval: 1 pointers, 1 call sites
-; CHECK-NEXT:   Both ModRef:  Ptr: i32* %p       <->  tail call void @takebyval(ptr byval(i32) %p)
+; CHECK-NEXT:   Just Ref:  Ptr: i32* %p       <->  tail call void @takebyval(ptr byval(i32) %p)

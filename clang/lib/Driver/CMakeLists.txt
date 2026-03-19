@@ -14,17 +14,22 @@ if(WIN32)
   set(system_libs version)
 endif()
 
+if(CLANG_USE_XCSELECT)
+  set(system_libs xcselect)
+endif()
+
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
+  CreateASTUnitFromArgs.cpp
+  CreateInvocationFromArgs.cpp
   Distro.cpp
   Driver.cpp
-  DriverOptions.cpp
   Job.cpp
+  ModulesDriver.cpp
   Multilib.cpp
   MultilibBuilder.cpp
   OffloadBundler.cpp
-  OptionUtils.cpp
   Phases.cpp
   SanitizerArgs.cpp
   Tool.cpp
@@ -51,6 +56,7 @@ add_clang_library(clangDriver
   ToolChains/CrossWindows.cpp
   ToolChains/CSKYToolChain.cpp
   ToolChains/Cuda.cpp
+  ToolChains/Cygwin.cpp
   ToolChains/Darwin.cpp
   ToolChains/DragonFly.cpp
   ToolChains/Flang.cpp
@@ -64,20 +70,23 @@ add_clang_library(clangDriver
   ToolChains/Hexagon.cpp
   ToolChains/HLSL.cpp
   ToolChains/Hurd.cpp
+  ToolChains/LFILinux.cpp
   ToolChains/Linux.cpp
+  ToolChains/Managarm.cpp
   ToolChains/MipsLinux.cpp
   ToolChains/MinGW.cpp
   ToolChains/MSP430.cpp
   ToolChains/MSVC.cpp
-  ToolChains/NaCl.cpp
   ToolChains/NetBSD.cpp
   ToolChains/OHOS.cpp
   ToolChains/OpenBSD.cpp
   ToolChains/PS4CPU.cpp
-  ToolChains/RISCVToolchain.cpp
   ToolChains/Solaris.cpp
   ToolChains/SPIRV.cpp
+  ToolChains/SPIRVOpenMP.cpp
+  ToolChains/SYCL.cpp
   ToolChains/TCE.cpp
+  ToolChains/UEFI.cpp
   ToolChains/VEToolchain.cpp
   ToolChains/WebAssembly.cpp
   ToolChains/XCore.cpp
@@ -91,10 +100,15 @@ add_clang_library(clangDriver
   DEPENDS
   ClangDriverOptions
   # These generated headers are included transitively.
-  ARMTargetParserTableGen
-  AArch64TargetParserTableGen
+  target_parser_gen
 
   LINK_LIBS
   clangBasic
+  clangFrontend
+  clangScalableStaticAnalysisFrameworkCore
+  clangScalableStaticAnalysisFrameworkFrontend
+  clangSerialization
+  clangLex
+  clangOptions
   ${system_libs}
   )

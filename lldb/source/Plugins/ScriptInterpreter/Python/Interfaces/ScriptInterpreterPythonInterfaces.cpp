@@ -1,0 +1,40 @@
+//===-- ScriptInterpreterPythonInterfaces.cpp -----------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "lldb/Core/PluginManager.h"
+#include "lldb/lldb-enumerations.h"
+
+#include "ScriptInterpreterPythonInterfaces.h"
+
+using namespace lldb;
+using namespace lldb_private;
+
+llvm::StringRef
+ScriptInterpreterPythonInterfaces::GetPluginDescriptionStatic() {
+  return "Script Interpreter Python Interfaces";
+}
+
+void ScriptInterpreterPythonInterfaces::Initialize() {
+  OperatingSystemPythonInterface::Initialize();
+  ScriptedPlatformPythonInterface::Initialize();
+  ScriptedProcessPythonInterface::Initialize();
+  ScriptedStopHookPythonInterface::Initialize();
+  ScriptedBreakpointPythonInterface::Initialize();
+  ScriptedThreadPlanPythonInterface::Initialize();
+  ScriptedFrameProviderPythonInterface::Initialize();
+}
+
+void ScriptInterpreterPythonInterfaces::Terminate() {
+  OperatingSystemPythonInterface::Terminate();
+  ScriptedPlatformPythonInterface::Terminate();
+  ScriptedProcessPythonInterface::Terminate();
+  ScriptedStopHookPythonInterface::Terminate();
+  ScriptedBreakpointPythonInterface::Terminate();
+  ScriptedThreadPlanPythonInterface::Terminate();
+  ScriptedFrameProviderPythonInterface::Terminate();
+}

@@ -135,49 +135,39 @@
 // cancel the addrspacecast pair this pass emits.
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
-#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include <numeric>
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include <queue>
 
 #define DEBUG_TYPE "nvptx-lower-args"
 
 using namespace llvm;
-
-namespace llvm {
-void initializeNVPTXLowerArgsPass(PassRegistry &);
-}
+using namespace NVPTXAS;
 
 namespace {
-class NVPTXLowerArgs : public FunctionPass {
+class NVPTXLowerArgsLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override;
-
-  bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F);
-  bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F);
-
-  // handle byval parameters
-  void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg);
-  // Knowing Ptr must point to the global address space, this function
-  // addrspacecasts Ptr to global and then back to generic. This allows
-  // NVPTXInferAddressSpaces to fold the global-to-generic cast into
-  // loads/stores that appear later.
-  void markPointerAsGlobal(Value *Ptr);
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerArgs() : FunctionPass(ID) {}
+  NVPTXLowerArgsLegacyPass() : FunctionPass(ID) {}
   StringRef getPassName() const override {
     return "Lower pointer arguments of CUDA kernels";
   }
@@ -187,23 +177,23 @@ public:
 };
 } // namespace
 
-char NVPTXLowerArgs::ID = 1;
+char NVPTXLowerArgsLegacyPass::ID = 1;
 
-INITIALIZE_PASS_BEGIN(NVPTXLowerArgs, "nvptx-lower-args",
+INITIALIZE_PASS_BEGIN(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
                       "Lower arguments (NVPTX)", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(NVPTXLowerArgs, "nvptx-lower-args",
+INITIALIZE_PASS_END(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
                     "Lower arguments (NVPTX)", false, false)
 
 // =============================================================================
-// If the function had a byval struct ptr arg, say foo(%struct.x* byval %d),
+// If the function had a byval struct ptr arg, say foo(ptr byval(%struct.x) %d),
 // and we can't guarantee that the only accesses are loads,
 // then add the following instructions to the first basic block:
 //
 // %temp = alloca %struct.x, align 8
-// %tempd = addrspacecast %struct.x* %d to %struct.x addrspace(101)*
-// %tv = load %struct.x addrspace(101)* %tempd
-// store %struct.x %tv, %struct.x* %temp, align 8
+// %tempd = addrspacecast ptr %d to ptr addrspace(101)
+// %tv = load %struct.x, ptr addrspace(101) %tempd
+// store %struct.x %tv, ptr %temp, align 8
 //
 // The above code allocates some space in the stack and copies the incoming
 // struct from param space to local space.
@@ -213,102 +203,79 @@ INITIALIZE_PASS_END(NVPTXLowerArgs, "nvptx-lower-args",
 // ones in parameter AS, so we can access them using ld.param.
 // =============================================================================
 
-// For Loads, replaces the \p OldUse of the pointer with a Use of the same
-// pointer in parameter AS.
-// For "escapes" (to memory, a function call, or a ptrtoint), cast the OldUse to
-// generic using cvta.param.
-static void convertToParamAS(Use *OldUse, Value *Param, bool GridConstant) {
-  Instruction *I = dyn_cast<Instruction>(OldUse->getUser());
-  assert(I && "OldUse must be in an instruction");
+/// Recursively convert the users of a param to the param address space.
+static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
   struct IP {
     Use *OldUse;
-    Instruction *OldInstruction;
     Value *NewParam;
   };
-  SmallVector<IP> ItemsToConvert = {{OldUse, I, Param}};
-  SmallVector<Instruction *> InstructionsToDelete;
 
-  auto CloneInstInParamAS = [GridConstant](const IP &I) -> Value * {
-    if (auto *LI = dyn_cast<LoadInst>(I.OldInstruction)) {
+  const auto CloneInstInParamAS = [](const IP &I) -> Value * {
+    auto *OldInst = cast<Instruction>(I.OldUse->getUser());
+    if (auto *LI = dyn_cast<LoadInst>(OldInst)) {
       LI->setOperand(0, I.NewParam);
       return LI;
     }
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(I.OldInstruction)) {
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(OldInst)) {
       SmallVector<Value *, 4> Indices(GEP->indices());
       auto *NewGEP = GetElementPtrInst::Create(
           GEP->getSourceElementType(), I.NewParam, Indices, GEP->getName(),
           GEP->getIterator());
-      NewGEP->setIsInBounds(GEP->isInBounds());
+      NewGEP->setNoWrapFlags(GEP->getNoWrapFlags());
       return NewGEP;
     }
-    if (auto *BC = dyn_cast<BitCastInst>(I.OldInstruction)) {
+    if (auto *BC = dyn_cast<BitCastInst>(OldInst)) {
       auto *NewBCType = PointerType::get(BC->getContext(), ADDRESS_SPACE_PARAM);
       return BitCastInst::Create(BC->getOpcode(), I.NewParam, NewBCType,
                                  BC->getName(), BC->getIterator());
     }
-    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I.OldInstruction)) {
+    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(OldInst)) {
       assert(ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM);
       (void)ASC;
       // Just pass through the argument, the old ASC is no longer needed.
       return I.NewParam;
     }
+    if (auto *MI = dyn_cast<MemTransferInst>(OldInst)) {
+      if (MI->getRawSource() == I.OldUse->get()) {
+        // convert to memcpy/memmove from param space.
+        IRBuilder<> Builder(OldInst);
+        Intrinsic::ID ID = MI->getIntrinsicID();
 
-    if (GridConstant) {
-      auto GetParamAddrCastToGeneric =
-          [](Value *Addr, Instruction *OriginalUser) -> Value * {
-        PointerType *ReturnTy =
-            PointerType::get(OriginalUser->getContext(), ADDRESS_SPACE_GENERIC);
-        Function *CvtToGen = Intrinsic::getDeclaration(
-            OriginalUser->getModule(), Intrinsic::nvvm_ptr_param_to_gen,
-            {ReturnTy, PointerType::get(OriginalUser->getContext(),
-                                        ADDRESS_SPACE_PARAM)});
-
-        // Cast param address to generic address space
-        Value *CvtToGenCall =
-            CallInst::Create(CvtToGen, Addr, Addr->getName() + ".gen",
-                             OriginalUser->getIterator());
-        return CvtToGenCall;
-      };
-
-      if (auto *CI = dyn_cast<CallInst>(I.OldInstruction)) {
-        I.OldUse->set(GetParamAddrCastToGeneric(I.NewParam, CI));
-        return CI;
+        CallInst *B = Builder.CreateMemTransferInst(
+            ID, MI->getRawDest(), MI->getDestAlign(), I.NewParam,
+            MI->getSourceAlign(), MI->getLength(), MI->isVolatile());
+        for (unsigned I : {0, 1})
+          if (uint64_t Bytes = MI->getParamDereferenceableBytes(I))
+            B->addDereferenceableParamAttr(I, Bytes);
+        return B;
       }
-      if (auto *SI = dyn_cast<StoreInst>(I.OldInstruction)) {
-        // byval address is being stored, cast it to generic
-        if (SI->getValueOperand() == I.OldUse->get())
-          SI->setOperand(0, GetParamAddrCastToGeneric(I.NewParam, SI));
-        return SI;
-      }
-      if (auto *PI = dyn_cast<PtrToIntInst>(I.OldInstruction)) {
-        if (PI->getPointerOperand() == I.OldUse->get())
-          PI->setOperand(0, GetParamAddrCastToGeneric(I.NewParam, PI));
-        return PI;
-      }
-      llvm_unreachable(
-          "Instruction unsupported even for grid_constant argument");
     }
 
     llvm_unreachable("Unsupported instruction");
   };
 
+  auto ItemsToConvert =
+      map_to_vector(OldUses, [=](Use *U) -> IP { return {U, Param}; });
+  SmallVector<Instruction *> InstructionsToDelete;
+
   while (!ItemsToConvert.empty()) {
     IP I = ItemsToConvert.pop_back_val();
     Value *NewInst = CloneInstInParamAS(I);
+    Instruction *OldInst = cast<Instruction>(I.OldUse->getUser());
 
-    if (NewInst && NewInst != I.OldInstruction) {
+    if (NewInst && NewInst != OldInst) {
       // We've created a new instruction. Queue users of the old instruction to
       // be converted and the instruction itself to be deleted. We can't delete
       // the old instruction yet, because it's still in use by a load somewhere.
-      for (Use &U : I.OldInstruction->uses())
-        ItemsToConvert.push_back({&U, cast<Instruction>(U.getUser()), NewInst});
+      for (Use &U : OldInst->uses())
+        ItemsToConvert.push_back({&U, NewInst});
 
-      InstructionsToDelete.push_back(I.OldInstruction);
+      InstructionsToDelete.push_back(OldInst);
     }
   }
 
   // Now we know that all argument loads are using addresses in parameter space
-  // and we can finally remove the old instructions in generic AS.  Instructions
+  // and we can finally remove the old instructions in generic AS. Instructions
   // scheduled for removal should be processed in reverse order so the ones
   // closest to the load are deleted first. Otherwise they may still be in use.
   // E.g if we have Value = Load(BitCast(GEP(arg))), InstructionsToDelete will
@@ -318,34 +285,35 @@ static void convertToParamAS(Use *OldUse, Value *Param, bool GridConstant) {
     I->eraseFromParent();
 }
 
+static Align setByValParamAlign(Argument *Arg) {
+  Function *F = Arg->getParent();
+  Type *ByValType = Arg->getParamByValType();
+  const DataLayout &DL = F->getDataLayout();
+
+  const Align OptimizedAlign = getFunctionParamOptimizedAlign(F, ByValType, DL);
+  const Align CurrentAlign = Arg->getParamAlign().valueOrOne();
+
+  if (CurrentAlign >= OptimizedAlign)
+    return CurrentAlign;
+
+  LLVM_DEBUG(dbgs() << "Try to use alignment " << OptimizedAlign.value()
+                    << " instead of " << CurrentAlign.value() << " for " << *Arg
+                    << '\n');
+
+  Arg->removeAttr(Attribute::Alignment);
+  Arg->addAttr(Attribute::getWithAlignment(F->getContext(), OptimizedAlign));
+
+  return OptimizedAlign;
+}
+
 // Adjust alignment of arguments passed byval in .param address space. We can
 // increase alignment of such arguments in a way that ensures that we can
 // effectively vectorize their loads. We should also traverse all loads from
 // byval pointer and adjust their alignment, if those were using known offset.
 // Such alignment changes must be conformed with parameter store and load in
 // NVPTXTargetLowering::LowerCall.
-static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
-                                    const NVPTXTargetLowering *TLI) {
-  Function *Func = Arg->getParent();
-  Type *StructType = Arg->getParamByValType();
-  const DataLayout &DL = Func->getDataLayout();
-
-  uint64_t NewArgAlign =
-      TLI->getFunctionParamOptimizedAlign(Func, StructType, DL).value();
-  uint64_t CurArgAlign =
-      Arg->getAttribute(Attribute::Alignment).getValueAsInt();
-
-  if (CurArgAlign >= NewArgAlign)
-    return;
-
-  LLVM_DEBUG(dbgs() << "Try to use alignment " << NewArgAlign << " instead of "
-                    << CurArgAlign << " for " << *Arg << '\n');
-
-  auto NewAlignAttr =
-      Attribute::get(Func->getContext(), Attribute::Alignment, NewArgAlign);
-  Arg->removeAttr(Attribute::Alignment);
-  Arg->addAttr(NewAlignAttr);
-
+static void propagateAlignmentToLoads(Value *Val, Align NewAlign,
+                                      const DataLayout &DL) {
   struct Load {
     LoadInst *Inst;
     uint64_t Offset;
@@ -358,25 +326,18 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
 
   SmallVector<Load> Loads;
   std::queue<LoadContext> Worklist;
-  Worklist.push({ArgInParamAS, 0});
-  bool IsGridConstant = isParamGridConstant(*Arg);
+  Worklist.push({Val, 0});
 
   while (!Worklist.empty()) {
     LoadContext Ctx = Worklist.front();
     Worklist.pop();
 
     for (User *CurUser : Ctx.InitialVal->users()) {
-      if (auto *I = dyn_cast<LoadInst>(CurUser)) {
+      if (auto *I = dyn_cast<LoadInst>(CurUser))
         Loads.push_back({I, Ctx.Offset});
-        continue;
-      }
-
-      if (auto *I = dyn_cast<BitCastInst>(CurUser)) {
-        Worklist.push({I, Ctx.Offset});
-        continue;
-      }
-
-      if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
+      else if (isa<BitCastInst>(CurUser) || isa<AddrSpaceCastInst>(CurUser))
+        Worklist.push({cast<Instruction>(CurUser), Ctx.Offset});
+      else if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
         APInt OffsetAccumulated =
             APInt::getZero(DL.getIndexSizeInBits(ADDRESS_SPACE_PARAM));
 
@@ -388,235 +349,276 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
         assert(Offset != OffsetLimit && "Expect Offset less than UINT64_MAX");
 
         Worklist.push({I, Ctx.Offset + Offset});
-        continue;
       }
-
-      // supported for grid_constant
-      if (IsGridConstant &&
-          (isa<CallInst>(CurUser) || isa<StoreInst>(CurUser) ||
-           isa<PtrToIntInst>(CurUser)))
-        continue;
-
-      llvm_unreachable("All users must be one of: load, "
-                       "bitcast, getelementptr, call, store, ptrtoint");
     }
   }
 
   for (Load &CurLoad : Loads) {
-    Align NewLoadAlign(std::gcd(NewArgAlign, CurLoad.Offset));
-    Align CurLoadAlign(CurLoad.Inst->getAlign());
+    Align NewLoadAlign = commonAlignment(NewAlign, CurLoad.Offset);
+    Align CurLoadAlign = CurLoad.Inst->getAlign();
     CurLoad.Inst->setAlignment(std::max(NewLoadAlign, CurLoadAlign));
   }
 }
 
-void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
-                                      Argument *Arg) {
-  bool IsGridConstant = isParamGridConstant(*Arg);
-  Function *Func = Arg->getParent();
-  BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();
-  Type *StructType = Arg->getParamByValType();
-  assert(StructType && "Missing byval type");
+// Create a call to the nvvm_internal_addrspace_wrap intrinsic and set the
+// alignment of the return value based on the alignment of the argument.
+static CallInst *createNVVMInternalAddrspaceWrap(IRBuilder<> &IRB,
+                                                 Argument &Arg) {
+  CallInst *ArgInParam =
+      IRB.CreateIntrinsic(Intrinsic::nvvm_internal_addrspace_wrap,
+                          {IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg.getType()},
+                          &Arg, {}, Arg.getName() + ".param");
 
-  auto AreSupportedUsers = [&](Value *Start) {
-    SmallVector<Value *, 16> ValuesToCheck = {Start};
-    auto IsSupportedUse = [IsGridConstant](Value *V) -> bool {
-      if (isa<GetElementPtrInst>(V) || isa<BitCastInst>(V) || isa<LoadInst>(V))
-        return true;
-      // ASC to param space are OK, too -- we'll just strip them.
-      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(V)) {
-        if (ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM)
-          return true;
-      }
-      // Simple calls and stores are supported for grid_constants
-      // writes to these pointers are undefined behaviour
-      if (IsGridConstant &&
-          (isa<CallInst>(V) || isa<StoreInst>(V) || isa<PtrToIntInst>(V)))
-        return true;
-      return false;
-    };
+  if (MaybeAlign ParamAlign = Arg.getParamAlign())
+    ArgInParam->addRetAttr(
+        Attribute::getWithAlignment(ArgInParam->getContext(), *ParamAlign));
 
-    while (!ValuesToCheck.empty()) {
-      Value *V = ValuesToCheck.pop_back_val();
-      if (!IsSupportedUse(V)) {
-        LLVM_DEBUG(dbgs() << "Need a "
-                          << (isParamGridConstant(*Arg) ? "cast " : "copy ")
-                          << "of " << *Arg << " because of " << *V << "\n");
-        (void)Arg;
-        return false;
-      }
-      if (!isa<LoadInst>(V) && !isa<CallInst>(V) && !isa<StoreInst>(V) &&
-          !isa<PtrToIntInst>(V))
-        llvm::append_range(ValuesToCheck, V->users());
-    }
-    return true;
-  };
+  Arg.addAttr(Attribute::get(Arg.getContext(), "nvvm.grid_constant"));
+  Arg.addAttr(Attribute::ReadOnly);
 
-  if (llvm::all_of(Arg->users(), AreSupportedUsers)) {
-    // Convert all loads and intermediate operations to use parameter AS and
-    // skip creation of a local copy of the argument.
-    SmallVector<Use *, 16> UsesToUpdate;
-    for (Use &U : Arg->uses())
-      UsesToUpdate.push_back(&U);
-
-    Value *ArgInParamAS = new AddrSpaceCastInst(
-        Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
-        FirstInst);
-    for (Use *U : UsesToUpdate)
-      convertToParamAS(U, ArgInParamAS, IsGridConstant);
-    LLVM_DEBUG(dbgs() << "No need to copy or cast " << *Arg << "\n");
-
-    const auto *TLI =
-        cast<NVPTXTargetLowering>(TM.getSubtargetImpl()->getTargetLowering());
-
-    adjustByValArgAlignment(Arg, ArgInParamAS, TLI);
-
-    return;
-  }
-
-  const DataLayout &DL = Func->getDataLayout();
-  unsigned AS = DL.getAllocaAddrSpace();
-  if (isParamGridConstant(*Arg)) {
-    // Writes to a grid constant are undefined behaviour. We do not need a
-    // temporary copy. When a pointer might have escaped, conservatively replace
-    // all of its uses (which might include a device function call) with a cast
-    // to the generic address space.
-    IRBuilder<> IRB(&Func->getEntryBlock().front());
-
-    // Cast argument to param address space
-    auto *CastToParam = cast<AddrSpaceCastInst>(IRB.CreateAddrSpaceCast(
-        Arg, IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getName() + ".param"));
-
-    // Cast param address to generic address space. We do not use an
-    // addrspacecast to generic here, because, LLVM considers `Arg` to be in the
-    // generic address space, and a `generic -> param` cast followed by a `param
-    // -> generic` cast will be folded away. The `param -> generic` intrinsic
-    // will be correctly lowered to `cvta.param`.
-    Value *CvtToGenCall = IRB.CreateIntrinsic(
-        IRB.getPtrTy(ADDRESS_SPACE_GENERIC), Intrinsic::nvvm_ptr_param_to_gen,
-        CastToParam, nullptr, CastToParam->getName() + ".gen");
-
-    Arg->replaceAllUsesWith(CvtToGenCall);
-
-    // Do not replace Arg in the cast to param space
-    CastToParam->setOperand(0, Arg);
-  } else {
-    // Otherwise we have to create a temporary copy.
-    AllocaInst *AllocA =
-        new AllocaInst(StructType, AS, Arg->getName(), FirstInst);
-    // Set the alignment to alignment of the byval parameter. This is because,
-    // later load/stores assume that alignment, and we are going to replace
-    // the use of the byval parameter with this alloca instruction.
-    AllocA->setAlignment(Func->getParamAlign(Arg->getArgNo())
-                             .value_or(DL.getPrefTypeAlign(StructType)));
-    Arg->replaceAllUsesWith(AllocA);
-
-    Value *ArgInParam = new AddrSpaceCastInst(
-        Arg, PointerType::get(Arg->getContext(), ADDRESS_SPACE_PARAM),
-        Arg->getName(), FirstInst);
-    // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
-    // addrspacecast preserves alignment.  Since params are constant, this load
-    // is definitely not volatile.
-    LoadInst *LI =
-        new LoadInst(StructType, ArgInParam, Arg->getName(),
-                     /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
-    new StoreInst(LI, AllocA, FirstInst);
-  }
+  return ArgInParam;
 }
 
-void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
-  if (Ptr->getType()->getPointerAddressSpace() != ADDRESS_SPACE_GENERIC)
-    return;
+namespace {
+struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
+  using Base = PtrUseVisitor<ArgUseChecker>;
+  // Set of phi/select instructions using the Arg
+  SmallPtrSet<Instruction *, 4> Conditionals;
 
-  // Deciding where to emit the addrspacecast pair.
-  BasicBlock::iterator InsertPt;
-  if (Argument *Arg = dyn_cast<Argument>(Ptr)) {
-    // Insert at the functon entry if Ptr is an argument.
-    InsertPt = Arg->getParent()->getEntryBlock().begin();
-  } else {
-    // Insert right after Ptr if Ptr is an instruction.
-    InsertPt = ++cast<Instruction>(Ptr)->getIterator();
-    assert(InsertPt != InsertPt->getParent()->end() &&
-           "We don't call this function with Ptr being a terminator.");
+  ArgUseChecker(const DataLayout &DL) : PtrUseVisitor(DL) {}
+
+  PtrInfo visitArgPtr(Argument &A) {
+    assert(A.getType()->isPointerTy());
+    IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(A.getType()));
+    IsOffsetKnown = false;
+    Offset = APInt(IntIdxTy->getBitWidth(), 0);
+    PI.reset();
+
+    LLVM_DEBUG(dbgs() << "Checking Argument " << A << "\n");
+    // Enqueue the uses of this pointer.
+    enqueueUsers(A);
+
+    // Visit all the uses off the worklist until it is empty.
+    // Note that unlike PtrUseVisitor we intentionally do not track offsets.
+    // We're only interested in how we use the pointer.
+    while (!(Worklist.empty() || PI.isAborted())) {
+      UseToVisit ToVisit = Worklist.pop_back_val();
+      U = ToVisit.UseAndIsOffsetKnown.getPointer();
+      Instruction *I = cast<Instruction>(U->getUser());
+      LLVM_DEBUG(dbgs() << "Processing " << *I << "\n");
+      Base::visit(I);
+    }
+    if (PI.isEscaped())
+      LLVM_DEBUG(dbgs() << "Argument pointer escaped: " << *PI.getEscapingInst()
+                        << "\n");
+    else if (PI.isAborted())
+      LLVM_DEBUG(dbgs() << "Pointer use needs a copy: " << *PI.getAbortingInst()
+                        << "\n");
+    LLVM_DEBUG(dbgs() << "Traversed " << Conditionals.size()
+                      << " conditionals\n");
+    return PI;
   }
 
-  Instruction *PtrInGlobal = new AddrSpaceCastInst(
-      Ptr, PointerType::get(Ptr->getContext(), ADDRESS_SPACE_GLOBAL),
-      Ptr->getName(), InsertPt);
-  Value *PtrInGeneric = new AddrSpaceCastInst(PtrInGlobal, Ptr->getType(),
-                                              Ptr->getName(), InsertPt);
-  // Replace with PtrInGeneric all uses of Ptr except PtrInGlobal.
-  Ptr->replaceAllUsesWith(PtrInGeneric);
-  PtrInGlobal->setOperand(0, Ptr);
+  void visitStoreInst(StoreInst &SI) {
+    // Storing the pointer escapes it.
+    if (U->get() == SI.getValueOperand())
+      return PI.setEscapedAndAborted(&SI);
+
+    PI.setAborted(&SI);
+  }
+
+  void visitAddrSpaceCastInst(AddrSpaceCastInst &ASC) {
+    // ASC to param space are no-ops and do not need a copy
+    if (ASC.getDestAddressSpace() != ADDRESS_SPACE_PARAM)
+      return PI.setEscapedAndAborted(&ASC);
+    Base::visitAddrSpaceCastInst(ASC);
+  }
+
+  void visitPtrToIntInst(PtrToIntInst &I) { Base::visitPtrToIntInst(I); }
+
+  void visitPHINodeOrSelectInst(Instruction &I) {
+    assert(isa<PHINode>(I) || isa<SelectInst>(I));
+    enqueueUsers(I);
+    Conditionals.insert(&I);
+  }
+  // PHI and select just pass through the pointers.
+  void visitPHINode(PHINode &PN) { visitPHINodeOrSelectInst(PN); }
+  void visitSelectInst(SelectInst &SI) { visitPHINodeOrSelectInst(SI); }
+
+  // memcpy/memmove are OK when the pointer is source. We can convert them to
+  // AS-specific memcpy.
+  void visitMemTransferInst(MemTransferInst &II) {
+    if (*U == II.getRawDest())
+      PI.setAborted(&II);
+  }
+
+  void visitMemSetInst(MemSetInst &II) { PI.setAborted(&II); }
+}; // struct ArgUseChecker
+
+void copyByValParam(Function &F, Argument &Arg) {
+  LLVM_DEBUG(dbgs() << "Creating a local copy of " << Arg << "\n");
+  Type *ByValType = Arg.getParamByValType();
+  const DataLayout &DL = F.getDataLayout();
+  IRBuilder<> IRB(&F.getEntryBlock().front());
+  AllocaInst *AllocA = IRB.CreateAlloca(ByValType, nullptr, Arg.getName());
+  // Set the alignment to alignment of the byval parameter. This is because,
+  // later load/stores assume that alignment, and we are going to replace
+  // the use of the byval parameter with this alloca instruction.
+  AllocA->setAlignment(
+      Arg.getParamAlign().value_or(DL.getPrefTypeAlign(ByValType)));
+  Arg.replaceAllUsesWith(AllocA);
+
+  Value *ArgInParamAS = createNVVMInternalAddrspaceWrap(IRB, Arg);
+
+  // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
+  // addrspacecast preserves alignment.  Since params are constant, this load
+  // is definitely not volatile.
+  const auto ArgSize = *AllocA->getAllocationSize(DL);
+  IRB.CreateMemCpy(AllocA, AllocA->getAlign(), ArgInParamAS, AllocA->getAlign(),
+                   ArgSize);
+}
+} // namespace
+
+static bool argIsProcessed(Argument *Arg) {
+  if (Arg->use_empty())
+    return true;
+
+  // If the argument is already wrapped, it was processed by this pass before.
+  if (Arg->hasOneUse())
+    if (const auto *II = dyn_cast<IntrinsicInst>(*Arg->user_begin()))
+      if (II->getIntrinsicID() == Intrinsic::nvvm_internal_addrspace_wrap)
+        return true;
+
+  return false;
+}
+
+static void lowerKernelByValParam(Argument *Arg, Function &F,
+                                  const bool HasCvtaParam) {
+  assert(isKernelFunction(F));
+
+  const DataLayout &DL = F.getDataLayout();
+  IRBuilder<> IRB(&F.getEntryBlock().front());
+
+  if (argIsProcessed(Arg))
+    return;
+
+  const Align NewArgAlign = setByValParamAlign(Arg);
+
+  // (1) First check the easy case, if were able to trace through all the uses
+  // and we can convert them all to param AS, then we'll do this.
+  ArgUseChecker AUC(DL);
+  ArgUseChecker::PtrInfo PI = AUC.visitArgPtr(*Arg);
+  const bool ArgUseIsReadOnly = !(PI.isEscaped() || PI.isAborted());
+  if (ArgUseIsReadOnly && AUC.Conditionals.empty()) {
+    // Convert all loads and intermediate operations to use parameter AS and
+    // skip creation of a local copy of the argument.
+    SmallVector<Use *, 16> UsesToUpdate(llvm::make_pointer_range(Arg->uses()));
+    Value *ArgInParamAS = createNVVMInternalAddrspaceWrap(IRB, *Arg);
+    for (Use *U : UsesToUpdate)
+      convertToParamAS(U, ArgInParamAS);
+
+    propagateAlignmentToLoads(ArgInParamAS, NewArgAlign, DL);
+    return;
+  }
+
+  // (2) If the argument is grid constant, we get to use the pointer directly.
+  if (HasCvtaParam && (ArgUseIsReadOnly || isParamGridConstant(*Arg))) {
+    LLVM_DEBUG(dbgs() << "Using non-copy pointer to " << *Arg << "\n");
+
+    // Cast argument to param address space. Because the backend will emit the
+    // argument already in the param address space, we need to use the noop
+    // intrinsic, this had the added benefit of preventing other optimizations
+    // from folding away this pair of addrspacecasts.
+    Instruction *ArgInParamAS = createNVVMInternalAddrspaceWrap(IRB, *Arg);
+
+    // Cast param address to generic address space.
+    Value *GenericArg = IRB.CreateAddrSpaceCast(
+        ArgInParamAS, IRB.getPtrTy(ADDRESS_SPACE_GENERIC),
+        Arg->getName() + ".gen");
+
+    Arg->replaceAllUsesWith(GenericArg);
+
+    // Do not replace Arg in the cast to param space
+    ArgInParamAS->setOperand(0, Arg);
+    return;
+  }
+
+  // (3) Otherwise we have to create a copy of the argument in local memory.
+  copyByValParam(F, *Arg);
 }
 
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
-                                         Function &F) {
-  // Copying of byval aggregates + SROA may result in pointers being loaded as
-  // integers, followed by intotoptr. We may want to mark those as global, too,
-  // but only if the loaded integer is used exclusively for conversion to a
-  // pointer with inttoptr.
-  auto HandleIntToPtr = [this](Value &V) {
-    if (llvm::all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); })) {
-      SmallVector<User *, 16> UsersToUpdate(V.users());
-      for (User *U : UsersToUpdate)
-        markPointerAsGlobal(U);
-    }
-  };
-  if (TM.getDrvInterface() == NVPTX::CUDA) {
-    // Mark pointers in byval structs as global.
-    for (auto &B : F) {
-      for (auto &I : B) {
-        if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-          if (LI->getType()->isPointerTy() || LI->getType()->isIntegerTy()) {
-            Value *UO = getUnderlyingObject(LI->getPointerOperand());
-            if (Argument *Arg = dyn_cast<Argument>(UO)) {
-              if (Arg->hasByValAttr()) {
-                // LI is a load from a pointer within a byval kernel parameter.
-                if (LI->getType()->isPointerTy())
-                  markPointerAsGlobal(LI);
-                else
-                  HandleIntToPtr(*LI);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
+  const NVPTXSubtarget *ST = TM.getSubtargetImpl(F);
+  const bool HasCvtaParam = ST->hasCvtaParam();
 
   LLVM_DEBUG(dbgs() << "Lowering kernel args of " << F.getName() << "\n");
-  for (Argument &Arg : F.args()) {
-    if (Arg.getType()->isPointerTy()) {
-      if (Arg.hasByValAttr())
-        handleByValParam(TM, &Arg);
-      else if (TM.getDrvInterface() == NVPTX::CUDA)
-        markPointerAsGlobal(&Arg);
-    } else if (Arg.getType()->isIntegerTy() &&
-               TM.getDrvInterface() == NVPTX::CUDA) {
-      HandleIntToPtr(Arg);
+  bool Changed = false;
+  for (Argument &Arg : F.args())
+    if (Arg.hasByValAttr()) {
+      lowerKernelByValParam(&Arg, F, HasCvtaParam);
+      Changed = true;
     }
-  }
-  return true;
+
+  return Changed;
 }
 
 // Device functions only need to copy byval args into local memory.
-bool NVPTXLowerArgs::runOnDeviceFunction(const NVPTXTargetMachine &TM,
-                                         Function &F) {
+static bool runOnDeviceFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "Lowering function args of " << F.getName() << "\n");
+
+  const DataLayout &DL = F.getDataLayout();
+
+  bool Changed = false;
   for (Argument &Arg : F.args())
-    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr())
-      handleByValParam(TM, &Arg);
-  return true;
+    if (Arg.hasByValAttr()) {
+      const Align NewArgAlign = setByValParamAlign(&Arg);
+      propagateAlignmentToLoads(&Arg, NewArgAlign, DL);
+      Changed = true;
+    }
+
+  return Changed;
 }
 
-bool NVPTXLowerArgs::runOnFunction(Function &F) {
-  auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
-
+static bool processFunction(Function &F, NVPTXTargetMachine &TM) {
   return isKernelFunction(F) ? runOnKernelFunction(TM, F)
-                             : runOnDeviceFunction(TM, F);
+                             : runOnDeviceFunction(F);
 }
 
-FunctionPass *llvm::createNVPTXLowerArgsPass() { return new NVPTXLowerArgs(); }
+bool NVPTXLowerArgsLegacyPass::runOnFunction(Function &F) {
+  auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
+  return processFunction(F, TM);
+}
+
+FunctionPass *llvm::createNVPTXLowerArgsPass() {
+  return new NVPTXLowerArgsLegacyPass();
+}
+
+static bool copyFunctionByValArgs(Function &F) {
+  LLVM_DEBUG(dbgs() << "Creating a copy of byval args of " << F.getName()
+                    << "\n");
+  bool Changed = false;
+  if (isKernelFunction(F)) {
+    for (Argument &Arg : F.args())
+      if (Arg.hasByValAttr() && !isParamGridConstant(Arg)) {
+        copyByValParam(F, Arg);
+        Changed = true;
+      }
+  }
+  return Changed;
+}
+
+PreservedAnalyses NVPTXCopyByValArgsPass::run(Function &F,
+                                              FunctionAnalysisManager &AM) {
+  return copyFunctionByValArgs(F) ? PreservedAnalyses::none()
+                                  : PreservedAnalyses::all();
+}
+
+PreservedAnalyses NVPTXLowerArgsPass::run(Function &F,
+                                          FunctionAnalysisManager &AM) {
+  auto &NTM = static_cast<NVPTXTargetMachine &>(TM);
+  bool Changed = processFunction(F, NTM);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}

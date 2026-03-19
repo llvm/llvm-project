@@ -1,9 +1,8 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: OpName %[[ArgCum:.*]] "_arg_cum"
 ; CHECK-SPIRV-DAG: OpName %[[FunTest:.*]] "test"
-; CHECK-SPIRV-DAG: OpName %[[Addr:.*]] "addr"
 ; CHECK-SPIRV-DAG: OpName %[[StubObj:.*]] "stub_object"
 ; CHECK-SPIRV-DAG: OpName %[[MemOrder:.*]] "mem_order"
 ; CHECK-SPIRV-DAG: OpName %[[FooStub:.*]] "foo_stub"
@@ -24,7 +23,7 @@
 ; CHECK-SPIRV: %[[FunTest]] = OpFunction %[[TyVoid]] None %[[TyFunPtrLong]]
 ; CHECK-SPIRV: %[[ArgCum]] = OpFunctionParameter %[[TyPtrLong]]
 
-; CHECK-SPIRV: OpFunctionCall %[[TyVoid]] %[[FooFunc]] %[[Addr]] %[[Const3]]
+; CHECK-SPIRV: OpFunctionCall %[[TyVoid]] %[[FooFunc]] %[[Addr:.*]] %[[Const3]]
 
 ; CHECK-SPIRV: %[[HalfAddr:.*]] = OpPtrCastToGeneric
 ; CHECK-SPIRV-NEXT: %[[HalfAddrCasted:.*]] = OpBitcast %[[TyGenPtrLong]] %[[HalfAddr]]

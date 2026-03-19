@@ -124,7 +124,7 @@ define i32 @positive_biggerLshr_shlnuw_lshrexact(i32 %x) {
 
 define <2 x i32> @positive_samevar_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @positive_samevar_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> <i32 -1, i32 -1>, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> splat (i32 -1), [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
@@ -139,7 +139,7 @@ define <2 x i32> @positive_samevar_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @positive_sameconst_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @positive_sameconst_vec(
-; CHECK-NEXT:    [[T0:%.*]] = and <2 x i32> [[X:%.*]], <i32 134217727, i32 134217727>
+; CHECK-NEXT:    [[T0:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 134217727)
 ; CHECK-NEXT:    ret <2 x i32> [[T0]]
 ;
   %t0 = shl <2 x i32> %x, <i32 5, i32 5>
@@ -150,7 +150,7 @@ define <2 x i32> @positive_sameconst_vec(<2 x i32> %x) {
 define <3 x i32> @positive_sameconst_vec_undef0(<3 x i32> %x) {
 ; CHECK-LABEL: @positive_sameconst_vec_undef0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], <i32 5, i32 undef, i32 5>
-; CHECK-NEXT:    [[RET:%.*]] = lshr <3 x i32> [[T0]], <i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[RET:%.*]] = lshr <3 x i32> [[T0]], splat (i32 5)
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
   %t0 = shl <3 x i32> %x, <i32 5, i32 undef, i32 5>
@@ -160,7 +160,7 @@ define <3 x i32> @positive_sameconst_vec_undef0(<3 x i32> %x) {
 
 define <3 x i32> @positive_sameconst_vec_undef1(<3 x i32> %x) {
 ; CHECK-LABEL: @positive_sameconst_vec_undef1(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], <i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], splat (i32 5)
 ; CHECK-NEXT:    [[RET:%.*]] = lshr <3 x i32> [[T0]], <i32 5, i32 undef, i32 5>
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
@@ -181,8 +181,8 @@ define <3 x i32> @positive_sameconst_vec_undef2(<3 x i32> %x) {
 
 define <2 x i32> @positive_biggerShl_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @positive_biggerShl_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X:%.*]], <i32 5, i32 5>
-; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[TMP1]], <i32 134217696, i32 134217696>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X:%.*]], splat (i32 5)
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[TMP1]], splat (i32 134217696)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %t0 = shl <2 x i32> %x, <i32 10, i32 10>
@@ -193,7 +193,7 @@ define <2 x i32> @positive_biggerShl_vec(<2 x i32> %x) {
 define <3 x i32> @positive_biggerShl_vec_undef0(<3 x i32> %x) {
 ; CHECK-LABEL: @positive_biggerShl_vec_undef0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], <i32 10, i32 undef, i32 10>
-; CHECK-NEXT:    [[RET:%.*]] = lshr <3 x i32> [[T0]], <i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[RET:%.*]] = lshr <3 x i32> [[T0]], splat (i32 5)
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
   %t0 = shl <3 x i32> %x, <i32 10, i32 undef, i32 10>
@@ -203,7 +203,7 @@ define <3 x i32> @positive_biggerShl_vec_undef0(<3 x i32> %x) {
 
 define <3 x i32> @positive_biggerShl_vec_undef1(<3 x i32> %x) {
 ; CHECK-LABEL: @positive_biggerShl_vec_undef1(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], <i32 10, i32 10, i32 10>
+; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], splat (i32 10)
 ; CHECK-NEXT:    [[RET:%.*]] = lshr <3 x i32> [[T0]], <i32 5, i32 undef, i32 5>
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
@@ -225,8 +225,8 @@ define <3 x i32> @positive_biggerShl_vec_undef2(<3 x i32> %x) {
 
 define <2 x i32> @positive_biggerLshr_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @positive_biggerLshr_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 5>
-; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[TMP1]], <i32 4194303, i32 4194303>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 5)
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[TMP1]], splat (i32 4194303)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %t0 = shl <2 x i32> %x, <i32 5, i32 5>
@@ -237,7 +237,7 @@ define <2 x i32> @positive_biggerLshr_vec(<2 x i32> %x) {
 define <3 x i32> @positive_biggerLshr_vec_undef0(<3 x i32> %x) {
 ; CHECK-LABEL: @positive_biggerLshr_vec_undef0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], <i32 5, i32 undef, i32 5>
-; CHECK-NEXT:    [[RET:%.*]] = lshr <3 x i32> [[T0]], <i32 10, i32 10, i32 10>
+; CHECK-NEXT:    [[RET:%.*]] = lshr <3 x i32> [[T0]], splat (i32 10)
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
   %t0 = shl <3 x i32> %x, <i32 5, i32 undef, i32 5>
@@ -247,7 +247,7 @@ define <3 x i32> @positive_biggerLshr_vec_undef0(<3 x i32> %x) {
 
 define <3 x i32> @positive_biggerLshr_vec_undef1(<3 x i32> %x) {
 ; CHECK-LABEL: @positive_biggerLshr_vec_undef1(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], <i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> [[X:%.*]], splat (i32 5)
 ; CHECK-NEXT:    [[RET:%.*]] = lshr <3 x i32> [[T0]], <i32 10, i32 undef, i32 10>
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
@@ -346,7 +346,7 @@ define i32 @positive_biggerLshr_multiuse_extrainstr(i32 %x) {
 
 define <2 x i32> @positive_biggerShl_vec_nonsplat(<2 x i32> %x) {
 ; CHECK-LABEL: @positive_biggerShl_vec_nonsplat(
-; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i32> [[X:%.*]], <i32 5, i32 5>
+; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i32> [[X:%.*]], splat (i32 5)
 ; CHECK-NEXT:    [[RET:%.*]] = lshr <2 x i32> [[T0]], <i32 5, i32 10>
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
@@ -358,7 +358,7 @@ define <2 x i32> @positive_biggerShl_vec_nonsplat(<2 x i32> %x) {
 define <2 x i32> @positive_biggerLshl_vec_nonsplat(<2 x i32> %x) {
 ; CHECK-LABEL: @positive_biggerLshl_vec_nonsplat(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i32> [[X:%.*]], <i32 5, i32 10>
-; CHECK-NEXT:    [[RET:%.*]] = lshr <2 x i32> [[T0]], <i32 5, i32 5>
+; CHECK-NEXT:    [[RET:%.*]] = lshr <2 x i32> [[T0]], splat (i32 5)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %t0 = shl <2 x i32> %x, <i32 5, i32 10>

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mattr=movw,lpmx | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mattr=movw,lpmx | FileCheck %s
 ; XFAIL: *
 
 # Wide LPM is currently unimplemented in the pseudo expansion pass.

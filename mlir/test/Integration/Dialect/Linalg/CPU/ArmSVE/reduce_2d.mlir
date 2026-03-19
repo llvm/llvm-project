@@ -4,7 +4,7 @@
 // DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = reduce_2d_f32
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve"\
-// DEFINE:    -shared-libs=%mlir_native_utils_lib_dir/libmlir_runner_utils%shlibext,%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext
+// DEFINE:    -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 
 // RUN: %{compile}
 
@@ -155,7 +155,9 @@ module attributes {transform.with_named_sequence} {
     // Step 3: Lower vector.multi_reduction
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.lower_masked_transfers
-      transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.reorder_multi_reduction_dims lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerreduction"
     } : !transform.op<"func.func">
 
     transform.yield

@@ -1,4 +1,4 @@
-//===-- AMDGPULowerKernelAttributes.cpp ------------------------------------------===//
+//===-- AMDGPULowerKernelAttributes.cpp------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,12 +17,13 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 
@@ -56,6 +57,8 @@ enum ImplicitArgOffsets {
   HIDDEN_REMAINDER_X = 18,
   HIDDEN_REMAINDER_Y = 20,
   HIDDEN_REMAINDER_Z = 22,
+
+  GRID_DIMS = 64
 };
 
 class AMDGPULowerKernelAttributes : public ModulePass {
@@ -66,42 +69,116 @@ public:
 
   bool runOnModule(Module &M) override;
 
-  StringRef getPassName() const override {
-    return "AMDGPU Kernel Attributes";
-  }
+  StringRef getPassName() const override { return "AMDGPU Kernel Attributes"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
- }
+  }
 };
 
 Function *getBasePtrIntrinsic(Module &M, bool IsV5OrAbove) {
   auto IntrinsicId = IsV5OrAbove ? Intrinsic::amdgcn_implicitarg_ptr
                                  : Intrinsic::amdgcn_dispatch_ptr;
-  StringRef Name = Intrinsic::getName(IntrinsicId);
-  return M.getFunction(Name);
+  return Intrinsic::getDeclarationIfExists(&M, IntrinsicId);
 }
 
 } // end anonymous namespace
 
-static bool processUse(CallInst *CI, bool IsV5OrAbove) {
-  Function *F = CI->getParent()->getParent();
+static bool annotateGridSizeLoadWithRangeMD(LoadInst *Load,
+                                            uint32_t MaxNumGroups) {
+  if (MaxNumGroups == 0 || MaxNumGroups == std::numeric_limits<uint32_t>::max())
+    return false;
 
-  auto MD = F->getMetadata("reqd_work_group_size");
+  if (!Load->getType()->isIntegerTy(32))
+    return false;
+
+  // TODO: If there is existing range metadata, preserve it if it is stricter.
+  if (Load->hasMetadata(LLVMContext::MD_range))
+    return false;
+
+  MDBuilder MDB(Load->getContext());
+  MDNode *Range = MDB.createRange(APInt(32, 1), APInt(32, MaxNumGroups + 1));
+  Load->setMetadata(LLVMContext::MD_range, Range);
+  return true;
+}
+
+static bool annotateGroupSizeLoadWithRangeMD(LoadInst *Load, bool IsRemainder) {
+  if (!Load->getType()->isIntegerTy(16))
+    return false;
+
+  // TODO: If there is existing range metadata, preserve it if it is stricter.
+  if (Load->hasMetadata(LLVMContext::MD_range))
+    return false;
+
+  MDBuilder MDB(Load->getContext());
+  MDNode *Range = MDB.createRange(
+      APInt(16, !IsRemainder),
+      APInt(16, AMDGPU::IsaInfo::getMaxFlatWorkGroupSize() + 1 - IsRemainder));
+  Load->setMetadata(LLVMContext::MD_range, Range);
+  return true;
+}
+
+static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load,
+                                            unsigned KnownNumGridDims) {
+  IntegerType *Ty = dyn_cast<IntegerType>(Load->getType());
+  if (!Ty || Ty->getBitWidth() < 3)
+    return false;
+
+  if (KnownNumGridDims != 0) {
+    Load->replaceAllUsesWith(
+        ConstantInt::get(Load->getType(), KnownNumGridDims));
+    return true;
+  }
+
+  // TODO: If there is existing range metadata, preserve it if it is stricter.
+  if (Load->hasMetadata(LLVMContext::MD_range))
+    return false;
+
+  MDBuilder MDB(Load->getContext());
+  MDNode *Range =
+      MDB.createRange(APInt(Ty->getBitWidth(), 1), APInt(Ty->getBitWidth(), 4));
+  Load->setMetadata(LLVMContext::MD_range, Range);
+  return true;
+}
+
+/// Compute the number of grid dimensions based on !reqd_work_group_size
+/// metadata
+static unsigned computeNumGridDims(const MDNode *ReqdWorkGroupSize) {
+  ConstantInt *KnownZ =
+      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(2));
+  if (KnownZ->getZExtValue() != 1)
+    return 3;
+
+  ConstantInt *KnownY =
+      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(1));
+  if (KnownY->getZExtValue() != 1)
+    return 2;
+
+  return 1;
+}
+
+static bool processUse(CallInst *CI, bool IsV5OrAbove) {
+  Function *F = CI->getFunction();
+
+  auto *MD = F->getMetadata("reqd_work_group_size");
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =
-    F->getFnAttribute("uniform-work-group-size").getValueAsBool();
+      F->hasFnAttribute("uniform-work-group-size");
 
-  if (!HasReqdWorkGroupSize && !HasUniformWorkGroupSize)
-    return false;
+  SmallVector<unsigned> MaxNumWorkgroups =
+      AMDGPU::getIntegerVecAttribute(*F, "amdgpu-max-num-workgroups",
+                                     /*Size=*/3, /*DefaultVal=*/0);
 
   Value *BlockCounts[3] = {nullptr, nullptr, nullptr};
-  Value *GroupSizes[3]  = {nullptr, nullptr, nullptr};
-  Value *Remainders[3]  = {nullptr, nullptr, nullptr};
-  Value *GridSizes[3]   = {nullptr, nullptr, nullptr};
+  Value *GroupSizes[3] = {nullptr, nullptr, nullptr};
+  Value *Remainders[3] = {nullptr, nullptr, nullptr};
+  Value *GridSizes[3] = {nullptr, nullptr, nullptr};
 
   const DataLayout &DL = F->getDataLayout();
+  bool MadeChange = false;
+
+  unsigned KnownNumGridDims = HasReqdWorkGroupSize ? computeNumGridDims(MD) : 0;
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.
@@ -134,40 +211,66 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     if (IsV5OrAbove) { // Base is ImplicitArgPtr.
       switch (Offset) {
       case HIDDEN_BLOCK_COUNT_X:
-        if (LoadSize == 4)
+        if (LoadSize == 4) {
           BlockCounts[0] = Load;
+          MadeChange |=
+              annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[0]);
+        }
         break;
       case HIDDEN_BLOCK_COUNT_Y:
-        if (LoadSize == 4)
+        if (LoadSize == 4) {
           BlockCounts[1] = Load;
+          MadeChange |=
+              annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[1]);
+        }
         break;
       case HIDDEN_BLOCK_COUNT_Z:
-        if (LoadSize == 4)
+        if (LoadSize == 4) {
           BlockCounts[2] = Load;
+          MadeChange |=
+              annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[2]);
+        }
         break;
       case HIDDEN_GROUP_SIZE_X:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           GroupSizes[0] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, false);
+        }
         break;
       case HIDDEN_GROUP_SIZE_Y:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           GroupSizes[1] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, false);
+        }
         break;
       case HIDDEN_GROUP_SIZE_Z:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           GroupSizes[2] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, false);
+        }
         break;
       case HIDDEN_REMAINDER_X:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           Remainders[0] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, true);
+        }
         break;
       case HIDDEN_REMAINDER_Y:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           Remainders[1] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, true);
+        }
         break;
       case HIDDEN_REMAINDER_Z:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           Remainders[2] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, true);
+        }
+        break;
+
+      case GRID_DIMS:
+        if (LoadSize <= 2)
+          MadeChange |= annotateGridDimsLoadWithRangeMD(Load, KnownNumGridDims);
         break;
       default:
         break;
@@ -204,15 +307,16 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     }
   }
 
-  bool MadeChange = false;
   if (IsV5OrAbove && HasUniformWorkGroupSize) {
-    // Under v5  __ockl_get_local_size returns the value computed by the expression:
+    // Under v5  __ockl_get_local_size returns the value computed by the
+    // expression:
     //
-    //   workgroup_id < hidden_block_count ? hidden_group_size : hidden_remainder
+    //   workgroup_id < hidden_block_count ? hidden_group_size :
+    //                                       hidden_remainder
     //
-    // For functions with the attribute uniform-work-group-size=true. we can evaluate
-    // workgroup_id < hidden_block_count as true, and thus hidden_group_size is returned
-    // for __ockl_get_local_size.
+    // For functions with the attribute uniform-work-group-size=true. we can
+    // evaluate workgroup_id < hidden_block_count as true, and thus
+    // hidden_group_size is returned for __ockl_get_local_size.
     for (int I = 0; I < 3; ++I) {
       Value *BlockCount = BlockCounts[I];
       if (!BlockCount)
@@ -237,7 +341,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     for (Value *Remainder : Remainders) {
       if (!Remainder)
         continue;
-      Remainder->replaceAllUsesWith(Constant::getNullValue(Remainder->getType()));
+      Remainder->replaceAllUsesWith(
+          Constant::getNullValue(Remainder->getType()));
       MadeChange = true;
     }
   } else if (HasUniformWorkGroupSize) { // Pre-V5.
@@ -278,13 +383,13 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
           continue;
 
         for (User *UMin : ZextGroupSize->users()) {
-          if (match(UMin,
-                    m_UMin(m_Sub(m_Specific(GridSize),
-                                 m_Mul(GroupIDIntrin, m_Specific(ZextGroupSize))),
-                           m_Specific(ZextGroupSize)))) {
+          if (match(UMin, m_UMin(m_Sub(m_Specific(GridSize),
+                                       m_Mul(GroupIDIntrin,
+                                             m_Specific(ZextGroupSize))),
+                                 m_Specific(ZextGroupSize)))) {
             if (HasReqdWorkGroupSize) {
-              ConstantInt *KnownSize
-                = mdconst::extract<ConstantInt>(MD->getOperand(I));
+              ConstantInt *KnownSize =
+                  mdconst::extract<ConstantInt>(MD->getOperand(I));
               UMin->replaceAllUsesWith(ConstantFoldIntegerCast(
                   KnownSize, UMin->getType(), false, DL));
             } else {
@@ -294,6 +399,49 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
             MadeChange = true;
           }
         }
+      }
+    }
+  }
+
+  // Upgrade the old method of calculating the block size using the grid size.
+  // We pattern match any case where the implicit argument group size is the
+  // divisor to a dispatch packet grid size read of the same dimension.
+  if (IsV5OrAbove) {
+    for (int I = 0; I < 3; I++) {
+      Value *GroupSize = GroupSizes[I];
+      if (!GroupSize || !GroupSize->getType()->isIntegerTy(16))
+        continue;
+
+      for (User *U : GroupSize->users()) {
+        Instruction *Inst = cast<Instruction>(U);
+        if (isa<ZExtInst>(Inst) && !Inst->use_empty())
+          Inst = cast<Instruction>(*Inst->user_begin());
+
+        using namespace llvm::PatternMatch;
+        if (!match(
+                Inst,
+                m_UDiv(m_ZExtOrSelf(m_Load(m_GEP(
+                           m_Intrinsic<Intrinsic::amdgcn_dispatch_ptr>(),
+                           m_SpecificInt(GRID_SIZE_X + I * sizeof(uint32_t))))),
+                       m_Value())))
+          continue;
+
+        IRBuilder<> Builder(Inst);
+
+        Value *GEP = Builder.CreateInBoundsGEP(
+            Builder.getInt8Ty(), CI,
+            {ConstantInt::get(Type::getInt64Ty(CI->getContext()),
+                              HIDDEN_BLOCK_COUNT_X + I * sizeof(uint32_t))});
+        Instruction *BlockCount = Builder.CreateLoad(Builder.getInt32Ty(), GEP);
+        BlockCount->setMetadata(LLVMContext::MD_invariant_load,
+                                MDNode::get(CI->getContext(), {}));
+        BlockCount->setMetadata(LLVMContext::MD_noundef,
+                                MDNode::get(CI->getContext(), {}));
+
+        Value *BlockCountExt = Builder.CreateZExt(BlockCount, Inst->getType());
+        Inst->replaceAllUsesWith(BlockCountExt);
+        Inst->eraseFromParent();
+        MadeChange = true;
       }
     }
   }
@@ -315,7 +463,6 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 
   return MadeChange;
 }
-
 
 // TODO: Move makeLIDRangeMetadata usage into here. Seem to not get
 // TargetPassConfig for subtarget.
@@ -340,7 +487,6 @@ bool AMDGPULowerKernelAttributes::runOnModule(Module &M) {
   return MadeChange;
 }
 
-
 INITIALIZE_PASS_BEGIN(AMDGPULowerKernelAttributes, DEBUG_TYPE,
                       "AMDGPU Kernel Attributes", false, false)
 INITIALIZE_PASS_END(AMDGPULowerKernelAttributes, DEBUG_TYPE,
@@ -361,12 +507,14 @@ AMDGPULowerKernelAttributesPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!BasePtr) // ImplicitArgPtr/DispatchPtr not used.
     return PreservedAnalyses::all();
 
+  bool Changed = false;
   for (Instruction &I : instructions(F)) {
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
       if (CI->getCalledFunction() == BasePtr)
-        processUse(CI, IsV5OrAbove);
+        Changed |= processUse(CI, IsV5OrAbove);
     }
   }
 
-  return PreservedAnalyses::all();
+  return !Changed ? PreservedAnalyses::all()
+                  : PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

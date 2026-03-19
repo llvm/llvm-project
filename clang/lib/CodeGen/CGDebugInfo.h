@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGDEBUGINFO_H
 
 #include "CGBuilder.h"
+#include "SanitizerHandler.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -58,6 +59,8 @@ class CGBlockInfo;
 class CGDebugInfo {
   friend class ApplyDebugLocation;
   friend class SaveAndRestoreLocation;
+  friend class ApplyAtomGroup;
+
   CodeGenModule &CGM;
   const llvm::codegenoptions::DebugInfoKind DebugKind;
   bool DebugTypeExtRefs;
@@ -85,7 +88,8 @@ class CGDebugInfo {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   llvm::DIType *SingletonId = nullptr;
@@ -154,7 +158,6 @@ class CGDebugInfo {
   /// This is a storage for names that are constructed on demand. For
   /// example, C++ destructors, C++ operators etc..
   llvm::BumpPtrAllocator DebugInfoNames;
-  StringRef CWDName;
 
   llvm::DenseMap<const char *, llvm::TrackingMDRef> DIFileCache;
   llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPCache;
@@ -178,6 +181,16 @@ class CGDebugInfo {
   /// The key is coroutine real parameters, value is DIVariable in LLVM IR.
   Param2DILocTy ParamDbgMappings;
 
+  /// Key Instructions bookkeeping.
+  /// Source atoms are identified by a {AtomGroup, InlinedAt} pair, meaning
+  /// AtomGroup numbers can be repeated across different functions.
+  struct {
+    uint64_t NextAtom = 1;
+    uint64_t HighestEmittedAtom = 0;
+    uint64_t CurrentAtom = 0;
+  } KeyInstructionsInfo;
+
+private:
   /// Helper functions for getOrCreateType.
   /// @{
   /// Currently the checksum of an interface includes the number of
@@ -185,6 +198,7 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const BuiltinType *Ty);
   llvm::DIType *CreateType(const ComplexType *Ty);
   llvm::DIType *CreateType(const BitIntType *Ty);
+  llvm::DIType *CreateType(const OverflowBehaviorType *Ty, llvm::DIFile *U);
   llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg);
   llvm::DIType *CreateQualifiedType(const FunctionProtoType *Ty,
                                     llvm::DIFile *Fg);
@@ -195,6 +209,9 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const PointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const BlockPointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
+                           llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLInlineSpirvType *Ty, llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 
@@ -246,9 +263,14 @@ class CGDebugInfo {
   /// to get a method type which includes \c this pointer.
   llvm::DISubroutineType *getOrCreateMethodType(const CXXMethodDecl *Method,
                                                 llvm::DIFile *F);
+
+  llvm::DISubroutineType *
+  getOrCreateMethodTypeForDestructor(const CXXMethodDecl *Method,
+                                     llvm::DIFile *F, QualType FNType);
+
   llvm::DISubroutineType *
   getOrCreateInstanceMethodType(QualType ThisPtr, const FunctionProtoType *Func,
-                                llvm::DIFile *Unit);
+                                llvm::DIFile *Unit, bool SkipFirst = false);
   llvm::DISubroutineType *
   getOrCreateFunctionType(const Decl *D, QualType FnType, llvm::DIFile *F);
   /// \return debug info descriptor for vtable.
@@ -352,12 +374,12 @@ class CGDebugInfo {
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
   /// A cache that maps names of artificial inlined functions to subprograms.
-  llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
+  llvm::StringMap<llvm::DISubprogram *> InlinedSubprogramMap;
 
   /// A function that returns the subprogram corresponding to the artificial
   /// inlined function for traps.
-  llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName,
-                                                  llvm::DIFile *FileScope);
+  llvm::DISubprogram *createInlinedSubprogram(StringRef FuncName,
+                                              llvm::DIFile *FileScope);
 
   /// Helpers for collecting fields of a record.
   /// @{
@@ -376,6 +398,7 @@ class CGDebugInfo {
   void CollectRecordFields(const RecordDecl *Decl, llvm::DIFile *F,
                            SmallVectorImpl<llvm::Metadata *> &E,
                            llvm::DICompositeType *RecordTy);
+  llvm::StringRef GetLambdaCaptureName(const LambdaCapture &Capture);
 
   /// If the C++ class has vtable info then insert appropriate debug
   /// info entry in EltTys vector.
@@ -489,7 +512,7 @@ public:
   /// This is needed for call site debug info.
   void EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                QualType CalleeType,
-                               const FunctionDecl *CalleeDecl);
+                               GlobalDecl CalleeGlobalDecl);
 
   /// Constructs the debug code for exiting a function.
   void EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn);
@@ -632,8 +655,45 @@ public:
   llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
                                                 StringRef Category,
                                                 StringRef FailureMsg);
+  /// Create a debug location from `Location` that adds an artificial inline
+  /// frame where the frame name is FuncName
+  ///
+  /// This is used to indiciate instructions that come from compiler
+  /// instrumentation.
+  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
+                                            StringRef FuncName);
+
+  /// Reset internal state.
+  void completeFunction();
+
+  /// Add \p KeyInstruction and an optional \p Backup instruction to the
+  /// current atom group, created using ApplyAtomGroup.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup);
+
+  /// Add \p KeyInstruction and an optional \p Backup instruction to the atom
+  /// group \p Atom.
+  void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                   llvm::Value *Backup, uint64_t Atom);
+
+  /// Emit symbol for debugger that holds the pointer to the vtable.
+  void emitVTableSymbol(llvm::GlobalVariable *VTable, const CXXRecordDecl *RD);
+
+  /// Return flags which enable debug info emission for call sites, provided
+  /// that it is supported and enabled.
+  llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
+
+  /// Add call target information.
+  void addCallTargetIfVirtual(const FunctionDecl *FD, llvm::CallBase *CI);
 
 private:
+  /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
+  /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
+  /// has no DebugLoc, and chooses the atom group in which the instruction
+  /// has the highest precedence if it's already in one.
+  void addInstSourceAtomMetadata(llvm::Instruction *I, uint64_t Group,
+                                 uint8_t Rank);
+
   /// Emit call to llvm.dbg.declare for a variable declaration.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.
@@ -658,7 +718,8 @@ private:
   };
 
   bool HasReconstitutableArgs(ArrayRef<TemplateArgument> Args) const;
-  std::string GetName(const Decl *, bool Qualified = false) const;
+  std::string GetName(const Decl *, bool Qualified = false,
+                      bool *NameIsSimplified = nullptr) const;
 
   /// Build up structure info for the byref.  See \a BuildByRefType.
   BlockByRefType EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
@@ -775,18 +836,14 @@ private:
                          unsigned LineNo, StringRef LinkageName,
                          llvm::GlobalVariable *Var, llvm::DIScope *DContext);
 
-
-  /// Return flags which enable debug info emission for call sites, provided
-  /// that it is supported and enabled.
-  llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
-
   /// Get the printing policy for producing names for debug info.
   PrintingPolicy getPrintingPolicy() const;
 
   /// Get function name for the given FunctionDecl. If the name is
   /// constructed on demand (e.g., C++ destructor) then the name is
   /// stored on the side.
-  StringRef getFunctionName(const FunctionDecl *FD);
+  StringRef getFunctionName(const FunctionDecl *FD,
+                            bool *NameIsSimplified = nullptr);
 
   /// Returns the unmangled name of an Objective-C method.
   /// This is the display name for the debugging info.
@@ -797,7 +854,8 @@ private:
   StringRef getSelectorName(Selector S);
 
   /// Get class name including template argument list.
-  StringRef getClassName(const RecordDecl *RD);
+  StringRef getClassName(const RecordDecl *RD,
+                         bool *NameIsSimplified = nullptr);
 
   /// Get the vtable name for the given class.
   StringRef getVTableName(const CXXRecordDecl *Decl);
@@ -848,6 +906,13 @@ private:
       std::memcpy(Data + A.size(), B.data(), B.size());
     return StringRef(Data, A.size() + B.size());
   }
+
+  /// If one exists, returns the linkage name of the specified \
+  /// (non-null) \c Method. Returns empty string otherwise.
+  llvm::StringRef GetMethodLinkageName(const CXXMethodDecl *Method) const;
+
+  /// Returns true if we should generate call target information.
+  bool shouldGenerateVirtualCallSite() const;
 };
 
 /// A scoped helper to set the current debug location to the specified
@@ -926,6 +991,21 @@ public:
   ApplyInlineDebugLocation(CodeGenFunction &CGF, GlobalDecl InlinedFn);
   /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
+  ApplyInlineDebugLocation(const ApplyInlineDebugLocation &) = delete;
+  ApplyInlineDebugLocation &operator=(ApplyInlineDebugLocation &) = delete;
+};
+
+class SanitizerDebugLocation {
+  CodeGenFunction *CGF;
+  ApplyDebugLocation Apply;
+
+public:
+  SanitizerDebugLocation(CodeGenFunction *CGF,
+                         ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                         SanitizerHandler Handler);
+  ~SanitizerDebugLocation();
+  SanitizerDebugLocation(const SanitizerDebugLocation &) = delete;
+  SanitizerDebugLocation &operator=(SanitizerDebugLocation &) = delete;
 };
 
 } // namespace CodeGen

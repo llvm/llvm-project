@@ -1,9 +1,40 @@
+add_entrypoint_object(
+  stdin
+  SRCS
+    stdin.cpp
+  HDRS
+    ../stdin.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  stdout
+  SRCS
+    stdout.cpp
+  HDRS
+    ../stdout.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
+add_entrypoint_object(
+  stderr
+  SRCS
+    stderr.cpp
+  HDRS
+    ../stderr.h
+  DEPENDS
+    libc.hdr.types.FILE
+)
+
 add_header_library(
   gpu_file
   HDRS
     file.h
   DEPENDS
     libc.hdr.types.FILE
+    libc.hdr.stdio_macros
     libc.src.__support.RPC.rpc_client
     libc.src.__support.common
     .stdin
@@ -28,6 +59,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.RPC.rpc_client
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -39,6 +71,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.RPC.rpc_client
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -83,6 +116,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.RPC.rpc_client
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -93,6 +127,7 @@ add_entrypoint_object(
     ../fopen.h
   DEPENDS
     libc.hdr.types.FILE
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -103,6 +138,8 @@ add_entrypoint_object(
     ../fclose.h
   DEPENDS
     libc.hdr.types.FILE
+    libc.hdr.stdio_macros
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -113,6 +150,7 @@ add_entrypoint_object(
     ../fread.h
   DEPENDS
     libc.hdr.types.FILE
+    .gpu_file
 )
 
 add_entrypoint_object(
@@ -123,7 +161,6 @@ add_entrypoint_object(
     ../puts.h
   DEPENDS
     libc.hdr.types.FILE
-    libc.include.stdio # needed for stdin
     .gpu_file
 )
 
@@ -168,7 +205,6 @@ add_entrypoint_object(
     ../putc.h
   DEPENDS
     libc.hdr.types.FILE
-    libc.include.stdio # needed for stdin
     .gpu_file
 )
 
@@ -180,7 +216,6 @@ add_entrypoint_object(
     ../putchar.h
   DEPENDS
     libc.hdr.types.FILE
-    libc.include.stdio # needed for stdin
     .gpu_file
 )
 
@@ -203,7 +238,6 @@ add_entrypoint_object(
     ../getc.h
   DEPENDS
     libc.hdr.types.FILE
-    libc.include.stdio # needed for stdin
     .gpu_file
 )
 
@@ -215,7 +249,6 @@ add_entrypoint_object(
     ../getchar.h
   DEPENDS
     libc.hdr.types.FILE
-    libc.include.stdio # needed for stdin
     .gpu_file
 )
 
@@ -226,10 +259,9 @@ add_entrypoint_object(
   HDRS
     ../fgets.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.hdr.types.FILE
     .gpu_file
-    .feof
-    .ferror
 )
 
 add_entrypoint_object(
@@ -295,31 +327,12 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  stdin
+  rename
   SRCS
-    stdin.cpp
+    rename.cpp
   HDRS
-    ../stdin.h
+    ../rename.h
   DEPENDS
     libc.hdr.types.FILE
-)
-
-add_entrypoint_object(
-  stdout
-  SRCS
-    stdout.cpp
-  HDRS
-    ../stdout.h
-  DEPENDS
-    libc.hdr.types.FILE
-)
-
-add_entrypoint_object(
-  stderr
-  SRCS
-    stderr.cpp
-  HDRS
-    ../stderr.h
-  DEPENDS
-    libc.hdr.types.FILE
+    .gpu_file
 )

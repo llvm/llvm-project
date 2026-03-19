@@ -1,0 +1,281 @@
+<!-- This document is written in Markdown and uses extra directives provided by
+MyST (https://myst-parser.readthedocs.io/en/latest/). -->
+
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
+
+LLVM {{env.config.release}} Release Notes
+=========================================
+
+```{contents}
+```
+
+````{only} PreRelease
+```{warning} These are in-progress notes for the upcoming LLVM {{env.config.release}}
+             release. Release notes for previous releases can be found on
+             [the Download Page](https://releases.llvm.org/download.html).
+```
+````
+
+Introduction
+============
+
+This document contains the release notes for the LLVM Compiler Infrastructure,
+release {{env.config.release}}.  Here we describe the status of LLVM, including
+major improvements from the previous release, improvements in various subprojects
+of LLVM, and some of the current users of the code.  All LLVM releases may be
+downloaded from the [LLVM releases web site](https://llvm.org/releases/).
+
+For more information about LLVM, including information about the latest
+release, please check out the [main LLVM web site](https://llvm.org/).  If you
+have questions or comments, the [Discourse forums](https://discourse.llvm.org)
+is a good place to ask them.
+
+Note that if you are reading this file from a Git checkout or the main
+LLVM web page, this document applies to the *next* release, not the current
+one.  To see the release notes for a specific release, please see the
+[releases page](https://llvm.org/releases/).
+
+Non-comprehensive list of changes in this release
+=================================================
+
+<!-- For small 1-3 sentence descriptions, just add an entry at the end of
+this list. If your description won't fit comfortably in one bullet
+point (e.g. maybe you would like to give an example of the
+functionality, or simply have a lot to talk about), see the comment below
+for adding a new subsection. -->
+
+* ...
+
+<!-- If you would like to document a larger change, then you can add a
+subsection about it right here. You can copy the following boilerplate:
+
+Special New Feature
+-------------------
+
+Makes programs 10x faster by doing Special New Thing.
+-->
+
+Changes to the LLVM IR
+----------------------
+
+* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
+  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
+  with a bitcast.
+
+* "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
+  migrated to first-class denormal_fpenv attribute.
+
+* The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
+  bitcode will be automatically updated.
+
+Changes to LLVM infrastructure
+------------------------------
+
+* Removed ``Constant::isZeroValue``. It was functionally identical to
+  ``Constant::isNullValue`` for all types except floating-point negative
+  zero. All callers should use ``isNullValue`` instead. ``isZeroValue``
+  will be reintroduced in the future with bitwise-all-zeros semantics
+  to support non-zero null pointers.
+
+* Removed TypePromoteFloat legalization from SelectionDAG
+
+* Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
+  `llvm/utils/reduce_pipeline.py`.
+
+* The ``Br`` opcode was split into two opcodes separating unconditional
+  (``UncondBr``) and conditional (``CondBr``) branches.
+
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``getOperand`` or
+  ``setOperand`` to access successors.
+
+Changes to building LLVM
+------------------------
+
+Changes to TableGen
+-------------------
+
+Changes to Interprocedural Optimizations
+----------------------------------------
+
+Changes to Vectorizers
+----------------------
+
+Changes to the AArch64 Backend
+------------------------------
+
+* The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
+  requiring the `+d128` feature gating.
+
+Changes to the AMDGPU Backend
+-----------------------------
+
+* Initial support for gfx1310
+
+Changes to the ARM Backend
+--------------------------
+
+* The `r14` register can now be used as an alias for the link register `lr`
+  in inline assembly. Clang always canonicalizes the name to `lr`, but other
+  frontends may not.
+
+Changes to the AVR Backend
+--------------------------
+
+Changes to the DirectX Backend
+------------------------------
+
+Changes to the Hexagon Backend
+------------------------------
+
+Changes to the LoongArch Backend
+--------------------------------
+
+* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
+
+Changes to the MIPS Backend
+---------------------------
+
+Changes to the NVPTX Backend
+----------------------------
+
+* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
+  the oldest GPU variant compatible with the widest range of recent major CUDA
+  Toolkit versions (11/12/13).
+
+Changes to the PowerPC Backend
+------------------------------
+
+Changes to the RISC-V Backend
+-----------------------------
+
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+* `-mcpu=spacemit-x100` was added.
+* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
+  `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
+  available in the assembler and disassembler without requiring their respective
+  extensions.
+* Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
+  Absolute Difference) extension.
+* Adds CodeGen support for the 'Zvabd` extension.
+* `-mcpu=spacemit-a100` was added.
+* The opt-in `-riscv-enable-p-ext-simd-codegen` flag has been removed. P extension SIMD code generation is now enabled automatically if the P extension is supported.
+* `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
+* Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
+  Reordering Structured Data) extension.
+* `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
+
+Changes to the WebAssembly Backend
+----------------------------------
+
+Changes to the Windows Target
+-----------------------------
+
+* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
+  with a new `.seh_splitchained` instruction.
+
+Changes to the X86 Backend
+--------------------------
+
+* `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
+  in use. This matches the behaviour of Intel syntax and aids with
+  compatibility when changing the default Clang syntax to the Intel syntax.
+
+Changes to the OCaml bindings
+-----------------------------
+
+Changes to the Python bindings
+------------------------------
+
+Changes to the C API
+--------------------
+
+* Replaced opcode ``LLVMBr`` with ``LLVMUncondBr`` and ``LLVMCondBr``.
+
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``LLVMGetOperand``
+  or ``LLVMSetOperand`` to access successors.
+
+Changes to the CodeGen infrastructure
+-------------------------------------
+
+Changes to the Metadata Info
+----------------------------
+
+Changes to the Debug Info
+-------------------------
+
+Changes to the LLVM tools
+-------------------------
+
+* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
+
+Changes to LLDB
+---------------
+
+### Deprecated APIs
+
+* ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
+  have been deprecated. They always return 1, as before.
+
+### FreeBSD
+
+#### Userspace Debugging
+
+* Support for MIPS64 has been removed.
+* The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
+  assumed to be supported.
+
+#### Kernel Debugging
+
+* The plugin that analyzes FreeBSD kernel core dump and live core has been renamed from `freebsd-kernel` to
+ `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin. 
+* Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
+  available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
+  from any platform.
+* Support for ARM, PPC64le, and RISCV64 has been added.
+* The crashed thread is now automatically selected on start.
+* Threads are listed in incrmental order by pid then by tid.
+* Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
+  when lldb is in the interactive mode (i.e. not in batch mode).
+* Writing to the core is now supported. For safety reasons, this feature is off by default. To enable it,
+  `plugin.process.freebsd-kernel-core.read-only` must be set to `false`. This setting is available when
+  using `/dev/mem` or a kernel dump. However, since `kvm_write()` does not support writing to kernel dumps,
+  writes to a kernel dump will still fail when the setting is false.
+
+### Linux
+
+* On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
+* Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
+
+Changes to BOLT
+---------------
+
+Changes to Sanitizers
+---------------------
+
+* Add a random delay into ThreadSanitizer to help find rare thread interleavings.
+
+Other Changes
+-------------
+
+External Open Source Projects Using LLVM {{env.config.release}}
+===============================================================
+
+Additional Information
+======================
+
+A wide variety of additional information is available on the
+[LLVM web page](https://llvm.org/), in particular in the
+[documentation](https://llvm.org/docs/) section.  The web page also contains
+versions of the API documentation which is up-to-date with the Git version of
+the source code.  You can access versions of these documents specific to this
+release by going into the `llvm/docs/` directory in the LLVM tree.
+
+If you have any questions or comments about LLVM, please feel free to contact
+us via the [Discourse forums](https://discourse.llvm.org).

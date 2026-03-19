@@ -29,41 +29,41 @@ struct SimpleCases : public Base {
 public:
   virtual ~SimpleCases();
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: prefer using 'OVERRIDE' or (rarely) 'FINAL' instead of 'virtual' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  ~SimpleCases() OVERRIDE;
+  // CHECK-FIXES: ~SimpleCases() OVERRIDE;
 
   void a();
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: annotate this function with 'OVERRIDE' or (rarely) 'FINAL' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void a() OVERRIDE;
+  // CHECK-FIXES: void a() OVERRIDE;
 
   virtual void b();
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using 'OVERRIDE' or (rarely) 'FINAL' instead of 'virtual' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void b() OVERRIDE;
+  // CHECK-FIXES: void b() OVERRIDE;
 
   virtual void c();
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: {{^}}  void c() OVERRIDE;
+  // CHECK-FIXES: void c() OVERRIDE;
 
   virtual void e() = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: {{^}}  void e() OVERRIDE = 0;
+  // CHECK-FIXES: void e() OVERRIDE = 0;
 
   virtual void f2() const = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: {{^}}  void f2() const OVERRIDE = 0;
+  // CHECK-FIXES: void f2() const OVERRIDE = 0;
 
   virtual void g() ABSTRACT;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: {{^}}  void g() OVERRIDE ABSTRACT;
+  // CHECK-FIXES: void g() OVERRIDE ABSTRACT;
 
   virtual void j() const;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: {{^}}  void j() const OVERRIDE;
+  // CHECK-FIXES: void j() const OVERRIDE;
 
   virtual void k() OVERRIDE;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: 'virtual' is redundant since the function is already declared 'OVERRIDE' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void k() OVERRIDE;
+  // CHECK-FIXES: void k() OVERRIDE;
 
   virtual void l() const OVERRIDE;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: 'virtual' is redundant since the function is already declared 'OVERRIDE' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void l() const OVERRIDE;
+  // CHECK-FIXES: void l() const OVERRIDE;
 };

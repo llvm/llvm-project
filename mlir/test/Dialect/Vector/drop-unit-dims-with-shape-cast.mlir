@@ -207,3 +207,100 @@ func.func @negative_transpose_with_no_unit_dims(%vec: vector<4x2x3xf32>) -> vect
 
 // CHECK-LABEL: func.func @negative_transpose_with_no_unit_dims
 // CHECK-NOT: vector.shape_cast
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// [Pattern: DropUnitDimsFromScfForOp]
+///----------------------------------------------------------------------------------------
+
+func.func @scf_for_with_internal_unit_dims(%vec: vector<4x1x1x[4]xf32>) -> vector<4x1x1x[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %res = scf.for %i = %c0 to %c4 step %c1 iter_args(%iter = %vec) -> vector<4x1x1x[4]xf32> {
+    %s = math.sqrt %iter : vector<4x1x1x[4]xf32>
+    scf.yield %s : vector<4x1x1x[4]xf32>
+  }
+  return %res : vector<4x1x1x[4]xf32>
+}
+
+// CHECK-LABEL: func.func @scf_for_with_internal_unit_dims
+//  CHECK-SAME:   %[[VEC:[A-Za-z0-9]+]]: vector<4x1x1x[4]xf32>
+//       CHECK:   %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<4x1x1x[4]xf32> to vector<4x[4]xf32>
+//       CHECK:   %[[LOOP:.+]] = scf.for {{.*}} iter_args(%[[ITER:.+]] = %[[CAST]])
+//       CHECK:     %[[SQRT:.+]] = math.sqrt %[[ITER]] : vector<4x[4]xf32>
+//       CHECK:     scf.yield %[[SQRT]]
+//       CHECK:   %[[CASTBACK:.+]] = vector.shape_cast %[[LOOP]] : vector<4x[4]xf32> to vector<4x1x1x[4]xf32>
+//       CHECK:   return %[[CASTBACK]]
+
+// -----
+
+func.func @scf_for_with_all_unit_dims(%vec: vector<1x1xf32>) -> vector<1x1xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %res = scf.for %i = %c0 to %c4 step %c1 iter_args(%iter = %vec) -> vector<1x1xf32> {
+    %s = math.sqrt %iter : vector<1x1xf32>
+    scf.yield %s : vector<1x1xf32>
+  }
+  return %res : vector<1x1xf32>
+}
+
+// CHECK-LABEL: func.func @scf_for_with_all_unit_dims
+//  CHECK-SAME:   %[[VEC:[A-Za-z0-9]+]]: vector<1x1xf32>
+//       CHECK:   %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x1xf32> to vector<1xf32>
+//       CHECK:   %[[LOOP:.+]] = scf.for {{.*}} iter_args(%[[ITER:.+]] = %[[CAST]])
+//       CHECK:     %[[SQRT:.+]] = math.sqrt %[[ITER]] : vector<1xf32>
+//       CHECK:     scf.yield %[[SQRT]]
+//       CHECK:   %[[CASTBACK:.+]] = vector.shape_cast %[[LOOP]] : vector<1xf32> to vector<1x1xf32>
+//       CHECK:   return %[[CASTBACK]]
+
+// -----
+
+func.func @scf_for_with_multiple_operands(%idx: index, %vec0: vector<1x4xf32>, %vec1: vector<1x4xf32>) -> vector<1x4xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %res:3 = scf.for %i = %c0 to %c4 step %c1
+    iter_args(%id = %idx, %iter0 = %vec0, %iter1 = %vec1) -> (index, vector<1x4xf32>, vector<1x4xf32>) {
+    %add = arith.addf %iter0, %iter1 : vector<1x4xf32>
+    scf.yield %id, %add, %add : index, vector<1x4xf32>, vector<1x4xf32>
+  }
+  return %res#1 : vector<1x4xf32>
+}
+
+// CHECK-LABEL: func.func @scf_for_with_multiple_operands
+//  CHECK-SAME:   %[[IDX:[A-Za-z0-9]+]]: index
+//  CHECK-SAME:   %[[VEC0:[A-Za-z0-9]+]]: vector<1x4xf32>
+//  CHECK-SAME:   %[[VEC1:[A-Za-z0-9]+]]: vector<1x4xf32>
+//   CHECK-DAG:   %[[CAST0:.+]] = vector.shape_cast %[[VEC0]] : vector<1x4xf32> to vector<4xf32>
+//   CHECK-DAG:   %[[CAST1:.+]] = vector.shape_cast %[[VEC1]] : vector<1x4xf32> to vector<4xf32>
+//       CHECK:   %[[LOOP:.+]]:3 = scf.for
+//  CHECK-SAME:     iter_args(%{{.*}} = %[[IDX]], %[[ITER0:.+]] = %[[CAST0]], %[[ITER1:.+]] = %[[CAST1]])
+//       CHECK:     %[[ADD:.+]] = arith.addf %[[ITER0]], %[[ITER1]] : vector<4xf32>
+//       CHECK:     scf.yield %{{.*}}, %[[ADD]], %[[ADD]]
+//       CHECK:   %[[CASTBACK:.+]] = vector.shape_cast %[[LOOP]]#1 : vector<4xf32> to vector<1x4xf32>
+//       CHECK:   return %[[CASTBACK]]
+
+// -----
+
+func.func @scf_for_with_scalable_unit_dims(%vec: vector<1x[1]xf32>) -> vector<1x[1]xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %res = scf.for %i = %c0 to %c4 step %c1 iter_args(%iter = %vec) -> vector<1x[1]xf32> {
+    %s = math.sqrt %iter : vector<1x[1]xf32>
+    scf.yield %s : vector<1x[1]xf32>
+  }
+  return %res : vector<1x[1]xf32>
+}
+
+// CHECK-LABEL: func.func @scf_for_with_scalable_unit_dims
+//  CHECK-SAME:   %[[VEC:[A-Za-z0-9]+]]: vector<1x[1]xf32>
+//       CHECK:   %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x[1]xf32> to vector<[1]xf32>
+//       CHECK:   %[[LOOP:.+]] = scf.for {{.*}} iter_args(%[[ITER:.+]] = %[[CAST]])
+//       CHECK:     %[[SQRT:.+]] = math.sqrt %[[ITER]] : vector<[1]xf32>
+//       CHECK:     scf.yield %[[SQRT]]
+//       CHECK:   %[[CASTBACK:.+]] = vector.shape_cast %[[LOOP]] : vector<[1]xf32> to vector<1x[1]xf32>
+//       CHECK:   return %[[CASTBACK]]

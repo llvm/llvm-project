@@ -17,7 +17,7 @@
 #include "executor_address.h"
 #include "gtest/gtest.h"
 
-using namespace __orc_rt;
+using namespace orc_rt;
 
 TEST(ExecutorAddrTest, DefaultAndNull) {
   // Check that default constructed values and isNull behave as expected.

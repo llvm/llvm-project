@@ -22,10 +22,11 @@
 // REQUIRES: long_tests
 
 #include <random>
-#include <numeric>
-#include <vector>
 #include <cassert>
+#include <cmath>
+#include <numeric>
 #include <sstream>
+#include <vector>
 
 #include "test_macros.h"
 

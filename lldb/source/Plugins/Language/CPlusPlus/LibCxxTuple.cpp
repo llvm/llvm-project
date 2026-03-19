@@ -20,11 +20,6 @@ public:
     Update();
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return formatters::ExtractIndexFromString(name.GetCString());
-  }
-
-  bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
   llvm::Expected<uint32_t> CalculateNumChildren() override {
     return m_elements.size();

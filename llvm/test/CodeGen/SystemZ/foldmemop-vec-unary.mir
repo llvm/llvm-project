@@ -44,7 +44,7 @@ body:             |
 
 # LDEB can't be used if dst operand is a VR32 (and not FP32).
 # CHECK-LABEL: fun1:
-# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Folded Reload
+# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Reload
 # CHECK-NEXT: wldeb   %v16, %f0
 ---
 name:            fun1
@@ -75,7 +75,7 @@ body:             |
 # Spilling the destination of an fp extension needs an extra store instruction.
 # CHECK-LABEL: fun2:
 # CHECK:      ldebr   %f0, %f0
-# CHECK-NEXT: std     %f0, 160(%r15)                  # 8-byte Folded Spill
+# CHECK-NEXT: std     %f0, 160(%r15)                  # 8-byte Spill
 ---
 name:            fun2
 alignment:       16
@@ -130,7 +130,7 @@ body:             |
 
 # SQDB can't be used if dst operand is a VR64 (and not FP64).
 # CHECK-LABEL: fun4:
-# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Folded Reload
+# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Reload
 # CHECK-NEXT: wfsqdb  %v16, %f0
 ---
 name:            fun4
@@ -187,7 +187,7 @@ body:             |
 
 # SQEB can't be used if dst operand is a VR32 (and not FP32).
 # CHECK-LABEL: fun6:
-# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Folded Reload
+# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Reload
 # CHECK-NEXT: wfsqsb  %v16, %f0
 ---
 name:            fun6

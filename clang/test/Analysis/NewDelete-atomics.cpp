@@ -97,6 +97,32 @@ public:
   T *getPtr() const { return Ptr; } // no-warning
 };
 
+// Also IntrusivePtr with different name and outline release in destructor
+template <typename T>
+class DifferentlyNamedOutlineRelease {
+  T *Ptr;
+
+public:
+  DifferentlyNamedOutlineRelease(T *Ptr) : Ptr(Ptr) {
+    Ptr->incRef();
+  }
+
+  DifferentlyNamedOutlineRelease(const DifferentlyNamedOutlineRelease &Other) : Ptr(Other.Ptr) {
+    Ptr->incRef();
+  }
+
+  void releasePtr(void) {
+      delete Ptr;
+  }
+
+  ~DifferentlyNamedOutlineRelease() {
+    if (Ptr->decRef() == 1)
+      releasePtr();
+  }
+
+  T *getPtr() const { return Ptr; } // no-warning
+};
+
 void testDestroyLocalRefPtr() {
   IntrusivePtr<RawObj> p1(new RawObj());
   {
@@ -171,6 +197,26 @@ void testDestroyLocalRefPtrWithAtomicsDifferentlyNamed(
     const DifferentlyNamed<StdAtomicObj> &p1) {
   {
     DifferentlyNamed<StdAtomicObj> p2(p1);
+  }
+
+  // p1 still maintains ownership. The object is not deleted.
+  p1.getPtr()->foo(); // no-warning
+}
+
+void testDestroyLocalRefPtrWithOutlineRelease() {
+  DifferentlyNamedOutlineRelease <RawObj> p1(new RawObj());
+  {
+    DifferentlyNamedOutlineRelease <RawObj> p2(p1);
+  }
+
+  // p1 still maintains ownership. The object is not deleted.
+  p1.getPtr()->foo(); // no-warning
+}
+
+void testDestroySymbolicRefPtrWithOutlineRelease(
+    const DifferentlyNamedOutlineRelease<RawObj> &p1) {
+  {
+    DifferentlyNamedOutlineRelease <RawObj> p2(p1);
   }
 
   // p1 still maintains ownership. The object is not deleted.

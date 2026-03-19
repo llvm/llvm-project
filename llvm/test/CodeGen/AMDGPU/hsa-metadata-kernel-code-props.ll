@@ -23,7 +23,7 @@
 define amdgpu_kernel void @test(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) "amdgpu-no-implicitarg-ptr" {
+    ptr addrspace(1) %b) "amdgpu-no-implicitarg-ptr" "amdgpu-no-flat-scratch-init" {
 entry:
   %a.val = load half, ptr addrspace(1) %a
   %b.val = load half, ptr addrspace(1) %b
@@ -170,7 +170,7 @@ define amdgpu_kernel void @num_spilled_vgprs() #1 {
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 1
 
-attributes #0 = { "amdgpu-num-sgpr"="20" }
+attributes #0 = { "amdgpu-num-sgpr"="20" "amdgpu-no-flat-scratch-init" }
 attributes #1 = { "amdgpu-num-vgpr"="20" }
 attributes #2 = { "amdgpu-flat-work-group-size"="1,256" }
 

@@ -210,7 +210,7 @@ define i1 @shl_nz_bounded_cnt(i32 %cnt, i32 %y) {
 define <2 x i1> @shl_nz_bounded_cnt_vec_todo_no_common_bit(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @shl_nz_bounded_cnt_vec_todo_no_common_bit(
 ; CHECK-NEXT:    [[CNT:%.*]] = and <2 x i32> [[X:%.*]], <i32 16, i32 32>
-; CHECK-NEXT:    [[VAL:%.*]] = or <2 x i32> [[Y:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[VAL:%.*]] = or <2 x i32> [[Y:%.*]], splat (i32 16)
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[VAL]], [[CNT]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[SHL]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -315,7 +315,7 @@ define i1 @lshr_nz_bounded_cnt_fail(i32 %cnt, i32 %y) {
 
 define <2 x i1> @ashr_nz_bounded_cnt_vec_fail(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_nz_bounded_cnt_vec_fail(
-; CHECK-NEXT:    [[CNT:%.*]] = and <2 x i32> [[X:%.*]], <i32 24, i32 24>
+; CHECK-NEXT:    [[CNT:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 24)
 ; CHECK-NEXT:    [[VAL:%.*]] = or <2 x i32> [[Y:%.*]], <i32 131088, i32 268697601>
 ; CHECK-NEXT:    [[SHL:%.*]] = ashr <2 x i32> [[VAL]], [[CNT]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[SHL]], zeroinitializer
@@ -648,7 +648,7 @@ define <2 x i1> @bitcast_veci8_to_veci16(<4 x i8> %xx, <2 x i16> %ind) {
 
 define <3 x i1> @bitcast_veci3_to_veci4_fail_not_multiple(<4 x i3> %xx, <3 x i4> %ind) {
 ; CHECK-LABEL: @bitcast_veci3_to_veci4_fail_not_multiple(
-; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw <4 x i3> [[XX:%.*]], <i3 1, i3 1, i3 1, i3 1>
+; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw <4 x i3> [[XX:%.*]], splat (i3 1)
 ; CHECK-NEXT:    [[X:%.*]] = bitcast <4 x i3> [[XA]] to <3 x i4>
 ; CHECK-NEXT:    [[Z:%.*]] = or <3 x i4> [[X]], [[IND:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i4> [[Z]], zeroinitializer
@@ -663,7 +663,7 @@ define <3 x i1> @bitcast_veci3_to_veci4_fail_not_multiple(<4 x i3> %xx, <3 x i4>
 
 define <4 x i1> @bitcast_fail_veci16_to_veci8(<2 x i16> %xx, <4 x i8> %ind) {
 ; CHECK-LABEL: @bitcast_fail_veci16_to_veci8(
-; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw <2 x i16> [[XX:%.*]], <i16 1, i16 1>
+; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw <2 x i16> [[XX:%.*]], splat (i16 1)
 ; CHECK-NEXT:    [[X:%.*]] = bitcast <2 x i16> [[XA]] to <4 x i8>
 ; CHECK-NEXT:    [[Z:%.*]] = or <4 x i8> [[X]], [[IND:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[Z]], zeroinitializer
@@ -1294,7 +1294,7 @@ false:
 
 define <2 x i1> @range_metadata_vec(ptr %p, <2 x i32> %x) {
 ; CHECK-LABEL: @range_metadata_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %v = load <2 x i32>, ptr %p, !range !{i32 1, i32 100}
   %or = or <2 x i32> %v, %x
@@ -1377,7 +1377,7 @@ define i1 @neg_range_call(i8 %y) {
 
 define <2 x i1> @range_attr_vec(<2 x i8> range(i8 1, 0) %x, <2 x i8> %y) {
 ; CHECK-LABEL: @range_attr_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %or = or <2 x i8> %y, %x
   %cmp = icmp ne <2 x i8> %or, zeroinitializer
@@ -1401,7 +1401,7 @@ declare range(i8 -1, 1) <2 x i8> @returns_contain_zero_range_helper_vec()
 define <2 x i1> @range_return_vec(<2 x i8> %y) {
 ; CHECK-LABEL: @range_return_vec(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @returns_non_zero_range_helper_vec()
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %x = call <2 x i8> @returns_non_zero_range_helper_vec()
   %or = or <2 x i8> %y, %x
@@ -1427,7 +1427,7 @@ declare <2 x i8> @returns_i8_helper_vec()
 define <2 x i1> @range_call_vec(<2 x i8> %y) {
 ; CHECK-LABEL: @range_call_vec(
 ; CHECK-NEXT:    [[X:%.*]] = call range(i8 1, 0) <2 x i8> @returns_i8_helper_vec()
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %x = call range(i8 1, 0) <2 x i8> @returns_i8_helper_vec()
   %or = or <2 x i8> %y, %x

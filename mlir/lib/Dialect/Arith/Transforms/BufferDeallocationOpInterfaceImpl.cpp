@@ -67,8 +67,8 @@ struct SelectOpInterface
       return state.getMemrefWithUniqueOwnership(builder, value,
                                                 value.getParentBlock());
 
-    Value ownership = builder.create<arith::SelectOp>(
-        op->getLoc(), selectOp.getCondition(),
+    Value ownership = arith::SelectOp::create(
+        builder, op->getLoc(), selectOp.getCondition(),
         state.getOwnership(selectOp.getTrueValue(), block).getIndicator(),
         state.getOwnership(selectOp.getFalseValue(), block).getIndicator());
     return {selectOp.getResult(), ownership};

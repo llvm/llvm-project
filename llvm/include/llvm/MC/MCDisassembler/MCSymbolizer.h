@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -36,7 +37,7 @@ class raw_ostream;
 /// inside each disassembler, but would use the instr info to determine what
 /// operands are actually symbolizable, and in what way. I don't think this
 /// information exists right now.
-class MCSymbolizer {
+class LLVM_ABI MCSymbolizer {
 protected:
   MCContext &Ctx;
   std::unique_ptr<MCRelocationInfo> RelInfo;

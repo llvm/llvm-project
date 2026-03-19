@@ -31,6 +31,15 @@
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL uptr __hwasan_tls;
 
+namespace __sanitizer {
+void EarlySanitizerInit() {
+  // Setup the hwasan runtime before any `__libc_extensions_init`s are called.
+  // This is needed because libraries which define this function (like fdio)
+  // may be instrumented and either access `__hwasan_tls` or make runtime calls.
+  __hwasan_init();
+}
+}  // namespace __sanitizer
+
 namespace __hwasan {
 
 bool InitShadow() {
@@ -150,7 +159,16 @@ static void FinishThreadInitialization(Thread *thread) {
 }
 
 static void ThreadExitHook(void *hook, thrd_t self) {
-  Thread *thread = static_cast<Thread *>(hook);
+  // In the event this happens to be the initial thread, but thrd/pthread_exit
+  // was called on it, the hook will be NULL, but we can always access the
+  // current thread via the normal internal API.
+  Thread* thread;
+  if (hook) {
+    thread = static_cast<Thread*>(hook);
+    DCHECK_EQ(thread, GetCurrentThread());
+  } else {
+    thread = GetCurrentThread();
+  }
   atomic_signal_fence(memory_order_seq_cst);
   hwasanThreadList().ReleaseThread(thread);
 }

@@ -579,6 +579,54 @@ for.end:
   ret void
 }
 
+declare float @llvm.atan2.f32(float, float) nounwind readnone
+define void @atan2_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @atan2_v4f32_intrinsic(
+; CHECK: call <4 x float> @_simd_atan2_f4(<4 x float>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @llvm.atan2.f32(float %lv, float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @llvm.atan2.f64(double, double) nounwind readnone
+define void @atan2_v2f64_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @atan2_v2f64_intrinsic(
+; CHECK: call <2 x double> @_simd_atan2_d2(<2 x double>
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @llvm.atan2.f64(double %lv, double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
 declare float @llvm.cosh.f32(float) nounwind readnone
 define void @cosh_v4f32_intrinsic(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-LABEL: @cosh_v4f32_intrinsic(

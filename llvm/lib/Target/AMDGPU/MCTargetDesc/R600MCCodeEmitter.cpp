@@ -22,7 +22,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/TargetParser/SubtargetFeature.h"
 
 using namespace llvm;
 
@@ -52,7 +51,7 @@ private:
   void emit(uint32_t value, SmallVectorImpl<char> &CB) const;
   void emit(uint64_t value, SmallVectorImpl<char> &CB) const;
 
-  unsigned getHWReg(unsigned regNo) const;
+  unsigned getHWReg(MCRegister Reg) const;
 
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
@@ -145,8 +144,8 @@ void R600MCCodeEmitter::emit(uint64_t Value, SmallVectorImpl<char> &CB) const {
   support::endian::write(CB, Value, llvm::endianness::little);
 }
 
-unsigned R600MCCodeEmitter::getHWReg(unsigned RegNo) const {
-  return MRI.getEncodingValue(RegNo) & HW_REG_MASK;
+unsigned R600MCCodeEmitter::getHWReg(MCRegister Reg) const {
+  return MRI.getEncodingValue(Reg) & HW_REG_MASK;
 }
 
 uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
@@ -167,7 +166,7 @@ uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
     // We can't easily get the order of the current one, so compare against
     // the first one and adjust offset.
     const unsigned offset = (&MO == &MI.getOperand(0)) ? 0 : 4;
-    Fixups.push_back(MCFixup::create(offset, MO.getExpr(), FK_SecRel_4, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(offset, MO.getExpr(), FK_SecRel_4));
     return 0;
   }
 

@@ -91,3 +91,14 @@ amxor.w $a0, $a1, $a0
 amadd.d $a0, $a1, $a2, $a3
 # CHECK: :[[#@LINE+1]]:24: error: optional integer offset must be 0
 amadd.d $a0, $a1, $a2, 1
+
+## According to experiment results on real LA664 HW, the AMCAS instructions
+## are subject to the same constraint as the other 3-register atomic insns.
+## This is undocumented in v1.10 of the LoongArch Reference Manual.
+
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+amcas.b $a0, $a0, $a0
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+amcas.h $a0, $a0, $a1
+# CHECK: :[[#@LINE+1]]:13: error: $rd must be different from both $rk and $rj
+amcas_db.w $a0, $a1, $a0

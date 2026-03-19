@@ -4,6 +4,9 @@
 ! Test that the warnings are not generated with `-w` option.
 ! RUN: %flang -c -w %s 2>&1 | FileCheck --allow-empty %s -check-prefix=WARNING
 
+! Test that the warnings are not generated with `--no-warnings` option.
+! RUN: %flang -c --no-warnings %s 2>&1 | FileCheck --allow-empty %s -check-prefix=WARNING
+
 ! Test that warnings are portability messages are generated.
 ! RUN: %flang -c -pedantic %s 2>&1 | FileCheck %s -check-prefixes=DEFAULT,PORTABILITY
 

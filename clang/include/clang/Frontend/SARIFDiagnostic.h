@@ -23,7 +23,7 @@ namespace clang {
 class SARIFDiagnostic : public DiagnosticRenderer {
 public:
   SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
-                  DiagnosticOptions *DiagOpts, SarifDocumentWriter *Writer);
+                  DiagnosticOptions &DiagOpts, SarifDocumentWriter *Writer);
 
   ~SARIFDiagnostic() = default;
 
@@ -63,10 +63,20 @@ private:
                                   ArrayRef<CharSourceRange> Ranges,
                                   const Diagnostic &Diag);
 
+  SarifResult addRelatedLocationToResult(SarifResult Result, FullSourceLoc Loc,
+                                         PresumedLoc PLoc);
+
+  llvm::SmallVector<CharSourceRange>
+  getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                   ArrayRef<CharSourceRange> Ranges);
+
   SarifRule addDiagnosticLevelToRule(SarifRule Rule,
                                      DiagnosticsEngine::Level Level);
 
   llvm::StringRef emitFilename(StringRef Filename, const SourceManager &SM);
+
+  llvm::SmallVector<std::pair<FullSourceLoc, PresumedLoc>>
+      RelatedLocationsCache;
 };
 
 } // end namespace clang

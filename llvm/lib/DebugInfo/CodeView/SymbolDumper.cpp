@@ -621,6 +621,17 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           RegRelativeIndirSym &RegRelIndir) {
+  W.printHex("Offset", RegRelIndir.Offset);
+  printTypeIndex("Type", RegRelIndir.Type);
+  W.printEnum("Register", uint16_t(RegRelIndir.Register),
+              getRegisterNames(CompilationCPUType));
+  W.printHex("OffsetInUdt", RegRelIndir.OffsetInUdt);
+  W.printString("VarName", RegRelIndir.Name);
+  return Error::success();
+}
+
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
                                            ThreadLocalDataSym &Data) {
   StringRef LinkageName;
   if (ObjDelegate) {
@@ -669,6 +680,13 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   W.printNumber("BranchSegment", JumpTable.BranchSegment);
   W.printNumber("TableSegment", JumpTable.TableSegment);
   W.printNumber("EntriesCount", JumpTable.EntriesCount);
+  return Error::success();
+}
+
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           HotPatchFuncSym &HotPatchFunc) {
+  printTypeIndex("Function", HotPatchFunc.Function);
+  W.printString("Name", HotPatchFunc.Name);
   return Error::success();
 }
 

@@ -2,7 +2,12 @@
 ; RUN: opt -passes=nsan -nsan-shadow-type-mapping=dqq -nsan-truncate-fcmp-eq=false -S %s | FileCheck %s --check-prefixes=CHECK,DQQ
 ; RUN: opt -passes=nsan -nsan-shadow-type-mapping=dlq -nsan-truncate-fcmp-eq=false -S %s | FileCheck %s --check-prefixes=CHECK,DLQ
 
+; RUN: opt -passes=nsan -nsan-shadow-type-mapping=dqq -nsan-truncate-fcmp-eq=false -use-constant-fp-for-fixed-length-splat -S %s | FileCheck %s --check-prefixes=CHECK,DQQ
+; RUN: opt -passes=nsan -nsan-shadow-type-mapping=dlq -nsan-truncate-fcmp-eq=false -use-constant-fp-for-fixed-length-splat -S %s | FileCheck %s --check-prefixes=CHECK,DLQ
+
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
+
+declare float @declaration_only(float %a) sanitize_numerical_stability
 
 ; Tests with simple control flow.
 
@@ -132,8 +137,8 @@ define <2 x float> @return_param_add_return_float_vector(<2 x float> %a) sanitiz
 ; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[A:%.*]] to <2 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], <2 x double> [[TMP2]], <2 x double> [[TMP3]]
 ; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
-; CHECK-NEXT:    [[B:%.*]] = fadd <2 x float> [[A]], <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP4]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[B:%.*]] = fadd <2 x float> [[A]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP4]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[B]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @__nsan_internal_check_float_d(float [[TMP6]], double [[TMP7]], i32 1, i64 0)
@@ -394,8 +399,8 @@ define void @load_add_store_vector(<2 x float>* %a) sanitize_numerical_stability
 ; CHECK-NEXT:    br label [[TMP6]]
 ; CHECK:       6:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x double> [ [[TMP3]], [[TMP2]] ], [ [[TMP5]], [[TMP4]] ]
-; CHECK-NEXT:    [[C:%.*]] = fadd <2 x float> [[B]], <float 1.000000e+00, float 1.000000e+00>
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[C:%.*]] = fadd <2 x float> [[B]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP7]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP9:%.*]] = call ptr @__nsan_get_shadow_ptr_for_float_store(ptr [[A]], i64 2)
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[C]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP8]], i64 0
@@ -496,80 +501,6 @@ define void @call_fn_taking_float() sanitize_numerical_stability {
 entry:
   call void @takes_floats(float 1.0, i8 2, double 3.0, x86_fp80 0xK3FC9E69594BEC44DE000)
   ret void
-}
-
-declare float @llvm.sin.f32(float) readnone
-
-define float @call_sin_intrinsic() sanitize_numerical_stability {
-; CHECK-LABEL: @call_sin_intrinsic(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.sin.f32(float 1.000000e+00)
-; CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.sin.f64(double 1.000000e+00)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_float_d(float [[R]], double [[TMP0]], i32 1, i64 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext float [[R]] to double
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], double [[TMP3]], double [[TMP0]]
-; CHECK-NEXT:    store i64 ptrtoint (ptr @call_sin_intrinsic to i64), ptr @__nsan_shadow_ret_tag, align 8
-; CHECK-NEXT:    store double [[TMP4]], ptr @__nsan_shadow_ret_ptr, align 8
-; CHECK-NEXT:    ret float [[R]]
-;
-entry:
-  %r = call float @llvm.sin.f32(float 1.0)
-  ret float %r
-}
-
-declare float @sinf(float)
-
-define float @call_sinf_libfunc() sanitize_numerical_stability {
-; CHECK-LABEL: @call_sinf_libfunc(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call float @sinf(float 1.000000e+00) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.sin.f64(double 1.000000e+00)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_float_d(float [[R]], double [[TMP0]], i32 1, i64 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext float [[R]] to double
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], double [[TMP3]], double [[TMP0]]
-; CHECK-NEXT:    store i64 ptrtoint (ptr @call_sinf_libfunc to i64), ptr @__nsan_shadow_ret_tag, align 8
-; CHECK-NEXT:    store double [[TMP4]], ptr @__nsan_shadow_ret_ptr, align 8
-; CHECK-NEXT:    ret float [[R]]
-;
-entry:
-  %r = call float @sinf(float 1.0)
-  ret float %r
-}
-
-declare double @sin(double)
-
-; FIXME: nsan uses `sin(double)` for fp128.
-define double @call_sin_libfunc() sanitize_numerical_stability {
-; DQQ-LABEL: @call_sin_libfunc(
-; DQQ-NEXT:  entry:
-; DQQ-NEXT:    [[R:%.*]] = call double @sin(double 1.000000e+00) #[[ATTR4]]
-; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 0xK3FFF8000000000000000)
-; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
-; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
-; DQQ-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 1
-; DQQ-NEXT:    [[TMP4:%.*]] = fpext double [[R]] to fp128
-; DQQ-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], fp128 [[TMP4]], fp128 [[TMP1]]
-; DQQ-NEXT:    store i64 ptrtoint (ptr @call_sin_libfunc to i64), ptr @__nsan_shadow_ret_tag, align 8
-; DQQ-NEXT:    store fp128 [[TMP5]], ptr @__nsan_shadow_ret_ptr, align 16
-; DQQ-NEXT:    ret double [[R]]
-;
-; DLQ-LABEL: @call_sin_libfunc(
-; DLQ-NEXT:  entry:
-; DLQ-NEXT:    [[R:%.*]] = call double @sin(double 1.000000e+00) #[[ATTR4]]
-; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 0xK3FFF8000000000000000)
-; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
-; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
-; DLQ-NEXT:    [[TMP3:%.*]] = fpext double [[R]] to x86_fp80
-; DLQ-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], x86_fp80 [[TMP3]], x86_fp80 [[TMP0]]
-; DLQ-NEXT:    store i64 ptrtoint (ptr @call_sin_libfunc to i64), ptr @__nsan_shadow_ret_tag, align 8
-; DLQ-NEXT:    store x86_fp80 [[TMP4]], ptr @__nsan_shadow_ret_ptr, align 16
-; DLQ-NEXT:    ret double [[R]]
-;
-entry:
-  %r = call double @sin(double 1.0)
-  ret double %r
 }
 
 declare double @frexp(double, i32*)
@@ -770,8 +701,8 @@ define void @vector_shuffle(<2 x float> %0) sanitize_numerical_stability {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x float> [[TMP0:%.*]] to <2 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], <2 x double> [[TMP3]], <2 x double> [[TMP4]]
 ; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> <double 1.000000e+00, double 1.000000e+00>, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> splat (float 1.000000e+00), <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> splat (double 1.000000e+00), <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -844,7 +775,7 @@ define float @sub_fabs(float %a, float %b) sanitize_numerical_stability {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = fpext float [[S]] to double
 ; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP10]], double [[TMP11]], double [[TMP8]]
-; CHECK-NEXT:    [[R:%.*]] = call float @fabsf(float [[S]]) #[[ATTR4]]
+; CHECK-NEXT:    [[R:%.*]] = call float @fabsf(float [[S]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call double @llvm.fabs.f64(double [[TMP8]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @__nsan_internal_check_float_d(float [[R]], double [[TMP13]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[TMP14]], 1
@@ -859,33 +790,6 @@ entry:
   %r = call float @fabsf(float %s)
   ret float %r
 }
-
-; Note that the `unsafe-fp-math` from the function attributes should be moved to
-; individual instructions, with the shadow instructions NOT getting the attribute.
-define float @param_add_return_float_unsafe_fp_math(float %a) #0 {
-; CHECK-LABEL: @param_add_return_float_unsafe_fp_math(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__nsan_shadow_args_tag, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], ptrtoint (ptr @param_add_return_float_unsafe_fp_math to i64)
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr @__nsan_shadow_args_ptr, align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fpext float [[A:%.*]] to double
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP1]], double [[TMP2]], double [[TMP3]]
-; CHECK-NEXT:    store i64 0, ptr @__nsan_shadow_args_tag, align 8
-; CHECK-NEXT:    [[B:%.*]] = fadd fast float [[A]], 1.000000e+00
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd double [[TMP4]], 1.000000e+00
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @__nsan_internal_check_float_d(float [[B]], double [[TMP5]], i32 1, i64 0)
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = fpext float [[B]] to double
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP7]], double [[TMP8]], double [[TMP5]]
-; CHECK-NEXT:    store i64 ptrtoint (ptr @param_add_return_float_unsafe_fp_math to i64), ptr @__nsan_shadow_ret_tag, align 8
-; CHECK-NEXT:    store double [[TMP9]], ptr @__nsan_shadow_ret_ptr, align 8
-; CHECK-NEXT:    ret float [[B]]
-;
-entry:
-  %b = fadd float %a, 1.0
-  ret float %b
-}
-
 
 define void @truncate(<2 x double> %0) sanitize_numerical_stability {
 ; DQQ-LABEL: @truncate(
@@ -936,4 +840,4 @@ entry:
 }
 
 
-attributes #0 = { nounwind readonly uwtable sanitize_numerical_stability "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind readonly uwtable sanitize_numerical_stability "correctly-rounded-divide-sqrt-fp-math"="false" denormal_fpenv(preservesign, float: ieee) "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }

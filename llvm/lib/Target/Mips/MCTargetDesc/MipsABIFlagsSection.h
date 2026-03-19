@@ -143,6 +143,8 @@ public:
       ISAExtension = Mips::AFL_EXT_OCTEONP;
     else if (P.hasCnMips())
       ISAExtension = Mips::AFL_EXT_OCTEON;
+    else if (P.isR5900())
+      ISAExtension = Mips::AFL_EXT_5900;
     else
       ISAExtension = Mips::AFL_EXT_NONE;
   }

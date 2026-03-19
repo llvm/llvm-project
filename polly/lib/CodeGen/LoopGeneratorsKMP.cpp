@@ -28,27 +28,23 @@ void ParallelLoopGeneratorKMP::createCallSpawnThreads(Value *SubFn,
 
   if (!KMPCMicroTy) {
     // void (*kmpc_micro)(kmp_int32 *global_tid, kmp_int32 *bound_tid, ...)
-    Type *MicroParams[] = {Builder.getInt32Ty()->getPointerTo(),
-                           Builder.getInt32Ty()->getPointerTo()};
+    Type *MicroParams[] = {Builder.getPtrTy(0), Builder.getPtrTy(0)};
 
     KMPCMicroTy = FunctionType::get(Builder.getVoidTy(), MicroParams, true);
   }
 
   // If F is not available, declare it.
   if (!F) {
-    StructType *IdentTy =
-        StructType::getTypeByName(M->getContext(), "struct.ident_t");
-
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
-    Type *Params[] = {IdentTy->getPointerTo(), Builder.getInt32Ty(),
-                      KMPCMicroTy->getPointerTo()};
+    Type *Params[] = {Builder.getPtrTy(0), Builder.getInt32Ty(),
+                      Builder.getPtrTy(0)};
 
     FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Params, true);
     F = Function::Create(Ty, Linkage, Name, M);
   }
 
-  Value *Task = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      SubFn, KMPCMicroTy->getPointerTo());
+  Value *Task =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SubFn, Builder.getPtrTy(0));
 
   Value *Args[] = {SourceLocationInfo,
                    Builder.getInt32(4) /* Number of arguments (w/o Task) */,
@@ -77,12 +73,9 @@ void ParallelLoopGeneratorKMP::deployParallelExecution(Function *SubFn,
 }
 
 Function *ParallelLoopGeneratorKMP::prepareSubFnDefinition(Function *F) const {
-  std::vector<Type *> Arguments = {Builder.getInt32Ty()->getPointerTo(),
-                                   Builder.getInt32Ty()->getPointerTo(),
-                                   LongType,
-                                   LongType,
-                                   LongType,
-                                   Builder.getPtrTy()};
+  std::vector<Type *> Arguments = {
+      Builder.getPtrTy(0), Builder.getPtrTy(0), LongType, LongType, LongType,
+      Builder.getPtrTy()};
 
   FunctionType *FT = FunctionType::get(Builder.getVoidTy(), Arguments, false);
   Function *SubFn = Function::Create(FT, Function::InternalLinkage,
@@ -138,8 +131,11 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
 
   // Create basic blocks.
   BasicBlock *HeaderBB = BasicBlock::Create(Context, "polly.par.setup", SubFn);
+  // Add terminator so that DT computation doesn't fail.
+  auto *UI = new UnreachableInst(Context, HeaderBB);
   SubFnDT = std::make_unique<DominatorTree>(*SubFn);
   SubFnLI = std::make_unique<LoopInfo>(*SubFnDT);
+  UI->eraseFromParent();
 
   BasicBlock *ExitBB = BasicBlock::Create(Context, "polly.par.exit", SubFn);
   BasicBlock *CheckNextBB =
@@ -289,7 +285,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   }
 
   Builder.CreateBr(CheckNextBB);
-  Builder.SetInsertPoint(&*--Builder.GetInsertPoint());
+  Builder.SetInsertPoint(std::prev(Builder.GetInsertPoint()));
   BasicBlock *AfterBB;
   Value *IV = createLoop(LB, UB, SequentialLoopStride, Builder, *SubFnLI,
                          *SubFnDT, AfterBB, ICmpInst::ICMP_SLE, nullptr, true,
@@ -305,7 +301,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
     createCallStaticFini(ID);
   }
   Builder.CreateRetVoid();
-  Builder.SetInsertPoint(&*LoopBody);
+  Builder.SetInsertPoint(LoopBody);
 
   // FIXME: Call SubFnDT->verify() and SubFnLI->verify() to check that the
   // DominatorTree/LoopInfo has been created correctly. Alternatively, recreate
@@ -320,11 +316,8 @@ Value *ParallelLoopGeneratorKMP::createCallGlobalThreadNum() {
 
   // If F is not available, declare it.
   if (!F) {
-    StructType *IdentTy =
-        StructType::getTypeByName(M->getContext(), "struct.ident_t");
-
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
-    Type *Params[] = {IdentTy->getPointerTo()};
+    Type *Params[] = {Builder.getPtrTy(0)};
 
     FunctionType *Ty = FunctionType::get(Builder.getInt32Ty(), Params, false);
     F = Function::Create(Ty, Linkage, Name, M);
@@ -342,11 +335,8 @@ void ParallelLoopGeneratorKMP::createCallPushNumThreads(Value *GlobalThreadID,
 
   // If F is not available, declare it.
   if (!F) {
-    StructType *IdentTy =
-        StructType::getTypeByName(M->getContext(), "struct.ident_t");
-
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
-    Type *Params[] = {IdentTy->getPointerTo(), Builder.getInt32Ty(),
+    Type *Params[] = {Builder.getPtrTy(0), Builder.getInt32Ty(),
                       Builder.getInt32Ty()};
 
     FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Params, false);
@@ -367,20 +357,18 @@ void ParallelLoopGeneratorKMP::createCallStaticInit(Value *GlobalThreadID,
   const std::string Name =
       is64BitArch() ? "__kmpc_for_static_init_8" : "__kmpc_for_static_init_4";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy =
-      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
 
-    Type *Params[] = {IdentTy->getPointerTo(),
+    Type *Params[] = {Builder.getPtrTy(0),
                       Builder.getInt32Ty(),
                       Builder.getInt32Ty(),
-                      Builder.getInt32Ty()->getPointerTo(),
-                      LongType->getPointerTo(),
-                      LongType->getPointerTo(),
-                      LongType->getPointerTo(),
+                      Builder.getPtrTy(0),
+                      Builder.getPtrTy(0),
+                      Builder.getPtrTy(0),
+                      Builder.getPtrTy(0),
                       LongType,
                       LongType};
 
@@ -408,13 +396,11 @@ void ParallelLoopGeneratorKMP::createCallStaticInit(Value *GlobalThreadID,
 void ParallelLoopGeneratorKMP::createCallStaticFini(Value *GlobalThreadID) {
   const std::string Name = "__kmpc_for_static_fini";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy =
-      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
-    Type *Params[] = {IdentTy->getPointerTo(), Builder.getInt32Ty()};
+    Type *Params[] = {Builder.getPtrTy(0), Builder.getInt32Ty()};
     FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Params, false);
     F = Function::Create(Ty, Linkage, Name, M);
   }
@@ -432,14 +418,12 @@ void ParallelLoopGeneratorKMP::createCallDispatchInit(Value *GlobalThreadID,
   const std::string Name =
       is64BitArch() ? "__kmpc_dispatch_init_8" : "__kmpc_dispatch_init_4";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy =
-      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
 
-    Type *Params[] = {IdentTy->getPointerTo(),
+    Type *Params[] = {Builder.getPtrTy(0),
                       Builder.getInt32Ty(),
                       Builder.getInt32Ty(),
                       LongType,
@@ -474,19 +458,14 @@ Value *ParallelLoopGeneratorKMP::createCallDispatchNext(Value *GlobalThreadID,
   const std::string Name =
       is64BitArch() ? "__kmpc_dispatch_next_8" : "__kmpc_dispatch_next_4";
   Function *F = M->getFunction(Name);
-  StructType *IdentTy =
-      StructType::getTypeByName(M->getContext(), "struct.ident_t");
 
   // If F is not available, declare it.
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
 
-    Type *Params[] = {IdentTy->getPointerTo(),
-                      Builder.getInt32Ty(),
-                      Builder.getInt32Ty()->getPointerTo(),
-                      LongType->getPointerTo(),
-                      LongType->getPointerTo(),
-                      LongType->getPointerTo()};
+    Type *Params[] = {Builder.getPtrTy(0), Builder.getInt32Ty(),
+                      Builder.getPtrTy(0), Builder.getPtrTy(0),
+                      Builder.getPtrTy(0), Builder.getPtrTy(0)};
 
     FunctionType *Ty = FunctionType::get(Builder.getInt32Ty(), Params, false);
     F = Function::Create(Ty, Linkage, Name, M);

@@ -19,8 +19,10 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 
 namespace clang {
 
@@ -40,8 +42,7 @@ void SemaPPC::checkAIXMemberAlignment(SourceLocation Loc, const Expr *Arg) {
     return;
 
   QualType ArgType = Arg->getType();
-  for (const FieldDecl *FD :
-       ArgType->castAs<RecordType>()->getDecl()->fields()) {
+  for (const FieldDecl *FD : ArgType->castAsRecordDecl()->fields()) {
     if (const auto *AA = FD->getAttr<AlignedAttr>()) {
       CharUnits Alignment = getASTContext().toCharUnitsFromBits(
           AA->getAlignment(getASTContext()));
@@ -87,6 +88,22 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_ppc_fetch_and_andlp:
   case PPC::BI__builtin_ppc_fetch_and_orlp:
   case PPC::BI__builtin_ppc_fetch_and_swaplp:
+  case PPC::BI__builtin_amo_lwat:
+  case PPC::BI__builtin_amo_ldat:
+  case PPC::BI__builtin_amo_lwat_s:
+  case PPC::BI__builtin_amo_ldat_s:
+  case PPC::BI__builtin_amo_lwat_cond:
+  case PPC::BI__builtin_amo_ldat_cond:
+  case PPC::BI__builtin_amo_lwat_cond_s:
+  case PPC::BI__builtin_amo_ldat_cond_s:
+  case PPC::BI__builtin_amo_stwat:
+  case PPC::BI__builtin_amo_stdat:
+  case PPC::BI__builtin_amo_stwat_s:
+  case PPC::BI__builtin_amo_stdat_s:
+  case PPC::BI__builtin_amo_lwat_csne:
+  case PPC::BI__builtin_amo_ldat_csne:
+  case PPC::BI__builtin_amo_lwat_csne_s:
+  case PPC::BI__builtin_amo_ldat_csne_s:
     return true;
   }
   return false;
@@ -97,15 +114,71 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
                                           CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
   bool IsTarget64Bit = TI.getTypeWidth(TI.getIntPtrType()) == 64;
-  llvm::APSInt Result;
 
   if (isPPC_64Builtin(BuiltinID) && !IsTarget64Bit)
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)
            << TheCall->getSourceRange();
 
+  // Common BCD type-validation helpers
+  // Emit error diagnostics and return true on success
+  //  - IsTypeVecUChar: enforces vector unsigned char
+  //  - IsIntType: enforces any integer type
+  // Lambdas centralize type checks for BCD builtin handlers
+
+  // Lambda 1: verify vector unsigned char type
+  auto IsTypeVecUChar = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
+    QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
+                                             VectorKind::AltiVecVector);
+    if (Context.hasSameType(ArgTy, VecType))
+      return true;
+
+    Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
+         diag::err_ppc_invalid_arg_type)
+        << ArgIndex << VecType << ArgTy;
+    return false;
+  };
+
+  // Lambda 2: verify integer type
+  auto IsIntType = [&](QualType ArgTy, unsigned ArgIndex) -> bool {
+    if (ArgTy->isIntegerType())
+      return true;
+
+    Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
+         diag::err_ppc_invalid_arg_type)
+        << ArgIndex << "integer" << ArgTy;
+    return false;
+  };
+
   switch (BuiltinID) {
   default:
     return false;
+  case PPC::BI__builtin_ppc_bcdsetsign: {
+    // Arg0 must be vector unsigned char
+    if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
+      return false;
+
+    // Restrict Arg1 constant range (0–1)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
+  }
+  case PPC::BI__builtin_ppc_national2packed:
+  case PPC::BI__builtin_ppc_packed2zoned:
+  case PPC::BI__builtin_ppc_zoned2packed:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case PPC::BI__builtin_ppc_bcdshift:
+  case PPC::BI__builtin_ppc_bcdshiftround:
+  case PPC::BI__builtin_ppc_bcdtruncate: {
+
+    // Arg0 must be vector unsigned char
+    if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
+      return false;
+
+    // Arg1 must be integer type
+    if (!IsIntType(TheCall->getArg(1)->getType(), 1))
+      return false;
+
+    // Restrict Arg2 constant range (0–1)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 1);
+  }
   case PPC::BI__builtin_altivec_crypto_vshasigmaw:
   case PPC::BI__builtin_altivec_crypto_vshasigmad:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||
@@ -249,6 +322,69 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   case PPC::BI__builtin_##Name:                                                \
     return BuiltinPPCMMACall(TheCall, BuiltinID, Types);
 #include "clang/Basic/BuiltinsPPC.def"
+  case PPC::BI__builtin_amo_lwat:
+  case PPC::BI__builtin_amo_ldat:
+  case PPC::BI__builtin_amo_lwat_s:
+  case PPC::BI__builtin_amo_ldat_s: {
+    llvm::APSInt Result;
+    if (SemaRef.BuiltinConstantArg(TheCall, 2, Result))
+      return true;
+    unsigned Val = Result.getZExtValue();
+
+    bool IsUnsigned = (BuiltinID == PPC::BI__builtin_amo_lwat ||
+                       BuiltinID == PPC::BI__builtin_amo_ldat);
+
+    bool IsValid = IsUnsigned
+                       ? llvm::is_contained({0u, 1u, 2u, 3u, 4u, 6u, 8u}, Val)
+                       : llvm::is_contained({0u, 5u, 7u, 8u}, Val);
+
+    if (IsValid)
+      return false;
+
+    Expr *Arg = TheCall->getArg(2);
+    return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
+           << toString(Result, 10) << (IsUnsigned ? "0-4, 6" : "0, 5, 7") << "8"
+           << Arg->getSourceRange();
+  }
+  case PPC::BI__builtin_amo_lwat_cond:
+  case PPC::BI__builtin_amo_ldat_cond:
+  case PPC::BI__builtin_amo_lwat_cond_s:
+  case PPC::BI__builtin_amo_ldat_cond_s: {
+    llvm::APSInt Result;
+    if (SemaRef.BuiltinConstantArg(TheCall, 1, Result))
+      return true;
+    unsigned Val = Result.getZExtValue();
+    if (llvm::is_contained({24u, 25u, 28u}, Val))
+      return false;
+
+    Expr *Arg = TheCall->getArg(1);
+    return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
+           << toString(Result, 10) << "24, 25" << "28" << Arg->getSourceRange();
+  }
+  case PPC::BI__builtin_amo_stwat:
+  case PPC::BI__builtin_amo_stdat:
+  case PPC::BI__builtin_amo_stwat_s:
+  case PPC::BI__builtin_amo_stdat_s: {
+    llvm::APSInt Result;
+    if (SemaRef.BuiltinConstantArg(TheCall, 2, Result))
+      return true;
+    unsigned Val = Result.getZExtValue();
+
+    bool IsUnsigned = (BuiltinID == PPC::BI__builtin_amo_stwat ||
+                       BuiltinID == PPC::BI__builtin_amo_stdat);
+
+    bool IsValid = IsUnsigned
+                       ? llvm::is_contained({0u, 1u, 2u, 3u, 4u, 6u, 24u}, Val)
+                       : llvm::is_contained({0u, 5u, 7u, 24u}, Val);
+
+    if (IsValid)
+      return false;
+
+    Expr *Arg = TheCall->getArg(2);
+    return SemaRef.Diag(Arg->getBeginLoc(), diag::err_argument_invalid_range)
+           << toString(Result, 10) << (IsUnsigned ? "0-4, 6" : "0, 5, 7")
+           << "24" << Arg->getSourceRange();
+  }
   }
   llvm_unreachable("must return from switch");
 }
@@ -438,4 +574,72 @@ bool SemaPPC::BuiltinVSX(CallExpr *TheCall) {
   return false;
 }
 
+bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
+                                    const SmallVectorImpl<SourceLocation> &Locs,
+                                    SmallVectorImpl<SmallString<64>> &NewParams,
+                                    SourceLocation AttrLoc) {
+  using namespace DiagAttrParams;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
+
+  auto &TargetInfo = getASTContext().getTargetInfo();
+  bool HasDefault = false;
+  bool HasComma = false;
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
+
+    if (Param.empty() || Param.ends_with(','))
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << "" << TargetClones;
+
+    if (Param.contains(','))
+      HasComma = true;
+
+    StringRef LHS;
+    StringRef RHS = Param;
+    do {
+      std::tie(LHS, RHS) = RHS.split(',');
+      LHS = LHS.trim();
+      const SourceLocation &CurLoc =
+          Loc.getLocWithOffset(LHS.data() - Param.data());
+
+      if (LHS.starts_with("cpu=")) {
+        StringRef CPUStr = LHS.drop_front(sizeof("cpu=") - 1);
+        if (!TargetInfo.isValidCPUName(CPUStr))
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unknown << CPU << CPUStr << TargetClones;
+        else if (!TargetInfo.validateCpuIs(CPUStr))
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << CPU << CPUStr << TargetClones;
+      } else if (LHS == "default") {
+        HasDefault = true;
+      } else {
+        // it's a feature string, but not supported yet.
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << LHS << TargetClones;
+      }
+      SmallString<64> CPU;
+      if (LHS.starts_with("cpu=")) {
+        CPU.append("cpu=");
+        CPU.append(
+            llvm::PPC::normalizeCPUName(LHS.drop_front(sizeof("cpu=") - 1)));
+        LHS = CPU.str();
+      }
+      if (llvm::is_contained(NewParams, LHS)) {
+        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+        continue;
+      }
+      NewParams.push_back(LHS);
+    } while (!RHS.empty());
+  }
+  if (HasComma && Params.size() > 1)
+    Diag(Locs[0], diag::warn_target_clone_mixed_values);
+
+  if (!HasDefault)
+    return Diag(AttrLoc, diag::err_target_clone_must_have_default);
+
+  return false;
+}
 } // namespace clang

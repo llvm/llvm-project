@@ -4,7 +4,7 @@
 define void @PR50374() {
 ; CHECK-LABEL: PR50374:
 ; CHECK:       # %bb.0: # %while.84.body.preheader
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %vector.body1999
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_1

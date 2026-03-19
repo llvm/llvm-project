@@ -1,4 +1,5 @@
 # RUN: llc -verify-machineinstrs -mtriple=amdgcn -run-pass si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -verify-machineinstrs -mtriple=amdgcn -passes si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
 # Check that add with carry out isn't incorrectly reduced to e32 when
 # the carry out is a virtual register.
 

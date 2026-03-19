@@ -76,8 +76,8 @@ declare void @llvm.va_start.p0(ptr)
 declare void @llvm.va_copy.p0(ptr, ptr)
 declare void @llvm.va_end.p0(ptr)
 
-; CHECK-LABEL: llvm.func @variadic_function
-define void @variadic_function(i32 %X, ...) {
+; CHECK-LABEL: llvm.func @variadic_function(%arg0: i32, ...) -> i32
+define i32 @variadic_function(i32 %X, ...) {
   ; CHECK: %[[ALLOCA0:.+]] = llvm.alloca %{{.*}} x !llvm.struct<"struct.va_list", (ptr)> {{.*}} : (i32) -> !llvm.ptr
   %ap = alloca %struct.va_list
   ; CHECK: llvm.intr.vastart %[[ALLOCA0]]
@@ -87,11 +87,13 @@ define void @variadic_function(i32 %X, ...) {
   %aq = alloca ptr
   ; CHECK: llvm.intr.vacopy %[[ALLOCA0]] to %[[ALLOCA1]]
   call void @llvm.va_copy.p0(ptr %aq, ptr %ap)
+
+  %ret = va_arg ptr %aq, i32
   ; CHECK: llvm.intr.vaend %[[ALLOCA1]]
   call void @llvm.va_end.p0(ptr %aq)
 
   ; CHECK: llvm.intr.vaend %[[ALLOCA0]]
   call void @llvm.va_end.p0(ptr %ap)
   ; CHECK: llvm.return
-  ret void
+  ret i32 %ret
 }

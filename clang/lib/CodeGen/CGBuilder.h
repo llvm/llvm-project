@@ -11,9 +11,12 @@
 
 #include "Address.h"
 #include "CGValue.h"
+#include "CodeGenModule.h"
 #include "CodeGenTypeCache.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 
@@ -43,7 +46,7 @@ private:
 
 typedef CGBuilderInserter CGBuilderInserterTy;
 
-typedef llvm::IRBuilder<llvm::ConstantFolder, CGBuilderInserterTy>
+typedef llvm::IRBuilder<llvm::TargetFolder, CGBuilderInserterTy>
     CGBuilderBaseTy;
 
 class CGBuilderTy : public CGBuilderBaseTy {
@@ -63,40 +66,48 @@ class CGBuilderTy : public CGBuilderBaseTy {
   Address createConstGEP2_32(Address Addr, unsigned Idx0, unsigned Idx1,
                              const llvm::Twine &Name) {
     const llvm::DataLayout &DL = BB->getDataLayout();
-    llvm::GetElementPtrInst *GEP;
+    llvm::Value *V;
     if (IsInBounds)
-      GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
-          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
-          Name));
+      V = CreateConstInBoundsGEP2_32(Addr.getElementType(),
+                                     emitRawPointerFromAddress(Addr), Idx0,
+                                     Idx1, Name);
     else
-      GEP = cast<llvm::GetElementPtrInst>(CreateConstGEP2_32(
-          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
-          Name));
+      V = CreateConstGEP2_32(Addr.getElementType(),
+                             emitRawPointerFromAddress(Addr), Idx0, Idx1, Name);
     llvm::APInt Offset(
         DL.getIndexSizeInBits(Addr.getType()->getPointerAddressSpace()), 0,
         /*isSigned=*/true);
-    if (!GEP->accumulateConstantOffset(DL, Offset))
-      llvm_unreachable("offset of GEP with constants is always computable");
-    return Address(GEP, GEP->getResultElementType(),
+    if (!llvm::GEPOperator::accumulateConstantOffset(
+            Addr.getElementType(), {getInt32(Idx0), getInt32(Idx1)}, DL,
+            Offset))
+      llvm_unreachable(
+          "accumulateConstantOffset with constant indices should not fail.");
+    llvm::Type *ElementTy = llvm::GetElementPtrInst::getIndexedType(
+        Addr.getElementType(), {Idx0, Idx1});
+    return Address(V, ElementTy,
                    Addr.getAlignment().alignmentAtOffset(
                        CharUnits::fromQuantity(Offset.getSExtValue())),
                    IsInBounds ? Addr.isKnownNonNull() : NotKnownNonNull);
   }
 
 public:
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::LLVMContext &C)
-      : CGBuilderBaseTy(C), TypeCache(TypeCache) {}
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::LLVMContext &C,
-              const llvm::ConstantFolder &F,
+  CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C)
+      : CGBuilderBaseTy(C, llvm::TargetFolder(CGM.getDataLayout())),
+        TypeCache(CGM) {}
+  CGBuilderTy(const CodeGenModule &CGM, llvm::LLVMContext &C,
               const CGBuilderInserterTy &Inserter)
-      : CGBuilderBaseTy(C, F, Inserter), TypeCache(TypeCache) {}
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::Instruction *I)
-      : CGBuilderBaseTy(I), TypeCache(TypeCache) {}
-  CGBuilderTy(const CodeGenTypeCache &TypeCache, llvm::BasicBlock *BB)
-      : CGBuilderBaseTy(BB), TypeCache(TypeCache) {}
+      : CGBuilderBaseTy(C, llvm::TargetFolder(CGM.getDataLayout()), Inserter),
+        TypeCache(CGM) {}
+  CGBuilderTy(const CodeGenModule &CGM, llvm::Instruction *I)
+      : CGBuilderBaseTy(I->getParent(), I->getIterator(),
+                        llvm::TargetFolder(CGM.getDataLayout())),
+        TypeCache(CGM) {}
+  CGBuilderTy(const CodeGenModule &CGM, llvm::BasicBlock *BB)
+      : CGBuilderBaseTy(BB, llvm::TargetFolder(CGM.getDataLayout())),
+        TypeCache(CGM) {}
 
   llvm::ConstantInt *getSize(CharUnits N) {
-    return llvm::ConstantInt::get(TypeCache.SizeTy, N.getQuantity());
+    return llvm::ConstantInt::getSigned(TypeCache.SizeTy, N.getQuantity());
   }
   llvm::ConstantInt *getSize(uint64_t N) {
     return llvm::ConstantInt::get(TypeCache.SizeTy, N);
@@ -334,9 +345,10 @@ public:
 
   Address CreateGEP(Address Addr, ArrayRef<llvm::Value *> IdxList,
                     llvm::Type *ElementType, CharUnits Align,
-                    const Twine &Name = "") {
+                    const Twine &Name = "",
+                    llvm::GEPNoWrapFlags NW = llvm::GEPNoWrapFlags::none()) {
     llvm::Value *Ptr = emitRawPointerFromAddress(Addr);
-    return RawAddress(CreateGEP(Addr.getElementType(), Ptr, IdxList, Name),
+    return RawAddress(CreateGEP(Addr.getElementType(), Ptr, IdxList, Name, NW),
                       ElementType, Align);
   }
 

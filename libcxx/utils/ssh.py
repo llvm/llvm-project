@@ -57,7 +57,7 @@ def main():
         return subprocess.run(command, *args_, **kwargs)
 
     # Create a temporary directory where the test will be run.
-    # That is effectively the value of %T on the remote host.
+    # That is effectively the value of %{temp} on the remote host.
     tmp = runCommand(
         ssh("mktemp -d {}/libcxx.XXXXXXXXXX".format(args.tempdir)),
         universal_newlines=True,

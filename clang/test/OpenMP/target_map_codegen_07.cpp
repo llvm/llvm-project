@@ -35,9 +35,9 @@
 
 // CK8-LABEL: @.__omp_offloading_{{.*}}implicit_maps_float{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK8-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
+// CK8-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 4, i64 0]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK8-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// CK8-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
 
 // CK8-LABEL: implicit_maps_float{{.*}}(
 void implicit_maps_float (int a){
@@ -57,14 +57,14 @@ void implicit_maps_float (int a){
 // CK8-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
 // CK8-DAG: store float {{.+}}, ptr [[ADDR]],
 
-// CK8: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
+// CK8: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
 #pragma omp target
   {
     f += 1.0;
   }
 }
 
-// CK8: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
+// CK8: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
 // CK8: [[ADDR:%.+]] = alloca i[[sz]],
 // CK8: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK8: {{.+}} = load float, ptr [[ADDR]],

@@ -30,13 +30,9 @@ void ParallelLoopGeneratorGOMP::createCallSpawnThreads(Value *SubFn,
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
 
-    Type *Params[] = {PointerType::getUnqual(FunctionType::get(
-                          Builder.getVoidTy(), Builder.getPtrTy(), false)),
-                      Builder.getPtrTy(),
-                      Builder.getInt32Ty(),
-                      LongType,
-                      LongType,
-                      LongType};
+    Type *Params[] = {
+        Builder.getPtrTy(), Builder.getPtrTy(), Builder.getInt32Ty(),
+        LongType,           LongType,           LongType};
 
     FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Params, false);
     F = Function::Create(Ty, Linkage, Name, M);
@@ -111,8 +107,11 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
 
   // Create basic blocks.
   BasicBlock *HeaderBB = BasicBlock::Create(Context, "polly.par.setup", SubFn);
+  // Add terminator so that DT computation doesn't fail.
+  auto *UI = new UnreachableInst(Context, HeaderBB);
   SubFnDT = std::make_unique<DominatorTree>(*SubFn);
   SubFnLI = std::make_unique<LoopInfo>(*SubFnDT);
+  UI->eraseFromParent();
 
   BasicBlock *ExitBB = BasicBlock::Create(Context, "polly.par.exit", SubFn);
   BasicBlock *CheckNextBB =
@@ -152,7 +151,7 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
                          "polly.par.UBAdjusted");
 
   Builder.CreateBr(CheckNextBB);
-  Builder.SetInsertPoint(&*--Builder.GetInsertPoint());
+  Builder.SetInsertPoint(std::prev(Builder.GetInsertPoint()));
   BasicBlock *AfterBB;
   Value *IV =
       createLoop(LB, UB, Stride, Builder, *SubFnLI, *SubFnDT, AfterBB,
@@ -165,7 +164,7 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
   createCallCleanupThread();
   Builder.CreateRetVoid();
 
-  Builder.SetInsertPoint(&*LoopBody);
+  Builder.SetInsertPoint(LoopBody);
 
   // FIXME: Call SubFnDT->verify() and SubFnLI->verify() to check that the
   // DominatorTree/LoopInfo has been created correctly. Alternatively, recreate
@@ -183,7 +182,7 @@ Value *ParallelLoopGeneratorGOMP::createCallGetWorkItem(Value *LBPtr,
   // If F is not available, declare it.
   if (!F) {
     GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
-    Type *Params[] = {LongType->getPointerTo(), LongType->getPointerTo()};
+    Type *Params[] = {Builder.getPtrTy(0), Builder.getPtrTy(0)};
     FunctionType *Ty = FunctionType::get(Builder.getInt8Ty(), Params, false);
     F = Function::Create(Ty, Linkage, Name, M);
   }

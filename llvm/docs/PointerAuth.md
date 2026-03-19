@@ -374,6 +374,19 @@ For example:
     .quad _sym@AUTH(ia,12,addr)
 ```
 
+#### MachO Object File Representation
+
+At the object file level, authenticated relocations are represented using the
+``ARM64_RELOC_AUTHENTICATED_POINTER`` relocation kind (with value ``11``).
+
+The pointer authentication information is encoded into the addend as follows:
+
+```
+| 63 | 62 | 61-51 | 50-49 |   48   | 47     -     32 | 31  -  0 |
+| -- | -- | ----- | ----- | ------ | --------------- | -------- |
+|  1 |  0 |   0   |  key  |  addr  |  discriminator  |  addend  |
+```
+
 #### ELF Object File Representation
 
 At the object file level, authenticated relocations are represented

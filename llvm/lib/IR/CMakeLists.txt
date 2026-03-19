@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMCore
   BuiltinGCs.cpp
   Comdat.cpp
   ConstantFold.cpp
+  ConstantFPRange.cpp
   ConstantRange.cpp
   ConstantRangeList.cpp
   Constants.cpp
@@ -25,12 +26,16 @@ add_llvm_component_library(LLVMCore
   DiagnosticInfo.cpp
   DiagnosticPrinter.cpp
   Dominators.cpp
+  DroppedVariableStats.cpp
+  DroppedVariableStatsIR.cpp
   EHPersonalities.cpp
   FPEnv.cpp
   Function.cpp
   GCStrategy.cpp
   GVMaterializer.cpp
   Globals.cpp
+  Intrinsics.cpp
+  NVVMIntrinsicUtils.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
   SSAContext.cpp
@@ -50,6 +55,7 @@ add_llvm_component_library(LLVMCore
   ModuleSummaryIndex.cpp
   Operator.cpp
   OptBisect.cpp
+  PatternMatch.cpp
   Pass.cpp
   PassInstrumentation.cpp
   PassManager.cpp
@@ -70,13 +76,16 @@ add_llvm_component_library(LLVMCore
   User.cpp
   Value.cpp
   ValueSymbolTable.cpp
-  VectorBuilder.cpp
+  VectorTypeUtils.cpp
   Verifier.cpp
   VFABIDemangler.cpp
   RuntimeLibcalls.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/IR
+
+  PRECOMPILE_HEADERS
+  [["llvm/IR/pch.h"]]
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}

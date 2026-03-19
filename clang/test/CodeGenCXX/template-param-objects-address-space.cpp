@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -std=c++20 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple spirv64-unknown-unknown -fsycl-is-device -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
 
 struct S { char buf[32]; };
 template<S s> constexpr const char *begin() { return s.buf; }
@@ -37,6 +37,6 @@ const void *s = observable_addr<S{"hello world"}>();
 // CHECK: define linkonce_odr noundef ptr @_Z15observable_addrIXtl1StlA32_cLc104ELc101ELc108ELc108ELc111ELc32ELc119ELc111ELc114ELc108ELc100EEEEEPKvv()
 // WITH-NONZERO-DEFAULT-AS: define linkonce_odr {{.*}} noundef ptr addrspace(4) @_Z15observable_addrIXtl1StlA32_cLc104ELc101ELc108ELc108ELc111ELc32ELc119ELc111ELc114ELc108ELc100EEEEEPKvv()
 // CHECK: %call = call noundef ptr @_Z6calleePK1S(ptr noundef addrspacecast (ptr addrspace(1) [[HELLO]] to ptr))
-// WITH-NONZERO-DEFAULT-AS: %call = call {{.*}} noundef ptr addrspace(4) @_Z6calleePK1S(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) [[HELLO]] to ptr addrspace(4)))
+// WITH-NONZERO-DEFAULT-AS: %call = call {{.*}} noundef{{.*}} ptr addrspace(4) @_Z6calleePK1S(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) [[HELLO]] to ptr addrspace(4)))
 // CHECK: declare noundef ptr @_Z6calleePK1S(ptr noundef)
 // WITH-NONZERO-DEFAULT-AS: declare {{.*}} noundef ptr addrspace(4) @_Z6calleePK1S(ptr addrspace(4) noundef)

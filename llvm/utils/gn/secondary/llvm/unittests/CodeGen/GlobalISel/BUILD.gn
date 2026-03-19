@@ -24,6 +24,7 @@ unittest("GlobalISelTests") {
     "InstructionSelectTest.cpp",
     "KnownBitsTest.cpp",
     "KnownBitsVectorTest.cpp",
+    "KnownFPClassTest.cpp",
     "LegalizerHelperTest.cpp",
     "LegalizerInfoTest.cpp",
     "LegalizerTest.cpp",

@@ -15,7 +15,6 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var1"}
     %6 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var2"}
     omp.target map_entries(%5 -> %arg0, %6 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
       omp.terminator
     }
     llvm.return
@@ -25,7 +24,6 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %0 = llvm.mlir.addressof @var_common_ : !llvm.ptr
     %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<8 x i8>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var_common"}
     omp.target map_entries(%1 -> %arg0 : !llvm.ptr) {
-    ^bb0(%arg0: !llvm.ptr):
       omp.terminator
     }
     llvm.return
@@ -36,24 +34,24 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // CHECK: @[[GLOBAL_BYTE_ARRAY:.*]] = common global [8 x i8] zeroinitializer, align 4
 
-// CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] [i64 4, i64 4]
-// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 35, i64 35]
+// CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [3 x i64] [i64 4, i64 4, i64 0]
+// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [3 x i64] [i64 35, i64 35, i64 288]
 
-// CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 8]
-// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 35]
+// CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] [i64 8, i64 0]
+// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 35, i64 288]
 
 // CHECK: define void @omp_map_common_block_using_common_block_members()
+// CHECK:  %[[BASEPTRS:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+// CHECK:  store ptr @[[GLOBAL_BYTE_ARRAY]], ptr %[[BASEPTRS]], align 8
+// CHECK:  %[[OFFLOADPTRS:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+// CHECK:  store ptr @[[GLOBAL_BYTE_ARRAY]], ptr %[[OFFLOADPTRS]], align 8
+// CHECK: %[[BASEPTRS:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr @[[GLOBAL_BYTE_ARRAY]], i64 4), ptr %[[BASEPTRS]], align 8
+// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr @[[GLOBAL_BYTE_ARRAY]], i64 4), ptr %[[OFFLOADPTRS]], align 8
+
+// CHECK: define void @omp_map_common_block_using_common_block_symbol()
 // CHECK:  %[[BASEPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK:  store ptr @[[GLOBAL_BYTE_ARRAY]], ptr %[[BASEPTRS]], align 8
 // CHECK:  %[[OFFLOADPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-// CHECK:  store ptr @[[GLOBAL_BYTE_ARRAY]], ptr %[[OFFLOADPTRS]], align 8
-// CHECK: %[[BASEPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
-// CHECK: store ptr getelementptr (i8, ptr @[[GLOBAL_BYTE_ARRAY]], i64 4), ptr %[[BASEPTRS]], align 8
-// CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 1
-// CHECK: store ptr getelementptr (i8, ptr @[[GLOBAL_BYTE_ARRAY]], i64 4), ptr %[[OFFLOADPTRS]], align 8
-
-// CHECK: define void @omp_map_common_block_using_common_block_symbol()
-// CHECK:  %[[BASEPTRS:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
-// CHECK:  store ptr @[[GLOBAL_BYTE_ARRAY]], ptr %[[BASEPTRS]], align 8
-// CHECK:  %[[OFFLOADPTRS:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 // CHECK:  store ptr @[[GLOBAL_BYTE_ARRAY]], ptr %[[OFFLOADPTRS]], align 8

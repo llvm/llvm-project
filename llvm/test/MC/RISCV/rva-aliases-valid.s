@@ -1,8 +1,8 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+a -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+a -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-NOALIAS,CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+a \
 # RUN:     | FileCheck -check-prefixes=CHECK-S,CHECK-S-OBJ %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+a -riscv-no-aliases\
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+a -M no-aliases\
 # RUN:     | FileCheck -check-prefixes=CHECK-S-NOALIAS,CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+a \
 # RUN:     | FileCheck -check-prefixes=CHECK-S,CHECK-S-OBJ %s

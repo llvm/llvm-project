@@ -9,6 +9,8 @@ module m
     procedure :: fwrite
     generic :: write(formatted) => fwrite
   end type
+  type, extends(t) :: t2
+  end type
  contains
   subroutine fwrite(x, unit, iotype, vlist, iostat, iomsg)
     class(t), intent(in) :: x
@@ -19,19 +21,16 @@ module m
     character(*), intent(in out) :: iomsg
     write(unit, *, iostat=iostat, iomsg=iomsg) '(', iotype, ':', vlist, ':', x%n, ')'
   end subroutine
-  subroutine subr(x, y, z)
+  subroutine subr(x, y, z, w)
     class(t), intent(in) :: x
     class(base), intent(in) :: y
     class(*), intent(in) :: z
+    class(t2), intent(in) :: w
     print *, x ! ok
+    print *, w ! ok
     !ERROR: Derived type 'base' in I/O may not be polymorphic unless using defined I/O
     print *, y
     !ERROR: I/O list item may not be unlimited polymorphic
     print *, z
   end subroutine
-end
-
-program main
-  use m
-  call subr(t(123),t(234),t(345))
 end

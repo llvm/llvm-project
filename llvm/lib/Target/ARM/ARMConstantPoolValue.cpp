@@ -196,7 +196,7 @@ int ARMConstantPoolConstant::getExistingMachineCPValue(MachineConstantPool *CP,
     auto *CPV = static_cast<ARMConstantPoolValue*>(
         CP->getConstants()[index].Val.MachineCPVal);
     auto *Constant = cast<ARMConstantPoolConstant>(CPV);
-    Constant->GVars.insert(GVars.begin(), GVars.end());
+    Constant->GVars.insert_range(GVars);
   }
   return index;
 }

@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64-unknown-fuchsia -run-pass=greedy -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown-fuchsia -passes=greedy -verify-machineinstrs -o - %s | FileCheck %s
 
 # Check that we spill %31 and do not rematerialize it since the use operand
 # of ADDXri is killed by the STRXui in this block.

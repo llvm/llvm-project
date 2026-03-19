@@ -97,12 +97,15 @@ uint64_t SymbolFileDWARFDwo::GetDebugInfoSize(bool load_all_debug_info) {
 }
 
 bool SymbolFileDWARFDwo::ParseVendorDWARFOpcode(
-    uint8_t op, const lldb_private::DataExtractor &opcodes,
-    lldb::offset_t &offset, std::vector<lldb_private::Value> &stack) const {
-  return GetBaseSymbolFile().ParseVendorDWARFOpcode(op, opcodes, offset, stack);
+    uint8_t op, const DataExtractor &opcodes, lldb::offset_t &offset,
+    RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
+    std::vector<Value> &stack) const {
+  return GetBaseSymbolFile().ParseVendorDWARFOpcode(op, opcodes, offset,
+                                                    reg_ctx, reg_kind, stack);
 }
 
-SymbolFileDWARF::DIEToTypePtr &SymbolFileDWARFDwo::GetDIEToType() {
+llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &
+SymbolFileDWARFDwo::GetDIEToType() {
   return GetBaseSymbolFile().GetDIEToType();
 }
 
@@ -117,7 +120,7 @@ SymbolFileDWARFDwo::GetForwardDeclCompilerTypeToDIE() {
 
 void SymbolFileDWARFDwo::GetObjCMethods(
     lldb_private::ConstString class_name,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   GetBaseSymbolFile().GetObjCMethods(class_name, callback);
 }
 

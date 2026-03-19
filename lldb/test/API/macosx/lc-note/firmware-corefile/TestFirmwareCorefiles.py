@@ -12,6 +12,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestFirmwareCorefiles(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(
         debug_info=no_match(["dsym"]),
         bugnumber="This test is looking explicitly for a dSYM",
@@ -285,7 +287,7 @@ class TestFirmwareCorefiles(TestBase):
             for l in python_init:
                 writer.write(l + "\n")
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
         dwarfdump_cmd_output = subprocess.check_output(
             ('/usr/bin/dwarfdump --uuid "%s"' % aout_exe), shell=True
         ).decode("utf-8")

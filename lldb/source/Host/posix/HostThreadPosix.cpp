@@ -26,11 +26,11 @@ Status HostThreadPosix::Join(lldb::thread_result_t *result) {
   Status error;
   if (IsJoinable()) {
     int err = ::pthread_join(m_thread, result);
-    error.SetError(err, lldb::eErrorTypePOSIX);
+    error = Status(err, lldb::eErrorTypePOSIX);
   } else {
     if (result)
       *result = nullptr;
-    error.SetError(EINVAL, eErrorTypePOSIX);
+    error = Status(EINVAL, eErrorTypePOSIX);
   }
 
   Reset();
@@ -44,18 +44,14 @@ Status HostThreadPosix::Cancel() {
     llvm_unreachable("someone is calling HostThread::Cancel()");
 #else
     int err = ::pthread_cancel(m_thread);
-    error.SetError(err, eErrorTypePOSIX);
+    error = Status(err, eErrorTypePOSIX);
 #endif
   }
   return error;
 }
 
-Status HostThreadPosix::Detach() {
-  Status error;
-  if (IsJoinable()) {
-    int err = ::pthread_detach(m_thread);
-    error.SetError(err, eErrorTypePOSIX);
-  }
-  Reset();
-  return error;
+void HostThreadPosix::Reset() {
+  if (IsJoinable())
+    ::pthread_detach(m_thread);
+  HostNativeThreadBase::Reset();
 }

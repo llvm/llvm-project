@@ -50,17 +50,17 @@ namespace test2 {
 
   struct __attribute__((visibility("hidden"))) B {};
   const std::type_info &b0 = typeid(B);
-  // CHECK-GLOBALS: @_ZTSN5test21BE = linkonce_odr hidden constant
   // CHECK-GLOBALS: @_ZTIN5test21BE = linkonce_odr hidden constant { {{.*}}, ptr @_ZTSN5test21BE }
+  // CHECK-GLOBALS: @_ZTSN5test21BE = linkonce_odr hidden constant
 
   const std::type_info &b1 = typeid(B*);
-  // CHECK-GLOBALS: @_ZTSPN5test21BE = linkonce_odr hidden constant
   // CHECK-GLOBALS: @_ZTIPN5test21BE = linkonce_odr hidden constant { {{.*}}, ptr @_ZTSPN5test21BE, i32 0, ptr @_ZTIN5test21BE
+  // CHECK-GLOBALS: @_ZTSPN5test21BE = linkonce_odr hidden constant
 
   struct C {};
   const std::type_info &c0 = typeid(C);
-  // CHECK-GLOBALS: @_ZTSN5test21CE = linkonce_odr constant [11 x i8] c"N5test21CE\00"
   // CHECK-GLOBALS: @_ZTIN5test21CE = linkonce_odr constant { {{.*}}, ptr @_ZTSN5test21CE }
+  // CHECK-GLOBALS: @_ZTSN5test21CE = linkonce_odr constant [11 x i8] c"N5test21CE\00"
 }
 
 // va_list should be based on "char *" rather than "ptr".

@@ -41,6 +41,7 @@ class TestingConfig(object):
             "LSAN_OPTIONS",
             "HWASAN_OPTIONS",
             "MSAN_OPTIONS",
+            "RTSAN_OPTIONS",
             "TSAN_OPTIONS",
             "UBSAN_OPTIONS",
             "ADB",
@@ -63,6 +64,9 @@ class TestingConfig(object):
             "SOURCE_DATE_EPOCH",
             "GTEST_FILTER",
             "DFLTCC",
+            "QEMU_LD_PREFIX",
+            "QEMU_CPU",
+            "HOME",
         ]
 
         if sys.platform.startswith("aix"):
@@ -139,8 +143,7 @@ class TestingConfig(object):
         cfg_globals["__file__"] = path
         try:
             exec(compile(data, path, "exec"), cfg_globals, None)
-            if litConfig.debug:
-                litConfig.note("... loaded config %r" % path)
+            litConfig.dbg("... loaded config %r" % path)
         except SystemExit:
             e = sys.exc_info()[1]
             # We allow normal system exit inside a config file to just
@@ -231,6 +234,11 @@ class TestingConfig(object):
             # files. Should we distinguish them?
             self.test_source_root = str(self.test_source_root)
         self.excludes = set(self.excludes)
+        if (
+            litConfig.maxRetriesPerTest is not None
+            and getattr(self, "test_retry_attempts", None) is None
+        ):
+            self.test_retry_attempts = litConfig.maxRetriesPerTest
 
     @property
     def root(self):

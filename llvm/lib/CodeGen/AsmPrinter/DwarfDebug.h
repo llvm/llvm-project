@@ -52,6 +52,7 @@ class DwarfCompileUnit;
 class DwarfExpression;
 class DwarfTypeUnit;
 class DwarfUnit;
+class GlobalVariable;
 class LexicalScope;
 class MachineFunction;
 class MCSection;
@@ -382,6 +383,8 @@ class DwarfDebug : public DebugHandlerBase {
                               SmallPtrSet<const MDNode *, 2>>;
   DenseMap<const DILocalScope *, MDNodeSet> LocalDeclsPerLS;
 
+  SmallDenseSet<const MachineInstr *> ForceIsStmtInstrs;
+
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
 
@@ -391,9 +394,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// As an optimization, there is no need to emit an entry in the directory
   /// table for the same directory as DW_AT_comp_dir.
   StringRef CompilationDir;
-
-  /// Holder for the file specific debug information.
-  DwarfFile InfoHolder;
 
   /// Holders for the various debug information flags that we might need to
   /// have exposed. See accessor functions below for description.
@@ -407,6 +407,9 @@ class DwarfDebug : public DebugHandlerBase {
   SmallVector<
       std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
       TypeUnitsUnderConstruction;
+
+  /// Symbol pointing to the current function's DWARF line table entries.
+  MCSymbol *FunctionLineTableLabel;
 
   /// Used to set a uniqe ID for a Type Unit.
   /// This counter represents number of DwarfTypeUnits created, not necessarily
@@ -431,9 +434,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// True if the sections itself must be used as references and don't create
   /// temp symbols inside DWARF sections.
   bool UseSectionsAsReferences = false;
-
-  ///Allow emission of the .debug_loc section.
-  bool UseLocSection = true;
 
   /// Allow emission of .debug_aranges section
   bool UseARangesSection = false;
@@ -462,6 +462,10 @@ public:
   };
 
 private:
+  /// Instructions which should get is_stmt applied because they implement key
+  /// functionality for a source atom.
+  SmallDenseSet<const MachineInstr *> KeyInstructions;
+
   /// Force the use of DW_AT_ranges even for single-entry range lists.
   MinimizeAddrInV5 MinimizeAddr = MinimizeAddrInV5::Disabled;
 
@@ -525,10 +529,6 @@ private:
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
-
-  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
-    return InfoHolder.getUnits();
-  }
 
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
@@ -667,6 +667,7 @@ private:
   /// emit it here if we don't have a skeleton CU for split dwarf.
   void addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const;
 
+  DwarfCompileUnit *getDwarfCompileUnit(const DICompileUnit *DIUnit);
   /// Create new DwarfCompileUnit for the given metadata node with tag
   /// DW_TAG_compile_unit.
   DwarfCompileUnit &getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit);
@@ -677,7 +678,7 @@ private:
   /// label that was emitted and which provides correspondence to the
   /// source line list.
   void recordSourceLine(unsigned Line, unsigned Col, const MDNode *Scope,
-                        unsigned Flags);
+                        unsigned Flags, StringRef Location = {});
 
   /// Populate LexicalScope entries with variables' info.
   void collectEntityInfo(DwarfCompileUnit &TheCU, const DISubprogram *SP,
@@ -697,7 +698,16 @@ private:
   /// Emit the reference to the section.
   void emitSectionReference(const DwarfCompileUnit &CU);
 
+  void findForceIsStmtInstrs(const MachineFunction *MF);
+
+  /// Compute instructions which should get is_stmt applied because they
+  /// implement key functionality for a source location atom, store results in
+  /// DwarfDebug::KeyInstructions.
+  void computeKeyInstructions(const MachineFunction *MF);
+
 protected:
+  /// Holder for the file specific debug information.
+  DwarfFile InfoHolder;
   /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
 
@@ -709,7 +719,55 @@ protected:
 
   void skippedNonDebugFunction() override;
 
+  /// Target-specific debug info initialization at function start.
+  virtual void initializeTargetDebugInfo(const MachineFunction &MF) {}
+
+  /// Setters for target-specific DWARF configuration overrides.
+  /// Called from target DwarfDebug subclass constructors.
+  void setUseInlineStrings(bool V) { UseInlineStrings = V; }
+  void setUseRangesSection(bool V) { UseRangesSection = V; }
+  void setUseSectionsAsReferences(bool V) { UseSectionsAsReferences = V; }
+
+  /// Whether to attach ranges/low_pc to the compile unit DIE in endModule.
+  virtual bool shouldAttachCompileUnitRanges() const { return true; }
+
+  /// Target-specific source line recording.
+  virtual void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags);
+
+  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
+    return InfoHolder.getUnits();
+  }
+
 public:
+  //===--------------------------------------------------------------------===//
+  // Target hooks for debug info customization.
+  //
+
+  /// Whether the target requires resetting the base address in range/loc lists.
+  virtual bool shouldResetBaseAddress(const MCSection &Section) const {
+    return false;
+  }
+
+  /// Describes the storage kind of a debug variable for target hooks.
+  enum class VariableLocationKind { Global, Register, FrameIndex };
+
+  /// Extract target-specific address space information from a DIExpression.
+  /// Targets may strip address-space-encoding ops from the expression and
+  /// return the address space via \p TargetAddrSpace.
+  virtual const DIExpression *
+  adjustExpressionForTarget(const DIExpression *Expr,
+                            std::optional<unsigned> &TargetAddrSpace) const {
+    return Expr;
+  }
+
+  /// Add target-specific attributes to a variable DIE (e.g.
+  /// DW_AT_address_class).
+  virtual void
+  addTargetVariableAttributes(DwarfCompileUnit &CU, DIE &Die,
+                              std::optional<unsigned> TargetAddrSpace,
+                              VariableLocationKind VarLocKind,
+                              const GlobalVariable *GV = nullptr) const {}
+
   //===--------------------------------------------------------------------===//
   // Main entry points.
   //
@@ -724,8 +782,10 @@ public:
   /// Emit all Dwarf sections that should come after the content.
   void endModule() override;
 
-  /// Emits inital debug location directive.
-  DebugLoc emitInitialLocDirective(const MachineFunction &MF, unsigned CUID);
+  /// Emits inital debug location directive. Returns instruction at which
+  /// the function prologue ends.
+  const MachineInstr *emitInitialLocDirective(const MachineFunction &MF,
+                                              unsigned CUID);
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
@@ -788,9 +848,6 @@ public:
   bool useSectionsAsReferences() const {
     return UseSectionsAsReferences;
   }
-
-  /// Returns whether .debug_loc section should be emitted.
-  bool useLocSection() const { return UseLocSection; }
 
   /// Returns whether to generate DWARF v4 type units.
   bool generateTypeUnits() const { return GenerateTypeUnits; }
@@ -893,6 +950,10 @@ public:
   const DwarfCompileUnit *lookupCU(const DIE *Die) const {
     return CUDieMap.lookup(Die);
   }
+
+  /// Find the matching DwarfCompileUnit for the given SP referenced from SrcCU.
+  DwarfCompileUnit &getOrCreateAbstractSubprogramCU(const DISubprogram *SP,
+                                                    DwarfCompileUnit &SrcCU);
 
   unsigned getStringTypeLoc(const DIStringType *ST) const {
     return StringTypeLocMap.lookup(ST);

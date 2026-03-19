@@ -74,7 +74,7 @@ Operands are ordered just like they would be in a MachineInstr: the defs (outs)
 come first, then the uses (ins).
 
 Patterns are generally grouped into another DAG datatype with a dummy operator
-such as ``match``, ``apply`` or ``pattern``.
+such as ``match``, ``apply``, ``combine`` or ``pattern``.
 
 Finally, any DAG datatype in TableGen can be named. This also holds for
 patterns. e.g. the following is valid: ``(G_FOO $root, (i32 0):$cst):$mypat``.
@@ -370,6 +370,42 @@ The following expansions are available for MIR patterns:
     (match (G_ZEXT $root, $src):$mi),
     (apply "foobar(${root}.getReg(), ${src}.getReg(), ${mi}->hasImplicitDef())")>;
 
+``combine`` Operator
+~~~~~~~~~~~~~~~~~~~~
+
+``GICombineRule`` also supports a single ``combine`` pattern, which is a shorter way to
+declare patterns that just match one or more instructions, then defer all remaining matching
+and rewriting logic to C++ code.
+
+.. code-block:: text
+  :caption: Example usage of the combine operator.
+
+  // match + apply
+  def FooLong : GICombineRule<
+    (defs root:$root),
+    (match (G_ZEXT $root, $src):$mi, "return matchFoo(${mi});"),
+    (apply "applyFoo(${mi});")>;
+
+  // combine
+  def FooShort : GICombineRule<
+    (defs root:$root),
+    (combine (G_ZEXT $root, $src):$mi, "return combineFoo(${mi});")>;
+
+This has a couple of advantages:
+
+* We only need one C++ function, not two.
+* We no longer need to use ``GIDefMatchData`` to pass information between the match/apply functions.
+
+As described above, this is syntactic sugar for the match+apply form. In a ``combine`` pattern:
+
+* Everything except C++ code is considered the ``match`` part.
+* The C++ code is the ``apply`` part. C++ code is emitted in order of appearance.
+
+.. note::
+
+  The C++ code **must** return true if it changed any instruction. Returning false when changing
+  instructions is undefined behavior.
+
 Common Pattern #1: Replace a Register with Another
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -601,7 +637,7 @@ Gallery
 =======
 
 We should use precise patterns that state our intentions. Please avoid
-using wip_match_opcode in patterns.
+using wip_match_opcode in patterns. It can lead to imprecise patterns.
 
 .. code-block:: text
   :caption: Example fold zext(trunc:nuw)
@@ -630,3 +666,20 @@ using wip_match_opcode in patterns.
            (G_ZEXT $root, $src),
     [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
     (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+
+  // Precise: lists all combine combinations
+  class ext_of_ext_opcodes<Instruction ext1Opcode, Instruction ext2Opcode> : GICombineRule <
+    (defs root:$root, build_fn_matchinfo:$matchinfo),
+    (match (ext2Opcode $second, $src):$Second,
+           (ext1Opcode $root, $second):$First,
+           [{ return Helper.matchExtOfExt(*${First}, *${Second}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFn(*${First}, ${matchinfo}); }])>;
+
+  def zext_of_zext : ext_of_ext_opcodes<G_ZEXT, G_ZEXT>;
+  def zext_of_anyext : ext_of_ext_opcodes<G_ZEXT, G_ANYEXT>;
+  def sext_of_sext : ext_of_ext_opcodes<G_SEXT, G_SEXT>;
+  def sext_of_anyext : ext_of_ext_opcodes<G_SEXT, G_ANYEXT>;
+  def anyext_of_anyext : ext_of_ext_opcodes<G_ANYEXT, G_ANYEXT>;
+  def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
+  def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;

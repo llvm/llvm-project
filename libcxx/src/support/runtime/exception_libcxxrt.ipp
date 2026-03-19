@@ -11,6 +11,8 @@
 #  error this header may only be used when targeting libcxxrt
 #endif
 
+#include <exception>
+
 namespace std {
 
 bad_exception::~bad_exception() noexcept {}

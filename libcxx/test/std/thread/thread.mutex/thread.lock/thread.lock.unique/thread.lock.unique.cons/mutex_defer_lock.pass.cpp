@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: c++03
 
 // <mutex>
 
@@ -15,27 +13,24 @@
 // unique_lock(mutex_type& m, defer_lock_t);
 
 #include <cassert>
+#include <memory>
 #include <mutex>
+#include <type_traits>
 
-#include "nasty_containers.h"
-#include "../types.h"
+#include "checking_mutex.h"
 #include "test_macros.h"
 
+#if TEST_STD_VER >= 11
+static_assert(
+    std::is_nothrow_constructible<std::unique_lock<checking_mutex>, checking_mutex&, std::defer_lock_t>::value, "");
+#endif
+
 int main(int, char**) {
-  {
-    typedef MyMutex M;
-    M m;
-    std::unique_lock<M> lk(m, std::defer_lock);
-    assert(lk.mutex() == std::addressof(m));
-    assert(lk.owns_lock() == false);
-  }
-  {
-    typedef nasty_mutex M;
-    M m;
-    std::unique_lock<M> lk(m, std::defer_lock);
-    assert(lk.mutex() == std::addressof(m));
-    assert(lk.owns_lock() == false);
-  }
+  checking_mutex m;
+  std::unique_lock<checking_mutex> lk(m, std::defer_lock_t());
+  assert(m.last_try == checking_mutex::none);
+  assert(lk.mutex() == std::addressof(m));
+  assert(lk.owns_lock() == false);
 
   return 0;
 }

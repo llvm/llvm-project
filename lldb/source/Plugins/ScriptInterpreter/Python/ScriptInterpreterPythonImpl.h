@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
-
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
 
 #include "lldb-python.h"
 
@@ -81,35 +77,28 @@ public:
   CreateStructuredDataFromScriptObject(ScriptObject obj) override;
 
   StructuredData::GenericSP
-  CreateScriptedBreakpointResolver(const char *class_name,
-                                   const StructuredDataImpl &args_data,
-                                   lldb::BreakpointSP &bkpt_sp) override;
-  bool ScriptedBreakpointResolverSearchCallback(
-      StructuredData::GenericSP implementor_sp,
-      SymbolContext *sym_ctx) override;
-
-  lldb::SearchDepth ScriptedBreakpointResolverSearchDepth(
-      StructuredData::GenericSP implementor_sp) override;
-
-  StructuredData::GenericSP
-  CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
-                         const StructuredDataImpl &args_data,
-                         Status &error) override;
-
-  bool ScriptedStopHookHandleStop(StructuredData::GenericSP implementor_sp,
-                                  ExecutionContext &exc_ctx,
-                                  lldb::StreamSP stream_sp) override;
-
-  StructuredData::GenericSP
   CreateFrameRecognizer(const char *class_name) override;
 
   lldb::ValueObjectListSP
   GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
                          lldb::StackFrameSP frame_sp) override;
 
+  bool ShouldHide(const StructuredData::ObjectSP &implementor,
+                  lldb::StackFrameSP frame_sp) override;
+
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
+  lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
+
+  lldb::ScriptedBreakpointInterfaceSP
+  CreateScriptedBreakpointInterface() override;
+
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
+
+  lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() override;
+
+  lldb::ScriptedFrameProviderInterfaceSP
+  CreateScriptedFrameProviderInterface() override;
 
   lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() override;
@@ -132,8 +121,9 @@ public:
   GetChildAtIndex(const StructuredData::ObjectSP &implementor,
                   uint32_t idx) override;
 
-  int GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
-                              const char *child_name) override;
+  llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
+                          const char *child_name) override;
 
   bool UpdateSynthProviderInstance(
       const StructuredData::ObjectSP &implementor) override;
@@ -169,6 +159,14 @@ public:
   std::optional<std::string>
   GetRepeatCommandForScriptedCommand(StructuredData::GenericSP impl_obj_sp,
                                      Args &args) override;
+
+  StructuredData::DictionarySP HandleArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+      size_t args_pos, size_t char_in_arg) override;
+
+  StructuredData::DictionarySP HandleOptionArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_options,
+      size_t char_in_arg) override;
 
   Status GenerateFunction(const char *signature, const StringList &input,
                           bool is_callback) override;
@@ -241,7 +239,8 @@ public:
                            const LoadScriptOptions &options,
                            lldb_private::Status &error,
                            StructuredData::ObjectSP *module_sp = nullptr,
-                           FileSpec extra_search_dir = {}) override;
+                           FileSpec extra_search_dir = {},
+                           lldb::TargetSP loaded_into_target_sp = {}) override;
 
   bool IsReservedWord(const char *word) override;
 
@@ -477,7 +476,7 @@ public:
         StreamString run_string;
         run_string.Printf("run_python_interpreter (%s)",
                           m_python->GetDictionaryName());
-        PyRun_SimpleString(run_string.GetData());
+        python::RunSimpleString(run_string.GetData());
       }
     }
     SetIsDone(true);
@@ -495,5 +494,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONIMPL_H

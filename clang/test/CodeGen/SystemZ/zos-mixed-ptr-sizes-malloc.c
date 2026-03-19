@@ -4,7 +4,7 @@ void *__malloc31(size_t);
 
 int test_1() {
   // X64-LABEL: define {{.*}} i32 @test_1()
-  // X64: ret i32 135
+  // X64: ret i32 %add20
   int *__ptr32 a;
   int *b;
   int i;

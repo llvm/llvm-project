@@ -1,8 +1,6 @@
-! Offloading test checking interaction of an
-! explicit derived type member mapping of
-! an array with bounds when mapped to
-! target using a combination of enter and
-! exit directives.
+! Offloading test checking interaction of an explicit derived type member
+! mapping of an array with bounds when mapped to target using a combination of
+! enter and exit directives.
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

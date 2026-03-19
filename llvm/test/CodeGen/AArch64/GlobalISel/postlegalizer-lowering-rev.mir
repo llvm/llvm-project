@@ -14,10 +14,11 @@ body:             |
     liveins: $d0, $d1
     ; CHECK-LABEL: name: rev64_mask_1_0
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[REV64_:%[0-9]+]]:_(<2 x s32>) = G_REV64 [[COPY]]
-    ; CHECK: $d0 = COPY [[REV64_]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[REV64_:%[0-9]+]]:_(<2 x s32>) = G_REV64 [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[REV64_]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s32>) = G_SHUFFLE_VECTOR %0(<2 x s32>), %1, shufflemask(1, 0)
@@ -35,10 +36,14 @@ body:             |
     liveins: $d0, $d1
     ; CHECK-LABEL: name: rev64_mask_1_undef
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[REV64_:%[0-9]+]]:_(<2 x s32>) = G_REV64 [[COPY]]
-    ; CHECK: $d0 = COPY [[REV64_]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[COPY]](<2 x s32>), [[DEF]](<2 x s32>)
+    ; CHECK-NEXT: [[DUPLANE32_:%[0-9]+]]:_(<2 x s32>) = G_DUPLANE32 [[CONCAT_VECTORS]], [[C]](s64)
+    ; CHECK-NEXT: $d0 = COPY [[DUPLANE32_]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s32>) = G_SHUFFLE_VECTOR %0(<2 x s32>), %1, shufflemask(1, undef)
@@ -56,28 +61,23 @@ body:             |
     liveins: $d0, $d1
 
     ; Verify that we don't produce a G_REV64 when
-    ;
     ; M[i] != (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts)
     ; In this example, BlockElts = 2
-    ;
     ; At i = 1
     ; M[i] = 3
     ; i % BlockElts = i % 2 = 1
-    ;
     ; So
-    ;
     ; 3 != (1 - 1) + (2 - 1 - 1)
     ; 3 != 0
-    ;
     ; And so we should not produce a G_REV64.
-    ;
     ; CHECK-LABEL: name: no_rev64_mask_1
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ZIP2_:%[0-9]+]]:_(<2 x s32>) = G_ZIP2 [[COPY]], [[COPY1]]
-    ; CHECK: $d0 = COPY [[ZIP2_]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ZIP2_:%[0-9]+]]:_(<2 x s32>) = G_ZIP2 [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ZIP2_]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s32>) = G_SHUFFLE_VECTOR %0(<2 x s32>), %1, shufflemask(1, 3)

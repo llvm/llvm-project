@@ -21,7 +21,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/CodeGen/MIRFormatter.h"
@@ -47,6 +46,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -67,7 +67,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cctype>
@@ -124,6 +123,16 @@ bool PerTargetMIParsingState::getRegisterByName(StringRef RegName,
   if (RegInfo == Names2Regs.end())
     return true;
   Reg = RegInfo->getValue();
+  return false;
+}
+
+bool PerTargetMIParsingState::getVRegFlagValue(StringRef FlagName,
+                                               uint8_t &FlagValue) const {
+  const auto *TRI = Subtarget.getRegisterInfo();
+  std::optional<uint8_t> FV = TRI->getVRegFlagValue(FlagName);
+  if (!FV)
+    return true;
+  FlagValue = *FV;
   return false;
 }
 
@@ -318,7 +327,7 @@ PerFunctionMIParsingState::PerFunctionMIParsingState(MachineFunction &MF,
 }
 
 VRegInfo &PerFunctionMIParsingState::getVRegInfo(Register Num) {
-  auto I = VRegInfos.insert(std::make_pair(Num, nullptr));
+  auto I = VRegInfos.try_emplace(Num);
   if (I.second) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
     VRegInfo *Info = new (Allocator) VRegInfo;
@@ -331,7 +340,7 @@ VRegInfo &PerFunctionMIParsingState::getVRegInfo(Register Num) {
 VRegInfo &PerFunctionMIParsingState::getVRegInfoNamed(StringRef RegName) {
   assert(RegName != "" && "Expected named reg.");
 
-  auto I = VRegInfosNamed.insert(std::make_pair(RegName.str(), nullptr));
+  auto I = VRegInfosNamed.try_emplace(RegName.str());
   if (I.second) {
     VRegInfo *Info = new (Allocator) VRegInfo;
     Info->VReg = MF.getRegInfo().createIncompleteVirtualRegister(RegName);
@@ -444,7 +453,7 @@ public:
   bool parseVirtualRegister(VRegInfo *&Info);
   bool parseNamedVirtualRegister(VRegInfo *&Info);
   bool parseRegister(Register &Reg, VRegInfo *&VRegInfo);
-  bool parseRegisterFlag(unsigned &Flags);
+  bool parseRegisterFlag(RegState &Flags);
   bool parseRegisterClassOrBank(VRegInfo &RegInfo);
   bool parseSubRegisterIndex(unsigned &SubReg);
   bool parseRegisterTiedDefIndex(unsigned &TiedDefIdx);
@@ -452,6 +461,7 @@ public:
                             std::optional<unsigned> &TiedDefIdx,
                             bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
+  bool parseSymbolicInlineAsmOperand(unsigned OpIdx, MachineOperand &Dest);
   bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                        const Constant *&C);
   bool parseIRConstant(StringRef::iterator Loc, const Constant *&C);
@@ -476,7 +486,7 @@ public:
   bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
-  bool parseCFIRegister(Register &Reg);
+  bool parseCFIRegister(unsigned &Reg);
   bool parseCFIAddressSpace(unsigned &AddressSpace);
   bool parseCFIEscapeValues(std::string& Values);
   bool parseCFIOperand(MachineOperand &Dest);
@@ -488,6 +498,7 @@ public:
   bool parseTargetIndexOperand(MachineOperand &Dest);
   bool parseDbgInstrRefOperand(MachineOperand &Dest);
   bool parseCustomRegisterMaskOperand(MachineOperand &Dest);
+  bool parseLaneMaskOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
   bool parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
                            MachineOperand &Dest,
@@ -503,6 +514,7 @@ public:
   bool parseSectionID(std::optional<MBBSectionID> &SID);
   bool parseBBID(std::optional<UniqueBBID> &BBID);
   bool parseCallFrameSize(unsigned &CallFrameSize);
+  bool parsePrefetchTarget(CallsiteID &Target);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -514,6 +526,7 @@ public:
   bool parsePreOrPostInstrSymbol(MCSymbol *&Symbol);
   bool parseHeapAllocMarker(MDNode *&Node);
   bool parsePCSections(MDNode *&Node);
+  bool parseMMRA(MDNode *&Node);
 
   bool parseTargetImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
                               MachineOperand &Dest, const MIRFormatter &MF);
@@ -580,7 +593,7 @@ MIParser::MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
 
 void MIParser::lex(unsigned SkipChar) {
   CurrentSource = lexMIToken(
-      CurrentSource.slice(SkipChar, StringRef::npos), Token,
+      CurrentSource.substr(SkipChar), Token,
       [this](StringRef::iterator Loc, const Twine &Msg) { error(Loc, Msg); });
 }
 
@@ -599,7 +612,7 @@ bool MIParser::error(StringRef::iterator Loc, const Twine &Msg) {
   // Create a diagnostic for a YAML string literal.
   Error = SMDiagnostic(SM, SMLoc(), Buffer.getBufferIdentifier(), 1,
                        Loc - Source.data(), SourceMgr::DK_Error, Msg.str(),
-                       Source, std::nullopt, std::nullopt);
+                       Source, {}, {});
   return true;
 }
 
@@ -668,17 +681,32 @@ bool MIParser::parseSectionID(std::optional<MBBSectionID> &SID) {
 
 // Parse Machine Basic Block ID.
 bool MIParser::parseBBID(std::optional<UniqueBBID> &BBID) {
-  assert(Token.is(MIToken::kw_bb_id));
+  if (Token.isNot(MIToken::kw_bb_id))
+    return error("expected 'bb_id'");
   lex();
   unsigned BaseID = 0;
   unsigned CloneID = 0;
-  if (getUnsigned(BaseID))
-    return error("Unknown BB ID");
-  lex();
-  if (Token.is(MIToken::IntegerLiteral)) {
-    if (getUnsigned(CloneID))
-      return error("Unknown Clone ID");
+  if (Token.is(MIToken::FloatingPointLiteral)) {
+    StringRef S = Token.range();
+    auto Parts = S.split('.');
+    if (Parts.first.getAsInteger(10, BaseID) ||
+        Parts.second.getAsInteger(10, CloneID))
+      return error("Unknown BB ID");
     lex();
+  } else {
+    if (getUnsigned(BaseID))
+      return error("Unknown BB ID");
+    lex();
+    if (Token.is(MIToken::comma) || Token.is(MIToken::dot)) {
+      lex();
+      if (getUnsigned(CloneID))
+        return error("Unknown Clone ID");
+      lex();
+    } else if (Token.is(MIToken::IntegerLiteral)) {
+      if (getUnsigned(CloneID))
+        return error("Unknown Clone ID");
+      lex();
+    }
   }
   BBID = {BaseID, CloneID};
   return false;
@@ -696,6 +724,17 @@ bool MIParser::parseCallFrameSize(unsigned &CallFrameSize) {
   return false;
 }
 
+bool MIParser::parsePrefetchTarget(CallsiteID &Target) {
+  lex();
+  std::optional<UniqueBBID> BBID;
+  if (parseBBID(BBID))
+    return true;
+  Target.BBID = *BBID;
+  if (expectAndConsume(MIToken::comma))
+    return true;
+  return getUnsigned(Target.CallsiteIndex);
+}
+
 bool MIParser::parseBasicBlockDefinition(
     DenseMap<unsigned, MachineBasicBlock *> &MBBSlots) {
   assert(Token.is(MIToken::MachineBasicBlockLabel));
@@ -710,6 +749,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
+  bool IsEHScopeEntry = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   std::optional<UniqueBBID> BBID;
@@ -737,6 +777,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_ehfunclet_entry:
         IsEHFuncletEntry = true;
+        lex();
+        break;
+      case MIToken::kw_ehscope_entry:
+        IsEHScopeEntry = true;
         lex();
         break;
       case MIToken::kw_align:
@@ -780,7 +824,7 @@ bool MIParser::parseBasicBlockDefinition(
                             "' is not defined in the function '" +
                             MF.getName() + "'");
   }
-  auto *MBB = MF.CreateMachineBasicBlock(BB);
+  auto *MBB = MF.CreateMachineBasicBlock(BB, BBID);
   MF.insert(MF.end(), MBB);
   bool WasInserted = MBBSlots.insert(std::make_pair(ID, MBB)).second;
   if (!WasInserted)
@@ -795,16 +839,10 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
+  MBB->setIsEHScopeEntry(IsEHScopeEntry);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
-  }
-  if (BBID.has_value()) {
-    // BBSectionsType is set to `List` if any basic blocks has `SectionID`.
-    // Here, we set it to `Labels` if it hasn't been set above.
-    if (!MF.hasBBSections())
-      MF.setBBSectionsType(BasicBlockSection::Labels);
-    MBB->setBBID(BBID.value());
   }
   MBB->setCallFrameSize(CallFrameSize);
   return false;
@@ -950,8 +988,9 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
         return true;
     } else if (consumeIfPresent(MIToken::Newline)) {
       continue;
-    } else
+    } else {
       break;
+    }
     if (!Token.isNewlineOrEOF())
       return error("expected line break at the end of a list");
     lex();
@@ -1069,8 +1108,9 @@ bool MIParser::parse(MachineInstr *&MI) {
   while (!Token.isNewlineOrEOF() && Token.isNot(MIToken::kw_pre_instr_symbol) &&
          Token.isNot(MIToken::kw_post_instr_symbol) &&
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
-         Token.isNot(MIToken::kw_pcsections) &&
+         Token.isNot(MIToken::kw_pcsections) && Token.isNot(MIToken::kw_mmra) &&
          Token.isNot(MIToken::kw_cfi_type) &&
+         Token.isNot(MIToken::kw_deactivation_symbol) &&
          Token.isNot(MIToken::kw_debug_location) &&
          Token.isNot(MIToken::kw_debug_instr_number) &&
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
@@ -1104,7 +1144,9 @@ bool MIParser::parse(MachineInstr *&MI) {
   if (Token.is(MIToken::kw_pcsections))
     if (parsePCSections(PCSections))
       return true;
-
+  MDNode *MMRA = nullptr;
+  if (Token.is(MIToken::kw_mmra) && parseMMRA(MMRA))
+    return true;
   unsigned CFIType = 0;
   if (Token.is(MIToken::kw_cfi_type)) {
     lex();
@@ -1117,6 +1159,14 @@ bool MIParser::parse(MachineInstr *&MI) {
     // Lex past trailing comma if present.
     if (Token.is(MIToken::comma))
       lex();
+  }
+
+  GlobalValue *DS = nullptr;
+  if (Token.is(MIToken::kw_deactivation_symbol)) {
+    lex();
+    if (parseGlobalValue(DS))
+      return true;
+    lex();
   }
 
   unsigned InstrNum = 0;
@@ -1142,8 +1192,9 @@ bool MIParser::parse(MachineInstr *&MI) {
     } else if (Token.is(MIToken::md_dilocation)) {
       if (parseDILocation(Node))
         return true;
-    } else
+    } else {
       return error("expected a metadata node after 'debug-location'");
+    }
     if (!isa<DILocation>(Node))
       return error("referenced metadata is not a DILocation");
     DebugLocation = DebugLoc(Node);
@@ -1159,6 +1210,8 @@ bool MIParser::parse(MachineInstr *&MI) {
         return true;
       MemOperands.push_back(MemOp);
       if (Token.isNewlineOrEOF())
+        break;
+      if (OpCode == TargetOpcode::BUNDLE && Token.is(MIToken::lbrace))
         break;
       if (Token.isNot(MIToken::comma))
         return error("expected ',' before the next machine memory operand");
@@ -1191,8 +1244,12 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setHeapAllocMarker(MF, HeapAllocMarker);
   if (PCSections)
     MI->setPCSections(MF, PCSections);
+  if (MMRA)
+    MI->setMMRAMetadata(MF, MMRA);
   if (CFIType)
     MI->setCFIType(MF, CFIType);
+  if (DS)
+    MI->setDeactivationSymbol(MF, DS);
   if (!MemOperands.empty())
     MI->setMemRefs(MF, MemOperands);
   if (InstrNum)
@@ -1275,8 +1332,9 @@ bool MIParser::parseStandaloneMDNode(MDNode *&Node) {
   } else if (Token.is(MIToken::md_dilocation)) {
     if (parseDILocation(Node))
       return true;
-  } else
+  } else {
     return error("expected a metadata node");
+  }
   if (Token.isNot(MIToken::Eof))
     return error("expected end of string after the metadata node");
   return false;
@@ -1314,9 +1372,10 @@ bool MIParser::parseMachineMetadata() {
 
     assert(PFS.MachineMetadataNodes[ID] == MD && "Tracking VH didn't work");
   } else {
-    if (PFS.MachineMetadataNodes.count(ID))
+    auto [It, Inserted] = PFS.MachineMetadataNodes.try_emplace(ID);
+    if (!Inserted)
       return error("Metadata id is already used");
-    PFS.MachineMetadataNodes[ID].reset(MD);
+    It->second.reset(MD);
   }
 
   return false;
@@ -1399,7 +1458,7 @@ bool MIParser::parseMetadata(Metadata *&MD) {
   // Forward reference.
   auto &FwdRef = PFS.MachineForwardRefMDNodes[ID];
   FwdRef = std::make_pair(
-      MDTuple::getTemporary(MF.getFunction().getContext(), std::nullopt), Loc);
+      MDTuple::getTemporary(MF.getFunction().getContext(), {}), Loc);
   PFS.MachineMetadataNodes[ID].reset(FwdRef.first.get());
   MD = FwdRef.first.get();
 
@@ -1473,7 +1532,10 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_noconvergent) ||
          Token.is(MIToken::kw_unpredictable) ||
          Token.is(MIToken::kw_nneg) ||
-         Token.is(MIToken::kw_disjoint)) {
+         Token.is(MIToken::kw_disjoint) ||
+         Token.is(MIToken::kw_nusw) ||
+         Token.is(MIToken::kw_samesign) ||
+         Token.is(MIToken::kw_inbounds)) {
     // clang-format on
     // Mine frame and fast math flags
     if (Token.is(MIToken::kw_frame_setup))
@@ -1510,6 +1572,12 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::NonNeg;
     if (Token.is(MIToken::kw_disjoint))
       Flags |= MachineInstr::Disjoint;
+    if (Token.is(MIToken::kw_nusw))
+      Flags |= MachineInstr::NoUSWrap;
+    if (Token.is(MIToken::kw_samesign))
+      Flags |= MachineInstr::SameSign;
+    if (Token.is(MIToken::kw_inbounds))
+      Flags |= MachineInstr::InBounds;
 
     lex();
   }
@@ -1627,8 +1695,8 @@ bool MIParser::parseRegisterClassOrBank(VRegInfo &RegInfo) {
   llvm_unreachable("Unexpected register kind");
 }
 
-bool MIParser::parseRegisterFlag(unsigned &Flags) {
-  const unsigned OldFlags = Flags;
+bool MIParser::parseRegisterFlag(RegState &Flags) {
+  const RegState OldFlags = Flags;
   switch (Token.kind()) {
   case MIToken::kw_implicit:
     Flags |= RegState::Implicit;
@@ -1685,16 +1753,14 @@ bool MIParser::parseSubRegisterIndex(unsigned &SubReg) {
 }
 
 bool MIParser::parseRegisterTiedDefIndex(unsigned &TiedDefIdx) {
-  if (!consumeIfPresent(MIToken::kw_tied_def))
-    return true;
+  assert(Token.is(MIToken::kw_tied_def));
+  lex();
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected an integer literal after 'tied-def'");
   if (getUnsigned(TiedDefIdx))
     return true;
   lex();
-  if (expectAndConsume(MIToken::rparen))
-    return true;
-  return false;
+  return expectAndConsume(MIToken::rparen);
 }
 
 bool MIParser::assignRegisterTies(MachineInstr &MI,
@@ -1737,11 +1803,13 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
 bool MIParser::parseRegisterOperand(MachineOperand &Dest,
                                     std::optional<unsigned> &TiedDefIdx,
                                     bool IsDef) {
-  unsigned Flags = IsDef ? RegState::Define : 0;
+  RegState Flags = getDefRegState(IsDef);
   while (Token.isRegisterFlag()) {
     if (parseRegisterFlag(Flags))
       return true;
   }
+  // Update IsDef as we may have read a def flag.
+  IsDef = hasRegState(Flags, RegState::Define);
   if (!Token.isRegister())
     return error("expected a register after register flags");
   Register Reg;
@@ -1763,67 +1831,61 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (parseRegisterClassOrBank(*RegInfo))
         return true;
   }
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  if ((Flags & RegState::Define) == 0) {
-    if (consumeIfPresent(MIToken::lparen)) {
+
+  if (consumeIfPresent(MIToken::lparen)) {
+    // For a def, we only expect a type. For use we expect either a type or a
+    // tied-def. Additionally, for physical registers, we don't expect a type.
+    if (Token.is(MIToken::kw_tied_def)) {
+      if (IsDef)
+        return error("tied-def not supported for defs");
       unsigned Idx;
-      if (!parseRegisterTiedDefIndex(Idx))
-        TiedDefIdx = Idx;
-      else {
-        // Try a redundant low-level type.
-        LLT Ty;
-        if (parseLowLevelType(Token.location(), Ty))
-          return error("expected tied-def or low-level type after '('");
+      if (parseRegisterTiedDefIndex(Idx))
+        return true;
+      TiedDefIdx = Idx;
+    } else {
+      if (!Reg.isVirtual())
+        return error("unexpected type on physical register");
 
-        if (expectAndConsume(MIToken::rparen))
-          return true;
+      LLT Ty;
+      // If type parsing fails, forwad the parse error for defs.
+      if (parseLowLevelType(Token.location(), Ty))
+        return IsDef ? true
+                     : error("expected tied-def or low-level type after '('");
 
-        if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-          return error("inconsistent type for generic virtual register");
+      if (expectAndConsume(MIToken::rparen))
+        return true;
 
-        MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-        MRI.setType(Reg, Ty);
-      }
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
+        return error("inconsistent type for generic virtual register");
+
+      MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
+      MRI.setType(Reg, Ty);
+      MRI.noteNewVirtualRegister(Reg);
     }
-  } else if (consumeIfPresent(MIToken::lparen)) {
-    // Virtual registers may have a tpe with GlobalISel.
-    if (!Reg.isVirtual())
-      return error("unexpected type on physical register");
-
-    LLT Ty;
-    if (parseLowLevelType(Token.location(), Ty))
-      return true;
-
-    if (expectAndConsume(MIToken::rparen))
-      return true;
-
-    if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-      return error("inconsistent type for generic virtual register");
-
-    MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-    MRI.setType(Reg, Ty);
-  } else if (Reg.isVirtual()) {
-    // Generic virtual registers must have a type.
-    // If we end up here this means the type hasn't been specified and
-    // this is bad!
+  } else if (IsDef && Reg.isVirtual()) {
+    // Generic virtual registers defs must have a type.
     if (RegInfo->Kind == VRegInfo::GENERIC ||
         RegInfo->Kind == VRegInfo::REGBANK)
       return error("generic virtual registers must have a type");
   }
 
-  if (Flags & RegState::Define) {
-    if (Flags & RegState::Kill)
+  if (IsDef) {
+    if (hasRegState(Flags, RegState::Kill))
       return error("cannot have a killed def operand");
   } else {
-    if (Flags & RegState::Dead)
+    if (hasRegState(Flags, RegState::Dead))
       return error("cannot have a dead use operand");
   }
 
   Dest = MachineOperand::CreateReg(
-      Reg, Flags & RegState::Define, Flags & RegState::Implicit,
-      Flags & RegState::Kill, Flags & RegState::Dead, Flags & RegState::Undef,
-      Flags & RegState::EarlyClobber, SubReg, Flags & RegState::Debug,
-      Flags & RegState::InternalRead, Flags & RegState::Renamable);
+      Reg, IsDef, hasRegState(Flags, RegState::Implicit),
+      hasRegState(Flags, RegState::Kill), hasRegState(Flags, RegState::Dead),
+      hasRegState(Flags, RegState::Undef),
+      hasRegState(Flags, RegState::EarlyClobber), SubReg,
+      hasRegState(Flags, RegState::Debug),
+      hasRegState(Flags, RegState::InternalRead),
+      hasRegState(Flags, RegState::Renamable));
 
   return false;
 }
@@ -1838,6 +1900,142 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   else
     return error("integer literal is too large to be an immediate operand");
   lex();
+  return false;
+}
+
+bool MIParser::parseSymbolicInlineAsmOperand(unsigned OpIdx,
+                                             MachineOperand &Dest) {
+  assert(OpIdx >= InlineAsm::MIOp_ExtraInfo);
+  assert(Token.is(MIToken::Identifier) &&
+         "expected symbolic inline asm operand");
+
+  // Parse ExtraInfo flags.
+  if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
+    unsigned ExtraInfo = 0;
+    for (;;) {
+      if (Token.isNot(MIToken::Identifier))
+        break;
+
+      StringRef FlagName = Token.stringValue();
+      unsigned Flag = StringSwitch<unsigned>(FlagName)
+                          .Case("sideeffect", InlineAsm::Extra_HasSideEffects)
+                          .Case("mayload", InlineAsm::Extra_MayLoad)
+                          .Case("maystore", InlineAsm::Extra_MayStore)
+                          .Case("isconvergent", InlineAsm::Extra_IsConvergent)
+                          .Case("alignstack", InlineAsm::Extra_IsAlignStack)
+                          .Case("unwind", InlineAsm::Extra_MayUnwind)
+                          .Case("attdialect", 0)
+                          .Case("inteldialect", InlineAsm::Extra_AsmDialect)
+                          .Default(~0u);
+      if (Flag == ~0u)
+        return error("unknown inline asm extra info flag '" + FlagName + "'");
+
+      ExtraInfo |= Flag;
+      lex();
+    }
+
+    Dest = MachineOperand::CreateImm(ExtraInfo);
+    return false;
+  }
+
+  // Parse symbolic form: kind[:constraint].
+  StringRef KindStr = Token.stringValue();
+  constexpr auto InvalidKind = static_cast<InlineAsm::Kind>(0);
+  InlineAsm::Kind K =
+      StringSwitch<InlineAsm::Kind>(KindStr)
+          .Case("regdef", InlineAsm::Kind::RegDef)
+          .Case("reguse", InlineAsm::Kind::RegUse)
+          .Case("regdef-ec", InlineAsm::Kind::RegDefEarlyClobber)
+          .Case("clobber", InlineAsm::Kind::Clobber)
+          .Case("imm", InlineAsm::Kind::Imm)
+          .Case("mem", InlineAsm::Kind::Mem)
+          .Default(InvalidKind);
+  if (K == InvalidKind)
+    return error("unknown inline asm operand kind '" + KindStr + "'");
+
+  lex();
+
+  // Create the flag with default of 1 operand.
+  InlineAsm::Flag F(K, 1);
+
+  // Parse optional tiedto constraint: tiedto:$N.
+  if (Token.is(MIToken::Identifier) && Token.stringValue() == "tiedto") {
+    lex();
+    if (Token.isNot(MIToken::colon))
+      return error("expected ':' after 'tiedto'");
+    lex();
+    if (Token.isNot(MIToken::NamedRegister))
+      return error("expected '$N' operand number after 'tiedto:'");
+    unsigned OperandNo;
+    if (Token.stringValue().getAsInteger(10, OperandNo))
+      return error("invalid operand number in tiedto constraint");
+    lex();
+
+    F.setMatchingOp(OperandNo);
+
+    Dest = MachineOperand::CreateImm(F);
+    return false;
+  }
+
+  // Parse optional constraint after ':'.
+  if (Token.isNot(MIToken::colon)) {
+    Dest = MachineOperand::CreateImm(F);
+    return false;
+  }
+
+  lex();
+
+  if (Token.isNot(MIToken::Identifier))
+    return error("expected register class or memory constraint name after ':'");
+
+  StringRef ConstraintStr = Token.stringValue();
+  if (K == InlineAsm::Kind::Mem) {
+    InlineAsm::ConstraintCode CC =
+        StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
+            .Case("es", InlineAsm::ConstraintCode::es)
+            .Case("i", InlineAsm::ConstraintCode::i)
+            .Case("k", InlineAsm::ConstraintCode::k)
+            .Case("m", InlineAsm::ConstraintCode::m)
+            .Case("o", InlineAsm::ConstraintCode::o)
+            .Case("v", InlineAsm::ConstraintCode::v)
+            .Case("A", InlineAsm::ConstraintCode::A)
+            .Case("Q", InlineAsm::ConstraintCode::Q)
+            .Case("R", InlineAsm::ConstraintCode::R)
+            .Case("S", InlineAsm::ConstraintCode::S)
+            .Case("T", InlineAsm::ConstraintCode::T)
+            .Case("Um", InlineAsm::ConstraintCode::Um)
+            .Case("Un", InlineAsm::ConstraintCode::Un)
+            .Case("Uq", InlineAsm::ConstraintCode::Uq)
+            .Case("Us", InlineAsm::ConstraintCode::Us)
+            .Case("Ut", InlineAsm::ConstraintCode::Ut)
+            .Case("Uv", InlineAsm::ConstraintCode::Uv)
+            .Case("Uy", InlineAsm::ConstraintCode::Uy)
+            .Case("X", InlineAsm::ConstraintCode::X)
+            .Case("Z", InlineAsm::ConstraintCode::Z)
+            .Case("ZB", InlineAsm::ConstraintCode::ZB)
+            .Case("ZC", InlineAsm::ConstraintCode::ZC)
+            .Case("Zy", InlineAsm::ConstraintCode::Zy)
+            .Case("p", InlineAsm::ConstraintCode::p)
+            .Case("ZQ", InlineAsm::ConstraintCode::ZQ)
+            .Case("ZR", InlineAsm::ConstraintCode::ZR)
+            .Case("ZS", InlineAsm::ConstraintCode::ZS)
+            .Case("ZT", InlineAsm::ConstraintCode::ZT)
+            .Default(InlineAsm::ConstraintCode::Unknown);
+    if (CC == InlineAsm::ConstraintCode::Unknown)
+      return error("unknown memory constraint '" + ConstraintStr + "'");
+    F.setMemConstraint(CC);
+  } else if (K == InlineAsm::Kind::RegDef || K == InlineAsm::Kind::RegUse ||
+             K == InlineAsm::Kind::RegDefEarlyClobber) {
+    const TargetRegisterClass *RC =
+        PFS.Target.getRegClass(ConstraintStr.lower());
+    if (!RC)
+      return error("unknown register class '" + ConstraintStr + "'");
+    F.setRegClass(RC->getID());
+  }
+
+  lex();
+
+  Dest = MachineOperand::CreateImm(F);
   return false;
 }
 
@@ -1998,8 +2196,9 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
       return error("invalid address space number");
 
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
-  } else
+  } else {
     return GetError();
+  }
   lex();
 
   if (Token.isNot(MIToken::greater))
@@ -2070,7 +2269,10 @@ static bool getUnsigned(const MIToken &Token, unsigned &Result,
                         ErrorCallbackType ErrCB) {
   if (Token.hasIntegerValue()) {
     const uint64_t Limit = uint64_t(std::numeric_limits<unsigned>::max()) + 1;
-    uint64_t Val64 = Token.integerValue().getLimitedValue(Limit);
+    const APSInt &SInt = Token.integerValue();
+    if (SInt.isNegative())
+      return ErrCB(Token.location(), "expected unsigned integer");
+    uint64_t Val64 = SInt.getLimitedValue(Limit);
     if (Val64 == Limit)
       return ErrCB(Token.location(), "expected 32-bit integer (too large)");
     Result = Val64;
@@ -2306,7 +2508,7 @@ bool MIParser::parseDIExpression(MDNode *&Expr) {
   Expr = llvm::parseDIExpressionBodyAtBeginning(
       CurrentSource, Read, Error, *PFS.MF.getFunction().getParent(),
       &PFS.IRSlots);
-  CurrentSource = CurrentSource.slice(Read, StringRef::npos);
+  CurrentSource = CurrentSource.substr(Read);
   lex();
   if (!Expr)
     return error(Error.getMessage());
@@ -2323,6 +2525,8 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
   MDNode *Scope = nullptr;
   MDNode *InlinedAt = nullptr;
   bool ImplicitCode = false;
+  uint64_t AtomGroup = 0;
+  uint64_t AtomRank = 0;
 
   if (expectAndConsume(MIToken::lparen))
     return true;
@@ -2373,8 +2577,9 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
           } else if (Token.is(MIToken::md_dilocation)) {
             if (parseDILocation(InlinedAt))
               return true;
-          } else
+          } else {
             return error("expected metadata node");
+          }
           if (!isa<DILocation>(InlinedAt))
             return error("expected DILocation node");
           continue;
@@ -2397,6 +2602,28 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
           lex();
           continue;
         }
+        if (Token.stringValue() == "atomGroup") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          AtomGroup = Token.integerValue().getZExtValue();
+          lex();
+          continue;
+        }
+        if (Token.stringValue() == "atomRank") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          AtomRank = Token.integerValue().getZExtValue();
+          lex();
+          continue;
+        }
       }
       return error(Twine("invalid DILocation argument '") +
                    Token.stringValue() + "'");
@@ -2412,7 +2639,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
     return error("DILocation requires a scope");
 
   Loc = DILocation::get(MF.getFunction().getContext(), Line, Column, Scope,
-                        InlinedAt, ImplicitCode);
+                        InlinedAt, ImplicitCode, AtomGroup, AtomRank);
   return false;
 }
 
@@ -2439,7 +2666,7 @@ bool MIParser::parseCFIOffset(int &Offset) {
   return false;
 }
 
-bool MIParser::parseCFIRegister(Register &Reg) {
+bool MIParser::parseCFIRegister(unsigned &Reg) {
   if (Token.isNot(MIToken::NamedRegister))
     return error("expected a cfi register");
   Register LLVMReg;
@@ -2484,7 +2711,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   auto Kind = Token.kind();
   lex();
   int Offset;
-  Register Reg;
+  unsigned Reg;
   unsigned AddressSpace;
   unsigned CFIIndex;
   switch (Kind) {
@@ -2557,7 +2784,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createUndefined(nullptr, Reg));
     break;
   case MIToken::kw_cfi_register: {
-    Register Reg2;
+    unsigned Reg2;
     if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
         parseCFIRegister(Reg2))
       return true;
@@ -2571,6 +2798,10 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     break;
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+    break;
+  case MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc:
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createNegateRAStateWithPC(nullptr));
     break;
   case MIToken::kw_cfi_escape: {
     std::string Values;
@@ -2658,13 +2889,8 @@ bool MIParser::parseIntrinsicOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::rparen))
     return error("expected ')' to terminate intrinsic name");
 
-  // Find out what intrinsic we're dealing with, first try the global namespace
-  // and then the target's private intrinsics if that fails.
-  const TargetIntrinsicInfo *TII = MF.getTarget().getIntrinsicInfo();
-  Intrinsic::ID ID = Function::lookupIntrinsicID(Name);
-  if (ID == Intrinsic::not_intrinsic && TII)
-    ID = static_cast<Intrinsic::ID>(TII->lookupName(Name));
-
+  // Find out what intrinsic we're dealing with.
+  Intrinsic::ID ID = Intrinsic::lookupIntrinsicID(Name);
   if (ID == Intrinsic::not_intrinsic)
     return error("unknown intrinsic name");
   Dest = MachineOperand::CreateIntrinsicID(ID);
@@ -2744,14 +2970,18 @@ bool MIParser::parseShuffleMaskOperand(MachineOperand &Dest) {
     } else if (Token.is(MIToken::IntegerLiteral)) {
       const APSInt &Int = Token.integerValue();
       ShufMask.push_back(Int.getExtValue());
-    } else
+    } else {
       return error("expected integer constant");
+    }
 
     lex();
   } while (consumeIfPresent(MIToken::comma));
 
   if (expectAndConsume(MIToken::rparen))
     return error("shufflemask should be terminated by ')'.");
+
+  if (ShufMask.size() < 2)
+    return error("shufflemask should have > 1 element");
 
   ArrayRef<int> MaskAlloc = MF.allocateShuffleMask(ShufMask);
   Dest = MachineOperand::CreateShuffleMask(MaskAlloc);
@@ -2823,7 +3053,7 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
       if (parseNamedRegister(Reg))
         return true;
       lex();
-      Mask[Reg / 32] |= 1U << (Reg % 32);
+      Mask[Reg.id() / 32] |= 1U << (Reg.id() % 32);
     }
 
     // TODO: Report an error if the same register is used more than once.
@@ -2832,6 +3062,31 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::rparen))
     return true;
   Dest = MachineOperand::CreateRegMask(Mask);
+  return false;
+}
+
+bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
+  assert(Token.is(MIToken::kw_lanemask));
+
+  lex();
+  if (expectAndConsume(MIToken::lparen))
+    return true;
+
+  // Parse lanemask.
+  if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
+    return error("expected a valid lane mask value");
+  static_assert(sizeof(LaneBitmask::Type) == sizeof(uint64_t),
+                "Use correct get-function for lane mask.");
+  LaneBitmask::Type V;
+  if (getUint64(V))
+    return true;
+  LaneBitmask LaneMask(V);
+  lex();
+
+  if (expectAndConsume(MIToken::rparen))
+    return true;
+
+  Dest = MachineOperand::CreateLaneMask(LaneMask);
   return false;
 }
 
@@ -2848,7 +3103,7 @@ bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
     if (parseNamedRegister(Reg))
       return true;
     lex();
-    Mask[Reg / 32] |= 1U << (Reg % 32);
+    Mask[Reg.id() / 32] |= 1U << (Reg.id() % 32);
     // TODO: Report an error if the same register is used more than once.
     if (Token.isNot(MIToken::comma))
       break;
@@ -2880,6 +3135,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::NamedVirtualRegister:
     return parseRegisterOperand(Dest, TiedDefIdx);
   case MIToken::IntegerLiteral:
+    // TODO: Forbid numeric operands for INLINEASM once the transition to the
+    // symbolic form is over.
     return parseImmediateOperand(Dest);
   case MIToken::kw_half:
   case MIToken::kw_bfloat:
@@ -2927,6 +3184,7 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_undefined:
   case MIToken::kw_cfi_window_save:
   case MIToken::kw_cfi_aarch64_negate_ra_sign_state:
+  case MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc:
     return parseCFIOperand(Dest);
   case MIToken::kw_blockaddress:
     return parseBlockAddressOperand(Dest);
@@ -2934,6 +3192,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     return parseIntrinsicOperand(Dest);
   case MIToken::kw_target_index:
     return parseTargetIndexOperand(Dest);
+  case MIToken::kw_lanemask:
+    return parseLaneMaskOperand(Dest);
   case MIToken::kw_liveout:
     return parseLiveoutRegisterMaskOperand(Dest);
   case MIToken::kw_floatpred:
@@ -2945,15 +3205,23 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     return parseDbgInstrRefOperand(Dest);
   case MIToken::Error:
     return true;
-  case MIToken::Identifier:
-    if (const auto *RegMask = PFS.Target.getRegMask(Token.stringValue())) {
+  case MIToken::Identifier: {
+    bool IsInlineAsm = OpCode == TargetOpcode::INLINEASM ||
+                       OpCode == TargetOpcode::INLINEASM_BR;
+    if (IsInlineAsm)
+      return parseSymbolicInlineAsmOperand(OpIdx, Dest);
+
+    StringRef Id = Token.stringValue();
+    if (const auto *RegMask = PFS.Target.getRegMask(Id)) {
       Dest = MachineOperand::CreateRegMask(RegMask);
       lex();
       break;
-    } else if (Token.stringValue() == "CustomRegMask") {
+    } else if (Id == "CustomRegMask") {
       return parseCustomRegisterMaskOperand(Dest);
-    } else
+    } else {
       return parseTypedImmediateOperand(Dest);
+    }
+  }
   case MIToken::dot: {
     const auto *TII = MF.getSubtarget().getInstrInfo();
     if (const auto *Formatter = TII->getMIRFormatter()) {
@@ -3240,8 +3508,9 @@ bool MIParser::parseMemoryPseudoSourceValue(const PseudoSourceValue *&PSV) {
                 return error(Loc, Msg);
               }))
         return true;
-    } else
+    } else {
       return error("unable to parse target custom pseudo source value");
+    }
     break;
   }
   default:
@@ -3449,6 +3718,11 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
       if (parseMDNode(AAInfo.NoAlias))
         return true;
       break;
+    case MIToken::md_noalias_addrspace:
+      lex();
+      if (parseMDNode(AAInfo.NoAliasAddrSpace))
+        return true;
+      break;
     case MIToken::md_range:
       lex();
       if (parseMDNode(Range))
@@ -3457,7 +3731,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     // TODO: Report an error on duplicate metadata nodes.
     default:
       return error("expected 'align' or '!tbaa' or '!alias.scope' or "
-                   "'!noalias' or '!range'");
+                   "'!noalias' or '!range' or '!noalias.addrspace'");
     }
   }
   if (expectAndConsume(MIToken::rparen))
@@ -3510,6 +3784,20 @@ bool MIParser::parsePCSections(MDNode *&Node) {
     return true;
   if (!Node)
     return error("expected a MDNode after 'pcsections'");
+  if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
+      Token.is(MIToken::lbrace))
+    return false;
+  if (Token.isNot(MIToken::comma))
+    return error("expected ',' before the next machine operand");
+  lex();
+  return false;
+}
+
+bool MIParser::parseMMRA(MDNode *&Node) {
+  assert(Token.is(MIToken::kw_mmra) && "Invalid token for MMRA!");
+  lex();
+  if (parseMDNode(Node))
+    return true;
   if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
       Token.is(MIToken::lbrace))
     return false;
@@ -3606,14 +3894,18 @@ bool llvm::parseVirtualRegisterReference(PerFunctionMIParsingState &PFS,
   return MIParser(PFS, Error, Src).parseStandaloneVirtualRegister(Info);
 }
 
-bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS,
-                                     int &FI, StringRef Src,
-                                     SMDiagnostic &Error) {
+bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS, int &FI,
+                                     StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneStackObject(FI);
 }
 
-bool llvm::parseMDNode(PerFunctionMIParsingState &PFS,
-                       MDNode *&Node, StringRef Src, SMDiagnostic &Error) {
+bool llvm::parsePrefetchTarget(PerFunctionMIParsingState &PFS,
+                               CallsiteID &Target, StringRef Src,
+                               SMDiagnostic &Error) {
+  return MIParser(PFS, Error, Src).parsePrefetchTarget(Target);
+}
+bool llvm::parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node,
+                       StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneMDNode(Node);
 }
 

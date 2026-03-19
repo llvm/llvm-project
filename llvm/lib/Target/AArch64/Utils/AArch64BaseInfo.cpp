@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "AArch64BaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Regex.h"
@@ -19,7 +18,7 @@ using namespace llvm;
 
 namespace llvm {
   namespace AArch64AT {
-#define GET_AT_IMPL
+#define GET_ATsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
@@ -27,121 +26,135 @@ namespace llvm {
 
 namespace llvm {
   namespace AArch64DBnXS {
-#define GET_DBNXS_IMPL
+#define GET_DBnXSsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64DB {
-#define GET_DB_IMPL
+#define GET_DBsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64DC {
-#define GET_DC_IMPL
+#define GET_DCsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64IC {
-#define GET_IC_IMPL
+#define GET_ICsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64ISB {
-#define GET_ISB_IMPL
+#define GET_ISBsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64TSB {
-#define GET_TSB_IMPL
-#include "AArch64GenSystemOperands.inc"
-  }
-}
-
-namespace llvm {
-  namespace AArch64PRCTX {
-#define GET_PRCTX_IMPL
+#define GET_TSBsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64PRFM {
-#define GET_PRFM_IMPL
+#define GET_PRFMsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64SVEPRFM {
-#define GET_SVEPRFM_IMPL
+#define GET_SVEPRFMsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64RPRFM {
-#define GET_RPRFM_IMPL
+#define GET_RPRFMsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   } // namespace AArch64RPRFM
 } // namespace llvm
 
 namespace llvm {
   namespace AArch64SVEPredPattern {
-#define GET_SVEPREDPAT_IMPL
+#define GET_SVEPREDPATsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
 namespace AArch64SVEVecLenSpecifier {
-#define GET_SVEVECLENSPECIFIER_IMPL
+#define GET_SVEVECLENSPECIFIERsList_IMPL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64SVEVecLenSpecifier
 } // namespace llvm
 
 namespace llvm {
   namespace AArch64ExactFPImm {
-#define GET_EXACTFPIMM_IMPL
+#define GET_ExactFPImmsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64PState {
-#define GET_PSTATEIMM0_15_IMPL
+#define GET_PStateImm0_15sList_IMPL
 #include "AArch64GenSystemOperands.inc"
-#define GET_PSTATEIMM0_1_IMPL
+#define GET_PStateImm0_1sList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
   namespace AArch64PSBHint {
-#define GET_PSB_IMPL
+#define GET_PSBsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
+
+namespace llvm {
+namespace AArch64PHint {
+#define GET_PHintsList_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64PHint
+} // namespace llvm
 
 namespace llvm {
   namespace AArch64BTIHint {
-#define GET_BTI_IMPL
+#define GET_BTIsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
 
 namespace llvm {
+namespace AArch64CMHPriorityHint {
+#define GET_CMHPRIORITYHINT_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64CMHPriorityHint
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64TIndexHint {
+#define GET_TINDEX_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TIndexHint
+} // namespace llvm
+
+namespace llvm {
   namespace AArch64SysReg {
-#define GET_SYSREG_IMPL
+#define GET_SysRegsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }
@@ -180,15 +193,55 @@ std::string AArch64SysReg::genericRegisterString(uint32_t Bits) {
 }
 
 namespace llvm {
-  namespace AArch64TLBI {
+namespace AArch64TLBI {
 #define GET_TLBITable_IMPL
 #include "AArch64GenSystemOperands.inc"
-  }
-}
+} // namespace AArch64TLBI
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64PLBI {
+#define GET_PLBITable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64PLBI
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64TLBIP {
+#define GET_TLBIPTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TLBIP
+
+namespace AArch64MLBI {
+#define GET_MLBITable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64MLBI
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GIC {
+#define GET_GICTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GIC
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GICR {
+#define GET_GICRTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GICR
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GSB {
+#define GET_GSBTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GSB
+} // namespace llvm
 
 namespace llvm {
   namespace AArch64SVCR {
-#define GET_SVCR_IMPL
+#define GET_SVCRsList_IMPL
 #include "AArch64GenSystemOperands.inc"
   }
 }

@@ -24,14 +24,13 @@
 
 namespace detail
 {
-   TEST_NORETURN
-   inline void throw_bad_alloc_helper() {
+[[noreturn]] inline void throw_bad_alloc_helper() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-       throw std::bad_alloc();
+  throw std::bad_alloc();
 #else
        std::abort();
 #endif
-   }
+}
 }
 
 class MemCounter
@@ -455,11 +454,23 @@ void operator delete[](void* p, std::nothrow_t const&) TEST_NOEXCEPT {
 #      define USE_ALIGNED_ALLOC
 #    endif
 
+#    if defined(__APPLE__)
+#      if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                                                   \
+           __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500)
+#        define TEST_HAS_NO_C11_ALIGNED_ALLOC
+#      endif
+#    elif defined(__ANDROID__) && __ANDROID_API__ < 28
+#      define TEST_HAS_NO_C11_ALIGNED_ALLOC
+#    endif
+
 inline void* allocate_aligned_impl(std::size_t size, std::align_val_t align) {
   const std::size_t alignment = static_cast<std::size_t>(align);
   void* ret                   = nullptr;
 #    ifdef USE_ALIGNED_ALLOC
   ret = _aligned_malloc(size, alignment);
+#    elif TEST_STD_VER >= 17 && !defined(TEST_HAS_NO_C11_ALIGNED_ALLOC)
+  size_t rounded_size = (size + alignment - 1) & ~(alignment - 1);
+  ret                 = aligned_alloc(alignment, size > rounded_size ? size : rounded_size);
 #    else
   assert(posix_memalign(&ret, std::max(alignment, sizeof(void*)), size) != EINVAL);
 #    endif
@@ -615,7 +626,11 @@ struct RequireAllocationGuard {
     void requireExactly(std::size_t N) { m_req_alloc = N; m_exactly = true; }
 
     ~RequireAllocationGuard() {
+#ifdef ALLOW_MISMATCHING_LIBRRARY_INTERNAL_ALLOCATIONS
+        ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(globalMemCounter.checkOutstandingNewEq(static_cast<int>(m_outstanding_new_on_init)));
+#else
         assert(globalMemCounter.checkOutstandingNewEq(static_cast<int>(m_outstanding_new_on_init)));
+#endif
         std::size_t Expect = m_new_count_on_init + m_req_alloc;
         assert(globalMemCounter.checkNewCalledEq(static_cast<int>(Expect)) ||
                (!m_exactly && globalMemCounter.checkNewCalledGreaterThan(static_cast<int>(Expect))));

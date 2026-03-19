@@ -71,9 +71,26 @@ conversions (%r, %k); any fixed point number conversion will be treated as
 invalid. This reduces code size. This has no effect if the current compiler does
 not support fixed point numbers.
 
+LIBC_COPT_PRINTF_DISABLE_WIDE
+-----------------------------
+When set, this flag disables support for wide characters (%lc and %ls). Any
+conversions will be ignored. This reduces code size. This will be set by default
+on windows platforms as current printf implementation does not support UTF-16 wide
+characters.
+
+LIBC_COPT_PRINTF_DISABLE_BITINT
+-------------------------------
+When set, this flag disables the bit int length modifiers wNUM and wfNUM. The
+length modifiers will be treated as if they don't exist, so conversions using
+them will be treated as invalid. This reduces code size.
+
+.. _printf_no_nullptr_checks:
+
 LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 ----------------------------------
-When set, this flag disables the nullptr checks in %n and %s.
+When set, this flag disables the nullptr checks in %n and %s; passing a null
+pointer is undefined behavior. See :ref:`printf_conversion` for the behavior
+when nullptr checks are enabled.
 
 LIBC_COPT_PRINTF_CONV_ATLAS
 ---------------------------
@@ -173,13 +190,15 @@ If a number passed as a field width or precision value is out of range for an
 int, then it will be treated as the largest value in the int range
 (e.g. "%-999999999999.999999999999s" is the same as "%-2147483647.2147483647s").
 
-If the field width is set to INT_MIN by using the '*' form, 
+If the field width is set to INT_MIN by using the '*' form,
 e.g. printf("%*d", INT_MIN, 1), it will be treated as INT_MAX, since -INT_MIN is
 not representable as an int.
 
 If a number passed as a bit width is less than or equal to zero, the conversion
 is considered invalid. If the provided bit width is larger than the width of
 uintmax_t, it will be clamped to the width of uintmax_t.
+
+.. _printf_conversion:
 
 ----------
 Conversion
@@ -192,7 +211,7 @@ If a conversion specification ends in %, then it will be treated as if it is
 "%%", ignoring all options.
 
 If a null pointer is passed to a %s conversion specification and null pointer
-checks are enabled, it will be treated as if the provided string is "null".
+checks are enabled, it will be treated as if the provided string is "(null)".
 
 If a null pointer is passed to a %n conversion specification and null pointer
 checks are enabled, the conversion will fail and printf will return a negative
@@ -213,3 +232,15 @@ The %r, %R, %k, and %K fixed point number format specifiers are accepted as
 defined in ISO/IEC TR 18037 (the fixed point number extension). These are
 available when the compiler is detected as having support for fixed point
 numbers and the LIBC_COPT_PRINTF_DISABLE_FIXED_POINT flag is not set.
+
+The %m conversion will behave as specified by POSIX for syslog: It takes no
+arguments, and outputs the result of strerror(errno). Additionally, to match
+existing printf behaviors, it will behave as if it is a %s string conversion for
+the purpose of all options, except for the alt form flag. If the alt form flag
+is specified, %m will instead output a string matching the macro name of the
+value of errno (e.g. "ERANGE" for errno = ERANGE), again treating it as a string
+conversion. If there is no corresponding macro, then alt form %m will print the
+value of errno as an integer with the %d format, including all options. If
+errno = 0 and alt form is specified, the conversion will be a string conversion
+on "0" for simplicity of implementation. This matches what other libcs
+implementing this feature have done.

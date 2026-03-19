@@ -14,9 +14,26 @@ include(CompilerRTDarwinUtils)
 check_include_file(unwind.h HAVE_UNWIND_H)
 
 # Used by sanitizer_common and tests.
-check_include_file(rpc/xdr.h HAVE_RPC_XDR_H)
+if ("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
+  set(_rpc_xdr_header "tirpc/rpc/xdr.h")
+  set(_default_require_rpc_xdr_h ON)
+else()
+  set(_rpc_xdr_header "rpc/xdr.h")
+  set(_default_require_rpc_xdr_h OFF)
+endif()
+check_include_file(${_rpc_xdr_header} HAVE_RPC_XDR_H)
+option(COMPILER_RT_REQUIRE_RPC_XDR_H
+  "Require ${_rpc_xdr_header} for sanitizer builds (default ON for AIX, OFF elsewhere). \
+Set to OFF to bypass the missing-header error."
+  ${_default_require_rpc_xdr_h})
 if (NOT HAVE_RPC_XDR_H)
   set(HAVE_RPC_XDR_H 0)
+  if (COMPILER_RT_REQUIRE_RPC_XDR_H)
+    message(FATAL_ERROR
+      "${_rpc_xdr_header} is required for sanitizer builds but was not found. "
+      "Install the appropriate development package (e.g. bos.net.nfs.adt on AIX), "
+      "or set -DCOMPILER_RT_REQUIRE_RPC_XDR_H=OFF to bypass this check.")
+  endif()
 endif()
 
 # Top level target used to build all compiler-rt libraries.
@@ -59,9 +76,9 @@ if (LLVM_TREE_AVAILABLE)
     set(_host_executable_suffix ${CMAKE_EXECUTABLE_SUFFIX})
   endif()
   set(COMPILER_RT_TEST_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang${_host_executable_suffix})
   set(COMPILER_RT_TEST_CXX_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang++${_host_executable_suffix})
 else()
     # Take output dir and install path from the user.
   set(COMPILER_RT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH
@@ -77,12 +94,21 @@ else()
   set(COMPILER_RT_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE PATH "C++ Compiler to use for testing")
 endif()
 
-if("${COMPILER_RT_TEST_COMPILER}" MATCHES "clang[+]*$")
+get_filename_component(_test_compiler_name "${COMPILER_RT_TEST_COMPILER}" NAME)
+if("${COMPILER_RT_TEST_COMPILER}" STREQUAL "${CMAKE_C_COMPILER}")
+  set(COMPILER_RT_TEST_COMPILER_ID "${CMAKE_C_COMPILER_ID}")
+elseif("${_test_compiler_name}" MATCHES "clang.*")
   set(COMPILER_RT_TEST_COMPILER_ID Clang)
-elseif("${COMPILER_RT_TEST_COMPILER}" MATCHES "clang.*.exe$")
-  set(COMPILER_RT_TEST_COMPILER_ID Clang)
+elseif("${_test_compiler_name}" MATCHES "cl.exe$")
+  set(COMPILER_RT_TEST_COMPILER_ID MSVC)
 else()
+  message(STATUS "Unknown compiler ${COMPILER_RT_TEST_COMPILER}, assuming GNU")
   set(COMPILER_RT_TEST_COMPILER_ID GNU)
+endif()
+
+# AppleClang expects 'Clang' as compiler-rt test compiler ID.
+if ("${COMPILER_RT_TEST_COMPILER_ID}" STREQUAL "AppleClang")
+  set(COMPILER_RT_TEST_COMPILER_ID Clang)
 endif()
 
 if(NOT DEFINED COMPILER_RT_OS_DIR)
@@ -216,8 +242,7 @@ macro(test_targets)
       endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
       test_target_arch(amdgcn "" "--target=amdgcn-amd-amdhsa" "-nogpulib"
-                       "-flto" "-fconvergent-functions"
-                       "-Xclang -mcode-object-version=none")
+                       "-flto" "-Xclang -mcode-object-version=none")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
       test_target_arch(hexagon "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "loongarch64")
@@ -261,8 +286,7 @@ macro(test_targets)
         test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
       endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
-      test_target_arch(nvptx64 "" "--nvptx64-nvidia-cuda" "-nogpulib" "-flto"
-                       "-fconvergent-functions" "-c")
+      test_target_arch(nvptx64 "" "--nvptx64-nvidia-cuda" "-nogpulib" "-flto" "-c")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
         test_target_arch(arm "" "" "")

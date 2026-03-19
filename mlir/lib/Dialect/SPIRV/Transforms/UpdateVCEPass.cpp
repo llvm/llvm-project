@@ -13,14 +13,11 @@
 
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Visitors.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include <optional>
 
@@ -98,6 +95,13 @@ static LogicalResult checkAndUpdateCapabilityRequirements(
   return success();
 }
 
+static void addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
+  SetVector<spirv::Capability> tmp;
+  for (spirv::Capability cap : caps)
+    tmp.insert_range(getRecursiveImpliedCapabilities(cap));
+  caps.insert_range(std::move(tmp));
+}
+
 void UpdateVCEPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
 
@@ -154,6 +158,12 @@ void UpdateVCEPass::runOnOperation() {
     if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))
       valueTypes.push_back(globalVar.getType());
 
+    // If the op is FunctionLike make sure to process input and result types.
+    if (auto funcOpInterface = dyn_cast<FunctionOpInterface>(op)) {
+      llvm::append_range(valueTypes, funcOpInterface.getArgumentTypes());
+      llvm::append_range(valueTypes, funcOpInterface.getResultTypes());
+    }
+
     // Requirements from values' types
     SmallVector<ArrayRef<spirv::Extension>, 4> typeExtensions;
     SmallVector<ArrayRef<spirv::Capability>, 8> typeCapabilities;
@@ -176,6 +186,23 @@ void UpdateVCEPass::runOnOperation() {
 
   if (walkResult.wasInterrupted())
     return signalPassFailure();
+
+  addAllImpliedCapabilities(deducedCapabilities);
+
+  // Update min version requirement for capabilities after deducing them.
+  for (spirv::Capability cap : deducedCapabilities) {
+    if (std::optional<spirv::Version> minVersion = spirv::getMinVersion(cap)) {
+      deducedVersion = std::max(deducedVersion, *minVersion);
+      if (deducedVersion > allowedVersion) {
+        module.emitError("Capability '")
+            << spirv::stringifyCapability(cap) << "' requires min version "
+            << spirv::stringifyVersion(deducedVersion)
+            << " but target environment allows up to "
+            << spirv::stringifyVersion(allowedVersion);
+        return signalPassFailure();
+      }
+    }
+  }
 
   // TODO: verify that the deduced version is consistent with
   // SPIR-V ops' maximal version requirements.

@@ -33,7 +33,7 @@ return:
 
 declare i32 @foo() addrspace(40)
 ; CHECK: declare i32 @foo() addrspace(40)
-declare i32 @named(i16* nocapture) addrspace(40)
-; CHECK: declare i32 @named(ptr nocapture) addrspace(40)
+declare i32 @named(i16* captures(none)) addrspace(40)
+; CHECK: declare i32 @named(ptr captures(none)) addrspace(40)
 declare i32 @0(i16*) addrspace(40)
 ; CHECK: declare i32 @0(ptr) addrspace(40)

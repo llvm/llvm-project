@@ -15,9 +15,50 @@
 
 #include "llvm/Support/CommandLine.h"
 
+namespace llvm {
+namespace bolt {
+class BinaryFunction;
+}
+} // namespace llvm
+
 namespace opts {
 
-extern bool HeatmapMode;
+enum HeatmapModeKind {
+  HM_None = 0,
+  HM_Exclusive, // llvm-bolt-heatmap
+  HM_Optional   // perf2bolt --heatmap
+};
+
+/// Strategy used to partition blocks into fragments.
+enum SplitFunctionsStrategy : char {
+  /// Split each function into a hot and cold fragment using profiling
+  /// information.
+  Profile2 = 0,
+  /// Split each function into a hot, warm, and cold fragment using
+  /// profiling information.
+  CDSplit,
+  /// Split each function into a hot and cold fragment at a randomly chosen
+  /// split point (ignoring any available profiling information).
+  Random2,
+  /// Split each function into N fragments at a randomly chosen split points
+  /// (ignoring any available profiling information).
+  RandomN,
+  /// Split all basic blocks of each function into fragments such that each
+  /// fragment contains exactly a single basic block.
+  All
+};
+
+using HeatmapBlockSizes = std::vector<unsigned>;
+struct HeatmapBlockSpecParser : public llvm::cl::parser<HeatmapBlockSizes> {
+  explicit HeatmapBlockSpecParser(llvm::cl::Option &O)
+      : llvm::cl::parser<HeatmapBlockSizes>(O) {}
+  // Return true on error.
+  bool parse(llvm::cl::Option &O, llvm::StringRef ArgName, llvm::StringRef Arg,
+             HeatmapBlockSizes &Val);
+};
+
+extern HeatmapModeKind HeatmapMode;
+extern bool BinaryAnalysisMode;
 
 extern llvm::cl::OptionCategory BoltCategory;
 extern llvm::cl::OptionCategory BoltDiffCategory;
@@ -27,20 +68,26 @@ extern llvm::cl::OptionCategory BoltOutputCategory;
 extern llvm::cl::OptionCategory AggregatorCategory;
 extern llvm::cl::OptionCategory BoltInstrCategory;
 extern llvm::cl::OptionCategory HeatmapCategory;
+extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;
 extern llvm::cl::opt<bool> AggregateOnly;
+extern llvm::cl::opt<bool> ArmSPE;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
+extern llvm::cl::opt<bool> CompactCodeModel;
 extern llvm::cl::opt<bool> DiffOnly;
 extern llvm::cl::opt<bool> EnableBAT;
 extern llvm::cl::opt<bool> EqualizeBBCounts;
+extern llvm::cl::opt<bool> ForcePatch;
 extern llvm::cl::opt<bool> RemoveSymtab;
 extern llvm::cl::opt<unsigned> ExecutionCountThreshold;
-extern llvm::cl::opt<unsigned> HeatmapBlock;
+extern llvm::cl::opt<HeatmapBlockSizes, false, HeatmapBlockSpecParser>
+    HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
 extern llvm::cl::opt<bool> HeatmapPrintMappings;
+extern llvm::cl::opt<std::string> HeatmapOutput;
 extern llvm::cl::opt<bool> HotData;
 extern llvm::cl::opt<bool> HotFunctionsAtEnd;
 extern llvm::cl::opt<bool> HotText;
@@ -50,11 +97,14 @@ extern llvm::cl::opt<std::string> OutputFilename;
 extern llvm::cl::opt<std::string> PerfData;
 extern llvm::cl::opt<bool> PrintCacheMetrics;
 extern llvm::cl::opt<bool> PrintSections;
+extern llvm::cl::opt<bool> UpdateBranchProtection;
+extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 
 // The format to use with -o in aggregation mode (perf2bolt)
 enum ProfileFormatKind { PF_Fdata, PF_YAML };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
+extern llvm::cl::opt<bool> ShowDensity;
 extern llvm::cl::opt<bool> SplitEH;
 extern llvm::cl::opt<bool> StrictMode;
 extern llvm::cl::opt<bool> TimeOpts;
@@ -76,6 +126,31 @@ extern llvm::cl::opt<unsigned> Verbosity;
 
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
+
+/// Return true if we should dump dot graphs for the given function.
+bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
+
+/// Bitmask representing a subset of possible gadget kinds.
+enum GadgetKindBitmask : unsigned {
+  /// Scan for unprotected backward control-flow (return instructions).
+  GS_PTRAUTH_RETURN_TARGETS = (1 << 0),
+  /// Scan for tail calls performed with untrusted link register.
+  GS_PTRAUTH_TAIL_CALLS = (1 << 1),
+  /// Scan for unprotected forward control-flow (branch and call instructions).
+  GS_PTRAUTH_BRANCH_AND_CALL_TARGETS = (1 << 2),
+  /// Scan for signing oracles.
+  GS_PTRAUTH_SIGN_ORACLES = (1 << 3),
+  /// Scan for authentication oracles.
+  GS_PTRAUTH_AUTH_ORACLES = (1 << 4),
+
+  /// Scan for all Pointer Authentication issues.
+  GS_PTRAUTH_ALL_MASK = GS_PTRAUTH_RETURN_TARGETS | GS_PTRAUTH_TAIL_CALLS |
+                        GS_PTRAUTH_BRANCH_AND_CALL_TARGETS |
+                        GS_PTRAUTH_SIGN_ORACLES | GS_PTRAUTH_AUTH_ORACLES,
+
+  /// Run all implemented scanners.
+  GS_ALL_MASK = GS_PTRAUTH_ALL_MASK,
+};
 
 } // namespace opts
 

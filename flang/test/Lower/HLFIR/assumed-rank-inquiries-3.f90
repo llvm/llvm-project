@@ -1,5 +1,5 @@
 ! Test shape lowering for assumed-rank
-! RUN: bbc -emit-hlfir -o - %s -allow-assumed-rank | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_shape(x)
   real :: x(..)
@@ -10,7 +10,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 4 : i32
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_3:.*]] : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
-! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAShape(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
+! CHECK:           fir.call @_FortranAShape(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_12:.*]] = fir.box_rank %[[VAL_3]] : (!fir.box<!fir.array<*:f32>>) -> index
 ! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
@@ -33,7 +33,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 8 : i32
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_3:.*]] : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
-! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAShape(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
+! CHECK:           fir.call @_FortranAShape(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi64>>) -> !fir.ref<!fir.array<?xi64>>
 ! CHECK:           %[[VAL_12:.*]] = fir.box_rank %[[VAL_3]] : (!fir.box<!fir.array<*:f32>>) -> index
 ! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
@@ -49,7 +49,7 @@ end subroutine
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : i32
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<*:f32>>>) -> !fir.box<none>
-! CHECK:           %[[VAL_11:.*]] = fir.call @_FortranAShape(%[[VAL_8]], %[[VAL_9]], %[[VAL_5]], %{{.*}}, %{{.*}})
+! CHECK:           fir.call @_FortranAShape(%[[VAL_8]], %[[VAL_9]], %[[VAL_5]], %{{.*}}, %{{.*}})
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_13:.*]] = fir.box_rank %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<*:f32>>>) -> index
 ! CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
@@ -65,7 +65,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 4 : i32
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_3:.*]] : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
-! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranALbound(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
+! CHECK:           fir.call @_FortranALbound(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_12:.*]] = fir.box_rank %[[VAL_3]] : (!fir.box<!fir.array<*:f32>>) -> index
 ! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
@@ -88,7 +88,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 8 : i32
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_3:.*]] : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
-! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranALbound(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
+! CHECK:           fir.call @_FortranALbound(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi64>>) -> !fir.ref<!fir.array<?xi64>>
 ! CHECK:           %[[VAL_12:.*]] = fir.box_rank %[[VAL_3]] : (!fir.box<!fir.array<*:f32>>) -> index
 ! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
@@ -104,7 +104,7 @@ end subroutine
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : i32
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<*:f32>>>) -> !fir.box<none>
-! CHECK:           %[[VAL_11:.*]] = fir.call @_FortranALbound(%[[VAL_8]], %[[VAL_9]], %[[VAL_5]], %{{.*}}, %{{.*}})
+! CHECK:           fir.call @_FortranALbound(%[[VAL_8]], %[[VAL_9]], %[[VAL_5]], %{{.*}}, %{{.*}})
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_13:.*]] = fir.box_rank %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<*:f32>>>) -> index
 ! CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
@@ -119,7 +119,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 4 : i32
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_3:.*]] : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
-! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAUbound(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
+! CHECK:           fir.call @_FortranAUbound(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_12:.*]] = fir.box_rank %[[VAL_3]] : (!fir.box<!fir.array<*:f32>>) -> index
 ! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
@@ -142,7 +142,7 @@ end subroutine
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 8 : i32
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_3:.*]] : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
-! CHECK:           %[[VAL_10:.*]] = fir.call @_FortranAUbound(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
+! CHECK:           fir.call @_FortranAUbound(%[[VAL_7]], %[[VAL_8]], %[[VAL_4]], %{{.*}}, %{{.*}})
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi64>>) -> !fir.ref<!fir.array<?xi64>>
 ! CHECK:           %[[VAL_12:.*]] = fir.box_rank %[[VAL_3]] : (!fir.box<!fir.array<*:f32>>) -> index
 ! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
@@ -158,7 +158,7 @@ end subroutine
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : i32
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<*:f32>>>) -> !fir.box<none>
-! CHECK:           %[[VAL_11:.*]] = fir.call @_FortranAUbound(%[[VAL_8]], %[[VAL_9]], %[[VAL_5]], %{{.*}}, %{{.*}})
+! CHECK:           fir.call @_FortranAUbound(%[[VAL_8]], %[[VAL_9]], %[[VAL_5]], %{{.*}}, %{{.*}})
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<15xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_13:.*]] = fir.box_rank %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<*:f32>>>) -> index
 ! CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
@@ -171,7 +171,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_lbound_dim(
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 2 : i32
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_2:.*]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
-! CHECK:           %[[VAL_8:.*]] = fir.call @_FortranALboundDim(%[[VAL_6]], %[[VAL_3]],
+! CHECK:           fir.call @_FortranALboundDim(%[[VAL_6]], %[[VAL_3]],
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i64) -> i32
 ! CHECK:           %[[VAL_10:.*]]:3 = hlfir.associate %[[VAL_9]]
 
@@ -186,7 +186,7 @@ end subroutine
 ! CHECK:           %[[VAL_8:.*]] = fir.call @_FortranASizeDim(%[[VAL_6]], %[[VAL_3]],
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i64) -> i32
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
-! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranALboundDim(%[[VAL_12]], %[[VAL_3]],
+! CHECK:           fir.call @_FortranALboundDim(%[[VAL_12]], %[[VAL_3]],
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i64) -> i32
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_17:.*]] = arith.subi %[[VAL_15]], %[[VAL_16]] : i32

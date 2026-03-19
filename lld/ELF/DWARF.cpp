@@ -16,9 +16,6 @@
 #include "DWARF.h"
 #include "InputSection.h"
 #include "Symbols.h"
-#include "lld/Common/Memory.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
-#include "llvm/Object/ELFObjectFile.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -112,7 +109,8 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &sec, uint64_t pos,
   const RelTy &rel = *it;
 
   const ObjFile<ELFT> *file = sec.getFile<ELFT>();
-  uint32_t symIndex = rel.getSymbol(config->isMips64EL);
+  Ctx &ctx = sec.getCtx();
+  uint32_t symIndex = rel.getSymbol(ctx.arg.isMips64EL);
   const typename ELFT::Sym &sym = file->template getELFSyms<ELFT>()[symIndex];
   uint32_t secIndex = file->getSectionIndex(sym);
 

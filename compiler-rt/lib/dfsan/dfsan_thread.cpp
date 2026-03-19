@@ -21,13 +21,8 @@ DFsanThread *DFsanThread::Create(thread_callback_t start_routine, void *arg,
 }
 
 void DFsanThread::SetThreadStackAndTls() {
-  uptr tls_size = 0;
-  uptr stack_size = 0;
-  GetThreadStackAndTls(IsMainThread(), &stack_.bottom, &stack_size, &tls_begin_,
-                       &tls_size);
-  stack_.top = stack_.bottom + stack_size;
-  tls_end_ = tls_begin_ + tls_size;
-
+  GetThreadStackAndTls(IsMainThread(), &stack_.bottom, &stack_.top, &tls_begin_,
+                       &tls_end_);
   int local;
   CHECK(AddrIsInStack((uptr)&local));
 }

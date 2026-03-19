@@ -19,8 +19,11 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/BuildID.h"
+#include "llvm/ProfileData/DataAccessProf.h"
+#include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfSummaryBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
@@ -78,21 +81,39 @@ private:
   // Whether to serialize the full schema.
   bool MemProfFullSchema;
 
+  // Whether to generated random memprof hotness for testing.
+  bool MemprofGenerateRandomHotness;
+
+  std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData;
+
+  // MemProf summary builder to which records are added as MemProf data is added
+  // to the writer.
+  memprof::MemProfSummaryBuilder MemProfSumBuilder;
+
 public:
-  InstrProfWriter(
-      bool Sparse = false, uint64_t TemporalProfTraceReservoirSize = 0,
-      uint64_t MaxTemporalProfTraceLength = 0, bool WritePrevVersion = false,
-      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0,
-      bool MemProfFullSchema = false);
-  ~InstrProfWriter();
+  // For memprof testing, random hotness can be assigned to the contexts if
+  // MemprofGenerateRandomHotness is enabled. The random seed can be either
+  // provided by MemprofGenerateRandomHotnessSeed, or if that is 0, one will be
+  // generated in the writer using the current time.
+  LLVM_ABI InstrProfWriter(bool Sparse = false,
+                           uint64_t TemporalProfTraceReservoirSize = 0,
+                           uint64_t MaxTemporalProfTraceLength = 0,
+                           bool WritePrevVersion = false,
+                           memprof::IndexedVersion MemProfVersionRequested =
+                               static_cast<memprof::IndexedVersion>(
+                                   memprof::MinimumSupportedVersion),
+                           bool MemProfFullSchema = false,
+                           bool MemprofGenerateRandomHotness = false,
+                           unsigned MemprofGenerateRandomHotnessSeed = 0);
+  LLVM_ABI ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
 
   /// Add function counts for the given function. If there are already counts
   /// for this function and the hash and number of counts match, each counter is
   /// summed. Optionally scale counts by \p Weight.
-  void addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
-                 function_ref<void(Error)> Warn);
+  LLVM_ABI void addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
+                          function_ref<void(Error)> Warn);
   void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
     addRecord(std::move(I), 1, Warn);
   }
@@ -100,53 +121,47 @@ public:
 
   /// Add \p SrcTraces using reservoir sampling where \p SrcStreamSize is the
   /// total number of temporal profiling traces the source has seen.
-  void addTemporalProfileTraces(SmallVectorImpl<TemporalProfTraceTy> &SrcTraces,
-                                uint64_t SrcStreamSize);
+  LLVM_ABI void
+  addTemporalProfileTraces(SmallVectorImpl<TemporalProfTraceTy> &SrcTraces,
+                           uint64_t SrcStreamSize);
 
-  /// Add a memprof record for a function identified by its \p Id.
-  void addMemProfRecord(const GlobalValue::GUID Id,
-                        const memprof::IndexedMemProfRecord &Record);
-
-  /// Add a memprof frame identified by the hash of the contents of the frame in
-  /// \p FrameId.
-  bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
-                       function_ref<void(Error)> Warn);
-
-  /// Add a call stack identified by the hash of the contents of the call stack
-  /// in \p CallStack.
-  bool addMemProfCallStack(const memprof::CallStackId CSId,
-                           const llvm::SmallVector<memprof::FrameId> &CallStack,
-                           function_ref<void(Error)> Warn);
+  /// Add the entire MemProfData \p Incoming to the writer context.
+  LLVM_ABI bool addMemProfData(memprof::IndexedMemProfData Incoming,
+                               function_ref<void(Error)> Warn);
 
   // Add a binary id to the binary ids list.
-  void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
+  LLVM_ABI void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
+
+  LLVM_ABI void addDataAccessProfData(
+      std::unique_ptr<memprof::DataAccessProfData> DataAccessProfile);
 
   /// Merge existing function counts from the given writer.
-  void mergeRecordsFromWriter(InstrProfWriter &&IPW,
-                              function_ref<void(Error)> Warn);
+  LLVM_ABI void mergeRecordsFromWriter(InstrProfWriter &&IPW,
+                                       function_ref<void(Error)> Warn);
 
   /// Write the profile to \c OS
-  Error write(raw_fd_ostream &OS);
+  LLVM_ABI Error write(raw_fd_ostream &OS);
 
   /// Write the profile to a string output stream \c OS
-  Error write(raw_string_ostream &OS);
+  LLVM_ABI Error write(raw_string_ostream &OS);
 
   /// Write the profile in text format to \c OS
-  Error writeText(raw_fd_ostream &OS);
+  LLVM_ABI Error writeText(raw_fd_ostream &OS);
 
   /// Write temporal profile trace data to the header in text format to \c OS
-  void writeTextTemporalProfTraceData(raw_fd_ostream &OS,
-                                      InstrProfSymtab &Symtab);
+  LLVM_ABI void writeTextTemporalProfTraceData(raw_fd_ostream &OS,
+                                               InstrProfSymtab &Symtab);
 
-  Error validateRecord(const InstrProfRecord &Func);
+  LLVM_ABI Error validateRecord(const InstrProfRecord &Func);
 
   /// Write \c Record in text format to \c OS
-  static void writeRecordInText(StringRef Name, uint64_t Hash,
-                                const InstrProfRecord &Counters,
-                                InstrProfSymtab &Symtab, raw_fd_ostream &OS);
+  LLVM_ABI static void writeRecordInText(StringRef Name, uint64_t Hash,
+                                         const InstrProfRecord &Counters,
+                                         InstrProfSymtab &Symtab,
+                                         raw_fd_ostream &OS);
 
   /// Write the profile, returning the raw data. For testing.
-  std::unique_ptr<MemoryBuffer> writeBuffer();
+  LLVM_ABI std::unique_ptr<MemoryBuffer> writeBuffer();
 
   /// Update the attributes of the current profile from the attributes
   /// specified. An error is returned if IR and FE profiles are mixed.
@@ -174,7 +189,9 @@ public:
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
-                         InstrProfKind::FunctionEntryInstrumentation)) {
+                         InstrProfKind::FunctionEntryInstrumentation) ||
+        testIncompatible(InstrProfKind::FunctionEntryOnly,
+                         InstrProfKind::LoopEntriesInstrumentation)) {
       return make_error<InstrProfError>(
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");
@@ -192,24 +209,38 @@ public:
   }
 
   // Internal interfaces for testing purpose only.
-  void setValueProfDataEndianness(llvm::endianness Endianness);
-  void setOutputSparse(bool Sparse);
+  LLVM_ABI void setValueProfDataEndianness(llvm::endianness Endianness);
+  LLVM_ABI void setOutputSparse(bool Sparse);
   void setMemProfVersionRequested(memprof::IndexedVersion Version) {
     MemProfVersionRequested = Version;
   }
   void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
-  void overlapRecord(NamedInstrProfRecord &&Other, OverlapStats &Overlap,
-                     OverlapStats &FuncLevelOverlap,
-                     const OverlapFuncFilters &FuncFilter);
+  LLVM_ABI void overlapRecord(NamedInstrProfRecord &&Other,
+                              OverlapStats &Overlap,
+                              OverlapStats &FuncLevelOverlap,
+                              const OverlapFuncFilters &FuncFilter);
 
 private:
   void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
                  uint64_t Weight, function_ref<void(Error)> Warn);
   bool shouldEncodeData(const ProfilingData &PD);
-  /// Add \p Trace using reservoir sampling.
-  void addTemporalProfileTrace(TemporalProfTraceTy Trace);
+
+  /// Add a memprof record for a function identified by its \p Id.
+  void addMemProfRecord(const GlobalValue::GUID Id,
+                        const memprof::IndexedMemProfRecord &Record);
+
+  /// Add a memprof frame identified by the hash of the contents of the frame in
+  /// \p FrameId.
+  bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
+                       function_ref<void(Error)> Warn);
+
+  /// Add a call stack identified by the hash of the contents of the call stack
+  /// in \p CallStack.
+  bool addMemProfCallStack(const memprof::CallStackId CSId,
+                           const llvm::SmallVector<memprof::FrameId> &CallStack,
+                           function_ref<void(Error)> Warn);
 
   Error writeImpl(ProfOStream &OS);
 
@@ -218,6 +249,9 @@ private:
   // back patching.
   uint64_t writeHeader(const IndexedInstrProf::Header &header,
                        const bool WritePrevVersion, ProfOStream &OS);
+
+  // Writes binary IDs.
+  Error writeBinaryIds(ProfOStream &OS);
 
   // Writes compressed vtable names to profiles.
   Error writeVTableNames(ProfOStream &OS);

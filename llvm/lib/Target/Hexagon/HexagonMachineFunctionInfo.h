@@ -70,12 +70,12 @@ public:
     PacketInfo[MI] |= Hexagon::EndPacket;
   }
   bool isStartPacket(const MachineInstr* MI) const {
-    return (PacketInfo.count(MI) &&
-            (PacketInfo.find(MI)->second & Hexagon::StartPacket));
+    auto It = PacketInfo.find(MI);
+    return It != PacketInfo.end() && (It->second & Hexagon::StartPacket);
   }
   bool isEndPacket(const MachineInstr* MI) const {
-    return (PacketInfo.count(MI) &&
-            (PacketInfo.find(MI)->second & Hexagon::EndPacket));
+    auto It = PacketInfo.find(MI);
+    return It != PacketInfo.end() && (It->second & Hexagon::EndPacket);
   }
   void setHasClobberLR(bool v) { HasClobberLR = v;  }
   bool hasClobberLR() const { return HasClobberLR; }

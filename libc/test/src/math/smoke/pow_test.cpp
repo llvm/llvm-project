@@ -22,13 +22,40 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
   constexpr double POS_ODD_INTEGER = 5.0;
   constexpr double POS_EVEN_INTEGER = 8.0;
   constexpr double POS_NON_INTEGER = 1.1;
+  constexpr double ONE_HALF = 0.5;
 
   for (int i = 0; i < N_ROUNDING_MODES; ++i) {
     ForceRoundingMode __r(ROUNDING_MODES[i]);
     if (!__r.success)
       continue;
 
+    // pow( sNaN, exponent )
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(sNaN, sNaN),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, LIBC_NAMESPACE::pow(sNaN, NEG_ODD_INTEGER), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, LIBC_NAMESPACE::pow(sNaN, NEG_EVEN_INTEGER), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, LIBC_NAMESPACE::pow(sNaN, POS_ODD_INTEGER), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(
+        aNaN, LIBC_NAMESPACE::pow(sNaN, POS_EVEN_INTEGER), FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(sNaN, ONE_HALF),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(sNaN, zero),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(sNaN, neg_zero),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(sNaN, inf),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(sNaN, neg_inf),
+                                FE_INVALID);
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(sNaN, aNaN),
+                                FE_INVALID);
+
     // pow( 0.0, exponent )
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(zero, sNaN),
+                                FE_INVALID);
     EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::pow(zero, NEG_ODD_INTEGER),
                                 FE_DIVBYZERO);
     EXPECT_FP_EQ_WITH_EXCEPTION(
@@ -38,6 +65,7 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(zero, POS_ODD_INTEGER));
     EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(zero, POS_EVEN_INTEGER));
     EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(zero, POS_NON_INTEGER));
+    EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(zero, ONE_HALF));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(zero, zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(zero, neg_zero));
     EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::pow(zero, inf));
@@ -46,6 +74,8 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_IS_NAN(LIBC_NAMESPACE::pow(zero, aNaN));
 
     // pow( -0.0, exponent )
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(neg_zero, sNaN),
+                                FE_INVALID);
     EXPECT_FP_EQ_WITH_EXCEPTION(
         neg_inf, LIBC_NAMESPACE::pow(neg_zero, NEG_ODD_INTEGER), FE_DIVBYZERO);
     EXPECT_FP_EQ_WITH_EXCEPTION(
@@ -55,6 +85,7 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::pow(neg_zero, POS_ODD_INTEGER));
     EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(neg_zero, POS_EVEN_INTEGER));
     EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(neg_zero, POS_NON_INTEGER));
+    EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(neg_zero, ONE_HALF));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(neg_zero, zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(neg_zero, neg_zero));
     EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::pow(neg_zero, inf));
@@ -63,6 +94,8 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_IS_NAN(LIBC_NAMESPACE::pow(neg_zero, aNaN));
 
     // pow( 1.0, exponent )
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(1.0, sNaN),
+                                FE_INVALID);
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(1.0, zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(1.0, neg_zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(1.0, 1.0));
@@ -77,7 +110,9 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(1.0, neg_inf));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(1.0, aNaN));
 
-    // pow( 1.0, exponent )
+    // pow( -1.0, exponent )
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(-1.0, sNaN),
+                                FE_INVALID);
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(-1.0, zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(-1.0, neg_zero));
     EXPECT_FP_EQ(-1.0, LIBC_NAMESPACE::pow(-1.0, 1.0));
@@ -95,6 +130,8 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_IS_NAN(LIBC_NAMESPACE::pow(-1.0, aNaN));
 
     // pow( inf, exponent )
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(inf, sNaN),
+                                FE_INVALID);
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(inf, zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(inf, neg_zero));
     EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(inf, 1.0));
@@ -105,11 +142,14 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(inf, POS_ODD_INTEGER));
     EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(inf, POS_EVEN_INTEGER));
     EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(inf, POS_NON_INTEGER));
+    EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(inf, ONE_HALF));
     EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(inf, inf));
     EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(inf, neg_inf));
     EXPECT_FP_IS_NAN(LIBC_NAMESPACE::pow(inf, aNaN));
 
     // pow( -inf, exponent )
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(neg_inf, sNaN),
+                                FE_INVALID);
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(neg_inf, zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(neg_inf, neg_zero));
     EXPECT_FP_EQ(neg_inf, LIBC_NAMESPACE::pow(neg_inf, 1.0));
@@ -120,11 +160,14 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_EQ(neg_inf, LIBC_NAMESPACE::pow(neg_inf, POS_ODD_INTEGER));
     EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(neg_inf, POS_EVEN_INTEGER));
     EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(neg_inf, POS_NON_INTEGER));
+    EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(neg_inf, ONE_HALF));
     EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(neg_inf, inf));
     EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(neg_inf, neg_inf));
     EXPECT_FP_IS_NAN(LIBC_NAMESPACE::pow(neg_inf, aNaN));
 
     // pow ( aNaN, exponent )
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::pow(aNaN, sNaN),
+                                FE_INVALID);
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(aNaN, zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(aNaN, neg_zero));
     EXPECT_FP_IS_NAN(LIBC_NAMESPACE::pow(aNaN, 1.0));
@@ -185,3 +228,30 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     }
   }
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcPowTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::pow(-min_denormal, 0.5));
+  EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(2.0, min_denormal));
+}
+
+TEST_F(LlvmLibcPowTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::pow(-min_denormal, 0.5));
+  EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(2.0, min_denormal));
+}
+
+TEST_F(LlvmLibcPowTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::pow(-min_denormal, 0.5));
+  EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(2.0, min_denormal));
+}
+
+#endif

@@ -36,7 +36,7 @@ cl::opt<bool>
                          cl::ReallyHidden,
                          cl::desc("disable outlining indirect calls."));
 
-cl::opt<bool>
+static cl::opt<bool>
     MatchCallsByName("ir-sim-calls-by-name", cl::init(false), cl::ReallyHidden,
                      cl::desc("only allow matching call instructions if the "
                               "name and type signature match."));
@@ -78,8 +78,7 @@ void IRInstructionData::initializeInstruction() {
   // We capture the incoming BasicBlocks as values as well as the incoming
   // Values in order to check for structural similarity.
   if (PHINode *PN = dyn_cast<PHINode>(Inst))
-    for (BasicBlock *BB : PN->blocks())
-      OperVals.push_back(BB);
+    llvm::append_range(OperVals, PN->blocks());
 }
 
 IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
@@ -87,12 +86,11 @@ IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
 
 void IRInstructionData::setBranchSuccessors(
     DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger) {
-  assert(isa<BranchInst>(Inst) && "Instruction must be branch");
+  assert((isa<UncondBrInst, CondBrInst>(Inst)) && "Instruction must be branch");
 
-  BranchInst *BI = cast<BranchInst>(Inst);
   DenseMap<BasicBlock *, unsigned>::iterator BBNumIt;
 
-  BBNumIt = BasicBlockToInteger.find(BI->getParent());
+  BBNumIt = BasicBlockToInteger.find(Inst->getParent());
   assert(BBNumIt != BasicBlockToInteger.end() &&
          "Could not find location for BasicBlock!");
 
@@ -111,14 +109,10 @@ void IRInstructionData::setBranchSuccessors(
 }
 
 ArrayRef<Value *> IRInstructionData::getBlockOperVals() {
-  assert((isa<BranchInst>(Inst) ||
-         isa<PHINode>(Inst)) && "Instruction must be branch or PHINode");
-  
-  if (BranchInst *BI = dyn_cast<BranchInst>(Inst))
-    return ArrayRef<Value *>(
-      std::next(OperVals.begin(), BI->isConditional() ? 1 : 0),
-      OperVals.end()
-    );
+  if (isa<UncondBrInst>(Inst))
+    return OperVals;
+  if (isa<CondBrInst>(Inst))
+    return ArrayRef<Value *>(OperVals).drop_front(1);
 
   if (PHINode *PN = dyn_cast<PHINode>(Inst))
     return ArrayRef<Value *>(
@@ -126,7 +120,7 @@ ArrayRef<Value *> IRInstructionData::getBlockOperVals() {
       OperVals.end()
     );
 
-  return ArrayRef<Value *>();
+  llvm_unreachable("Instruction must be branch or PHINode");
 }
 
 void IRInstructionData::setCalleeName(bool MatchByName) {
@@ -278,7 +272,8 @@ bool IRSimilarity::isClose(const IRInstructionData &A,
       return false;
   }
 
-  if (isa<BranchInst>(A.Inst) && isa<BranchInst>(B.Inst) &&
+  if (isa<UncondBrInst, CondBrInst>(A.Inst) &&
+      isa<UncondBrInst, CondBrInst>(B.Inst) &&
       A.RelativeBlockLocations.size() != B.RelativeBlockLocations.size())
     return false;
 
@@ -337,7 +332,7 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
   IRInstructionData *ID = allocateIRInstructionData(*It, true, *IDL);
   InstrListForBB.push_back(ID);
 
-  if (isa<BranchInst>(*It))
+  if (isa<UncondBrInst, CondBrInst>(*It))
     ID->setBranchSuccessors(BasicBlockToInteger);
 
   if (isa<CallInst>(*It))
@@ -459,16 +454,14 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
     // Map the operand values to an unsigned integer if it does not already
     // have an unsigned integer assigned to it.
     for (Value *Arg : ID->OperVals)
-      if (!ValueToNumber.contains(Arg)) {
-        ValueToNumber.try_emplace(Arg, LocalValNumber);
+      if (ValueToNumber.try_emplace(Arg, LocalValNumber).second) {
         NumberToValue.try_emplace(LocalValNumber, Arg);
         LocalValNumber++;
       }
 
     // Mapping the instructions to an unsigned integer if it is not already
     // exist in the mapping.
-    if (!ValueToNumber.contains(ID->Inst)) {
-      ValueToNumber.try_emplace(ID->Inst, LocalValNumber);
+    if (ValueToNumber.try_emplace(ID->Inst, LocalValNumber).second) {
       NumberToValue.try_emplace(LocalValNumber, ID->Inst);
       LocalValNumber++;
     }
@@ -484,12 +477,10 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
   DenseSet<BasicBlock *> BBSet;
   getBasicBlocks(BBSet);
   for (BasicBlock *BB : BBSet) {
-    if (ValueToNumber.contains(BB))
-      continue;
-    
-    ValueToNumber.try_emplace(BB, LocalValNumber);
-    NumberToValue.try_emplace(LocalValNumber, BB);
-    LocalValNumber++;
+    if (ValueToNumber.try_emplace(BB, LocalValNumber).second) {
+      NumberToValue.try_emplace(LocalValNumber, BB);
+      LocalValNumber++;
+    }
   }
 }
 
@@ -732,11 +723,10 @@ bool IRSimilarityCandidate::compareAssignmentMapping(
     for (unsigned OtherVal : ValueMappingIt->second) {
       if (OtherVal == InstValB)
         continue;
-      if (!ValueNumberMappingA.contains(OtherVal))
+      auto OtherValIt = ValueNumberMappingA.find(OtherVal);
+      if (OtherValIt == ValueNumberMappingA.end())
         continue;
-      if (!ValueNumberMappingA[OtherVal].contains(InstValA))
-        continue;
-      ValueNumberMappingA[OtherVal].erase(InstValA);
+      OtherValIt->second.erase(InstValA);
     }
     ValueNumberMappingA.erase(ValueMappingIt);
     std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
@@ -863,8 +853,8 @@ bool IRSimilarityCandidate::compareStructure(
     // region.  So, at this point, in each location we target a specific block
     // outside the region, we are targeting a corresponding block in each
     // analagous location in the region we are comparing to.
-    if (!(isa<BranchInst>(IA) && isa<BranchInst>(IB)) &&
-        !(isa<PHINode>(IA) && isa<PHINode>(IB)))
+    if (!isa<UncondBrInst, CondBrInst, PHINode>(IA) ||
+        IA->getOpcode() != IB->getOpcode())
       continue;
 
     SmallVector<int, 4> &RelBlockLocsA = ItA->RelativeBlockLocations;
@@ -1085,9 +1075,8 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
     // If the basic block is the starting block, then the shared instruction may
     // not be the first instruction in the block, it will be the first
     // instruction in the similarity region.
-    Value *FirstOutlineInst = BB == getStartBB()
-                                  ? frontInstruction()
-                                  : &*BB->instructionsWithoutDebug().begin();
+    Value *FirstOutlineInst =
+        BB == getStartBB() ? frontInstruction() : &*BB->begin();
 
     unsigned FirstInstGVN = *getGVN(FirstOutlineInst);
     unsigned FirstInstCanonNum = *getCanonicalNum(FirstInstGVN);
@@ -1312,12 +1301,11 @@ static void findCandidateStructures(
        CandIt != CandEndIt; CandIt++) {
 
     // Determine if it has an assigned structural group already.
-    CandToGroupIt = CandToGroup.find(&*CandIt);
-    if (CandToGroupIt == CandToGroup.end()) {
-      // If not, we assign it one, and add it to our mapping.
-      std::tie(CandToGroupIt, Inserted) =
-          CandToGroup.insert(std::make_pair(&*CandIt, CurrentGroupNum++));
-    }
+    // If not, we assign it one, and add it to our mapping.
+    std::tie(CandToGroupIt, Inserted) =
+        CandToGroup.try_emplace(&*CandIt, CurrentGroupNum);
+    if (Inserted)
+      ++CurrentGroupNum;
 
     // Get the structural group number from the iterator.
     OuterGroupNum = CandToGroupIt->second;
@@ -1424,16 +1412,8 @@ void IRSimilarityIdentifier::findCandidates(
         // IRSimilarityCandidates that include that instruction.
         for (IRSimilarityCandidate &IRCand : SimilarityCandidates->back()) {
           for (unsigned Idx = IRCand.getStartIdx(), Edx = IRCand.getEndIdx();
-               Idx <= Edx; ++Idx) {
-            DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>>::iterator
-                IdIt;
-            IdIt = IndexToIncludedCand.find(Idx);
-            bool Inserted = false;
-            if (IdIt == IndexToIncludedCand.end())
-              std::tie(IdIt, Inserted) = IndexToIncludedCand.insert(
-                  std::make_pair(Idx, DenseSet<IRSimilarityCandidate *>()));
-            IdIt->second.insert(&IRCand);
-          }
+               Idx <= Edx; ++Idx)
+            IndexToIncludedCand[Idx].insert(&IRCand);
           // Add mapping of candidate to the overall similarity group number.
           CandToGroup.insert(
               std::make_pair(&IRCand, SimilarityCandidates->size() - 1));
@@ -1486,10 +1466,7 @@ INITIALIZE_PASS(IRSimilarityIdentifierWrapperPass, "ir-similarity-identifier",
                 "ir-similarity-identifier", false, true)
 
 IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
-    : ModulePass(ID) {
-  initializeIRSimilarityIdentifierWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
   IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,

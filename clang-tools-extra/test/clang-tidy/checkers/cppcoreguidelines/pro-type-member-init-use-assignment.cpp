@@ -30,7 +30,7 @@ struct S {
   double d;
   // CHECK-FIXES: double d = 0.0;
   long double ld;
-  // CHECK-FIXES: double ld = 0.0L;
+  // CHECK-FIXES: long double ld = 0.0L;
   int *ptr;
   // CHECK-FIXES: int *ptr = nullptr;
   T t;

@@ -22,7 +22,7 @@ class RISCVELFTargetObjectFile : public TargetLoweringObjectFileELF {
   MCSection *SmallROData16Section;
   MCSection *SmallROData32Section;
   MCSection *SmallBSSSection;
-  unsigned SSThreshold = 8;
+  unsigned SSThreshold = 0;
 
 public:
   unsigned getTextSectionAlignment() const override;
@@ -41,8 +41,8 @@ public:
   bool isConstantInSmallSection(const DataLayout &DL, const Constant *CN) const;
 
   MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
-                                   const Constant *C,
-                                   Align &Alignment) const override;
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override;
 
   void getModuleMetadata(Module &M) override;
 
@@ -53,6 +53,14 @@ public:
                                           const MCValue &MV, int64_t Offset,
                                           MachineModuleInfo *MMI,
                                           MCStreamer &Streamer) const override;
+};
+
+class RISCVMachOTargetObjectFile : public TargetLoweringObjectFileMachO {
+public:
+  RISCVMachOTargetObjectFile() {};
+
+  void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,
+                         const TargetMachine &TM) const override;
 };
 
 } // end namespace llvm

@@ -6,7 +6,7 @@
 ; removed, its alias set tracker is destroyed and no longer available when LICM
 ; runs on the outer loop.
 
-define void @f() {
+define void @f(i1 %arg) {
 entry:
   br label %l1
 
@@ -17,7 +17,7 @@ l1.loopexit:
   br label %l1.backedge
 
 l1:
-  br i1 undef, label %l1.backedge, label %l2.preheader
+  br i1 %arg, label %l1.backedge, label %l2.preheader
 
 l1.backedge:
   br label %l1

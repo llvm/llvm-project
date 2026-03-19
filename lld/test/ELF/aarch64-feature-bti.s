@@ -258,6 +258,10 @@
 # FORCE-NEXT:           nop
 # FORCE-NEXT:           nop
 
+# RUN: not ld.lld %t.o -z bti-report=u -o /dev/null 2>&1 | FileCheck --check-prefix=REPORT-ERR %s
+# REPORT-ERR: error: unknown -z bti-report= value: u{{$}}
+# REPORT-EMPTY:
+
 .section ".note.gnu.property", "a"
 .long 4
 .long 0x10
@@ -286,5 +290,5 @@ func1:
 
 .ifdef RELVTABLE_PLT
 // R_AARCH64_PLT32
-.word funcRelVtable@PLT - .
+.word %pltpcrel(funcRelVtable)
 .endif

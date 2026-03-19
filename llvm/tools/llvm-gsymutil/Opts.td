@@ -17,7 +17,13 @@ defm convert :
   Eq<"convert",
      "Convert the specified file to the GSYM format.\nSupported files include ELF and mach-o files that will have their debug info (DWARF) and symbol table converted">;
 def merged_functions :
-  FF<"merged-functions", "Encode merged function information for functions in debug info that have matching address ranges.\nWithout this option one function per unique address range will be emitted.">;
+  FF<"merged-functions", "When used with --convert, encodes merged function information for functions in debug info that have matching address ranges.\n"
+                         "Without this option one function per unique address range will be emitted.\n"
+                         "When used with --address/--addresses-from-stdin, all merged functions for a particular address will be displayed.\n"
+                         "Without this option only one function will be displayed.">;
+def dwarf_callsites : FF<"dwarf-callsites", "Load call site info from DWARF, if available">;
+defm callsites_yaml_file :
+  Eq<"callsites-yaml-file", "Load call site info from YAML file. Useful for testing.">, Flags<[HelpHidden]>;
 defm arch :
   Eq<"arch",
      "Process debug information for the specified CPU architecture only.\nArchitectures may be specified by name or by number.\nThis option can be specified multiple times, once for each desired architecture">;
@@ -40,3 +46,8 @@ def addresses_from_stdin :
 defm json_summary_file :
   Eq<"json-summary-file",
      "Output a categorized summary of errors into the JSON file specified.">;
+defm merged_functions_filter : 
+  Eq<"merged-functions-filter", 
+     "When used with --address/--addresses-from-stdin and --merged-functions,\n"
+     "filters the merged functions output to only show functions matching any of the specified regex patterns.\n"
+     "Can be specified multiple times.">;

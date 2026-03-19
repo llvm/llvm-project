@@ -61,16 +61,20 @@
 ; CHECK-NEXT: DW_AT_declaration
 ; CHECK-NEXT: DW_AT_signature {{.*}} (0xb04af47397402e77)
 
+; CHECK: [[WOMBAT:^0x........]]: DW_TAG_structure_type
+; CHECK-NEXT: DW_AT_declaration
+; CHECK-NEXT: DW_AT_signature {{.*}} (0xfd756cee88f8a118)
+
+; CHECK: DW_TAG_structure_type
+
+; CHECK: DW_TAG_structure_type
+
 ; Ensure the CU-local type 'walrus' is not placed in a type unit.
 ; CHECK: [[WALRUS:^0x........]]: DW_TAG_structure_type
 ; CHECK-NEXT: DW_AT_name{{.*}}"walrus"
 ; CHECK-NEXT: DW_AT_byte_size
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-
-; CHECK: [[WOMBAT:^0x........]]: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_declaration
-; CHECK-NEXT: DW_AT_signature {{.*}} (0xfd756cee88f8a118)
 
 ; SINGLE-LABEL: .debug_types contents:
 ; FISSION: .debug_types.dwo contents:
@@ -215,7 +219,7 @@ entry:
   ret void, !dbg !57
 }
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!34}

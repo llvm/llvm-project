@@ -535,3 +535,37 @@ void foo() {
 } // namespace local_recursive_lambda
 
 #endif
+
+namespace PR134038_Regression {
+
+template <class T> class G {
+public:
+  template <class> class Iter {
+  public:
+    Iter();
+    ~Iter();
+
+    operator G<T>();
+  };
+};
+
+template <class ObserverType>
+template <class ContainerType>
+G<ObserverType>::Iter<ContainerType>::Iter() {}
+
+template <class ObserverType>
+template <class ContainerType>
+G<ObserverType>::Iter<ContainerType>::~Iter() {}
+
+template <class ObserverType>
+template <class ContainerType>
+G<ObserverType>::Iter<ContainerType>::operator G<ObserverType>() {
+  return G<ObserverType>{};
+}
+
+void NotifySettingChanged()  {
+  G<int>::Iter<int> Iter;
+  G<int> g = Iter;
+}
+
+}

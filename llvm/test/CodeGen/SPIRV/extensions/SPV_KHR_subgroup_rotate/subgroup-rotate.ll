@@ -1,5 +1,5 @@
 ; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_subgroup_rotate %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_subgroup_rotate %s -o - | FileCheck %s
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_subgroup_rotate %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: OpGroupNonUniformRotateKHR instruction requires the following SPIR-V extension: SPV_KHR_subgroup_rotate
@@ -329,7 +329,7 @@ declare spir_func double @_Z16sub_group_rotatedi(double noundef, i32 noundef) #1
 ; Function Attrs: convergent nounwind
 declare spir_func double @_Z26sub_group_clustered_rotatedij(double noundef, i32 noundef, i32 noundef) #1
 
-attributes #0 = { convergent noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
+attributes #0 = { convergent noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #2 = { convergent nounwind }
 

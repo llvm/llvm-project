@@ -17,8 +17,8 @@
 // const string remote_version();
 
 #include <chrono>
-
 #include <cassert>
+#include <string>
 
 #include "test_macros.h"
 

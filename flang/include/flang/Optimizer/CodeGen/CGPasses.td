@@ -36,7 +36,11 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
     Option<"forcedTargetFeatures", "target-features", "std::string",
            /*default=*/"", "Override module's target features.">,
     Option<"applyTBAA", "apply-tbaa", "bool", /*default=*/"false",
-           "Attach TBAA tags to memory accessing operations.">
+           "Attach TBAA tags to memory accessing operations.">,
+    Option<"typeDescriptorsRenamedForAssembly",
+           "type-descriptors-renamed-for-assembly", "bool", /*default=*/"false",
+           "Global variables created to describe derived types "
+           "have been renamed to avoid special symbols in their names.">
   ];
 }
 
@@ -64,7 +68,7 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
       representations that may differ based on the target machine.
   }];
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::func::FuncDialect",
-                            "mlir::DLTIDialect" ];
+                            "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect" ];
   let options = [
     Option<"forcedTargetTriple", "target", "std::string", /*default=*/"",
            "Override module's target triple.">,
@@ -87,12 +91,29 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
 }
 
 def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
-  let options = [
-    Option<"useThunks", "use-thunks",
-           "bool", /*default=*/"true",
+  let options =
+      [Option<
+           "useThunks", "use-thunks", "bool", /*default=*/"true",
            "Convert procedure pointer abstractions to a single code pointer, "
-           "deploying thunks wherever required.">
-  ];
+           "deploying thunks wherever required.">,
+       Option<
+           "useSafeTrampoline", "use-safe-trampoline", "bool",
+           /*default=*/"false",
+           "Use runtime trampoline pool instead of stack-based trampolines "
+           "for W^X compliance. When enabled, internal procedure pointers "
+           "use a runtime-managed pool of executable trampolines with "
+           "separate data region, avoiding the need for an executable stack.">];
+}
+
+def LowerRepackArraysPass : Pass<"lower-repack-arrays", "mlir::ModuleOp"> {
+  let summary = "Convert fir.pack/unpack_array to other FIR operations";
+  let description = [{
+    Convert fir.pack/unpack_array operations to other FIR operations
+    and Fortran runtime calls that implement the semantics
+    of packing/unpacking.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::arith::ArithDialect",
+                           "mlir::func::FuncDialect"];
 }
 
 #endif // FORTRAN_OPTIMIZER_CODEGEN_FIR_PASSES

@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -fsanitize=signed-integer-overflow,integer-divide-by-zero,float-divide-by-zero,shift-base,shift-exponent,unreachable,return,vla-bound,alignment,null,vptr,object-size,float-cast-overflow,bool,enum,array-bounds,function -fsanitize-recover=signed-integer-overflow,integer-divide-by-zero,float-divide-by-zero,shift-base,shift-exponent,vla-bound,alignment,null,vptr,object-size,float-cast-overflow,bool,enum,array-bounds,function -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-FUNCSAN
-// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -fsanitize=vptr,address -fsanitize-recover=vptr,address -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK-ASAN
-// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -fsanitize=vptr -fsanitize-recover=vptr -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=DOWNCAST-NULL
-// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -fsanitize=function -emit-llvm %s -o - -triple x86_64-linux-gnux32 | FileCheck %s --check-prefix=CHECK-FUNCSAN
-// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -fsanitize=function -emit-llvm %s -o - -triple i386-linux-gnu | FileCheck %s --check-prefix=CHECK-FUNCSAN
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -Wno-error=return-type -fsanitize=signed-integer-overflow,integer-divide-by-zero,float-divide-by-zero,shift-base,shift-exponent,unreachable,return,vla-bound,alignment,null,vptr,object-size,float-cast-overflow,bool,enum,array-bounds,function -fsanitize-recover=signed-integer-overflow,integer-divide-by-zero,float-divide-by-zero,shift-base,shift-exponent,vla-bound,alignment,null,vptr,object-size,float-cast-overflow,bool,enum,array-bounds,function -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-FUNCSAN
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -Wno-error=return-type -fsanitize=vptr,address -fsanitize-recover=vptr,address -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK-ASAN
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -Wno-error=return-type -fsanitize=vptr -fsanitize-recover=vptr -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=DOWNCAST-NULL
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -Wno-error=return-type -fsanitize=function -emit-llvm %s -o - -triple x86_64-linux-gnux32 | FileCheck %s --check-prefix=CHECK-FUNCSAN
+// RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -Wno-error=return-type -fsanitize=function -emit-llvm %s -o - -triple i386-linux-gnu | FileCheck %s --check-prefix=CHECK-FUNCSAN
 
 struct S {
   double d;
@@ -734,6 +734,6 @@ void ThisAlign::this_align_lambda_2() {
   p();
 }
 
-// CHECK: attributes [[NR_NUW]] = { noreturn nounwind }
+// CHECK: attributes [[NR_NUW]] = { nomerge noreturn nounwind }
 
 // CHECK-FUNCSAN: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1000226989}

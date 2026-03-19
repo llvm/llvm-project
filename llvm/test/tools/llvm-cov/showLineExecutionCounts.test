@@ -1,0 +1,53 @@
+// Basic handling of line counts.
+// RUN: rm -rf %t.dir
+// RUN: llvm-profdata merge %S/Inputs/lineExecutionCounts.proftext -o %t.profdata
+
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck -check-prefixes=TEXT,WHOLE-FILE -D#C=999 -DC16K2=16.2k -DC16K1=16.1k %S/Inputs/showLineExecutionCounts.cpp
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -binary-counters -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck -check-prefixes=TEXT,WHOLE-FILE -D#C=1 -DC16K2=1 -DC16K1=1 %S/Inputs/showLineExecutionCounts.cpp
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs -name=main | FileCheck -check-prefixes=TEXT,FILTER -D#C=999 -DC16K2=16.2k -DC16K1=16.1k %S/Inputs/showLineExecutionCounts.cpp
+
+// Test -output-dir.
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -o %t.dir/show -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.dir/show.filtered -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs -name=main
+// RUN: FileCheck -check-prefixes=TEXT,WHOLE-FILE -D#C=999 -DC16K2=16.2k -DC16K1=16.1k -input-file %t.dir/show/coverage/tmp/showLineExecutionCounts.cpp.txt %S/Inputs/showLineExecutionCounts.cpp
+// RUN: FileCheck -check-prefixes=TEXT,FILTER -D#C=999 -DC16K2=16.2k -DC16K1=16.1k -input-file %t.dir/show.filtered/coverage/tmp/showLineExecutionCounts.cpp.txt %S/Inputs/showLineExecutionCounts.cpp
+//
+// RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata 2>/dev/null -summary-only > %t.export-summary.json
+// RUN: not grep '"name":"main"' %t.export-summary.json
+//
+// Test html output.
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.dir/html -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.dir/html.binary -binary-counters -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.dir/html.filtered -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs -name=main
+// RUN: FileCheck -check-prefixes=HTML,HTML-WHOLE-FILE -input-file %t.dir/html/coverage/tmp/showLineExecutionCounts.cpp.html %S/Inputs/showLineExecutionCounts.cpp
+// RUN: FileCheck -check-prefixes=HTML-BINARY,HTML-WHOLE-FILE -input-file %t.dir/html.binary/coverage/tmp/showLineExecutionCounts.cpp.html %S/Inputs/showLineExecutionCounts.cpp
+// RUN: FileCheck -check-prefixes=HTML,HTML-FILTER -input-file %t.dir/html.filtered/coverage/tmp/showLineExecutionCounts.cpp.html %S/Inputs/showLineExecutionCounts.cpp
+//
+// Test index creation.
+// RUN: FileCheck -check-prefix=TEXT-INDEX -input-file %t.dir/show/index.txt %s
+// TEXT-INDEX: Filename
+// TEXT-INDEX-NEXT: ---
+// TEXT-INDEX-NEXT: {{.*}}showLineExecutionCounts.cpp
+//
+// RUN: FileCheck -check-prefix HTML-INDEX -input-file %t.dir/html/index.html %s
+// HTML-INDEX-LABEL: <table>
+// HTML-INDEX: <td class='column-entry-bold'>Filename</td>
+// HTML-INDEX: <td class='column-entry-bold'>Function Coverage</td>
+// HTML-INDEX: <td class='column-entry-bold'>Line Coverage</td>
+// HTML-INDEX: <td class='column-entry-bold'>Region Coverage</td>
+// HTML-INDEX: <a href='coverage{{.*}}showLineExecutionCounts.cpp.html'{{.*}}showLineExecutionCounts.cpp</a>
+// HTML-INDEX: <td class='column-entry-green'>
+// HTML-INDEX: 100.00% (1/1)
+// HTML-INDEX: <td class='column-entry-yellow'>
+// HTML-INDEX: 90.00% (18/20)
+// HTML-INDEX: <td class='column-entry-red'>
+// HTML-INDEX: 72.73% (8/11)
+// HTML-INDEX: <tr class='light-row-bold'>
+// HTML-INDEX: Totals
+
+// Single byte
+// RUN: yaml2obj %S/Inputs/showLineExecutionCounts-single.yaml -o %t.o
+// RUN: llvm-profdata merge %S/Inputs/showLineExecutionCounts-single.proftext -o %t.profdata
+
+// RUN: llvm-cov show %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck -check-prefixes=TEXT,WHOLE-FILE -D#C=1 -DC16K2=1 -DC16K1=1 %S/Inputs/showLineExecutionCounts.cpp
+// RUN: llvm-cov show %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs -name=main | FileCheck -check-prefixes=TEXT,FILTER -D#C=1 -DC16K2=1 -DC16K1=1 %S/Inputs/showLineExecutionCounts.cpp

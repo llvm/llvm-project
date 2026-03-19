@@ -16,12 +16,15 @@
 #include <__algorithm/upper_bound.h>
 #include <__atomic/atomic.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__exception/terminate.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
 #include <__memory/allocator.h>
 #include <__memory/construct_at.h>
+#include <__memory/destroy.h>
 #include <__memory/unique_ptr.h>
+#include <__new/exceptions.h>
 #include <__numeric/reduce.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
@@ -37,12 +40,12 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstddef>
-#include <new>
 #include <optional>
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
@@ -140,15 +143,15 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 
     unique_ptr<__merge_range_t[], decltype(__destroy)> __ranges(
         [&]() -> __merge_range_t* {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
           try {
-#endif
+#  endif
             return std::allocator<__merge_range_t>().allocate(__n_ranges);
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
           } catch (const std::bad_alloc&) {
             return nullptr;
           }
-#endif
+#  endif
         }(),
         __destroy);
 
@@ -266,7 +269,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
       return __empty{};
     }
 
-    using _Value = __iter_value_type<_RandomAccessIterator>;
+    using _Value = __iterator_value_type<_RandomAccessIterator>;
 
     auto __destroy = [__size](_Value* __ptr) {
       std::destroy_n(__ptr, __size);
@@ -279,7 +282,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
     // Initialize all elements to a moved-from state
     // TODO: Don't do this - this can be done in the first merge - see https://llvm.org/PR63928
     std::__construct_at(__values.get(), std::move(*__first));
-    for (__iter_diff_t<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
+    for (__iterator_difference_type<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
       std::__construct_at(__values.get() + __i, std::move(__values.get()[__i - 1]));
     }
     *__first = std::move(__values.get()[__size - 1]);
@@ -391,6 +394,8 @@ struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

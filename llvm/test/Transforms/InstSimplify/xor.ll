@@ -23,7 +23,7 @@ define i4 @xor_and_or_not_commute0(i4 %a, i4 %b) {
 
 define <2 x i4> @xor_and_or_not_commute1(<2 x i4> %a, <2 x i4> %b) {
 ; CHECK-LABEL: @xor_and_or_not_commute1(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[A:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[A:%.*]], splat (i4 -1)
 ; CHECK-NEXT:    ret <2 x i4> [[NOT]]
 ;
   %and = and <2 x i4> %a, %b
@@ -47,7 +47,7 @@ define i74 @xor_and_or_not_commute2(i74 %a, i74 %b) {
 
 define <2 x i4> @xor_and_or_not_commute3(<2 x i4> %a, <2 x i4> %b) {
 ; CHECK-LABEL: @xor_and_or_not_commute3(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[A:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[A:%.*]], splat (i4 -1)
 ; CHECK-NEXT:    ret <2 x i4> [[NOT]]
 ;
   %and = and <2 x i4> %b, %a

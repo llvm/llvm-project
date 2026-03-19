@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 #ifndef RK
 #define RK 8
@@ -8,7 +8,7 @@ module m
   integer, parameter :: k = RK
   character(20) :: tag(11)
 contains
-  ! CHECK-LABEL: func @_QMmPinit
+  ! CHECK-LABEL: func.func @_QMmPinit()
   subroutine init
     tag( 1) = 'signaling_nan';      tag( 2) = 'quiet_nan'
     tag( 3) = 'negative_inf';       tag( 4) = 'negative_normal'
@@ -17,7 +17,8 @@ contains
     tag( 9) = 'positive_normal';    tag(10) = 'positive_inf'
     tag(11) = 'other_value'
   end
-  ! CHECK-LABEL: func @_QMmPout
+  ! CHECK-LABEL: func.func @_QMmPout(
+  ! CHECK-SAME: %[[X_ARG:.*]]: !fir.ref<f64> {{.*}}, %[[V_ARG:.*]]: !fir.ref<i32> {{.*}})
   subroutine out(x,v)
     use ieee_arithmetic
     real(k) :: x
@@ -36,58 +37,53 @@ contains
   end
 end module m
 
-! CHECK-LABEL: func @_QPclassify
+! CHECK-LABEL: func.func @_QPclassify(
+! CHECK-SAME: %[[X_ARG:.*]]: !fir.ref<f64> {{.*}})
 subroutine classify(x)
   use m; use ieee_arithmetic
   real(k) :: x
-  ! CHECK-DAG: %[[V_0:[0-9]+]] = fir.alloca i32 {adapt.valuebyref}
-  ! CHECK-DAG: %[[V_1:[0-9]+]] = fir.alloca !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK-DAG: %[[V_2:[0-9]+]] = fir.alloca !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}> {bindc_name = "r", uniq_name = "_QFclassifyEr"}
+  ! CHECK-DAG: %[[R_ALLOC:.*]] = fir.alloca !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}> {bindc_name = "r", uniq_name = "_QFclassifyEr"}
+  ! CHECK-DAG: %[[R_DECL:.*]]:2 = hlfir.declare %[[R_ALLOC]] {uniq_name = "_QFclassifyEr"}
+  ! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]] {{.*}} {uniq_name = "_QFclassifyEx"}
   type(ieee_class_type) :: r
 
-  ! CHECK:     %[[V_8:[0-9]+]] = fir.load %arg0 : !fir.ref<f64>
-  ! CHECK:     %[[V_9:[0-9]+]] = arith.bitcast %[[V_8]] : f64 to i64
-  ! CHECK:     %[[V_10:[0-9]+]] = arith.shrui %[[V_9]], %c59{{.*}} : i64
-  ! CHECK:     %[[V_11:[0-9]+]] = arith.andi %[[V_10]], %c16{{.*}} : i64
-  ! CHECK:     %[[V_12:[0-9]+]] = arith.andi %[[V_9]], %c9218868437227405312{{.*}} : i64
-  ! CHECK:     %[[V_13:[0-9]+]] = arith.cmpi ne, %[[V_12]], %c0{{.*}} : i64
-  ! CHECK:     %[[V_14:[0-9]+]] = arith.select %[[V_13]], %c8{{.*}}, %c0{{.*}} : i64
-  ! CHECK:     %[[V_15:[0-9]+]] = arith.ori %[[V_11]], %[[V_14]] : i64
-  ! CHECK:     %[[V_16:[0-9]+]] = arith.cmpi eq, %[[V_12]], %c9218868437227405312{{.*}} : i64
-  ! CHECK:     %[[V_17:[0-9]+]] = arith.select %[[V_16]], %c4{{.*}}, %c0{{.*}} : i64
-  ! CHECK:     %[[V_18:[0-9]+]] = arith.ori %[[V_15]], %[[V_17]] : i64
-  ! CHECK:     %[[V_19:[0-9]+]] = arith.andi %[[V_9]], %c2251799813685247{{.*}} : i64
-  ! CHECK:     %[[V_20:[0-9]+]] = arith.cmpi ne, %[[V_19]], %c0{{.*}} : i64
-  ! CHECK:     %[[V_21:[0-9]+]] = arith.select %[[V_20]], %c2{{.*}}, %c0{{.*}} : i64
-  ! CHECK:     %[[V_22:[0-9]+]] = arith.ori %[[V_18]], %[[V_21]] : i64
-  ! CHECK:     %[[V_23:[0-9]+]] = arith.shrui %[[V_9]], %c51{{.*}} : i64
-  ! CHECK:     %[[V_24:[0-9]+]] = arith.andi %[[V_23]], %c1{{.*}} : i64
-  ! CHECK:     %[[V_25:[0-9]+]] = arith.ori %[[V_22]], %[[V_24]] : i64
-  ! CHECK:     %[[V_26:[0-9]+]] = fir.address_of(@_FortranAIeeeClassTable) : !fir.ref<!fir.array<32xi8>>
-  ! CHECK:     %[[V_27:[0-9]+]] = fir.coordinate_of %[[V_26]], %[[V_25]] : (!fir.ref<!fir.array<32xi8>>, i64) -> !fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
-  ! CHECK:     %[[V_28:[0-9]+]] = fir.field_index _QMieee_arithmeticTieee_class_type.which, !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK:     %[[V_29:[0-9]+]] = fir.coordinate_of %[[V_27]], %[[V_28]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.field) -> !fir.ref<i8>
-  ! CHECK:     %[[V_30:[0-9]+]] = fir.field_index _QMieee_arithmeticTieee_class_type.which, !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK:     %[[V_31:[0-9]+]] = fir.coordinate_of %[[V_2]], %[[V_30]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.field) -> !fir.ref<i8>
-  ! CHECK:     %[[V_32:[0-9]+]] = fir.load %[[V_29]] : !fir.ref<i8>
-  ! CHECK:     fir.store %[[V_32]] to %[[V_31]] : !fir.ref<i8>
+  ! CHECK:     %[[X_VAL:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f64>
+  ! CHECK:     %[[BITCAST:.*]] = arith.bitcast %[[X_VAL]] : f64 to i64
+  ! CHECK:     %{{.*}} = arith.shrui %[[BITCAST]], %c59{{.*}} : i64
+  ! CHECK:     %[[V_11:.*]] = arith.andi %{{.*}}, %c16{{.*}} : i64
+  ! CHECK:     %[[EXP:.*]] = arith.andi %[[BITCAST]], %c{{-?[0-9]+}}{{.*}} : i64
+  ! CHECK:     %[[EXP_NZ:.*]] = arith.cmpi ne, %[[EXP]], %c0{{.*}} : i64
+  ! CHECK:     %[[V_14:.*]] = arith.select %[[EXP_NZ]], %c8{{.*}}, %c0{{.*}} : i64
+  ! CHECK:     %[[V_15:.*]] = arith.ori %[[V_11]], %[[V_14]] : i64
+  ! CHECK:     %[[EXP_INF:.*]] = arith.cmpi eq, %[[EXP]], %c{{-?[0-9]+}}{{.*}} : i64
+  ! CHECK:     %[[V_17:.*]] = arith.select %[[EXP_INF]], %c4{{.*}}, %c0{{.*}} : i64
+  ! CHECK:     %[[V_18:.*]] = arith.ori %[[V_15]], %[[V_17]] : i64
+  ! CHECK:     %[[FRAC:.*]] = arith.andi %[[BITCAST]], %c{{[0-9]+}}{{.*}} : i64
+  ! CHECK:     %[[FRAC_NZ:.*]] = arith.cmpi ne, %[[FRAC]], %c0{{.*}} : i64
+  ! CHECK:     %[[V_21:.*]] = arith.select %[[FRAC_NZ]], %c2{{.*}}, %c0{{.*}} : i64
+  ! CHECK:     %[[V_22:.*]] = arith.ori %[[V_18]], %[[V_21]] : i64
+  ! CHECK:     %[[V_23:.*]] = arith.shrui %[[BITCAST]], %c51{{.*}} : i64
+  ! CHECK:     %[[V_24:.*]] = arith.andi %[[V_23]], %c1{{.*}} : i64
+  ! CHECK:     %[[V_25:.*]] = arith.ori %[[V_22]], %[[V_24]] : i64
+  ! CHECK:     %[[TABLE:.*]] = fir.address_of(@_FortranAIeeeClassTable) : !fir.ref<!fir.array<32xi8>>
+  ! CHECK:     %[[COORD:.*]] = fir.coordinate_of %[[TABLE]], %[[V_25]] : (!fir.ref<!fir.array<32xi8>>, i64) -> !fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
+  ! CHECK:     %[[TMP:.*]]:2 = hlfir.declare %[[COORD]] {uniq_name = ".tmp.intrinsic_result"}
+  ! CHECK:     %[[EXPR:.*]] = hlfir.as_expr %[[TMP]]#0 move {{.*}} : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, i1) -> !hlfir.expr<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
+  ! CHECK:     hlfir.assign %[[EXPR]] to %[[R_DECL]]#0 : !hlfir.expr<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
+  ! CHECK:     hlfir.destroy %[[EXPR]] : !hlfir.expr<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>
   r = ieee_class(x)
 
 ! if (r==ieee_signaling_nan)      call out(x, 1)
 ! if (r==ieee_quiet_nan)          call out(x, 2)
-  ! CHECK:     %[[V_38:[0-9]+]] = fir.field_index _QMieee_arithmeticTieee_class_type.which, !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK:     %[[V_39:[0-9]+]] = fir.coordinate_of %[[V_1]], %[[V_38]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.field) -> !fir.ref<i8>
-  ! CHECK:     fir.store %c3{{.*}} to %[[V_39]] : !fir.ref<i8>
-  ! CHECK:     %[[V_40:[0-9]+]] = fir.field_index _QMieee_arithmeticTieee_class_type.which, !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK:     %[[V_41:[0-9]+]] = fir.coordinate_of %[[V_2]], %[[V_40]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.field) -> !fir.ref<i8>
-  ! CHECK:     %[[V_42:[0-9]+]] = fir.field_index _QMieee_arithmeticTieee_class_type.which, !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK:     %[[V_43:[0-9]+]] = fir.coordinate_of %[[V_1]], %[[V_42]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.field) -> !fir.ref<i8>
-  ! CHECK:     %[[V_44:[0-9]+]] = fir.load %[[V_41]] : !fir.ref<i8>
-  ! CHECK:     %[[V_45:[0-9]+]] = fir.load %[[V_43]] : !fir.ref<i8>
-  ! CHECK:     %[[V_46:[0-9]+]] = arith.cmpi eq, %[[V_44]], %[[V_45]] : i8
-  ! CHECK:     fir.if %[[V_46]] {
-  ! CHECK:       fir.store %c3{{.*}} to %[[V_0]] : !fir.ref<i32>
-  ! CHECK:       fir.call @_QMmPout(%arg0, %[[V_0]]) {{.*}} : (!fir.ref<f64>, !fir.ref<i32>) -> ()
+  ! CHECK:     %[[R_WHICH:.*]] = fir.coordinate_of %[[R_DECL]]#0, {{.*}}which : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>) -> !fir.ref<i8>
+  ! CHECK:     %{{.*}} = fir.coordinate_of %{{.*}}, {{.*}}which : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>) -> !fir.ref<i8>
+  ! CHECK:     %[[R_VAL:.*]] = fir.load %[[R_WHICH]] : !fir.ref<i8>
+  ! CHECK:     %[[CLASS_VAL:.*]] = fir.load %{{.*}} : !fir.ref<i8>
+  ! CHECK:     %[[EQ:.*]] = arith.cmpi eq, %[[R_VAL]], %[[CLASS_VAL]] : i8
+  ! CHECK:     fir.if %[[EQ]] {
+  ! CHECK:       %[[V_ASSOC:.*]]:3 = hlfir.associate %c3{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+  ! CHECK:       fir.call @_QMmPout(%[[X_DECL]]#0, %[[V_ASSOC]]#0) {{.*}} : (!fir.ref<f64>, !fir.ref<i32>) -> ()
+  ! CHECK:       hlfir.end_associate %[[V_ASSOC]]#1, %[[V_ASSOC]]#2 : !fir.ref<i32>, i1
   ! CHECK:     }
   if (r==ieee_negative_inf)       call out(x, 3)
 ! if (r==ieee_negative_normal)    call out(x, 4)
@@ -100,7 +96,7 @@ subroutine classify(x)
 ! if (r==ieee_other_value)        call out(x,11)
 end
 
-! CHECK-LABEL: func @_QQmain
+! CHECK-LABEL: func.func @_QQmain()
 program p
   use m; use ieee_arithmetic
   real(k) :: x(10)
@@ -109,21 +105,14 @@ program p
 
 ! x(1)  = ieee_value(x(1), ieee_signaling_nan)
 ! x(2)  = ieee_value(x(1), ieee_quiet_nan)
-  ! CHECK:     %[[V_0:[0-9]+]] = fir.alloca !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK:     %[[V_2:[0-9]+]] = fir.address_of(@_QFEx) : !fir.ref<!fir.array<10xf64>>
-  ! CHECK:     %[[V_8:[0-9]+]] = fir.field_index _QMieee_arithmeticTieee_class_type.which, !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK:     %[[V_9:[0-9]+]] = fir.coordinate_of %[[V_0]], %[[V_8]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.field) -> !fir.ref<i8>
-  ! CHECK:     fir.store %c3{{.*}} to %[[V_9]] : !fir.ref<i8>
-  ! CHECK:     %[[V_10:[0-9]+]] = fir.field_index _QMieee_arithmeticTieee_class_type.which, !fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>
-  ! CHECK:     %[[V_11:[0-9]+]] = fir.coordinate_of %[[V_0]], %[[V_10]] : (!fir.ref<!fir.type<_QMieee_arithmeticTieee_class_type{_QMieee_arithmeticTieee_class_type.which:i8}>>, !fir.field) -> !fir.ref<i8>
-  ! CHECK:     %[[V_12:[0-9]+]] = fir.load %[[V_11]] : !fir.ref<i8>
-  ! CHECK:     %[[V_13:[0-9]+]] = fir.address_of(@_FortranAIeeeValueTable_8) : !fir.ref<!fir.array<12xi64>>
-  ! CHECK:     %[[V_14:[0-9]+]] = fir.coordinate_of %[[V_13]], %[[V_12]] : (!fir.ref<!fir.array<12xi64>>, i8) -> !fir.ref<i64>
-  ! CHECK:     %[[V_15:[0-9]+]] = fir.load %[[V_14]] : !fir.ref<i64>
-  ! CHECK:     %[[V_16:[0-9]+]] = arith.bitcast %[[V_15]] : i64 to f64
-  ! CHECK:     %[[V_17:[0-9]+]] = arith.subi %c3{{.*}}, %c1{{.*}} : i64
-  ! CHECK:     %[[V_18:[0-9]+]] = fir.coordinate_of %[[V_2]], %[[V_17]] : (!fir.ref<!fir.array<10xf64>>, i64) -> !fir.ref<f64>
-  ! CHECK:     fir.store %[[V_16]] to %[[V_18]] : !fir.ref<f64>
+  ! CHECK:     %[[X_G_ALLOC:.*]] = fir.address_of(@_QFEx) : !fir.ref<!fir.array<10xf64>>
+  ! CHECK:     %[[X_G_DECL:.*]]:2 = hlfir.declare %[[X_G_ALLOC]]({{.*}}) {uniq_name = "_QFEx"}
+  ! CHECK:     %[[VAL_TABLE:.*]] = fir.address_of(@_FortranAIeeeValueTable_8) : !fir.ref<!fir.array<12xi64>>
+  ! CHECK:     %[[VAL_COORD:.*]] = fir.coordinate_of %[[VAL_TABLE]], %{{.*}} : (!fir.ref<!fir.array<12xi64>>, i8) -> !fir.ref<i64>
+  ! CHECK:     %[[VAL_I64:.*]] = fir.load %[[VAL_COORD]] : !fir.ref<i64>
+  ! CHECK:     %[[VAL_F64:.*]] = arith.bitcast %[[VAL_I64]] : i64 to f64
+  ! CHECK:     %[[X3_ADDR:.*]] = hlfir.designate %[[X_G_DECL]]#0 (%c3{{.*}})  : (!fir.ref<!fir.array<10xf64>>, index) -> !fir.ref<f64>
+  ! CHECK:     hlfir.assign %[[VAL_F64]] to %[[X3_ADDR]] : f64, !fir.ref<f64>
   x(3)  = ieee_value(x(1), ieee_negative_inf)
 ! x(4)  = ieee_value(x(1), ieee_negative_normal)
 ! x(5)  = ieee_value(x(1), ieee_negative_subnormal)

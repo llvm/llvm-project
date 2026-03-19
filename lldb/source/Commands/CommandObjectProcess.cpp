@@ -25,6 +25,7 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -34,6 +35,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/FormatAdapters.h"
 
 #include "llvm/ADT/ScopeExit.h"
 
@@ -117,8 +119,9 @@ public:
   CommandObjectProcessLaunch(CommandInterpreter &interpreter)
       : CommandObjectProcessLaunchOrAttach(
             interpreter, "process launch",
-            "Launch the executable in the debugger.", nullptr,
-            eCommandRequiresTarget, "restart"),
+            "Launch the executable in the debugger. If no run-args are "
+            "specified, the arguments from target.run-args are used.",
+            nullptr, eCommandRequiresTarget, "restart"),
 
         m_class_options("scripted process", true, 'C', 'k', 'v', 0) {
     m_all_options.Append(&m_options);
@@ -200,6 +203,13 @@ protected:
     if (target->GetDisableSTDIO())
       m_options.launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
 
+    if (!m_options.launch_info.GetWorkingDirectory()) {
+      if (llvm::StringRef wd = target->GetLaunchWorkingDirectory();
+          !wd.empty()) {
+        m_options.launch_info.SetWorkingDirectory(FileSpec(wd));
+      }
+    }
+
     // Merge the launch info environment with the target environment.
     Environment target_env = target->GetEnvironment();
     m_options.launch_info.GetEnvironment().insert(target_env.begin(),
@@ -249,13 +259,13 @@ protected:
         if (!exe_module_sp)
           exe_module_sp = target->GetExecutableModule();
         if (!exe_module_sp) {
-          result.AppendWarning("Could not get executable module after launch.");
+          result.AppendWarning("could not get executable module after launch");
         } else {
 
           const char *archname =
               exe_module_sp->GetArchitecture().GetArchitectureName();
-          result.AppendMessageWithFormat(
-              "Process %" PRIu64 " launched: '%s' (%s)\n", process_sp->GetID(),
+          result.AppendMessageWithFormatv(
+              "Process {0} launched: '{1}' ({2})", process_sp->GetID(),
               exe_module_sp->GetFileSpec().GetPath().c_str(), archname);
         }
         result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -373,8 +383,8 @@ protected:
     if (!old_exec_module_sp) {
       // We might not have a module if we attached to a raw pid...
       if (new_exec_module_sp) {
-        result.AppendMessageWithFormat(
-            "Executable binary set to \"%s\".\n",
+        result.AppendMessageWithFormatv(
+            "Executable binary set to \"{0}\".",
             new_exec_module_sp->GetFileSpec().GetPath().c_str());
       }
     } else if (!new_exec_module_sp) {
@@ -389,8 +399,8 @@ protected:
     }
 
     if (!old_arch_spec.IsValid()) {
-      result.AppendMessageWithFormat(
-          "Architecture set to: %s.\n",
+      result.AppendMessageWithFormatv(
+          "Architecture set to: {0}.",
           target->GetArchitecture().GetTriple().getTriple().c_str());
     } else if (!old_arch_spec.IsExactMatch(target->GetArchitecture())) {
       result.AppendWarningWithFormat(
@@ -452,14 +462,20 @@ protected:
       switch (short_option) {
       case 'i':
         if (option_arg.getAsInteger(0, m_ignore))
-          error.SetErrorStringWithFormat(
+          error = Status::FromErrorStringWithFormat(
               "invalid value for ignore option: \"%s\", should be a number.",
               option_arg.str().c_str());
         break;
       case 'b':
         m_run_to_bkpt_args.AppendArgument(option_arg);
         m_any_bkpts_specified = true;
-      break;
+        break;
+      case 'F':
+        m_base_direction = lldb::RunDirection::eRunForward;
+        break;
+      case 'R':
+        m_base_direction = lldb::RunDirection::eRunReverse;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -470,6 +486,7 @@ protected:
       m_ignore = 0;
       m_run_to_bkpt_args.Clear();
       m_any_bkpts_specified = false;
+      m_base_direction = std::nullopt;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -479,6 +496,7 @@ protected:
     uint32_t m_ignore = 0;
     Args m_run_to_bkpt_args;
     bool m_any_bkpts_specified = false;
+    std::optional<lldb::RunDirection> m_base_direction;
   };
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
@@ -625,8 +643,12 @@ protected:
             BreakpointLocationSP loc_sp = bp_sp->GetLocationAtIndex(loc_idx);
             tmp_id.SetBreakpointLocationID(loc_idx);
             if (!with_locs.Contains(tmp_id) && loc_sp->IsEnabled()) {
-              locs_disabled.push_back(tmp_id);
-              loc_sp->SetEnabled(false);
+              if (llvm::Error error = loc_sp->SetEnabled(false))
+                result.AppendErrorWithFormatv(
+                    "failed to disable breakpoint location: {0}",
+                    llvm::fmt_consume(std::move(error)));
+              else
+                locs_disabled.push_back(tmp_id);
             }
           }
         }
@@ -644,6 +666,9 @@ protected:
               eStateRunning, override_suspend);
         }
       }
+
+      if (m_options.m_base_direction.has_value())
+        process->SetBaseDirection(*m_options.m_base_direction);
 
       const uint32_t iohandler_id = process->GetIOHandlerID();
 
@@ -678,8 +703,12 @@ protected:
         if (bp_sp) {
           BreakpointLocationSP loc_sp
               = bp_sp->FindLocationByID(bkpt_id.GetLocationID());
-          if (loc_sp)
-            loc_sp->SetEnabled(true);
+          if (loc_sp) {
+            if (llvm::Error error = loc_sp->SetEnabled(true))
+              result.AppendErrorWithFormatv(
+                  "failed to enable breakpoint location: {0}",
+                  llvm::fmt_consume(std::move(error)));
+          }
         }
       }
 
@@ -690,8 +719,8 @@ protected:
         // PushProcessIOHandler().
         process->SyncIOHandler(iohandler_id, std::chrono::seconds(2));
 
-        result.AppendMessageWithFormat("Process %" PRIu64 " resuming\n",
-                                       process->GetID());
+        result.AppendMessageWithFormatv("Process {0} resuming",
+                                        process->GetID());
         if (synchronous_execution) {
           // If any state changed events had anything to say, add that to the
           // result
@@ -743,8 +772,8 @@ public:
         bool success;
         tmp_result = OptionArgParser::ToBoolean(option_arg, false, &success);
         if (!success)
-          error.SetErrorStringWithFormat("invalid boolean option: \"%s\"",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "invalid boolean option: \"%s\"", option_arg.str().c_str());
         else {
           if (tmp_result)
             m_keep_stopped = eLazyBoolYes;
@@ -1093,8 +1122,8 @@ protected:
         Status error(process->GetTarget().GetPlatform()->UnloadImage(
             process, image_token));
         if (error.Success()) {
-          result.AppendMessageWithFormat(
-              "Unloading shared library with index %u...ok\n", image_token);
+          result.AppendMessageWithFormatv(
+              "Unloading shared library with index {0}...ok", image_token);
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           result.AppendErrorWithFormat("failed to unload image: %s",
@@ -1261,7 +1290,27 @@ public:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_process_save_core_options);
+      if (!m_opt_def.empty())
+        return llvm::ArrayRef(m_opt_def);
+
+      auto orig = llvm::ArrayRef(g_process_save_core_options);
+      m_opt_def.resize(orig.size());
+      llvm::copy(g_process_save_core_options, m_opt_def.data());
+      for (OptionDefinition &value : m_opt_def) {
+        llvm::StringRef opt_name = value.long_option;
+        if (opt_name != "plugin-name")
+          continue;
+
+        llvm::SmallVector<llvm::StringRef> plugin_names =
+            PluginManager::GetSaveCorePluginNames();
+        m_plugin_enums.resize(plugin_names.size());
+        for (auto [num, val] : llvm::zip(plugin_names, m_plugin_enums)) {
+          val.string_value = num.data();
+        }
+        value.enum_values = llvm::ArrayRef(m_plugin_enums);
+        break;
+      }
+      return llvm::ArrayRef(m_opt_def);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -1283,7 +1332,7 @@ public:
         llvm_unreachable("Unimplemented option");
       }
 
-      return {};
+      return error;
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
@@ -1292,6 +1341,8 @@ public:
 
     // Instance variables to hold the values for command options.
     SaveCoreOptions m_core_dump_options;
+    llvm::SmallVector<OptionEnumValueElement> m_plugin_enums;
+    std::vector<OptionDefinition> m_opt_def;
   };
 
 protected:
@@ -1300,10 +1351,12 @@ protected:
     if (process_sp) {
       if (command.GetArgumentCount() == 1) {
         FileSpec output_file(command.GetArgumentAtIndex(0));
-        FileSystem::Instance().Resolve(output_file);
+        FileSystem::Instance().Resolve(output_file,
+                                       /*force_make_absolute=*/true);
         auto &core_dump_options = m_options.m_core_dump_options;
         core_dump_options.SetOutputFile(output_file);
-        Status error = PluginManager::SaveCore(process_sp, core_dump_options);
+        core_dump_options.SetProcess(process_sp);
+        Status error = PluginManager::SaveCore(core_dump_options);
         if (error.Success()) {
           if (core_dump_options.GetStyle() ==
                   SaveCoreStyle::eSaveCoreDirtyOnly ||
@@ -1321,8 +1374,9 @@ protected:
           }
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat(
-              "Failed to save core file for process: %s\n", error.AsCString());
+          result.AppendErrorWithFormatv(
+              "failed to save core file for process to '{0}': {1}\n",
+              output_file.GetPath(), error);
         }
       } else {
         result.AppendErrorWithFormat("'%s' takes one arguments:\nUsage: %s\n",
@@ -1368,6 +1422,9 @@ public:
       case 'v':
         m_verbose = true;
         break;
+      case 'd':
+        m_dump = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1377,6 +1434,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_verbose = false;
+      m_dump = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1385,6 +1443,7 @@ public:
 
     // Instance variables to hold the values for command options.
     bool m_verbose = false;
+    bool m_dump = false;
   };
 
 protected:
@@ -1409,17 +1468,17 @@ protected:
       addr_t data_mask = process->GetDataAddressMask();
       if (code_mask != LLDB_INVALID_ADDRESS_MASK) {
         int bits = std::bitset<64>(~code_mask).count();
-        result.AppendMessageWithFormat(
-            "Addressable code address mask: 0x%" PRIx64 "\n", code_mask);
-        result.AppendMessageWithFormat(
-            "Addressable data address mask: 0x%" PRIx64 "\n", data_mask);
-        result.AppendMessageWithFormat(
-            "Number of bits used in addressing (code): %d\n", bits);
+        result.AppendMessageWithFormatv("Addressable code address mask: {0:x}",
+                                        code_mask);
+        result.AppendMessageWithFormatv("Addressable data address mask: {0:x}",
+                                        data_mask);
+        result.AppendMessageWithFormatv(
+            "Number of bits used in addressing (code): {0}", bits);
       }
 
       PlatformSP platform_sp = process->GetTarget().GetPlatform();
       if (!platform_sp) {
-        result.AppendError("Couldn'retrieve the target's platform");
+        result.AppendError("Couldn't retrieve the target's platform");
         return;
       }
 
@@ -1437,6 +1496,14 @@ protected:
         strm.EOL();
         strm.PutCString("Extended Crash Information:\n");
         crash_info_sp->GetDescription(strm);
+      }
+    }
+
+    if (m_options.m_dump) {
+      StateType state = process->GetState();
+      if (state == eStateStopped) {
+        ProcessModID process_mod_id = process->GetModID();
+        process_mod_id.Dump(result.GetOutputStream());
       }
     }
   }
@@ -1538,8 +1605,8 @@ public:
   Options *GetOptions() override { return &m_options; }
 
   void PrintSignalHeader(Stream &str) {
-    str.Printf("NAME         PASS   STOP   NOTIFY\n");
-    str.Printf("===========  =====  =====  ======\n");
+    str.Printf("NAME         PASS   STOP   NOTIFY  DESCRIPTION\n");
+    str.Printf("===========  =====  =====  ======  ===================\n");
   }
 
   void PrintSignal(Stream &str, int32_t signo, llvm::StringRef sig_name,
@@ -1550,9 +1617,16 @@ public:
 
     str.Format("{0, -11}  ", sig_name);
     if (signals_sp->GetSignalInfo(signo, suppress, stop, notify)) {
-      bool pass = !suppress;
+      const bool pass = !suppress;
       str.Printf("%s  %s  %s", (pass ? "true " : "false"),
                  (stop ? "true " : "false"), (notify ? "true " : "false"));
+
+      const llvm::StringRef sig_description =
+          signals_sp->GetSignalNumberDescription(signo);
+      if (!sig_description.empty()) {
+        str.PutCString("   ");
+        str.PutCString(sig_description);
+      }
     }
     str.Printf("\n");
   }

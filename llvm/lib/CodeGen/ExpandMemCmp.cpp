@@ -25,6 +25,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -355,7 +356,7 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
 
   // Swap bytes if required.
   if (BSwapSizeType) {
-    Function *Bswap = Intrinsic::getDeclaration(
+    Function *Bswap = Intrinsic::getOrInsertDeclaration(
         CI->getModule(), Intrinsic::bswap, BSwapSizeType);
     Lhs = Builder.CreateCall(Bswap, Lhs);
     Rhs = Builder.CreateCall(Bswap, Rhs);
@@ -389,17 +390,14 @@ void MemCmpExpansion::emitLoadCompareByteBlock(unsigned BlockIndex,
     // next LoadCmpBlock,
     Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_NE, Diff,
                                     ConstantInt::get(Diff->getType(), 0));
-    BranchInst *CmpBr =
-        BranchInst::Create(EndBlock, LoadCmpBlocks[BlockIndex + 1], Cmp);
-    Builder.Insert(CmpBr);
+    Builder.CreateCondBr(Cmp, EndBlock, LoadCmpBlocks[BlockIndex + 1]);
     if (DTU)
       DTU->applyUpdates(
           {{DominatorTree::Insert, BB, EndBlock},
            {DominatorTree::Insert, BB, LoadCmpBlocks[BlockIndex + 1]}});
   } else {
     // The last block has an unconditional branch to EndBlock.
-    BranchInst *CmpBr = BranchInst::Create(EndBlock);
-    Builder.Insert(CmpBr);
+    Builder.CreateBr(EndBlock);
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, BB, EndBlock}});
   }
@@ -487,8 +485,9 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   // Early exit branch if difference found to ResultBlock. Otherwise,
   // continue to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
-  BranchInst *CmpBr = BranchInst::Create(ResBlock.BB, NextBB, Cmp);
-  Builder.Insert(CmpBr);
+  CondBrInst *CmpBr = Builder.CreateCondBr(Cmp, ResBlock.BB, NextBB);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
+                                              CI->getFunction());
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, ResBlock.BB},
                        {DominatorTree::Insert, BB, NextBB}});
@@ -551,8 +550,9 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
   // Early exit branch if difference found to ResultBlock. Otherwise, continue
   // to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
-  BranchInst *CmpBr = BranchInst::Create(NextBB, ResBlock.BB, Cmp);
-  Builder.Insert(CmpBr);
+  CondBrInst *CmpBr = Builder.CreateCondBr(Cmp, NextBB, ResBlock.BB);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
+                                              CI->getFunction());
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, NextBB},
                        {DominatorTree::Insert, BB, ResBlock.BB}});
@@ -577,8 +577,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
     Builder.SetInsertPoint(ResBlock.BB, InsertPt);
     Value *Res = ConstantInt::get(Type::getInt32Ty(CI->getContext()), 1);
     PhiRes->addIncoming(Res, ResBlock.BB);
-    BranchInst *NewBr = BranchInst::Create(EndBlock);
-    Builder.Insert(NewBr);
+    Builder.CreateBr(EndBlock);
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
     return;
@@ -592,10 +591,11 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
   Value *Res =
       Builder.CreateSelect(Cmp, Constant::getAllOnesValue(Builder.getInt32Ty()),
                            ConstantInt::get(Builder.getInt32Ty(), 1));
+  setExplicitlyUnknownBranchWeightsIfProfiled(*cast<Instruction>(Res),
+                                              DEBUG_TYPE, CI->getFunction());
 
   PhiRes->addIncoming(Res, ResBlock.BB);
-  BranchInst *NewBr = BranchInst::Create(EndBlock);
-  Builder.Insert(NewBr);
+  Builder.CreateBr(EndBlock);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
 }
@@ -668,25 +668,33 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
   // We can generate more optimal code with a smaller number of operations
   if (CI->hasOneUser()) {
     auto *UI = cast<Instruction>(*CI->user_begin());
-    ICmpInst::Predicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
-    uint64_t Shift;
+    CmpPredicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
     bool NeedsZExt = false;
     // This is a special case because instead of checking if the result is less
     // than zero:
     //    bool result = memcmp(a, b, NBYTES) < 0;
     // Compiler is clever enough to generate the following code:
     //    bool result = memcmp(a, b, NBYTES) >> 31;
-    if (match(UI, m_LShr(m_Value(), m_ConstantInt(Shift))) &&
-        Shift == (CI->getType()->getIntegerBitWidth() - 1)) {
+    if (match(UI,
+              m_LShr(m_Value(),
+                     m_SpecificInt(CI->getType()->getIntegerBitWidth() - 1)))) {
       Pred = ICmpInst::ICMP_SLT;
       NeedsZExt = true;
+    } else if (match(UI, m_SpecificICmp(ICmpInst::ICMP_SGT, m_Specific(CI),
+                                        m_AllOnes()))) {
+      // Adjust predicate as if it compared with 0.
+      Pred = ICmpInst::ICMP_SGE;
+    } else if (match(UI, m_SpecificICmp(ICmpInst::ICMP_SLT, m_Specific(CI),
+                                        m_One()))) {
+      // Adjust predicate as if it compared with 0.
+      Pred = ICmpInst::ICMP_SLE;
     } else {
       // In case of a successful match this call will set `Pred` variable
       match(UI, m_ICmp(Pred, m_Specific(CI), m_Zero()));
     }
     // Generate new code and remove the original memcmp call and the user
     if (ICmpInst::isSigned(Pred)) {
-      Value *Cmp = Builder.CreateICmp(CmpInst::getUnsignedPredicate(Pred),
+      Value *Cmp = Builder.CreateICmp(ICmpInst::getUnsignedPredicate(Pred),
                                       Loads.Lhs, Loads.Rhs);
       auto *Result = NeedsZExt ? Builder.CreateZExt(Cmp, UI->getType()) : Cmp;
       UI->replaceAllUsesWith(Result);
@@ -696,17 +704,9 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
     }
   }
 
-  // The result of memcmp is negative, zero, or positive, so produce that by
-  // subtracting 2 extended compare bits: sub (ugt, ult).
-  // If a target prefers to use selects to get -1/0/1, they should be able
-  // to transform this later. The inverse transform (going from selects to math)
-  // may not be possible in the DAG because the selects got converted into
-  // branches before we got there.
-  Value *CmpUGT = Builder.CreateICmpUGT(Loads.Lhs, Loads.Rhs);
-  Value *CmpULT = Builder.CreateICmpULT(Loads.Lhs, Loads.Rhs);
-  Value *ZextUGT = Builder.CreateZExt(CmpUGT, Builder.getInt32Ty());
-  Value *ZextULT = Builder.CreateZExt(CmpULT, Builder.getInt32Ty());
-  return Builder.CreateSub(ZextUGT, ZextULT);
+  // The result of memcmp is negative, zero, or positive.
+  return Builder.CreateIntrinsic(Builder.getInt32Ty(), Intrinsic::ucmp,
+                                 {Loads.Lhs, Loads.Rhs});
 }
 
 // This function expands the memcmp call into an inline expansion and returns
@@ -852,8 +852,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   // available load sizes.
   const bool IsUsedForZeroCmp =
       IsBCmp || isOnlyUsedInZeroEqualityComparison(CI);
-  bool OptForSize = CI->getFunction()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
+  bool OptForSize = llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
   auto Options = TTI->enableMemCmpExpansion(OptForSize,
                                             IsUsedForZeroCmp);
   if (!Options) return false;
@@ -903,9 +902,7 @@ class ExpandMemCmpLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  ExpandMemCmpLegacyPass() : FunctionPass(ID) {
-    initializeExpandMemCmpLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  ExpandMemCmpLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F)) return false;

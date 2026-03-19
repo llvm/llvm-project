@@ -10,7 +10,6 @@
 #include <cstdlib>
 
 #include <memory>
-#include <mutex>
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -36,8 +35,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/UUID.h"
-
-#include "llvm/Support/Threading.h"
 
 #define USEC_PER_SEC 1000000
 
@@ -70,7 +67,7 @@ public:
 
   PluginProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_processkdp_properties);
+    m_collection_sp->Initialize(g_processkdp_properties_def);
   }
 
   ~PluginProperties() override = default;
@@ -97,6 +94,7 @@ llvm::StringRef ProcessKDP::GetPluginDescriptionStatic() {
 }
 
 void ProcessKDP::Terminate() {
+  ProcessKDPLog::Terminate();
   PluginManager::UnregisterPlugin(ProcessKDP::CreateInstance);
 }
 
@@ -170,13 +168,14 @@ ProcessKDP::~ProcessKDP() {
 
 Status ProcessKDP::DoWillLaunch(Module *module) {
   Status error;
-  error.SetErrorString("launching not supported in kdp-remote plug-in");
+  return Status::FromErrorString(
+      "launching not supported in kdp-remote plug-in");
   return error;
 }
 
 Status ProcessKDP::DoWillAttachToProcessWithID(lldb::pid_t pid) {
   Status error;
-  error.SetErrorString(
+  return Status::FromErrorString(
       "attaching to a by process ID not supported in kdp-remote plug-in");
   return error;
 }
@@ -184,7 +183,7 @@ Status ProcessKDP::DoWillAttachToProcessWithID(lldb::pid_t pid) {
 Status ProcessKDP::DoWillAttachToProcessWithName(const char *process_name,
                                                  bool wait_for_launch) {
   Status error;
-  error.SetErrorString(
+  return Status::FromErrorString(
       "attaching to a by process name not supported in kdp-remote plug-in");
   return error;
 }
@@ -211,10 +210,8 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
   // exceptions
   SetCanJIT(false);
 
-  if (remote_url.empty()) {
-    error.SetErrorStringWithFormat("empty connection URL");
-    return error;
-  }
+  if (remote_url.empty())
+    return Status::FromErrorString("empty connection URL");
 
   std::unique_ptr<ConnectionFileDescriptor> conn_up(
       new ConnectionFileDescriptor());
@@ -277,12 +274,15 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
               // Lookup UUID locally, before attempting dsymForUUID like action
               FileSpecList search_paths =
                   Target::GetDefaultDebugFileSearchPaths();
+
+              StatisticsMap symbol_locator_map;
               module_spec.GetSymbolFileSpec() =
-                  PluginManager::LocateExecutableSymbolFile(module_spec,
-                                                            search_paths);
+                  PluginManager::LocateExecutableSymbolFile(
+                      module_spec, search_paths, symbol_locator_map);
               if (module_spec.GetSymbolFileSpec()) {
                 ModuleSpec executable_module_spec =
-                    PluginManager::LocateExecutableObjectFile(module_spec);
+                    PluginManager::LocateExecutableObjectFile(
+                        module_spec, symbol_locator_map);
                 if (FileSystem::Instance().Exists(
                         executable_module_spec.GetFileSpec())) {
                   module_spec.GetFileSpec() =
@@ -298,6 +298,8 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
 
               if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
                 ModuleSP module_sp(new Module(module_spec));
+                module_sp->GetSymbolLocatorStatistics().merge(
+                    symbol_locator_map);
                 if (module_sp.get() && module_sp->GetObjectFile()) {
                   // Get the current target executable
                   ModuleSP exe_module_sp(target.GetExecutableModule());
@@ -322,33 +324,23 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
           SetID(1);
           GetThreadList();
           SetPrivateState(eStateStopped);
-          StreamSP async_strm_sp(target.GetDebugger().GetAsyncOutputStream());
-          if (async_strm_sp) {
-            const char *cstr;
-            if ((cstr = m_comm.GetKernelVersion()) != NULL) {
-              async_strm_sp->Printf("Version: %s\n", cstr);
-              async_strm_sp->Flush();
-            }
-            //                      if ((cstr = m_comm.GetImagePath ()) != NULL)
-            //                      {
-            //                          async_strm_sp->Printf ("Image Path:
-            //                          %s\n", cstr);
-            //                          async_strm_sp->Flush();
-            //                      }
-          }
+          const char *cstr;
+          if ((cstr = m_comm.GetKernelVersion()) != NULL)
+            target.GetDebugger().GetAsyncOutputStream()->Printf("Version: %s\n",
+                                                                cstr);
         } else {
-          error.SetErrorString("KDP_REATTACH failed");
+          return Status::FromErrorString("KDP_REATTACH failed");
         }
       } else {
-        error.SetErrorString("KDP_REATTACH failed");
+        return Status::FromErrorString("KDP_REATTACH failed");
       }
     } else {
-      error.SetErrorString("invalid reply port from UDP connection");
+      return Status::FromErrorString("invalid reply port from UDP connection");
     }
   } else {
     if (error.Success())
-      error.SetErrorStringWithFormat("failed to connect to '%s'",
-                                     remote_url.str().c_str());
+      error = Status::FromErrorStringWithFormat("failed to connect to '%s'",
+                                                remote_url.str().c_str());
   }
   if (error.Fail())
     m_comm.Disconnect();
@@ -360,7 +352,8 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
 Status ProcessKDP::DoLaunch(Module *exe_module,
                             ProcessLaunchInfo &launch_info) {
   Status error;
-  error.SetErrorString("launching not supported in kdp-remote plug-in");
+  return Status::FromErrorString(
+      "launching not supported in kdp-remote plug-in");
   return error;
 }
 
@@ -368,7 +361,7 @@ Status
 ProcessKDP::DoAttachToProcessWithID(lldb::pid_t attach_pid,
                                     const ProcessAttachInfo &attach_info) {
   Status error;
-  error.SetErrorString(
+  return Status::FromErrorString(
       "attach to process by ID is not supported in kdp remote debugging");
   return error;
 }
@@ -377,7 +370,7 @@ Status
 ProcessKDP::DoAttachToProcessWithName(const char *process_name,
                                       const ProcessAttachInfo &attach_info) {
   Status error;
-  error.SetErrorString(
+  return Status::FromErrorString(
       "attach to process by name is not supported in kdp remote debugging");
   return error;
 }
@@ -402,9 +395,14 @@ lldb_private::DynamicLoader *ProcessKDP::GetDynamicLoader() {
 
 Status ProcessKDP::WillResume() { return Status(); }
 
-Status ProcessKDP::DoResume() {
+Status ProcessKDP::DoResume(RunDirection direction) {
   Status error;
   Log *log = GetLog(KDPLog::Process);
+
+  if (direction == RunDirection::eRunReverse)
+    return Status::FromErrorStringWithFormatv(
+        "{0} does not support reverse execution of processes", GetPluginName());
+
   // Only start the async thread if we try to do any process control
   if (!m_async_thread.IsJoinable())
     StartAsyncThread();
@@ -438,7 +436,7 @@ Status ProcessKDP::DoResume() {
         reg_ctx_sp->HardwareSingleStep(true);
         resume = true;
       } else {
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "KDP thread 0x%llx has no register context",
             kernel_thread_sp->GetID());
       }
@@ -454,7 +452,7 @@ Status ProcessKDP::DoResume() {
         reg_ctx_sp->HardwareSingleStep(false);
         resume = true;
       } else {
-        error.SetErrorStringWithFormat(
+        error = Status::FromErrorStringWithFormat(
             "KDP thread 0x%llx has no register context",
             kernel_thread_sp->GetID());
       }
@@ -473,9 +471,9 @@ Status ProcessKDP::DoResume() {
       m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue);
       SetPrivateState(eStateRunning);
     } else
-      error.SetErrorString("KDP resume failed");
+      return Status::FromErrorString("KDP resume failed");
   } else {
-    error.SetErrorString("kernel thread is suspended");
+    return Status::FromErrorString("kernel thread is suspended");
   }
 
   return error;
@@ -526,7 +524,7 @@ Status ProcessKDP::DoHalt(bool &caused_stop) {
       // a process stopped event
       SetPrivateState(eStateStopped);
     } else {
-      error.SetErrorString("KDP cannot interrupt a running kernel");
+      return Status::FromErrorString("KDP cannot interrupt a running kernel");
     }
   }
   return error;
@@ -603,7 +601,7 @@ size_t ProcessKDP::DoReadMemory(addr_t addr, void *buf, size_t size,
 
     return total_bytes_read;
   }
-  error.SetErrorString("not connected");
+  error = Status::FromErrorString("not connected");
   return 0;
 }
 
@@ -611,27 +609,27 @@ size_t ProcessKDP::DoWriteMemory(addr_t addr, const void *buf, size_t size,
                                  Status &error) {
   if (m_comm.IsConnected())
     return m_comm.SendRequestWriteMemory(addr, buf, size, error);
-  error.SetErrorString("not connected");
+  error = Status::FromErrorString("not connected");
   return 0;
 }
 
 lldb::addr_t ProcessKDP::DoAllocateMemory(size_t size, uint32_t permissions,
                                           Status &error) {
-  error.SetErrorString(
+  error = Status::FromErrorString(
       "memory allocation not supported in kdp remote debugging");
   return LLDB_INVALID_ADDRESS;
 }
 
 Status ProcessKDP::DoDeallocateMemory(lldb::addr_t addr) {
   Status error;
-  error.SetErrorString(
+  return Status::FromErrorString(
       "memory deallocation not supported in kdp remote debugging");
   return error;
 }
 
 Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
-    return Status("Hardware breakpoints are not supported.");
+    return Status::FromErrorString("Hardware breakpoints are not supported.");
 
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
@@ -640,7 +638,7 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
         bp_site->SetEnabled(true);
         bp_site->SetType(BreakpointSite::eExternal);
       } else {
-        error.SetErrorString("KDP set breakpoint failed");
+        return Status::FromErrorString("KDP set breakpoint failed");
       }
     }
     return error;
@@ -661,7 +659,7 @@ Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
           if (m_comm.SendRequestBreakpoint(false, bp_site->GetLoadAddress()))
             bp_site->SetEnabled(false);
           else
-            error.SetErrorString("KDP remove breakpoint failed");
+            return Status::FromErrorString("KDP remove breakpoint failed");
         }
       } else {
         error = DisableSoftwareBreakpoint(bp_site);
@@ -676,21 +674,17 @@ void ProcessKDP::Clear() { m_thread_list.Clear(); }
 
 Status ProcessKDP::DoSignal(int signo) {
   Status error;
-  error.SetErrorString(
+  return Status::FromErrorString(
       "sending signals is not supported in kdp remote debugging");
   return error;
 }
 
 void ProcessKDP::Initialize() {
-  static llvm::once_flag g_once_flag;
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
 
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance,
-                                  DebuggerInitialize);
-
-    ProcessKDPLog::Initialize();
-  });
+  ProcessKDPLog::Initialize();
 }
 
 void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {

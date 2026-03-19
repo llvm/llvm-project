@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SYS_SYSCALL_H
 #define LLVM_LIBC_SYS_SYSCALL_H
 
-//TODO: Handle non-linux syscalls
+#if defined(__linux__)
 
 #include <asm/unistd.h>
 
@@ -307,6 +307,10 @@
 
 #ifdef __NR_faccessat
 #define SYS_faccessat __NR_faccessat
+#endif
+
+#ifdef __NR_faccessat2
+#define SYS_faccessat2 __NR_faccessat2
 #endif
 
 #ifdef __NR_fadvise64
@@ -1517,6 +1521,10 @@
 #define SYS_ppoll __NR_ppoll
 #endif
 
+#ifdef __NR_ppoll_time64
+#define SYS_ppoll_time64 __NR_ppoll_time64
+#endif
+
 #ifdef __NR_prctl
 #define SYS_prctl __NR_prctl
 #endif
@@ -2301,6 +2309,10 @@
 #define SYS_utimes __NR_utimes
 #endif
 
+#ifdef __NR_utimensat_time64
+#define SYS_utimensat_time64 __NR_utimensat_time64
+#endif
+
 #ifdef __NR_utrap_install
 #define SYS_utrap_install __NR_utrap_install
 #endif
@@ -2349,5 +2361,6 @@
 #define SYS_writev __NR_writev
 #endif
 
+#endif // __linux__
 
 #endif // LLVM_LIBC_SYS_SYSCALL_H

@@ -20,7 +20,7 @@ define void @imm_out_of_range(ptr %base, <vscale x 2 x i1> %mask) nounwind {
   %data = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 2 x i1> %mask,
-                                                            <vscale x 2 x i64> undef)
+                                                            <vscale x 2 x i64> poison)
   %base_store = getelementptr <vscale x 2 x i64>, ptr %base, i64 -9
   call void @llvm.masked.store.nxv2i64(<vscale x 2 x i64> %data,
                                        ptr %base_store,
@@ -41,7 +41,7 @@ define void @test_masked_ldst_sv2i8(ptr %base, <vscale x 2 x i1> %mask) nounwind
   %data = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %base_load,
                                                           i32 1,
                                                           <vscale x 2 x i1> %mask,
-                                                          <vscale x 2 x i8> undef)
+                                                          <vscale x 2 x i8> poison)
   %base_store = getelementptr <vscale x 2 x i8>, ptr %base, i64 -7
   call void @llvm.masked.store.nxv2i8(<vscale x 2 x i8> %data,
                                       ptr %base_store,
@@ -60,7 +60,7 @@ define void @test_masked_ldst_sv2i16(ptr %base, <vscale x 2 x i1> %mask) nounwin
   %data = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 2 x i1> %mask,
-                                                            <vscale x 2 x i16> undef)
+                                                            <vscale x 2 x i16> poison)
   %base_store = getelementptr <vscale x 2 x i16>, ptr %base, i64 -7
   call void @llvm.masked.store.nxv2i16(<vscale x 2 x i16> %data,
                                        ptr %base_store,
@@ -80,7 +80,7 @@ define void @test_masked_ldst_sv2i32(ptr %base, <vscale x 2 x i1> %mask) nounwin
   %data = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 2 x i1> %mask,
-                                                            <vscale x 2 x i32> undef)
+                                                            <vscale x 2 x i32> poison)
   %base_store = getelementptr <vscale x 2 x i32>, ptr %base, i64 -7
   call void @llvm.masked.store.nxv2i32(<vscale x 2 x i32> %data,
                                        ptr %base_store,
@@ -99,7 +99,7 @@ define void @test_masked_ldst_sv2i64(ptr %base, <vscale x 2 x i1> %mask) nounwin
   %data = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 2 x i1> %mask,
-                                                            <vscale x 2 x i64> undef)
+                                                            <vscale x 2 x i64> poison)
   %base_store = getelementptr <vscale x 2 x i64>, ptr %base, i64 -7
   call void @llvm.masked.store.nxv2i64(<vscale x 2 x i64> %data,
                                        ptr %base_store,
@@ -118,7 +118,7 @@ define void @test_masked_ldst_sv2f16(ptr %base, <vscale x 2 x i1> %mask) nounwin
   %data = call <vscale x 2 x half> @llvm.masked.load.nxv2f16(ptr %base_load,
                                                              i32 1,
                                                              <vscale x 2 x i1> %mask,
-                                                             <vscale x 2 x half> undef)
+                                                             <vscale x 2 x half> poison)
   %base_store = getelementptr <vscale x 2 x half>, ptr %base, i64 -7
   call void @llvm.masked.store.nxv2f16(<vscale x 2 x half> %data,
                                        ptr %base_store,
@@ -138,7 +138,7 @@ define void @test_masked_ldst_sv2f32(ptr %base, <vscale x 2 x i1> %mask) nounwin
   %data = call <vscale x 2 x float> @llvm.masked.load.nxv2f32(ptr %base_load,
                                                               i32 1,
                                                               <vscale x 2 x i1> %mask,
-                                                              <vscale x 2 x float> undef)
+                                                              <vscale x 2 x float> poison)
   %base_store = getelementptr <vscale x 2 x float>, ptr %base, i64 -7
   call void @llvm.masked.store.nxv2f32(<vscale x 2 x float> %data,
                                        ptr %base_store,
@@ -157,7 +157,7 @@ define void @test_masked_ldst_sv2f64(ptr %base, <vscale x 2 x i1> %mask) nounwin
   %data = call <vscale x 2 x double> @llvm.masked.load.nxv2f64(ptr %base_load,
                                                                i32 1,
                                                                <vscale x 2 x i1> %mask,
-                                                               <vscale x 2 x double> undef)
+                                                               <vscale x 2 x double> poison)
   %base_store = getelementptr <vscale x 2 x double>, ptr %base, i64 -5
   call void @llvm.masked.store.nxv2f64(<vscale x 2 x double> %data,
                                        ptr %base_store,
@@ -177,7 +177,7 @@ define <vscale x 2 x i64> @masked_zload_sv2i8_to_sv2i64(ptr %base, <vscale x 2 x
   %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %base_load,
                                                           i32 1,
                                                           <vscale x 2 x i1> %mask,
-                                                          <vscale x 2 x i8> undef)
+                                                          <vscale x 2 x i8> poison)
   %ext = zext <vscale x 2 x i8> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -191,7 +191,7 @@ define <vscale x 2 x i64> @masked_sload_sv2i8_to_sv2i64(ptr %base, <vscale x 2 x
   %load = call <vscale x 2 x i8> @llvm.masked.load.nxv2i8(ptr %base_load,
                                                           i32 1,
                                                           <vscale x 2 x i1> %mask,
-                                                          <vscale x 2 x i8> undef)
+                                                          <vscale x 2 x i8> poison)
   %ext = sext <vscale x 2 x i8> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -205,7 +205,7 @@ define <vscale x 2 x i64> @masked_zload_sv2i16_to_sv2i64(ptr %base, <vscale x 2 
   %load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 2 x i1> %mask,
-                                                            <vscale x 2 x i16> undef)
+                                                            <vscale x 2 x i16> poison)
   %ext = zext <vscale x 2 x i16> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -219,7 +219,7 @@ define <vscale x 2 x i64> @masked_sload_sv2i16_to_sv2i64(ptr %base, <vscale x 2 
   %load = call <vscale x 2 x i16> @llvm.masked.load.nxv2i16(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 2 x i1> %mask,
-                                                            <vscale x 2 x i16> undef)
+                                                            <vscale x 2 x i16> poison)
   %ext = sext <vscale x 2 x i16> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -233,7 +233,7 @@ define <vscale x 2 x i64> @masked_zload_sv2i32_to_sv2i64(ptr %base, <vscale x 2 
   %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 2 x i1> %mask,
-                                                            <vscale x 2 x i32> undef)
+                                                            <vscale x 2 x i32> poison)
   %ext = zext <vscale x 2 x i32> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -247,7 +247,7 @@ define <vscale x 2 x i64> @masked_sload_sv2i32_to_sv2i64(ptr %base, <vscale x 2 
   %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 2 x i1> %mask,
-                                                            <vscale x 2 x i32> undef)
+                                                            <vscale x 2 x i32> poison)
   %ext = sext <vscale x 2 x i32> %load to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %ext
 }
@@ -309,7 +309,7 @@ define void @test_masked_ldst_sv4i8(ptr %base, <vscale x 4 x i1> %mask) nounwind
   %data = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %base_load,
                                                           i32 1,
                                                           <vscale x 4 x i1> %mask,
-                                                          <vscale x 4 x i8> undef)
+                                                          <vscale x 4 x i8> poison)
   %base_store = getelementptr <vscale x 4 x i8>, ptr %base, i64 2
   call void @llvm.masked.store.nxv4i8(<vscale x 4 x i8> %data,
                                       ptr %base_store,
@@ -328,7 +328,7 @@ define void @test_masked_ldst_sv4i16(ptr %base, <vscale x 4 x i1> %mask) nounwin
   %data = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 4 x i1> %mask,
-                                                            <vscale x 4 x i16> undef)
+                                                            <vscale x 4 x i16> poison)
   %base_store = getelementptr <vscale x 4 x i16>, ptr %base, i64 2
   call void @llvm.masked.store.nxv4i16(<vscale x 4 x i16> %data,
                                        ptr %base_store,
@@ -347,7 +347,7 @@ define void @test_masked_ldst_sv4i32(ptr %base, <vscale x 4 x i1> %mask) nounwin
   %data = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 4 x i1> %mask,
-                                                            <vscale x 4 x i32> undef)
+                                                            <vscale x 4 x i32> poison)
   %base_store = getelementptr <vscale x 4 x i32>, ptr %base, i64 7
   call void @llvm.masked.store.nxv4i32(<vscale x 4 x i32> %data,
                                        ptr %base_store,
@@ -366,7 +366,7 @@ define void @test_masked_ldst_sv4f16(ptr %base, <vscale x 4 x i1> %mask) nounwin
   %data = call <vscale x 4 x half> @llvm.masked.load.nxv4f16(ptr %base_load,
                                                              i32 1,
                                                              <vscale x 4 x i1> %mask,
-                                                             <vscale x 4 x half> undef)
+                                                             <vscale x 4 x half> poison)
   %base_store = getelementptr <vscale x 4 x half>, ptr %base, i64 2
   call void @llvm.masked.store.nxv4f16(<vscale x 4 x half> %data,
                                        ptr %base_store,
@@ -385,7 +385,7 @@ define void @test_masked_ldst_sv4f32(ptr %base, <vscale x 4 x i1> %mask) nounwin
   %data = call <vscale x 4 x float> @llvm.masked.load.nxv4f32(ptr %base_load,
                                                               i32 1,
                                                               <vscale x 4 x i1> %mask,
-                                                              <vscale x 4 x float> undef)
+                                                              <vscale x 4 x float> poison)
   %base_store = getelementptr <vscale x 4 x float>, ptr %base, i64 2
   call void @llvm.masked.store.nxv4f32(<vscale x 4 x float> %data,
                                        ptr %base_store,
@@ -405,7 +405,7 @@ define <vscale x 4 x i32> @masked_zload_sv4i8_to_sv4i32(ptr %base, <vscale x 4 x
   %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %base_load,
                                                           i32 1,
                                                           <vscale x 4 x i1> %mask,
-                                                          <vscale x 4 x i8> undef)
+                                                          <vscale x 4 x i8> poison)
   %ext = zext <vscale x 4 x i8> %load to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %ext
 }
@@ -419,7 +419,7 @@ define <vscale x 4 x i32> @masked_sload_sv4i8_to_sv4i32(ptr %base, <vscale x 4 x
   %load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(ptr %base_load,
                                                           i32 1,
                                                           <vscale x 4 x i1> %mask,
-                                                          <vscale x 4 x i8> undef)
+                                                          <vscale x 4 x i8> poison)
   %ext = sext <vscale x 4 x i8> %load to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %ext
 }
@@ -433,7 +433,7 @@ define <vscale x 4 x i32> @masked_zload_sv4i16_to_sv4i32(ptr %base, <vscale x 4 
   %load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 4 x i1> %mask,
-                                                            <vscale x 4 x i16> undef)
+                                                            <vscale x 4 x i16> poison)
   %ext = zext <vscale x 4 x i16> %load to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %ext
 }
@@ -447,7 +447,7 @@ define <vscale x 4 x i32> @masked_sload_sv4i16_to_sv4i32(ptr %base, <vscale x 4 
   %load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 4 x i1> %mask,
-                                                            <vscale x 4 x i16> undef)
+                                                            <vscale x 4 x i16> poison)
   %ext = sext <vscale x 4 x i16> %load to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %ext
 }
@@ -495,7 +495,7 @@ define void @test_masked_ldst_sv8i8(ptr %base, <vscale x 8 x i1> %mask) nounwind
   %data = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr %base_load,
                                                           i32 1,
                                                           <vscale x 8 x i1> %mask,
-                                                          <vscale x 8 x i8> undef)
+                                                          <vscale x 8 x i8> poison)
   %base_store = getelementptr <vscale x 8 x i8>, ptr %base, i64 7
   call void @llvm.masked.store.nxv8i8(<vscale x 8 x i8> %data,
                                       ptr %base_store,
@@ -514,7 +514,7 @@ define void @test_masked_ldst_sv8i16(ptr %base, <vscale x 8 x i1> %mask) nounwin
   %data = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 8 x i1> %mask,
-                                                            <vscale x 8 x i16> undef)
+                                                            <vscale x 8 x i16> poison)
   %base_store = getelementptr <vscale x 8 x i16>, ptr %base, i64 7
   call void @llvm.masked.store.nxv8i16(<vscale x 8 x i16> %data,
                                        ptr %base_store,
@@ -533,7 +533,7 @@ define void @test_masked_ldst_sv8f16(ptr %base, <vscale x 8 x i1> %mask) nounwin
   %data = call <vscale x 8 x half> @llvm.masked.load.nxv8f16(ptr %base_load,
                                                              i32 1,
                                                              <vscale x 8 x i1> %mask,
-                                                             <vscale x 8 x half> undef)
+                                                             <vscale x 8 x half> poison)
   %base_store = getelementptr <vscale x 8 x half>, ptr %base, i64 2
   call void @llvm.masked.store.nxv8f16(<vscale x 8 x half> %data,
                                        ptr %base_store,
@@ -552,7 +552,7 @@ define void @test_masked_ldst_sv8bf16(ptr %base, <vscale x 8 x i1> %mask) nounwi
   %data = call <vscale x 8 x bfloat> @llvm.masked.load.nxv8bf16(ptr %base_load,
                                                                 i32 1,
                                                                 <vscale x 8 x i1> %mask,
-                                                                <vscale x 8 x bfloat> undef)
+                                                                <vscale x 8 x bfloat> poison)
   %base_store = getelementptr <vscale x 8 x bfloat>, ptr %base, i64 2
   call void @llvm.masked.store.nxv8bf16(<vscale x 8 x bfloat> %data,
                                         ptr %base_store,
@@ -572,7 +572,7 @@ define <vscale x 8 x i16> @masked_zload_sv8i8_to_sv8i16(ptr %base, <vscale x 8 x
   %load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr %base_load,
                                                           i32 1,
                                                           <vscale x 8 x i1> %mask,
-                                                          <vscale x 8 x i8> undef)
+                                                          <vscale x 8 x i8> poison)
   %ext = zext <vscale x 8 x i8> %load to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %ext
 }
@@ -586,7 +586,7 @@ define <vscale x 8 x i16> @masked_sload_sv8i8_to_sv8i16(ptr %base, <vscale x 8 x
   %load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(ptr %base_load,
                                                           i32 1,
                                                           <vscale x 8 x i1> %mask,
-                                                          <vscale x 8 x i8> undef)
+                                                          <vscale x 8 x i8> poison)
   %ext = sext <vscale x 8 x i8> %load to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %ext
 }
@@ -619,7 +619,7 @@ define void @test_masked_ldst_sv16i8(ptr %base, <vscale x 16 x i1> %mask) nounwi
   %data = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(ptr %base_load,
                                                             i32 1,
                                                             <vscale x 16 x i1> %mask,
-                                                            <vscale x 16 x i8> undef)
+                                                            <vscale x 16 x i8> poison)
   %base_store = getelementptr <vscale x 16 x i8>, ptr %base, i64 7
   call void @llvm.masked.store.nxv16i8(<vscale x 16 x i8> %data,
                                        ptr %base_store,

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 define i8 @sub8_reg_reg(i8 %a, i8 %b) {
 ; CHECK-LABEL: sub8_reg_reg:

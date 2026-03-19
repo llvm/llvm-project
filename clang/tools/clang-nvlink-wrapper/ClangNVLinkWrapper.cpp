@@ -109,12 +109,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "NVLinkOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "NVLinkOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -124,7 +125,8 @@ static constexpr OptTable::Info InfoTable[] = {
 
 class WrapperOptTable : public opt::GenericOptTable {
 public:
-  WrapperOptTable() : opt::GenericOptTable(InfoTable) {}
+  WrapperOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 
 const OptTable &getOptTable() {
@@ -161,6 +163,19 @@ void diagnosticHandler(const DiagnosticInfo &DI) {
     WithColor::remark(errs()) << ErrStorage << "\n";
     break;
   }
+}
+
+bool hasFatBinary(const ArgList &Args, MemoryBufferRef Buffer) {
+  if (Args.hasArg(OPT_dry_run) && Args.hasArg(OPT_assume_device_object))
+    return false;
+  if (identify_magic(Buffer.getBuffer()) != file_magic::elf_relocatable)
+    return false;
+  Expected<std::unique_ptr<ObjectFile>> ObjFile =
+      ObjectFile::createObjectFile(Buffer);
+  if (!ObjFile) // Assume fatbin if the object creation fails.
+    return !errorToBool(ObjFile.takeError());
+  return (*ObjFile)->getArch() != Triple::nvptx &&
+         (*ObjFile)->getArch() != Triple::nvptx64;
 }
 
 Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
@@ -236,9 +251,8 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
     return;
 
-  llvm::errs() << " \"" << CmdArgs.front() << "\" ";
-  llvm::errs() << llvm::join(std::next(CmdArgs.begin()), CmdArgs.end(), " ")
-               << "\n";
+  errs() << " \"" << CmdArgs.front() << "\" ";
+  errs() << join(std::next(CmdArgs.begin()), CmdArgs.end(), " ") << "\n";
 }
 
 /// A minimum symbol interface that provides the necessary information to
@@ -251,6 +265,7 @@ struct Symbol {
   };
 
   Symbol() : File(), Flags(None), UsedInRegularObj(false) {}
+  Symbol(Symbol::Flags Flags) : File(), Flags(Flags), UsedInRegularObj(true) {}
 
   Symbol(MemoryBufferRef File, const irsymtab::Reader::SymbolRef Sym)
       : File(File), Flags(0), UsedInRegularObj(false) {
@@ -284,12 +299,16 @@ struct Symbol {
 };
 
 Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
-  std::string CudaPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
-  std::string GivenPath = Args.getLastArgValue(OPT_ptxas_path_EQ).str();
-  Expected<std::string> PTXAsPath =
-      findProgram(Args, "ptxas", {CudaPath + "/bin", GivenPath});
+  SmallVector<StringRef, 1> SearchPaths;
+  if (Arg *A = Args.getLastArg(OPT_cuda_path_EQ))
+    SearchPaths.push_back(Args.MakeArgString(A->getValue() + Twine("/bin")));
+  if (Arg *A = Args.getLastArg(OPT_ptxas_path_EQ))
+    SearchPaths.push_back(Args.MakeArgString(A->getValue()));
+
+  Expected<std::string> PTXAsPath = findProgram(Args, "ptxas", SearchPaths);
   if (!PTXAsPath)
     return PTXAsPath.takeError();
+
   if (!Args.hasArg(OPT_arch))
     return createStringError(
         "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
@@ -303,13 +322,15 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   if (Args.hasArg(OPT_verbose))
     AssemblerArgs.push_back("-v");
   if (Args.hasArg(OPT_g)) {
-    if (Args.hasArg(OPT_O))
+    if (Args.getLastArgValue(OPT_O, "3") != "0")
       WithColor::warning(errs(), Executable)
           << "Optimized debugging not supported, overriding to '-O0'\n";
     AssemblerArgs.push_back("-O0");
-  } else
+    AssemblerArgs.push_back("-g");
+  } else {
     AssemblerArgs.push_back(
         Args.MakeArgString("-O" + Args.getLastArgValue(OPT_O, "3")));
+  }
   AssemblerArgs.append({"-arch", Args.getLastArgValue(OPT_arch)});
   AssemblerArgs.append({"-o", *TempFileOrErr});
 
@@ -329,23 +350,28 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   lto::ThinBackend Backend;
   unsigned Jobs = 0;
   if (auto *Arg = Args.getLastArg(OPT_jobs))
-    if (!llvm::to_integer(Arg->getValue(), Jobs) || Jobs == 0)
+    if (!to_integer(Arg->getValue(), Jobs) || Jobs == 0)
       reportError(createStringError("%s: expected a positive integer, got '%s'",
                                     Arg->getSpelling().data(),
                                     Arg->getValue()));
-  Backend = lto::createInProcessThinBackend(
-      llvm::heavyweight_hardware_concurrency(Jobs));
+  Backend =
+      lto::createInProcessThinBackend(heavyweight_hardware_concurrency(Jobs));
 
   Conf.CPU = Args.getLastArgValue(OPT_arch);
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
 
-  Conf.RemarksFilename = RemarksFilename;
-  Conf.RemarksPasses = RemarksPasses;
-  Conf.RemarksWithHotness = RemarksWithHotness;
-  Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
-  Conf.RemarksFormat = RemarksFormat;
+  Conf.RemarksFilename =
+      Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);
+  Conf.RemarksPasses =
+      Args.getLastArgValue(OPT_opt_remarks_filter, RemarksPasses);
+  Conf.RemarksFormat =
+      Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
 
-  Conf.MAttrs = {Args.getLastArgValue(OPT_feature, "").str()};
+  Conf.RemarksWithHotness =
+      Args.hasArg(OPT_opt_remarks_with_hotness) || RemarksWithHotness;
+  Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
+
+  Conf.MAttrs = llvm::codegen::getMAttrs();
   std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(Args.getLastArgValue(OPT_O, "2")[0]);
   assert(CGOptLevelOrNone && "Invalid optimization level");
@@ -354,7 +380,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
   Conf.DefaultTriple = Triple.getTriple();
 
   Conf.OptPipeline = Args.getLastArgValue(OPT_lto_newpm_passes, "");
-  Conf.PassPlugins = PassPlugins;
+  Conf.PassPluginFilenames = PassPlugins;
   Conf.DebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
 
   Conf.DiagHandler = diagnosticHandler;
@@ -378,7 +404,7 @@ Expected<std::unique_ptr<lto::LTO>> createLTO(const ArgList &Args) {
 
   unsigned Partitions = 1;
   if (auto *Arg = Args.getLastArg(OPT_lto_partitions))
-    if (!llvm::to_integer(Arg->getValue(), Partitions) || Partitions == 0)
+    if (!to_integer(Arg->getValue(), Partitions) || Partitions == 0)
       reportError(createStringError("%s: expected a positive integer, got '%s'",
                                     Arg->getSpelling().data(),
                                     Arg->getValue()));
@@ -510,7 +536,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       InputFiles.emplace_back(std::move(*BufferOrErr), /*IsLazy=*/false);
       break;
     case file_magic::archive: {
-      Expected<std::unique_ptr<llvm::object::Archive>> LibFile =
+      Expected<std::unique_ptr<object::Archive>> LibFile =
           object::Archive::create(Buffer);
       if (!LibFile)
         return LibFile.takeError();
@@ -536,12 +562,19 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
 
   bool Extracted = true;
   StringMap<Symbol> SymTab;
+  for (auto &Sym : Args.getAllArgValues(OPT_u))
+    SymTab[Sym] = Symbol(Symbol::Undefined);
   SmallVector<std::unique_ptr<MemoryBuffer>> LinkerInput;
   while (Extracted) {
     Extracted = false;
     for (auto &[Input, IsLazy] : InputFiles) {
       if (!Input)
         continue;
+
+      if (hasFatBinary(Args, *Input)) {
+        LinkerInput.emplace_back(std::move(Input));
+        continue;
+      }
 
       // Archive members only extract if they define needed symbols. We will
       // re-scan all the inputs if any files were extracted for the link job.
@@ -563,7 +596,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
   for (auto &Input : LinkerInput)
     if (identify_magic(Input->getBuffer()) == file_magic::bitcode)
       BitcodeFiles.emplace_back(std::move(Input));
-  llvm::erase_if(LinkerInput, [](const auto &F) { return !F; });
+  erase_if(LinkerInput, [](const auto &F) { return !F; });
 
   // Run the LTO pipeline on the extracted inputs.
   SmallVector<StringRef> Files;
@@ -574,7 +607,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
     lto::LTO &LTOBackend = **LTOBackendOrErr;
     for (auto &BitcodeFile : BitcodeFiles) {
       Expected<std::unique_ptr<lto::InputFile>> BitcodeFileOrErr =
-          llvm::lto::InputFile::create(*BitcodeFile);
+          lto::InputFile::create(*BitcodeFile);
       if (!BitcodeFileOrErr)
         return BitcodeFileOrErr.takeError();
 
@@ -638,7 +671,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       if (std::error_code EC = sys::fs::openFileForWrite(TempFile, FD))
         reportError(errorCodeToError(EC));
       return std::make_unique<CachedFileStream>(
-          std::make_unique<llvm::raw_fd_ostream>(FD, true));
+          std::make_unique<raw_fd_ostream>(FD, true));
     };
 
     if (Error Err = LTOBackend.run(AddStream))
@@ -655,11 +688,14 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
     }
   }
 
-  // Copy all of the input files to a new file ending in `.cubin`. The 'nvlink'
+  // Create a copy for each file to a new file ending in `.cubin`. The 'nvlink'
   // linker requires all NVPTX inputs to have this extension for some reason.
+  // We don't use a symbolic link because it's not supported on Windows and some
+  // of this input files could be extracted from an archive.
   for (auto &Input : LinkerInput) {
     auto TempFileOrErr = createTempFile(
-        Args, sys::path::stem(Input->getBufferIdentifier()), "cubin");
+        Args, sys::path::stem(Input->getBufferIdentifier()),
+        hasFatBinary(Args, Input->getMemBufferRef()) ? "o" : "cubin");
     if (!TempFileOrErr)
       return TempFileOrErr.takeError();
     Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
@@ -667,7 +703,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
     if (!OutputOrErr)
       return OutputOrErr.takeError();
     std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
-    llvm::copy(Input->getBuffer(), Output->getBufferStart());
+    copy(Input->getBuffer(), Output->getBufferStart());
     if (Error E = Output->commit())
       return E;
     Files.emplace_back(Args.MakeArgString(*TempFileOrErr));
@@ -680,9 +716,11 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
   if (Args.hasArg(OPT_lto_emit_asm) || Args.hasArg(OPT_lto_emit_llvm))
     return Error::success();
 
-  std::string CudaPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
-  Expected<std::string> NVLinkPath =
-      findProgram(Args, "nvlink", {CudaPath + "/bin"});
+  SmallVector<StringRef, 1> SearchPaths;
+  if (Arg *A = Args.getLastArg(OPT_cuda_path_EQ))
+    SearchPaths.push_back(Args.MakeArgString(A->getValue() + Twine("/bin")));
+
+  Expected<std::string> NVLinkPath = findProgram(Args, "nvlink", SearchPaths);
   if (!NVLinkPath)
     return NVLinkPath.takeError();
 
@@ -704,8 +742,8 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
     Arg->render(Args, NewLinkerArgs);
   }
 
-  llvm::transform(Files, std::back_inserter(NewLinkerArgs),
-                  [&](StringRef Arg) { return Args.MakeArgString(Arg); });
+  transform(Files, std::back_inserter(NewLinkerArgs),
+            [&](StringRef Arg) { return Args.MakeArgString(Arg); });
 
   SmallVector<StringRef> LinkerArgs({*NVLinkPath});
   if (!Args.hasArg(OPT_o))

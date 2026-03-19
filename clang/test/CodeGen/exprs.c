@@ -7,7 +7,7 @@ int x=sizeof(zxcv);
 int y=__alignof__(zxcv);
 
 
-void *test(int *i) {
+void test(int *i) {
  short a = 1;
  i += a;
  i + a;
@@ -18,7 +18,7 @@ _Bool test2b;
 int test2(void) { if (test2b); return 0; }
 
 // PR1921
-int test3(void) {
+void test3(void) {
   const unsigned char *bp;
   bp -= (short)1;
 }
@@ -196,10 +196,17 @@ void f18(void) {
 
 // Ensure the right stmt is returned
 int f19(void) {
-  return ({ 3;;4;; });
+  return ({ 3;;4; });
 }
 // CHECK-LABEL: define{{.*}} i32 @f19()
 // CHECK: [[T:%.*]] = alloca i32
 // CHECK: store i32 4, ptr [[T]]
 // CHECK: [[L:%.*]] = load i32, ptr [[T]]
 // CHECK: ret i32 [[L]]
+
+// PR166036: The trailing NullStmt should result in a void.
+void f20(void) {
+  return ({ 3;;4;; });
+}
+// CHECK-LABEL: define{{.*}} void @f20()
+// CHECK: ret void

@@ -65,16 +65,13 @@ class SystemZElimCompare : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZElimCompare() : MachineFunctionPass(ID) {
-    initializeSystemZElimComparePass(*PassRegistry::getPassRegistry());
-  }
+  SystemZElimCompare() : MachineFunctionPass(ID) {}
 
   bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -153,30 +150,6 @@ Reference SystemZElimCompare::getRegReferences(MachineInstr &MI, unsigned Reg) {
   return Ref;
 }
 
-// Return true if this is a load and test which can be optimized the
-// same way as compare instruction.
-static bool isLoadAndTestAsCmp(MachineInstr &MI) {
-  // If we during isel used a load-and-test as a compare with 0, the
-  // def operand is dead.
-  return (MI.getOpcode() == SystemZ::LTEBR ||
-          MI.getOpcode() == SystemZ::LTDBR ||
-          MI.getOpcode() == SystemZ::LTXBR) &&
-         MI.getOperand(0).isDead();
-}
-
-// Return the source register of Compare, which is the unknown value
-// being tested.
-static unsigned getCompareSourceReg(MachineInstr &Compare) {
-  unsigned reg = 0;
-  if (Compare.isCompare())
-    reg = Compare.getOperand(0).getReg();
-  else if (isLoadAndTestAsCmp(Compare))
-    reg = Compare.getOperand(1).getReg();
-  assert(reg);
-
-  return reg;
-}
-
 // Compare compares the result of MI against zero.  If MI is an addition
 // of -1 and if CCUsers is a single branch on nonzero, eliminate the addition
 // and convert the branch to a BRCT(G) or BRCTH.  Return true on success.
@@ -209,7 +182,7 @@ bool SystemZElimCompare::convertToBRCT(
   // We already know that there are no references to the register between
   // MI and Compare.  Make sure that there are also no references between
   // Compare and Branch.
-  unsigned SrcReg = getCompareSourceReg(Compare);
+  unsigned SrcReg = TII->getCompareSourceReg(Compare);
   MachineBasicBlock::iterator MBBI = Compare, MBBE = Branch;
   for (++MBBI; MBBI != MBBE; ++MBBI)
     if (getRegReferences(*MBBI, SrcReg))
@@ -227,6 +200,9 @@ bool SystemZElimCompare::convertToBRCT(
   // this is not necessary there.
   if (BRCT != SystemZ::BRCTH)
     MIB.addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);
+  // The debug instr tracking for the counter now used by BRCT needs to be
+  // updated.
+  MI.getParent()->getParent()->substituteDebugValuesForInst(MI, *MIB);
   MI.eraseFromParent();
   return true;
 }
@@ -253,7 +229,7 @@ bool SystemZElimCompare::convertToLoadAndTrap(
   // We already know that there are no references to the register between
   // MI and Compare.  Make sure that there are also no references between
   // Compare and Branch.
-  unsigned SrcReg = getCompareSourceReg(Compare);
+  unsigned SrcReg = TII->getCompareSourceReg(Compare);
   MachineBasicBlock::iterator MBBI = Compare, MBBE = Branch;
   for (++MBBI; MBBI != MBBE; ++MBBI)
     if (getRegReferences(*MBBI, SrcReg))
@@ -268,6 +244,9 @@ bool SystemZElimCompare::convertToLoadAndTrap(
       .add(MI.getOperand(1))
       .add(MI.getOperand(2))
       .add(MI.getOperand(3));
+  // The debug instr tracking for the load target now used by the load-and-trap
+  // needs to be updated.
+  MI.getParent()->getParent()->substituteDebugValuesForInst(MI, *Branch);
   MI.eraseFromParent();
   return true;
 }
@@ -288,6 +267,9 @@ bool SystemZElimCompare::convertToLoadAndTest(
   for (const auto &MO : MI.operands())
     MIB.add(MO);
   MIB.setMemRefs(MI.memoperands());
+  // The debug instr tracking for the load target now needs to be updated
+  // because the load has moved to a new instruction
+  MI.getParent()->getParent()->substituteDebugValuesForInst(MI, *MIB);
   MI.eraseFromParent();
 
   // Mark instruction as not raising an FP exception if applicable.  We already
@@ -488,25 +470,17 @@ bool SystemZElimCompare::adjustCCMasksForInstr(
   return true;
 }
 
-// Return true if Compare is a comparison against zero.
-static bool isCompareZero(MachineInstr &Compare) {
-  if (isLoadAndTestAsCmp(Compare))
-    return true;
-  return Compare.getNumExplicitOperands() == 2 &&
-    Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
-}
-
 // Try to optimize cases where comparison instruction Compare is testing
 // a value against zero.  Return true on success and if Compare should be
 // deleted as dead.  CCUsers is the list of instructions that use the CC
 // value produced by Compare.
 bool SystemZElimCompare::optimizeCompareZero(
     MachineInstr &Compare, SmallVectorImpl<MachineInstr *> &CCUsers) {
-  if (!isCompareZero(Compare))
+  if (!TII->isCompareZero(Compare))
     return false;
 
   // Search back for CC results that are based on the first operand.
-  unsigned SrcReg = getCompareSourceReg(Compare);
+  unsigned SrcReg = TII->getCompareSourceReg(Compare);
   MachineBasicBlock &MBB = *Compare.getParent();
   Reference CCRefs;
   Reference SrcRefs;
@@ -695,7 +669,7 @@ bool SystemZElimCompare::processBlock(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator MBBI = MBB.end();
   while (MBBI != MBB.begin()) {
     MachineInstr &MI = *--MBBI;
-    if (CompleteCCUsers && (MI.isCompare() || isLoadAndTestAsCmp(MI)) &&
+    if (CompleteCCUsers && (MI.isCompare() || TII->isLoadAndTestAsCmp(MI)) &&
         (optimizeCompareZero(MI, CCUsers) ||
          fuseCompareOperations(MI, CCUsers))) {
       ++MBBI;

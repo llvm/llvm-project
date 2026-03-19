@@ -37,16 +37,16 @@ StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Status &error) {
 
   auto buffer_or_error = llvm::MemoryBuffer::getFile(input_spec.GetPath());
   if (!buffer_or_error) {
-    error.SetErrorStringWithFormatv("could not open input file: {0} - {1}.",
-                                    input_spec.GetPath(),
-                                    buffer_or_error.getError().message());
+    error = Status::FromErrorStringWithFormatv(
+        "could not open input file: {0} - {1}.", input_spec.GetPath(),
+        buffer_or_error.getError().message());
     return return_sp;
   }
   llvm::Expected<json::Value> value =
       json::parse(buffer_or_error.get()->getBuffer().str());
   if (value)
     return ParseJSONValue(*value);
-  error.SetErrorString(toString(value.takeError()));
+  error = Status::FromError(value.takeError());
   return StructuredData::ObjectSP();
 }
 

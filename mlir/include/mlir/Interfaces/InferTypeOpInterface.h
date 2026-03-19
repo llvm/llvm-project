@@ -33,6 +33,10 @@ using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<OpFoldResult>>;
 LogicalResult
 reifyResultShapes(OpBuilder &b, Operation *op,
                   ReifiedRankedShapedTypeDims &reifiedReturnShapes);
+FailureOr<SmallVector<OpFoldResult>>
+reifyShapeOfResult(OpBuilder &b, Operation *op, int resultIndex);
+FailureOr<OpFoldResult> reifyDimOfResult(OpBuilder &b, Operation *op,
+                                         int resultIndex, int dim);
 
 /// Adaptor class to abstract the differences between whether value is from
 /// a ShapedType or ShapedTypeComponents or DenseIntElementsAttribute.
@@ -244,6 +248,10 @@ inferReturnTensorTypes(ArrayRef<ShapedTypeComponents> retComponents,
 /// Verifies that the inferred result types match the actual result types for
 /// the op. Precondition: op implements InferTypeOpInterface.
 LogicalResult verifyInferredResultTypes(Operation *op);
+
+/// Report a fatal error indicating that the result types could not be
+/// inferred.
+void reportFatalInferReturnTypesError(OperationState &state);
 } // namespace detail
 
 namespace OpTrait {

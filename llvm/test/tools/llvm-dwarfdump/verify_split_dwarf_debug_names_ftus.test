@@ -1,0 +1,36 @@
+# Verify we can successfully verify .debug_names with split DWARF.
+#
+# RUN: rm -rf %t1/
+# RUN: mkdir %t1
+# RUN: yaml2obj %p/Inputs/verify_split_dwarf_debug_names_ftus_exe.yaml > %t1/a.out
+# RUN: yaml2obj %p/Inputs/verify_split_dwarf_debug_names_ftus_dwo.yaml > %t1/main.dwo
+# RUN: cd %t1
+# RUN: llvm-dwarfdump --verify %t1/a.out | FileCheck %s
+
+# CHECK: Verifying unit: 1 / 1
+# CHECK: Verifying dwo Units...
+# CHECK: Verifying .debug_line...
+# CHECK: Verifying .debug_str_offsets...
+# CHECK: Verifying .debug_names...
+# CHECK: No errors.
+
+# Now verify if we remove the "main.dwo" file that we get an error letting us
+# know that the .dwo file was not able to be found.
+# RUN: rm %t1/main.dwo
+# RUN: not llvm-dwarfdump --verify %t1/a.out | FileCheck --check-prefix=NODWO %s
+
+# NODWO: Verifying unit: 1 / 1
+# NODWO: Verifying dwo Units...
+# NODWO: Verifying .debug_line...
+# NODWO: Verifying .debug_str_offsets...
+# NODWO: Verifying .debug_names...
+# NODWO: error: Name Index @ 0x0: Entry @ 0xbf unable to load .dwo file "main.dwo" for DWARF unit @ 0x0.
+# NODWO: error: Name Index @ 0x0: Entry @ 0xc6 unable to load .dwo file "main.dwo" for DWARF unit @ 0x0.
+# NODWO: error: Name Index @ 0x0: Entry @ 0xcd unable to load .dwo file "main.dwo" for DWARF unit @ 0x0.
+# NODWO: error: Name Index @ 0x0: Entry @ 0xd3 unable to load .dwo file "main.dwo" for DWARF unit @ 0x0.
+# NODWO: error: Name Index @ 0x0: Entry @ 0xde unable to load .dwo file "main.dwo" for DWARF unit @ 0x0.
+# NODWO: error: Name Index @ 0x0: Entry @ 0xe4 unable to load .dwo file "main.dwo" for DWARF unit @ 0x0.
+# NODWO: error: Name Index @ 0x0: Entry @ 0xea unable to load .dwo file "main.dwo" for DWARF unit @ 0x0.
+# NODWO: error: Aggregated error counts:
+# NODWO: error: Unable to get load .dwo file occurred 7 time(s).
+# NODWO: Errors detected.

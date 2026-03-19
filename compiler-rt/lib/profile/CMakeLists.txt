@@ -39,6 +39,17 @@ int main() {
 " COMPILER_RT_TARGET_HAS_FCNTL_LCK)
 
 CHECK_CXX_SOURCE_COMPILES("
+#include <sys/file.h>
+
+int fd;
+int main() {
+  flock(fd, LOCK_EX);
+  return 0;
+}
+
+" COMPILER_RT_TARGET_HAS_FLOCK)
+
+CHECK_CXX_SOURCE_COMPILES("
 #include <sys/utsname.h>
 int main() {
  return 0;
@@ -49,12 +60,9 @@ int main() {
 add_compiler_rt_component(profile)
 
 set(PROFILE_SOURCES
-  GCDAProfiling.c
   InstrProfiling.c
   InstrProfilingInternal.c
-  InstrProfilingValue.c
   InstrProfilingBuffer.c
-  InstrProfilingFile.c
   InstrProfilingMerge.c
   InstrProfilingMergeFile.c
   InstrProfilingNameVar.c
@@ -66,9 +74,25 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformLinux.c
   InstrProfilingPlatformOther.c
   InstrProfilingPlatformWindows.c
-  InstrProfilingRuntime.cpp
-  InstrProfilingUtil.c
   )
+
+if (NOT COMPILER_RT_PROFILE_BAREMETAL)
+  # For baremetal, exclude the following:
+  # - Anything that contains filesystem operations (InstrProfilingFile.c,
+  #   InstrProfilingUtils.c)
+  # - Initialization, because it isn't necesary without the filesystem bits
+  #   on ELF targets (InstrProfilingRuntime.cpp).
+  # - Value profiling, because it requires malloc (InstrProfilingValue.c).
+  #   This could be optional if someone needs it.
+  # - GCDA profiling, which is unrelated (GCDAProfiling.c)
+  list(APPEND PROFILE_SOURCES
+    GCDAProfiling.c
+    InstrProfilingFile.c
+    InstrProfilingRuntime.cpp
+    InstrProfilingUtil.c
+    InstrProfilingValue.c
+    )
+endif()
 
 set(PROFILE_HEADERS
   InstrProfiling.h
@@ -93,6 +117,13 @@ if(FUCHSIA OR UNIX)
      -Wno-pedantic)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
+  set(EXTRA_FLAGS
+      ${EXTRA_FLAGS}
+      -D_WASI_EMULATED_MMAN
+      -D_WASI_EMULATED_GETPID)
+endif()
+
 if(COMPILER_RT_TARGET_HAS_ATOMICS)
  set(EXTRA_FLAGS
      ${EXTRA_FLAGS}
@@ -105,16 +136,44 @@ if(COMPILER_RT_TARGET_HAS_FCNTL_LCK)
      -DCOMPILER_RT_HAS_FCNTL_LCK=1)
 endif()
 
+if(COMPILER_RT_TARGET_HAS_FLOCK)
+  set(EXTRA_FLAGS
+      ${EXTRA_FLAGS}
+      -DCOMPILER_RT_HAS_FLOCK=1)
+endif()
+
 if(COMPILER_RT_TARGET_HAS_UNAME)
  set(EXTRA_FLAGS
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_HAS_UNAME=1)
 endif()
 
+if(COMPILER_RT_PROFILE_BAREMETAL)
+ set(EXTRA_FLAGS
+     ${EXTRA_FLAGS}
+     -DCOMPILER_RT_PROFILE_BAREMETAL=1)
+endif()
+
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding EXTRA_FLAGS)
+  append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib EXTRA_FLAGS)
+  append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto EXTRA_FLAGS)
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                   "SHELL:-Xclang -mcode-object-version=none" EXTRA_FLAGS)
+  endif()
+endif()
+
+if(MSVC)
+  # profile historically has only been supported with the static runtime
+  # on windows
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+endif()
+
 # We don't use the C++ Standard Library here, so avoid including it by mistake.
 append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ EXTRA_FLAGS)
 # XRay uses C++ standard library headers.
-string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-?-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # This appears to be a C-only warning banning the use of locals in aggregate
 # initializers. All other compilers accept this, though.

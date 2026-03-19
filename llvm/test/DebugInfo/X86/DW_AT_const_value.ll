@@ -1,5 +1,4 @@
 ; RUN: llc %s -o - | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators %s -o - | FileCheck %s
 
 ;; Check single location variables of various types with a constant value are
 ;; emitted with a DW_AT_const_value attribute.

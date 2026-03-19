@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Test that V_vzero and W_vzero intrinsics work. The W_vzero intrinsic was added
 ; for v65/hvx.

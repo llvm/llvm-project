@@ -16,7 +16,6 @@
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointList.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -44,7 +44,7 @@ static bool CheckTargetForWatchpointOperations(Target &target,
   bool process_is_valid =
       target.GetProcessSP() && target.GetProcessSP()->IsAlive();
   if (!process_is_valid) {
-    result.AppendError("There's no process or it is not alive.");
+    result.AppendError("there's no process or it is not alive");
     return false;
   }
   // Target passes our checks, return true.
@@ -209,8 +209,8 @@ protected:
             process_sp->GetWatchpointSlotCount();
 
         if (num_supported_hardware_watchpoints)
-          result.AppendMessageWithFormat(
-              "Number of supported hardware watchpoints: %u\n",
+          result.AppendMessageWithFormatv(
+              "Number of supported hardware watchpoints: {0}",
               *num_supported_hardware_watchpoints);
       }
     }
@@ -243,7 +243,7 @@ protected:
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 
@@ -298,23 +298,23 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be enabled.");
+      result.AppendError("no watchpoints exist to be enabled");
       return;
     }
 
     if (command.GetArgumentCount() == 0) {
       // No watchpoint selected; enable all currently set watchpoints.
       target.EnableAllWatchpoints();
-      result.AppendMessageWithFormat("All watchpoints enabled. (%" PRIu64
-                                     " watchpoints)\n",
-                                     (uint64_t)num_watchpoints);
+      result.AppendMessageWithFormatv(
+          "All watchpoints enabled. ({0} watchpoints)",
+          (uint64_t)num_watchpoints);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Particular watchpoints selected; enable them.
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 
@@ -323,7 +323,7 @@ protected:
       for (size_t i = 0; i < size; ++i)
         if (target.EnableWatchpointByID(wp_ids[i]))
           ++count;
-      result.AppendMessageWithFormat("%d watchpoints enabled.\n", count);
+      result.AppendMessageWithFormatv("{0} watchpoints enabled.", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
@@ -366,16 +366,16 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be disabled.");
+      result.AppendError("no watchpoints exist to be disabled");
       return;
     }
 
     if (command.GetArgumentCount() == 0) {
       // No watchpoint selected; disable all currently set watchpoints.
       if (target.DisableAllWatchpoints()) {
-        result.AppendMessageWithFormat("All watchpoints disabled. (%" PRIu64
-                                       " watchpoints)\n",
-                                       (uint64_t)num_watchpoints);
+        result.AppendMessageWithFormatv(
+            "All watchpoints disabled. ({0} watchpoints)",
+            (uint64_t)num_watchpoints);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         result.AppendError("Disable all watchpoints failed\n");
@@ -385,7 +385,7 @@ protected:
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 
@@ -394,7 +394,7 @@ protected:
       for (size_t i = 0; i < size; ++i)
         if (target.DisableWatchpointByID(wp_ids[i]))
           ++count;
-      result.AppendMessageWithFormat("%d watchpoints disabled.\n", count);
+      result.AppendMessageWithFormatv("{0} watchpoints disabled.\n", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
@@ -476,7 +476,7 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be deleted.");
+      result.AppendError("no watchpoints exist to be deleted");
       return;
     }
 
@@ -488,9 +488,9 @@ protected:
         result.AppendMessage("Operation cancelled...");
       } else {
         target.RemoveAllWatchpoints();
-        result.AppendMessageWithFormat("All watchpoints removed. (%" PRIu64
-                                       " watchpoints)\n",
-                                       (uint64_t)num_watchpoints);
+        result.AppendMessageWithFormatv(
+            "All watchpoints removed. ({0} watchpoints)",
+            (uint64_t)num_watchpoints);
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return;
@@ -500,7 +500,7 @@ protected:
     std::vector<uint32_t> wp_ids;
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                wp_ids)) {
-      result.AppendError("Invalid watchpoints specification.");
+      result.AppendError("invalid watchpoints specification");
       return;
     }
 
@@ -509,7 +509,7 @@ protected:
     for (size_t i = 0; i < size; ++i)
       if (target.RemoveWatchpointByID(wp_ids[i]))
         ++count;
-    result.AppendMessageWithFormat("%d watchpoints deleted.\n", count);
+    result.AppendMessageWithFormatv("{0} watchpoints deleted.", count);
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
@@ -559,8 +559,8 @@ public:
       switch (short_option) {
       case 'i':
         if (option_arg.getAsInteger(0, m_ignore_count))
-          error.SetErrorStringWithFormat("invalid ignore count '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid ignore count '%s'",
+                                                    option_arg.str().c_str());
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -596,22 +596,22 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be ignored.");
+      result.AppendError("no watchpoints exist to be ignored");
       return;
     }
 
     if (command.GetArgumentCount() == 0) {
       target.IgnoreAllWatchpoints(m_options.m_ignore_count);
-      result.AppendMessageWithFormat("All watchpoints ignored. (%" PRIu64
-                                     " watchpoints)\n",
-                                     (uint64_t)num_watchpoints);
+      result.AppendMessageWithFormatv(
+          "All watchpoints ignored. ({0} watchpoints)",
+          (uint64_t)num_watchpoints);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Particular watchpoints selected; ignore them.
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 
@@ -620,7 +620,7 @@ protected:
       for (size_t i = 0; i < size; ++i)
         if (target.IgnoreWatchpointByID(wp_ids[i], m_options.m_ignore_count))
           ++count;
-      result.AppendMessageWithFormat("%d watchpoints ignored.\n", count);
+      result.AppendMessageWithFormatv("{0} watchpoints ignored.", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
@@ -715,7 +715,7 @@ protected:
     size_t num_watchpoints = watchpoints.GetSize();
 
     if (num_watchpoints == 0) {
-      result.AppendError("No watchpoints exist to be modified.");
+      result.AppendError("no watchpoints exist to be modified");
       return;
     }
 
@@ -728,7 +728,7 @@ protected:
       std::vector<uint32_t> wp_ids;
       if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(
               target, command, wp_ids)) {
-        result.AppendError("Invalid watchpoints specification.");
+        result.AppendError("invalid watchpoints specification");
         return;
       }
 
@@ -741,7 +741,7 @@ protected:
           ++count;
         }
       }
-      result.AppendMessageWithFormat("%d watchpoints modified.\n", count);
+      result.AppendMessageWithFormatv("{0} watchpoints modified.", count);
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
@@ -822,7 +822,6 @@ protected:
 
     // We passed the sanity check for the command. Proceed to set the
     // watchpoint now.
-    lldb::addr_t addr = 0;
     size_t size = 0;
 
     VariableSP var_sp;
@@ -861,18 +860,7 @@ protected:
 
     CompilerType compiler_type;
 
-    if (valobj_sp) {
-      AddressType addr_type;
-      addr = valobj_sp->GetAddressOf(false, &addr_type);
-      if (addr_type == eAddressTypeLoad) {
-        // We're in business.
-        // Find out the size of this variable.
-        size = m_option_watchpoint.watch_size.GetCurrentValue() == 0
-                   ? valobj_sp->GetByteSize().value_or(0)
-                   : m_option_watchpoint.watch_size.GetCurrentValue();
-      }
-      compiler_type = valobj_sp->GetCompilerType();
-    } else {
+    if (!valobj_sp) {
       const char *error_cstr = error.AsCString(nullptr);
       if (error_cstr)
         result.AppendError(error_cstr);
@@ -882,6 +870,16 @@ protected:
                                      command.GetArgumentAtIndex(0));
       return;
     }
+    auto [addr, addr_type] = valobj_sp->GetAddressOf(false);
+    if (addr_type == eAddressTypeLoad) {
+      // We're in business.
+      // Find out the size of this variable.
+      size =
+          m_option_watchpoint.watch_size.GetCurrentValue() == 0
+              ? llvm::expectedToOptional(valobj_sp->GetByteSize()).value_or(0)
+              : m_option_watchpoint.watch_size.GetCurrentValue();
+    }
+    compiler_type = valobj_sp->GetCompilerType();
 
     // Now it's time to create the watchpoint.
     uint32_t watch_type = 0;
@@ -1080,7 +1078,8 @@ protected:
     /// of the expression, so convert to that if we found a valid type.
     CompilerType compiler_type(valobj_sp->GetCompilerType());
 
-    std::optional<uint64_t> valobj_size = valobj_sp->GetByteSize();
+    std::optional<uint64_t> valobj_size =
+        llvm::expectedToOptional(valobj_sp->GetByteSize());
     // Set the type as a uint8_t array if the size being watched is
     // larger than the ValueObject's size (which is probably the size
     // of a pointer).

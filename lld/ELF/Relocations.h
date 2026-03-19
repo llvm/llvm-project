@@ -16,14 +16,24 @@
 #include <vector>
 
 namespace lld::elf {
+struct Ctx;
+struct ELFSyncStream;
+class Defined;
+class Undefined;
 class Symbol;
 class InputSection;
 class InputSectionBase;
 class OutputSection;
+class RelocationBaseSection;
 class SectionBase;
 
 // Represents a relocation type, such as R_X86_64_PC32 or R_ARM_THM_CALL.
-using RelType = uint32_t;
+struct RelType {
+  uint32_t v = 0;
+  /*implicit*/ constexpr RelType(uint32_t v = 0) : v(v) {}
+  /*implicit*/ operator uint32_t() const { return v; }
+};
+
 using JumpModType = uint32_t;
 
 // List of target-independent relocation types. Relocations read
@@ -32,6 +42,7 @@ using JumpModType = uint32_t;
 enum RelExpr {
   R_ABS,
   R_ADDEND,
+  R_ADDEND_NEG,
   R_DTPREL,
   R_GOT,
   R_GOT_OFF,
@@ -53,14 +64,12 @@ enum RelExpr {
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
   R_RELAX_TLS_GD_TO_IE,
-  R_RELAX_TLS_GD_TO_IE_ABS,
   R_RELAX_TLS_GD_TO_IE_GOT_OFF,
   R_RELAX_TLS_GD_TO_IE_GOTPLT,
   R_RELAX_TLS_GD_TO_LE,
   R_RELAX_TLS_GD_TO_LE_NEG,
   R_RELAX_TLS_IE_TO_LE,
   R_RELAX_TLS_LD_TO_LE,
-  R_RELAX_TLS_LD_TO_LE_ABS,
   R_SIZE,
   R_TPREL,
   R_TPREL_NEG,
@@ -82,42 +91,41 @@ enum RelExpr {
   //
   // Even though RelExpr is intended to be a target-neutral representation
   // of a relocation type, there are some relocations whose semantics are
-  // unique to a target. Such relocation are marked with R_<TARGET_NAME>.
-  R_AARCH64_GOT_PAGE_PC,
-  R_AARCH64_GOT_PAGE,
-  R_AARCH64_PAGE_PC,
-  R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
-  R_AARCH64_TLSDESC_PAGE,
-  R_AARCH64_AUTH,
-  R_ARM_PCA,
-  R_ARM_SBREL,
-  R_MIPS_GOTREL,
-  R_MIPS_GOT_GP,
-  R_MIPS_GOT_GP_PC,
-  R_MIPS_GOT_LOCAL_PAGE,
-  R_MIPS_GOT_OFF,
-  R_MIPS_GOT_OFF32,
-  R_MIPS_TLSGD,
-  R_MIPS_TLSLD,
-  R_PPC32_PLTREL,
-  R_PPC64_CALL,
-  R_PPC64_CALL_PLT,
-  R_PPC64_RELAX_TOC,
-  R_PPC64_TOCBASE,
-  R_PPC64_RELAX_GOT_PC,
-  R_RISCV_ADD,
-  R_RISCV_LEB128,
-  R_RISCV_PC_INDIRECT,
+  // unique to a target. Such relocation are marked with RE_<TARGET_NAME>.
+  RE_AARCH64_GOT_PAGE_PC,
+  RE_AARCH64_GOT_PAGE,
+  RE_AARCH64_PAGE_PC,
+  RE_AARCH64_TLSDESC_PAGE,
+  RE_AARCH64_AUTH,
+  RE_ARM_PCA,
+  RE_ARM_SBREL,
+  RE_MIPS_GOTREL,
+  RE_MIPS_GOT_GP,
+  RE_MIPS_GOT_GP_PC,
+  RE_MIPS_GOT_LOCAL_PAGE,
+  RE_MIPS_GOT_OFF,
+  RE_MIPS_GOT_OFF32,
+  RE_MIPS_OSEC_LOCAL_PAGE,
+  RE_MIPS_TLSGD,
+  RE_MIPS_TLSLD,
+  RE_PPC32_PLTREL,
+  RE_PPC64_CALL,
+  RE_PPC64_CALL_PLT,
+  RE_PPC64_TOCBASE,
+  RE_RISCV_ADD,
+  RE_RISCV_LEB128,
+  RE_RISCV_PC_INDIRECT,
   // Same as R_PC but with page-aligned semantics.
-  R_LOONGARCH_PAGE_PC,
+  RE_LOONGARCH_PAGE_PC,
   // Same as R_PLT_PC but with page-aligned semantics.
-  R_LOONGARCH_PLT_PAGE_PC,
+  RE_LOONGARCH_PLT_PAGE_PC,
   // In addition to having page-aligned semantics, LoongArch GOT relocs are
   // also reused for TLS, making the semantics differ from other architectures.
-  R_LOONGARCH_GOT,
-  R_LOONGARCH_GOT_PAGE_PC,
-  R_LOONGARCH_TLSGD_PAGE_PC,
-  R_LOONGARCH_TLSDESC_PAGE_PC,
+  RE_LOONGARCH_GOT,
+  RE_LOONGARCH_GOT_PAGE_PC,
+  RE_LOONGARCH_PC_INDIRECT,
+  RE_LOONGARCH_TLSGD_PAGE_PC,
+  RE_LOONGARCH_TLSDESC_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -138,17 +146,24 @@ struct JumpInstrMod {
   unsigned size;
 };
 
+void printLocation(ELFSyncStream &s, InputSectionBase &sec, const Symbol &sym,
+                   uint64_t off);
+
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
-template <class ELFT> void scanRelocations();
-template <class ELFT> void checkNoCrossRefs();
-void reportUndefinedSymbols();
-void postScanRelocations();
-void addGotEntry(Symbol &sym);
+template <class ELFT> void scanRelocations(Ctx &ctx);
+template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
+void reportUndefinedSymbols(Ctx &);
+bool maybeReportUndefined(Ctx &, Undefined &sym, InputSectionBase &sec,
+                          uint64_t offset);
+void postScanRelocations(Ctx &ctx);
+void addGotEntry(Ctx &ctx, Symbol &sym);
 
-void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
+void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
+
+bool isAbsolute(const Symbol &sym);
 
 class ThunkSection;
 class Thunk;
@@ -156,6 +171,9 @@ class InputSectionDescription;
 
 class ThunkCreator {
 public:
+  // Thunk may be incomplete. Avoid inline ctor/dtor.
+  ThunkCreator(Ctx &ctx);
+  ~ThunkCreator();
   // Return true if Thunks have been added to OutputSections
   bool createThunks(uint32_t pass, ArrayRef<OutputSection *> outputSections);
 
@@ -173,10 +191,16 @@ private:
   std::pair<Thunk *, bool> getThunk(InputSection *isec, Relocation &rel,
                                     uint64_t src);
 
+  std::pair<Thunk *, bool> getSyntheticLandingPad(Defined &d, int64_t a);
+
   ThunkSection *addThunkSection(OutputSection *os, InputSectionDescription *,
-                                uint64_t off);
+                                uint64_t off, bool isPrefix = false);
 
   bool normalizeExistingThunk(Relocation &rel, uint64_t src);
+
+  bool addSyntheticLandingPads();
+
+  Ctx &ctx;
 
   // Record all the available Thunks for a (Symbol, addend) pair, where Symbol
   // is represented as a (section, offset) pair. There may be multiple
@@ -185,9 +209,10 @@ private:
   // original addend, so we cannot fold offset + addend. A nested pair is used
   // because DenseMapInfo is not specialized for std::tuple.
   llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
-                 std::vector<Thunk *>>
+                 SmallVector<std::unique_ptr<Thunk>, 0>>
       thunkedSymbolsBySectionAndAddend;
-  llvm::DenseMap<std::pair<Symbol *, int64_t>, std::vector<Thunk *>>
+  llvm::DenseMap<std::pair<Symbol *, int64_t>,
+                 SmallVector<std::unique_ptr<Thunk>, 0>>
       thunkedSymbols;
 
   // Find a Thunk from the Thunks symbol definition, we can use this to find
@@ -197,8 +222,20 @@ private:
   // Track InputSections that have an inline ThunkSection placed in front
   // an inline ThunkSection may have control fall through to the section below
   // so we need to make sure that there is only one of them.
-  // The Mips LA25 Thunk is an example of an inline ThunkSection.
+  // The Mips LA25 Thunk is an example of an inline ThunkSection, as is
+  // the AArch64BTLandingPadThunk.
   llvm::DenseMap<InputSection *, ThunkSection *> thunkedSections;
+
+  // Record landing pads, generated for a section + offset destination.
+  // Landling pads are alternative entry points for destinations that need
+  // to be reached via thunks that use indirect branches. A destination
+  // needs at most one landing pad as that can be reused by all callers.
+  llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
+                 std::unique_ptr<Thunk>>
+      landingPadsBySectionAndAddend;
+
+  // All the nonLandingPad thunks that have been created, in order of creation.
+  std::vector<Thunk *> allThunks;
 
   // The number of completed passes of createThunks this permits us
   // to do one time initialization on Pass 0 and put a limit on the
@@ -264,7 +301,7 @@ template <bool is64> struct RelocsCrel {
         step();
       return *this;
     }
-    // For RelocationScanner::scanOne.
+    // For RelocScan::scan when TLS relocations consume multiple entries.
     void operator+=(size_t n) {
       for (; n; --n)
         operator++();
@@ -306,26 +343,7 @@ static inline int64_t getAddend(const typename ELFT::Crel &rel) {
   return rel.r_addend;
 }
 
-template <typename RelTy>
-inline Relocs<RelTy> sortRels(Relocs<RelTy> rels,
-                              SmallVector<RelTy, 0> &storage) {
-  auto cmp = [](const RelTy &a, const RelTy &b) {
-    return a.r_offset < b.r_offset;
-  };
-  if (!llvm::is_sorted(rels, cmp)) {
-    storage.assign(rels.begin(), rels.end());
-    llvm::stable_sort(storage, cmp);
-    rels = Relocs<RelTy>(storage);
-  }
-  return rels;
-}
-
-template <bool is64>
-inline Relocs<llvm::object::Elf_Crel_Impl<is64>>
-sortRels(Relocs<llvm::object::Elf_Crel_Impl<is64>> rels,
-         SmallVector<llvm::object::Elf_Crel_Impl<is64>, 0> &storage) {
-  return {};
-}
+RelocationBaseSection &getIRelativeSection(Ctx &ctx);
 
 // Returns true if Expr refers a GOT entry. Note that this function returns
 // false for TLS variables even though they need GOT, because TLS variables uses
