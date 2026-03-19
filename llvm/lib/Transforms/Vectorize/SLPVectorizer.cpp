@@ -24614,35 +24614,36 @@ public:
       : Operands(Ops), RangeSizesStorage(RangeSizes),
         RangeSizesByIdx(RangeSizesByIdx) {}
 
-  // Set up initial values using the already set Operands
+  /// Set up initial values using the already set Operands
   bool initializeContext(BoUpSLP &R, const DataLayout &DL,
                          const TargetTransformInfo &TTI);
-  // Return the index of the first unvectorized store after \p StartIdx
+  /// Return the index of the first unvectorized store after \p StartIdx
   unsigned getFirstUnvecStore(unsigned StartIdx = 0) const;
-  // Return the index of the first vectorized store after \p StartIdx
+  /// Return the index of the first vectorized store after \p StartIdx
   unsigned getFirstVecStoreAfter(unsigned StartIdx) const;
-  // Return true if all stores have been vectorized
+  /// Return true if all stores have been vectorized
   bool allVectorized() const;
-  // Return true if all elements in the given range match \p TreeSize
+  /// Return true if all elements in the given range match \p TreeSize
   bool isFirstSizeSameRange(unsigned StartIdx, unsigned Length,
                             unsigned TreeSize) const;
-  // Return true if the \p TreeSize is profitable for all elements in the range
+  /// Return true if the \p TreeSize is profitable for all elements in the range
   bool allOfRangeProfitable(unsigned StartIdx, unsigned Length,
                             unsigned TreeSize) const;
-  // Update the live (first) range sizes from the cached values (second)
+  /// Update the live (first) range sizes from the cached values (second)
   void updateRangeSizesFromCache();
-  // Update the cached (second) range sizes with the given \p TreeSize
+  /// Update the cached (second) range sizes with the given \p TreeSize
   void updateCachedRangeSizes(unsigned StartIdx, unsigned Length,
                               unsigned TreeSize);
-  // Update CandidateVFs for secondary iterations
+  /// Update CandidateVFs for secondary iterations
   bool updateCandidateVFs(const TargetTransformInfo &TTI);
-  // Get the current VF
+  /// Get the current VF
   std::optional<unsigned> getCurrentVF() const;
-  // Remove the current VF from the queue
+  /// Remove the current VF from the queue
   void incrementVF() { CandidateVFs.pop(); }
-  // Record vectorization of the provided range
+  /// Record vectorization of the provided range
   void markRangeVectorized(unsigned StartIdx, unsigned Length,
                            unsigned &FirstUnvecStore, unsigned &MaxSliceEnd);
+  /// Checks if the quadratic mean deviation is less than 90% of the mean size.
   bool checkTreeSizes(const unsigned SliceStartIdx, const unsigned VF) const;
 
 private:
@@ -24860,7 +24861,6 @@ std::optional<unsigned> StoreChainContext::getCurrentVF() const {
   return CandidateVFs.front();
 }
 
-/// Checks if the quadratic mean deviation is less than 90% of the mean size.
 bool StoreChainContext::checkTreeSizes(const unsigned SliceStartIdx,
                                        const unsigned VF) const {
   auto Sizes = RangeSizes.slice(SliceStartIdx, VF);
