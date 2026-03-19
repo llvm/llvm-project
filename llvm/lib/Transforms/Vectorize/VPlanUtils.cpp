@@ -609,6 +609,24 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
   return HeaderMask;
 }
 
+SmallVector<VPBasicBlock *>
+VPBlockUtils::blocksChainBetween(VPBasicBlock *FirstBB, VPBasicBlock *LastBB) {
+  assert(FirstBB->getPlan() == LastBB->getPlan() &&
+         "FirstBB and LastBB from different VPlans");
+#ifndef NDEBUG
+  VPDominatorTree VPDT(*FirstBB->getPlan());
+#endif
+  assert(VPDT.properlyDominates(FirstBB, LastBB) &&
+         "Expected FirstBB to dominate LastBB");
+  auto Blocks = to_vector(
+      VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_deep(FirstBB)));
+  auto *LastIt = find(Blocks, LastBB);
+  assert(LastIt != Blocks.end() &&
+         "LastBB unreachable from FirstBB in depth-first traversal");
+  Blocks.erase(std::next(LastIt), Blocks.end());
+  return Blocks;
+}
+
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
                             const VPDominatorTree &VPDT) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
