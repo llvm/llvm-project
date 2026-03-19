@@ -167,8 +167,8 @@ getLayoutAttrFromOperands(MLIRContext *ctx, transform::TransformState &state,
 
 DiagnosedSilenceableFailure
 transform::GetLoadOp::apply(transform::TransformRewriter &rewriter,
-                              transform::TransformResults &results,
-                              transform::TransformState &state) {
+                            transform::TransformResults &results,
+                            transform::TransformState &state) {
   auto targetValues = state.getPayloadValues(getTarget());
   if (!llvm::hasSingleElement(targetValues)) {
     return emitDefiniteFailure()
@@ -176,18 +176,20 @@ transform::GetLoadOp::apply(transform::TransformRewriter &rewriter,
            << llvm::range_size(targetValues) << ")";
   }
 
-  Operation* loadOp = nullptr;
+  Operation *loadOp = nullptr;
   auto maybeLoadNdOp =
       findProducerOfType<xegpu::LoadNdOp>(*targetValues.begin());
   if (maybeLoadNdOp) {
     loadOp = maybeLoadNdOp->getOperation();
   } else {
-    auto maybeLoadOp = findProducerOfType<xegpu::LoadGatherOp>(*targetValues.begin());
+    auto maybeLoadOp =
+        findProducerOfType<xegpu::LoadGatherOp>(*targetValues.begin());
     if (maybeLoadOp) {
       loadOp = maybeLoadOp->getOperation();
     } else {
       return emitSilenceableFailure(getLoc())
-            << "Could not find a matching xegpu.load_nd or xegpu.load op when walking the "
+             << "Could not find a matching xegpu.load_nd or xegpu.load op when "
+                "walking the "
                 "producer chain of the first operand.";
     }
   }
@@ -377,8 +379,8 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   // Cast target to load op.
   auto maybeLoadOp = dyn_cast<xegpu::LoadNdOp>(target);
   if (!maybeLoadOp) {
-    return emitSilenceableFailure(getLoc()) << "Expected xegpu.load_nd op, got "
-                                          << target->getName();
+    return emitSilenceableFailure(getLoc())
+           << "Expected xegpu.load_nd op, got " << target->getName();
   }
   auto loadOp = maybeLoadOp;
   if (loadOp.getMixedOffsets().size() == 0) {
@@ -398,7 +400,8 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Find descriptor op.
-  auto maybeDescOp = findProducerOfType<xegpu::CreateNdDescOp>(loadOp.getResult());
+  auto maybeDescOp =
+      findProducerOfType<xegpu::CreateNdDescOp>(loadOp.getResult());
   if (!maybeDescOp)
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;
