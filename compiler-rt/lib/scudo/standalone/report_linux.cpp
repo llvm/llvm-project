@@ -12,13 +12,10 @@
 
 #include "common.h"
 #include "internal_defs.h"
+#include "libc_pal.h"
 #include "report.h"
 #include "report_linux.h"
 #include "string_utils.h"
-
-#include <errno.h>
-#include <stdlib.h>
-#include <string.h>
 
 namespace scudo {
 
@@ -26,7 +23,7 @@ namespace scudo {
 void NORETURN reportMapError(uptr SizeIfOOM) {
   ScopedString Error;
   Error.append("Scudo ERROR: internal map failure (error desc=%s)",
-               strerror(errno));
+               LibcPAL::strerror(LibcPAL::geterrno()));
   if (SizeIfOOM)
     Error.append(" requesting %zuKB", SizeIfOOM >> 10);
   Error.append("\n");
@@ -37,7 +34,7 @@ void NORETURN reportUnmapError(uptr Addr, uptr Size) {
   ScopedString Error;
   Error.append("Scudo ERROR: internal unmap failure (error desc=%s) Addr 0x%zx "
                "Size %zu\n",
-               strerror(errno), Addr, Size);
+               LibcPAL::strerror(LibcPAL::geterrno()), Addr, Size);
   reportRawError(Error.data());
 }
 
@@ -46,7 +43,7 @@ void NORETURN reportProtectError(uptr Addr, uptr Size, int Prot) {
   Error.append(
       "Scudo ERROR: internal protect failure (error desc=%s) Addr 0x%zx "
       "Size %zu Prot %x\n",
-      strerror(errno), Addr, Size, Prot);
+      LibcPAL::strerror(LibcPAL::geterrno()), Addr, Size, Prot);
   reportRawError(Error.data());
 }
 

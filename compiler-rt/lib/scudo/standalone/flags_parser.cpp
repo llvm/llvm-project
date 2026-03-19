@@ -8,12 +8,8 @@
 
 #include "flags_parser.h"
 #include "common.h"
+#include "libc_pal.h"
 #include "report.h"
-
-#include <errno.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
 
 namespace scudo {
 
@@ -144,9 +140,9 @@ bool FlagParser::runHandler(const char *Name, const char *Value,
       break;
     case FlagType::FT_int:
       char *ValueEnd;
-      errno = 0;
-      long V = strtol(Value, &ValueEnd, 10);
-      if (errno != 0 ||                 // strtol failed (over or underflow)
+      LibcPAL::seterrno(0);
+      long V = LibcPAL::strtol(Value, &ValueEnd, 10);
+      if (LibcPAL::geterrno() != 0 ||   // strtol failed (over or underflow)
           V > INT_MAX || V < INT_MIN || // overflows integer
           // contains unexpected characters
           (*ValueEnd != '"' && *ValueEnd != '\'' &&

@@ -52,7 +52,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(calloc)(size_t nmemb, size_t size) {
   scudo::uptr Product;
   if (UNLIKELY(scudo::checkForCallocOverflow(size, nmemb, &Product))) {
     if (SCUDO_ALLOCATOR.canReturnNull()) {
-      errno = ENOMEM;
+      scudo::LibcPAL::seterrno(ENOMEM);
       return nullptr;
     }
     scudo::reportCallocOverflow(nmemb, size);
@@ -133,7 +133,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(memalign)(size_t alignment, size_t size) {
   } else {
     if (UNLIKELY(!scudo::isPowerOfTwo(alignment))) {
       if (SCUDO_ALLOCATOR.canReturnNull()) {
-        errno = EINVAL;
+        scudo::LibcPAL::seterrno(EINVAL);
         return nullptr;
       }
       scudo::reportAlignmentNotPowerOfTwo(alignment);
@@ -166,7 +166,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(pvalloc)(size_t size) {
   const scudo::uptr PageSize = scudo::getPageSizeCached();
   if (UNLIKELY(scudo::checkForPvallocOverflow(size, PageSize))) {
     if (SCUDO_ALLOCATOR.canReturnNull()) {
-      errno = ENOMEM;
+      scudo::LibcPAL::seterrno(ENOMEM);
       return nullptr;
     }
     scudo::reportPvallocOverflow(size);
@@ -222,7 +222,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(reallocarray)(void *ptr, size_t nmemb,
   scudo::uptr Product;
   if (UNLIKELY(scudo::checkForCallocOverflow(size, nmemb, &Product))) {
     if (SCUDO_ALLOCATOR.canReturnNull()) {
-      errno = ENOMEM;
+      scudo::LibcPAL::seterrno(ENOMEM);
       return nullptr;
     }
     scudo::reportReallocarrayOverflow(nmemb, size);
@@ -317,7 +317,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
                                                  size_t size) {
   if (UNLIKELY(scudo::checkAlignedAllocAlignmentAndSize(alignment, size))) {
     if (SCUDO_ALLOCATOR.canReturnNull()) {
-      errno = EINVAL;
+      scudo::LibcPAL::seterrno(EINVAL);
       return nullptr;
     }
     scudo::reportInvalidAlignedAllocAlignment(alignment, size);
