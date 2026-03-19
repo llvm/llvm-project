@@ -585,14 +585,17 @@ int main(int argc, char **argv) {
     TheTarget->createNullTargetStreamer(*FFS);
     Str = std::move(FFS);
   } else if (FileType == OFT_AssemblyFile) {
-    IP.reset(TheTarget->createMCInstPrinter(
-        Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
+    unsigned AsmVariant = OutputAsmVariant.getNumOccurrences()
+                              ? OutputAsmVariant
+                              : MAI->getAssemblerDialect();
+    IP.reset(TheTarget->createMCInstPrinter(Triple(TripleName), AsmVariant,
+                                            *MAI, *MCII, *MRI));
 
     if (!IP) {
       WithColor::error()
           << "unable to create instruction printer for target triple '"
-          << TheTriple.normalize() << "' with assembly variant "
-          << OutputAsmVariant << ".\n";
+          << TheTriple.normalize() << "' with assembly variant " << AsmVariant
+          << "\n";
       return 1;
     }
 

@@ -186,6 +186,10 @@ defm IEEEMinimumMaximumInsts : AMDGPUSubtargetFeature<"ieee-minimum-maximum-inst
   "v_pk_minimum/maximum_f16 instructions"
 >;
 
+defm SALUMinimumMaximumInsts : AMDGPUSubtargetFeature<"salu-minimum-maximum-insts",
+  "Has s_minimum/maximum_f16/f32 instructions"
+>;
+
 defm Minimum3Maximum3F32 : AMDGPUSubtargetFeature<"minimum3-maximum3-f32",
   "Has v_minimum3_f32 and v_maximum3_f32 instructions"
 >;
@@ -808,6 +812,14 @@ defm WMMA256bInsts : AMDGPUSubtargetFeature<"wmma-256b-insts",
 
 defm WMMA128bInsts : AMDGPUSubtargetFeature<"wmma-128b-insts",
   "Has WMMA instructions where A and B matrices do not have duplicated data"
+>;
+
+defm SWMMACGfx1200Insts : AMDGPUSubtargetFeature<"swmmac-gfx1200-insts",
+  "Has GFX1200 SWMMAC instructions"
+>;
+
+defm SWMMACGfx1250Insts : AMDGPUSubtargetFeature<"swmmac-gfx1250-insts",
+  "Has GFX1250 SWMMAC instructions"
 >;
 
 defm PkFmacF16Inst : AMDGPUSubtargetFeature<"pk-fmac-f16-inst",
@@ -1488,9 +1500,10 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
-   FeatureFlatOffsetBits24, FeatureFlatSignedOffset, FeatureInstCacheLineSize128
+   FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
+   FeatureFlatSignedOffset, FeatureInstCacheLineSize128
   ]
 >;
 
@@ -1513,9 +1526,10 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
-   FeatureFlatOffsetBits24, FeatureFlatSignedOffset, FeatureInstCacheLineSize128
+   FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
+   FeatureFlatSignedOffset, FeatureInstCacheLineSize128
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -1944,6 +1958,7 @@ def FeatureISAVersion11_7_0 : FeatureSet<
      FeatureFP8ConversionInsts,
      FeatureDot11Insts,
      FeatureWMMA128bInsts,
+     FeatureSWMMACGfx1200Insts,
      FeatureIEEEMinimumMaximumInsts,
      FeatureMinimum3Maximum3F32,
      FeatureMinimum3Maximum3F16])>;
@@ -1977,6 +1992,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
    FeatureWMMA128bInsts,
+   FeatureSWMMACGfx1200Insts,
    FeatureIEEEMinimumMaximumInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -2074,7 +2090,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
-   FeatureMcastLoadInsts
+   FeatureMcastLoadInsts,
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2087,7 +2103,9 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts])>;
+   FeatureCvtPkNormVOP3Insts,
+   FeatureSWMMACGfx1200Insts,
+   FeatureSWMMACGfx1250Insts])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
@@ -2099,7 +2117,9 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts])>;
+   FeatureCvtPkNormVOP3Insts,
+   FeatureSWMMACGfx1200Insts,
+   FeatureSWMMACGfx1250Insts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,

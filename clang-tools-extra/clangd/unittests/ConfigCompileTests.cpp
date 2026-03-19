@@ -298,43 +298,6 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
                                    "unreachable-code", "unused-variable",
                                    "typecheck_bool_condition",
                                    "unexpected_friend", "warn_alloca"));
-  clang::DiagnosticOptions DiagOpts;
-  clang::DiagnosticsEngine DiagEngine(DiagnosticIDs::create(), DiagOpts,
-                                      new clang::IgnoringDiagConsumer);
-
-  using Diag = clang::Diagnostic;
-  {
-    auto D = DiagEngine.Report(diag::warn_unreachable);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-  // Subcategory not respected/suppressed.
-  {
-    auto D = DiagEngine.Report(diag::warn_unreachable_break);
-    EXPECT_FALSE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-  {
-    auto D = DiagEngine.Report(diag::warn_unused_variable);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-  {
-    auto D = DiagEngine.Report(diag::err_typecheck_bool_condition);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-  {
-    auto D = DiagEngine.Report(diag::err_unexpected_friend);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-  {
-    auto D = DiagEngine.Report(diag::warn_alloca);
-    EXPECT_TRUE(isDiagnosticSuppressed(
-        Diag{&DiagEngine, D}, Conf.Diagnostics.Suppress, LangOptions()));
-  }
-
   Frag.Diagnostics.Suppress.emplace_back("*");
   EXPECT_TRUE(compileAndApply());
   EXPECT_TRUE(Conf.Diagnostics.SuppressAll);

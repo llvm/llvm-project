@@ -10,6 +10,7 @@
 #define MLIR_BINDINGS_PYTHON_IRCORE_H
 
 #include <cstddef>
+#include <exception>
 #include <optional>
 #include <sstream>
 #include <utility>
@@ -1313,12 +1314,17 @@ private:
 };
 
 /// Custom exception that allows access to error diagnostic information. This is
-/// converted to the `ir.MLIRError` python exception when thrown.
-struct MLIR_PYTHON_API_EXPORTED MLIRError {
+/// translated to the `ir.MLIRError` python exception when thrown.
+struct MLIR_PYTHON_API_EXPORTED MLIRError : std::exception {
   MLIRError(std::string message,
             std::vector<PyDiagnostic::DiagnosticInfo> &&errorDiagnostics = {})
       : message(std::move(message)),
         errorDiagnostics(std::move(errorDiagnostics)) {}
+  const char *what() const noexcept override { return message.c_str(); }
+
+  /// Bind the MLIRError exception class to the given module.
+  static void bind(nanobind::module_ &m);
+
   std::string message;
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };

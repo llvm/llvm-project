@@ -106,6 +106,8 @@ Clang Python Bindings Potentially Breaking Changes
   equality checks (``__eq__``) to the other object they are compared with when
   they are of different classes. They previously returned ``False`` when compared
   with objects of other classes.
+- ``TranslationUnit.get_tokens`` now throws an error if both the ``extent`` and
+  ``locations`` argument are passed. Previousy, ``locations`` took precedence.
 
 What's New in Clang |release|?
 ==============================
@@ -160,6 +162,8 @@ Non-comprehensive list of changes in this release
 
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
+
+- Added header ``endian.h`` which contains byte order helpers specified in POSIX
 
 New Compiler Flags
 ------------------
@@ -282,6 +286,13 @@ Improvements to Clang's diagnostics
 - Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
   made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
 
+- Fixed the Fix-It insertion point for ``expected ';' after alias declaration``
+  when parsing alias declarations involving a token-split ``>>`` sequence
+  (for example, ``using A = X<int>>;``). (#GH184425)
+
+- Fixed incorrect ``implicitly deleted`` diagnostic for explicitly deleted
+  candidate function. (#GH185693)
+
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
@@ -322,6 +333,8 @@ Bug Fixes in This Version
 - Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
 - Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
 - Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
+- Fixed a crash caused by accessing dependent diagnostics of a non-dependent context.
+- Fixed a crash when substituting into a non-type template parameter that has a type containing an undeduced placeholder type.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -339,7 +352,9 @@ Bug Fixes to C++ Support
 - Fixed an incorrect template argument deduction when matching packs of template
   template parameters when one of its parameters is also a pack. (#GH181166)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
+- Fixed an alias template CTAD crash.
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
   when used inside decltype in the return type. (#GH180460)
@@ -347,6 +362,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
 - Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
+- Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
 
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching 
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported 
@@ -354,11 +370,14 @@ Bug Fixes to C++ Support
 
 - Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
 - Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
+- We no longer consider conversion operators when copy-initializing from the same type. This was non
+  conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
+- Fixed a assertion when __block is used on global variables in C mode. (#GH183974)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -376,6 +395,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
+- Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
+- Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
 
 OpenACC Specific Changes
 ------------------------
@@ -472,6 +493,7 @@ clang-format
   constructor initializers after commas, keeping the colon on the same line.
 - Extend ``BreakBinaryOperations`` to accept a structured configuration with
   per-operator break rules and minimum chain length gating via ``PerOperator``.
+- Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyAndAttached`` for LLVM style.
 
 libclang
 --------

@@ -44,6 +44,21 @@ bool clang::CIRGen::isEmptyFieldForLayout(const ASTContext &context,
 
 namespace {
 
+class AMDGPUABIInfo : public ABIInfo {
+public:
+  AMDGPUABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+};
+
+} // namespace
+
+namespace {
+
 class X8664ABIInfo : public ABIInfo {
 public:
   X8664ABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
@@ -70,6 +85,11 @@ public:
       : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
 };
 } // namespace
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<AMDGPUTargetCIRGenInfo>(cgt);
+}
 
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
