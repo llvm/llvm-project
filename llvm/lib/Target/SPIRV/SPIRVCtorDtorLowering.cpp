@@ -108,8 +108,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
     auto *GV = new GlobalVariable(
         M, PointerType::get(C, 0),
         /*isConstant=*/false, GlobalValue::WeakAnyLinkage,
-        Constant::getNullValue(PointerType::get(C, 0)),
-        Name,
+        Constant::getNullValue(PointerType::get(C, 0)), Name,
         /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
         /*AddressSpace=*/GlobalAddrSpace);
     GV->setVisibility(GlobalVariable::ProtectedVisibility);
@@ -118,13 +117,15 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
 
   auto *Begin = M.getOrInsertGlobal(
       IsCtor ? "__init_array_start" : "__fini_array_start",
-      PointerType::get(C, 0),
-      function_ref<GlobalVariable *()>(
-          [&]() { return CreateGlobal(IsCtor ? "__init_array_start" : "__fini_array_start"); }));
+      PointerType::get(C, 0), function_ref<GlobalVariable *()>([&]() {
+        return CreateGlobal(IsCtor ? "__init_array_start"
+                                   : "__fini_array_start");
+      }));
   auto *End = M.getOrInsertGlobal(
       IsCtor ? "__init_array_end" : "__fini_array_end", PointerType::get(C, 0),
-      function_ref<GlobalVariable *()>(
-          [&]() { return CreateGlobal(IsCtor ? "__init_array_end" : "__fini_array_end"); }));
+      function_ref<GlobalVariable *()>([&]() {
+        return CreateGlobal(IsCtor ? "__init_array_end" : "__fini_array_end");
+      }));
   auto *CallBackTy = FunctionType::get(IRB.getVoidTy(), {});
 
   // The destructor array must be called in reverse order. Get an expression to
