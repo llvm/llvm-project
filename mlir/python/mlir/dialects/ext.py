@@ -34,7 +34,7 @@ __all__ = [
     "Region",
     "Type",
     "Attribute",
-    "infer_type",
+    "result",
 ]
 
 Operand = ir.Value
@@ -114,7 +114,7 @@ class ConstraintLoweringContext:
 
 
 @dataclass
-class Marker:
+class FieldSpecifier:
     infer_type: bool = False
     default_is_none: bool = False
 
@@ -128,13 +128,12 @@ class Marker:
         return self.default_is_none or self.infer_type
 
 
-def infer_type() -> Any:
+def result(*, infer_type: bool = False) -> Any:
     """
-    A marker to indicate that the type of a result should be inferred.
-    It can only be used in `Result` definitions.
+    A field specifier for `Result` definitions.
     """
 
-    return Marker(infer_type=True)
+    return FieldSpecifier(infer_type=infer_type)
 
 
 def infer_type_impl(type_) -> Callable[[], ir.Type]:
@@ -170,7 +169,7 @@ class FieldDef:
     kw_only: bool = False
 
     @staticmethod
-    def from_type_hint(name, type_, marker) -> "FieldDef":
+    def from_type_hint(name, type_, specifier) -> "FieldDef":
         variadicity = Variadicity.single
         if inner := match_optional(type_):
             variadicity = Variadicity.optional
@@ -186,15 +185,17 @@ class FieldDef:
                 name,
                 variadicity,
                 constraint,
-                kw_only=marker.kw_only(),
-                infer_type=infer_type_impl(constraint) if marker.infer_type else None,
+                kw_only=specifier.kw_only(),
+                infer_type=(
+                    infer_type_impl(constraint) if specifier.infer_type else None
+                ),
             )
         elif origin is ir.Value:
             return OperandDef(
                 name,
                 variadicity,
                 get_args(type_)[0],
-                kw_only=marker.kw_only(),
+                kw_only=specifier.kw_only(),
             )
         elif issubclass(origin or type_, ir.Attribute):
             return AttributeDef(name, variadicity, type_)
@@ -338,17 +339,19 @@ class Operation(ir.OpView):
             if hasattr(base, "_fields"):
                 fields.extend(base._fields)
         for key, value in cls.__annotations__.items():
-            # if the class variable is not defined, we treat it as a default marker;
-            # if it is assigned with `None`, we treat it as a marker with `default_is_none=True`.
-            # e.g. x : int         # default marker
-            #      y : int = None  # marker with default_is_none=True
-            marker = cls.__dict__.get(key, Marker()) or Marker(default_is_none=True)
+            # if the class variable is not defined, we treat it as a default specifier;
+            # if it is assigned with `None`, we treat it as a specifier with `default_is_none=True`.
+            # e.g. x : int         # default specifier
+            #      y : int = None  # specifier with default_is_none=True
+            specifier = cls.__dict__.get(key, FieldSpecifier()) or FieldSpecifier(
+                default_is_none=True
+            )
             # treat all other values as invalid
-            if not isinstance(marker, Marker):
+            if not isinstance(specifier, FieldSpecifier):
                 raise TypeError(
                     f"the field specifier of field '{key}' is not supported"
                 )
-            field = FieldDef.from_type_hint(key, value, marker)
+            field = FieldDef.from_type_hint(key, value, specifier)
             fields.append(field)
 
         cls._fields = fields

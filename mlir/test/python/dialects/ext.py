@@ -23,12 +23,12 @@ def testMyInt():
 
     class ConstantOp(MyInt.Operation, name="constant"):
         value: IntegerAttr
-        cst: Result[i32] = infer_type()
+        cst: Result[i32] = result(infer_type=True)
 
     class AddOp(Operation, dialect=MyInt, name="add"):
         lhs: Operand[i32]
         rhs: Operand[i32]
-        res: Result[i32] = infer_type()
+        res: Result[i32] = result(infer_type=True)
 
     # CHECK: irdl.dialect @myint {
     # CHECK:   irdl.operation @constant {
@@ -556,9 +556,9 @@ def testExtDialectWithType():
         arr: Result[Array]
 
     class MakeArray3Op(TestType.Operation, name="make_array3"):
-        arr: Result[
-            Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]
-        ] = infer_type()
+        arr: Result[Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]] = result(
+            infer_type=True
+        )
 
     with Context(), Location.unknown():
         TestType.load()
@@ -706,3 +706,33 @@ def testExtDialectWithAttr():
         # CHECK: "ext_attr.op1"() {pair = #ext_attr.pair<1 : i32, 2 : i32>} : () -> ()
         # CHECK: "ext_attr.op2"() {pair = #ext_attr.str_pair<"hello", "world">, pair2 = #ext_attr.str_pair<"a", "b">} : () -> ()
         print(module)
+
+
+# CHECK: TEST: testExtDialectWithInvalidOp
+@run
+def testExtDialectWithInvalidOp():
+    class TestInvalid(Dialect, name="ext_invalid"):
+        pass
+
+    try:
+
+        class InferTypeBeforePositionalOp(
+            TestInvalid.Operation, name="infer_before_pos"
+        ):
+            res: Result[IntegerType[32]] = result(infer_type=True)
+            a: Operand[IntegerType[32]]
+
+    except ValueError as e:
+        # CHECK: wrong parameter order
+        print(e)
+
+    try:
+
+        class AssignNoneOnNonOptionalOp(
+            TestInvalid.Operation, name="assign_none_on_non_optional"
+        ):
+            a: Operand[IntegerType[32]] = None
+
+    except ValueError as e:
+        # CHECK: only optional operand can be a keyword parameter
+        print(e)
