@@ -3715,6 +3715,18 @@ public:
     });
   }
 
+  /// Checks if it is legal and profitable to build SplitVectorize node for the
+  /// given \p VL.
+  /// \param Op1 first homogeneous scalars.
+  /// \param Op2 second homogeneous scalars.
+  /// \param ReorderIndices indices to reorder the scalars.
+  /// \returns true if the node was successfully built.
+  bool canBuildSplitNode(ArrayRef<Value *> VL,
+                         const InstructionsState &LocalState,
+                         SmallVectorImpl<Value *> &Op1,
+                         SmallVectorImpl<Value *> &Op2,
+                         OrdersType &ReorderIndices) const;
+
   ~BoUpSLP();
 
 private:
@@ -3787,18 +3799,6 @@ private:
   InstructionCost getEntryCost(const TreeEntry *E,
                                ArrayRef<Value *> VectorizedVals,
                                SmallPtrSetImpl<Value *> &CheckedExtracts);
-
-  /// Checks if it is legal and profitable to build SplitVectorize node for the
-  /// given \p VL.
-  /// \param Op1 first homogeneous scalars.
-  /// \param Op2 second homogeneous scalars.
-  /// \param ReorderIndices indices to reorder the scalars.
-  /// \returns true if the node was successfully built.
-  bool canBuildSplitNode(ArrayRef<Value *> VL,
-                         const InstructionsState &LocalState,
-                         SmallVectorImpl<Value *> &Op1,
-                         SmallVectorImpl<Value *> &Op2,
-                         OrdersType &ReorderIndices) const;
 
   /// This is the recursive part of buildTree.
   void buildTreeRec(ArrayRef<Value *> Roots, unsigned Depth, const EdgeInfo &EI,
@@ -18507,6 +18507,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
              "Must contain at least single gathered value.");
       assert(TEPtr->UserTreeIndex &&
              "Expected only single user of a gather node.");
+      if (any_of(TEPtr->CombinedEntriesWithIndices,
+                 [&](const auto &P) { return P.first == TE->Idx; }))
+        continue;
       const EdgeInfo &UseEI = TEPtr->UserTreeIndex;
 
       PHINode *UserPHI = (UseEI.UserTE->State != TreeEntry::SplitVectorize &&
@@ -25918,7 +25921,9 @@ private:
   /// Optimizes original placement of the reduced values for the reduction tree.
   /// For example, if there is a zext i1 + selects, we can merge select
   /// into zext and improve emission of the reductions.
-  void optimizeReducedVals() {
+  void optimizeReducedVals(BoUpSLP &R, DominatorTree &DT, const DataLayout &DL,
+                           const TargetTransformInfo &TTI,
+                           const TargetLibraryInfo &TLI) {
     SmallDenseMap<unsigned, unsigned> UsedReductionOpIds;
     for (const auto [Idx, Vals] : enumerate(ReducedVals)) {
       if (auto *I = dyn_cast<Instruction>(Vals.front()))
@@ -25937,6 +25942,40 @@ private:
           ZExt->getType() == ReducedVals[SelectIdx].front()->getType()) {
         ReducedVals[ZExtIdx].append(ReducedVals[SelectIdx]);
         ReducedVals.erase(std::next(ReducedVals.begin(), SelectIdx));
+      }
+    }
+    // Merge 1 element reduced value groups into larger group of shl, if only 2
+    // groups available. May trigger extra vectorization with the copyables.
+    if (ReducedVals.size() == 2 &&
+        (ReducedVals.front().size() == 1 || ReducedVals.back().size() == 1)) {
+      SmallVector<Value *> Ops(ReducedVals.front().size() +
+                               ReducedVals.back().size());
+      copy(ReducedVals.front(), Ops.begin());
+      copy(ReducedVals.back(),
+           std::next(Ops.begin(), ReducedVals.front().size()));
+      InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
+      InstructionsState OpS = Analysis.buildInstructionsState(
+          Ops, R, /*TryCopyableElementsVectorization=*/true,
+          /*WithProfitabilityCheck=*/true);
+      if (OpS && OpS.areInstructionsWithCopyableElements() &&
+          OpS.getOpcode() == Instruction::Shl) {
+        // The smallest reduced values group should be the first.
+        if (ReducedVals.back().size() == 1 && ReducedVals.front().size() != 1)
+          std::swap(ReducedVals.front(), ReducedVals.back());
+        // Check if the largest reduced values group are shl and sort them by
+        // the constant shift amount to improve chances of vectorization with
+        // the copyables.
+        auto Comparator = [](Value *V1, Value *V2) {
+          ConstantInt *C1, *C2;
+          if (!match(V1, m_Shl(m_Value(), m_ConstantInt(C1))))
+            return false;
+          if (!match(V2, m_Shl(m_Value(), m_ConstantInt(C2))))
+            return true;
+          return C1->getZExtValue() < C2->getZExtValue();
+        };
+        stable_sort(ReducedVals.back(), Comparator);
+        ReducedVals.front().append(ReducedVals.back());
+        ReducedVals.pop_back();
       }
     }
   }
@@ -25967,7 +26006,9 @@ public:
 
   /// Try to find a reduction tree.
   bool matchAssociativeReduction(BoUpSLP &R, Instruction *Root,
-                                 ScalarEvolution &SE, const DataLayout &DL,
+                                 ScalarEvolution &SE, DominatorTree &DT,
+                                 const DataLayout &DL,
+                                 const TargetTransformInfo &TTI,
                                  const TargetLibraryInfo &TLI) {
     RdxKind = HorizontalReduction::getRdxKind(Root);
     if (!isVectorizable(RdxKind, Root))
@@ -26118,7 +26159,7 @@ public:
     }
     // Post optimize reduced values to get better reduction sequences and sort
     // them by size.
-    optimizeReducedVals();
+    optimizeReducedVals(R, DT, DL, TTI, TLI);
     // Sort the reduced values by number of same/alternate opcode and/or pointer
     // operand.
     stable_sort(ReducedVals, [](ArrayRef<Value *> P1, ArrayRef<Value *> P2) {
@@ -26250,6 +26291,11 @@ public:
     SmallVector<SmallVector<Value *>> LocalReducedVals;
     // Try merge consecutive reduced values into a single vectorizable group and
     // check, if they can be vectorized as copyables.
+    const bool TwoGroupsOnly = ReducedVals.size() == 2;
+    const bool TwoGroupsOfSameSmallSize =
+        TwoGroupsOnly &&
+        ReducedVals.front().size() == ReducedVals.back().size() &&
+        ReducedVals.front().size() < ReductionLimit;
     for (ArrayRef<Value *> RV : ReducedVals) {
       // Loads are not very compatible with undefs.
       if (isa<UndefValue>(RV.front()) &&
@@ -26266,22 +26312,47 @@ public:
         States.push_back(getSameOpcode(RV, TLI));
         continue;
       }
-      SmallVector<Value *> Ops;
-      if (!LocalReducedVals.empty())
-        Ops = LocalReducedVals.back();
-      Ops.append(RV.begin(), RV.end());
-      InstructionsCompatibilityAnalysis Analysis(DT, DL, *TTI, TLI);
-      InstructionsState OpS =
-          Analysis.buildInstructionsState(Ops, V, VectorizeCopyableElements);
-      if (LocalReducedVals.empty()) {
-        LocalReducedVals.push_back(Ops);
-        States.push_back(OpS);
-        continue;
-      }
-      if (OpS) {
-        LocalReducedVals.back().swap(Ops);
-        States.back() = OpS;
-        continue;
+      // Do some copyables analysis only if more than 2 groups exist or they
+      // are large enough.
+      if (!TwoGroupsOfSameSmallSize) {
+        SmallVector<Value *> Ops;
+        if (!LocalReducedVals.empty())
+          Ops = LocalReducedVals.back();
+        Ops.append(RV.begin(), RV.end());
+        InstructionsCompatibilityAnalysis Analysis(DT, DL, *TTI, TLI);
+        InstructionsState OpS = Analysis.buildInstructionsState(
+            Ops, V, /*TryCopyableElementsVectorization=*/true,
+            /*WithProfitabilityCheck=*/true, /*SkipSameCodeCheck=*/true);
+        if (OpS && OpS.areInstructionsWithCopyableElements()) {
+          if (LocalReducedVals.empty()) {
+            LocalReducedVals.push_back(Ops);
+            States.push_back(OpS);
+            continue;
+          }
+          LocalReducedVals.back().swap(Ops);
+          States.back() = OpS;
+          continue;
+        }
+        // For safety, allow split vectorization only if 2 groups are available
+        // overall.
+        if (TwoGroupsOnly) {
+          auto [MainOp, AltOp] = getMainAltOpsNoStateVL(Ops);
+          OpS = InstructionsState(MainOp, AltOp);
+          // Last chance to try to vectorize alternate node.
+          SmallVector<Value *> Op1, Op2;
+          BoUpSLP::OrdersType ReorderIndices;
+          if (MainOp && AltOp &&
+              V.canBuildSplitNode(Ops, OpS, Op1, Op2, ReorderIndices)) {
+            if (LocalReducedVals.empty()) {
+              LocalReducedVals.push_back(Ops);
+              States.push_back(OpS);
+              continue;
+            }
+            LocalReducedVals.back().swap(Ops);
+            States.back() = OpS;
+            continue;
+          }
+        }
       }
       LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
       States.push_back(getSameOpcode(RV, TLI));
@@ -27723,7 +27794,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     if (!isReductionCandidate(Inst))
       return nullptr;
     HorizontalReduction HorRdx;
-    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
+    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DT, *DL, *TTI, *TLI))
       return nullptr;
     return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
   };

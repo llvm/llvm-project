@@ -207,6 +207,7 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_target_mem,
   kw_target_mem0,
   kw_target_mem1,
   kw_errnomem,
