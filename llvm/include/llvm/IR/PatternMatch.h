@@ -154,43 +154,16 @@ inline class_match<IntrinsicInst> m_AnyIntrinsic() {
 }
 
 struct undef_match {
+private:
+  static bool checkAggregate(const ConstantAggregate *CA);
+
+public:
   static bool check(const Value *V) {
     if (isa<UndefValue>(V))
       return true;
-
-    const auto *CA = dyn_cast<ConstantAggregate>(V);
-    if (!CA)
-      return false;
-
-    SmallPtrSet<const ConstantAggregate *, 8> Seen;
-    SmallVector<const ConstantAggregate *, 8> Worklist;
-
-    // Either UndefValue, PoisonValue, or an aggregate that only contains
-    // these is accepted by matcher.
-    // CheckValue returns false if CA cannot satisfy this constraint.
-    auto CheckValue = [&](const ConstantAggregate *CA) {
-      for (const Value *Op : CA->operand_values()) {
-        if (isa<UndefValue>(Op))
-          continue;
-
-        const auto *CA = dyn_cast<ConstantAggregate>(Op);
-        if (!CA)
-          return false;
-        if (Seen.insert(CA).second)
-          Worklist.emplace_back(CA);
-      }
-
-      return true;
-    };
-
-    if (!CheckValue(CA))
-      return false;
-
-    while (!Worklist.empty()) {
-      if (!CheckValue(Worklist.pop_back_val()))
-        return false;
-    }
-    return true;
+    if (const auto *CA = dyn_cast<ConstantAggregate>(V))
+      return checkAggregate(CA);
+    return false;
   }
   template <typename ITy> bool match(ITy *V) const { return check(V); }
 };
@@ -402,38 +375,44 @@ template <int64_t Val> inline constantint_match<Val> m_ConstantInt() {
 /// is true.
 template <typename Predicate, typename ConstantVal, bool AllowPoison>
 struct cstval_pred_ty : public Predicate {
+private:
+  bool matchVector(const Value *V) const {
+    if (const auto *C = dyn_cast<Constant>(V)) {
+      if (const auto *CV = dyn_cast_or_null<ConstantVal>(C->getSplatValue()))
+        return this->isValue(CV->getValue());
+
+      // Number of elements of a scalable vector unknown at compile time
+      auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
+      if (!FVTy)
+        return false;
+
+      // Non-splat vector constant: check each element for a match.
+      unsigned NumElts = FVTy->getNumElements();
+      assert(NumElts != 0 && "Constant vector with no elements?");
+      bool HasNonPoisonElements = false;
+      for (unsigned i = 0; i != NumElts; ++i) {
+        Constant *Elt = C->getAggregateElement(i);
+        if (!Elt)
+          return false;
+        if (AllowPoison && isa<PoisonValue>(Elt))
+          continue;
+        auto *CV = dyn_cast<ConstantVal>(Elt);
+        if (!CV || !this->isValue(CV->getValue()))
+          return false;
+        HasNonPoisonElements = true;
+      }
+      return HasNonPoisonElements;
+    }
+    return false;
+  }
+
+public:
   const Constant **Res = nullptr;
   template <typename ITy> bool match_impl(ITy *V) const {
     if (const auto *CV = dyn_cast<ConstantVal>(V))
       return this->isValue(CV->getValue());
-    if (const auto *VTy = dyn_cast<VectorType>(V->getType())) {
-      if (const auto *C = dyn_cast<Constant>(V)) {
-        if (const auto *CV = dyn_cast_or_null<ConstantVal>(C->getSplatValue()))
-          return this->isValue(CV->getValue());
-
-        // Number of elements of a scalable vector unknown at compile time
-        auto *FVTy = dyn_cast<FixedVectorType>(VTy);
-        if (!FVTy)
-          return false;
-
-        // Non-splat vector constant: check each element for a match.
-        unsigned NumElts = FVTy->getNumElements();
-        assert(NumElts != 0 && "Constant vector with no elements?");
-        bool HasNonPoisonElements = false;
-        for (unsigned i = 0; i != NumElts; ++i) {
-          Constant *Elt = C->getAggregateElement(i);
-          if (!Elt)
-            return false;
-          if (AllowPoison && isa<PoisonValue>(Elt))
-            continue;
-          auto *CV = dyn_cast<ConstantVal>(Elt);
-          if (!CV || !this->isValue(CV->getValue()))
-            return false;
-          HasNonPoisonElements = true;
-        }
-        return HasNonPoisonElements;
-      }
-    }
+    if (isa<VectorType>(V->getType()))
+      return matchVector(V);
     return false;
   }
 
@@ -3027,6 +3006,20 @@ template <typename Opnd0, typename Opnd1>
 inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
 m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maximumnum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMaxNum_or_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMaxNum(Op0, Op1), m_FMaximumNum(Op0, Op1));
+}
+
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMinNum_or_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMinNum(Op0, Op1), m_FMinimumNum(Op0, Op1));
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>

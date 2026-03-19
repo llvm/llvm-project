@@ -1446,7 +1446,7 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
       break;
     }
     case Instruction::CondBr: {
-      BranchInst *BI = cast<BranchInst>(U);
+      CondBrInst *BI = cast<CondBrInst>(U);
       BI->swapSuccessors(); // swaps prof metadata too
       if (BPI)
         BPI->swapSuccEdgesProbabilities(BI->getParent());
@@ -1855,9 +1855,9 @@ static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
 
   // Check if incoming PHI value can be replaced with constant
   // based on implied condition.
-  BranchInst *TerminatorBI = dyn_cast<BranchInst>(InBB->getTerminator());
+  CondBrInst *TerminatorBI = dyn_cast<CondBrInst>(InBB->getTerminator());
   const ICmpInst *ICmp = dyn_cast<ICmpInst>(&I);
-  if (TerminatorBI && TerminatorBI->isConditional() &&
+  if (TerminatorBI &&
       TerminatorBI->getSuccessor(0) != TerminatorBI->getSuccessor(1) && ICmp) {
     bool LHSIsTrue = TerminatorBI->getSuccessor(0) == PN->getParent();
     std::optional<bool> ImpliedCond = isImpliedCondition(
@@ -2015,8 +2015,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     // be inserting the computation on some other paths (e.g. inside a loop).
     // Only do this if the pred block is unconditionally branching into the phi
     // block. Also, make sure that the pred block is not dead code.
-    BranchInst *BI = dyn_cast<BranchInst>(InBB->getTerminator());
-    if (!BI || !BI->isUnconditional() || !DT.isReachableFromEntry(InBB))
+    UncondBrInst *BI = dyn_cast<UncondBrInst>(InBB->getTerminator());
+    if (!BI || !DT.isReachableFromEntry(InBB))
       return nullptr;
 
     NewPhiValues.push_back(nullptr);
@@ -2270,9 +2270,8 @@ Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
   // The block that we are hoisting to must reach here unconditionally.
   // Otherwise, we could be speculatively executing an expensive or
   // non-speculative op.
-  auto *PredBlockBranch = dyn_cast<BranchInst>(OtherBB->getTerminator());
-  if (!PredBlockBranch || PredBlockBranch->isConditional() ||
-      !DT.isReachableFromEntry(OtherBB))
+  auto *PredBlockBranch = dyn_cast<UncondBrInst>(OtherBB->getTerminator());
+  if (!PredBlockBranch || !DT.isReachableFromEntry(OtherBB))
     return nullptr;
 
   // TODO: This check could be tightened to only apply to binops (div/rem) that
@@ -4072,8 +4071,9 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   // If there are more than 2 instructions, check that they are noops
   // i.e., they won't hurt the performance of the generated code.
   if (FreeInstrBB->size() != 2) {
-    for (const Instruction &Inst : FreeInstrBB->instructionsWithoutDebug()) {
-      if (&Inst == &FI || &Inst == FreeInstrBBTerminator)
+    for (const Instruction &Inst : *FreeInstrBB) {
+      if (&Inst == &FI || &Inst == FreeInstrBBTerminator ||
+          isa<PseudoProbeInst>(Inst))
         continue;
       auto *Cast = dyn_cast<CastInst>(&Inst);
       if (!Cast || !Cast->isNoopCast(DL))
@@ -6080,7 +6080,7 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
     // If this is a branch or switch on a constant, mark only the single
     // live successor. Otherwise assume all successors are live.
     Instruction *TI = BB->getTerminator();
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI); BI && BI->isConditional()) {
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
       if (isa<UndefValue>(BI->getCondition())) {
         // Branch on undef is UB.
         HandleOnlyLiveSuccessor(BB, nullptr);
@@ -6146,11 +6146,11 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
 
 void InstCombiner::computeBackEdges() {
   // Collect backedges.
-  SmallPtrSet<BasicBlock *, 16> Visited;
+  SmallVector<bool> Visited(F.getMaxBlockNumber());
   for (BasicBlock *BB : RPOT) {
-    Visited.insert(BB);
+    Visited[BB->getNumber()] = true;
     for (BasicBlock *Succ : successors(BB))
-      if (Visited.contains(Succ))
+      if (Visited[Succ->getNumber()])
         BackEdges.insert({BB, Succ});
   }
   ComputedBackEdges = true;

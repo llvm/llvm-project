@@ -198,6 +198,37 @@ iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
   return enum_seq(LOAD_CNT, MaxCounter);
 }
 
+StringLiteral getInstCounterName(InstCounterType T) {
+  switch (T) {
+  case LOAD_CNT:
+    return "LOAD_CNT";
+  case DS_CNT:
+    return "DS_CNT";
+  case EXP_CNT:
+    return "EXP_CNT";
+  case STORE_CNT:
+    return "STORE_CNT";
+  case SAMPLE_CNT:
+    return "SAMPLE_CNT";
+  case BVH_CNT:
+    return "BVH_CNT";
+  case KM_CNT:
+    return "KM_CNT";
+  case X_CNT:
+    return "X_CNT";
+  case VA_VDST:
+    return "VA_VDST";
+  case VM_VSRC:
+    return "VM_VSRC";
+  default:
+    return "Unknown T";
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void Waitcnt::dump() const { dbgs() << *this << "\n"; }
+#endif
+
 /// \returns true if the target supports signed immediate offset for SMRD
 /// instructions.
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST) {
@@ -1495,6 +1526,14 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
                         unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
+  // In dynamic VGPR mode, (static) occupancy does not depend on VGPR usage,
+  // so getMaxNumVGPRs does not depend on WavesPerEU, and thus we need to return
+  // zero because there is no nonzero VGPR usage N where going below N
+  // achieves higher (static) occupancy.
+  bool DynamicVGPREnabled = (DynamicVGPRBlockSize != 0);
+  if (DynamicVGPREnabled)
+    return 0;
+
   unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
@@ -1522,9 +1561,13 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
                         unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
+  // In dynamic VGPR mode, WavesPerEU does not imply a VGPR limit.
+  bool DynamicVGPREnabled = (DynamicVGPRBlockSize != 0);
   unsigned MaxNumVGPRs =
-      alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
-                getVGPRAllocGranule(STI, DynamicVGPRBlockSize));
+      DynamicVGPREnabled
+          ? getTotalNumVGPRs(STI)
+          : alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
+                      getVGPRAllocGranule(STI, DynamicVGPRBlockSize));
   unsigned AddressableNumVGPRs =
       getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
@@ -1741,30 +1784,6 @@ bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
   }
 
   return false;
-}
-
-raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait) {
-  ListSeparator LS;
-  if (Wait.LoadCnt != ~0u)
-    OS << LS << "LoadCnt: " << Wait.LoadCnt;
-  if (Wait.ExpCnt != ~0u)
-    OS << LS << "ExpCnt: " << Wait.ExpCnt;
-  if (Wait.DsCnt != ~0u)
-    OS << LS << "DsCnt: " << Wait.DsCnt;
-  if (Wait.StoreCnt != ~0u)
-    OS << LS << "StoreCnt: " << Wait.StoreCnt;
-  if (Wait.SampleCnt != ~0u)
-    OS << LS << "SampleCnt: " << Wait.SampleCnt;
-  if (Wait.BvhCnt != ~0u)
-    OS << LS << "BvhCnt: " << Wait.BvhCnt;
-  if (Wait.KmCnt != ~0u)
-    OS << LS << "KmCnt: " << Wait.KmCnt;
-  if (Wait.XCnt != ~0u)
-    OS << LS << "XCnt: " << Wait.XCnt;
-  if (LS.unused())
-    OS << "none";
-  OS << '\n';
-  return OS;
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {
@@ -3599,9 +3618,12 @@ convertSetRegImmToVgprMSBs(unsigned Imm, unsigned Simm16,
 
   auto [HwRegId, Offset, Size] = Hwreg::HwregEncoding::decode(Simm16);
   if (HwRegId != Hwreg::ID_MODE ||
-      (!HasSetregVGPRMSBFixup && (Offset + Size) <= VGPRMSBShift))
+      (!HasSetregVGPRMSBFixup && (Offset + Size) < VGPRMSBShift))
     return {};
-  Imm = ((Imm >> Offset) & Hwreg::VGPR_MSB_MASK) >> VGPRMSBShift;
+  // If there is SetregVGPRMSBFixup then Offset is ignored.
+  if (!HasSetregVGPRMSBFixup)
+    Imm <<= Offset;
+  Imm = (Imm & Hwreg::VGPR_MSB_MASK) >> VGPRMSBShift;
   if (!HasSetregVGPRMSBFixup)
     Imm &= llvm::maskTrailingOnes<unsigned>(Size);
   return llvm::rotr<uint8_t>(static_cast<uint8_t>(Imm), /*R=*/2);

@@ -296,9 +296,13 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     if (Dest && Src && Dest->getLength() == Src->getLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_ArrayToPointerDecay:
+    assert(Src && "Array expression should have origins as it is GL value");
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        Dest->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
+    return;
   case CK_FunctionToPointerDecay:
   case CK_BuiltinFnToFnPtr:
-  case CK_ArrayToPointerDecay:
     // Ignore function-to-pointer decays.
     return;
   default:
@@ -470,10 +474,38 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
   }
 }
 
+void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
+  assert(ASE->isGLValue() && "Array subscript should be a GL value");
+  OriginList *Dst = getOriginsList(*ASE);
+  assert(Dst && "Array subscript should have origins as it is a GL value");
+  OriginList *Src = getOriginsList(*ASE->getBase());
+  assert(Src && "Base of array subscript should have origins");
+  CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+      Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
+}
+
+bool FactsGenerator::escapesViaReturn(OriginID OID) const {
+  return llvm::any_of(EscapesInCurrentBlock, [OID](const Fact *F) {
+    if (const auto *EF = F->getAs<ReturnEscapeFact>())
+      return EF->getEscapedOriginID() == OID;
+    return false;
+  });
+}
+
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
     return;
+  // Expire the origin when its variable's lifetime ends to ensure liveness
+  // doesn't persist through loop back-edges.
+  std::optional<OriginID> ExpiredOID;
+  if (OriginList *List = getOriginsList(*LifetimeEndsVD)) {
+    OriginID OID = List->getOuterOriginID();
+    // Skip origins that escape via return; the escape checker needs their loans
+    // to remain until the return statement is processed.
+    if (!escapesViaReturn(OID))
+      ExpiredOID = OID;
+  }
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
     if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
@@ -483,7 +515,8 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
       const ValueDecl *Path = AP.getAsValueDecl();
       if (Path == LifetimeEndsVD)
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-            BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+            BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc(),
+            ExpiredOID));
     }
   }
 }
