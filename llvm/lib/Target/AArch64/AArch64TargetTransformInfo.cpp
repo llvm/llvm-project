@@ -6854,9 +6854,12 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
   case Instruction::Xor:
     // EON only for scalars (possibly expanded fixed vectors)
     // and vectors using the SVE2/SME BSL2N instruction.
-    if (I->getType()->isVectorTy() && ST->hasNEON() && !ST->hasSVE2() &&
-        !ST->hasSME())
-      break;
+    if (I->getType()->isVectorTy() && ST->isNeonAvailable()) {
+      bool hasBSL2N = ST->isSVEorStreamingSVEAvailable() &&
+                      (ST->hasSVE2() || ST->hasSME());
+      if (!hasBSL2N)
+        break;
+    }
     [[fallthrough]];
   case Instruction::And:
   case Instruction::Or:
