@@ -2908,7 +2908,7 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
     return TemplateArgumentLoc(Arg, Arg.getAsExpr());
 
   case TemplateArgument::Pack:
-    return TemplateArgumentLoc(Arg, TemplateArgumentLocInfo());
+    return TemplateArgumentLoc(Arg, TemplateArgumentLocInfo(Context, Loc));
   }
 
   llvm_unreachable("Invalid TemplateArgument Kind!");
