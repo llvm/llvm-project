@@ -71,8 +71,8 @@ define i32 @umul_min_max_assoc(i32 %0, i32 %1, i32 %2) {
   ret i32 %7
 }
 
-define i32 @sadd_min_max_assoc_wrong1(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: define i32 @sadd_min_max_assoc_wrong1(
+define i32 @add_min_max_assoc_wrong(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: define i32 @add_min_max_assoc_wrong(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP2]], [[TMP4]]
@@ -87,8 +87,8 @@ define i32 @sadd_min_max_assoc_wrong1(i32 %0, i32 %1, i32 %2) {
   ret i32 %7
 }
 
-define i32 @sadd_min_max_assoc_wrong2(i32 %0, i32 %1, i32 %2) {
-; CHECK-LABEL: define i32 @sadd_min_max_assoc_wrong2(
+define i32 @mul_min_max_assoc_wrong(i32 %0, i32 %1, i32 %2) {
+; CHECK-LABEL: define i32 @mul_min_max_assoc_wrong(
 ; CHECK-SAME: i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP2]], [[TMP4]]
