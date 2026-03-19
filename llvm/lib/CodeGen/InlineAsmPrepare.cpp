@@ -60,7 +60,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
-#include <sstream>
 
 using namespace llvm;
 
@@ -107,56 +106,57 @@ static bool isRegMemConstraint(StringRef Constraint) {
 
 /// Tag "rm" output constraints with '*' to signify that they default to a
 /// memory location.
-static std::tuple<std::string, bool, bool>
+static std::pair<std::string, MemoryEffects>
 convertConstraintsToMemory(StringRef ConstraintStr) {
   std::vector<std::string> Constraints;
   Constraints.reserve(ConstraintStr.count(',') + 1);
 
-  std::istringstream OS(ConstraintStr.str());
-  std::string Constraint;
-  while (std::getline(OS, Constraint, ','))
-    Constraints.push_back(Constraint);
-
-  bool HasRegMem = false;
-  bool MayWriteMem = false;
-  for (auto &Constraint : Constraints) {
+  MemoryEffects NewME = MemoryEffects::none();
+  for (StringRef Constraint : llvm::split(ConstraintStr, ',')) {
     std::string NewConstraint;
 
     auto I = Constraint.begin(), E = Constraint.end();
+    bool IsInput = false;
+    bool IsOutput = false;
     bool HasIndirect = false;
 
     if (*I == '=') {
-      if (Constraint.size() == 1)
-        return {};
       ++I;
       NewConstraint += '=';
+      IsOutput = true;
     }
+    if (I == E)
+      return {std::string(), MemoryEffects::none()};
     if (*I == '*') {
-      if (Constraint.size() == 1)
-        return {};
       ++I;
       NewConstraint += '*';
       HasIndirect = true;
     }
+    if (I == E)
+      return {std::string(), MemoryEffects::none()};
     if (*I == '+') {
-      if (Constraint.size() == 1)
-        return {};
       ++I;
       NewConstraint += '+';
+      IsInput = true;
+      IsOutput = true;
     }
+    if (I == E)
+      return {std::string(), MemoryEffects::none()};
 
-    if (isRegMemConstraint(std::string(I, E))) {
-      HasRegMem = true;
-      MayWriteMem = true;
+    std::string RestConstraint(I, E);
+    if (isRegMemConstraint(RestConstraint)) {
+      if (IsInput)
+        NewME |= MemoryEffects::argMemOnly(ModRefInfo::Ref);
+      if (IsOutput)
+        NewME |= MemoryEffects::argMemOnly(ModRefInfo::Mod);
       if (!HasIndirect)
         NewConstraint += '*';
     }
 
-    NewConstraint += std::string(I, E);
-    Constraint = NewConstraint;
+    Constraints.push_back(NewConstraint + RestConstraint);
   }
 
-  return {llvm::join(Constraints, ","), HasRegMem, MayWriteMem};
+  return {llvm::join(Constraints, ","), NewME};
 }
 
 /// Build a map of tied constraints. TiedOutput[i] = j means Constraint i is an
@@ -262,7 +262,7 @@ static CallInst *
 createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
                    Type *NewRetTy, ArrayRef<Value *> NewArgs,
                    ArrayRef<std::pair<unsigned, Type *>> ElementTypeAttrs,
-                   CallBase *CB, bool MayWriteMem, IRBuilder<> &Builder,
+                   CallBase *CB, MemoryEffects NewME, IRBuilder<> &Builder,
                    LLVMContext &Context) {
   SmallVector<Type *> NewArgTypes;
   for (const auto *NewArg : NewArgs)
@@ -276,10 +276,10 @@ createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
   CallInst *NewCall = Builder.CreateCall(NewFTy, NewIA, NewArgs);
   NewCall->setCallingConv(CB->getCallingConv());
   NewCall->setAttributes(CB->getAttributes());
-  NewCall->setDebugLoc(CB->getDebugLoc());
-  NewCall->setMemoryEffects(MayWriteMem ? MemoryEffects::writeOnly()
-                                        : MemoryEffects::readOnly());
   NewCall->copyMetadata(*CB);
+
+  // Copy over the MemoryEffects and add whether they write and/or read memory.
+  NewCall->setMemoryEffects(CB->getMemoryEffects() | NewME);
 
   for (const auto &[Index, Ty] : ElementTypeAttrs)
     NewCall->addParamAttr(Index,
@@ -347,9 +347,9 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
   const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
 
-  const auto &[NewConstraintStr, HasRegMem, MayWriteMem] =
+  const auto &[NewConstraintStr, NewME] =
       convertConstraintsToMemory(IA->getConstraintString());
-  if (!HasRegMem)
+  if (NewME.doesNotAccessMemory())
     return false;
 
   IRBuilder<> Builder(CB);
@@ -408,7 +408,7 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   // Create the new inline assembly call.
   CallInst *NewCall = createNewInlineAsm(IA, NewConstraintStr, NewRetTy,
                                          NewArgs, ElementTypeAttrs, CB,
-                                         MayWriteMem, Builder, F.getContext());
+                                         NewME, Builder, F.getContext());
 
   // Reconstruct the return value and update users.
   if (!CB->use_empty()) {
