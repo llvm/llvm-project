@@ -2142,10 +2142,17 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                              SourceLocation PlacementRParen,
                              SourceRange TypeIdParens, QualType AllocType,
                              TypeSourceInfo *AllocTypeInfo,
-                             std::optional<Expr *> ArraySize,
+                             std::optional<Expr *> OptArraySize,
                              SourceRange DirectInitRange, Expr *Initializer) {
   SourceRange TypeRange = AllocTypeInfo->getTypeLoc().getSourceRange();
   SourceLocation StartLoc = Range.getBegin();
+
+  Expr *ArraySize = OptArraySize.value_or(nullptr);
+
+  auto UpdateArraySize = [&](Expr *NewSize) {
+    OptArraySize = NewSize;
+    ArraySize = NewSize;
+  };
 
   CXXNewInitializationStyle InitStyle;
   if (DirectInitRange.isValid()) {
@@ -2199,11 +2206,11 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   auto *Deduced = AllocType->getContainedDeducedType();
   if (Deduced && !Deduced->isDeduced() &&
       isa<DeducedTemplateSpecializationType>(Deduced)) {
-    if (ArraySize) {
+    if (OptArraySize) {
       SourceLocation ArraySizeExprLoc =
-          *ArraySize ? (*ArraySize)->getExprLoc() : TypeRange.getBegin();
+          ArraySize ? ArraySize->getExprLoc() : TypeRange.getBegin();
       SourceRange ArraySizeSourceRange =
-          *ArraySize ? (*ArraySize)->getSourceRange() : TypeRange;
+          ArraySize ? ArraySize->getSourceRange() : TypeRange;
       return ExprError(
           Diag(ArraySizeExprLoc, diag::err_deduced_class_template_compound_type)
           << /*array*/ 2 << ArraySizeSourceRange);
@@ -2260,11 +2267,12 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // Per C++0x [expr.new]p5, the type being constructed may be a
   // typedef of an array type.
   // Dependent case will be handled separately.
-  if (!ArraySize && !AllocType->isDependentType()) {
+  if (!OptArraySize && !AllocType->isDependentType()) {
     if (const ConstantArrayType *Array
                               = Context.getAsConstantArrayType(AllocType)) {
-      ArraySize = IntegerLiteral::Create(
+      Expr *NewSize = IntegerLiteral::Create(
           Context, Array->getSize(), Context.getSizeType(), TypeRange.getEnd());
+      UpdateArraySize(NewSize);
       AllocType = Array->getElementType();
     }
   }
@@ -2272,7 +2280,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   if (CheckAllocatedType(AllocType, TypeRange.getBegin(), TypeRange))
     return ExprError();
 
-  if (ArraySize && !checkArrayElementAlignment(AllocType, TypeRange.getBegin()))
+  if (OptArraySize &&
+      !checkArrayElementAlignment(AllocType, TypeRange.getBegin()))
     return ExprError();
 
   // In ARC, infer 'retaining' for the allocated
@@ -2286,9 +2295,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   QualType ResultType = Context.getPointerType(AllocType);
 
   bool IsArraySizeNonOverloadPlaceholderType =
-      *ArraySize && (*ArraySize)->getType()->isNonOverloadPlaceholderType();
+      ArraySize && ArraySize->getType()->isNonOverloadPlaceholderType();
   if (IsArraySizeNonOverloadPlaceholderType) {
-    ExprResult result = CheckPlaceholderExpr(*ArraySize);
+    ExprResult result = CheckPlaceholderExpr(ArraySize);
     if (result.isInvalid())
       return ExprError();
   }
@@ -2300,20 +2309,19 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // C++1y [expr.new]p6: The expression [...] is implicitly converted to
   //   std::size_t.
   std::optional<uint64_t> KnownArraySize;
-  bool IsArraySizeNotTypeDependent =
-      *ArraySize && !(*ArraySize)->isTypeDependent();
+  bool IsArraySizeNotTypeDependent = ArraySize && !ArraySize->isTypeDependent();
   if (IsArraySizeNotTypeDependent) {
     ExprResult ConvertedSize;
     if (getLangOpts().CPlusPlus14) {
       assert(Context.getTargetInfo().getIntWidth() && "Builtin type of size 0?");
 
       ConvertedSize = PerformImplicitConversion(
-          *ArraySize, Context.getSizeType(), AssignmentAction::Converting);
+          ArraySize, Context.getSizeType(), AssignmentAction::Converting);
 
-      if (!ConvertedSize.isInvalid() && (*ArraySize)->getType()->isRecordType())
+      if (!ConvertedSize.isInvalid() && ArraySize->getType()->isRecordType())
         // Diagnose the compatibility of this conversion.
         Diag(StartLoc, diag::warn_cxx98_compat_array_size_conversion)
-            << (*ArraySize)->getType() << 0 << "'size_t'";
+            << ArraySize->getType() << 0 << "'size_t'";
     } else {
       class SizeConvertDiagnoser : public ICEConvertDiagnoser {
       protected:
@@ -2367,16 +2375,17 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                           : diag::ext_array_size_conversion)
                    << T << ConvTy->isEnumeralType() << ConvTy;
         }
-      } SizeDiagnoser(*ArraySize);
+      } SizeDiagnoser(ArraySize);
 
-      ConvertedSize = PerformContextualImplicitConversion(StartLoc, *ArraySize,
+      ConvertedSize = PerformContextualImplicitConversion(StartLoc, ArraySize,
                                                           SizeDiagnoser);
     }
     if (ConvertedSize.isInvalid())
       return ExprError();
 
-    ArraySize = ConvertedSize.get();
-    QualType ArraySizeType = (*ArraySize)->getType();
+    UpdateArraySize(ConvertedSize.get());
+    QualType ArraySizeType = ArraySize->getType();
+
     if (!ArraySizeType->isIntegralOrUnscopedEnumerationType())
       return ExprError();
 
@@ -2393,10 +2402,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     // FIXME: Per CWG1464, we are required to check the value prior to
     // converting to size_t. This will never find a negative array size in
     // C++14 onwards, because Value is always unsigned here!
-    SourceLocation ArraySizeBeginLoc = (*ArraySize)->getBeginLoc();
-    SourceRange ArraySizeSourceRange = (*ArraySize)->getSourceRange();
+    SourceLocation ArraySizeBeginLoc = ArraySize->getBeginLoc();
+    SourceRange ArraySizeSourceRange = ArraySize->getSourceRange();
     if (std::optional<llvm::APSInt> Value =
-            (*ArraySize)->getIntegerConstantExpr(Context)) {
+            ArraySize->getIntegerConstantExpr(Context)) {
       if (Value->isSigned() && Value->isNegative()) {
         return ExprError(
             Diag(ArraySizeBeginLoc, diag::err_typecheck_negative_array_size)
@@ -2451,7 +2460,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   if (!AllocType->isDependentType() &&
       !Expr::hasAnyTypeDependentArguments(PlacementArgs) &&
       FindAllocationFunctions(StartLoc, AllocationParameterRange, Scope, Scope,
-                              AllocType, ArraySize.has_value(), IAP,
+                              AllocType, OptArraySize.has_value(), IAP,
                               PlacementArgs, OperatorNew, OperatorDelete))
     return ExprError();
 
@@ -2589,14 +2598,14 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           AllocType,
           llvm::APInt(Context.getTypeSize(Context.getSizeType()),
                       *KnownArraySize),
-          *ArraySize, ArraySizeModifier::Normal, 0);
-    else if (ArraySize)
+          ArraySize, ArraySizeModifier::Normal, 0);
+    else if (OptArraySize)
       InitType = Context.getIncompleteArrayType(AllocType,
                                                 ArraySizeModifier::Normal, 0);
     else
       InitType = AllocType;
 
-    bool IsArraySizeExprNotNull = ArraySize && *ArraySize;
+    bool IsArraySizeExprNotNull = OptArraySize && ArraySize;
     bool VariableLengthArrayNew = IsArraySizeExprNotNull && !KnownArraySize;
     InitializedEntity Entity = InitializedEntity::InitializeNew(
         StartLoc, InitType, VariableLengthArrayNew);
@@ -2617,14 +2626,15 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     // FIXME: If we have a KnownArraySize, check that the array bound of the
     // initializer is no greater than that constant value.
 
-    bool IsArraySizeExprNull = ArraySize && !*ArraySize;
+    bool IsArraySizeExprNull = OptArraySize && !ArraySize;
     if (IsArraySizeExprNull) {
       auto *CAT = Context.getAsConstantArrayType(Initializer->getType());
       if (CAT) {
         // FIXME: Track that the array size was inferred rather than explicitly
         // specified.
-        ArraySize = IntegerLiteral::Create(
+        Expr *NewSize = IntegerLiteral::Create(
             Context, CAT->getSize(), Context.getSizeType(), TypeRange.getEnd());
+        UpdateArraySize(NewSize);
       } else {
         Diag(TypeRange.getEnd(), diag::err_new_array_size_unknown_from_init)
             << Initializer->getSourceRange();
@@ -2652,14 +2662,14 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // for compatibility.
   if (const CXXConstructExpr *CCE =
           dyn_cast_or_null<CXXConstructExpr>(Initializer);
-      CCE && ArraySize) {
+      CCE && OptArraySize) {
     Context.setClassNeedsVectorDeletingDestructor(
         CCE->getConstructor()->getParent());
   }
 
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
                             IAP, UsualArrayDeleteWantsSize, PlacementArgs,
-                            TypeIdParens, ArraySize, InitStyle, Initializer,
+                            TypeIdParens, OptArraySize, InitStyle, Initializer,
                             ResultType, AllocTypeInfo, Range, DirectInitRange);
 }
 
