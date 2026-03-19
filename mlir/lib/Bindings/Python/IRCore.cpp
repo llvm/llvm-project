@@ -2783,8 +2783,7 @@ static std::string formatMLIRError(const MLIRError &e) {
     if (sv.size() > 6 && sv.substr(0, 5) == "#loc(" && sv.back() == ')') {
       sv.remove_prefix(5); // "#loc("
       sv.remove_suffix(1); // ")"
-    } else if (sv.size() > 5 && sv.substr(0, 4) == "loc(" &&
-               sv.back() == ')') {
+    } else if (sv.size() > 5 && sv.substr(0, 4) == "loc(" && sv.back() == ')') {
       sv.remove_prefix(4); // "loc("
       sv.remove_suffix(1); // ")"
     }
