@@ -311,7 +311,7 @@ DependencyScanningTool::createActionController(
     LookupModuleOutputCallback LookupModuleOutput) {
   if (Worker.getScanningFormat() == ScanningOutputFormat::FullIncludeTree)
     return createIncludeTreeActionController(LookupModuleOutput,
-                                             *Worker.getCAS());
+                                             *Worker.getService().getCAS());
   return std::make_unique<CallbackActionController>(LookupModuleOutput);
 }
 

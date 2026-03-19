@@ -1540,14 +1540,9 @@ static IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
              const CASOptions &CASOpts, DiagnosticsEngine &Diags,
              IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-             std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
+             std::shared_ptr<llvm::cas::ObjectStore> CAS) {
   if (FEOpts.CASIncludeTreeID.empty())
     return BaseFS;
-
-  // If no CAS was provided, create one with CASOptions.
-  std::shared_ptr<llvm::cas::ObjectStore> CAS = std::move(OverrideCAS);
-  if (!CAS)
-    CAS = CASOpts.getOrCreateDatabases(Diags).first;
 
   // Helper for creating a valid (but empty) CAS FS if an error is encountered.
   auto makeEmptyCASFS = [&CAS]() {
@@ -1573,6 +1568,8 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
   };
 
   // CAS couldn't be created. The error was already reported to Diags.
+  assert((CAS || Diags.hasErrorOccurred()) &&
+         "CAS is missing but not diagnosed");
   if (!CAS)
     return makeEmptyCASFS();
 
@@ -5871,21 +5868,20 @@ void CompilerInvocation::clearImplicitModuleBuildOptions() {
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
-    std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
+    std::shared_ptr<llvm::cas::ObjectStore> CAS) {
   return createVFSFromCompilerInvocation(
-      CI, Diags, llvm::vfs::getRealFileSystem(), std::move(OverrideCAS));
+      CI, Diags, llvm::vfs::getRealFileSystem(), std::move(CAS));
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
+    std::shared_ptr<llvm::cas::ObjectStore> CAS) {
   return createVFSFromOverlayFiles(
       CI.getHeaderSearchOpts().VFSOverlayFiles, Diags,
       createBaseFS(CI.getFileSystemOpts(), CI.getFrontendOpts(),
-                   CI.getCASOpts(), Diags, std::move(BaseFS),
-                   std::move(OverrideCAS)));
+                   CI.getCASOpts(), Diags, std::move(BaseFS), std::move(CAS)));
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem> clang::createVFSFromOverlayFiles(

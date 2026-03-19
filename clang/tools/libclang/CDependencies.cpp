@@ -936,7 +936,7 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
     ReproducerCASOpts.CASPath = CASPath.str();
     ReproducerCASOpts.PluginPath = Opts.CASOpts.PluginPath;
     ReproducerCASOpts.PluginOptions = Opts.CASOpts.PluginOptions;
-    auto DBsOrErr = ReproducerCASOpts.getOrCreateDatabases();
+    auto DBsOrErr = ReproducerCASOpts.CASConfiguration::createDatabases();
     if (!DBsOrErr)
       return ReportFailure() << "failed to create a CAS database\n"
                              << toString(DBsOrErr.takeError());

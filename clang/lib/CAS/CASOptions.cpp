@@ -20,80 +20,27 @@ using namespace llvm::cas;
 
 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
           std::shared_ptr<llvm::cas::ActionCache>>
-CASOptions::getOrCreateDatabases(DiagnosticsEngine &Diags,
-                                 bool CreateEmptyDBsOnFailure) const {
-  if (IsFrozen)
-    return {Cache.CAS, Cache.AC};
+CASOptions::createDatabases(DiagnosticsEngine &Diags,
+                            bool CreateEmptyDBsOnFailure) const {
+  auto DBs = CASConfiguration::createDatabases();
+  if (DBs)
+    return std::move(*DBs);
 
-  if (auto E = initCache())
-    Diags.Report(diag::err_cas_cannot_be_initialized) << toString(std::move(E));
+  Diags.Report(diag::err_cas_cannot_be_initialized)
+      << toString(DBs.takeError());
 
-  if (!Cache.CAS && CreateEmptyDBsOnFailure)
-    Cache.CAS = llvm::cas::createInMemoryCAS();
-  if (!Cache.AC && CreateEmptyDBsOnFailure)
-    Cache.AC = llvm::cas::createInMemoryActionCache();
-  return {Cache.CAS, Cache.AC};
-}
-
-llvm::Expected<std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
-                         std::shared_ptr<llvm::cas::ActionCache>>>
-CASOptions::getOrCreateDatabases() const {
-  if (auto E = initCache())
-    return std::move(E);
-  return std::pair{Cache.CAS, Cache.AC};
-}
-
-void CASOptions::freezeConfig(DiagnosticsEngine &Diags) {
-  if (IsFrozen)
-    return;
-
-  // Make sure the cache is initialized.
-  if (auto E = initCache())
-    Diags.Report(diag::err_cas_cannot_be_initialized) << toString(std::move(E));
-
-  // Freeze the CAS and wipe out the visible config to hide it from future
-  // accesses. For example, future diagnostics cannot see this. Something that
-  // needs direct access to the CAS configuration will need to be
-  // scheduled/executed at a level that has access to the configuration.
-  auto &CurrentConfig = static_cast<CASConfiguration &>(*this);
-  CurrentConfig = CASConfiguration();
-  IsFrozen = true;
-
-  if (Cache.CAS) {
-    // Set the CASPath to the hash schema, since that leaks through CASContext's
-    // API and is observable.
-    CurrentConfig.CASPath =
-        Cache.CAS->getContext().getHashSchemaIdentifier().str();
-    CurrentConfig.PluginPath.clear();
-    CurrentConfig.PluginOptions.clear();
-  }
+  if (CreateEmptyDBsOnFailure)
+    return {llvm::cas::createInMemoryCAS(),
+            llvm::cas::createInMemoryActionCache()};
+  return {nullptr, nullptr};
 }
 
 void CASOptions::ensurePersistentCAS() {
-  assert(!IsFrozen && "Expected to check for a persistent CAS before freezing");
   switch (getKind()) {
-  case UnknownCAS:
-    llvm_unreachable("Cannot ensure persistent CAS if it's unknown / frozen");
   case InMemoryCAS:
     CASPath = "auto";
     break;
   case OnDiskCAS:
     break;
   }
-}
-
-llvm::Error CASOptions::initCache() const {
-  auto &CurrentConfig = static_cast<const CASConfiguration &>(*this);
-  if (CurrentConfig == Cache.Config && Cache.CAS && Cache.AC)
-    return llvm::Error::success();
-
-  Cache.Config = CurrentConfig;
-  StringRef CASPath = Cache.Config.CASPath;
-
-  auto DBs = Cache.Config.createDatabases();
-  if (!DBs)
-    return DBs.takeError();
-
-  std::tie(Cache.CAS, Cache.AC) = std::move(*DBs);
-  return llvm::Error::success();
 }

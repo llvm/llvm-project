@@ -202,10 +202,9 @@ public:
       DependencyActionController &Controller, DiagnosticConsumer &DiagsConsumer,
       raw_ostream *VerboseOS, bool DiagGenerationAsCompilation);
 
-  ScanningOutputFormat getScanningFormat() const { return Service.getFormat(); }
+  DependencyScanningService &getService() const { return Service; }
 
-  const CASOptions &getCASOpts() const { return CASOpts; }
-  std::shared_ptr<cas::ObjectStore> getCAS() const { return CAS; }
+  ScanningOutputFormat getScanningFormat() const { return Service.getFormat(); }
 
   llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
 

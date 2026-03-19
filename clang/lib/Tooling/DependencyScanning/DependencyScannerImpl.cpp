@@ -621,6 +621,11 @@ bool initializeScanCompilerInstance(
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
     bool DiagGenerationAsCompilation, raw_ostream *VerboseOS) {
+  // Pre-set the shared CAS databases on the scan instance so that code which
+  // calls getOrCreateObjectStore()/getOrCreateActionCache() before
+  // createVirtualFileSystem() gets the correct shared instance.
+  ScanInstance.setCASDatabases(Service.getCAS(), Service.getActionCache());
+
   ScanInstance.setBuildingModule(false);
 
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);

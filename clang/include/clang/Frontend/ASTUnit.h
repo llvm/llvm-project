@@ -124,6 +124,8 @@ private:
   std::unique_ptr<HeaderSearchOptions> HSOpts;
   std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
+  std::shared_ptr<cas::ObjectStore> CAS;
+  std::shared_ptr<cas::ActionCache> ActionCache;
   bool HadModuleLoaderFatalFailure = false;
   bool StorePreamblesInMemory = false;
 

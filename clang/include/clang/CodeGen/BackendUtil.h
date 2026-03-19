@@ -41,11 +41,10 @@ enum BackendAction {
 };
 
 void emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
-		                   const CASOptions &CASOpts, // MCCAS 
                        StringRef TDesc, llvm::Module *M, BackendAction Action,
                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                        std::unique_ptr<raw_pwrite_stream> OS,
-                       std::unique_ptr<raw_pwrite_stream> CasidOS = nullptr,		       
+                       std::unique_ptr<raw_pwrite_stream> CasidOS = nullptr,
                        BackendConsumer *BC = nullptr);
 
 void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,

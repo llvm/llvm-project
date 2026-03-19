@@ -236,7 +236,12 @@ public:
     return Worker.getScanningFormat();
   }
 
-  const CASOptions &getCASOpts() const { return Worker.getCASOpts(); }
+  std::shared_ptr<cas::ObjectStore> getCAS() const {
+    return Worker.getService().getCAS();
+  }
+  const CASOptions &getCASOpts() const {
+    return Worker.getService().getCASOpts();
+  }
 
   static std::unique_ptr<DependencyActionController>
   createActionController(DependencyScanningWorker &Worker,

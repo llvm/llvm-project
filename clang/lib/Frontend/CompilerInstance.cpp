@@ -295,9 +295,8 @@ void CompilerInstance::createVirtualFileSystem(
   DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DC,
                           /*ShouldOwnClient=*/false);
 
-  std::tie(CAS, ActionCache) =
-      getInvocation().getCASOpts().getOrCreateDatabases(
-          Diags, /*CreateEmptyCASOnFailure=*/false);
+  if (getFrontendOpts().needsCAS())
+    getOrCreateCASDatabases(&Diags);
 
   VFS = createVFSFromCompilerInvocation(getInvocation(), Diags,
                                         std::move(BaseFS), CAS);
@@ -869,10 +868,9 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
           currentModule, getLangOpts().APINotesModules,
           getAPINotesOpts().ModuleSearchPaths);
     else
-      loadAPINotesFromIncludeTree(
-          *getCASOpts().getOrCreateDatabases(getDiagnostics()).first,
-          TheSema->APINotes, getDiagnostics(),
-          getFrontendOpts().CASIncludeTreeID);
+      loadAPINotesFromIncludeTree(getOrCreateObjectStore(), TheSema->APINotes,
+                                  getDiagnostics(),
+                                  getFrontendOpts().CASIncludeTreeID);
 
     // Check for any attributes we should add to the module
     for (auto reader : TheSema->APINotes.getCurrentModuleReaders()) {
@@ -970,14 +968,26 @@ llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputBackend() {
 
 std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
           std::shared_ptr<llvm::cas::ActionCache>>
-CompilerInstance::getOrCreateCASDatabases() {
-  // Create a new CAS databases from the CompilerInvocation. Future calls to
-  // createFileManager() will use the same CAS.
+CompilerInstance::getOrCreateCASDatabases(DiagnosticsEngine *Diags) {
+  if (CAS && ActionCache)
+    return {CAS, ActionCache};
+  if (!Diags)
+    Diags = this->Diagnostics.get();
+  // Create a new CAS databases from the CompilerInvocation. Future calls will
+  // use the same CAS.
   std::tie(CAS, ActionCache) =
-      getInvocation().getCASOpts().getOrCreateDatabases(
-          getDiagnostics(),
-          /*CreateEmptyCASOnFailure=*/true);
+      getCASOpts().createDatabases(*Diags, /*CreateEmptyDBsOnFailure=*/true);
   return {CAS, ActionCache};
+}
+
+void CompilerInstance::setCASDatabases(
+    std::shared_ptr<llvm::cas::ObjectStore> CAS,
+    std::shared_ptr<llvm::cas::ActionCache> ActionCache) {
+  assert((!this->CAS || this->CAS == CAS) && "modifying CompilerInstance CAS");
+  assert((!this->ActionCache || this->ActionCache == ActionCache) &&
+         "modifying CompilerInstance Cache");
+  this->CAS = std::move(CAS);
+  this->ActionCache = std::move(ActionCache);
 }
 
 llvm::cas::ObjectStore &CompilerInstance::getOrCreateObjectStore() {
@@ -1020,17 +1030,15 @@ void CompilerInstance::initializeDelayedInputFileFromCAS() {
     Diagnostics->Report(diag::err_fe_unable_to_load_include_tree)
         << Opts.CASIncludeTreeID << llvm::toString(std::move(E));
   };
-  auto CAS = Invocation->getCASOpts().getOrCreateDatabases(*Diagnostics).first;
-  if (!CAS)
-    return;
+  auto &CAS = getOrCreateObjectStore();
   if (!Opts.CASIncludeTreeID.empty()) {
-    auto ID = CAS->parseID(Opts.CASIncludeTreeID);
+    auto ID = CAS.parseID(Opts.CASIncludeTreeID);
     if (!ID)
       return reportError(ID.takeError());
-    auto Object = CAS->getReference(*ID);
+    auto Object = CAS.getReference(*ID);
     if (!Object)
       return reportError(llvm::cas::ObjectStore::createUnknownObjectError(*ID));
-    auto Root = cas::IncludeTreeRoot::get(*CAS, *Object);
+    auto Root = cas::IncludeTreeRoot::get(CAS, *Object);
     if (!Root)
       return reportError(Root.takeError());
     auto MainTree = Root->getMainFileTree();
@@ -1062,14 +1070,14 @@ void CompilerInstance::initializeDelayedInputFileFromCAS() {
     return;
   }
   if (!Opts.CASInputFileCASID.empty()) {
-    auto ID = CAS->parseID(Opts.CASInputFileCASID);
+    auto ID = CAS.parseID(Opts.CASInputFileCASID);
     if (!ID)
       return reportError(ID.takeError());
-    auto ValueRef = CAS->getReference(*ID);
+    auto ValueRef = CAS.getReference(*ID);
     if (!ValueRef)
       return reportError(llvm::cas::ObjectStore::createUnknownObjectError(*ID));
 
-    cas::CompileJobResultSchema Schema(*CAS);
+    cas::CompileJobResultSchema Schema(CAS);
     auto Result = Schema.load(*ValueRef);
     if (!Result)
       return reportError(Result.takeError());
@@ -1079,7 +1087,7 @@ void CompilerInstance::initializeDelayedInputFileFromCAS() {
       return reportError(
           llvm::createStringError("unable to get the main compilation output"));
 
-    auto OutProxy = CAS->getProxy(Output->Object);
+    auto OutProxy = CAS.getProxy(Output->Object);
     if (!OutProxy)
       return reportError(OutProxy.takeError());
 
@@ -1397,6 +1405,9 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   auto &Instance = *InstancePtr;
 
   auto &Inv = Instance.getInvocation();
+
+  if (CAS)
+    Instance.setCASDatabases(CAS, ActionCache);
 
   if (ThreadSafeConfig) {
     Instance.setVirtualFileSystem(ThreadSafeConfig->getVFS());

@@ -133,6 +133,9 @@ public:
 
   std::time_t getBuildSessionTimestamp() const { return BuildSessionTimestamp; }
 
+  std::shared_ptr<llvm::cas::ActionCache> getActionCache() const {
+    return Cache;
+  }
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
