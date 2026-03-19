@@ -4,6 +4,7 @@
 
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i64 @llvm.ctlz.i64(i64, i1)
+declare i32 @llvm.amdgcn.sffbh.i32(i32)
 
 ; Test that ctls(x) is lowered to umin(ffbh_i32(x), bitwidth) - 1
 ; ctls is formed by the DAG combiner from: ctlz(x ^ ashr(x, 31)) - 1
@@ -176,6 +177,67 @@ define i32 @ctls_i64(i64 %x) {
   %d = sub i64 %c, 1
   %e = trunc i64 %d to i32
   ret i32 %e
+}
+
+; @llvm.amdgcn.sffbh must still produce raw hardware result.
+define i32 @sffbh_intrinsic(i32 %x) {
+; GFX6-LABEL: sffbh_intrinsic:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ffbh_i32_e32 v0, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: sffbh_intrinsic:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cls_i32_e32 v0, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %r = call i32 @llvm.amdgcn.sffbh.i32(i32 %x)
+  ret i32 %r
+}
+
+; sitofp i64 to f32 uses sffbh(Hi)-1, not CTLS.
+define float @sitofp_i64_to_f32(i64 %x) {
+; GFX6-LABEL: sitofp_i64_to_f32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_xor_b32_e32 v2, v0, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v2
+; GFX6-NEXT:    v_ffbh_i32_e32 v3, v1
+; GFX6-NEXT:    v_add_i32_e32 v2, vcc, 32, v2
+; GFX6-NEXT:    v_add_i32_e32 v3, vcc, -1, v3
+; GFX6-NEXT:    v_min_u32_e32 v2, v3, v2
+; GFX6-NEXT:    v_lshl_b64 v[0:1], v[0:1], v2
+; GFX6-NEXT:    v_min_u32_e32 v0, 1, v0
+; GFX6-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX6-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; GFX6-NEXT:    v_sub_i32_e32 v1, vcc, 32, v2
+; GFX6-NEXT:    v_ldexp_f32_e32 v0, v0, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: sitofp_i64_to_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_xor_b32_e32 v2, v0, v1
+; GFX11-NEXT:    v_cls_i32_e32 v3, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_ashrrev_i32_e32 v2, 31, v2
+; GFX11-NEXT:    v_add_nc_u32_e32 v3, -1, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_add_nc_u32_e32 v2, 32, v2
+; GFX11-NEXT:    v_min_u32_e32 v2, v3, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
+; GFX11-NEXT:    v_min_u32_e32 v0, 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX11-NEXT:    v_sub_nc_u32_e32 v1, 32, v2
+; GFX11-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_ldexp_f32 v0, v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %r = sitofp i64 %x to float
+  ret float %r
 }
 
 ; Negative tests:

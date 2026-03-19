@@ -3423,11 +3423,11 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
 SDValue AMDGPUTargetLowering::LowerCTLS(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
+  assert(Src.getValueType() == MVT::i32 && "LowerCTLS only supports i32");
   unsigned BitWidth = Src.getValueType().getScalarSizeInBits();
-  SDValue Ffbh = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
-                             DAG.getTargetConstant(Intrinsic::amdgcn_sffbh, SL,
-                                                   MVT::i32),
-                             Src);
+  SDValue Ffbh = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
+      DAG.getTargetConstant(Intrinsic::amdgcn_sffbh, SL, MVT::i32), Src);
   SDValue Clamped = DAG.getNode(ISD::UMIN, SL, MVT::i32, Ffbh,
                                 DAG.getConstant(BitWidth, SL, MVT::i32));
   return DAG.getNode(ISD::SUB, SL, MVT::i32, Clamped,

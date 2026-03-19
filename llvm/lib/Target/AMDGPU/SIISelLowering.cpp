@@ -15536,8 +15536,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   }
 
   // umin(sffbh(x), bitwidth) -> sffbh(x) if x is known to be not 0 or -1.
-  if (Opc == ISD::UMIN &&
-      Op0.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+  if (Opc == ISD::UMIN && Op0.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
       Op0.getConstantOperandVal(0) == Intrinsic::amdgcn_sffbh) {
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op1);
     if (C) {

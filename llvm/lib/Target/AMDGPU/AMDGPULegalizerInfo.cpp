@@ -4692,6 +4692,7 @@ bool AMDGPULegalizerInfo::legalizeCTLS(MachineInstr &MI,
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(Src);
+  assert(SrcTy == LLT::scalar(32) && "legalizeCTLS only supports s32");
   const LLT S32 = LLT::scalar(32);
   unsigned BitWidth = SrcTy.getSizeInBits();
 
