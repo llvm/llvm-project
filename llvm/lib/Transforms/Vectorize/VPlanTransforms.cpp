@@ -6155,40 +6155,42 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   assert(is_contained(UpdateR->operands(), Op) &&
          "Op should be operand of UpdateR");
 
-  // If Op is an extend, then it's still a valid partial reduction if the
-  // extended mul fulfills the other requirements.
-  // For example, reduce.add(ext(mul(ext(A), ext(B)))) is still a valid partial
-  // reduction since the inner extends will be widened. We already have oneUse
-  // checks on the inner extends so widening them is safe.
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
-  if (match(Op, m_ZExtOrSExt(m_Mul(m_VPValue(), m_VPValue()))) ||
-      match(Op, m_FPExt(m_FMul(m_VPValue(), m_VPValue())))) {
+  if (match(Op, m_AnyExtend(m_VPValue()))) {
     auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
-    OuterExtKind = getPartialReductionExtendKind(CastRecipe);
-    Op = CastRecipe->getOperand(0);
-  }
-
-  // Match: UpdateR(PrevValue, ext(...))
-  if ((UpdateR->getOpcode() == Instruction::Add ||
-       UpdateR->getOpcode() == Instruction::FAdd) &&
-      match(Op, m_AnyExtend(m_VPValue()))) {
-    assert(!OuterExtKind && "Op should be Mul BinOp with OuterExtKind");
-    return ExtendedReductionOperand{UpdateR,
-                                    {cast<VPWidenCastRecipe>(Op), nullptr}};
+    VPValue *CastSource = CastRecipe->getOperand(0);
+    if (match(CastSource, m_Mul(m_VPValue(), m_VPValue())) ||
+        match(CastSource, m_FMul(m_VPValue(), m_VPValue()))) {
+      // Match: ext(mul(...))
+      // Record the outer cast kind and set `Op` to the mul. We can then match
+      // this as a binary operator. Note: We can optimize out the outer extend
+      // by widening the inner extends to match it. See
+      // optimizeExtendsForPartialReduction.
+      Op = CastSource;
+      OuterExtKind = getPartialReductionExtendKind(CastRecipe);
+    } else if (UpdateR->getOpcode() == Instruction::Add ||
+               UpdateR->getOpcode() == Instruction::FAdd) {
+      // Match: UpdateR(PrevValue, ext(...))
+      // TODO: Remove the add/fadd restriction (we should be able to handle this
+      // case for sub reductions too).
+      return ExtendedReductionOperand{UpdateR, {CastRecipe, nullptr}};
+    }
   }
 
   // The rest of the matching assumes `Op` is a (possibly extended/negated)
   // binary operation.
-  VPWidenRecipe *BinOp = matchWidenBinaryOperator(Op);
-  if (!BinOp || !BinOp->hasOneUse())
+
+  if (!Op->hasOneUse())
     return std::nullopt;
 
-  // Handle neg(binop(...)) pattern.
+  // Handle neg(...) pattern (aka sub(0, ...)).
   VPValue *NegatedOp = nullptr;
-  if (match(BinOp, m_Sub(m_ZeroInt(), m_VPValue(NegatedOp)))) {
-    if (!(BinOp = matchWidenBinaryOperator(NegatedOp)))
-      return std::nullopt;
-  }
+  if (match(Op, m_Sub(m_ZeroInt(), m_VPValue(NegatedOp))))
+    Op = NegatedOp;
+
+  VPWidenRecipe *BinOp = matchWidenBinaryOperator(Op);
+  if (!BinOp)
+    return std::nullopt;
 
   VPValue *LHS = BinOp->getOperand(0);
   VPValue *RHS = BinOp->getOperand(1);
