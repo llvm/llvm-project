@@ -214,6 +214,27 @@ static bool isREX2(struct InternalInstruction *insn, uint8_t prefix) {
   return insn->mode == MODE_64BIT && prefix == 0xd5;
 }
 
+
+/// Sets an instruction's segmentOverride based on CPU mode, respecting ignored
+/// overrides.
+static void setSegmentOverride(struct InternalInstruction *insn,
+                               SegmentOverride prefix) {
+  // In 32-bit or 16-bit mode all segment override prefixes are used.
+  // In 64-bit mode, the ES/CS/SS/DS segment overrides should be ignored.
+  //
+  // There are some overloaded uses for these prefixes:
+  // - CS = HWNT (branch Hint Weakly Not Taken)
+  // - DS = NOTRACK + HST (branch Hint Strongly Taken)
+  //
+  // These are currently not handled by this code and will not appear in the
+  // final disassembly.
+  if (insn->mode != MODE_64BIT || prefix == SEG_OVERRIDE_FS ||
+      prefix == SEG_OVERRIDE_GS) {
+    insn->segmentOverride = prefix;
+    return;
+  }
+}
+
 // Consumes all of an instruction's prefix bytes, and marks the
 // instruction as having them.  Also sets the instruction's default operand,
 // address, and other relevant data sizes to report operands correctly.
@@ -295,22 +316,22 @@ static int readPrefixes(struct InternalInstruction *insn) {
       break;
     }
     case 0x2e: // CS segment override -OR- Branch not taken
-      insn->segmentOverride = SEG_OVERRIDE_CS;
+      setSegmentOverride(insn, SEG_OVERRIDE_CS);
       break;
-    case 0x36: // SS segment override -OR- Branch taken
-      insn->segmentOverride = SEG_OVERRIDE_SS;
+    case 0x36: // SS segment override
+      setSegmentOverride(insn, SEG_OVERRIDE_SS);
       break;
-    case 0x3e: // DS segment override
-      insn->segmentOverride = SEG_OVERRIDE_DS;
+    case 0x3e: // DS segment override -OR- Branch taken
+      setSegmentOverride(insn, SEG_OVERRIDE_DS);
       break;
     case 0x26: // ES segment override
-      insn->segmentOverride = SEG_OVERRIDE_ES;
+      setSegmentOverride(insn, SEG_OVERRIDE_ES);
       break;
     case 0x64: // FS segment override
-      insn->segmentOverride = SEG_OVERRIDE_FS;
+      setSegmentOverride(insn, SEG_OVERRIDE_FS);
       break;
     case 0x65: // GS segment override
-      insn->segmentOverride = SEG_OVERRIDE_GS;
+      setSegmentOverride(insn, SEG_OVERRIDE_GS);
       break;
     case 0x66: { // Operand-size override {
       uint8_t nextByte;

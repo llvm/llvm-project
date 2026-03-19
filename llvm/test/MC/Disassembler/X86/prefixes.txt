@@ -57,16 +57,16 @@
 # CHECK: movl 32(%rbp), %eax
 0x8b 0x45 0x20
 
-# CHECK: movl %es:32(%rbp), %eax
+# CHECK: movl 32(%rbp), %eax
 0x26 0x8b 0x45 0x20
 
-# CHECK: movl %es:32(%rbp), %eax
+# CHECK: movl 32(%rbp), %eax
 0x2e 0x26 0x8b 0x45 0x20
 
 # Test that multiple prefixes stack.
-#    (todo- the correct disassembly is actually more like "es movl %cs:32(%rbp), %eax"
+#    (todo- the correct disassembly is actually more like "es cs movl 32(%rbp), %eax"
 #    but we don't support that)
-# CHECK: movl %cs:32(%rbp), %eax
+# CHECK: movl 32(%rbp), %eax
 0x26 0x2e 0x8b 0x45 0x20
 
 # Test that 0xf3 as part of the opcode works.
