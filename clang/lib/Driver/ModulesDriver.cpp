@@ -503,8 +503,7 @@ struct InputDependencies {
 
   /// A list of the C++20 named modules this translation unit depends on.
   ///
-  /// All C++20 named module dependencies are expected to target the same triple
-  /// as this translation unit.
+  /// These only correspond to modules built with compatible compiler invocations.
   std::vector<std::string> NamedModuleDeps;
 
   /// A collection of absolute paths to files that this translation unit
