@@ -6467,13 +6467,15 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
            "reverse directive does not support any clauses");
     Res = ActOnOpenMPReverseDirective(AStmt, StartLoc, EndLoc);
     break;
-  case OMPD_split:
-    // TODO: Add counts clause support - not yet worked on
-    // Currently only supports basic split without clauses.
-    assert(ClausesWithImplicit.empty() &&
-           "split directive does not support any clauses");
-    Res = ActOnOpenMPSplitDirective(AStmt, StartLoc, EndLoc);
+  case OMPD_split: {
+    const OMPCountsClause *CountsClause =
+        OMPExecutableDirective::getSingleClause<OMPCountsClause>(
+            ClausesWithImplicit);
+    assert(CountsClause && "split directive requires counts clause");
+    Res =
+        ActOnOpenMPSplitDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc);
     break;
+  }
   case OMPD_interchange:
     Res = ActOnOpenMPInterchangeDirective(ClausesWithImplicit, AStmt, StartLoc,
                                           EndLoc);
@@ -15915,7 +15917,12 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
                                      buildPreInits(Context, PreInits));
 }
 
-StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(Stmt *AStmt,
+/// Build the AST for \#pragma omp split counts(c1, c2, ...).
+///
+/// Splits the single associated loop into N consecutive loops, where N is the
+/// number of count expressions.
+StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
+                                                 Stmt *AStmt,
                                                  SourceLocation StartLoc,
                                                  SourceLocation EndLoc) {
   ASTContext &Context = getASTContext();
@@ -15925,6 +15932,12 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(Stmt *AStmt,
   if (!AStmt)
     return StmtError();
 
+  const OMPCountsClause *CountsClause =
+      OMPExecutableDirective::getSingleClause<OMPCountsClause>(Clauses);
+  if (!CountsClause)
+    return StmtError();
+
+  // Split applies to a single loop; check it is transformable and get helpers.
   constexpr unsigned NumLoops = 1;
   Stmt *Body = nullptr;
   SmallVector<OMPLoopBasedDirective::HelperExprs, NumLoops> LoopHelpers(
@@ -15937,8 +15950,8 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(Stmt *AStmt,
   // Delay applying the transformation to when template is completely
   // instantiated.
   if (SemaRef.CurContext->isDependentContext())
-    return OMPSplitDirective::Create(Context, StartLoc, EndLoc, AStmt, NumLoops,
-                                     nullptr, nullptr);
+    return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                     NumLoops, AStmt, nullptr, nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting a single-dimensional loop iteration space");
@@ -15954,6 +15967,8 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(Stmt *AStmt,
   SmallVector<Stmt *> PreInits;
   addLoopPreInits(Context, LoopHelper, LoopStmt, OriginalInits[0], PreInits);
 
+  // Type and name of the original loop variable; we create one IV per segment
+  // and assign it to the original var so the body sees the same name.
   auto *IterationVarRef = cast<DeclRefExpr>(LoopHelper.IterationVarRef);
   QualType IVTy = IterationVarRef->getType();
   uint64_t IVWidth = Context.getTypeSize(IVTy);
@@ -15963,153 +15978,109 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(Stmt *AStmt,
   SourceLocation OrigVarLoc = OrigVar->getExprLoc();
   SourceLocation OrigVarLocBegin = OrigVar->getBeginLoc();
   SourceLocation OrigVarLocEnd = OrigVar->getEndLoc();
-
-  // Locations pointing to the transformation.
-  SourceLocation TransformLoc = StartLoc;
-
   // Internal variable names.
   std::string OrigVarName = OrigVar->getNameInfo().getAsString();
 
-  // For Subexpressions with more than one use, we define a lambda
-  // that creates a new AST node at every use.
-  CaptureVars CopyTransformer(SemaRef);
-  auto MakeNumIterations = [&CopyTransformer, &LoopHelper]() -> Expr * {
-    return AssertSuccess(
-        CopyTransformer.TransformExpr(LoopHelper.NumIterations));
-  };
+  // Collect constant count values from the counts clause
+  SmallVector<uint64_t, 4> CountValues;
+  for (Expr *CountExpr : CountsClause->getCountsRefs()) {
+    if (!CountExpr) {
+      return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                       NumLoops, AStmt, nullptr, nullptr);
+    }
+    std::optional<llvm::APSInt> OptVal =
+        CountExpr->getIntegerConstantExpr(Context);
+    if (!OptVal || OptVal->isNegative()) {
+      return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                       NumLoops, AStmt, nullptr, nullptr);
+    }
+    CountValues.push_back(OptVal->getZExtValue());
+  }
 
-  // For split, we currently divide the loop into two equal parts.
-  // First loop: i = 0; i < n/2; ++i
-  // Second loop: i = n/2; i < n; ++i
-  // TODO: Add counts clause support - not yet worked on
-
-  // Create iteration variable for the first split loop.
-  SmallString<64> FirstIVName(".split.first.iv.");
-  FirstIVName += OrigVarName;
-  VarDecl *FirstIVDecl =
-      buildVarDecl(SemaRef, {}, IVTy, FirstIVName, nullptr, OrigVar);
-  auto MakeFirstRef = [&SemaRef = this->SemaRef, FirstIVDecl, IVTy,
-                       OrigVarLoc]() {
-    return buildDeclRefExpr(SemaRef, FirstIVDecl, IVTy, OrigVarLoc);
-  };
-
-  // Create iteration variable for the second split loop.
-  SmallString<64> SecondIVName(".split.second.iv.");
-  SecondIVName += OrigVarName;
-  VarDecl *SecondIVDecl =
-      buildVarDecl(SemaRef, {}, IVTy, SecondIVName, nullptr, OrigVar);
-  auto MakeSecondRef = [&SemaRef = this->SemaRef, SecondIVDecl, IVTy,
-                        OrigVarLoc]() {
-    return buildDeclRefExpr(SemaRef, SecondIVDecl, IVTy, OrigVarLoc);
-  };
-
-  // Create n/2 expression for the split point.
-  auto *Two = IntegerLiteral::Create(Context, llvm::APInt(IVWidth, 2), IVTy,
-                                     TransformLoc);
-  ExprResult HalfIterations = SemaRef.BuildBinOp(CurScope, TransformLoc, BO_Div,
-                                                 MakeNumIterations(), Two);
-  if (!HalfIterations.isUsable())
+  if (CountValues.empty()) {
+    Diag(CountsClause->getBeginLoc(), diag::err_omp_unexpected_clause_value)
+        << "at least one non-negative integer expression" << "counts";
     return StmtError();
+  }
 
-  // First loop: init-statement: i = 0
-  auto *Zero = IntegerLiteral::Create(Context, llvm::APInt::getZero(IVWidth),
-                                      FirstIVDecl->getType(), OrigVarLoc);
-  SemaRef.AddInitializerToDecl(FirstIVDecl, Zero, /*DirectInit=*/false);
-  StmtResult FirstInit = new (Context)
-      DeclStmt(DeclGroupRef(FirstIVDecl), OrigVarLocBegin, OrigVarLocEnd);
-  if (!FirstInit.isUsable())
-    return StmtError();
+  // Cumulative segment starts: Starts[0]=0,
+  // Starts[j]=Starts[j-1]+CountValues[j-1]. Example: CountValues [3,5,2] →
+  // Starts [0,3,8,10]. Segment k runs [Starts[k], Starts[k+1]).
+  SmallVector<uint64_t, 4> Starts;
+  Starts.push_back(0);
+  for (size_t j = 0; j < CountValues.size(); ++j)
+    Starts.push_back(Starts.back() + CountValues[j]);
 
-  // First loop: cond-expression (i < n/2)
-  ExprResult FirstCond =
-      SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                         MakeFirstRef(), HalfIterations.get());
-  if (!FirstCond.isUsable())
-    return StmtError();
+  size_t NumSegments = CountValues.size();
+  SmallVector<Stmt *, 4> SplitLoops;
 
-  // First loop: incr-statement (++i)
-  ExprResult FirstIncr = SemaRef.BuildUnaryOp(
-      CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, MakeFirstRef());
-  if (!FirstIncr.isUsable())
-    return StmtError();
+  for (size_t Seg = 0; Seg < NumSegments; ++Seg) {
+    uint64_t StartVal = Starts[Seg];
+    uint64_t EndVal = Starts[Seg + 1];
 
-  // First loop: body - update original variable and execute body
-  // We need to create a copy of LoopHelper.Updates that uses FirstIV instead
-  // of the iteration variable. For now, use a simpler approach: directly
-  // assign the first IV to the original variable.
-  SmallVector<Stmt *, 4> FirstBodyStmts;
-  // Create update statement: origVar = .split.first.iv
-  // We'll use a BinaryOperator for assignment
-  ExprResult FirstUpdateExpr = SemaRef.BuildBinOp(
-      CurScope, OrigVarLoc, BO_Assign, OrigVar, MakeFirstRef());
-  if (!FirstUpdateExpr.isUsable())
-    return StmtError();
-  FirstBodyStmts.push_back(FirstUpdateExpr.get());
-  if (auto *CXXRangeFor = dyn_cast<CXXForRangeStmt>(LoopStmt))
-    FirstBodyStmts.push_back(CXXRangeFor->getLoopVarStmt());
-  FirstBodyStmts.push_back(Body);
-  auto *FirstBody =
-      CompoundStmt::Create(Context, FirstBodyStmts, FPOptionsOverride(),
-                           Body->getBeginLoc(), Body->getEndLoc());
+    // Segment IV: .split.iv.<Seg>.<OrigVarName>, init to StartVal, bound by
+    // EndVal.
+    SmallString<64> IVName(".split.iv.");
+    IVName += Twine(Seg).str();
+    IVName += ".";
+    IVName += OrigVarName;
+    VarDecl *IVDecl = buildVarDecl(SemaRef, {}, IVTy, IVName, nullptr, OrigVar);
+    auto MakeIVRef = [&SemaRef = this->SemaRef, IVDecl, IVTy, OrigVarLoc]() {
+      return buildDeclRefExpr(SemaRef, IVDecl, IVTy, OrigVarLoc);
+    };
 
-  // Create first loop
-  auto *FirstLoop = new (Context)
-      ForStmt(Context, FirstInit.get(), FirstCond.get(), nullptr,
-              FirstIncr.get(), FirstBody, LoopHelper.Init->getBeginLoc(),
-              LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
+    llvm::APInt StartAP(IVWidth, StartVal, /*isSigned=*/false);
+    llvm::APInt EndAP(IVWidth, EndVal, /*isSigned=*/false);
+    auto *StartLit = IntegerLiteral::Create(Context, StartAP, IVTy, OrigVarLoc);
+    auto *EndLit = IntegerLiteral::Create(Context, EndAP, IVTy, OrigVarLoc);
 
-  // Second loop: init-statement (i = n/2)
-  SemaRef.AddInitializerToDecl(SecondIVDecl, HalfIterations.get(),
-                               /*DirectInit=*/false);
-  StmtResult SecondInit = new (Context)
-      DeclStmt(DeclGroupRef(SecondIVDecl), OrigVarLocBegin, OrigVarLocEnd);
-  if (!SecondInit.isUsable())
-    return StmtError();
+    SemaRef.AddInitializerToDecl(IVDecl, StartLit, /*DirectInit=*/false);
+    StmtResult InitStmt = new (Context)
+        DeclStmt(DeclGroupRef(IVDecl), OrigVarLocBegin, OrigVarLocEnd);
+    if (!InitStmt.isUsable())
+      return StmtError();
 
-  // Second loop: cond-expression (i < n)
-  ExprResult SecondCond =
-      SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                         MakeSecondRef(), MakeNumIterations());
-  if (!SecondCond.isUsable())
-    return StmtError();
+    ExprResult CondExpr = SemaRef.BuildBinOp(
+        CurScope, LoopHelper.Cond->getExprLoc(), BO_LT, MakeIVRef(), EndLit);
+    if (!CondExpr.isUsable())
+      return StmtError();
 
-  // Second loop: incr-statement (++i)
-  ExprResult SecondIncr = SemaRef.BuildUnaryOp(
-      CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, MakeSecondRef());
-  if (!SecondIncr.isUsable())
-    return StmtError();
+    ExprResult IncrExpr = SemaRef.BuildUnaryOp(
+        CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, MakeIVRef());
+    if (!IncrExpr.isUsable())
+      return StmtError();
 
-  // Second loop: body - update original variable and execute body
-  SmallVector<Stmt *, 4> SecondBodyStmts;
-  // Create update statement: origVar = .split.second.iv
-  ExprResult SecondUpdateExpr = SemaRef.BuildBinOp(
-      CurScope, OrigVarLoc, BO_Assign, OrigVar, MakeSecondRef());
-  if (!SecondUpdateExpr.isUsable())
-    return StmtError();
-  SecondBodyStmts.push_back(SecondUpdateExpr.get());
-  if (auto *CXXRangeFor = dyn_cast<CXXForRangeStmt>(LoopStmt))
-    SecondBodyStmts.push_back(CXXRangeFor->getLoopVarStmt());
-  SecondBodyStmts.push_back(Body);
-  auto *SecondBody =
-      CompoundStmt::Create(Context, SecondBodyStmts, FPOptionsOverride(),
-                           Body->getBeginLoc(), Body->getEndLoc());
+    // orig_var = IV so the original body sees the same variable.
+    ExprResult UpdateExpr = SemaRef.BuildBinOp(CurScope, OrigVarLoc, BO_Assign,
+                                               OrigVar, MakeIVRef());
+    if (!UpdateExpr.isUsable())
+      return StmtError();
 
-  // Create second loop
-  auto *SecondLoop = new (Context)
-      ForStmt(Context, SecondInit.get(), SecondCond.get(), nullptr,
-              SecondIncr.get(), SecondBody, LoopHelper.Init->getBeginLoc(),
-              LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
+    SmallVector<Stmt *, 4> BodyStmts;
+    BodyStmts.push_back(UpdateExpr.get());
+    if (auto *CXXRangeFor = dyn_cast<CXXForRangeStmt>(LoopStmt))
+      BodyStmts.push_back(CXXRangeFor->getLoopVarStmt());
+    BodyStmts.push_back(Body);
 
-  // Combine both loops into a compound statement
-  SmallVector<Stmt *, 2> SplitLoops;
-  SplitLoops.push_back(FirstLoop);
-  SplitLoops.push_back(SecondLoop);
-  auto *SplitStmt =
-      CompoundStmt::Create(Context, SplitLoops, FPOptionsOverride(),
-                           FirstLoop->getBeginLoc(), SecondLoop->getEndLoc());
+    auto *LoopBody =
+        CompoundStmt::Create(Context, BodyStmts, FPOptionsOverride(),
+                             Body->getBeginLoc(), Body->getEndLoc());
 
-  return OMPSplitDirective::Create(Context, StartLoc, EndLoc, AStmt, NumLoops,
-                                   SplitStmt, buildPreInits(Context, PreInits));
+    auto *For = new (Context)
+        ForStmt(Context, InitStmt.get(), CondExpr.get(), nullptr,
+                IncrExpr.get(), LoopBody, LoopHelper.Init->getBeginLoc(),
+                LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
+    // Push the splitted for loops into SplitLoops
+    SplitLoops.push_back(For);
+  }
+  // Combine all the loops into a compound statement
+  auto *SplitStmt = CompoundStmt::Create(
+      Context, SplitLoops, FPOptionsOverride(),
+      SplitLoops.front()->getBeginLoc(), SplitLoops.back()->getEndLoc());
+
+  return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
+                                   AStmt, SplitStmt,
+                                   buildPreInits(Context, PreInits));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
@@ -18058,6 +18029,31 @@ OMPClause *SemaOpenMP::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
 
   return OMPSizesClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
                                 SanitizedSizeExprs);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
+                                               SourceLocation StartLoc,
+                                               SourceLocation LParenLoc,
+                                               SourceLocation EndLoc) {
+  SmallVector<Expr *> SanitizedCountExprs(CountExprs);
+
+  for (Expr *&CountExpr : SanitizedCountExprs) {
+    if (!CountExpr)
+      continue;
+
+    bool IsValid = isNonNegativeIntegerValue(CountExpr, SemaRef, OMPC_counts,
+                                             /*StrictlyPositive=*/false);
+
+    QualType CountTy = CountExpr->getType();
+    if (!CountTy->isIntegerType())
+      IsValid = false;
+
+    if (!CountExpr->isInstantiationDependent() && !IsValid)
+      CountExpr = nullptr;
+  }
+
+  return OMPCountsClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
+                                 SanitizedCountExprs);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,

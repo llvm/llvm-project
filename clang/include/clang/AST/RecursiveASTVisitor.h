@@ -3507,6 +3507,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPSizesClause(OMPSizesClause *C) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPCountsClause(OMPCountsClause *C) {
+  for (Expr *E : C->getCountsRefs())
+    TRY_TO(TraverseStmt(E));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPPermutationClause(
     OMPPermutationClause *C) {
   for (Expr *E : C->getArgsRefs())

@@ -459,7 +459,8 @@ public:
                                          SourceLocation EndLoc);
   /// Called on well-formed '#pragma omp split' after parsing of its
   /// associated statement.
-  StmtResult ActOnOpenMPSplitDirective(Stmt *AStmt, SourceLocation StartLoc,
+  StmtResult ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
+                                       Stmt *AStmt, SourceLocation StartLoc,
                                        SourceLocation EndLoc);
   /// Called on well-formed '#pragma omp interchange' after parsing of its
   /// clauses and the associated statement.
@@ -915,6 +916,11 @@ public:
                                     SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc);
+  /// Called on well-formed 'counts' clause after parsing its arguments.
+  OMPClause *ActOnOpenMPCountsClause(ArrayRef<Expr *> CountExprs,
+                                     SourceLocation StartLoc,
+                                     SourceLocation LParenLoc,
+                                     SourceLocation EndLoc);
   /// Called on well-form 'permutation' clause after parsing its arguments.
   OMPClause *ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
                                           SourceLocation StartLoc,
