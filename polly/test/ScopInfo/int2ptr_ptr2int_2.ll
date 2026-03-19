@@ -46,12 +46,12 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %add.ptr = getelementptr inbounds i64, ptr %ptr, i64 1
-  %tmp = ptrtoint ptr %add.ptr to i16
+  %tmp = ptrtoaddr ptr %add.ptr to i16
   %add = add nsw i16 %tmp, 1
   %add1 = add nsw i16 %val, 1
   %tmp1 = inttoptr i16 %add1 to ptr
   %add.ptr2 = getelementptr inbounds i64, ptr %tmp1, i64 1
-  %tmp2 = ptrtoint ptr %add.ptr2 to i16
+  %tmp2 = ptrtoaddr ptr %add.ptr2 to i16
   %arrayidx = getelementptr inbounds i64, ptr %B, i16 %tmp2
   %tmp3 = load i64, ptr %arrayidx
   %arrayidx3 = getelementptr inbounds i64, ptr %A, i16 %add

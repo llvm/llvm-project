@@ -19,8 +19,9 @@
 ; IR:      polly.stmt.for.body:
 ; IR-NEXT:   %p_tmp1 = inttoptr i64 %{{[0-9]+}} to ptr
 ; IR-NEXT:   %p_add.ptr2 = getelementptr inbounds i64, ptr %p_tmp1, i64 1
-; IR-NEXT:   %p_tmp2 = ptrtoint ptr %p_add.ptr2 to i64
-; IR-NEXT:   %p_arrayidx = getelementptr inbounds i64, ptr %A, i64 %p_tmp2
+; IR-NEXT:   %p_tmp2 = ptrtoaddr ptr %p_add.ptr2 to i32
+; IR-NEXT:   %p_tmp2.ext = zext i32 %p_tmp2 to i64
+; IR-NEXT:   %p_arrayidx = getelementptr inbounds i64, ptr %A, i64 %p_tmp2.ext
 ; IR-NEXT:   %tmp3_p_scalar_ = load i64, ptr %p_arrayidx, align 8, !alias.scope !2, !noalias !5
 ; IR-NEXT:   %tmp4_p_scalar_ = load i64, ptr %scevgep, align 8, !alias.scope !2, !noalias !5
 ; IR-NEXT:   %p_add4 = add nsw i64 %tmp4_p_scalar_, %tmp3_p_scalar_
@@ -35,7 +36,6 @@
 ; IR-NEXT:   %[[ADD:[0-9]+]] = add i32 %[[SHL]], 72
 ; IR-NEXT:   %scevgep = getelementptr i8, ptr %A, i32 %[[ADD]]
 ; IR-NEXT:   br label %polly.loop_header
-
 ;
 target datalayout = "e-p:32:32:32-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -50,13 +50,15 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %add.ptr = getelementptr inbounds i64, ptr %ptr, i64 1
-  %tmp = ptrtoint ptr %add.ptr to i64
-  %add = add nsw i64 %tmp, 1
+  %tmp = ptrtoaddr ptr %add.ptr to i32
+  %tmp.ext = zext i32 %tmp to i64
+  %add = add nsw i64 %tmp.ext, 1
   %add1 = add nsw i64 %val, 1
   %tmp1 = inttoptr i64 %add1 to ptr
   %add.ptr2 = getelementptr inbounds i64, ptr %tmp1, i64 1
-  %tmp2 = ptrtoint ptr %add.ptr2 to i64
-  %arrayidx = getelementptr inbounds i64, ptr %A, i64 %tmp2
+  %tmp2 = ptrtoaddr ptr %add.ptr2 to i32
+  %tmp2.ext = zext i32 %tmp2 to i64
+  %arrayidx = getelementptr inbounds i64, ptr %A, i64 %tmp2.ext
   %tmp3 = load i64, ptr %arrayidx
   %arrayidx3 = getelementptr inbounds i64, ptr %A, i64 %add
   %tmp4 = load i64, ptr %arrayidx3
