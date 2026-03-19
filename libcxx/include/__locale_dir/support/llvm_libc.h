@@ -46,9 +46,7 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __loc
   return ::setlocale(__category, __locale);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t&) {
-  return std::localeconv();
-}
+inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t&) { return std::localeconv(); }
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 } // namespace __locale
