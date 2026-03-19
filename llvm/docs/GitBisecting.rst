@@ -100,24 +100,8 @@ Here's how LLVM's history currently looks:
 merged, at every revision at ``C`` or earlier, *only* the ``mlir/`` directory
 exists, and nothing else does.
 
-As of early 2020, there is no flag to ``git bisect`` to tell it to not
-descend into all reachable commits. Ideally, we'd want to tell it to only
-follow the first parent of ``D``.
-
-The best workaround is to pass a list of directories to ``git bisect``:
-If you know the bug is due to a change in llvm, clang, or compiler-rt, use
-
-  .. code-block:: bash
-
-     git bisect start -- clang llvm compiler-rt
-
-That way, the commits in ``mlir`` are never evaluated.
-
-Alternatively, ``git bisect skip aed0d21a6 aed0d21a6..0f0d0ed1c78f`` explicitly
-skips all commits on that branch. It takes 1.5 minutes to run on a fast
-machine, and makes ``git bisect log`` output unreadable. (``aed0d21a6`` is
-listed twice because git ranges exclude the revision listed on the left,
-so it needs to be ignored explicitly.)
+``git bisect --first-parent`` tells git to only descend into the first parent
+of commits, meaning ``B..C`` will never be searched from ``D``.
 
 More Resources
 ==============

@@ -16,9 +16,13 @@
 ; CHECK-SPIRV: OpGenericCastToPtr %[[#LocalCharPtr]] %[[#Ptr2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
+@G_p = global ptr addrspace(3) null
+@G_p2 = global ptr addrspace(3) null
+
 define spir_kernel void @foo(ptr addrspace(1) %arg) {
 entry:
   %p = addrspacecast ptr addrspace(1) %arg to ptr addrspace(3)
+  store ptr addrspace(3) %p, ptr @G_p
   ret void
 }
 
@@ -26,5 +30,6 @@ define spir_kernel void @bar(ptr addrspace(1) %arg) {
 entry:
   %p1 = addrspacecast ptr addrspace(1) %arg to ptr addrspace(4)
   %p2 = addrspacecast ptr addrspace(4) %p1 to ptr addrspace(3)
+  store ptr addrspace(3) %p2, ptr @G_p2
   ret void
 }

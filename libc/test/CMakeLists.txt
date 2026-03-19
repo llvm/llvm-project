@@ -3,8 +3,43 @@ add_custom_target(libc-unit-tests)
 add_custom_target(libc-hermetic-tests)
 add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
 
+if (TARGET check-hdrgen)
+  add_dependencies(check-libc check-hdrgen)
+endif()
+
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
+
+# Build-only targets for lit (don't run tests, just build executables)
+add_custom_target(libc-unit-tests-build)
+add_custom_target(libc-hermetic-tests-build)
+
+# Resolve the GPU loader executable path for the lit site config.
+if(TARGET libc.utils.gpu.loader)
+  get_target_property(LIBC_GPU_LOADER_EXECUTABLE libc.utils.gpu.loader "EXECUTABLE")
+endif()
+
+# Configure the site config file for lit
+configure_lit_site_cfg(
+  ${LIBC_SOURCE_DIR}/test/lit.site.cfg.py.in
+  ${LIBC_BUILD_DIR}/test/lit.site.cfg.py
+  MAIN_CONFIG
+  ${LIBC_SOURCE_DIR}/test/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBS_DIR"
+  "LIBC_SOURCE_DIR"
+  "LIBC_BUILD_DIR"
+  "LIBC_GPU_LOADER_EXECUTABLE"
+)
+
+add_lit_testsuite(check-libc-lit
+  "Running libc tests via lit"
+  ${LIBC_BUILD_DIR}/test
+  DEPENDS libc-unit-tests-build libc-hermetic-tests-build
+)
 
 add_subdirectory(UnitTest)
 

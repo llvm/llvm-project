@@ -1,8 +1,11 @@
 ! Tests for 2.9.3.1 Simd
 
 ! The "if" clause was added to the "simd" directive in OpenMP 5.0.
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
-! RUN: bbc -hlfir -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+
+! To prevent testing for unrelated clauses like implicit linear clause and focusing on the
+! clauses of interest here, the OpenMP version is 6.0
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
+! RUN: bbc -hlfir -emit-hlfir -fopenmp -fopenmp-version=60 %s -o - | FileCheck %s
 
 !CHECK: omp.declare_reduction @[[REDUCER:.*]] : i32
 
@@ -26,7 +29,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_if_clause
 subroutine simd_with_if_clause(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_if_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_if_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   !$OMP SIMD IF( n .GE. threshold )
   ! CHECK: %[[COND:.*]] = arith.cmpi sge
@@ -46,7 +49,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_simdlen_clause
 subroutine simd_with_simdlen_clause(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   !$OMP SIMD SIMDLEN(2)
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
@@ -65,7 +68,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_simdlen_clause_from_param
 subroutine simd_with_simdlen_clause_from_param(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clause_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clause_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   integer, parameter :: simdlen = 2;
   !$OMP SIMD SIMDLEN(simdlen)
@@ -85,7 +88,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_simdlen_clause_from_expr_from_param
 subroutine simd_with_simdlen_clause_from_expr_from_param(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clause_from_expr_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_clause_from_expr_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   integer, parameter :: simdlen = 2;
   !$OMP SIMD SIMDLEN(simdlen*2 + 2)
@@ -105,7 +108,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_safelen_clause
 subroutine simd_with_safelen_clause(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_safelen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_safelen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   !$OMP SIMD SAFELEN(2)
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
@@ -124,7 +127,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_safelen_clause_from_expr_from_param
 subroutine simd_with_safelen_clause_from_expr_from_param(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_safelen_clause_from_expr_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_safelen_clause_from_expr_from_paramEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   integer, parameter :: safelen = 2;
   !$OMP SIMD SAFELEN(safelen*2 + 2)
@@ -144,7 +147,7 @@ end subroutine
 
 !CHECK-LABEL: func @_QPsimd_with_simdlen_safelen_clause
 subroutine simd_with_simdlen_safelen_clause(n, threshold)
-  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_safelen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[ARG_N:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsimd_with_simdlen_safelen_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: i, n, threshold
   !$OMP SIMD SIMDLEN(1) SAFELEN(2)
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
@@ -270,7 +273,7 @@ subroutine lastprivate_with_simd
   integer :: i
   real :: sum
 
-  
+
 !CHECK: omp.simd private(@_QFlastprivate_with_simdEsum_private_f32 %[[VAR_SUM_DECLARE]]#0 -> %[[VAR_SUM_PINNED:.*]], @{{.*}}) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = ({{.*}} to ({{.*}}) inclusive step ({{.*}}) {
 !CHECK: %[[VAR_SUM_PINNED_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM_PINNED]] {{.*}}

@@ -17,6 +17,7 @@
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -65,7 +66,9 @@ protected:
   }
 
   /// Build the VPlan for the loop starting from \p LoopHeader.
-  VPlanPtr buildVPlan(BasicBlock *LoopHeader, bool HasUncountableExit = false) {
+  VPlanPtr buildVPlan(
+      BasicBlock *LoopHeader,
+      UncountableExitStyle Style = UncountableExitStyle::NoUncountableExit) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
@@ -75,8 +78,23 @@ protected:
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                              {}, PSE);
 
-    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
-    VPlanTransforms::addMiddleCheck(*Plan, true, false);
+    if (Style != UncountableExitStyle::NoUncountableExit) {
+      // handleEarlyExits requires induction phi recipes.
+      MapVector<PHINode *, InductionDescriptor> Inductions;
+      for (PHINode &Phi : LoopHeader->phis()) {
+        InductionDescriptor ID;
+        if (InductionDescriptor::isInductionPHI(&Phi, L, PSE, ID))
+          Inductions[&Phi] = ID;
+      }
+      VPlanTransforms::createHeaderPhiRecipes(
+          *Plan, PSE, *L, Inductions,
+          MapVector<PHINode *, RecurrenceDescriptor>(),
+          SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
+          /*AllowReordering=*/false);
+    }
+
+    VPlanTransforms::handleEarlyExits(*Plan, Style, L, PSE, *DT, AC.get());
+    VPlanTransforms::addMiddleCheck(*Plan, false);
 
     VPlanTransforms::createLoopRegions(*Plan);
     return Plan;
@@ -86,16 +104,25 @@ protected:
 class VPlanTestBase : public testing::Test {
 protected:
   LLVMContext C;
-  std::unique_ptr<BasicBlock> ScalarHeader;
+  std::unique_ptr<Module> M;
+  Function *F;
+  BasicBlock *ScalarHeader;
   SmallVector<std::unique_ptr<VPlan>> Plans;
 
-  VPlanTestBase() : ScalarHeader(BasicBlock::Create(C, "scalar.header")) {
-    BranchInst::Create(&*ScalarHeader, &*ScalarHeader);
+  VPlanTestBase() {
+    M = std::make_unique<Module>("VPlanTestModule", C);
+    FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), false);
+    F = Function::Create(FTy, GlobalValue::ExternalLinkage, "f", M.get());
+    ScalarHeader = BasicBlock::Create(C, "scalar.header", F);
+    UncondBrInst::Create(ScalarHeader, ScalarHeader);
   }
 
-  VPlan &getPlan(VPValue *TC = nullptr) {
-    Plans.push_back(std::make_unique<VPlan>(&*ScalarHeader, TC));
-    return *Plans.back();
+  VPlan &getPlan() {
+    Plans.push_back(std::make_unique<VPlan>(ScalarHeader));
+    VPlan &Plan = *Plans.back();
+    VPValue *DefaultTC = Plan.getConstantInt(32, 1024);
+    Plan.setTripCount(DefaultTC);
+    return Plan;
   }
 };
 

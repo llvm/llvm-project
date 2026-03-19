@@ -73,16 +73,16 @@ define spir_func void @f() {
 entry:
   %q = alloca i32, align 4
   %r = alloca i32, align 4
-  %0 = load i32, i32 addrspace(1)* @i2, align 4
-  store i32 %0, i32* %q, align 4
-  %1 = load i32, i32 addrspace(1)* @i3, align 4
-  store i32 %1, i32 addrspace(1)* @i5, align 4
-  %2 = load i32, i32 addrspace(1)* @e, align 4
-  store i32 %2, i32* %r, align 4
-  %3 = load i32, i32 addrspace(2)* getelementptr inbounds ([256 x i32], [256 x i32] addrspace(2)* @noise_table, i32 0, i32 0), align 4
-  store i32 %3, i32* %r, align 4
-  %4 = load i32, i32 addrspace(2)* getelementptr inbounds ([2 x i32], [2 x i32] addrspace(2)* @f.color_table, i32 0, i32 0), align 4
-  store i32 %4, i32* %r, align 4
+  %0 = load i32, ptr addrspace(1) @i2, align 4
+  store i32 %0, ptr %q, align 4
+  %1 = load i32, ptr addrspace(1) @i3, align 4
+  store i32 %1, ptr addrspace(1) @i5, align 4
+  %2 = load i32, ptr addrspace(1) @e, align 4
+  store i32 %2, ptr %r, align 4
+  %3 = load i32, ptr addrspace(2) @noise_table, align 4
+  store i32 %3, ptr %r, align 4
+  %4 = load i32, ptr addrspace(2) @f.color_table, align 4
+  store i32 %4, ptr %r, align 4
   %call = call spir_func i32 @g()
   call spir_func void @inline_fun()
   ret void
@@ -99,8 +99,8 @@ entry:
 ;; "linkonce_odr" is lost in translation !
 define linkonce_odr spir_func void @inline_fun() {
 entry:
-  %t = alloca i32 addrspace(1)*, align 4
-  store i32 addrspace(1)* @i1, i32 addrspace(1)** %t, align 4
+  %t = alloca ptr addrspace(1), align 4
+  store ptr addrspace(1) @i1, ptr %t, align 4
   ret void
 }
 

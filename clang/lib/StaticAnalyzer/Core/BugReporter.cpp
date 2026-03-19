@@ -25,7 +25,6 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"

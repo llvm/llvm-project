@@ -173,11 +173,10 @@ define void @test_scalar_steps(ptr nocapture %a, ptr noalias %b, i64 %size) !dbg
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0, !dbg [[LOC8:!.+]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2, !dbg [[LOC8]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2, !dbg [[LOC8:!.+]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP9]], align 4
@@ -253,10 +252,10 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !32 = distinct !DILexicalBlock(scope: !31, file: !5, line: 137, column: 2)
 !33 = !DILocation(line: 210, column: 44, scope: !32)
 !34 = !DILocation(line: 320, column: 44, scope: !32)
-!35 = distinct !DISubprogram(name: "test_misc", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !12)
+!35 = distinct !DISubprogram(name: "test_misc", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !2)
 !36 = distinct !DILexicalBlock(scope: !35, file: !5, line: 137, column: 2)
 !37 = !DILocation(line: 430, column: 44, scope: !36)
 !38 = !DILocation(line: 540, column: 44, scope: !36)
-!39 = distinct !DISubprogram(name: "test_scalar_Steps", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !12)
+!39 = distinct !DISubprogram(name: "test_scalar_Steps", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, retainedNodes: !2)
 !40 = distinct !DILexicalBlock(scope: !39, file: !5, line: 137, column: 2)
 !41 = !DILocation(line: 650, column: 44, scope: !40)

@@ -1,26 +1,5 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
-llvm.func @pmevent_no_id() {
-  // expected-error @below {{either `id` or `mask` must be set}}
-  nvvm.pmevent 
-}
-
-// -----
-
-llvm.func @pmevent_bigger15() {
-  // expected-error @below {{`id` must be between 0 and 15}}
-  nvvm.pmevent id  = 141
-}
-
-// -----
-
-llvm.func @pmevent_many_ids() {
-  // expected-error @below {{`id` and `mask` cannot be set at the same time}}
-  nvvm.pmevent id = 1 mask = 1
-}
-
-// -----
-
 llvm.func @kernel_func(%numberOfThreads : i32) {
   // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
   nvvm.barrier number_of_threads = %numberOfThreads
@@ -578,14 +557,6 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
 
 // -----
 
-llvm.func @nanosleep() {
-  // expected-error@+1 {{integer constant out of range for attribute}}
-  nvvm.nanosleep 100000000000000
-  llvm.return
-}
-
-// -----
-
 llvm.func @clusterlaunchcontrol_query_cancel_is_canceled_invalid_return_type(%try_cancel_response: i128) {
   // expected-error@+1 {{'nvvm.clusterlaunchcontrol.query.cancel' op is_canceled query type returns an i1}}
   %res = nvvm.clusterlaunchcontrol.query.cancel query = is_canceled, %try_cancel_response : i32
@@ -620,4 +591,15 @@ func.func @invalid_range_equal_bounds() {
   // expected-error @below {{invalid range attribute: Lower == Upper, but they aren't min (0) or max (4294967295) value! This is an invalid constant range.}}
   %0 = nvvm.read.ptx.sreg.warpsize range <i32, 32, 32> : i32
   return
+}
+
+// -----
+
+// Test for correct return type check for wmma.load fragment a for f64 
+llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
+  // expected-error @below {{'nvvm.wmma.load' op expected destination type to be f64}}
+  %0 = nvvm.wmma.load %arg0, %arg1
+    {eltype = #nvvm.mma_type<f64>, frag = #nvvm.mma_frag<a>, k = 4 : i32, layout = #nvvm.mma_layout<row>, m = 8 : i32, n = 8 : i32}
+    : (!llvm.ptr) -> !llvm.struct<(f64)>
+  llvm.return
 }

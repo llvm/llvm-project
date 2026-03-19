@@ -332,7 +332,7 @@ ListeningSocket::~ListeningSocket() {
 raw_socket_stream::raw_socket_stream(int SocketFD)
     : raw_fd_stream(SocketFD, true) {}
 
-raw_socket_stream::~raw_socket_stream() {}
+raw_socket_stream::~raw_socket_stream() = default;
 
 Expected<std::unique_ptr<raw_socket_stream>>
 raw_socket_stream::createConnectedUnix(StringRef SocketPath) {

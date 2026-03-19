@@ -92,6 +92,11 @@ static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
   if (auto attr = op->getAttr(kInPlaceOperandsAttrName)) {
     inPlaceVector = SmallVector<StringRef>(llvm::to_vector<4>(
         cast<ArrayAttr>(attr).getAsValueRange<StringAttr>()));
+    // The existing attribute may have fewer entries than the current operand
+    // count (e.g., when user-provided annotations are inconsistent with the
+    // op's actual operand count). Resize to avoid an out-of-bounds access.
+    if (inPlaceVector.size() < op->getNumOperands())
+      inPlaceVector.resize(op->getNumOperands(), "none");
   } else {
     inPlaceVector = SmallVector<StringRef>(op->getNumOperands(), "none");
     for (OpOperand &opOperand : op->getOpOperands())
@@ -497,7 +502,7 @@ static bool matchesInsertDestination(const AnalysisState &state,
   // terminates. All of them must be equivalent subsets.
   SetVector<Value> backwardSlice =
       state.findValueInReverseUseDefChain(opOperand, matchingSubset);
-  return static_cast<bool>(llvm::all_of(backwardSlice, matchingSubset));
+  return llvm::all_of(backwardSlice, matchingSubset);
 }
 
 /// Return "true" if the given "read" and potentially conflicting "write" are

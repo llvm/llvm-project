@@ -20,6 +20,8 @@
 #include "mlir/IR/SymbolTable.h"
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc"
@@ -152,6 +154,9 @@ mlir::ValueRange getDataOperands(mlir::Operation *accOp);
 /// Used to get a mutable range iterating over the data operands.
 mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
 
+/// Used to get the recipe attribute from a data clause operation.
+mlir::SymbolRefAttr getRecipe(mlir::Operation *accOp);
+
 /// Used to check whether the provided `type` implements the `PointerLikeType`
 /// interface.
 inline bool isPointerLikeType(mlir::Type type) {
@@ -174,7 +179,27 @@ static constexpr StringLiteral getDeclareActionAttrName() {
 }
 
 static constexpr StringLiteral getRoutineInfoAttrName() {
-  return StringLiteral("acc.routine_info");
+  return RoutineInfoAttr::name;
+}
+
+static constexpr StringLiteral getSpecializedRoutineAttrName() {
+  return SpecializedRoutineAttr::name;
+}
+
+/// Used to check whether the current operation is marked with
+/// `acc routine`. The operation passed in should be a function.
+inline bool isAccRoutine(mlir::Operation *op) {
+  return op && op->hasAttr(mlir::acc::getRoutineInfoAttrName());
+}
+
+/// Used to check whether this is a specialized accelerator version of
+/// `acc routine` function.
+inline bool isSpecializedAccRoutine(mlir::Operation *op) {
+  return op && op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
+}
+
+static constexpr StringLiteral getFromDefaultClauseAttrName() {
+  return StringLiteral("acc.from_default");
 }
 
 static constexpr StringLiteral getVarNameAttrName() {
@@ -187,17 +212,20 @@ static constexpr StringLiteral getCombinedConstructsAttrName() {
 
 struct RuntimeCounters
     : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
-  mlir::StringRef getName() final { return "AccRuntimeCounters"; }
+  mlir::StringRef getName() const final { return "AccRuntimeCounters"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct ConstructResource
     : public mlir::SideEffects::Resource::Base<ConstructResource> {
-  mlir::StringRef getName() final { return "AccConstructResource"; }
+  mlir::StringRef getName() const final { return "AccConstructResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 struct CurrentDeviceIdResource
     : public mlir::SideEffects::Resource::Base<CurrentDeviceIdResource> {
-  mlir::StringRef getName() final { return "AccCurrentDeviceIdResource"; }
+  mlir::StringRef getName() const final { return "AccCurrentDeviceIdResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 } // namespace acc

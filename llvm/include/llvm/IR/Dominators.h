@@ -32,7 +32,6 @@
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
-#include <algorithm>
 #include <utility>
 
 namespace llvm {
@@ -112,12 +111,7 @@ public:
     return Start;
   }
 
-  const BasicBlock *getEnd() const {
-    return End;
-  }
-
-  /// Check if this is the only edge between Start and End.
-  LLVM_ABI bool isSingleEdge() const;
+  const BasicBlock *getEnd() const { return End; }
 };
 
 template <> struct DenseMapInfo<BasicBlockEdge> {

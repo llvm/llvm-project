@@ -63,7 +63,7 @@ define void @flat_atomic_xchg_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw xchg ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -124,7 +124,7 @@ define i64 @flat_atomic_xchg_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw xchg ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -209,7 +209,7 @@ define amdgpu_gfx void @flat_atomic_xchg_i64_noret_offset_scalar(ptr inreg %out,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw xchg ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -294,7 +294,7 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw xchg ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -327,7 +327,7 @@ define void @flat_atomic_xchg_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw xchg ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -360,7 +360,7 @@ define i64 @flat_atomic_xchg_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw xchg ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -425,7 +425,7 @@ define void @flat_atomic_xchg_f64_noret_offset(ptr %out, double %in) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %out, i32 4
+  %gep = getelementptr inbounds double, ptr %out, i32 4
   %tmp0 = atomicrmw xchg ptr %gep, double %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -486,7 +486,7 @@ define double @flat_atomic_xchg_f64_ret_offset(ptr %out, double %in) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %out, i32 4
+  %gep = getelementptr inbounds double, ptr %out, i32 4
   %result = atomicrmw xchg ptr %gep, double %in seq_cst, !noalias.addrspace !1
   ret double %result
 }
@@ -571,7 +571,7 @@ define amdgpu_gfx void @flat_atomic_xchg_f64_noret_offset_scalar(ptr inreg %out,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %out, i32 4
+  %gep = getelementptr inbounds double, ptr %out, i32 4
   %tmp0 = atomicrmw xchg ptr %gep, double %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -656,7 +656,7 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_offset_scalar(ptr inreg %out,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %out, i32 4
+  %gep = getelementptr inbounds double, ptr %out, i32 4
   %result = atomicrmw xchg ptr %gep, double %in seq_cst, !noalias.addrspace !1
   ret double %result
 }
@@ -689,7 +689,7 @@ define void @flat_atomic_xchg_f64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %out, i64 4
+  %gep = getelementptr inbounds double, ptr %out, i64 4
   %tmp0 = atomicrmw xchg ptr %gep, double %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -722,7 +722,7 @@ define double @flat_atomic_xchg_f64_ret_offset__amdgpu_no_remote_memory(ptr %out
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr double, ptr %out, i64 4
+  %gep = getelementptr inbounds double, ptr %out, i64 4
   %result = atomicrmw xchg ptr %gep, double %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret double %result
 }
@@ -787,7 +787,7 @@ define void @flat_atomic_add_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw add ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -848,7 +848,7 @@ define i64 @flat_atomic_add_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw add ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -933,7 +933,7 @@ define amdgpu_gfx void @flat_atomic_add_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw add ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -1018,7 +1018,7 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw add ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -1051,7 +1051,7 @@ define void @flat_atomic_add_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw add ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -1084,7 +1084,7 @@ define i64 @flat_atomic_add_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw add ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -1251,7 +1251,7 @@ define void @flat_atomic_sub_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw sub ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -1422,7 +1422,7 @@ define i64 @flat_atomic_sub_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw sub ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -1619,7 +1619,7 @@ define amdgpu_gfx void @flat_atomic_sub_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw sub ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -1816,7 +1816,7 @@ define amdgpu_gfx i64 @flat_atomic_sub_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw sub ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -1849,7 +1849,7 @@ define void @flat_atomic_sub_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw sub ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -1882,7 +1882,7 @@ define i64 @flat_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw sub ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -2049,7 +2049,7 @@ define void @flat_atomic_and_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw and ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -2220,7 +2220,7 @@ define i64 @flat_atomic_and_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw and ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -2411,7 +2411,7 @@ define amdgpu_gfx void @flat_atomic_and_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw and ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -2602,7 +2602,7 @@ define amdgpu_gfx i64 @flat_atomic_and_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw and ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -2635,7 +2635,7 @@ define void @flat_atomic_and_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw and ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -2668,7 +2668,7 @@ define i64 @flat_atomic_and_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw and ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -2847,7 +2847,7 @@ define void @flat_atomic_nand_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw nand ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -3030,7 +3030,7 @@ define i64 @flat_atomic_nand_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw nand ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -3233,7 +3233,7 @@ define amdgpu_gfx void @flat_atomic_nand_i64_noret_offset_scalar(ptr inreg %out,
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw nand ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -3436,7 +3436,7 @@ define amdgpu_gfx i64 @flat_atomic_nand_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw nand ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -3526,7 +3526,7 @@ define void @flat_atomic_nand_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw nand ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -3618,7 +3618,7 @@ define i64 @flat_atomic_nand_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw nand ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -3785,7 +3785,7 @@ define void @flat_atomic_or_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw or ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -3956,7 +3956,7 @@ define i64 @flat_atomic_or_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw or ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -4147,7 +4147,7 @@ define amdgpu_gfx void @flat_atomic_or_i64_noret_offset_scalar(ptr inreg %out, i
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw or ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -4338,7 +4338,7 @@ define amdgpu_gfx i64 @flat_atomic_or_i64_ret_offset_scalar(ptr inreg %out, i64 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw or ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -4371,7 +4371,7 @@ define void @flat_atomic_or_i64_noret_offset__amdgpu_no_remote_memory(ptr %out, 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw or ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -4404,7 +4404,7 @@ define i64 @flat_atomic_or_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i64
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw or ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -4571,7 +4571,7 @@ define void @flat_atomic_xor_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw xor ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -4742,7 +4742,7 @@ define i64 @flat_atomic_xor_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw xor ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -4933,7 +4933,7 @@ define amdgpu_gfx void @flat_atomic_xor_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw xor ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -5124,7 +5124,7 @@ define amdgpu_gfx i64 @flat_atomic_xor_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw xor ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -5157,7 +5157,7 @@ define void @flat_atomic_xor_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw xor ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -5190,7 +5190,7 @@ define i64 @flat_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw xor ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -5363,7 +5363,7 @@ define void @flat_atomic_max_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw max ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -5540,7 +5540,7 @@ define i64 @flat_atomic_max_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw max ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -5749,7 +5749,7 @@ define amdgpu_gfx void @flat_atomic_max_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw max ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -5958,7 +5958,7 @@ define amdgpu_gfx i64 @flat_atomic_max_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw max ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -6064,8 +6064,8 @@ define amdgpu_kernel void @atomic_max_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw max ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -6180,8 +6180,8 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX9-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw max ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   store i64 %tmp0, ptr %out2
   ret void
@@ -6284,7 +6284,7 @@ define amdgpu_kernel void @atomic_max_i64_addr64(ptr %out, i64 %in, i64 %index) 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw max ptr %ptr, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -6395,7 +6395,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX9-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw max ptr %ptr, i64 %in seq_cst, !noalias.addrspace !1
   store i64 %tmp0, ptr %out2
   ret void
@@ -6429,7 +6429,7 @@ define void @flat_atomic_max_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw max ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -6462,7 +6462,7 @@ define i64 @flat_atomic_max_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw max ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -6635,7 +6635,7 @@ define void @flat_atomic_umax_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw umax ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -6812,7 +6812,7 @@ define i64 @flat_atomic_umax_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw umax ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -7021,7 +7021,7 @@ define amdgpu_gfx void @flat_atomic_umax_i64_noret_offset_scalar(ptr inreg %out,
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw umax ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -7230,7 +7230,7 @@ define amdgpu_gfx i64 @flat_atomic_umax_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw umax ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -7336,8 +7336,8 @@ define amdgpu_kernel void @atomic_umax_i64_addr64_offset(ptr %out, i64 %in, i64 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw umax ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -7452,8 +7452,8 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX9-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw umax ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   store i64 %tmp0, ptr %out2
   ret void
@@ -7565,7 +7565,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX9-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw umax ptr %ptr, i64 %in seq_cst, !noalias.addrspace !1
   store i64 %tmp0, ptr %out2
   ret void
@@ -7599,7 +7599,7 @@ define void @flat_atomic_umax_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw umax ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -7632,7 +7632,7 @@ define i64 @flat_atomic_umax_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw umax ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -7805,7 +7805,7 @@ define void @flat_atomic_umin_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw umin ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -7982,7 +7982,7 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw umin ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -8191,7 +8191,7 @@ define amdgpu_gfx void @flat_atomic_umin_i64_noret_offset_scalar(ptr inreg %out,
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw umin ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -8400,7 +8400,7 @@ define amdgpu_gfx i64 @flat_atomic_umin_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw umin ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -8433,7 +8433,7 @@ define void @flat_atomic_umin_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw umin ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -8466,7 +8466,7 @@ define i64 @flat_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw umin ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -8639,7 +8639,7 @@ define void @flat_atomic_min_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw min ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -8816,7 +8816,7 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw min ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -9025,7 +9025,7 @@ define amdgpu_gfx void @flat_atomic_min_i64_noret_offset_scalar(ptr inreg %out, 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw min ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -9234,7 +9234,7 @@ define amdgpu_gfx i64 @flat_atomic_min_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw min ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -9340,8 +9340,8 @@ define amdgpu_kernel void @atomic_min_i64_addr64_offset(ptr %out, i64 %in, i64 %
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw min ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -9456,8 +9456,8 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX9-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %tmp0 = atomicrmw min ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   store i64 %tmp0, ptr %out2
   ret void
@@ -9664,7 +9664,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX9-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX9-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
   %tmp0 = atomicrmw min ptr %ptr, i64 %in seq_cst, !noalias.addrspace !1, !noalias.addrspace !1
   store i64 %tmp0, ptr %out2
   ret void
@@ -9698,7 +9698,7 @@ define void @flat_atomic_min_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw min ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -9731,7 +9731,7 @@ define i64 @flat_atomic_min_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw min ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -9916,7 +9916,7 @@ define void @flat_atomic_uinc_wrap_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw uinc_wrap ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -10105,7 +10105,7 @@ define i64 @flat_atomic_uinc_wrap_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw uinc_wrap ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -10314,7 +10314,7 @@ define amdgpu_gfx void @flat_atomic_uinc_wrap_i64_noret_offset_scalar(ptr inreg 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw uinc_wrap ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -10523,7 +10523,7 @@ define amdgpu_gfx i64 @flat_atomic_uinc_wrap_i64_ret_offset_scalar(ptr inreg %ou
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[34:35]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw uinc_wrap ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -10556,7 +10556,7 @@ define void @flat_atomic_uinc_wrap_i64_noret_offset__amdgpu_no_remote_memory(ptr
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw uinc_wrap ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -10589,7 +10589,7 @@ define i64 @flat_atomic_uinc_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw uinc_wrap ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }
@@ -10786,7 +10786,7 @@ define void @flat_atomic_udec_wrap_i64_noret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw udec_wrap ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -10987,7 +10987,7 @@ define i64 @flat_atomic_udec_wrap_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw udec_wrap ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -11220,7 +11220,7 @@ define amdgpu_gfx void @flat_atomic_udec_wrap_i64_noret_offset_scalar(ptr inreg 
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw udec_wrap ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret void
 }
@@ -11453,7 +11453,7 @@ define amdgpu_gfx i64 @flat_atomic_udec_wrap_i64_ret_offset_scalar(ptr inreg %ou
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[38:39]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw udec_wrap ptr %gep, i64 %in seq_cst, !noalias.addrspace !1
   ret i64 %result
 }
@@ -11486,7 +11486,7 @@ define void @flat_atomic_udec_wrap_i64_noret_offset__amdgpu_no_remote_memory(ptr
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %tmp0 = atomicrmw udec_wrap ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret void
 }
@@ -11519,7 +11519,7 @@ define i64 @flat_atomic_udec_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   %result = atomicrmw udec_wrap ptr %gep, i64 %in seq_cst, !amdgpu.no.remote.memory !0, !noalias.addrspace !1
   ret i64 %result
 }

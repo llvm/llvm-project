@@ -106,7 +106,8 @@ struct X86OutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
     MIB.addUse(PhysReg, RegState::Implicit);
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -217,7 +218,8 @@ struct X86IncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
     markPhysRegUsed(PhysReg.asMCReg());
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
@@ -280,8 +282,7 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     if (Arg.hasAttribute(Attribute::ByVal) ||
         Arg.hasAttribute(Attribute::InReg) ||
         Arg.hasAttribute(Attribute::SwiftSelf) ||
-        Arg.hasAttribute(Attribute::SwiftError) ||
-        Arg.hasAttribute(Attribute::Nest) || VRegs[Idx].size() > 1)
+        Arg.hasAttribute(Attribute::SwiftError) || VRegs[Idx].size() > 1)
       return false;
 
     if (Arg.hasAttribute(Attribute::StructRet)) {

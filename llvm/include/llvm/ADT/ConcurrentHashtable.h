@@ -24,7 +24,6 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
-#include <type_traits>
 
 namespace llvm {
 
@@ -343,10 +342,8 @@ protected:
     CurBucket.Size = NewBucketSize;
 
     // Delete old bucket entries.
-    if (SrcHashes != nullptr)
-      delete[] SrcHashes;
-    if (SrcEntries != nullptr)
-      delete[] SrcEntries;
+    delete[] SrcHashes;
+    delete[] SrcEntries;
   }
 
   uint32_t getBucketIdx(hash_code Hash) { return Hash & HashMask; }

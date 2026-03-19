@@ -1,11 +1,11 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
-// RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o %t1.o
-// RUN: llvm-mc -triple=aarch64 -filetype=obj pauth-bti-gcs.s -o %t2.o
-// RUN: llvm-mc -triple=aarch64 -filetype=obj pauth-bti-pac.s -o %t3.o
-// RUN: ld.lld -r %t1.o %t2.o %t3.o -o %t.merged.o
-// RUN: llvm-readelf -n %t.merged.o | FileCheck %s --check-prefix=NOTE
+// RUN: llvm-mc -triple=aarch64 -filetype=obj %s -o 1.o
+// RUN: llvm-mc -triple=aarch64 -filetype=obj pauth-bti-gcs.s -o 2.o
+// RUN: llvm-mc -triple=aarch64 -filetype=obj pauth-bti-pac.s -o 3.o
+// RUN: ld.lld -r 1.o 2.o 3.o -o merged.o
+// RUN: llvm-readelf -n merged.o | FileCheck %s --check-prefix=NOTE
 
 /// This test merges three object files with AArch64 build attributes.
 /// All contain identical PAuth ABI info (platform/version), which must be preserved.

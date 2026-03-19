@@ -15,10 +15,11 @@ add_mlir_dialect_library(MLIRLLVMDialect
 
   DEPENDS
   MLIRLLVMDialectBytecodeIncGen
-  MLIRLLVMOpsIncGen
-  MLIRLLVMTypesIncGen
-  MLIRLLVMIntrinsicOpsIncGen
   MLIRLLVMInterfacesIncGen
+  MLIRLLVMIntrinsicOpsIncGen
+  MLIRLLVMOpsIncGen
+  MLIRLLVMTranslationDialectInterfaceIncGen
+  MLIRLLVMTypesIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
 
@@ -31,6 +32,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRFunctionInterfaces
+  MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemorySlotInterfaces

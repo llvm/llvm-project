@@ -1,10 +1,6 @@
-; RUN: opt %loadNPMPolly \
-; RUN: -polly-analyze-read-only-scalars=false -passes=polly-codegen -S < %s | \
-; RUN: FileCheck %s
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=false '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 
-; RUN: opt %loadNPMPolly \
-; RUN: -polly-analyze-read-only-scalars=true -passes=polly-codegen -S < %s | \
-; RUN: FileCheck %s
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=true '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

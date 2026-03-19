@@ -85,7 +85,7 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
 private:
   static uint64_t
-  getRelocHash(const macho::Reloc &reloc,
+  getRelocHash(const Relocation &reloc,
                const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) {
     auto *isec = reloc.getReferentInputSection();
     std::optional<uint64_t> sectionIdx;
@@ -117,6 +117,10 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
       for (auto &subsec : sec->subsections) {
         auto *isec = subsec.isec;
         if (!isec || isec->data.empty() || !isec->data.data())
+          continue;
+        // CString section order is handled by
+        // {Deduplicated}CStringSection::finalizeContents()
+        if (isa<CStringInputSection>(isec) || isec->isFinal)
           continue;
         // ConcatInputSections are entirely live or dead, so the offset is
         // irrelevant.

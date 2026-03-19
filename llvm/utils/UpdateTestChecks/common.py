@@ -29,7 +29,7 @@ Version changelog:
    'none' and 'all'. 'smart' is the default.
 5: Basic block labels are matched by FileCheck expressions
 6: The semantics of TBAA checks has been incorporated in the check lines.
-7: Indent switch-cases correctly.
+7: Indent switch-cases correctly; CHECK-EMPTY instead of skipping blank lines.
 """
 DEFAULT_VERSION = 6
 
@@ -597,6 +597,10 @@ LOOP_PASS_DEBUG_RE = re.compile(
     r"^\s*\'(?P<func>[\w.$-]+?)\'[^\n]*" r"\s*\n(?P<body>.*)$", flags=(re.X | re.S)
 )
 
+VPLAN_RE = re.compile(
+    r"\'(?P<func>[\w.$-]+?)\'[^\n]*\n(?P<body>.*)\n$", flags=(re.X | re.S)
+)
+
 IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@"?([\w.$-]+)"?\s*\(')
 IR_FUNCTION_LABEL_RE = re.compile(
     r'^\s*(?:define\s+(?:internal\s+)?[^@]*)?@"?([\w.$-]+)"?\s*\('
@@ -605,9 +609,10 @@ TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r"-m?triple[= ]([^ ]+)")
 MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
+STOP_PASS_RE = re.compile(r"-stop-(before|after)=(\w+)")
 
 IS_DEBUG_RECORD_RE = re.compile(r"^(\s+)#dbg_")
-IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\w+")
+IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\S+")
 
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r"^(\s+)")
 SCRUB_WHITESPACE_RE = re.compile(r"(?!^(|  \w))[ \t]+", flags=re.M)
@@ -1123,6 +1128,8 @@ class FunctionTestBuilder:
 ##### Generator of LLVM IR CHECK lines
 
 SCRUB_IR_COMMENT_RE = re.compile(r"\s*;.*")
+# Comments to indicate the predecessors of a block in the IR.
+SCRUB_PRED_COMMENT_RE = re.compile(r"\s*; preds = .*")
 SCRUB_IR_FUNC_META_RE = re.compile(r"((?:\!(?!dbg\b)[a-zA-Z_]\w*(?:\s+![0-9]+)?)\s*)+")
 
 # TODO: We should also derive check lines for global, debug, loop declarations, etc..
@@ -1181,6 +1188,7 @@ class NamelessValue:
     # Create a FileCheck variable name based on an IR name.
     def get_value_name(self, var: str, check_prefix: str):
         var = var.replace("!", "")
+        var = var.replace("%", "")
         if self.replace_number_with_counter:
             assert var
             replacement = self.variable_mapping.get(var, None)
@@ -1361,7 +1369,7 @@ def make_ir_generalizer(version, no_meta_details):
     ]
 
     prefix = r"(\s*)"
-    suffix = r"([,\s\(\)\}]|\Z)"
+    suffix = r"([,\s\(\)\}\]]|\Z)"
 
     # values = [
     #     nameless_value
@@ -1409,15 +1417,23 @@ def make_analyze_generalizer(version):
         NamelessValue(
             r"GRP",
             "#",
-            r"",
+            r"group",
             r"0x[0-9a-f]+",
             None,
             replace_number_with_counter=True,
         ),
+        NamelessValue(
+            r"VP",
+            r"vp",
+            r"vp<",
+            r"%[0-9]+",
+            None,
+            ir_suffix=r">",
+        ),
     ]
 
     prefix = r"(\s*)"
-    suffix = r"(\)?:)"
+    suffix = r"([,\s\(\)\}\]:]|\Z)"
 
     return GeneralizerInfo(
         version, GeneralizerInfo.MODE_ANALYZE, values, prefix, suffix
@@ -1574,7 +1590,12 @@ def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[tuple]:
 
 
 VARIABLE_TAG = "[[@@]]"
-METAVAR_RE = re.compile(r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]")
+METAVAR_PATTERN = r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]"
+LABEL_METAVAR_PATTERN1 = r"label %" + METAVAR_PATTERN
+LABEL_METAVAR_PATTERN2 = r"^" + METAVAR_PATTERN + r":"
+METAVAR_RE = re.compile(
+    rf"(?:{LABEL_METAVAR_PATTERN1})|(?:{LABEL_METAVAR_PATTERN2})|(?:{METAVAR_PATTERN})"
+)
 NUMERIC_SUFFIX_RE = re.compile(r"[0-9]*$")
 
 
@@ -1877,6 +1898,7 @@ def generalize_check_lines(
     *,
     unstable_globals_only=False,
     no_meta_details=False,
+    ignore_all_comments=True,  # If False, only ignore comments of predecessors
 ):
     if unstable_globals_only:
         regexp = ginfo.get_unstable_globals_regexp()
@@ -1904,8 +1926,12 @@ def generalize_check_lines(
                         line,
                     )
                     break
-            # Ignore any comments, since the check lines will too.
-            scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r"", line)
+            if ignore_all_comments:
+                # Ignore any comments, since the check lines will too.
+                scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r"", line)
+            else:
+                # Ignore comments of predecessors only.
+                scrubbed_line = SCRUB_PRED_COMMENT_RE.sub(r"", line)
             # Ignore the metadata details if check global is none
             if no_meta_details:
                 scrubbed_line = SCRUB_IR_FUNC_META_RE.sub(r"{{.*}}", scrubbed_line)
@@ -2006,7 +2032,8 @@ def generalize_check_lines(
                     CheckValueInfo(
                         key=None,
                         text=None,
-                        name=m.group(1),
+                        # The sole capturing group is only designated for the name.
+                        name=m.group(m.lastindex),
                         prefix="",
                         suffix="",
                     )
@@ -2083,6 +2110,7 @@ def add_checks(
     global_tbaa_records_for_prefixes={},
     preserve_names=False,
     original_check_lines: Mapping[str, List[str]] = {},
+    check_inst_comments=True,
 ):
     # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
     prefix_exclusions = set()
@@ -2253,7 +2281,9 @@ def add_checks(
                             "{} {}-EMPTY:".format(comment_marker, checkprefix)
                         )
                     else:
-                        check_suffix = "-NEXT" if not is_filtered else ""
+                        # TODO: Remove once only -vplan-print-after is supported.
+                        check_next = not is_filtered and "VPlan" not in func_line
+                        check_suffix = "-NEXT" if check_next else ""
                         output_lines.append(
                             "{} {}{}:  {}".format(
                                 comment_marker, checkprefix, check_suffix, func_line
@@ -2272,6 +2302,14 @@ def add_checks(
             # For IR output, change all defs to FileCheck variables, so we're immune
             # to variable naming fashions.
             else:
+                if ginfo.get_version() >= 7:
+                    # Record the indices of blank lines in the function body preemptively.
+                    blank_line_indices = {
+                        i for i, line in enumerate(func_body) if line.strip() == ""
+                    }
+                else:
+                    blank_line_indices = set()
+
                 func_body = generalize_check_lines(
                     func_body,
                     ginfo,
@@ -2280,6 +2318,8 @@ def add_checks(
                     global_tbaa_records,
                     preserve_names,
                     original_check_lines=original_check_lines.get(checkprefix),
+                    # IR output might require comments checks, e.g., print-predicate-info, print<memssa>
+                    ignore_all_comments=not check_inst_comments,
                 )
 
                 # This could be selectively enabled with an optional invocation argument.
@@ -2295,12 +2335,22 @@ def add_checks(
 
                 is_blank_line = False
 
-                for func_line in func_body:
+                for idx, func_line in enumerate(func_body):
                     if func_line.strip() == "":
-                        is_blank_line = True
+                        # We should distinguish if the line is a 'fake' blank line generated by
+                        # generalize_check_lines removing comments.
+                        # Fortunately, generalize_check_lines does not change the index of each line,
+                        # we can record the indices of blank lines preemptively.
+                        if idx in blank_line_indices:
+                            output_lines.append(
+                                "{} {}-EMPTY:".format(comment_marker, checkprefix)
+                            )
+                        else:
+                            is_blank_line = True
                         continue
-                    # Do not waste time checking IR comments.
-                    func_line = SCRUB_IR_COMMENT_RE.sub(r"", func_line)
+                    if not check_inst_comments:
+                        # Do not waste time checking IR comments unless necessary.
+                        func_line = SCRUB_IR_COMMENT_RE.sub(r"", func_line)
 
                     # Skip blank lines instead of checking them.
                     if is_blank_line:
@@ -2342,6 +2392,7 @@ def add_ir_checks(
     global_vars_seen_dict,
     global_tbaa_records_for_prefixes,
     is_filtered,
+    check_inst_comments=False,
     original_check_lines={},
 ):
     assert ginfo.is_ir()
@@ -2368,6 +2419,7 @@ def add_ir_checks(
         global_tbaa_records_for_prefixes,
         preserve_names,
         original_check_lines=original_check_lines,
+        check_inst_comments=check_inst_comments,
     )
 
 
@@ -2379,9 +2431,12 @@ def add_analyze_checks(
     func_name,
     ginfo: GeneralizerInfo,
     is_filtered,
+    check_label_prefix="",
 ):
     assert ginfo.is_analyze()
-    check_label_format = "{} %s-LABEL: '%s%s%s%s'".format(comment_marker)
+    check_label_format = "{} %s-LABEL: {}'%s%s%s%s'".format(
+        comment_marker, check_label_prefix
+    )
     global_vars_seen_dict = {}
     return add_checks(
         output_lines,
@@ -2675,6 +2730,7 @@ def get_autogennote_suffix(parser, args):
             "tool_binary",
             "opt_binary",
             "llc_binary",
+            "llubi_binary",
             "clang",
             "opt",
             "llvm_bin",

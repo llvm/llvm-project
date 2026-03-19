@@ -22,6 +22,9 @@ struct support::adapt_operations<std::unordered_multiset<K>> {
 
   using InsertionResult = typename std::unordered_multiset<K>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }
+
+  template <class Allocator>
+  using rebind_alloc = std::unordered_multiset<K, std::hash<K>, std::equal_to<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {

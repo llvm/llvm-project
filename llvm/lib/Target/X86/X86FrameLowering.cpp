@@ -3093,8 +3093,8 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
     MBB.addLiveIn(Reg);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
 
-    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, TRI,
-                            Register(), MachineInstr::FrameSetup);
+    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, Register(),
+                            MachineInstr::FrameSetup);
   }
 
   return true;
@@ -3166,8 +3166,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
       VT = STI.hasBWI() ? MVT::v64i1 : MVT::v16i1;
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, I.getFrameIdx(), RC, TRI,
-                             Register());
+    TII.loadRegFromStackSlot(MBB, MI, Reg, I.getFrameIdx(), RC, Register());
   }
 
   // Clear the stack slot for spill base pointer register.
@@ -3211,6 +3210,14 @@ void X86FrameLowering::determineCalleeSaves(MachineFunction &MF,
     if (STI.isTarget64BitILP32())
       BasePtr = getX86SubSuperRegister(BasePtr, 64);
     SavedRegs.set(BasePtr);
+  }
+  if (STI.hasUserReservedRegisters()) {
+    for (int Reg = SavedRegs.find_first(); Reg != -1;
+         Reg = SavedRegs.find_next(Reg)) {
+      if (STI.isRegisterReservedByUser(Reg)) {
+        SavedRegs.reset(Reg);
+      }
+    }
   }
 }
 

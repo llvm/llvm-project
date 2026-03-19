@@ -235,7 +235,7 @@ ObjCLanguage::GetFunctionNameInfo(ConstString name) const {
   return {func_name_type, std::nullopt};
 }
 
-bool ObjCLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+bool ObjCLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
   ConstString demangled_name = mangled.GetDemangledName();
   if (!demangled_name)
     return false;
@@ -1064,4 +1064,11 @@ ObjCLanguage::GetBooleanFromString(llvm::StringRef str) const {
       .Case("YES", {true})
       .Case("NO", {false})
       .Default({});
+}
+
+bool ObjCLanguage::IsPossibleObjCMethodName(llvm::StringRef name) {
+  if (!name.starts_with("-[") && !name.starts_with("+["))
+    return false;
+
+  return name.ends_with("]");
 }

@@ -64,7 +64,8 @@ def KnobOp : Op<Transform_Dialect, "tune.knob", [
 def AlternativesOp : Op<Transform_Dialect, "tune.alternatives", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands",
-         "getRegionInvocationBounds"]>,
+         "getRegionInvocationBounds",
+         "getSuccessorInputs"]>,
   DeclareOpInterfaceMethods<TransformOpInterface>,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">,

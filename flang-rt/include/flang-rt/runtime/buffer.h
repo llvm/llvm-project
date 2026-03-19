@@ -151,8 +151,13 @@ private:
       char *old{buffer_};
       auto oldSize{size_};
       size_ = std::max<std::int64_t>(bytes, size_ + minBuffer);
-      buffer_ =
-          reinterpret_cast<char *>(AllocateMemoryOrCrash(terminator, size_));
+      std::int64_t toAllocate{size_};
+#ifdef RT_USE_PSEUDO_FILE_UNIT
+      // PseudoOpenFile::Write() needs extra space for a NUL byte.
+      ++toAllocate;
+#endif
+      buffer_ = reinterpret_cast<char *>(
+          AllocateMemoryOrCrash(terminator, toAllocate));
       auto chunk{std::min<std::int64_t>(length_, oldSize - start_)};
       // "memcpy" in glibc has a "nonnull" attribute on the source pointer.
       // Avoid passing a null pointer, since it would result in an undefined

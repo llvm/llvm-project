@@ -26,31 +26,49 @@ namespace cpp {
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
+template <unsigned N>
+LIBC_INLINE static void inline_copy(const char *from, char *to) {
+#if __has_builtin(__builtin_memcpy_inline)
+  __builtin_memcpy_inline(to, from, N);
+#else
+  for (unsigned i = 0; i < N; ++i)
+    to[i] = from[i];
+#endif // __has_builtin(__builtin_memcpy_inline)
+}
+
 // This implementation of bit_cast requires trivially-constructible To, to avoid
 // UB in the implementation.
 template <typename To, typename From>
-LIBC_INLINE constexpr cpp::enable_if_t<
+LIBC_INLINE static constexpr cpp::enable_if_t<
     (sizeof(To) == sizeof(From)) &&
         cpp::is_trivially_constructible<To>::value &&
         cpp::is_trivially_copyable<To>::value &&
         cpp::is_trivially_copyable<From>::value,
     To>
 bit_cast(const From &from) {
-  MSAN_UNPOISON(&from, sizeof(From));
 #if __has_builtin(__builtin_bit_cast) || defined(LIBC_COMPILER_IS_MSVC)
   return __builtin_bit_cast(To, from);
 #else
   To to{};
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
-#if __has_builtin(__builtin_memcpy_inline)
-  __builtin_memcpy_inline(dst, src, sizeof(To));
-#else
-  for (unsigned i = 0; i < sizeof(To); ++i)
-    dst[i] = src[i];
-#endif // __has_builtin(__builtin_memcpy_inline)
+  inline_copy<sizeof(From)>(src, dst);
   return to;
 #endif // __has_builtin(__builtin_bit_cast)
+}
+
+// The following simple bit copy from a smaller type to maybe-larger type.
+template <typename To, typename From>
+LIBC_INLINE constexpr cpp::enable_if_t<
+    (sizeof(To) >= sizeof(From)) &&
+        cpp::is_trivially_constructible<To>::value &&
+        cpp::is_trivially_copyable<To>::value &&
+        cpp::is_trivially_copyable<From>::value,
+    void>
+bit_copy(const From &from, To &to) {
+  char *dst = reinterpret_cast<char *>(&to);
+  const char *src = reinterpret_cast<const char *>(&from);
+  inline_copy<sizeof(From)>(src, dst);
 }
 
 template <typename T>

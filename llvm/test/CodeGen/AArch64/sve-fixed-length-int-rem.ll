@@ -616,10 +616,9 @@ define void @srem_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    movprfx z5, z3
 ; VBITS_GE_256-NEXT:    sdiv z5.s, p0/m, z5.s, z4.s
 ; VBITS_GE_256-NEXT:    mls z0.s, p0/m, z2.s, z1.s
-; VBITS_GE_256-NEXT:    movprfx z1, z3
-; VBITS_GE_256-NEXT:    mls z1.s, p0/m, z5.s, z4.s
+; VBITS_GE_256-NEXT:    mls z3.s, p0/m, z5.s, z4.s
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    st1w { z3.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: srem_v16i32:
@@ -744,11 +743,10 @@ define void @srem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-NEXT:    movprfx z18, z16
 ; VBITS_GE_128-NEXT:    sdiv z18.d, p0/m, z18.d, z17.d
 ; VBITS_GE_128-NEXT:    msb z0.d, p0/m, z4.d, z1.d
-; VBITS_GE_128-NEXT:    movprfx z1, z2
-; VBITS_GE_128-NEXT:    mls z1.d, p0/m, z19.d, z3.d
+; VBITS_GE_128-NEXT:    mls z2.d, p0/m, z19.d, z3.d
 ; VBITS_GE_128-NEXT:    mls z16.d, p0/m, z18.d, z17.d
 ; VBITS_GE_128-NEXT:    mls z5.d, p0/m, z7.d, z6.d
-; VBITS_GE_128-NEXT:    stp q0, q1, [x0]
+; VBITS_GE_128-NEXT:    stp q0, q2, [x0]
 ; VBITS_GE_128-NEXT:    stp q16, q5, [x0, #32]
 ; VBITS_GE_128-NEXT:    ret
 ;
@@ -765,10 +763,9 @@ define void @srem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    movprfx z5, z3
 ; VBITS_GE_256-NEXT:    sdiv z5.d, p0/m, z5.d, z4.d
 ; VBITS_GE_256-NEXT:    mls z0.d, p0/m, z2.d, z1.d
-; VBITS_GE_256-NEXT:    movprfx z1, z3
-; VBITS_GE_256-NEXT:    mls z1.d, p0/m, z5.d, z4.d
+; VBITS_GE_256-NEXT:    mls z3.d, p0/m, z5.d, z4.d
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    st1d { z3.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: srem_v8i64:
@@ -1434,10 +1431,9 @@ define void @urem_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    movprfx z5, z3
 ; VBITS_GE_256-NEXT:    udiv z5.s, p0/m, z5.s, z4.s
 ; VBITS_GE_256-NEXT:    mls z0.s, p0/m, z2.s, z1.s
-; VBITS_GE_256-NEXT:    movprfx z1, z3
-; VBITS_GE_256-NEXT:    mls z1.s, p0/m, z5.s, z4.s
+; VBITS_GE_256-NEXT:    mls z3.s, p0/m, z5.s, z4.s
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    st1w { z3.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: urem_v16i32:
@@ -1562,11 +1558,10 @@ define void @urem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_128-NEXT:    movprfx z18, z16
 ; VBITS_GE_128-NEXT:    udiv z18.d, p0/m, z18.d, z17.d
 ; VBITS_GE_128-NEXT:    msb z0.d, p0/m, z4.d, z1.d
-; VBITS_GE_128-NEXT:    movprfx z1, z2
-; VBITS_GE_128-NEXT:    mls z1.d, p0/m, z19.d, z3.d
+; VBITS_GE_128-NEXT:    mls z2.d, p0/m, z19.d, z3.d
 ; VBITS_GE_128-NEXT:    mls z16.d, p0/m, z18.d, z17.d
 ; VBITS_GE_128-NEXT:    mls z5.d, p0/m, z7.d, z6.d
-; VBITS_GE_128-NEXT:    stp q0, q1, [x0]
+; VBITS_GE_128-NEXT:    stp q0, q2, [x0]
 ; VBITS_GE_128-NEXT:    stp q16, q5, [x0, #32]
 ; VBITS_GE_128-NEXT:    ret
 ;
@@ -1583,10 +1578,9 @@ define void @urem_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    movprfx z5, z3
 ; VBITS_GE_256-NEXT:    udiv z5.d, p0/m, z5.d, z4.d
 ; VBITS_GE_256-NEXT:    mls z0.d, p0/m, z2.d, z1.d
-; VBITS_GE_256-NEXT:    movprfx z1, z3
-; VBITS_GE_256-NEXT:    mls z1.d, p0/m, z5.d, z4.d
+; VBITS_GE_256-NEXT:    mls z3.d, p0/m, z5.d, z4.d
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    st1d { z3.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: urem_v8i64:

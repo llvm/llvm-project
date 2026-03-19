@@ -211,15 +211,9 @@ static Instruction *cloneInstructionInExitBlock(
 static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
                              MemorySSAUpdater &MSSAU);
 
-static void moveInstructionBefore(
-    Instruction &I, BasicBlock::iterator Dest, ICFLoopSafetyInfo &SafetyInfo,
-    MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
-    MemorySSA::InsertionPlace Point = MemorySSA::BeforeTerminator);
-
-static bool sinkUnusedInvariantsFromPreheaderToExit(
-    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
-    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
-    SinkAndHoistLICMFlags &SinkFlags, OptimizationRemarkEmitter *ORE);
+static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
+                                  ICFLoopSafetyInfo &SafetyInfo,
+                                  MemorySSAUpdater &MSSAU, ScalarEvolution *SE);
 
 static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
@@ -477,12 +471,6 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
                                     TLI, TTI, L, MSSAU, &SafetyInfo, Flags, ORE)
             : sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, TTI, L,
                          MSSAU, &SafetyInfo, Flags, ORE);
-
-  // sink pre-header defs that are unused in-loop into the unique exit to reduce
-  // pressure.
-  Changed |= sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo, MSSAU,
-                                                     SE, DT, Flags, ORE);
-
   Flags.setIsSink(false);
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI, L,
@@ -677,17 +665,16 @@ private:
 
   // The branches that we can hoist, mapped to the block that marks a
   // convergence point of their control flow.
-  DenseMap<BranchInst *, BasicBlock *> HoistableBranches;
+  DenseMap<CondBrInst *, BasicBlock *> HoistableBranches;
 
 public:
   ControlFlowHoister(LoopInfo *LI, DominatorTree *DT, Loop *CurLoop,
                      MemorySSAUpdater &MSSAU)
       : LI(LI), DT(DT), CurLoop(CurLoop), MSSAU(MSSAU) {}
 
-  void registerPossiblyHoistableBranch(BranchInst *BI) {
+  void registerPossiblyHoistableBranch(CondBrInst *BI) {
     // We can only hoist conditional branches with loop invariant operands.
-    if (!ControlFlowHoisting || !BI->isConditional() ||
-        !CurLoop->hasLoopInvariantOperands(BI))
+    if (!ControlFlowHoisting || !CurLoop->hasLoopInvariantOperands(BI))
       return;
 
     // The branch destinations need to be in the loop, and we don't gain
@@ -787,7 +774,7 @@ public:
 
     // Check if this block is conditional based on a pending branch
     auto HasBBAsSuccessor =
-        [&](DenseMap<BranchInst *, BasicBlock *>::value_type &Pair) {
+        [&](DenseMap<CondBrInst *, BasicBlock *>::value_type &Pair) {
           return BB != Pair.second && (Pair.first->getSuccessor(0) == BB ||
                                        Pair.first->getSuccessor(1) == BB);
         };
@@ -803,7 +790,7 @@ public:
       HoistDestinationMap[BB] = InitialPreheader;
       return InitialPreheader;
     }
-    BranchInst *BI = It->first;
+    CondBrInst *BI = It->first;
     assert(std::none_of(std::next(It), HoistableBranches.end(),
                         HasBBAsSuccessor) &&
            "BB is expected to be the target of at most one branch");
@@ -842,15 +829,15 @@ public:
       BasicBlock *TargetSucc = HoistTarget->getSingleSuccessor();
       assert(TargetSucc && "Expected hoist target to have a single successor");
       HoistCommonSucc->moveBefore(TargetSucc);
-      BranchInst::Create(TargetSucc, HoistCommonSucc);
+      UncondBrInst::Create(TargetSucc, HoistCommonSucc);
     }
     if (!HoistTrueDest->getTerminator()) {
       HoistTrueDest->moveBefore(HoistCommonSucc);
-      BranchInst::Create(HoistCommonSucc, HoistTrueDest);
+      UncondBrInst::Create(HoistCommonSucc, HoistTrueDest);
     }
     if (!HoistFalseDest->getTerminator()) {
       HoistFalseDest->moveBefore(HoistCommonSucc);
-      BranchInst::Create(HoistCommonSucc, HoistFalseDest);
+      UncondBrInst::Create(HoistCommonSucc, HoistFalseDest);
     }
 
     // If BI is being cloned to what was originally the preheader then
@@ -873,7 +860,7 @@ public:
 
     // Now finally clone BI.
     auto *NewBI =
-        BranchInst::Create(HoistTrueDest, HoistFalseDest, BI->getCondition(),
+        CondBrInst::Create(BI->getCondition(), HoistTrueDest, HoistFalseDest,
                            HoistTarget->getTerminator()->getIterator());
     HoistTarget->getTerminator()->eraseFromParent();
     // md_prof should also come from the original branch - since the
@@ -933,8 +920,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
     for (Instruction &I : llvm::make_early_inc_range(*BB)) {
       // Try hoisting the instruction out to the preheader.  We can only do
       // this if all of the operands of the instruction are loop invariant and
-      // if it is safe to hoist the instruction. We also check block frequency
-      // to make sure instruction only gets hoisted into colder blocks.
+      // if it is safe to hoist the instruction.
       // TODO: It may be safe to hoist if we are hoisting to a conditional block
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
@@ -1021,7 +1007,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 
       // Remember possibly hoistable branches so we can actually hoist them
       // later if needed.
-      if (BranchInst *BI = dyn_cast<BranchInst>(&I))
+      if (CondBrInst *BI = dyn_cast<CondBrInst>(&I))
         CFH.registerPossiblyHoistableBranch(BI);
     }
   }
@@ -1468,78 +1454,17 @@ static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
 
 static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                                   ICFLoopSafetyInfo &SafetyInfo,
-                                  MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
-                                  MemorySSA::InsertionPlace Point) {
+                                  MemorySSAUpdater &MSSAU,
+                                  ScalarEvolution *SE) {
   SafetyInfo.removeInstruction(&I);
   SafetyInfo.insertInstructionTo(&I, Dest->getParent());
   I.moveBefore(*Dest->getParent(), Dest);
   if (MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(
           MSSAU.getMemorySSA()->getMemoryAccess(&I)))
-    MSSAU.moveToPlace(OldMemAcc, Dest->getParent(), Point);
+    MSSAU.moveToPlace(OldMemAcc, Dest->getParent(),
+                      MemorySSA::BeforeTerminator);
   if (SE)
     SE->forgetBlockAndLoopDispositions(&I);
-}
-
-// If there's a single exit block, sink any loop-invariant values that were
-// defined in the preheader but not used inside the loop into the exit block
-// to reduce register pressure in the loop.
-static bool sinkUnusedInvariantsFromPreheaderToExit(
-    Loop *L, AAResults *AA, ICFLoopSafetyInfo *SafetyInfo,
-    MemorySSAUpdater &MSSAU, ScalarEvolution *SE, DominatorTree *DT,
-    SinkAndHoistLICMFlags &SinkFlags, OptimizationRemarkEmitter *ORE) {
-  BasicBlock *ExitBlock = L->getExitBlock();
-  if (!ExitBlock)
-    return false;
-
-  BasicBlock *Preheader = L->getLoopPreheader();
-  if (!Preheader)
-    return false;
-
-  bool MadeAnyChanges = false;
-
-  for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
-
-    // Skip terminator.
-    if (Preheader->getTerminator() == &I)
-      continue;
-
-    // New instructions were inserted at the end of the preheader.
-    if (isa<PHINode>(I))
-      break;
-
-    // Don't move instructions which might have side effects, since the side
-    // effects need to complete before instructions inside the loop. Note that
-    // it's okay if the instruction might have undefined behavior: LoopSimplify
-    // guarantees that the preheader dominates the exit block.
-    if (I.mayHaveSideEffects())
-      continue;
-
-    if (!canSinkOrHoistInst(I, AA, DT, L, MSSAU, true, SinkFlags, nullptr))
-      continue;
-
-    // Determine if there is a use in or before the loop (direct or
-    // otherwise).
-    bool UsedInLoopOrPreheader = false;
-    for (Use &U : I.uses()) {
-      auto *UserI = cast<Instruction>(U.getUser());
-      BasicBlock *UseBB = UserI->getParent();
-      if (auto *PN = dyn_cast<PHINode>(UserI)) {
-        UseBB = PN->getIncomingBlock(U);
-      }
-      if (UseBB == Preheader || L->contains(UseBB)) {
-        UsedInLoopOrPreheader = true;
-        break;
-      }
-    }
-    if (UsedInLoopOrPreheader)
-      continue;
-
-    moveInstructionBefore(I, ExitBlock->getFirstInsertionPt(), *SafetyInfo,
-                          MSSAU, SE, MemorySSA::Beginning);
-    MadeAnyChanges = true;
-  }
-
-  return MadeAnyChanges;
 }
 
 static Instruction *sinkThroughTriviallyReplaceablePHI(
@@ -2660,11 +2585,11 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (IsSigned &&
-      !match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned && !match(VariantLHS, m_NSWAddLike(m_Value(VariantOp),
+                                                  m_Value(InvariantOp))))
     return false;
-  if (!IsSigned &&
-      !match(VariantLHS, m_NUWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (!IsSigned && !match(VariantLHS, m_NUWAddLike(m_Value(VariantOp),
+                                                   m_Value(InvariantOp))))
     return false;
 
   // LHS itself is a loop-variant, try to represent it in the form:
@@ -2829,7 +2754,7 @@ static bool isReassociableOp(Instruction *I, unsigned IntOpcode,
 /// A1, A2, ... and C are loop invariants into expressions like
 /// ((A1 * C * B1) + (A2 * C * B2) + ...) and hoist the (A1 * C), (A2 * C), ...
 /// invariant expressions. This functions returns true only if any hoisting has
-/// actually occured.
+/// actually occurred.
 static bool hoistMulAddAssociation(Instruction &I, Loop &L,
                                    ICFLoopSafetyInfo &SafetyInfo,
                                    MemorySSAUpdater &MSSAU, AssumptionCache *AC,

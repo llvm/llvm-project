@@ -4,6 +4,18 @@
 // RUN:   | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
 // CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
 
+// RUN: %clang %s -### --target=arm-none-eabi -o %t.out 2>&1 \
+// RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM %s
+// CHECK-ARM: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}arm-unknown-none-eabi{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-ARM: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}arm-unknown-none-eabi{{[/\\]+}}include"
+
+// RUN: %clang %s -### --target=aarch64-none-elf -o %t.out 2>&1 \
+// RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
+// RUN:   | FileCheck --check-prefix=CHECK-AARCH64 %s
+// CHECK-AARCH64: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}aarch64-unknown-none-elf{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-AARCH64: "-internal-isystem" "{{[^"]+}}multiarch-sysroot-tree{{[/\\]+}}aarch64-unknown-none-elf{{[/\\]+}}include"
+
 // RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
 // RUN:     -T semihosted.lds \
 // RUN:     -L some/directory/user/asked/for \
@@ -19,8 +31,9 @@
 // CHECK-V6M-C-SAME: "--sysroot={{.*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm"
 // CHECK-V6M-C-SAME: "-Bstatic" "-m" "armelf" "-EL"
 // CHECK-V6M-C-SAME: "[[SYSROOT:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}crt0.o"
-// CHECK-V6M-C-SAME: "-T" "semihosted.lds" "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
+// CHECK-V6M-C-SAME: "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
 // CHECK-V6M-C-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
+// CHECK-V6M-C-SAME: "-T" "semihosted.lds"
 // CHECK-V6M-C-SAME: "{{.*}}.o"
 // CHECK-V6M-C-SAME: {{[^"]*}}libclang_rt.builtins.a"
 // CHECK-V6M-C-SAME: "-lc"
@@ -601,3 +614,12 @@
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
 // RUN:   | FileCheck --check-prefix=CHECK-RV64-RELAX %s
 // CHECK-RV64-RELAX-NOT: "--no-relax"
+
+// Check that "-T" follows after "-L" for RISC-V
+// RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf \
+// RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
+// RUN:     -T linker_script.lds -Lsearch_path \
+// RUN:   | FileCheck --check-prefix=CHECK-RV64-LINKER-SCRIPT %s
+// CHECK-RV64-LINKER-SCRIPT: ld{{(.exe)?}}"
+// CHECK-RV64-LINKER-SCRIPT-SAME: "-Lsearch_path"
+// CHECK-RV64-LINKER-SCRIPT-SAME: "-T" "linker_script.lds"

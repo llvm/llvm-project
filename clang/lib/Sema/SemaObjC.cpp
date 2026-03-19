@@ -1468,7 +1468,7 @@ bool SemaObjC::isCFError(RecordDecl *RD) {
   // declared with "objc_bridge_mutable", so look for either one of the two
   // attributes.
   if (RD->getTagKind() == TagTypeKind::Struct) {
-    IdentifierInfo *bridgedType = nullptr;
+    const IdentifierInfo *bridgedType = nullptr;
     if (auto bridgeAttr = RD->getAttr<ObjCBridgeAttr>())
       bridgedType = bridgeAttr->getBridgedType();
     else if (auto bridgeAttr = RD->getAttr<ObjCBridgeMutableAttr>())
@@ -1708,6 +1708,12 @@ void SemaObjC::handleBlocksAttr(Decl *D, const ParsedAttr &AL) {
   BlocksAttr::BlockType type;
   if (!BlocksAttr::ConvertStrToBlockType(II->getName(), type)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << II;
+    return;
+  }
+
+  VarDecl *VD = dyn_cast<VarDecl>(D);
+  if (!VD || !VD->hasLocalStorage()) {
+    Diag(AL.getLoc(), diag::err_block_on_nonlocal) << AL;
     return;
   }
 

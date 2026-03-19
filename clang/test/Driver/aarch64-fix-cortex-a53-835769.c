@@ -7,9 +7,13 @@
 
 // RUN: %clang --target=aarch64-linux-androideabi %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-YES %s
+// RUN: %clang --target=aarch64-linux-androideabi -march=armv8.1-a %s -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-DEF %s
 
 // RUN: %clang --target=aarch64-fuchsia %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-YES %s
+// RUN: %clang --target=aarch64-fuchsia -march=armv8.1-a %s -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-DEF %s
 
 // RUN: %clang --target=aarch64-fuchsia -mcpu=cortex-a73 %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-DEF %s

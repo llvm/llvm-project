@@ -463,7 +463,7 @@ void HexagonOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     break;
   case Register:
     OS << "<register R";
-    OS << getReg() << ">";
+    OS << getReg().id() << ">";
     break;
   case Token:
     OS << "'" << getToken() << "'";

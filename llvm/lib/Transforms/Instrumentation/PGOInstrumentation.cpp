@@ -407,8 +407,8 @@ public:
 // Return a string describing the branch condition that can be
 // used in static branch probability heuristics:
 static std::string getBranchCondString(Instruction *TI) {
-  BranchInst *BI = dyn_cast<BranchInst>(TI);
-  if (!BI || !BI->isConditional())
+  CondBrInst *BI = dyn_cast<CondBrInst>(TI);
+  if (!BI)
     return std::string();
 
   Value *Cond = BI->getCondition();
@@ -456,7 +456,7 @@ createIRLevelProfileFlagVar(Module &M,
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
   if (PGOInstrumentLoopEntries)
     ProfileVersion |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
-  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
   if (PGOFunctionEntryCoverage)
     ProfileVersion |=
@@ -734,7 +734,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   FunctionHash = (((uint64_t)JCH.getCRC()) << 28) + JC.getCRC();
 
   // Reserve bit 60-63 for other information purpose.
-  FunctionHash &= 0x0FFFFFFFFFFFFFFF;
+  FunctionHash &= NamedInstrProfRecord::FUNC_HASH_MASK;
   if (IsCS)
     NamedInstrProfRecord::setCSFlagInHash(FunctionHash);
   LLVM_DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
@@ -1692,7 +1692,7 @@ void PGOUseFunc::setBranchWeights() {
     Instruction *TI = BB.getTerminator();
     if (TI->getNumSuccessors() < 2)
       continue;
-    if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
+    if (!(isa<CondBrInst>(TI) || isa<SwitchInst>(TI) ||
           isa<IndirectBrInst>(TI) || isa<InvokeInst>(TI) ||
           isa<CallBrInst>(TI)))
       continue;

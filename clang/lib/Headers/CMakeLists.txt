@@ -3,6 +3,7 @@
 # to platform specific lists below.
 set(core_files
   builtins.h
+  endian.h
   float.h
   __float_float.h
   __float_header_macro.h
@@ -24,6 +25,7 @@ set(core_files
   stdcountof.h
   stdckdint.h
   stddef.h
+  stddefer.h
   __stddef_header_macro.h
   __stddef_max_align_t.h
   __stddef_null.h
@@ -119,6 +121,7 @@ set(opencl_files
 
 set(ppc_files
   altivec.h
+  amo.h
   )
 
 set(ppc_htm_files
@@ -127,14 +130,16 @@ set(ppc_htm_files
   )
 
 set(riscv_files
+  # Standard headers
   riscv_bitmanip.h
-  riscv_corev_alu.h
   riscv_crypto.h
-  riscv_nds.h
   riscv_ntlh.h
-  sifive_vector.h
+  # Vendor headers
   andes_vector.h
+  riscv_corev_alu.h
   riscv_mips.h
+  riscv_nds.h
+  sifive_vector.h
   )
 
 set(spirv_files
@@ -162,18 +167,12 @@ set(x86_files
   adxintrin.h
   ammintrin.h
   amxavx512intrin.h
-  amxbf16transposeintrin.h
   amxcomplexintrin.h
-  amxcomplextransposeintrin.h
   amxfp16intrin.h
-  amxfp16transposeintrin.h
   amxfp8intrin.h
   amxintrin.h
   amxmovrsintrin.h
-  amxmovrstransposeintrin.h
   amxtf32intrin.h
-  amxtf32transposeintrin.h
-  amxtransposeintrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h
@@ -298,9 +297,11 @@ set(x86_files
   )
 
 set(gpu_files
+  amdhsa_abi.h
   gpuintrin.h
   nvptxintrin.h
   amdgpuintrin.h
+  spirvintrin.h
   )
 
 set(windows_only_files
@@ -519,8 +520,8 @@ foreach( f ${generated_files} )
   endif()
 endforeach( f )
 
-function(add_header_target target_name file_list)
-  add_library(${target_name} INTERFACE ${file_list})
+function(add_header_target target_name)
+  add_library(${target_name} INTERFACE ${ARGN})
   set_target_properties(${target_name} PROPERTIES
     FOLDER "Clang/Resources"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")

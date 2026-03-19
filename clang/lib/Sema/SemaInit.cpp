@@ -31,8 +31,10 @@
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1897,26 +1899,28 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
     return;
 
   const ConstantMatrixType *MT = DeclType->castAs<ConstantMatrixType>();
-  QualType ElemTy = MT->getElementType();
-  const unsigned MaxElts = MT->getNumElementsFlattened();
 
-  unsigned NumEltsInit = 0;
-  InitializedEntity ElemEnt =
+  // For HLSL, the error reporting for this case is handled in SemaHLSL's
+  // initializer list diagnostics. That means the execution should require
+  // getNumElementsFlattened to equal getNumInits. In other words the execution
+  // should never reach this point if this condition is not true".
+  assert(IList->getNumInits() == MT->getNumElementsFlattened() &&
+         "Inits must equal Matrix element count");
+
+  QualType ElemTy = MT->getElementType();
+
+  Index = 0;
+  InitializedEntity Element =
       InitializedEntity::InitializeElement(SemaRef.Context, 0, Entity);
 
-  while (NumEltsInit < MaxElts && Index < IList->getNumInits()) {
+  while (Index < IList->getNumInits()) {
     // Not a sublist: just consume directly.
-    ElemEnt.setElementIndex(Index);
-    CheckSubElementType(ElemEnt, IList, ElemTy, Index, StructuredList,
+    // Note: In HLSL, elements of the InitListExpr are in row-major order, so no
+    // change is needed to the Index.
+    Element.setElementIndex(Index);
+    CheckSubElementType(Element, IList, ElemTy, Index, StructuredList,
                         StructuredIndex);
-    ++NumEltsInit;
   }
-
-  // For HLSL The error for this case is handled in SemaHLSL's initializer
-  // list diagnostics, That means the execution should require NumEltsInit
-  // to equal Max initializers. In other words  execution should never
-  // reach this point if this condition is not true".
-  assert(NumEltsInit == MaxElts && "NumEltsInit must equal MaxElts");
 }
 
 void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
@@ -3089,6 +3093,65 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         PrevField = *FI;
       }
 
+      const auto GenerateDesignatedInitReorderingFixit =
+          [&](SemaBase::SemaDiagnosticBuilder &Diag) {
+            struct ReorderInfo {
+              int Pos{};
+              const Expr *InitExpr{};
+            };
+
+            llvm::SmallDenseMap<IdentifierInfo *, int> MemberNameInx{};
+            llvm::SmallVector<ReorderInfo, 16> ReorderedInitExprs{};
+
+            const auto *CxxRecord =
+                IList->getSemanticForm()->getType()->getAsCXXRecordDecl();
+
+            for (const FieldDecl *Field : CxxRecord->fields())
+              MemberNameInx[Field->getIdentifier()] = Field->getFieldIndex();
+
+            for (const Expr *Init : IList->inits()) {
+              if (const auto *DI =
+                      dyn_cast_if_present<DesignatedInitExpr>(Init)) {
+                // We expect only one Designator
+                if (DI->size() != 1)
+                  return;
+
+                const IdentifierInfo *const FieldName =
+                    DI->getDesignator(0)->getFieldName();
+                // In case we have an unknown initializer in the source, not in
+                // the record
+                if (MemberNameInx.contains(FieldName))
+                  ReorderedInitExprs.emplace_back(
+                      ReorderInfo{MemberNameInx.at(FieldName), Init});
+              }
+            }
+
+            llvm::sort(ReorderedInitExprs,
+                       [](const ReorderInfo &A, const ReorderInfo &B) {
+                         return A.Pos < B.Pos;
+                       });
+
+            llvm::SmallString<128> FixedInitList{};
+            SourceManager &SM = SemaRef.getSourceManager();
+            const LangOptions &LangOpts = SemaRef.getLangOpts();
+
+            // In a derived Record, first n base-classes are initialized first.
+            // They do not use designated init, so skip them
+            const ArrayRef<clang::Expr *> IListInits =
+                IList->inits().drop_front(CxxRecord->getNumBases());
+            // loop over each existing expressions and apply replacement
+            for (const auto &[OrigExpr, Repl] :
+                 llvm::zip(IListInits, ReorderedInitExprs)) {
+              CharSourceRange CharRange = CharSourceRange::getTokenRange(
+                  Repl.InitExpr->getSourceRange());
+              const StringRef InitText =
+                  Lexer::getSourceText(CharRange, SM, LangOpts);
+
+              Diag << FixItHint::CreateReplacement(OrigExpr->getSourceRange(),
+                                                   InitText.str());
+            }
+          };
+
       if (PrevField &&
           PrevField->getFieldIndex() > KnownField->getFieldIndex()) {
         SemaRef.Diag(DIE->getInit()->getBeginLoc(),
@@ -3098,9 +3161,10 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         unsigned OldIndex = StructuredIndex - 1;
         if (StructuredList && OldIndex <= StructuredList->getNumInits()) {
           if (Expr *PrevInit = StructuredList->getInit(OldIndex)) {
-            SemaRef.Diag(PrevInit->getBeginLoc(),
-                         diag::note_previous_field_init)
-                << PrevField << PrevInit->getSourceRange();
+            auto Diag = SemaRef.Diag(PrevInit->getBeginLoc(),
+                                     diag::note_previous_field_init)
+                        << PrevField << PrevInit->getSourceRange();
+            GenerateDesignatedInitReorderingFixit(Diag);
           }
         }
       }
@@ -3411,7 +3475,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
   // the rest of this array subobject.
   if (IsFirstDesignator) {
     if (NextElementIndex)
-      *NextElementIndex = DesignatedStartIndex;
+      *NextElementIndex = std::move(DesignatedStartIndex);
     StructuredIndex = ElementIndex;
     return false;
   }
@@ -4625,6 +4689,18 @@ static void TryConstructorInitialization(Sema &S,
     }
   }
 
+  // if the initialization is direct-initialization, or if it is
+  // copy-initialization where the cv-unqualified version of the source type is
+  // the same as or is derived from the class of the destination type,
+  // constructors are considered.
+  if ((Kind.getKind() == InitializationKind::IK_Direct ||
+       Kind.getKind() == InitializationKind::IK_Copy) &&
+      Args.size() == 1 &&
+      S.getASTContext().hasSameUnqualifiedType(
+          Args[0]->getType().getNonReferenceType(),
+          DestType.getNonReferenceType()))
+    RequireActualConstructor = true;
+
   // C++11 [over.match.list]p1:
   //   - If no viable initializer-list constructor is found, overload resolution
   //     is performed again, where the candidate functions are all the
@@ -5586,7 +5662,16 @@ static void TryReferenceInitializationCore(Sema &S,
       T1QualsIgnoreAS.removeAddressSpace();
       T2QualsIgnoreAS.removeAddressSpace();
     }
-    QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1QualsIgnoreAS);
+    // Strip the existing ObjC lifetime qualifier from cv2T2 before combining
+    // with T1's qualifiers.
+    QualType T2ForQualConv = cv2T2;
+    if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
+      Qualifiers T2BaseQuals =
+          T2ForQualConv.getQualifiers().withoutObjCLifetime();
+      T2ForQualConv = S.Context.getQualifiedType(
+          T2ForQualConv.getUnqualifiedType(), T2BaseQuals);
+    }
+    QualType cv1T4 = S.Context.getQualifiedType(T2ForQualConv, T1QualsIgnoreAS);
     if (T1QualsIgnoreAS != T2QualsIgnoreAS)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_PRValue);
@@ -6873,10 +6958,39 @@ void InitializationSequence::InitializeFrom(Sema &S,
   // For HLSL ext vector types we allow list initialization behavior for C++
   // functional cast expressions which look like constructor syntax. This is
   // accomplished by converting initialization arguments to InitListExpr.
-  if (S.getLangOpts().HLSL && Args.size() > 1 &&
-      (DestType->isExtVectorType() || DestType->isConstantMatrixType()) &&
-      (SourceType.isNull() ||
-       !Context.hasSameUnqualifiedType(SourceType, DestType))) {
+  auto ShouldTryListInitialization = [&]() -> bool {
+    // Only try list initialization for HLSL.
+    if (!S.getLangOpts().HLSL)
+      return false;
+
+    bool DestIsVec = DestType->isExtVectorType();
+    bool DestIsMat = DestType->isConstantMatrixType();
+
+    // If the destination type is neither a vector nor a matrix, then don't try
+    // list initialization.
+    if (!DestIsVec && !DestIsMat)
+      return false;
+
+    // If there is only a single source argument, then only try list
+    // initialization if initializing a matrix with a vector or vice versa.
+    if (Args.size() == 1) {
+      assert(!SourceType.isNull() &&
+             "Source QualType should not be null when arg size is exactly 1");
+      bool SourceIsVec = SourceType->isExtVectorType();
+      bool SourceIsMat = SourceType->isConstantMatrixType();
+
+      if (DestIsMat && !SourceIsVec)
+        return false;
+      if (DestIsVec && !SourceIsMat)
+        return false;
+    }
+
+    // Try list initialization if the source type is null or if the
+    // destination and source types differ.
+    return SourceType.isNull() ||
+           !Context.hasSameUnqualifiedType(SourceType, DestType);
+  };
+  if (ShouldTryListInitialization()) {
     InitListExpr *ILE = new (Context)
         InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args,
                      Args.back()->getEndLoc());
@@ -8438,8 +8552,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
         Expr::EvalResult ER;
         if (Entity.getType()->getAs<PointerType>() &&
             CurInit.get()->EvaluateAsRValue(ER, S.Context) &&
-            !ER.Val.isNullPointer()) {
+            (ER.Val.isLValue() && !ER.Val.isNullPointer())) {
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
+          return ExprError();
         }
       }
 

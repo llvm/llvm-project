@@ -712,33 +712,33 @@ define void @lshr_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, (%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %cl, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%esi), %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%esp,%esi), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ebx, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edi,%edi), %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edx, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, (%esp,%esi), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edi), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%esp,%edi), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %ebx, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %al
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %al
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edx,%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edi), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebx, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebx, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%esp,%esi), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %esi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 12(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 8(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, (%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 4(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%esp,%edi), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edi,%edi), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 12(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 8(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, (%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 4(%edx)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl $44, %esp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
@@ -994,42 +994,42 @@ define void @shl_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%ecx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%ecx), %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%ecx), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl (%eax), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl (%eax), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorps %xmm0, %xmm0
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movaps %xmm0, (%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %al
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %al
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    negb %al
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movsbl %al, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 16(%esp,%edx), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 20(%esp,%edx), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %ecx, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    negb %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movsbl %dl, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 16(%esp,%esi), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 20(%esp,%esi), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edx, %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %al
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %al
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, 28(%esp,%edx), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%esp,%edx), %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebx, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ebx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, 28(%esp,%esi), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%esp,%esi), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %edx, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ecx, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %edx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ecx, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, (%ecx)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 8(%ecx)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 12(%ecx)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, 4(%ecx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 12(%ecx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, 4(%ecx)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl $44, %esp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
@@ -1297,33 +1297,33 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %cl, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%esi), %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%esp,%esi), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ebx, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edi,%edi), %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edx, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, (%esp,%esi), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $12, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%esp,%edi), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%esp,%edi), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %ebx, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %al
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %al
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edx,%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, (%esp,%edi), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebx, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebx, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%esp,%esi), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    sarxl %eax, %esi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 12(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 8(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, (%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 4(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%esp,%edi), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edi,%edi), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    sarxl %ecx, %edi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 12(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 8(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, (%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 4(%edx)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl $44, %esp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
@@ -1487,31 +1487,31 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrb $6, %cl
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %cl, %esi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -64(%rsp,%rsi,8), %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -56(%rsp,%rsi,8), %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rcx, %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, -72(%rsp,%rsi,8), %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rdi, %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -48(%rsp,%rsi,8), %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rsi, %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    # kill: def $al killed $al killed $rax def $rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %esi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrb $6, %sil
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %sil, %esi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -64(%rsp,%rsi,8), %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -56(%rsp,%rsi,8), %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %rdi, %r9
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    andb $63, %al
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    xorb $63, %al
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r8,%r8), %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %r10, %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, -72(%rsp,%rsi,8), %r9
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rdi, %rdi
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rdi, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r8, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rcx, %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rcx, %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rsi, %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rsi, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r10, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r11, 24(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r8, %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -48(%rsp,%rsi,8), %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%rsi,%rsi), %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %r9, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r8, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %rsi, %rcx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, 24(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rax, 16(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, (%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, 8(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, (%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r10, 8(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    retq
 ;
 ; X64-HAVE-BMI2-HAVE-SHLD-LABEL: lshr_32bytes:
@@ -1761,88 +1761,90 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%eax), %ecx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%eax), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%eax), %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 16(%eax), %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 20(%eax), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%eax), %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 28(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%eax), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 28(%eax), %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl (%eax), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl (%eax), %ecx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorps %xmm0, %xmm0
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $5, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %cl, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 36(%esp,%esi,4), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 40(%esp,%esi,4), %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ecx, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebx, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ebx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $5, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 36(%esp,%esi,4), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 40(%esp,%esi,4), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %edx, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %cl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %cl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%ebp,%ebp), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebx, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, 32(%esp,%esi,4), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%esp,%esi,4), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 44(%esp,%esi,4), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ecx, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%esp,%esi,4), %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%ebx,%ebx), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%esp,%esi,4), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %edi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ebx, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 60(%esp,%esi,4), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %esi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %esi, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%esp,%esi,4), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 44(%esp,%esi,4), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %edx, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ebp, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%esp,%esi,4), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edi,%edi), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%esp,%esi,4), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebp, %eax, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebx, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 28(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 24(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, 16(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 20(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebp, {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %eax, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %eax, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 60(%esp,%esi,4), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebx, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebp, %edi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebp, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 28(%edi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 24(%edi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 16(%edi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 20(%edi)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 8(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 8(%edi)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 12(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 12(%edi)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, (%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, (%edi)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 4(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 4(%edi)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl $108, %esp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
@@ -2040,32 +2042,32 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %cl
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    andb $24, %cl
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    negb %cl
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movsbq %cl, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %esi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %sil
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    andb $24, %sil
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    negb %sil
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movsbq %sil, %rdi
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -40(%rsp,%rdi), %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -32(%rsp,%rdi), %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rcx, %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, -16(%rsp,%rdi), %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -24(%rsp,%rdi), %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rdi, %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %r8, %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    # kill: def $al killed $al killed $rax def $rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -32(%rsp,%rdi), %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %rsi, %r9
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    andb $63, %al
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    xorb $63, %al
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %r8, %r10
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %r8
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %r8, %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rsi, %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, -16(%rsp,%rdi), %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -24(%rsp,%rdi), %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %rdi, %rcx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rdi, %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rcx, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r10, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r11, (%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rdi, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rsi, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rcx, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r10, (%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rax, 16(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rsi, 24(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, 24(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r8, 8(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    retq
 ;
@@ -2319,97 +2321,101 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%eax), %ecx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%eax), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%eax), %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 16(%eax), %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 20(%eax), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%eax), %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 28(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%eax), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 28(%eax), %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl (%eax), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl (%eax), %ecx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorps %xmm0, %xmm0
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $28, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    negb %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movsbl %cl, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $3, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $28, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    negb %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movsbl %dl, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 64(%esp,%esi), %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 68(%esp,%esi), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 68(%esp,%esi), %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ecx, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %edx, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %cl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %cl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %ebx, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 72(%esp,%esi), %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 76(%esp,%esi), %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebp, %edi, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, %ebx, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 80(%esp,%ebp), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 80(%esp,%ebp), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %ebx, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 84(%esp,%ebp), %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, %ebx, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, %ecx, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, %edx, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ecx, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, 92(%esp,%esi), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 88(%esp,%esi), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %esi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edx, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, 92(%esp,%edx), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 88(%esp,%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %esi, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %esi, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebx, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %eax, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, (%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 24(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 28(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, 16(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 20(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 8(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 12(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 4(%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %ebx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, (%ecx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 24(%ecx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 28(%ecx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, 16(%ecx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 20(%ecx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 8(%ecx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 12(%ecx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 4(%ecx)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl $108, %esp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
@@ -2610,31 +2616,31 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrb $6, %cl
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %cl, %esi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -64(%rsp,%rsi,8), %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -56(%rsp,%rsi,8), %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rcx, %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, -72(%rsp,%rsi,8), %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rdi, %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -48(%rsp,%rsi,8), %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    sarxq %rax, %rsi, %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    # kill: def $al killed $al killed $rax def $rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %esi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrb $6, %sil
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %sil, %esi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -64(%rsp,%rsi,8), %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -56(%rsp,%rsi,8), %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %rdi, %r9
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    andb $63, %al
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    xorb $63, %al
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r8,%r8), %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %r10, %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, -72(%rsp,%rsi,8), %r9
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rdi, %rdi
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rdi, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r8, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rcx, %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rcx, %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rsi, %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rsi, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r10, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r11, 24(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r8, %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -48(%rsp,%rsi,8), %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%rsi,%rsi), %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %r9, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r8, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    sarxq %rcx, %rsi, %rcx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, 24(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rax, 16(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, (%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, 8(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, (%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r10, 8(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    retq
 ;
 ; X64-HAVE-BMI2-HAVE-SHLD-LABEL: ashr_32bytes:
@@ -2927,60 +2933,59 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $5, %cl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %cl, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 36(%esp,%esi,4), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 40(%esp,%esi,4), %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ecx, %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %dl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebx, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ebx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrb $5, %dl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movzbl %dl, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 36(%esp,%esi,4), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 40(%esp,%esi,4), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andb $31, %al
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %al
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%ebp,%ebp), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebx, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, 32(%esp,%esi,4), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%esp,%esi,4), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 44(%esp,%esi,4), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ecx, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%esp,%esi,4), %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%ebx,%ebx), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%esp,%esi,4), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %edi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %eax, %ebx, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 60(%esp,%esi,4), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    sarxl %eax, %esi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %esi, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, 32(%esp,%esi,4), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%esp,%esi,4), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %edx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 44(%esp,%esi,4), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %edx, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %ebp, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %edx, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%esp,%esi,4), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %edx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%esp,%esi,4), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, %eax, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebx, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %eax, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %eax, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 60(%esp,%esi,4), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %ebx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ecx, {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    sarxl %ecx, %esi, %ecx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 28(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 24(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, 16(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 20(%esi)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 8(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 28(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, 24(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 16(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 20(%esi)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, 8(%esi)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 12(%esi)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
@@ -3263,13 +3268,11 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ;
 ; X64-HAVE-BMI2-NO-SHLD-LABEL: lshr_64bytes:
 ; X64-HAVE-BMI2-NO-SHLD:       # %bb.0:
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %rbp
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r15
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r14
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r13
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r12
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %rax
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq (%rdi), %rcx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq 8(%rdi), %r8
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq 16(%rdi), %r9
@@ -3292,65 +3295,63 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    andl $63, %ecx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %esi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    andl $63, %esi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, %ecx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrl $3, %eax
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    andl $56, %eax
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -120(%rsp,%rax), %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -112(%rsp,%rax), %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r8, %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, -128(%rsp,%rax), %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %esi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -104(%rsp,%rax), %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r9, %r13
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %rdi, %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -88(%rsp,%rax), %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r11, %r14
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %r12d
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    notl %r12d
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rdi, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r12, %rdi, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r15, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -96(%rsp,%rax), %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r15, %rbp
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -112(%rsp,%rax), %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r8, %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, %r10d
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    notl %r10d
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r11,%r11), %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r10, %rdi, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, -128(%rsp,%rax), %r9
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    xorb $63, %sil
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %r8, %r8
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %r8, %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rbx, %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r15,%r15), %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r12, %rbx, %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r13, %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -80(%rsp,%rax), %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r15, %r13
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -72(%rsp,%rax), %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %rax, %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %r9, %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %r9, %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r10, %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r15,%r15), %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r12, %r10, %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -104(%rsp,%rax), %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %rbx, %r14
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -96(%rsp,%rax), %r15
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r15,%r15), %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r10, %r9, %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r11, %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rbx, %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %rbx, %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r11, %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -88(%rsp,%rax), %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r11, %r14
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -80(%rsp,%rax), %r12
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r12,%r12), %r13
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r10, %r13, %r10
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r15, %r14
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %r11, %r11
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %r11, %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rbp, %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rax, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %rax, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r13, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, 56(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rax, 48(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r12, %r14
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -72(%rsp,%rax), %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%rax,%rax), %r15
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %r15, %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %rax, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rax, 56(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rsi, 48(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r11, 32(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r10, 40(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r9, 16(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rbx, 24(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rbx, 16(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r9, 24(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r8, (%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, 8(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq $8, %rsp
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %rbx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r12
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r13
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r14
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %rbp
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    retq
 ;
 ; X64-HAVE-BMI2-HAVE-SHLD-LABEL: lshr_64bytes:
@@ -3868,20 +3869,20 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 40(%eax), %ecx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 44(%eax), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%eax), %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%eax), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%eax), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 60(%eax), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%eax), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%eax), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%eax), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 60(%eax), %ecx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl (%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl (%eax), %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorps %xmm0, %xmm0
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
@@ -3906,116 +3907,117 @@ define void @lshr_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $31, %ecx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $31, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl $3, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $60, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 68(%esp,%ecx), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 72(%esp,%ecx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl $3, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $60, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 68(%esp,%ebx), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 72(%esp,%ebx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    notl %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebp, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebx, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %bl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %cl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, 64(%esp,%ecx), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, 64(%esp,%ebx), %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 80(%esp,%ecx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 80(%esp,%ebx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 76(%esp,%ecx), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 76(%esp,%ebx), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebp, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebp, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 88(%esp,%ecx), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 88(%esp,%ebx), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 84(%esp,%ecx), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 84(%esp,%ebx), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebp, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebp, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 96(%esp,%ecx), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 96(%esp,%ebx), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %esi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 92(%esp,%ecx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 92(%esp,%ebx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %esi, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %esi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 104(%esp,%ecx), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 104(%esp,%ebx), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 100(%esp,%ecx), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 100(%esp,%ebx), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebp, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebp, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 112(%esp,%ecx), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 112(%esp,%ebx), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %esi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 108(%esp,%ecx), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %esi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %esi, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 108(%esp,%ebx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %esi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %esi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 120(%esp,%ebx), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edi,%edi), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 116(%esp,%ebx), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebp, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 120(%esp,%ecx), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, %edi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 116(%esp,%ecx), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebp, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %eax, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 124(%esp,%ecx), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 124(%esp,%ebx), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %eax, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %eax, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebx, %eax, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 60(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, 56(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, 48(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, 52(%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 56(%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, 48(%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 52(%eax)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 40(%eax)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
@@ -4388,10 +4390,8 @@ define void @shl_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ;
 ; X64-HAVE-BMI2-NO-SHLD-LABEL: shl_64bytes:
 ; X64-HAVE-BMI2-NO-SHLD:       # %bb.0:
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %rbp
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r15
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r14
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r13
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r12
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %rbx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %rax
@@ -4419,63 +4419,61 @@ define void @shl_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, %eax
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    andl $63, %eax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrl $3, %esi
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    andl $56, %esi
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    negl %esi
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movslq %esi, %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -64(%rsp,%rsi), %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -56(%rsp,%rsi), %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rcx, %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -40(%rsp,%rsi), %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rdi, %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -48(%rsp,%rsi), %r14
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %r14, %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -24(%rsp,%rsi), %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %r8, %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %r10, %r12
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %r13d
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    xorb $63, %r13b
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %r13, %r10, %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -32(%rsp,%rsi), %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %r9, %rbp
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %r14
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %r13, %r14, %r14
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r11, %r14
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, -8(%rsp,%rsi), %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -16(%rsp,%rsi), %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rax, %rsi, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %r13, %rcx, %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rbx, %rcx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -64(%rsp,%rsi), %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -56(%rsp,%rsi), %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %rdi, %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    xorb $63, %al
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %r9, %r10
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %r13, %r9, %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r15, %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %r13, %rdi, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rbp, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %r13, %rsi, %rsi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r11, %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %r9, %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r8, %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -40(%rsp,%rsi), %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %r11, %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -48(%rsp,%rsi), %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %r8, %r14
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %r13, %r8, %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rax, %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r12, (%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r8, 48(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %r8, %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rbx, %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rdi, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -24(%rsp,%rsi), %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %rbx, %r14
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -32(%rsp,%rsi), %r15
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %r15, %r12
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %r15
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %r15, %r15
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %r15
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %r11, %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r12, %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, -8(%rsp,%rsi), %r14
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -16(%rsp,%rsi), %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rcx, %rsi, %rcx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rsi, %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrq %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rax, %rbx, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rcx, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r10, (%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rax, 48(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rsi, 56(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, 32(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r9, 40(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, 16(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r14, 24(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r10, 8(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r11, 32(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r15, 40(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, 16(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r8, 24(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r9, 8(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq $8, %rsp
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %rbx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r12
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r13
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r14
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %rbp
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    retq
 ;
 ; X64-HAVE-BMI2-HAVE-SHLD-LABEL: shl_64bytes:
@@ -4972,33 +4970,33 @@ define void @shl_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    pushl %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    subl $204, %esp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl (%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 16(%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 20(%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 28(%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 32(%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 36(%ebp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 40(%ebp), %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 44(%ebp), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%ebp), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%ebp), %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%ebp), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 60(%ebp), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl (%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 16(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 20(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 28(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 32(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 36(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 40(%eax), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 44(%eax), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%eax), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%eax), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%eax), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 60(%eax), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl (%ebp), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorps %xmm0, %xmm0
@@ -5011,7 +5009,7 @@ define void @shl_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl (%esp), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
@@ -5032,149 +5030,152 @@ define void @shl_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $31, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl $3, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $60, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal {{[0-9]+}}(%esp), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    subl %ebp, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl (%edi), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%edi), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %bl
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ecx, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%edi), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%edi), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %eax, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 16(%edi), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %eax, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 20(%edi), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %esi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%edi), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 28(%edi), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, (%esp), %eax # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %eax, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, (%esp) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 32(%edi), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %eax, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 36(%edi), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %esi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 40(%edi), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 44(%edi), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %eax, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%edi), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $31, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl $3, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $60, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    subl %eax, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl (%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 4(%edx), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %bl
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %esi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %eax, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 8(%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %esi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 12(%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %eax, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 16(%edx), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 20(%edx), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %ecx, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %esi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 24(%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %esi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 28(%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %esi, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 32(%edx), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 36(%edx), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %ecx, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 40(%edx), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %esi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 44(%edx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %esi, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %edi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %eax, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%edi), %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ecx, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %ebp, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 48(%edx), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %edi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 52(%edx), %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, %ecx, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, %ebp, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %eax, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    negl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, 188(%esp,%ecx), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%edi), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edx, %edi, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %eax, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edx, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 56(%edx), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %ecx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebp, %edi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ecx, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %edi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %eax, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, (%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 56(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, 60(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 48(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 52(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 40(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 44(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 32(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 36(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 24(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 28(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 16(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 20(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 8(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 12(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 4(%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %ebx, %edi, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebp, {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    negl %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ebp, 188(%esp,%ebx), %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ecx, %ebx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, (%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 56(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, 60(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 48(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 52(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 40(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 44(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 32(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 36(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 24(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 28(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 16(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 20(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 8(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 12(%edx)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, 4(%edx)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl $204, %esp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    popl %edi
@@ -5534,13 +5535,11 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ;
 ; X64-HAVE-BMI2-NO-SHLD-LABEL: ashr_64bytes:
 ; X64-HAVE-BMI2-NO-SHLD:       # %bb.0:
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %rbp
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r15
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r14
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r13
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %r12
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    pushq %rax
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq (%rdi), %rcx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq 8(%rdi), %r8
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq 16(%rdi), %r9
@@ -5567,65 +5566,63 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    andl $63, %ecx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %esi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    andl $63, %esi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, %ecx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrl $3, %eax
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    andl $56, %eax
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -120(%rsp,%rax), %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -112(%rsp,%rax), %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r8, %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, -128(%rsp,%rax), %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %esi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -104(%rsp,%rax), %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r9, %r13
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %rdi, %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -88(%rsp,%rax), %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r11, %r14
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %r12d
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    notl %r12d
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rdi, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r12, %rdi, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r15, %rdi
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -96(%rsp,%rax), %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r15, %rbp
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -112(%rsp,%rax), %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r8, %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, %r10d
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    notl %r10d
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r11,%r11), %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r10, %rdi, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %rdi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, -128(%rsp,%rax), %r9
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    xorb $63, %sil
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %r8, %r8
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %r8, %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rbx, %r8
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r15,%r15), %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r12, %rbx, %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r13, %rbx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -80(%rsp,%rax), %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r15, %r13
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -72(%rsp,%rax), %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    sarxq %rcx, %rax, %rcx
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %r9, %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %r9, %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r10, %r9
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r15,%r15), %r10
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r12, %r10, %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r9, %r8
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -104(%rsp,%rax), %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %rbx, %r14
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -96(%rsp,%rax), %r15
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r15,%r15), %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r10, %r9, %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %r9
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r11, %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rbx, %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %rbx, %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r11, %rbx
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -88(%rsp,%rax), %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r11, %r14
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -80(%rsp,%rax), %r12
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%r12,%r12), %r13
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %r10, %r13, %r10
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %r10
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r15, %r14
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %r11, %r11
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %r11, %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %rbp, %r11
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq %rax, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %rax, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r13, %rax
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rcx, 56(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rax, 48(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %r11
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shrxq %rcx, %r12, %r14
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq -72(%rsp,%rax), %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    leaq (%rax,%rax), %r15
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    shlxq %rsi, %r15, %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    orq %r14, %rsi
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    sarxq %rcx, %rax, %rax
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rax, 56(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rsi, 48(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r11, 32(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r10, 40(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r9, 16(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rbx, 24(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rbx, 16(%rdx)
+; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r9, 24(%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %r8, (%rdx)
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    movq %rdi, 8(%rdx)
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    addq $8, %rsp
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %rbx
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r12
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r13
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r14
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %r15
-; X64-HAVE-BMI2-NO-SHLD-NEXT:    popq %rbp
 ; X64-HAVE-BMI2-NO-SHLD-NEXT:    retq
 ;
 ; X64-HAVE-BMI2-HAVE-SHLD-LABEL: ashr_64bytes:
@@ -6221,33 +6218,31 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $31, %edx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $31, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrl $3, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    andl $60, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 68(%esp,%ebx), %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 72(%esp,%ebx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    notl %ecx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    notl %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %eax, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebp, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %al
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    xorb $31, %cl
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %edi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %ecx
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edi, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, 64(%esp,%ebx), %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 80(%esp,%ebx), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 80(%esp,%ebx), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%esi,%esi), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 76(%esp,%ebx), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebp, %esi
@@ -6256,87 +6251,84 @@ define void @ashr_64bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebp, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 88(%esp,%ebx), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 84(%esp,%ebx), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebp, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebp, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 96(%esp,%ebx), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 92(%esp,%ebx), %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %esi, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %esi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 104(%esp,%ebx), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 100(%esp,%ebx), %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebp, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebp, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 112(%esp,%ebx), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %esi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %edi, %esi, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 108(%esp,%ebx), %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %esi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Folded Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %esi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %esi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 120(%esp,%ebx), %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%edi,%edi), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %eax, %ebp, %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 116(%esp,%ebx), %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %ebp, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 120(%esp,%ebx), %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %esi, %edi, %ebp
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 116(%esp,%ebx), %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %esi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %edi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %edi
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %eax, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %ebp, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %ebp, %ebp
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %ebp
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl 124(%esp,%ebx), %eax
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    leal (%eax,%eax), %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %esi, %esi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    shrxl %edx, %edi, %edi
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %edi, %esi
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    sarxl %edx, %eax, %edx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    addl %eax, %eax
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    shlxl %ecx, %eax, %ebx
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    orl %esi, %ebx
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edx, 60(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebx, 56(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %edi, 48(%eax)
-; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, 52(%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %esi, 56(%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ebp, 48(%eax)
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 52(%eax)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl %ecx, 40(%eax)
 ; X86-HAVE-BMI2-NO-SHLD-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload

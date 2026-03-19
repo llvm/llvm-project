@@ -181,6 +181,18 @@ def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
 
+class LLVM_CmpIntrOp<string func>
+    : LLVM_OneResultIntrOp<func, [0], [0], [Pure, SameTypeOperands]> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$a,
+      LLVM_ScalarOrVectorOf<AnySignlessInteger>:$b);
+  let results = (outs LLVM_ScalarOrVectorOf<AnySignlessInteger>:$res);
+  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+                       "functional-type(operands, results)";
+}
+
+def LLVM_SCmpOp : LLVM_CmpIntrOp<"scmp">;
+def LLVM_UCmpOp : LLVM_CmpIntrOp<"ucmp">;
+
 def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
@@ -547,6 +559,11 @@ def LLVM_USHLSat : LLVM_BinarySameArgsIntrOpI<"ushl.sat">;
 //
 // Optimization hint intrinsics.
 //
+
+def LLVM_FakeUseOp : LLVM_ZeroResultIntrOp<"fake.use"> {
+  let arguments = (ins Variadic<LLVM_Type>:$args);
+  let assemblyFormat = "$args attr-dict `:` type($args)";
+}
 
 def LLVM_AssumeOp
     : LLVM_ZeroResultIntrOp<"assume", /*overloadedOperands=*/[], /*traits=*/[],

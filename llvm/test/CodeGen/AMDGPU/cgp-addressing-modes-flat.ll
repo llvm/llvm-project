@@ -12,8 +12,8 @@
 define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; OPT-GFX7-LABEL: @test_sinkable_flat_small_offset_i32(
 ; OPT-GFX7-NEXT:  entry:
-; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
-; OPT-GFX7-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr [[IN:%.*]], i64 7
+; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX7-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 7
 ; OPT-GFX7-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX7-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX7:       if:
@@ -28,8 +28,8 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ;
 ; OPT-GFX8-LABEL: @test_sinkable_flat_small_offset_i32(
 ; OPT-GFX8-NEXT:  entry:
-; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
-; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr [[IN:%.*]], i64 7
+; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 7
 ; OPT-GFX8-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX8-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX8:       if:
@@ -44,11 +44,11 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ;
 ; OPT-GFX9-LABEL: @test_sinkable_flat_small_offset_i32(
 ; OPT-GFX9-NEXT:  entry:
-; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX9-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX9-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX9:       if:
-; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 28
+; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 28
 ; OPT-GFX9-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SUNKADDR]], align 4
 ; OPT-GFX9-NEXT:    br label [[ENDIF]]
 ; OPT-GFX9:       endif:
@@ -58,11 +58,11 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ;
 ; OPT-GFX10-LABEL: @test_sinkable_flat_small_offset_i32(
 ; OPT-GFX10-NEXT:  entry:
-; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX10-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX10-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX10:       if:
-; OPT-GFX10-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 28
+; OPT-GFX10-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 28
 ; OPT-GFX10-NEXT:    [[LOAD:%.*]] = load i32, ptr [[SUNKADDR]], align 4
 ; OPT-GFX10-NEXT:    br label [[ENDIF]]
 ; OPT-GFX10:       endif:
@@ -146,8 +146,8 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i64 999999
-  %in.gep = getelementptr i32, ptr %in, i64 7
+  %out.gep = getelementptr inbounds i32, ptr %out, i64 999999
+  %in.gep = getelementptr inbounds i32, ptr %in, i64 7
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %endif, label %if
 
@@ -167,12 +167,12 @@ done:
 define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, i32 %cond) {
 ; OPT-GFX7-LABEL: @test_sink_noop_addrspacecast_flat_to_global_i32(
 ; OPT-GFX7-NEXT:  entry:
-; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX7-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX7-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX7:       if:
 ; OPT-GFX7-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[IN:%.*]] to ptr addrspace(1)
-; OPT-GFX7-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP0]], i64 28
+; OPT-GFX7-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 28
 ; OPT-GFX7-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[SUNKADDR]], align 4
 ; OPT-GFX7-NEXT:    br label [[ENDIF]]
 ; OPT-GFX7:       endif:
@@ -182,8 +182,8 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ;
 ; OPT-GFX8-LABEL: @test_sink_noop_addrspacecast_flat_to_global_i32(
 ; OPT-GFX8-NEXT:  entry:
-; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
-; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr [[IN:%.*]], i64 7
+; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 7
 ; OPT-GFX8-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX8-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX8:       if:
@@ -197,12 +197,12 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ;
 ; OPT-GFX9-LABEL: @test_sink_noop_addrspacecast_flat_to_global_i32(
 ; OPT-GFX9-NEXT:  entry:
-; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX9-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX9-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX9:       if:
 ; OPT-GFX9-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[IN:%.*]] to ptr addrspace(1)
-; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP0]], i64 28
+; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 28
 ; OPT-GFX9-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[SUNKADDR]], align 4
 ; OPT-GFX9-NEXT:    br label [[ENDIF]]
 ; OPT-GFX9:       endif:
@@ -212,12 +212,12 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ;
 ; OPT-GFX10-LABEL: @test_sink_noop_addrspacecast_flat_to_global_i32(
 ; OPT-GFX10-NEXT:  entry:
-; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-GFX10-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-GFX10-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX10:       if:
 ; OPT-GFX10-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[IN:%.*]] to ptr addrspace(1)
-; OPT-GFX10-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr addrspace(1) [[TMP0]], i64 28
+; OPT-GFX10-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP0]], i64 28
 ; OPT-GFX10-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(1) [[SUNKADDR]], align 4
 ; OPT-GFX10-NEXT:    br label [[ENDIF]]
 ; OPT-GFX10:       endif:
@@ -303,8 +303,8 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i64 999999
-  %in.gep = getelementptr i32, ptr %in, i64 7
+  %out.gep = getelementptr inbounds i32, ptr %out, i64 999999
+  %in.gep = getelementptr inbounds i32, ptr %in, i64 7
   %cast = addrspacecast ptr %in.gep to ptr addrspace(1)
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %endif, label %if
@@ -325,12 +325,12 @@ done:
 define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in, i32 %cond) {
 ; OPT-LABEL: @test_sink_noop_addrspacecast_flat_to_constant_i32(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 999999
+; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 999999
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; OPT-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT:       if:
 ; OPT-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[IN:%.*]] to ptr addrspace(4)
-; OPT-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i64 28
+; OPT-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 28
 ; OPT-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[SUNKADDR]], align 4
 ; OPT-NEXT:    br label [[ENDIF]]
 ; OPT:       endif:
@@ -416,8 +416,8 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i64 999999
-  %in.gep = getelementptr i32, ptr %in, i64 7
+  %out.gep = getelementptr inbounds i32, ptr %out, i64 999999
+  %in.gep = getelementptr inbounds i32, ptr %in, i64 7
   %cast = addrspacecast ptr %in.gep to ptr addrspace(4)
   %cmp0 = icmp eq i32 %cond, 0
   br i1 %cmp0, label %endif, label %if
@@ -438,8 +438,8 @@ done:
 define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; OPT-GFX7-LABEL: @test_sink_flat_small_max_flat_offset(
 ; OPT-GFX7-NEXT:  entry:
-; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
-; OPT-GFX7-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4095
+; OPT-GFX7-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
+; OPT-GFX7-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4095
 ; OPT-GFX7-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-GFX7-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-GFX7-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -456,8 +456,8 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ;
 ; OPT-GFX8-LABEL: @test_sink_flat_small_max_flat_offset(
 ; OPT-GFX8-NEXT:  entry:
-; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
-; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4095
+; OPT-GFX8-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
+; OPT-GFX8-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4095
 ; OPT-GFX8-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-GFX8-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-GFX8-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -474,12 +474,12 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ;
 ; OPT-GFX9-LABEL: @test_sink_flat_small_max_flat_offset(
 ; OPT-GFX9-NEXT:  entry:
-; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
+; OPT-GFX9-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
 ; OPT-GFX9-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-GFX9-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-GFX9-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
 ; OPT-GFX9:       if:
-; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4095
+; OPT-GFX9-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4095
 ; OPT-GFX9-NEXT:    [[LOAD:%.*]] = load i8, ptr [[SUNKADDR]], align 1
 ; OPT-GFX9-NEXT:    [[CAST:%.*]] = sext i8 [[LOAD]] to i32
 ; OPT-GFX9-NEXT:    br label [[ENDIF]]
@@ -490,8 +490,8 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ;
 ; OPT-GFX10-LABEL: @test_sink_flat_small_max_flat_offset(
 ; OPT-GFX10-NEXT:  entry:
-; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
-; OPT-GFX10-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4095
+; OPT-GFX10-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
+; OPT-GFX10-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4095
 ; OPT-GFX10-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-GFX10-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-GFX10-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -588,8 +588,8 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i32 1024
-  %in.gep = getelementptr i8, ptr %in, i64 4095
+  %out.gep = getelementptr inbounds i32, ptr %out, i32 1024
+  %in.gep = getelementptr inbounds i8, ptr %in, i64 4095
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %endif, label %if
@@ -611,8 +611,8 @@ done:
 define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; OPT-LABEL: @test_sink_flat_small_max_plus_1_flat_offset(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i64 99999
-; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 4096
+; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 99999
+; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 4096
 ; OPT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3:[0-9]+]]
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -711,8 +711,8 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i64 99999
-  %in.gep = getelementptr i8, ptr %in, i64 4096
+  %out.gep = getelementptr inbounds i32, ptr %out, i64 99999
+  %in.gep = getelementptr inbounds i8, ptr %in, i64 4096
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %endif, label %if
@@ -734,8 +734,8 @@ done:
 define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; OPT-LABEL: @test_sinkable_flat_reg_offset(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr i32, ptr [[OUT:%.*]], i32 1024
-; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 [[REG:%.*]]
+; OPT-NEXT:    [[OUT_GEP:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i32 1024
+; OPT-NEXT:    [[IN_GEP:%.*]] = getelementptr inbounds i8, ptr [[IN:%.*]], i64 [[REG:%.*]]
 ; OPT-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #[[ATTR3]]
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[TID]], 0
 ; OPT-NEXT:    br i1 [[CMP0]], label [[ENDIF:%.*]], label [[IF:%.*]]
@@ -834,8 +834,8 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %out.gep = getelementptr i32, ptr %out, i32 1024
-  %in.gep = getelementptr i8, ptr %in, i64 %reg
+  %out.gep = getelementptr inbounds i32, ptr %out, i32 1024
+  %in.gep = getelementptr inbounds i8, ptr %in, i64 %reg
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %endif, label %if

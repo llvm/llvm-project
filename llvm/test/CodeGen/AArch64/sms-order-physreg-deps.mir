@@ -237,7 +237,7 @@ body:             |
     %2:gpr64sp = PHI %17, %bb.0, %13, %bb.3
     %4:zpr = DUP_ZR_D %2
     %22:zpr = COPY %21
-    %20:gpr64all = SUBREG_TO_REG 0, %23, %subreg.sub_32
+    %20:gpr64all = SUBREG_TO_REG %23, %subreg.sub_32
   
   bb.2.vector.body:
     successors: %bb.3(0x04000000), %bb.2(0x7c000000)

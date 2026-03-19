@@ -602,6 +602,15 @@ namespace Destructors {
   }
   static_assert(testS() == 1); // both-error {{not an integral constant expression}} \
                                // both-note {{in call to 'testS()'}}
+
+  struct A { int n; };
+  constexpr void double_destroy() {
+    A a;
+    a.~A();
+    a.~A(); // both-note {{destruction of object outside its lifetime}}
+  }
+  static_assert((double_destroy(), true)); // both-error {{not an integral constant expression}} \
+                                           // both-note {{in call to}}
 }
 
 namespace BaseToDerived {
@@ -1881,4 +1890,15 @@ namespace MethodWillHaveBody {
     return t;
   }
   int n = f(0); // both-note {{instantiation of}}
+}
+
+namespace StaticRedecl {
+  struct T {
+    static T tt;
+    constexpr T() : p(&tt) {}
+    T *p;
+  };
+  T T::tt;
+  constexpr T t;
+  static_assert(t.p == &T::tt, "");
 }

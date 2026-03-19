@@ -67,7 +67,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VS1:       [[VECTOR_PH]]:
 ; CHECK-VS1-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS1-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 16
+; CHECK-VS1-NEXT:    [[TMP17:%.*]] = shl nuw i64 [[TMP16]], 4
 ; CHECK-VS1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], [[TMP17]]
 ; CHECK-VS1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-VS1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[CONV]], i64 0
@@ -160,7 +160,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VS2:       [[VECTOR_PH]]:
 ; CHECK-VS2-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS2-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 8
+; CHECK-VS2-NEXT:    [[TMP17:%.*]] = shl nuw i64 [[TMP16]], 3
 ; CHECK-VS2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], [[TMP17]]
 ; CHECK-VS2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-VS2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[CONV]], i64 0
@@ -393,7 +393,7 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[TMP1]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer

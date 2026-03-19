@@ -299,6 +299,8 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_Exported:
   case MCSA_Memtag:
   case MCSA_WeakAntiDep:
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
     return false;
 
   case MCSA_Global:
@@ -422,7 +424,7 @@ void MCMachOStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 }
 
 void MCMachOStreamer::finishImpl() {
-  emitFrames(&getAssembler().getBackend());
+  emitFrames();
 
   // We have to set the fragment atom associations so we can relax properly for
   // Mach-O.

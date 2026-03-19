@@ -487,6 +487,13 @@ inline uptr Log2(uptr x) {
   return LeastSignificantSetBitIndex(x);
 }
 
+inline bool IntervalsAreSeparate(uptr start1, uptr end1, uptr start2,
+                                 uptr end2) {
+  CHECK_LE(start1, end1);
+  CHECK_LE(start2, end2);
+  return (end1 < start2) || (end2 < start1);
+}
+
 // Don't use std::min, std::max or std::swap, to minimize dependency
 // on libstdc++.
 template <class T>
@@ -737,6 +744,7 @@ enum ModuleArch {
   kModuleArchARMV7S,
   kModuleArchARMV7K,
   kModuleArchARM64,
+  kModuleArchARM64E,
   kModuleArchLoongArch64,
   kModuleArchRISCV64,
   kModuleArchHexagon
@@ -810,6 +818,8 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "armv7k";
     case kModuleArchARM64:
       return "arm64";
+    case kModuleArchARM64E:
+      return "arm64e";
     case kModuleArchLoongArch64:
       return "loongarch64";
     case kModuleArchRISCV64:
@@ -1089,6 +1099,12 @@ inline u32 GetNumberOfCPUsCached() {
     NumberOfCPUsCached = GetNumberOfCPUs();
   return NumberOfCPUsCached;
 }
+
+inline u32 Rand(u32* state) {  // ANSI C linear congruential PRNG.
+  return (*state = *state * 1103515245 + 12345) >> 16;
+}
+
+inline u32 RandN(u32* state, u32 n) { return Rand(state) % n; }  // [0, n)
 
 }  // namespace __sanitizer
 

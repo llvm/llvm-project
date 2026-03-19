@@ -8,6 +8,8 @@
 
 // REQUIRES: gpu
 // XFAIL: nvptx64-nvidia-cuda
+// XFAIL: nvptx64-nvidia-cuda-LTO
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

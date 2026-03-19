@@ -28,7 +28,7 @@ struct X86_64 : TargetInfo {
 
   int64_t getEmbeddedAddend(MemoryBufferRef, uint64_t offset,
                             const relocation_info) const override;
-  void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
+  void relocateOne(uint8_t *loc, const Relocation &, uint64_t va,
                    uint64_t relocVA) const override;
 
   void writeStub(uint8_t *buf, const Symbol &,
@@ -44,7 +44,7 @@ struct X86_64 : TargetInfo {
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
   uint64_t getPageSize() const override { return 4 * 1024; }
 
-  void handleDtraceReloc(const Symbol *sym, const Reloc &r,
+  void handleDtraceReloc(const Symbol *sym, const Relocation &r,
                          uint8_t *loc) const override;
 };
 } // namespace
@@ -54,7 +54,8 @@ static constexpr std::array<RelocAttrs, 10> relocAttrsArray{{
     {"UNSIGNED", B(UNSIGNED) | B(ABSOLUTE) | B(EXTERN) | B(LOCAL) | B(BYTE1) |
                      B(BYTE4) | B(BYTE8)},
     {"SIGNED", B(PCREL) | B(EXTERN) | B(LOCAL) | B(BYTE4)},
-    {"BRANCH", B(PCREL) | B(EXTERN) | B(BRANCH) | B(BYTE1) | B(BYTE4)},
+    {"BRANCH",
+     B(PCREL) | B(EXTERN) | B(LOCAL) | B(BRANCH) | B(BYTE1) | B(BYTE4)},
     {"GOT_LOAD", B(PCREL) | B(EXTERN) | B(GOT) | B(LOAD) | B(BYTE4)},
     {"GOT", B(PCREL) | B(EXTERN) | B(GOT) | B(POINTER) | B(BYTE4)},
     {"SUBTRACTOR", B(SUBTRAHEND) | B(EXTERN) | B(BYTE4) | B(BYTE8)},
@@ -101,10 +102,10 @@ int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
   return addend + pcrelOffset(rel.r_type);
 }
 
-void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
+void X86_64::relocateOne(uint8_t *loc, const Relocation &r, uint64_t value,
                          uint64_t relocVA) const {
   if (r.pcrel) {
-    uint64_t pc = relocVA + (1 << r.length) + pcrelOffset(r.type);
+    uint64_t pc = relocVA + (1ull << r.length) + pcrelOffset(r.type);
     value -= pc;
   }
 
@@ -240,7 +241,7 @@ TargetInfo *macho::createX86_64TargetInfo() {
   return &t;
 }
 
-void X86_64::handleDtraceReloc(const Symbol *sym, const Reloc &r,
+void X86_64::handleDtraceReloc(const Symbol *sym, const Relocation &r,
                                uint8_t *loc) const {
   assert(r.type == X86_64_RELOC_BRANCH);
 

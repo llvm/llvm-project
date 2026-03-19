@@ -56,7 +56,7 @@ public:
            "A pass name should not contain whitespaces!");
     assert(!Name.starts_with('-') && "A pass name should not start with '-'!");
   }
-  virtual ~Pass() {}
+  virtual ~Pass() = default;
   /// \Returns the name of the pass.
   StringRef getName() const { return Name; }
 #ifndef NDEBUG
@@ -65,7 +65,7 @@ public:
     return OS;
   }
   virtual void print(raw_ostream &OS) const { OS << Name; }
-  LLVM_DUMP_METHOD virtual void dump() const;
+  LLVM_ABI_FOR_TEST LLVM_DUMP_METHOD virtual void dump() const;
 #endif
   /// Similar to print() but adds a newline. Used for testing.
   virtual void printPipeline(raw_ostream &OS) const { OS << Name << "\n"; }

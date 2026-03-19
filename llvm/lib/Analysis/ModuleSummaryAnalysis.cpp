@@ -85,6 +85,19 @@ static cl::opt<bool> EnableMemProfIndirectCallSupport(
     cl::desc(
         "Enable MemProf support for summarizing and cloning indirect calls"));
 
+// This can be used to override the number of callees created from VP metadata
+// normally taken from the -icp-max-prom option with a larger amount, if useful
+// for analysis. Use a separate option so that we can control the number of
+// indirect callees for ThinLTO summary based analysis (e.g. for MemProf which
+// needs this information for a correct and not overly-conservative callsite
+// graph analysis, especially because allocation contexts may not be very
+// frequent), without affecting normal ICP.
+cl::opt<unsigned>
+    MaxSummaryIndirectEdges("module-summary-max-indirect-edges", cl::init(0),
+                            cl::Hidden,
+                            cl::desc("Max number of summary edges added from "
+                                     "indirect call profile metadata"));
+
 LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
@@ -455,13 +468,6 @@ static void computeFunctionSummary(
         ValueInfo.updateHotness(Hotness);
         if (CB->isTailCall())
           ValueInfo.setHasTailCall(true);
-        // Add the relative block frequency to CalleeInfo if there is no profile
-        // information.
-        if (BFI != nullptr && Hotness == CalleeInfo::HotnessType::Unknown) {
-          uint64_t BBFreq = BFI->getBlockFreq(&BB).getFrequency();
-          uint64_t EntryFreq = BFI->getEntryFreq().getFrequency();
-          ValueInfo.updateRelBlockFreq(BBFreq, EntryFreq);
-        }
       } else {
         HasUnknownCall = true;
         // If F is imported, a local linkage ifunc (e.g. target_clones on a
@@ -494,8 +500,8 @@ static void computeFunctionSummary(
         }
 
         CandidateProfileData =
-            ICallAnalysis.getPromotionCandidatesForInstruction(&I, TotalCount,
-                                                               NumCandidates);
+            ICallAnalysis.getPromotionCandidatesForInstruction(
+                &I, TotalCount, NumCandidates, MaxSummaryIndirectEdges);
         for (const auto &Candidate : CandidateProfileData)
           CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
               .updateHotness(getHotness(Candidate.Count, PSI));
@@ -706,7 +712,8 @@ static void computeFunctionSummary(
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
       /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable(),
-      GlobalValueSummary::ImportKind::Definition);
+      GlobalValueSummary::ImportKind::Definition,
+      /* NoRenameOnPromotion = */ false);
   FunctionSummary::FFlags FunFlags{
       F.doesNotAccessMemory(), F.onlyReadsMemory() && !F.doesNotAccessMemory(),
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
@@ -864,7 +871,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
       /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable(),
-      GlobalValueSummary::Definition);
+      GlobalValueSummary::Definition, /* NoRenameOnPromotion = */ false);
 
   VTableFuncList VTableFuncs;
   // If splitting is not enabled, then we compute the summary information
@@ -911,7 +918,7 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   GlobalValueSummary::GVFlags Flags(
       A.getLinkage(), A.getVisibility(), NonRenamableLocal,
       /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable(),
-      GlobalValueSummary::Definition);
+      GlobalValueSummary::Definition, /* NoRenameOnPromotion = */ false);
   auto AS = std::make_unique<AliasSummary>(Flags);
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
   assert(AliaseeVI && "Alias expects aliasee summary to be available");
@@ -993,7 +1000,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
               /* NotEligibleToImport = */ true,
               /* Live = */ true,
               /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable(),
-              GlobalValueSummary::Definition);
+              GlobalValueSummary::Definition,
+              /* NoRenameOnPromotion = */ false);
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {

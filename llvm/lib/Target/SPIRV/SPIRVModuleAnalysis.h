@@ -81,7 +81,7 @@ private:
   void initAvailableCapabilitiesForVulkan(const SPIRVSubtarget &ST);
 
 public:
-  RequirementHandler() {}
+  RequirementHandler() = default;
   void clear() {
     MinimalCaps.clear();
     AllCaps.clear();
@@ -227,7 +227,7 @@ public:
 
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  static struct SPIRV::ModuleAnalysisInfo MAI;
+  SPIRV::ModuleAnalysisInfo MAI;
 
 private:
   void setBaseInfo(const Module &M);

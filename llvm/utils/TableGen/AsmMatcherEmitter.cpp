@@ -141,7 +141,7 @@ class AsmMatcherInfo;
 // RegisterSets can be seen in the outputted AsmMatcher tables occasionally, and
 // can even affect compiler output (at least seen in diagnostics produced when
 // all matches fail). So we use a type that sorts them consistently.
-typedef std::set<const Record *, LessRecordByID> RegisterSet;
+using RegisterSet = std::set<const Record *, LessRecordByID>;
 
 class AsmMatcherEmitter {
   const RecordKeeper &Records;
@@ -451,8 +451,9 @@ struct MatchableInfo {
       /// the operand.
       ImmOperand,
 
-      /// RegOperand - This represents a fixed register that is dumped in.
-      RegOperand
+      /// RegOperand - This represents a fixed register (potentially depending
+      /// on the HwMode) that is dumped in.
+      RegOperand,
     } Kind;
 
     /// Tuple containing the index of the (earlier) result operand that should
@@ -779,8 +780,8 @@ public:
   std::vector<OperandMatchEntry> OperandMatchInfo;
 
   /// Map of Register records to their class information.
-  typedef std::map<const Record *, ClassInfo *, LessRecordByID>
-      RegisterClassesTy;
+  using RegisterClassesTy =
+      std::map<const Record *, ClassInfo *, LessRecordByID>;
   RegisterClassesTy RegisterClasses;
 
   /// Map of Predicate records to their subtarget information.
@@ -1275,7 +1276,7 @@ void AsmMatcherInfo::buildRegisterClasses(
   const auto &Registers = Target.getRegBank().getRegisters();
   auto &RegClassList = Target.getRegBank().getRegClasses();
 
-  typedef std::set<RegisterSet, LessRegisterSet> RegisterSetSet;
+  using RegisterSetSet = std::set<RegisterSet, LessRegisterSet>;
 
   // The register sets used for matching.
   RegisterSetSet RegisterSets;
@@ -1515,7 +1516,7 @@ AsmMatcherInfo::AsmMatcherInfo(const Record *asmParser,
 void AsmMatcherInfo::buildOperandMatchInfo() {
   /// Map containing a mask with all operands indices that can be found for
   /// that class inside a instruction.
-  typedef std::map<ClassInfo *, unsigned, deref<std::less<>>> OpClassMaskTy;
+  using OpClassMaskTy = std::map<ClassInfo *, unsigned, deref<std::less<>>>;
   OpClassMaskTy OpClassMask;
 
   bool CallCustomParserForAllOperands =
@@ -2183,7 +2184,7 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
           // If optional operand is not present in actual instruction then we
           // should call its DefaultMethod before RenderMethod
           assert(HasOptionalOperands);
-          CvtOS << "      if (OptionalOperandsMask[*(p + 1) - 1]) {\n"
+          CvtOS << "      if (OptionalOperandsMask[*(p + 1)]) {\n"
                 << "        " << Op.Class->DefaultMethod << "()"
                 << "->" << Op.Class->RenderMethod << "(Inst, "
                 << OpInfo.MINumOperands << ");\n"
@@ -2263,12 +2264,14 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
       }
       case MatchableInfo::ResOperand::RegOperand: {
         std::string Reg, Name;
+        bool IsRegByHwMode = false;
         if (!OpInfo.Register) {
           Name = "reg0";
           Reg = "0";
         } else {
           Reg = getQualifiedName(OpInfo.Register);
           Name = "reg" + OpInfo.Register->getName().str();
+          IsRegByHwMode = OpInfo.Register->isSubClassOf("RegisterByHwMode");
         }
         Signature += "__" + Name;
         Name = "CVT_" + Name;
@@ -2281,10 +2284,17 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
         if (!IsNewConverter)
           break;
-        CvtOS << "    case " << Name << ":\n"
-              << "      Inst.addOperand(MCOperand::createReg(" << Reg << "));\n"
-              << "      break;\n";
 
+        CvtOS << indent(4) << "case " << Name << ":\n"
+              << indent(6) << "Inst.addOperand(MCOperand::createReg(";
+        if (IsRegByHwMode) {
+          RegisterByHwMode(OpInfo.Register, Target.getRegBank())
+              .emitResolverCall(
+                  CvtOS, "STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)");
+        } else {
+          CvtOS << Reg;
+        }
+        CvtOS << "));\n" << indent(6) << "break;\n";
         OpOS << "    case " << Name << ":\n"
              << "      Operands[*(p + 1)]->setMCOperandNum(NumMCOperands);\n"
              << "      Operands[*(p + 1)]->setConstraint(\"m\");\n"
@@ -2581,13 +2591,14 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
             });
 
         if (FoundMode == ModeSelect.Items.end()) {
-          OS << indent(8) << "InvalidMatchClass, // Missing mode\n";
+          OS << indent(8) << "InvalidMatchClass, // Missing mode entry for "
+             << Class->getName() << "\n";
         } else {
           const CodeGenRegisterClass *RegClass =
               RegBank.getRegClass(FoundMode->second);
           const ClassInfo *CI =
               Info.RegisterClassClasses.at(RegClass->getDef());
-          OS << indent(8) << CI->Name << ",\n";
+          OS << indent(8) << CI->Name << ", // " << Class->getName() << "\n";
         }
       }
 
@@ -3608,7 +3619,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "namespace {\n";
   OS << "  struct MatchEntry {\n";
   OS << "    " << getMinimalTypeForRange(MaxMnemonicIndex) << " Mnemonic;\n";
-  OS << "    uint16_t Opcode;\n";
+  OS << "    uint32_t Opcode;\n";
   OS << "    " << getMinimalTypeForRange(NumConverters) << " ConvertFn;\n";
   OS << "    " << getMinimalTypeForRange(FeatureBitsets.size())
      << " RequiredFeaturesIdx;\n";
@@ -3732,7 +3743,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   if (HasOptionalOperands)
-    OS << "  SmallBitVector OptionalOperandsMask(" << MaxNumOperands << ");\n";
+    OS << "  SmallBitVector OptionalOperandsMask("
+       << MaxNumOperands + HasMnemonicFirst << ");\n";
 
   // Emit code to search the table.
   OS << "  // Find the appropriate table for this asm variant.\n";
@@ -3801,7 +3813,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (!ReportMultipleNearMisses)
     OS << "    bool OperandsValid = true;\n";
   if (HasOptionalOperands)
-    OS << "    OptionalOperandsMask.reset(0, " << MaxNumOperands << ");\n";
+    OS << "    OptionalOperandsMask.reset(0, "
+       << MaxNumOperands + HasMnemonicFirst << ");\n";
   OS << "    for (unsigned FormalIdx = " << (HasMnemonicFirst ? "0" : "SIndex")
      << ", ActualIdx = " << (HasMnemonicFirst ? "1" : "SIndex")
      << "; FormalIdx != " << MaxNumOperands << "; ++FormalIdx) {\n";
@@ -3849,21 +3862,24 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "          DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"but formal "
           "operand not required\\n\");\n";
     OS << "          if (isSubclass(Formal, OptionalMatchClass)) {\n";
-    OS << "            OptionalOperandsMask.set(FormalIdx);\n";
+    OS << "            OptionalOperandsMask.set("
+       << (HasMnemonicFirst ? "FormalIdx + 1" : "FormalIdx") << ");\n";
     OS << "          }\n";
     OS << "        }\n";
     OS << "        continue;\n";
   } else {
     OS << "        if (Formal == InvalidMatchClass) {\n";
     if (HasOptionalOperands) {
-      OS << "          OptionalOperandsMask.set(FormalIdx, " << MaxNumOperands
-         << ");\n";
+      OS << "          OptionalOperandsMask.set("
+         << (HasMnemonicFirst ? "FormalIdx + 1, " : "FormalIdx, ")
+         << MaxNumOperands + HasMnemonicFirst << ");\n";
     }
     OS << "          break;\n";
     OS << "        }\n";
     OS << "        if (isSubclass(Formal, OptionalMatchClass)) {\n";
     if (HasOptionalOperands)
-      OS << "          OptionalOperandsMask.set(FormalIdx);\n";
+      OS << "          OptionalOperandsMask.set("
+         << (HasMnemonicFirst ? "FormalIdx + 1" : "FormalIdx") << ");\n";
     OS << "          continue;\n";
     OS << "        }\n";
     OS << "        OperandsValid = false;\n";
@@ -3903,7 +3919,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      if (Diag == Match_InvalidOperand "
      << "&& isSubclass(Formal, OptionalMatchClass)) {\n";
   if (HasOptionalOperands)
-    OS << "        OptionalOperandsMask.set(FormalIdx);\n";
+    OS << "        OptionalOperandsMask.set("
+       << (HasMnemonicFirst ? "FormalIdx + 1" : "FormalIdx") << ");\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"ignoring "
         "optional operand\\n\");\n";
   OS << "        continue;\n";
@@ -4058,12 +4075,12 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (HasOptionalOperands) {
     OS << "    unsigned DefaultsOffset[" << (MaxNumOperands + 1)
        << "] = { 0 };\n";
-    OS << "    assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
-       << ");\n";
+    OS << "    assert(OptionalOperandsMask.size() == "
+       << (MaxNumOperands + HasMnemonicFirst) << ");\n";
     OS << "    for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
        << "; ++i) {\n";
-    OS << "      DefaultsOffset[i + 1] = NumDefaults;\n";
     OS << "      NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
+    OS << "      DefaultsOffset[i + 1] = NumDefaults;\n";
     OS << "    }\n\n";
   }
 
@@ -4164,7 +4181,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "        MII.getDeprecatedInfo(Inst, getSTI(), Info)) {\n";
     OS << "      SMLoc Loc = ((" << Target.getName()
        << "Operand &)*Operands[0]).getStartLoc();\n";
-    OS << "      getParser().Warning(Loc, Info, std::nullopt);\n";
+    OS << "      getParser().Warning(Loc, Info, {});\n";
     OS << "    }\n";
   }
 

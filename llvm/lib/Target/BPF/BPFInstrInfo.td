@@ -41,14 +41,12 @@ def BPFcallseq_start: SDNode<"ISD::CALLSEQ_START", SDT_BPFCallSeqStart,
                              [SDNPHasChain, SDNPOutGlue]>;
 def BPFcallseq_end  : SDNode<"ISD::CALLSEQ_END",   SDT_BPFCallSeqEnd,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
-def BPFbrcc         : SDNode<"BPFISD::BR_CC", SDT_BPFBrCC,
-                             [SDNPHasChain, SDNPOutGlue, SDNPInGlue]>;
+def BPFbrcc         : SDNode<"BPFISD::BR_CC", SDT_BPFBrCC, [SDNPHasChain]>;
 
 def BPFselectcc     : SDNode<"BPFISD::SELECT_CC", SDT_BPFSelectCC>;
 def BPFWrapper      : SDNode<"BPFISD::Wrapper", SDT_BPFWrapper>;
 def BPFmemcpy       : SDNode<"BPFISD::MEMCPY", SDT_BPFMEMCPY,
-                             [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
-                              SDNPMayStore, SDNPMayLoad]>;
+                             [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def BPFIsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
 def BPFIsBigEndian    : Predicate<"!Subtarget->isLittleEndian()">;
 def BPFHasALU32 : Predicate<"Subtarget->getHasAlu32()">;
@@ -1345,17 +1343,17 @@ let Predicates = [BPFHasALU32] in {
   }
 
   def : Pat<(i64 (zextloadi8  ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDB32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDB32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (zextloadi16 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDH32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDH32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (zextloadi32 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDW32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi8  ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDB32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDB32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi16 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDH32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDH32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi32 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDW32 ADDRri:$src), sub_32)>;
 
   let Predicates = [BPFHasLoadAcqStoreRel] in {
     foreach P = [[relaxed_load<atomic_load_nonext_32>, LDW32],

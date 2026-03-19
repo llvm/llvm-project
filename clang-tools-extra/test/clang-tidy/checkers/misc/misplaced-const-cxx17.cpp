@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -expect-clang-tidy-error %s misc-misplaced-const %t -- -- -std=c++17
+// RUN: %check_clang_tidy -std=c++17-or-later -expect-clang-tidy-error %s misc-misplaced-const %t
 
 // This test previously would cause a failed assertion because the structured
 // binding declaration had no valid type associated with it. This ensures the

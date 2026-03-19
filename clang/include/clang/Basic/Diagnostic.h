@@ -310,6 +310,11 @@ private:
   // Suppress all diagnostics.
   bool SuppressAllDiagnostics = false;
 
+  // Force system warnings to be shown, regardless of the current
+  // diagnostic state. This is used for temporary overrides and is not
+  // stored as location-specific state in modules.
+  bool ForceSystemWarnings = false;
+
   // Elide common types of templates.
   bool ElideType = true;
 
@@ -730,6 +735,9 @@ public:
   void setSuppressAllDiagnostics(bool Val) { SuppressAllDiagnostics = Val; }
   bool getSuppressAllDiagnostics() const { return SuppressAllDiagnostics; }
 
+  void setForceSystemWarnings(bool Val) { ForceSystemWarnings = Val; }
+  bool getForceSystemWarnings() const { return ForceSystemWarnings; }
+
   /// Set type eliding, to skip outputting same types occurring in
   /// template types.
   void setElideType(bool Val) { ElideType = Val; }
@@ -971,7 +979,7 @@ public:
   /// diagnostics in specific files.
   /// Mapping file is expected to be a special case list with sections denoting
   /// diagnostic groups and `src` entries for globs to suppress. `emit` category
-  /// can be used to disable suppression. Longest glob that matches a filepath
+  /// can be used to disable suppression. The last glob that matches a filepath
   /// takes precedence. For example:
   ///   [unused]
   ///   src:clang/*
@@ -1735,7 +1743,8 @@ public:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
 
 /// Abstract interface, implemented by clients of the front-end, which
-/// formats and prints fully processed diagnostics.
+/// formats and prints fully processed diagnostics. The destructor must be
+/// called even with -disable-free.
 class DiagnosticConsumer {
 protected:
   unsigned NumWarnings = 0; ///< Number of warnings reported
@@ -1769,10 +1778,6 @@ public:
   /// The diagnostic client should assume that any objects made available via
   /// BeginSourceFile() are inaccessible.
   virtual void EndSourceFile() {}
-
-  /// Callback to inform the diagnostic client that processing of all
-  /// source files has ended.
-  virtual void finish() {}
 
   /// Indicates whether the diagnostics handled by this
   /// DiagnosticConsumer should be included in the number of diagnostics

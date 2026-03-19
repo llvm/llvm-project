@@ -87,4 +87,4 @@ declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i3
 declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
 declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg)
 
-attributes #0 = { "target-features"=",+wavefrontsize64,+cumode" }
+attributes #0 = { "target-features"="+wavefrontsize64,+cumode" }

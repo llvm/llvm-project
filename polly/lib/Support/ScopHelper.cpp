@@ -206,18 +206,6 @@ void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, DominatorTree *DT,
   splitBlock(EntryBlock, I, DT, LI, RI);
 }
 
-void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, Pass *P) {
-  auto *DTWP = P->getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  auto *LIWP = P->getAnalysisIfAvailable<LoopInfoWrapperPass>();
-  auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
-  RegionInfoPass *RIP = P->getAnalysisIfAvailable<RegionInfoPass>();
-  RegionInfo *RI = RIP ? &RIP->getRegionInfo() : nullptr;
-
-  // splitBlock updates DT, LI and RI.
-  polly::splitEntryBlockForAlloca(EntryBlock, DT, LI, RI);
-}
-
 void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
                              polly::AssumptionKind Kind, isl::set Set,
                              DebugLoc Loc, polly::AssumptionSign Sign,
@@ -254,10 +242,10 @@ struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
   friend struct SCEVVisitor<ScopExpander, const SCEV *>;
 
   explicit ScopExpander(const Region &R, ScalarEvolution &SE, Function *GenFn,
-                        ScalarEvolution &GenSE, const DataLayout &DL,
-                        const char *Name, ValueMapT *VMap,
-                        LoopToScevMapT *LoopMap, BasicBlock *RTCBB)
-      : Expander(GenSE, DL, Name, /*PreserveLCSSA=*/false), Name(Name), R(R),
+                        ScalarEvolution &GenSE, const char *Name,
+                        ValueMapT *VMap, polly::LoopToScevMapT *LoopMap,
+                        BasicBlock *RTCBB)
+      : Expander(GenSE, Name, /*PreserveLCSSA=*/false), Name(Name), R(R),
         VMap(VMap), LoopMap(LoopMap), RTCBB(RTCBB), GenSE(GenSE), GenFn(GenFn) {
   }
 
@@ -284,7 +272,7 @@ private:
   const char *Name;
   const Region &R;
   ValueMapT *VMap;
-  LoopToScevMapT *LoopMap;
+  polly::LoopToScevMapT *LoopMap;
   BasicBlock *RTCBB;
   DenseMap<const SCEV *, const SCEV *> SCEVCache;
 
@@ -379,6 +367,9 @@ private:
   ///{
   const SCEV *visitConstant(const SCEVConstant *E) { return E; }
   const SCEV *visitVScale(const SCEVVScale *E) { return E; }
+  const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *E) {
+    return GenSE.getPtrToAddrExpr(visit(E->getOperand()));
+  }
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
     return GenSE.getPtrToIntExpr(visit(E->getOperand()), E->getType());
   }
@@ -398,50 +389,50 @@ private:
     return GenSE.getUDivExpr(visit(E->getLHS()), RHSScev);
   }
   const SCEV *visitAddExpr(const SCEVAddExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
+    SmallVector<SCEVUse, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getAddExpr(NewOps);
   }
   const SCEV *visitMulExpr(const SCEVMulExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
+    SmallVector<SCEVUse, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getMulExpr(NewOps);
   }
   const SCEV *visitUMaxExpr(const SCEVUMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMaxExpr(NewOps);
   }
   const SCEV *visitSMaxExpr(const SCEVSMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMaxExpr(NewOps);
   }
   const SCEV *visitUMinExpr(const SCEVUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps);
   }
   const SCEV *visitSMinExpr(const SCEVSMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMinExpr(NewOps);
   }
   const SCEV *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps, /*Sequential=*/true);
   }
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
 
     const Loop *L = E->getLoop();
@@ -467,23 +458,9 @@ Value *polly::expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                             const SCEV *E, Type *Ty, BasicBlock::iterator IP,
                             ValueMapT *VMap, LoopToScevMapT *LoopMap,
                             BasicBlock *RTCBB) {
-  ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, DL, Name, VMap,
-                        LoopMap, RTCBB);
+  ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, Name, VMap, LoopMap,
+                        RTCBB);
   return Expander.expandCodeFor(E, Ty, IP);
-}
-
-Value *polly::getConditionFromTerminator(Instruction *TI) {
-  if (BranchInst *BR = dyn_cast<BranchInst>(TI)) {
-    if (BR->isUnconditional())
-      return ConstantInt::getTrue(Type::getInt1Ty(TI->getContext()));
-
-    return BR->getCondition();
-  }
-
-  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
-    return SI->getCondition();
-
-  return nullptr;
 }
 
 Loop *polly::getLoopSurroundingScop(Scop &S, LoopInfo &LI) {
