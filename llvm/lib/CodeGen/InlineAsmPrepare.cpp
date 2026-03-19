@@ -262,8 +262,8 @@ static CallInst *
 createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
                    Type *NewRetTy, ArrayRef<Value *> NewArgs,
                    ArrayRef<std::pair<unsigned, Type *>> ElementTypeAttrs,
-                   CallBase *CB, IRBuilder<> &Builder, LLVMContext &Context,
-                   bool MayWriteMem) {
+                   CallBase *CB, bool MayWriteMem, IRBuilder<> &Builder,
+                   LLVMContext &Context) {
   SmallVector<Type *> NewArgTypes;
   for (const auto *NewArg : NewArgs)
     NewArgTypes.push_back(NewArg->getType());
@@ -277,10 +277,9 @@ createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
   NewCall->setCallingConv(CB->getCallingConv());
   NewCall->setAttributes(CB->getAttributes());
   NewCall->setDebugLoc(CB->getDebugLoc());
+  NewCall->setMemoryEffects(MayWriteMem ? MemoryEffects::writeOnly()
+                                        : MemoryEffects::readOnly());
   NewCall->copyMetadata(*CB);
-
-  if (MayWriteMem)
-    NewCall->setMemoryEffects(MemoryEffects::writeOnly());
 
   for (const auto &[Index, Ty] : ElementTypeAttrs)
     NewCall->addParamAttr(Index,
@@ -408,8 +407,8 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
 
   // Create the new inline assembly call.
   CallInst *NewCall = createNewInlineAsm(IA, NewConstraintStr, NewRetTy,
-                                         NewArgs, ElementTypeAttrs, CB, Builder,
-                                         F.getContext(), MayWriteMem);
+                                         NewArgs, ElementTypeAttrs, CB,
+                                         MayWriteMem, Builder, F.getContext());
 
   // Reconstruct the return value and update users.
   if (!CB->use_empty()) {
