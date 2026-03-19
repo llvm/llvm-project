@@ -51,9 +51,12 @@ jobs:
             libedit-static 
 
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
-          fetch-depth: 0
+          # This job only needs the checked out commit itself; fetching the full
+          # branch and tag history adds several minutes on large repositories.
+          fetch-depth: 1
+          fetch-tags: false
 
       - name: Restore sccache cache
         uses: actions/cache@v4
