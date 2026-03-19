@@ -6,17 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_subnormal_config.h>
-#include <clc/opencl/opencl-base.h>
+#include "clc/math/clc_subnormal_config.h"
 
-_CLC_DEF bool __clc_fp16_subnormals_supported() { return false; }
-
-_CLC_DEF bool __clc_fp32_subnormals_supported() { return false; }
-
-_CLC_DEF bool __clc_fp64_subnormals_supported() {
-#if defined(CLC_SPIRV) || defined(CLC_CLSPV)
-  return false;
-#else
-  return true;
-#endif
-}
+_CLC_DEF bool __clc_denormals_are_zero_fp16() { return false; }
+_CLC_DEF bool __clc_denormals_are_zero_fp32() { return true; }
+_CLC_DEF bool __clc_denormals_are_zero_fp64() { return false; }

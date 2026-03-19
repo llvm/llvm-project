@@ -1,4 +1,5 @@
 # RUN: llc -run-pass=aarch64-expand-pseudo -mtriple=aarch64-unknown-linux-gnu -o - %s | FileCheck %s
+# RUN: llc -passes=aarch64-expand-pseudo -mtriple=aarch64-unknown-linux-gnu -o - %s | FileCheck %s
 
 # This testcase was obtained by looking at FileCheck.cpp and reducing it down via llvm-reduce 
 

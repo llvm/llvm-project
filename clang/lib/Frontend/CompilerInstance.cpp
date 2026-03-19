@@ -659,11 +659,10 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
   ASTReader::ListenerScope ReadModuleNamesListener(*Reader,
                                                    std::move(Listener));
 
-  switch (Reader->ReadAST(Path,
+  switch (Reader->ReadAST(ModuleFileName::makeExplicit(Path),
                           Preamble ? serialization::MK_Preamble
                                    : serialization::MK_PCH,
-                          SourceLocation(),
-                          ASTReader::ARR_None)) {
+                          SourceLocation(), ASTReader::ARR_None)) {
   case ASTReader::Success:
     // Set the predefines buffer as suggested by the PCH reader. Typically, the
     // predefines buffer will be empty.
@@ -1398,7 +1397,8 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
 static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
                                       SourceLocation ImportLoc,
                                       SourceLocation ModuleNameLoc,
-                                      Module *Module, StringRef ModuleFileName,
+                                      Module *Module,
+                                      ModuleFileName ModuleFileName,
                                       bool *OutOfDate, bool *Missing) {
   DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
 
@@ -1439,7 +1439,7 @@ static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
 static bool compileModuleImpl(CompilerInstance &ImportingInstance,
                               SourceLocation ImportLoc,
                               SourceLocation ModuleNameLoc, Module *Module,
-                              StringRef ModuleFileName) {
+                              ModuleFileName ModuleFileName) {
   {
     auto Instance = ImportingInstance.cloneForModuleCompile(
         ModuleNameLoc, Module, ModuleFileName);
@@ -1480,9 +1480,11 @@ enum class CompileOrReadResult : uint8_t {
 /// Attempt to compile the module in a separate compiler instance behind a lock
 /// (to avoid building the same module in multiple compiler instances), or read
 /// the AST produced by another compiler instance.
-static CompileOrReadResult compileModuleBehindLockOrRead(
-    CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
-    SourceLocation ModuleNameLoc, Module *Module, StringRef ModuleFileName) {
+static CompileOrReadResult
+compileModuleBehindLockOrRead(CompilerInstance &ImportingInstance,
+                              SourceLocation ImportLoc,
+                              SourceLocation ModuleNameLoc, Module *Module,
+                              ModuleFileName ModuleFileName) {
   DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
 
   Diags.Report(ModuleNameLoc, diag::remark_module_lock)
@@ -1556,7 +1558,8 @@ static CompileOrReadResult compileModuleBehindLockOrRead(
 static bool compileModuleAndReadAST(CompilerInstance &ImportingInstance,
                                     SourceLocation ImportLoc,
                                     SourceLocation ModuleNameLoc,
-                                    Module *Module, StringRef ModuleFileName) {
+                                    Module *Module,
+                                    ModuleFileName ModuleFileName) {
   if (ImportingInstance.getInvocation()
           .getFrontendOpts()
           .BuildingImplicitModuleUsesLock) {
@@ -1710,11 +1713,11 @@ void CompilerInstance::createASTReader() {
 }
 
 bool CompilerInstance::loadModuleFile(
-    StringRef FileName, serialization::ModuleFile *&LoadedModuleFile) {
+    ModuleFileName FileName, serialization::ModuleFile *&LoadedModuleFile) {
   llvm::Timer Timer;
   if (timerGroup)
-    Timer.init("preloading." + FileName.str(), "Preloading " + FileName.str(),
-               *timerGroup);
+    Timer.init("preloading." + std::string(FileName.str()),
+               "Preloading " + std::string(FileName.str()), *timerGroup);
   llvm::TimeRegion TimeLoading(timerGroup ? &Timer : nullptr);
 
   // If we don't already have an ASTReader, create one now.
@@ -1771,7 +1774,7 @@ enum ModuleSource {
 /// Select a source for loading the named module and compute the filename to
 /// load it from.
 static ModuleSource selectModuleSource(
-    Module *M, StringRef ModuleName, std::string &ModuleFilename,
+    Module *M, StringRef ModuleName, ModuleFileName &ModuleFilename,
     const std::map<std::string, std::string, std::less<>> &BuiltModules,
     HeaderSearch &HS) {
   assert(ModuleFilename.empty() && "Already has a module source?");
@@ -1780,7 +1783,7 @@ static ModuleSource selectModuleSource(
   // via a module build pragma.
   auto BuiltModuleIt = BuiltModules.find(ModuleName);
   if (BuiltModuleIt != BuiltModules.end()) {
-    ModuleFilename = BuiltModuleIt->second;
+    ModuleFilename = ModuleFileName::makeExplicit(BuiltModuleIt->second);
     return MS_ModuleBuildPragma;
   }
 
@@ -1820,7 +1823,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     checkConfigMacros(getPreprocessor(), M, ImportLoc);
 
   // Select the source and filename for loading the named module.
-  std::string ModuleFilename;
+  ModuleFileName ModuleFilename;
   ModuleSource Source =
       selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
   SourceLocation ModuleNameLoc = ModuleNameRange.getBegin();
@@ -1849,8 +1852,8 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   // Time how long it takes to load the module.
   llvm::Timer Timer;
   if (timerGroup)
-    Timer.init("loading." + ModuleFilename, "Loading " + ModuleFilename,
-               *timerGroup);
+    Timer.init("loading." + std::string(ModuleFilename.str()),
+               "Loading " + std::string(ModuleFilename.str()), *timerGroup);
   llvm::TimeRegion TimeLoading(timerGroup ? &Timer : nullptr);
   llvm::TimeTraceScope TimeScope("Module Load", ModuleName);
 
@@ -2070,7 +2073,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
           PrivateModule, PP->getIdentifierInfo(Module->Name)->getTokenID());
       PrivPath.emplace_back(Path[0].getLoc(), &II);
 
-      std::string FileName;
+      ModuleFileName FileName;
       // If there is a modulemap module or prebuilt module, load it.
       if (PP->getHeaderSearchInfo().lookupModule(PrivateModule, ImportLoc, true,
                                                  !IsInclusionDirective) ||

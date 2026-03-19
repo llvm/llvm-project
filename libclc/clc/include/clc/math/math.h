@@ -9,9 +9,9 @@
 #ifndef __CLC_MATH_MATH_H__
 #define __CLC_MATH_MATH_H__
 
-#include <clc/clc_as_type.h>
-#include <clc/clcfunc.h>
-#include <clc/math/clc_subnormal_config.h>
+#include "clc/clc_as_type.h"
+#include "clc/clcfunc.h"
+#include "clc/math/clc_subnormal_config.h"
 
 #define SNAN 0x001
 #define QNAN 0x002
@@ -60,7 +60,7 @@
 
 _CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
   int ix = __clc_as_int(x);
-  if (!__clc_fp32_subnormals_supported() && ((ix & EXPBITS_SP32) == 0) &&
+  if (__clc_denormals_are_zero_fp32() && ((ix & EXPBITS_SP32) == 0) &&
       ((ix & MANTBITS_SP32) != 0)) {
     ix &= SIGNBIT_SP32;
     x = __clc_as_float(ix);

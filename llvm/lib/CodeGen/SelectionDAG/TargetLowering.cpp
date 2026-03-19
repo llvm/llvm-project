@@ -6598,6 +6598,11 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
+
+  // If the sdiv has an 'exact' bit we can use a simpler lowering.
+  if (N->getFlags().hasExact())
+    return BuildExactSDIV(*this, N, dl, DAG, Created);
+
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
@@ -6622,10 +6627,6 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
         !isOperationLegal(ISD::MUL, MulVT))
       return SDValue();
   }
-
-  // If the sdiv has an 'exact' bit we can use a simpler lowering.
-  if (N->getFlags().hasExact())
-    return BuildExactSDIV(*this, N, dl, DAG, Created);
 
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
 
@@ -6766,6 +6767,11 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
+
+  // If the udiv has an 'exact' bit we can use a simpler lowering.
+  if (N->getFlags().hasExact())
+    return BuildExactUDIV(*this, N, dl, DAG, Created);
+
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
@@ -6790,10 +6796,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
         !isOperationLegal(ISD::MUL, MulVT))
       return SDValue();
   }
-
-  // If the udiv has an 'exact' bit we can use a simpler lowering.
-  if (N->getFlags().hasExact())
-    return BuildExactUDIV(*this, N, dl, DAG, Created);
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -12998,9 +13000,11 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
   if (ResultVT.bitsGT(VecEltVT)) {
     // If the result type of vextract is wider than the load, then issue an
     // extending load instead.
-    ISD::LoadExtType ExtType = isLoadExtLegal(ISD::ZEXTLOAD, ResultVT, VecEltVT)
-                                   ? ISD::ZEXTLOAD
-                                   : ISD::EXTLOAD;
+    ISD::LoadExtType ExtType =
+        isLoadLegal(ResultVT, VecEltVT, Alignment,
+                    OriginalLoad->getAddressSpace(), ISD::ZEXTLOAD, false)
+            ? ISD::ZEXTLOAD
+            : ISD::EXTLOAD;
     Load = DAG.getExtLoad(ExtType, DL, ResultVT, OriginalLoad->getChain(),
                           NewPtr, MPI, VecEltVT, Alignment,
                           OriginalLoad->getMemOperand()->getFlags(),

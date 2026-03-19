@@ -137,13 +137,13 @@ bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
 // Return the depth of the affected nests:
 //   {affected-depth, must-be-perfect-nest, reason}.
 std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version);
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
 // Return the range of the affected nests in the sequence:
 //   {first, count, reason}.
 // If the range is "the whole sequence", the return value will be {1, -1, ...}.
 std::tuple<std::optional<int64_t>, std::optional<int64_t>, Reason>
 GetAffectedLoopRangeWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version);
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
 
 // Count the required loop count from range. If count == -1, return -1,
 // indicating all loops in the sequence.

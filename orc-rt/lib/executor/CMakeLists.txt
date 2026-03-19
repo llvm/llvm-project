@@ -1,6 +1,7 @@
 set(files
   AllocAction.cpp
-  ControllerInterface.cpp
+  BootstrapInfo.cpp
+  SimpleSymbolTable.cpp
   Error.cpp
   ExecutorProcessInfo.cpp
   QueueingTaskDispatcher.cpp
