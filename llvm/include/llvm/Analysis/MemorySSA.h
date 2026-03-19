@@ -1287,6 +1287,8 @@ private:
   void fillInCurrentElem() {
     CurrentElem.MA = *DefIterator;
     CurrentElem.Loc = Location;
+    // No need for phi translation or handling of cross-iteration dependences
+    // if we're not walking past a phi.
     if (!WalkingPhi)
       return;
 

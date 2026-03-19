@@ -409,7 +409,7 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
   bool FoundClobber = false;
   DenseSet<UpwardDefsElem> VisitedPhis;
   SmallVector<UpwardDefsElem, 8> Worklist;
-  Worklist.push_back({Start, StartLoc, false});
+  Worklist.push_back({Start, StartLoc, /*MayBeCrossIteration=*/false});
   // Walk all paths from Start to ClobberAt, while looking for clobbers. If one
   // is found, complain.
   while (!Worklist.empty()) {
@@ -772,7 +772,8 @@ class ClobberWalker {
     assert(Paths.empty() && VisitedPhis.empty() &&
            "Reset the optimization state.");
 
-    Paths.emplace_back(Loc, Start, Phi, false, std::nullopt);
+    Paths.emplace_back(Loc, Start, Phi, /*MayBeCrossIteration=*/false,
+                       std::nullopt);
     // Stores how many "valid" optimization nodes we had prior to calling
     // addSearches/getBlockingAccess. Necessary for caching if we had a blocker.
     auto PriorPathsSize = Paths.size();
@@ -781,7 +782,7 @@ class ClobberWalker {
     SmallVector<ListIndex, 8> NewPaused;
     SmallVector<TerminatedPath, 4> TerminatedPaths;
 
-    addSearches(Phi, PausedSearches, 0, false);
+    addSearches(Phi, PausedSearches, 0, /*MayBeCrossIteration=*/false);
 
     // Moves the TerminatedPath with the "most dominated" Clobber to the end of
     // Paths.
@@ -949,7 +950,8 @@ public:
     if (auto *MU = dyn_cast<MemoryUse>(Start))
       Current = MU->getDefiningAccess();
 
-    DefPath FirstDesc(Q.StartingLoc, Current, Current, false, std::nullopt);
+    DefPath FirstDesc(Q.StartingLoc, Current, Current,
+                      /*MayBeCrossIteration=*/false, std::nullopt);
     // Fast path for the overly-common case (no crazy phi optimization
     // necessary)
     UpwardsWalkResult WalkResult = walkToPhiOrClobber(FirstDesc);
