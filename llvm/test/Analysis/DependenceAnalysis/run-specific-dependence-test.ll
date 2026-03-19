@@ -11,8 +11,8 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-WEAK-ZERO-SIV
 ; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=exact-rdiv 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-EXACT-RDIV
-; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=symbolic-rdiv 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-SYMBOLIC-RDIV
+; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=subscripts-range 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-SUBSCRIPTS-RANGE
 ; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=gcd-miv 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-GCD-MIV
 ; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=banerjee-miv 2>&1 \
@@ -45,9 +45,9 @@ define void @strong_siv(ptr %a) {
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ;
-; CHECK-SYMBOLIC-RDIV-LABEL: 'strong_siv'
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-LABEL: 'strong_siv'
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
 ;
 ; CHECK-GCD-MIV-LABEL: 'strong_siv'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %gep, align 1 --> Dst: store i8 0, ptr %gep, align 1
@@ -125,13 +125,13 @@ define void @weak_crossing_siv(ptr %a) {
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ;
-; CHECK-SYMBOLIC-RDIV-LABEL: 'weak_crossing_siv'
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*|<]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-LABEL: 'weak_crossing_siv'
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*|<]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
 ;
 ; CHECK-GCD-MIV-LABEL: 'weak_crossing_siv'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -220,13 +220,13 @@ define void @exact_siv(ptr %a) {
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ;
-; CHECK-SYMBOLIC-RDIV-LABEL: 'exact_siv'
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*|<]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-LABEL: 'exact_siv'
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*|<]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
 ;
 ; CHECK-GCD-MIV-LABEL: 'exact_siv'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -304,7 +304,7 @@ define void @weak_zero_siv(ptr %a) {
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [S]!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - none!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [*]!
 ;
@@ -316,13 +316,13 @@ define void @weak_zero_siv(ptr %a) {
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ;
-; CHECK-SYMBOLIC-RDIV-LABEL: 'weak_zero_siv'
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [S]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*|<]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-LABEL: 'weak_zero_siv'
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [S]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - none!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
 ;
 ; CHECK-GCD-MIV-LABEL: 'weak_zero_siv'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -410,13 +410,13 @@ define void @exact_rdiv(ptr %a) {
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ;
-; CHECK-SYMBOLIC-RDIV-LABEL: 'exact_rdiv'
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [|<]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-LABEL: 'exact_rdiv'
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [|<]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
 ;
 ; CHECK-GCD-MIV-LABEL: 'exact_rdiv'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -514,13 +514,13 @@ define void @symbolic_rdiv(ptr %a) {
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ;
-; CHECK-SYMBOLIC-RDIV-LABEL: 'symbolic_rdiv'
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-LABEL: 'symbolic_rdiv'
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - none!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [*]!
 ;
 ; CHECK-GCD-MIV-LABEL: 'symbolic_rdiv'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -616,13 +616,13 @@ define void @gcd_miv(ptr %a) {
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [* *]!
 ;
-; CHECK-SYMBOLIC-RDIV-LABEL: 'gcd_miv'
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [* *]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [* *|<]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [* *]!
+; CHECK-SUBSCRIPTS-RANGE-LABEL: 'gcd_miv'
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [* *]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [* *|<]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [* *]!
 ;
 ; CHECK-GCD-MIV-LABEL: 'gcd_miv'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -728,13 +728,13 @@ define void @banerjee_miv(ptr %a) {
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - output [* *]!
 ;
-; CHECK-SYMBOLIC-RDIV-LABEL: 'banerjee_miv'
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [* *]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [* *|<]!
-; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [* *]!
+; CHECK-SUBSCRIPTS-RANGE-LABEL: 'banerjee_miv'
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [* *]!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - none!
+; CHECK-SUBSCRIPTS-RANGE-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
+; CHECK-SUBSCRIPTS-RANGE-NEXT:    da analyze - output [* *]!
 ;
 ; CHECK-GCD-MIV-LABEL: 'banerjee_miv'
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1

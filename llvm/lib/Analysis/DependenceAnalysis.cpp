@@ -71,6 +71,9 @@ STATISTIC(TotalArrayPairs, "Array pairs tested");
 STATISTIC(NonlinearSubscriptPairs, "Nonlinear subscript pairs");
 STATISTIC(ZIVapplications, "ZIV applications");
 STATISTIC(ZIVindependence, "ZIV independence");
+STATISTIC(SubscriptsRangeApplications, "SubscriptsRange applications");
+STATISTIC(SubscriptsRangeSuccesses, "SubscriptsRange successes");
+STATISTIC(SubscriptsRangeIndependence, "SubscriptsRange independence");
 STATISTIC(StrongSIVapplications, "Strong SIV applications");
 STATISTIC(StrongSIVsuccesses, "Strong SIV successes");
 STATISTIC(StrongSIVindependence, "Strong SIV independence");
@@ -85,8 +88,6 @@ STATISTIC(WeakZeroSIVsuccesses, "Weak-Zero SIV successes");
 STATISTIC(WeakZeroSIVindependence, "Weak-Zero SIV independence");
 STATISTIC(ExactRDIVapplications, "Exact RDIV applications");
 STATISTIC(ExactRDIVindependence, "Exact RDIV independence");
-STATISTIC(SymbolicRDIVapplications, "Symbolic RDIV applications");
-STATISTIC(SymbolicRDIVindependence, "Symbolic RDIV independence");
 STATISTIC(GCDapplications, "GCD applications");
 STATISTIC(GCDsuccesses, "GCD successes");
 STATISTIC(GCDindependence, "GCD independence");
@@ -116,12 +117,12 @@ namespace {
 /// Types of dependence test routines.
 enum class DependenceTestType {
   All,
+  SubscriptsRange,
   StrongSIV,
   WeakCrossingSIV,
   ExactSIV,
   WeakZeroSIV,
   ExactRDIV,
-  SymbolicRDIV,
   GCDMIV,
   BanerjeeMIV,
 };
@@ -137,6 +138,9 @@ static cl::opt<DependenceTestType> EnableDependenceTest(
              "dependence test routines are enabled."),
     cl::values(clEnumValN(DependenceTestType::All, "all",
                           "Enable all dependence test routines."),
+               clEnumValN(DependenceTestType::SubscriptsRange,
+                          "subscripts-range",
+                          "Enable only Subscripts Range test."),
                clEnumValN(DependenceTestType::StrongSIV, "strong-siv",
                           "Enable only Strong SIV test."),
                clEnumValN(DependenceTestType::WeakCrossingSIV,
@@ -148,8 +152,6 @@ static cl::opt<DependenceTestType> EnableDependenceTest(
                           "Enable only Weak-Zero SIV test."),
                clEnumValN(DependenceTestType::ExactRDIV, "exact-rdiv",
                           "Enable only Exact RDIV test."),
-               clEnumValN(DependenceTestType::SymbolicRDIV, "symbolic-rdiv",
-                          "Enable only Symbolic RDIV test."),
                clEnumValN(DependenceTestType::GCDMIV, "gcd-miv",
                           "Enable only GCD MIV test."),
                clEnumValN(DependenceTestType::BanerjeeMIV, "banerjee-miv",
@@ -1247,15 +1249,6 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
 
-  // First try to prove independence based on the ranges of the two subscripts.
-  ConstantRange SrcRange = SE->getSignedRange(Src);
-  ConstantRange DstRange = SE->getSignedRange(Dst);
-  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
-    ++StrongSIVindependence;
-    ++StrongSIVsuccesses;
-    return true;
-  }
-
   const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
   if (!Delta)
     return false;
@@ -2085,66 +2078,6 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   return TL.sgt(TU);
 }
 
-// symbolicRDIVtest -
-// In Section 4.5 of the Practical Dependence Testing paper,the authors
-// introduce a special case of Banerjee's Inequalities (also called the
-// Extreme-Value Test) that can handle some of the SIV and RDIV cases,
-// particularly cases with symbolics. Since it's only able to disprove
-// dependence (not compute distances or directions), we'll use it as a
-// fall back for the other tests.
-//
-// When we have a pair of subscripts of the form [c1 + a1*i] and [c2 + a2*j]
-// where i and j are induction variables and c1 and c2 are loop invariants,
-// we can use the symbolic tests to disprove some dependences, serving as a
-// backup for the RDIV test. Note that i and j can be the same variable,
-// letting this test serve as a backup for the various SIV tests.
-//
-// For a dependence to exist, c1 + a1*i must equal c2 + a2*j for some
-//  0 <= i <= N1 and some 0 <= j <= N2, where N1 and N2 are the (normalized)
-// loop bounds for the i and j loops, respectively. So, ...
-//
-// c1 + a1*i = c2 + a2*j
-// a1*i - a2*j = c2 - c1
-//
-// To test for a dependence, we compute c2 - c1 and make sure it's in the
-// range of the maximum and minimum possible values of a1*i - a2*j.
-// Considering the signs of a1 and a2, we have 4 possible cases:
-//
-// 1) If a1 >= 0 and a2 >= 0, then
-//        a1*0 - a2*N2 <= c2 - c1 <= a1*N1 - a2*0
-//              -a2*N2 <= c2 - c1 <= a1*N1
-//
-// 2) If a1 >= 0 and a2 <= 0, then
-//        a1*0 - a2*0 <= c2 - c1 <= a1*N1 - a2*N2
-//                  0 <= c2 - c1 <= a1*N1 - a2*N2
-//
-// 3) If a1 <= 0 and a2 >= 0, then
-//        a1*N1 - a2*N2 <= c2 - c1 <= a1*0 - a2*0
-//        a1*N1 - a2*N2 <= c2 - c1 <= 0
-//
-// 4) If a1 <= 0 and a2 <= 0, then
-//        a1*N1 - a2*0  <= c2 - c1 <= a1*0 - a2*N2
-//        a1*N1         <= c2 - c1 <=       -a2*N2
-//
-// return true if dependence disproved
-bool DependenceInfo::symbolicRDIVtest(const SCEVAddRecExpr *Src,
-                                      const SCEVAddRecExpr *Dst) const {
-  if (!isDependenceTestEnabled(DependenceTestType::SymbolicRDIV))
-    return false;
-
-  ++SymbolicRDIVapplications;
-  LLVM_DEBUG(dbgs() << "\ttry symbolic RDIV test\n");
-  ConstantRange SrcRange = SE->getSignedRange(Src);
-  ConstantRange DstRange = SE->getSignedRange(Dst);
-  LLVM_DEBUG(dbgs() << "\n SrcRange: " << SrcRange << "\n");
-  LLVM_DEBUG(dbgs() << "\n DstRange: " << DstRange << "\n");
-  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
-    ++SymbolicRDIVindependence;
-    return true;
-  }
-  return false;
-}
-
 // testSIV -
 // When we have a pair of subscripts of the form [c1 + a1*i] and [c2 - a2*i]
 // where i is an induction variable, c1 and c2 are loop invariant, and a1 and
@@ -2180,8 +2113,7 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                                       CurDstLoop, Level, Result);
     else
       disproven = exactSIVtest(SrcAddRec, DstAddRec, Level, Result);
-    return disproven || gcdMIVtest(Src, Dst, Result) ||
-           symbolicRDIVtest(SrcAddRec, DstAddRec);
+    return disproven || gcdMIVtest(Src, Dst, Result);
   }
   if (SrcAddRec) {
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
@@ -2230,7 +2162,7 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
     llvm_unreachable("RDIV expected at least one AddRec");
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
                        Result) ||
-         gcdMIVtest(Src, Dst, Result) || symbolicRDIVtest(SrcAddRec, DstAddRec);
+         gcdMIVtest(Src, Dst, Result);
 }
 
 // Tests the single-subscript MIV pair (Src and Dst) for dependence.
@@ -2243,6 +2175,24 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   return gcdMIVtest(Src, Dst, Result) ||
          banerjeeMIVtest(Src, Dst, Loops, Result);
+}
+
+// Test range intersection of subscript pair for dependence.
+// Return true if dependence disproved.
+// Can be used as a pre-test.
+bool DependenceInfo::testSubscriptsRange(const SCEV *Src,
+                                         const SCEV *Dst) const {
+  if (!isDependenceTestEnabled(DependenceTestType::SubscriptsRange))
+    return false;
+  ++SubscriptsRangeApplications;
+  ConstantRange SrcRange = SE->getSignedRange(Src);
+  ConstantRange DstRange = SE->getSignedRange(Dst);
+  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
+    ++SubscriptsRangeIndependence;
+    ++SubscriptsRangeSuccesses;
+    return true;
+  }
+  return false;
 }
 
 /// Given a SCEVMulExpr, returns its first operand if its first operand is a
@@ -3324,6 +3274,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   // Test each subscript individually
   for (unsigned SI = 0; SI < Pairs; ++SI) {
     LLVM_DEBUG(dbgs() << "testing subscript " << SI);
+    if (testSubscriptsRange(Pair[SI].Src, Pair[SI].Dst))
+      return nullptr;
     switch (Pair[SI].Classification) {
     case Subscript::NonLinear:
       // ignore these, but collect loops for later
