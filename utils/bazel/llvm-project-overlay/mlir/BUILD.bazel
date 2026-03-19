@@ -6336,7 +6336,7 @@ cc_library(
         ":ToLLVMIRTranslation",
         "//llvm:Support",
         "//llvm:config",
-    ] + (["//llvm:NVPTXCodeGen",] if "NVPTX" in llvm_targets else []),
+    ] + (["//llvm:NVPTXCodeGen"] if "NVPTX" in llvm_targets else []),
 )
 
 td_library(

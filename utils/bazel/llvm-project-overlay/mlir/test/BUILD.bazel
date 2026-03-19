@@ -780,7 +780,7 @@ cc_library(
         "//mlir:VectorDialect",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",
-    ] + (["//llvm:NVPTXCodeGen",] if "NVPTX" in llvm_targets else []),
+    ] + (["//llvm:NVPTXCodeGen"] if "NVPTX" in llvm_targets else []),
 )
 
 cc_library(
