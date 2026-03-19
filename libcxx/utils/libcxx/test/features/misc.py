@@ -7,7 +7,7 @@
 # ===----------------------------------------------------------------------===##
 
 from libcxx.test.dsl import compilerMacros, sourceBuilds, hasCompileFlag, programSucceeds, runScriptExitCode
-from libcxx.test.dsl import Feature, AddCompileFlag, AddLinkFlag
+from libcxx.test.dsl import Feature, AddCompileFlag, AddLinkFlag, AddSubstitution
 import platform
 import sys
 
@@ -246,14 +246,6 @@ features = [
         name="has-no-zdump",
         when=lambda cfg: runScriptExitCode(cfg, ["zdump --version"]) != 0,
     ),
-    # Whether the `filecheck` executable is available. Note that this corresponds to
-    # a Python port of LLVM's FileCheck, not LLVM's actual FileCheck program, since
-    # that one requires building parts of LLVM that we don't want to build when merely
-    # testing libc++.
-    Feature(
-        name="has-filecheck",
-        when=lambda cfg: runScriptExitCode(cfg, ["filecheck --version"]) == 0,
-    ),
     Feature(
         name="can-create-symlinks",
         when=lambda cfg: "_WIN32" not in compilerMacros(cfg)
@@ -303,5 +295,19 @@ features = [
             }
             """,
         ),
+    ),
+
+    # Whether a `FileCheck` executable is available. Note that we intend not to depend
+    # on how that executable has been installed: we can either use the LLVM FileCheck
+    # executable or the `filecheck` Python port of the same utility.
+    Feature(
+        name="has-filecheck",
+        when=lambda cfg: runScriptExitCode(cfg, ["filecheck --version"]) == 0,
+        actions=[AddSubstitution("%{filecheck}", "filecheck")]
+    ),
+    Feature(
+        name="has-filecheck",
+        when=lambda cfg: runScriptExitCode(cfg, ["FileCheck --version"]) == 0,
+        actions=[AddSubstitution("%{filecheck}", "FileCheck")]
     ),
 ]
