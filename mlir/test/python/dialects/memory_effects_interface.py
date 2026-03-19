@@ -45,9 +45,7 @@ def test_known_no_effects():
     and the interface is active."""
     with ir.Context() as ctx, ir.Location.unknown():
         TestMemEffectsDialect.load(reload=True)
-        OptionalMemoryEffectsModel.attach(
-            OptionalEffectsOp.OPERATION_NAME, context=ctx
-        )
+        OptionalMemoryEffectsModel.attach(OptionalEffectsOp.OPERATION_NAME, context=ctx)
 
         module = ir.Module.create()
         with ir.InsertionPoint(module.body):
@@ -65,9 +63,7 @@ def test_unknown_effects():
     and the interface is not active (the op pretends not to implement it)."""
     with ir.Context() as ctx, ir.Location.unknown():
         TestMemEffectsDialect.load(reload=True)
-        OptionalMemoryEffectsModel.attach(
-            OptionalEffectsOp.OPERATION_NAME, context=ctx
-        )
+        OptionalMemoryEffectsModel.attach(OptionalEffectsOp.OPERATION_NAME, context=ctx)
 
         module = ir.Module.create()
         with ir.InsertionPoint(module.body):
