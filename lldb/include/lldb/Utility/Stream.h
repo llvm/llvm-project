@@ -371,6 +371,8 @@ public:
 
   size_t PrintfVarArg(const char *format, va_list args);
 
+  /// Forwards the arguments to llvm::formatv and writes to the stream.
+  /// FIXME: instead of this API, consider using llvm::formatv directly.
   template <typename... Args> void Format(const char *format, Args &&... args) {
     *this << llvm::formatv(format, std::forward<Args>(args)...);
   }
