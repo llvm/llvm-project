@@ -1828,7 +1828,7 @@ namespace AMDGPU {
 } // end namespace AMDGPU
 
 namespace AMDGPU {
-enum AsmComments : uint8_t {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // For sgpr to vgpr spill instructions
   SGPR_SPILL = MachineInstr::TAsmComments
 };
