@@ -68,8 +68,6 @@
 ; CHECK-NEXT: OpCompositeExtract %[[#HalfTy]] %[[#StructRet]] 2
 ; CHECK-NO: OpAsmCallINTEL
 
-target triple = "spirv64-unknown-unknown"
-
 define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_float, ptr addrspace(1) %_arg_half, i64 %_lng) {
   %i1 = load i32, ptr addrspace(1) %_arg_int
   %i2 = load i8, ptr addrspace(1) %_arg_int
