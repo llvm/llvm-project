@@ -7,7 +7,6 @@ set(LIBCLC_TEST_DEPS
 umbrella_lit_testsuite_begin(check-libclc)
 
 # Testing unresolved symbols.
-# check_external_funcs.sh does not work on Windows
 if(NOT WIN32)
   foreach(t ${LIBCLC_TARGETS_TO_BUILD})
     string(REPLACE "-" ";" TRIPLE ${t})
@@ -25,10 +24,9 @@ if(NOT WIN32)
     set(LIBCLC_TARGET_TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/${t})
     file(MAKE_DIRECTORY ${LIBCLC_TARGET_TEST_DIR})
     file(WRITE ${LIBCLC_TARGET_TEST_DIR}/check-external-funcs.test
-"// RUN: %check_external_funcs %libclc_library_dir/${t}/${output_file} %llvm_tools_dir
+"; RUN: llvm-nm -u \"%libclc_library_dir/${t}/${output_file}\" | FileCheck %s --allow-empty
 
-// This test verifies that the libclc library for ${t} has no
-// unresolved external functions (except LLVM intrinsics).
+; CHECK-NOT: {{.+}}
 ")
 
     configure_lit_site_cfg(
