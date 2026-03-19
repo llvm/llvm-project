@@ -315,3 +315,43 @@ body:             |
     $vgpr512 = V_MOV_B32_e32 $vgpr513, implicit $exec
     S_ENDPGM 0
 ...
+
+# ASM-LABEL: {{^}}multiple_setreg:
+# ASM: s_set_vgpr_msb 0x41                     ;  msbs: dst=1 src0=1 src1=0 src2=0
+# ASM: v_mov_b32_e32 v0 /*v256*/, v1 /*v257*/
+# ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 0, 4), 0x5005 ;  msbs: dst=1 src0=1 src1=0 src2=0
+# ASM: v_mov_b32_e32 v0 /*v256*/, v1 /*v257*/
+# ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 0, 4), 0x5005 ;  msbs: dst=1 src0=1 src1=0 src2=0
+# ASM: v_mov_b32_e32 v0 /*v256*/, v1 /*v257*/
+# ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 0x5001 ;  msbs: dst=1 src0=1 src1=0 src2=0
+# ASM: v_mov_b32_e32 v0 /*v256*/, v1 /*v257*/
+
+# DIS-LABEL: <multiple_setreg>:
+# DIS: v_mov_b32_e32 v0 /*v256*/, v1 /*v257*/
+# DIS: v_mov_b32_e32 v0 /*v256*/, v1 /*v257*/
+# DIS: v_mov_b32_e32 v0 /*v256*/, v1 /*v257*/
+# DIS: v_mov_b32_e32 v0 /*v256*/, v1 /*v257*/
+---
+name:            multiple_setreg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: multiple_setreg
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 20485, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 20485, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 20481, 1601, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    S_SETREG_IMM32_B32 5, 6145, implicit-def $mode, implicit $mode
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    S_SETREG_IMM32_B32 5, 6145, implicit-def $mode, implicit $mode
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    S_ENDPGM 0
+...
