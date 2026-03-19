@@ -706,6 +706,47 @@ def llvm_funcref_ty    : LLVMType<funcref>;
 def llvm_exnref_ty     : LLVMType<exnref>;
 
 //===----------------------------------------------------------------------===//
+// TypeInfoGen overview
+//
+// TypeInfoGen builds the TypeSig byte sequence for a single intrinsic by
+// lowering TableGen "Sig" encodings into the compact IIT_* representation
+// used at runtime.
+//
+// The following intermediate fields are constructed:
+//   AllTypes     -  all ret and param types concatenated in declaration order.
+//   ACTys        -  the subset of AllTypes passing the predicate:
+//                   ty.isAny OR isa<LLVMMatchTypeNextArg>(ty)
+//                   These define the overload slots.
+//   ArgCodes     -  ArgKind for each entry in ACTys (e.g. AnyInteger, 
+//                   AnyFloat, ...).
+//   ACIdxs       -  parallel to AllTypes. ACIdxs[i] is the count of
+//                   predicate-true entries seen before position i in AllTypes.
+//                   For a type that passes the predicate, ACIdxs[i] is its
+//                   index in ACTys. For a type that does not pass, ACIdxs[i]
+//                   is still propagated through ResolveArgCode but is not
+//                   consumed. Only used by EncAnyType and EncNextArgA.
+//   MappingRIdxs -  parallel to ACTys. MappingRIdxs[i] is the number of prior
+//                   isAny=true entries, i.e. the overload slot index among
+//                   any-types. Used by EncMatchType to map
+//                   LLVMMatchType<N>.Number (ACTys index) to a slot.
+//
+// With those tables built, TypeSig is assembled by iterating over AllTypes
+// and expanding each type's raw Sig bytes through ResolveArgCode:
+//
+//   ResolveArgCode(Mapping=MappingRIdxs, ArgCodes, ACIdx=ACIdxs[i], ax):
+//     ah = ax & 0xFF00   - identifies which Enc* class produced this byte
+//     al = ax & 0x00FF   - type-specific payload
+//     num = Mapping[al]  - overload slot index via MappingRIdxs
+//     EncAnyType  (0x100): ret = (ACIdx << 3) | al
+//                        - assigns this position to its overload slot with 
+//                          given ArgKind
+//     EncMatchType(0x200): ret = (num << 3) | AK_MatchType(7)
+//                        - al = LLVMMatchType<N>.Number, 
+//                          num = MappingRIdxs[al] = slot index
+//     EncSameWidth(0x300): ret = (num << 3) | ArgCodes[num]
+//     EncNextArgA (0x400): ret = ACIdx
+//     EncNextArgN (0x500): ret = num
+//     Otherwise          : ret = al  (already a final IIT_* code).
 
 class MakeIdx<list<int> Set> {
   list<int> IdxsR = !foreach(i, !range(Set),
