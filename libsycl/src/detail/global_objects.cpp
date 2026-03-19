@@ -53,3 +53,6 @@ std::vector<PlatformImplUPtr> &getPlatformCache() {
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
+
+extern "C" void __sycl_register_lib(void *) {}
+extern "C" void __sycl_unregister_lib(void *) {}
