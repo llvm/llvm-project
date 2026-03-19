@@ -54,6 +54,10 @@ private:
   /// at the root.
   GenericCycle *ParentCycle = nullptr;
 
+  /// The top-level cycle this cycle is part of. Points to itself if this is
+  /// a top-level cycle.
+  GenericCycle *TopLevelCycle;
+
   /// The entry block(s) of the cycle. The header is the only entry if
   /// this is a loop. Is empty for the root "cycle", to avoid
   /// unnecessary memory use.
@@ -103,7 +107,7 @@ private:
   GenericCycle &operator=(GenericCycle &&Rhs) = delete;
 
 public:
-  GenericCycle() = default;
+  GenericCycle() : TopLevelCycle(this) {}
 
   /// \brief Whether the cycle is a natural loop.
   bool isReducible() const { return Entries.size() == 1; }
@@ -265,9 +269,6 @@ private:
 
   /// Map basic blocks to their inner-most containing cycle.
   DenseMap<BlockT *, CycleT *> BlockMap;
-
-  /// Map basic blocks to their top level containing cycle.
-  DenseMap<BlockT *, CycleT *> BlockMapTopLevel;
 
   /// Top-level cycles discovered by any DFS.
   ///
