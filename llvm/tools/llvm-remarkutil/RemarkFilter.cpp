@@ -15,6 +15,7 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
+#include <map>
 
 using namespace llvm;
 using namespace remarks;
@@ -40,6 +41,16 @@ static cl::list<std::string> InputFileNames(
     cl::Positional, cl::OneOrMore, cl::list_init<std::string>({"-"}),
     cl::desc("<input file> [<input file> ...]"), cl::sub(FilterSub));
 
+static cl::opt<bool>
+    ExcludeOpt("exclude",
+               cl::desc("Keep all remarks except those matching the filter"),
+               cl::init(false), cl::sub(FilterSub));
+static cl::opt<bool> SortOpt("sort", cl::desc("Sort remarks (expensive!)"),
+                             cl::init(false), cl::sub(FilterSub));
+static cl::opt<bool> DedupeOpt("dedupe",
+                               cl::desc("Deduplicate remarks (expensive!)"),
+                               cl::init(false), cl::sub(FilterSub));
+
 REMARK_FILTER_SETUP_FUNC()
 
 namespace {
@@ -47,6 +58,10 @@ namespace {
 class FilterTool {
 public:
   Filters Filter;
+
+  bool Sort = false;
+  bool Dedupe = false;
+  bool Exclude = false;
 
   FilterTool(Filters Filter) : Filter(std::move(Filter)) {}
   ~FilterTool() { finalize(); }
@@ -67,9 +82,9 @@ public:
     auto MaybeRemark = Parser.next();
     for (; MaybeRemark; MaybeRemark = Parser.next()) {
       Remark &Remark = **MaybeRemark;
-      if (!Filter.filterRemark(Remark))
+      if (Filter.filterRemark(Remark) == Exclude)
         continue;
-      Serializer->emit(Remark);
+      emit(std::move(*MaybeRemark));
     }
     auto E = MaybeRemark.takeError();
     if (!E.isA<EndOfFileError>())
@@ -81,6 +96,7 @@ public:
   void finalize() {
     if (!Serializer)
       return;
+    emitBuffered();
     OF->keep();
     Serializer = nullptr;
   }
@@ -88,6 +104,21 @@ public:
 private:
   std::unique_ptr<ToolOutputFile> OF;
   std::unique_ptr<RemarkSerializer> Serializer;
+
+  /// Compare Remarks through unique_ptr
+  struct RemarkPtrCompare {
+    bool operator()(const std::unique_ptr<Remark> &LHS,
+                    const std::unique_ptr<Remark> &RHS) const {
+      assert(LHS && RHS && "Invalid pointers to compare.");
+      return *LHS < *RHS;
+    }
+  };
+
+  // Buffer all remarks if required (for sorting/deduplication).
+  // For now, use std::map (like the RemarkLinker) for easy sorting. We
+  // should be capitalizing on the fact that the strings are interned.
+  std::map<std::unique_ptr<Remark>, size_t, RemarkPtrCompare> Remarks;
+  StringTable StrTab;
 
   /// Set up the RemarkSerializer lazily, so automatic output format detection
   /// can default to the automatically detected input format from the first file
@@ -107,6 +138,26 @@ private:
     Serializer = std::move(*MaybeSerializer);
     return Error::success();
   }
+
+  void emit(std::unique_ptr<Remark> RPtr) {
+    Remark &R = *RPtr;
+    if (!Sort && !Dedupe) {
+      Serializer->emit(R);
+      return;
+    }
+    StrTab.internalize(R);
+    auto [It, Inserted] = Remarks.try_emplace(std::move(RPtr), 1);
+    if (!Dedupe && !Inserted)
+      ++It->second;
+  }
+
+  void emitBuffered() {
+    for (auto &[R, Count] : Remarks) {
+      for (size_t I = 0; I < Count; ++I)
+        Serializer->emit(*R);
+    }
+    Remarks.clear();
+  }
 };
 
 } // namespace
@@ -116,6 +167,9 @@ static Error tryFilter() {
   if (!MaybeFilter)
     return MaybeFilter.takeError();
   FilterTool Tool(std::move(*MaybeFilter));
+  Tool.Sort = SortOpt;
+  Tool.Dedupe = DedupeOpt;
+  Tool.Exclude = ExcludeOpt;
 
   for (auto &InputFileName : InputFileNames) {
     if (Error E = Tool.processInputFile(InputFileName))

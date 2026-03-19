@@ -96,6 +96,9 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+* Outer let statements use ``ID{n-m}`` instead of ``ID<n-m>`` to be consistent
+  with inner let statements.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
