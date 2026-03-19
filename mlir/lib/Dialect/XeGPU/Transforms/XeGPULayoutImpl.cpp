@@ -437,37 +437,10 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     return DenseI32ArrayAttr::get(context, vec32);
   };
 
-  // Helper lambda to check if the layout from consumer can be reused for the
-  // source shape
-  auto isLayoutCompatibleWithSrcShape =
-      [&](ArrayRef<int64_t> srcShape,
-          xegpu::DistributeLayoutAttr srcLayout) -> bool {
-    SmallVector<int64_t> sgLayout = srcLayout.getEffectiveSgLayoutAsInt();
-    SmallVector<int64_t> laneLayout = srcLayout.getEffectiveLaneLayoutAsInt();
-    if (static_cast<size_t>(srcLayout.getRank()) != srcShape.size())
-      return false;
-    for (size_t i = 0; i < srcShape.size(); i++) {
-      if (!sgLayout.empty() && srcShape[i] % sgLayout[i] != 0)
-        return false;
-      if (!laneLayout.empty() && srcShape[i] % laneLayout[i] != 0)
-        return false;
-    }
-    return true;
-  };
-
-  // Extract original plain layout for workgroup/subgroup size recovery
-  xegpu::DistributeLayoutAttr rootPlainLayout = consumerLayout;
-  while (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(rootPlainLayout)) {
-    rootPlainLayout = sliceAttr.getParent();
-  }
-  auto sgLayoutVec = rootPlainLayout.getEffectiveSgLayoutAsInt();
-  const int workgroupSize = std::accumulate(
-      sgLayoutVec.begin(), sgLayoutVec.end(), 1, std::multiplies<int64_t>());
+  const int workgroupSize = consumerLayout.getNumSubgroups();
   const int subgroupSize = uArch->getSubgroupSize();
   int64_t maxReduceVectorSize = 1; // could extend to spirv vector Size
 
-  xegpu::SliceAttr consumerSliceLayout =
-      dyn_cast<xegpu::SliceAttr>(consumerLayout);
   SmallVector<int64_t> consumerSgLayout =
       consumerLayout.getEffectiveSgLayoutAsInt();
   SmallVector<int64_t> consumerLaneLayout =
@@ -477,18 +450,18 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
 
   xegpu::DistributeLayoutAttr srcLayout;
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    xegpu::SliceAttr consumerSliceLayout =
+        dyn_cast<xegpu::SliceAttr>(consumerLayout);
     if (consumerSliceLayout &&
-        consumerSliceLayout.getDims().asArrayRef().equals(reductionDims) &&
-        isLayoutCompatibleWithSrcShape(srcShape,
-                                       consumerSliceLayout.getParent())) {
-      int64_t sgDataValue = -1;
+        consumerSliceLayout.getDims().asArrayRef().equals(reductionDims)) {
       srcLayout = consumerSliceLayout.getParent();
       SmallVector<int64_t> sgLayoutFromConsumer =
           srcLayout.getEffectiveSgLayoutAsInt();
-      for (int dim = 0; dim < srcRank; dim++) {
-        sgDataValue = srcShape[dim] / sgLayoutFromConsumer[dim];
-        srcLayout = srcLayout.setDimData(dim, sgDataValue, -1, -1);
-      }
+      auto srcSgData = computeShapeRatio(srcShape, sgLayoutFromConsumer);
+      if (srcSgData)
+        for (int dim = 0; dim < srcRank; dim++) {
+          srcLayout = srcLayout.setDimData(dim, srcSgData.value()[dim], -1, -1);
+        }
     } else {
 
       SmallVector<int64_t> sgLayout(srcRank), sgData(srcRank), order(srcRank);
