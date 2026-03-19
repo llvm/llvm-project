@@ -1803,6 +1803,16 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsArgument) {
   }
 }
 
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsArgumentInNew) {
+  const std::string Code =
+      "void* operator new(unsigned long, void* p) noexcept;"
+      "void f() { int* x = nullptr; new(x) int{311}; }";
+  auto AST = buildASTFromCodeWithArgs(Code, {});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+}
+
 TEST(ExprMutationAnalyzerTest, PointeeMutatedByPassAsArgumentInConstruct) {
   {
     const std::string Code = "struct A { A(int const*); };"
