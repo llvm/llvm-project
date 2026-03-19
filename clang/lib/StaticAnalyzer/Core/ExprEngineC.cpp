@@ -624,6 +624,20 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
     return;
   }
 
+  // Bypass a nop initialization that assign to itself at variable declaration.
+  // I.e., int x = x;
+  // This is an idiom in C code and GCC will not generate any assemblies for
+  // this self initialization, even under -O0, but Clang will.
+  // Since the frontend will warn in C++ code, and it is ill-formed for C++
+  // reference types, the bypass is effected to C code only.
+  if (getContext().getLangOpts().getCLangStd())
+    if (const Expr *EI = VD->getInit())
+      if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(EI->IgnoreImpCasts()))
+        if (VD == DR->getDecl()) {
+          Dst.insert(Pred);
+          return;
+        }
+
   // FIXME: all pre/post visits should eventually be handled by ::Visit().
   ExplodedNodeSet dstPreVisit;
   getCheckerManager().runCheckersForPreStmt(dstPreVisit, Pred, DS, *this);
