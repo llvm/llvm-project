@@ -237,7 +237,7 @@ class ProgressBar:
     BAR = "%s${%s}[${BOLD}%s%s${NORMAL}${%s}]${NORMAL}%s"
     HEADER = "${BOLD}${CYAN}%s${NORMAL}\n\n"
 
-    def __init__(self, term, header, useETA=True, minOutputInterval=None):
+    def __init__(self, term, header, minOutputInterval, useETA=True):
         self.term = term
         if not (self.term.CLEAR_EOL and self.term.UP and self.term.BOL):
             raise ValueError(

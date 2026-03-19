@@ -238,8 +238,8 @@ def parse_args():
     format_group.add_argument(
         "--min-output-interval",
         dest="minOutputInterval",
-        help="Limit updates to progressbar to at most once per INTERVAL, in seconds. Set to 0 to disable ratelimit (default 0.2 seconds).",
-        default=0.2,
+        help="Limit updates to progressbar to at most once per INTERVAL, in seconds. Set to 0 to disable ratelimit (default - no ratelimit).",
+        default=0.0,
         metavar="INTERVAL",
         type=_non_negative_float,
     )
