@@ -609,16 +609,14 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
       // Add in the live successors by first checking whether we have terminator
       // that may be simplified based on the values simplified by this call.
       BasicBlock *KnownSucc = nullptr;
-      if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-        if (BI->isConditional()) {
-          if (auto *SimpleCond = getSimplifiedConstant(BI->getCondition())) {
-            // Just take the first successor if condition is undef
-            if (isa<UndefValue>(SimpleCond))
-              KnownSucc = BI->getSuccessor(0);
-            else if (ConstantInt *SimpleCondVal =
-                         dyn_cast<ConstantInt>(SimpleCond))
-              KnownSucc = BI->getSuccessor(SimpleCondVal->isZero() ? 1 : 0);
-          }
+      if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
+        if (auto *SimpleCond = getSimplifiedConstant(BI->getCondition())) {
+          // Just take the first successor if condition is undef
+          if (isa<UndefValue>(SimpleCond))
+            KnownSucc = BI->getSuccessor(0);
+          else if (ConstantInt *SimpleCondVal =
+                       dyn_cast<ConstantInt>(SimpleCond))
+            KnownSucc = BI->getSuccessor(SimpleCondVal->isZero() ? 1 : 0);
         }
       } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
         if (auto *SimpleCond = getSimplifiedConstant(SI->getCondition())) {
@@ -754,7 +752,7 @@ static bool hasUnrollEnablePragma(const Loop *L) {
   return getUnrollMetadataForLoop(L, "llvm.loop.unroll.enable");
 }
 
-// Returns true if the loop has an runtime unroll(disable) pragma.
+// Returns true if the loop has a runtime unroll(disable) pragma.
 static bool hasRuntimeUnrollDisablePragma(const Loop *L) {
   return getUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
 }
@@ -1436,6 +1434,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   // Save loop properties before it is transformed.
   MDNode *OrigLoopID = L->getLoopID();
+  UnrollPragmaInfo PInfo(L);
 
   // Unroll the loop.
   Loop *RemainderLoop = nullptr;
@@ -1478,8 +1477,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   // If loop has an unroll count pragma or unrolled by explicitly set count
   // mark loop as unrolled to prevent unrolling beyond that requested.
-  if (UnrollResult != LoopUnrollResult::FullyUnrolled &&
-      UnrollPragmaInfo(L).ExplicitUnroll)
+  if (UnrollResult != LoopUnrollResult::FullyUnrolled && PInfo.ExplicitUnroll)
     L->setLoopAlreadyUnrolled();
 
   return UnrollResult;

@@ -99,6 +99,12 @@
       "doc": "Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled."
     }
   },
+  "ctype": {
+    "LIBC_CONF_CTYPE_SMALLER_ASCII": {
+      "value": false,
+      "doc": "Shrinks b36_char_to_int by assuming the character encoding is ASCII."
+    }
+  },
   "codegen": {
     "LIBC_CONF_KEEP_FRAME_POINTER": {
       "value": true,
