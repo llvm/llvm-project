@@ -3202,13 +3202,6 @@ void Verifier::verifySiblingFuncletUnwinds() {
   }
 }
 
-/// Returns true if \p U is the oracle operand of an llvm.speculative.load.
-static bool isSpeculativeLoadOracleUse(const Use &U) {
-  auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-  return II && II->getIntrinsicID() == Intrinsic::speculative_load &&
-         II->isArgOperand(&U) && II->getArgOperandNo(&U) == 2;
-}
-
 // visitFunction - Verify that a function is ok.
 //
 void Verifier::visitFunction(const Function &F) {
