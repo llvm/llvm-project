@@ -1171,8 +1171,8 @@ Error LVSymbolVisitor::visitKnownRecord(
     const uint64_t Operand2 = DefRangeRegisterRelIndir.Hdr.BasePointerOffset;
     const uint64_t Operand3 = DefRangeRegisterRelIndir.Hdr.OffsetInUdt;
 
-    LocalVariableAddrRange Range = DefRangeRegisterRelIndir.Range;
-    LVAddress Address =
+    const LocalVariableAddrRange Range = DefRangeRegisterRelIndir.Range;
+    const LVAddress Address =
         Reader->linearAddress(Range.ISectStart, Range.OffsetStart);
 
     Symbol->addLocation(Attr, Address, Address + Range.Range, 0, 0);
