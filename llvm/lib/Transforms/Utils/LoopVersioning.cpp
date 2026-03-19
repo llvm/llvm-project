@@ -62,10 +62,9 @@ void LoopVersioning::versionLoop(
   const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
 
   SCEVExpander Exp2(*RtPtrChecking.getSE(), "induction");
-  bool AllChecksHoisted = false;
-  MemRuntimeCheck =
-      addRuntimeChecks(RuntimeCheckBB->getTerminator(), VersionedLoop,
-                       AliasChecks, Exp2, false, AllChecksHoisted);
+  MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
+                                     VersionedLoop, AliasChecks, Exp2)
+                        .first;
 
   SCEVExpander Exp(*SE, "scev.check");
   SCEVRuntimeCheck =

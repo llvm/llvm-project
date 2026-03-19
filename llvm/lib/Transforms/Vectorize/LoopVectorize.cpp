@@ -1540,7 +1540,7 @@ class GeneratedRTChecks {
   Value *MemRuntimeCheckCond = nullptr;
 
   /// True if memory checks are outer-loop invariant (hoistable).
-  /// Used to discount check cost for inner loops.
+  /// Used to discount the cost of performing runtime checks for inner loops.
   bool AllChecksHoisted = false;
 
   DominatorTree *DT;
@@ -1636,10 +1636,9 @@ public:
             },
             IC);
       } else {
-        MemRuntimeCheckCond = addRuntimeChecks(
+        std::tie(MemRuntimeCheckCond, AllChecksHoisted) = addRuntimeChecks(
             MemCheckBlock->getTerminator(), L, RtPtrChecking.getChecks(),
-            MemCheckExp, VectorizerParams::HoistRuntimeChecks,
-            AllChecksHoisted);
+            MemCheckExp, VectorizerParams::HoistRuntimeChecks);
       }
       assert(MemRuntimeCheckCond &&
              "no RT checks generated although RtPtrChecking "
