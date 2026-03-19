@@ -3071,10 +3071,29 @@ class CompletionChunkKind(BaseEnumeration):
     VERTICAL_SPACE = 20
 
 
-class _CXUnsavedFile(Structure):
+class UnsavedFile(Structure):
     """Helper for passing unsaved file arguments."""
 
     _fields_ = [("name", c_char_p), ("contents", c_char_p), ("length", c_ulong)]
+
+
+class _CXUnsavedFile(UnsavedFile):
+    """
+    _CXUnsavedFile acts as an alias to UnsavedFile.
+    This will be removed  in a future release.
+    All existing usage should be replaced directly with UnsavedFile.
+    No other changes are required.
+    """
+
+    def __getattribute__(self, attr):
+        warnings.warn(
+            "'_CXUnsavedFile' will be renamed to 'UnsavedFile' for consistency. "
+            "'UnsavedFile' is already available to use and existing uses should "
+            "be adapted to refer to it instead. '_CXUnsavedFile' will be "
+            "removed in a future release.",
+            DeprecationWarning,
+        )
+        return super().__getattribute__(attr)
 
 
 class CompletionChunk:
@@ -3464,10 +3483,10 @@ class TranslationUnit(ClangObject):
     @staticmethod
     def process_unsaved_files(
         unsaved_files: list[InMemoryFile],
-    ) -> Array[_CXUnsavedFile] | None:
+    ) -> Array[UnsavedFile] | None:
         unsaved_array = None
         if len(unsaved_files):
-            unsaved_array = (_CXUnsavedFile * len(unsaved_files))()
+            unsaved_array = (UnsavedFile * len(unsaved_files))()
             for i, (name, contents) in enumerate(unsaved_files):
                 if hasattr(contents, "read"):
                     contents = contents.read()
