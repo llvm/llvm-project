@@ -1192,8 +1192,19 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   auto *Addr = getCounterAddress(Inc);
 
   IRBuilder<> Builder(Inc);
-  if (Options.Atomic || AtomicCounterUpdateAll ||
-      (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
+  if (isGPUProfTarget(M)) {
+    auto *I64Ty = Builder.getInt64Ty();
+    auto *PtrTy = Builder.getPtrTy();
+    auto *CalleeTy = FunctionType::get(Type::getVoidTy(M.getContext()),
+                                       {PtrTy, PtrTy, I64Ty}, false);
+    auto Callee =
+        M.getOrInsertFunction("__llvm_profile_instrument_gpu", CalleeTy);
+    Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
+    Value *Uniform =
+        ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
+    Builder.CreateCall(Callee, {CastAddr, Uniform, Inc->getStep()});
+  } else if (Options.Atomic || AtomicCounterUpdateAll ||
+             (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {
