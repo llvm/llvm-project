@@ -2245,11 +2245,12 @@ struct BackgroundDeletion : llvm::DefaultThreadPool {
       errs() << Warning;
   }
 
-  void remove(SmallVector<std::string> &&Files,
-              std::optional<unsigned> TimeTraceGranularity) {
-    async([this, Files = std::move(Files), TTG = TimeTraceGranularity] {
-      if (TTG)
-        timeTraceProfilerInitialize(*TTG, "Remove DTLTO temporary files");
+  void remove(SmallVector<std::string> &&Files, bool TimeTraceEnabled,
+              unsigned TimeTraceGranularity) {
+    async([this, Files = std::move(Files), TTE = TimeTraceEnabled,
+           TTG = TimeTraceGranularity] {
+      if (LLVM_ENABLE_THREADS && TTE)
+        timeTraceProfilerInitialize(TTG, "Remove DTLTO temporary files");
       {
         llvm::TimeTraceScope TimeScope("Remove DTLTO temporary files");
         for (auto &F : Files) {
@@ -2263,7 +2264,7 @@ struct BackgroundDeletion : llvm::DefaultThreadPool {
           }
         }
       }
-      if (TTG)
+      if (LLVM_ENABLE_THREADS && TTE)
         timeTraceProfilerFinishThread();
     });
   }
@@ -2615,10 +2616,8 @@ public:
         if (!ShouldEmitIndexFiles)
           Files.push_back(std::string(Job.SummaryIndexPath));
       }
-      std::optional<unsigned> TimeTraceGranularity;
-      if (LLVM_ENABLE_THREADS && Conf.TimeTraceEnabled)
-        TimeTraceGranularity = Conf.TimeTraceGranularity;
-      BackgroundDeleter->remove(std::move(Files), TimeTraceGranularity);
+      BackgroundDeleter->remove(std::move(Files), Conf.TimeTraceEnabled,
+                                Conf.TimeTraceGranularity);
     });
 
     const StringRef BCError = "DTLTO backend compilation: ";
