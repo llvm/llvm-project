@@ -1836,6 +1836,8 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
     for (auto &MI : reverse(MBB)) {
       if (WebAssembly::isTry(MI.getOpcode()))
         EHPadStack.pop_back();
+      else if (MI.getOpcode() == WebAssembly::DELEGATE)
+        EHPadStack.push_back(MI.getOperand(0).getMBB());
       else if (WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
 
@@ -1847,6 +1849,8 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
           !WebAssembly::mayThrow(MI))
         continue;
       SeenThrowableInstInBB = true;
+      LLVM_DEBUG(dbgs() << "- fixCallUnwindMismatches considering: " << MI
+                        << "  in MBB = " << MBB.getName() << "\n");
 
       // If the EH pad on the stack top is where this instruction should unwind
       // next, we're good.
@@ -1923,8 +1927,10 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
         RecordCallerMismatchRange(EHPadStack.back());
 
       // If EHPadStack is empty, that means it correctly unwinds to the caller
-      // if it throws, so we're good. If MI does not throw, we're good too.
-      else if (EHPadStack.empty() || !MayThrow) {
+      // if it throws, so we're good. A delegate targeting FakeCallerBB also
+      // correctly unwinds to the caller. If MI does not throw, we're good too.
+      else if (EHPadStack.empty() || EHPadStack.back() == FakeCallerBB ||
+               !MayThrow) {
       }
 
       // We found an instruction that unwinds to the caller but currently has an
@@ -1940,6 +1946,8 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
       // Update EHPadStack.
       if (WebAssembly::isTry(MI.getOpcode()))
         EHPadStack.pop_back();
+      else if (MI.getOpcode() == WebAssembly::DELEGATE)
+        EHPadStack.push_back(MI.getOperand(0).getMBB());
       else if (WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
     }
@@ -2474,8 +2482,11 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
     // Add an 'unreachable' after 'end_try_table's.
     addUnreachableAfterTryTables(MF, TII);
     // Fix mismatches in unwind destinations induced by linearizing the code.
-    fixCallUnwindMismatches(MF);
+    // Run fixCatchUnwindMismatches() first so that fixCallUnwindMismatches()
+    // will see and correct any new call/rethrow unwind mismatches introduced by
+    // fixCatchUnwindMismatches().
     fixCatchUnwindMismatches(MF);
+    fixCallUnwindMismatches(MF);
     // addUnreachableAfterTryTables and fixUnwindMismatches create new BBs, so
     // we need to recalculate ScopeTops.
     recalculateScopeTops(MF);

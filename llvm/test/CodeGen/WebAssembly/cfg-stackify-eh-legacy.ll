@@ -659,11 +659,9 @@ try.cont:                                         ; preds = %catch.start0
 ; --- try-delegate ends (call unwind mismatch)
 ; NOSORT:     catch
 ; NOSORT:       call  {{.*}} __cxa_begin_catch
-; --- try-delegate starts (call unwind mismatch)
-; NOSORT:       try
-; NOSORT:         call  __cxa_end_catch
-; NOSORT:       delegate    3            # label/catch{{[0-9]+}}: to caller
-; --- try-delegate ends (call unwind mismatch)
+; __cxa_end_catch doesn't need its own try-delegate because the enclosing
+; catch-mismatch delegate already routes to caller.
+; NOSORT:       call  __cxa_end_catch
 ; NOSORT:     end_try
 ; NOSORT:   delegate    1                # label/catch{{[0-9]+}}: to caller
 ; --- try-delegate ends (catch unwind mismatch)
@@ -1736,7 +1734,7 @@ unreachable:                                      ; preds = %rethrow, %entry
 }
 
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 24 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT: 23 wasm-cfg-stackify    - Number of call unwind mismatches found
 ; NOSORT:  5 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
