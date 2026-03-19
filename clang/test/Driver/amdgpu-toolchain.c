@@ -46,3 +46,9 @@
 // RUN:  --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode 2>&1 \
 // RUN: | FileCheck -check-prefix=DEVICE-LIBS %s
 // DEVICE-LIBS: "-mlink-builtin-bitcode" "[[ROCM_PATH:.+]]ockl.bc"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE %s
+//      PROFILE: ld.lld
+// PROFILE-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"

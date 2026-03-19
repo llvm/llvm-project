@@ -4,7 +4,7 @@
 
 !Check that we don't crash on this.
 
-!CHECK: omp.single copyprivate(%6#0 -> @_copy_class_ptr_rec__QFf01Tt : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QFf01Tt>>>>) {
+!CHECK: omp.single copyprivate(%6#0 -> @_copy_ref_class_ptr_rec__QFf01Tt : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QFf01Tt>>>>) {
 !CHECK:   omp.terminator
 !CHECK: }
 

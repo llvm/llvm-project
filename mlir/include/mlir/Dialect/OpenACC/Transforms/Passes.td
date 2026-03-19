@@ -486,4 +486,15 @@ def ACCRoutineToGPUFunc : Pass<"acc-routine-to-gpu-func", "mlir::ModuleOp"> {
   let options = [ AccDeviceTypeOption ];
 }
 
+def ACCBindRoutine : Pass<"acc-bind-routine", "mlir::func::FuncOp"> {
+  let summary = "Apply bind clause to function calls in ACC compute regions";
+  let description = [{
+    For calls inside offload regions that target a function with an
+    `acc routine` directive and a `bind(name)` clause, rewrite the
+    call to use the bound symbol so device code calls the correct
+    call target.
+  }];
+  let options = [ AccDeviceTypeOption ];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

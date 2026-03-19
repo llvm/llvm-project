@@ -19,8 +19,7 @@ define void @func(i32 %0) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <32 x i32> [[TMP16]], <32 x i32> <i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 32, i32 33, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 poison, i32 poison, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <32 x i32> [[TMP14]], <32 x i32> <i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 32, i32 33, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP18:%.*]] = or <32 x i32> [[TMP8]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = sext <32 x i32> [[TMP18]] to <32 x i64>
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp slt <32 x i64> [[TMP19]], zeroinitializer
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp slt <32 x i32> [[TMP18]], zeroinitializer
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <32 x i1> [[TMP20]], i32 31
 ; CHECK-NEXT:    [[TMP22:%.*]] = and i1 false, [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <32 x i1> [[TMP20]], i32 30

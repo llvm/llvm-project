@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-using MachineCycleInfo = GenericCycleInfo<MachineSSAContext>;
+class MachineCycleInfo : public GenericCycleInfo<MachineSSAContext> {};
 using MachineCycle = MachineCycleInfo::CycleT;
 
 /// Legacy analysis pass which computes a \ref MachineCycleInfo.

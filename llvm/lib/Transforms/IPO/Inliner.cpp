@@ -142,21 +142,6 @@ static cl::opt<CallSiteFormat::Format> CGSCCInlineReplayFormat(
                    "<Line Number>:<Column Number>.<Discriminator> (default)")),
     cl::desc("How cgscc inline replay file is formatted"), cl::Hidden);
 
-/// Return true if the specified inline history ID
-/// indicates an inline history that includes the specified function.
-static bool inlineHistoryIncludes(
-    Function *F, int InlineHistoryID,
-    const SmallVectorImpl<std::pair<Function *, int>> &InlineHistory) {
-  while (InlineHistoryID != -1) {
-    assert(unsigned(InlineHistoryID) < InlineHistory.size() &&
-           "Invalid inline history ID");
-    if (InlineHistory[InlineHistoryID].first == F)
-      return true;
-    InlineHistoryID = InlineHistory[InlineHistoryID].second;
-  }
-  return false;
-}
-
 InlineAdvisor &
 InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
                         FunctionAnalysisManager &FAM, Module &M) {

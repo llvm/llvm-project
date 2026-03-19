@@ -26996,9 +26996,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   // Combine an extract of an extract into a single extract_subvector.
   // ext (ext X, C), 0 --> ext X, C
   if (ExtIdx == 0 && V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
-    // The index has to be a multiple of the new result type's known minimum
-    // vector length.
-    if (V.getConstantOperandVal(1) % NVT.getVectorMinNumElements() == 0 &&
+    // Both indices must have the same scaling factor and C has to be a
+    // multiple of the new result type's known minimum vector length.
+    if (V.getValueType().isScalableVector() == NVT.isScalableVector() &&
+        V.getConstantOperandVal(1) % NVT.getVectorMinNumElements() == 0 &&
         TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
                                     V.getConstantOperandVal(1)) &&
         TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT)) {

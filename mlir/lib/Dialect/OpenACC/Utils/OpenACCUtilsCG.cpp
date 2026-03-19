@@ -100,7 +100,7 @@ ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
     YieldOp::create(rewriter, loc, yieldOperands);
   } else {
     auto exeRegion = mlir::acc::wrapMultiBlockRegionWithSCFExecuteRegion(
-        regionToClone, mapping, loc, rewriter, /*convertFuncReturn=*/true);
+        regionToClone, mapping, loc, rewriter);
     if (!exeRegion) {
       rewriter.eraseOp(computeRegion);
       return nullptr;

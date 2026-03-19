@@ -17,6 +17,7 @@
 #include "clc/integer/clc_hadd.h"
 #include "clc/integer/clc_mul_hi.h"
 #include "clc/integer/definitions.h"
+#include "clc/math/clc_flush_if_daz.h"
 #include "clc/math/clc_mad.h"
 #include "clc/math/math.h"
 #include "clc/relational/clc_isinf.h"
@@ -127,9 +128,9 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
     return c;
   }
 
-  a = __clc_flush_denormal_if_not_supported(a);
-  b = __clc_flush_denormal_if_not_supported(b);
-  c = __clc_flush_denormal_if_not_supported(c);
+  a = __clc_flush_if_daz(a);
+  b = __clc_flush_if_daz(b);
+  c = __clc_flush_if_daz(c);
 
   if (a == 0.0f || b == 0.0f) {
     return c;

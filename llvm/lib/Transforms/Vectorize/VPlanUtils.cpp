@@ -62,9 +62,10 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 
   VPValue *A, *B;
 
-  auto m_CanonicalScalarIVSteps =
-      m_ScalarIVSteps(m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
-                      m_One(), m_Specific(&Plan.getVF()));
+  auto m_CanonicalScalarIVSteps = m_ScalarIVSteps(
+      m_CombineOr(m_CanonicalIV(),
+                  m_DerivedIV(m_ZeroInt(), m_CanonicalIV(), m_One())),
+      m_One(), m_Specific(&Plan.getVF()));
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&

@@ -10,7 +10,7 @@
 #define __CLANG_ENDIAN_H
 
 // If the system has an endian.h, let's use that instead.
-#if __STDC_HOSTED__ && __has_include_next(<endian.h>)
+#if __has_include_next(<endian.h>)
 #include_next <endian.h>
 #else
 

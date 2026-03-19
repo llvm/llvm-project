@@ -28,7 +28,9 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
       "  %st.addr = getelementptr inbounds i16, ptr %array, i64 %iv\n"
       "  %data = load i16, ptr %st.addr, align 2\n"
       "  %inc = add nsw i16 %data, 1\n"
-      "  store i16 %inc, ptr %st.addr, align 2\n"
+      // TODO: Uncomment store once more support is added for uncountable exits
+      //       in loops with stores.
+      // "  store i16 %inc, ptr %st.addr, align 2\n"
       "  %uncountable.addr = getelementptr inbounds nuw i16, ptr %pred, i64 "
       "%iv\n"
       "  %uncountable.val = load i16, ptr %uncountable.addr, align 2\n"
@@ -46,7 +48,7 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildVPlan(LoopHeader, /*HasUncountableExit=*/true);
+  auto Plan = buildVPlan(LoopHeader, UncountableExitStyle::ReadOnly);
   VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
   VPlanTransforms::optimize(*Plan);
 

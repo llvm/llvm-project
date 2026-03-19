@@ -229,13 +229,28 @@ define i64 @dont_fold_urem_i64(i64 %x) nounwind {
 ;
 ; RV32IM-LABEL: dont_fold_urem_i64:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    addi sp, sp, -16
-; RV32IM-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    li a2, 98
-; RV32IM-NEXT:    li a3, 0
-; RV32IM-NEXT:    call __umoddi3
-; RV32IM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    addi sp, sp, 16
+; RV32IM-NEXT:    slli a2, a1, 31
+; RV32IM-NEXT:    srli a3, a0, 1
+; RV32IM-NEXT:    andi a4, a1, 2046
+; RV32IM-NEXT:    srli a1, a1, 11
+; RV32IM-NEXT:    or a2, a3, a2
+; RV32IM-NEXT:    slli a4, a4, 10
+; RV32IM-NEXT:    srli a3, a2, 21
+; RV32IM-NEXT:    or a3, a3, a4
+; RV32IM-NEXT:    lui a4, 21400
+; RV32IM-NEXT:    slli a2, a2, 11
+; RV32IM-NEXT:    srli a2, a2, 11
+; RV32IM-NEXT:    add a2, a2, a3
+; RV32IM-NEXT:    li a3, 49
+; RV32IM-NEXT:    addi a4, a4, -2006
+; RV32IM-NEXT:    add a1, a2, a1
+; RV32IM-NEXT:    mulhu a2, a1, a4
+; RV32IM-NEXT:    mul a2, a2, a3
+; RV32IM-NEXT:    sub a1, a1, a2
+; RV32IM-NEXT:    slli a1, a1, 1
+; RV32IM-NEXT:    andi a0, a0, 1
+; RV32IM-NEXT:    or a0, a1, a0
+; RV32IM-NEXT:    li a1, 0
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: dont_fold_urem_i64:

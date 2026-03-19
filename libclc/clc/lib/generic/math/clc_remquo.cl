@@ -10,6 +10,7 @@
 #include "clc/integer/clc_clz.h"
 #include "clc/internal/clc.h"
 #include "clc/math/clc_floor.h"
+#include "clc/math/clc_flush_if_daz.h"
 #include "clc/math/clc_fma.h"
 #include "clc/math/clc_ldexp.h"
 #include "clc/math/clc_subnormal_config.h"

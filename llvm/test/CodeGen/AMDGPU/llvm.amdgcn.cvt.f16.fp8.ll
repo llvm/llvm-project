@@ -12,7 +12,7 @@ declare <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16)
 define amdgpu_ps float @test_cvt_f16_bf8_byte0(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_bf8_byte0:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_bf8_e32 v0.l, v0
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -20,7 +20,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte0(i32 %a) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_bf8_byte0:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_bf8_e32 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -28,7 +28,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte0(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_bf8_byte0:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_bf8_e32 v0.l, v0
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -36,7 +36,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte0(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_bf8_byte0:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_bf8_e32 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -49,7 +49,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte0(i32 %a) {
 define amdgpu_ps float @test_cvt_f16_bf8_byte1(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_bf8_byte1:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_bf8_e64 v0.l, v0 byte_sel:1
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -57,7 +57,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte1(i32 %a) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_bf8_byte1:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:1
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -65,7 +65,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte1(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_bf8_byte1:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_bf8_e64 v0.l, v0 byte_sel:1
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -73,7 +73,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte1(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_bf8_byte1:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:1
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -86,7 +86,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte1(i32 %a) {
 define amdgpu_ps float @test_cvt_f16_bf8_byte2(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_bf8_byte2:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_bf8_e64 v0.l, v0 byte_sel:2
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -94,7 +94,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte2(i32 %a) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_bf8_byte2:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:2
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -102,7 +102,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte2(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_bf8_byte2:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_bf8_e64 v0.l, v0 byte_sel:2
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -110,7 +110,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte2(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_bf8_byte2:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -123,7 +123,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte2(i32 %a) {
 define amdgpu_ps float @test_cvt_f16_bf8_byte3(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_bf8_byte3:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_bf8_e64 v0.l, v0 byte_sel:3
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -131,7 +131,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte3(i32 %a) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_bf8_byte3:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:3
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -139,7 +139,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte3(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_bf8_byte3:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_bf8_e64 v0.l, v0 byte_sel:3
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -147,7 +147,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte3(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_bf8_byte3:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:3
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -160,14 +160,14 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte3(i32 %a) {
 define amdgpu_ps float @test_cvt_f16_bf8_byte3_hi(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_bf8_byte3_hi:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_bf8_e64 v0.h, v0 byte_sel:3
 ; GFX1250-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.l, 0
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_bf8_byte3_hi:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:3
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v0, 0, 0x5040100
@@ -175,7 +175,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte3_hi(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_bf8_byte3_hi:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_bf8_e64 v0.l, v0 byte_sel:3
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0
@@ -183,7 +183,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte3_hi(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_bf8_byte3_hi:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_bf8_e64 v0, v0 byte_sel:3
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0
@@ -198,7 +198,7 @@ define amdgpu_ps float @test_cvt_f16_bf8_byte3_hi(i32 %a) {
 define amdgpu_ps float @test_cvt_f16_fp8_byte0(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_fp8_byte0:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_fp8_e32 v0.l, v0
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -206,7 +206,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte0(i32 %a) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_fp8_byte0:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_fp8_e32 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -214,7 +214,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte0(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_fp8_byte0:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_fp8_e32 v0.l, v0
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -222,7 +222,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte0(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_fp8_byte0:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_fp8_e32 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -235,7 +235,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte0(i32 %a) {
 define amdgpu_ps float @test_cvt_f16_fp8_byte1(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_fp8_byte1:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_fp8_e64 v0.l, v0 byte_sel:1
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -243,7 +243,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte1(i32 %a) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_fp8_byte1:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:1
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -251,7 +251,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte1(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_fp8_byte1:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_fp8_e64 v0.l, v0 byte_sel:1
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -259,7 +259,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte1(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_fp8_byte1:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:1
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -272,7 +272,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte1(i32 %a) {
 define amdgpu_ps float @test_cvt_f16_fp8_byte2(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_fp8_byte2:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_fp8_e64 v0.l, v0 byte_sel:2
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -280,7 +280,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte2(i32 %a) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_fp8_byte2:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:2
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -288,7 +288,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte2(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_fp8_byte2:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_fp8_e64 v0.l, v0 byte_sel:2
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -296,7 +296,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte2(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_fp8_byte2:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:2
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -309,7 +309,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte2(i32 %a) {
 define amdgpu_ps float @test_cvt_f16_fp8_byte3(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_fp8_byte3:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_fp8_e64 v0.l, v0 byte_sel:3
 ; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -317,7 +317,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte3(i32 %a) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_fp8_byte3:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:3
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -325,7 +325,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte3(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_fp8_byte3:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_fp8_e64 v0.l, v0 byte_sel:3
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -333,7 +333,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte3(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_fp8_byte3:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:3
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -346,14 +346,14 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte3(i32 %a) {
 define amdgpu_ps float @test_cvt_f16_fp8_byte3_hi(i32 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_f16_fp8_byte3_hi:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_f16_fp8_e64 v0.h, v0 byte_sel:3
 ; GFX1250-SDAG-REAL16-NEXT:    v_mov_b16_e32 v0.l, 0
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_f16_fp8_byte3_hi:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:3
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v0, 0, 0x5040100
@@ -361,7 +361,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte3_hi(i32 %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_f16_fp8_byte3_hi:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_f16_fp8_e64 v0.l, v0 byte_sel:3
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0
@@ -369,7 +369,7 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte3_hi(i32 %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_f16_fp8_byte3_hi:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_fp8_e64 v0, v0 byte_sel:3
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0
@@ -384,25 +384,25 @@ define amdgpu_ps float @test_cvt_f16_fp8_byte3_hi(i32 %a) {
 define amdgpu_ps float @test_cvt_pk_f16_bf8_v(i16 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_f16_bf8_v:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_f16_bf8 v0, v0.l
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_f16_bf8_v:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_f16_bf8 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_f16_bf8_v:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_f16_bf8 v0, v0.l
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_f16_bf8_v:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_f16_bf8 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.bf8(i16 %a)
@@ -413,7 +413,7 @@ define amdgpu_ps float @test_cvt_pk_f16_bf8_v(i16 %a) {
 define amdgpu_ps float @test_cvt_pk_f16_bf8_s(i16 inreg %a) {
 ; GFX1250-LABEL: test_cvt_pk_f16_bf8_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_pk_f16_bf8 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.bf8(i16 %a)
@@ -424,25 +424,25 @@ define amdgpu_ps float @test_cvt_pk_f16_bf8_s(i16 inreg %a) {
 define amdgpu_ps float @test_cvt_pk_f16_fp8_v(i16 %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_f16_fp8_v:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_f16_fp8 v0, v0.l
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_f16_fp8_v:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_f16_fp8 v0, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_f16_fp8_v:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_f16_fp8 v0, v0.l
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_f16_fp8_v:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_f16_fp8 v0, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16 %a)
@@ -453,7 +453,7 @@ define amdgpu_ps float @test_cvt_pk_f16_fp8_v(i16 %a) {
 define amdgpu_ps float @test_cvt_pk_f16_fp8_s(i16 inreg %a) {
 ; GFX1250-LABEL: test_cvt_pk_f16_fp8_s:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_cvt_pk_f16_fp8 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %cvt = tail call <2 x half> @llvm.amdgcn.cvt.pk.f16.fp8(i16 %a)
@@ -464,13 +464,13 @@ define amdgpu_ps float @test_cvt_pk_f16_fp8_s(i16 inreg %a) {
 define amdgpu_ps float @test_cvt_pk_f16_fp8_v_hi(<2 x i16> %a) {
 ; GFX1250-SDAG-REAL16-LABEL: test_cvt_pk_f16_fp8_v_hi:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-REAL16-NEXT:    v_cvt_pk_f16_fp8 v0, v0.h
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_cvt_pk_f16_fp8_v_hi:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX1250-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-FAKE16-NEXT:    v_cvt_pk_f16_fp8 v0, v0
@@ -478,7 +478,7 @@ define amdgpu_ps float @test_cvt_pk_f16_fp8_v_hi(<2 x i16> %a) {
 ;
 ; GFX1250-GISEL-REAL16-LABEL: test_cvt_pk_f16_fp8_v_hi:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-REAL16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-REAL16-NEXT:    v_cvt_pk_f16_fp8 v0, v0.l
@@ -486,7 +486,7 @@ define amdgpu_ps float @test_cvt_pk_f16_fp8_v_hi(<2 x i16> %a) {
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: test_cvt_pk_f16_fp8_v_hi:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_pk_f16_fp8 v0, v0

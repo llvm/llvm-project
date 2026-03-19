@@ -1310,12 +1310,17 @@ def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
 
 def or_disjoint : PatFrag<(ops node:$lhs, node:$rhs),
                           (or node:$lhs, node:$rhs), [{
-  return N->getFlags().hasDisjoint();
+  return N->getFlags().hasDisjoint() ||
+         CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
 }]> {
   let GISelPredicateCode = [{
     return MI.getFlag(MachineInstr::Disjoint);
   }];
 }
+
+def add_like : PatFrags<(ops node:$lhs, node:$rhs),
+                        [(add node:$lhs, node:$rhs),
+                         (or_disjoint node:$lhs, node:$rhs)]>;
 
 def xor_like : PatFrags<(ops node:$lhs, node:$rhs),
                         [(xor node:$lhs, node:$rhs),

@@ -16,7 +16,7 @@
 
 _CLC_DEF _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
 
-  if (!__clc_fp32_subnormals_supported()) {
+  if (__clc_denormals_are_zero_fp32()) {
     // This treats subnormals as zeros
     int i = __clc_as_int(x);
     int e = (i >> 23) & 0xff;

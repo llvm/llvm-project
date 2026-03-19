@@ -1752,6 +1752,20 @@ class LongBccPseudo : Pseudo<(outs),
   let hasNoSchedulingInfo = 1;
 }
 
+class LongBcciPseudo<DAGOperand InTyImm, int size>
+    : Pseudo<(outs),
+             (ins GPR:$rs1, InTyImm:$imm, simm21_lsb0_jal:$imm20),
+             []> {
+  let Size = size;
+  let isBarrier = 1;
+  let isBranch = 1;
+  let hasSideEffects = 0;
+  let mayStore = 0;
+  let mayLoad = 0;
+  let isAsmParserOnly = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
 def PseudoLongBEQ : LongBccPseudo;
 def PseudoLongBNE : LongBccPseudo;
 def PseudoLongBLT : LongBccPseudo;

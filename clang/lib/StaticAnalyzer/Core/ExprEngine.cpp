@@ -2973,35 +2973,35 @@ void ExprEngine::processStaticInitializer(const DeclStmt *DS,
 
 /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a computed goto jump.
-void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &Builder,
+void ExprEngine::processIndirectGoto(ExplodedNodeSet &Dst, const Expr *Tgt,
+                                     const CFGBlock *Dispatch,
                                      ExplodedNode *Pred) {
   ProgramStateRef State = Pred->getState();
-  SVal V = State->getSVal(Builder.getTarget(), Builder.getLocationContext());
+  SVal V = State->getSVal(Tgt, getCurrLocationContext());
 
-  // Case 1: We know the computed label.
-  if (std::optional<loc::GotoLabel> LV = V.getAs<loc::GotoLabel>()) {
-    const LabelDecl *L = LV->getLabel();
-
-    for (const CFGBlock *Succ : Builder) {
-      if (cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
-        Builder.generateNode(Succ, State, Pred);
-        return;
-      }
-    }
-
-    llvm_unreachable("No block with label.");
-  }
-
-  // Case 2: The label is NULL (or some other constant), or Undefined.
-  if (isa<UndefinedVal, loc::ConcreteInt>(V)) {
-    // FIXME: Emit warnings when the jump target is undefined or numerical.
+  // We cannot dispatch anywhere if the label is undefined, NULL or some other
+  // concrete number.
+  // FIXME: Emit a warning in this situation.
+  if (isa<UndefinedVal, loc::ConcreteInt>(V))
     return;
-  }
 
-  // Case 3: We have no clue about the label.  Dispatch to all targets.
-  // FIXME: Implement dispatch for symbolic pointers.
-  for (const CFGBlock *Succ : Builder)
-    Builder.generateNode(Succ, State, Pred);
+  // If 'V' is the address of a concrete goto label (on this execution path),
+  // then only transition along the edge to that label.
+  // FIXME: Implement dispatch for symbolic pointers, utilizing information
+  // that they are equal or not equal to pointers to a certain goto label.
+  const LabelDecl *L = nullptr;
+  if (auto LV = V.getAs<loc::GotoLabel>())
+    L = LV->getLabel();
+
+  // Dispatch to the label 'L' or to all labels if 'L' is null.
+  for (const CFGBlock *Succ : Dispatch->succs()) {
+    if (!L || cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
+      // FIXME: If 'V' was a symbolic value, then record that on this execution
+      // path it is equal to the address of the label leading to 'Succ'.
+      BlockEdge BE(getCurrBlock(), Succ, Pred->getLocationContext());
+      Dst.Add(Engine.makeNode(BE, State, Pred));
+    }
+  }
 }
 
 void ExprEngine::processBeginOfFunction(ExplodedNode *Pred,

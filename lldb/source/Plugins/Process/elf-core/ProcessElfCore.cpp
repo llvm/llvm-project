@@ -306,10 +306,9 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
       // Assert that either the path is not in the map or the UUID matches
       assert(m_uuids.count(entry.path) == 0 || m_uuids[entry.path] == uuid);
       m_uuids[entry.path] = uuid;
-      if (log)
-        LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
-                  __FUNCTION__, entry.start, uuid.GetAsString().c_str(),
-                  entry.path.c_str());
+      LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
+                __FUNCTION__, entry.start, uuid.GetAsString().c_str(),
+                entry.path.c_str());
     }
   }
 }
@@ -547,10 +546,8 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   int pr_version = data.GetU32(&offset);
 
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    if (pr_version > 1)
-      LLDB_LOGF(log, "FreeBSD PRSTATUS unexpected version %d", pr_version);
-  }
+  if (pr_version > 1)
+    LLDB_LOGF(log, "FreeBSD PRSTATUS unexpected version %d", pr_version);
 
   // Skip padding, pr_statussz, pr_gregsetsz, pr_fpregsetsz, pr_osreldate
   if (lp64)
@@ -575,10 +572,8 @@ static void ParseFreeBSDPrPsInfo(ProcessElfCore &process,
   int pr_version = data.GetU32(&offset);
 
   Log *log = GetLog(LLDBLog::Process);
-  if (log) {
-    if (pr_version > 1)
-      LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);
-  }
+  if (pr_version > 1)
+    LLDB_LOGF(log, "FreeBSD PRPSINFO unexpected version %d", pr_version);
 
   // Skip pr_psinfosz, pr_fname, pr_psargs
   offset += 108;

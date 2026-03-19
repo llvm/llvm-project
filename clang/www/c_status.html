@@ -997,7 +997,14 @@ conformance.</p>
     <tr>
       <td>Improved tag compatibility</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3037.pdf">N3037</a></td>
-      <td class="full" align="center">Clang 21</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang supports much of this feature starting with Clang 21, but there
+          are implementation bugs and open questions around handling of
+          attributes or other compiler extensions. As a result, some structure
+          definitions may be incorrectly accepted or rejected and so there is a
+          potential for breaking changes in the future.
+        </details>
     </tr>
     <tr>
       <td>#embed</td>

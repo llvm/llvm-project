@@ -74,33 +74,37 @@ static bool IsSimpleTypeSignedInteger(SimpleTypeKind kind) {
   }
 }
 
-static std::pair<size_t, bool> GetIntegralTypeInfo(TypeIndex ti,
-                                                   TpiStream &tpi) {
+static llvm::Expected<std::pair<size_t, bool>>
+GetIntegralTypeInfo(TypeIndex ti, TpiStream &tpi) {
   if (ti.isSimple()) {
     SimpleTypeKind stk = ti.getSimpleKind();
-    return {GetTypeSizeForSimpleKind(stk), IsSimpleTypeSignedInteger(stk)};
+    return std::make_pair(GetTypeSizeForSimpleKind(stk),
+                          IsSimpleTypeSignedInteger(stk));
   }
 
   CVType cvt = tpi.getType(ti);
   switch (cvt.kind()) {
   case LF_MODIFIER: {
     ModifierRecord mfr;
-    llvm::cantFail(TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mfr));
+    if (auto err = TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mfr))
+      return std::move(err);
     return GetIntegralTypeInfo(mfr.ModifiedType, tpi);
   }
   case LF_POINTER: {
     PointerRecord pr;
-    llvm::cantFail(TypeDeserializer::deserializeAs<PointerRecord>(cvt, pr));
-    return {pr.getSize(), false};
+    if (auto err = TypeDeserializer::deserializeAs<PointerRecord>(cvt, pr))
+      return std::move(err);
+    return std::make_pair(pr.getSize(), false);
   }
   case LF_ENUM: {
     EnumRecord er;
-    llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, er));
+    if (auto err = TypeDeserializer::deserializeAs<EnumRecord>(cvt, er))
+      return std::move(err);
     return GetIntegralTypeInfo(er.UnderlyingType, tpi);
   }
   default:
-    assert(false && "Type is not integral!");
-    return {0, false};
+    return llvm::make_error<llvm::StringError>("Type is not integral",
+                                               llvm::inconvertibleErrorCode());
   }
 }
 
@@ -248,15 +252,18 @@ DWARFExpression lldb_private::npdb::MakeGlobalLocationExpression(
       });
 }
 
-DWARFExpression lldb_private::npdb::MakeConstantLocationExpression(
-    TypeIndex underlying_ti, TpiStream &tpi, const llvm::APSInt &constant,
-    ModuleSP module) {
+llvm::Expected<DWARFExpression>
+lldb_private::npdb::MakeConstantLocationExpression(TypeIndex underlying_ti,
+                                                   TpiStream &tpi,
+                                                   const llvm::APSInt &constant,
+                                                   ModuleSP module) {
   const ArchSpec &architecture = module->GetArchitecture();
   uint32_t address_size = architecture.GetAddressByteSize();
 
-  size_t size = 0;
-  bool is_signed = false;
-  std::tie(size, is_signed) = GetIntegralTypeInfo(underlying_ti, tpi);
+  auto type_info = GetIntegralTypeInfo(underlying_ti, tpi);
+  if (!type_info)
+    return type_info.takeError();
+  auto [size, is_signed] = *type_info;
 
   union {
     llvm::support::little64_t I;

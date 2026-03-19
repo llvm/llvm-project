@@ -167,6 +167,16 @@ void __llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
                                             uint64_t CounterValue);
 
 /*!
+ * \brief Wave-cooperative counter increment for GPU targets.
+ *
+ * Reduces per-lane atomic contention by electing a single lane per wave to
+ * perform the counter update. \c Uniform is an optional counter tracking the
+ * number of uniform.
+ */
+void __llvm_profile_instrument_gpu(uint64_t *Counter, uint64_t *Uniform,
+                                   uint64_t Step);
+
+/*!
  * \brief Write instrumentation data to the current file.
  *
  * Writes to the file with the last name given to \a *

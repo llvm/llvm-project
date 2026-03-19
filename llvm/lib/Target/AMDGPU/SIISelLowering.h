@@ -77,7 +77,7 @@ private:
                             EVT VT,
                             AMDGPUFunctionArgInfo::PreloadedValue) const;
 
-  SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
   SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
 

@@ -65,12 +65,10 @@ void ObjCLanguageRuntime::AddToMethodCache(lldb::addr_t class_addr,
                                            lldb::addr_t selector,
                                            lldb::addr_t impl_addr) {
   Log *log = GetLog(LLDBLog::Step);
-  if (log) {
-    LLDB_LOGF(log,
-              "Caching: class 0x%" PRIx64 " selector 0x%" PRIx64
-              " implementation 0x%" PRIx64 ".",
-              class_addr, selector, impl_addr);
-  }
+  LLDB_LOGF(log,
+            "Caching: class 0x%" PRIx64 " selector 0x%" PRIx64
+            " implementation 0x%" PRIx64 ".",
+            class_addr, selector, impl_addr);
   m_impl_cache.insert(std::pair<ClassAndSel, lldb::addr_t>(
       ClassAndSel(class_addr, selector), impl_addr));
 }

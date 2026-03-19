@@ -7,7 +7,7 @@
 define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrspace(1) %out, i32 %n) {
 ; CHECK-LABEL: ds_prefetch_flushed:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    s_load_b32 s1, s[4:5], 0x0 nv
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x10 nv

@@ -39,6 +39,10 @@ class DeallocOp;
 // Patterns
 //===----------------------------------------------------------------------===//
 
+/// Collects a set of patterns that bypass memref.reinterpet_cast Ops. This
+/// simplifies the IR in the context of lowering to EmitC.
+void populateElideReinterpretCastPatterns(RewritePatternSet &patterns);
+
 /// Collects a set of patterns to rewrite ops within the memref dialect.
 void populateExpandOpsPatterns(RewritePatternSet &patterns);
 

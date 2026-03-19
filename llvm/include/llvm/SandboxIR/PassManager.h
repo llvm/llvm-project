@@ -34,9 +34,9 @@ class Value;
 template <typename ParentPass, typename ContainedPass>
 class PassManager : public ParentPass {
 public:
-  // CreatePassFunc(StringRef PassName, StringRef PassArgs).
-  using CreatePassFunc =
-      std::function<std::unique_ptr<ContainedPass>(StringRef, StringRef)>;
+  // CreatePassFunc(StringRef PassName, StringRef PassArgs, StringRef AuxArg)
+  using CreatePassFunc = std::function<std::unique_ptr<ContainedPass>(
+      StringRef, StringRef, StringRef)>;
 
 protected:
   /// The list of passes that this pass manager will run.
@@ -62,23 +62,39 @@ public:
   static constexpr char EndToken = '\0';
   static constexpr char BeginArgsToken = '<';
   static constexpr char EndArgsToken = '>';
+  static constexpr char BeginAuxArgsToken = '(';
+  static constexpr char EndAuxArgsToken = ')';
   static constexpr char PassDelimToken = ',';
 
   /// Parses \p Pipeline as a comma-separated sequence of pass names and sets
   /// the pass pipeline, using \p CreatePass to instantiate passes by name.
   ///
-  /// Passes can have arguments, for example:
+  /// Passes can have two types of arguments:
+  /// - The standard pass arguments within < >, which are commonly used for
+  /// passing a comma-separated list of pass names, for example:
   ///   "pass1<arg1,arg2>,pass2,pass3<arg3,arg4>"
+  /// - An auxiliary pass argument within ( ), which is used as a secondary
+  /// argument, for example:
+  ///   "pass1(foo),pass2,pass3(bar)"
+  /// Note that both types of arguments can be combined, like:
+  ///   "pass1(foo)<arg1,arg2>,pass2,pass3(bar)<arg3,arg4>"
+  /// The reason why there is more than one type of pass argument, is to make
+  /// it easier for passes to parse the argument contents, and make the pass
+  /// pipeline more consistent and easier to read, than relying on some
+  /// formatting that the passes might expect.
   ///
-  /// The arguments between angle brackets are treated as a mostly opaque string
-  /// and each pass is responsible for parsing its arguments. The exception to
-  /// this are nested angle brackets, which must match pair-wise to allow
-  /// arguments to contain nested pipelines, like:
+  /// The arguments between both bracket types are treated as a mostly opaque
+  /// string and each pass is responsible for parsing its arguments. The
+  /// exception to this are nested brackets, which must match pair-wise to
+  /// allow arguments to contain nested pipelines or nested aux arguments, like:
   ///
   ///   "pass1<subpass1,subpass2<arg1,arg2>,subpass3>"
+  /// or
+  ///   "pass1(arg1(nestedarg))"
   ///
   /// An empty args string is treated the same as no args, so "pass" and
   /// "pass<>" are equivalent.
+  ///
   void setPassPipeline(StringRef Pipeline, CreatePassFunc CreatePass) {
     assert(Passes.empty() &&
            "setPassPipeline called on a non-empty sandboxir::PassManager");
@@ -93,14 +109,15 @@ public:
     std::string PipelineStr = std::string(Pipeline) + EndToken;
     Pipeline = StringRef(PipelineStr);
 
-    auto AddPass = [this, CreatePass](StringRef PassName, StringRef PassArgs) {
+    auto AddPass = [this, CreatePass](StringRef PassName, StringRef PassArgs,
+                                      StringRef AuxArg) {
       if (PassName.empty()) {
         errs() << "Found empty pass name.\n";
         exit(1);
       }
       // Get the pass that corresponds to PassName and add it to the pass
       // manager.
-      auto Pass = CreatePass(PassName, PassArgs);
+      auto Pass = CreatePass(PassName, PassArgs, AuxArg);
       if (Pass == nullptr) {
         errs() << "Pass '" << PassName << "' not registered!\n";
         exit(1);
@@ -112,11 +129,16 @@ public:
       ScanName,  // reading a pass name
       ScanArgs,  // reading a list of args
       ArgsEnded, // read the last '>' in an args list, must read delimiter next
+      ScanAuxArgs,  // reading the auxiliary argument
+      AuxArgsEnded, // read the last ')' in aux args list
     } CurrentState = State::ScanName;
     int PassBeginIdx = 0;
     int ArgsBeginIdx;
+    int AuxArgsBeginIdx = 0;
     StringRef PassName;
+    StringRef AuxArg;
     int NestedArgs = 0;
+    int NestedAuxArgs = 0;
     for (auto [Idx, C] : enumerate(Pipeline)) {
       switch (CurrentState) {
       case State::ScanName:
@@ -128,14 +150,23 @@ public:
           CurrentState = State::ScanArgs;
           break;
         }
-        if (C == EndArgsToken) {
-          errs() << "Unexpected '>' in pass pipeline.\n";
+        if (C == BeginAuxArgsToken) {
+          // Save pass name for later and begin scanning args.
+          PassName = Pipeline.slice(PassBeginIdx, Idx);
+          AuxArgsBeginIdx = Idx + 1;
+          ++NestedAuxArgs;
+          CurrentState = State::ScanAuxArgs;
+          AuxArg = StringRef();
+          break;
+        }
+        if (C == EndArgsToken || C == EndAuxArgsToken) {
+          errs() << "Unexpected '" << C << "' in pass pipeline.\n";
           exit(1);
         }
         if (C == EndToken || C == PassDelimToken) {
           // Delimiter found, add the pass (with empty args), stay in the
           // ScanName state.
-          AddPass(Pipeline.slice(PassBeginIdx, Idx), StringRef());
+          AddPass(Pipeline.slice(PassBeginIdx, Idx), StringRef(), AuxArg);
           PassBeginIdx = Idx + 1;
         }
         break;
@@ -150,7 +181,7 @@ public:
           --NestedArgs;
           if (NestedArgs == 0) {
             // Done scanning args.
-            AddPass(PassName, Pipeline.slice(ArgsBeginIdx, Idx));
+            AddPass(PassName, Pipeline.slice(ArgsBeginIdx, Idx), AuxArg);
             CurrentState = State::ArgsEnded;
           } else if (NestedArgs < 0) {
             errs() << "Unexpected '>' in pass pipeline.\n";
@@ -170,10 +201,50 @@ public:
         // accepting strings like "foo<args><more-args>" or "foo<args>bar".
         if (C == EndToken || C == PassDelimToken) {
           PassBeginIdx = Idx + 1;
+          AuxArg = StringRef();
           CurrentState = State::ScanName;
         } else {
           errs() << "Expected delimiter or end-of-string after pass "
                     "arguments.\n";
+          exit(1);
+        }
+        break;
+      case State::ScanAuxArgs:
+        if (C == BeginAuxArgsToken) {
+          ++NestedAuxArgs;
+          break;
+        }
+        if (C == EndAuxArgsToken) {
+          --NestedAuxArgs;
+          if (NestedAuxArgs == 0) {
+            AuxArg = Pipeline.slice(AuxArgsBeginIdx, Idx);
+            CurrentState = State::AuxArgsEnded;
+          } else if (NestedAuxArgs < 0) {
+            errs() << "Unexpected '" << EndAuxArgsToken
+                   << "' in pass pipeline.\n";
+            exit(1);
+          }
+          break;
+        }
+        if (C == EndToken) {
+          errs() << "Missing '" << EndAuxArgsToken
+                 << "' in pass pipeline. End-of-string reached while "
+                    "reading arguments for pass '"
+                 << PassName << "'.\n";
+          exit(1);
+        }
+        break;
+      case State::AuxArgsEnded:
+        if (C == EndToken || C == PassDelimToken) {
+          AddPass(PassName, StringRef(), AuxArg);
+          CurrentState = State::ScanArgs;
+        } else if (C == BeginArgsToken) {
+          ++NestedArgs;
+          ArgsBeginIdx = Idx + 1;
+          CurrentState = State::ScanArgs;
+        } else {
+          errs() << "Expected delimiter, begin-of-args or end-of-string after "
+                    "pass aux argument.\n";
           exit(1);
         }
         break;

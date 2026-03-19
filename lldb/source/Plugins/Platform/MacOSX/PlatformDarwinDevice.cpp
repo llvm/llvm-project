@@ -40,21 +40,17 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
       FileSystem::Instance().Resolve(sdk_sysroot_fspec);
       const SDKDirectoryInfo sdk_sysroot_directory_info(sdk_sysroot_fspec);
       m_sdk_directory_infos.push_back(sdk_sysroot_directory_info);
-      if (log) {
-        LLDB_LOGF(log,
-                  "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded added "
-                  "--sysroot SDK directory %s",
-                  m_sdk_sysroot.c_str());
-      }
+      LLDB_LOGF(log,
+                "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded added "
+                "--sysroot SDK directory %s",
+                m_sdk_sysroot.c_str());
       return true;
     }
     const char *device_support_dir = GetDeviceSupportDirectory();
-    if (log) {
-      LLDB_LOGF(log,
-                "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded Got "
-                "DeviceSupport directory %s",
-                device_support_dir);
-    }
+    LLDB_LOGF(log,
+              "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded Got "
+              "DeviceSupport directory %s",
+              device_support_dir);
     if (device_support_dir) {
       const bool find_directories = true;
       const bool find_files = false;
@@ -75,12 +71,10 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
         sdk_symbols_symlink_fspec.AppendPathComponent("Symbols");
         if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
           m_sdk_directory_infos.push_back(sdk_directory_info);
-          if (log) {
-            LLDB_LOGF(log,
-                      "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                      "added builtin SDK directory %s",
-                      sdk_symbols_symlink_fspec.GetPath().c_str());
-          }
+          LLDB_LOGF(log,
+                    "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                    "added builtin SDK directory %s",
+                    sdk_symbols_symlink_fspec.GetPath().c_str());
         }
       }
 
@@ -91,12 +85,10 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
       FileSpec local_sdk_cache(local_sdk_cache_str.c_str());
       FileSystem::Instance().Resolve(local_sdk_cache);
       if (FileSystem::Instance().Exists(local_sdk_cache)) {
-        if (log) {
-          LLDB_LOGF(log,
-                    "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                    "searching %s for additional SDKs",
-                    local_sdk_cache.GetPath().c_str());
-        }
+        LLDB_LOGF(log,
+                  "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                  "searching %s for additional SDKs",
+                  local_sdk_cache.GetPath().c_str());
         char path[PATH_MAX];
         if (local_sdk_cache.GetPath(path, sizeof(path))) {
           FileSystem::Instance().EnumerateDirectory(
@@ -107,13 +99,11 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
           // First try for an exact match of major, minor and update
           for (uint32_t i = num_installed; i < num_sdk_infos; ++i) {
             m_sdk_directory_infos[i].user_cached = true;
-            if (log) {
-              LLDB_LOGF(log,
-                        "PlatformDarwinDevice::"
-                        "UpdateSDKDirectoryInfosIfNeeded "
-                        "user SDK directory %s",
-                        m_sdk_directory_infos[i].directory.GetPath().c_str());
-            }
+            LLDB_LOGF(log,
+                      "PlatformDarwinDevice::"
+                      "UpdateSDKDirectoryInfosIfNeeded "
+                      "user SDK directory %s",
+                      m_sdk_directory_infos[i].directory.GetPath().c_str());
           }
         }
       }
@@ -131,12 +121,10 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
           sdk_symbols_symlink_fspec.AppendPathComponent("Symbols");
           if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
             m_sdk_directory_infos.push_back(sdk_directory_info);
-            if (log) {
-              LLDB_LOGF(log,
-                        "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                        "added env var SDK directory %s",
-                        sdk_symbols_symlink_fspec.GetPath().c_str());
-            }
+            LLDB_LOGF(log,
+                      "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                      "added env var SDK directory %s",
+                      sdk_symbols_symlink_fspec.GetPath().c_str());
           }
         }
       }

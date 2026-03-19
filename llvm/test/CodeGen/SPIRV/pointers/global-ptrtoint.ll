@@ -1,10 +1,12 @@
 ; This test is to check that correct virtual register type is created after ptrtoint.
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; FIXME: re-enable when validator issue if fixed
+; https://github.com/llvm/llvm-project/issues/186756
 
 ; CHECK: OpName %[[GlobalValue:.*]] "dev_global"
 ; CHECK-DAG: %[[TyI64:.*]] = OpTypeInt 64 0

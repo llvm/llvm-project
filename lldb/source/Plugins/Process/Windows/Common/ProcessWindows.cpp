@@ -556,10 +556,11 @@ bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
       new_thread_list.AddThread(old_thread);
       ++new_size;
       ++continued_threads;
-      LLDB_LOGV(log, "Thread {0} was running and is still running.",
-                old_thread_id);
+      LLDB_LOG_VERBOSE(log, "Thread {0} was running and is still running.",
+                       old_thread_id);
     } else {
-      LLDB_LOGV(log, "Thread {0} was running and has exited.", old_thread_id);
+      LLDB_LOG_VERBOSE(log, "Thread {0} was running and has exited.",
+                       old_thread_id);
       ++exited_threads;
     }
   }
@@ -570,7 +571,8 @@ bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
     new_thread_list.AddThread(thread_info.second);
     ++new_size;
     ++new_threads;
-    LLDB_LOGV(log, "Thread {0} is new since last update.", thread_info.first);
+    LLDB_LOG_VERBOSE(log, "Thread {0} is new since last update.",
+                     thread_info.first);
   }
 
   LLDB_LOG(log, "{0} new threads, {1} old threads, {2} exited threads.",

@@ -28,10 +28,10 @@ static bool mustBreakAfterAttributes(const FormatToken &Tok,
   switch (Style.BreakAfterAttributes) {
   case FormatStyle::ABS_Always:
     return true;
-  case FormatStyle::ABS_Leave:
-    return Tok.NewlinesBefore > 0;
-  default:
+  case FormatStyle::ABS_Never:
     return false;
+  default: // ABS_Leave and ABS_LeaveAll
+    return Tok.NewlinesBefore > 0;
   }
 }
 
@@ -4121,6 +4121,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
 
     if (!LineIsFunctionDeclaration) {
+      Line.ReturnTypeWrapped = false;
       // Annotate */&/&& in `operator` function calls as binary operators.
       for (const auto *Tok = FirstNonComment; Tok; Tok = Tok->Next) {
         if (Tok->isNot(tok::kw_operator))
@@ -5706,7 +5707,7 @@ static bool isAllmanLambdaBrace(const FormatToken &Tok) {
          Tok.isNoneOf(TT_ObjCBlockLBrace, TT_DictLiteral);
 }
 
-bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
+bool TokenAnnotator::mustBreakBefore(AnnotatedLine &Line,
                                      const FormatToken &Right) const {
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0 &&
       (!Style.RemoveEmptyLinesInUnwrappedLines || &Right == Line.First)) {
@@ -6181,6 +6182,12 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // put on a new line anyways.
     if (Left.isOneOf(tok::r_brace, tok::greater, tok::r_square))
       return true;
+  }
+
+  if (Style.BreakAfterAttributes == FormatStyle::ABS_LeaveAll &&
+      Left.is(TT_AttributeRSquare) && Right.NewlinesBefore > 0) {
+    Line.ReturnTypeWrapped = true;
+    return true;
   }
 
   return false;

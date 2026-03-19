@@ -49,7 +49,6 @@ class ExprEngine;
 /// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
   friend class ExprEngine;
-  friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
   friend class NodeBuilderContext;
   friend class SwitchNodeBuilder;
@@ -331,33 +330,6 @@ public:
 
   ExplodedNode *generateNode(ProgramStateRef State, bool branch,
                              ExplodedNode *Pred);
-};
-
-class IndirectGotoNodeBuilder : public NodeBuilder {
-  const CFGBlock &DispatchBlock;
-  const Expr *Target;
-
-public:
-  IndirectGotoNodeBuilder(ExplodedNodeSet &DstSet,
-                          const NodeBuilderContext &Ctx, const Expr *Tgt,
-                          const CFGBlock *Dispatch)
-      : NodeBuilder(DstSet, Ctx), DispatchBlock(*Dispatch), Target(Tgt) {}
-
-  using iterator = CFGBlock::const_succ_iterator;
-
-  iterator begin() { return DispatchBlock.succ_begin(); }
-  iterator end() { return DispatchBlock.succ_end(); }
-
-  using NodeBuilder::generateNode;
-
-  ExplodedNode *generateNode(const CFGBlock *Block, ProgramStateRef State,
-                             ExplodedNode *Pred);
-
-  const Expr *getTarget() const { return Target; }
-
-  const LocationContext *getLocationContext() const {
-    return C.getLocationContext();
-  }
 };
 
 class SwitchNodeBuilder : public NodeBuilder {

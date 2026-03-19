@@ -21,14 +21,14 @@ namespace llvm {
 
 class AMDGPUSubtarget;
 
-class AMDGPUMachineFunction : public MachineFunctionInfo {
+class AMDGPUMachineFunctionInfo : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
 
 protected:
   uint64_t ExplicitKernArgSize = 0; // Cache for this.
-  Align MaxKernArgAlign;        // Cache for this.
+  Align MaxKernArgAlign;            // Cache for this.
 
   /// Number of bytes in the LDS that are being used.
   uint32_t LDSSize = 0;
@@ -70,21 +70,15 @@ protected:
   bool HasInitWholeWave = false;
 
 public:
-  AMDGPUMachineFunction(const Function &F, const AMDGPUSubtarget &ST);
+  AMDGPUMachineFunctionInfo(const Function &F, const AMDGPUSubtarget &ST);
 
-  uint64_t getExplicitKernArgSize() const {
-    return ExplicitKernArgSize;
-  }
+  uint64_t getExplicitKernArgSize() const { return ExplicitKernArgSize; }
 
   Align getMaxKernArgAlign() const { return MaxKernArgAlign; }
 
-  uint32_t getLDSSize() const {
-    return LDSSize;
-  }
+  uint32_t getLDSSize() const { return LDSSize; }
 
-  uint32_t getGDSSize() const {
-    return GDSSize;
-  }
+  uint32_t getGDSSize() const { return GDSSize; }
 
   void recordNumNamedBarriers(uint32_t GVAddr, unsigned BarCnt) {
     NumNamedBarriers =
@@ -92,9 +86,7 @@ public:
   }
   uint32_t getNumNamedBarriers() const { return NumNamedBarriers; }
 
-  bool isEntryFunction() const {
-    return IsEntryFunction;
-  }
+  bool isEntryFunction() const { return IsEntryFunction; }
 
   bool isModuleEntryFunction() const { return IsModuleEntryFunction; }
 
@@ -103,13 +95,9 @@ public:
   // The stack is empty upon entry to this function.
   bool isBottomOfStack() const { return isEntryFunction(); }
 
-  bool isMemoryBound() const {
-    return MemoryBound;
-  }
+  bool isMemoryBound() const { return MemoryBound; }
 
-  bool needsWaveLimiter() const {
-    return WaveLimiter;
-  }
+  bool needsWaveLimiter() const { return WaveLimiter; }
 
   bool hasInitWholeWave() const { return HasInitWholeWave; }
   void setInitWholeWave() { HasInitWholeWave = true; }
@@ -133,5 +121,5 @@ public:
   bool isDynamicLDSUsed() const;
 };
 
-}
+} // namespace llvm
 #endif

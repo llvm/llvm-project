@@ -81,7 +81,7 @@ private:
   SDValue lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
 

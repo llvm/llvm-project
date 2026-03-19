@@ -16,6 +16,19 @@
 #include <mutex>
 #include <vector>
 
+// +++ Entry points referenced by the offload wrapper object {
+
+/// Executed as a part of current module's (.exe, .dll) static initialization.
+/// Registers device executable images with the runtime.
+extern "C" _LIBSYCL_EXPORT void __sycl_register_lib(void *);
+
+/// Executed as a part of current module's (.exe, .dll) static
+/// de-initialization.
+/// Unregisters device executable images with the runtime.
+extern "C" _LIBSYCL_EXPORT void __sycl_unregister_lib(void *);
+
+// +++ }
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {

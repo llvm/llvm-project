@@ -425,6 +425,7 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
   // Defranges don't have types, just registers and code offsets.
   case SymbolKind::S_DEFRANGE_REGISTER:
   case SymbolKind::S_DEFRANGE_REGISTER_REL:
+  case SymbolKind::S_DEFRANGE_REGISTER_REL_INDIR:
   case SymbolKind::S_DEFRANGE_FRAMEPOINTER_REL:
   case SymbolKind::S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE:
   case SymbolKind::S_DEFRANGE_SUBFIELD_REGISTER:

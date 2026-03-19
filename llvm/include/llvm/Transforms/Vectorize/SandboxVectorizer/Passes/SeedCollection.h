@@ -25,9 +25,14 @@ class SeedCollection final : public FunctionPass {
 
   /// The PM containing the pipeline of region passes.
   RegionPassManager RPM;
+  /// The auxiliary argument passed to the pass that tells us that we should
+  /// collect seeds of different types.
+  static constexpr StringRef DiffTypesArgStr = "enable-diff-types";
+  /// Collect seeds of different types.
+  bool AllowDiffTypes = false;
 
 public:
-  SeedCollection(StringRef Pipeline);
+  SeedCollection(StringRef Pipeline, StringRef AuxArg);
   bool runOnFunction(Function &F, const Analyses &A) final;
   void printPipeline(raw_ostream &OS) const final {
     OS << getName() << "\n";

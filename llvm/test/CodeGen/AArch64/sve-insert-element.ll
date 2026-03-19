@@ -624,3 +624,111 @@ define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, 
   %res = insertelement <vscale x 32 x i1> %val, i1 %elt, i32 %idx
   ret <vscale x 32 x i1> %res
 }
+
+define <vscale x 8 x i16> @test_insert_first_into_zero_nxv8i16(i16 %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov h0, w0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 8 x i16> zeroinitializer, i16 %x, i64 0
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @test_insert_first_into_zero_nxv4i32(i32 %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x i32> zeroinitializer, i32 %x, i64 0
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @test_insert_first_into_zero_nxv2i64(i64 %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x i64> zeroinitializer, i64 %x, i64 0
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 8 x half> @test_insert_first_into_zero_nxv8f16(half %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov h0, h0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 8 x half> zeroinitializer, half %x, i64 0
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 4 x half> @test_insert_first_into_zero_nxv4f16(half %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov h0, h0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x half> zeroinitializer, half %x, i32 0
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 2 x half> @test_insert_first_into_zero_nxv2f16(half %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov h0, h0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x half> zeroinitializer, half %x, i32 0
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 8 x bfloat> @test_insert_first_into_zero_nxv8bf16(bfloat %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv8bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov h0, h0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 8 x bfloat> zeroinitializer, bfloat %x, i64 0
+  ret <vscale x 8 x bfloat> %res
+}
+
+define <vscale x 4 x bfloat> @test_insert_first_into_zero_nxv4bf16(bfloat %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov h0, h0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x bfloat> zeroinitializer, bfloat %x, i32 0
+  ret <vscale x 4 x bfloat> %res
+}
+
+define <vscale x 2 x bfloat> @test_insert_first_into_zero_nxv2bf16(bfloat %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov h0, h0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x bfloat> zeroinitializer, bfloat %x, i32 0
+  ret <vscale x 2 x bfloat> %res
+}
+
+define <vscale x 4 x float> @test_insert_first_into_zero_nxv4f32(float %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, s0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x float> zeroinitializer, float %x, i64 0
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x float> @test_insert_first_into_zero_nxv2f32(float %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, s0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x float> zeroinitializer, float %x, i32 0
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 2 x double> @test_insert_first_into_zero_nxv2f64(double %x) {
+; CHECK-LABEL: test_insert_first_into_zero_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, d0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x double> zeroinitializer, double %x, i64 0
+  ret <vscale x 2 x double> %res
+}

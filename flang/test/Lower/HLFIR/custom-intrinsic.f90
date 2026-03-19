@@ -14,8 +14,7 @@ end function
 ! CHECK-NEXT:    %[[RES_DECL:.*]]:2 = hlfir.declare %[[RES_ALLOC]] {uniq_name = "_QFmax_simpleEmax_simple"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-NEXT:    %[[A_LD:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<i32>
 ! CHECK-NEXT:    %[[B_LD:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<i32>
-! CHECK-NEXT:    %[[A_GT_B:.*]] = arith.cmpi sgt, %[[A_LD]], %[[B_LD]] : i32
-! CHECK-NEXT:    %[[SELECT:.*]] = arith.select %[[A_GT_B]], %[[A_LD]], %[[B_LD]] : i32
+! CHECK-NEXT:    %[[SELECT:.*]] = arith.maxsi %[[A_LD]], %[[B_LD]] : i32
 ! CHECK-NEXT:    hlfir.assign %[[SELECT]] to %[[RES_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    %[[RES_LD:.*]] = fir.load %[[RES_DECL]]#0 : !fir.ref<i32>
 ! CHECK-NEXT:    return %[[RES_LD]] : i32
@@ -38,12 +37,10 @@ end function
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_10:.*]] = fir.is_present %[[VAL_5]]#0 : (!fir.ref<i32>) -> i1
-! CHECK:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_9]] : i32
-! CHECK:           %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_8]], %[[VAL_9]] : i32
+! CHECK:           %[[VAL_12:.*]] = arith.maxsi %[[VAL_8]], %[[VAL_9]] : i32
 ! CHECK:           %[[VAL_13:.*]] = fir.if %[[VAL_10]] -> (i32) {
 ! CHECK:             %[[VAL_14:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_15:.*]] = arith.cmpi sgt, %[[VAL_12]], %[[VAL_14]] : i32
-! CHECK:             %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_12]], %[[VAL_14]] : i32
+! CHECK:             %[[VAL_16:.*]] = arith.maxsi %[[VAL_12]], %[[VAL_14]] : i32
 ! CHECK:             fir.result %[[VAL_16]] : i32
 ! CHECK:           } else {
 ! CHECK:             fir.result %[[VAL_12]] : i32
@@ -73,20 +70,17 @@ end function
 ! CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_12:.*]] = fir.is_present %[[VAL_6]]#0 : (!fir.ref<i32>) -> i1
 ! CHECK:           %[[VAL_13:.*]] = fir.is_present %[[VAL_7]]#0 : (!fir.ref<i32>) -> i1
-! CHECK:           %[[VAL_14:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_11]] : i32
-! CHECK:           %[[VAL_15:.*]] = arith.select %[[VAL_14]], %[[VAL_10]], %[[VAL_11]] : i32
+! CHECK:           %[[VAL_15:.*]] = arith.maxsi %[[VAL_10]], %[[VAL_11]] : i32
 ! CHECK:           %[[VAL_16:.*]] = fir.if %[[VAL_12]] -> (i32) {
 ! CHECK:             %[[VAL_17:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_18:.*]] = arith.cmpi sgt, %[[VAL_15]], %[[VAL_17]] : i32
-! CHECK:             %[[VAL_19:.*]] = arith.select %[[VAL_18]], %[[VAL_15]], %[[VAL_17]] : i32
+! CHECK:             %[[VAL_19:.*]] = arith.maxsi %[[VAL_15]], %[[VAL_17]] : i32
 ! CHECK:             fir.result %[[VAL_19]] : i32
 ! CHECK:           } else {
 ! CHECK:             fir.result %[[VAL_15]] : i32
 ! CHECK:           }
 ! CHECK:           %[[VAL_20:.*]] = fir.if %[[VAL_13]] -> (i32) {
 ! CHECK:             %[[VAL_21:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_22:.*]] = arith.cmpi sgt, %[[VAL_23:.*]], %[[VAL_21]] : i32
-! CHECK:             %[[VAL_24:.*]] = arith.select %[[VAL_22]], %[[VAL_23]], %[[VAL_21]] : i32
+! CHECK:             %[[VAL_24:.*]] = arith.maxsi %[[VAL_23:.*]], %[[VAL_21]] : i32
 ! CHECK:             fir.result %[[VAL_24]] : i32
 ! CHECK:           } else {
 ! CHECK:             fir.result %[[VAL_25:.*]] : i32
@@ -119,8 +113,7 @@ end function
 ! CHECK-DAG:             %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<i32>
 ! CHECK-DAG:             %[[VAL_16:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
 ! CHECK-DAG:             %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
-! CHECK:             %[[VAL_18:.*]] = arith.cmpi sgt, %[[VAL_15]], %[[VAL_17]] : i32
-! CHECK:             %[[VAL_19:.*]] = arith.select %[[VAL_18]], %[[VAL_15]], %[[VAL_17]] : i32
+! CHECK:             %[[VAL_19:.*]] = arith.maxsi %[[VAL_15]], %[[VAL_17]] : i32
 ! CHECK:             hlfir.yield_element %[[VAL_19]] : i32
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_20:.*]] to %[[VAL_11]]#0 : !hlfir.expr<42xi32>, !fir.ref<!fir.array<42xi32>>
@@ -155,13 +148,11 @@ end function
 ! CHECK:           ^bb0(%[[VAL_17:.*]]: index):
 ! CHECK:             %[[VAL_18:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_17]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:             %[[VAL_19:.*]] = fir.load %[[VAL_18]] : !fir.ref<i32>
-! CHECK:             %[[VAL_20:.*]] = arith.cmpi sgt, %[[VAL_15]], %[[VAL_19]] : i32
-! CHECK:             %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_15]], %[[VAL_19]] : i32
+! CHECK:             %[[VAL_21:.*]] = arith.maxsi %[[VAL_15]], %[[VAL_19]] : i32
 ! CHECK:             %[[VAL_22:.*]] = fir.if %[[VAL_14]] -> (i32) {
 ! CHECK:               %[[VAL_23:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_17]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:               %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.ref<i32>
-! CHECK:               %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_21]], %[[VAL_24]] : i32
-! CHECK:               %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_21]], %[[VAL_24]] : i32
+! CHECK:               %[[VAL_26:.*]] = arith.maxsi %[[VAL_21]], %[[VAL_24]] : i32
 ! CHECK:               fir.result %[[VAL_26]] : i32
 ! CHECK:             } else {
 ! CHECK:               fir.result %[[VAL_21]] : i32
@@ -187,8 +178,7 @@ end function
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFmin_simpleEmin_simple"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
-! CHECK:           %[[VAL_8:.*]] = arith.cmpi slt, %[[VAL_6]], %[[VAL_7]] : i32
-! CHECK:           %[[VAL_9:.*]] = arith.select %[[VAL_8]], %[[VAL_6]], %[[VAL_7]] : i32
+! CHECK:           %[[VAL_9:.*]] = arith.minsi %[[VAL_6]], %[[VAL_7]] : i32
 ! CHECK:           hlfir.assign %[[VAL_9]] to %[[VAL_5]]#0 : i32, !fir.ref<i32>
 ! CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[VAL_10]] : i32
@@ -211,12 +201,10 @@ end function
 ! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_10:.*]] = fir.is_present %[[VAL_5]]#0 : (!fir.ref<i32>) -> i1
-! CHECK:           %[[VAL_11:.*]] = arith.cmpi slt, %[[VAL_8]], %[[VAL_9]] : i32
-! CHECK:           %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_8]], %[[VAL_9]] : i32
+! CHECK:           %[[VAL_12:.*]] = arith.minsi %[[VAL_8]], %[[VAL_9]] : i32
 ! CHECK:           %[[VAL_13:.*]] = fir.if %[[VAL_10]] -> (i32) {
 ! CHECK:             %[[VAL_14:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_15:.*]] = arith.cmpi slt, %[[VAL_12]], %[[VAL_14]] : i32
-! CHECK:             %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_12]], %[[VAL_14]] : i32
+! CHECK:             %[[VAL_16:.*]] = arith.minsi %[[VAL_12]], %[[VAL_14]] : i32
 ! CHECK:             fir.result %[[VAL_16]] : i32
 ! CHECK:           } else {
 ! CHECK:             fir.result %[[VAL_12]] : i32
@@ -246,20 +234,17 @@ end function
 ! CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:           %[[VAL_12:.*]] = fir.is_present %[[VAL_6]]#0 : (!fir.ref<i32>) -> i1
 ! CHECK:           %[[VAL_13:.*]] = fir.is_present %[[VAL_7]]#0 : (!fir.ref<i32>) -> i1
-! CHECK:           %[[VAL_14:.*]] = arith.cmpi slt, %[[VAL_10]], %[[VAL_11]] : i32
-! CHECK:           %[[VAL_15:.*]] = arith.select %[[VAL_14]], %[[VAL_10]], %[[VAL_11]] : i32
+! CHECK:           %[[VAL_15:.*]] = arith.minsi %[[VAL_10]], %[[VAL_11]] : i32
 ! CHECK:           %[[VAL_16:.*]] = fir.if %[[VAL_12]] -> (i32) {
 ! CHECK:             %[[VAL_17:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_18:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_17]] : i32
-! CHECK:             %[[VAL_19:.*]] = arith.select %[[VAL_18]], %[[VAL_15]], %[[VAL_17]] : i32
+! CHECK:             %[[VAL_19:.*]] = arith.minsi %[[VAL_15]], %[[VAL_17]] : i32
 ! CHECK:             fir.result %[[VAL_19]] : i32
 ! CHECK:           } else {
 ! CHECK:             fir.result %[[VAL_15]] : i32
 ! CHECK:           }
 ! CHECK:           %[[VAL_20:.*]] = fir.if %[[VAL_13]] -> (i32) {
 ! CHECK:             %[[VAL_21:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
-! CHECK:             %[[VAL_22:.*]] = arith.cmpi slt, %[[VAL_23:.*]], %[[VAL_21]] : i32
-! CHECK:             %[[VAL_24:.*]] = arith.select %[[VAL_22]], %[[VAL_23]], %[[VAL_21]] : i32
+! CHECK:             %[[VAL_24:.*]] = arith.minsi %[[VAL_23:.*]], %[[VAL_21]] : i32
 ! CHECK:             fir.result %[[VAL_24]] : i32
 ! CHECK:           } else {
 ! CHECK:             fir.result %[[VAL_25:.*]] : i32
@@ -292,8 +277,7 @@ end function
 ! CHECK-DAG:             %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<i32>
 ! CHECK-DAG:             %[[VAL_16:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
 ! CHECK-DAG:             %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
-! CHECK:             %[[VAL_18:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_17]] : i32
-! CHECK:             %[[VAL_19:.*]] = arith.select %[[VAL_18]], %[[VAL_15]], %[[VAL_17]] : i32
+! CHECK:             %[[VAL_19:.*]] = arith.minsi %[[VAL_15]], %[[VAL_17]] : i32
 ! CHECK:             hlfir.yield_element %[[VAL_19]] : i32
 ! CHECK:           }
 ! CHECK:           hlfir.assign %[[VAL_20:.*]] to %[[VAL_11]]#0 : !hlfir.expr<42xi32>, !fir.ref<!fir.array<42xi32>>
@@ -328,13 +312,11 @@ end function
 ! CHECK:           ^bb0(%[[VAL_17:.*]]: index):
 ! CHECK:             %[[VAL_18:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_17]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:             %[[VAL_19:.*]] = fir.load %[[VAL_18]] : !fir.ref<i32>
-! CHECK:             %[[VAL_20:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_19]] : i32
-! CHECK:             %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_15]], %[[VAL_19]] : i32
+! CHECK:             %[[VAL_21:.*]] = arith.minsi %[[VAL_15]], %[[VAL_19]] : i32
 ! CHECK:             %[[VAL_22:.*]] = fir.if %[[VAL_14]] -> (i32) {
 ! CHECK:               %[[VAL_23:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_17]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:               %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.ref<i32>
-! CHECK:               %[[VAL_25:.*]] = arith.cmpi slt, %[[VAL_21]], %[[VAL_24]] : i32
-! CHECK:               %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_21]], %[[VAL_24]] : i32
+! CHECK:               %[[VAL_26:.*]] = arith.minsi %[[VAL_21]], %[[VAL_24]] : i32
 ! CHECK:               fir.result %[[VAL_26]] : i32
 ! CHECK:             } else {
 ! CHECK:               fir.result %[[VAL_21]] : i32
@@ -812,8 +794,7 @@ end subroutine
 ! CHECK:             %[[VAL_112:.*]] = arith.addi %[[VAL_84]], %[[VAL_111]] : index
 ! CHECK:             %[[VAL_113:.*]] = hlfir.designate %[[VAL_79]] (%[[VAL_108]], %[[VAL_110]], %[[VAL_112]])  : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index, index, index) -> !fir.ref<i32>
 ! CHECK:             %[[VAL_114:.*]] = fir.load %[[VAL_113]] : !fir.ref<i32>
-! CHECK:             %[[VAL_115:.*]] = arith.cmpi slt, %[[VAL_99]], %[[VAL_114]] : i32
-! CHECK:             %[[VAL_116:.*]] = arith.select %[[VAL_115]], %[[VAL_99]], %[[VAL_114]] : i32
+! CHECK:             %[[VAL_116:.*]] = arith.minsi %[[VAL_99]], %[[VAL_114]] : i32
 ! CHECK:             %[[VAL_117:.*]] = fir.if %[[VAL_70]] -> (i32) {
 ! CHECK:               %[[VAL_118:.*]] = arith.constant 0 : index
 ! CHECK:               %[[VAL_119:.*]]:3 = fir.box_dims %[[VAL_80]], %[[VAL_118]] : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index) -> (index, index, index)
@@ -830,8 +811,7 @@ end subroutine
 ! CHECK:               %[[VAL_130:.*]] = arith.addi %[[VAL_84]], %[[VAL_129]] : index
 ! CHECK:               %[[VAL_131:.*]] = hlfir.designate %[[VAL_80]] (%[[VAL_126]], %[[VAL_128]], %[[VAL_130]])  : (!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>, index, index, index) -> !fir.ref<i32>
 ! CHECK:               %[[VAL_132:.*]] = fir.load %[[VAL_131]] : !fir.ref<i32>
-! CHECK:               %[[VAL_133:.*]] = arith.cmpi slt, %[[VAL_116]], %[[VAL_132]] : i32
-! CHECK:               %[[VAL_134:.*]] = arith.select %[[VAL_133]], %[[VAL_116]], %[[VAL_132]] : i32
+! CHECK:               %[[VAL_134:.*]] = arith.minsi %[[VAL_116]], %[[VAL_132]] : i32
 ! CHECK:               fir.result %[[VAL_134]] : i32
 ! CHECK:             } else {
 ! CHECK:               fir.result %[[VAL_116]] : i32

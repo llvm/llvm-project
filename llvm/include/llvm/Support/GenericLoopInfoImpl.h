@@ -295,7 +295,7 @@ void LoopBase<BlockT, LoopT>::addBasicBlockToLoop(
   LoopT *L = static_cast<LoopT *>(this);
 
   // Add the loop mapping to the LoopInfo object...
-  LIB.BBMap[NewBB] = L;
+  LIB.changeLoopFor(NewBB, L);
 
   // Add the basic block to this loop and all parent loops...
   while (L) {
@@ -578,6 +578,12 @@ template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
   // Postorder traversal of the dominator tree.
   const DomTreeNodeBase<BlockT> *DomRoot = DomTree.getRootNode();
+  if constexpr (GraphHasNodeNumbers<const BlockT *>) {
+    ParentPtr = DomRoot->getBlock()->getParent();
+    BlockNumberEpoch = GraphTraits<ParentT>::getNumberEpoch(ParentPtr);
+    unsigned Max = GraphTraits<ParentT>::getMaxNumber(ParentPtr);
+    BBMap.resize(Max);
+  }
   for (auto DomNode : post_order(DomRoot)) {
 
     BlockT *Header = DomNode->getBlock();
@@ -756,14 +762,33 @@ void LoopInfoBase<BlockT, LoopT>::verify(
 
 // Verify that blocks are mapped to valid loops.
 #ifndef NDEBUG
-  for (auto &Entry : BBMap) {
-    const BlockT *BB = Entry.first;
-    LoopT *L = Entry.second;
-    assert(Loops.count(L) && "orphaned loop");
-    assert(L->contains(BB) && "orphaned block");
-    for (LoopT *ChildLoop : *L)
-      assert(!ChildLoop->contains(BB) &&
-             "BBMap should point to the innermost loop containing BB");
+  if constexpr (GraphHasNodeNumbers<const BlockT *>) {
+    for (auto It : enumerate(BBMap)) {
+      LoopT *L = It.value();
+      unsigned Number = It.index();
+      if (!L)
+        continue;
+      assert(Loops.count(L) && "orphaned loop");
+      // We have no way to map block numbers back to blocks, so find it.
+      auto BBIt = find_if(L->Blocks, [&Number](BlockT *BB) {
+        return GraphTraits<BlockT *>::getNumber(BB) == Number;
+      });
+      BlockT *BB = BBIt != L->Blocks.end() ? *BBIt : nullptr;
+      assert(BB && "orphaned block");
+      for (LoopT *ChildLoop : *L)
+        assert(!ChildLoop->contains(BB) &&
+               "BBMap should point to the innermost loop containing BB");
+    }
+  } else {
+    for (auto &Entry : BBMap) {
+      const BlockT *BB = Entry.first;
+      LoopT *L = Entry.second;
+      assert(Loops.count(L) && "orphaned loop");
+      assert(L->contains(BB) && "orphaned block");
+      for (LoopT *ChildLoop : *L)
+        assert(!ChildLoop->contains(BB) &&
+               "BBMap should point to the innermost loop containing BB");
+    }
   }
 
   // Recompute LoopInfo to verify loops structure.

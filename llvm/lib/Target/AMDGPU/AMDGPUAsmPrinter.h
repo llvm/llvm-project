@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class AMDGPUMachineFunction;
+class AMDGPUMachineFunctionInfo;
 class AMDGPUResourceUsageAnalysis;
 class AMDGPUTargetStreamer;
 class MCCodeEmitter;
@@ -73,7 +73,7 @@ private:
                                   const MCExpr *TotalNumVGPR,
                                   const MCExpr *NumSGPR,
                                   const MCExpr *ScratchSize, uint64_t CodeSize,
-                                  const AMDGPUMachineFunction *MFI);
+                                  const AMDGPUMachineFunctionInfo *MFI);
   void emitResourceUsageRemarks(const MachineFunction &MF,
                                 const SIProgramInfo &CurrentProgramInfo,
                                 bool isModuleEntryFunction, bool hasMAIInsts);

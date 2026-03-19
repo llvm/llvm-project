@@ -34,13 +34,18 @@ void testExportSMTLIB(MlirContext ctx) {
   MlirModule module =
       mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(testSMT));
 
-  MlirLogicalResult result =
-      mlirTranslateModuleToSMTLIB(module, dumpCallback, NULL, false, false);
-  (void)result;
+  MlirLogicalResult result = mlirTranslateModuleToSMTLIB(
+      module, dumpCallback, NULL, false, false, true);
   assert(mlirLogicalResultIsSuccess(result));
 
   // CHECK: ; solver scope 0
   // CHECK-NEXT: (reset)
+
+  result = mlirTranslateModuleToSMTLIB(module, dumpCallback, NULL, false, false,
+                                       false);
+  assert(mlirLogicalResultIsSuccess(result));
+
+  // CHECK-NOT: (reset)
   mlirModuleDestroy(module);
 }
 

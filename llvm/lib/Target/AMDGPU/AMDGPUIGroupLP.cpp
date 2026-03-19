@@ -345,7 +345,7 @@ public:
         SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
 
     for (auto &PipelineInstrs : SyncedInstrs) {
-      if (PipelineInstrs.second.size() > 0) {
+      if (!PipelineInstrs.second.empty()) {
         NeedsSolver = true;
         break;
       }
@@ -359,7 +359,7 @@ public:
     CurrPipeline = BestPipeline;
 
     while (static_cast<size_t>(BeginSyncGroupIdx) < PipelineInstrs.size() &&
-           PipelineInstrs[BeginSyncGroupIdx].size() == 0)
+           PipelineInstrs[BeginSyncGroupIdx].empty())
       ++BeginSyncGroupIdx;
 
     if (static_cast<size_t>(BeginSyncGroupIdx) >= PipelineInstrs.size())
@@ -395,7 +395,7 @@ void PipelineSolver::convertSyncMapsToArrays() {
   PipelineInstrs.resize(SyncedInstrs.size());
   for (auto &SyncInstrMap : SyncedInstrs) {
     for (auto &SUsToCandSGs : SyncInstrMap.second) {
-      if (PipelineInstrs[PipelineIDx].size() == 0) {
+      if (PipelineInstrs[PipelineIDx].empty()) {
         PipelineInstrs[PipelineIDx].push_back(
             std::pair(SUsToCandSGs.first, SUsToCandSGs.second));
         continue;
@@ -511,7 +511,7 @@ void PipelineSolver::advancePosition() {
     ++CurrSyncGroupIdx;
     // Advance to next non-trivial pipeline
     while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size() &&
-           PipelineInstrs[CurrSyncGroupIdx].size() == 0)
+           PipelineInstrs[CurrSyncGroupIdx].empty())
       ++CurrSyncGroupIdx;
   }
 }
@@ -533,7 +533,7 @@ void PipelineSolver::retreatPosition() {
 
     --CurrSyncGroupIdx;
     // Go to previous non-trivial pipeline
-    while (PipelineInstrs[CurrSyncGroupIdx].size() == 0)
+    while (PipelineInstrs[CurrSyncGroupIdx].empty())
       --CurrSyncGroupIdx;
 
     CurrConflInstNo = PipelineInstrs[CurrSyncGroupIdx].size() - 1;

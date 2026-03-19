@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIMACHINEFUNCTIONINFO_H
 
 #include "AMDGPUArgumentUsageInfo.h"
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -411,7 +411,7 @@ struct VGPRBlock2IndexFunctor {
 
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
-class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
+class SIMachineFunctionInfo final : public AMDGPUMachineFunctionInfo,
                                     private MachineRegisterInfo::Delegate {
   friend class GCNTargetMachine;
 

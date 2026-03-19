@@ -71,12 +71,11 @@ uint32_t Listener::StartListeningForEvents(Broadcaster *broadcaster,
         broadcaster->AddListener(this->shared_from_this(), event_mask);
 
     Log *log = GetLog(LLDBLog::Events);
-    if (log != nullptr)
-      LLDB_LOGF(log,
-                "%p Listener::StartListeningForEvents (broadcaster = %p, "
-                "mask = 0x%8.8x) acquired_mask = 0x%8.8x for %s",
-                static_cast<void *>(this), static_cast<void *>(broadcaster),
-                event_mask, acquired_mask, m_name.c_str());
+    LLDB_LOGF(log,
+              "%p Listener::StartListeningForEvents (broadcaster = %p, "
+              "mask = 0x%8.8x) acquired_mask = 0x%8.8x for %s",
+              static_cast<void *>(this), static_cast<void *>(broadcaster),
+              event_mask, acquired_mask, m_name.c_str());
 
     return acquired_mask;
   }
@@ -166,10 +165,9 @@ void Listener::BroadcasterManagerWillDestruct(BroadcasterManagerSP manager_sp) {
 
 void Listener::AddEvent(EventSP &event_sp) {
   Log *log = GetLog(LLDBLog::Events);
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Listener('%s')::AddEvent (event_sp = {%p})",
-              static_cast<void *>(this), m_name.c_str(),
-              static_cast<void *>(event_sp.get()));
+  LLDB_LOGF(log, "%p Listener('%s')::AddEvent (event_sp = {%p})",
+            static_cast<void *>(this), m_name.c_str(),
+            static_cast<void *>(event_sp.get()));
 
   std::lock_guard<std::mutex> guard(m_events_mutex);
   m_events.push_back(event_sp);
@@ -205,14 +203,13 @@ bool Listener::FindNextEventInternal(
   if (pos != m_events.end()) {
     event_sp = *pos;
 
-    if (log != nullptr)
-      LLDB_LOGF(log,
-                "%p '%s' Listener::FindNextEventInternal(broadcaster=%p, "
-                "event_type_mask=0x%8.8x, "
-                "remove=%i) event %p",
-                static_cast<void *>(this), GetName(),
-                static_cast<void *>(broadcaster), event_type_mask, remove,
-                static_cast<void *>(event_sp.get()));
+    LLDB_LOGF(log,
+              "%p '%s' Listener::FindNextEventInternal(broadcaster=%p, "
+              "event_type_mask=0x%8.8x, "
+              "remove=%i) event %p",
+              static_cast<void *>(this), GetName(),
+              static_cast<void *>(broadcaster), event_type_mask, remove,
+              static_cast<void *>(event_sp.get()));
 
     if (remove) {
       m_events.erase(pos);

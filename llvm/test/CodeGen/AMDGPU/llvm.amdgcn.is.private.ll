@@ -61,8 +61,8 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ;
 ; GFX1250-LABEL: is_private_vgpr:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset scope:SCOPE_SYS
@@ -188,8 +188,8 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ;
 ; GFX1250-SDAG-LABEL: is_private_sgpr:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x4
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x4 nv
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_xor_b32 s0, s0, src_flat_scratch_base_hi
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
@@ -266,8 +266,8 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ;
 ; GFX1250-GISEL-LABEL: is_private_sgpr:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s1, src_flat_scratch_base_hi
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

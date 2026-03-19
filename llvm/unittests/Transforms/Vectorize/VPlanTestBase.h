@@ -65,7 +65,9 @@ protected:
   }
 
   /// Build the VPlan for the loop starting from \p LoopHeader.
-  VPlanPtr buildVPlan(BasicBlock *LoopHeader, bool HasUncountableExit = false) {
+  VPlanPtr buildVPlan(
+      BasicBlock *LoopHeader,
+      UncountableExitStyle Style = UncountableExitStyle::NoUncountableExit) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
@@ -75,7 +77,7 @@ protected:
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                              {}, PSE);
 
-    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
+    VPlanTransforms::handleEarlyExits(*Plan, Style);
     VPlanTransforms::addMiddleCheck(*Plan, false);
 
     VPlanTransforms::createLoopRegions(*Plan);

@@ -246,6 +246,7 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
 
 void tensor::populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns) {
   populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
+  populateForwardConcatInsertSliceDestPatterns(patterns);
   patterns.add<InsertSliceOfInsertSliceFolder<tensor::InsertSliceOp>,
                InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>>(
       patterns.getContext());

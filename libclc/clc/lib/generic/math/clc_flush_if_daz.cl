@@ -5,18 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+#include "clc/clc_convert.h"
+#include "clc/math/clc_canonicalize.h"
+#include "clc/math/clc_flush_if_daz.h"
 #include "clc/math/clc_subnormal_config.h"
-#include "clc/opencl/opencl-base.h"
+#include "clc/math/math.h"
 
-_CLC_DEF bool __clc_fp16_subnormals_supported() { return false; }
-
-_CLC_DEF bool __clc_fp32_subnormals_supported() { return false; }
-
-_CLC_DEF bool __clc_fp64_subnormals_supported() {
-#if defined(CLC_SPIRV) || defined(CLC_CLSPV)
-  return false;
-#else
-  return true;
-#endif
-}
+#define __CLC_BODY "clc_flush_if_daz.inc"
+#include "clc/math/gentype.inc"

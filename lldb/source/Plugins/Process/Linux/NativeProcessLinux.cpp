@@ -154,38 +154,38 @@ static void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
   switch (req) {
   case PTRACE_POKETEXT: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOGV(log, "PTRACE_POKETEXT {0}", buf.GetData());
+    LLDB_LOG_VERBOSE(log, "PTRACE_POKETEXT {0}", buf.GetData());
     break;
   }
   case PTRACE_POKEDATA: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOGV(log, "PTRACE_POKEDATA {0}", buf.GetData());
+    LLDB_LOG_VERBOSE(log, "PTRACE_POKEDATA {0}", buf.GetData());
     break;
   }
   case PTRACE_POKEUSER: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOGV(log, "PTRACE_POKEUSER {0}", buf.GetData());
+    LLDB_LOG_VERBOSE(log, "PTRACE_POKEUSER {0}", buf.GetData());
     break;
   }
   case PTRACE_SETREGS: {
     DisplayBytes(buf, data, data_size);
-    LLDB_LOGV(log, "PTRACE_SETREGS {0}", buf.GetData());
+    LLDB_LOG_VERBOSE(log, "PTRACE_SETREGS {0}", buf.GetData());
     break;
   }
   case PTRACE_SETFPREGS: {
     DisplayBytes(buf, data, data_size);
-    LLDB_LOGV(log, "PTRACE_SETFPREGS {0}", buf.GetData());
+    LLDB_LOG_VERBOSE(log, "PTRACE_SETFPREGS {0}", buf.GetData());
     break;
   }
   case PTRACE_SETSIGINFO: {
     DisplayBytes(buf, data, sizeof(siginfo_t));
-    LLDB_LOGV(log, "PTRACE_SETSIGINFO {0}", buf.GetData());
+    LLDB_LOG_VERBOSE(log, "PTRACE_SETSIGINFO {0}", buf.GetData());
     break;
   }
   case PTRACE_SETREGSET: {
     // Extract iov_base from data, which is a pointer to the struct iovec
     DisplayBytes(buf, *(void **)data, data_size);
-    LLDB_LOGV(log, "PTRACE_SETREGSET {0}", buf.GetData());
+    LLDB_LOG_VERBOSE(log, "PTRACE_SETREGSET {0}", buf.GetData());
     break;
   }
   default: {}

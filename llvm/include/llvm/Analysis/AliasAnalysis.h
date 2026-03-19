@@ -659,6 +659,8 @@ class BatchAAResults {
   AAQueryInfo AAQI;
   SimpleCaptureAnalysis SimpleCA;
 
+  friend class BatchAACrossIterationScope;
+
 public:
   BatchAAResults(AAResults &AAR) : AA(AAR), AAQI(AAR, &SimpleCA) {}
   BatchAAResults(AAResults &AAR, CaptureAnalysis *CA)
@@ -714,6 +716,21 @@ public:
 
   /// Disable the use of the dominator tree during alias analysis queries.
   void disableDominatorTree() { AAQI.UseDominatorTree = false; }
+};
+
+/// Temporarily set the cross iteration mode on a BatchAA instance.
+class BatchAACrossIterationScope {
+  BatchAAResults &BAA;
+  bool OrigCrossIteration;
+
+public:
+  BatchAACrossIterationScope(BatchAAResults &BAA, bool CrossIteration)
+      : BAA(BAA), OrigCrossIteration(BAA.AAQI.MayBeCrossIteration) {
+    BAA.AAQI.MayBeCrossIteration = CrossIteration;
+  }
+  ~BatchAACrossIterationScope() {
+    BAA.AAQI.MayBeCrossIteration = OrigCrossIteration;
+  }
 };
 
 /// Temporary typedef for legacy code that uses a generic \c AliasAnalysis

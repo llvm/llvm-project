@@ -496,6 +496,9 @@ program p
   namelist /g/ k
 end program
 ```
+* When the argument to intrinsic `ALLOCATED(p)` is actually a pointer
+  rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
+  stern warning.
 
 ### Extensions supported when enabled by options
 

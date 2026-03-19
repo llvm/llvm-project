@@ -243,6 +243,7 @@ enum RegBankLLTMappingApplyID {
   // Src only modifiers: operand must be SGPR, if in VGPR, insert readfirstlane
   // to move to SGPR.
   SgprB32_ReadFirstLane,
+  SgprB64_ReadFirstLane,
 
   // Src only modifiers: extends
   Sgpr32AExt,

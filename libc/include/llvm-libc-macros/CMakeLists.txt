@@ -233,6 +233,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_sem_macros
+  HDR
+    sys-sem-macros.h
+)
+
+add_macro_header(
   sys_stat_macros
   HDR
     sys-stat-macros.h

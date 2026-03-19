@@ -172,7 +172,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUMCInstLower.cpp",
     "AMDGPUMCResourceInfo.cpp",
     "AMDGPUMIRFormatter.cpp",
-    "AMDGPUMachineFunction.cpp",
+    "AMDGPUMachineFunctionInfo.cpp",
     "AMDGPUMachineModuleInfo.cpp",
     "AMDGPUMacroFusion.cpp",
     "AMDGPUMarkLastScratchLoad.cpp",

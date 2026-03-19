@@ -387,18 +387,16 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
   return_value = exe_ctx.GetProcessRef().RunThreadPlan(
       exe_ctx, call_plan_sp, real_options, diagnostic_manager);
 
-  if (log) {
-    if (return_value != lldb::eExpressionCompleted) {
-      LLDB_LOGF(log,
-                "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
-                "completed abnormally: %s ==",
-                m_name.c_str(), toString(return_value).c_str());
-    } else {
-      LLDB_LOGF(log,
-                "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
-                "completed normally ==",
-                m_name.c_str());
-    }
+  if (return_value != lldb::eExpressionCompleted) {
+    LLDB_LOGF(log,
+              "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
+              "completed abnormally: %s ==",
+              m_name.c_str(), toString(return_value).c_str());
+  } else {
+    LLDB_LOGF(log,
+              "== [FunctionCaller::ExecuteFunction] Execution of \"%s\" "
+              "completed normally ==",
+              m_name.c_str());
   }
 
   if (exe_ctx.GetProcessPtr())

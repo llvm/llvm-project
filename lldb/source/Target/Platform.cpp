@@ -2111,6 +2111,37 @@ Platform::LocateModuleCallback Platform::GetLocateModuleCallback() const {
   return m_locate_module_callback;
 }
 
+void Platform::WarnIfInvalidUnsanitizedScriptExists(
+    Stream &os,
+    const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
+    const FileSpec &original_fspec, const FileSpec &fspec) {
+  if (!sanitized_name.RequiredSanitization())
+    return;
+
+  // Path to unsanitized script name doesn't exist. Nothing to warn about.
+  if (!FileSystem::Instance().Exists(original_fspec))
+    return;
+
+  std::string reason_for_complaint =
+      sanitized_name.IsKeyword()
+          ? llvm::formatv("conflicts with the keyword '{0}'",
+                          sanitized_name.GetConflictingKeyword())
+                .str()
+          : "contains reserved characters";
+
+  if (FileSystem::Instance().Exists(fspec))
+    os.Format("debug script '{0}' cannot be loaded because '{1}' {2}. "
+              "Ignoring '{1}' and loading '{3}' instead.\n",
+              original_fspec.GetPath(), original_fspec.GetFilename(),
+              std::move(reason_for_complaint), fspec.GetFilename());
+  else
+    os.Format("debug script '{0}' cannot be loaded because '{1}' {2}. "
+              "If you intend to have this script loaded, please rename it to "
+              "'{3}' and retry.\n",
+              original_fspec.GetPath(), original_fspec.GetFilename(),
+              std::move(reason_for_complaint), fspec.GetFilename());
+}
+
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   for (const PlatformSP &platform_sp : m_platforms) {

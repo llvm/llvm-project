@@ -349,11 +349,10 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 10000, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 10000, [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 [[TMP4]]
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP6]], align 1
@@ -364,6 +363,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 10000, [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7]]
 ; CHECK:       vec.epilog.ph:
@@ -399,11 +399,10 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-VF8-NEXT:    [[N_MOD_VF:%.*]] = urem i64 10000, [[TMP3]]
 ; CHECK-VF8-NEXT:    [[N_VEC:%.*]] = sub i64 10000, [[N_MOD_VF]]
-; CHECK-VF8-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[N_VEC]]
 ; CHECK-VF8-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF8:       vector.body:
 ; CHECK-VF8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF8-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
+; CHECK-VF8-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[INDEX]]
 ; CHECK-VF8-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 [[TMP4]]
 ; CHECK-VF8-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[NEXT_GEP]], align 1
 ; CHECK-VF8-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP6]], align 1
@@ -414,6 +413,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-VF8-NEXT:    [[CMP_N:%.*]] = icmp eq i64 10000, [[N_VEC]]
 ; CHECK-VF8-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK-VF8:       vec.epilog.iter.check:
+; CHECK-VF8-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC]]
 ; CHECK-VF8-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-VF8-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3]]
 ; CHECK-VF8:       vec.epilog.ph:

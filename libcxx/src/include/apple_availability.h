@@ -27,6 +27,10 @@
 #    if __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000
 #      define _LIBCPP_USE_ULOCK
 #    endif
+#  elif defined(__ENVIRONMENT_OS_VERSION_MIN_REQUIRED__) && __is_target_os(visionos)
+#    if __ENVIRONMENT_OS_VERSION_MIN_REQUIRED__ >= 10000
+#      define _LIBCPP_USE_ULOCK
+#    endif
 #  endif // __ENVIRONMENT_.*_VERSION_MIN_REQUIRED__
 
 #endif // __APPLE__

@@ -1804,18 +1804,16 @@ void StructuredDataDarwinLog::EnableNow() {
     // care of the rest.
     auto &interpreter = debugger_sp->GetCommandInterpreter();
     const bool success = RunEnableCommand(interpreter);
-    if (log) {
-      if (success)
-        LLDB_LOGF(log,
-                  "StructuredDataDarwinLog::%s() ran enable command "
-                  "successfully for (process uid %u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
-      else
-        LLDB_LOGF(log,
-                  "StructuredDataDarwinLog::%s() error: running "
-                  "enable command failed (process uid %u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
-    }
+    if (success)
+      LLDB_LOGF(log,
+                "StructuredDataDarwinLog::%s() ran enable command "
+                "successfully for (process uid %u)",
+                __FUNCTION__, process_sp->GetUniqueID());
+    else
+      LLDB_LOGF(log,
+                "StructuredDataDarwinLog::%s() error: running "
+                "enable command failed (process uid %u)",
+                __FUNCTION__, process_sp->GetUniqueID());
     Debugger::ReportError("failed to configure DarwinLog support",
                           debugger_sp->GetID());
     return;

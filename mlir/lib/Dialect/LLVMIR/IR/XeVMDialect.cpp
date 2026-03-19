@@ -349,6 +349,37 @@ LogicalResult MMAOp::verify() {
   return success();
 }
 
+LogicalResult MMAMxOp::verify() {
+  if (getC()) {
+    if (getResult().getType() != getC().getType())
+      return emitOpError("type of C operand must match result type");
+  }
+  return success();
+}
+
+LogicalResult TruncfOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type dstTy = getDst().getType();
+  if (isa<VectorType>(srcTy) && !isa<VectorType>(dstTy))
+    return emitOpError("both src and dst should be vector types or both should "
+                       "be scalar types");
+  if (isa<VectorType>(srcTy)) {
+    VectorType srcVecTy = dyn_cast<VectorType>(srcTy);
+    VectorType dstVecTy = dyn_cast<VectorType>(dstTy);
+    if (srcVecTy.getNumElements() != dstVecTy.getNumElements())
+      return emitOpError(
+          "src and dst vector types should have the same number of elements");
+    if (srcVecTy.getElementTypeBitWidth() <= dstVecTy.getElementTypeBitWidth())
+      return emitError(
+          "dst element bitwidth should be less than src element bitwidth");
+  } else {
+    if (srcTy.getIntOrFloatBitWidth() <= dstTy.getIntOrFloatBitWidth())
+      return emitError(
+          "dst element bitwidth should be less than src element bitwidth");
+  }
+  return success();
+}
+
 LogicalResult
 XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
                        StringRef triple, StringRef chip, DictionaryAttr flags,

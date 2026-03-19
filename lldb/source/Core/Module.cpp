@@ -142,14 +142,13 @@ Module::Module(const ModuleSpec &module_spec)
   }
 
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
-              static_cast<void *>(this),
-              module_spec.GetArchitecture().GetArchitectureName(),
-              module_spec.GetFileSpec().GetPath().c_str(),
-              module_spec.GetObjectName().IsEmpty() ? "" : "(",
-              module_spec.GetObjectName().AsCString(""),
-              module_spec.GetObjectName().IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
+            static_cast<void *>(this),
+            module_spec.GetArchitecture().GetArchitectureName(),
+            module_spec.GetFileSpec().GetPath().c_str(),
+            module_spec.GetObjectName().IsEmpty() ? "" : "(",
+            module_spec.GetObjectName().AsCString(""),
+            module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
   auto extractor_sp = module_spec.GetExtractor();
   lldb::offset_t file_size = 0;
@@ -174,9 +173,7 @@ Module::Module(const ModuleSpec &module_spec)
   ModuleSpec matching_module_spec;
   if (!modules_specs.FindMatchingModuleSpec(module_spec,
                                             matching_module_spec)) {
-    if (log) {
-      LLDB_LOGF(log, "Found local object file but the specs didn't match");
-    }
+    LLDB_LOGF(log, "Found local object file but the specs didn't match");
     return;
   }
 
@@ -252,11 +249,10 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
   }
 
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
-              static_cast<void *>(this), m_arch.GetArchitectureName(),
-              m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-              m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
+            static_cast<void *>(this), m_arch.GetArchitectureName(),
+            m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
+            m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
 }
 
 Module::Module()
@@ -282,11 +278,10 @@ Module::~Module() {
     modules.erase(pos);
   }
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
-  if (log != nullptr)
-    LLDB_LOGF(log, "%p Module::~Module((%s) '%s%s%s%s')",
-              static_cast<void *>(this), m_arch.GetArchitectureName(),
-              m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-              m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
+  LLDB_LOGF(log, "%p Module::~Module((%s) '%s%s%s%s')",
+            static_cast<void *>(this), m_arch.GetArchitectureName(),
+            m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
+            m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
   // Release any auto pointers before we start tearing down our member
   // variables since the object file and symbol files might need to make
   // function calls back into this module object. The ordering is important

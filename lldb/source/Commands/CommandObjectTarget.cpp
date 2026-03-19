@@ -1047,13 +1047,10 @@ protected:
         const char *to = command.GetArgumentAtIndex(i + 1);
 
         if (from[0] && to[0]) {
-          Log *log = GetLog(LLDBLog::Host);
-          if (log) {
-            LLDB_LOGF(log,
-                      "target modules search path adding ImageSearchPath "
-                      "pair: '%s' -> '%s'",
-                      from, to);
-          }
+          LLDB_LOGF(GetLog(LLDBLog::Host),
+                    "target modules search path adding ImageSearchPath "
+                    "pair: '%s' -> '%s'",
+                    from, to);
           bool last_pair = ((argc - i) == 2);
           target.GetImageSearchPathList().Append(
               from, to, last_pair); // Notify if this is the last pair

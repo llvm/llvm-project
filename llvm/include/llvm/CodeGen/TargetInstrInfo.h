@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
-#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -46,6 +45,7 @@ class DFAPacketizer;
 class InstrItineraryData;
 class LiveIntervals;
 class LiveVariables;
+class MachineCycleInfo;
 class MachineLoop;
 class MachineLoopInfo;
 class MachineMemOperand;

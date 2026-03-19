@@ -470,11 +470,11 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
     info.SetMapped(MemoryRegionInfo::eNo);
   }
 
-  LLDB_LOGV(log,
-            "Memory region info for address {0}: readable={1}, "
-            "executable={2}, writable={3}",
-            vm_addr, info.GetReadable(), info.GetExecutable(),
-            info.GetWritable());
+  LLDB_LOG_VERBOSE(log,
+                   "Memory region info for address {0}: readable={1}, "
+                   "executable={2}, writable={3}",
+                   vm_addr, info.GetReadable(), info.GetExecutable(),
+                   info.GetWritable());
   return error;
 }
 

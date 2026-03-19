@@ -243,5 +243,5 @@ void StringList::LogDump(Log *log, const char *name) {
   if (name)
     strm.Printf("End %s.\n", name);
 
-  LLDB_LOGV(log, "{0}", strm.GetData());
+  LLDB_LOG_VERBOSE(log, "{0}", strm.GetData());
 }

@@ -234,7 +234,8 @@ static void findReferencesInStmt(ScopStmt *Stmt, SetVector<Value *> &Values,
   LoopInfo *LI = Stmt->getParent()->getLI();
 
   BasicBlock *BB = Stmt->getBasicBlock();
-  Loop *Scope = LI->getLoopFor(BB);
+  // TODO: Should BB ever be null?
+  Loop *Scope = BB ? LI->getLoopFor(BB) : nullptr;
   for (Instruction *Inst : Stmt->getInstructions())
     findReferencesInInst(Inst, Stmt, Scope, GlobalMap, Values, SCEVs);
 

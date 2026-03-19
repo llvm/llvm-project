@@ -130,14 +130,12 @@ ItaniumABIRuntime::GetTypeInfo(ValueObject &in_value,
           }
         }
 
-        if (log) {
-          LLDB_LOGF(log,
-                    "0x%16.16" PRIx64
-                    ": static-type = '%s' has multiple matching dynamic "
-                    "types, didn't find a C++ match\n",
-                    in_value.GetPointerValue().address,
-                    in_value.GetTypeName().AsCString());
-        }
+        LLDB_LOGF(log,
+                  "0x%16.16" PRIx64
+                  ": static-type = '%s' has multiple matching dynamic "
+                  "types, didn't find a C++ match\n",
+                  in_value.GetPointerValue().address,
+                  in_value.GetTypeName().AsCString());
       }
       if (type_info)
         SetDynamicTypeInfo(vtable_info.addr, type_info);

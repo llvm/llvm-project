@@ -77,6 +77,22 @@ typedef unsigned ID;
 
 using VPlanPtr = std::unique_ptr<VPlan>;
 
+/// \enum UncountableExitStyle
+/// Different methods of handling early exits.
+///
+enum class UncountableExitStyle {
+  NoUncountableExit = 0,
+  /// No side effects to worry about, so we can process any uncountable exits
+  /// in the loop and branch either to the middle block if the trip count was
+  /// reached, or an early exitblock to determine which exit was taken.
+  ReadOnly,
+  /// All memory operations other than the load(s) required to determine whether
+  /// an uncountable exit occurre will be masked based on that condition. If an
+  /// uncountable exit is taken, then all lanes before the exiting lane will
+  /// complete, leaving just the final lane to execute in the scalar tail.
+  MaskedHandleExitInScalarLoop,
+};
+
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
 /// A VPBlockBase can be either a VPBasicBlock or a VPRegionBlock.
 class LLVM_ABI_FOR_TEST VPBlockBase {

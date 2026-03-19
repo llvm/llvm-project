@@ -19,7 +19,6 @@
 
 namespace llvm {
 
-class GCNSubtarget;
 class MachineMemOperand;
 class MachineInstr;
 

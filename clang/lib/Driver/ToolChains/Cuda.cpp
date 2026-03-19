@@ -643,6 +643,8 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
 
+  getToolChain().addProfileRTLibs(Args, CmdArgs);
+
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
   if (Args.hasArg(options::OPT_startfiles)) {

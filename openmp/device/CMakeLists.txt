@@ -16,7 +16,6 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Mapping.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Misc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Parallelism.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/Profiling.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Reduction.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/State.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Synchronization.cpp
