@@ -878,7 +878,7 @@ void doNotInvalidateWhenPassedToSystemCalls(char *s) {
   memcpy(p, p, 1);
 } // expected-warning {{leak}}
 
-void doNotInvalidateWhenPassedToSystemCalls2(char *s) {
+void overlappingMemcpyDoesNotSinkPath(char *s) {
   char *p = malloc(12);
   // FIXME: We should stop analysis here, even if we emit no warnings, since
   // overlapping buffers for strycpy is a fatal error.
