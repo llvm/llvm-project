@@ -8055,8 +8055,19 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       CM.getInLoopReductions(), Hints.allowReordering());
 
   VPlanTransforms::simplifyRecipes(*VPlan0);
+  // If we're vectorizing a loop with an uncountable exit, make sure that the
+  // recipes are safe to handle.
+  // TODO: Remove this once we can properly check the VPlan itself for both
+  //       the presence of an uncountable exit and the presence of stores in
+  //       the loop inside handleEarlyExits itself.
+  UncountableExitStyle EEStyle = UncountableExitStyle::NoUncountableExit;
+  if (Legal->hasUncountableEarlyExit())
+    EEStyle = Legal->hasUncountableExitWithSideEffects()
+                  ? UncountableExitStyle::MaskedHandleExitInScalarLoop
+                  : UncountableExitStyle::ReadOnly;
+
   if (!VPlanTransforms::handleEarlyExits(
-          *VPlan0, Legal->hasUncountableEarlyExit(), OrigLoop, PSE, *DT,
+          *VPlan0, EEStyle, OrigLoop, PSE, *DT,
           Legal->getAssumptionCache()))
     return;
   VPlanTransforms::addMiddleCheck(*VPlan0, CM.foldTailByMasking());
@@ -8356,9 +8367,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       MapVector<PHINode *, RecurrenceDescriptor>(),
       SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
       /*AllowReordering=*/false);
-  if (!VPlanTransforms::handleEarlyExits(*Plan,
-                                         /*HasUncountableExit*/ false, OrigLoop,
-                                         PSE, *DT, Legal->getAssumptionCache()))
+  if (!VPlanTransforms::handleEarlyExits(
+          *Plan, UncountableExitStyle::NoUncountableExit, OrigLoop, PSE, *DT,
+          Legal->getAssumptionCache()))
     return nullptr;
   VPlanTransforms::addMiddleCheck(*Plan, /*TailFolded*/ false);
 

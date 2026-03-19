@@ -149,11 +149,12 @@ struct VPlanTransforms {
       VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
 
-  /// Update \p Plan to account for all early exits. If \p HasUncountableExit
-  /// is true, handles uncountable early exits and checks that all loads are
-  /// dereferenceable. Returns false if a non-dereferenceable load is found.
+  /// Update \p Plan to account for all early exits. If \p Style is not
+  /// NoUncountableExit, handles uncountable early exits and checks that all
+  /// loads are dereferenceable. Returns false if a non-dereferenceable load is
+  /// found.
   LLVM_ABI_FOR_TEST static bool
-  handleEarlyExits(VPlan &Plan, bool HasUncountableExit, Loop *TheLoop,
+  handleEarlyExits(VPlan &Plan, UncountableExitStyle Style, Loop *TheLoop,
                    PredicatedScalarEvolution &PSE, DominatorTree &DT,
                    AssumptionCache *AC);
 
@@ -323,7 +324,8 @@ struct VPlanTransforms {
   /// that determines which exit to take based on lane-by-lane semantics.
   static void handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                           VPBasicBlock *LatchVPBB,
-                                          VPBasicBlock *MiddleVPBB);
+                                          VPBasicBlock *MiddleVPBB,
+                                          UncountableExitStyle Style);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)

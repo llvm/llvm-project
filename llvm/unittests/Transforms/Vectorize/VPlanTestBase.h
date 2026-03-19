@@ -66,7 +66,9 @@ protected:
   }
 
   /// Build the VPlan for the loop starting from \p LoopHeader.
-  VPlanPtr buildVPlan(BasicBlock *LoopHeader, bool HasUncountableExit = false) {
+  VPlanPtr buildVPlan(
+      BasicBlock *LoopHeader,
+      UncountableExitStyle Style = UncountableExitStyle::NoUncountableExit) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
@@ -76,7 +78,7 @@ protected:
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                              {}, PSE);
 
-    if (HasUncountableExit) {
+    if (Style != UncountableExitStyle::NoUncountableExit) {
       // handleEarlyExits requires induction phi recipes.
       MapVector<PHINode *, InductionDescriptor> Inductions;
       for (PHINode &Phi : LoopHeader->phis()) {
@@ -91,8 +93,7 @@ protected:
           /*AllowReordering=*/false);
     }
 
-    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit, L, PSE, *DT,
-                                      AC.get());
+    VPlanTransforms::handleEarlyExits(*Plan, Style, L, PSE, *DT, AC.get());
     VPlanTransforms::addMiddleCheck(*Plan, false);
 
     VPlanTransforms::createLoopRegions(*Plan);

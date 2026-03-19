@@ -1843,8 +1843,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   LLVM_DEBUG(dbgs() << "LV: Found an early exit loop with symbolic max "
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
-  HasUncountableEarlyExit = true;
-  UncountableExitWithSideEffects = HasSideEffects;
+  UncountableExitType = HasSideEffects ? UncountableExitTrait::ReadWrite
+                                       : UncountableExitTrait::ReadOnly;
   return true;
 }
 
@@ -1998,8 +1998,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
         return false;
     } else {
       if (!isVectorizableEarlyExitLoop()) {
-        assert(!hasUncountableEarlyExit() &&
-               !hasUncountableExitWithSideEffects() &&
+        assert(UncountableExitType == UncountableExitTrait::None &&
                "Must be false without vectorizable early-exit loop");
         if (DoExtraAnalysis)
           Result = false;
@@ -2018,8 +2017,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  // Bail out for state-changing loops with uncountable exits for now.
-  if (UncountableExitWithSideEffects) {
+  // Bail out for ReadWrite loops with uncountable exits for now.
+  if (UncountableExitType == UncountableExitTrait::ReadWrite) {
     reportVectorizationFailure(
         "Writes to memory unsupported in early exit loops",
         "Cannot vectorize early exit loop with writes to memory",

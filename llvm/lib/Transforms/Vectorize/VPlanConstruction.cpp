@@ -987,21 +987,25 @@ static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
 }
 
 bool VPlanTransforms::handleEarlyExits(VPlan &Plan,
-                                       bool HasUncountableEarlyExit,
+                                       UncountableExitStyle Style,
                                        Loop *TheLoop,
                                        PredicatedScalarEvolution &PSE,
                                        DominatorTree &DT, AssumptionCache *AC) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
-  VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
+  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
 
-  if (HasUncountableEarlyExit) {
-    auto *HeaderVPBB = cast<VPBasicBlock>(HeaderVPB);
+  // TODO: We would like to detect uncountable exits and stores within loops
+  //       with such exits from the VPlan alone. Exit detection can be moved
+  //       here from handleUncountableEarlyExits, but we need to improve
+  //       detection of recipes which may write to memory.
+  if (Style != UncountableExitStyle::NoUncountableExit) {
     if (!areAllLoadsDereferenceable(HeaderVPBB, MiddleVPBB, TheLoop, PSE, DT,
                                     AC))
       return false;
-    handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB);
+    // TODO: Check target preference for style.
+    handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB, Style);
     return true;
   }
 
