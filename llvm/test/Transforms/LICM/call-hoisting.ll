@@ -281,11 +281,11 @@ define i32 @unrelated_read(ptr noalias %loc, ptr noalias %otherloc) {
 ; CHECK-LABEL: define i32 @unrelated_read(
 ; CHECK-SAME: ptr noalias [[LOC:%.*]], ptr noalias [[OTHERLOC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @load(i32 [[IV]], ptr [[OTHERLOC]])
-; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
