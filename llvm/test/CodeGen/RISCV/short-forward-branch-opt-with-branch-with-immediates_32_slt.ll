@@ -15,10 +15,7 @@ define i32 @branch_with_immSFB_mv(i32 %a, i32 %c, i32 %d) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_mv:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.blti a2, 2, .LBB0_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a1
-; RV32I-SFB-WITH-IMM-NEXT:  .LBB0_2: # %entry
+; RV32I-SFB-WITH-IMM-NEXT:    qc.mvlti a0, a2, 2, a1
 ; RV32I-SFB-WITH-IMM-NEXT:    ret
 entry:
   %x = icmp slt i32 %d, 2

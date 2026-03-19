@@ -797,6 +797,83 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
   return reductionResult;
 }
 
+Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
+                                         VectorType type,
+                                         vector::CombiningKind kind) {
+  Type elemTy = type.getElementType();
+
+  switch (kind) {
+  case vector::CombiningKind::ADD:
+  case vector::CombiningKind::XOR:
+  case vector::CombiningKind::OR:
+    return arith::ConstantOp::create(
+        builder, loc, type,
+        DenseElementsAttr::get(type, builder.getZeroAttr(elemTy)));
+
+  case vector::CombiningKind::MUL:
+  case vector::CombiningKind::AND:
+    return arith::ConstantOp::create(
+        builder, loc, type,
+        DenseElementsAttr::get(type, builder.getOneAttr(elemTy)));
+
+  case vector::CombiningKind::MINSI:
+    // Use max signed int value for signed integer min
+    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
+      auto maxVal = APInt::getSignedMaxValue(intTy.getWidth());
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getIntegerAttr(elemTy, maxVal)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MINUI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
+      auto maxVal = APInt::getMaxValue(intTy.getWidth());
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getIntegerAttr(elemTy, maxVal)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MAXSI:
+    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
+      auto minVal = APInt::getSignedMinValue(intTy.getWidth());
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getIntegerAttr(elemTy, minVal)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MAXUI:
+    return arith::ConstantOp::create(
+        builder, loc, type,
+        DenseElementsAttr::get(type, builder.getZeroAttr(elemTy)));
+
+  case vector::CombiningKind::MINNUMF:
+  case vector::CombiningKind::MINIMUMF:
+    // Use +infinity for float min operations
+    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
+      auto posInf = APFloat::getInf(floatTy.getFloatSemantics());
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getFloatAttr(elemTy, posInf)));
+    }
+    return nullptr;
+
+  case vector::CombiningKind::MAXNUMF:
+  case vector::CombiningKind::MAXIMUMF:
+    // Use -infinity for float max operations
+    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
+      auto negInf = APFloat::getInf(floatTy.getFloatSemantics(), true);
+      return arith::ConstantOp::create(
+          builder, loc, type,
+          DenseElementsAttr::get(type, builder.getFloatAttr(elemTy, negInf)));
+    }
+    return nullptr;
+  }
+  return nullptr;
+}
+
 /// Explicit instantiations
 template int xegpu::getLargestDivisor<int>(int dim, ArrayRef<int> candidates,
                                            ArrayRef<int> candidateMultiples);
