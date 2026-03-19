@@ -71,3 +71,59 @@ define i128 @zext_i77_to_i128(i77 %0) {
   %2 = zext i77 %0 to i128
   ret i128 %2
 }
+
+define signext i32 @trunc_i128_to_i32(i128 %0) {
+; CHECK-LABEL: trunc_i128_to_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+  %2 = trunc i128 %0 to i32
+  ret i32 %2
+}
+
+define i128 @sext_i64_to_i128(i64 %0) {
+; CHECK-LABEL: sext_i64_to_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra.l %s1, %s0, 63
+; CHECK-NEXT:    b.l.t (, %s10)
+  %2 = sext i64 %0 to i128
+  ret i128 %2
+}
+
+define i128 @zext_i64_to_i128(i64 %0) {
+; CHECK-LABEL: zext_i64_to_i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    or %s1, 0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+  %2 = zext i64 %0 to i128
+  ret i128 %2
+}
+
+define signext i32 @trunc_i131_to_i32(i131 %0) {
+; CHECK-LABEL: trunc_i131_to_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+  %2 = trunc i131 %0 to i32
+  ret i32 %2
+}
+
+define i131 @sext_i64_to_i131(i64 %0) {
+; CHECK-LABEL: sext_i64_to_i131:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra.l %s1, %s0, 63
+; CHECK-NEXT:    or %s2, 0, %s1
+; CHECK-NEXT:    b.l.t (, %s10)
+  %2 = sext i64 %0 to i131
+  ret i131 %2
+}
+
+define i131 @zext_i64_to_i131(i64 %0) {
+; CHECK-LABEL: zext_i64_to_i131:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    or %s1, 0, (0)1
+; CHECK-NEXT:    or %s2, 0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+  %2 = zext i64 %0 to i131
+  ret i131 %2
+}
