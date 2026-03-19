@@ -73,7 +73,6 @@ class ModuleFileKey {
   /// for other kinds of module files.
   std::string ImplicitModulePathSuffix;
 
-  friend class ASTReader;
   friend class ModuleFileName;
   friend llvm::DenseMapInfo<ModuleFileKey>;
 
