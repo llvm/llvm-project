@@ -13,8 +13,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=33554432
-
 // template<container-compatible-range<T> R>
 //   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23
 

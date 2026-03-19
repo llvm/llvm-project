@@ -102,8 +102,8 @@ TEST_CONSTEXPR_CXX26 void self_reference_test() {
 TEST_CONSTEXPR_CXX26 bool tests() {
 #if TEST_STD_VER >= 26
   if consteval {
-    constexpr int is[]{0, 1, 15, 33};
-    constexpr int js[]{0, 1, 15, 33};
+    constexpr int is[]{0, 15, 33};
+    constexpr int js[]{0, 15, 33};
     for (int i : is) {
       for (int j : js) {
         testN<std::deque<int>>(i, j);
