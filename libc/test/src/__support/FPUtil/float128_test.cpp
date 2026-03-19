@@ -4,17 +4,16 @@
 // These tests validate the basic integration of the float128 type with:
 //   - type traits (is_floating_point)
 //   - FPBits functionality
-//
+//   - Float128 casting
 // The goal is to ensure that both the type alias (float128) and the fallback
 // implementation behave consistently with other floating-point types.
 //===----------------------------------------------------------------------===//
-#include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/fpbits_str.h"
-#include "src/__support/big_int.h"
-#include "src/__support/integer_literals.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/macros/properties/types.h"
-#include "src/__support/sign.h" // Sign
 #include "test/UnitTest/Test.h"
+#include "src/__support/FPUtil/bfloat16.h"
+using LIBC_NAMESPACE::fputil::cast;
+
 // Test: float128 is recognized as a floating-point type.
 TEST(LlvmLibcTypeTraitsTest, Float128IsFloatingPoint) {
   using LIBC_NAMESPACE::cpp::is_floating_point_v;
@@ -56,4 +55,67 @@ TEST(LlvmLibcFPBitsTest, Float128SpecialValues) {
 
   auto nan = FPBits<float128>::quiet_nan();
   EXPECT_TRUE(nan.is_nan());
+}
+
+//Test float to float128 casting
+TEST(LlvmLibcCastTest, FloatToFloat128ToFloat) {
+  float x = 1.25f;
+  float128 q = cast<float128>(x);
+  float y = cast<float>(q);
+  EXPECT_TRUE(x == y);
+}
+
+//Test double -> float128 -> double casting
+TEST(LlvmLibcCastTest, DoubleToFloat128ToDouble) {
+  double x = 1.5;
+  float128 q = cast<float128>(x);
+  double y = cast<double>(q);
+  EXPECT_TRUE(x == y);
+}
+
+//Test bfloat16 -> float128 casting
+TEST(LlvmLibcCastTest, bfloat16ToFloat128Tobfloat16) {
+  bfloat16 x = cast<bfloat16>(0.1);
+  float128 q = cast<float128>(x);
+  bfloat16 y = cast<bfloat16>(q);
+  EXPECT_TRUE(x == y);
+}
+
+TEST(LlvmLibcCastTest, RoundingBehavior) {
+  double x = 0.1;
+  float128 q = cast<float128>(x);
+  double y = cast<double>(q);
+  EXPECT_TRUE(x == y);
+}
+
+TEST(LlvmLibcCastTest, ZeroAndNegativeZero) {
+  using LIBC_NAMESPACE::fputil::cast;
+  double pos_zero = 0.0;
+  double neg_zero = -0.0;
+
+  float128 q1 = cast<float128>(pos_zero);
+  float128 q2 = cast<float128>(neg_zero);
+
+  double y1 = cast<double>(q1);
+  double y2 = cast<double>(q2);
+
+  EXPECT_TRUE(y1 == 0.0);
+  EXPECT_TRUE(y2 == 0.0);
+  EXPECT_TRUE(__builtin_signbit(y2) != 0);
+}
+
+TEST(LlvmLibcCastTest, SpecialValues) {
+  using LIBC_NAMESPACE::fputil::cast;
+
+  double inf = __builtin_inf();
+  double nan = __builtin_nan("");
+
+  float128 q_inf = cast<float128>(inf);
+  float128 q_nan = cast<float128>(nan);
+
+  double y_inf = cast<double>(q_inf);
+  double y_nan = cast<double>(q_nan);
+
+  EXPECT_TRUE(__builtin_isinf(y_inf) != 0);
+  EXPECT_TRUE(__builtin_isnan(y_nan) != 0);
 }

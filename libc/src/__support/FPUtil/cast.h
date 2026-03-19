@@ -35,7 +35,11 @@ cast(InType x) {
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
                   || cpp::is_same_v<OutType, float16> ||
                   cpp::is_same_v<InType, float16>
-#endif
+#endif   
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+                  || cpp::is_same_v<OutType, float128> ||
+                  cpp::is_same_v<InType, float128>
+#endif     
     ) {
       using InFPBits = FPBits<InType>;
       using InStorageType = typename InFPBits::StorageType;
