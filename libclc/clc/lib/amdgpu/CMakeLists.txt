@@ -5,6 +5,7 @@ libclc_configure_source_list(CLC_AMDGPU_SOURCES
   math/clc_exp2.cl
   math/clc_exp2_fast.cl
   math/clc_exp10.cl
+  math/clc_fmod.cl
   math/clc_frexp.cl
   math/clc_half_exp.cl
   math/clc_half_exp2.cl
