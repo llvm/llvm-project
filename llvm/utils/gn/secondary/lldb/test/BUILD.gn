@@ -62,10 +62,12 @@ write_lit_cfg("lit_api_site_cfg") {
         rebase_path("$root_build_dir/include/c++/v1"),
     "LIBCXX_GENERATED_INCLUDE_TARGET_DIR=",
     "LLDB_BUILD_INTEL_PT=0",
+    "LLDB_ENABLE_MTE=0",
     "LLDB_TEST_COMMON_ARGS=",
     "LLDB_TEST_USER_ARGS=",
     "LLDB_ENABLE_PYTHON=0",
     "LLDB_HAS_LIBCXX=False",  # FIXME: support this (?)
+    "LLDB_LAUNCHER=",  # FIXME: set on mac when needed
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_PYTHON_API_TEST_EXECUTABLE=$python_path",
     "LLDB_TEST_ARCH=$current_cpu",
@@ -122,9 +124,11 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLDB_BUILD_LLDBRPC=0",  # FIXME: add lldb-rpc-gen target, enable
     "LLDB_ENABLE_LUA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_LZMA=0",  # FIXME: gn arg, use in Config.h
+    "LLDB_ENABLE_MTE=0",
     "LLDB_ENABLE_PYTHON=0",  # FIXME: gn arg, use in Config.h
     "LLDB_HAS_LIBCXX=False",  # FIXME: support this (?)
     "LLDB_IS_64_BITS=1",
+    "LLDB_LAUNCHER=",  # FIXME: set on mac when needed
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLDB_TEST_BUILD_DIRECTORY=" + rebase_path("$target_gen_dir/test_build"),

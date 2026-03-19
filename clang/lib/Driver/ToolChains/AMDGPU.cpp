@@ -632,6 +632,8 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString("-plugin-opt=-mattr=" + llvm::join(Features, ",")));
   }
 
+  getToolChain().addProfileRTLibs(Args, CmdArgs);
+
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
   if (Args.hasArg(options::OPT_startfiles)) {
@@ -1035,7 +1037,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   };
   auto AddSanBCLibs = [&]() {
     if (Pref.GPUSan)
-      AddBCLib(getAsanRTLPath());
+      AddBCLib(getAsanRTLPath(), false);
   };
 
   AddSanBCLibs();

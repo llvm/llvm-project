@@ -15,7 +15,7 @@
 #include "AMDGPUISelLowering.h"
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -1518,7 +1518,7 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
-SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
+SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                                  SDValue Op,
                                                  SelectionDAG &DAG) const {
 
@@ -1529,7 +1529,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   if (!MFI->isModuleEntryFunction()) {
     auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
     if (std::optional<uint32_t> Address =
-            AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+            AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV)) {
       if (IsNamedBarrier) {
         unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
@@ -3902,12 +3902,15 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
       (SrcVT == MVT::f32 || SrcVT == MVT::f64))
     return Op;
 
-  const SDValue Int32VT = DAG.getValueType(MVT::i32);
+  if (DstVT == MVT::i16 && SatWidth == DstWidth && SrcVT == MVT::f16)
+    return Op;
+
+  const SDValue Int32VTOp = DAG.getValueType(MVT::i32);
 
   // Perform all saturation at i32 and truncate
-  if (SatWidth < DstWidth) {
+  if (SatWidth < DstWidth && SatWidth <= 32) {
     const uint64_t Int32Width = 32;
-    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, Int32VT);
+    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, Int32VTOp);
     SDValue Int32SatVal;
 
     if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
@@ -3924,15 +3927,8 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
       Int32SatVal = DAG.getNode(ISD::UMIN, DL, MVT::i32, FpToInt32, MinConst);
     }
 
-    if (DstWidth == Int32Width)
-      return Int32SatVal;
-    if (DstWidth < Int32Width)
-      return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Int32SatVal);
-
-    // DstWidth > Int32Width
-    const unsigned Ext =
-        OpOpcode == ISD::FP_TO_SINT_SAT ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-    return DAG.getNode(Ext, DL, DstVT, FpToInt32);
+    return DAG.getExtOrTrunc(OpOpcode == ISD::FP_TO_SINT_SAT, Int32SatVal, DL,
+                             DstVT);
   }
 
   // SatWidth == DstWidth
@@ -3941,7 +3937,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   if (DstVT == MVT::i64 &&
       (SrcVT == MVT::f16 || SrcVT == MVT::bf16 ||
        (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP))) {
-    return DAG.getNode(OpOpcode, DL, DstVT, Src, Int32VT);
+    return DAG.getNode(OpOpcode, DL, DstVT, Src, Int32VTOp);
   }
 
   // Promote f16/bf16 src to f32
@@ -5894,7 +5890,8 @@ uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     const MachineFunction &MF, const ImplicitParameter Param) const {
-  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+  const AMDGPUMachineFunctionInfo *MFI =
+      MF.getInfo<AMDGPUMachineFunctionInfo>();
   return getImplicitParameterOffset(MFI->getExplicitKernArgSize(), Param);
 }
 

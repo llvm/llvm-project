@@ -1,3 +1,4 @@
+# UNSUPPORTED: system-windows
 # RUN: %python %S/../../../../examples/python/formatter_bytecode.py --test
 
 # RUN: %clang_host -std=c++17 -g %S/Inputs/FormatterBytecode/MyOptional.cpp -o %t.exe
