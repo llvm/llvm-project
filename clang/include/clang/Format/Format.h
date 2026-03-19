@@ -1295,6 +1295,10 @@ struct FormatStyle {
   /// \version 12
   std::vector<std::string> AttributeMacros;
 
+  /// This option is **deprecated**. See ``BinPack`` of ``PackArguments``.
+  /// \version 3.7
+  // bool BinPackArguments;
+
   /// If ``BinPackLongBracedList`` is ``true`` it overrides
   /// ``BinPackArguments`` if there are 20 or more items in a braced
   /// initializer list.
@@ -1310,6 +1314,10 @@ struct FormatStyle {
   /// \endcode
   /// \version 21
   bool BinPackLongBracedList;
+
+  /// This option is **deprecated**. See ``BinPack`` of ``PackParameters``.
+  /// \version 3.7
+  // BinPackParametersStyle BinPackParameters;
 
   /// Styles for adding spacing around ``:`` in bitfield definitions.
   enum BitFieldColonSpacingStyle : int8_t {

@@ -1158,6 +1158,8 @@ template <> struct MappingTraits<FormatStyle> {
       IO.mapOptional("AlwaysBreakAfterReturnType", Style.BreakAfterReturnType);
       IO.mapOptional("AlwaysBreakTemplateDeclarations",
                      Style.BreakTemplateDeclarations);
+      IO.mapOptional("BinPackArguments", Style.PackArguments.BinPack);
+      IO.mapOptional("BinPackParameters", Style.PackParameters.BinPack);
       IO.mapOptional("BreakBeforeInheritanceComma",
                      BreakBeforeInheritanceComma);
       IO.mapOptional("BreakConstructorInitializersBeforeComma",
@@ -1240,9 +1242,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AlwaysBreakBeforeMultilineStrings",
                    Style.AlwaysBreakBeforeMultilineStrings);
     IO.mapOptional("AttributeMacros", Style.AttributeMacros);
-    IO.mapOptional("BinPackArguments", Style.PackArguments.BinPack);
     IO.mapOptional("BinPackLongBracedList", Style.BinPackLongBracedList);
-    IO.mapOptional("BinPackParameters", Style.PackParameters.BinPack);
     IO.mapOptional("BitFieldColonSpacing", Style.BitFieldColonSpacing);
     IO.mapOptional("BracedInitializerIndentWidth",
                    Style.BracedInitializerIndentWidth);
