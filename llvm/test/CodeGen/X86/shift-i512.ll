@@ -1307,34 +1307,46 @@ define i512 @lshr_i512_1(i512 %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK-NEXT:    shrdq $1, %rdx, %rsi
-; CHECK-NEXT:    movq %rcx, %rbx
-; CHECK-NEXT:    shlq $63, %rbx
+; CHECK-NEXT:    shrq %rsi
+; CHECK-NEXT:    movq %rdx, %rdi
+; CHECK-NEXT:    shlq $63, %rdi
+; CHECK-NEXT:    orq %rsi, %rdi
+; CHECK-NEXT:    movq %rcx, %rsi
+; CHECK-NEXT:    shlq $63, %rsi
 ; CHECK-NEXT:    shrq %rdx
-; CHECK-NEXT:    orq %rbx, %rdx
-; CHECK-NEXT:    shrdq $1, %r8, %rcx
-; CHECK-NEXT:    movq %r9, %rbx
-; CHECK-NEXT:    shlq $63, %rbx
+; CHECK-NEXT:    orq %rsi, %rdx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movq %r8, %rsi
+; CHECK-NEXT:    shlq $63, %rsi
+; CHECK-NEXT:    orq %rcx, %rsi
+; CHECK-NEXT:    movq %r9, %rcx
+; CHECK-NEXT:    shlq $63, %rcx
 ; CHECK-NEXT:    shrq %r8
-; CHECK-NEXT:    orq %rbx, %r8
-; CHECK-NEXT:    shrdq $1, %r10, %r9
-; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    shlq $63, %rbx
+; CHECK-NEXT:    orq %rcx, %r8
+; CHECK-NEXT:    shrq %r9
+; CHECK-NEXT:    movq %r10, %rcx
+; CHECK-NEXT:    shlq $63, %rcx
+; CHECK-NEXT:    orq %r9, %rcx
+; CHECK-NEXT:    movq %rbx, %r9
+; CHECK-NEXT:    shlq $63, %r9
 ; CHECK-NEXT:    shrq %r10
-; CHECK-NEXT:    orq %rbx, %r10
-; CHECK-NEXT:    shrdq $1, %r11, %rdi
+; CHECK-NEXT:    orq %r9, %r10
+; CHECK-NEXT:    shrq %rbx
+; CHECK-NEXT:    movq %r11, %r9
+; CHECK-NEXT:    shlq $63, %r9
+; CHECK-NEXT:    orq %rbx, %r9
 ; CHECK-NEXT:    shrq %r11
 ; CHECK-NEXT:    movq %r11, 56(%rax)
-; CHECK-NEXT:    movq %rdi, 48(%rax)
+; CHECK-NEXT:    movq %r9, 48(%rax)
 ; CHECK-NEXT:    movq %r10, 40(%rax)
-; CHECK-NEXT:    movq %r9, 32(%rax)
+; CHECK-NEXT:    movq %rcx, 32(%rax)
 ; CHECK-NEXT:    movq %r8, 24(%rax)
-; CHECK-NEXT:    movq %rcx, 16(%rax)
+; CHECK-NEXT:    movq %rsi, 16(%rax)
 ; CHECK-NEXT:    movq %rdx, 8(%rax)
-; CHECK-NEXT:    movq %rsi, (%rax)
+; CHECK-NEXT:    movq %rdi, (%rax)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %r = lshr i512 %a0, 1
@@ -1346,34 +1358,46 @@ define i512 @ashr_i512_1(i512 %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK-NEXT:    shrdq $1, %rdx, %rsi
-; CHECK-NEXT:    movq %rcx, %rbx
-; CHECK-NEXT:    shlq $63, %rbx
+; CHECK-NEXT:    shrq %rsi
+; CHECK-NEXT:    movq %rdx, %rdi
+; CHECK-NEXT:    shlq $63, %rdi
+; CHECK-NEXT:    orq %rsi, %rdi
+; CHECK-NEXT:    movq %rcx, %rsi
+; CHECK-NEXT:    shlq $63, %rsi
 ; CHECK-NEXT:    shrq %rdx
-; CHECK-NEXT:    orq %rbx, %rdx
-; CHECK-NEXT:    shrdq $1, %r8, %rcx
-; CHECK-NEXT:    movq %r9, %rbx
-; CHECK-NEXT:    shlq $63, %rbx
+; CHECK-NEXT:    orq %rsi, %rdx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movq %r8, %rsi
+; CHECK-NEXT:    shlq $63, %rsi
+; CHECK-NEXT:    orq %rcx, %rsi
+; CHECK-NEXT:    movq %r9, %rcx
+; CHECK-NEXT:    shlq $63, %rcx
 ; CHECK-NEXT:    shrq %r8
-; CHECK-NEXT:    orq %rbx, %r8
-; CHECK-NEXT:    shrdq $1, %r10, %r9
-; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    shlq $63, %rbx
+; CHECK-NEXT:    orq %rcx, %r8
+; CHECK-NEXT:    shrq %r9
+; CHECK-NEXT:    movq %r10, %rcx
+; CHECK-NEXT:    shlq $63, %rcx
+; CHECK-NEXT:    orq %r9, %rcx
+; CHECK-NEXT:    movq %rbx, %r9
+; CHECK-NEXT:    shlq $63, %r9
 ; CHECK-NEXT:    shrq %r10
-; CHECK-NEXT:    orq %rbx, %r10
-; CHECK-NEXT:    shrdq $1, %r11, %rdi
+; CHECK-NEXT:    orq %r9, %r10
+; CHECK-NEXT:    shrq %rbx
+; CHECK-NEXT:    movq %r11, %r9
+; CHECK-NEXT:    shlq $63, %r9
+; CHECK-NEXT:    orq %rbx, %r9
 ; CHECK-NEXT:    sarq %r11
 ; CHECK-NEXT:    movq %r11, 56(%rax)
-; CHECK-NEXT:    movq %rdi, 48(%rax)
+; CHECK-NEXT:    movq %r9, 48(%rax)
 ; CHECK-NEXT:    movq %r10, 40(%rax)
-; CHECK-NEXT:    movq %r9, 32(%rax)
+; CHECK-NEXT:    movq %rcx, 32(%rax)
 ; CHECK-NEXT:    movq %r8, 24(%rax)
-; CHECK-NEXT:    movq %rcx, 16(%rax)
+; CHECK-NEXT:    movq %rsi, 16(%rax)
 ; CHECK-NEXT:    movq %rdx, 8(%rax)
-; CHECK-NEXT:    movq %rsi, (%rax)
+; CHECK-NEXT:    movq %rdi, (%rax)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %r = ashr i512 %a0, 1
@@ -1383,20 +1407,26 @@ define i512 @ashr_i512_1(i512 %a0) nounwind {
 define i512 @shl_i512_200(i512 %a0) nounwind {
 ; SSE-LABEL: shl_i512_200:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movq %rsi, %r10
-; SSE-NEXT:    shrdq $56, %rdx, %r10
 ; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movq %rsi, %rdi
+; SSE-NEXT:    shrq $56, %rdi
+; SSE-NEXT:    movq %rdx, %r10
+; SSE-NEXT:    shlq $8, %r10
+; SSE-NEXT:    orq %rdi, %r10
 ; SSE-NEXT:    movq %rcx, %rdi
 ; SSE-NEXT:    shlq $8, %rdi
 ; SSE-NEXT:    shrq $56, %rdx
 ; SSE-NEXT:    orq %rdi, %rdx
-; SSE-NEXT:    shrdq $56, %r8, %rcx
+; SSE-NEXT:    shrq $56, %rcx
+; SSE-NEXT:    movq %r8, %rdi
+; SSE-NEXT:    shlq $8, %rdi
+; SSE-NEXT:    orq %rcx, %rdi
 ; SSE-NEXT:    shlq $8, %r9
 ; SSE-NEXT:    shrq $56, %r8
 ; SSE-NEXT:    orq %r9, %r8
 ; SSE-NEXT:    shlq $8, %rsi
 ; SSE-NEXT:    movq %r8, 56(%rax)
-; SSE-NEXT:    movq %rcx, 48(%rax)
+; SSE-NEXT:    movq %rdi, 48(%rax)
 ; SSE-NEXT:    movq %rdx, 40(%rax)
 ; SSE-NEXT:    movq %r10, 32(%rax)
 ; SSE-NEXT:    movq %rsi, 24(%rax)
@@ -1409,20 +1439,26 @@ define i512 @shl_i512_200(i512 %a0) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    movq %rsi, %rdi
-; AVX2-NEXT:    shrdq $56, %rdx, %rdi
-; AVX2-NEXT:    movq %rcx, %r10
+; AVX2-NEXT:    shrq $56, %rdi
+; AVX2-NEXT:    movq %rdx, %r10
 ; AVX2-NEXT:    shlq $8, %r10
+; AVX2-NEXT:    orq %rdi, %r10
+; AVX2-NEXT:    movq %rcx, %rdi
+; AVX2-NEXT:    shlq $8, %rdi
 ; AVX2-NEXT:    shrq $56, %rdx
-; AVX2-NEXT:    orq %r10, %rdx
-; AVX2-NEXT:    shrdq $56, %r8, %rcx
+; AVX2-NEXT:    orq %rdi, %rdx
+; AVX2-NEXT:    shrq $56, %rcx
+; AVX2-NEXT:    movq %r8, %rdi
+; AVX2-NEXT:    shlq $8, %rdi
+; AVX2-NEXT:    orq %rcx, %rdi
 ; AVX2-NEXT:    shlq $8, %r9
 ; AVX2-NEXT:    shrq $56, %r8
 ; AVX2-NEXT:    orq %r9, %r8
 ; AVX2-NEXT:    shlq $8, %rsi
 ; AVX2-NEXT:    movq %r8, 56(%rax)
-; AVX2-NEXT:    movq %rcx, 48(%rax)
+; AVX2-NEXT:    movq %rdi, 48(%rax)
 ; AVX2-NEXT:    movq %rdx, 40(%rax)
-; AVX2-NEXT:    movq %rdi, 32(%rax)
+; AVX2-NEXT:    movq %r10, 32(%rax)
 ; AVX2-NEXT:    movq %rsi, 24(%rax)
 ; AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovaps %xmm0, (%rax)
@@ -1433,20 +1469,26 @@ define i512 @shl_i512_200(i512 %a0) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq %rdi, %rax
 ; AVX512-NEXT:    movq %rsi, %rdi
-; AVX512-NEXT:    shrdq $56, %rdx, %rdi
-; AVX512-NEXT:    movq %rcx, %r10
+; AVX512-NEXT:    shrq $56, %rdi
+; AVX512-NEXT:    movq %rdx, %r10
 ; AVX512-NEXT:    shlq $8, %r10
+; AVX512-NEXT:    orq %rdi, %r10
+; AVX512-NEXT:    movq %rcx, %rdi
+; AVX512-NEXT:    shlq $8, %rdi
 ; AVX512-NEXT:    shrq $56, %rdx
-; AVX512-NEXT:    orq %r10, %rdx
-; AVX512-NEXT:    shrdq $56, %r8, %rcx
+; AVX512-NEXT:    orq %rdi, %rdx
+; AVX512-NEXT:    shrq $56, %rcx
+; AVX512-NEXT:    movq %r8, %rdi
+; AVX512-NEXT:    shlq $8, %rdi
+; AVX512-NEXT:    orq %rcx, %rdi
 ; AVX512-NEXT:    shlq $8, %r9
 ; AVX512-NEXT:    shrq $56, %r8
 ; AVX512-NEXT:    orq %r9, %r8
 ; AVX512-NEXT:    shlq $8, %rsi
 ; AVX512-NEXT:    movq %r8, 56(%rax)
-; AVX512-NEXT:    movq %rcx, 48(%rax)
+; AVX512-NEXT:    movq %rdi, 48(%rax)
 ; AVX512-NEXT:    movq %rdx, 40(%rax)
-; AVX512-NEXT:    movq %rdi, 32(%rax)
+; AVX512-NEXT:    movq %r10, 32(%rax)
 ; AVX512-NEXT:    movq %rsi, 24(%rax)
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovaps %xmm0, (%rax)

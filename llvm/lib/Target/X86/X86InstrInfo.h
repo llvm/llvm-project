@@ -30,8 +30,8 @@ class X86Subtarget;
 enum X86MachineCombinerPattern : unsigned {
   // X86 VNNI
   DPWSSD = MachineCombinerPattern::TARGET_PATTERN_START,
-  // Unfold SHLD
-  USHLD,
+  // Unfold SHD
+  USHD,
 };
 
 namespace X86 {

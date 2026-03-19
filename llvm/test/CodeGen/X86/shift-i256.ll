@@ -1511,17 +1511,23 @@ define i256 @lshr_i256_1(i256 %a0) nounwind {
 ; CHECK-LABEL: lshr_i256_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrdq $1, %rdx, %rsi
-; CHECK-NEXT:    movq %rcx, %rdi
+; CHECK-NEXT:    shrq %rsi
+; CHECK-NEXT:    movq %rdx, %rdi
 ; CHECK-NEXT:    shlq $63, %rdi
+; CHECK-NEXT:    orq %rsi, %rdi
+; CHECK-NEXT:    movq %rcx, %rsi
+; CHECK-NEXT:    shlq $63, %rsi
 ; CHECK-NEXT:    shrq %rdx
-; CHECK-NEXT:    orq %rdi, %rdx
-; CHECK-NEXT:    shrdq $1, %r8, %rcx
+; CHECK-NEXT:    orq %rsi, %rdx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movq %r8, %rsi
+; CHECK-NEXT:    shlq $63, %rsi
+; CHECK-NEXT:    orq %rcx, %rsi
 ; CHECK-NEXT:    shrq %r8
 ; CHECK-NEXT:    movq %r8, 24(%rax)
-; CHECK-NEXT:    movq %rcx, 16(%rax)
+; CHECK-NEXT:    movq %rsi, 16(%rax)
 ; CHECK-NEXT:    movq %rdx, 8(%rax)
-; CHECK-NEXT:    movq %rsi, (%rax)
+; CHECK-NEXT:    movq %rdi, (%rax)
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: lshr_i256_1:
@@ -1578,17 +1584,23 @@ define i256 @ashr_i256_1(i256 %a0) nounwind {
 ; CHECK-LABEL: ashr_i256_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrdq $1, %rdx, %rsi
-; CHECK-NEXT:    movq %rcx, %rdi
+; CHECK-NEXT:    shrq %rsi
+; CHECK-NEXT:    movq %rdx, %rdi
 ; CHECK-NEXT:    shlq $63, %rdi
+; CHECK-NEXT:    orq %rsi, %rdi
+; CHECK-NEXT:    movq %rcx, %rsi
+; CHECK-NEXT:    shlq $63, %rsi
 ; CHECK-NEXT:    shrq %rdx
-; CHECK-NEXT:    orq %rdi, %rdx
-; CHECK-NEXT:    shrdq $1, %r8, %rcx
+; CHECK-NEXT:    orq %rsi, %rdx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movq %r8, %rsi
+; CHECK-NEXT:    shlq $63, %rsi
+; CHECK-NEXT:    orq %rcx, %rsi
 ; CHECK-NEXT:    sarq %r8
 ; CHECK-NEXT:    movq %r8, 24(%rax)
-; CHECK-NEXT:    movq %rcx, 16(%rax)
+; CHECK-NEXT:    movq %rsi, 16(%rax)
 ; CHECK-NEXT:    movq %rdx, 8(%rax)
-; CHECK-NEXT:    movq %rsi, (%rax)
+; CHECK-NEXT:    movq %rdi, (%rax)
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: ashr_i256_1:

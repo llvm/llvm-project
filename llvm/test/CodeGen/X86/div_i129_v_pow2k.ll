@@ -19,8 +19,10 @@ define i129 @v_sdiv_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-NEXT:    andl $1, %ecx
 ; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    negq %rdx
-; X64-NEXT:    shrdq $33, %rsi, %rax
+; X64-NEXT:    shrq $33, %rax
 ; X64-NEXT:    shldq $31, %rsi, %rdx
+; X64-NEXT:    shlq $31, %rsi
+; X64-NEXT:    orq %rsi, %rax
 ; X64-NEXT:    retq
 ;
 ; X64-O0-LABEL: v_sdiv_i129_v_pow2k:
@@ -146,12 +148,14 @@ define i129 @v_sdiv_exact_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-LABEL: v_sdiv_exact_i129_v_pow2k:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    andl $1, %ecx
 ; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    negq %rdx
-; X64-NEXT:    shrdq $33, %rsi, %rax
+; X64-NEXT:    shrq $33, %rdi
 ; X64-NEXT:    shldq $31, %rsi, %rdx
+; X64-NEXT:    shlq $31, %rax
+; X64-NEXT:    orq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X64-O0-LABEL: v_sdiv_exact_i129_v_pow2k:
@@ -241,10 +245,12 @@ define i129 @v_sdiv_exact_i129_v_pow2k(i129 %lhs) nounwind {
 define i129 @v_udiv_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-LABEL: v_udiv_i129_v_pow2k:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    shrdq $33, %rsi, %rax
+; X64-NEXT:    shrq $33, %rdi
 ; X64-NEXT:    shldq $31, %rsi, %rdx
+; X64-NEXT:    shlq $31, %rax
+; X64-NEXT:    orq %rdi, %rax
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    retq
 ;
@@ -312,10 +318,12 @@ define i129 @v_udiv_i129_v_pow2k(i129 %lhs) nounwind {
 define i129 @v_udiv_exact_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-LABEL: v_udiv_exact_i129_v_pow2k:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    shrdq $33, %rsi, %rax
+; X64-NEXT:    shrq $33, %rdi
 ; X64-NEXT:    shldq $31, %rsi, %rdx
+; X64-NEXT:    shlq $31, %rax
+; X64-NEXT:    orq %rdi, %rax
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    retq
 ;

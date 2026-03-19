@@ -192,14 +192,19 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    adcq $0, %rdx
 ; CHECK-NEXT:    adcq $0, %rcx
 ; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    shrdq $2, %rsi, %rdx
+; CHECK-NEXT:    shrq $2, %rdx
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shlq $62, %rax
+; CHECK-NEXT:    orq %rax, %rdx
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    btq $55, %rdi
 ; CHECK-NEXT:    jae .LBB0_9
 ; CHECK-NEXT:    jmp .LBB0_7
 ; CHECK-NEXT:  .LBB0_7: # %itofp-if-then20
-; CHECK-NEXT:    shrdq $3, %rsi, %rdi
+; CHECK-NEXT:    shrq $3, %rdi
+; CHECK-NEXT:    shlq $61, %rsi
+; CHECK-NEXT:    orq %rsi, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    movq %rdi, %rdx

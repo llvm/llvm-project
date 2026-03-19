@@ -342,17 +342,19 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    testb %bl, %al
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %rbp # 8-byte Folded Reload
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Folded Reload
-; X64-NEXT:    movq %rbp, %rcx
-; X64-NEXT:    sarq $63, %rcx
-; X64-NEXT:    andq %rbp, %rcx
+; X64-NEXT:    movq %rbp, %rax
+; X64-NEXT:    sarq $63, %rax
+; X64-NEXT:    andq %rbp, %rax
 ; X64-NEXT:    testq %rbp, %rbp
-; X64-NEXT:    movq $-1, %rdx
-; X64-NEXT:    cmovgq %rdx, %r13
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpq $-1, %rcx
-; X64-NEXT:    cmovlq %rdx, %rcx
-; X64-NEXT:    cmovgeq %r13, %rax
-; X64-NEXT:    shrdq $1, %rcx, %rax
+; X64-NEXT:    movq $-1, %rcx
+; X64-NEXT:    cmovgq %rcx, %r13
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    cmpq $-1, %rax
+; X64-NEXT:    cmovlq %rcx, %rax
+; X64-NEXT:    cmovgeq %r13, %rdx
+; X64-NEXT:    shrq %rdx
+; X64-NEXT:    shlq $63, %rax
+; X64-NEXT:    orq %rdx, %rax
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r12
