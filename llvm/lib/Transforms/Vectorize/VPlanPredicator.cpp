@@ -137,7 +137,7 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
 }
 
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
-  // Insert after the block's phis, they will be replaced by blends later.
+  // Insert after the block's phis, which will be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
 
   // Reuse the mask of the immediate dominator if the VPBB post-dominates it.
@@ -167,15 +167,15 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
     assert(FrontierBB->getParent() == VPBB->getParent() &&
            "IDom logic above should have prevented going outside loop region "
            "here!");
-    // Switch can have multiple edges to the same successor, don't need to "or"
-    // it more than once.
+    // A switch can have multiple edges to the same successor, avoid adding such
+    // edges more than once.
     SmallPtrSet<VPBlockBase *, 4> Visited;
 
     for (auto *Succ : FrontierBB->successors()) {
       if (!VPPDT.dominates(VPBB, Succ))
-        // That edge doesn't **directly** affect us. If VPBB is reachable
-        // through this edge, the condition it "carries" would be handled
-        // through another block in the post-dom-frontier.
+        // This edge doesn't **directly** contribute to the VPBB's mask. If VPBB
+        // is reachable through this edge, the condition it "carries" will be
+        // handled through another block in the post-dom-frontier.
         continue;
 
       if (!Visited.insert(Succ).second)
