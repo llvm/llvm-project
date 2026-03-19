@@ -16,9 +16,10 @@ extern "C" void body(...);
 // PRINT-LABEL: void foo(
 // DUMP-LABEL:  FunctionDecl {{.*}} foo
 void foo(int n) {
-  // PRINT:     #pragma omp split
+  // PRINT:     #pragma omp split counts(2, 3)
   // DUMP:      OMPSplitDirective
-  #pragma omp split
+  // DUMP: OMPCountsClause
+  #pragma omp split counts(2, 3)
   // PRINT: for (int i = 0; i < n; ++i)
   // DUMP:      ForStmt
   for (int i = 0; i < n; ++i)
