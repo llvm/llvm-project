@@ -1272,6 +1272,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
     return isAnyPtr(Ty, 128) ? Ty : LLT();
   case SgprB64:
   case VgprB64:
+  case SgprB64_ReadFirstLane:
   case UniInVgprB64:
     if (Ty == LLT::scalar(64) || Ty == LLT::fixed_vector(2, 32) ||
         Ty == LLT::fixed_vector(4, 16) || isAnyPtr(Ty, 64))
@@ -1725,14 +1726,15 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       break;
     }
     case SgprB32_M0:
-    case SgprB32_ReadFirstLane: {
+    case SgprB32_ReadFirstLane:
+    case SgprB64_ReadFirstLane: {
       assert(Ty == getBTyFromID(MethodIDs[i], Ty));
       if (RB == SgprRB)
         break;
       assert(RB == VgprRB);
-      Register NewSGPR32 = MRI.createVirtualRegister({SgprRB, Ty});
-      buildReadFirstLane(B, NewSGPR32, Op.getReg(), RBI);
-      Op.setReg(NewSGPR32);
+      Register NewSGPR = MRI.createVirtualRegister({SgprRB, Ty});
+      buildReadFirstLane(B, NewSGPR, Op.getReg(), RBI);
+      Op.setReg(NewSGPR);
       break;
     }
     // sgpr and vgpr scalars with extend
