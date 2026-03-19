@@ -641,6 +641,8 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
     return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
+  if (ST.hasFeature(AMDGPU::FeatureGFX11_7Insts))
+    return SIEncodingFamily::GFX1170;
   if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
     return SIEncodingFamily::GFX11;
   llvm_unreachable("Subtarget generation does not support VOPD!");
@@ -1493,6 +1495,14 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
                         unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
+  // In dynamic VGPR mode, (static) occupancy does not depend on VGPR usage,
+  // so getMaxNumVGPRs does not depend on WavesPerEU, and thus we need to return
+  // zero because there is no nonzero VGPR usage N where going below N
+  // achieves higher (static) occupancy.
+  bool DynamicVGPREnabled = (DynamicVGPRBlockSize != 0);
+  if (DynamicVGPREnabled)
+    return 0;
+
   unsigned MaxWavesPerEU = getMaxWavesPerEU(STI);
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
@@ -1520,9 +1530,13 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
                         unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
+  // In dynamic VGPR mode, WavesPerEU does not imply a VGPR limit.
+  bool DynamicVGPREnabled = (DynamicVGPRBlockSize != 0);
   unsigned MaxNumVGPRs =
-      alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
-                getVGPRAllocGranule(STI, DynamicVGPRBlockSize));
+      DynamicVGPREnabled
+          ? getTotalNumVGPRs(STI)
+          : alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
+                      getVGPRAllocGranule(STI, DynamicVGPRBlockSize));
   unsigned AddressableNumVGPRs =
       getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);

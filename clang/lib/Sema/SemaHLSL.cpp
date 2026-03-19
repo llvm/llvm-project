@@ -342,19 +342,27 @@ static bool isZeroSizedArray(const ConstantArrayType *CAT) {
   return CAT != nullptr;
 }
 
-static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
-  const Type *Ty = VD->getType().getTypePtr();
+static bool isResourceRecordTypeOrArrayOf(QualType Ty) {
   return Ty->isHLSLResourceRecord() || Ty->isHLSLResourceRecordArray();
+}
+
+static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
+  return isResourceRecordTypeOrArrayOf(VD->getType());
+}
+
+static const HLSLAttributedResourceType *
+getResourceArrayHandleType(QualType QT) {
+  assert(QT->isHLSLResourceRecordArray() &&
+         "expected array of resource records");
+  const Type *Ty = QT->getUnqualifiedDesugaredType();
+  while (const ArrayType *AT = dyn_cast<ArrayType>(Ty))
+    Ty = AT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
 }
 
 static const HLSLAttributedResourceType *
 getResourceArrayHandleType(VarDecl *VD) {
-  assert(VD->getType()->isHLSLResourceRecordArray() &&
-         "expected array of resource records");
-  const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
-  while (const ArrayType *AT = dyn_cast<ArrayType>(Ty))
-    Ty = AT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
-  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
+  return getResourceArrayHandleType(VD->getType());
 }
 
 // Returns true if the type is a leaf element type that is not valid to be
@@ -821,6 +829,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return (ST == llvm::Triple::Vertex && !IsInput) ||
            (ST == llvm::Triple::Pixel && IsInput);
   }
+  if (SemanticName == "SV_VERTEXID")
+    return true;
 
   return false;
 }
@@ -1040,6 +1050,11 @@ void SemaHLSL::checkSemanticAnnotation(
     diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
                                   {{llvm::Triple::Vertex, IOType::InOut},
                                    {llvm::Triple::Pixel, IOType::In}});
+    return;
+  }
+  if (SemanticName == "SV_VERTEXID") {
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                  {{llvm::Triple::Vertex, IOType::In}});
     return;
   }
 
@@ -1922,6 +1937,14 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
         (VT && VT->getNumElements() > 4))
       Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
           << AL << "float/float1/float2/float3/float4";
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_VERTEXID") {
+    uint64_t SizeInBits = SemaRef.Context.getTypeSize(ValueType);
+    if (!ValueType->isUnsignedIntegerType() || SizeInBits != 32)
+      Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type) << AL << "uint";
     D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
     return;
   }
@@ -3492,6 +3515,50 @@ static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
 
   return false;
 }
+static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountRange(TheCall, 2, 3))
+    return true;
+
+  // Check the texture handle.
+  if (CheckResourceHandle(&S, TheCall, 0,
+                          [](const HLSLAttributedResourceType *ResType) {
+                            return ResType->getAttrs().ResourceDimension ==
+                                   llvm::dxil::ResourceDimension::Unknown;
+                          }))
+    return true;
+
+  auto *ResourceTy =
+      TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+  // Check the location + lod (int3 for Texture2D).
+  unsigned ExpectedDim =
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  QualType CoordLODTy = TheCall->getArg(1)->getType();
+  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, ExpectedDim + 1,
+                              TheCall->getArg(1)->getBeginLoc()))
+    return true;
+
+  QualType EltTy = CoordLODTy;
+  if (const auto *VTy = EltTy->getAs<VectorType>())
+    EltTy = VTy->getElementType();
+  if (!EltTy->isIntegerType()) {
+    S.Diag(TheCall->getArg(1)->getBeginLoc(), diag::err_typecheck_expect_int)
+        << CoordLODTy;
+    return true;
+  }
+
+  // Check the offset operand.
+  if (TheCall->getNumArgs() > 2) {
+    if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
+                                S.Context.IntTy, ExpectedDim,
+                                TheCall->getArg(2)->getBeginLoc()))
+      return true;
+  }
+
+  TheCall->setType(ResourceTy->getContainedType());
+  return false;
+}
+
 static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   unsigned MinArgs, MaxArgs;
   if (Kind == SampleKind::Sample) {
@@ -3712,6 +3779,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_load_level:
+    return CheckLoadLevelBuiltin(SemaRef, TheCall);
   case Builtin::BI__builtin_hlsl_resource_sample:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Sample);
   case Builtin::BI__builtin_hlsl_resource_sample_bias:
@@ -3981,6 +4050,25 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_hlsl_transpose: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    Expr *Arg = TheCall->getArg(0);
+    QualType ArgTy = Arg->getType();
+
+    const auto *MatTy = ArgTy->getAs<ConstantMatrixType>();
+    if (!MatTy) {
+      SemaRef.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << 1 << /* matrix */ 3 << /* no int */ 0 << /* no fp */ 0 << ArgTy;
+      return true;
+    }
+
+    QualType RetTy = getASTContext().getConstantMatrixType(
+        MatTy->getElementType(), MatTy->getNumColumns(), MatTy->getNumRows());
+    TheCall->setType(RetTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
@@ -4045,6 +4133,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_xor:
   case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
@@ -4141,6 +4230,19 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
       return true;
     if (CheckWavePrefix(&SemaRef, TheCall))
+      return true;
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_quad_read_across_x: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+    if (CheckNotBoolScalarOrVector(&SemaRef, TheCall, 0))
       return true;
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();
@@ -4717,6 +4819,151 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
   Decl->setType(Type);
 }
 
+// Creates a global variable declaration for a resource field embedded in a
+// struct, assigns it a binding, initializes it, and associates it with the
+// struct declaration via an HLSLAssociatedResourceDeclAttr.
+static void createGlobalResourceDeclForStruct(Sema &S, VarDecl *ParentVD,
+                                              SourceLocation Loc,
+                                              IdentifierInfo *Id,
+                                              QualType ResTy) {
+  assert(isResourceRecordTypeOrArrayOf(ResTy) &&
+         "expected resource type or array of resources");
+
+  DeclContext *DC = ParentVD->getNonTransparentDeclContext();
+  assert(DC->isTranslationUnit() && "expected translation unit decl context");
+
+  ASTContext &AST = S.getASTContext();
+  VarDecl *ResDecl =
+      VarDecl::Create(AST, DC, Loc, Loc, Id, ResTy, nullptr, SC_None);
+
+  unsigned Range = 1;
+  const HLSLAttributedResourceType *ResHandleTy = nullptr;
+  if (const auto *AT = dyn_cast<ArrayType>(ResTy.getTypePtr())) {
+    const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+    Range = CAT ? CAT->getSize().getZExtValue() : 0;
+    ResHandleTy = getResourceArrayHandleType(ResTy);
+  } else {
+    ResHandleTy = HLSLAttributedResourceType::findHandleTypeOnResource(
+        ResTy.getTypePtr());
+  }
+  // FIXME: Explicit bindings will be handled in a follow-up change. For now
+  // just add an implicit binding attribute.
+  auto *Attr =
+      HLSLResourceBindingAttr::CreateImplicit(S.getASTContext(), "", "0", {});
+  Attr->setBinding(getRegisterType(ResHandleTy), std::nullopt, 0);
+  Attr->setImplicitBindingOrderID(S.HLSL().getNextImplicitBindingOrderID());
+  ResDecl->addAttr(Attr);
+  ResDecl->setImplicit();
+
+  if (Range == 1)
+    S.HLSL().initGlobalResourceDecl(ResDecl);
+  else
+    S.HLSL().initGlobalResourceArrayDecl(ResDecl);
+
+  ParentVD->addAttr(
+      HLSLAssociatedResourceDeclAttr::CreateImplicit(AST, ResDecl));
+  DC->addDecl(ResDecl);
+
+  DeclGroupRef DG(ResDecl);
+  S.Consumer.HandleTopLevelDecl(DG);
+}
+
+static void
+handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
+                                 const ConstantArrayType *CAT,
+                                 EmbeddedResourceNameBuilder &NameBuilder);
+
+// Scans base and all fields of a struct/class type to find all embedded
+// resources or resource arrays. Creates a global variable for each resource
+// found.
+static void
+handleStructWithResources(Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
+                          EmbeddedResourceNameBuilder &NameBuilder) {
+
+  // Scan the base classes.
+  assert(RD->getNumBases() <= 1 && "HLSL doesn't support multiple inheritance");
+  const auto *BasesIt = RD->bases_begin();
+  if (BasesIt != RD->bases_end()) {
+    QualType QT = BasesIt->getType();
+    if (QT->isHLSLIntangibleType()) {
+      CXXRecordDecl *BaseRD = QT->getAsCXXRecordDecl();
+      NameBuilder.pushBaseName(BaseRD->getName());
+      handleStructWithResources(S, ParentVD, BaseRD, NameBuilder);
+      NameBuilder.pop();
+    }
+  }
+  // Process this class fields.
+  for (const FieldDecl *FD : RD->fields()) {
+    QualType FDTy = FD->getType().getCanonicalType();
+    if (!FDTy->isHLSLIntangibleType())
+      continue;
+
+    NameBuilder.pushName(FD->getName());
+
+    if (isResourceRecordTypeOrArrayOf(FDTy)) {
+      IdentifierInfo *II = NameBuilder.getNameAsIdentifier(S.getASTContext());
+      createGlobalResourceDeclForStruct(S, ParentVD, FD->getLocation(), II,
+                                        FDTy);
+    } else if (const auto *RD = FDTy->getAsCXXRecordDecl()) {
+      handleStructWithResources(S, ParentVD, RD, NameBuilder);
+
+    } else if (const auto *ArrayTy = dyn_cast<ConstantArrayType>(FDTy)) {
+      assert(!FDTy->isHLSLResourceRecordArray() &&
+             "resource arrays should have been already handled");
+      handleArrayOfStructWithResources(S, ParentVD, ArrayTy, NameBuilder);
+    }
+    NameBuilder.pop();
+  }
+}
+
+// Processes array of structs with resources.
+static void
+handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
+                                 const ConstantArrayType *CAT,
+                                 EmbeddedResourceNameBuilder &NameBuilder) {
+
+  QualType ElementTy = CAT->getElementType().getCanonicalType();
+  assert(ElementTy->isHLSLIntangibleType() && "Expected HLSL intangible type");
+
+  const ConstantArrayType *SubCAT = dyn_cast<ConstantArrayType>(ElementTy);
+  const CXXRecordDecl *ElementRD = ElementTy->getAsCXXRecordDecl();
+
+  if (!SubCAT && !ElementRD)
+    return;
+
+  for (unsigned I = 0, E = CAT->getSize().getZExtValue(); I < E; ++I) {
+    NameBuilder.pushArrayIndex(I);
+    if (ElementRD)
+      handleStructWithResources(S, ParentVD, ElementRD, NameBuilder);
+    else
+      handleArrayOfStructWithResources(S, ParentVD, SubCAT, NameBuilder);
+    NameBuilder.pop();
+  }
+}
+
+// Scans all fields of a user-defined struct (or array of structs)
+// to find all embedded resources or resource arrays. For each resource
+// a global variable of the resource type is created and associated
+// with the parent declaration (VD) through a HLSLAssociatedResourceDeclAttr
+// attribute.
+void SemaHLSL::handleGlobalStructOrArrayOfWithResources(VarDecl *VD) {
+  EmbeddedResourceNameBuilder NameBuilder(VD->getName());
+
+  const Type *VDTy = VD->getType().getTypePtr();
+  assert(VDTy->isHLSLIntangibleType() && !isResourceRecordTypeOrArrayOf(VD) &&
+         "Expected non-resource struct or array type");
+
+  if (const CXXRecordDecl *RD = VDTy->getAsCXXRecordDecl()) {
+    handleStructWithResources(SemaRef, VD, RD, NameBuilder);
+    return;
+  }
+
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(VDTy)) {
+    handleArrayOfStructWithResources(SemaRef, VD, CAT, NameBuilder);
+    return;
+  }
+}
+
 void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   if (VD->hasGlobalStorage()) {
     // make sure the declaration has a complete type
@@ -4789,6 +5036,12 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
         }
       }
     }
+
+    // Process resources in user-defined structs, or arrays of such structs.
+    const Type *VDTy = VD->getType().getTypePtr();
+    if (VD->getStorageClass() != SC_Static && VDTy->isHLSLIntangibleType() &&
+        !isResourceRecordTypeOrArrayOf(VD))
+      handleGlobalStructOrArrayOfWithResources(VD);
 
     // Mark groupshared variables as extern so they will have
     // external storage and won't be default initialized

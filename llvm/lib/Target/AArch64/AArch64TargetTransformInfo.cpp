@@ -1109,9 +1109,44 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   case Intrinsic::pow: {
+    // For scalar calls we know the target has the libcall, and for fixed-width
+    // vectors we know for the worst case it can be scalarised.
     EVT VT = getTLI()->getValueType(DL, RetTy);
     RTLIB::Libcall LC = RTLIB::getPOW(VT);
-    if (getTLI()->getLibcallImpl(LC) != RTLIB::Unsupported)
+    bool HasLibcall = getTLI()->getLibcallImpl(LC) != RTLIB::Unsupported;
+    bool CanLowerWithLibcalls = !isa<ScalableVectorType>(RetTy) || HasLibcall;
+
+    // If we know that the call can be lowered with libcalls then it's safe to
+    // reduce the costs in some cases. This is important for scalable vectors,
+    // since we cannot scalarize the call in the absence of a vector math
+    // library.
+    if (CanLowerWithLibcalls && ICA.getInst() && !ICA.getArgs().empty()) {
+      // If we know the fast math flags and the exponent is a constant then the
+      // cost may be less for some exponents like 0.25 and 0.75.
+      const Constant *ExpC = dyn_cast<Constant>(ICA.getArgs()[1]);
+      if (ExpC && isa<VectorType>(ExpC->getType()))
+        ExpC = ExpC->getSplatValue();
+      if (auto *ExpF = dyn_cast_or_null<ConstantFP>(ExpC)) {
+        // The argument must be a FP constant.
+        bool Is025 = ExpF->getValueAPF().isExactlyValue(0.25);
+        bool Is075 = ExpF->getValueAPF().isExactlyValue(0.75);
+        FastMathFlags FMF = ICA.getInst()->getFastMathFlags();
+        if ((Is025 || Is075) && FMF.noInfs() && FMF.approxFunc() &&
+            (!Is025 || FMF.noSignedZeros())) {
+          IntrinsicCostAttributes Attrs(Intrinsic::sqrt, RetTy, {RetTy}, FMF);
+          InstructionCost Sqrt = getIntrinsicInstrCost(Attrs, CostKind);
+          if (Is025)
+            return 2 * Sqrt;
+          InstructionCost FMul =
+              getArithmeticInstrCost(Instruction::FMul, RetTy, CostKind);
+          return (Sqrt * 2) + FMul;
+        }
+        // TODO: For 1/3 exponents we expect the cbrt call to be slightly
+        // cheaper than pow.
+      }
+    }
+
+    if (HasLibcall)
       return getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
     break;
   }
@@ -4276,8 +4311,8 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
     return std::nullopt;
   if (Ty->getScalarType()->isHalfTy() && ST->hasFullFP16())
     return std::nullopt;
-  if (CanUseSVE && Ty->isScalableTy() && ST->hasSVEB16B16() &&
-      ST->isNonStreamingSVEorSME2Available())
+  // If we have +sve-b16b16 the operation can be promoted to SVE.
+  if (CanUseSVE && ST->hasSVEB16B16() && ST->isNonStreamingSVEorSME2Available())
     return std::nullopt;
 
   Type *PromotedTy = Ty->getWithNewType(Type::getFloatTy(Ty->getContext()));
@@ -5207,7 +5242,7 @@ static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
     return false;
 
   if (any_of(Blocks, [](BasicBlock *BB) {
-        return !isa<BranchInst>(BB->getTerminator());
+        return !isa<UncondBrInst, CondBrInst>(BB->getTerminator());
       }))
     return false;
 
@@ -5336,10 +5371,9 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
   // Try to runtime-unroll loops with early-continues depending on loop-varying
   // loads; this helps with branch-prediction for the early-continues.
-  auto *Term = dyn_cast<BranchInst>(Header->getTerminator());
+  auto *Term = dyn_cast<CondBrInst>(Header->getTerminator());
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
-  if (!Term || !Term->isConditional() || Preds.size() == 1 ||
-      !llvm::is_contained(Preds, Header) ||
+  if (!Term || Preds.size() == 1 || !llvm::is_contained(Preds, Header) ||
       none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); }))
     return;
 
@@ -6456,7 +6490,7 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   // with an unpredicated loop.
   unsigned NumInsns = 0;
   for (BasicBlock *BB : TFI->LVL->getLoop()->blocks()) {
-    NumInsns += BB->sizeWithoutDebug();
+    NumInsns += BB->size();
   }
 
   // We expect 4 of these to be a IV PHI, IV add, IV compare and branch.
@@ -6495,8 +6529,7 @@ bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(
     // break point in the code - the end of a block with an unconditional
     // terminator.
     if (I->getOpcode() == Instruction::Or &&
-        isa<BranchInst>(I->getNextNode()) &&
-        cast<BranchInst>(I->getNextNode())->isUnconditional())
+        isa<UncondBrInst>(I->getNextNode()))
       return true;
 
     if (I->getOpcode() == Instruction::Add ||
