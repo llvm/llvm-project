@@ -220,8 +220,19 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
   }
   if (dyType && inPure) {
     if (const Symbol * impure{HasImpureFinal(ultimate)}) {
-      return BlameSymbol(at, "'%s' has an impure FINAL procedure '%s'"_en_US,
-          original, impure->name());
+      if (flags.test(DefinabilityFlag::OnlyWarnOnImpureFinalInPureContext)) {
+        if (scope.context().ShouldWarn(
+                common::UsageWarning::ImpureFinalInPure)) {
+          parser::Message message{at,
+              "'%s' has impure FINAL procedure '%s' and must be definable in this pure context"_warn_en_US,
+              original.name(), impure->name()};
+          evaluate::AttachDeclaration(message, original);
+          return message;
+        }
+      } else {
+        return BlameSymbol(at, "'%s' has an impure FINAL procedure '%s'"_en_US,
+            original, impure->name());
+      }
     }
     if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
       if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(dyType)}) {
