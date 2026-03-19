@@ -54,11 +54,12 @@ define <4 x bfloat> @fadd_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 define <8 x bfloat> @fadd_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; NOB16B16-LABEL: fadd_v8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    shll v2.4s, v1.4h, #16
-; NOB16B16-NEXT:    shll v3.4s, v0.4h, #16
-; NOB16B16-NEXT:    shll2 v1.4s, v1.8h, #16
-; NOB16B16-NEXT:    shll2 v0.4s, v0.8h, #16
-; NOB16B16-NEXT:    fadd v2.4s, v3.4s, v2.4s
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
+; NOB16B16-NEXT:    zip1 v3.8h, v2.8h, v1.8h
+; NOB16B16-NEXT:    zip1 v4.8h, v2.8h, v0.8h
+; NOB16B16-NEXT:    zip2 v1.8h, v2.8h, v1.8h
+; NOB16B16-NEXT:    zip2 v0.8h, v2.8h, v0.8h
+; NOB16B16-NEXT:    fadd v2.4s, v4.4s, v3.4s
 ; NOB16B16-NEXT:    fadd v1.4s, v0.4s, v1.4s
 ; NOB16B16-NEXT:    bfcvtn v0.4h, v2.4s
 ; NOB16B16-NEXT:    bfcvtn2 v0.8h, v1.4s
@@ -95,13 +96,14 @@ define <4 x bfloat> @fdiv_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 define <8 x bfloat> @fdiv_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-LABEL: fdiv_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shll v2.4s, v1.4h, #16
-; CHECK-NEXT:    shll v3.4s, v0.4h, #16
-; CHECK-NEXT:    shll2 v1.4s, v1.8h, #16
-; CHECK-NEXT:    shll2 v0.4s, v0.8h, #16
-; CHECK-NEXT:    fdiv v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    zip1 v3.8h, v2.8h, v1.8h
+; CHECK-NEXT:    zip1 v4.8h, v2.8h, v0.8h
+; CHECK-NEXT:    zip2 v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    zip2 v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    fdiv v3.4s, v4.4s, v3.4s
 ; CHECK-NEXT:    fdiv v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    bfcvtn v0.4h, v2.4s
+; CHECK-NEXT:    bfcvtn v0.4h, v3.4s
 ; CHECK-NEXT:    bfcvtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
   %res = fdiv <8 x bfloat> %a, %b
@@ -943,11 +945,12 @@ define <4 x bfloat> @fsub_v4bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
 define <8 x bfloat> @fsub_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; NOB16B16-LABEL: fsub_v8bf16:
 ; NOB16B16:       // %bb.0:
-; NOB16B16-NEXT:    shll v2.4s, v1.4h, #16
-; NOB16B16-NEXT:    shll v3.4s, v0.4h, #16
-; NOB16B16-NEXT:    shll2 v1.4s, v1.8h, #16
-; NOB16B16-NEXT:    shll2 v0.4s, v0.8h, #16
-; NOB16B16-NEXT:    fsub v2.4s, v3.4s, v2.4s
+; NOB16B16-NEXT:    movi v2.2d, #0000000000000000
+; NOB16B16-NEXT:    zip1 v3.8h, v2.8h, v1.8h
+; NOB16B16-NEXT:    zip1 v4.8h, v2.8h, v0.8h
+; NOB16B16-NEXT:    zip2 v1.8h, v2.8h, v1.8h
+; NOB16B16-NEXT:    zip2 v0.8h, v2.8h, v0.8h
+; NOB16B16-NEXT:    fsub v2.4s, v4.4s, v3.4s
 ; NOB16B16-NEXT:    fsub v1.4s, v0.4s, v1.4s
 ; NOB16B16-NEXT:    bfcvtn v0.4h, v2.4s
 ; NOB16B16-NEXT:    bfcvtn2 v0.8h, v1.4s
