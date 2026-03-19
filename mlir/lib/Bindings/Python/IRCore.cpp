@@ -2780,7 +2780,11 @@ static std::string formatMLIRError(const MLIRError &e) {
     mlirLocationPrint(loc, accum.getCallback(), accum.getUserData());
     std::string s = nb::cast<std::string>(nb::str(accum.join()));
     std::string_view sv(s);
-    if (sv.size() > 5) {
+    if (sv.size() > 6 && sv.substr(0, 5) == "#loc(" && sv.back() == ')') {
+      sv.remove_prefix(5); // "#loc("
+      sv.remove_suffix(1); // ")"
+    } else if (sv.size() > 5 && sv.substr(0, 4) == "loc(" &&
+               sv.back() == ')') {
       sv.remove_prefix(4); // "loc("
       sv.remove_suffix(1); // ")"
     }
