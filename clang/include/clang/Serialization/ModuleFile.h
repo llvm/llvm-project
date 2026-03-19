@@ -144,8 +144,10 @@ enum class InputFilesValidation {
 /// other modules.
 class ModuleFile {
 public:
-  ModuleFile(ModuleKind Kind, FileEntryRef File, unsigned Generation)
-      : Kind(Kind), File(File), Generation(Generation) {}
+  ModuleFile(ModuleKind Kind, ModuleFileKey FileKey, FileEntryRef File,
+             unsigned Generation)
+      : Kind(Kind), FileKey(std::move(FileKey)), File(File),
+        Generation(Generation) {}
   ~ModuleFile();
 
   // === General information ===
@@ -157,7 +159,10 @@ public:
   ModuleKind Kind;
 
   /// The file name of the module file.
-  std::string FileName;
+  ModuleFileName FileName;
+
+  /// The key ModuleManager used for the module file.
+  ModuleFileKey FileKey;
 
   /// The name of the module.
   std::string ModuleName;

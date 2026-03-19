@@ -57,6 +57,16 @@ tablegen("X86GenRegisterBank") {
   td_file = "X86.td"
 }
 
+tablegen("X86GenSDNodeInfo") {
+  visibility = [
+    ":LLVMX86CodeGen",
+    "//bolt/unittests/Core:CoreTests",
+    "//llvm//unittests/Target/X86:X86Tests",
+  ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "X86.td"
+}
+
 tablegen("X86GenPreLegalizeGICombiner") {
   visibility = [ ":LLVMX86CodeGen" ]
   args = [
@@ -87,6 +97,7 @@ static_library("LLVMX86CodeGen") {
     ":X86GenPostLegalizeGICombiner",
     ":X86GenPreLegalizeGICombiner",
     ":X86GenRegisterBank",
+    ":X86GenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",

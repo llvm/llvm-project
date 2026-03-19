@@ -6380,6 +6380,49 @@ def NVVM_SubFOp : NVVM_FloatBinaryOp<"subf"> {
   }];
 }
 
+def NVVM_FmaOp : NVVM_Op<"fma", [Pure, SameOperandsAndResultType]> {
+  let summary = [{
+    Performs floating point fused multiply-add operation with support for mixed 
+    precision operands
+  }];
+  let description = [{
+    The `nvvm.fma` operation performs floating point fused multiply-add of 
+    three operands of the same type.
+
+    The rounding mode is specified by the `rnd` attribute, saturation mode by 
+    the `sat` attribute, flush-to-zero by the `ftz` attribute, and ReLU by the 
+    `relu` attribute.
+    
+    Out-of-bounds (OOB) behavior is controlled by the `oob` attribute. `oob` 
+    clamps the result to 0 if either of the operands is `OOB NaN` (see [Tensors](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors)).
+
+    For more information, see PTX ISA:
+    - [floating point fused multiply-add](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-fma)
+    - [half-precision floating point fused multiply-add](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-fma)
+  }];
+  let arguments = (ins
+    SIMTFloatType:$a,
+    SIMTFloatType:$b,
+    SIMTFloatType:$c,
+    FPArithRoundingMode:$rnd,
+    DefaultValuedAttr<SaturationModeSatOrNone, "SaturationMode::NONE">:$sat,
+    DefaultValuedAttr<BoolAttr, "false">:$ftz,
+    DefaultValuedAttr<BoolAttr, "false">:$relu,
+    DefaultValuedAttr<BoolAttr, "false">:$oob
+  );
+  let results = (outs SIMTFloatType:$res);
+  let assemblyFormat = "$a `,` $b `,` $c attr-dict `:` type($a)";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static void lowerFmaToLLVMIR(
+        Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+  let llvmBuilder = [{
+    NVVM::FmaOp::lowerFmaToLLVMIR(*op, moduleTranslation, builder);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM tensormap.replace Op
 //===----------------------------------------------------------------------===//

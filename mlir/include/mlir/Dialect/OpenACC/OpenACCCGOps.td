@@ -181,6 +181,17 @@ def OpenACC_KernelEnvironmentOp
   }];
 
   let hasCanonicalizer = 1;
+
+  let extraClassDeclaration = [{
+    /// Create a `KernelEnvironmentOp` populated with data mapping, async, and
+    /// wait clauses extracted from the given ACC compute construct. Emplaces
+    /// a block in the region and sets the rewriter's insertion point to the
+    /// start of that block so callers can create operations inside it
+    /// (e.g., `acc.compute_region`).
+    template <typename ComputeConstructT>
+    static KernelEnvironmentOp createAndPopulate(
+        ComputeConstructT computeConstruct, ::mlir::OpBuilder &builder);
+  }];
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s readability-else-after-return %t -- -- -isystem %clang_tidy_headers -fexceptions
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-else-after-return %t -- -- -fexceptions
 #include <string>
 
 struct my_exception {
@@ -436,5 +436,69 @@ LABEL:
       // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
       // CHECK-FIXES: {{^}} // comment-27
       f(0);
+  }
+
+  if (true) {
+    goto skip_over_return;
+    return;
+skip_over_return:
+    f(0);
+  } else {
+    f(0);
+  }
+
+  if (true) {
+    goto skip_over_return2;
+    return;
+skip_over_return2:
+    // No statement after label. Valid since C++23/C23.
+  } else {
+    f(0);
+  }
+
+  if (true) {
+    goto skip_over_return3;
+    return;
+skip_over_return3:
+    return;
+  } else { // comment-28
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+    // CHECK-FIXES: {{^}}  } // comment-28
+    f(0);
+  }
+}
+
+void testExcessiveBracing() {
+  if (false) {
+    {{{ return; }}}
+  } else { // comment-29
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+  // CHECK-FIXES: {{^}}  } // comment-29
+    return;
+  }
+}
+
+[[noreturn]] void noReturn();
+
+struct NoReturnMember {
+  [[noreturn]] void noReturn();
+};
+
+void testNoReturn() {
+  if (true) {
+    noReturn();
+  } else { // comment-30
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after calling a function that doesn't return
+    // CHECK-FIXES: {{^}}  } // comment-30
+    f(0);
+  }
+
+  if (true) {
+    NoReturnMember f;
+    f.noReturn();
+  } else { // comment-31
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after calling a function that doesn't return
+    // CHECK-FIXES: {{^}}  } // comment-31
+    f(0);
   }
 }

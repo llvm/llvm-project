@@ -1173,11 +1173,12 @@ struct WgToSgVectorShapeCastOp
 
       if (!sourceLayout.isSliceOf(layout))
         return rewriter.notifyMatchFailure(
-            op, "The ShapeCast op only expands dimensions, the result layout "
-                "must be a slice of the input layout, or vice versa.");
-      layoutToDistribute = layoutToDistribute.setUnitDimData(expandedUnitDims);
-      layoutToDistribute =
-          layoutToDistribute.setUnitDimLayout(expandedUnitDims);
+            op, "The ShapeCast op only expands dimensions, the input layout "
+                "must be a slice of the result layout.");
+
+      assert(layoutToDistribute.isEqualTo(
+                 layoutToDistribute.setUnitDimData(expandedUnitDims)) &&
+             "The sg_data for unit dimensions should be set as 1");
     }
 
     SmallVector<int64_t> sgShape =
@@ -1196,86 +1197,6 @@ struct WgToSgVectorShapeCastOp
     return success();
   }
 };
-
-static Value createAccumulator(ConversionPatternRewriter &rewriter,
-                               Location loc, VectorType type,
-                               vector::CombiningKind kind) {
-  Type elemTy = type.getElementType();
-
-  switch (kind) {
-  case vector::CombiningKind::ADD:
-  case vector::CombiningKind::XOR:
-  case vector::CombiningKind::OR:
-    return arith::ConstantOp::create(
-        rewriter, loc, type,
-        DenseElementsAttr::get(type, rewriter.getZeroAttr(elemTy)));
-
-  case vector::CombiningKind::MUL:
-  case vector::CombiningKind::AND:
-    return arith::ConstantOp::create(
-        rewriter, loc, type,
-        DenseElementsAttr::get(type, rewriter.getOneAttr(elemTy)));
-
-  case vector::CombiningKind::MINSI:
-    // Use max signed int value for signed integer min
-    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
-      auto maxVal = APInt::getSignedMaxValue(intTy.getWidth());
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type,
-                                 rewriter.getIntegerAttr(elemTy, maxVal)));
-    }
-    return nullptr;
-
-  case vector::CombiningKind::MINUI:
-    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
-      auto maxVal = APInt::getMaxValue(intTy.getWidth());
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type,
-                                 rewriter.getIntegerAttr(elemTy, maxVal)));
-    }
-    return nullptr;
-
-  case vector::CombiningKind::MAXSI:
-    if (auto intTy = dyn_cast<IntegerType>(elemTy)) {
-      auto minVal = APInt::getSignedMinValue(intTy.getWidth());
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type,
-                                 rewriter.getIntegerAttr(elemTy, minVal)));
-    }
-    return nullptr;
-
-  case vector::CombiningKind::MAXUI:
-    return arith::ConstantOp::create(
-        rewriter, loc, type,
-        DenseElementsAttr::get(type, rewriter.getZeroAttr(elemTy)));
-
-  case vector::CombiningKind::MINNUMF:
-  case vector::CombiningKind::MINIMUMF:
-    // Use +infinity for float min operations
-    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
-      auto posInf = APFloat::getInf(floatTy.getFloatSemantics());
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type, rewriter.getFloatAttr(elemTy, posInf)));
-    }
-    return nullptr;
-
-  case vector::CombiningKind::MAXNUMF:
-  case vector::CombiningKind::MAXIMUMF:
-    // Use -infinity for float max operations
-    if (auto floatTy = dyn_cast<FloatType>(elemTy)) {
-      auto negInf = APFloat::getInf(floatTy.getFloatSemantics(), true);
-      return arith::ConstantOp::create(
-          rewriter, loc, type,
-          DenseElementsAttr::get(type, rewriter.getFloatAttr(elemTy, negInf)));
-    }
-    return nullptr;
-  }
-  return nullptr;
-}
 
 /// This pattern transforms vector.multi_dim_reduction operations from
 /// workgroup-level to subgroup-level execution with support for multiple
@@ -1358,8 +1279,8 @@ struct WgToSgMultiDimReductionOp
     VectorType newDstType = VectorType::get(sgDstShape, elemTy);
     for (auto sgSrc : sgSrcs) {
       // Create ZERO accumulator for local reduction
-      auto neutralLocalAcc =
-          createAccumulator(rewriter, loc, newDstType, op.getKind());
+      auto neutralLocalAcc = xegpu::createReductionNeutralValue(
+          rewriter, loc, newDstType, op.getKind());
       // Local reduction with ZERO accumulator
       auto localReduce = vector::MultiDimReductionOp::create(
           rewriter, loc, newDstType, op.getKind(), sgSrc, neutralLocalAcc,
@@ -1480,8 +1401,8 @@ struct WgToSgMultiDimReductionOp
         /*layout=*/nullptr);
 
     // Step 6: Perform final reduction with ZERO accumulator
-    auto neutralFinalAcc =
-        createAccumulator(rewriter, loc, newDstType, op.getKind());
+    auto neutralFinalAcc = xegpu::createReductionNeutralValue(
+        rewriter, loc, newDstType, op.getKind());
 
     auto finalReduce = vector::MultiDimReductionOp::create(
         rewriter, loc, newDstType, op.getKind(), slmLoadOp.getResult(),
@@ -1680,8 +1601,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           // Only convert RankedTensorTypes that carry an XeGPU layout encoding.
           // Plain tensors (e.g. tensor<?xi32>) have no XeGPU encoding and must
           // not be converted: VectorType does not support dynamic dimensions.
-          auto encoding =
-              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding());
+          auto encoding = dyn_cast_if_present<xegpu::DistributeLayoutAttr>(
+              type.getEncoding());
           if (!encoding)
             return std::nullopt;
 

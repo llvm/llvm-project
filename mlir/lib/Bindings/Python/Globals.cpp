@@ -130,10 +130,10 @@ void PyGlobals::registerValueCaster(MlirTypeID mlirTypeID,
 }
 
 void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
-                                    nb::object pyClass) {
+                                    nb::object pyClass, bool replace) {
   nb::ft_lock_guard lock(mutex);
   nb::object &found = dialectClassMap[dialectNamespace];
-  if (found) {
+  if (found && !replace) {
     throw std::runtime_error(nanobind::detail::join(
         "Dialect namespace '", dialectNamespace, "' is already registered."));
   }

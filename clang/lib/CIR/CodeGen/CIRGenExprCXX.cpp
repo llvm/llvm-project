@@ -581,9 +581,9 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // allocation fails.
     if (typeSizeMultiplier != 1) {
       mlir::Value tsmV = cgf.getBuilder().getConstInt(loc, typeSizeMultiplier);
-      auto mulOp = cir::BinOpOverflowOp::create(
-          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
-          cir::BinOpOverflowKind::Mul, size, tsmV);
+      auto mulOp = cir::MulOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy), size,
+          tsmV);
 
       if (hasOverflow)
         hasOverflow =
@@ -617,9 +617,9 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     if (cookieSize != 0) {
       sizeWithoutCookie = size;
       mlir::Value cookieSizeV = cgf.getBuilder().getConstInt(loc, cookieSize);
-      auto addOp = cir::BinOpOverflowOp::create(
-          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy),
-          cir::BinOpOverflowKind::Add, size, cookieSizeV);
+      auto addOp = cir::AddOverflowOp::create(
+          cgf.getBuilder(), loc, mlir::cast<cir::IntType>(cgf.sizeTy), size,
+          cookieSizeV);
 
       if (hasOverflow)
         hasOverflow =
@@ -667,7 +667,12 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   ///   to a replaceable global allocation function.
   ///
   /// We model such elidable calls with the 'builtin' attribute.
-  assert(!cir::MissingFeatures::attributeBuiltin());
+  if (calleeDecl->isReplaceableGlobalAllocationFunction() && calleePtr &&
+      calleePtr->hasAttr(cir::CIRDialect::getNoBuiltinAttrName())) {
+    callOrTryCall->setAttr(cir::CIRDialect::getBuiltinAttrName(),
+                           mlir::UnitAttr::get(callOrTryCall->getContext()));
+  }
+
   return rv;
 }
 
@@ -1041,8 +1046,52 @@ void CIRGenFunction::emitNewArrayInitializer(
       return;
     }
 
-    cgm.errorNYI(cce->getSourceRange(),
-                 "emitNewArrayInitializer: ctor initializer");
+    // Store the new Cleanup position for irregular Cleanups.
+    //
+    // FIXME: Share this cleanup with the constructor call emission rather than
+    // having it create a cleanup of its own.
+    if (endOfInit.isValid())
+      builder.createStore(getLoc(e->getSourceRange()), curPtr.emitRawPointer(),
+                          endOfInit);
+
+    mlir::Type initType = convertType(cce->getType());
+    // Emit a constructor call loop to initialize the remaining elements.
+    if (initListElements) {
+      // If the number of elements is a constant, we will have already gotten
+      // the constant op above. Here we use it to get the number of remaining
+      // elements as a new constant.
+      if (constOp) {
+        auto constIntAttr = mlir::cast<cir::IntAttr>(constOp.getValue());
+        uint64_t numRemainingElements =
+            constIntAttr.getUInt() - initListElements;
+        numElements =
+            builder.getConstInt(getLoc(e->getSourceRange()),
+                                numElements.getType(), numRemainingElements);
+        // Currently, the AST gives us a pointer to the element type here
+        // rather than an array. That's inconsistent with what it does
+        // without an explicit initializer list, so we need to create an
+        // array type here. That will decay back to a pointer when we lower
+        // the cir.array.ctor op, but we need an array type for the initial
+        // representation.
+        if (!mlir::isa<cir::ArrayType>(initType))
+          initType = cir::ArrayType::get(initType, numRemainingElements);
+      } else {
+        cgm.errorNYI(e->getSourceRange(),
+                     "emitNewArrayInitializer: numRemainingElements with "
+                     "non-constant count");
+        return;
+      }
+    }
+
+    curPtr = curPtr.withElementType(builder, initType);
+    emitCXXAggrConstructorCall(ctor, numElements, curPtr, cce,
+                               /*newPointerIsChecked=*/true,
+                               cce->requiresZeroInitialization());
+    if (getContext().getTargetInfo().emitVectorDeletingDtors(
+            getContext().getLangOpts())) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitNewArrayInitializer: emitVectorDeletingDtors");
+    }
     return;
   }
 
@@ -1177,11 +1226,6 @@ static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
     cgf.cgm.errorNYI(de->getSourceRange(), "emitObjectDelete: ObjCLifetime");
   }
 
-  // In traditional LLVM codegen null checks are emitted to save a delete call.
-  // In CIR we optimize for size by default, the null check should be added into
-  // this function callers.
-  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
-
   cgf.popCleanupBlock();
 }
 
@@ -1196,10 +1240,21 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // unconditionally perform the operator delete call in that case. For now, we
   // assume that deleted pointers are null rarely enough that it's better to
   // keep the branch. This might be worth revisiting for a -O0 code size win.
-  //
-  // CIR note: emit the code size friendly by default for now, such as mentioned
-  // in `emitObjectDelete`.
   assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
+  cir::YieldOp thenYield;
+  mlir::Value notNull = builder.createPtrIsNotNull(ptr.getPointer());
+  cir::IfOp::create(builder, getLoc(e->getExprLoc()), notNull,
+                    /*withElseRegion=*/false,
+                    /*thenBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      thenYield = builder.createYield(loc);
+                    });
+
+  // Emit the rest of the CIR inside the if-op's then region, but restore the
+  // insertion point to the point after the if when this function returns.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(thenYield);
+
   QualType deleteTy = e->getDestroyedType();
 
   // A destroying operator delete overrides the entire operation of the
@@ -1222,9 +1277,32 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   }
 
   if (e->isArrayForm()) {
-    assert(!cir::MissingFeatures::deleteArray());
-    cgm.errorNYI(e->getSourceRange(), "emitCXXDeleteExpr: array delete");
-    return;
+    const FunctionDecl *operatorDelete = e->getOperatorDelete();
+    cir::FuncOp operatorDeleteFn = cgm.getAddrOfFunction(operatorDelete);
+    auto deleteFn =
+        mlir::FlatSymbolRefAttr::get(operatorDeleteFn.getSymNameAttr());
+    UsualDeleteParams udp = operatorDelete->getUsualDeleteParams();
+    auto deleteParams = cir::UsualDeleteParamsAttr::get(
+        builder.getContext(), udp.Size, isAlignedAllocation(udp.Alignment),
+        isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+
+    mlir::FlatSymbolRefAttr elementDtor;
+    if (const auto *rd = deleteTy->getAsCXXRecordDecl()) {
+      if (rd->hasDefinition() && !rd->hasTrivialDestructor()) {
+        const CXXDestructorDecl *dtor = rd->getDestructor();
+        if (dtor->getType()->castAs<FunctionProtoType>()->canThrow())
+          cgm.errorNYI(e->getSourceRange(),
+                       "emitCXXDeleteExpr: throwing destructor");
+        cir::FuncOp dtorFn =
+            cgm.getAddrOfCXXStructor(GlobalDecl(dtor, Dtor_Complete));
+        elementDtor = mlir::FlatSymbolRefAttr::get(builder.getContext(),
+                                                   dtorFn.getSymNameAttr());
+      }
+    }
+
+    cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
+                               ptr.getPointer(), deleteFn, deleteParams,
+                               elementDtor);
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }

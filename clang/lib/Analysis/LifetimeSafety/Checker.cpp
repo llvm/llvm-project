@@ -24,20 +24,18 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
 namespace clang::lifetimes::internal {
 
-static Confidence livenessKindToConfidence(LivenessKind K) {
+static bool causingFactDominatesExpiry(LivenessKind K) {
   switch (K) {
   case LivenessKind::Must:
-    return Confidence::Definite;
+    return true;
   case LivenessKind::Maybe:
-    return Confidence::Maybe;
   case LivenessKind::Dead:
-    return Confidence::None;
+    return false;
   }
   llvm_unreachable("unknown liveness kind");
 }
@@ -50,12 +48,13 @@ struct PendingWarning {
   llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
   const Expr *MovedExpr;
   const Expr *InvalidatedByExpr;
-  Confidence ConfidenceLevel;
+  bool CausingFactDominatesExpiry;
 };
 
 using AnnotationTarget =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
-using EscapingTarget = llvm::PointerUnion<const Expr *, const FieldDecl *>;
+using EscapingTarget =
+    llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
 
 class LifetimeChecker {
 private:
@@ -68,6 +67,19 @@ private:
   FactManager &FactMgr;
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
+
+  static SourceLocation
+  GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
+    if (const auto *UF = F.dyn_cast<const UseFact *>())
+      return UF->getUseExpr()->getExprLoc();
+    if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+      if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+        return ReturnEsc->getReturnExpr()->getExprLoc();
+      if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
+        return FieldEsc->getFieldDecl()->getLocation();
+    }
+    llvm_unreachable("unhandled causing fact in PointerUnion");
+  }
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
@@ -109,6 +121,8 @@ public:
           NoescapeWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
         if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
           NoescapeWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+        if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
+          NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
         return;
       }
       // Suggest lifetimebound for parameter escaping through return.
@@ -139,9 +153,7 @@ public:
   ///
   /// This method examines all live origins at the expiry point and determines
   /// if any of them hold the expiring loan. If so, it creates a pending
-  /// warning with the appropriate confidence level based on the liveness
-  /// information. The confidence reflects whether the origin is definitely
-  /// or maybe live at this point.
+  /// warning.
   ///
   /// Note: This implementation considers only the confidence of origin
   /// liveness. Future enhancements could also consider the confidence of loan
@@ -153,34 +165,34 @@ public:
       MovedExpr = *ME;
 
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
-    Confidence CurConfidence = Confidence::None;
+    bool CurDomination = false;
     // The UseFact or OriginEscapesFact most indicative of a lifetime error,
     // prioritized by earlier source location.
-    llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
-        BestCausingFact = nullptr;
+    llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact =
+        nullptr;
 
     for (auto &[OID, LiveInfo] : Origins) {
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
       if (!HeldLoans.contains(ExpiredLoan))
         continue;
       // Loan is defaulted.
-      Confidence NewConfidence = livenessKindToConfidence(LiveInfo.Kind);
-      if (CurConfidence < NewConfidence) {
-        CurConfidence = NewConfidence;
-        BestCausingFact = LiveInfo.CausingFact;
-      }
+
+      if (!CurDomination || causingFactDominatesExpiry(LiveInfo.Kind))
+        CausingFact = LiveInfo.CausingFact;
     }
-    if (!BestCausingFact)
+    if (!CausingFact)
       return;
-    // We have a use-after-free.
-    Confidence LastConf = FinalWarningsMap.lookup(ExpiredLoan).ConfidenceLevel;
-    if (LastConf >= CurConfidence)
+
+    bool LastDomination =
+        FinalWarningsMap.lookup(ExpiredLoan).CausingFactDominatesExpiry;
+    if (LastDomination)
       return;
-    FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
-                                     /*BestCausingFact=*/BestCausingFact,
-                                     /*MovedExpr=*/MovedExpr,
-                                     /*InvalidatedByExpr=*/nullptr,
-                                     /*ConfidenceLevel=*/CurConfidence};
+    FinalWarningsMap[ExpiredLoan] = {
+        /*ExpiryLoc=*/EF->getExpiryLoc(),
+        /*CausingFact=*/CausingFact,
+        /*MovedExpr=*/MovedExpr,
+        /*InvalidatedByExpr=*/nullptr,
+        /*CausingFactDominatesExpiry=*/CurDomination};
   }
 
   /// Checks for use-after-invalidation errors when a container is modified.
@@ -216,16 +228,16 @@ public:
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
       for (LoanID LiveLoanID : HeldLoans)
         if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
-          Confidence CurConfidence = livenessKindToConfidence(LiveInfo.Kind);
-          Confidence LastConf =
-              FinalWarningsMap.lookup(LiveLoanID).ConfidenceLevel;
-          if (LastConf < CurConfidence) {
+          bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
+          bool LastDomination =
+              FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
+          if (!LastDomination) {
             FinalWarningsMap[LiveLoanID] = {
                 /*ExpiryLoc=*/{},
                 /*CausingFact=*/LiveInfo.CausingFact,
                 /*MovedExpr=*/nullptr,
                 /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
-                /*ConfidenceLevel=*/CurConfidence};
+                /*CausingFactDominatesExpiry=*/CurDomination};
           }
         }
     }
@@ -245,7 +257,6 @@ public:
         InvalidatedPVD = PL->getParmVarDecl();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
-      Confidence Confidence = Warning.ConfidenceLevel;
       const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
@@ -260,16 +271,18 @@ public:
 
         } else
           SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
-                                         ExpiryLoc, Confidence);
+                                         ExpiryLoc);
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
-          SemaHelper->reportUseAfterReturn(IssueExpr,
-                                           RetEscape->getReturnExpr(),
-                                           MovedExpr, ExpiryLoc, Confidence);
+          SemaHelper->reportUseAfterReturn(
+              IssueExpr, RetEscape->getReturnExpr(), MovedExpr, ExpiryLoc);
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
+        else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
+          SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
+                                           MovedExpr, ExpiryLoc);
         else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
@@ -342,6 +355,8 @@ public:
         SemaHelper->reportNoescapeViolation(PVD, E);
       else if (const auto *FD = EscapeTarget.dyn_cast<const FieldDecl *>())
         SemaHelper->reportNoescapeViolation(PVD, FD);
+      else if (const auto *G = EscapeTarget.dyn_cast<const VarDecl *>())
+        SemaHelper->reportNoescapeViolation(PVD, G);
       else
         llvm_unreachable("Unhandled EscapingTarget type");
     }
