@@ -37,7 +37,7 @@ foreach(t ${LIBCLC_TARGETS_TO_BUILD})
 
   add_lit_testsuite(check-libclc-external-funcs-${t} "Running ${t} tests"
     ${LIBCLC_TARGET_TEST_DIR}
-    DEPENDS libclc-${t} ${LIBCLC_TEST_DEPS}
+    DEPENDS ${LIBCLC_TEST_DEPS}
   )
   set_target_properties(check-libclc-external-funcs-${t} PROPERTIES FOLDER "libclc tests")
 endforeach()
