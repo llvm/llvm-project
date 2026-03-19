@@ -2146,17 +2146,9 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
     M = HS.lookupModule(ModuleName, ImportLoc, true, !IsInclusionDirective);
 
     // Check whether M refers to the file in the prebuilt module path.
-    if (M && M->getASTFile())
-      if (auto ModuleFile = FileMgr->getOptionalFileRef(ModuleFilename)) {
-        if (*ModuleFile == M->getASTFile())
-          return M;
-#if !defined(__APPLE__)
-        // Workaround for ext4 file system. Also check bypass file if exists.
-        if (auto Bypass = FileMgr->getBypassFile(*ModuleFile))
-          if (*Bypass == M->getASTFile())
-            return M;
-#endif
-      }
+    if (M && M->getASTFileKey() &&
+        *M->getASTFileKey() == ModuleFilename.makeKey(*FileMgr))
+      return M;
 
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)
         << ModuleName;
@@ -2567,8 +2559,7 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
     for (ModuleMap::module_iterator I = MMap.module_begin(),
         E = MMap.module_end(); I != E; ++I) {
       Module *TheModule = I->second;
-      OptionalFileEntryRef Entry = TheModule->getASTFile();
-      if (!Entry) {
+      if (!TheModule->getASTFileKey()) {
         SmallVector<IdentifierLoc, 2> Path;
         Path.emplace_back(TriggerLoc,
                           getPreprocessor().getIdentifierInfo(TheModule->Name));

@@ -262,7 +262,8 @@ static void indexPreprocessorModuleMacros(Preprocessor &PP,
     if (M.second.getLatest() == nullptr) {
       for (auto *MM : PP.getLeafModuleMacros(M.first)) {
         auto *OwningMod = MM->getOwningModule();
-        if (OwningMod && OwningMod->getASTFile() == Mod.File) {
+        if (OwningMod && OwningMod->getASTFileKey() &&
+            *OwningMod->getASTFileKey() == Mod.FileKey) {
           if (auto *MI = MM->getMacroInfo()) {
             indexPreprocessorMacro(M.first, MI, MacroDirective::MD_Define,
                                    MI->getDefinitionLoc(), DataConsumer);
@@ -1078,7 +1079,7 @@ bool index::emitIndexDataForModuleFile(const Module *Mod,
 
   auto astReader = CI.getASTReader();
   serialization::ModuleFile *ModFile =
-      astReader->getModuleManager().lookup(*Mod->getASTFile());
+      astReader->getModuleManager().lookup(*Mod->getASTFileKey());
   assert(ModFile && "no module file loaded for module ?");
   return produceIndexDataForModuleFile(*ModFile, CI, IndexOpts, RecordOpts,
                                        ParentUnitWriter);

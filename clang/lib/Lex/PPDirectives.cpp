@@ -2325,7 +2325,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         // FIXME: Need to clarify what `File` means in the callback, and if that
         // can be the module file entry instead of header file entry.
         Module *M = Imported;
-        InclusionCallback(M->getASTFile(), Imported);
+        auto FE = FileMgr.getVirtualFileRef(*M->getASTFileName(), 0, 0);
+        InclusionCallback(FE, Imported);
       }
 
       makeModuleVisible(Imported, EndLoc);
