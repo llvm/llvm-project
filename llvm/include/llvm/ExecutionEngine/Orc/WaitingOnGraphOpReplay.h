@@ -57,17 +57,20 @@ public:
   recordSimplify(const std::vector<std::unique_ptr<SuperNode>> &SNs) override {
     std::scoped_lock<std::mutex> Lock(M);
     recordSuperNodes("simplify-and-emit", SNs);
+    OS.flush();
   }
 
   void recordFail(const ContainerElementsMap &Failed) override {
     std::scoped_lock<std::mutex> Lock(M);
     OS << "fail\n";
     recordContainerElementsMap("  ", "failed", Failed);
+    OS.flush();
   }
 
   void recordEnd() override {
     std::scoped_lock<std::mutex> Lock(M);
     OS << "end\n";
+    OS.flush();
   }
 
   // Should render the container id as a string.
@@ -186,21 +189,17 @@ public:
                          return ExternalState::None;
                        });
       for (auto &SN : ER.Ready)
-        for (auto &[Container, Elems] : SN->defs())
-          Ready[Container].insert(Elems.begin(), Elems.end());
+        Ready.merge(SN->defs());
       for (auto &SN : ER.Failed)
-        for (auto &[Container, Elems] : SN->defs())
-          Failed[Container].insert(Elems.begin(), Elems.end());
+        Failed.merge(SN->defs());
     }
 
     void replayFail(ContainerElementsMap NewlyFailed) {
-      for (auto &[Container, Elems] : NewlyFailed)
-        Failed[Container].insert(Elems.begin(), Elems.end());
+      Failed.merge(NewlyFailed);
 
       auto FailedSNs = G.fail(NewlyFailed);
       for (auto &SN : FailedSNs)
-        for (auto &[Container, Elems] : SN->defs())
-          Failed[Container].insert(Elems.begin(), Elems.end());
+        Failed.merge(SN->defs());
     }
 
     Graph &G;
@@ -382,7 +381,7 @@ readWaitingOnGraphOpsFromBuffer(StringRef InputBuffer, Error &Err) {
         SNs.push_back(
             std::make_unique<SuperNode>(std::move(*Defs), std::move(*Deps)));
       }
-      return SNs;
+      return std::move(SNs);
     }
 
     static Expected<ContainerElementsMap>
@@ -445,7 +444,7 @@ readWaitingOnGraphOpsFromBuffer(StringRef InputBuffer, Error &Err) {
         }
       }
 
-      return M;
+      return std::move(M);
     }
   };
 

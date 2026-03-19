@@ -970,9 +970,10 @@ multiclass avx10_convert_2op_nomb<string OpcodeStr, AVX512VLVectorVTInfo _dest,
   }
 }
 
+let ExeDomain = SSEPackedInt in
 defm VCVTHF82PH : avx10_convert_2op_nomb<"vcvthf82ph", avx512vl_f16_info,
                                          avx512vl_i8_info, 0x1e, X86vcvthf82ph>,
-                  AVX512XDIi8Base, T_MAP5, EVEX, EVEX_CD8<16, CD8VH>;
+                  TB, XD, T_MAP5, EVEX, EVEX_CD8<16, CD8VH>;
 
 //-------------------------------------------------
 // AVX10 BF16 instructions

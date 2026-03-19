@@ -430,21 +430,20 @@ public:
     Status &= Handler.onInstructionExecuted(RI, None);
   }
 
-  void visitBranchInst(BranchInst &BI) {
-    if (BI.isConditional()) {
-      switch (getValue(BI.getCondition()).asBoolean()) {
-      case BooleanKind::True:
-        jumpTo(BI, BI.getSuccessor(0));
-        return;
-      case BooleanKind::False:
-        jumpTo(BI, BI.getSuccessor(1));
-        return;
-      case BooleanKind::Poison:
-        reportImmediateUB("Branch on poison condition.");
-        return;
-      }
+  void visitUncondBrInst(UncondBrInst &BI) { jumpTo(BI, BI.getSuccessor()); }
+
+  void visitCondBrInst(CondBrInst &BI) {
+    switch (getValue(BI.getCondition()).asBoolean()) {
+    case BooleanKind::True:
+      jumpTo(BI, BI.getSuccessor(0));
+      return;
+    case BooleanKind::False:
+      jumpTo(BI, BI.getSuccessor(1));
+      return;
+    case BooleanKind::Poison:
+      reportImmediateUB("Branch on poison condition.");
+      return;
     }
-    jumpTo(BI, BI.getSuccessor(0));
   }
 
   void visitSwitchInst(SwitchInst &SI) {
@@ -1106,6 +1105,23 @@ public:
       }
     }
     setResult(SVI, std::move(Res));
+  }
+
+  void visitBitCastInst(BitCastInst &BCI) {
+    // The conversion is done as if the value had been stored to memory and read
+    // back as the target type.
+    SmallVector<Byte> Bytes;
+    Bytes.resize(Ctx.getEffectiveTypeStoreSize(BCI.getType()),
+                 Byte::concrete(0));
+    Ctx.toBytes(getValue(BCI.getOperand(0)), BCI.getOperand(0)->getType(),
+                Bytes);
+    setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
+  }
+
+  void visitFreezeInst(FreezeInst &FI) {
+    AnyValue Val = getValue(FI.getOperand(0));
+    Ctx.freeze(Val, FI.getType());
+    setResult(FI, std::move(Val));
   }
 
   /// This function implements the main interpreter loop.

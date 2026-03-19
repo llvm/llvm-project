@@ -21,6 +21,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
@@ -679,6 +680,9 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string
+          *separated_error_output, // Pass nullptr to have error and command
+                                   // output combined in command_output.
       const Timeout<std::micro> &timeout);
 
   virtual lldb_private::Status RunShellCommand(
@@ -690,6 +694,9 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string
+          *separated_error_output, // Pass nullptr to have error and command
+                                   // output combined in command_output.
       const Timeout<std::micro> &timeout);
 
   virtual void SetLocalCacheDirectory(const char *local);
@@ -1053,6 +1060,14 @@ protected:
                                     const FileSpec &dst_file_spec);
 
   virtual const char *GetCacheHostname();
+
+  /// If we did some replacements of reserved characters, and a
+  /// file with the untampered name exists, then warn the user
+  /// that the file as-is shall not be loaded.
+  static void WarnIfInvalidUnsanitizedScriptExists(
+      Stream &os,
+      const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
+      const FileSpec &original_fspec, const FileSpec &fspec);
 
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;
