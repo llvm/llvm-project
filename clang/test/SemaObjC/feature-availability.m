@@ -42,6 +42,26 @@ struct __attribute__((availability(domain:feature1, AVAIL))) S1 {};
 -(struct S1)m3 __attribute__((availability(domain:feature1, UNAVAIL))); // enabled-error {{cannot use 'S1' because feature 'feature1' is unavailable in this context}}
 @end
 
+__attribute__((objc_root_class))
+@interface C_IVar {
+  int ivar0 __attribute__((availability(domain:feature1, AVAIL)));
+}
+@end
+
+@implementation C_IVar {
+  int ivar1 __attribute__((availability(domain:feature2, AVAIL)));
+}
+-(void)m0 {
+  ivar0 = 1; // enabled-error {{cannot use 'ivar0' because feature 'feature1' is unavailable in this context}} enabled-note {{enclose 'ivar0' in an @available check to silence this warning}}
+  if (@available(domain:feature1))
+    ivar0 = 2;
+
+  ivar1 = 1; // expected-error {{cannot use 'ivar1' because feature 'feature2' is unavailable in this context}} expected-note {{enclose 'ivar1' in an @available check to silence this warning}}
+  if (@available(domain:feature2))
+    ivar1 = 2;
+}
+@end
+
 @class Base0;
 
 __attribute__((availability(domain:feature1, AVAIL))) // expected-note 2 {{is incompatible with __attribute__((availability(domain:feature1, 0)))}}
