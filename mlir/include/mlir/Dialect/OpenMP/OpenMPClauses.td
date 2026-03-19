@@ -1131,7 +1131,6 @@ class OpenMP_LooprangeClauseSkip<
     bit description = false, bit extraClassDeclaration = false>
     : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-
   let arguments = (ins OptionalAttr<I64Attr>:$first,
       OptionalAttr<I64Attr>:$count);
 
@@ -1158,7 +1157,6 @@ class OpenMP_PermutationClauseSkip<
     bit description = false, bit extraClassDeclaration = false>
     : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-
   let arguments = (ins OptionalAttr<ArrayAttr>:$permutation);
 
   let optAssemblyFormat = [{
@@ -1167,8 +1165,8 @@ class OpenMP_PermutationClauseSkip<
 
   let description = [{
     The `permutation` clause contains the new order in which the loops affected
-    by a loop interchange are arranged. The clause contains a list of positive
-    numbers known beforehand.
+    by a loop interchange are arranged. The clause contains a list of constant 
+    positive numbers.
   }];
 }
 

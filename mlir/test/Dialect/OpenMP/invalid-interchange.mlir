@@ -99,7 +99,26 @@ func.func @zero_attribute(%tc1 : i32, %tc2 : i32) {
 
 // -----
 
-func.func @zero_attribute(%tc1 : i32, %tc2 : i32) {
+func.func @float_attribute(%tc1 : i32, %tc2 : i32) {
+  %canonloop1 = omp.new_cli
+  %canonloop2 = omp.new_cli
+  %canonloop3 = omp.new_cli
+  %canonloop4 = omp.new_cli
+  omp.canonical_loop(%canonloop1) %iv1 : i32 in range(%tc1) {
+    omp.canonical_loop(%canonloop2) %iv2 : i32 in range(%tc2) {
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  // expected-error@+1 {{'omp.interchange' op permutation attribute must be of integer type}}
+  omp.interchange (%canonloop3, %canonloop4) <- (%canonloop1, %canonloop2) permutation([3.14 : f32, 2 : i32])
+
+  return
+}
+
+// -----
+func.func @missing_attribute(%tc1 : i32, %tc2 : i32) {
   %canonloop1 = omp.new_cli
   %canonloop2 = omp.new_cli
   %canonloop3 = omp.new_cli
@@ -164,4 +183,19 @@ func.func @non_nectangular(%tc1 : i32, %tc2 : i32) {
   omp.interchange <-(%canonloop1, %canonloop2) permutation([1 : i32, 2 : i32])
 
   llvm.return
+}
+
+func.func @not_nested(%tc1 : i32, %tc2 : i32) -> () {
+  %cli_outer = omp.new_cli
+  %cli_inner = omp.new_cli
+  omp.canonical_loop(%cli_outer) %iv_outer : i32 in range(%tc1) {
+    omp.terminator
+  }
+  omp.canonical_loop(%cli_inner) %iv_inner : i32 in range(%tc2) {
+    omp.terminator
+  }
+
+  // expected-error@+1 {{'omp.interchange' op interchanged loop nest must be nested within each other}}
+  omp.interchange <- (%cli_outer, %cli_inner) permutation([2 : i32, 1 : i32])
+  return
 }

@@ -6831,7 +6831,6 @@ OpenMPIRBuilder::interchangeLoops(DebugLoc DL,
 
   // Detach the original loops
   for (int i = 0; i < NumLoops - 1; i++) {
-
     BasicBlock *body = Loops[i]->getBody();
     BasicBlock *region =
         cast<BranchInst>(body->getTerminator())->getSuccessor(0);

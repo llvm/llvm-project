@@ -3519,7 +3519,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
                 return "fused";
             })
             .Case(
-                [&](InterchangeOp op) -> std::string { return "interchange"; })
+                [&](InterchangeOp op) -> std::string { return "interchanged"; })
             .Case([&](TileOp op) -> std::string {
               auto [generateesFirst, generateesCount] =
                   op.getGenerateesODSOperandIndexAndLength();
@@ -3709,9 +3709,9 @@ CanonicalLoopOp::getGenerateesODSOperandIndexAndLength() {
   return getODSOperandIndexAndLength(odsIndex_cli);
 }
 
-// Canonical loop must be perfectly nested, i.e. the body of the parent must
-// only contain the omp.canonical_loop of the nested loops, and
-// omp.terminator
+/// Canonical loop must be perfectly nested, i.e. the body of the parent must
+/// only contain the omp.canonical_loop of the nested loops, and
+/// omp.terminator
 bool isPerfectlyNested(CanonicalLoopOp parentLoop, CanonicalLoopOp loop) {
   auto &parentBody = parentLoop.getRegion();
   if (!parentBody.hasOneBlock())
@@ -3996,12 +3996,15 @@ LogicalResult InterchangeOp::verify() {
 
   llvm::SmallVector<bool> found(permutation.size(), false);
   for (auto &val : permutation) {
-    int perm = llvm::dyn_cast<IntegerAttr>(val).getInt();
-    if (perm <= 0)
-      return emitOpError()
-             << "permutation attribute must be a positive integer";
-    if ((unsigned)perm - 1 < permutation.size())
-      found[perm - 1] = true;
+    if (auto intAttr = llvm::dyn_cast<IntegerAttr>(val)) {
+      int perm = intAttr.getInt();
+      if (perm <= 0)
+        return emitOpError()
+               << "permutation attribute must be a positive integer";
+      if ((size_t)perm - 1 < permutation.size())
+        found[perm - 1] = true;
+    } else
+      return emitOpError() << "permutation attribute must be of integer type";
   }
   for (bool b : found) {
     if (!b)
@@ -4014,37 +4017,43 @@ LogicalResult InterchangeOp::verify() {
     return emitOpError()
            << "expecting the same number of generatees and applyees";
 
-  DenseSet<Value> parentIVs;
-
-  Value parent = getApplyees().front();
-  for (auto &&applyee : llvm::drop_begin(getApplyees())) {
-    auto [parentCreate, parentGen, parentCons] = decodeCli(parent);
+  // FIXME: Unify common checks with other loop transformations
+  // Collect the loops from the nest
+  bool isOnlyCanonLoops = true;
+  SmallVector<CanonicalLoopOp> canonLoops;
+  for (Value applyee : getApplyees()) {
     auto [create, gen, cons] = decodeCli(applyee);
-
-    if (!parentGen)
-      return emitOpError() << "applyee CLI has no generator";
-
-    auto parentLoop = dyn_cast_or_null<CanonicalLoopOp>(parentGen->getOwner());
-    if (!parentGen)
-      return emitOpError()
-             << "currently only supports omp.canonical_loop as applyee";
-
-    parentIVs.insert(parentLoop.getInductionVar());
 
     if (!gen)
       return emitOpError() << "applyee CLI has no generator";
+
     auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    canonLoops.push_back(loop);
     if (!loop)
+      isOnlyCanonLoops = false;
+  }
+
+  // FIXME: We currently can only verify non-rectangularity and perfect nest of
+  // omp.canonical_loop.
+  if (!isOnlyCanonLoops)
+    return success();
+
+  DenseSet<Value> parentIVs;
+  for (auto i : llvm::seq<int>(1, canonLoops.size())) {
+    auto parentLoop = canonLoops[i - 1];
+    auto loop = canonLoops[i];
+
+    if (parentLoop.getOperation() != loop.getOperation()->getParentOp())
       return emitOpError()
-             << "currently only supports omp.canonical_loop as applyee";
+             << "interchanged loop nest must be nested within each other";
+
+    parentIVs.insert(parentLoop.getInductionVar());
 
     if (!isPerfectlyNested(parentLoop, loop))
       return emitOpError() << "interchanged loop nest must be perfectly nested";
 
     if (parentIVs.contains(loop.getTripCount()))
       return emitOpError() << "interchanged loop nest must be rectangular";
-
-    parent = applyee;
   }
 
   return success();

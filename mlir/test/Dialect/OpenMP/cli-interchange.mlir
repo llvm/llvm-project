@@ -10,9 +10,9 @@ func.func @omp_interchange_raw(%tc1 : i32, %tc2 : i32) -> () {
   %cli_outer = "omp.new_cli" () : () -> (!omp.cli)
   // CHECK-NEXT: %canonloop_d1 = omp.new_cli
   %cli_inner = "omp.new_cli" () : () -> (!omp.cli)
-  // CHECK-NEXT: %interchange = omp.new_cli
+  // CHECK-NEXT: %interchanged = omp.new_cli
   %interchange1 = "omp.new_cli" () : () -> (!omp.cli)
-  // CHECK-NEXT: %interchange_0 = omp.new_cli
+  // CHECK-NEXT: %interchanged_0 = omp.new_cli
   %interchange2 = "omp.new_cli" () : () -> (!omp.cli)
   // CHECK-NEXT: omp.canonical_loop(%canonloop) %iv : i32 in range(%[[tc1]]) {
   "omp.canonical_loop" (%tc1, %cli_outer) ({
@@ -26,7 +26,7 @@ func.func @omp_interchange_raw(%tc1 : i32, %tc2 : i32) -> () {
       // CHECK: omp.terminator
       omp.terminator
   }) : (i32, !omp.cli) -> ()
-  // CHECK: omp.interchange (%interchange, %interchange_0) <- (%canonloop, %canonloop_d1)
+  // CHECK: omp.interchange (%interchanged, %interchanged_0) <- (%canonloop, %canonloop_d1)
   // CHECK-SAME: permutation([2 : i32, 1 : i32])
   "omp.interchange" (%interchange1, %interchange2, %cli_outer, %cli_inner) <{operandSegmentSizes = array<i32: 2, 2>, permutation = [2 : i32, 1 : i32]}> : (!omp.cli, !omp.cli, !omp.cli, !omp.cli) -> ()
   return
@@ -41,9 +41,9 @@ func.func @omp_interchange_pretty(%tc1 : i32, %tc2 : i32) -> () {
   %cli_outer = omp.new_cli
   // CHECK-NEXT: %canonloop_d1 = omp.new_cli
   %cli_inner = omp.new_cli
-  // CHECK-NEXT: %interchange = omp.new_cli
+  // CHECK-NEXT: %interchanged = omp.new_cli
   %interchange1 = omp.new_cli
-  // CHECK-NEXT: %interchange_0 = omp.new_cli
+  // CHECK-NEXT: %interchanged_0 = omp.new_cli
   %interchange2 = omp.new_cli
   // CHECK-NEXT: omp.canonical_loop(%canonloop) %iv : i32 in range(%[[tc1]]) {
   omp.canonical_loop(%cli_outer) %iv_outer : i32 in range(%tc1) {
@@ -55,9 +55,41 @@ func.func @omp_interchange_pretty(%tc1 : i32, %tc2 : i32) -> () {
     // CHECK: omp.terminator
     omp.terminator
   }
-  // CHECK: omp.interchange (%interchange, %interchange_0) <- (%canonloop, %canonloop_d1)
+  // CHECK: omp.interchange (%interchanged, %interchanged_0) <- (%canonloop, %canonloop_d1)
   // CHECK-SAME: permutation([2 : i32, 1 : i32])
   omp.interchange (%interchange1, %interchange2) <- (%cli_outer, %cli_inner) permutation([2 : i32, 1 : i32])
+  return
+}
+
+
+// Composition of multiple interchanges
+// CHECK-LABEL: @omp_interchange_composition(
+// CHECK-SAME: %[[tc1:.+]]: i32, %[[tc2:.+]]: i32) {
+func.func @omp_interchange_composition(%tc1 : i32, %tc2 : i32) -> () {
+  %cli_outer = omp.new_cli
+  %cli_inner = omp.new_cli
+  %interchange1 = omp.new_cli
+  %interchange2 = omp.new_cli
+  %interchange3 = omp.new_cli
+  %interchange4 = omp.new_cli
+
+  // CHECK: omp.canonical_loop(%canonloop) %iv : i32 in range(%[[tc1]]) {
+  omp.canonical_loop(%cli_outer) %iv_outer : i32 in range(%tc1) {
+    // CHECK: omp.canonical_loop(%canonloop_d1) %iv_d1 : i32 in range(%[[tc2]]) {
+    omp.canonical_loop(%cli_inner) %iv_inner : i32 in range(%tc2) {
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  // CHECK: omp.interchange (%interchanged, %interchanged_0) <- (%canonloop, %canonloop_d1)
+  // CHECK-SAME: permutation([2 : i32, 1 : i32])
+  omp.interchange (%interchange1, %interchange2) <- (%cli_outer, %cli_inner) permutation([2 : i32, 1 : i32])
+
+  // CHECK: omp.interchange (%interchanged_1, %interchanged_2) <- (%interchanged, %interchanged_0)
+  // CHECK-SAME: permutation([1 : i32, 2 : i32])
+  omp.interchange (%interchange3, %interchange4) <- (%interchange1, %interchange2) permutation([1 : i32, 2 : i32])
   return
 }
 

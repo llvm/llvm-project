@@ -1438,8 +1438,8 @@ public:
   ///
   /// @param DL          Debug location for instructions added by interchange.
   /// @param Loops       Loops affected by loop interchange. The
-  /// CanonicalLoopInfo objects are invalidated by this method, i.e. should not
-  /// used after interchange.
+  ///                    CanonicalLoopInfo objects are invalidated by this
+  ///                    method, i.e. should not be used after interchange.
   /// @param Permutation The new order in wich the \p Loops will be arranged.
   ///
   /// \returns A list of generated loops. Contains the same loops as the input
