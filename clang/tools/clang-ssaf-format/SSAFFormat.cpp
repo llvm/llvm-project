@@ -215,7 +215,7 @@ void printAnalysis(const AnalysisData &AD, size_t AnalysisIndex,
                             std::to_string(AnalysisIndex + 1) + ".";
   llvm::outs().indent(Layout.AnalysisCol)
       << llvm::right_justify(AnalysisNum, Layout.AnalysisNumWidth) << " "
-      << llvm::left_justify(AD.Name, Layout.MaxAnalysisNameWidth) << "  "
+      << llvm::left_justify(AD.Name, Layout.MaxAnalysisNameWidth) << " - "
       << AD.Desc << "\n";
 }
 
@@ -242,7 +242,7 @@ void printFormat(const FormatData &FD, size_t FormatIndex,
   std::string FormatNum = std::to_string(FormatIndex + 1) + ".";
   llvm::outs().indent(FormatIndent)
       << llvm::right_justify(FormatNum, Layout.FormatNumWidth) << " "
-      << llvm::left_justify(FD.Name, Layout.MaxFormatNameWidth) << "  "
+      << llvm::left_justify(FD.Name, Layout.MaxFormatNameWidth) << " - "
       << FD.Desc << "\n";
 
   printAnalyses(FD.Analyses, FormatIndex, Layout);
