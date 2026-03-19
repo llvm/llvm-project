@@ -1161,7 +1161,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
   // Instead of returning errors directly, we capture them and provide
   // more of context about this routine.
-  auto handleErr = [&](Error Err) {
+  auto HandleErr = [&](Error Err) {
     std::string Buffer;
     llvm::raw_string_ostream(Buffer)
         << "failed to call global " << (IsCtor ? "constructors" : "destructors")
@@ -1169,7 +1169,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
     return Plugin::error(ErrorCode::INVALID_BINARY, std::move(Err),
                          Buffer.c_str());
   };
-  auto handleErrStr = [&](const std::string &Msg) {
+  auto HandleErrStr = [&](const std::string &Msg) {
     return Plugin::error(ErrorCode::INVALID_BINARY,
                          "failed to call global %s in the image: %s",
                          IsCtor ? "constructors" : "destructors", Msg.c_str());
@@ -1181,13 +1181,16 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   // prefixed with a __init_array_object_ or __fini_array_object_.
   auto ELFObjOrErr = Handler.getELFObjectFile(Image);
   if (!ELFObjOrErr)
-    return handleErr(ELFObjOrErr.takeError());
+    return HandleErr(ELFObjOrErr.takeError());
 
-  SmallVector<std::pair<StringRef, uint16_t>> Funcs;
+  /*Each array object represents the name of a constructor or destructor
+    function along with its priority.*/
+  using ArrayObject = std::pair<StringRef, uint16_t>;
+  SmallVector<ArrayObject> Funcs;
   for (ELFSymbolRef Sym : (*ELFObjOrErr)->symbols()) {
     auto NameOrErr = Sym.getName();
     if (!NameOrErr)
-      return handleErr(NameOrErr.takeError());
+      return HandleErr(NameOrErr.takeError());
 
     if (!NameOrErr->starts_with(IsCtor ? "__init_array_object_"
                                        : "__fini_array_object_"))
@@ -1195,7 +1198,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
     uint16_t Priority;
     if (NameOrErr->rsplit('_').second.getAsInteger(10, Priority))
-      return handleErrStr("invalid priority for constructor or destructor");
+      return HandleErrStr("invalid priority for constructor or destructor");
 
     Funcs.emplace_back(*NameOrErr, Priority);
   }
@@ -1213,7 +1216,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   auto BufferOrErr =
       allocate(Funcs.size() * sizeof(void *), nullptr, TARGET_ALLOC_DEVICE);
   if (!BufferOrErr)
-    return handleErr(BufferOrErr.takeError());
+    return HandleErr(BufferOrErr.takeError());
 
   void *Buffer = *BufferOrErr;
   if (!Buffer)
@@ -1234,43 +1237,44 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   }
 
   if (auto Err = dataSubmit(GlobalPtrStart, FunctionPtrs.data(),
-                            FunctionPtrs.size() * sizeof(void *), nullptr))
-    return handleErr(std::move(Err));
+                            FunctionPtrs.size() * sizeof(void *),
+                            /*AsyncInfo=*/nullptr))
+    return HandleErr(std::move(Err));
 
   GlobalTy StartGlobal(IsCtor ? "__init_array_start" : "__fini_array_start",
                        sizeof(void *), &GlobalPtrStart);
   if (auto Err = Handler.writeGlobalToDevice(*this, Image, StartGlobal))
-    return handleErr(std::move(Err));
+    return HandleErr(std::move(Err));
 
   GlobalTy StopGlobal(IsCtor ? "__init_array_end" : "__fini_array_end",
                       sizeof(void *), &GlobalPtrStop);
   if (auto Err = Handler.writeGlobalToDevice(*this, Image, StopGlobal))
-    return handleErr(std::move(Err));
+    return HandleErr(std::move(Err));
 
   // Call the generated kernel to execute the constructors or destructors.
   auto KernelOrErr = constructKernel(KernelName);
   if (!KernelOrErr)
-    return handleErr(KernelOrErr.takeError());
+    return HandleErr(KernelOrErr.takeError());
 
   GenericKernelTy &L0Kernel = *KernelOrErr;
   if (auto Err = L0Kernel.init(*this, Image))
-    return handleErr(std::move(Err));
+    return HandleErr(std::move(Err));
 
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, /*AsyncInfoPtr=*/nullptr);
 
   KernelArgsTy KernelArgs{};
   uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
   if (auto Err = L0Kernel.launchImpl(*this, NumBlocksAndThreads,
                                      NumBlocksAndThreads, 0, KernelArgs,
                                      KernelLaunchParamsTy{}, AsyncInfoWrapper))
-    return handleErr(std::move(Err));
+    return HandleErr(std::move(Err));
 
   Error Err = Plugin::success();
   AsyncInfoWrapper.finalize(Err);
   if (Err)
-    return handleErr(std::move(Err));
+    return HandleErr(std::move(Err));
   if (auto Err = free(Buffer, TARGET_ALLOC_DEVICE))
-    return handleErr(std::move(Err));
+    return HandleErr(std::move(Err));
 
   return Plugin::success();
 }
