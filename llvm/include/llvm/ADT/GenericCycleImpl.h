@@ -314,12 +314,29 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
 }
 
 template <typename ContextT>
+void GenericCycleInfo<ContextT>::verifyBlockNumberEpoch(
+    const FunctionT *Fn) const {
+  assert(BlockNumberEpoch ==
+             GraphTraits<const FunctionT *>::getNumberEpoch(Fn) &&
+         "CycleInfo used with outdated block number epoch");
+}
+
+template <typename ContextT>
+void GenericCycleInfo<ContextT>::addToBlockMap(BlockT *Block, CycleT *Cycle) {
+  verifyBlockNumberEpoch(Block->getParent());
+  unsigned Number = GraphTraits<BlockT *>::getNumber(Block);
+  if (Number >= BlockMap.size())
+    BlockMap.resize(GraphTraits<FunctionT *>::getMaxNumber(Block->getParent()));
+  BlockMap[Number] = Cycle;
+}
+
+template <typename ContextT>
 void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
   // FixMe: Appending NewBlock is fine as a set of blocks in a cycle. When
   // printing, cycle NewBlock is at the end of list but it should be in the
   // middle to represent actual traversal of a cycle.
   Cycle->appendBlock(Block);
-  BlockMap.try_emplace(Block, Cycle);
+  addToBlockMap(Block, Cycle);
 
   CycleT *ParentCycle = Cycle->getParentCycle();
   while (ParentCycle) {
@@ -361,7 +378,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
     std::unique_ptr<CycleT> NewCycle = std::make_unique<CycleT>();
     NewCycle->appendEntry(HeaderCandidate);
     NewCycle->appendBlock(HeaderCandidate);
-    Info.BlockMap.try_emplace(HeaderCandidate, NewCycle.get());
+    Info.addToBlockMap(HeaderCandidate, NewCycle.get());
 
     // Helper function to process (non-back-edge) predecessors of a discovered
     // block and either add them to the worklist or recognize that the given
@@ -417,7 +434,7 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
                      << Info.Context.print(BlockParent->getHeader()) << "\n");
         }
       } else {
-        Info.BlockMap.try_emplace(Block, NewCycle.get());
+        Info.addToBlockMap(Block, NewCycle.get());
         assert(!is_contained(NewCycle->Blocks, Block));
         NewCycle->Blocks.insert(Block);
         ProcessPredecessors(Block);
@@ -508,6 +525,7 @@ template <typename ContextT>
 void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   GenericCycleInfoCompute<ContextT> Compute(*this);
   Context = ContextT(&F);
+  BlockNumberEpoch = GraphTraits<FunctionT *>::getNumberEpoch(&F);
 
   LLVM_DEBUG(errs() << "Computing cycles for function: " << F.getName()
                     << "\n");
@@ -534,7 +552,9 @@ void GenericCycleInfo<ContextT>::splitCriticalEdge(BlockT *Pred, BlockT *Succ,
 template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getCycle(const BlockT *Block) const
     -> CycleT * {
-  return BlockMap.lookup(Block);
+  verifyBlockNumberEpoch(Block->getParent());
+  unsigned Number = GraphTraits<const BlockT *>::getNumber(Block);
+  return Number < BlockMap.size() ? BlockMap[Number] : nullptr;
 }
 
 /// \brief Find the innermost cycle containing both given cycles.
@@ -608,9 +628,9 @@ void GenericCycleInfo<ContextT>::verifyCycleNest(bool VerifyFull) const {
         Cycle->verifyCycleNest();
       // Check the block map entries for blocks contained in this cycle.
       for (BlockT *BB : Cycle->blocks()) {
-        auto MapIt = BlockMap.find(BB);
-        assert(MapIt != BlockMap.end());
-        assert(Cycle->contains(MapIt->second));
+        CycleT *CycleInBlockMap = getCycle(BB);
+        assert(CycleInBlockMap != nullptr);
+        assert(Cycle->contains(CycleInBlockMap));
       }
     }
   }
