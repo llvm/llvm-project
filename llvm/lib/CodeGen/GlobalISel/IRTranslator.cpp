@@ -4151,6 +4151,14 @@ static bool checkForMustTailInVarArgFn(bool IsVarArg, const BasicBlock &BB) {
 bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MF = &CurMF;
   const Function &F = MF->getFunction();
+
+  // Skip oracle functions by changing their linkage to
+  // available_externally to not generate any code.
+  if (F.hasFnAttribute("oracle-function")) {
+    MF->getFunction().setLinkage(GlobalValue::AvailableExternallyLinkage);
+    return false;
+  }
+
   ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
   CLI = MF->getSubtarget().getCallLowering();
 
