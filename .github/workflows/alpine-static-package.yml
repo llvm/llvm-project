@@ -1,0 +1,157 @@
+name: Alpine Static LLVM Package
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-package:
+    name: Build lldb (alpine static)
+    runs-on: ubuntu-24.04
+    container:
+      image: alpine:3.20
+    env:
+      SCCACHE_DIR: ${{ github.workspace }}/.cache/sccache
+      CCACHE_BASEDIR: ${{ github.workspace }}/.cache/sccache
+      LTO_MODE: Thin
+    defaults:
+      run:
+        shell: sh
+    steps:
+      - name: Install build dependencies
+        run: |
+          set -eux
+          apk add --no-cache \
+            bash \
+            binutils \
+            build-base \
+            ca-certificates \
+            clang \
+            cmake \
+            git \
+            lld \
+            linux-headers \
+            ninja \
+            perl \
+            python3 \
+            sccache \
+            swig \
+            zstd-static \
+            zstd-dev \
+            xz \
+            xz-dev \
+            zlib-dev \
+            ncurses-dev \
+            ncurses-static \
+            libedit-dev \
+            libedit-static 
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore sccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-alpine-static-${{ runner.os }}-${{ env.LTO_MODE }}-${{ hashFiles('.github/workflows/alpine-static-package.yml') }}
+          restore-keys: |
+            sccache-alpine-static-${{ runner.os }}-${{ env.LTO_MODE }}-
+            sccache-alpine-static-${{ runner.os }}-
+
+      - name: Initialize sccache
+        run: |
+          set -eux
+          mkdir -p "${SCCACHE_DIR}"
+          sccache --version
+          sccache --zero-stats || true
+
+      - name: Configure (RelWithDebInfo + LTO + static)
+        env:
+          CC: clang
+          CXX: clang++
+        run: |
+          set -eux
+          cmake -G Ninja -S llvm -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_EXE_LINKER_FLAGS="-static -fuse-ld=lld" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
+            -DCMAKE_MODULE_LINKER_FLAGS="-fuse-ld=lld" \
+            -DLLVM_ENABLE_PROJECTS="lldb" \
+            -DLLVM_ENABLE_LTO="${LTO_MODE}" \
+            -DLLVM_BUILD_LLVM_DYLIB=OFF \
+            -DLLVM_LINK_LLVM_DYLIB=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DLLDB_ENABLE_PYTHON=OFF \
+            -DLLVM_ENABLE_TERMINFO=ON \
+            -DLLVM_ENABLE_LIBEDIT=ON \
+            -DLLVM_ENABLE_LIBXML2=OFF \
+            -DLLVM_ENABLE_ZSTD=FORCE_ON \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_USE_STATIC_ZSTD=ON
+
+      - name: Build
+        run: |
+          set -eux
+          ninja -C build lldb
+
+      - name: Show sccache stats
+        if: always()
+        run: |
+          set -eux
+          sccache --show-stats || true
+
+      - name: Install
+        run: |
+          set -eux
+          cmake --install build --prefix "$PWD/package"
+
+      - name: Verify static linkage (best effort)
+        run: |
+          set -eux
+          file package/bin/lldb || true
+
+      - name: Prepare deliverables
+        id: deliverables
+        run: |
+          set -eux
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          cp -a package package-stripped
+          mkdir -p debug_symbols
+
+          for bin in lldb; do
+            objcopy --only-keep-debug "package/bin/${bin}" "debug_symbols/${bin}.debug"
+            strip --strip-debug "package-stripped/bin/${bin}"
+          done
+
+          cp "package-stripped/bin/lldb" "lldb-${SHORT_SHA}"
+          chmod +x "lldb-${SHORT_SHA}"
+
+          tar -C debug_symbols -czf debug_symbols.tar.gz .
+
+          echo "lldb_name=lldb-${SHORT_SHA}" >> "$GITHUB_OUTPUT" 
+
+      - name: Upload lldb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.deliverables.outputs.lldb_name }}
+          path: ${{ steps.deliverables.outputs.lldb_name }}
+          if-no-files-found: error
+
+      - name: Upload debug symbols artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug_symbols.tar.gz
+          path: debug_symbols.tar.gz
+          if-no-files-found: error
