@@ -4652,10 +4652,10 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
             << F.ModuleName << F.BaseDirectory << M->Directory->getName();
 
       if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities)) {
-        if (auto ASTFE = M ? M->getASTFile() : std::nullopt) {
+        if (auto ASTFileName = M ? M->getASTFileName() : nullptr) {
           // This module was defined by an imported (explicit) module.
-          Diag(diag::err_module_file_conflict) << F.ModuleName << F.FileName
-                                               << ASTFE->getName();
+          Diag(diag::err_module_file_conflict)
+              << F.ModuleName << F.FileName << *ASTFileName;
           // TODO: Add a note with the module map paths if they differ.
         } else {
           // This module was built with a different module map.
@@ -6339,15 +6339,16 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
                                        "too many submodules");
 
       if (!ParentModule) {
-        if (OptionalFileEntryRef CurFile = CurrentModule->getASTFile()) {
+        if (const ModuleFileKey *CurFileKey = CurrentModule->getASTFileKey()) {
           // Don't emit module relocation error if we have -fno-validate-pch
           if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
                     DisableValidationForModuleKind::Module)) {
-            assert(CurFile != F.File && "ModuleManager did not de-duplicate");
+            assert(*CurFileKey != F.FileKey &&
+                   "ModuleManager did not de-duplicate");
 
             Diag(diag::err_module_file_conflict)
-                << CurrentModule->getTopLevelModuleName() << CurFile->getName()
-                << F.File.getName();
+                << CurrentModule->getTopLevelModuleName()
+                << *CurrentModule->getASTFileName() << F.FileName;
 
             auto CurModMapFile =
                 ModMap.getContainingModuleMapFile(CurrentModule);
@@ -6361,7 +6362,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         }
 
         F.DidReadTopLevelSubmodule = true;
-        CurrentModule->setASTFile(F.File);
+        CurrentModule->setASTFileNameAndKey(F.FileName, F.FileKey);
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
       }
 

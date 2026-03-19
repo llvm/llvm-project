@@ -386,9 +386,9 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       Diag(Path[0].getLoc(), diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition);
-      else if (OptionalFileEntryRef FE = M->getASTFile())
+      else if (const ModuleFileName *FileName = M->getASTFileName())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition_from_ast_file)
-            << FE->getName();
+            << *FileName;
       Mod = M;
       break;
     }
