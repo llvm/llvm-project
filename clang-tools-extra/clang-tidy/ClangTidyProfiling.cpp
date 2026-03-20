@@ -48,6 +48,7 @@ void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
   assert(Storage && "We should have a filename.");
   std::string TimestampStr;
   llvm::raw_string_ostream TmpOS(TimestampStr);
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   TmpOS << Storage->Timestamp;
 
   llvm::json::OStream JOS(OS, 2);
