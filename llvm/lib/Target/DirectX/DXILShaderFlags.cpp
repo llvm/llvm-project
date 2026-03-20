@@ -228,7 +228,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
-      if (RTI.isTyped())
+      if (RTI.isTyped() && RTI.isUAV())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
       if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
         CSF.TiledResources = true;

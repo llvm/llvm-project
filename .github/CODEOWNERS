@@ -37,6 +37,7 @@
 
 /clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
 /clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
 /clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
 /lldb/ @JDevlieghere

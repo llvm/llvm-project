@@ -26,13 +26,9 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_flush_if_daz(__CLC_GENTYPE x) {
 
   // Hack around canonicalize not working on spirv.
 #if defined(CLC_SPIRV) || defined(CLC_CLSPV)
-  __CLC_S_GENTYPE ix = __CLC_AS_S_GENTYPE(x);
-  __CLC_S_GENTYPE should_flush =
-      ((ix & __CLC_GENTYPE_EXPBITS) == (__CLC_S_GENTYPE)0) &&
-      ((ix & __CLC_GENTYPE_MANTBITS) != (__CLC_S_GENTYPE)0);
-  __CLC_S_GENTYPE signbit = ix &= __CLC_GENTYPE_SIGNBIT;
-  __CLC_S_GENTYPE result = should_flush ? signbit : ix;
-  return __CLC_AS_GENTYPE(result);
+  __CLC_S_GENTYPE is_denorm_or_zero = __clc_fabs(x) < __CLC_GENTYPE_MIN;
+  return __clc_select(x, __clc_copysign(__CLC_FP_LIT(0.0), x),
+                      is_denorm_or_zero);
 #else
   return __clc_canonicalize(x);
 #endif

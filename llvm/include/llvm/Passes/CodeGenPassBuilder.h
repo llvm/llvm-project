@@ -737,7 +737,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     // target lowering hook.
     if (!Opt.DisableMergeICmps)
       addFunctionPass(MergeICmpsPass(), PMW);
-    addFunctionPass(ExpandMemCmpPass(TM), PMW);
+    addFunctionPass(ExpandMemCmpPass(), PMW);
   }
 
   // Run GC lowering passes for builtin collectors

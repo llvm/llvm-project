@@ -33,12 +33,4 @@ def OpenACC_DeclareTokenType : OpenACC_Type<"DeclareToken", "declare_token"> {
   }];
 }
 
-def OpenACC_ParWidthType : OpenACC_Type<"ParWidth", "par_width"> {
-  let summary = "parallel width token type";
-  let description = [{
-    Represents a type that is consumed by a compute region in order to
-    capture its parallelism dimensions arguments.
-  }];
-}
-
 #endif // OPENACC_OPS_TYPES

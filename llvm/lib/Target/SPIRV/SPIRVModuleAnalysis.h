@@ -144,8 +144,8 @@ struct ModuleAnalysisInfo {
   DenseMap<unsigned, MCRegister> ExtInstSetMap;
   // Contains the list of all global OpVariables in the module.
   SmallVector<const MachineInstr *, 4> GlobalVarList;
-  // Maps functions to corresponding function ID registers.
-  DenseMap<const Function *, MCRegister> FuncMap;
+  // Maps functions and global variables to corresponding ID registers.
+  DenseMap<const GlobalObject *, MCRegister> GlobalObjMap;
   // The set contains machine instructions which are necessary
   // for correct MIR but will not be emitted in function bodies.
   DenseSet<const MachineInstr *> InstrsToDelete;
@@ -167,9 +167,9 @@ struct ModuleAnalysisInfo {
   DenseMap<const Function *, SPIRV::FPFastMathDefaultInfoVector>
       FPFastMathDefaultInfoMap;
 
-  MCRegister getFuncReg(const Function *F) {
-    assert(F && "Function is null");
-    return FuncMap.lookup(F);
+  MCRegister getGlobalObjReg(const GlobalObject *GO) {
+    assert(GO && "GlobalObject is null");
+    return GlobalObjMap.lookup(GO);
   }
   MCRegister getExtInstSetReg(unsigned SetNum) { return ExtInstSetMap[SetNum]; }
   InstrList &getMSInstrs(unsigned MSType) { return MS[MSType]; }

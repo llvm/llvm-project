@@ -24,6 +24,7 @@
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
 #include "cl_common_defines.h"
 #include "llvm/ADT/APFloat.h"
@@ -94,6 +95,21 @@
 using namespace llvm;
 
 #define DEPOTNAME "__local_depot"
+
+static StringRef getTextureName(const Value &V) {
+  assert(V.hasName() && "Found texture variable with no name");
+  return V.getName();
+}
+
+static StringRef getSurfaceName(const Value &V) {
+  assert(V.hasName() && "Found surface variable with no name");
+  return V.getName();
+}
+
+static StringRef getSamplerName(const Value &V) {
+  assert(V.hasName() && "Found sampler variable with no name");
+  return V.getName();
+}
 
 /// discoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.

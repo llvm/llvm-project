@@ -635,15 +635,18 @@ define double @splat_loads(ptr %array1, ptr %array2, ptr %ptrA, ptr %ptrB) {
 ; SSE-LABEL: @splat_loads(
 ; SSE-NEXT:  entry:
 ; SSE-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAY1:%.*]], align 8
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; SSE-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ARRAY2:%.*]], align 8
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; SSE-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP0]], [[TMP2]]
-; SSE-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP0]], [[TMP1]]
-; SSE-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP3]], [[TMP4]]
-; SSE-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
-; SSE-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP5]], i32 1
+; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; SSE-NEXT:    [[TMP4:%.*]] = fmul <4 x double> [[TMP2]], [[TMP3]]
+; SSE-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP4]], i32 0
+; SSE-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP4]], i32 2
 ; SSE-NEXT:    [[ADD3:%.*]] = fadd double [[TMP6]], [[TMP7]]
-; SSE-NEXT:    ret double [[ADD3]]
+; SSE-NEXT:    [[TMP9:%.*]] = extractelement <4 x double> [[TMP4]], i32 1
+; SSE-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
+; SSE-NEXT:    [[ADD2:%.*]] = fadd double [[TMP9]], [[TMP8]]
+; SSE-NEXT:    [[ADD4:%.*]] = fadd double [[ADD3]], [[ADD2]]
+; SSE-NEXT:    ret double [[ADD4]]
 ;
 ; AVX-LABEL: @splat_loads(
 ; AVX-NEXT:  entry:

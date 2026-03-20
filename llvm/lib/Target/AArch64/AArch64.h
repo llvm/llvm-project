@@ -56,7 +56,7 @@ FunctionPass *createFalkorHWPFFixPass();
 FunctionPass *createFalkorMarkStridedAccessesPass();
 FunctionPass *createAArch64PointerAuthPass();
 FunctionPass *createAArch64BranchTargetsPass();
-FunctionPass *createAArch64MIPeepholeOptPass();
+FunctionPass *createAArch64MIPeepholeOptLegacyPass();
 FunctionPass *createAArch64PostCoalescerPass();
 
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
@@ -97,7 +97,7 @@ void initializeAArch64DeadRegisterDefinitionsLegacyPass(PassRegistry &);
 void initializeAArch64ExpandPseudoLegacyPass(PassRegistry &);
 void initializeAArch64LoadStoreOptLegacyPass(PassRegistry &);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
-void initializeAArch64MIPeepholeOptPass(PassRegistry &);
+void initializeAArch64MIPeepholeOptLegacyPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PostCoalescerPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
@@ -170,6 +170,13 @@ public:
 };
 
 class AArch64ExpandPseudoPass : public PassInfoMixin<AArch64ExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64MIPeepholeOptPass
+    : public PassInfoMixin<AArch64MIPeepholeOptPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

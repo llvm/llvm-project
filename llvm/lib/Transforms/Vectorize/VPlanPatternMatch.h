@@ -593,6 +593,10 @@ m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
 }
 
+template <typename Op0_t> inline auto m_AnyExtend(const Op0_t &Op0) {
+  return m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0));
+}
+
 template <typename Op0_t>
 inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>, Op0_t>
 m_ZExtOrSelf(const Op0_t &Op0) {

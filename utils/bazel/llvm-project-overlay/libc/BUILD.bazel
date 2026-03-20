@@ -10201,6 +10201,7 @@ libc_support_library(
 libc_support_library(
     name = "printf_writer",
     hdrs = ["src/stdio/printf_core/writer.h"],
+    textual_hdrs = ["src/stdio/printf_core/write_modes.def"],
     deps = [
         ":__support_cpp_string_view",
         ":__support_macros_config",

@@ -108,6 +108,10 @@ Clang Python Bindings Potentially Breaking Changes
   with objects of other classes.
 - ``TranslationUnit.get_tokens`` now throws an error if both the ``extent`` and
   ``locations`` argument are passed. Previousy, ``locations`` took precedence.
+- ``_CXUnsavedFile`` will be renamed to ``UnsavedFile`` for consistency.
+  ``UnsavedFile`` is already available to use and existing uses should
+  be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a 
+  future release.
 
 What's New in Clang |release|?
 ==============================
@@ -501,6 +505,7 @@ libclang
 - Visit constraints of `auto` type to properly visit concept usages (#GH166580)
 - Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
+- The clang_Module_getASTFile API is deprecated and now always returns nullptr
 
 Code Completion
 ---------------

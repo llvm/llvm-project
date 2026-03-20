@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the declaration of the NVVM specific utility functions.
+// This file contains declarations for PTX-specific utility functions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,9 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
@@ -32,46 +30,6 @@ namespace llvm {
 class DataLayout;
 class TargetMachine;
 
-void clearAnnotationCache(const Module *);
-
-bool isTexture(const Value &);
-bool isSurface(const Value &);
-bool isSampler(const Value &);
-bool isImage(const Value &);
-bool isImageReadOnly(const Value &);
-bool isImageWriteOnly(const Value &);
-bool isImageReadWrite(const Value &);
-bool isManaged(const Value &);
-
-StringRef getTextureName(const Value &);
-StringRef getSurfaceName(const Value &);
-StringRef getSamplerName(const Value &);
-
-SmallVector<unsigned, 3> getMaxNTID(const Function &);
-SmallVector<unsigned, 3> getReqNTID(const Function &);
-SmallVector<unsigned, 3> getClusterDim(const Function &);
-
-std::optional<uint64_t> getOverallMaxNTID(const Function &);
-std::optional<uint64_t> getOverallReqNTID(const Function &);
-std::optional<uint64_t> getOverallClusterRank(const Function &);
-
-std::optional<unsigned> getMaxClusterRank(const Function &);
-std::optional<unsigned> getMinCTASm(const Function &);
-std::optional<unsigned> getMaxNReg(const Function &);
-
-bool hasBlocksAreClusters(const Function &);
-
-inline bool isKernelFunction(const Function &F) {
-  return F.getCallingConv() == CallingConv::PTX_Kernel;
-}
-
-bool isParamGridConstant(const Argument &);
-
-inline MaybeAlign getAlign(const Function &F, unsigned Index) {
-  return F.getAttributes().getAttributes(Index).getStackAlignment();
-}
-
-MaybeAlign getAlign(const CallInst &, unsigned);
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
 /// Since function arguments are passed via .param space, we may want to

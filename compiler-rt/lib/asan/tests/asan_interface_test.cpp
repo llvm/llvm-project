@@ -200,6 +200,40 @@ TEST(AddressSanitizerInterface, OverlappingPoisonMemoryRegionTest) {
   free(array);
 }
 
+TEST(AddressSanitizerInterface, PoisonedSuffixOfFirstGranuleOfRegionTest) {
+  static const size_t granularity = 1ULL << 3;  // shadow granularity
+  char* array = Ident((char*)malloc(118));
+  // State: [0..117] - unpoisoned
+  char* first_granule = (char*)((uintptr_t)array & ~(granularity - 1));
+  EXPECT_EQ(array, first_granule);
+  // Poison [4..7] (suffix of the first granule)
+  __asan_poison_memory_region(array + 4, 4);
+  // State: [uuuupppp][uuuuuuuu]...[uuuuuupp]
+  // i.e. [0..3] - unpoisoned; [4..7] - poisoned; [8..117] - unpoisoned
+  // Sanity checks:
+  GOOD_ACCESS(array, 3);
+  BAD_ACCESS(array, 4);
+  BAD_ACCESS(array, 7);
+  GOOD_ACCESS(array, 8);
+  GOOD_ACCESS(array, 117);
+  BAD_ACCESS(array, 118);
+  EXPECT_EQ(0, __asan_region_is_poisoned(array, 4));               // [0..3]
+  EXPECT_EQ(0, __asan_region_is_poisoned(array + 8, 110));         // [8..117]
+  EXPECT_EQ(array + 4, __asan_region_is_poisoned(array + 4, 4));   // [4..7]
+  EXPECT_EQ(array + 4, __asan_region_is_poisoned(array, 8));       // [0..7]
+  EXPECT_EQ(array + 4, __asan_region_is_poisoned(array, 16));      // [0..15]
+  EXPECT_EQ(array + 4, __asan_region_is_poisoned(array, 17));      // [0..16]
+  EXPECT_EQ(array + 4, __asan_region_is_poisoned(array + 4, 12));  // [4..15]
+  EXPECT_EQ(array + 4, __asan_region_is_poisoned(array + 4, 13));  // [4..16]
+  EXPECT_EQ(array + 5, __asan_region_is_poisoned(array + 5, 2));   // [5..6]
+  EXPECT_EQ(array + 4, __asan_region_is_poisoned(array + 2, 4));   // [2..5]
+  EXPECT_EQ(array + 6, __asan_region_is_poisoned(array + 6, 10));  // [6..15]
+  // Check that poisoned suffix of the first granule is not skipped:
+  EXPECT_EQ(array + 4, __asan_region_is_poisoned(array + 2, 14));   // [2..15]
+  EXPECT_EQ(array + 4, __asan_region_is_poisoned(array + 2, 100));  // [2..101]
+  free(array);
+}
+
 TEST(AddressSanitizerInterface, PushAndPopWithPoisoningTest) {
   // Vector of capacity 20
   char *vec = Ident((char*)malloc(20));

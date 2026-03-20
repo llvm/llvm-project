@@ -81,14 +81,12 @@ bool LiveRangeEdit::canRematerializeAt(Remat &RM, SlotIndex UseIdx) {
   return true;
 }
 
-SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator MI,
-                                         Register DestReg, const Remat &RM,
-                                         const TargetRegisterInfo &tri,
-                                         bool Late, unsigned SubIdx,
-                                         MachineInstr *ReplaceIndexMI) {
+SlotIndex LiveRangeEdit::rematerializeAt(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    const Remat &RM, const TargetRegisterInfo &tri, bool Late, unsigned SubIdx,
+    MachineInstr *ReplaceIndexMI, LaneBitmask UsedLanes) {
   assert(RM.OrigMI && "Invalid remat");
-  TII.reMaterialize(MBB, MI, DestReg, SubIdx, *RM.OrigMI);
+  TII.reMaterialize(MBB, MI, DestReg, SubIdx, *RM.OrigMI, UsedLanes);
   // DestReg of the cloned instruction cannot be Dead. Set isDead of DestReg
   // to false anyway in case the isDead flag of RM.OrigMI's dest register
   // is true.

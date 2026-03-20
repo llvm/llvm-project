@@ -4207,7 +4207,7 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
   SmallVector<IdentifierLoc, 2> Path;
   bool ImportingHeader = false;
   bool IsPartition = false;
-  std::string FlatName;
+
   switch (Tok.getKind()) {
   case tok::header_name:
     ImportingHeader = true;
@@ -4221,27 +4221,12 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
     Lex(Tok);
     [[fallthrough]];
   case tok::identifier: {
-    bool LeadingSpace = Tok.hasLeadingSpace();
-    unsigned NumToksInDirective = DirToks.size();
-    if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path)) {
-      if (Tok.isNot(tok::eod))
-        CheckEndOfDirective(ImportTok.getIdentifierInfo()->getName(),
-                            /*EnableMacros=*/false, &DirToks);
-      EnterModuleSuffixTokenStream(DirToks);
+    if (HandleModuleName(ImportTok.getIdentifierInfo()->getName(), UseLoc, Tok,
+                         Path, DirToks, /*AllowMacroExpansion=*/true,
+                         IsPartition))
       return;
-    }
 
-    // Clean the module-name tokens and replace these tokens with
-    // annot_module_name.
-    DirToks.resize(NumToksInDirective);
-    ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
-    DirToks.emplace_back();
-    DirToks.back().setKind(tok::annot_module_name);
-    DirToks.back().setAnnotationRange(NameLoc->getRange());
-    DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
-    DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
-    DirToks.push_back(Tok);
-
+    std::string FlatName;
     bool IsValid =
         (IsPartition && ModuleDeclState.isNamedModule()) || !IsPartition;
     if (Callbacks && IsValid) {
@@ -4382,57 +4367,20 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     DirToks.push_back(Tok);
     break;
   case tok::identifier: {
-    bool LeadingSpace = Tok.hasLeadingSpace();
-    unsigned NumToksInDirective = DirToks.size();
-
-    // C++ [cpp.module]p3: Any preprocessing tokens after the module
-    // preprocessing token in the module directive are processed just as in
-    // normal text.
-    //
-    // P3034R1 Module Declarations Shouldn’t be Macros.
-    if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path,
-                              /*AllowMacroExpansion=*/false)) {
-      if (Tok.isNot(tok::eod))
-        CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
-                            /*EnableMacros=*/false, &DirToks);
-      EnterModuleSuffixTokenStream(DirToks);
+    if (HandleModuleName(ModuleTok.getIdentifierInfo()->getName(), UseLoc, Tok,
+                         Path, DirToks, /*AllowMacroExpansion=*/false,
+                         /*IsPartition=*/false))
       return;
-    }
-
-    ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
-    DirToks.resize(NumToksInDirective);
-    DirToks.emplace_back();
-    DirToks.back().setKind(tok::annot_module_name);
-    DirToks.back().setAnnotationRange(NameLoc->getRange());
-    DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
-    DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
-    DirToks.push_back(Tok);
 
     // C++20 [cpp.module]p
     //   The pp-tokens, if any, of a pp-module shall be of the form:
     //     pp-module-name pp-module-partition[opt] pp-tokens[opt]
     if (Tok.is(tok::colon)) {
-      NumToksInDirective = DirToks.size();
       LexUnexpandedToken(Tok);
-      LeadingSpace = Tok.hasLeadingSpace();
-      if (LexModuleNameContinue(Tok, UseLoc, DirToks, Partition,
-                                /*AllowMacroExpansion=*/false,
-                                /*IsPartition=*/true)) {
-        if (Tok.isNot(tok::eod))
-          CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
-                              /*EnableMacros=*/false, &DirToks);
-        EnterModuleSuffixTokenStream(DirToks);
+      if (HandleModuleName(ModuleTok.getIdentifierInfo()->getName(), UseLoc,
+                           Tok, Partition, DirToks,
+                           /*AllowMacroExpansion=*/false, /*IsPartition=*/true))
         return;
-      }
-
-      ModuleNameLoc *PartitionLoc = ModuleNameLoc::Create(*this, Partition);
-      DirToks.resize(NumToksInDirective);
-      DirToks.emplace_back();
-      DirToks.back().setKind(tok::annot_module_name);
-      DirToks.back().setAnnotationRange(NameLoc->getRange());
-      DirToks.back().setAnnotationValue(static_cast<void *>(PartitionLoc));
-      DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
-      DirToks.push_back(Tok);
     }
 
     // If the current token is a macro definition, put it back to token stream

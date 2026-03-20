@@ -147,6 +147,28 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
   computeGlobalViewIndicesFromFlatOffset(offset, subType, layout, indices);
 }
 
+uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
+    const cir::CIRDataLayout &layout, mlir::Type ty,
+    llvm::ArrayRef<int64_t> indices) {
+  int64_t offset = 0;
+  for (int64_t idx : indices) {
+    if (auto recordTy = dyn_cast<cir::RecordType>(ty)) {
+      offset += recordTy.getElementOffset(layout.layout, idx);
+      const llvm::Align tyAlign = llvm::Align(
+          recordTy.getPacked() ? 1 : layout.layout.getTypeABIAlignment(ty));
+      offset = llvm::alignTo(offset, tyAlign);
+      assert(idx < (int64_t)recordTy.getMembers().size());
+      ty = recordTy.getMembers()[idx];
+    } else if (auto arrayTy = dyn_cast<cir::ArrayType>(ty)) {
+      ty = arrayTy.getElementType();
+      offset += layout.getTypeAllocSize(ty) * idx;
+    } else {
+      llvm_unreachable("unexpected type");
+    }
+  }
+  return offset;
+}
+
 cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(
     mlir::ArrayAttr fields, bool packed, bool padded, llvm::StringRef name) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());

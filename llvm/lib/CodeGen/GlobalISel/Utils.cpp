@@ -170,7 +170,6 @@ void llvm::constrainSelectedInstRegOperands(MachineInstr &I,
       continue;
 
     LLVM_DEBUG(dbgs() << "Converting operand: " << MO << '\n');
-    assert(MO.isReg() && "Unsupported non-reg operand");
 
     Register Reg = MO.getReg();
     // Physical registers don't need to be constrained.

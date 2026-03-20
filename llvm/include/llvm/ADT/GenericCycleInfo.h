@@ -302,7 +302,7 @@ public:
   CycleT *getSmallestCommonCycle(CycleT *A, CycleT *B) const;
   CycleT *getSmallestCommonCycle(BlockT *A, BlockT *B) const;
   unsigned getCycleDepth(const BlockT *Block) const;
-  CycleT *getTopLevelParentCycle(BlockT *Block);
+  CycleT *getTopLevelParentCycle(const BlockT *Block) const;
 
   /// Assumes that \p Cycle is the innermost cycle containing \p Block.
   /// \p Block will be appended to \p Cycle and all of its parent cycles.

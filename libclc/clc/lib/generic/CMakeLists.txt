@@ -156,6 +156,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_rsqrt.cl
   math/clc_sin.cl
   math/clc_sincos.cl
+  math/clc_sincospi.cl
   math/clc_sincos_helpers.cl
   math/clc_sinh.cl
   math/clc_sinpi.cl
@@ -167,6 +168,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_tanh.cl
   math/clc_tanpi.cl
   math/clc_tgamma.cl
+  math/clc_trigpi_helpers.cl
   math/clc_trunc.cl
   mem_fence/clc_mem_fence.cl
   misc/clc_shuffle.cl

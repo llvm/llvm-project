@@ -42,7 +42,7 @@ struct PrebuiltModuleDep {
 
   explicit PrebuiltModuleDep(const Module *M)
       : ModuleName(M->getTopLevelModuleName()),
-        PCMFile(M->getASTFile()->getName()),
+        PCMFile(M->getASTFileName()->str()),
         ModuleMapFile(M->PresumedModuleMapFile) {}
 };
 

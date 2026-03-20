@@ -455,6 +455,11 @@ BlockArgument ComputeRegionOp::gpuParWidth(gpu::Processor processor) {
 }
 
 LogicalResult ComputeRegionOp::verify() {
+  for (auto op : getLaunchArgs())
+    if (!op.getDefiningOp<acc::ParWidthOp>())
+      return emitOpError(
+          "launch arguments must be results of acc.par_width operations");
+
   unsigned expectedBlockArgs = getLaunchArgs().size() + getInputArgs().size();
   unsigned actualBlockArgs = getRegion().front().getNumArguments();
   if (expectedBlockArgs != actualBlockArgs)
@@ -531,9 +536,9 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalKeyword("launch"))) {
     if (parser.parseAssignmentList(regionArgs, launchOperands))
       return failure();
-    auto parWidthType = acc::ParWidthType::get(builder.getContext());
+    Type indexType = builder.getIndexType();
     for (size_t i = 0; i < regionArgs.size(); ++i)
-      types.push_back(parWidthType);
+      types.push_back(indexType);
   }
 
   if (succeeded(parser.parseOptionalKeyword("ins"))) {

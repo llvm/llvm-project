@@ -270,7 +270,7 @@ added in the darwin crash log example above:
          # Get a symbol context for the section offset address which includes
          # a module, compile unit, function, block, line entry, and symbol
          sym_ctx = so_addr.GetSymbolContext (lldb.eSymbolContextEverything)
-         print sym_ctx
+         print(sym_ctx)
 
 
 Use Builtin Python Module to Symbolicate

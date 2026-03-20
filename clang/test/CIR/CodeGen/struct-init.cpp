@@ -60,6 +60,19 @@ StructWithFieldInitFromConst swfifc2 = { 2 };
 // LLVM: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
 // OGCG: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
 
+
+struct StructWithBoolField {
+  int a;
+  bool b;
+  int c;
+};
+
+StructWithBoolField sbf = {1, true, 3};
+
+// CIR: cir.global external @sbf = #cir.const_record<{#cir.int<1> : !s32i, #true, #cir.int<3> : !s32i}> : !rec_StructWithBoolField
+// LLVM: @sbf = global %struct.StructWithBoolField { i32 1, i8 1, i32 3 }, align 4
+// OGCG: @sbf = global %struct.StructWithBoolField { i32 1, i8 1, i32 3 }, align 4
+
 void init() {
   S s1 = {1, 2, 3};
   S s2 = {4, 5};

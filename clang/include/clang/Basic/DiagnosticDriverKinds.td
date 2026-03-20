@@ -624,6 +624,17 @@ def remark_using_modules_manifest : Remark<
   InGroup<ModulesDriver>;
 def err_modules_manifest_failed_parse : Error<
   "failure while parsing standard modules manifest: '%0'">;
+def err_default_modules_cache_not_available : Error<
+  "unable to determine the default -fmodules-cache-path. Please specify it "
+  "explicitly using -fmodules-cache-path or the CLANG_MODULE_CACHE_PATH "
+  "environment variable">;
+def err_dependency_scan_failed : Error<
+  "failed to perform dependency scan">;
+def err_modules_driver_named_module_redefinition : Error<
+  "duplicate definitions of C++20 named module '%0' in '%1' and '%2'">;
+def remark_printing_module_graph : Remark<
+  "printing module dependency graph">,
+  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,

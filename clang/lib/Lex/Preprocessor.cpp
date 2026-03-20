@@ -1250,6 +1250,36 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
   }
 }
 
+bool Preprocessor::HandleModuleName(StringRef DirType, SourceLocation UseLoc,
+                                    Token &Tok,
+                                    SmallVectorImpl<IdentifierLoc> &Path,
+                                    SmallVectorImpl<Token> &DirToks,
+                                    bool AllowMacroExpansion,
+                                    bool IsPartition) {
+  bool LeadingSpace = Tok.hasLeadingSpace();
+  unsigned NumToksInDirective = DirToks.size();
+  if (LexModuleNameContinue(Tok, UseLoc, DirToks, Path, AllowMacroExpansion,
+                            IsPartition)) {
+    if (Tok.isNot(tok::eod))
+      CheckEndOfDirective(DirType,
+                          /*EnableMacros=*/false, &DirToks);
+    EnterModuleSuffixTokenStream(DirToks);
+    return true;
+  }
+
+  // Clean the module-name tokens and replace these tokens with
+  // annot_module_name.
+  DirToks.resize(NumToksInDirective);
+  ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
+  DirToks.emplace_back();
+  DirToks.back().setKind(tok::annot_module_name);
+  DirToks.back().setAnnotationRange(NameLoc->getRange());
+  DirToks.back().setAnnotationValue(static_cast<void *>(NameLoc));
+  DirToks.back().setFlagValue(Token::LeadingSpace, LeadingSpace);
+  DirToks.push_back(Tok);
+  return false;
+}
+
 /// [cpp.pre]/p2:
 /// A preprocessing directive consists of a sequence of preprocessing tokens
 /// that satisfies the following constraints: At the start of translation phase
@@ -1410,7 +1440,9 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   SmallVector<Token, 32> Suffix;
   SmallVector<IdentifierLoc, 3> Path;
   Lex(Result);
-  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path))
+  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path,
+                            /*AllowMacroExpansion=*/true,
+                            /*IsPartition=*/false))
     return CollectPPImportSuffixAndEnterStream(Suffix);
 
   ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);

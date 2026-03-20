@@ -1,4 +1,4 @@
-REQUIRES: curl
+REQUIRES: curl, http-server
 
 RUN: rm -rf %t
 RUN: mkdir -p %t/debuginfod-cache

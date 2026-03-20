@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_fabs.h"
-#include "clc/math/clc_sincos_helpers.h"
-#include "clc/math/math.h"
+#include "clc/math/clc_sincospi.h"
+#include "clc/math/clc_sinpi.h"
 
 #define __CLC_BODY "clc_sinpi.inc"
 #include "clc/math/gentype.inc"

@@ -8,7 +8,7 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i8 [[A_PROMOTED]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[A_PROMOTED]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i16> [[TMP5]], <i16 0, i16 -1, i16 0, i16 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP6]])

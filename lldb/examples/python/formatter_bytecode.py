@@ -19,6 +19,7 @@ import re
 import io
 import ast
 import enum
+import shlex
 import textwrap
 from copy import copy
 from dataclasses import dataclass
@@ -1147,6 +1148,11 @@ def _main():
     )
     parser.add_argument("-n", "--type-name", help="source type of formatter")
     parser.add_argument(
+        "--skip-invocation-comment",
+        action="store_true",
+        help="do not print invocation comment in compiled output",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         help="output file (required for --assemble)",
@@ -1179,6 +1185,9 @@ def _main():
                 section.write_binary(output)
         else:
             with open(args.output, "w") as output:
+                if not args.skip_invocation_comment:
+                    print("// Generated with:", file=output)
+                    print("//  ", shlex.join(sys.argv), file=output)
                 section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:

@@ -3756,6 +3756,9 @@ public:
   llvm::Function *
   GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
                                      const OMPExecutableDirective &D);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunctionAggregate(const CapturedStmt &S,
+                                              const OMPExecutableDirective &D);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,

@@ -154,9 +154,10 @@ PyAttrBuilderMap::dunderGetItemNamed(const std::string &attributeKind) {
 }
 
 void PyAttrBuilderMap::dunderSetItemNamed(const std::string &attributeKind,
-                                          nb::callable func, bool replace) {
+                                          nb::callable func, bool replace,
+                                          bool allow_existing) {
   PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
-                                            replace);
+                                            replace, allow_existing);
 }
 
 void PyAttrBuilderMap::bind(nb::module_ &m) {
@@ -171,6 +172,7 @@ void PyAttrBuilderMap::bind(nb::module_ &m) {
                   "attribute kind.")
       .def_static("insert", &PyAttrBuilderMap::dunderSetItemNamed,
                   "attribute_kind"_a, "attr_builder"_a, "replace"_a = false,
+                  "allow_existing"_a = false,
                   "Register an attribute builder for building MLIR "
                   "attributes from Python values.");
 }

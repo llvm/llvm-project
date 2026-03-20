@@ -1,3 +1,7 @@
+if (LIBC_CONF_PRINTF_MODULAR)
+  message(FATAL_ERROR "modular printf is only supported in baremetal stdio")
+endif()
+
 add_entrypoint_object(
   stdin
   SRCS

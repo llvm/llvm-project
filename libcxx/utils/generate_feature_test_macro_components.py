@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 from builtins import range
@@ -504,8 +504,8 @@ feature_test_macros = [
             "name": "__cpp_lib_destroying_delete",
             "values": {"c++20": 201806},
             "headers": ["new"],
-            "test_suite_guard": "TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
-            "libcxx_guard": "_LIBCPP_STD_VER >= 20 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
+            "test_suite_guard": "defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
+            "libcxx_guard": "defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
         },
         {
             "name": "__cpp_lib_enable_shared_from_this",

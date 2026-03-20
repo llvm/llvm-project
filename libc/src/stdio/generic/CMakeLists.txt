@@ -416,6 +416,10 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
+if (LIBC_CONF_PRINTF_MODULAR AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
+  message(FATAL_ERROR "modular printf is only supported in baremetal stdio")
+endif()
+
 add_generic_entrypoint_object(
   printf
   SRCS

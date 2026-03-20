@@ -94,7 +94,7 @@ def testCeilDivUOp(ctx):
 def testCmpOp(ctx):
     a = index.ConstantOp(value=42)
     b = index.ConstantOp(value=23)
-    pred = AttrBuilder.get("IndexCmpPredicateAttr")("slt", context=ctx)
+    pred = AttrBuilder.get("index.IndexCmpPredicateAttr")("slt", context=ctx)
     r = index.CmpOp(pred, lhs=a, rhs=b)
     # CHECK: %{{.*}} = index.cmp slt(%{{.*}}, %{{.*}})
 

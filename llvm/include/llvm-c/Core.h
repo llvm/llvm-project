@@ -2081,9 +2081,8 @@ LLVM_C_ABI unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy,
       macro(SelectInst)                     \
       macro(ShuffleVectorInst)              \
       macro(StoreInst)                      \
-      macro(BranchInst)                     \
-        macro(UncondBrInst)                 \
-        macro(CondBrInst)                   \
+      macro(UncondBrInst)                   \
+      macro(CondBrInst)                     \
       macro(IndirectBrInst)                 \
       macro(InvokeInst)                     \
       macro(ReturnInst)                     \
@@ -2229,6 +2228,10 @@ LLVM_C_ABI LLVMBool LLVMIsPoison(LLVMValueRef Val);
 #define LLVM_DECLARE_VALUE_CAST(name)                                          \
   LLVM_C_ABI LLVMValueRef LLVMIsA##name(LLVMValueRef Val);
 LLVM_FOR_EACH_VALUE_SUBCLASS(LLVM_DECLARE_VALUE_CAST)
+
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMIsABranchInst(LLVMValueRef Val),
+    "Use LLVMIsAUncondBrInst/LLVMIsACondBrInst instead");
 
 LLVM_C_ABI LLVMValueRef LLVMIsAMDNode(LLVMValueRef Val);
 LLVM_C_ABI LLVMValueRef LLVMIsAValueAsMetadata(LLVMValueRef Val);

@@ -6,6 +6,9 @@
 
 #include <endian.h>
 
+_Static_assert(__LITTLE_ENDIAN == __ORDER_LITTLE_ENDIAN__, "");
+_Static_assert(__BIG_ENDIAN == __ORDER_BIG_ENDIAN__, "");
+_Static_assert(__PDP_ENDIAN == __ORDER_PDP_ENDIAN__, "");
 
 #if BYTE_ORDER == BIG_ENDIAN
 

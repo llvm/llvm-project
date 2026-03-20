@@ -332,9 +332,10 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
@@ -1829,7 +1830,7 @@ namespace AMDGPU {
 } // end namespace AMDGPU
 
 namespace AMDGPU {
-enum AsmComments {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // For sgpr to vgpr spill instructions
   SGPR_SPILL = MachineInstr::TAsmComments
 };

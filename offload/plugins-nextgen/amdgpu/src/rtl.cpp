@@ -1141,7 +1141,7 @@ private:
     // Set the output signal of the current slot.
     Slots[Curr].Signal = OutputSignal;
 
-    return std::make_pair(Curr, InputSignal);
+    return {Curr, InputSignal};
   }
 
   /// Complete all pending post actions and reset the stream after synchronizing
@@ -1974,7 +1974,7 @@ struct AMDHostDeviceTy : public AMDGenericDeviceTy {
                   const llvm::SmallVector<hsa_agent_t> &HostAgents)
       : AMDGenericDeviceTy(), Agents(HostAgents), ArgsMemoryManager(Plugin),
         PinnedMemoryManager(Plugin) {
-    assert(HostAgents.size() && "No host agent found");
+    assert(!HostAgents.empty() && "No host agent found");
   }
 
   /// Initialize the host device memory pools and the memory managers for

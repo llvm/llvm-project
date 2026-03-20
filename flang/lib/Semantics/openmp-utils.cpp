@@ -775,6 +775,9 @@ bool IsTransformableLoop(const parser::DoConstruct &loop) {
 }
 
 bool IsTransformableLoop(const parser::OpenMPLoopConstruct &omp) {
+  if (IsFullUnroll(omp)) {
+    return false;
+  }
   return IsLoopTransforming(omp.BeginDir().DirId());
 }
 
@@ -919,6 +922,60 @@ std::optional<int64_t> GetRequiredCount(
   return std::nullopt;
 }
 
+#ifdef EXPENSIVE_CHECKS
+namespace {
+/// Check that for every value x of type T, there will be a "source" member
+/// somewhere in x. This is to specifically make sure that parser::GetSource
+/// will return something for any parser::ExecutionPartConstruct.
+
+template <typename...> struct HasSourceT {
+  static constexpr bool value{false};
+};
+
+template <typename T> struct HasSourceT<T> {
+private:
+  using U = llvm::remove_cvref_t<T>;
+
+  static constexpr bool check() {
+    if constexpr (parser::HasSource<U>::value) {
+      return true;
+    } else if constexpr (ConstraintTrait<U>) {
+      return HasSourceT<decltype(U::thing)>::value;
+    } else if constexpr (WrapperTrait<U>) {
+      return HasSourceT<decltype(U::v)>::value;
+    } else if constexpr (TupleTrait<U>) {
+      return HasSourceT<decltype(U::t)>::value;
+    } else if constexpr (UnionTrait<U>) {
+      return HasSourceT<decltype(U::u)>::value;
+    } else {
+      return false;
+    }
+  }
+
+public:
+  static constexpr bool value{check()};
+};
+
+template <> struct HasSourceT<parser::ErrorRecovery> {
+  static constexpr bool value{true};
+};
+
+template <typename T> struct HasSourceT<common::Indirection<T>> {
+  static constexpr bool value{HasSourceT<T>::value};
+};
+
+template <typename... Ts> struct HasSourceT<std::tuple<Ts...>> {
+  static constexpr bool value{(HasSourceT<Ts>::value || ...)};
+};
+
+template <typename... Ts> struct HasSourceT<std::variant<Ts...>> {
+  static constexpr bool value{(HasSourceT<Ts>::value && ...)};
+};
+
+static_assert(HasSourceT<parser::ExecutionPartConstruct>::value);
+} // namespace
+#endif // EXPENSIVE_CHECKS
+
 LoopSequence::LoopSequence(const parser::ExecutionPartConstruct &root,
     unsigned version, bool allowAllLoops)
     : version_(version), allowAllLoops_(allowAllLoops) {
@@ -945,10 +1002,11 @@ std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
       return std::make_unique<Construct>(body, &code);
     }
   } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(code)}) {
-    if (IsTransformableLoop(*omp)) {
-      auto &body{std::get<parser::Block>(omp->t)};
-      return std::make_unique<Construct>(body, &code);
-    }
+    // Allow all loop constructs. This helps with better diagnostics, e.g.
+    // "this is not a loop-transforming construct", insted of just "this is
+    // not a valid intervening code".
+    auto &body{std::get<parser::Block>(omp->t)};
+    return std::make_unique<Construct>(body, &code);
   }
 
   return nullptr;
@@ -957,6 +1015,7 @@ std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
 void LoopSequence::createChildrenFromRange(
     ExecutionPartIterator::IteratorType begin,
     ExecutionPartIterator::IteratorType end) {
+  bool invalidWithEntry{false};
   // Create children. If there is zero or one, this LoopSequence could be
   // a nest. If there are more, it could be a proper sequence. In the latter
   // case any code between consecutive children must be "transparent".
@@ -964,13 +1023,20 @@ void LoopSequence::createChildrenFromRange(
     if (auto entry{createConstructEntry(code)}) {
       children_.push_back(
           LoopSequence(std::move(entry), version_, allowAllLoops_));
-      if (!IsTransformableLoop(code)) {
-        hasInvalidIC_ = true;
-        hasOpaqueIC_ = true;
+      // Even when DO WHILE et al are allowed to have entries, still treat
+      // them as invalid intervening code.
+      // Give it priority over other kinds of invalid interveninig code.
+      if (!invalidWithEntry && !IsTransformableLoop(code)) {
+        invalidIC_ = &code;
+        invalidWithEntry = true;
       }
     } else {
-      hasInvalidIC_ = hasInvalidIC_ || !IsValidInterveningCode(code);
-      hasOpaqueIC_ = hasOpaqueIC_ || !IsTransparentInterveningCode(code);
+      if (!invalidIC_ && !IsValidInterveningCode(code)) {
+        invalidIC_ = &code;
+      }
+      if (!opaqueIC_ && !IsTransparentInterveningCode(code)) {
+        opaqueIC_ = &code;
+      }
     }
   }
 }
@@ -1069,16 +1135,16 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
     return Depth{0, 0};
   }
 
-  // Get the length of the nested sequence. The hasInvalidIC_ and hasOpaqueIC_
-  // flags do not count canonical loop nests, but there can only be one for
-  // depth to make sense.
+  // Get the length of the nested sequence. The invalidIC_ and opaqueIC_
+  // members do not count canonical loop nests, but there can only be one
+  // for depth to make sense.
   std::optional<int64_t> length{getNestedLength()};
   // Get the depths of the code nested in this sequence (e.g. contained in
   // entry_), and use it as the basis for the depths of entry_->owner.
   auto [semaDepth, perfDepth]{getNestedDepths()};
-  if (hasInvalidIC_ || length.value_or(0) != 1) {
+  if (invalidIC_ || length.value_or(0) != 1) {
     semaDepth = perfDepth = 0;
-  } else if (hasOpaqueIC_ || length.value_or(0) != 1) {
+  } else if (opaqueIC_ || length.value_or(0) != 1) {
     perfDepth = 0;
   }
 

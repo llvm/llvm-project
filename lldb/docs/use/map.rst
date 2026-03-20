@@ -1398,7 +1398,7 @@ Echo text to the screen
 
 .. code-block:: shell
 
-  (lldb) script print "Here is some text"
+  (lldb) script print("Here is some text")
 
 Remap source file pathnames for the debug session
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

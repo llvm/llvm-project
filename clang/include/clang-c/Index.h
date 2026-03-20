@@ -4651,6 +4651,8 @@ CINDEX_LINKAGE CXModule clang_getModuleForFile(CXTranslationUnit, CXFile);
  * \param Module a module object.
  *
  * \returns the module file where the provided module object came from.
+ *
+ * @deprecated: module files are longer guaranteed to be loaded from a CXFile
  */
 CINDEX_LINKAGE CXFile clang_Module_getASTFile(CXModule Module);
 

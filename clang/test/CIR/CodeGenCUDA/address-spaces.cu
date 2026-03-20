@@ -19,17 +19,12 @@
 // LLVM-DEVICE: @_ZZ2fnvE1j = internal global i32 undef, align 4
 
 __device__ int a;
-// CIR-DEVICE: cir.global external @[[DEV:.*]] = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
+// CIR-DEVICE: cir.global external lang_address_space(offload_global) @[[DEV:.*]] = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
 // LLVM-DEVICE: @[[DEV_LD:.*]] = externally_initialized global i32 0, align 4
 // OGCG-DEVICE: @[[DEV_OD:.*]] = addrspace(1) externally_initialized global i32 0, align 4
 
-__shared__ int b;
-// CIR-DEVICE: cir.global external @[[SHARED:.*]] = #cir.undef : !s32i {alignment = 4 : i64}
-// LLVM-DEVICE: @[[SHARED_LL:.*]] = global i32 undef, align 4
-// OGCG-DEVICE: @[[SHARED_OD:.*]] = addrspace(3) global i32 undef, align 4
-
 __constant__ int c;
-// CIR-DEVICE: cir.global constant external @[[CONST:.*]] = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
+// CIR-DEVICE: cir.global constant external lang_address_space(offload_constant) @[[CONST:.*]] = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
 // LLVM-DEVICE: @[[CONST_LL:.*]] = externally_initialized constant i32 0, align 4
 // OGCG-DEVICE: @[[CONST_OD:.*]] = addrspace(4) externally_initialized constant i32 0, align 4
 

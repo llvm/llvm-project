@@ -95,9 +95,9 @@ def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None, None, Non
 
 
 # Convenience decorator for registering user-friendly Attribute builders.
-def register_attribute_builder(kind, replace=False):
+def register_attribute_builder(kind, replace=False, allow_existing=False):
     def decorator_builder(func):
-        AttrBuilder.insert(kind, func, replace=replace)
+        AttrBuilder.insert(kind, func, replace=replace, allow_existing=allow_existing)
         return func
 
     return decorator_builder

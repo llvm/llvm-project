@@ -127,9 +127,9 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
                                           MachinePointerInfo SrcPtrInfo) const {
 
   // Get the constant size of the copy/set.
-  uint64_t ConstSize = 0;
+  LocationSize MemSize = LocationSize::afterPointer();
   if (auto *C = dyn_cast<ConstantSDNode>(Size))
-    ConstSize = C->getZExtValue();
+    MemSize = LocationSize::precise(C->getZExtValue());
 
   const bool IsSet = Opcode == AArch64::MOPSMemorySetPseudo ||
                      Opcode == AArch64::MOPSMemorySetTaggingPseudo;
@@ -140,7 +140,7 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
       isVolatile ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
   auto DstFlags = MachineMemOperand::MOStore | Vol;
   auto *DstOp =
-      MF.getMachineMemOperand(DstPtrInfo, DstFlags, ConstSize, Alignment);
+      MF.getMachineMemOperand(DstPtrInfo, DstFlags, MemSize, Alignment);
 
   if (IsSet) {
     // Extend value to i64, if required.
@@ -158,7 +158,7 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
 
     auto SrcFlags = MachineMemOperand::MOLoad | Vol;
     auto *SrcOp =
-        MF.getMachineMemOperand(SrcPtrInfo, SrcFlags, ConstSize, Alignment);
+        MF.getMachineMemOperand(SrcPtrInfo, SrcFlags, MemSize, Alignment);
     DAG.setNodeMemRefs(Node, {DstOp, SrcOp});
     return SDValue(Node, 3);
   }

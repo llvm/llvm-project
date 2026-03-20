@@ -4125,6 +4125,20 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     MIB.constrainAllUses(TII, TRI, RBI);
     return true;
   }
+  case Intrinsic::spv_named_boolean_spec_constant: {
+    auto Opcode = I.getOperand(3).getImm() ? SPIRV::OpSpecConstantTrue
+                                           : SPIRV::OpSpecConstantFalse;
+
+    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+                   .addDef(I.getOperand(0).getReg())
+                   .addUse(GR.getSPIRVTypeID(ResType));
+    MIB.constrainAllUses(TII, TRI, RBI);
+    unsigned SpecId = I.getOperand(2).getImm();
+    buildOpDecorate(I.getOperand(0).getReg(), *MIB.getInstr(), TII,
+                    SPIRV::Decoration::SpecId, {SpecId});
+
+    return true;
+  }
   case Intrinsic::spv_const_composite: {
     // If no values are attached, the composite is null constant.
     bool IsNull = I.getNumExplicitDefs() + 1 == I.getNumExplicitOperands();

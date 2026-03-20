@@ -384,22 +384,40 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
   case index_error_code::missing_index_file:
     Context.getDiagnostics().Report(diag::err_ctu_error_opening)
         << IE.getFileName();
-    break;
+    return;
   case index_error_code::invalid_index_format:
     Context.getDiagnostics().Report(diag::err_extdefmap_parsing)
         << IE.getFileName() << IE.getLineNum();
-    break;
+    return;
   case index_error_code::multiple_definitions:
     Context.getDiagnostics().Report(diag::err_multiple_def_index)
         << IE.getLineNum();
-    break;
+    return;
   case index_error_code::triple_mismatch:
     Context.getDiagnostics().Report(diag::warn_ctu_incompat_triple)
         << IE.getFileName() << IE.getTripleToName() << IE.getTripleFromName();
-    break;
-  default:
-    break;
+    return;
+  case index_error_code::success:
+    llvm_unreachable("There should not be a success error. This case should "
+                     "have been handled by the caller.");
+    return;
+  case index_error_code::unspecified:
+  case index_error_code::missing_definition:
+  case index_error_code::failed_import:
+  case index_error_code::failed_to_get_external_ast:
+  case index_error_code::failed_to_generate_usr:
+  case index_error_code::lang_mismatch:
+  case index_error_code::lang_dialect_mismatch:
+  case index_error_code::load_threshold_reached:
+  case index_error_code::invocation_list_ambiguous:
+  case index_error_code::invocation_list_file_not_found:
+  case index_error_code::invocation_list_empty:
+  case index_error_code::invocation_list_wrong_format:
+  case index_error_code::invocation_list_lookup_unsuccessful:
+    // FIXME: Silently dropping these errors
+    return;
   }
+  llvm_unreachable("Unrecognized index_error_code.");
 }
 
 CrossTranslationUnitContext::ASTUnitStorage::ASTUnitStorage(

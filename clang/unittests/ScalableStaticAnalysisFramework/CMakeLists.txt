@@ -23,6 +23,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   SummaryNameTest.cpp
   TestFixture.cpp
   TUSummaryBuilderTest.cpp
+  WholeProgramAnalysis/AnalysisDriverTest.cpp
 
   CLANG_LIBS
   clangAST
