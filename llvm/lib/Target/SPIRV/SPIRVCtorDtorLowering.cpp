@@ -45,7 +45,7 @@ static cl::opt<bool>
 
 namespace {
 
-static std::string getHash(StringRef Str) {
+std::string getHash(StringRef Str) {
   llvm::MD5 Hasher;
   llvm::MD5::MD5Result Hash;
   Hasher.update(Str);
@@ -53,12 +53,12 @@ static std::string getHash(StringRef Str) {
   return llvm::utohexstr(Hash.low(), /*LowerCase=*/true);
 }
 
-static void addKernelAttrs(Function *F) {
+void addKernelAttrs(Function *F) {
   F->setCallingConv(CallingConv::SPIR_KERNEL);
   F->addFnAttr("uniform-work-group-size", "true");
 }
 
-static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
+Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
   StringRef InitOrFiniKernelName =
       IsCtor ? "spirv$device$init" : "spirv$device$fini";
   if (M.getFunction(InitOrFiniKernelName))
@@ -95,7 +95,7 @@ static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
 //   for (size_t i = fini_array_size; i > 0; --i)
 //     reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 // }
-static void createInitOrFiniCalls(Function &F, bool IsCtor) {
+void createInitOrFiniCalls(Function &F, bool IsCtor) {
   Module &M = *F.getParent();
   LLVMContext &C = M.getContext();
 
@@ -107,9 +107,9 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
 
   auto CreateGlobal = [&](const char *Name) -> GlobalVariable * {
     auto *GV = new GlobalVariable(
-        M, PointerType::get(C, 0),
+        M, PointerType::getUnqual(C),
         /*isConstant=*/false, GlobalValue::WeakAnyLinkage,
-        Constant::getNullValue(PointerType::get(C, 0)), Name,
+        Constant::getNullValue(PointerType::getUnqual(C)), Name,
         /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
         /*AddressSpace=*/GlobalAddrSpace);
     GV->setVisibility(GlobalVariable::ProtectedVisibility);
@@ -118,12 +118,12 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
 
   auto *Begin = M.getOrInsertGlobal(
       IsCtor ? "__init_array_start" : "__fini_array_start",
-      PointerType::get(C, 0), function_ref<GlobalVariable *()>([&]() {
+      PointerType::getUnqual(C), function_ref<GlobalVariable *()>([&]() {
         return CreateGlobal(IsCtor ? "__init_array_start"
                                    : "__fini_array_start");
       }));
   auto *End = M.getOrInsertGlobal(
-      IsCtor ? "__init_array_end" : "__fini_array_end", PointerType::get(C, 0),
+      IsCtor ? "__init_array_end" : "__fini_array_end", PointerType::getUnqual(C),
       function_ref<GlobalVariable *()>([&]() {
         return CreateGlobal(IsCtor ? "__init_array_end" : "__fini_array_end");
       }));
@@ -136,7 +136,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   if (!IsCtor) {
     Value *OldBeginVal = BeginVal;
     BeginVal =
-        IRB.CreateInBoundsGEP(PointerType::get(C, 0), EndVal,
+        IRB.CreateInBoundsGEP(PointerType::getUnqual(C), EndVal,
                               ArrayRef<Value *>(ConstantInt::getAllOnesValue(
                                   IntegerType::getInt64Ty(C))),
                               "start");
@@ -162,7 +162,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   IRB.CreateRetVoid();
 }
 
-static bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
+bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
                                     bool IsCtor) {
   ConstantArray *GA = dyn_cast<ConstantArray>(GV->getInitializer());
   if (!GA || GA->getNumOperands() == 0)
@@ -189,7 +189,7 @@ static bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
     auto *GV = new GlobalVariable(M, F->getType(), /*IsConstant=*/true,
                                   GlobalValue::ExternalLinkage, F, NameStr,
                                   nullptr, GlobalValue::NotThreadLocal,
-                                  /*AddressSpace=*/0);
+                                  /*AddressSpace=*/1);
     GV->setSection(IsCtor ? ".init_array" + PriorityStr
                           : ".fini_array" + PriorityStr);
     GV->setVisibility(GlobalVariable::ProtectedVisibility);
@@ -198,7 +198,7 @@ static bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
   return true;
 }
 
-static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
+bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
                                    bool IsCtor) {
   GlobalVariable *GV = M.getGlobalVariable(GlobalName);
   if (!GV || !GV->hasInitializer())
@@ -220,7 +220,7 @@ static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
   return true;
 }
 
-static bool lowerCtorsAndDtors(Module &M) {
+bool lowerCtorsAndDtors(Module &M) {
   // Only run this pass for OpenMP offload compilation
   if (!llvm::omp::isOpenMPDevice(M))
     return false;
