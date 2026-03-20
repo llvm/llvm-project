@@ -91,7 +91,7 @@ protected:
   }
 
   /// Parameter indices.
-  llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;
+  llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
   std::optional<SourceInfo> LocOverride = std::nullopt;

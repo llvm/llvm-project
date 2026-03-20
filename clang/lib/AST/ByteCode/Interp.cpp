@@ -298,11 +298,6 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
   // at the end.
   for (const Function::ParamDescriptor &PDesc : Func->args_reverse())
     TYPE_SWITCH(PDesc.T, S.Stk.discard<T>());
-
-  if (Func->hasThisPointer() && !Func->isThisPointerExplicit())
-    S.Stk.discard<Pointer>();
-  if (Func->hasRVO())
-    S.Stk.discard<Pointer>();
 }
 
 bool isConstexprUnknown(const Pointer &P) {
@@ -1661,20 +1656,19 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return false;
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, OpPC, VarArgSize);
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame;
+  S.Current = NewFrame.get();
 
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
   if (Interpret(S)) {
+    NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
   }
 
-  InterpFrame::free(NewFrame);
   // Interpreting the function failed somehow. Reset to
   // previous state.
   S.Current = FrameBefore;
@@ -1745,10 +1739,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, OpPC, VarArgSize);
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame;
+  S.Current = NewFrame.get();
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   // Note that we cannot assert(CallResult.hasValue()) here since
@@ -1760,13 +1753,13 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     S.InitializingBlocks.pop_back();
 
   if (!Success) {
-    InterpFrame::free(NewFrame);
     // Interpreting the function failed somehow. Reset to
     // previous state.
     S.Current = FrameBefore;
     return false;
   }
 
+  NewFrame.release(); // Frame was delete'd already.
   assert(S.Current == FrameBefore);
   return true;
 }

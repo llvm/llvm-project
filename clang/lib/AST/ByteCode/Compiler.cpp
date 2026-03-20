@@ -240,7 +240,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
             return this->emitGetLocal(*SubExprT, It->second.Offset, E);
           } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
             if (auto It = this->Params.find(PVD); It != this->Params.end()) {
-              return this->emitGetParam(*SubExprT, It->second.Index, E);
+              return this->emitGetParam(*SubExprT, It->second.Offset, E);
             }
           }
         }
@@ -3852,13 +3852,13 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
   // This is necessary because the calling code has pushed the pointer
   // of the correct base for  us already, but the arguments need
   // to come after.
-  unsigned ParamIndex = 0;
+  unsigned Offset = align(primSize(PT_Ptr)); // instance pointer.
   for (const ParmVarDecl *PD : Ctor->parameters()) {
     PrimType PT = this->classify(PD->getType()).value_or(PT_Ptr);
 
-    if (!this->emitGetParam(PT, ParamIndex, E))
+    if (!this->emitGetParam(PT, Offset, E))
       return false;
-    ++ParamIndex;
+    Offset += align(primSize(PT));
   }
 
   return this->emitCall(F, 0, E);
@@ -6605,7 +6605,7 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
     // We do the lvalue-to-rvalue conversion manually here, so no need
     // to care about references.
     PrimType ParamType = this->classify(PVD->getType()).value_or(PT_Ptr);
-    if (!this->emitGetParam(ParamType, It->second.Index, MD))
+    if (!this->emitGetParam(ParamType, It->second.Offset, MD))
       return false;
   }
 
@@ -6702,7 +6702,10 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (!this->emitThis(Ctor))
       return false;
 
-    if (!this->emitGetParam(PT_Ptr, /*ParamIndex=*/0, Ctor))
+    const ParmVarDecl *PVD = Ctor->getParamDecl(0);
+    ParamOffset PO = this->Params[PVD]; // Must exist.
+
+    if (!this->emitGetParam(PT_Ptr, PO.Offset, Ctor))
       return false;
 
     return this->emitMemcpy(Ctor) && this->emitPopPtr(Ctor) &&
@@ -6875,7 +6878,10 @@ bool Compiler<Emitter>::compileUnionAssignmentOperator(
   if (!this->emitThis(MD))
     return false;
 
-  if (!this->emitGetParam(PT_Ptr, /*ParamIndex=*/0, MD))
+  const ParmVarDecl *PVD = MD->getParamDecl(0);
+  ParamOffset PO = this->Params[PVD]; // Must exist.
+
+  if (!this->emitGetParam(PT_Ptr, PO.Offset, MD))
     return false;
 
   return this->emitMemcpy(MD) && this->emitRet(PT_Ptr, MD);
@@ -7447,9 +7453,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
       if (IsReference || !It->second.IsPtr)
-        return this->emitGetParam(classifyPrim(E), It->second.Index, E);
+        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
 
-      return this->emitGetPtrParam(It->second.Index, E);
+      return this->emitGetPtrParam(It->second.Offset, E);
     }
 
     if (!Ctx.getLangOpts().CPlusPlus23 && IsReference)

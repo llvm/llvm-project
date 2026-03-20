@@ -1426,11 +1426,11 @@ bool SetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool GetParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
+bool GetParam(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (S.checkingPotentialConstantExpression()) {
     return false;
   }
-  S.Stk.push<T>(S.Current->getParam<T>(Index));
+  S.Stk.push<T>(S.Current->getParam<T>(I));
   return true;
 }
 
@@ -1786,10 +1786,10 @@ inline bool GetPtrLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
-inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
+inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (S.Current->isBottomFrame())
     return false;
-  S.Stk.push<Pointer>(S.Current->getParamPointer(Index));
+  S.Stk.push<Pointer>(S.Current->getParamPointer(I));
   return true;
 }
 

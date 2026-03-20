@@ -94,8 +94,6 @@ public:
   unsigned getEvalID() const { return EvalID; }
   /// Move all pointers from this block to \param B.
   void movePointersTo(Block *B);
-  /// Make all pointers that currently point to this block point to nullptr.
-  void removePointers();
 
   /// Returns a pointer to the stored data.
   /// You are allowed to read Desc->getSize() bytes from this address.
