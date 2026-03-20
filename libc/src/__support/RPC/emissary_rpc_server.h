@@ -42,42 +42,6 @@ __attribute((weak)) EmissaryReturn_t EmissaryPrint(char *data, emisArgBuf_t *ab,
 } // end extern "C"
 } // namespace EmissaryExternal
 
-// We would like to get llvm typeID enum from Type.h. e.g.
-// #include ".../llvm/include/llvm/IR/Type.h"
-// But we cannot include LLVM headers in a runtime function.
-// So we a have a manual copy of llvm TypeID enum from Type.h
-// The codegen for _emissary_exec puts this ID in the key for
-// each arg and the host runtime needs to decode this key.
-#if 1
-enum TypeID {
-  // PrimitiveTypes
-  HalfTyID = 0,  ///< 16-bit floating point type
-  BFloatTyID,    ///< 16-bit floating point type (7-bit significand)
-  FloatTyID,     ///< 32-bit floating point type
-  DoubleTyID,    ///< 64-bit floating point type
-  X86_FP80TyID,  ///< 80-bit floating point type (X87)
-  FP128TyID,     ///< 128-bit floating point type (112-bit significand)
-  PPC_FP128TyID, ///< 128-bit floating point type (two 64-bits, PowerPC)
-  VoidTyID,      ///< type with no size
-  LabelTyID,     ///< Labels
-  MetadataTyID,  ///< Metadata
-  X86_AMXTyID,   ///< AMX vectors (8192 bits, X86 specific)
-  TokenTyID,     ///< Tokens
-
-  // Derived types... see DerivedTypes.h file.
-  IntegerTyID,        ///< Arbitrary bit width integers
-  ByteTyID,           ///< Arbitrary bit width bytes
-  FunctionTyID,       ///< Functions
-  PointerTyID,        ///< Pointers
-  StructTyID,         ///< Structures
-  ArrayTyID,          ///< Arrays
-  FixedVectorTyID,    ///< Fixed width SIMD vector type
-  ScalableVectorTyID, ///< Scalable SIMD vector type
-  TypedPointerTyID,   ///< Typed pointer used by some GPU targets
-  TargetExtTyID,      ///< Target extension type
-};
-#endif
-
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
@@ -145,20 +109,16 @@ EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr, char *strptr,
   size_t bytes_consumed;
   size_t strsz;
   size_t fillerNeeded;
-
   uint argcount = 0;
-
   for (int argnum = 0; argnum < NumArgs; argnum++) {
     num_bytes = 0;
     strsz = 0;
     unsigned int key = *(unsigned int *)keyptr;
-    unsigned int llvmID = key >> 16;
+    unsigned int emis_id = key >> 16;
     unsigned int numbits = (key << 16) >> 16;
 
-    switch (llvmID) {
-    case FloatTyID:  ///<  2: 32-bit floating point type
-    case DoubleTyID: ///<  3: 64-bit floating point type
-    case FP128TyID:  ///<  5: 128-bit floating point type (112-bit mantissa)
+    switch (emis_id) {
+    case EmisFloatTy:
       num_bytes = numbits / 8;
       bytes_consumed = num_bytes;
       fillerNeeded = ((size_t)dataptr) % num_bytes;
@@ -175,7 +135,7 @@ EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr, char *strptr,
         a[argcount] = (emis_argptr_t *)getuint64(dataptr);
       break;
 
-    case IntegerTyID: ///< 11: Arbitrary bit width integers
+    case EmisIntegerTy:
       num_bytes = numbits / 8;
       bytes_consumed = num_bytes;
       fillerNeeded = ((size_t)dataptr) % num_bytes;
@@ -192,7 +152,7 @@ EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr, char *strptr,
         a[argcount] = (emis_argptr_t *)getuint64(dataptr);
       break;
 
-    case PointerTyID: {   ///< 15: Pointers
+    case EmisPointerTy: {
       if (numbits == 1) { // This is a pointer to string
         num_bytes = 4;
         bytes_consumed = num_bytes;
@@ -219,23 +179,6 @@ EmissaryBuildVargs(int NumArgs, char *keyptr, char *dataptr, char *strptr,
       }
     } break;
 
-    case HalfTyID:           ///<  1: 16-bit floating point type
-    case ArrayTyID:          ///< 14: Arrays
-    case StructTyID:         ///< 13: Structures
-    case FunctionTyID:       ///< 12: Functions
-    case TokenTyID:          ///< 10: Tokens
-    case MetadataTyID:       ///<  8: Metadata
-    case LabelTyID:          ///<  7: Labels
-    case PPC_FP128TyID:      ///<  6: 128-bit floating point type (two 64-bits,
-                             ///<  PowerPC)
-    case X86_FP80TyID:       ///<  4: 80-bit floating point type (X87)
-    case FixedVectorTyID:    ///< 16: Fixed width SIMD vector type
-    case ScalableVectorTyID: ///< 17: Scalable SIMD vector type
-    case TypedPointerTyID:   ///< Typed pointer used by some GPU targets
-    case TargetExtTyID:      ///< Target extension type
-    case VoidTyID:
-      return _ERC_UNSUPPORTED_ID_ERROR;
-      break;
     default:
       return _ERC_INVALID_ID_ERROR;
     }

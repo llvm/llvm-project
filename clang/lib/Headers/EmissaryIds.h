@@ -31,6 +31,13 @@ _emissary_exec(const unsigned long long int, ...);
   ((unsigned long long)a << 48) | ((unsigned long long)b << 32) |              \
       ((unsigned long long)c << 16) | ((unsigned long long)d)
 
+enum EmisTyID {
+  EmisInvalidTy = 0,
+  EmisFloatTy,
+  EmisIntegerTy,
+  EmisPointerTy,
+};
+
 /// These are the various Emissary APIs currently defined.
 /// MPI, HDF5, and, RESERVE are "external" Emissary APIs whose device stubs and
 /// host runtime support are provided by library maintainers typically in the

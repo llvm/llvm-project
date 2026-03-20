@@ -134,6 +134,46 @@ static llvm::Function *GetEmissaryExecDeclaration(CodeGenModule &CGM,
 // A macro to pack the llvm type ID and numbits into 4-byte key
 #define _PACK_TY_BITLEN(x, y) ((uint32_t)x << 16) | ((uint32_t)y)
 
+static EmisTyID getEmisTyID(llvm::Type::TypeID tyid) {
+  switch (tyid) {
+  case llvm::Type::HalfTyID:     ///< 16-bit floating point type
+  case llvm::Type::X86_FP80TyID: ///< 80-bit floating point type (X87)
+  case llvm::Type::BFloatTyID:   ///< 16-bit floating point type (7-bit
+                                 ///< significand)
+    return EmisInvalidTy;
+  case llvm::Type::FloatTyID:  ///< 32-bit floating point type
+  case llvm::Type::DoubleTyID: ///< 64-bit floating point type
+  case llvm::Type::FP128TyID:  ///< 128-bit floating point type (112-bit
+                               ///< significand)
+    return EmisFloatTy;
+  case llvm::Type::PPC_FP128TyID: ///< 128-bit floating point type (two 64-bits,
+                                  ///< PowerPC)
+  case llvm::Type::VoidTyID:      ///< type with no size
+  case llvm::Type::LabelTyID:     ///< Labels
+  case llvm::Type::MetadataTyID:  ///< Metadata
+  case llvm::Type::X86_AMXTyID:   ///< AMX vectors (8192 bits, X86 specific)
+  case llvm::Type::TokenTyID:     ///< Tokens
+    return EmisInvalidTy;
+  // Derived types... see DerivedTypes.h file.
+  case llvm::Type::IntegerTyID: ///< Arbitrary bit width integers
+    return EmisIntegerTy;
+  case llvm::Type::ByteTyID:     ///< Arbitrary bit width bytes
+  case llvm::Type::FunctionTyID: ///< Functions
+    return EmisInvalidTy;
+  case llvm::Type::PointerTyID: ///< Pointers
+    return EmisPointerTy;
+  case llvm::Type::StructTyID:         ///< Structures
+  case llvm::Type::ArrayTyID:          ///< Arrays
+  case llvm::Type::FixedVectorTyID:    ///< Fixed width SIMD vector type
+  case llvm::Type::ScalableVectorTyID: ///< Scalable SIMD vector type
+  case llvm::Type::TypedPointerTyID: ///< Typed pointer used by some GPU targets
+  case llvm::Type::TargetExtTyID:    ///< Target extension type
+    return EmisInvalidTy;
+  default:
+    return EmisInvalidTy;
+  }
+}
+
 //  ----- External function EmitEmissaryExec called from CGExpr.cpp -----
 RValue CodeGenFunction::EmitEmissaryExec(const CallExpr *E) {
   assert(getTarget().getTriple().isAMDGCN() ||
@@ -278,6 +318,7 @@ RValue CodeGenFunction::EmitEmissaryExec(const CallExpr *E) {
     llvm::Type *ty = Args[I].getRValue(*this).getScalarVal()->getType();
     llvm::Type::TypeID argtypeid =
         Args[I].getRValue(*this).getScalarVal()->getType()->getTypeID();
+    EmisTyID emis_tyid = getEmisTyID(argtypeid);
 
     // Get type size in bits. Usually 64 or 32.
     uint32_t numbits = 0;
@@ -291,7 +332,7 @@ RValue CodeGenFunction::EmitEmissaryExec(const CallExpr *E) {
       numbits = ty->getScalarSizeInBits();
     // Create a key that combines llvm typeID and size
     llvm::Value *Key =
-        llvm::ConstantInt::get(Int32Ty, _PACK_TY_BITLEN(argtypeid, numbits));
+        llvm::ConstantInt::get(Int32Ty, _PACK_TY_BITLEN(emis_tyid, numbits));
     P = Builder.CreateStructGEP(DataStructTy, BufferPtr, I + 2);
     Builder.CreateAlignedStore(Key, P, DL.getPrefTypeAlign(Key->getType()));
   }
