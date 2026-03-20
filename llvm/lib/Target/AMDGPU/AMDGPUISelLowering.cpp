@@ -3430,8 +3430,8 @@ SDValue AMDGPUTargetLowering::LowerCTLS(SDValue Op, SelectionDAG &DAG) const {
       DAG.getTargetConstant(Intrinsic::amdgcn_sffbh, SL, MVT::i32), Src);
   SDValue Clamped = DAG.getNode(ISD::UMIN, SL, MVT::i32, Ffbh,
                                 DAG.getConstant(BitWidth, SL, MVT::i32));
-  return DAG.getNode(ISD::SUB, SL, MVT::i32, Clamped,
-                     DAG.getConstant(1, SL, MVT::i32));
+  return DAG.getNode(ISD::ADD, SL, MVT::i32, Clamped,
+                     DAG.getAllOnesConstant(SL, MVT::i32));
 }
 
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,

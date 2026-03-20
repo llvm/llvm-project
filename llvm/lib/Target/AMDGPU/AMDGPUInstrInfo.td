@@ -493,8 +493,6 @@ def AMDGPUdiv_fixup : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_div_fixup node:$src0, node:$src1, node:$src2),
    (AMDGPUdiv_fixup_impl node:$src0, node:$src1, node:$src2)]>;
 
-def AMDGPUffbh_i32 : PatFrag<(ops node:$src),
-  (int_amdgcn_sffbh node:$src)>;
 
 def AMDGPUffbh_u32 : PatFrags<(ops node:$src),
   [(ctlz_zero_undef node:$src),

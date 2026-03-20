@@ -1385,10 +1385,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(1, 32);
 
   getActionDefinitionsBuilder(G_CTLS)
-      .customFor({{S32, S32}})
+      .scalarize(0)
       .clampScalar(0, S32, S32)
       .clampScalar(1, S32, S32)
-      .scalarize(0);
+      .custom();
 
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
@@ -4692,8 +4692,8 @@ bool AMDGPULegalizerInfo::legalizeCTLS(MachineInstr &MI,
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(Src);
-  assert(SrcTy == LLT::scalar(32) && "legalizeCTLS only supports s32");
   const LLT S32 = LLT::scalar(32);
+  assert(SrcTy == S32 && "legalizeCTLS only supports s32");
   unsigned BitWidth = SrcTy.getSizeInBits();
 
   auto Sffbh = B.buildIntrinsic(Intrinsic::amdgcn_sffbh, {S32}).addUse(Src);

@@ -5620,6 +5620,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_CTTZ:
   case G_CTTZ_ZERO_UNDEF:
   case G_CTPOP:
+  case G_CTLS:
   case G_FCOPYSIGN:
   case G_ZEXT:
   case G_SEXT:

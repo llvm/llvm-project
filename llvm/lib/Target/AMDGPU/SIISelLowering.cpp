@@ -15536,18 +15536,17 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
   }
 
   // umin(sffbh(x), bitwidth) -> sffbh(x) if x is known to be not 0 or -1.
-  if (Opc == ISD::UMIN && Op0.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-      Op0.getConstantOperandVal(0) == Intrinsic::amdgcn_sffbh) {
-    ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op1);
-    if (C) {
-      SDValue FfbhSrc = Op0.getOperand(1);
-      unsigned BitWidth = FfbhSrc.getValueType().getScalarSizeInBits();
-      if (C->getZExtValue() >= BitWidth) {
-        // Check if we can prove the source is not all-same-bits.
-        KnownBits Known = DAG.computeKnownBits(FfbhSrc);
-        if (Known.One.getBoolValue() && Known.Zero.getBoolValue())
-          return Op0;
-      }
+  SDValue FfbhSrc;
+  uint64_t Clamp = 0;
+  if (Opc == ISD::UMIN &&
+      sd_match(Op0,
+               m_IntrinsicWOChain<Intrinsic::amdgcn_sffbh>(m_Value(FfbhSrc))) &&
+      sd_match(Op1, m_ConstInt(Clamp))) {
+    unsigned BitWidth = FfbhSrc.getValueType().getScalarSizeInBits();
+    if (Clamp >= BitWidth) {
+      KnownBits Known = DAG.computeKnownBits(FfbhSrc);
+      if (Known.isNonZero() && !Known.isAllOnes())
+        return Op0;
     }
   }
 
