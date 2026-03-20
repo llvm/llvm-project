@@ -56,6 +56,9 @@ private:
   bool allowsMisalignedMemoryAccesses(EVT, unsigned AddrSpace, Align Alignment,
                                       MachineMemOperand::Flags Flags,
                                       unsigned *Fast) const override;
+  LegalizeAction getCustomLoadAction(EVT ValVT, EVT MemVT, Align Alignment,
+                                     unsigned AddrSpace, unsigned ExtType,
+                                     bool Atomic) const override;
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
   bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
