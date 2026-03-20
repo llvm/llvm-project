@@ -129,6 +129,22 @@ static SDValue stripExtractLoElt(SDValue In) {
   return In;
 }
 
+static SDValue emitRegSequence(llvm::SelectionDAG &CurDAG, unsigned DstRegClass,
+                               EVT DstTy, ArrayRef<SDValue> Elts,
+                               ArrayRef<unsigned> SubRegClass,
+                               const SDLoc &DL) {
+  assert(Elts.size() == SubRegClass.size() && "array size mismatch");
+  unsigned NumElts = Elts.size();
+  SmallVector<SDValue, 17> Ops(2 * NumElts + 1);
+  Ops[0] = (CurDAG.getTargetConstant(DstRegClass, DL, MVT::i32));
+  for (unsigned i = 0; i < NumElts; ++i) {
+    Ops[2 * i + 1] = Elts[i];
+    Ops[2 * i + 2] = CurDAG.getTargetConstant(SubRegClass[i], DL, MVT::i32);
+  }
+  return SDValue(
+      CurDAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, DstTy, Ops), 0);
+}
+
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISelLegacy, "amdgpu-isel",
@@ -3739,8 +3755,7 @@ static MachineSDNode *buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
 
 static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
                                          llvm::SelectionDAG *CurDAG,
-                                         const SDLoc &DL,
-                                         const GCNSubtarget *Subtarget) {
+                                         const SDLoc &DL, bool IsRealTrue16) {
   SmallVector<SDValue, 8> PackedElts;
   assert("unhandled Reg sequence size" &&
          (Elts.size() == 8 || Elts.size() == 16));
@@ -3753,25 +3768,19 @@ static MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
     if (isExtractHiElt(Elts[i + 1], HiSrc) && LoSrc == HiSrc) {
       PackedElts.push_back(HiSrc);
     } else {
-      if (Subtarget->useRealTrue16Insts()) {
-        // FIXME-TRUE16. use reg_sequence to replace v_perm_b32
-        // Currently packing VGPR_32 for 16-bit source before passing to
-        // v_perm_b32
+      if (IsRealTrue16) {
+        // FIXME-TRUE16. For now pack VGPR_32 for 16-bit source before
+        // passing to v_perm_b32. Eventually we should use replace v_perm_b32
+        // by reg_sequence.
         SDValue Undef = SDValue(
             CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i16),
             0);
-        SDValue Ops[] = {
-            CurDAG->getTargetConstant(AMDGPU::VGPR_32RegClassID, DL, MVT::i32),
-            Elts[i], CurDAG->getTargetConstant(AMDGPU::lo16, DL, MVT::i16),
-            Undef, CurDAG->getTargetConstant(AMDGPU::hi16, DL, MVT::i16)};
-
-        Elts[i] = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
-                                                 MVT::i32, Ops),
-                          0);
-        Ops[1] = Elts[i + 1];
-        Elts[i + 1] = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE,
-                                                     DL, MVT::i32, Ops),
-                              0);
+        Elts[i] =
+            emitRegSequence(*CurDAG, AMDGPU::VGPR_32RegClassID, MVT::i32,
+                            {Elts[i], Undef}, {AMDGPU::lo16, AMDGPU::hi16}, DL);
+        Elts[i + 1] = emitRegSequence(*CurDAG, AMDGPU::VGPR_32RegClassID,
+                                      MVT::i32, {Elts[i + 1], Undef},
+                                      {AMDGPU::lo16, AMDGPU::hi16}, DL);
       }
       SDValue PackLoLo = CurDAG->getTargetConstant(0x05040100, DL, MVT::i32);
       MachineSDNode *Packed =
@@ -3788,7 +3797,8 @@ static MachineSDNode *buildRegSequence(SmallVectorImpl<SDValue> &Elts,
                                        const SDLoc &DL, unsigned ElementSize,
                                        const GCNSubtarget *Subtarget) {
   if (ElementSize == 16)
-    return buildRegSequence16(Elts, CurDAG, DL, Subtarget);
+    return buildRegSequence16(Elts, CurDAG, DL,
+                              Subtarget->useRealTrue16Insts());
   if (ElementSize == 32)
     return buildRegSequence32(Elts, CurDAG, DL);
   llvm_unreachable("Unhandled element size");
@@ -3862,8 +3872,9 @@ bool AMDGPUDAGToDAGISel::SelectWMMAModsF16Neg(SDValue In, SDValue &Src,
 
     // All elements have neg modifier
     if (BV->getNumOperands() * 2 == EltsF16.size()) {
-      Src =
-          SDValue(buildRegSequence16(EltsF16, CurDAG, SDLoc(In), Subtarget), 0);
+      Src = SDValue(buildRegSequence16(EltsF16, CurDAG, SDLoc(In),
+                                       Subtarget->useRealTrue16Insts()),
+                    0);
       Mods |= SISrcMods::NEG;
       Mods |= SISrcMods::NEG_HI;
     }
