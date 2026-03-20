@@ -1093,6 +1093,16 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP}, MVT::i128,
                      Custom);
 
+  if (STI.hasVectorAtom()) {
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, {MVT::v2f32, MVT::v4f32},
+                       Custom);
+    for (MVT VT : {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v2bf16,
+                    MVT::v4bf16, MVT::v8bf16})
+      setOperationAction(
+          {ISD::ATOMIC_LOAD_FADD, ISD::ATOMIC_LOAD_FMIN, ISD::ATOMIC_LOAD_FMAX},
+          VT, Custom);
+  }
+
   // Now deduce the information based on the above mentioned
   // actions
   computeRegisterProperties(STI.getRegisterInfo());
@@ -3408,6 +3418,63 @@ static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
   return NewSt;
 }
 
+enum AtomVecOp : unsigned {
+  ATOM_VEC_FADD = 0,
+  ATOM_VEC_FMIN = 1,
+  ATOM_VEC_FMAX = 2,
+};
+
+
+// Replace a vector ATOMIC_LOAD_F{ADD,MIN,MAX} with an NVPTXISD::ATOM_VEC_V{N}
+// node that scalarizes the vector argument and result. We do this because vector types are illegal in NVPTX.
+static void replaceVectorAtomicRMW(SDNode *N, SelectionDAG &DAG,
+                                   SmallVectorImpl<SDValue> &Results) {
+  auto *AN = cast<AtomicSDNode>(N);
+  EVT VecVT = AN->getValueType(0);
+  EVT EltVT = VecVT.getVectorElementType();
+  unsigned NumElts = VecVT.getVectorNumElements();
+  SDLoc DL(N);
+
+  unsigned NVPTXOpc;
+  switch (NumElts) {
+  case 2: NVPTXOpc = NVPTXISD::ATOM_VEC_V2; break;
+  case 4: NVPTXOpc = NVPTXISD::ATOM_VEC_V4; break;
+  case 8: NVPTXOpc = NVPTXISD::ATOM_VEC_V8; break;
+  default: llvm_unreachable("Unsupported vector width for atom");
+  }
+
+  unsigned OpCode;
+  switch (N->getOpcode()) {
+  case ISD::ATOMIC_LOAD_FADD: OpCode = ATOM_VEC_FADD; break;
+  case ISD::ATOMIC_LOAD_FMIN: OpCode = ATOM_VEC_FMIN; break;
+  case ISD::ATOMIC_LOAD_FMAX: OpCode = ATOM_VEC_FMAX; break;
+  default: llvm_unreachable("Unsupported atomic op for vector atom");
+  }
+
+  SmallVector<SDValue, 10> Ops;
+  Ops.push_back(AN->getChain());
+  Ops.push_back(AN->getBasePtr());
+  SDValue Val = AN->getVal();
+  for (unsigned I = 0; I < NumElts; ++I)
+    Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
+                              DAG.getIntPtrConstant(I, DL)));
+  Ops.push_back(DAG.getTargetConstant(OpCode, DL, MVT::i32));
+
+  SmallVector<EVT, 9> ResVTs(NumElts, EltVT);
+  ResVTs.push_back(MVT::Other);
+
+  SDValue Result = DAG.getMemIntrinsicNode(NVPTXOpc, DL,
+                                           DAG.getVTList(ResVTs), Ops,
+                                           VecVT, AN->getMemOperand());
+
+  SmallVector<SDValue, 8> Elts;
+  for (unsigned I = 0; I < NumElts; ++I)
+    Elts.push_back(Result.getValue(I));
+
+  Results.push_back(DAG.getBuildVector(VecVT, DL, Elts));
+  Results.push_back(Result.getValue(NumElts));
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -3452,6 +3519,14 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   }
   case ISD::LOAD:
     return LowerLOAD(Op, DAG);
+  case ISD::ATOMIC_LOAD_FADD:
+  case ISD::ATOMIC_LOAD_FMIN:
+  case ISD::ATOMIC_LOAD_FMAX: {
+    SmallVector<SDValue, 2> Results;
+    replaceVectorAtomicRMW(Op.getNode(), DAG, Results);
+    assert(Results.size() == 2);
+    return DAG.getMergeValues(Results, SDLoc(Op));
+  }
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::SHL_PARTS:
@@ -7411,6 +7486,11 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   case ISD::ATOMIC_CMP_SWAP:
   case ISD::ATOMIC_SWAP:
     replaceAtomicSwap128(N, DAG, STI, Results);
+    return;
+  case ISD::ATOMIC_LOAD_FADD:
+  case ISD::ATOMIC_LOAD_FMIN:
+  case ISD::ATOMIC_LOAD_FMAX:
+    replaceVectorAtomicRMW(N, DAG, Results);
     return;
   }
 }

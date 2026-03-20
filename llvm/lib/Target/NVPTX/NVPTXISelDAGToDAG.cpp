@@ -185,6 +185,11 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case NVPTXISD::ATOMIC_SWAP_B128:
     selectAtomicSwap128(N);
     return;
+  case NVPTXISD::ATOM_VEC_V2:
+  case NVPTXISD::ATOM_VEC_V4:
+  case NVPTXISD::ATOM_VEC_V8:
+    selectVectorAtomicRMW(N);
+    return;
   case ISD::FADD:
   case ISD::FMUL:
   case ISD::FSUB:
@@ -2282,6 +2287,80 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   auto *ATOM = CurDAG->getMachineNode(Opcode, dl, N->getVTList(), Ops);
   CurDAG->setNodeMemRefs(ATOM, AN->getMemOperand());
 
+  ReplaceNode(N, ATOM);
+}
+
+void NVPTXDAGToDAGISel::selectVectorAtomicRMW(SDNode *N) {
+  MemSDNode *MN = cast<MemSDNode>(N);
+  SDLoc DL(N);
+
+  unsigned NumElts;
+  switch (N->getOpcode()) {
+  case NVPTXISD::ATOM_VEC_V2: NumElts = 2; break;
+  case NVPTXISD::ATOM_VEC_V4: NumElts = 4; break;
+  case NVPTXISD::ATOM_VEC_V8: NumElts = 8; break;
+  default: llvm_unreachable("Unexpected opcode");
+  }
+
+  // Node layout: chain, ptr, val0..valN-1, op_code
+  const auto [Base, Offset] = selectADDR(N->getOperand(1), CurDAG);
+  unsigned OpCode =
+      cast<ConstantSDNode>(N->getOperand(2 + NumElts))->getZExtValue();
+  MVT EltVT = N->getSimpleValueType(0);
+
+  // Opcode table indexed by [op][elt_type][vec_width].
+  // op: 0=fadd, 1=fmin, 2=fmax
+  // elt_type: 0=f32, 1=f16, 2=bf16
+  // vec_width: 0=v2, 1=v4, 2=v8
+  // clang-format off
+  static const unsigned OpcTable[3][3][3] = {
+    // fadd
+    {{NVPTX::ATOM_ADD_V_F32_v2, NVPTX::ATOM_ADD_V_F32_v4, 0},
+     {NVPTX::ATOM_ADD_V_F16_v2, NVPTX::ATOM_ADD_V_F16_v4, NVPTX::ATOM_ADD_V_F16_v8},
+     {NVPTX::ATOM_ADD_V_BF16_v2, NVPTX::ATOM_ADD_V_BF16_v4, NVPTX::ATOM_ADD_V_BF16_v8}},
+    // fmin
+    {{0, 0, 0},
+     {NVPTX::ATOM_MIN_V_F16_v2, NVPTX::ATOM_MIN_V_F16_v4, NVPTX::ATOM_MIN_V_F16_v8},
+     {NVPTX::ATOM_MIN_V_BF16_v2, NVPTX::ATOM_MIN_V_BF16_v4, NVPTX::ATOM_MIN_V_BF16_v8}},
+    // fmax
+    {{0, 0, 0},
+     {NVPTX::ATOM_MAX_V_F16_v2, NVPTX::ATOM_MAX_V_F16_v4, NVPTX::ATOM_MAX_V_F16_v8},
+     {NVPTX::ATOM_MAX_V_BF16_v2, NVPTX::ATOM_MAX_V_BF16_v4, NVPTX::ATOM_MAX_V_BF16_v8}},
+  };
+  // clang-format on
+
+  unsigned TypeIdx;
+  switch (EltVT.SimpleTy) {
+  case MVT::f32:  TypeIdx = 0; break;
+  case MVT::f16:  TypeIdx = 1; break;
+  case MVT::bf16: TypeIdx = 2; break;
+  default: report_fatal_error("Unsupported element type for vector atom");
+  }
+
+  unsigned WidthIdx;
+  switch (NumElts) {
+  case 2: WidthIdx = 0; break;
+  case 4: WidthIdx = 1; break;
+  case 8: WidthIdx = 2; break;
+  default: report_fatal_error("Unsupported vector width for vector atom");
+  }
+
+  unsigned Opc = OpcTable[OpCode][TypeIdx][WidthIdx];
+  if (!Opc)
+    report_fatal_error("Unsupported vector atom combination");
+
+  SmallVector<SDValue, 16> Ops;
+  for (unsigned I = 0; I < NumElts; ++I)
+    Ops.push_back(N->getOperand(2 + I));
+  Ops.push_back(getI32Imm(getMemOrder(MN), DL));
+  Ops.push_back(getI32Imm(getAtomicScope(MN), DL));
+  Ops.push_back(getI32Imm(getAddrSpace(MN), DL));
+  Ops.push_back(Base);
+  Ops.push_back(Offset);
+  Ops.push_back(N->getOperand(0)); // chain
+
+  auto *ATOM = CurDAG->getMachineNode(Opc, DL, N->getVTList(), Ops);
+  CurDAG->setNodeMemRefs(ATOM, MN->getMemOperand());
   ReplaceNode(N, ATOM);
 }
 

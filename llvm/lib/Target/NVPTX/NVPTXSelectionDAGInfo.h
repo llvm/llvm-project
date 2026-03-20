@@ -42,7 +42,14 @@ enum NodeType : unsigned {
   StoreV2,
   StoreV4,
   StoreV8,
-  LAST_MEMORY_OPCODE = StoreV8,
+
+  /// Vector atomicrmw nodes. Each takes (chain, ptr, val0..valN, op_code) and
+  /// produces (res0..resN, chain). The op_code constant encodes the atomic
+  /// operation: 0=fadd, 1=fmin, 2=fmax.
+  ATOM_VEC_V2,
+  ATOM_VEC_V4,
+  ATOM_VEC_V8,
+  LAST_MEMORY_OPCODE = ATOM_VEC_V8,
 };
 
 } // namespace NVPTXISD

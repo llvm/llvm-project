@@ -2547,6 +2547,51 @@ defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz.bf1
 defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, "add.f32", atomic_load_fadd>;
 defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2<F64RT, atomic_load_fadd, "add.f64", atomic_load_fadd, [hasAtomAddF64]>;
 
+// Vector atom instructions: atom.{sem}.{scope}.{addsp}.{op_prefix}.v{N}.{type}
+multiclass ATOM_VEC_INST<NVPTXRegClass RC, string op_prefix, string type_str,
+                         list<Predicate> preds, bit support_v8 = false> {
+  defvar base = "atom${sem:sem}${scope:scope}${addsp:addsp}." # op_prefix;
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+    def _v2 : NVPTXInst<
+      (outs RC:$d0, RC:$d1),
+      (ins RC:$s0, RC:$s1,
+           AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+           ADDR:$addr),
+      base # ".v2." # type_str
+      # " \t{{$d0, $d1}}, [$addr], {{$s0, $s1}};">,
+      Requires<preds>;
+    def _v4 : NVPTXInst<
+      (outs RC:$d0, RC:$d1, RC:$d2, RC:$d3),
+      (ins RC:$s0, RC:$s1, RC:$s2, RC:$s3,
+           AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+           ADDR:$addr),
+      base # ".v4." # type_str
+      # " \t{{$d0, $d1, $d2, $d3}}, [$addr], {{$s0, $s1, $s2, $s3}};">,
+      Requires<preds>;
+    if support_v8 then
+    def _v8 : NVPTXInst<
+      (outs RC:$d0, RC:$d1, RC:$d2, RC:$d3,
+            RC:$d4, RC:$d5, RC:$d6, RC:$d7),
+      (ins RC:$s0, RC:$s1, RC:$s2, RC:$s3,
+           RC:$s4, RC:$s5, RC:$s6, RC:$s7,
+           AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp,
+           ADDR:$addr),
+      base # ".v8." # type_str
+      # " \t{{$d0, $d1, $d2, $d3, $d4, $d5, $d6, $d7}}, [$addr],"
+      # " {{$s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7}};">,
+      Requires<preds>;
+  }
+}
+
+defvar VecAtomPreds = [hasVectorAtom, hasPTX<81>];
+defm ATOM_ADD_V_F32  : ATOM_VEC_INST<B32, "add",       "f32",  VecAtomPreds>;
+defm ATOM_ADD_V_F16  : ATOM_VEC_INST<B16, "add.noftz", "f16",  VecAtomPreds, support_v8 = true>;
+defm ATOM_ADD_V_BF16 : ATOM_VEC_INST<B16, "add.noftz", "bf16", VecAtomPreds, support_v8 = true>;
+defm ATOM_MIN_V_F16  : ATOM_VEC_INST<B16, "min.noftz", "f16",  VecAtomPreds, support_v8 = true>;
+defm ATOM_MIN_V_BF16 : ATOM_VEC_INST<B16, "min.noftz", "bf16", VecAtomPreds, support_v8 = true>;
+defm ATOM_MAX_V_F16  : ATOM_VEC_INST<B16, "max.noftz", "f16",  VecAtomPreds, support_v8 = true>;
+defm ATOM_MAX_V_BF16 : ATOM_VEC_INST<B16, "max.noftz", "bf16", VecAtomPreds, support_v8 = true>;
+
 // atom_swap
 defm INT_PTX_ATOM_SWAP_32 : F_ATOMIC_2<I32RT, atomic_swap_i32, "exch.b32", atomic_swap>;
 defm INT_PTX_ATOM_SWAP_64 : F_ATOMIC_2<I64RT, atomic_swap_i64, "exch.b64", atomic_swap>;
