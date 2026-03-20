@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This is a `config-h`-style header that is meant to be included as the first
-// header in all compilation units of the Flang runtime library.  This is
-// currently done using command line flags in `AddFlangRT.cmake`.
+// This file is inserted implicitly to all translation units using -include on
+// the command line.  The reason is that it configures the C++ standard
+// template library (libc++ or libstdc++) using preprocessor macro definitions
+// that must appear before any C++ library include.
 
 // We define our own _GLIBCXX_THROW_OR_ABORT here because, as of GCC 15.1, the
 // libstdc++ header file <bits/c++config> uses (void)_EXC in its definition of
