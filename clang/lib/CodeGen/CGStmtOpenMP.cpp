@@ -3206,7 +3206,7 @@ void CodeGenFunction::EmitOMPReverseDirective(const OMPReverseDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPSplitDirective(const OMPSplitDirective &S) {
-  // Emit the de-sugared statement (the two split loops).
+  // Emit the de-sugared statement (the split loops).
   OMPTransformDirectiveScopeRAII SplitScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
 }

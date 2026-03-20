@@ -15984,24 +15984,19 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
   // Collect constant count values from the counts clause
   SmallVector<uint64_t, 4> CountValues;
   for (Expr *CountExpr : CountsClause->getCountsRefs()) {
-    if (!CountExpr) {
+    if (!CountExpr)
       return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                        NumLoops, AStmt, nullptr, nullptr);
-    }
     std::optional<llvm::APSInt> OptVal =
         CountExpr->getIntegerConstantExpr(Context);
-    if (!OptVal || OptVal->isNegative()) {
+    if (!OptVal || OptVal->isNegative())
       return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                        NumLoops, AStmt, nullptr, nullptr);
-    }
     CountValues.push_back(OptVal->getZExtValue());
   }
 
-  if (CountValues.empty()) {
-    Diag(CountsClause->getBeginLoc(), diag::err_omp_unexpected_clause_value)
-        << "at least one non-negative integer expression" << "counts";
+  if (CountValues.empty())
     return StmtError();
-  }
 
   // Cumulative segment starts: Starts[0]=0,
   // Starts[j]=Starts[j-1]+CountValues[j-1]. Example: CountValues [3,5,2] →
@@ -16021,9 +16016,7 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
     // Segment IV: .split.iv.<Seg>.<OrigVarName>, init to StartVal, bound by
     // EndVal.
     SmallString<64> IVName(".split.iv.");
-    IVName += Twine(Seg).str();
-    IVName += ".";
-    IVName += OrigVarName;
+    IVName += (Twine(Seg) + "." + OrigVarName).str();
     VarDecl *IVDecl = buildVarDecl(SemaRef, {}, IVTy, IVName, nullptr, OrigVar);
     auto MakeIVRef = [&SemaRef = this->SemaRef, IVDecl, IVTy, OrigVarLoc]() {
       return buildDeclRefExpr(SemaRef, IVDecl, IVTy, OrigVarLoc);

@@ -15,6 +15,8 @@ extern "C" void body(...);
 
 // PRINT-LABEL: void foo(
 // DUMP-LABEL:  FunctionDecl {{.*}} foo
+// OpenMP spec: one counts item may be the keyword (e.g. omp_fill) when loop
+// bound is not constant; this test uses literal counts for ast-print check.
 void foo(int n) {
   // PRINT:     #pragma omp split counts(2, 3)
   // DUMP:      OMPSplitDirective

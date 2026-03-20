@@ -2005,13 +2005,9 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
 
 void OMPClausePrinter::VisitOMPCountsClause(OMPCountsClause *Node) {
   OS << "counts(";
-  bool First = true;
-  for (auto *Count : Node->getCountsRefs()) {
-    if (!First)
-      OS << ", ";
-    Count->printPretty(OS, nullptr, Policy, 0);
-    First = false;
-  }
+  llvm::interleaveComma(Node->getCountsRefs(), OS, [&](const Expr *E) {
+    E->printPretty(OS, nullptr, Policy, 0);
+  });
   OS << ")";
 }
 

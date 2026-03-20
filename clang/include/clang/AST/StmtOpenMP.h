@@ -6067,7 +6067,7 @@ public:
 
 /// Represents the '#pragma omp split' loop transformation directive.
 ///
-/// \code{c}
+/// \code{.c}
 ///   #pragma omp split
 ///   for (int i = 0; i < n; ++i)
 ///     ...
