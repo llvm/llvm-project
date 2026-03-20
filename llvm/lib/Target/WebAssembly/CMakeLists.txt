@@ -45,6 +45,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyOptimizeLiveIntervals.cpp
   WebAssemblyOptimizeReturned.cpp
   WebAssemblyPeephole.cpp
+  WebAssemblyReduceToAnyAllTrue.cpp
   WebAssemblyRefTypeMem2Local.cpp
   WebAssemblyRegisterInfo.cpp
   WebAssemblyRegColoring.cpp
