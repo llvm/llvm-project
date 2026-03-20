@@ -247,10 +247,10 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   if (!AddrIsInMem(last))
     return last;
   CHECK_LE(beg, last);
-  // First check the first and the last application bytes,
-  // then check the ASAN_SHADOW_GRANULARITY-aligned region by calling
-  // mem_is_zero on the corresponding shadow.
-  if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(last)) {
+  // First check the last application byte, i.e. last granule, then check
+  // the ASAN_SHADOW_GRANULARITY-aligned region by calling mem_is_zero
+  // on the corresponding shadow (first granule is fully checked).
+  if (!__asan::AddressIsPoisoned(last)) {
     uptr aligned_b = RoundDownTo(beg, ASAN_SHADOW_GRANULARITY);
     uptr aligned_e = RoundDownTo(last, ASAN_SHADOW_GRANULARITY);
     if (aligned_b == aligned_e)  // one granule case => last check is enough.
