@@ -429,11 +429,6 @@ static VectorType trimNonScalableUnitDims(VectorType oldType) {
   return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
-static auto getMaskDimData(vector::CreateMaskOp op) { return op.getMaskDimSizes(); }
-static auto getMaskDimData(vector::ConstantMaskOp op) {
-  return op.getMaskDimSizes();
-}
-
 static bool isUnitDimMask(Value operand) {
   auto cst = operand.getDefiningOp<arith::ConstantIndexOp>();
   return cst && cst.value() == 1;
@@ -450,11 +445,10 @@ static FailureOr<Value> maskDropNonScalableUnitDims(PatternRewriter &rewriter,
   if (reducedType.getRank() == type.getRank())
     return failure();
 
-  auto maskDimData = getMaskDimData(op);
-  using ElemType = std::decay_t<decltype(*maskDimData.begin())>;
+  using ElemType = std::decay_t<decltype(*op.getMaskDimSizes().begin())>;
   SmallVector<ElemType> reduced;
-  for (auto [dim, dimIsScalable, elem] :
-       llvm::zip_equal(type.getShape(), type.getScalableDims(), maskDimData)) {
+  for (auto [dim, dimIsScalable, elem] : llvm::zip_equal(
+           type.getShape(), type.getScalableDims(), op.getMaskDimSizes())) {
     if (dim == 1 && !dimIsScalable) {
       if (!isUnitDimMask(elem))
         return failure();
