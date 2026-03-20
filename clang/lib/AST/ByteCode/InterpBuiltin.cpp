@@ -3550,6 +3550,38 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_compress(InterpState &S, CodePtr OpPC,
+                                          const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+
+  APSInt Mask = popToAPSInt(S, Call->getArg(2));
+  const Pointer &Passthru = S.Stk.pop<Pointer>();
+  const Pointer &Source = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumElems = Source.getNumElems();
+  PrimType ElemT = Source.getFieldDesc()->getPrimType();
+
+  unsigned J = 0;
+  for (unsigned I = 0; I != NumElems; ++I) {
+    if (Mask[I]) {
+      if (ElemT == PT_Float)
+        Dst.elem<Floating>(J) = Source.elem<Floating>(I);
+      else
+        INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(J) = Source.elem<T>(I); });
+      ++J;
+    }
+  }
+  for (unsigned I = J; I != NumElems; ++I) {
+    if (ElemT == PT_Float)
+      Dst.elem<Floating>(I) = Passthru.elem<Floating>(I);
+    else
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(I) = Passthru.elem<T>(I); });
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
                                               const CallExpr *Call,
                                               unsigned ID) {
@@ -5112,6 +5144,25 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpconflictdi_256:
   case X86::BI__builtin_ia32_vpconflictdi_512:
     return interp__builtin_ia32_vpconflict(S, OpPC, Call);
+  case X86::BI__builtin_ia32_compressdf128_mask:
+  case X86::BI__builtin_ia32_compressdf256_mask:
+  case X86::BI__builtin_ia32_compressdf512_mask:
+  case X86::BI__builtin_ia32_compressdi128_mask:
+  case X86::BI__builtin_ia32_compressdi256_mask:
+  case X86::BI__builtin_ia32_compressdi512_mask:
+  case X86::BI__builtin_ia32_compresshi128_mask:
+  case X86::BI__builtin_ia32_compresshi256_mask:
+  case X86::BI__builtin_ia32_compresshi512_mask:
+  case X86::BI__builtin_ia32_compressqi128_mask:
+  case X86::BI__builtin_ia32_compressqi256_mask:
+  case X86::BI__builtin_ia32_compressqi512_mask:
+  case X86::BI__builtin_ia32_compresssf128_mask:
+  case X86::BI__builtin_ia32_compresssf256_mask:
+  case X86::BI__builtin_ia32_compresssf512_mask:
+  case X86::BI__builtin_ia32_compresssi128_mask:
+  case X86::BI__builtin_ia32_compresssi256_mask:
+  case X86::BI__builtin_ia32_compresssi512_mask:
+    return interp__builtin_ia32_compress(S, OpPC, Call);
   case clang::X86::BI__builtin_ia32_blendpd:
   case clang::X86::BI__builtin_ia32_blendpd256:
   case clang::X86::BI__builtin_ia32_blendps:
