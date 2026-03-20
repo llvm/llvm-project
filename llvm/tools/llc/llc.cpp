@@ -389,6 +389,7 @@ int main(int argc, char **argv) {
   initializeUnreachableBlockElimLegacyPassPass(*Registry);
   initializeConstantHoistingLegacyPassPass(*Registry);
   initializeScalarOpts(*Registry);
+  initializeIPO(*Registry);
   initializeVectorization(*Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
   initializeTransformUtils(*Registry);
@@ -509,8 +510,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   };
 
   auto MAttrs = codegen::getMAttrs();
-  bool SkipModule =
-      CPUStr == "help" || (!MAttrs.empty() && MAttrs.front() == "help");
+  bool SkipModule = CPUStr == "help" || is_contained(MAttrs, "help");
 
   CodeGenOptLevel OLvl;
   if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {

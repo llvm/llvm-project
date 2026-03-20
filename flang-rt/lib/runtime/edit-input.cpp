@@ -970,6 +970,11 @@ RT_API_ATTRS bool EditLogicalInput(
     // not list-directed.
     char32_t comma{edit.modes.GetSeparatorChar()};
     while (next && *next != comma) {
+      if (*next == '!') {
+        if (!io.AdvanceRecord()) { // skip namelist comment
+          return false;
+        }
+      }
       next = io.NextInField(remaining, edit);
     }
   }

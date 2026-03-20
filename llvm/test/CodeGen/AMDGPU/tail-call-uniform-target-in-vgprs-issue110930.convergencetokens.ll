@@ -44,7 +44,7 @@ define void @tail_call_uniform_vgpr_value_convergence_tokens() #0 {
   ; CHECK-NEXT:   CONVERGENCECTRL_GLUE [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   SI_TCRETURN killed [[REG_SEQUENCE]], 0, 0, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit [[CONVERGENCECTRL_ENTRY]]
   %t = call token @llvm.experimental.convergence.entry()
-  %fptr = load ptr, ptr addrspace(3) null, align 8
+  %fptr = load ptr, ptr addrspace(3) zeroinitializer, align 8
   tail call void %fptr() #0 [ "convergencectrl"(token %t) ]
   ret void
 }

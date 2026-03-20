@@ -1,5 +1,5 @@
 add_mlir_dialect(SPIRVOps spirv)
-add_mlir_doc(SPIRVOps SPIRVOps Dialects/ -gen-op-doc)
+add_mlir_doc(SPIRVOps SPIRVOps Dialects/ -gen-op-doc -dialect=spirv)
 
 set(LLVM_TARGET_DEFINITIONS SPIRVBase.td)
 mlir_tablegen(SPIRVEnums.h.inc -gen-enum-decls)

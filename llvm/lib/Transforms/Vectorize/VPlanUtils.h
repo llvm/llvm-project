@@ -145,6 +145,12 @@ template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
 /// inserted for predicated reductions or tail folding.
 VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
+/// Collect the header mask with the pattern:
+/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// the header-mask pattern manually.
+VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
+
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -162,8 +168,7 @@ public:
   /// successors are moved from \p BlockPtr to \p NewBlock. \p NewBlock must
   /// have neither successors nor predecessors.
   static void insertBlockAfter(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
+    assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
     transferSuccessors(BlockPtr, NewBlock);
@@ -175,8 +180,7 @@ public:
   /// NewBlock. Add \p NewBlock as predecessor of \p BlockPtr and \p BlockPtr as
   /// successor of \p NewBlock.
   static void insertBlockBefore(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
+    assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
     for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
@@ -195,9 +199,8 @@ public:
   /// predecessors.
   static void insertTwoBlocksAfter(VPBlockBase *IfTrue, VPBlockBase *IfFalse,
                                    VPBlockBase *BlockPtr) {
-    assert(IfTrue->getSuccessors().empty() &&
-           "Can't insert IfTrue with successors.");
-    assert(IfFalse->getSuccessors().empty() &&
+    assert(!IfTrue->hasSuccessors() && "Can't insert IfTrue with successors.");
+    assert(!IfFalse->hasSuccessors() &&
            "Can't insert IfFalse with successors.");
     BlockPtr->setTwoSuccessors(IfTrue, IfFalse);
     IfTrue->setPredecessors({BlockPtr});

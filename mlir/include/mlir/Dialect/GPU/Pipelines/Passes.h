@@ -32,7 +32,7 @@ struct GPUToNVVMPipelineOptions
   PassOptions::Option<std::string> cubinFeatures{
       *this, "cubin-features",
       llvm::cl::desc("Features to use to serialize to cubin."),
-      llvm::cl::init("+ptx60")};
+      llvm::cl::init("")};
   PassOptions::Option<std::string> cubinFormat{
       *this, "cubin-format",
       llvm::cl::desc("Compilation format to use to serialize to cubin."),

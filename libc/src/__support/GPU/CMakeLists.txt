@@ -10,9 +10,9 @@ add_header_library(
 )
 
 add_header_library(
-  fixedstack
+  fixedbuffer
   HDRS
-    fixedstack.h
+    fixedbuffer.h
 )
 
 add_object_library(
@@ -29,5 +29,5 @@ add_object_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     .utils
-    .fixedstack
+    .fixedbuffer
 )

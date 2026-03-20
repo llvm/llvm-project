@@ -764,6 +764,22 @@ public:
         return true;
       }
     }
+    // For derived and class-derived types, match on the type symbol pointer.
+    if (type.category() == DeclTypeSpec::TypeDerived ||
+        type.category() == DeclTypeSpec::ClassDerived) {
+      const auto &rhs = type.derivedTypeSpec();
+      const auto &rhsSym = rhs.typeSymbol();
+      for (auto t : typeList_) {
+        if (t->category() == DeclTypeSpec::TypeDerived ||
+            t->category() == DeclTypeSpec::ClassDerived) {
+          const auto &lhs = t->derivedTypeSpec();
+          const auto &lhsSym = lhs.typeSymbol();
+          if (&lhsSym == &rhsSym) {
+            return true;
+          }
+        }
+      }
+    }
     return false;
   }
 

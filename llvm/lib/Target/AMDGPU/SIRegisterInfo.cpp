@@ -1536,12 +1536,36 @@ void SIRegisterInfo::buildSpillLoadStore(
   const bool IsAGPR = !ST.hasGFX90AInsts() && isAGPRClass(RC);
   const unsigned RegWidth = AMDGPU::getRegBitWidth(*RC) / 8;
 
+  // On targets with register tuple alignment requirements,
+  // for unaligned tuples, break the spill into 32-bit pieces.
+  // TODO: Optimize misaligned spills by using larger aligned chunks instead of
+  // 32-bit splits.
+  bool IsRegMisaligned = false;
+  if (!IsBlock && RegWidth > 4) {
+    unsigned SpillOpcode =
+        getFlatScratchSpillOpcode(TII, LoadStoreOp, std::min(RegWidth, 16u));
+    int VDataIdx =
+        IsStore ? AMDGPU::getNamedOperandIdx(SpillOpcode, AMDGPU::OpName::vdata)
+                : 0; // Restore Ops have data reg as the first (output) operand.
+    const TargetRegisterClass *ExpectedRC =
+        TII->getRegClass(TII->get(SpillOpcode), VDataIdx);
+    if (!ExpectedRC->contains(ValueReg)) {
+      unsigned NumRegs = std::min(AMDGPU::getRegBitWidth(*ExpectedRC) / 4, 4u);
+      unsigned SubIdx = getSubRegFromChannel(0, NumRegs);
+      const TargetRegisterClass *MatchRC =
+          getMatchingSuperRegClass(RC, ExpectedRC, SubIdx);
+      if (!MatchRC || !MatchRC->contains(ValueReg))
+        IsRegMisaligned = true;
+    }
+  }
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
   // If we're using a block operation, the element should be the whole block.
-  unsigned EltSize = IsBlock               ? RegWidth
-                     : (IsFlat && !IsAGPR) ? std::min(RegWidth, 16u)
-                                           : 4u;
+  // For misaligned registers, use 4-byte elements to avoid alignment errors.
+  unsigned EltSize = IsBlock ? RegWidth
+                     : (IsFlat && !IsAGPR && !IsRegMisaligned)
+                         ? std::min(RegWidth, 16u)
+                         : 4u;
   unsigned NumSubRegs = RegWidth / EltSize;
   unsigned Size = NumSubRegs * EltSize;
   unsigned RemSize = RegWidth - Size;
@@ -1549,7 +1573,10 @@ void SIRegisterInfo::buildSpillLoadStore(
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
   int64_t MaterializedOffset = Offset;
 
-  int64_t MaxOffset = Offset + Size + RemSize - EltSize;
+  // Maxoffset is the starting offset for the last chunk to be spilled.
+  // In case of non-zero remainder element, max offset will be the
+  // last address(offset + Size) after spilling  all the EltSize chunks.
+  int64_t MaxOffset = Offset + Size - (RemSize ? 0 : EltSize);
   int64_t ScratchOffsetRegDelta = 0;
 
   if (IsFlat && EltSize > 4) {
@@ -1836,10 +1863,12 @@ void SIRegisterInfo::buildSpillLoadStore(
       IsKill = false;
     }
 
+    // Create the MMO, additional set the NonVolatile flag as scratch memory
+    // used for spills will not be used outside the thread.
     MachinePointerInfo PInfo = BasePtrInfo.getWithOffset(RegOffset);
-    MachineMemOperand *NewMMO =
-        MF->getMachineMemOperand(PInfo, MMO->getFlags(), RemEltSize,
-                                 commonAlignment(Alignment, RegOffset));
+    MachineMemOperand *NewMMO = MF->getMachineMemOperand(
+        PInfo, MMO->getFlags() | MOThreadPrivate, RemEltSize,
+        commonAlignment(Alignment, RegOffset));
 
     auto MIB =
         BuildMI(MBB, MI, DL, *Desc)
@@ -3257,8 +3286,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           if (!IsSALU)
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::COPY), ResultReg)
                 .addReg(TmpResultReg, RegState::Kill);
-          else
-            ResultReg = TmpResultReg;
           // If there were truly no free SGPRs, we need to undo everything.
           if (!TmpScaledReg.isValid()) {
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
@@ -4066,7 +4093,7 @@ SIRegisterInfo::getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
 unsigned SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
                                             const TargetRegisterClass &RC,
                                             bool IncludeCalls) const {
-  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+  unsigned NumArchVGPRs = ST.getAddressableNumArchVGPRs();
   ArrayRef<MCPhysReg> Registers =
       (RC.getID() == AMDGPU::VGPR_32RegClassID)
           ? RC.getRegisters().take_front(NumArchVGPRs)

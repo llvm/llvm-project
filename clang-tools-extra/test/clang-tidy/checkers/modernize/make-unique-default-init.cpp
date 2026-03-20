@@ -2,12 +2,10 @@
 // RUN:   -config="{CheckOptions: \
 // RUN:             {modernize-make-unique.IgnoreDefaultInitialization: \
 // RUN:              'false'}} \
-// RUN:             }" \
-// RUN:   -- -I %S/Inputs/smart-ptr
+// RUN:             }"
 
-#include "initializer_list.h"
-#include "unique_ptr.h"
-// CHECK-FIXES: #include <memory>
+#include <memory>
+#include <vector>
 
 void basic() {
   std::unique_ptr<int> P1 = std::unique_ptr<int>(new int());

@@ -395,6 +395,35 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   }
 }
 
+TEST_F(ScudoWrappersCTest, Reallocarray) {
+  // reallocarray is effectively a wrapper around realloc, so we don't have
+  // as much coverage here - simply provide a sanity check that reallocarray
+  // preserves memory contents and properly checks for overflow.
+  void *P = malloc(Size);
+  EXPECT_NE(P, nullptr);
+  memset(P, 0x42, Size);
+
+  invalidateHookPtrs();
+  void *OldP = P;
+  P = reallocarray(P, 2U, Size);
+  EXPECT_NE(P, nullptr);
+  for (size_t I = 0; I < Size; I++)
+    EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
+  if (OldP == P) {
+    verifyDeallocHookPtr(OldP);
+    verifyAllocHookPtr(OldP);
+  } else {
+    verifyAllocHookPtr(P);
+    verifyAllocHookSize(Size * 2U);
+    verifyDeallocHookPtr(OldP);
+  }
+  verifyReallocHookPtrs(OldP, P, Size * 2U);
+
+  errno = 0;
+  EXPECT_EQ(reallocarray(P, SIZE_MAX - 1, SIZE_MAX - 1), nullptr);
+  EXPECT_EQ(errno, ENOMEM);
+}
+
 #if !SCUDO_FUCHSIA
 TEST_F(ScudoWrappersCTest, MallOpt) {
   errno = 0;

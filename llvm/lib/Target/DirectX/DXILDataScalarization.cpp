@@ -367,18 +367,14 @@ static Constant *transformInitializer(Constant *Init, Type *OrigType,
   if (isa<VectorType>(OrigType) && isa<ArrayType>(NewType)) {
     // Convert vector initializer to array initializer
     SmallVector<Constant *, MaxVecSize> ArrayElements;
-    if (ConstantVector *ConstVecInit = dyn_cast<ConstantVector>(Init)) {
-      for (unsigned I = 0; I < ConstVecInit->getNumOperands(); ++I)
-        ArrayElements.push_back(ConstVecInit->getOperand(I));
-    } else if (ConstantDataVector *ConstDataVecInit =
-                   llvm::dyn_cast<llvm::ConstantDataVector>(Init)) {
-      for (unsigned I = 0; I < ConstDataVecInit->getNumElements(); ++I)
-        ArrayElements.push_back(ConstDataVecInit->getElementAsConstant(I));
-    } else {
-      assert(false && "Expected a ConstantVector or ConstantDataVector for "
-                      "vector initializer!");
-    }
 
+    unsigned E = cast<FixedVectorType>(OrigType)->getNumElements();
+    for (unsigned I = 0; I != E; ++I)
+      if (Constant *Elt = Init->getAggregateElement(I))
+        ArrayElements.push_back(Elt);
+
+    assert(ArrayElements.size() == E &&
+           "Expected fixed length constant aggregate for vector initializer!");
     return ConstantArray::get(cast<ArrayType>(NewType), ArrayElements);
   }
 

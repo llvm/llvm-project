@@ -658,21 +658,26 @@ func.func @transpose_load(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16
 
 // CHECK-LABEL: func @gather_to_lds
 func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %mem2 : memref<32x32xf16>, %smem1 : memref<32xf16, #gpu.address_space<workgroup>>, %smem2 : memref<32x32xf16, #gpu.address_space<workgroup>>, %smem3 : memref<?x?xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>) {
-  // CHECK: amdgpu.gather_to_lds %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
+  // CHECK: amdgpu.gather_to_lds async %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
+  // CHECK: amdgpu.gather_to_lds async %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
+  // CHECK: rocdl.asyncmark
   // CHECK: amdgpu.gather_to_lds %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}}]
-  // CHECK: amdgpu.gather_to_lds %{{.*}}[%{{.*}}],          %{{.*}}[%{{.*}}, %{{.*}}]
-  // CHECK: amdgpu.gather_to_lds %{{.*}}[%{{.*}}],          %{{.*}}[%{{.*}}, %{{.*}}]
-  amdgpu.gather_to_lds %mem2[%idx1, %idx2], %smem2[%idx1, %idx2] : vector<2xf16>, memref<32x32xf16>, memref<32x32xf16, #gpu.address_space<workgroup>>
-  amdgpu.gather_to_lds %mem2[%idx1, %idx2], %smem1[%idx1]        : vector<2xf16>, memref<32x32xf16>, memref<32xf16,    #gpu.address_space<workgroup>>
-  amdgpu.gather_to_lds %mem1[%idx1],        %smem2[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,    memref<32x32xf16, #gpu.address_space<workgroup>>
-  amdgpu.gather_to_lds %mem1[%idx1],        %smem3[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,   memref<?x?xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>
+  // CHECK: amdgpu.gather_to_lds %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}, %{{.*}}]
+  amdgpu.gather_to_lds async %mem2[%idx1, %idx2], %smem2[%idx1, %idx2] : vector<2xf16>, memref<32x32xf16>, memref<32x32xf16, #gpu.address_space<workgroup>>
+  amdgpu.gather_to_lds async %mem1[%idx1], %smem2[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,    memref<32x32xf16, #gpu.address_space<workgroup>>
+  rocdl.asyncmark
+  amdgpu.gather_to_lds %mem2[%idx1, %idx2], %smem1[%idx1] : vector<2xf16>, memref<32x32xf16>, memref<32xf16,    #gpu.address_space<workgroup>>
+  amdgpu.gather_to_lds %mem1[%idx1], %smem3[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,   memref<?x?xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>
+  rocdl.wait.asyncmark 0
   func.return
 }
 
 // CHECK-LABEL: func @gather_to_lds_0d
 func.func @gather_to_lds_0d(%mem1 : memref<f16>, %smem1 : memref<f16, #gpu.address_space<workgroup>>) {
-  // CHECK: amdgpu.gather_to_lds %{{.*}}[], %{{.*}}[]
-  amdgpu.gather_to_lds %mem1[], %smem1[] : vector<2xf16>, memref<f16>, memref<f16, #gpu.address_space<workgroup>>
+  // CHECK: amdgpu.gather_to_lds async %{{.*}}[], %{{.*}}[]
+  amdgpu.gather_to_lds async %mem1[], %smem1[] : vector<2xf16>, memref<f16>, memref<f16, #gpu.address_space<workgroup>>
+  rocdl.asyncmark
+  rocdl.wait.asyncmark 0
   func.return
 }
 
@@ -704,8 +709,8 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, 
 }
 
 // CHECK-LABEL: func @make_dma_descriptor
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: vector<16xi1>, %[[TIMEOUT:.+]]: i1, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index, %[[I32:.+]]: i32)
-func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: vector<16xi1>, %timeout: i1, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index, %i32: i32) {
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[WG_MASK:.+]]: vector<16xi1>, %[[TIMEOUT:.+]]: i1, %[[BARRIER:.+]]: memref<2x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index, %[[I32:.+]]: i32)
+func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: vector<16xi1>, %timeout: i1, %barrier: memref<2x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, %idx: index, %i32: i32) {
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
@@ -762,8 +767,8 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %wg_mask: vector<16
         globalStride [64, 1]
         // CHECK-SAME: sharedSize [64, 64]
         sharedSize [64, 64]
-        // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<8xi32, #gpu.address_space<workgroup>>)
-        atomicBarrier(%barrier[%idx] : memref<8xi32, #gpu.address_space<workgroup>>)
+        // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<2x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>)
+        atomicBarrier(%barrier[%idx] : memref<2x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>)
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
@@ -799,5 +804,34 @@ func.func @wmma_scale(%fp8_src: vector<64xf8E4M3FN>, %fp6_alt_src: vector<64xf6E
   %4 = amdgpu.scaled_wmma 16x16x128 (%scale_vec8 * %fp8_src) * (%scale_vec8 * %fp8_src) + %dst0 {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<8xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf32>
   // CHECK: amdgpu.scaled_wmma 32x16x128 ({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E4M3FN>, vector<128xf4E2M1FN>, vector<4xf8E4M3FN>, vector<64xf4E2M1FN>, vector<16xf32>
   %5 = amdgpu.scaled_wmma 32x16x128 (%scale_vec4_e4m3 * %fp4_src_a) * (%scale_vec4_e4m3 * %fp4_src_b) + %dst1 {a_first_scale_lane = 0 : i32, b_first_scale_lane = 0 : i32} : vector<4xf8E4M3FN>, vector<128xf4E2M1FN>, vector<4xf8E4M3FN>, vector<64xf4E2M1FN>, vector<16xf32>
+  func.return
+}
+
+// CHECK-LABEL: func.func @dpp_vector_src_does_not_assert
+// CHECK: amdgpu.dpp
+func.func @dpp_vector_src_does_not_assert(%tile: vector<256xi8>, %pop: vector<256xi8>) {
+  %r = amdgpu.dpp %pop %tile row_shl(1 : i32) : vector<256xi8>
+  func.return
+}
+
+// CHECK-LABEL: func @ds_barrier_ops
+// CHECK-SAME: ([[BARRIER:%.*]]: memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, [[COUNT:%.*]]: i64, [[PARTICIPANTS:%.*]]: i32)
+func.func @ds_barrier_ops(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, %count: i64, %participants: i32) {
+  // CHECK: amdgpu.ds_barrier_init [[BARRIER]][], [[PARTICIPANTS]] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i32
+  amdgpu.ds_barrier_init %barrier[], %participants : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i32
+  // CHECK: [[STATE:%.*]] = amdgpu.ds_barrier_poll_state [[BARRIER]][] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>> -> !amdgpu.ds_barrier_state
+  %state = amdgpu.ds_barrier_poll_state %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>> -> !amdgpu.ds_barrier_state
+  // CHECK: amdgpu.ds_async_barrier_arrive [[BARRIER]][] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>
+  amdgpu.ds_async_barrier_arrive %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>
+  // CHECK: [[OLD_STATE:%.*]] = amdgpu.ds_barrier_arrive [[BARRIER]][], [[COUNT]] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i64 -> !amdgpu.ds_barrier_state
+  %old_state = amdgpu.ds_barrier_arrive %barrier[], %count : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i64 -> !amdgpu.ds_barrier_state
+  // CHECK: [[PHASE:%.*]] = amdgpu.ds_barrier_state_phase [[STATE]] : !amdgpu.ds_barrier_state -> i32
+  %phase = amdgpu.ds_barrier_state_phase %state : !amdgpu.ds_barrier_state -> i32
+  // CHECK: [[PENDING:%.*]] = amdgpu.ds_barrier_state_pending_count [[STATE]] : !amdgpu.ds_barrier_state -> i32
+  %pending = amdgpu.ds_barrier_state_pending_count %state : !amdgpu.ds_barrier_state -> i32
+  // CHECK: [[INIT:%.*]] = amdgpu.ds_barrier_state_init_count [[STATE]] : !amdgpu.ds_barrier_state -> i32
+  %init = amdgpu.ds_barrier_state_init_count %state : !amdgpu.ds_barrier_state -> i32
+  // CHECK: [[PARITY:%.*]] = amdgpu.ds_barrier_state_phase_parity [[STATE]] : !amdgpu.ds_barrier_state -> i1
+  %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
   func.return
 }

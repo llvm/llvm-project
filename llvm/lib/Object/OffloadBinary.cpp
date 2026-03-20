@@ -28,6 +28,26 @@ using namespace llvm::object;
 
 namespace {
 
+/// A MemoryBuffer that shares ownership of the underlying memory.
+/// This allows multiple OffloadBinary instances to share the same buffer.
+class SharedMemoryBuffer : public MemoryBuffer {
+public:
+  SharedMemoryBuffer(std::shared_ptr<MemoryBuffer> Buf)
+      : SharedBuf(std::move(Buf)) {
+    init(SharedBuf->getBufferStart(), SharedBuf->getBufferEnd(),
+         /*RequiresNullTerminator=*/false);
+  }
+
+  BufferKind getBufferKind() const override { return MemoryBuffer_Malloc; }
+
+  StringRef getBufferIdentifier() const override {
+    return SharedBuf->getBufferIdentifier();
+  }
+
+private:
+  const std::shared_ptr<MemoryBuffer> SharedBuf;
+};
+
 /// Attempts to extract all the embedded device images contained inside the
 /// buffer \p Contents. The buffer is expected to contain a valid offloading
 /// binary format.
@@ -35,7 +55,7 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
                           SmallVectorImpl<OffloadFile> &Binaries) {
   uint64_t Offset = 0;
   // There could be multiple offloading binaries stored at this section.
-  while (Offset < Contents.getBuffer().size()) {
+  while (Offset < Contents.getBufferSize()) {
     std::unique_ptr<MemoryBuffer> Buffer =
         MemoryBuffer::getMemBuffer(Contents.getBuffer().drop_front(Offset), "",
                                    /*RequiresNullTerminator*/ false);
@@ -43,21 +63,32 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
                        Buffer->getBufferStart()))
       Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
                                               Buffer->getBufferIdentifier());
-    auto BinaryOrErr = OffloadBinary::create(*Buffer);
-    if (!BinaryOrErr)
-      return BinaryOrErr.takeError();
-    OffloadBinary &Binary = **BinaryOrErr;
 
-    // Create a new owned binary with a copy of the original memory.
+    auto HeaderOrErr = OffloadBinary::extractHeader(*Buffer);
+    if (!HeaderOrErr)
+      return HeaderOrErr.takeError();
+    const OffloadBinary::Header *Header = *HeaderOrErr;
+
+    // Create a copy of original memory containing only the current binary.
     std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
-        Binary.getData().take_front(Binary.getSize()),
+        Buffer->getBuffer().take_front(Header->Size),
         Contents.getBufferIdentifier());
-    auto NewBinaryOrErr = OffloadBinary::create(*BufferCopy);
-    if (!NewBinaryOrErr)
-      return NewBinaryOrErr.takeError();
-    Binaries.emplace_back(std::move(*NewBinaryOrErr), std::move(BufferCopy));
 
-    Offset += Binary.getSize();
+    auto BinariesOrErr = OffloadBinary::create(*BufferCopy);
+    if (!BinariesOrErr)
+      return BinariesOrErr.takeError();
+
+    // Share ownership among multiple OffloadFiles.
+    std::shared_ptr<MemoryBuffer> SharedBuffer =
+        std::shared_ptr<MemoryBuffer>(std::move(BufferCopy));
+
+    for (auto &Binary : *BinariesOrErr) {
+      std::unique_ptr<SharedMemoryBuffer> SharedBufferPtr =
+          std::make_unique<SharedMemoryBuffer>(SharedBuffer);
+      Binaries.emplace_back(std::move(Binary), std::move(SharedBufferPtr));
+    }
+
+    Offset += Header->Size;
   }
 
   return Error::success();
@@ -167,8 +198,8 @@ Error extractFromArchive(const Archive &Library,
 
 } // namespace
 
-Expected<std::unique_ptr<OffloadBinary>>
-OffloadBinary::create(MemoryBufferRef Buf) {
+Expected<const OffloadBinary::Header *>
+OffloadBinary::extractHeader(MemoryBufferRef Buf) {
   if (Buf.getBufferSize() < sizeof(Header) + sizeof(Entry))
     return errorCodeToError(object_error::parse_failed);
 
@@ -182,83 +213,146 @@ OffloadBinary::create(MemoryBufferRef Buf) {
 
   const char *Start = Buf.getBufferStart();
   const Header *TheHeader = reinterpret_cast<const Header *>(Start);
-  if (TheHeader->Version != OffloadBinary::Version)
+  if (TheHeader->Version == 0 || TheHeader->Version > OffloadBinary::Version)
     return errorCodeToError(object_error::parse_failed);
 
   if (TheHeader->Size > Buf.getBufferSize() ||
       TheHeader->Size < sizeof(Entry) || TheHeader->Size < sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
 
-  if (TheHeader->EntryOffset > TheHeader->Size - sizeof(Entry) ||
-      TheHeader->EntrySize > TheHeader->Size - sizeof(Header))
+  uint64_t EntriesCount =
+      (TheHeader->Version == 1) ? 1 : TheHeader->EntriesCount;
+  uint64_t EntriesSize = sizeof(Entry) * EntriesCount;
+  if (TheHeader->EntriesOffset > TheHeader->Size - EntriesSize ||
+      EntriesSize > TheHeader->Size - sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
 
-  const Entry *TheEntry =
-      reinterpret_cast<const Entry *>(&Start[TheHeader->EntryOffset]);
-
-  if (TheEntry->ImageOffset > Buf.getBufferSize() ||
-      TheEntry->StringOffset > Buf.getBufferSize() ||
-      TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
-          Buf.getBufferSize())
-    return errorCodeToError(object_error::unexpected_eof);
-
-  return std::unique_ptr<OffloadBinary>(
-      new OffloadBinary(Buf, TheHeader, TheEntry));
+  return TheHeader;
 }
 
-SmallString<0> OffloadBinary::write(const OffloadingImage &OffloadingData) {
+Expected<SmallVector<std::unique_ptr<OffloadBinary>>>
+OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
+  auto HeaderOrErr = OffloadBinary::extractHeader(Buf);
+  if (!HeaderOrErr)
+    return HeaderOrErr.takeError();
+  const Header *TheHeader = *HeaderOrErr;
+
+  const char *Start = Buf.getBufferStart();
+  const Entry *Entries =
+      reinterpret_cast<const Entry *>(&Start[TheHeader->EntriesOffset]);
+
+  auto validateEntry = [&](const Entry *TheEntry) -> Error {
+    if (TheEntry->ImageOffset > Buf.getBufferSize() ||
+        TheEntry->StringOffset > Buf.getBufferSize() ||
+        TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
+            Buf.getBufferSize())
+      return errorCodeToError(object_error::unexpected_eof);
+    return Error::success();
+  };
+
+  SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
+  if (TheHeader->Version > 1 && Index.has_value()) {
+    if (*Index >= TheHeader->EntriesCount)
+      return errorCodeToError(object_error::parse_failed);
+    const Entry *TheEntry = &Entries[*Index];
+    if (auto Err = validateEntry(TheEntry))
+      return std::move(Err);
+
+    Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, *Index));
+    return std::move(Binaries);
+  }
+
+  uint64_t EntriesCount = TheHeader->Version == 1 ? 1 : TheHeader->EntriesCount;
+  for (uint64_t I = 0; I < EntriesCount; ++I) {
+    const Entry *TheEntry = &Entries[I];
+    if (auto Err = validateEntry(TheEntry))
+      return std::move(Err);
+
+    Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, I));
+  }
+
+  return std::move(Binaries);
+}
+
+SmallString<0> OffloadBinary::write(ArrayRef<OffloadingImage> OffloadingData) {
+  uint64_t EntriesCount = OffloadingData.size();
+  assert(EntriesCount > 0 && "At least one offloading image is required");
+
   // Create a null-terminated string table with all the used strings.
+  // Also calculate total size of images.
   StringTableBuilder StrTab(StringTableBuilder::ELF);
-  for (auto &KeyAndValue : OffloadingData.StringData) {
-    StrTab.add(KeyAndValue.first);
-    StrTab.add(KeyAndValue.second);
+  uint64_t TotalStringEntries = 0;
+  uint64_t TotalImagesSize = 0;
+  for (const OffloadingImage &Img : OffloadingData) {
+    for (auto &KeyAndValue : Img.StringData) {
+      StrTab.add(KeyAndValue.first);
+      StrTab.add(KeyAndValue.second);
+    }
+    TotalStringEntries += Img.StringData.size();
+    TotalImagesSize += Img.Image->getBufferSize();
   }
   StrTab.finalize();
 
-  uint64_t StringEntrySize =
-      sizeof(StringEntry) * OffloadingData.StringData.size();
+  uint64_t StringEntrySize = sizeof(StringEntry) * TotalStringEntries;
+  uint64_t EntriesSize = sizeof(Entry) * EntriesCount;
+  uint64_t StrTabOffset = sizeof(Header) + EntriesSize + StringEntrySize;
 
   // Make sure the image we're wrapping around is aligned as well.
-  uint64_t BinaryDataSize = alignTo(sizeof(Header) + sizeof(Entry) +
-                                        StringEntrySize + StrTab.getSize(),
-                                    getAlignment());
+  uint64_t BinaryDataSize =
+      alignTo(StrTabOffset + StrTab.getSize(), getAlignment());
 
-  // Create the header and fill in the offsets. The entry will be directly
+  // Create the header and fill in the offsets. The entries will be directly
   // placed after the header in memory. Align the size to the alignment of the
   // header so this can be placed contiguously in a single section.
   Header TheHeader;
-  TheHeader.Size = alignTo(
-      BinaryDataSize + OffloadingData.Image->getBufferSize(), getAlignment());
-  TheHeader.EntryOffset = sizeof(Header);
-  TheHeader.EntrySize = sizeof(Entry);
-
-  // Create the entry using the string table offsets. The string table will be
-  // placed directly after the entry in memory, and the image after that.
-  Entry TheEntry;
-  TheEntry.TheImageKind = OffloadingData.TheImageKind;
-  TheEntry.TheOffloadKind = OffloadingData.TheOffloadKind;
-  TheEntry.Flags = OffloadingData.Flags;
-  TheEntry.StringOffset = sizeof(Header) + sizeof(Entry);
-  TheEntry.NumStrings = OffloadingData.StringData.size();
-
-  TheEntry.ImageOffset = BinaryDataSize;
-  TheEntry.ImageSize = OffloadingData.Image->getBufferSize();
+  TheHeader.Size = alignTo(BinaryDataSize + TotalImagesSize, getAlignment());
+  TheHeader.EntriesOffset = sizeof(Header);
+  TheHeader.EntriesCount = EntriesCount;
 
   SmallString<0> Data;
   Data.reserve(TheHeader.Size);
   raw_svector_ostream OS(Data);
   OS << StringRef(reinterpret_cast<char *>(&TheHeader), sizeof(Header));
-  OS << StringRef(reinterpret_cast<char *>(&TheEntry), sizeof(Entry));
-  for (auto &KeyAndValue : OffloadingData.StringData) {
-    uint64_t Offset = sizeof(Header) + sizeof(Entry) + StringEntrySize;
-    StringEntry Map{Offset + StrTab.getOffset(KeyAndValue.first),
-                    Offset + StrTab.getOffset(KeyAndValue.second)};
-    OS << StringRef(reinterpret_cast<char *>(&Map), sizeof(StringEntry));
+
+  // Create the entries using the string table offsets. The string table will be
+  // placed directly after the set of entries in memory, and all the images are
+  // after that.
+  uint64_t StringEntryOffset = sizeof(Header) + EntriesSize;
+  uint64_t ImageOffset = BinaryDataSize;
+  for (const OffloadingImage &Img : OffloadingData) {
+    Entry TheEntry;
+
+    TheEntry.TheImageKind = Img.TheImageKind;
+    TheEntry.TheOffloadKind = Img.TheOffloadKind;
+    TheEntry.Flags = Img.Flags;
+
+    TheEntry.StringOffset = StringEntryOffset;
+    StringEntryOffset += sizeof(StringEntry) * Img.StringData.size();
+    TheEntry.NumStrings = Img.StringData.size();
+
+    TheEntry.ImageOffset = ImageOffset;
+    ImageOffset += Img.Image->getBufferSize();
+    TheEntry.ImageSize = Img.Image->getBufferSize();
+
+    OS << StringRef(reinterpret_cast<char *>(&TheEntry), sizeof(Entry));
   }
+
+  // Create the string map entries.
+  for (const OffloadingImage &Img : OffloadingData) {
+    for (auto &KeyAndValue : Img.StringData) {
+      StringEntry Map{StrTabOffset + StrTab.getOffset(KeyAndValue.first),
+                      StrTabOffset + StrTab.getOffset(KeyAndValue.second),
+                      KeyAndValue.second.size()};
+      OS << StringRef(reinterpret_cast<char *>(&Map), sizeof(StringEntry));
+    }
+  }
+
   StrTab.write(OS);
   // Add padding to required image alignment.
-  OS.write_zeros(TheEntry.ImageOffset - OS.tell());
-  OS << OffloadingData.Image->getBuffer();
+  OS.write_zeros(BinaryDataSize - OS.tell());
+
+  for (const OffloadingImage &Img : OffloadingData)
+    OS << Img.Image->getBuffer();
 
   // Add final padding to required alignment.
   assert(TheHeader.Size >= OS.tell() && "Too much data written?");
@@ -329,6 +423,7 @@ ImageKind object::getImageKind(StringRef Name) {
       .Case("cubin", IMG_Cubin)
       .Case("fatbin", IMG_Fatbinary)
       .Case("s", IMG_PTX)
+      .Case("spv", IMG_SPIRV)
       .Default(IMG_None);
 }
 
@@ -344,6 +439,8 @@ StringRef object::getImageKindName(ImageKind Kind) {
     return "fatbin";
   case IMG_PTX:
     return "s";
+  case IMG_SPIRV:
+    return "spv";
   default:
     return "";
   }

@@ -367,13 +367,13 @@ define amdgpu_kernel void @test_readlane_vregs_i64(ptr addrspace(1) %out, ptr ad
 ; CHECK-GISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
-; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-GISEL-NEXT:    s_nop 1
 ; CHECK-GISEL-NEXT:    v_readlane_b32 s2, v0, s3
 ; CHECK-GISEL-NEXT:    v_readlane_b32 s3, v1, s3
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CHECK-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -427,13 +427,13 @@ define amdgpu_kernel void @test_readlane_vregs_f64(ptr addrspace(1) %out, ptr ad
 ; CHECK-GISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
-; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-GISEL-NEXT:    s_nop 1
 ; CHECK-GISEL-NEXT:    v_readlane_b32 s2, v0, s3
 ; CHECK-GISEL-NEXT:    v_readlane_b32 s3, v1, s3
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CHECK-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
