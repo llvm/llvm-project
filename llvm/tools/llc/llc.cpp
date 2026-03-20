@@ -67,6 +67,7 @@
 using namespace llvm;
 
 static codegen::RegisterCodeGenFlags CGF;
+static codegen::RegisterMTuneFlag MTF;
 static codegen::RegisterSaveStatsFlag SSF;
 
 // General options for llc.  Other pass-specific options are specified
@@ -501,16 +502,19 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   std::unique_ptr<Module> M;
   std::unique_ptr<MIRParser> MIR;
   Triple TheTriple;
-  std::string CPUStr = codegen::getCPUStr(),
-              FeaturesStr = codegen::getFeaturesStr();
+  std::string CPUStr = codegen::getCPUStr();
+  std::string TuneCPUStr = codegen::getTuneCPUStr();
+  std::string FeaturesStr = codegen::getFeaturesStr();
 
   // Set attributes on functions as loaded from MIR from command line arguments.
-  auto setMIRFunctionAttributes = [&CPUStr, &FeaturesStr](Function &F) {
-    codegen::setFunctionAttributes(CPUStr, FeaturesStr, F);
+  auto setMIRFunctionAttributes = [&CPUStr, &TuneCPUStr,
+                                   &FeaturesStr](Function &F) {
+    codegen::setFunctionAttributes(F, CPUStr, FeaturesStr, TuneCPUStr);
   };
 
   auto MAttrs = codegen::getMAttrs();
-  bool SkipModule = CPUStr == "help" || is_contained(MAttrs, "help");
+  bool SkipModule =
+      CPUStr == "help" || TuneCPUStr == "help" || is_contained(MAttrs, "help");
 
   CodeGenOptLevel OLvl;
   if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {
@@ -658,8 +662,10 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     }
 
     InitializeOptions(TheTriple);
+    // Pass "help" as CPU for -mtune=help
+    std::string SkipModuleCPU = (TuneCPUStr == "help" ? "help" : CPUStr);
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-        TheTriple, CPUStr, FeaturesStr, Options, RM, CM, OLvl));
+        TheTriple, SkipModuleCPU, FeaturesStr, Options, RM, CM, OLvl));
     assert(Target && "Could not allocate target machine!");
 
     // Set PGO options based on command line flags
@@ -711,9 +717,9 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   if (!NoVerify && verifyModule(*M, &errs()))
     reportError("input module cannot be verified", InputFilename);
 
-  // Override function attributes based on CPUStr, FeaturesStr, and command line
-  // flags.
-  codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
+  // Override function attributes based on CPUStr, TuneCPUStr, FeaturesStr, and
+  // command line flags.
+  codegen::setFunctionAttributes(*M, CPUStr, FeaturesStr, TuneCPUStr);
 
   for (auto &Plugin : PluginList) {
     CodeGenFileType CGFT = codegen::getFileType();
