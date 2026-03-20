@@ -1,5 +1,8 @@
 REQUIRES: system-windows, http-server
 
+RUN: llvm-debuginfod-find --debuginfo 0 | FileCheck --check-prefix CHECK-STDOUT
+CHECK-STDOUT: Build ID 00 could not be found
+
 RUN: rm -rf %t
 RUN: mkdir -p %t/debuginfod-cache
 RUN: %python %S/Inputs/capture_req.py llvm-debuginfod-find --debuginfo 0 \
