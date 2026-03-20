@@ -429,7 +429,7 @@ static VectorType trimNonScalableUnitDims(VectorType oldType) {
   return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
-static auto getMaskDimData(vector::CreateMaskOp op) { return op.getOperands(); }
+static auto getMaskDimData(vector::CreateMaskOp op) { return op.getMaskDimSizes(); }
 static auto getMaskDimData(vector::ConstantMaskOp op) {
   return op.getMaskDimSizes();
 }
