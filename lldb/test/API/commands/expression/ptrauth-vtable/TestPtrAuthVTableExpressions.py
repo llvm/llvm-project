@@ -30,9 +30,7 @@ class TestPtrAuthVTableExpressions(TestBase):
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
 
-        self.expect_expr(
-            "base_ptr->value()", result_type="int", result_value="20"
-        )
+        self.expect_expr("base_ptr->value()", result_type="int", result_value="20")
 
     @skipUnlessArm64eSupported
     def test_virtual_call_via_helper(self):
@@ -43,6 +41,4 @@ class TestPtrAuthVTableExpressions(TestBase):
 
         self.expect_expr("call_value(&d)", result_type="int", result_value="20")
         self.expect_expr("call_value(&od)", result_type="int", result_value="30")
-        self.expect_expr(
-            "call_value(base_ptr)", result_type="int", result_value="20"
-        )
+        self.expect_expr("call_value(base_ptr)", result_type="int", result_value="20")
