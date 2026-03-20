@@ -57,7 +57,6 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
   float xf = x;
   float x_sq = xf * xf;
 
-  // |x| <= 1
   // Taylor series -> [x - x^3/3 + x^5/5 - x^7/7 ...]
   // x * [1 - x^2/3 + x^4/5 - x^6/7...] -> x * P(x)
   // atan(x) = x * poly(x^2)
@@ -68,15 +67,20 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
   // > P = fpminimax(atan(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14|], [|SG, SG,
   // SG..SG|], [0, 1]);
   //
-  // absolute error for the polynomial given by:
-  // dirtyinfnorm(atan(x) - x * P(x), [0, 1]) gives
-  // error ~ 0x1.482168p-24
+  // relative error for the polynomial given by:
+  // > dirtyinfnorm(atan(x)/x - P(x), [0, 1]);
+  // gives error ~ 0x1p-23
   // worst case error for it being ~ 0x1.dcf750p-23
   // satisfying -> error < worst_case
+  auto atan_eval = [](float x0) {
+    return fputil::polyeval(x0, 0x1.fffffcp-1f, -0x1.55519ep-2f, 0x1.98f6a8p-3f,
+                            -0x1.1f0a92p-3f, 0x1.95b654p-4f, -0x1.e65492p-5f,
+                            0x1.8c0c36p-6f, -0x1.32316ep-8f);
+  };
+
+  // |x| <= 1
   if (x_abs <= 0x3f80) {
-    float result = fputil::polyeval(
-        x_sq, 0x1.fffffcp-1f, -0x1.55519ep-2f, 0x1.98f6a8p-3f, -0x1.1f0a92p-3f,
-        0x1.95b654p-4f, -0x1.e65492p-5f, 0x1.8c0c36p-6f, -0x1.32316ep-8f);
+    float result = atan_eval(x_sq);
     return fputil::cast<bfloat16>(xf * result);
   }
 
@@ -86,19 +90,7 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
   float x_inv_sq = 1.0f / x_sq;
   float x_inv = fputil::sqrt<float>(x_inv_sq);
 
-  // Degree 14 polynomial of atan(1/|x|) generated using Sollya with command :
-  // > display = hexadecimal ;
-  // > P = fpminimax(atan(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14|], [|SG, SG, SG...
-  // SG|], [0, 1]); (here its atan(1/|x|)/(1/|x|))
-  // absolute error for the polynomial given by:
-  // dirtyinfnorm(atan(x) - x * P(x), [0, 1]) gives
-  // error ~ 0x1.482168p-24
-  // worst case error for it being ~ 0x1.dcf750p-23
-  // satisfying -> error < worst_case
-  float result =
-      fputil::polyeval(x_inv_sq, 0x1.fffffcp-1f, -0x1.55519ep-2f,
-                       0x1.98f6a8p-3f, -0x1.1f0a92p-3f, 0x1.95b654p-4f,
-                       -0x1.e65492p-5f, 0x1.8c0c36p-6f, -0x1.32316ep-8f);
+  float result = atan_eval(x_inv_sq);
   return fputil::cast<bfloat16>(sign *
                                 fputil::multiply_add(x_inv, -result, PI_2));
 }
