@@ -383,14 +383,12 @@ function(llvm_ExternalProject_Add name source_dir)
     set(verbose -DCMAKE_VERBOSE_MAKEFILE=ON)
   endif()
 
-  # Use the same FileLock for Unix Makefiles to serialize the main build with
-  # EXTRA_TARGETS. This prevents concurrent make invocations from corrupting
-  # shared artifacts in BINARY_DIR.
   if(CMAKE_GENERATOR MATCHES "Make")
+    # Use the same FileLock for Unix Makefiles to serialize the main build with
+    # EXTRA_TARGETS. This prevents concurrent make invocations from corrupting
+    # shared artifacts in BINARY_DIR.
     llvm_ExternalProject_BuildCmd(build_cmd "" ${BINARY_DIR} ${STAMP_DIR})
     set(build_command_arg BUILD_COMMAND ${build_cmd})
-  else()
-    set(build_command_arg "")
   endif()
 
   ExternalProject_Add(${name}
