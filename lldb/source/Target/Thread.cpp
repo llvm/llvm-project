@@ -1142,10 +1142,8 @@ void Thread::PushPlan(ThreadPlanSP thread_plan_sp) {
 void Thread::PopPlan() {
   Log *log = GetLog(LLDBLog::Step);
   ThreadPlanSP popped_plan_sp = GetPlans().PopPlan();
-  if (log) {
-    LLDB_LOGF(log, "Popping plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
-              popped_plan_sp->GetName(), popped_plan_sp->GetThread().GetID());
-  }
+  LLDB_LOGF(log, "Popping plan: \"%s\", tid = 0x%4.4" PRIx64 ".",
+            popped_plan_sp->GetName(), popped_plan_sp->GetThread().GetID());
 }
 
 void Thread::DiscardPlan() {
@@ -1260,12 +1258,10 @@ void Thread::DiscardThreadPlansUpToPlan(ThreadPlan *up_to_plan_ptr) {
 
 void Thread::DiscardThreadPlans(bool force) {
   Log *log = GetLog(LLDBLog::Step);
-  if (log) {
-    LLDB_LOGF(log,
-              "Discarding thread plans for thread (tid = 0x%4.4" PRIx64
-              ", force %d)",
-              GetID(), force);
-  }
+  LLDB_LOGF(log,
+            "Discarding thread plans for thread (tid = 0x%4.4" PRIx64
+            ", force %d)",
+            GetID(), force);
 
   if (force) {
     GetPlans().DiscardAllPlans();

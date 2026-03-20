@@ -9,9 +9,8 @@
 ;;   if (i)
 ;;     A[3*i - 2] = 1;
 ;; }
-;;
-;; FIXME: DependencyAnalsysis currently detects no dependency between
-;; `A[-6*i + INT64_MAX]` and `A[3*i - 2]`, but it does exist. For example,
+;; There is a bidirectional dependency between `A[-6*i + INT64_MAX]`
+;; and `A[3*i - 2]`, for example,
 ;;
 ;; | memory location        | -6*i + INT64_MAX       | 3*i - 2
 ;; |------------------------|------------------------|-----------
@@ -28,7 +27,7 @@ define void @exactsiv_const_ovfl(ptr %A) {
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - none!
 ;

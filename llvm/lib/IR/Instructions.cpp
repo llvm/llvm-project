@@ -1189,6 +1189,9 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 //                        UncondBrInst Implementation
 //===----------------------------------------------------------------------===//
 
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
 UncondBrInst::UncondBrInst(BasicBlock *IfTrue, InsertPosition InsertBefore)
     : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::UncondBr,
                  AllocMarker, InsertBefore) {
@@ -1242,6 +1245,9 @@ void CondBrInst::swapSuccessors() {
   // expectations.
   swapProfMetadata();
 }
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                        AllocaInst Implementation
@@ -1493,6 +1499,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmaximum";
   case AtomicRMWInst::FMinimum:
     return "fminimum";
+  case AtomicRMWInst::FMaximumNum:
+    return "fmaximumnum";
+  case AtomicRMWInst::FMinimumNum:
+    return "fminimumnum";
   case AtomicRMWInst::UIncWrap:
     return "uinc_wrap";
   case AtomicRMWInst::UDecWrap:
@@ -3242,7 +3252,16 @@ CastInst::getCastOpcode(
       DestTy->getPrimitiveSizeInBits().getFixedValue(); // 0 for ptr
 
   // Run through the possibilities ...
-  if (DestTy->isIntegerTy()) {                      // Casting to integral
+  if (DestTy->isByteTy()) {     // Casting to byte
+    if (SrcTy->isIntegerTy()) { // Casting from integral
+      assert(DestBits == SrcBits && "Illegal cast from integer to byte type");
+      return BitCast;
+    } else if (SrcTy->isPointerTy()) { // Casting from pointer
+      assert(DestBits == SrcBits && "Illegal cast from pointer to byte type");
+      return BitCast;
+    }
+    llvm_unreachable("Illegal cast to byte type");
+  } else if (DestTy->isIntegerTy()) {               // Casting to integral
     if (SrcTy->isIntegerTy()) {                     // Casting from integral
       if (DestBits < SrcBits)
         return Trunc;                               // int -> smaller int
@@ -3374,7 +3393,10 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
     PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
 
     // BitCast implies a no-op cast of type only. No bits change.
-    // However, you can't cast pointers to anything but pointers.
+    // However, you can't cast pointers to anything but pointers/bytes.
+    if ((SrcPtrTy && DstTy->isByteOrByteVectorTy()) ||
+        (SrcTy->isByteOrByteVectorTy() && DstPtrTy))
+      return true;
     if (!SrcPtrTy != !DstPtrTy)
       return false;
 

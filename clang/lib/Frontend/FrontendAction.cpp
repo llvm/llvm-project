@@ -892,7 +892,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
       for (serialization::ModuleFile &MF : MM)
         if (&MF != &PrimaryModule)
-          CI.getFrontendOpts().ModuleFiles.push_back(MF.FileName);
+          CI.getFrontendOpts().ModuleFiles.emplace_back(MF.FileName.str());
 
       ASTReader->visitTopLevelModuleMaps(PrimaryModule, [&](FileEntryRef FE) {
         CI.getFrontendOpts().ModuleMapFiles.push_back(
@@ -1288,7 +1288,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles) {
     serialization::ModuleFile *Loaded = nullptr;
-    if (!CI.loadModuleFile(ModuleFile, Loaded))
+    if (!CI.loadModuleFile(ModuleFileName::makeExplicit(ModuleFile), Loaded))
       return false;
 
     if (Loaded && Loaded->StandardCXXModule)
