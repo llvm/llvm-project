@@ -524,7 +524,10 @@ static void createReductionAllocAndInitRegions(
   mlir::Type ty = fir::unwrapRefType(type);
   builder.setInsertionPointToEnd(initBlock);
   mlir::Value initValue =
-      genInitValueCB(builder, loc, ty, initBlock->getArgument(0));
+      isByRef ? genInitValueCB(builder, loc, ty, initBlock->getArgument(0),
+                               initBlock->getArgument(1))
+              : genInitValueCB(builder, loc, ty, initBlock->getArgument(0),
+                               mlir::Value{});
   if (isByRef) {
     populateByRefInitAndCleanupRegions(
         converter, loc, type, initValue, initBlock,
@@ -622,7 +625,8 @@ OpType ReductionProcessor::createDeclareReduction(
     const ReductionIdentifier redId, mlir::Type type, mlir::Location loc,
     bool isByRef) {
   auto genInitValueCB = [&](fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Type type, mlir::Value val) {
+                            mlir::Type type, mlir::Value /*moldArg*/,
+                            mlir::Value /*privArg*/) {
     mlir::Type ty = fir::unwrapRefType(type);
     mlir::Value initValue = ReductionProcessor::getReductionInitValue(
         loc, unwrapSeqOrBoxedType(ty), redId, builder);

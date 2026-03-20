@@ -388,7 +388,8 @@ bool ClauseProcessor::processInitializer(
     ReductionProcessor::GenInitValueCBTy &genInitValueCB) const {
   if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
     genInitValueCB = [&, clause](fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Type type, mlir::Value ompOrig) {
+                                 mlir::Type type, mlir::Value moldArg,
+                                 mlir::Value privArg) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
       const StylizedInstance &inst = clause->v.front();
@@ -397,9 +398,9 @@ bool ClauseProcessor::processInitializer(
            std::get<StylizedInstance::Variables>(inst.t)) {
         mlir::Value addr;
         std::string name = object.sym()->name().ToString();
-        mlir::Type ompOrigType = ompOrig.getType();
+        mlir::Type moldArgType = moldArg.getType();
         // Check for unsupported dynamic-length character reductions
-        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        mlir::Type unwrappedType = fir::unwrapRefType(moldArgType);
         if (mlir::isa<fir::BoxCharType>(unwrappedType)) {
           TODO(loc, "OpenMP reduction allocation for dynamic length character");
         }
@@ -409,20 +410,15 @@ bool ClauseProcessor::processInitializer(
                  "OpenMP reduction allocation for dynamic length character");
           }
         }
-        // For by-ref reductions, the init block has two arguments:
-        //   arg0 = mold/original, arg1 = private allocation.
-        // omp_priv must map to arg1 (the private copy), not arg0.
-        if (name == "omp_priv" && fir::isa_ref_type(ompOrigType)) {
-          mlir::Block *initBlock = builder.getInsertionBlock();
-          if (initBlock->getNumArguments() > 1)
-            addr = initBlock->getArgument(1);
-          else
-            addr = ompOrig;
-        } else if (fir::isa_ref_type(ompOrigType)) {
-          addr = ompOrig;
+        // For by-ref reductions, omp_priv maps to privArg (the private
+        // allocation) and omp_orig maps to moldArg (the original).
+        if (name == "omp_priv" && privArg) {
+          addr = privArg;
+        } else if (fir::isa_ref_type(moldArgType)) {
+          addr = moldArg;
         } else {
-          addr = builder.createTemporary(loc, ompOrigType);
-          fir::StoreOp::create(builder, loc, ompOrig, addr);
+          addr = builder.createTemporary(loc, moldArgType);
+          fir::StoreOp::create(builder, loc, moldArg, addr);
         }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
