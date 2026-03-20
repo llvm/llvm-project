@@ -12,6 +12,8 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   DEPENDS
   MLIRCIREnumsGen
   MLIRCIROpsIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
   MLIRCIROpInterfacesIncGen
 
   LINK_LIBS

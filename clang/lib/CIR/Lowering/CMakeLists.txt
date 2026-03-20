@@ -9,6 +9,10 @@ add_clang_library(clangCIRLoweringCommon
   CIRPasses.cpp
   LoweringHelpers.cpp
 
+  DEPENDS
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
+
   LINK_LIBS
   clangCIR
   ${dialect_libs}

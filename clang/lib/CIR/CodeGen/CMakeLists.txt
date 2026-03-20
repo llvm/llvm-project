@@ -55,6 +55,8 @@ add_clang_library(clangCIR
   DEPENDS
   MLIRCIR
   MLIRCIROpInterfacesIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
   ${dialect_libs}
 
   LINK_LIBS
