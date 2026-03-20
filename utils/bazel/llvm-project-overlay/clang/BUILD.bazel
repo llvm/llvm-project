@@ -1371,10 +1371,10 @@ cc_library(
     hdrs = glob(["include/clang/DependencyScanning/**/*.h"]),
     deps = [
         ":basic",
-        ":driver",
         ":frontend",
         ":lex",
         ":serialization",
+        "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
@@ -1610,6 +1610,7 @@ cc_library(
         ":ast",
         ":basic",
         ":config",
+        ":dependency_scanning",
         ":driver_options_inc_gen",
         ":frontend",
         ":lex",
@@ -2606,6 +2607,21 @@ cc_library(
         ":ast",
         ":support",
         ":unified_symbol_resolution",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "scalable_static_analysis_analyses",
+    srcs = glob([
+        "lib/ScalableStaticAnalysisFramework/Analyses/**/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Analyses/**/*.h"]),
+    deps = [
+        ":analysis",
+        ":ast",
+        ":basic",
+        ":scalable_static_analysis_core",
         "//llvm:Support",
     ],
 )

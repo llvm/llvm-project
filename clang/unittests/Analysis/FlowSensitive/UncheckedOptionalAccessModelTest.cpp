@@ -106,6 +106,7 @@ protected:
       #include "std_optional.h"
       #include "std_string.h"
       #include "std_utility.h"
+      #include "testing_defs.h"
 
       template <typename T>
       T Make();
@@ -2892,6 +2893,72 @@ TEST_P(UncheckedOptionalAccessTest, DiagnosticsHaveRanges) {
           opt->fa->fi.value();  // [[unsafe:<input.cc:18:11, col:20>]]
         }
       }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      ASSERT_TRUE(opt.has_value());
+      EXPECT_EQ(opt.value(), 42);
+
+      opt.reset();
+      EXPECT_EQ(opt.value(), 42); // [[unsafe]]
+      ASSERT_TRUE(opt.value()); // [[unsafe]]
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      ASSERT_TRUE(opt);
+      EXPECT_EQ(*opt, 42);
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      ASSERT_FALSE(opt.has_value());
+      EXPECT_EQ(opt.value(), 42); // [[unsafe]]
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      EXPECT_TRUE(opt.has_value());
+      EXPECT_EQ(opt.value(), 42); // [[unsafe]]
+
+      EXPECT_TRUE(opt);
+      EXPECT_EQ(*opt, 42); // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, AssertFalseGtestMacroWithNullableValue) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    namespace BloombergLP::bdlb {
+      template <typename T>
+      struct NullableValue : $ns::$optional<T> {
+	bool isNull() const;
+      };
+    }
+
+    void target(BloombergLP::bdlb::NullableValue<int> opt) {
+      ASSERT_TRUE(opt.isNull());
+      EXPECT_EQ(*opt, 42); // [[unsafe]]
+
+      ASSERT_FALSE(opt.isNull());
+      EXPECT_EQ(*opt, 42);
     }
   )cc");
 }
