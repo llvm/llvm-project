@@ -16,6 +16,300 @@
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json --check-prefix=JSON-INDEX
 // RUN: FileCheck %s < %t/json/Vehicles/index.json --check-prefix=JSON-VEHICLES-INDEX
 
+// JSON-INDEX:      {
+// JSON-INDEX-NEXT:  "DocumentationFileName": "index",
+// JSON-INDEX-NEXT:  "Enums": [
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "Description": {
+// JSON-INDEX-NEXT:        "BriefComments": [
+// JSON-INDEX-NEXT:          [
+// JSON-INDEX-NEXT:            {
+// JSON-INDEX-NEXT:              "TextComment": "For specifying RGB colors"
+// JSON-INDEX-NEXT:            }
+// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:        ],
+// JSON-INDEX-NEXT:        "HasBriefComments": true
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "HasComments": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 4
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 1"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Red",
+// JSON-INDEX-NEXT:          "Value": "0"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 2"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Green",
+// JSON-INDEX-NEXT:          "Value": "1"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 3"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Blue",
+// JSON-INDEX-NEXT:          "Value": "2"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Name": "Color",
+// JSON-INDEX-NEXT:      "Scoped": false,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    },
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "Description": {
+// JSON-INDEX-NEXT:        "BriefComments": [
+// JSON-INDEX-NEXT:          [
+// JSON-INDEX-NEXT:            {
+// JSON-INDEX-NEXT:              "TextComment": "Shape Types"
+// JSON-INDEX-NEXT:            }
+// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:        ],
+// JSON-INDEX-NEXT:        "HasBriefComments": true
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "HasComments": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 13
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 1"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Circle",
+// JSON-INDEX-NEXT:          "Value": "0"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 2"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Rectangle",
+// JSON-INDEX-NEXT:          "Value": "1"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Comment 3"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Triangle",
+// JSON-INDEX-NEXT:          "Value": "2"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Name": "Shapes",
+// JSON-INDEX-NEXT:      "Scoped": true,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    },
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "BaseType": {
+// JSON-INDEX-NEXT:        "Name": "uint8_t",
+// JSON-INDEX-NEXT:        "QualName": "uint8_t",
+// JSON-INDEX-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Description": {
+// JSON-INDEX-NEXT:        "BriefComments": [
+// JSON-INDEX-NEXT:          [
+// JSON-INDEX-NEXT:            {
+// JSON-INDEX-NEXT:              "TextComment": "Specify the size"
+// JSON-INDEX-NEXT:            }
+// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:        ],
+// JSON-INDEX-NEXT:        "HasBriefComments": true
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "HasComments": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 26
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "A pearl."
+// JSON-INDEX-NEXT:                },
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Pearls are quite small."
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ],
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "Pearls are used in jewelry."
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Small",
+// JSON-INDEX-NEXT:          "Value": "0"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "BriefComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "A tennis ball."
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ],
+// JSON-INDEX-NEXT:            "HasBriefComments": true
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Medium",
+// JSON-INDEX-NEXT:          "Value": "1"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "A football."
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "Large",
+// JSON-INDEX-NEXT:          "Value": "2"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Name": "Size",
+// JSON-INDEX-NEXT:      "Scoped": false,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    },
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "BaseType": {
+// JSON-INDEX-NEXT:        "Name": "long long",
+// JSON-INDEX-NEXT:        "QualName": "long long",
+// JSON-INDEX-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Description": {
+// JSON-INDEX-NEXT:        "BriefComments": [
+// JSON-INDEX-NEXT:          [
+// JSON-INDEX-NEXT:            {
+// JSON-INDEX-NEXT:              "TextComment": "Very long number"
+// JSON-INDEX-NEXT:            }
+// JSON-INDEX-NEXT:          ]
+// JSON-INDEX-NEXT:        ],
+// JSON-INDEX-NEXT:        "HasBriefComments": true
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "HasComments": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 43
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Description": {
+// JSON-INDEX-NEXT:            "HasParagraphComments": true,
+// JSON-INDEX-NEXT:            "ParagraphComments": [
+// JSON-INDEX-NEXT:              [
+// JSON-INDEX-NEXT:                {
+// JSON-INDEX-NEXT:                  "TextComment": "A very large value"
+// JSON-INDEX-NEXT:                }
+// JSON-INDEX-NEXT:              ]
+// JSON-INDEX-NEXT:            ]
+// JSON-INDEX-NEXT:          },
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
+// JSON-INDEX-NEXT:          "Name": "BigVal",
+// JSON-INDEX-NEXT:          "ValueExpr": "999999999999"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Scoped": false,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    },
+// JSON-INDEX-NEXT:    {
+// JSON-INDEX-NEXT:      "End": true,
+// JSON-INDEX-NEXT:      "InfoType": "enum",
+// JSON-INDEX-NEXT:      "Location": {
+// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
+// JSON-INDEX-NEXT:        "LineNumber": 47
+// JSON-INDEX-NEXT:      },
+// JSON-INDEX-NEXT:      "Members": [
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Name": "RedUserSpecified",
+// JSON-INDEX-NEXT:          "ValueExpr": "'A'"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "Name": "GreenUserSpecified",
+// JSON-INDEX-NEXT:          "ValueExpr": "2"
+// JSON-INDEX-NEXT:        },
+// JSON-INDEX-NEXT:        {
+// JSON-INDEX-NEXT:          "End": true,
+// JSON-INDEX-NEXT:          "Name": "BlueUserSpecified",
+// JSON-INDEX-NEXT:          "ValueExpr": "'C'"
+// JSON-INDEX-NEXT:        }
+// JSON-INDEX-NEXT:      ],
+// JSON-INDEX-NEXT:      "Name": "ColorUserSpecified",
+// JSON-INDEX-NEXT:      "Scoped": false,
+// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
+// JSON-INDEX-NEXT:    }
+// JSON-INDEX-NEXT:  ],
+
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
 // HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum Color</code></pre>
@@ -463,300 +757,6 @@
 // MD-MUSTACHE-VEHICLES: | Pickup |
 // MD-MUSTACHE-VEHICLES: | Hatchback |
 // MD-MUSTACHE-VEHICLES: **brief** specify type of car
-
-// JSON-INDEX:      {
-// JSON-INDEX-NEXT:  "DocumentationFileName": "index",
-// JSON-INDEX-NEXT:  "Enums": [
-// JSON-INDEX-NEXT:    {
-// JSON-INDEX-NEXT:      "Description": {
-// JSON-INDEX-NEXT:        "BriefComments": [
-// JSON-INDEX-NEXT:          [
-// JSON-INDEX-NEXT:            {
-// JSON-INDEX-NEXT:              "TextComment": "For specifying RGB colors"
-// JSON-INDEX-NEXT:            }
-// JSON-INDEX-NEXT:          ]
-// JSON-INDEX-NEXT:        ],
-// JSON-INDEX-NEXT:        "HasBriefComments": true
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "HasComments": true,
-// JSON-INDEX-NEXT:      "InfoType": "enum",
-// JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
-// JSON-INDEX-NEXT:        "LineNumber": 4
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "Members": [
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "HasParagraphComments": true,
-// JSON-INDEX-NEXT:            "ParagraphComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "Comment 1"
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ]
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "Red",
-// JSON-INDEX-NEXT:          "Value": "0"
-// JSON-INDEX-NEXT:        },
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "HasParagraphComments": true,
-// JSON-INDEX-NEXT:            "ParagraphComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "Comment 2"
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ]
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "Green",
-// JSON-INDEX-NEXT:          "Value": "1"
-// JSON-INDEX-NEXT:        },
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "HasParagraphComments": true,
-// JSON-INDEX-NEXT:            "ParagraphComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "Comment 3"
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ]
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "End": true,
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "Blue",
-// JSON-INDEX-NEXT:          "Value": "2"
-// JSON-INDEX-NEXT:        }
-// JSON-INDEX-NEXT:      ],
-// JSON-INDEX-NEXT:      "Name": "Color",
-// JSON-INDEX-NEXT:      "Scoped": false,
-// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
-// JSON-INDEX-NEXT:    },
-// JSON-INDEX-NEXT:    {
-// JSON-INDEX-NEXT:      "Description": {
-// JSON-INDEX-NEXT:        "BriefComments": [
-// JSON-INDEX-NEXT:          [
-// JSON-INDEX-NEXT:            {
-// JSON-INDEX-NEXT:              "TextComment": "Shape Types"
-// JSON-INDEX-NEXT:            }
-// JSON-INDEX-NEXT:          ]
-// JSON-INDEX-NEXT:        ],
-// JSON-INDEX-NEXT:        "HasBriefComments": true
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "HasComments": true,
-// JSON-INDEX-NEXT:      "InfoType": "enum",
-// JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
-// JSON-INDEX-NEXT:        "LineNumber": 13
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "Members": [
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "HasParagraphComments": true,
-// JSON-INDEX-NEXT:            "ParagraphComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "Comment 1"
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ]
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "Circle",
-// JSON-INDEX-NEXT:          "Value": "0"
-// JSON-INDEX-NEXT:        },
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "HasParagraphComments": true,
-// JSON-INDEX-NEXT:            "ParagraphComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "Comment 2"
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ]
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "Rectangle",
-// JSON-INDEX-NEXT:          "Value": "1"
-// JSON-INDEX-NEXT:        },
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "HasParagraphComments": true,
-// JSON-INDEX-NEXT:            "ParagraphComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "Comment 3"
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ]
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "End": true,
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "Triangle",
-// JSON-INDEX-NEXT:          "Value": "2"
-// JSON-INDEX-NEXT:        }
-// JSON-INDEX-NEXT:      ],
-// JSON-INDEX-NEXT:      "Name": "Shapes",
-// JSON-INDEX-NEXT:      "Scoped": true,
-// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
-// JSON-INDEX-NEXT:    },
-// JSON-INDEX-NEXT:    {
-// JSON-INDEX-NEXT:      "BaseType": {
-// JSON-INDEX-NEXT:        "Name": "uint8_t",
-// JSON-INDEX-NEXT:        "QualName": "uint8_t",
-// JSON-INDEX-NEXT:        "USR": "0000000000000000000000000000000000000000"
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "Description": {
-// JSON-INDEX-NEXT:        "BriefComments": [
-// JSON-INDEX-NEXT:          [
-// JSON-INDEX-NEXT:            {
-// JSON-INDEX-NEXT:              "TextComment": "Specify the size"
-// JSON-INDEX-NEXT:            }
-// JSON-INDEX-NEXT:          ]
-// JSON-INDEX-NEXT:        ],
-// JSON-INDEX-NEXT:        "HasBriefComments": true
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "HasComments": true,
-// JSON-INDEX-NEXT:      "InfoType": "enum",
-// JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
-// JSON-INDEX-NEXT:        "LineNumber": 26
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "Members": [
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "HasParagraphComments": true,
-// JSON-INDEX-NEXT:            "ParagraphComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "A pearl."
-// JSON-INDEX-NEXT:                },
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "Pearls are quite small."
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ],
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "Pearls are used in jewelry."
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ]
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "Small",
-// JSON-INDEX-NEXT:          "Value": "0"
-// JSON-INDEX-NEXT:        },
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "BriefComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "A tennis ball."
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ],
-// JSON-INDEX-NEXT:            "HasBriefComments": true
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "Medium",
-// JSON-INDEX-NEXT:          "Value": "1"
-// JSON-INDEX-NEXT:        },
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "HasParagraphComments": true,
-// JSON-INDEX-NEXT:            "ParagraphComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "A football."
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ]
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "End": true,
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "Large",
-// JSON-INDEX-NEXT:          "Value": "2"
-// JSON-INDEX-NEXT:        }
-// JSON-INDEX-NEXT:      ],
-// JSON-INDEX-NEXT:      "Name": "Size",
-// JSON-INDEX-NEXT:      "Scoped": false,
-// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
-// JSON-INDEX-NEXT:    },
-// JSON-INDEX-NEXT:    {
-// JSON-INDEX-NEXT:      "BaseType": {
-// JSON-INDEX-NEXT:        "Name": "long long",
-// JSON-INDEX-NEXT:        "QualName": "long long",
-// JSON-INDEX-NEXT:        "USR": "0000000000000000000000000000000000000000"
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "Description": {
-// JSON-INDEX-NEXT:        "BriefComments": [
-// JSON-INDEX-NEXT:          [
-// JSON-INDEX-NEXT:            {
-// JSON-INDEX-NEXT:              "TextComment": "Very long number"
-// JSON-INDEX-NEXT:            }
-// JSON-INDEX-NEXT:          ]
-// JSON-INDEX-NEXT:        ],
-// JSON-INDEX-NEXT:        "HasBriefComments": true
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "HasComments": true,
-// JSON-INDEX-NEXT:      "InfoType": "enum",
-// JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
-// JSON-INDEX-NEXT:        "LineNumber": 43
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "Members": [
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Description": {
-// JSON-INDEX-NEXT:            "HasParagraphComments": true,
-// JSON-INDEX-NEXT:            "ParagraphComments": [
-// JSON-INDEX-NEXT:              [
-// JSON-INDEX-NEXT:                {
-// JSON-INDEX-NEXT:                  "TextComment": "A very large value"
-// JSON-INDEX-NEXT:                }
-// JSON-INDEX-NEXT:              ]
-// JSON-INDEX-NEXT:            ]
-// JSON-INDEX-NEXT:          },
-// JSON-INDEX-NEXT:          "End": true,
-// JSON-INDEX-NEXT:          "HasEnumMemberComments": true,
-// JSON-INDEX-NEXT:          "Name": "BigVal",
-// JSON-INDEX-NEXT:          "ValueExpr": "999999999999"
-// JSON-INDEX-NEXT:        }
-// JSON-INDEX-NEXT:      ],
-// JSON-INDEX-NEXT:      "Scoped": false,
-// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
-// JSON-INDEX-NEXT:    },
-// JSON-INDEX-NEXT:    {
-// JSON-INDEX-NEXT:      "End": true,
-// JSON-INDEX-NEXT:      "InfoType": "enum",
-// JSON-INDEX-NEXT:      "Location": {
-// JSON-INDEX-NEXT:        "Filename": "{{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}Inputs{{[\/]}}enum.cpp",
-// JSON-INDEX-NEXT:        "LineNumber": 47
-// JSON-INDEX-NEXT:      },
-// JSON-INDEX-NEXT:      "Members": [
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Name": "RedUserSpecified",
-// JSON-INDEX-NEXT:          "ValueExpr": "'A'"
-// JSON-INDEX-NEXT:        },
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "Name": "GreenUserSpecified",
-// JSON-INDEX-NEXT:          "ValueExpr": "2"
-// JSON-INDEX-NEXT:        },
-// JSON-INDEX-NEXT:        {
-// JSON-INDEX-NEXT:          "End": true,
-// JSON-INDEX-NEXT:          "Name": "BlueUserSpecified",
-// JSON-INDEX-NEXT:          "ValueExpr": "'C'"
-// JSON-INDEX-NEXT:        }
-// JSON-INDEX-NEXT:      ],
-// JSON-INDEX-NEXT:      "Name": "ColorUserSpecified",
-// JSON-INDEX-NEXT:      "Scoped": false,
-// JSON-INDEX-NEXT:      "USR": "{{([0-9A-F]{40})}}"
-// JSON-INDEX-NEXT:    }
-// JSON-INDEX-NEXT:  ],
 
 // JSON-VEHICLES-INDEX-LABEL:   "DocumentationFileName": "index",
 // JSON-VEHICLES-INDEX-NEXT:    "Enums": [
