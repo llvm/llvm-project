@@ -202,12 +202,14 @@ private:
   Depth calculateDepths() const;
   Depth getNestedDepths() const;
 
-  /// True if the sequence contains any code (besides transformable loops)
-  /// that is not a valid intervening code.
-  bool hasInvalidIC_{false};
-  /// True if the sequence contains any code (besides transformable loops)
-  /// that is not a valid transparent code.
-  bool hasOpaqueIC_{false};
+  /// The construct that is not a loop or a loop-transforming construct,
+  /// that is also not a valid intervening code. Unset if no such code is
+  /// present.
+  const parser::ExecutionPartConstruct *invalidIC_{nullptr};
+  /// The construct that is not a loop or a loop-transforming construct,
+  /// whose presence would prevent perfect nesting of loops (i.e. code that
+  /// is not "transparent" to a perfect nest).
+  const parser::ExecutionPartConstruct *opaqueIC_{nullptr};
 
   /// Precalculated length of the sequence. Note that this is different from
   /// the number of children because a child may result in a sequence, for
