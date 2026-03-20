@@ -858,7 +858,29 @@ struct BitcastOpConversion : public fir::FIROpConversion<fir::BitcastOp> {
       rewriter.replaceOp(bitcast, op0);
       return mlir::success();
     }
-    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(bitcast, toTy, op0);
+    mlir::Location loc = bitcast.getLoc();
+    bool fromChar = mlir::isa<fir::CharacterType>(bitcast.getValue().getType());
+    bool toChar = mlir::isa<fir::CharacterType>(bitcast.getRes().getType());
+    mlir::Value cast = op0;
+    mlir::Type scalarFromTy = fromTy;
+    if (fromChar) {
+      cast = mlir::LLVM::ExtractValueOp::create(rewriter, loc, cast, {0});
+      scalarFromTy = cast.getType();
+    }
+    mlir::Type scalarToTy = toTy;
+    if (toChar)
+      scalarToTy = mlir::cast<mlir::LLVM::LLVMArrayType>(toTy).getElementType();
+
+    if (scalarFromTy != scalarToTy)
+      cast = mlir::LLVM::BitcastOp::create(rewriter, loc, scalarToTy, cast);
+
+    if (toChar) {
+      mlir::Value undef = mlir::LLVM::UndefOp::create(rewriter, loc, toTy);
+      llvm::SmallVector<int64_t> position{0};
+      cast = mlir::LLVM::InsertValueOp::create(rewriter, loc, undef, cast,
+                                               position);
+    }
+    rewriter.replaceOp(bitcast, cast);
     return mlir::success();
   }
 };
@@ -4597,15 +4619,16 @@ void fir::populateFIRToLLVMConversionPatterns(
     fir::FIRToLLVMPassOptions &options) {
   patterns.insert<
       AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
-      AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
-      BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
-      BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
-      AssumedSizeExtentOpConversion, IsAssumedSizeExtentOpConversion,
-      BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
-      BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
-      BitcastOpConversion, CmpcOpConversion, VolatileCastOpConversion,
-      ConvertOpConversion, CoordinateOpConversion, CopyOpConversion,
-      DTEntryOpConversion, DeclareOpConversion, DeclareValueOpConversion,
+      AllocaOpConversion, AllocMemOpConversion, BitcastOpConversion,
+      BoxAddrOpConversion, BoxCharLenOpConversion, BoxDimsOpConversion,
+      BoxEleSizeOpConversion, BoxIsAllocOpConversion, BoxIsArrayOpConversion,
+      BoxIsPtrOpConversion, AssumedSizeExtentOpConversion,
+      IsAssumedSizeExtentOpConversion, BoxOffsetOpConversion,
+      BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeCodeOpConversion,
+      BoxTypeDescOpConversion, CallOpConversion, CmpcOpConversion,
+      VolatileCastOpConversion, ConvertOpConversion, CoordinateOpConversion,
+      CopyOpConversion, DTEntryOpConversion, DeclareOpConversion,
+      DeclareValueOpConversion,
       DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,

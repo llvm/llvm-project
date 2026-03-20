@@ -3067,8 +3067,36 @@ func.func @bitcast_char1_to_i8(%arg0 : !fir.char<1>) -> i8 {
 }
 
 // CHECK-LABEL: llvm.func @bitcast_char1_to_i8(
-// CHECK-SAME:    %[[ARG0:.*]]: i8) -> i8
-// CHECK:         llvm.return %[[ARG0]] : i8
+// CHECK-SAME:    %[[ARG0:.*]]: !llvm.array<1 x i8>) -> i8
+// CHECK:         %[[EXT:.*]] = llvm.extractvalue %[[ARG0]][0] : !llvm.array<1 x i8>
+// CHECK:         llvm.return %[[EXT]] : i8
+
+// -----
+
+func.func @bitcast_i8_to_char1(%arg0 : i8) -> !fir.char<1> {
+  %0 = fir.bitcast %arg0 : (i8) -> !fir.char<1>
+  return %0 : !fir.char<1>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_i8_to_char1(
+// CHECK-SAME:    %[[ARG0:.*]]: i8) -> !llvm.array<1 x i8>
+// CHECK:         %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<1 x i8>
+// CHECK:         %[[INS:.*]] = llvm.insertvalue %[[ARG0]], %[[UNDEF]][0] : !llvm.array<1 x i8>
+// CHECK:         llvm.return %[[INS]] : !llvm.array<1 x i8>
+
+// -----
+
+func.func @bitcast_f32_to_char4(%arg0 : f32) -> !fir.char<4> {
+  %0 = fir.bitcast %arg0 : (f32) -> !fir.char<4>
+  return %0 : !fir.char<4>
+}
+
+// CHECK-LABEL: llvm.func @bitcast_f32_to_char4(
+// CHECK-SAME:    %[[ARG0:.*]]: f32) -> !llvm.array<1 x i32>
+// CHECK:         %[[BC:.*]] = llvm.bitcast %[[ARG0]] : f32 to i32
+// CHECK:         %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<1 x i32>
+// CHECK:         %[[INS:.*]] = llvm.insertvalue %[[BC]], %[[UNDEF]][0] : !llvm.array<1 x i32>
+// CHECK:         llvm.return %[[INS]] : !llvm.array<1 x i32>
 
 // -----
 
