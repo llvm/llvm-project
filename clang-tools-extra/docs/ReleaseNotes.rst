@@ -582,7 +582,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
   - Avoid false positives on parameters used in dependent expressions
-    (e.g. inside generic lambdas).
+    (e.g. inside generic lambdas), including constructor-style dependent initializers.
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
