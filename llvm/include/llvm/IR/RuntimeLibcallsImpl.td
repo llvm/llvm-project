@@ -78,12 +78,10 @@ def Same : FuncArgType;     // Same argument type as the previous one.
 /// to be overridden for Darwin with the xxx$LDBL128 form.  See
 /// PPCISelLowering.cpp.
 class RuntimeLibcall<FuncArgType RetType = NoneType,
-                     list<FuncArgType> ArgTypes = [],
-                     string EnumName = ""> {
+                     list<FuncArgType> ArgTypes = []> {
   string Name = NAME;
   FuncArgType ReturnType = RetType;
   list<FuncArgType> ArgumentTypes = ArgTypes;
-  string LibFuncEnumName = EnumName; // For TargetLibraryInfo
 }
 
 // Concrete implementation of a libcall, which may have a different
