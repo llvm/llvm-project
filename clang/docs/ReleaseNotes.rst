@@ -544,6 +544,8 @@ Python Binding Changes
   ``CodeCompletionResults.results`` should be changed to directly use
   ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
   so it can be used the same as ``CodeCompletionResults.results``.
+- Exposed ``clang_getNonReferenceType`` and ``clang_getUnqualifiedType`` via
+  ``Type.get_non_reference()`` and ``Type.get_unqualified()``.
 
 OpenMP Support
 --------------
