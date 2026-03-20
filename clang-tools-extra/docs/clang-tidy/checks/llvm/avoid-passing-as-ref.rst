@@ -24,4 +24,4 @@ Options
 .. option:: ClassNames
 
    A semicolon-separated list of fully qualified class names that should be
-   passed by value. Default is ``"::mlir::Op"``.
+   passed by value. Default is ``::mlir::Op``.
