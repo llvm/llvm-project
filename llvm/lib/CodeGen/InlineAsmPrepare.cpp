@@ -359,9 +359,9 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   Type *NewRetTy = buildReturnType(NewRetTypes, F.getContext());
 
   // Create the new inline assembly call.
-  CallInst *NewCall = createNewInlineAsm(IA, NewConstraintStr, NewRetTy,
-                                         NewArgs, ElementTypeAttrs, CB,
-                                         NewME, Builder, F.getContext());
+  CallInst *NewCall =
+      createNewInlineAsm(IA, NewConstraintStr, NewRetTy, NewArgs,
+                         ElementTypeAttrs, CB, NewME, Builder, F.getContext());
 
   // Reconstruct the return value and update users.
   if (!CB->use_empty()) {
