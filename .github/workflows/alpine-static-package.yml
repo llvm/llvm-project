@@ -44,6 +44,7 @@ jobs:
             zstd-static \
             zstd-dev \
             xz \
+            xz-static \
             xz-dev \
             zlib-dev \
             ncurses-dev \
@@ -100,6 +101,7 @@ jobs:
             -DLLVM_TARGETS_TO_BUILD="X86" \
             -DBUILD_SHARED_LIBS=OFF \
             -DLLDB_BUILD_STATIC=ON \
+            -DLLDB_ENABLE_LZMA=ON \
             -DLLDB_ENABLE_PYTHON=OFF \
             -DLLVM_ENABLE_TERMINFO=ON \
             -DLLVM_ENABLE_LIBEDIT=ON \
