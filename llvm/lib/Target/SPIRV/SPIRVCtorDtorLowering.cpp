@@ -123,8 +123,8 @@ void createInitOrFiniCalls(Function &F, bool IsCtor) {
                                    : "__fini_array_start");
       }));
   auto *End = M.getOrInsertGlobal(
-      IsCtor ? "__init_array_end" : "__fini_array_end", PointerType::getUnqual(C),
-      function_ref<GlobalVariable *()>([&]() {
+      IsCtor ? "__init_array_end" : "__fini_array_end",
+      PointerType::getUnqual(C), function_ref<GlobalVariable *()>([&]() {
         return CreateGlobal(IsCtor ? "__init_array_end" : "__fini_array_end");
       }));
   auto *CallBackTy = FunctionType::get(IRB.getVoidTy(), {});
@@ -162,8 +162,7 @@ void createInitOrFiniCalls(Function &F, bool IsCtor) {
   IRB.CreateRetVoid();
 }
 
-bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
-                                    bool IsCtor) {
+bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV, bool IsCtor) {
   ConstantArray *GA = dyn_cast<ConstantArray>(GV->getInitializer());
   if (!GA || GA->getNumOperands() == 0)
     return false;
@@ -198,8 +197,7 @@ bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
   return true;
 }
 
-bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
-                                   bool IsCtor) {
+bool createInitOrFiniKernel(Module &M, StringRef GlobalName, bool IsCtor) {
   GlobalVariable *GV = M.getGlobalVariable(GlobalName);
   if (!GV || !GV->hasInitializer())
     return false;
