@@ -2358,7 +2358,8 @@ static bool BuiltinPopcountg(Sema &S, CallExpr *TheCall) {
 
 /// Checks the __builtin_stdc_* builtins that take a single unsigned integer
 /// argument and return either int, bool, or the argument type.
-static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall) {
+static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall,
+                               QualType ReturnType) {
   if (S.checkArgCount(TheCall, 1))
     return true;
 
@@ -2370,25 +2371,11 @@ static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall) {
   TheCall->setArg(0, Arg);
 
   QualType ArgTy = Arg->getType();
-  if (!ArgTy->isUnsignedIntegerType()) {
-    S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << 1 << /* scalar */ 1 << /* unsigned integer ty */ 3 << /* no fp */ 0
-        << ArgTy;
-    return true;
-  }
+  if (!ArgTy->isUnsignedIntegerType())
+    return S.Diag(Arg->getBeginLoc(), diag::err_builtin_stdc_invalid_arg_type)
+           << 1 << ArgTy;
 
-  switch (TheCall->getBuiltinCallee()) {
-  case Builtin::BI__builtin_stdc_bit_floor:
-  case Builtin::BI__builtin_stdc_bit_ceil:
-    TheCall->setType(ArgTy);
-    break;
-  case Builtin::BI__builtin_stdc_has_single_bit:
-    TheCall->setType(S.Context.BoolTy);
-    break;
-  default:
-    TheCall->setType(S.Context.UnsignedIntTy);
-    break;
-  }
+  TheCall->setType(ReturnType.isNull() ? ArgTy : ReturnType);
   return false;
 }
 
@@ -3847,6 +3834,15 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
+  case Builtin::BI__builtin_stdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_ceil:
+    if (BuiltinStdCBuiltin(*this, TheCall, QualType()))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_stdc_has_single_bit:
+    if (BuiltinStdCBuiltin(*this, TheCall, Context.BoolTy))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_stdc_leading_zeros:
   case Builtin::BI__builtin_stdc_leading_ones:
   case Builtin::BI__builtin_stdc_trailing_zeros:
@@ -3857,11 +3853,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_stdc_first_trailing_one:
   case Builtin::BI__builtin_stdc_count_zeros:
   case Builtin::BI__builtin_stdc_count_ones:
-  case Builtin::BI__builtin_stdc_has_single_bit:
   case Builtin::BI__builtin_stdc_bit_width:
-  case Builtin::BI__builtin_stdc_bit_floor:
-  case Builtin::BI__builtin_stdc_bit_ceil:
-    if (BuiltinStdCBuiltin(*this, TheCall))
+    if (BuiltinStdCBuiltin(*this, TheCall, Context.UnsignedIntTy))
       return ExprError();
     break;
 
