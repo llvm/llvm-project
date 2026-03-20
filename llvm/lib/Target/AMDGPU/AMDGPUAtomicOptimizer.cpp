@@ -46,8 +46,7 @@ using namespace llvm::AMDGPU;
 //
 // Only integer LDS atomics are affected because floating-point path is
 // untested. The default is 0 (always use DPP) because unconditionally enabling
-// the threshold can regress DPP-friendly workloads by ~4% (tested on RX
-// 7900XT).
+// the threshold can regress DPP-friendly workloads by ~4%.
 static cl::opt<unsigned> AMDGPUAtomicOptimizerDPPLdsThreshold(
     "amdgpu-atomic-optimizer-dpp-lds-threshold",
     cl::desc("Use DPP scan for integer LDS atomics only when active lanes > "
