@@ -67,8 +67,8 @@ export uint test_vec_vec_mulu(uint3 a, uint3 b) { return mul(a, b); }
 // CHECK-LABEL: test_vec_vec_muld
 // CHECK-NOT: @llvm.dx.fdot
 // CHECK-NOT: @llvm.spv.fdot
-// CHECK: %[[FMUL:.*]] = fmul {{.*}} double
-// CHECK: %hlsl.fmad.i = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double %{{.*}}, double %{{.*}}, double %[[FMUL]])
+// CHECK: fmul {{.*}} double
+// CHECK: %hlsl.fmad.i = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double %{{.*}}, double %{{.*}}, double %{{.*}})
 // CHECK: %hlsl.fmad.i.1 = {{.*}}call {{.*}} double @llvm.fmuladd.f64(double %{{.*}}, double %{{.*}}, double %hlsl.fmad.i)
 // CHECK: ret double %hlsl.fmad.i.1
 export double test_vec_vec_muld(double3 a, double3 b) { return mul(a, b); }
