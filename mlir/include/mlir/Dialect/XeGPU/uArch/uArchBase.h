@@ -41,8 +41,6 @@ enum class InstructionKind {
   Subgroup2DBlockPrefetch,   // Subgroup-level 2D block prefetch instruction
   StoreScatter,              // Lane-level store (scalar, vector)
   LoadGather,                // Lane-level load (scalar, vector)
-  StoreMatrix,               // Lane-level matrix store to slm
-  LoadMatrix                 // Lane-level matrix load to slm
   // @TODO: Add more instructions as needed
 };
 
@@ -73,10 +71,6 @@ struct Instruction {
       return "store";
     case InstructionKind::LoadGather:
       return "load";
-    case InstructionKind::StoreMatrix:
-      return "store_matrix";
-    case InstructionKind::LoadMatrix:
-      return "load_matrix";
     }
     llvm_unreachable("Unknown InstructionKind");
   }
@@ -280,28 +274,6 @@ struct StoreScatterInstructionInterface : public Instruction {
 
   virtual int32_t getMaxLaneStoreSize(int32_t bitWidth) const = 0;
   virtual ~StoreScatterInstructionInterface() = default;
-};
-
-struct LoadMatrixInstructionInterface : public Instruction {
-  LoadMatrixInstructionInterface()
-      : Instruction(InstructionKind::LoadMatrix, InstructionScope::Lane) {}
-  static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::LoadMatrix;
-  }
-
-  virtual int32_t getMaxLaneLoadSize(int32_t bitWidth) const = 0;
-  virtual ~LoadMatrixInstructionInterface() = default;
-};
-
-struct StoreMatrixInstructionInterface : public Instruction {
-  StoreMatrixInstructionInterface()
-      : Instruction(InstructionKind::StoreMatrix, InstructionScope::Lane) {}
-  static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::StoreMatrix;
-  }
-
-  virtual int32_t getMaxLaneStoreSize(int32_t bitWidth) const = 0;
-  virtual ~StoreMatrixInstructionInterface() = default;
 };
 
 } // namespace uArch

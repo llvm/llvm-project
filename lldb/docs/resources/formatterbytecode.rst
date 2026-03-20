@@ -149,7 +149,7 @@ Sel.  Mnemonic                         Stack Effect                             
 0x01  ``type_summary``                  ``(Object @type_summary -> String)``                    ``SBValue::GetTypeSummary``
 0x10  ``get_num_children``              ``(Object @get_num_children -> UInt)``                  ``SBValue::GetNumChildren``
 0x11  ``get_child_at_index``            ``(Object UInt @get_child_at_index -> Object)``         ``SBValue::GetChildAtIndex``
-0x12  ``get_child_with_name``           ``(Object String @get_child_with_name -> Object)``      ``SBValue::GetChildAtIndex``
+0x12  ``get_child_with_name``           ``(Object String @get_child_with_name -> Object)``      ``SBValue::GetChildMemberWithName``
 0x13  ``get_child_index``               ``(Object String @get_child_index -> UInt)``            ``SBValue::GetChildIndex``
 0x15  ``get_type``                      ``(Object @get_type -> Type)``                          ``SBValue::GetType``
 0x16  ``get_template_argument_type``    ``(Object UInt @get_template_argument_type -> Type)``   ``SBValue::GetTemplateArgumentType``
@@ -223,7 +223,7 @@ Signature    Mnemonic                Stack Effect
   0x03      ``@get_child_index``      ``(Object+ String -> UInt)``
   0x04      ``@get_child_at_index``   ``(Object+ UInt -> Object)``
   0x05      ``@get_value``            ``(Object+ -> String)``
-  0x06      ``@update``               ``(Object+ -> Object+)``
+  0x06      ``@update``               ``(Object -> Object+)``
 =========  ========================= ==============================
 
 If not specified, the init function defaults to an empty function that just passes the Object along. Its results may be cached and allow common prep work to be done for an Object that can be reused by subsequent calls to the other methods. This way subsequent calls to ``@get_child_at_index`` can avoid recomputing shared information, for example.

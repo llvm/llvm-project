@@ -122,18 +122,18 @@ class X86PreTileConfigImpl {
       return false;
     switch (MI.getOpcode()) {
     case X86::PTILESTOREDV:
-    case X86::PTCVTROWD2PSrreV:
-    case X86::PTCVTROWD2PSrriV:
-    case X86::PTCVTROWPS2BF16HrreV:
-    case X86::PTCVTROWPS2BF16HrriV:
-    case X86::PTCVTROWPS2BF16LrreV:
-    case X86::PTCVTROWPS2BF16LrriV:
-    case X86::PTCVTROWPS2PHHrreV:
-    case X86::PTCVTROWPS2PHHrriV:
-    case X86::PTCVTROWPS2PHLrreV:
-    case X86::PTCVTROWPS2PHLrriV:
-    case X86::PTILEMOVROWrreV:
-    case X86::PTILEMOVROWrriV:
+    case X86::PTCVTROWD2PSrteV:
+    case X86::PTCVTROWD2PSrtiV:
+    case X86::PTCVTROWPS2BF16HrteV:
+    case X86::PTCVTROWPS2BF16HrtiV:
+    case X86::PTCVTROWPS2BF16LrteV:
+    case X86::PTCVTROWPS2BF16LrtiV:
+    case X86::PTCVTROWPS2PHHrteV:
+    case X86::PTCVTROWPS2PHHrtiV:
+    case X86::PTCVTROWPS2PHLrteV:
+    case X86::PTCVTROWPS2PHLrtiV:
+    case X86::PTILEMOVROWrteV:
+    case X86::PTILEMOVROWrtiV:
       return true;
     }
 

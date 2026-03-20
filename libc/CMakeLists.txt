@@ -216,7 +216,7 @@ foreach(opt IN LISTS global_config)
   message(STATUS "${opt_name}: ${opt_value}")
   set(${opt_name} ${opt_value})
 endforeach()
-generate_config_doc(${main_config_file} ${LIBC_SOURCE_DIR}/docs/configure.rst)
+generate_config_doc(${main_config_file} ${LIBC_BUILD_DIR}/docs/configure.rst)
 
 # Load each target specific config.
 foreach(config_path IN LISTS LIBC_CONFIG_JSON_FILE_LIST)
@@ -350,6 +350,7 @@ include(LLVMLibCRules)
 set(TARGET_LLVMLIBC_ENTRYPOINTS "")
 set(TARGET_LIBC_ENTRYPOINTS "")
 set(TARGET_LIBM_ENTRYPOINTS "")
+set(TARGET_LIBMVEC_ENTRYPOINTS "")
 set(TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS "")
 
 # Check entrypoints.txt
@@ -380,6 +381,7 @@ foreach(removed_entrypoint IN LISTS TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS)
   list(REMOVE_ITEM TARGET_LLVMLIBC_ENTRYPOINTS ${removed_entrypoint})
   list(REMOVE_ITEM TARGET_LIBC_ENTRYPOINTS ${removed_entrypoint})
   list(REMOVE_ITEM TARGET_LIBM_ENTRYPOINTS ${removed_entrypoint})
+  list(REMOVE_ITEM TARGET_LIBMVEC_ENTRYPOINTS ${removed_entrypoint})
 endforeach()
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")

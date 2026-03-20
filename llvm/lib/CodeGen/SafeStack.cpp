@@ -177,6 +177,8 @@ class SafeStack {
 
   bool IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
                           const Value *AllocaPtr, uint64_t AllocaSize);
+  bool IsAccessSafe(Value *Addr, TypeSize Size, const Value *AllocaPtr,
+                    uint64_t AllocaSize);
   bool IsAccessSafe(Value *Addr, uint64_t Size, const Value *AllocaPtr,
                     uint64_t AllocaSize);
 
@@ -202,6 +204,16 @@ uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
     if (Size->isFixed())
       return Size->getFixedValue();
   return 0;
+}
+
+bool SafeStack::IsAccessSafe(Value *Addr, TypeSize AccessSize,
+                             const Value *AllocaPtr, uint64_t AllocaSize) {
+  if (AccessSize.isScalable()) {
+    // In case we don't know the size at compile time we cannot verify if the
+    // access is safe.
+    return false;
+  }
+  return IsAccessSafe(Addr, AccessSize.getFixedValue(), AllocaPtr, AllocaSize);
 }
 
 bool SafeStack::IsAccessSafe(Value *Addr, uint64_t AccessSize,
@@ -782,23 +794,22 @@ bool SafeStack::run() {
     IRB.SetCurrentDebugLocation(
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
-    RTLIB::LibcallImpl SafestackPointerAddressImpl =
-        Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
-    if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
-      F.getContext().emitError(
-          "no libcall available for safestack pointer address");
-      return false;
-    }
-
+    // FIXME: A more correct implementation of SafeStackUsePointerAddress would
+    // change the libcall availability in RuntimeLibcallsInfo
     StringRef SafestackPointerAddressName =
         RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
-            SafestackPointerAddressImpl);
+            RTLIB::impl___safestack_pointer_address);
 
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
         SafestackPointerAddressName, IRB.getPtrTy(0));
     UnsafeStackPtr = IRB.CreateCall(Fn);
   } else {
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB, Libcalls);
+    if (!UnsafeStackPtr) {
+      F.getContext().emitError(
+          "no location available for safestack pointer address");
+      UnsafeStackPtr = PoisonValue::get(StackPtrTy);
+    }
   }
 
   // Load the current stack pointer (we'll also use it as a base pointer).
