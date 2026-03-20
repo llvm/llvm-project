@@ -3618,9 +3618,12 @@ convertSetRegImmToVgprMSBs(unsigned Imm, unsigned Simm16,
 
   auto [HwRegId, Offset, Size] = Hwreg::HwregEncoding::decode(Simm16);
   if (HwRegId != Hwreg::ID_MODE ||
-      (!HasSetregVGPRMSBFixup && (Offset + Size) <= VGPRMSBShift))
+      (!HasSetregVGPRMSBFixup && (Offset + Size) < VGPRMSBShift))
     return {};
-  Imm = ((Imm >> Offset) & Hwreg::VGPR_MSB_MASK) >> VGPRMSBShift;
+  // If there is SetregVGPRMSBFixup then Offset is ignored.
+  if (!HasSetregVGPRMSBFixup)
+    Imm <<= Offset;
+  Imm = (Imm & Hwreg::VGPR_MSB_MASK) >> VGPRMSBShift;
   if (!HasSetregVGPRMSBFixup)
     Imm &= llvm::maskTrailingOnes<unsigned>(Size);
   return llvm::rotr<uint8_t>(static_cast<uint8_t>(Imm), /*R=*/2);
