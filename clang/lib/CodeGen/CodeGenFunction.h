@@ -3823,6 +3823,9 @@ public:
   llvm::Function *GenerateOpenMPCapturedStmtFunction(
       const CapturedStmt &S, const OMPExecutableDirective &D,
       bool TopLevel, bool IsTopKernel);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunctionAggregate(const CapturedStmt &S,
+                                              const OMPExecutableDirective &D);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars,
                                   const Stmt *XteamRedNestKey);

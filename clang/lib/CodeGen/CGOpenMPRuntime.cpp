@@ -6418,14 +6418,17 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
   CodeGenFunction CGF(CGM, true);
   llvm::OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
-      [&CGF, &D, &CodeGen](StringRef EntryFnName) {
+      [&CGF, &D, &CodeGen, this](StringRef EntryFnName) {
         const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
+        if (CGM.getLangOpts().OpenMPIsTargetDevice && !isGPU())
+          return CGF.GenerateOpenMPCapturedStmtFunctionAggregate(CS, D);
         return CGF.GenerateOpenMPCapturedStmtFunction(
             CS, D,
-            /*CanHaveMultiDeviceArgs*/ true, /*IsTopKernel*/ true);
+            /*CanHaveMultiDeviceArgs*/ true,
+            /*IsTopKernel*/ true);
       };
 
   cantFail(OMPBuilder.emitTargetRegionFunction(
