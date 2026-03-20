@@ -228,7 +228,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
       // excluded block. Clear Outer so we process BB's successors.
       if (LoopsWithHoles.count(OuterL))
         OuterL = nullptr;
-      if (StopLoops.contains(OuterL))
+      else if (StopLoops.contains(OuterL))
         return true;
     }
 
@@ -237,7 +237,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
       OuterC = CI->getTopLevelParentCycle(BB);
       if (CyclesWithHoles.count(OuterC))
         OuterC = nullptr;
-      if (StopCycles.contains(OuterC))
+      else if (StopCycles.contains(OuterC))
         return true;
     }
 
