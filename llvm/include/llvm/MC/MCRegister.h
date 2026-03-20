@@ -38,7 +38,7 @@ struct MCRegUnitToIndex {
 };
 
 /// Wrapper class representing physical registers and target specific virtual
-// registers. Should be passed by value.
+/// registers. Should be passed by value.
 class MCRegister {
   friend hash_code hash_value(const MCRegister &);
   unsigned Reg;
