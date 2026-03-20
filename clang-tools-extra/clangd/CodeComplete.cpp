@@ -2275,7 +2275,8 @@ CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
 }
 
 // If Offset is inside what looks like argument comment (e.g.
-// "/*^*/" or "/* foo = ^*/"), returns the offset pointing past the closing "*/".
+// "/*^*/" or "/* foo = ^*/"), returns the offset pointing past the closing
+// "*/".
 static std::optional<unsigned>
 maybeFunctionArgumentCommentEnd(const PathRef FileName, const unsigned Offset,
                                 const llvm::StringRef Content,
