@@ -1498,6 +1498,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_s_prefetch_data})
       .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
 
+  addRulesForIOpcs({amdgcn_class})
+      .Any({{UniS1, _, S16}, {{UniInVcc}, {IntrId, Vgpr16, Vgpr32}}})
+      .Any({{DivS1, _, S16}, {{Vcc}, {IntrId, Vgpr16, Vgpr32}}})
+      .Any({{UniS1, _, S32}, {{UniInVcc}, {IntrId, Vgpr32, Vgpr32}}})
+      .Any({{DivS1, _, S32}, {{Vcc}, {IntrId, Vgpr32, Vgpr32}}})
+      .Any({{UniS1, _, S64}, {{UniInVcc}, {IntrId, Vgpr64, Vgpr32}}})
+      .Any({{DivS1, _, S64}, {{Vcc}, {IntrId, Vgpr64, Vgpr32}}});
+
   // This is "intrinsic lane mask" it was set to i32/i64 in llvm-ir.
   addRulesForIOpcs({amdgcn_end_cf})
       .Any({{_, UniS32}, {{}, {IntrId, Sgpr32}}})
