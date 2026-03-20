@@ -1195,7 +1195,6 @@ LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
     : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
                  AllocMarker, InsertBefore) {
-  assert(Target && "Branch destination may not be null!");
   Op<-1>() = Target;
 }
 
