@@ -23,7 +23,6 @@
 #include "flang/Semantics/tools.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 
 #include <optional>
 #include <string>
