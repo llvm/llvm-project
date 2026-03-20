@@ -188,6 +188,42 @@ TEST_F(TestSwiftASTContext, PluginPath) {
       server);
 }
 
+TEST_F(TestSwiftASTContext, WorkingDirectoryVariousForms) {
+  std::string module_map_flag = "-fmodule-map-file=module.modulemap";
+  const std::vector<std::string> expected = {
+      "-fmodule-map-file=/abs/dir/module.modulemap"};
+
+  {
+    // Separate
+    const std::vector<std::string> source = {"-working-directory", "/abs/dir",
+                                             module_map_flag};
+    std::vector<std::string> dest;
+    SwiftASTContext::AddExtraClangArgs(source, dest);
+
+    const std::vector<std::string> expected = {
+        "-fmodule-map-file=/abs/dir/module.modulemap"};
+    EXPECT_EQ(dest, expected);
+  }
+  {
+    // Joined with no '='
+    const std::vector<std::string> source = {"-working-directory/abs/dir",
+                                             module_map_flag};
+    std::vector<std::string> dest;
+    SwiftASTContext::AddExtraClangArgs(source, dest);
+
+    EXPECT_EQ(dest, expected);
+  }
+  {
+    // Joined with '='
+    const std::vector<std::string> source = {"-working-directory=/abs/dir",
+                                             module_map_flag};
+    std::vector<std::string> dest;
+    SwiftASTContext::AddExtraClangArgs(source, dest);
+
+    EXPECT_EQ(dest, expected);
+  }
+}
+
 namespace {
 const std::vector<std::string> duplicated_flags = {
     "-DMACRO1",
