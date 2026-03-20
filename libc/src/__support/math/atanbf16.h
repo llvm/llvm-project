@@ -52,7 +52,7 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
 
   // atanbf16(+/-0) = +/-0
   if (LIBC_UNLIKELY(x_abs == 0))
-     return x;
+    return x;
 
   float xf = x;
   float x_sq = xf * xf;
