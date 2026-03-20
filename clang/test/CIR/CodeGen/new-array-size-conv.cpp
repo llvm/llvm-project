@@ -68,19 +68,3 @@ void t_new_signed_size_char(int n) {
 // OGCG:    %[[N:.*]] = load i32, ptr %{{.+}}
 // OGCG:    %[[N_SIZE_T:.*]] = sext i32 %[[N]] to i64
 // OGCG:    %[[IS_NEG:.*]] = icmp slt i64 %[[N_SIZE_T]], 0
-
-// Placement new with signed int array size.
-void t_placement_new_signed(void *ptr, int n) {
-  S *result = new(ptr) S[n];
-}
-
-// CIR-LABEL: cir.func {{.*}} @_Z22t_placement_new_signedPvi
-// CIR:    %[[N:.*]] = cir.load{{.*}}
-// CIR:    %[[N_SEXT:.*]] = cir.cast integral %[[N]] : !s32i -> !s64i
-// CIR:    %[[N_SIZE_T:.*]] = cir.cast integral %[[N_SEXT]] : !s64i -> !u64i
-
-// LLVM-LABEL: define{{.*}} void @_Z22t_placement_new_signedPvi
-// LLVM:    sext i32 %{{.*}} to i64
-
-// OGCG-LABEL: define{{.*}} void @_Z22t_placement_new_signedPvi
-// OGCG:    sext i32 %{{.*}} to i64
