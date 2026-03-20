@@ -253,8 +253,7 @@ Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
 static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
                                         ze_kernel_handle_t zeKernel,
                                         L0LaunchEnvTy &KEnv,
-                                        CommandModeTy CommandMode,
-                                        std::unique_lock<std::mutex> &Lock) {
+                                        CommandModeTy CommandMode) {
   const auto DeviceId = l0Device.getDeviceId();
   auto *IdStr = l0Device.getZeIdCStr();
   auto CmdListOrErr = l0Device.getImmCmdList();
@@ -290,7 +289,7 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendLaunchKernel, CmdList,
                        zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
                        WaitEvents);
-  Lock.unlock();
+  KEnv.Lock.unlock();
   if (AllErrors) {
     if (auto Err = l0Device.releaseEvent(Event))
       addError(std::move(Err));
@@ -319,8 +318,7 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
 
 static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
                                       ze_kernel_handle_t zeKernel,
-                                      L0LaunchEnvTy &KEnv,
-                                      std::unique_lock<std::mutex> &Lock) {
+                                      L0LaunchEnvTy &KEnv) {
   const auto DeviceId = l0Device.getDeviceId();
   const auto *IdStr = l0Device.getZeIdCStr();
 
@@ -339,7 +337,7 @@ static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
   ze_event_handle_t Event = nullptr;
   CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
                     &KEnv.GroupCounts, Event, 0, nullptr);
-  Lock.unlock();
+  KEnv.Lock.unlock();
   CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
   CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, l0Device.getMutex(),
                         CmdQueue, 1, &CmdList, nullptr);
@@ -460,7 +458,7 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   L0LaunchEnvTy KEnv(IsAsync, AsyncQueue, KernelPR);
 
   // Protect from kernel preparation to submission as kernels are shared.
-  std::unique_lock<std::mutex> Lock(KernelPR.Mtx);
+  KEnv.Lock.lock();
 
   if (auto Err = setKernelGroups(l0Device, KEnv, NumThreads, NumBlocks))
     return Err;
@@ -486,9 +484,9 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   const bool UseImmCmdList = l0Device.useImmForCompute();
   if (UseImmCmdList)
     return launchKernelWithImmCmdList(l0Device, zeKernel, KEnv,
-                                      Options.CommandMode, Lock);
+                                      Options.CommandMode);
 
-  return launchKernelWithCmdQueue(l0Device, zeKernel, KEnv, Lock);
+  return launchKernelWithCmdQueue(l0Device, zeKernel, KEnv);
 }
 
 } // namespace llvm::omp::target::plugin
