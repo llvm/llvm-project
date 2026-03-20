@@ -4858,6 +4858,13 @@ class StructBindingContext {
   HLSLResourceBindingAttr *RegBindingsAttrs[4];
   unsigned RegBindingOffset[4];
 
+  // Make sure the RegisterType values are what we expect
+  static_assert(static_cast<unsigned>(RegisterType::SRV) == 0 &&
+                static_cast<unsigned>(RegisterType::UAV) == 1 &&
+                static_cast<unsigned>(RegisterType::CBuffer) == 2 &&
+                static_cast<unsigned>(RegisterType::Sampler) == 3,
+                "unexpected register type values");
+
   // Vulkan binding attribute does not vary by register type.
   HLSLVkBindingAttr *VkBindingAttr;
   unsigned VkBindingOffset;
@@ -5058,31 +5065,31 @@ handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
   }
 }
 
+} // namespace
+
 // Scans all fields of a user-defined struct (or array of structs)
 // to find all embedded resources or resource arrays. For each resource
 // a global variable of the resource type is created and associated
 // with the parent declaration (VD) through a HLSLAssociatedResourceDeclAttr
 // attribute.
 void SemaHLSL::handleGlobalStructOrArrayOfWithResources(VarDecl *VD) {
-  StructBindingContext BindingCtx(VD);
   EmbeddedResourceNameBuilder NameBuilder(VD->getName());
+  StructBindingContext BindingCtx(VD);
 
   const Type *VDTy = VD->getType().getTypePtr();
   assert(VDTy->isHLSLIntangibleType() && !isResourceRecordTypeOrArrayOf(VD) &&
          "Expected non-resource struct or array type");
 
   if (const CXXRecordDecl *RD = VDTy->getAsCXXRecordDecl()) {
-    handleStructWithResources(SemaRef, VD, RD, NameBuilder);
+    handleStructWithResources(SemaRef, VD, RD, NameBuilder, BindingCtx);
     return;
   }
 
   if (const auto *CAT = dyn_cast<ConstantArrayType>(VDTy)) {
-    handleArrayOfStructWithResources(SemaRef, VD, CAT, NameBuilder);
+    handleArrayOfStructWithResources(SemaRef, VD, CAT, NameBuilder, BindingCtx);
     return;
   }
 }
-
-} // namespace
 
 void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   if (VD->hasGlobalStorage()) {
