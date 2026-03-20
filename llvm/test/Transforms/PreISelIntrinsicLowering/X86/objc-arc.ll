@@ -236,6 +236,16 @@ define void @test_objc_unsafeClaimAutoreleasedReturnValue_bundle() {
   ret void
 }
 
+define ptr @test_objc_claimAutoreleasedReturnValue(ptr %arg0) {
+; CHECK-LABEL: test_objc_claimAutoreleasedReturnValue
+; CHECK-NEXT: entry
+; CHECK-NEXT: %0 = call ptr @objc_claimAutoreleasedReturnValue(ptr %arg0)
+; CHECK-NEXT: ret ptr %0
+entry:
+  %0 = call ptr @llvm.objc.claimAutoreleasedReturnValue(ptr %arg0)
+  ret ptr %0
+}
+
 define ptr @test_objc_retainedObject(ptr %arg0) {
 ; CHECK-LABEL: test_objc_retainedObject
 ; CHECK-NEXT: entry
@@ -315,6 +325,7 @@ declare ptr @llvm.objc.retainBlock(ptr)
 declare void @llvm.objc.storeStrong(ptr, ptr)
 declare ptr @llvm.objc.storeWeak(ptr, ptr)
 declare ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr)
+declare ptr @llvm.objc.claimAutoreleasedReturnValue(ptr)
 declare ptr @llvm.objc.retainedObject(ptr)
 declare ptr @llvm.objc.unretainedObject(ptr)
 declare ptr @llvm.objc.unretainedPointer(ptr)
@@ -343,6 +354,7 @@ attributes #0 = { nounwind }
 ; CHECK: declare void @objc_storeStrong(ptr, ptr)
 ; CHECK: declare ptr @objc_storeWeak(ptr, ptr)
 ; CHECK: declare ptr @objc_unsafeClaimAutoreleasedReturnValue(ptr)
+; CHECK: declare ptr @objc_claimAutoreleasedReturnValue(ptr)
 ; CHECK: declare ptr @objc_retainedObject(ptr)
 ; CHECK: declare ptr @objc_unretainedObject(ptr)
 ; CHECK: declare ptr @objc_unretainedPointer(ptr)

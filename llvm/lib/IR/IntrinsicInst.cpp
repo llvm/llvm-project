@@ -50,6 +50,7 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
   case Intrinsic::objc_retainAutorelease:
   case Intrinsic::objc_retainAutoreleaseReturnValue:
   case Intrinsic::objc_retainAutoreleasedReturnValue:
+  case Intrinsic::objc_claimAutoreleasedReturnValue:
   case Intrinsic::objc_retainBlock:
   case Intrinsic::objc_storeStrong:
   case Intrinsic::objc_storeWeak:

@@ -52,6 +52,11 @@ define void @foo(i8 %v1, i1 %cond) {
   call i8 @llvm.smax.i8(i8 %v1, i8 %v1)
   ret void
 }
+
+TEST_F(IntrinsicInstTest, MayLowerToFunctionCallObjCClaimARV) {
+  EXPECT_TRUE(llvm::IntrinsicInst::mayLowerToFunctionCall(
+      llvm::Intrinsic::objc_claimAutoreleasedReturnValue));
+}
 )IR");
 
   llvm::Function *LLVMF = &*M->getFunction("foo");
