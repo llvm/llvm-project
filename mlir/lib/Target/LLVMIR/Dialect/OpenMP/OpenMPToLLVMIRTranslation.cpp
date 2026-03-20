@@ -360,7 +360,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("privatization");
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (isa<omp::TeamsOp>(op) || isa<omp::TaskloopOp>(op))
+    if (isa<omp::TeamsOp>(op) || isa<omp::TaskloopContextOp>(op))
       if (!op.getReductionVars().empty() || op.getReductionByref() ||
           op.getReductionSyms())
         result = todo("reduction");
@@ -422,9 +422,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkNowait(op, result);
       })
       .Case([&](omp::TaskloopContextOp op) {
-        // TODO: move clauses from TaskloopOp to here
-      })
-      .Case([&](omp::TaskloopOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
         checkReduction(op, result);
@@ -2890,7 +2887,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
   // It stores the pointer of allocated firstprivate copies,
   // which can be used later for freeing the allocated space.
   SmallVector<llvm::Value *> llvmFirstPrivateVars;
-  PrivateVarsInfo privateVarsInfo(taskloopOp);
+  PrivateVarsInfo privateVarsInfo(contextOp);
   TaskContextStructManager taskStructMgr{builder, moduleTranslation,
                                          privateVarsInfo.privatizers};
 
@@ -2936,7 +2933,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
         initPrivateVar(builder, moduleTranslation, privDecl, mlirPrivVar,
                        blockArg, llvmPrivateVarAlloc, initBlock);
     if (!privateVarOrErr)
-      return handleError(privateVarOrErr, *taskloopOp.getOperation());
+      return handleError(privateVarOrErr, *contextOp.getOperation());
 
     llvmFirstPrivateVars[i] = privateVarOrErr.get();
 
@@ -2957,9 +2954,9 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
   // firstprivate copy region
   setInsertPointForPossiblyEmptyBlock(builder, copyBlock);
   if (failed(copyFirstPrivateVars(
-          taskloopOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
+          contextOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
           taskStructMgr.getLLVMPrivateVarGEPs(), privateVarsInfo.privatizers,
-          taskloopOp.getPrivateNeedsBarrier())))
+          contextOp.getPrivateNeedsBarrier())))
     return llvm::failure();
 
   // Set up inserttion point for call to createTaskloop()
@@ -3047,7 +3044,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     // into the outlined function. When the task is duplicated, that structure
     // is duplicated too.
     if (failed(cleanupPrivateVars(builder, moduleTranslation,
-                                  taskloopOp.getLoc(), privateVarsInfo.llvmVars,
+                                  contextOp.getLoc(), privateVarsInfo.llvmVars,
                                   privateVarsInfo.privatizers)))
       return llvm::make_error<PreviouslyReportedError>();
     // Similarly, the task context structure freed inside the task is the
@@ -3122,10 +3119,10 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       // through a stack allocated structure.
     }
 
-    if (failed(copyFirstPrivateVars(taskloopOp.getOperation(), builder,
+    if (failed(copyFirstPrivateVars(contextOp.getOperation(), builder,
                                     moduleTranslation, srcGEPs, destGEPs,
                                     privateVarsInfo.privatizers,
-                                    taskloopOp.getPrivateNeedsBarrier())))
+                                    contextOp.getPrivateNeedsBarrier())))
       return llvm::make_error<PreviouslyReportedError>();
 
     return builder.saveIP();
@@ -3219,9 +3216,9 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
   llvm::Value *ifCond = nullptr;
   llvm::Value *grainsize = nullptr;
   int sched = 0; // default
-  mlir::Value grainsizeVal = taskloopOp.getGrainsize();
-  mlir::Value numTasksVal = taskloopOp.getNumTasks();
-  if (Value ifVar = taskloopOp.getIfExpr())
+  mlir::Value grainsizeVal = contextOp.getGrainsize();
+  mlir::Value numTasksVal = contextOp.getNumTasks();
+  if (Value ifVar = contextOp.getIfExpr())
     ifCond = moduleTranslation.lookupValue(ifVar);
   if (grainsizeVal) {
     grainsize = moduleTranslation.lookupValue(grainsizeVal);
@@ -3242,17 +3239,17 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
   // task's cleanup block which should be branched to. It doesn't depend upon
   // nogroup because even in that case the taskloop might still be inside an
   // explicit taskgroup.
-  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, taskloopOp,
+  pushCancelFinalizationCB(cancelTerminators, builder, ompBuilder, contextOp,
                            llvm::omp::Directive::OMPD_taskgroup);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
           ompLoc, allocaIP, bodyCB, loopInfo, lbVal, ubVal, stepVal,
-          taskloopOp.getUntied(), ifCond, grainsize, taskloopOp.getNogroup(),
-          sched, moduleTranslation.lookupValue(taskloopOp.getFinal()),
-          taskloopOp.getMergeable(),
-          moduleTranslation.lookupValue(taskloopOp.getPriority()),
+          contextOp.getUntied(), ifCond, grainsize, contextOp.getNogroup(),
+          sched, moduleTranslation.lookupValue(contextOp.getFinal()),
+          contextOp.getMergeable(),
+          moduleTranslation.lookupValue(contextOp.getPriority()),
           loopOp.getCollapseNumLoops(), taskDupOrNull,
           taskStructMgr.getStructPtr());
 
