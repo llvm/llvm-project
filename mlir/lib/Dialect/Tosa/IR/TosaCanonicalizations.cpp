@@ -935,6 +935,59 @@ void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<NonNarrowingCastsOptimization>(context);
 }
 
+struct CancellingBlockScaledCastsOptimization
+    : public OpRewritePattern<tosa::CastToBlockScaledOp> {
+  using OpRewritePattern<tosa::CastToBlockScaledOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::CastToBlockScaledOp castToBlockScaledOp,
+                                PatternRewriter &rewriter) const override {
+    const Value castToBlockScaledInput = castToBlockScaledOp.getInputData();
+    auto castFromBlockScaledOp =
+        castToBlockScaledInput.getDefiningOp<tosa::CastFromBlockScaledOp>();
+    if (!castFromBlockScaledOp)
+      return rewriter.notifyMatchFailure(
+          castToBlockScaledOp,
+          "input must be cast_from_block_scaled operation");
+
+    const Value innerData = castFromBlockScaledOp.getInputData();
+    const Value innerScale = castFromBlockScaledOp.getInputScale();
+    const auto innerDataTy =
+        dyn_cast<ShapedType>(innerData.getType()).getElementType();
+    const auto innerScaleTy =
+        dyn_cast<ShapedType>(innerScale.getType()).getElementType();
+
+    const Value outerData = castToBlockScaledOp.getOutputData();
+    const Value outerScale = castToBlockScaledOp.getOutputScale();
+    const auto outerDataTy =
+        dyn_cast<ShapedType>(outerData.getType()).getElementType();
+    const auto outerScaleTy =
+        dyn_cast<ShapedType>(outerScale.getType()).getElementType();
+
+    if (innerDataTy != outerDataTy || innerScaleTy != outerScaleTy) {
+      return rewriter.notifyMatchFailure(
+          castToBlockScaledOp,
+          "inputs types to cast_from_block_scaled operation must match output "
+          "types to cast_to_block_scaled");
+    }
+
+    if (castFromBlockScaledOp.getBlockSize() !=
+        castToBlockScaledOp.getBlockSize()) {
+      return rewriter.notifyMatchFailure(
+          castToBlockScaledOp, "block sizes for cast_from_block_scaled and "
+                               "cast_to_block_scaled must match");
+    }
+
+    rewriter.replaceOp(castToBlockScaledOp, {innerData, innerScale});
+
+    return success();
+  }
+};
+
+void CastToBlockScaledOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<CancellingBlockScaledCastsOptimization>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Operator Folders.
 //===----------------------------------------------------------------------===//
