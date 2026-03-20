@@ -4860,9 +4860,9 @@ class StructBindingContext {
 
   // Make sure the RegisterType values are what we expect
   static_assert(static_cast<unsigned>(RegisterType::SRV) == 0 &&
-                static_cast<unsigned>(RegisterType::UAV) == 1 &&
-                static_cast<unsigned>(RegisterType::CBuffer) == 2 &&
-                static_cast<unsigned>(RegisterType::Sampler) == 3,
+                    static_cast<unsigned>(RegisterType::UAV) == 1 &&
+                    static_cast<unsigned>(RegisterType::CBuffer) == 2 &&
+                    static_cast<unsigned>(RegisterType::Sampler) == 3,
                 "unexpected register type values");
 
   // Vulkan binding attribute does not vary by register type.
