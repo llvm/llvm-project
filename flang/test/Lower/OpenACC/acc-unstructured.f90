@@ -84,3 +84,28 @@ subroutine test_unstructured3(a, b, c)
 ! CHECK: acc.yield
 
 end subroutine
+
+! Test that acc.data is still created when there are no data clauses but the
+! construct contains unstructured control flow. Without this, the early return
+! in genACCDataOp skips acc.data creation, leaving orphaned blocks.
+subroutine test_unstructured4(a, n)
+  integer :: n, i, j
+  real :: a(:)
+  logical :: use_gpu
+
+  use_gpu = .true.
+  !$acc data if(use_gpu)
+  do i = 1, n
+    do j = 1, n
+      if (a(j) > 0.0) stop 'unstructured'
+    end do
+  end do
+  !$acc end data
+
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_unstructured4
+! CHECK: acc.data if(%{{.*}}) {
+! CHECK: fir.call @_FortranAStopStatementText
+! CHECK: acc.terminator
+! CHECK: }

@@ -2768,7 +2768,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, waitOperands);
   addOperands(operands, operandSegments, dataClauseOperands);
 
-  if (dataClauseOperands.empty() && !hasDefaultNone && !hasDefaultPresent)
+  if (dataClauseOperands.empty() && !hasDefaultNone && !hasDefaultPresent &&
+      !eval.lowerAsUnstructured())
     return;
 
   auto dataOp = createRegionOp<mlir::acc::DataOp, mlir::acc::TerminatorOp>(
