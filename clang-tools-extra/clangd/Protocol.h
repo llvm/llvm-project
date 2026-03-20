@@ -34,6 +34,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 // This file is using the LSP syntax for identifier names which is different
@@ -260,6 +261,18 @@ inline bool operator==(const TextEdit &L, const TextEdit &R) {
 bool fromJSON(const llvm::json::Value &, TextEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const TextEdit &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
+
+struct InsertReplaceEdit {
+  /// The string to be inserted.
+  std::string newText;
+
+  /// The range if the insert is requested.
+  Range insert;
+
+  /// The range if the replace is requested.
+  Range replace;
+};
+llvm::json::Value toJSON(const InsertReplaceEdit &);
 
 struct ChangeAnnotation {
   /// A human-readable string describing the actual change. The string
@@ -509,6 +522,10 @@ struct ClientCapabilities {
   /// The documentation format that should be used for textDocument/completion.
   /// textDocument.completion.completionItem.documentationFormat
   MarkupKind CompletionDocumentationFormat = MarkupKind::PlainText;
+
+  /// Client supports insert replace edit to control different behavior if a
+  /// completion item is inserted in the text or should replace text.
+  bool InsertReplace = false;
 
   /// The client has support for completion item label details.
   /// textDocument.completion.completionItem.labelDetailsSupport.
@@ -1372,9 +1389,13 @@ struct CompletionItem {
   /// An edit which is applied to a document when selecting this completion.
   /// When an edit is provided `insertText` is ignored.
   ///
-  /// Note: The range of the edit must be a single line range and it must
-  /// contain the position at which completion has been requested.
-  std::optional<TextEdit> textEdit;
+  /// Note 1: The text edit's range as well as both ranges from an insert
+  /// replace edit must be a single line range and must contain the position
+  /// at which completion has been requested.
+  /// Note 2: If an `InsertReplaceEdit` is returned, the edit's insert range
+  /// must be a prefix of the edit's replace range, meaning it must be
+  /// contained in and starting at the same position.
+  std::optional<std::variant<TextEdit, InsertReplaceEdit>> textEdit;
 
   /// An optional array of additional text edits that are applied when selecting
   /// this completion. Edits must not overlap with the main edit nor with

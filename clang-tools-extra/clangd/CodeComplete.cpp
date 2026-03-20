@@ -1382,14 +1382,17 @@ void loadMainFilePreambleMacros(const Preprocessor &PP,
 bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
                       const clang::CodeCompleteOptions &Options,
                       const SemaCompleteInput &Input,
-                      IncludeStructure *Includes = nullptr) {
+                      IncludeStructure *Includes = nullptr,
+                      std::unique_ptr<CompilerInvocation> CI = nullptr) {
   trace::Span Tracer("Sema completion");
 
   IgnoreDiagnostics IgnoreDiags;
-  auto CI = buildCompilerInvocation(Input.ParseInput, IgnoreDiags);
   if (!CI) {
-    elog("Couldn't create CompilerInvocation");
-    return false;
+    CI = buildCompilerInvocation(Input.ParseInput, IgnoreDiags);
+    if (!CI) {
+      elog("Couldn't create CompilerInvocation");
+      return false;
+    }
   }
   auto &FrontendOpts = CI->getFrontendOpts();
   FrontendOpts.SkipFunctionBodies = true;
@@ -1616,6 +1619,7 @@ class CodeCompleteFlow {
   CompletionPrefix HeuristicPrefix;
   std::optional<FuzzyMatcher> Filter; // Initialized once Sema runs.
   Range InsertRange;
+  std::optional<Range> ReplaceRange;
   std::vector<std::string> QueryScopes;      // Initialized once Sema runs.
   std::vector<std::string> AccessibleScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
@@ -1753,6 +1757,17 @@ public:
     InsertRange.start = InsertRange.end = Pos;
     InsertRange.start.character -= HeuristicPrefix.Name.size();
 
+    if (Opts.EnableInsertReplace) {
+      ReplaceRange.emplace();
+      ReplaceRange->start = InsertRange.start;
+      // Scan forward past ASCII identifier characters to find replace end.
+      size_t ReplaceEnd = Offset;
+      while (ReplaceEnd < Content.size() &&
+             isAsciiIdentifierContinue(Content[ReplaceEnd]))
+        ++ReplaceEnd;
+      ReplaceRange->end = offsetToPosition(Content, ReplaceEnd);
+    }
+
     llvm::StringMap<SourceParams> ProxSources;
     ProxSources[FileName].Cost = 0;
     FileProximity.emplace(ProxSources);
@@ -1832,19 +1847,26 @@ private:
   CodeCompleteResult runWithSema() {
     const auto &CodeCompletionRange = CharSourceRange::getCharRange(
         Recorder->CCSema->getPreprocessor().getCodeCompletionTokenRange());
+
+    const SourceManager &SM = Recorder->CCSema->getSourceManager();
+
     // When we are getting completions with an empty identifier, for example
     //    std::vector<int> asdf;
     //    asdf.^;
     // Then the range will be invalid and we will be doing insertion, use
     // current cursor position in such cases as range.
     if (CodeCompletionRange.isValid()) {
-      InsertRange = halfOpenToRange(Recorder->CCSema->getSourceManager(),
-                                    CodeCompletionRange);
+      InsertRange = halfOpenToRange(SM, CodeCompletionRange);
     } else {
       const auto &Pos = sourceLocToPosition(
-          Recorder->CCSema->getSourceManager(),
-          Recorder->CCSema->getPreprocessor().getCodeCompletionLoc());
+          SM, Recorder->CCSema->getPreprocessor().getCodeCompletionLoc());
       InsertRange.start = InsertRange.end = Pos;
+    }
+
+    if (Opts.EnableInsertReplace) {
+      ReplaceRange.emplace();
+      ReplaceRange->start = InsertRange.start;
+      ReplaceRange->end = getEndOfCodeCompletionReplace(SM);
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
@@ -1874,6 +1896,26 @@ private:
     return toCodeCompleteResult(Top);
   }
 
+  // Returns the LSP position at the end of the identifier suffix after the
+  // code completion cursor.
+  Position getEndOfCodeCompletionReplace(const SourceManager &SM) {
+    const Preprocessor &PP = Recorder->CCSema->getPreprocessor();
+    const LangOptions &LangOpts = Recorder->CCSema->getLangOpts();
+
+    // Skip past the code completion NUL byte and scan forward through
+    // identifier continuation characters (letters, digits, _, $, UCN,
+    // unicode). This handles all cases uniformly: with prefix ("vac^1abc"),
+    // without prefix ("vec.^asdf"), and digit-starting ("vec.^1abc").
+    const SourceLocation SuffixBegin =
+        PP.getCodeCompletionLoc().getLocWithOffset(1);
+    Position End = sourceLocToPosition(
+        SM, Lexer::findEndOfIdentifierContinuation(SuffixBegin, SM, LangOpts));
+    // Adjust for the NUL byte inserted at the cursor by code completion,
+    // which inflates the column by 1.
+    End.character--;
+    return End;
+  }
+
   CodeCompleteResult
   toCodeCompleteResult(const std::vector<ScoredBundle> &Scored) {
     CodeCompleteResult Output;
@@ -1886,6 +1928,7 @@ private:
       Output.Completions.push_back(toCodeCompletion(C.first));
       Output.Completions.back().Score = C.second;
       Output.Completions.back().CompletionInsertRange = InsertRange;
+      Output.Completions.back().CompletionReplaceRange = ReplaceRange;
       if (Opts.Index && !Output.Completions.back().Documentation) {
         for (auto &Cand : C.first) {
           if (Cand.SemaResult &&
@@ -1910,6 +1953,7 @@ private:
     Output.HasMore = Incomplete;
     Output.Context = CCContextKind;
     Output.InsertRange = InsertRange;
+    Output.ReplaceRange = ReplaceRange;
 
     // Look up documentation from the index.
     if (Opts.Index) {
@@ -2230,16 +2274,53 @@ CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
   return Result;
 }
 
+// If Offset is inside what looks like argument comment (e.g.
+// "/*^*/" or "/* foo = ^*/"), returns the offset pointing past the closing "*/".
+static std::optional<unsigned>
+maybeFunctionArgumentCommentEnd(const PathRef FileName, const unsigned Offset,
+                                const llvm::StringRef Content,
+                                const LangOptions &LangOpts) {
+  if (Offset > Content.size())
+    return std::nullopt;
+
+  SourceManagerForFile FileSM(FileName, Content);
+  const SourceManager &SM = FileSM.get();
+  const SourceLocation Cursor =
+      SM.getComposedLoc(SM.getMainFileID(), static_cast<unsigned>(Offset));
+  const SourceLocation EndOfSuffix =
+      Lexer::findEndOfIdentifierContinuation(Cursor, SM, LangOpts);
+  const unsigned EndOfSuffixOffset = SM.getFileOffset(EndOfSuffix);
+
+  const llvm::StringRef Rest = Content.drop_front(EndOfSuffixOffset);
+  llvm::StringRef RestTrimmed = Rest.ltrim();
+  // Comment argument pattern: `/* name = */` — skip past optional `=`.
+  if (RestTrimmed.starts_with("="))
+    RestTrimmed = RestTrimmed.drop_front(1).ltrim();
+  if (RestTrimmed.starts_with("*/"))
+    return EndOfSuffixOffset + (Rest.size() - RestTrimmed.size()) + 2;
+  return std::nullopt;
+}
+
 // Code complete the argument name on "/*" inside function call.
 // OutsideStartOffset should be pointing before the comment, i.e.:
 // foo(^/*, rather than foo(/*^) where the cursor probably is.
-CodeCompleteResult codeCompleteComment(PathRef FileName,
-                                       unsigned OutsideStartOffset,
-                                       llvm::StringRef Prefix,
-                                       const PreambleData *Preamble,
-                                       const ParseInputs &ParseInput) {
+CodeCompleteResult
+codeCompleteComment(PathRef FileName, const unsigned CursorOffset,
+                    unsigned OutsideStartOffset, llvm::StringRef Prefix,
+                    const PreambleData *Preamble, const ParseInputs &ParseInput,
+                    const CodeCompleteOptions &Opts) {
   if (Preamble == nullptr) // Can't run without Sema.
     return CodeCompleteResult();
+
+  IgnoreDiagnostics IgnoreDiags;
+  auto CI = buildCompilerInvocation(ParseInput, IgnoreDiags);
+  if (!CI)
+    return CodeCompleteResult();
+
+  std::optional<unsigned> OutsideEndOffset;
+  if (Opts.EnableInsertReplace)
+    OutsideEndOffset = maybeFunctionArgumentCommentEnd(
+        FileName, CursorOffset, ParseInput.Contents, CI->getLangOpts());
 
   clang::CodeCompleteOptions Options;
   Options.IncludeGlobals = false;
@@ -2253,18 +2334,29 @@ CodeCompleteResult codeCompleteComment(PathRef FileName,
       std::make_unique<ParamNameCollector>(Options, ParamNames), Options,
       {FileName, OutsideStartOffset, *Preamble,
        PreamblePatch::createFullPatch(FileName, ParseInput, *Preamble),
-       ParseInput});
+       ParseInput},
+      /*Includes=*/nullptr, std::move(CI));
   if (ParamNames.empty())
     return CodeCompleteResult();
 
   CodeCompleteResult Result;
   Range InsertRange;
   // Skip /*
-  OutsideStartOffset += 2;
-  InsertRange.start = offsetToPosition(ParseInput.Contents, OutsideStartOffset);
+  const unsigned InsideStartOffset = OutsideStartOffset + 2;
+  InsertRange.start = offsetToPosition(ParseInput.Contents, InsideStartOffset);
   InsertRange.end =
-      offsetToPosition(ParseInput.Contents, OutsideStartOffset + Prefix.size());
+      offsetToPosition(ParseInput.Contents, InsideStartOffset + Prefix.size());
   Result.InsertRange = InsertRange;
+
+  if (Opts.EnableInsertReplace) {
+    Range ReplaceRange;
+    ReplaceRange.start = InsertRange.start;
+    ReplaceRange.end = OutsideEndOffset ? offsetToPosition(ParseInput.Contents,
+                                                           *OutsideEndOffset)
+                                        : InsertRange.end;
+    Result.ReplaceRange = ReplaceRange;
+  }
+
   Result.Context = CodeCompletionContext::CCC_NaturalLanguage;
   for (llvm::StringRef Name : ParamNames) {
     if (!Name.starts_with(Prefix))
@@ -2274,6 +2366,7 @@ CodeCompleteResult codeCompleteComment(PathRef FileName,
     Item.FilterText = Item.Name;
     Item.Kind = CompletionItemKind::Text;
     Item.CompletionInsertRange = InsertRange;
+    Item.CompletionReplaceRange = Result.ReplaceRange;
     Item.Origin = SymbolOrigin::AST;
     Result.Completions.push_back(Item);
   }
@@ -2313,8 +2406,8 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
     // parsing, so we must move back the position before running it, extract
     // information we need and construct completion items ourselves.
     auto CommentPrefix = Content.substr(*OffsetBeforeComment + 2).trim();
-    return codeCompleteComment(FileName, *OffsetBeforeComment, CommentPrefix,
-                               Preamble, ParseInput);
+    return codeCompleteComment(FileName, *Offset, *OffsetBeforeComment,
+                               CommentPrefix, Preamble, ParseInput, Opts);
   }
 
   auto Flow = CodeCompleteFlow(
@@ -2424,7 +2517,9 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   }
   LSP.sortText = sortText(Score.Total, FilterText);
   LSP.filterText = FilterText;
-  LSP.textEdit = {CompletionInsertRange, RequiredQualifier + Name, ""};
+  TextEdit Edit;
+  Edit.range = CompletionInsertRange;
+  Edit.newText = RequiredQualifier + Name;
   // Merge continuous additionalTextEdits into main edit. The main motivation
   // behind this is to help LSP clients, it seems most of them are confused when
   // they are provided with additionalTextEdits that are consecutive to main
@@ -2433,19 +2528,34 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   // is mainly to help LSP clients again, so that changes do not effect each
   // other.
   for (const auto &FixIt : FixIts) {
-    if (FixIt.range.end == LSP.textEdit->range.start) {
-      LSP.textEdit->newText = FixIt.newText + LSP.textEdit->newText;
-      LSP.textEdit->range.start = FixIt.range.start;
+    if (FixIt.range.end == Edit.range.start) {
+      Edit.newText = FixIt.newText + Edit.newText;
+      Edit.range.start = FixIt.range.start;
     } else {
       LSP.additionalTextEdits.push_back(FixIt);
     }
   }
   if (Opts.EnableSnippets)
-    LSP.textEdit->newText += SnippetSuffix;
+    Edit.newText += SnippetSuffix;
 
   // FIXME(kadircet): Do not even fill insertText after making sure textEdit is
   // compatible with most of the editors.
-  LSP.insertText = LSP.textEdit->newText;
+  LSP.insertText = Edit.newText;
+  if (Opts.EnableInsertReplace) {
+    assert(CompletionReplaceRange &&
+           "CompletionReplaceRange must be already set before render() "
+           "when EnableInsertReplace is on");
+    InsertReplaceEdit IRE;
+    IRE.newText = std::move(Edit.newText);
+    IRE.insert = Edit.range;
+    IRE.replace = *CompletionReplaceRange;
+    // FixIt merging may have extended the insert range start; keep replace
+    // range as a superset per LSP spec.
+    IRE.replace.start = IRE.insert.start;
+    LSP.textEdit = std::move(IRE);
+  } else {
+    LSP.textEdit = std::move(Edit);
+  }
   // Some clients support snippets but work better with plaintext.
   // So if the snippet is trivial, let the client know.
   // https://github.com/clangd/clangd/issues/922

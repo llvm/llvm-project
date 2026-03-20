@@ -2527,7 +2527,7 @@ TEST(CompletionTest, RenderWithFixItMerged) {
 
   auto R = C.render(Opts);
   EXPECT_TRUE(R.textEdit);
-  EXPECT_EQ(R.textEdit->newText, "->Foo::x");
+  EXPECT_EQ(std::get<TextEdit>(*R.textEdit).newText, "->Foo::x");
   EXPECT_TRUE(R.additionalTextEdits.empty());
 }
 
@@ -2547,7 +2547,7 @@ TEST(CompletionTest, RenderWithFixItNonMerged) {
 
   auto R = C.render(Opts);
   EXPECT_TRUE(R.textEdit);
-  EXPECT_EQ(R.textEdit->newText, "Foo::x");
+  EXPECT_EQ(std::get<TextEdit>(*R.textEdit).newText, "Foo::x");
   EXPECT_THAT(R.additionalTextEdits, UnorderedElementsAre(FixIt));
 }
 
@@ -4000,6 +4000,92 @@ TEST(CompletionTest, CompletionRange) {
   EXPECT_EQ(Completions.InsertRange, Annotations(NoCompletion).range());
 }
 
+TEST(CompletionTest, ReplaceRange) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableInsertReplace = true;
+
+  // Cursor at end of token: insert == replace.
+  const char *EndOfToken =
+      "struct S { int abc; }; void f() { S s; s.[[abc]]^; }";
+  CodeCompleteResult Completions =
+      completions(EndOfToken, /*IndexSymbols=*/{}, Opts);
+  Annotations A(EndOfToken);
+  EXPECT_EQ(Completions.InsertRange, A.range());
+  EXPECT_EQ(Completions.ReplaceRange, A.range());
+
+  // Cursor mid-word: replace extends past cursor.
+  const char *MidWord = "struct S { int abcd; }; void f() { S s; "
+                        "s.$replace[[$insert[[ab^]]cd]]; }";
+  Completions = completions(MidWord, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(MidWord);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // Empty prefix: insert range is empty, replace covers the word.
+  const char *EmptyPrefix = "struct S { int abcd; }; void f() { S s; "
+                            "s.$replace[[$insert[[^]]abcd]]; }";
+  Completions = completions(EmptyPrefix, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(EmptyPrefix);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // Cursor mid-word with UTF-8 continuation: replace extends past UTF-8.
+  const char *MidWordUTF8 = "struct S { int ab🙂cd; }; void f() { S s; "
+                            "s.$replace[[$insert[[ab^]]🙂cd]]; }";
+  Completions = completions(MidWordUTF8, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(MidWordUTF8);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // EnableInsertReplace off: ReplaceRange should not be set.
+  Opts.EnableInsertReplace = false;
+  const char *NoReplace = "auto x = [[abc]]^";
+  Completions = completions(NoReplace, /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Completions.InsertRange, Annotations(NoReplace).range());
+  EXPECT_EQ(Completions.ReplaceRange, std::nullopt);
+}
+
+TEST(CompletionTest, ReplaceRangeNoCompile) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableInsertReplace = true;
+
+  // Cursor at end of token: insert == replace.
+  const char *EndOfToken = "auto x = [[abc]]^";
+  Annotations A(EndOfToken);
+  CodeCompleteResult Results =
+      completionsNoCompile(EndOfToken, /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+
+  // Cursor mid-word: replace extends past cursor.
+  const char *MidWord = "auto x = $replace[[$insert[[ab^]]cd]]";
+  Results = completionsNoCompile(MidWord, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(MidWord);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // Empty prefix: insert range is empty, replace covers the word.
+  const char *EmptyPrefix = "auto x = $replace[[$insert[[^]]abcd]]";
+  Results = completionsNoCompile(EmptyPrefix, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(EmptyPrefix);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // ASCII heuristic stops at non-ASCII: replace doesn't extend past UTF-8.
+  const char *MidWordUTF8 = "auto x = $replace[[$insert[[ab^]]]]🙂cd";
+  Results = completionsNoCompile(MidWordUTF8, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(MidWordUTF8);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // EnableInsertReplace off: ReplaceRange should not be set.
+  Opts.EnableInsertReplace = false;
+  const char *NoReplace = "auto x = [[abc]]^";
+  Results = completionsNoCompile(NoReplace, /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, Annotations(NoReplace).range());
+  EXPECT_EQ(Results.ReplaceRange, std::nullopt);
+}
+
 TEST(NoCompileCompletionTest, Basic) {
   auto Results = completionsNoCompile(R"cpp(
     void func() {
@@ -4318,6 +4404,44 @@ TEST(CompletionTest, CommentParamName) {
         testing::Each(
             AllOf(replacesRange(Annotations(CompletionRangeTest).range()),
                   origin(SymbolOrigin::AST), kind(CompletionItemKind::Text))));
+  }
+
+  // Test replace ranges (comment completion replaces up to */).
+  clangd::CodeCompleteOptions ReplaceOpts;
+  ReplaceOpts.EnableInsertReplace = true;
+  {
+    // With */ (no =): replace extends past suffix to */.
+    const std::string NoEquals(Code + "fun(/*$replace[[$insert[[fo^]]o*/]])");
+    const CodeCompleteResult Results = completions(NoEquals, {}, ReplaceOpts);
+    const Annotations A(NoEquals);
+    EXPECT_EQ(Results.InsertRange, A.range("insert"));
+    EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+  }
+  {
+    // With = and */: replace extends past = to */.
+    const std::string WithEquals(Code +
+                                 "fun(/*$replace[[$insert[[fo^]]o=*/]])");
+    const CodeCompleteResult Results = completions(WithEquals, {}, ReplaceOpts);
+    const Annotations A(WithEquals);
+    EXPECT_EQ(Results.InsertRange, A.range("insert"));
+    EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+  }
+  {
+    // Without */: replace == insert.
+    const std::string NoClose(Code + "fun(/*[[fo^]]");
+    const CodeCompleteResult Results = completions(NoClose, {}, ReplaceOpts);
+    const Annotations A(NoClose);
+    EXPECT_EQ(Results.InsertRange, A.range());
+    EXPECT_EQ(Results.ReplaceRange, A.range());
+  }
+  {
+    // With */ and UTF-8 suffix: replace extends past UTF-8 to */.
+    const std::string WithUTF8(Code +
+                               "fun(/*$replace[[$insert[[fo^]]o🙂=*/]])");
+    const CodeCompleteResult Results = completions(WithUTF8, {}, ReplaceOpts);
+    const Annotations A(WithUTF8);
+    EXPECT_EQ(Results.InsertRange, A.range("insert"));
+    EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
   }
 }
 

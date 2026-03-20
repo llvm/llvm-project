@@ -518,6 +518,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
   Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
+  Opts.CodeComplete.EnableInsertReplace = Params.capabilities.InsertReplace;
   if (!Opts.CodeComplete.BundleOverloads)
     Opts.CodeComplete.BundleOverloads = Params.capabilities.HasSignatureHelp;
   Opts.CodeComplete.DocumentationFormat =
