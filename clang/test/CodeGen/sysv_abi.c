@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX
-// RUN: %clang_cc1 -triple x86_64-mingw    -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX
-// RUN: %clang_cc1 -triple x86_64-cygwin   -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX
-// RUN: %clang_cc1 -triple x86_64-uefi -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX
+// RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX512
+// RUN: %clang_cc1 -triple x86_64-mingw    -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX512
+// RUN: %clang_cc1 -triple x86_64-cygwin   -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX512
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX512
+// RUN: %clang_cc1 -triple x86_64-uefi -emit-llvm  -target-cpu skylake-avx512 < %s | FileCheck %s --check-prefixes=CHECK,AVX512
+// Note: x86-64-v3 implies support for AVX2 but not AVX512
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -target-cpu x86-64-v3 < %s | FileCheck %s --check-prefixes=CHECK,AVX2
 // RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm < %s | FileCheck %s --check-prefixes=CHECK,NOAVX
 // RUN: %clang_cc1 -triple x86_64-mingw    -emit-llvm < %s | FileCheck %s --check-prefixes=CHECK,NOAVX
 // RUN: %clang_cc1 -triple x86_64-cygwin   -emit-llvm < %s | FileCheck %s --check-prefixes=CHECK,NOAVX
@@ -45,13 +47,17 @@ void use_vectors(void) {
 }
 
 // CHECK: define {{(dso_local )?}}void @use_vectors()
-// AVX: call {{(x86_64_sysvcc )?}}<8 x float> @get_m256()
-// AVX: call {{(x86_64_sysvcc )?}}void @take_m256(<8 x float> noundef %{{.*}})
-// AVX: call {{(x86_64_sysvcc )?}}<16 x float> @get_m512()
-// AVX: call {{(x86_64_sysvcc )?}}void @take_m512(<16 x float> noundef %{{.*}})
-// NOAVX: call {{(x86_64_sysvcc )?}}<8 x float> @get_m256()
+// AVX512: call {{(x86_64_sysvcc )?}}<8 x float> @get_m256()
+// AVX512: call {{(x86_64_sysvcc )?}}void @take_m256(<8 x float> noundef %{{.*}})
+// AVX512: call {{(x86_64_sysvcc )?}}<16 x float> @get_m512()
+// AVX512: call {{(x86_64_sysvcc )?}}void @take_m512(<16 x float> noundef %{{.*}})
+// AVX2: call {{(x86_64_sysvcc )?}}<8 x float> @get_m256()
+// AVX2: call {{(x86_64_sysvcc )?}}void @take_m256(<8 x float> noundef %{{.*}})
+// AVX2: call {{(x86_64_sysvcc )?}}void @get_m512(ptr {{[^,]*}} sret(<16 x float>) align 64 %{{.*}})
+// AVX2: call {{(x86_64_sysvcc )?}}void @take_m512(ptr noundef byval(<16 x float>) align 64 %{{.*}})
+// NOAVX: call {{(x86_64_sysvcc )?}}void @get_m256(ptr {{[^,]*}} sret(<8 x float>) align 32 %{{.*}})
 // NOAVX: call {{(x86_64_sysvcc )?}}void @take_m256(ptr noundef byval(<8 x float>) align 32 %{{.*}})
-// NOAVX: call {{(x86_64_sysvcc )?}}<16 x float> @get_m512()
+// NOAVX: call {{(x86_64_sysvcc )?}}void @get_m512(ptr {{[^,]*}} sret(<16 x float>) align 64 %{{.*}})
 // NOAVX: call {{(x86_64_sysvcc )?}}void @take_m512(ptr noundef byval(<16 x float>) align 64 %{{.*}})
 
 // Added test to explicitly cover the case when __attribute__((target("avx"))) is used 
