@@ -7,8 +7,9 @@ target triple = "x86_64-grtev4-linux-gnu"
 ; Tests that the computed predicate block cost divisor doesn't get coerced to
 ; zero and cause a division by zero error.
 ; See https://github.com/llvm/llvm-project/issues/187584
-define void @wombat() {
-; CHECK-LABEL: define void @wombat() {
+define void @wombat(ptr %x) {
+; CHECK-LABEL: define void @wombat(
+; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    br label %[[BB2:.*]]
 ; CHECK:       [[BB1:.*]]:
@@ -20,7 +21,7 @@ define void @wombat() {
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB6]], label %[[BB5:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[BB5]]:
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr null, align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[X]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 @llvm.smin.i64(i64 [[LOAD]], i64 [[PHI3]])
 ; CHECK-NEXT:    br label %[[BB6]]
 ; CHECK:       [[BB6]]:
@@ -44,7 +45,7 @@ bb4:                                              ; preds = %bb2
   br i1 false, label %bb6, label %bb5, !prof !0
 
 bb5:                                              ; preds = %bb4
-  %load = load i64, ptr null, align 8
+  %load = load i64, ptr %x, align 8
   %call = call i64 @llvm.smin.i64(i64 %load, i64 %phi3)
   br label %bb6
 
