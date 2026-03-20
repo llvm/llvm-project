@@ -15,21 +15,19 @@
 #include "clc/math/clc_mad.h"
 #include "clc/relational/clc_isinf.h"
 
-#define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_log
+
+#define __CLC_FLOAT_ONLY
 #define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_log
 #define __CLC_BODY "clc/shared/unary_def.inc"
 #include "clc/math/gentype.inc"
-#undef __CLC_FUNCTION
 #undef __CLC_IMPL_FUNCTION
 #undef __CLC_FLOAT_ONLY
 
 #define __CLC_HALF_ONLY
-#define __CLC_FUNCTION __clc_log
 #define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_log
 #define __CLC_BODY "clc/shared/unary_def.inc"
 #include "clc/math/gentype.inc"
-#undef __CLC_FUNCTION
 #undef __CLC_IMPL_FUNCTION
 #undef __CLC_HALF_ONLY
 
@@ -39,6 +37,5 @@
 #include "clc/math/gentype.inc"
 
 #define __CLC_DOUBLE_ONLY
-#define __CLC_FUNCTION __clc_log
 #define __CLC_BODY "clc/shared/unary_def_scalarize_loop.inc"
 #include "clc/math/gentype.inc"
