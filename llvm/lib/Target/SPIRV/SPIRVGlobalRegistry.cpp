@@ -307,6 +307,18 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
   // point set above that is always the first MBB.
   assert(ConstOrType->getParent() == NewMBB);
   LastInsertedType->second = ConstOrType;
+  // Advance past any continued instructions so that the next type/constant
+  // is inserted after the full group, preserving required adjacency.
+  while (auto *Next = LastInsertedType->second->getNextNode()) {
+    unsigned Opc = Next->getOpcode();
+    if (Opc == SPIRV::OpTypeStructContinuedINTEL ||
+        Opc == SPIRV::OpConstantCompositeContinuedINTEL ||
+        Opc == SPIRV::OpSpecConstantCompositeContinuedINTEL ||
+        Opc == SPIRV::OpCompositeConstructContinuedINTEL)
+      LastInsertedType->second = Next;
+    else
+      break;
+  }
 
   MIRBuilder.setInsertPt(*OldMBB, oldInsertPoint);
   return ConstOrType;
@@ -1039,7 +1051,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeStruct(
           auto MIBCont =
               MIRBuilder.buildInstr(SPIRV::OpTypeStructContinuedINTEL);
           for (size_t J = I; J < std::min(I + MaxNumElements, NumElements); ++J)
-            MIBCont.addUse(FieldTypes[I]);
+            MIBCont.addUse(FieldTypes[J]);
         }
         return MIBStruct;
       });
