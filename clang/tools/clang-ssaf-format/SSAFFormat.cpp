@@ -15,6 +15,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -152,14 +153,11 @@ SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
     return It->second.get();
   }
 
-  // SerializationFormats are uppercase while file extensions are lowercase.
-  std::string CapitalizedExtension = Extension.upper();
-
-  if (!isFormatRegistered(CapitalizedExtension)) {
+  if (!isFormatRegistered(Extension)) {
     return nullptr;
   }
 
-  auto Format = makeFormat(CapitalizedExtension);
+  auto Format = makeFormat(Extension);
   SerializationFormat *Result = Format.get();
   assert(Result);
 
@@ -217,7 +215,7 @@ void printAnalysis(const AnalysisData &AD, size_t AnalysisIndex,
                             std::to_string(AnalysisIndex + 1) + ".";
   llvm::outs().indent(Layout.AnalysisCol)
       << llvm::right_justify(AnalysisNum, Layout.AnalysisNumWidth) << " "
-      << llvm::left_justify(AD.Name, Layout.MaxAnalysisNameWidth) << "  "
+      << llvm::left_justify(AD.Name, Layout.MaxAnalysisNameWidth) << " - "
       << AD.Desc << "\n";
 }
 
@@ -244,7 +242,7 @@ void printFormat(const FormatData &FD, size_t FormatIndex,
   std::string FormatNum = std::to_string(FormatIndex + 1) + ".";
   llvm::outs().indent(FormatIndent)
       << llvm::right_justify(FormatNum, Layout.FormatNumWidth) << " "
-      << llvm::left_justify(FD.Name, Layout.MaxFormatNameWidth) << "  "
+      << llvm::left_justify(FD.Name, Layout.MaxFormatNameWidth) << " - "
       << FD.Desc << "\n";
 
   printAnalyses(FD.Analyses, FormatIndex, Layout);
@@ -469,8 +467,6 @@ int main(int argc, const char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "SSAF Format\n");
 
   loadPlugins();
-
-  initializeJSONFormat();
 
   if (ListFormats) {
     listFormats();

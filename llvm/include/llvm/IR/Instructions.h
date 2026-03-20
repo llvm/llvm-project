@@ -765,6 +765,14 @@ public:
     /// \p minimum matches the behavior of \p llvm.minimum.*.
     FMinimum,
 
+    /// *p = maximumnum(old, v)
+    /// \p maximumnum matches the behavior of \p llvm.maximumnum.*.
+    FMaximumNum,
+
+    /// *p = minimumnum(old, v)
+    /// \p minimumnum matches the behavior of \p llvm.minimumnum.*.
+    FMinimumNum,
+
     /// Increment one up to a maximum value.
     /// *p = (old u>= v) ? 0 : (old + 1)
     UIncWrap,
@@ -829,6 +837,8 @@ public:
     case AtomicRMWInst::FMin:
     case AtomicRMWInst::FMaximum:
     case AtomicRMWInst::FMinimum:
+    case AtomicRMWInst::FMaximumNum:
+    case AtomicRMWInst::FMinimumNum:
       return true;
     default:
       return false;
@@ -3062,16 +3072,19 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ReturnInst, Value)
 //===---------------------------------------------------------------------------
 /// Conditional or Unconditional Branch instruction.
 ///
-class BranchInst : public Instruction {
+class LLVM_DEPRECATED("Use UncondBrInst/CondBrInst/Instruction instead", "")
+    BranchInst : public Instruction {
 protected:
   BranchInst(Type *Ty, unsigned Opcode, AllocInfo AllocInfo,
              InsertPosition InsertBefore = nullptr)
       : Instruction(Ty, Opcode, AllocInfo, InsertBefore) {}
 
 public:
+  LLVM_DEPRECATED("Use UncondBrInst::Create instead", "UncondBrInst::Create")
   static BranchInst *Create(BasicBlock *IfTrue,
                             InsertPosition InsertBefore = nullptr);
 
+  LLVM_DEPRECATED("Use CondBrInst::Create instead", "CondBrInst::Create")
   static BranchInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
                             Value *Cond, InsertPosition InsertBefore = nullptr);
 
@@ -3079,10 +3092,14 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   // Defined out-of-line below to access CondBrInst.
+  LLVM_DEPRECATED("Use isa<UncondBrInst> instead", "isa<UncondBrInst>")
   bool isUnconditional() const;
+  LLVM_DEPRECATED("Use isa<CondBrInst> instead", "isa<CondBrInst>")
   bool isConditional() const;
 
+  LLVM_DEPRECATED("Cast to CondBrInst", "")
   Value *getCondition() const;
+  LLVM_DEPRECATED("Cast to CondBrInst", "")
   void setCondition(Value *V);
 
   /// Swap the successors of this branch instruction.
@@ -3090,6 +3107,7 @@ public:
   /// Swaps the successors of the branch instruction. This also swaps any
   /// branch weight metadata associated with the instruction so that it
   /// continues to map correctly to each operand.
+  LLVM_DEPRECATED("Cast to CondBrInst", "")
   void swapSuccessors();
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -3101,6 +3119,9 @@ public:
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 };
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 
 template <>
 struct OperandTraits<BranchInst> : public VariadicOperandTraits<BranchInst> {};
@@ -3265,6 +3286,9 @@ struct OperandTraits<CondBrInst> : public FixedNumOperandTraits<CondBrInst, 3> {
 };
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CondBrInst, Value)
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                     BranchInst Out-Of-Line Functions
