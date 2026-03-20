@@ -45,9 +45,6 @@ define amdgpu_kernel void @class_f16(
 ; VI-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; VI-GISEL-NEXT:    v_cmp_class_f16_e32 vcc, s2, v1
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; VI-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
@@ -90,9 +87,6 @@ define amdgpu_kernel void @class_f16_fabs(
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], |s4|, v0
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; VI-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; VI-GISEL-NEXT:    s_and_b32 s3, s3, 1
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
@@ -136,9 +130,6 @@ define amdgpu_kernel void @class_f16_fneg(
 ; VI-GISEL-NEXT:    v_max_f16_e64 v0, -s3, -s3
 ; VI-GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, s4
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; VI-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; VI-GISEL-NEXT:    s_and_b32 s3, s3, 1
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
@@ -182,9 +173,6 @@ define amdgpu_kernel void @class_f16_fabs_fneg(
 ; VI-GISEL-NEXT:    v_max_f16_e64 v0, -|s3|, -|s3|
 ; VI-GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, s4
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; VI-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; VI-GISEL-NEXT:    s_and_b32 s3, s3, 1
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
@@ -225,9 +213,6 @@ define amdgpu_kernel void @class_f16_1(
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], s3, 1
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; VI-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; VI-GISEL-NEXT:    s_and_b32 s3, s3, 1
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
@@ -263,9 +248,6 @@ define amdgpu_kernel void @class_f16_64(
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], s3, 64
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; VI-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; VI-GISEL-NEXT:    s_and_b32 s3, s3, 1
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
@@ -303,9 +285,6 @@ define amdgpu_kernel void @class_f16_full_mask(
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_cmp_class_f16_e32 vcc, s3, v0
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; VI-GISEL-NEXT:    s_and_b32 s3, s3, 1
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000
@@ -343,9 +322,6 @@ define amdgpu_kernel void @class_f16_nine_bit_mask(
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_cmp_class_f16_e32 vcc, s3, v0
 ; VI-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; VI-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
-; VI-GISEL-NEXT:    s_and_b32 s3, s3, 1
-; VI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; VI-GISEL-NEXT:    s_cselect_b32 s3, -1, 0
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0x1100f000

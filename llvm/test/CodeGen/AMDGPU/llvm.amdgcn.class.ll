@@ -25,21 +25,17 @@ define amdgpu_kernel void @test_class_f32(ptr addrspace(1) %out, [8 x i32], floa
 ;
 ; SI-GISEL-LABEL: test_class_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0x1c
-; SI-GISEL-NEXT:    s_load_dword s1, s[4:5], 0x13
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s1, v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0x1c
+; SI-GISEL-NEXT:    s_load_dword s6, s[4:5], 0x13
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
+; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s6, v0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], vcc, vcc
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 %b) #1
@@ -65,21 +61,17 @@ define amdgpu_kernel void @test_class_fabs_f32(ptr addrspace(1) %out, [8 x i32],
 ;
 ; SI-GISEL-LABEL: test_class_fabs_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0x1c
-; SI-GISEL-NEXT:    s_load_dword s1, s[4:5], 0x13
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[0:1], |s1|, v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0x1c
+; SI-GISEL-NEXT:    s_load_dword s6, s[4:5], 0x13
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], |s6|, v0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %a.fabs = call float @llvm.fabs.f32(float %a) #1
@@ -106,21 +98,17 @@ define amdgpu_kernel void @test_class_fneg_f32(ptr addrspace(1) %out, [8 x i32],
 ;
 ; SI-GISEL-LABEL: test_class_fneg_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0x13
-; SI-GISEL-NEXT:    s_load_dword s1, s[4:5], 0x1c
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, s0
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[0:1], v0, s1
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0x13
+; SI-GISEL-NEXT:    s_load_dword s6, s[4:5], 0x1c
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, s3
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, s6
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %a.fneg = fsub float -0.0, %a
@@ -147,21 +135,17 @@ define amdgpu_kernel void @test_class_fneg_fabs_f32(ptr addrspace(1) %out, [8 x 
 ;
 ; SI-GISEL-LABEL: test_class_fneg_fabs_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0x13
-; SI-GISEL-NEXT:    s_load_dword s1, s[4:5], 0x1c
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, |s0|
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[0:1], v0, s1
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0x13
+; SI-GISEL-NEXT:    s_load_dword s6, s[4:5], 0x1c
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_mul_f32_e64 v0, -1.0, |s3|
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, s6
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %a.fabs = call float @llvm.fabs.f32(float %a) #1
@@ -187,19 +171,15 @@ define amdgpu_kernel void @test_class_1_f32(ptr addrspace(1) %out, float %a) #0 
 ;
 ; SI-GISEL-LABEL: test_class_1_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0xb
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[0:1], s0, 1
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0xb
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], s3, 1
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 1) #1
@@ -223,19 +203,15 @@ define amdgpu_kernel void @test_class_64_f32(ptr addrspace(1) %out, float %a) #0
 ;
 ; SI-GISEL-LABEL: test_class_64_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0xb
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[0:1], s0, 64
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0xb
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], s3, 64
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 64) #1
@@ -261,20 +237,16 @@ define amdgpu_kernel void @test_class_full_mask_f32(ptr addrspace(1) %out, float
 ;
 ; SI-GISEL-LABEL: test_class_full_mask_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0xb
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x3ff
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s0, v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0xb
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x3ff
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s3, v0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], vcc, vcc
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 1023) #1
@@ -299,20 +271,16 @@ define amdgpu_kernel void @test_class_9bit_mask_f32(ptr addrspace(1) %out, float
 ;
 ; SI-GISEL-LABEL: test_class_9bit_mask_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0xb
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x1ff
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s0, v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0xb
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x1ff
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s3, v0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], vcc, vcc
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 511) #1
@@ -478,21 +446,17 @@ define amdgpu_kernel void @test_class_f64(ptr addrspace(1) %out, [8 x i32], doub
 ;
 ; SI-GISEL-LABEL: test_class_f64:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x1d
-; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x13
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; SI-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0x1d
+; SI-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
+; SI-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, s[6:7], v0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], vcc, vcc
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.amdgcn.class.f64(double %a, i32 %b) #1
@@ -518,21 +482,17 @@ define amdgpu_kernel void @test_class_fabs_f64(ptr addrspace(1) %out, [8 x i32],
 ;
 ; SI-GISEL-LABEL: test_class_fabs_f64:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x1d
-; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x13
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[0:1], |s[0:1]|, v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0x1d
+; SI-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
+; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[4:5], |s[6:7]|, v0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %a.fabs = call double @llvm.fabs.f64(double %a) #1
@@ -559,21 +519,17 @@ define amdgpu_kernel void @test_class_fneg_f64(ptr addrspace(1) %out, [8 x i32],
 ;
 ; SI-GISEL-LABEL: test_class_fneg_f64:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x13
-; SI-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x1d
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_max_f64 v[0:1], -s[0:1], -s[0:1]
-; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[0:1], v[0:1], s2
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0x1d
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_max_f64 v[0:1], -s[6:7], -s[6:7]
+; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[4:5], v[0:1], s3
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %a.fneg = fsub double -0.0, %a
@@ -600,21 +556,17 @@ define amdgpu_kernel void @test_class_fneg_fabs_f64(ptr addrspace(1) %out, [8 x 
 ;
 ; SI-GISEL-LABEL: test_class_fneg_fabs_f64:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x13
-; SI-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x1d
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_max_f64 v[0:1], -|s[0:1]|, -|s[0:1]|
-; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[0:1], v[0:1], s2
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0x1d
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_max_f64 v[0:1], -|s[6:7]|, -|s[6:7]|
+; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[4:5], v[0:1], s3
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %a.fabs = call double @llvm.fabs.f64(double %a) #1
@@ -643,12 +595,9 @@ define amdgpu_kernel void @test_class_1_f64(ptr addrspace(1) %out, double %a) #0
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[2:3], s[2:3], 1
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], s[2:3], s[2:3]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
+; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[4:5], s[2:3], 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
@@ -678,12 +627,9 @@ define amdgpu_kernel void @test_class_64_f64(ptr addrspace(1) %out, double %a) #
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[2:3], s[2:3], 64
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], s[2:3], s[2:3]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
+; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[4:5], s[2:3], 64
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
@@ -712,20 +658,16 @@ define amdgpu_kernel void @test_class_full_mask_f64(ptr addrspace(1) %out, [8 x 
 ;
 ; SI-GISEL-LABEL: test_class_full_mask_f64:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x13
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x1ff
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, s[0:1], v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x13
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, 0x1ff
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, s[6:7], v0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], vcc, vcc
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.amdgcn.class.f64(double %a, i32 511) #1
@@ -758,18 +700,15 @@ define amdgpu_kernel void @v_test_class_full_mask_f64(ptr addrspace(1) %out, ptr
 ; SI-GISEL-LABEL: v_test_class_full_mask_f64:
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; SI-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0x1ff
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, s[2:3], v1
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
+; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0x1ff
 ; SI-GISEL-NEXT:    s_mov_b32 s2, 0
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cmp_class_f64_e32 vcc, s[4:5], v2
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], vcc, vcc
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v2, s4
@@ -1260,19 +1199,15 @@ define amdgpu_kernel void @test_class_0_f32(ptr addrspace(1) %out, float %a) #0 
 ;
 ; SI-GISEL-LABEL: test_class_0_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0xb
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[0:1], s0, 0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], s[0:1], s[0:1]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0xb
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], s3, 0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.amdgcn.class.f32(float %a, i32 0) #1
@@ -1296,12 +1231,9 @@ define amdgpu_kernel void @test_class_0_f64(ptr addrspace(1) %out, double %a) #0
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[2:3], s[2:3], 0
-; SI-GISEL-NEXT:    s_or_b64 s[2:3], s[2:3], s[2:3]
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
+; SI-GISEL-NEXT:    v_cmp_class_f64_e64 s[4:5], s[2:3], 0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], s[4:5], s[4:5]
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
@@ -1326,20 +1258,16 @@ define amdgpu_kernel void @test_class_undef_f32(ptr addrspace(1) %out, float %a,
 ;
 ; SI-GISEL-LABEL: test_class_undef_f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dword s0, s[4:5], 0xc
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s0, v0
-; SI-GISEL-NEXT:    s_or_b64 s[0:1], vcc, vcc
-; SI-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; SI-GISEL-NEXT:    s_load_dword s3, s[4:5], 0xc
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-GISEL-NEXT:    s_and_b32 s3, s2, 1
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
-; SI-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
+; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s3
+; SI-GISEL-NEXT:    v_cmp_class_f32_e32 vcc, s0, v0
+; SI-GISEL-NEXT:    s_or_b64 s[4:5], vcc, vcc
 ; SI-GISEL-NEXT:    s_cselect_b32 s4, -1, 0
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
-; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-GISEL-NEXT:    s_endpgm
   %result = call i1 @llvm.amdgcn.class.f32(float poison, i32 %b) #1
