@@ -7,28 +7,32 @@ target triple = "x86_64-grtev4-linux-gnu"
 ; Tests that the computed predicate block cost divisor doesn't get coerced to
 ; zero and cause a division by zero error.
 ; See https://github.com/llvm/llvm-project/issues/187584
-define void @wombat(ptr %x) {
-; CHECK-LABEL: define void @wombat(
-; CHECK-SAME: ptr [[X:%.*]]) {
-; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    br label %[[BB4:.*]]
+define void @foo(ptr %x, i1 %y, i1 %z) {
+; CHECK-LABEL: define void @foo(
+; CHECK-SAME: ptr [[X:%.*]], i1 [[Y:%.*]], i1 [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[EXIT:.*]]:
 ; CHECK-NEXT:    ret void
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ADD:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI3:%.*]] = phi i64 [ [[PHI7:%.*]], %[[LOOP_LATCH]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI4:%.*]] = phi i1 [ [[YNOT:%.*]], %[[LOOP_LATCH]] ], [ [[Y]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI5:%.*]] = phi i1 [ [[ZNOT:%.*]], %[[LOOP_LATCH]] ], [ [[Z]], %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[Y]], label %[[BB4:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ADD:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[BB]] ]
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i64 [ [[PHI7:%.*]], %[[LOOP_LATCH]] ], [ 0, %[[BB]] ]
-; CHECK-NEXT:    br i1 true, label %[[BB5:.*]], label %[[LOOP_LATCH]]
+; CHECK-NEXT:    br i1 [[Z]], label %[[LOOP_LATCH]], label %[[BB5:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[BB5]]:
-; CHECK-NEXT:    br i1 false, label %[[LOOP_LATCH]], label %[[BB6:.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[X]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 @llvm.smin.i64(i64 [[LOAD]], i64 [[PHI3]])
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[PHI7]] = phi i64 [ [[PHI3]], %[[BB5]] ], [ [[CALL]], %[[BB6]] ], [ [[PHI3]], %[[BB4]] ]
+; CHECK-NEXT:    [[PHI7]] = phi i64 [ [[PHI3]], %[[BB4]] ], [ [[CALL]], %[[BB5]] ], [ [[PHI3]], %[[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[ADD]] = add i64 [[PHI]], 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i64 [[PHI]], 1
-; CHECK-NEXT:    br i1 [[ICMP]], label %[[EXIT]], label %[[BB4]]
+; CHECK-NEXT:    [[YNOT]] = xor i1 [[PHI4]], true
+; CHECK-NEXT:    [[ZNOT]] = xor i1 [[PHI5]], true
+; CHECK-NEXT:    br i1 [[ICMP]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ;
 entry:
   br label %loop.header
@@ -39,10 +43,12 @@ exit:                                              ; preds = %loop.latch
 loop.header:                                              ; preds = %loop.latch, %entry
   %phi = phi i64 [ %add, %loop.latch ], [ 0, %entry ]
   %phi3 = phi i64 [ %phi7, %loop.latch ], [ 0, %entry ]
-  br i1 true, label %bb4, label %loop.latch
+  %phi4 = phi i1 [ %ynot, %loop.latch ], [ %y, %entry ]
+  %phi5 = phi i1 [ %znot, %loop.latch ], [ %z, %entry ]
+  br i1 %y, label %bb4, label %loop.latch
 
 bb4:                                              ; preds = %loop.header
-  br i1 false, label %loop.latch, label %bb5, !prof !0
+  br i1 %z, label %loop.latch, label %bb5, !prof !0
 
 bb5:                                              ; preds = %bb4
   %load = load i64, ptr %x, align 8
@@ -53,9 +59,11 @@ loop.latch:                                              ; preds = %bb5, %bb4, %
   %phi7 = phi i64 [ %phi3, %bb4 ], [ %call, %bb5 ], [ %phi3, %loop.header ]
   %add = add i64 %phi, 1
   %icmp = icmp eq i64 %phi, 1
+  %ynot = xor i1 %phi4, true;
+  %znot = xor i1 %phi5, true;
   br i1 %icmp, label %exit, label %loop.header
 }
 
-declare i64 @llvm.smin.i64(i64, i64) #0
+declare i64 @llvm.smin.i64(i64, i64)
 
 !0 = !{!"branch_weights", i32 -2147483648, i32 0}
