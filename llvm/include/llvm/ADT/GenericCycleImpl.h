@@ -220,6 +220,11 @@ void GenericCycle<ContextT>::verifyCycleNest() const {
   if (ParentCycle) {
     assert(is_contained(ParentCycle->children(), this) &&
            "Cycle is not a subcycle of its parent!");
+    assert(ParentCycle->TopLevelCycle == TopLevelCycle &&
+           "Top level cycle of parent cycle must be the same");
+  } else {
+    assert(TopLevelCycle == this &&
+           "Cycle without parent must be top-level cycle");
   }
 #endif
 }
@@ -280,19 +285,8 @@ private:
 template <typename ContextT>
 auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(BlockT *Block)
     -> CycleT * {
-  auto Cycle = BlockMapTopLevel.find(Block);
-  if (Cycle != BlockMapTopLevel.end())
-    return Cycle->second;
-
-  auto MapIt = BlockMap.find(Block);
-  if (MapIt == BlockMap.end())
-    return nullptr;
-
-  auto *C = MapIt->second;
-  while (C->ParentCycle)
-    C = C->ParentCycle;
-  BlockMapTopLevel.try_emplace(Block, C);
-  return C;
+  CycleT *Cycle = getCycle(Block);
+  return Cycle ? Cycle->TopLevelCycle : nullptr;
 }
 
 template <typename ContextT>
@@ -310,12 +304,11 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   *Pos = std::move(CurrentContainer.back());
   CurrentContainer.pop_back();
   Child->ParentCycle = NewParent;
+  Child->TopLevelCycle = NewParent;
+  for (CycleT *Cycle : depth_first(Child))
+    Cycle->TopLevelCycle = NewParent;
 
   NewParent->Blocks.insert_range(Child->blocks());
-
-  for (auto &It : BlockMapTopLevel)
-    if (It.second == Child)
-      It.second = NewParent;
   NewParent->clearCache();
   Child->clearCache();
 }
@@ -335,7 +328,6 @@ void GenericCycleInfo<ContextT>::addBlockToCycle(BlockT *Block, CycleT *Cycle) {
     ParentCycle = Cycle->getParentCycle();
   }
 
-  BlockMapTopLevel.try_emplace(Block, Cycle);
   Cycle->clearCache();
 }
 
@@ -429,7 +421,6 @@ void GenericCycleInfoCompute<ContextT>::run(FunctionT *F) {
         assert(!is_contained(NewCycle->Blocks, Block));
         NewCycle->Blocks.insert(Block);
         ProcessPredecessors(Block);
-        Info.BlockMapTopLevel.try_emplace(Block, NewCycle.get());
       }
     } while (!Worklist.empty());
 
@@ -510,7 +501,6 @@ void GenericCycleInfoCompute<ContextT>::dfs(FunctionT *F, BlockT *EntryBlock) {
 template <typename ContextT> void GenericCycleInfo<ContextT>::clear() {
   TopLevelCycles.clear();
   BlockMap.clear();
-  BlockMapTopLevel.clear();
 }
 
 /// \brief Compute the cycle info for a function.
