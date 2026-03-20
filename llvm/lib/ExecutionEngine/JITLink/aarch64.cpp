@@ -13,12 +13,15 @@
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Endian.h"
 
 #define DEBUG_TYPE "jitlink"
 
 namespace llvm {
 namespace jitlink {
 namespace aarch64 {
+
+namespace endian = support::endian;
 
 const char NullPointerContent[8] = {0x00, 0x00, 0x00, 0x00,
                                     0x00, 0x00, 0x00, 0x00};
@@ -52,6 +55,8 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "NegDelta32";
   case Branch26PCRel:
     return "Branch26PCRel";
+  case Branch26PCRelRelaxable:
+    return "Branch26PCRelRelaxable";
   case MoveWide16:
     return "MoveWide16";
   case LDRLiteral19:
@@ -64,8 +69,12 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "ADRLiteral21";
   case Page21:
     return "Page21";
+  case Page21Relaxable:
+    return "Page21Relaxable";
   case PageOffset12:
     return "PageOffset12";
+  case PageOffset12Relaxable:
+    return "PageOffset12Relaxable";
   case GotPageOffset15:
     return "GotPageOffset15";
   case RequestGOTAndTransformToPage21:
@@ -400,6 +409,151 @@ Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G) {
       {cantFail(WrapperFunctionCall::Create<SPSArgList<>>(
            SigningFunctionSym.getAddress())),
        {}});
+
+  return Error::success();
+}
+
+Error optimizeGOTAndStubAccesses(LinkGraph &G) {
+  LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
+  auto Endian = G.getEndianness();
+
+  for (auto *B : G.blocks()) {
+    SmallVector<Edge *> Edges;
+    for (auto &E : B->edges())
+      Edges.push_back(&E);
+    llvm::sort(Edges, [](Edge *E1, Edge *E2) {
+      return E1->getOffset() < E2->getOffset();
+    });
+
+    for (auto *EI = Edges.begin(); EI != Edges.end(); ++EI) {
+      Edge &E = **EI;
+      auto *FixupData = reinterpret_cast<uint8_t *>(
+                            const_cast<char *>(B->getContent().data())) +
+                        E.getOffset();
+
+      // E2, if non-null, is the sole relocation that applies to the instruction
+      // after E.
+      auto *EI2 = EI + 1;
+      Edge *E2 = EI2 != Edges.end() &&
+                         (*EI2)->getOffset() == E.getOffset() + 4 &&
+                         (EI2 + 1 == Edges.end() ||
+                          (*(EI2 + 1))->getOffset() > E.getOffset() + 4)
+                     ? *EI2
+                     : nullptr;
+      uint32_t Instr = endian::read<uint32_t>(FixupData, Endian);
+      uint32_t Instr2 = E2 ? endian::read<uint32_t>(FixupData + 4, Endian) : 0;
+
+      auto Rd1 = Instr & 0x1f;
+      auto Rt2 = Instr2 & 0x1f;
+      auto Rn2 = Instr2 >> 5 & 0x1f;
+
+      // GOT indirection optimization:
+      //   ADRP x0, :got: symbol            Page21Relaxable
+      //   LDR  x1, [x0 :got_lo12: symbol]  PageOffset12Relaxable
+      //     to
+      //   ADRP x0, symbol                  Page21
+      //   ADD  x1, x0, :lo12: symbol       PageOffset12
+      //     or, when the displacement is small
+      //   NOP
+      //   ADR  x1, symbol                  ADRLiteral21
+      if (E2 && E.getKind() == aarch64::Page21Relaxable &&
+          E2->getKind() == aarch64::PageOffset12Relaxable &&
+          (Instr >> 24 & 0b10011111) == 0b10010000 && // ADRP
+          Instr2 >> 22 == 0b1111100101 &&             // LDR (unsigned offset)
+          Rd1 == Rn2 && // ldr source must match adrp dest.
+          &E.getTarget() == &E2->getTarget() && E.getAddend() == 0 &&
+          E.getTarget().isDefined() && E2->getAddend() == 0) {
+
+        auto &GOTBlock = E.getTarget().getBlock();
+        assert(GOTBlock.getSize() == G.getPointerSize() &&
+               "GOT block should be pointer sized");
+        assert(GOTBlock.edges_size() == 1 &&
+               "GOT block should only have one outgoing edge");
+        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
+        orc::ExecutorAddr TargetAddr = GOTTarget.getAddress();
+        orc::ExecutorAddr EdgeAddr = B->getFixupAddress(E);
+
+        int64_t DispADRP = TargetAddr - EdgeAddr;
+        int64_t DispADR = TargetAddr - EdgeAddr + 4;
+        if (isInt<33>(DispADRP)) {
+          LLVM_DEBUG({
+            const char *Replacement =
+                isInt<21>(DispADR) ? "nop/adr" : "adrp/add";
+            dbgs() << "  Replacing GOT load with " << Replacement << ":\n    ";
+            printEdge(dbgs(), *B, E, getEdgeKindName(E.getKind()));
+            dbgs() << "\n    ";
+            printEdge(dbgs(), *B, *E2, getEdgeKindName(E2->getKind()));
+            dbgs() << "\n";
+          });
+
+          E.setTarget(GOTTarget);
+          E2->setTarget(GOTTarget);
+
+          if (isInt<21>(DispADR)) {
+            E.setKind(Edge::Invalid);
+            E2->setKind(aarch64::ADRLiteral21);
+            // Assemble NOP
+            endian::write<uint32_t>(FixupData, 0xd503201f, Endian);
+            // Assemble ADR  x1, symbol
+            endian::write<uint32_t>(FixupData + 4, 0b00010000 << 24 | Rt2,
+                                    Endian);
+          } else {
+            E.setKind(aarch64::Page21);
+            E2->setKind(aarch64::PageOffset12);
+            // Assemble ADD  x1, x0, :lo12: symbol
+            endian::write<uint32_t>(
+                FixupData + 4, 0b1001000100 << 22 | Rn2 << 5 | Rt2, Endian);
+          }
+        }
+
+        continue;
+      }
+
+      if (E.getKind() == aarch64::Branch26PCRelRelaxable) {
+        auto &StubBlock = E.getTarget().getBlock();
+        assert(StubBlock.getSize() == sizeof(PointerJumpStubContent) &&
+               "Stub block should be stub sized");
+        assert(StubBlock.edges_size() >= 1 &&
+               "Stub block should have an outgoing edge");
+
+        auto &StubTarget = StubBlock.edges().begin()->getTarget();
+        Symbol *CallTarget;
+        if (StubTarget.isDefined()) {
+          auto &GOTBlock = StubTarget.getBlock();
+          assert(GOTBlock.getSize() == G.getPointerSize() &&
+                 "GOT block should be pointer sized");
+          assert(GOTBlock.edges_size() == 1 &&
+                 "GOT block should only have one outgoing edge");
+          CallTarget = &GOTBlock.edges().begin()->getTarget();
+        } else {
+          // If the stub target is undefined, we previously optimized it to
+          // point directly to the call target.
+          CallTarget = &StubTarget;
+        }
+
+        orc::ExecutorAddr EdgeAddr = B->getFixupAddress(E);
+        orc::ExecutorAddr TargetAddr = CallTarget->getAddress();
+
+        int64_t Displacement = TargetAddr - EdgeAddr;
+        if (isInt<28>(Displacement) && (Displacement & 0x3) == 0) {
+          LLVM_DEBUG({
+            dbgs() << "  Replaced stub branch with direct branch:\n    ";
+            printEdge(dbgs(), *B, E, getEdgeKindName(E.getKind()));
+            dbgs() << "\n";
+          });
+          E.setKind(aarch64::Branch26PCRel);
+          E.setTarget(*CallTarget);
+        }
+      }
+    }
+
+    for (auto IE = B->edges().begin(); IE != B->edges().end();) {
+      if (IE->getKind() == Edge::Invalid)
+        IE = B->removeEdge(IE);
+      else
+        ++IE;
+    }
+  }
 
   return Error::success();
 }
