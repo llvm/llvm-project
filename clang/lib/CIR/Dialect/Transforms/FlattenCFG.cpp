@@ -453,8 +453,12 @@ public:
     rewriter.setInsertionPointToEnd(entry);
     cir::BrOp::create(rewriter, op.getLoc(), &op.getEntry().front());
 
-    // Branch from condition region to body or exit.
-    auto conditionOp = cast<cir::ConditionOp>(cond->getTerminator());
+    // Branch from condition region to body or exit. The ConditionOp may not
+    // be in the first block of the condition region if a cleanup scope was
+    // already flattened within it, introducing multiple blocks. The
+    // ConditionOp is always the terminator of the last block.
+    auto conditionOp =
+        cast<cir::ConditionOp>(op.getCond().back().getTerminator());
     lowerConditionOp(conditionOp, body, exit, rewriter);
 
     // TODO(cir): Remove the walks below. It visits operations unnecessarily.
@@ -488,10 +492,13 @@ public:
         lowerTerminator(bodyYield, (step ? step : cond), rewriter);
     }
 
-    // Lower mandatory step region yield.
+    // Lower mandatory step region yield. Like the condition region, the
+    // YieldOp may be in the last block rather than the first if a cleanup
+    // scope was already flattened within the step region.
     if (step)
-      lowerTerminator(cast<cir::YieldOp>(step->getTerminator()), cond,
-                      rewriter);
+      lowerTerminator(
+          cast<cir::YieldOp>(op.maybeGetStep()->back().getTerminator()), cond,
+          rewriter);
 
     // Move region contents out of the loop op.
     rewriter.inlineRegionBefore(op.getCond(), exit);
