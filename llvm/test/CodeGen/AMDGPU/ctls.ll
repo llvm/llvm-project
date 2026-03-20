@@ -235,6 +235,250 @@ define amdgpu_ps i32 @ctls_i32_salu(i32 inreg %x) {
   ret i32 %d
 }
 
+define <2 x i32> @ctls_v2i32(<2 x i32> %x) {
+; GFX6-LABEL: ctls_v2i32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
+; GFX6-NEXT:    v_xor_b32_e32 v1, v1, v2
+; GFX6-NEXT:    v_xor_b32_e32 v0, v0, v3
+; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
+; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
+; GFX6-NEXT:    v_min_u32_e32 v1, 32, v1
+; GFX6-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, -1, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: ctls_v2i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_ashrrev_i32_e32 v2, 31, v0
+; GFX11-NEXT:    v_ashrrev_i32_e32 v3, 31, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX11-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_clz_i32_u32_e32 v0, v0
+; GFX11-NEXT:    v_clz_i32_u32_e32 v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX11-NEXT:    v_min_u32_e32 v1, 32, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, -1, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = ashr <2 x i32> %x, <i32 31, i32 31>
+  %b = xor <2 x i32> %x, %a
+  %c = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %b, i1 false)
+  %d = sub <2 x i32> %c, <i32 1, i32 1>
+  ret <2 x i32> %d
+}
+declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1)
+declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1)
+
+define <4 x i32> @ctls_v4i32(<4 x i32> %x) {
+; GFX6-LABEL: ctls_v4i32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ffbh_i32_e32 v0, v0
+; GFX6-NEXT:    v_ffbh_i32_e32 v1, v1
+; GFX6-NEXT:    v_ffbh_i32_e32 v2, v2
+; GFX6-NEXT:    v_ffbh_i32_e32 v3, v3
+; GFX6-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX6-NEXT:    v_min_u32_e32 v1, 32, v1
+; GFX6-NEXT:    v_min_u32_e32 v2, 32, v2
+; GFX6-NEXT:    v_min_u32_e32 v3, 32, v3
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, -1, v1
+; GFX6-NEXT:    v_add_i32_e32 v2, vcc, -1, v2
+; GFX6-NEXT:    v_add_i32_e32 v3, vcc, -1, v3
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: ctls_v4i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cls_i32_e32 v0, v0
+; GFX11-NEXT:    v_cls_i32_e32 v1, v1
+; GFX11-NEXT:    v_cls_i32_e32 v2, v2
+; GFX11-NEXT:    v_cls_i32_e32 v3, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX11-NEXT:    v_min_u32_e32 v1, 32, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_min_u32_e32 v2, 32, v2
+; GFX11-NEXT:    v_min_u32_e32 v3, 32, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, -1, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_add_nc_u32_e32 v2, -1, v2
+; GFX11-NEXT:    v_add_nc_u32_e32 v3, -1, v3
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
+  %b = xor <4 x i32> %x, %a
+  %c = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %b, i1 false)
+  %d = sub <4 x i32> %c, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %d
+}
+
+; umin should be folded away per element per element.
+define <2 x i32> @ctls_v2i32_known_mixed_bits(<2 x i32> %x) {
+; GFX6-LABEL: ctls_v2i32_known_mixed_bits:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_or_b32_e32 v1, 1, v1
+; GFX6-NEXT:    v_or_b32_e32 v0, 1, v0
+; GFX6-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; GFX6-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
+; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, -1, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: ctls_v2i32_known_mixed_bits:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_or_b32_e32 v0, 1, v0
+; GFX11-NEXT:    v_or_b32_e32 v1, 1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GFX11-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_clz_i32_u32_e32 v0, v0
+; GFX11-NEXT:    v_clz_i32_u32_e32 v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, -1, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %cleared = and <2 x i32> %x, <i32 2147483647, i32 2147483647>
+  %mixed = or <2 x i32> %cleared, <i32 1, i32 1>
+  %a = ashr <2 x i32> %mixed, <i32 31, i32 31>
+  %b = xor <2 x i32> %mixed, %a
+  %c = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %b, i1 false)
+  %d = sub <2 x i32> %c, <i32 1, i32 1>
+  ret <2 x i32> %d
+}
+
+; Vector with ctlz_zero_undef.
+define <2 x i32> @ctls_v2i32_zero_undef(<2 x i32> %x) {
+; GFX6-LABEL: ctls_v2i32_zero_undef:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
+; GFX6-NEXT:    v_xor_b32_e32 v1, v1, v2
+; GFX6-NEXT:    v_xor_b32_e32 v0, v0, v3
+; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
+; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, -1, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: ctls_v2i32_zero_undef:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_ashrrev_i32_e32 v2, 31, v0
+; GFX11-NEXT:    v_ashrrev_i32_e32 v3, 31, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX11-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_clz_i32_u32_e32 v0, v0
+; GFX11-NEXT:    v_clz_i32_u32_e32 v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, -1, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = ashr <2 x i32> %x, <i32 31, i32 31>
+  %b = xor <2 x i32> %x, %a
+  %c = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %b, i1 true)
+  %d = sub <2 x i32> %c, <i32 1, i32 1>
+  ret <2 x i32> %d
+}
+
+; Vector commuted XOR operands.
+define <2 x i32> @ctls_v2i32_xor_commuted(<2 x i32> %x) {
+; GFX6-LABEL: ctls_v2i32_xor_commuted:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
+; GFX6-NEXT:    v_xor_b32_e32 v1, v2, v1
+; GFX6-NEXT:    v_xor_b32_e32 v0, v3, v0
+; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
+; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
+; GFX6-NEXT:    v_min_u32_e32 v1, 32, v1
+; GFX6-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, -1, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: ctls_v2i32_xor_commuted:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_ashrrev_i32_e32 v2, 31, v0
+; GFX11-NEXT:    v_ashrrev_i32_e32 v3, 31, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_xor_b32_e32 v0, v2, v0
+; GFX11-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_clz_i32_u32_e32 v0, v0
+; GFX11-NEXT:    v_clz_i32_u32_e32 v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX11-NEXT:    v_min_u32_e32 v1, 32, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, -1, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = ashr <2 x i32> %x, <i32 31, i32 31>
+  %b = xor <2 x i32> %a, %x
+  %c = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %b, i1 false)
+  %d = sub <2 x i32> %c, <i32 1, i32 1>
+  ret <2 x i32> %d
+}
+
+; Vector known positive: umin should NOT be folded.
+define <2 x i32> @ctls_v2i32_known_positive(<2 x i32> %x) {
+; GFX6-LABEL: ctls_v2i32_known_positive:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; GFX6-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GFX6-NEXT:    v_ffbh_u32_e32 v1, v1
+; GFX6-NEXT:    v_ffbh_u32_e32 v0, v0
+; GFX6-NEXT:    v_min_u32_e32 v1, 32, v1
+; GFX6-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, -1, v1
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: ctls_v2i32_known_positive:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GFX11-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_clz_i32_u32_e32 v0, v0
+; GFX11-NEXT:    v_clz_i32_u32_e32 v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_min_u32_e32 v0, 32, v0
+; GFX11-NEXT:    v_min_u32_e32 v1, 32, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, -1, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v1, -1, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %pos = and <2 x i32> %x, <i32 2147483647, i32 2147483647>
+  %a = ashr <2 x i32> %pos, <i32 31, i32 31>
+  %b = xor <2 x i32> %pos, %a
+  %c = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %b, i1 false)
+  %d = sub <2 x i32> %c, <i32 1, i32 1>
+  ret <2 x i32> %d
+}
+
 ; @llvm.amdgcn.sffbh must still produce raw hardware result.
 define i32 @sffbh_intrinsic(i32 %x) {
 ; GFX6-LABEL: sffbh_intrinsic:

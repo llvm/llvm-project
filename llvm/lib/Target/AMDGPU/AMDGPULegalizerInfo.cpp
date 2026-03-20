@@ -1385,10 +1385,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(1, 32);
 
   getActionDefinitionsBuilder(G_CTLS)
+      .customFor({{S32, S32}})
       .scalarize(0)
       .clampScalar(0, S32, S32)
-      .clampScalar(1, S32, S32)
-      .custom();
+      .clampScalar(1, S32, S32);
 
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
