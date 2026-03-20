@@ -273,12 +273,13 @@ constexpr FeatureBitset FeaturesC86_4G_M4 =
 
 static constexpr FeatureBitset FeaturesC86_4G_M6 = FeaturesC86_4G_M4;
 
-static constexpr FeatureBitset FeaturesC86_4G_M7 = FeaturesC86_4G_M4 |
-    FeatureAVX512BF16 | FeatureAVX512BITALG | FeatureAVX512BW | FeatureAVX512CD |
-    FeatureAVX512DQ | FeatureAVX512F | FeatureAVX512IFMA | FeatureAVX512VBMI |
-    FeatureAVX512VBMI2 | FeatureAVX512VL | FeatureAVX512VNNI |
-    FeatureAVX512VPOPCNTDQ | FeatureCLWB | FeatureCMOV | FeatureGFNI |
-    FeatureVAES | FeatureVPCLMULQDQ | FeatureWBNOINVD;
+static constexpr FeatureBitset FeaturesC86_4G_M7 =
+    FeaturesC86_4G_M4 | FeatureAVX512BF16 | FeatureAVX512BITALG |
+    FeatureAVX512BW | FeatureAVX512CD | FeatureAVX512DQ | FeatureAVX512F |
+    FeatureAVX512IFMA | FeatureAVX512VBMI | FeatureAVX512VBMI2 |
+    FeatureAVX512VL | FeatureAVX512VNNI | FeatureAVX512VPOPCNTDQ | FeatureCLWB |
+    FeatureCMOV | FeatureGFNI | FeatureVAES | FeatureVPCLMULQDQ |
+    FeatureWBNOINVD;
 
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:

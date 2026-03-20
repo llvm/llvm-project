@@ -1359,10 +1359,11 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   return CPU;
 }
 
-static StringRef
-getHygonProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                              const unsigned *Features,
-                              unsigned *Type, unsigned *Subtype) {
+static StringRef getHygonProcessorTypeAndSubtype(unsigned Family,
+                                                 unsigned Model,
+                                                 const unsigned *Features,
+                                                 unsigned *Type,
+                                                 unsigned *Subtype) {
   StringRef CPU;
 
   switch (Family) {
@@ -1556,7 +1557,7 @@ StringRef sys::getHostCPUName() {
                                         &Subtype);
   } else if (Vendor == VendorSignatures::HYGON_GENUINE) {
     CPU = getHygonProcessorTypeAndSubtype(Family, Model, Features, &Type,
-                                        &Subtype);
+                                          &Subtype);
   }
 
   if (!CPU.empty())

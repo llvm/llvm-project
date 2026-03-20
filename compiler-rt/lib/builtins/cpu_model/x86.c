@@ -880,8 +880,8 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
 
 static const char *
 getHygonProcessorTypeAndSubtype(unsigned Family, unsigned Model,
-                              const unsigned *Features,
-                              struct __processor_model *CpuModel) {
+                                const unsigned *Features,
+                                struct __processor_model *CpuModel) {
   const char *CPU = 0;
 
   enum ProcessorTypes Type = CPU_TYPE_MAX;
