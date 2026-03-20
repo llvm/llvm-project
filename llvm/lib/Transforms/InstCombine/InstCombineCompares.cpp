@@ -75,7 +75,7 @@ static bool subWithOverflow(APInt &Result, const APInt &In1, const APInt &In2,
 /// branch on sign bit comparison.
 static bool hasBranchUse(ICmpInst &I) {
   for (auto *U : I.users())
-    if (isa<BranchInst>(U))
+    if (isa<CondBrInst>(U))
       return true;
   return false;
 }
@@ -1419,7 +1419,7 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     return nullptr;
   };
 
-  for (BranchInst *BI : DC.conditionsFor(X)) {
+  for (CondBrInst *BI : DC.conditionsFor(X)) {
     CmpPredicate DomPred;
     const APInt *DomC;
     if (!match(BI->getCondition(),
@@ -3086,37 +3086,14 @@ static Value *createLogicFromTable(const std::bitset<4> &Table, Value *Op0,
   return nullptr;
 }
 
-/// Try to match V as a boolean-controlled value: either
-///   select i1 Cond, C_true, C_false
-///   zext i1 Cond  (equivalent to select i1 Cond, 1, 0)
-///   sext i1 Cond  (equivalent to select i1 Cond, -1, 0)
-static bool matchBooleanMap(Value *V, Value *&Cond, Constant *&TrueC,
-                            Constant *&FalseC) {
-  if (match(V, m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
-    return true;
-
-  Type *Ty = V->getType();
-  if (match(V, m_ZExt(m_Value(Cond))) &&
-      Cond->getType()->isIntOrIntVectorTy(1)) {
-    TrueC = ConstantInt::get(Ty, 1);
-    FalseC = ConstantInt::get(Ty, 0);
-    return true;
-  }
-  if (match(V, m_SExt(m_Value(Cond))) &&
-      Cond->getType()->isIntOrIntVectorTy(1)) {
-    FalseC = ConstantInt::get(Ty, 0);
-    TrueC = Constant::getAllOnesValue(Ty);
-    return true;
-  }
-  return false;
-}
-
 Instruction *InstCombinerImpl::foldICmpBinOpWithConstantViaTruthTable(
     ICmpInst &Cmp, BinaryOperator *BO, const APInt &C) {
   Value *A, *B;
   Constant *C1, *C2, *C3, *C4;
-  if (!matchBooleanMap(BO->getOperand(0), A, C1, C2) ||
-      !matchBooleanMap(BO->getOperand(1), B, C3, C4) ||
+  if (!match(BO->getOperand(0),
+             m_SelectLike(m_Value(A), m_Constant(C1), m_Constant(C2))) ||
+      !match(BO->getOperand(1),
+             m_SelectLike(m_Value(B), m_Constant(C3), m_Constant(C4))) ||
       Cmp.getType() != A->getType() || Cmp.getType() != B->getType())
     return nullptr;
 
@@ -6859,8 +6836,8 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<BranchInst>(BB->getTerminator());
-  if (!BI || BI->getNumSuccessors() != 2)
+  auto *BI = dyn_cast_or_null<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());
   if (!IC || (IC->getOperand(0) != SI && IC->getOperand(1) != SI))

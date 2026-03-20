@@ -92,7 +92,7 @@ void HexagonHazardRecognizer::AdvanceCycle() {
 /// store doesn't have resources to fit in the packet (but the .new store may
 /// have resources). We attempt to schedule the store as soon as possible to
 /// help packetize the two instructions together.
-bool HexagonHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
+bool HexagonHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
   if (PrefVectorStoreNew != nullptr && PrefVectorStoreNew != SU)
     return true;
   if (UsesLoad && SU->isInstr() && SU->getInstr()->mayLoad())

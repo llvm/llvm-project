@@ -386,9 +386,9 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       Diag(Path[0].getLoc(), diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition);
-      else if (OptionalFileEntryRef FE = M->getASTFile())
+      else if (const ModuleFileName *FileName = M->getASTFileName())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition_from_ast_file)
-            << FE->getName();
+            << *FileName;
       Mod = M;
       break;
     }
@@ -942,6 +942,18 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
       S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
       D->setInvalidDecl();
       return false;
+    }
+
+    if (isa<FunctionDecl>(D)) {
+      FunctionDecl *FD = cast<FunctionDecl>(D);
+      for (const ParmVarDecl *PVD : FD->parameters()) {
+        if (PVD->hasAttr<HLSLGroupSharedAddressSpaceAttr>()) {
+          S.Diag(D->getBeginLoc(), diag::err_hlsl_attr_incompatible)
+              << "'export'" << "'groupshared' parameter";
+          D->setInvalidDecl();
+          return false;
+        }
+      }
     }
   }
 

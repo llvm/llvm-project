@@ -142,10 +142,11 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     LazyBool using_sc;
     LazyBool private_sc;
     FileSpec sc_path;
+    std::optional<uint64_t> size;
     SymbolSharedCacheUse sc_mode = ModuleList::GetGlobalModuleListProperties()
                                        .GetSharedCacheBinaryLoading();
     if (GetSharedCacheInformation(sc_base_addr, sc_uuid, using_sc, private_sc,
-                                  sc_path) &&
+                                  sc_path, size) &&
         sc_uuid) {
       if (module_spec.GetUUID())
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
@@ -655,7 +656,7 @@ std::optional<lldb_private::Address> DynamicLoaderDarwin::GetStartAddress() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
   auto log_err = [log](llvm::StringLiteral err_msg) -> std::nullopt_t {
-    LLDB_LOGV(log, "{}", err_msg);
+    LLDB_LOG_VERBOSE(log, "{}", err_msg);
     return std::nullopt;
   };
 
@@ -846,17 +847,14 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
 // Dump a Segment to the file handle provided.
 void DynamicLoaderDarwin::Segment::PutToLog(Log *log,
                                             lldb::addr_t slide) const {
-  if (log) {
-    if (slide == 0)
-      LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
-                name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
-    else
-      LLDB_LOGF(log,
-                "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64
-                ") slide = 0x%" PRIx64,
-                name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize,
-                slide);
-  }
+  if (slide == 0)
+    LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
+              name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
+  else
+    LLDB_LOGF(
+        log,
+        "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ") slide = 0x%" PRIx64,
+        name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize, slide);
 }
 
 lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {

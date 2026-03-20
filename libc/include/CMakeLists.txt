@@ -318,6 +318,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
     .llvm-libc-macros.error_number_macros
+    .llvm-libc-types.errno_t
 )
 
 add_header_macro(
@@ -359,6 +360,7 @@ add_header_macro(
   ../libc/include/stdio.yaml
   stdio.h
   DEPENDS
+    .llvm-libc-macros._LIBC_MODULAR_FORMAT_PRINTF
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdio_macros
@@ -498,6 +500,7 @@ add_header_macro(
     .llvm-libc-types.Elf32_Versym
     .llvm-libc-types.Elf32_Word
     .llvm-libc-types.Elf32_Xword
+    .llvm-libc-types.Elf32_auxv_t
     .llvm-libc-types.Elf64_Addr
     .llvm-libc-types.Elf64_Chdr
     .llvm-libc-types.Elf64_Dyn
@@ -520,6 +523,7 @@ add_header_macro(
     .llvm-libc-types.Elf64_Versym
     .llvm-libc-types.Elf64_Word
     .llvm-libc-types.Elf64_Xword
+    .llvm-libc-types.Elf64_auxv_t
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys
@@ -655,6 +659,21 @@ add_header_macro(
     .llvm-libc-types.time_t
     .llvm-libc-types.struct_timespec
     .llvm-libc-types.struct_timeval
+)
+
+add_header_macro(
+  sys_sem
+  ../libc/include/sys/sem.yaml
+  sys/sem.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_sem_macros
+    .llvm-libc-types.key_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_ipc_perm
+    .llvm-libc-types.struct_semid_ds
+    .llvm-libc-types.struct_sembuf
+    .llvm-libc-types.struct_seminfo
 )
 
 add_header_macro(

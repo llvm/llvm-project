@@ -149,15 +149,18 @@ struct VPlanTransforms {
       VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
 
-  /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
-                                                 bool HasUncountableExit);
+  /// Update \p Plan to account for all early exits. If \p Style is not
+  /// NoUncountableExit, handles uncountable early exits and checks that all
+  /// loads are dereferenceable. Returns false if a non-dereferenceable load is
+  /// found.
+  LLVM_ABI_FOR_TEST static bool
+  handleEarlyExits(VPlan &Plan, UncountableExitStyle Style, Loop *TheLoop,
+                   PredicatedScalarEvolution &PSE, DominatorTree &DT,
+                   AssumptionCache *AC);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
-  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan,
-                                               bool RequiresScalarEpilogueCheck,
-                                               bool TailFolded);
+  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
   // Create a check to \p Plan to see if the vector loop should be executed.
   static void addMinimumIterationCheck(
@@ -238,11 +241,6 @@ struct VPlanTransforms {
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
-
-  /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
-  /// is known to be <= VF, replacing them with the AVL directly.
-  static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
-                               PredicatedScalarEvolution &PSE);
 
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
@@ -326,7 +324,8 @@ struct VPlanTransforms {
   /// that determines which exit to take based on lane-by-lane semantics.
   static void handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                           VPBasicBlock *LatchVPBB,
-                                          VPBasicBlock *MiddleVPBB);
+                                          VPBasicBlock *MiddleVPBB,
+                                          UncountableExitStyle Style);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
@@ -406,10 +405,12 @@ struct VPlanTransforms {
                                      PredicatedScalarEvolution &PSE);
 
   /// Materialize vector trip count computations to a set of VPInstructions.
+  /// \p Step is used as the step value for the trip count computation.
   static void materializeVectorTripCount(VPlan &Plan,
                                          VPBasicBlock *VectorPHVPBB,
                                          bool TailByMasking,
-                                         bool RequiresScalarEpilogue);
+                                         bool RequiresScalarEpilogue,
+                                         VPValue *Step);
 
   /// Materialize the backedge-taken count to be computed explicitly using
   /// VPInstructions.

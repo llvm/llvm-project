@@ -28,44 +28,35 @@ enum ScopeKind : unsigned {
   eScopeKindRegisters
 };
 
-/// Creates a `protocol::Scope` struct.
-///
-/// \param[in] kind
-///     The kind of scope to create
-///
-/// \param[in] variablesReference
-///     The value to place into the "variablesReference" key
-///
-/// \param[in] expensive
-///     The value to place into the "expensive" key
-///
-/// \return
-///     A `protocol::Scope`
-protocol::Scope CreateScope(ScopeKind kind, var_ref_t variablesReference,
-                            bool expensive);
-
 /// An Interface to get or find specific variables by name.
 class VariableStore {
 public:
-  explicit VariableStore() = default;
+  explicit VariableStore(VariableReferenceStorage &storage, bool is_permanent,
+                         bool is_internal)
+      : m_storage(storage), m_is_permanent(is_permanent),
+        m_is_internal(is_internal) {}
   virtual ~VariableStore() = default;
 
   virtual llvm::Expected<std::vector<protocol::Variable>>
-  GetVariables(VariableReferenceStorage &storage,
-               const protocol::Configuration &config,
-               const protocol::VariablesArguments &args) = 0;
+  GetVariables(const protocol::VariablesArguments &args) = 0;
   virtual lldb::SBValue FindVariable(llvm::StringRef name) = 0;
-  virtual lldb::SBValue GetVariable() const = 0;
+  virtual lldb::SBValue GetVariable() const { return {}; }
 
   // Not copyable.
   VariableStore(const VariableStore &) = delete;
   VariableStore &operator=(const VariableStore &) = delete;
-  VariableStore(VariableStore &&) = default;
-  VariableStore &operator=(VariableStore &&) = default;
+  VariableStore(VariableStore &&) = delete;
+  VariableStore &operator=(VariableStore &&) = delete;
+
+protected:
+  VariableReferenceStorage &m_storage;
+  bool m_is_permanent;
+  bool m_is_internal;
 };
 
 struct VariableReferenceStorage {
-  explicit VariableReferenceStorage(Log &log) : log(log) {}
+  explicit VariableReferenceStorage(Log &log, protocol::Configuration &config)
+      : log(log), config(config) {}
   /// \return a new variableReference.
   /// Specify is_permanent as true for variable that should persist entire
   /// debug session.
@@ -78,7 +69,8 @@ struct VariableReferenceStorage {
 
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
-  var_ref_t Insert(const lldb::SBValue &variable, bool is_permanent);
+  var_ref_t Insert(const lldb::SBValue &variable, bool is_permanent,
+                   bool is_internal);
 
   /// Insert a value list. Used to store references to lldb repl command
   /// outputs.
@@ -93,6 +85,7 @@ struct VariableReferenceStorage {
 
   VariableStore *GetVariableStore(var_ref_t var_ref);
   Log &log;
+  protocol::Configuration &config;
 
 private:
   /// Template class for managing pools of variable stores.

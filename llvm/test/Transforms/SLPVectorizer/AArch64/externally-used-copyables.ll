@@ -16,10 +16,10 @@ define void @test(i64 %0, i64 %1, i64 %2, i64 %3, i64 %.sroa.3341.0.copyload, i6
 ; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i64> <i64 poison, i64 1, i64 poison, i64 1>, <4 x i64> [[TMP16]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <4 x i64> [[TMP22]], <4 x i64> <i64 -1, i64 poison, i64 -8, i64 poison>, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub <4 x i64> [[TMP22]], [[TMP33]]
+; CHECK-NEXT:    [[TMP21:%.*]] = or i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = shl i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = or i64 [[TMP18]], [[TMP0]]
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x i64> [[TMP13]], i64 [[TMP19]], i32 1
-; CHECK-NEXT:    [[TMP23:%.*]] = or <2 x i64> [[TMP29]], splat (i64 1)
+; CHECK-NEXT:    [[TMP23:%.*]] = or i64 [[TMP19]], 1
 ; CHECK-NEXT:    [[TMP37:%.*]] = shufflevector <4 x i64> [[TMP10]], <4 x i64> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <4 x i64> [[TMP10]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <8 x i64> [[TMP24]], <8 x i64> <i64 poison, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -34,11 +34,11 @@ define void @test(i64 %0, i64 %1, i64 %2, i64 %3, i64 %.sroa.3341.0.copyload, i6
 ; CHECK-NEXT:    [[TMP85:%.*]] = shufflevector <2 x i64> [[TMP83]], <2 x i64> [[TMP84]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP90:%.*]] = shufflevector <2 x i64> [[TMP85]], <2 x i64> poison, <64 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <4 x i64> [[TMP20]], <4 x i64> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 3>
-; CHECK-NEXT:    [[TMP81:%.*]] = shufflevector <2 x i64> [[TMP23]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP82:%.*]] = shufflevector <4 x i64> [[TMP32]], <4 x i64> [[TMP81]], <4 x i32> <i32 0, i32 4, i32 5, i32 3>
 ; CHECK-NEXT:    br label %[[DOTLR_PH1977_US:.*]]
 ; CHECK:       [[_LR_PH1977_US:.*:]]
 ; CHECK-NEXT:    [[INDVAR37888:%.*]] = phi i64 [ 0, [[DOTLR_PH_PREHEADER:%.*]] ], [ 1, %[[DOTLR_PH1977_US]] ]
+; CHECK-NEXT:    [[TMP81:%.*]] = insertelement <4 x i64> [[TMP32]], i64 [[TMP21]], i32 1
+; CHECK-NEXT:    [[TMP82:%.*]] = insertelement <4 x i64> [[TMP81]], i64 [[TMP23]], i32 2
 ; CHECK-NEXT:    [[TMP34:%.*]] = mul <4 x i64> [[TMP82]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = shufflevector <4 x i64> [[TMP34]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 3, i32 3>
 ; CHECK-NEXT:    [[TMP36:%.*]] = mul <4 x i64> [[TMP20]], [[TMP10]]

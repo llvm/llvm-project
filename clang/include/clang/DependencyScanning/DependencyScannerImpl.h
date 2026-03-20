@@ -11,12 +11,9 @@
 
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
-#include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
@@ -97,7 +94,8 @@ void canonicalizeDefines(PreprocessorOptions &PPOpts);
 /// Creates a CompilerInvocation suitable for the dependency scanner.
 std::shared_ptr<CompilerInvocation>
 createScanCompilerInvocation(const CompilerInvocation &Invocation,
-                             const DependencyScanningService &Service);
+                             const DependencyScanningService &Service,
+                             DependencyActionController &Controller);
 
 /// Creates dependency output options to be reported to the dependency consumer,
 /// deducing missing information if necessary.
