@@ -5150,8 +5150,8 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 void SelectionDAGBuilder::visitSpeculativeLoad(const CallInst &I) {
   SDLoc sdl = getCurSDLoc();
   Value *PtrOperand = I.getArgOperand(0);
-  // The second argument (num_read_bytes) is IR-level
-  // semantics only; it is not needed at codegen.
+  // The remaining arguments (num_accessible_bytes or oracle function + args)
+  // are IR-level semantics only; they are not needed at codegen.
   SDValue Ptr = getValue(PtrOperand);
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();

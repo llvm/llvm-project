@@ -28345,7 +28345,7 @@ Speculative Load Intrinsics
 LLVM provides intrinsics for speculatively loading memory that may be
 out-of-bounds. These intrinsics enable optimizations like early-exit loop
 vectorization where the vectorized loop may read beyond the end of an array,
-provided the access is guaranteed to not trap by target-specific checks.
+provided the access is guaranteed be valid by target-specific checks.
 
 .. _int_speculative_load:
 
@@ -28358,9 +28358,12 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x float>  @llvm.speculative.load.v4f32.p0(ptr <ptr>, i64 <num_read_bytes>)
-      declare <8 x i32>    @llvm.speculative.load.v8i32.p0(ptr <ptr>, i64 <num_read_bytes>)
-      declare i64          @llvm.speculative.load.i64.p0(ptr <ptr>, i64 <num_read_bytes>)
+      ; Direct form: number of accessible bytes given as i64
+      declare <4 x float>  @llvm.speculative.load.v4f32.p0(ptr <ptr>, i64 <num_accessible_bytes>)
+      declare <8 x i32>    @llvm.speculative.load.v8i32.p0(ptr <ptr>, i64 <num_accessible_bytes>)
+
+      ; Oracle form: accessible bytes computed by calling oracle_fn(args...)
+      declare <4 x float>  @llvm.speculative.load.v4f32.p0(ptr <ptr>, ptr <oracle_fn>, ...)
 
 Overview:
 """""""""
@@ -28369,34 +28372,35 @@ The '``llvm.speculative.load``' intrinsic loads a value from memory. Unlike a
 regular load, the memory access may extend beyond the bounds of the allocated
 object, provided the pointer has been verified by
 :ref:`llvm.can.load.speculatively <int_can_load_speculatively>` to ensure the
-access cannot fault.
+access is valid.
 
 Arguments:
 """"""""""
 
-The first argument is a pointer to the memory location to load from. The second
-argument is an ``i64`` specifying the number of bytes starting from ``ptr``
-that the intrinsic will read. The return type must have a power-of-2 size in
-bytes.
+The first argument is a pointer to the memory location to load from. The return
+type must be a vector type with a power-of-2 size in bytes. The remaining
+arguments determine the *number of accessible bytes* starting from ``ptr``,
+denoted ``N`` below.
+
+In the **direct form**, the second argument is an ``i64`` specifying ``N``
+directly. In the **oracle form**, the second argument must be a direct
+reference to a function returning ``i64`` that may only read memory through its
+arguments (indirect function pointers are not permitted); the remaining
+arguments are forwarded to it, and the return value is ``N``.
 
 Semantics:
 """"""""""
 
-The '``llvm.speculative.load``' intrinsic performs a load that may access
-memory beyond what is readable through the pointer. It must be used in
-combination with :ref:`llvm.can.load.speculatively <int_can_load_speculatively>`
-to ensure the access can be performed speculatively.
+The intrinsic reads ``N`` bytes starting from ``ptr`` and returns the stored
+values for those bytes. These bytes must lie within the bounds of an allocated
+object that ``ptr`` is :ref:`based <pointeraliasing>` on.
 
-The intrinsic reads ``num_read_bytes`` bytes starting from ``ptr`` and returns
-the stored values for those bytes. The read bytes must lie within the bounds
-of an allocated object that ``ptr`` is :ref:`based <pointeraliasing>` on.
+Bytes at offsets in ``[N, size of the return type)`` are ``poison`` and are not
+considered accessed for the purposes of data races or ``noalias`` constraints.
 
-Bytes at offsets ``>= num_read_bytes`` (up to the size of the return type)
-are ``poison`` and are not considered accessed for the purpose of data races
-or ``noalias`` constraints.
-
-The behavior is undefined if this intrinsic is used to load from a pointer
-for which ``llvm.can.load.speculatively`` returns false.
+The behavior is undefined if the speculative load accesses memory that would
+fault (i.e., the oracle or ``llvm.can.load.speculatively`` would indicate the
+access is not safe).
 
 .. _int_can_load_speculatively:
 
