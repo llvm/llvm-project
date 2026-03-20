@@ -54,11 +54,7 @@ public:
       mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
       mlir::NamedAttribute attribute,
       mlir::LLVM::ModuleTranslation &moduleTranslation) const override {
-    if (auto func = dyn_cast<mlir::LLVM::LLVMFuncOp>(op)) {
-      if (mlir::failed(
-              amendFunction(func, instructions, attribute, moduleTranslation)))
-        return mlir::failure();
-    } else if (auto mod = dyn_cast<mlir::ModuleOp>(op)) {
+    if (auto mod = dyn_cast<mlir::ModuleOp>(op)) {
       if (mlir::failed(amendModule(mod, attribute, moduleTranslation)))
         return mlir::failure();
     }
@@ -66,16 +62,6 @@ public:
   }
 
 private:
-  // Translate CIR's extra function attributes to LLVM's function attributes.
-  mlir::LogicalResult
-  amendFunction(mlir::LLVM::LLVMFuncOp func,
-                llvm::ArrayRef<llvm::Instruction *> instructions,
-                mlir::NamedAttribute attribute,
-                mlir::LLVM::ModuleTranslation &moduleTranslation) const {
-    // TODO(CIR): process extra function attributes.
-    return mlir::success();
-  }
-
   // Translate CIR's module attributes to LLVM's module metadata
   mlir::LogicalResult
   amendModule(mlir::ModuleOp mod, mlir::NamedAttribute attribute,
