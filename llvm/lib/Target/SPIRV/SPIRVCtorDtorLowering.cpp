@@ -26,8 +26,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/IPO/OpenMPOpt.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
@@ -248,7 +248,7 @@ PreservedAnalyses SPIRVCtorDtorLoweringPass::run(Module &M,
 
 char SPIRVCtorDtorLoweringLegacy::ID = 0;
 INITIALIZE_PASS(SPIRVCtorDtorLoweringLegacy, DEBUG_TYPE,
-                "Lower ctors and dtors for SPIR-V", false, false)
+                "SPIRV lower ctors and dtors", false, false)
 
 ModulePass *llvm::createSPIRVCtorDtorLoweringLegacyPass() {
   return new SPIRVCtorDtorLoweringLegacy();

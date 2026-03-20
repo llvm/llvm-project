@@ -34,6 +34,7 @@
 ; SPIRV-O0-NEXT:    Expand variadic functions
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIR-V Regularizer
+; SPIRV-O0-NEXT:    SPIRV lower ctors and dtors
 ; SPIRV-O0-NEXT:    SPIRV prepare functions
 ; SPIRV-O0-NEXT:    SPIRV prepare global variables
 ; SPIRV-O0-NEXT:    FunctionPass Manager
@@ -140,6 +141,7 @@
 ; SPIRV-Opt-NEXT:    Expand variadic functions
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIR-V Regularizer
+; SPIRV-Opt-NEXT:    SPIRV lower ctors and dtors
 ; SPIRV-Opt-NEXT:    SPIRV prepare functions
 ; SPIRV-Opt-NEXT:    SPIRV prepare global variables
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
