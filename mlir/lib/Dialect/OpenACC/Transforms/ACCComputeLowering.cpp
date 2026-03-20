@@ -25,7 +25,9 @@
 // 1. Compute constructs: acc.parallel, acc.serial, and acc.kernels are
 //    replaced by acc.kernel_environment containing a single acc.compute_region.
 //    Launch arguments (num_gangs, num_workers, vector_length) become
-//    acc.par_width ops and are passed as compute_region launch operands.
+//    acc.par_width ops (each result is `index`) and are passed as
+//    compute_region launch operands (still required to be acc.par_width
+//    results by the compute_region verifier).
 //
 // 2. acc.loop: Converted according to context and attributes:
 //    - Unstructured: body wrapped in scf.execute_region.
