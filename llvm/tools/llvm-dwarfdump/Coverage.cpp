@@ -107,11 +107,10 @@ computeVariableCoverage(DWARFDie VariableDIE,
         Index = IndexIt->second;
       } else {
         std::string Name;
-        assert(LineTable->getFileNameByIndex(
-                   L.first, "",
-                   DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath,
-                   Name) &&
-               "File index should always be valid");
+        [[maybe_unused]] bool ValidIndex = LineTable->getFileNameByIndex(
+            L.first, "",
+            DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath, Name);
+        assert(ValidIndex && "File index should always be valid");
 
         auto NameIt = FileNameMap.find(Name);
         if (NameIt != FileNameMap.end()) {
