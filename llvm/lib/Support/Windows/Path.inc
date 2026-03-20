@@ -341,34 +341,34 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting,
 std::error_code create_symlink(const Twine &to, const Twine &from) {
   // The Win32 API normally allows forward slashes, but under some cases it does
   // not correctly handle them in the target of a symlink.
-  SmallString<128> to_str;
-  llvm::sys::path::native(to, to_str);
+  SmallString<128> ToStr;
+  llvm::sys::path::native(to, ToStr);
 
-  SmallVector<wchar_t, 128> wide_from;
-  SmallVector<wchar_t, 128> wide_to;
-  if (std::error_code ec = widenPath(from, wide_from))
+  SmallVector<wchar_t, 128> WideFrom;
+  SmallVector<wchar_t, 128> WideTo;
+  if (std::error_code ec = widenPath(from, WideFrom))
     return ec;
-  if (std::error_code ec = widenPath(to, wide_to))
+  if (std::error_code ec = widenPath(to, WideTo))
     return ec;
 
   // Windows requires SYMBOLIC_LINK_FLAG_DIRECTORY for directory symlinks, so
   // check first what type the target is. Relative symlink targets are relative
   // to the link's parent directory, not the CWD, so resolve accordingly before
   // checking attributes.
-  SmallVector<wchar_t, 128> wide_resolved;
-  const SmallVectorImpl<wchar_t> *attr_path = &wide_to;
+  SmallVector<wchar_t, 128> WideResolved;
+  const SmallVectorImpl<wchar_t> *AttrPath = &WideTo;
 
-  if (sys::path::is_relative(to_str)) {
-    SmallString<128> from_str;
-    from.toVector(from_str);
-    SmallString<128> resolved = sys::path::parent_path(from_str);
-    sys::path::append(resolved, to_str);
-    if (std::error_code ec = widenPath(resolved, wide_resolved))
+  if (sys::path::is_relative(ToStr)) {
+    SmallString<128> FromStr;
+    from.toVector(FromStr);
+    SmallString<128> Resolved = sys::path::parent_path(FromStr);
+    sys::path::append(Resolved, ToStr);
+    if (std::error_code ec = widenPath(Resolved, WideResolved))
       return ec;
-    attr_path = &wide_resolved;
+    AttrPath = &WideResolved;
   }
   DWORD Flags = 0;
-  DWORD Attr = ::GetFileAttributesW(attr_path->begin());
+  DWORD Attr = ::GetFileAttributesW(AttrPath->begin());
   if (Attr == INVALID_FILE_ATTRIBUTES) {
     DWORD Err = ::GetLastError();
     if (Err != ERROR_FILE_NOT_FOUND && Err != ERROR_PATH_NOT_FOUND)
@@ -381,7 +381,7 @@ std::error_code create_symlink(const Twine &to, const Twine &from) {
 
   // Try with SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE first, which works
   // in non-UWP programs and when Developer Mode is enabled on Windows 10+.
-  if (::CreateSymbolicLinkW(wide_from.begin(), wide_to.begin(),
+  if (::CreateSymbolicLinkW(WideFrom.begin(), WideTo.begin(),
                             Flags |
                                 SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
     return std::error_code();
@@ -389,7 +389,7 @@ std::error_code create_symlink(const Twine &to, const Twine &from) {
   // If the flag is not recognized (older Windows), retry without it.
   DWORD Err = ::GetLastError();
   if (Err == ERROR_INVALID_PARAMETER) {
-    if (::CreateSymbolicLinkW(wide_from.begin(), wide_to.begin(), Flags))
+    if (::CreateSymbolicLinkW(WideFrom.begin(), WideTo.begin(), Flags))
       return std::error_code();
     Err = ::GetLastError();
   }
