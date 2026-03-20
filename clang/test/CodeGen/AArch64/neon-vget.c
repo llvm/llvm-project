@@ -6,34 +6,6 @@
 
 #include <arm_neon.h>
 
-// CHECK-LABEL: define{{.*}} float @test_vget_lane_f16(<4 x half> noundef %a) #0 {
-// CHECK:   [[__REINT_242:%.*]] = alloca <4 x half>, align 8
-// CHECK:   [[__REINT1_242:%.*]] = alloca i16, align 2
-// CHECK:   store <4 x half> %a, ptr [[__REINT_242]], align 8
-// CHECK:   [[TMP1:%.*]] = load <4 x i16>, ptr [[__REINT_242]], align 8
-// CHECK:   [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP1]], i32 1
-// CHECK:   store i16 [[VGET_LANE]], ptr [[__REINT1_242]], align 2
-// CHECK:   [[TMP5:%.*]] = load half, ptr [[__REINT1_242]], align 2
-// CHECK:   [[CONV:%.*]] = fpext half [[TMP5]] to float
-// CHECK:   ret float [[CONV]]
-float32_t test_vget_lane_f16(float16x4_t a) {
-  return vget_lane_f16(a, 1);
-}
-
-// CHECK-LABEL: define{{.*}} float @test_vgetq_lane_f16(<8 x half> noundef %a) #0 {
-// CHECK:   [[__REINT_244:%.*]] = alloca <8 x half>, align 16
-// CHECK:   [[__REINT1_244:%.*]] = alloca i16, align 2
-// CHECK:   store <8 x half> %a, ptr [[__REINT_244]], align 16
-// CHECK:   [[TMP1:%.*]] = load <8 x i16>, ptr [[__REINT_244]], align 16
-// CHECK:   [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP1]], i32 3
-// CHECK:   store i16 [[VGETQ_LANE]], ptr [[__REINT1_244]], align 2
-// CHECK:   [[TMP5:%.*]] = load half, ptr [[__REINT1_244]], align 2
-// CHECK:   [[CONV:%.*]] = fpext half [[TMP5]] to float
-// CHECK:   ret float [[CONV]]
-float32_t test_vgetq_lane_f16(float16x8_t a) {
-  return vgetq_lane_f16(a, 3);
-}
-
 // CHECK-LABEL: define{{.*}} <8 x i8> @test_vset_lane_u8(i8 noundef %a, <8 x i8> noundef %b) #0 {
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <8 x i8> %b, i8 %a, i32 7
 // CHECK:   ret <8 x i8> [[VSET_LANE]]

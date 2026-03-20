@@ -12,11 +12,6 @@
 //  * clang/test/CodeGen/AArch64/poly64.c
 // The main difference is the use of RUN lines that enable ClangIR lowering;
 // therefore only builtins currently supported by ClangIR are tested here.
-//
-// The half-precision extract variants are intentionally omitted here because
-// they lower through the vduph_* builtin IDs, which are still unsupported in
-// CIR for this patch.
-//
 //=============================================================================
 
 #include <arm_neon.h>
@@ -100,6 +95,22 @@ poly16_t test_vget_lane_p16(poly16x4_t a) {
 // LLVM: [[VGET_LANE:%.*]] = extractelement <4 x i16> %{{.*}}, i32 3
 // LLVM: ret i16 [[VGET_LANE]]
   return vget_lane_p16(a, 3);
+}
+
+// ALL-LABEL: @test_vget_lane_f16(
+float32_t test_vget_lane_f16(float16x4_t a) {
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u16i>
+// CIR: [[ELEM:%.*]] = cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u16i>
+// CIR: [[HALF:%.*]] = cir.cast bitcast [[ELEM]] : !u16i -> !cir.f16
+// CIR: [[RES:%.*]] = cir.cast floating [[HALF]] : !cir.f16 -> !cir.float
+// CIR: cir.return [[RES]] : !cir.float
+
+// LLVM: [[TMP:%.*]] = bitcast <4 x half> %{{.*}} to <4 x i16>
+// LLVM: [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP]], i32 1
+// LLVM: [[HALF:%.*]] = bitcast i16 [[VGET_LANE]] to half
+// LLVM: [[RES:%.*]] = fpext half [[HALF]] to float
+// LLVM: ret float [[RES]]
+  return vget_lane_f16(a, 1);
 }
 
 // ALL-LABEL: @test_vget_lane_f32(
@@ -195,6 +206,22 @@ poly16_t test_vgetq_lane_p16(poly16x8_t a) {
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <8 x i16> %{{.*}}, i32 7
 // LLVM: ret i16 [[VGETQ_LANE]]
   return vgetq_lane_p16(a, 7);
+}
+
+// ALL-LABEL: @test_vgetq_lane_f16(
+float32_t test_vgetq_lane_f16(float16x8_t a) {
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !u16i>
+// CIR: [[ELEM:%.*]] = cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<8 x !u16i>
+// CIR: [[HALF:%.*]] = cir.cast bitcast [[ELEM]] : !u16i -> !cir.f16
+// CIR: [[RES:%.*]] = cir.cast floating [[HALF]] : !cir.f16 -> !cir.float
+// CIR: cir.return [[RES]] : !cir.float
+
+// LLVM: [[TMP:%.*]] = bitcast <8 x half> %{{.*}} to <8 x i16>
+// LLVM: [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP]], i32 3
+// LLVM: [[HALF:%.*]] = bitcast i16 [[VGETQ_LANE]] to half
+// LLVM: [[RES:%.*]] = fpext half [[HALF]] to float
+// LLVM: ret float [[RES]]
+  return vgetq_lane_f16(a, 3);
 }
 
 // ALL-LABEL: @test_vgetq_lane_f32(
