@@ -150,29 +150,11 @@ add_lldb_library(liblldb ${LLDB_LIBRARY_TYPE} ${option_framework}
   ${option_install_prefix}
 )
 
-install(TARGETS liblldb EXPORT LLDBTargets
+install(TARGETS liblldb
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include
-)
-
-include(CMakePackageConfigHelpers)
-set(LLDB_PACKAGE_PATH "lib/cmake/lldb")
-configure_package_config_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/LLDBConfig.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/LLDBConfig.cmake"
-  INSTALL_DESTINATION "${LLDB_PACKAGE_PATH}"
-)
-
-install(
-  FILES "${CMAKE_CURRENT_BINARY_DIR}/LLDBConfig.cmake"
-  DESTINATION "${LLDB_PACKAGE_PATH}"
-)
-
-install(
-  EXPORT LLDBTargets
-  DESTINATION "${LLDB_PACKAGE_PATH}"
 )
 
 if (LLDB_ENABLE_PYTHON)
