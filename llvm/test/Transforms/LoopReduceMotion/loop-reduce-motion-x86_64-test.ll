@@ -23,7 +23,8 @@ define i32 @func_with_VecBin_Sub(ptr %pix1, i64 %stride1, ptr %pix2, i64 %stride
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC9]], [[HEIGHT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[LOOP_EXIT_LANDING:%.*]], label [[FOR_COND1_PREHEADER]]
 ; CHECK:       loop.exit.landing:
-; CHECK-NEXT:    [[SCALAR_TOTAL_SUM:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[VEC_SUM_NEXT]])
+; CHECK-NEXT:    [[VEC_SUM_EXIT_PHI:%.*]] = phi <8 x i32> [ [[VEC_SUM_NEXT]], [[FOR_COND1_PREHEADER]] ]
+; CHECK-NEXT:    [[SCALAR_TOTAL_SUM:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[VEC_SUM_EXIT_PHI]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 0, [[SCALAR_TOTAL_SUM]]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
@@ -81,9 +82,11 @@ define i32 @func_with_reduce(ptr %pix1, i64 %stride1, ptr %pix2, i64 %stride2, i
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[HEIGHT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[LOOP_EXIT_LANDING:%.*]], label [[FOR_COND1_PREHEADER]]
 ; CHECK:       loop.exit.landing:
-; CHECK-NEXT:    [[SCALAR_TOTAL_SUM:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[VEC_SUM_NEXT]])
+; CHECK-NEXT:    [[VEC_SUM_EXIT_PHI3:%.*]] = phi <8 x i32> [ [[VEC_SUM_NEXT2]], [[FOR_COND1_PREHEADER]] ]
+; CHECK-NEXT:    [[VEC_SUM_EXIT_PHI:%.*]] = phi <8 x i32> [ [[VEC_SUM_NEXT]], [[FOR_COND1_PREHEADER]] ]
+; CHECK-NEXT:    [[SCALAR_TOTAL_SUM:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[VEC_SUM_EXIT_PHI]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 0, [[SCALAR_TOTAL_SUM]]
-; CHECK-NEXT:    [[SCALAR_TOTAL_SUM3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[VEC_SUM_NEXT2]])
+; CHECK-NEXT:    [[SCALAR_TOTAL_SUM3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[VEC_SUM_EXIT_PHI3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 0, [[SCALAR_TOTAL_SUM3]]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:

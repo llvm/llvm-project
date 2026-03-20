@@ -228,14 +228,18 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
       continue;
 
     // Don't match if the Recurrence Value has other use in loop
+    bool hasOtherUse = false;
     for (User *U : RecurrenceValueFromPHI->users()) {
       if (Instruction *Inst = dyn_cast<Instruction>(U)) {
         BasicBlock *BB = Inst->getParent();
-        if (L.contains(BB)) {
-          continue;
+        if (Inst != PN && L.contains(BB)) {
+          hasOtherUse = true;
+          break;
         }
       }
     }
+    if (hasOtherUse)
+      continue;
 
     Value *RecurrenceValue = RecurrenceInst->getOperand(0) == PN
                                  ? RecurrenceInst->getOperand(1)
@@ -275,9 +279,17 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
       LandingPad = SplitEdge(ExitingBlock, ExitBlock, DT, LI);
       LandingPad->setName("loop.exit.landing");
     }
-    IRBuilder<> LandingPadBuilder(LandingPad->getTerminator());
+    IRBuilder<> LandingPadBuilder(LandingPad);
+    LandingPadBuilder.SetInsertPoint(LandingPad->begin());
+
+    // Create PHI node in LandingPad to maintain LCSSA form
+    PHINode *VecSumExitPhi =
+        LandingPadBuilder.CreatePHI(VecTy, 1, "vec.sum.exit.phi");
+    VecSumExitPhi->addIncoming(NewVecAdd, ExitingBlock);
+
+    LandingPadBuilder.SetInsertPoint(LandingPad->getTerminator());
     Value *ScalarTotalSum = LandingPadBuilder.CreateCall(
-        ReduceCall->getCalledFunction(), NewVecAdd, "scalar.total.sum");
+        ReduceCall->getCalledFunction(), VecSumExitPhi, "scalar.total.sum");
 
     Value *PreheaderValue = PN->getIncomingValueForBlock(Preheader);
     Value *LastAdd =
@@ -295,23 +307,21 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
     llvm::RecursivelyDeleteDeadPHINode(PN);
 
     if (!RecurrenceInst->use_empty()) {
-      for (auto *U : RecurrenceInst->users()) {
+      // Copy users to a temporary vector to avoid iterator invalidation
+      SmallVector<User *, 8> Users(RecurrenceInst->user_begin(),
+                                   RecurrenceInst->user_end());
+      for (auto *U : Users) {
         auto *phi = llvm::dyn_cast<llvm::PHINode>(U);
-        if (phi && !phi->use_empty()) {
+        if (phi && phi->getParent() == LandingPad && !phi->use_empty()) {
           phi->replaceAllUsesWith(FinalNode);
+          llvm::RecursivelyDeleteDeadPHINode(phi);
+          transform_success = true;
         }
       }
     }
-    transform_success = true;
-    StackRecur.push_back(RecurrenceInst);
   }
 
   if (transform_success) {
-    FoldSingleEntryPHINodes(LandingPad);
-    while (!StackRecur.empty()) {
-      Instruction *Rec = StackRecur.pop_back_val();
-      llvm::RecursivelyDeleteTriviallyDeadInstructions(Rec);
-    }
     return true;
   }
 
