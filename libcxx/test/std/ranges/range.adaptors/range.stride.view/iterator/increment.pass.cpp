@@ -44,53 +44,53 @@ template <typename Iter>
 constexpr bool test_non_forward_operator_increment(Iter zero_begin, Iter three_begin, Iter end) {
   using Base = BasicTestView<Iter, Iter>;
 
-  auto base_view_offset_zero              = Base(zero_begin, end);
-  auto base_view_offset_three             = Base(three_begin, end);
-  auto stride_view_over_base_zero_offset  = std::ranges::stride_view(base_view_offset_zero, 3);
-  auto stride_view_over_base_three_offset = std::ranges::stride_view(base_view_offset_three, 3);
+  auto base          = Base(zero_begin, end);
+  auto base_offset   = Base(three_begin, end);
+  auto sv            = std::ranges::stride_view(base, 3);
+  auto sv_offset     = std::ranges::stride_view(base_offset, 3);
 
-  auto sv_zero_offset_begin  = stride_view_over_base_zero_offset.begin();
-  auto sv_three_offset_begin = stride_view_over_base_three_offset.begin();
+  auto it        = sv.begin();
+  auto it_offset = sv_offset.begin();
 
-  auto sv_zero_offset_third_index = sv_zero_offset_begin; // With a stride of 3, so ++ moves 3 indexes.
-  ++sv_zero_offset_third_index;
-  assert(*sv_three_offset_begin == *sv_zero_offset_third_index);
+  auto it_after = it; // With a stride of 3, so ++ moves 3 indexes.
+  ++it_after;
+  assert(*it_offset == *it_after);
 
-  sv_zero_offset_third_index = sv_zero_offset_begin;
-  sv_zero_offset_third_index++;
-  assert(*sv_three_offset_begin == *sv_zero_offset_third_index);
+  it_after = it;
+  it_after++;
+  assert(*it_offset == *it_after);
 
   // See if both get to the end (with pre-increment).
-  auto sv_zero_offset_incremented_to_end = sv_zero_offset_begin;
-  ++sv_zero_offset_incremented_to_end; // 3
-  ++sv_zero_offset_incremented_to_end; // 6
-  ++sv_zero_offset_incremented_to_end; // 9
-  ++sv_zero_offset_incremented_to_end; // End
+  auto it_to_end = it;
+  ++it_to_end; // 3
+  ++it_to_end; // 6
+  ++it_to_end; // 9
+  ++it_to_end; // End
 
-  auto sv_three_offset_incremented_to_end = sv_three_offset_begin; // With a stride of 3, so ++ moves 3 indexes.
-  ++sv_three_offset_incremented_to_end;                            // 6
-  ++sv_three_offset_incremented_to_end;                            // 9
-  ++sv_three_offset_incremented_to_end;                            // End
+  auto it_offset_to_end = it_offset; // With a stride of 3, so ++ moves 3 indexes.
+  ++it_offset_to_end;                // 6
+  ++it_offset_to_end;                // 9
+  ++it_offset_to_end;                // End
 
-  assert(sv_three_offset_incremented_to_end == sv_zero_offset_incremented_to_end);
-  assert(sv_three_offset_incremented_to_end == stride_view_over_base_three_offset.end());
-  assert(sv_zero_offset_incremented_to_end == stride_view_over_base_zero_offset.end());
+  assert(it_offset_to_end == it_to_end);
+  assert(it_offset_to_end == sv_offset.end());
+  assert(it_to_end == sv.end());
 
   // See if both get to the end (with post-increment).
-  sv_zero_offset_incremented_to_end = sv_zero_offset_begin;
-  sv_zero_offset_incremented_to_end++; // 3
-  sv_zero_offset_incremented_to_end++; // 6
-  sv_zero_offset_incremented_to_end++; // 9
-  sv_zero_offset_incremented_to_end++; // End
+  it_to_end = it;
+  it_to_end++; // 3
+  it_to_end++; // 6
+  it_to_end++; // 9
+  it_to_end++; // End
 
-  sv_three_offset_incremented_to_end = sv_three_offset_begin; // With a stride of 3, so ++ moves 3 indexes.
-  sv_three_offset_incremented_to_end++;                       // 6
-  sv_three_offset_incremented_to_end++;                       // 9
-  sv_three_offset_incremented_to_end++;                       // End
+  it_offset_to_end = it_offset; // With a stride of 3, so ++ moves 3 indexes.
+  it_offset_to_end++;           // 6
+  it_offset_to_end++;           // 9
+  it_offset_to_end++;           // End
 
-  assert(sv_three_offset_incremented_to_end == sv_zero_offset_incremented_to_end);
-  assert(sv_three_offset_incremented_to_end == stride_view_over_base_three_offset.end());
-  assert(sv_zero_offset_incremented_to_end == stride_view_over_base_zero_offset.end());
+  assert(it_offset_to_end == it_to_end);
+  assert(it_offset_to_end == sv_offset.end());
+  assert(it_to_end == sv.end());
 
   return true;
 }
@@ -103,45 +103,45 @@ constexpr bool test_forward_operator_increment(Iter begin, Iter end) {
   static_assert(std::ranges::forward_range<Base>);
   static_assert(std::weakly_incrementable<StrideViewIterator>);
 
-  auto base_view_offset_zero             = Base(begin, end);
-  auto stride_view_over_base_zero_offset = std::ranges::stride_view(base_view_offset_zero, 3);
-  auto sv_zero_offset_begin              = stride_view_over_base_zero_offset.begin();
+  auto base = Base(begin, end);
+  auto sv   = std::ranges::stride_view(base, 3);
+  auto it   = sv.begin();
 
   // Create a ground truth for comparison.
-  auto sv_zero_offset_third_index_key = stride_view_over_base_zero_offset.begin();
-  sv_zero_offset_third_index_key++;
+  auto expected = sv.begin();
+  expected++;
 
-  auto sv_zero_offset_third_index = ++sv_zero_offset_begin;
-  assert(*sv_zero_offset_third_index == *sv_zero_offset_begin);
-  assert(*sv_zero_offset_third_index == *sv_zero_offset_third_index_key);
+  auto it_after = ++it;
+  assert(*it_after == *it);
+  assert(*it_after == *expected);
 
-  sv_zero_offset_begin       = stride_view_over_base_zero_offset.begin();
-  sv_zero_offset_third_index = sv_zero_offset_begin;
-  sv_zero_offset_third_index++;
-  assert(*sv_zero_offset_third_index == *sv_zero_offset_third_index_key);
+  it       = sv.begin();
+  it_after = it;
+  it_after++;
+  assert(*it_after == *expected);
 
-  sv_zero_offset_begin                   = stride_view_over_base_zero_offset.begin();
-  auto sv_zero_offset_incremented_to_end = sv_zero_offset_begin;
-  ++sv_zero_offset_incremented_to_end; // 3
-  ++sv_zero_offset_incremented_to_end; // 6
-  ++sv_zero_offset_incremented_to_end; // 9
-  ++sv_zero_offset_incremented_to_end; // End
+  it             = sv.begin();
+  auto it_to_end = it;
+  ++it_to_end; // 3
+  ++it_to_end; // 6
+  ++it_to_end; // 9
+  ++it_to_end; // End
 
-  auto sv_zero_offset_incremented_to_end_reset = sv_zero_offset_begin; // With a stride of 3, so ++ moves 3 indexes.
-  sv_zero_offset_incremented_to_end_reset      = ++sv_zero_offset_incremented_to_end_reset; // 3
-  sv_zero_offset_incremented_to_end_reset      = ++sv_zero_offset_incremented_to_end_reset; // 6
-  sv_zero_offset_incremented_to_end_reset      = ++sv_zero_offset_incremented_to_end_reset; // 9
-  sv_zero_offset_incremented_to_end_reset      = ++sv_zero_offset_incremented_to_end_reset; // End
+  auto it_to_end2 = it; // With a stride of 3, so ++ moves 3 indexes.
+  it_to_end2      = ++it_to_end2; // 3
+  it_to_end2      = ++it_to_end2; // 6
+  it_to_end2      = ++it_to_end2; // 9
+  it_to_end2      = ++it_to_end2; // End
 
-  assert(sv_zero_offset_incremented_to_end == sv_zero_offset_incremented_to_end_reset);
-  assert(sv_zero_offset_incremented_to_end == stride_view_over_base_zero_offset.end());
+  assert(it_to_end == it_to_end2);
+  assert(it_to_end == sv.end());
 
-  sv_zero_offset_incremented_to_end = sv_zero_offset_begin;
-  sv_zero_offset_incremented_to_end++; // 3
-  sv_zero_offset_incremented_to_end++; // 6
-  sv_zero_offset_incremented_to_end++; // 9
-  sv_zero_offset_incremented_to_end++; // End
-  assert(sv_zero_offset_incremented_to_end == stride_view_over_base_zero_offset.end());
+  it_to_end = it;
+  it_to_end++; // 3
+  it_to_end++; // 6
+  it_to_end++; // 9
+  it_to_end++; // End
+  assert(it_to_end == sv.end());
 
   return true;
 }

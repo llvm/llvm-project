@@ -33,65 +33,65 @@ constexpr bool test() {
   using BaseRange = BasicTestRange<cpp17_input_iterator<int*>>;
   using BaseView  = BasicTestView<int*>;
 
-  auto base_view          = BaseView(a, a + 5);
-  auto base_view_for_move = BaseView(a, a + 5);
+  auto base_view      = BaseView(a, a + 5);
+  auto base_view_move = BaseView(a, a + 5);
 
-  auto base_range          = BaseRange(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 5));
-  auto base_range_for_move = BaseRange(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 5));
+  auto base_range      = BaseRange(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 5));
+  auto base_range_move = BaseRange(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 5));
 
   // Deduction from lvalue view and rvalue view.
-  auto copied_stride_base_view = std::ranges::stride_view(base_view, 2);
-  auto moved_stride_base_view  = std::ranges::stride_view(std::move(base_view_for_move), 2);
+  auto sv_view      = std::ranges::stride_view(base_view, 2);
+  auto sv_view_move = std::ranges::stride_view(std::move(base_view_move), 2);
 
   // Deduction from lvalue range (-> ref_view) and rvalue range (-> owning_view).
-  auto copied_stride_base_range = std::ranges::stride_view(base_range, 2);
-  auto moved_stride_base_range  = std::ranges::stride_view(std::move(base_range_for_move), 2);
+  auto sv_range      = std::ranges::stride_view(base_range, 2);
+  auto sv_range_move = std::ranges::stride_view(std::move(base_range_move), 2);
 
   // Verify deduced types for views.
-  static_assert(std::same_as<decltype(copied_stride_base_view), std::ranges::stride_view<BaseView>>);
-  static_assert(std::same_as<decltype(moved_stride_base_view), std::ranges::stride_view<BaseView>>);
+  static_assert(std::same_as<decltype(sv_view), std::ranges::stride_view<BaseView>>);
+  static_assert(std::same_as<decltype(sv_view_move), std::ranges::stride_view<BaseView>>);
 
   // Verify deduced types for ranges: lvalue -> ref_view, rvalue -> owning_view.
   static_assert(
-      std::same_as<decltype(copied_stride_base_range), std::ranges::stride_view<std::ranges::ref_view<BaseRange>> >);
+      std::same_as<decltype(sv_range), std::ranges::stride_view<std::ranges::ref_view<BaseRange>> >);
   static_assert(
-      std::same_as<decltype(moved_stride_base_range), std::ranges::stride_view<std::ranges::owning_view<BaseRange>> >);
+      std::same_as<decltype(sv_range_move), std::ranges::stride_view<std::ranges::owning_view<BaseRange>> >);
 
   // Verify begin() produces the first element.
-  assert(*copied_stride_base_range.begin() == 1);
-  assert(*moved_stride_base_range.begin() == 1);
-  assert(*copied_stride_base_view.begin() == 1);
-  assert(*moved_stride_base_view.begin() == 1);
+  assert(*sv_range.begin() == 1);
+  assert(*sv_range_move.begin() == 1);
+  assert(*sv_view.begin() == 1);
+  assert(*sv_view_move.begin() == 1);
 
   // Verify iteration with stride 2 over a range.
-  auto copied_stride_range_it = copied_stride_base_range.begin();
-  copied_stride_range_it++;
-  assert(*copied_stride_range_it == 3);
-  copied_stride_range_it++;
-  copied_stride_range_it++;
-  assert(copied_stride_range_it == copied_stride_base_range.end());
+  auto it = sv_range.begin();
+  it++;
+  assert(*it == 3);
+  it++;
+  it++;
+  assert(it == sv_range.end());
 
-  auto moved_stride_range_it = moved_stride_base_range.begin();
-  moved_stride_range_it++;
-  moved_stride_range_it++;
-  assert(*moved_stride_range_it == 5);
-  moved_stride_range_it++;
-  assert(moved_stride_range_it == moved_stride_base_range.end());
+  auto it2 = sv_range_move.begin();
+  it2++;
+  it2++;
+  assert(*it2 == 5);
+  it2++;
+  assert(it2 == sv_range_move.end());
 
   // Verify iteration with stride 2 over a view.
-  auto copied_stride_view_it = copied_stride_base_view.begin();
-  copied_stride_view_it++;
-  assert(*copied_stride_view_it == 3);
-  copied_stride_view_it++;
-  copied_stride_view_it++;
-  assert(copied_stride_view_it == copied_stride_base_view.end());
+  auto it3 = sv_view.begin();
+  it3++;
+  assert(*it3 == 3);
+  it3++;
+  it3++;
+  assert(it3 == sv_view.end());
 
-  auto moved_stride_view_it = copied_stride_base_view.begin();
-  moved_stride_view_it++;
-  moved_stride_view_it++;
-  assert(*moved_stride_view_it == 5);
-  moved_stride_view_it++;
-  assert(moved_stride_view_it == moved_stride_base_view.end());
+  auto it4 = sv_view.begin();
+  it4++;
+  it4++;
+  assert(*it4 == 5);
+  it4++;
+  assert(it4 == sv_view_move.end());
 
   return true;
 }

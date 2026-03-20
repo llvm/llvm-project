@@ -69,29 +69,29 @@ constexpr bool test() {
   static_assert(std::ranges::random_access_range<Base>);
 
   // += with stride 1: advancing by distance matches starting at begin + distance.
-  auto base_view                  = Base(begin, end);
-  auto stride_view_over_base_view = std::ranges::stride_view(base_view, 1);
+  auto base       = Base(begin, end);
+  auto sv         = std::ranges::stride_view(base, 1);
 
-  auto base_view_offset                  = Base(begin + distance, end);
-  auto stride_view_over_base_view_offset = std::ranges::stride_view(base_view_offset, 1);
+  auto base_offset = Base(begin + distance, end);
+  auto sv_offset   = std::ranges::stride_view(base_offset, 1);
 
-  auto sv_bv_begin        = stride_view_over_base_view.begin();
-  auto sv_bv_offset_begin = stride_view_over_base_view_offset.begin();
+  auto it        = sv.begin();
+  auto it_offset = sv_offset.begin();
 
-  auto sv_bv_begin_after_distance = sv_bv_begin += distance;
-  assert(*sv_bv_begin == *sv_bv_offset_begin);
-  assert(*sv_bv_begin_after_distance == *sv_bv_offset_begin);
+  auto it_after = it += distance;
+  assert(*it == *it_offset);
+  assert(*it_after == *it_offset);
 
   // += past the end, then -= back: the remainder is handled correctly.
-  auto big_step                            = (end - 1) - begin;
-  auto stride_view_over_base_view_big_step = std::ranges::stride_view(base_view, big_step);
-  sv_bv_begin                              = stride_view_over_base_view_big_step.begin();
+  auto big_step      = (end - 1) - begin;
+  auto sv_big_step   = std::ranges::stride_view(base, big_step);
+  it                 = sv_big_step.begin();
 
   // This += should move us into a position where the stride doesn't evenly divide the range.
   // Do a -= 1 here to confirm that the remainder is taken into account.
-  sv_bv_begin += 2;
-  sv_bv_begin -= 1;
-  assert(*sv_bv_begin == *(stride_view_over_base_view.begin() + big_step));
+  it += 2;
+  it -= 1;
+  assert(*it == *(sv.begin() + big_step));
   return true;
 }
 

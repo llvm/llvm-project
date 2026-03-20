@@ -93,13 +93,6 @@ struct InputIter : IterBase<Derived, Iter> {
   }
 };
 
-// In input iterator that is unsized.
-struct UnsizedInputIter : InputIter<UnsizedInputIter, int*, false> {
-  using InputIter::InputIter;
-};
-static_assert(std::input_iterator<UnsizedInputIter>);
-static_assert(!std::sized_sentinel_for<UnsizedInputIter, UnsizedInputIter>);
-
 // In input iterator that is sized.
 struct SizedInputIter : InputIter<SizedInputIter, int*, true> {
   using InputIter::InputIter;
@@ -266,7 +259,6 @@ using UnSimpleConstView            = MaybeConstCommonSimpleView<false, true, tru
 using UnsimpleUnCommonConstView    = MaybeConstCommonSimpleView<false, true, false>;
 using SimpleUnCommonConstView      = MaybeConstCommonSimpleView<true, true, false>;
 using SimpleCommonConstView        = MaybeConstCommonSimpleView<true, true, true>;
-using SimpleNoConstSizedCommonView = MaybeConstCommonSimpleView<true, false, true, true>;
 
 // Don't move/hold the iterator itself, copy/hold the base
 // of that iterator and reconstruct the iterator on demand.

@@ -170,17 +170,16 @@ constexpr bool test() {
     test_forward_minus(vec.begin(), vec.end());
   }
   test_difference_minus();
+  {
+    int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    test_non_forward_minus(SizedInputIter(arr), SizedInputIter(arr + 1), SizedInputIter(arr + 10));
+  }
   return true;
 }
 
 int main(int, char**) {
   test();
   static_assert(test());
-
-  {
-    int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    test_non_forward_minus(SizedInputIter(arr), SizedInputIter(arr + 1), SizedInputIter(arr + 10));
-  }
 
   return 0;
 }
