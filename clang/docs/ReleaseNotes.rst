@@ -108,6 +108,10 @@ Clang Python Bindings Potentially Breaking Changes
   with objects of other classes.
 - ``TranslationUnit.get_tokens`` now throws an error if both the ``extent`` and
   ``locations`` argument are passed. Previousy, ``locations`` took precedence.
+- ``_CXUnsavedFile`` will be renamed to ``UnsavedFile`` for consistency.
+  ``UnsavedFile`` is already available to use and existing uses should
+  be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a 
+  future release.
 
 What's New in Clang |release|?
 ==============================
