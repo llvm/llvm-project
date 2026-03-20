@@ -25,7 +25,8 @@ Example:
 When using a raw initializer list or a temporary range (pre-C++20), it's
 recommended to materialize it in a local variable first to avoid potential
 lifetime issues. In C++20, temporary ranges can be used directly with
-``std::ranges`` algorithms as they are safe against this issue.
+``std::ranges`` algorithms as they handle the lifetime of a temporary range
+correctly.
 
 Example with raw initializer list:
 

@@ -37,7 +37,7 @@ AST_MATCHER_P(Stmt, nextStmt, ast_matchers::internal::Matcher<Stmt>,
 }
 
 AST_MATCHER(Expr, isUnsafeTemporaryRangeInit) {
-  const Expr *E = Node.IgnoreParenImpCasts();
+  const Expr *E = Node.IgnoreParenCasts();
   if (Finder->getASTContext().getLangOpts().CPlusPlus20)
     return isa<CXXStdInitializerListExpr>(E);
   return E->isPRValue();
@@ -55,8 +55,8 @@ void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(true)))));
   const auto ReturnsButNotFalse =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(false)))));
-  const auto RangeInitMatcher = anyOf(
-      expr(isUnsafeTemporaryRangeInit()).bind("unsafe_range_init"), expr());
+  const auto RangeInitMatcher =
+      optionally(expr(isUnsafeTemporaryRangeInit()).bind("unsafe_range_init"));
 
   Finder->addMatcher(
       cxxForRangeStmt(
