@@ -17,10 +17,17 @@ subroutine foo(N, A, B)
 100 continue
 end subroutine
 
-! Verify the inner acc.loop has seq and unstructured attributes,
-! and that it contains acc.yield (from the GoTo cross-region exit).
+! Verify the inner acc.loop (seq) contains acc.yield for the GoTo exit.
+! The GoTo target is outside the acc.loop region, so it must yield
+! instead of generating an illegal cross-region cf.br.
+
 ! CHECK: acc.loop gang vector
 ! CHECK: acc.loop
+! The GoTo comparison and branch:
+! CHECK: arith.cmpf ogt
+! CHECK-NEXT: cf.cond_br %{{.*}}, ^[[EXIT:bb[0-9]+]], ^
+! CHECK-NEXT: ^[[EXIT]]:
+! CHECK-NEXT: acc.yield
+! Normal loop end yield and closing:
 ! CHECK: acc.yield
-! CHECK: acc.yield
-! CHECK: } attributes {seq = [#acc.device_type<none>], unstructured}
+! CHECK-NEXT: } attributes {seq = [#acc.device_type<none>], unstructured}
