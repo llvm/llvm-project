@@ -1492,6 +1492,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_s_ttracedata}).Any({{}, {{}, {IntrId, SgprB32_M0}}});
 
+  addRulesForIOpcs({amdgcn_s_sleep_var})
+      .Any({{}, {{}, {IntrId, SgprB32_ReadFirstLane}}});
+
+  addRulesForIOpcs({amdgcn_s_prefetch_data})
+      .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
+
   // This is "intrinsic lane mask" it was set to i32/i64 in llvm-ir.
   addRulesForIOpcs({amdgcn_end_cf})
       .Any({{_, UniS32}, {{}, {IntrId, Sgpr32}}})
@@ -1522,6 +1528,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       // this should not exist in the first place, it is from call lowering
       // readfirstlaning just in case register is not in sgpr.
       .Any({{UniS32, _, UniS32}, {{}, {Sgpr32, None, Vgpr32}}});
+
+  addRulesForIOpcs({amdgcn_readlane}, StandardB)
+      .Uni(B32, {{SgprB32}, {IntrId, VgprB32, SgprB32_ReadFirstLane}});
+
+  addRulesForIOpcs({amdgcn_writelane}, StandardB)
+      .Div(B32,
+           {{VgprB32},
+            {IntrId, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane, VgprB32}});
 
   addRulesForIOpcs({amdgcn_wave_reduce_umax, amdgcn_wave_reduce_umin}, Standard)
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}})
