@@ -231,6 +231,7 @@ template <typename T> LIBC_INLINE void store(Ptr ptr, T value) {
 template <typename ValueType, typename T, typename... TS>
 LIBC_INLINE ValueType load_aligned(CPtr src) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
+  static_assert(Endian::IS_LITTLE || Endian::IS_BIG, "Invalid endianness");
   const ValueType value = load<T>(assume_aligned<sizeof(T)>(src));
 
   if constexpr (sizeof...(TS) > 0) {
