@@ -1126,7 +1126,25 @@ void case26(TwoInts TI) {
   float4 F = float4(TI, 1, 2);
   float3 F2 = float3(3, TI);
 }
+
+using handle_float_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(float)]];
+
+struct CustomResource {
+  handle_float_t h;
+};
+
+// CHECK-LABEL: define hidden void @_Z6case2714CustomResource
+// CHECK: [[b:%.*]] = alloca %struct.CustomResource, align 1
+// CHECK: [[h:%.*]] = getelementptr inbounds nuw %struct.CustomResource, ptr [[b]], i32 0, i32 0
+// CHECK: [[h1:%.*]] = getelementptr inbounds nuw %struct.CustomResource, ptr %a, i32 0, i32 0
+// CHECK: [[Z:%.*]] = load target("dx.TypedBuffer", float, 1, 0, 0), ptr [[h1]], align 1
+// CHECK: store target("dx.TypedBuffer", float, 1, 0, 0) %0, ptr [[h]], align 1
+// CHECK: ret void
+void case27(CustomResource a) {
+  CustomResource b = {a};
+}
 //.
 // CHECK: [[META3]] = !{}
 // CHECK: [[META4]] = !{i64 4}
 //.
+
