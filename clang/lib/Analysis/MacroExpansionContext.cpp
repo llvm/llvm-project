@@ -29,30 +29,26 @@ public:
       MacroExpansionContext::ExpansionRangeMap &ExpansionRanges)
       : PP(PP), SM(SM), ExpansionRanges(ExpansionRanges) {}
 
-  void MacroExpands(const Token &MacroName, const MacroDefinition &MD,
-                    SourceRange Range, const MacroArgs *Args) override {
+  void AddExpansionRange(StringRef Macro, SourceLocation Loc,
+                         SourceRange Range) {
     // Ignore annotation tokens like: _Pragma("pack(push, 1)")
-    if (MacroName.getIdentifierInfo()->getName() == "_Pragma")
+    if (Macro == "_Pragma")
       return;
 
-    SourceLocation MacroNameBegin = SM.getExpansionLoc(MacroName.getLocation());
+    SourceLocation MacroNameBegin = SM.getExpansionLoc(Loc);
     assert(MacroNameBegin == SM.getExpansionLoc(Range.getBegin()));
 
-    const SourceLocation ExpansionEnd = [Range, &SM = SM, &MacroName] {
+    const SourceLocation ExpansionEnd = [Range, &SM = SM, Macro, Loc] {
       // If the range is empty, use the length of the macro.
       if (Range.getBegin() == Range.getEnd())
-        return SM.getExpansionLoc(
-            MacroName.getLocation().getLocWithOffset(MacroName.getLength()));
+        return SM.getExpansionLoc(Loc.getLocWithOffset(Macro.size()));
 
       // Include the last character.
       return SM.getExpansionLoc(Range.getEnd()).getLocWithOffset(1);
     }();
 
     (void)PP;
-    LLVM_DEBUG(llvm::dbgs() << "MacroExpands event: '";
-               dumpTokenInto(PP, llvm::dbgs(), MacroName);
-               llvm::dbgs()
-               << "' with length " << MacroName.getLength() << " at ";
+    LLVM_DEBUG(llvm::dbgs() << "MacroExpands event: '" << Macro << " at ";
                MacroNameBegin.print(llvm::dbgs(), SM);
                llvm::dbgs() << ", expansion end at ";
                ExpansionEnd.print(llvm::dbgs(), SM); llvm::dbgs() << '\n';);
@@ -78,6 +74,12 @@ public:
       }
     }
   }
+
+  void MacroExpands(const Token &MacroName, const MacroDefinition &MD,
+                    SourceRange Range, const MacroArgs *Args) override {
+    AddExpansionRange(MacroName.getIdentifierInfo()->getName(),
+                      MacroName.getLocation(), Range);
+  }
 };
 } // namespace detail
 } // namespace clang
@@ -86,6 +88,32 @@ using namespace clang;
 
 MacroExpansionContext::MacroExpansionContext(const LangOptions &LangOpts)
     : LangOpts(LangOpts) {}
+
+MacroExpansionContext::MacroExpansionContext(
+    Preprocessor &PP,
+    llvm::iterator_range<PreprocessingRecord::iterator> PPRecords,
+    const LangOptions &LangOpts)
+    : PP(&PP), SM(&PP.getSourceManager()), LangOpts(LangOpts) {
+  detail::MacroExpansionRangeRecorder Recorder(PP, PP.getSourceManager(),
+                                               ExpansionRanges);
+  for (const auto *PPRecord : PPRecords) {
+    if (auto *ME = dyn_cast<MacroExpansion>(PPRecord)) {
+      if (ME->isBuiltinMacro()) {
+        Recorder.AddExpansionRange(ME->getName()->getName(),
+                                   ME->getSourceRange().getBegin(),
+                                   ME->getSourceRange());
+        continue;
+      }
+      if (!ME->getExpandedText() || ME->getExpandedText()->empty())
+        continue;
+      Recorder.AddExpansionRange(ME->getName()->getName(),
+                                 ME->getSourceRange().getBegin(),
+                                 ME->getSourceRange());
+      ExpandedTokens.try_emplace(ME->getSourceRange().getBegin(),
+                                 *ME->getExpandedText());
+    }
+  }
+}
 
 void MacroExpansionContext::registerForPreprocessor(Preprocessor &NewPP) {
   PP = &NewPP;
@@ -259,4 +287,3 @@ void MacroExpansionContext::onTokenLexed(const Token &Tok) {
   if (!Inserted)
     It->getSecond().append(TokenAsString);
 }
-

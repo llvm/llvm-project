@@ -371,9 +371,11 @@ private:
 
   explicit ASTUnit(bool MainFileIsAST);
 
-  bool Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-             std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
-             IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
+  bool
+  Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+        std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
+        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+        std::function<void(CompilerInstance &)> OnCompilerCreated = nullptr);
 
   std::unique_ptr<llvm::MemoryBuffer> getMainBufferWithPrecompiledPreamble(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
@@ -756,7 +758,8 @@ private:
   bool LoadFromCompilerInvocation(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       unsigned PrecompilePreambleAfterNParses,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+      std::function<void(CompilerInstance &)> OnCompilerCreated = nullptr);
 
 public:
   /// Create an ASTUnit from a source file, via a CompilerInvocation
@@ -845,7 +848,8 @@ public:
       bool UserFilesAreVolatile, bool ForSerialization,
       bool RetainExcludedConditionalBlocks,
       std::optional<StringRef> ModuleFormat, std::unique_ptr<ASTUnit> *ErrAST,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+      std::function<void(CompilerInstance &)> OnCompilerCreated);
 
   /// Reparse the source files using the same command-line options that
   /// were originally used to produce this translation unit.
