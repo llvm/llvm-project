@@ -750,8 +750,8 @@ clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
 clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
     ASTContext &Ctx, SourceLocation TrivialLoc) {
   if constexpr (EmbedLocInPointer)
-    Pointer = reinterpret_cast<void *>((TrivialLoc.getRawEncoding() + 1u)
-                                       << LowBitsRequired);
+    Pointer = reinterpret_cast<LocOrPointer>((TrivialLoc.getRawEncoding() + 1u)
+                                             << LowBitsRequired);
   else
     Pointer = new (Ctx) SourceLocation(TrivialLoc);
 }
