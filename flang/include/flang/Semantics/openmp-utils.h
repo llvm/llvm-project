@@ -119,8 +119,9 @@ struct Reason {
   template <typename... Ts> Reason &Say(Ts &&...args) {
     msgs.Say(std::forward<Ts>(args)...);
     return *this;
-  };
+  }
   operator bool() const { return !msgs.empty(); }
+  parser::Message &AttachTo(parser::Message &msg);
 };
 
 std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
@@ -133,20 +134,16 @@ std::pair<std::optional<int64_t>, Reason> GetNumArgumentsWithReason(
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
 
-std::optional<int64_t> GetNumGeneratedNestsFrom(
-    const parser::ExecutionPartConstruct &epc,
-    std::optional<int64_t> nestedCount);
-
 // Return the depth of the affected nests:
 //   {affected-depth, must-be-perfect-nest, reason}.
 std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version);
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
 // Return the range of the affected nests in the sequence:
 //   {first, count, reason}.
 // If the range is "the whole sequence", the return value will be {1, -1, ...}.
 std::tuple<std::optional<int64_t>, std::optional<int64_t>, Reason>
 GetAffectedLoopRangeWithReason(
-    const parser::OpenMPLoopConstruct &x, unsigned version);
+    const parser::OmpDirectiveSpecification &spec, unsigned version);
 
 // Count the required loop count from range. If count == -1, return -1,
 // indicating all loops in the sequence.

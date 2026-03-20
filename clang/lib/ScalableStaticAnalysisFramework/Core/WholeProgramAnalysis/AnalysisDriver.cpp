@@ -190,7 +190,7 @@ llvm::Expected<WPASuite> AnalysisDriver::execute(
     Suite.Data.emplace(std::move(Name), std::move(*Analysis).result());
   }
 
-  return Suite;
+  return std::move(Suite);
 }
 
 llvm::Expected<WPASuite> AnalysisDriver::run() && {
