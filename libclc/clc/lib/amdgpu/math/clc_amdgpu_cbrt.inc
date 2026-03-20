@@ -8,7 +8,7 @@
 
 #ifdef __CLC_SCALAR
 
-#define one_third_f32 (__CLC_FLOATN)0x1.555556p-2f
+#define __CLC_ONE_THIRD_F32 (__CLC_FLOATN)0x1.555556p-2f
 
 static _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE
 __clc_fixup_cbrt_sign(__CLC_GENTYPE magnitude, __CLC_GENTYPE x) {
@@ -31,8 +31,9 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_FLOATN __clc_cbrt(__CLC_FLOATN x) {
     ax = denorm_or_zero ? __clc_ldexp(ax, 24) : ax;
   }
 
-  __CLC_GENTYPE z = __clc_exp2_fast(one_third_f32 * __clc_log2_fast(ax));
-  z = __clc_mad(__clc_mad(__clc_recip_fast(z * z), -ax, z), -one_third_f32, z);
+  __CLC_GENTYPE z = __clc_exp2_fast(__CLC_ONE_THIRD_F32 * __clc_log2_fast(ax));
+  z = __clc_mad(__clc_mad(__clc_recip_fast(z * z), -ax, z),
+                -__CLC_ONE_THIRD_F32, z);
 
   if (!__clc_denormals_are_zero_fp32()) {
     z = denorm_or_zero ? __clc_ldexp(z, -8) : z;
@@ -46,12 +47,12 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_FLOATN __clc_cbrt(__CLC_FLOATN x) {
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_DOUBLEN __clc_cbrt(__CLC_DOUBLEN x) {
   __CLC_GENTYPE a = __clc_fabs(x);
   __CLC_INTN e3 = __clc_frexp_exp(a);
-  __CLC_INTN e =
-      __CLC_CONVERT_INTN(__clc_rint(one_third_f32 * __CLC_CONVERT_FLOATN(e3)));
+  __CLC_INTN e = __CLC_CONVERT_INTN(
+      __clc_rint(__CLC_ONE_THIRD_F32 * __CLC_CONVERT_FLOATN(e3)));
   a = __clc_ldexp(a, -3 * e);
 
   __CLC_GENTYPE c = __CLC_CONVERT_DOUBLEN(__clc_exp2_fast(
-      one_third_f32 * __clc_log2_fast(__CLC_CONVERT_FLOATN(a))));
+      __CLC_ONE_THIRD_F32 * __clc_log2_fast(__CLC_CONVERT_FLOATN(a))));
   __CLC_GENTYPE c2 = c * c;
   c = __clc_mad(
       c, __clc_div_fast(__clc_mad(-c, c2, a), __clc_mad(c + c, c2, a)), c);
@@ -67,7 +68,7 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_HALFN __clc_cbrt(__CLC_HALFN x) {
   __CLC_HALFN absx = __clc_fabs(x);
   __CLC_FLOATN absx_float = __CLC_CONVERT_FLOATN(absx);
   __CLC_FLOATN result_float =
-      __clc_exp2_fast(one_third_f32 * __clc_log2_fast(absx_float));
+      __clc_exp2_fast(__CLC_ONE_THIRD_F32 * __clc_log2_fast(absx_float));
   __CLC_HALFN ret = __CLC_CONVERT_HALFN(result_float);
   return __clc_fixup_cbrt_sign(ret, x);
 }
