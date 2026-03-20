@@ -223,7 +223,7 @@ public:
     mlir::Value lhsBoxRef = lhs.getFirBase();
 
     // Create MutableBoxValue - for trivial types, no length params needed
-    fir::MutableBoxValue mutableBox(lhsBoxRef, /*lenParamaters=*/{},
+    fir::MutableBoxValue mutableBox(lhsBoxRef, /*lenParameters=*/{},
                                     /*mutableProperties=*/{});
 
     // Use genReallocIfNeeded to handle allocation/reallocation properly.

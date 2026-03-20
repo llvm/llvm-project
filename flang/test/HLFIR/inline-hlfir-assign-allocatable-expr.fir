@@ -49,7 +49,7 @@ func.func @test_allocatable_elemental_assign(%arg0: !fir.ref<!fir.box<!fir.heap<
 // allocation checking and a loop for assignment.
 // ENABLED-NOT: hlfir.assign %{{.*}} realloc
 // ENABLED: hlfir.elemental
-// ENABLED: %[[ORIG_MEM:.*]] = fir.box_addr %6 : (!fir.box<!fir.heap<!fir.array<?xf64>>>) -> !fir.heap<!fir.array<?xf64>>
+// ENABLED: %[[ORIG_MEM:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xf64>>>) -> !fir.heap<!fir.array<?xf64>>
 // ENABLED: %[[IF_RET:.*]]:2 = fir.if %[[COND:.*]] -> (i1, !fir.heap<!fir.array<?xf64>>) {
 // ENABLED: fir.do_loop
 // ENABLED: hlfir.apply
