@@ -314,7 +314,7 @@ void OmpStructureChecker::CheckNestedConstruct(
                 " loops, but the loop sequence has a length of %" PRId64
                 ""_err_en_US,
                 *requiredCount, *numLoops)};
-            needRange.reason.AttachTo(beginSource, msg);
+            needRange.reason.AttachTo(msg);
           }
         }
       }
@@ -338,13 +338,13 @@ void OmpStructureChecker::CheckNestedConstruct(
               ", but the associated nest is a perfect nest of depth %" PRId64
               ""_err_en_US,
               *needDepth.value, *haveDepth)};
-          needDepth.reason.AttachTo(beginSource, msg);
+          needDepth.reason.AttachTo(msg);
         } else {
           auto &msg{context_.Say(beginSource,
               "This construct requires a nest of depth %" PRId64
               ", but the associated nest has a depth of %" PRId64 ""_err_en_US,
               *needDepth.value, *haveDepth)};
-          needDepth.reason.AttachTo(beginSource, msg);
+          needDepth.reason.AttachTo(msg);
         }
       }
     }

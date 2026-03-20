@@ -123,17 +123,11 @@ struct Reason {
 
   parser::Messages msgs;
 
-  // Allow messages without a source location. They will acquire a location
-  // during AttachTo.
-  template <typename... Ts>
-  Reason &Say(parser::CharBlock source, Ts &&...args) {
-    auto &msg{msgs.Say(source, std::forward<Ts>(args)...)};
-    if (source.empty()) {
-      unsourced_.insert(&msg);
-    }
+  template <typename... Ts> Reason &Say(Ts &&...args) {
+    msgs.Say(std::forward<Ts>(args)...);
     return *this;
   }
-  parser::Message &AttachTo(parser::CharBlock source, parser::Message &msg);
+  parser::Message &AttachTo(parser::Message &msg);
   Reason &Append(const Reason &other) {
     CopyFrom(other);
     return *this;
@@ -141,9 +135,6 @@ struct Reason {
   operator bool() const { return !msgs.empty(); }
 
 private:
-  // Set of messages without a source location.
-  llvm::DenseSet<const parser::Message *> unsourced_;
-
   void CopyFrom(const Reason &other);
 };
 

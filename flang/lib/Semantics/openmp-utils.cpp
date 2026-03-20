@@ -539,7 +539,6 @@ Reason::Reason(const Reason &other) { //
 Reason &Reason::operator=(const Reason &other) {
   if (this != &other) {
     msgs.clear();
-    unsourced_.clear();
     CopyFrom(other);
   }
   return *this;
@@ -547,27 +546,12 @@ Reason &Reason::operator=(const Reason &other) {
 
 void Reason::CopyFrom(const Reason &other) {
   for (auto &msg : other.msgs.messages()) {
-    auto &copy{msgs.Say(parser::Message(msg))};
-    if (other.unsourced_.contains(&msg)) {
-      unsourced_.insert(&copy);
-    }
+    msgs.Say(parser::Message(msg));
   }
 }
 
-parser::Message &Reason::AttachTo(
-    parser::CharBlock source, parser::Message &msg) {
-  parser::Messages sourced;
-  for (auto &&msg : msgs.messages()) {
-    if (unsourced_.contains(&msg)) {
-      llvm::StringRef fmt{"%s"};
-      sourced.Say(source,
-          parser::MessageFixedText(fmt.data(), fmt.size(), msg.severity()),
-          msg.ToString());
-    } else {
-      sourced.Say(std::move(msg));
-    }
-  }
-  sourced.AttachTo(msg);
+parser::Message &Reason::AttachTo(parser::Message &msg) {
+  msgs.AttachTo(msg);
   return msg;
 }
 
