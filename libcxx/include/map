@@ -1452,7 +1452,8 @@ public:
   template <typename _K2,
             class _Comp = _Compare,
             enable_if_t<__is_transparent_v<_Comp> || __is_transparently_comparable_v<_Comp, key_type, _K2>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator lower_bound(const _K2& __k) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator
+  lower_bound(const _K2& __k) const {
     return __tree_.__lower_bound_multi(__k);
   }
 #  endif
@@ -1476,7 +1477,8 @@ public:
   template <typename _K2,
             class _Comp = _Compare,
             enable_if_t<__is_transparent_v<_Comp> || __is_transparently_comparable_v<_Comp, key_type, _K2>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator upper_bound(const _K2& __k) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const_iterator
+  upper_bound(const _K2& __k) const {
     return __tree_.__upper_bound_multi(__k);
   }
 #  endif
@@ -1491,11 +1493,13 @@ public:
   }
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator> equal_range(const _K2& __k) {
+  [[__nodiscard__]]
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, iterator> equal_range(const _K2& __k) {
     return __tree_.__equal_range_multi(__k);
   }
   template <typename _K2, class _Comp = _Compare, enable_if_t<__is_transparent_v<_Comp>, int> = 0>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator> equal_range(const _K2& __k) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<const_iterator, const_iterator>
+  equal_range(const _K2& __k) const {
     return __tree_.__equal_range_multi(__k);
   }
 #  endif

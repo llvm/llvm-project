@@ -43,7 +43,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _Comparator& __as_transparen
 template <class _ArgumentType,
           class _Comparator,
           __enable_if_t<!is_same<_Comparator, __make_transparent_t<_ArgumentType, _Comparator> >::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __make_transparent_t<_ArgumentType, _Comparator> __as_transparent(_Comparator&) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __make_transparent_t<_ArgumentType, _Comparator>
+__as_transparent(_Comparator&) {
   static_assert(is_empty<_Comparator>::value);
   return __make_transparent_t<_ArgumentType, _Comparator>();
 }
