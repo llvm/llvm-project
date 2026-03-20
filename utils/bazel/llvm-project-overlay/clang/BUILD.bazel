@@ -2627,6 +2627,19 @@ cc_library(
 )
 
 cc_library(
+    name = "scalable_static_analysis_tool",
+    srcs = glob([
+        "lib/ScalableStaticAnalysisFramework/Tool/**/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Tool/**/*.h"]),
+    deps = [
+        ":basic",
+        ":scalable_static_analysis_core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "scalable_static_analysis_frontend",
     srcs = glob([
         "lib/ScalableStaticAnalysisFramework/Frontend/**/*.cpp",
@@ -2648,6 +2661,7 @@ cc_binary(
     deps = [
         ":basic",
         ":scalable_static_analysis_core",
+        ":scalable_static_analysis_tool",
         "//llvm:Option",
         "//llvm:Support",
     ],
@@ -2659,6 +2673,7 @@ cc_binary(
     deps = [
         ":basic",
         ":scalable_static_analysis_core",
+        ":scalable_static_analysis_tool",
         "//llvm:Option",
         "//llvm:Support",
     ],
