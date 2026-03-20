@@ -39,7 +39,7 @@ status of all important Fortran 2023 features. The table entries are based on th
 | The specifiers typeof and classof                          | N      | |
 | Conditional expressions and arguments                      | N      | |
 | More use of boz constants                                  | P      | All usages other than enum are supported |
-| Intrinsics for extracting tokens from a string             | N      | |
+| Intrinsics for extracting tokens from a string             | Y      | |
 | Intrinsics for Trig functions that work in degrees         | Y      | |
 | Intrinsics for Trig functions that work in half revolutions| Y      | |
 | Changes to system_clock                                    | N      | |
