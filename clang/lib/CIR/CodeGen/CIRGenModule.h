@@ -590,6 +590,9 @@ public:
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
 
   mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
+  /// Returns a null attribute to represent either a null method or null data
+  /// member, depending on the type of mpt.
+  mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an
@@ -777,6 +780,9 @@ public:
 
   /// Print out an error that codegen doesn't support the specified decl yet.
   void errorUnsupported(const Decl *d, llvm::StringRef type);
+
+  /// Emits AMDGPU specific Metadata.
+  void emitAMDGPUMetadata();
 
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.

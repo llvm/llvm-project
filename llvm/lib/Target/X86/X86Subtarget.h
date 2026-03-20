@@ -102,6 +102,8 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// Required vector width from function attribute.
   unsigned RequiredVectorWidth;
 
+  bool HasUserReservedRegisters;
+
   X86SelectionDAGInfo TSInfo;
   // Ordering here is important. X86InstrInfo initializes X86RegisterInfo which
   // X86TargetLowering needs.
@@ -162,7 +164,7 @@ public:
   bool isRegisterReservedByUser(Register i) const override {
     return ReservedRReg[i.id()];
   }
-  bool hasUserReservedRegisters() const { return ReservedRReg.any(); }
+  bool hasUserReservedRegisters() const { return HasUserReservedRegisters; }
 
 private:
   /// Initialize the full set of dependencies so we can use an initializer

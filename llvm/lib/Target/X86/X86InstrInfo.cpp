@@ -961,7 +961,8 @@ bool X86InstrInfo::isReMaterializableImpl(
 void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  Register DestReg, unsigned SubIdx,
-                                 const MachineInstr &Orig) const {
+                                 const MachineInstr &Orig,
+                                 LaneBitmask UsedLanes) const {
   bool ClobbersEFLAGS = Orig.modifiesRegister(X86::EFLAGS, &TRI);
   if (ClobbersEFLAGS && MBB.computeRegisterLiveness(&TRI, X86::EFLAGS, I) !=
                             MachineBasicBlock::LQR_Dead) {
@@ -5698,7 +5699,7 @@ static bool canConvert2Copy(unsigned Opc) {
 
 /// Convert an ALUrr opcode to corresponding ALUri opcode. Such as
 ///     ADD32rr  ==>  ADD32ri
-static unsigned convertALUrr2ALUri(unsigned Opc) {
+static unsigned convertALUrr2ALUri(unsigned Opc, bool HasNDDI) {
   switch (Opc) {
   default:
     return 0;
@@ -5707,9 +5708,7 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
     return X86::TO;                                                            \
   case X86::FROM##_ND:                                                         \
     return X86::TO##_ND;
-    FROM_TO(ADD64rr, ADD64ri32)
     FROM_TO(ADC64rr, ADC64ri32)
-    FROM_TO(SUB64rr, SUB64ri32)
     FROM_TO(SBB64rr, SBB64ri32)
     FROM_TO(AND64rr, AND64ri32)
     FROM_TO(OR64rr, OR64ri32)
@@ -5739,6 +5738,8 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
 #define FROM_TO(FROM, TO)                                                      \
   case X86::FROM:                                                              \
     return X86::TO;
+    FROM_TO(ADD64rr, ADD64ri32)
+    FROM_TO(SUB64rr, SUB64ri32)
     FROM_TO(TEST64rr, TEST64ri32)
     FROM_TO(CTEST64rr, CTEST64ri32)
     FROM_TO(CMP64rr, CMP64ri32)
@@ -5748,6 +5749,10 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
     FROM_TO(CMP32rr, CMP32ri)
     FROM_TO(CCMP32rr, CCMP32ri)
 #undef FROM_TO
+  case X86::ADD64rr_ND:
+    return HasNDDI ? X86::ADD64ri32_ND : 0;
+  case X86::SUB64rr_ND:
+    return HasNDDI ? X86::SUB64ri32_ND : 0;
   }
 }
 
@@ -5834,7 +5839,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
     else
       return false;
   } else
-    NewOpc = convertALUrr2ALUri(Opc);
+    NewOpc = convertALUrr2ALUri(Opc, Subtarget.hasNDDI());
 
   if (!NewOpc)
     return false;
@@ -7534,6 +7539,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   //
   // Utilize the mapping NonNDD -> RMW for the NDD variant.
   unsigned NonNDOpc = Subtarget.hasNDD() ? X86::getNonNDVariant(Opc) : 0U;
+  // Disable memory folding for NDD instructions.
+  if (NonNDOpc && !Subtarget.hasNDDM())
+    return nullptr;
+
   const X86FoldTableEntry *I =
       IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
                 : lookupFoldTable(Opc, OpNum);
