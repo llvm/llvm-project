@@ -124,21 +124,21 @@ struct AllocaAnalysis {
   explicit AllocaAnalysis(AllocaInst *Alloca) : Alloca(Alloca) {}
 };
 
-// ValueReplacer was used to postpone the value replacement and erase dead
+// ValueReplacer is used to postpone the value replacement and erase dead
 // instructions after all the alloca's being processed. The postpone is needed
-// to handle cross-alloca value reference correctly.
+// to handle cross-alloca value references correctly.
 struct ValueReplacer {
   // Keep record of the value replacement pair.
-  void postReplaceAllUsesWith(Value *Old, Value *New) {
+  void postReplaceAllUsesWith(Instruction *Old, Value *New) {
     ReplaceVec.emplace_back(Old, New);
   }
 
   // Do the actual value replacement and erase dead instructions.
-  void replaceAndErase() {
-    for (auto &[Old, New] : ReplaceVec)
+  static void replaceAndErase(ValueReplacer &&VR) {
+    for (auto &[Old, New] : VR.ReplaceVec)
       Old->replaceAllUsesWith(New);
 
-    for (auto *I : ErasableInstrs) {
+    for (auto *I : VR.ErasableInstrs) {
       I->dropDroppableUses();
       assert(I->use_empty());
       I->eraseFromParent();
@@ -146,9 +146,9 @@ struct ValueReplacer {
   }
 
   // Mark an instruction as dead, and will be erased later. Note the order the
-  // instruction was inserted matters if there is possible cross references. The
-  // caller need to take care of this. The instructions will be deleted in the
-  // order they were added.
+  // instruction was inserted matters if there are possible cross references.
+  // The caller need to take care of this. The instructions will be deleted in
+  // the order they were added.
   void postErase(Instruction *I) { ErasableInstrs.push_back(I); }
 
   void postErase(const SmallVectorImpl<Instruction *> &C) {
@@ -160,7 +160,7 @@ struct ValueReplacer {
   }
 
 private:
-  SmallVector<std::pair<Value *, Value *>> ReplaceVec;
+  SmallVector<std::pair<Instruction *, Value *>> ReplaceVec;
   SmallVector<Instruction *> ErasableInstrs;
 };
 
@@ -461,7 +461,6 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   bool Changed = false;
   SetVector<IntrinsicInst *> DeferredIntrs;
   ValueReplacer VR;
-  SmallVector<Instruction *> ToBeErased;
 
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
@@ -497,7 +496,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   }
   finishDeferredAllocaToLDSPromotion(DeferredIntrs);
 
-  VR.replaceAndErase();
+  ValueReplacer::replaceAndErase(std::move(VR));
   return Changed;
 }
 
