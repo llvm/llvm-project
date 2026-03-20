@@ -92,7 +92,7 @@ MATCHER_P(snippetSuffix, Text, "") { return arg.SnippetSuffix == Text; }
 MATCHER_P(origin, OriginSet, "") { return arg.Origin == OriginSet; }
 MATCHER_P(signature, S, "") { return arg.Signature == S; }
 MATCHER_P(replacesRange, Range, "") {
-  return arg.CompletionTokenRange == Range;
+  return arg.CompletionInsertRange == Range;
 }
 
 // Shorthand for Contains(named(Name)).
@@ -2520,7 +2520,7 @@ TEST(CompletionTest, RenderWithFixItMerged) {
   C.Name = "x";
   C.RequiredQualifier = "Foo::";
   C.FixIts = {FixIt};
-  C.CompletionTokenRange.start.character = 5;
+  C.CompletionInsertRange.start.character = 5;
 
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
@@ -2540,7 +2540,7 @@ TEST(CompletionTest, RenderWithFixItNonMerged) {
   C.Name = "x";
   C.RequiredQualifier = "Foo::";
   C.FixIts = {FixIt};
-  C.CompletionTokenRange.start.character = 5;
+  C.CompletionInsertRange.start.character = 5;
 
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
@@ -2551,7 +2551,7 @@ TEST(CompletionTest, RenderWithFixItNonMerged) {
   EXPECT_THAT(R.additionalTextEdits, UnorderedElementsAre(FixIt));
 }
 
-TEST(CompletionTest, CompletionTokenRange) {
+TEST(CompletionTest, CompletionInsertRange) {
   MockFS FS;
   MockCompilationDatabase CDB;
   TestTU TU;
@@ -2593,7 +2593,7 @@ TEST(CompletionTest, CompletionTokenRange) {
       ADD_FAILURE() << "Results.Completions.size() != 1" << Text;
       continue;
     }
-    EXPECT_THAT(Results.Completions.front().CompletionTokenRange,
+    EXPECT_THAT(Results.Completions.front().CompletionInsertRange,
                 TestCode.range());
   }
 }
@@ -3981,23 +3981,23 @@ TEST(CompletionTest, DelayedTemplateParsing) {
 TEST(CompletionTest, CompletionRange) {
   const char *WithRange = "auto x = [[abc]]^";
   auto Completions = completions(WithRange);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(WithRange).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(WithRange).range());
   Completions = completionsNoCompile(WithRange);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(WithRange).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(WithRange).range());
 
   const char *EmptyRange = "auto x = [[]]^";
   Completions = completions(EmptyRange);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(EmptyRange).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(EmptyRange).range());
   Completions = completionsNoCompile(EmptyRange);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(EmptyRange).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(EmptyRange).range());
 
   // Sema doesn't trigger at all here, while the no-sema completion runs
   // heuristics as normal and reports a range. It'd be nice to be consistent.
   const char *NoCompletion = "/* foo [[]]^ */";
   Completions = completions(NoCompletion);
-  EXPECT_EQ(Completions.CompletionRange, std::nullopt);
+  EXPECT_EQ(Completions.InsertRange, std::nullopt);
   Completions = completionsNoCompile(NoCompletion);
-  EXPECT_EQ(Completions.CompletionRange, Annotations(NoCompletion).range());
+  EXPECT_EQ(Completions.InsertRange, Annotations(NoCompletion).range());
 }
 
 TEST(NoCompileCompletionTest, Basic) {
@@ -4300,7 +4300,7 @@ TEST(CompletionTest, CommentParamName) {
   {
     std::string CompletionRangeTest(Code + "fun(/*[[^]]");
     auto Results = completions(CompletionRangeTest);
-    EXPECT_THAT(Results.CompletionRange,
+    EXPECT_THAT(Results.InsertRange,
                 llvm::ValueIs(Annotations(CompletionRangeTest).range()));
     EXPECT_THAT(
         Results.Completions,
@@ -4311,7 +4311,7 @@ TEST(CompletionTest, CommentParamName) {
   {
     std::string CompletionRangeTest(Code + "fun(/*[[fo^]]");
     auto Results = completions(CompletionRangeTest);
-    EXPECT_THAT(Results.CompletionRange,
+    EXPECT_THAT(Results.InsertRange,
                 llvm::ValueIs(Annotations(CompletionRangeTest).range()));
     EXPECT_THAT(
         Results.Completions,

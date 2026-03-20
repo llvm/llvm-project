@@ -1615,7 +1615,7 @@ class CodeCompleteFlow {
   bool Incomplete = false; // Would more be available with a higher limit?
   CompletionPrefix HeuristicPrefix;
   std::optional<FuzzyMatcher> Filter; // Initialized once Sema runs.
-  Range ReplacedRange;
+  Range InsertRange;
   std::vector<std::string> QueryScopes;      // Initialized once Sema runs.
   std::vector<std::string> AccessibleScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
@@ -1750,8 +1750,8 @@ public:
     IsUsingDeclaration = false;
     Filter = FuzzyMatcher(HeuristicPrefix.Name);
     auto Pos = offsetToPosition(Content, Offset);
-    ReplacedRange.start = ReplacedRange.end = Pos;
-    ReplacedRange.start.character -= HeuristicPrefix.Name.size();
+    InsertRange.start = InsertRange.end = Pos;
+    InsertRange.start.character -= HeuristicPrefix.Name.size();
 
     llvm::StringMap<SourceParams> ProxSources;
     ProxSources[FileName].Cost = 0;
@@ -1838,13 +1838,13 @@ private:
     // Then the range will be invalid and we will be doing insertion, use
     // current cursor position in such cases as range.
     if (CodeCompletionRange.isValid()) {
-      ReplacedRange = halfOpenToRange(Recorder->CCSema->getSourceManager(),
-                                      CodeCompletionRange);
+      InsertRange = halfOpenToRange(Recorder->CCSema->getSourceManager(),
+                                    CodeCompletionRange);
     } else {
       const auto &Pos = sourceLocToPosition(
           Recorder->CCSema->getSourceManager(),
           Recorder->CCSema->getPreprocessor().getCodeCompletionLoc());
-      ReplacedRange.start = ReplacedRange.end = Pos;
+      InsertRange.start = InsertRange.end = Pos;
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
@@ -1885,7 +1885,7 @@ private:
     for (auto &C : Scored) {
       Output.Completions.push_back(toCodeCompletion(C.first));
       Output.Completions.back().Score = C.second;
-      Output.Completions.back().CompletionTokenRange = ReplacedRange;
+      Output.Completions.back().CompletionInsertRange = InsertRange;
       if (Opts.Index && !Output.Completions.back().Documentation) {
         for (auto &Cand : C.first) {
           if (Cand.SemaResult &&
@@ -1909,7 +1909,7 @@ private:
     }
     Output.HasMore = Incomplete;
     Output.Context = CCContextKind;
-    Output.CompletionRange = ReplacedRange;
+    Output.InsertRange = InsertRange;
 
     // Look up documentation from the index.
     if (Opts.Index) {
@@ -2231,9 +2231,10 @@ CompletionPrefix guessCompletionPrefix(llvm::StringRef Content,
 }
 
 // Code complete the argument name on "/*" inside function call.
-// Offset should be pointing to the start of the comment, i.e.:
+// OutsideStartOffset should be pointing before the comment, i.e.:
 // foo(^/*, rather than foo(/*^) where the cursor probably is.
-CodeCompleteResult codeCompleteComment(PathRef FileName, unsigned Offset,
+CodeCompleteResult codeCompleteComment(PathRef FileName,
+                                       unsigned OutsideStartOffset,
                                        llvm::StringRef Prefix,
                                        const PreambleData *Preamble,
                                        const ParseInputs &ParseInput) {
@@ -2250,20 +2251,20 @@ CodeCompleteResult codeCompleteComment(PathRef FileName, unsigned Offset,
   // full patch.
   semaCodeComplete(
       std::make_unique<ParamNameCollector>(Options, ParamNames), Options,
-      {FileName, Offset, *Preamble,
+      {FileName, OutsideStartOffset, *Preamble,
        PreamblePatch::createFullPatch(FileName, ParseInput, *Preamble),
        ParseInput});
   if (ParamNames.empty())
     return CodeCompleteResult();
 
   CodeCompleteResult Result;
-  Range CompletionRange;
+  Range InsertRange;
   // Skip /*
-  Offset += 2;
-  CompletionRange.start = offsetToPosition(ParseInput.Contents, Offset);
-  CompletionRange.end =
-      offsetToPosition(ParseInput.Contents, Offset + Prefix.size());
-  Result.CompletionRange = CompletionRange;
+  OutsideStartOffset += 2;
+  InsertRange.start = offsetToPosition(ParseInput.Contents, OutsideStartOffset);
+  InsertRange.end =
+      offsetToPosition(ParseInput.Contents, OutsideStartOffset + Prefix.size());
+  Result.InsertRange = InsertRange;
   Result.Context = CodeCompletionContext::CCC_NaturalLanguage;
   for (llvm::StringRef Name : ParamNames) {
     if (!Name.starts_with(Prefix))
@@ -2272,7 +2273,7 @@ CodeCompleteResult codeCompleteComment(PathRef FileName, unsigned Offset,
     Item.Name = Name.str() + "=*/";
     Item.FilterText = Item.Name;
     Item.Kind = CompletionItemKind::Text;
-    Item.CompletionTokenRange = CompletionRange;
+    Item.CompletionInsertRange = InsertRange;
     Item.Origin = SymbolOrigin::AST;
     Result.Completions.push_back(Item);
   }
@@ -2423,7 +2424,7 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   }
   LSP.sortText = sortText(Score.Total, FilterText);
   LSP.filterText = FilterText;
-  LSP.textEdit = {CompletionTokenRange, RequiredQualifier + Name, ""};
+  LSP.textEdit = {CompletionInsertRange, RequiredQualifier + Name, ""};
   // Merge continuous additionalTextEdits into main edit. The main motivation
   // behind this is to help LSP clients, it seems most of them are confused when
   // they are provided with additionalTextEdits that are consecutive to main

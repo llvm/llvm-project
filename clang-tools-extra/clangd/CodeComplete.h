@@ -222,7 +222,7 @@ struct CodeCompletion {
   std::vector<TextEdit> FixIts;
 
   /// Holds the range of the token we are going to replace with this completion.
-  Range CompletionTokenRange;
+  Range CompletionInsertRange;
 
   // Scores are used to rank completion items.
   struct Scores {
@@ -262,7 +262,7 @@ struct CodeCompleteResult {
   // Example: foo.pb^ -> foo.push_back()
   //              ~~
   // Typically matches the textEdit.range of Completions, but not guaranteed to.
-  std::optional<Range> CompletionRange;
+  std::optional<Range> InsertRange;
   // Usually the source will be parsed with a real C++ parser.
   // But heuristics may be used instead if e.g. the preamble is not ready.
   bool RanParser = true;
