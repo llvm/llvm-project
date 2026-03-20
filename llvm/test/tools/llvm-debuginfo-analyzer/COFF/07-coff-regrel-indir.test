@@ -15,13 +15,14 @@
 ; 10   return b + c;
 ; 11 }
 
+; RUN: yaml2obj %p/Inputs/defrange-regrel-indir-clang.yaml -o - | \
 ; RUN: llvm-debuginfo-analyzer --attribute=register \
 ; RUN:                         --print=symbols \
-; RUN:                         %p/Inputs/defrange-regrel-indir-clang.o 2>&1 | \
+; RUN:                         - 2>&1 | \
 ; RUN: FileCheck --strict-whitespace %s
 
 ; CHECK: Logical View:
-; CHECK-NEXT:            {File} 'defrange-regrel-indir-clang.o'
+; CHECK-NEXT:            {File} '-'
 ; CHECK-EMPTY:
 ; CHECK-NEXT:              {CompileUnit} 't.cpp'
 ; CHECK-NEXT:                {Function} extern not_inlined 'main' -> 'int'
