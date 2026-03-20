@@ -429,8 +429,8 @@ static VectorType trimNonScalableUnitDims(VectorType oldType) {
   return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
-static bool isUnitDimMask(Value operand) {
-  auto cst = operand.getDefiningOp<arith::ConstantIndexOp>();
+static bool isUnitDimMask(Value maskDimSize) {
+  auto cst = maskDimSize.getDefiningOp<arith::ConstantIndexOp>();
   return cst && cst.value() == 1;
 }
 static bool isUnitDimMask(int64_t maskDimSize) { return maskDimSize == 1; }
