@@ -39,9 +39,9 @@ constexpr bool test() {
 
   {
     // Test with stride as inexact multiple of number of elements in view strided over.
-    constexpr auto iota = std::views::iota(0, 22);
+    auto iota = std::views::iota(0, 22);
     static_assert(std::ranges::sized_range<decltype(iota)>);
-    constexpr auto strided = std::views::stride(iota, 3);
+    auto strided = std::views::stride(iota, 3);
     static_assert(std::ranges::sized_range<decltype(strided)>);
     assert(strided.size() == 8);
   }
