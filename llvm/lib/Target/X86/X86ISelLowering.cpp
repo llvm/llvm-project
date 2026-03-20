@@ -58301,31 +58301,61 @@ static SDValue combineFPToSInt(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Custom handling for VCVTTPS2QQS/VCVTTPS2UQQS
 static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert((Opcode == ISD::FP_TO_SINT_SAT || Opcode == ISD::FP_TO_UINT_SAT) &&
+         "Unexpected opcode for combineFP_TO_xINT_SAT");
   if (!Subtarget.hasAVX10_2())
     return SDValue();
 
-  bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT_SAT;
-  EVT SrcVT = N->getOperand(0).getValueType();
+  bool IsSigned = Opcode == ISD::FP_TO_SINT_SAT;
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
   EVT DstVT = N->getValueType(0);
-  SDLoc dl(N);
+  EVT SatVT = cast<VTSDNode>(N->getOperand(1))->getVT();
+  SDLoc DL(N);
 
-  if (SrcVT == MVT::v2f32 && DstVT == MVT::v2i64) {
-    SDValue V2F32Value = DAG.getUNDEF(SrcVT);
-
-    // Concatenate the original v2f32 input and V2F32Value to create v4f32
-    SDValue NewSrc = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                                 N->getOperand(0), V2F32Value);
-
-    // Select the FP_TO_SINT_SAT/FP_TO_UINT_SAT node
+  // Preserve the existing full-width v2f32 -> v2i64 target-specific combine.
+  if (SrcVT == MVT::v2f32 && DstVT == MVT::v2i64 &&
+      SatVT.getScalarSizeInBits() == 64) {
+    SDValue Undef = DAG.getUNDEF(SrcVT);
+    SDValue NewSrc =
+        DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4f32, Src, Undef);
     if (IsSigned)
-      return DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v2i64, NewSrc);
-
-    return DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v2i64, NewSrc);
+      return DAG.getNode(X86ISD::FP_TO_SINT_SAT, DL, MVT::v2i64, NewSrc);
+    return DAG.getNode(X86ISD::FP_TO_UINT_SAT, DL, MVT::v2i64, NewSrc);
   }
-  return SDValue();
+
+  bool IsVector = SrcVT.isVector();
+  if (IsVector && !SrcVT.isFixedLengthVector())
+    return SDValue();
+
+  EVT SrcEltVT = SrcVT.getScalarType();
+  if (SrcEltVT != MVT::f32 && SrcEltVT != MVT::f64)
+    return SDValue();
+
+  unsigned DstWidth = DstVT.getScalarSizeInBits();
+  unsigned SatWidth = SatVT.getScalarSizeInBits();
+  // Only canonicalize narrow SatVT cases.
+  if ((DstWidth != 32 && DstWidth != 64) || SatWidth >= DstWidth)
+    return SDValue();
+
+  EVT FullSatVT = EVT::getIntegerVT(*DAG.getContext(), DstWidth);
+  SDValue FullSatTy = DAG.getValueType(FullSatVT);
+  SDValue Full = DAG.getNode(Opcode, DL, DstVT, Src, FullSatTy);
+  if (IsSigned) {
+    APInt Min = APInt::getSignedMinValue(SatWidth).sext(DstWidth);
+    APInt Max = APInt::getSignedMaxValue(SatWidth).sext(DstWidth);
+    SDValue MinC = DAG.getConstant(Min, DL, DstVT);
+    SDValue MaxC = DAG.getConstant(Max, DL, DstVT);
+    SDValue ClampedMin = DAG.getNode(ISD::SMAX, DL, DstVT, Full, MinC);
+    return DAG.getNode(ISD::SMIN, DL, DstVT, ClampedMin, MaxC);
+  }
+
+  APInt Max = APInt::getMaxValue(SatWidth).zext(DstWidth);
+  SDValue MaxC = DAG.getConstant(Max, DL, DstVT);
+  return DAG.getNode(ISD::UMIN, DL, DstVT, Full, MaxC);
 }
 
 // Turn uniform-constant splat rotates into VROTLI/VROTRI
