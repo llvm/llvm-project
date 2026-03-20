@@ -1,5 +1,5 @@
 ! Test lowering of conditional expressions (Fortran 2023)
-! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPtest_scalar_integer(
 ! CHECK-SAME:    %[[FLAG:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "flag"},
@@ -98,13 +98,14 @@ subroutine test_char_constant_len(flag)
   str1 = "HELLO"
   str2 = "WORLD"
   result = (flag ? str1 : str2)
-  ! CHECK: %[[TEMP:.*]] = fir.alloca !fir.char<1,5> {bindc_name = ".cond.scalar"
-  ! CHECK: %{{.*}} = arith.constant 5 : index
-  ! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] typeparams %{{.*}} {uniq_name = ".cond.result"}
+  ! Per F2023, the length type parameter is that of the chosen branch, so
+  ! branches may have different lengths. The result length is therefore
+  ! always only known at runtime: use the allocatable (deferred) path.
+  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = ".cond.char"
   ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
+  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
+  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
   ! CHECK: }
 end subroutine
 

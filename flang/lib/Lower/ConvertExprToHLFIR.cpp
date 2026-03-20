@@ -1827,40 +1827,39 @@ private:
     llvm_unreachable("unknown descriptor inquiry");
   }
 
-  /// Build nested if-then-else chain for conditional expressions with lazy
-  /// evaluation. The assignValue callback generates and assigns each value to
-  /// avoid evaluating non-taken branches.
-  template <typename T>
-  void buildConditionalIfChain(
-      const Fortran::evaluate::ConditionalExpr<T> &condExpr,
-      const std::function<void(int valueIndex)> &assignValue) {
+  /// Build nested if-then-else chain by walking the right-skewed
+  /// ConditionalExpr tree. The assignValue callback generates and assigns
+  /// each value to avoid evaluating non-taken branches.
+  template <typename T, typename Callback>
+  void
+  buildConditionalIfChain(const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+                          const Callback &assignValue) {
     const mlir::Location loc = getLoc();
     fir::FirOpBuilder &builder = getBuilder();
-    std::function<void(int)> buildIfChain = [&](int i) {
-      if (i >= static_cast<int>(condExpr.conditions().size())) {
-        // All conditions false: assign final else value.
-        getStmtCtx().pushScope();
-        assignValue(static_cast<int>(condExpr.values().size()) - 1);
-        getStmtCtx().finalizeAndPop();
-      } else {
-        getStmtCtx().pushScope();
-        const hlfir::EntityWithAttributes condEntity =
-            gen(condExpr.conditions()[i]);
-        mlir::Value condition =
-            hlfir::loadTrivialScalar(loc, builder, condEntity);
-        condition = builder.createConvert(loc, builder.getI1Type(), condition);
-        builder.genIfOp(loc, {}, condition, /*withElseRegion=*/true)
-            .genThen([&]() {
-              getStmtCtx().pushScope();
-              assignValue(i);
-              getStmtCtx().finalizeAndPop();
-            })
-            .genElse([&]() { buildIfChain(i + 1); })
-            .end();
-        getStmtCtx().finalizeAndPop();
-      }
-    };
-    buildIfChain(0);
+    getStmtCtx().pushScope();
+    const hlfir::EntityWithAttributes condEntity = gen(condExpr.condition());
+    mlir::Value condition = hlfir::loadTrivialScalar(loc, builder, condEntity);
+    condition = builder.createConvert(loc, builder.getI1Type(), condition);
+    builder.genIfOp(loc, {}, condition, /*withElseRegion=*/true)
+        .genThen([&]() {
+          getStmtCtx().pushScope();
+          assignValue(condExpr.thenValue());
+          getStmtCtx().finalizeAndPop();
+        })
+        .genElse([&]() {
+          // Recurse for nested ConditionalExpr; else assign terminal value.
+          if (const auto *nested =
+                  std::get_if<Fortran::evaluate::ConditionalExpr<T>>(
+                      &condExpr.elseValue().u)) {
+            buildConditionalIfChain(*nested, assignValue);
+          } else {
+            getStmtCtx().pushScope();
+            assignValue(condExpr.elseValue());
+            getStmtCtx().finalizeAndPop();
+          }
+        })
+        .end();
+    getStmtCtx().finalizeAndPop();
   }
 
   /// Generate scalar conditional with lazy evaluation using assignment.
@@ -1879,15 +1878,16 @@ private:
         builder, loc, tempStorage, ".cond.result",
         /*shape=*/mlir::Value{}, /*typeParams=*/typeParams);
     const hlfir::Entity temp{tempDecl};
-    buildConditionalIfChain(condExpr, [&](int valueIndex) {
-      hlfir::Entity entity = gen(condExpr.values()[valueIndex]);
-      auto [exv, cleanup] = hlfir::convertToValue(loc, builder, entity);
-      hlfir::Entity value{fir::getBase(exv)};
-      if (cleanup) {
-        getStmtCtx().attachCleanup(*cleanup);
-      }
-      hlfir::AssignOp::create(builder, loc, value, temp);
-    });
+    buildConditionalIfChain(
+        condExpr, [&](const Fortran::evaluate::Expr<T> &expr) {
+          hlfir::Entity entity = gen(expr);
+          auto [exv, cleanup] = hlfir::convertToValue(loc, builder, entity);
+          hlfir::Entity value{fir::getBase(exv)};
+          if (cleanup) {
+            getStmtCtx().attachCleanup(*cleanup);
+          }
+          hlfir::AssignOp::create(builder, loc, value, temp);
+        });
     return temp;
   }
 
@@ -1912,13 +1912,14 @@ private:
         hlfir::DeclareOp::create(builder, loc, tempStorage, ".cond.result");
     const hlfir::Entity temp{tempDecl};
     // Lazy evaluation: only the selected branch is evaluated and assigned.
-    buildConditionalIfChain(condExpr, [&](int valueIndex) {
-      const hlfir::Entity entity = gen(condExpr.values()[valueIndex]);
-      hlfir::AssignOp::create(builder, loc, entity, temp,
-                              /*isWholeAllocatableAssignment=*/true,
-                              /*keepLhsLengthIfRealloc=*/false,
-                              /*temporary_lhs=*/true);
-    });
+    buildConditionalIfChain(
+        condExpr, [&](const Fortran::evaluate::Expr<T> &expr) {
+          const hlfir::Entity entity = gen(expr);
+          hlfir::AssignOp::create(builder, loc, entity, temp,
+                                  /*isWholeAllocatableAssignment=*/true,
+                                  /*keepLhsLengthIfRealloc=*/false,
+                                  /*temporary_lhs=*/true);
+        });
     return temp;
   }
 
@@ -1977,12 +1978,6 @@ private:
   template <typename T>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
-    assert(!condExpr.conditions().empty() &&
-           "conditional expression must have conditions");
-    assert(!condExpr.values().empty() &&
-           "conditional expression must have values");
-    assert(condExpr.values().size() == condExpr.conditions().size() + 1 &&
-           "values must have exactly one more element than conditions");
     const int rank = condExpr.Rank();
 
     // Arrays: handle early to avoid unnecessary type checks.
