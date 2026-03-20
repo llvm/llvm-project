@@ -445,16 +445,13 @@ static void buildWorklist(const Record *R,
   });
 
   // Add a work item for each Varying element type.
-  for (size_t I = 0, N = VaryingTypeRecords.size(); I < N; ++I) {
-    const Record *ElemTy = VaryingTypeRecords[I];
-
+  for (const Record *ElemTy : VaryingTypeRecords) {
     TypeWorkItem Item;
     Item.ElemType = ElemTy->getValueAsString("Name");
     bool Is16Bit = Ctx.Uses16BitType || ElemTy->getValueAsBit("Is16Bit");
     bool IsCond16Bit = Ctx.UsesConditionally16BitType ||
                        ElemTy->getValueAsBit("IsConditionally16Bit");
     SetAvailability(Item, Is16Bit, IsCond16Bit);
-
     Worklist.push_back(Item);
   }
 }
