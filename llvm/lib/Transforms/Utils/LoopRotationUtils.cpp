@@ -69,16 +69,18 @@ class LoopRotate {
   bool RotationOnly;
   bool IsUtilMode;
   bool PrepareForLTO;
+  bool CheckExitCount;
 
 public:
   LoopRotate(unsigned MaxHeaderSize, LoopInfo *LI,
              const TargetTransformInfo *TTI, AssumptionCache *AC,
              DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
              const SimplifyQuery &SQ, bool RotationOnly, bool IsUtilMode,
-             bool PrepareForLTO)
+             bool PrepareForLTO, bool CheckExitCount)
       : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE),
         MSSAU(MSSAU), SQ(SQ), RotationOnly(RotationOnly),
-        IsUtilMode(IsUtilMode), PrepareForLTO(PrepareForLTO) {}
+        IsUtilMode(IsUtilMode), PrepareForLTO(PrepareForLTO),
+        CheckExitCount(CheckExitCount) {}
   bool processLoop(Loop *L);
 
 private:
@@ -207,11 +209,12 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
   }
 }
 
-// Assuming both header and latch are exiting, look for a phi which is only
-// used outside the loop (via a LCSSA phi) in the exit from the header.
-// This means that rotating the loop can remove the phi.
-static bool profitableToRotateLoopExitingLatch(Loop *L) {
+// Assuming both header and latch are exiting, check if rotating is profitable:
+// either a header phi becomes dead, or rotating makes the latch exit count
+// computable (enabling downstream optimizations like unrolling/vectorization).
+static bool profitableToRotateLoopExitingLatch(Loop *L, ScalarEvolution *SE) {
   BasicBlock *Header = L->getHeader();
+  BasicBlock *Latch = L->getLoopLatch();
   BranchInst *BI = dyn_cast<BranchInst>(Header->getTerminator());
   assert(BI && BI->isConditional() && "need header with conditional exit");
   BasicBlock *HeaderExit = BI->getSuccessor(0);
@@ -226,6 +229,13 @@ static bool profitableToRotateLoopExitingLatch(Loop *L) {
       continue;
     return true;
   }
+
+  // Check if rotating would make the latch exit count computable, enabling
+  // optimizations like runtime unrolling and vectorization.
+  if (SE && isa<SCEVCouldNotCompute>(SE->getExitCount(L, Latch)) &&
+      !isa<SCEVCouldNotCompute>(SE->getExitCount(L, Header)))
+    return true;
+
   return false;
 }
 
@@ -441,7 +451,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // Rotate if either the loop latch does *not* exit the loop, or if the loop
     // latch was just simplified. Or if we think it will be profitable.
     if (L->isLoopExiting(OrigLatch) && !SimplifiedLatch && IsUtilMode == false &&
-        !profitableToRotateLoopExitingLatch(L) &&
+        !profitableToRotateLoopExitingLatch(L,  CheckExitCount ? SE : nullptr) &&
         !canRotateDeoptimizingLatchExit(L))
       return Rotated;
 
@@ -1058,8 +1068,9 @@ bool llvm::LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
                         ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
                         const SimplifyQuery &SQ, bool RotationOnly = true,
                         unsigned Threshold = unsigned(-1),
-                        bool IsUtilMode = true, bool PrepareForLTO) {
+                        bool IsUtilMode = true, bool PrepareForLTO,
+                        bool CheckExitCount) {
   LoopRotate LR(Threshold, LI, TTI, AC, DT, SE, MSSAU, SQ, RotationOnly,
-                IsUtilMode, PrepareForLTO);
+                IsUtilMode, PrepareForLTO, CheckExitCount);
   return LR.processLoop(L);
 }
