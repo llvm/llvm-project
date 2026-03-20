@@ -356,7 +356,7 @@ void DWARFDebugLoclists::dumpRawEntry(const DWARFLocationEntry &Entry,
   StringRef EncodingString = dwarf::LocListEncodingString(Entry.Kind);
   // Unsupported encodings should have been reported during parsing.
   assert(!EncodingString.empty() && "Unknown loclist entry encoding");
-  OS << formatv("{0}(", fmt_align(EncodingString.data(), AlignStyle::Left,
+  OS << formatv("{0}(", fmt_align(EncodingString, AlignStyle::Left,
                                   MaxEncodingStringLength));
   unsigned FieldSize = 2 + 2 * Data.getAddressSize();
   switch (Entry.Kind) {
