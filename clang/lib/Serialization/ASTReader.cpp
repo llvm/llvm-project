@@ -6483,7 +6483,8 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
                                        "too many submodules");
 
       if (!ParentModule) {
-        if (const ModuleFileKey *CurFileKey = CurrentModule->getASTFileKey()) {
+        if ([[maybe_unused]] const ModuleFileKey *CurFileKey =
+                CurrentModule->getASTFileKey()) {
           // Don't emit module relocation error if we have -fno-validate-pch
           if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
                     DisableValidationForModuleKind::Module)) {
