@@ -349,28 +349,28 @@ public:
   };
 
 private:
-  /// Whether the bounds safety kind has been audited.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned KindAudited : 1;
-
   /// The kind of bounds safety for this property. Only valid if the bounds
   /// safety has been audited.
   LLVM_PREFERRED_TYPE(BoundsSafetyKind)
   unsigned Kind : 3;
 
-  /// Whether the pointer indirection level has been specified.
+  /// Whether the bounds safety kind has been audited.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned LevelAudited : 1;
+  unsigned KindAudited : 1;
 
   /// The pointer indirection level at which the bounds annotation applies.
   /// Only valid if LevelAudited is set.
   unsigned Level : 3;
 
+  /// Whether the pointer indirection level has been specified.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned LevelAudited : 1;
+
 public:
   std::string ExternalBounds;
 
   BoundsSafetyInfo()
-      : KindAudited(false), Kind(0), LevelAudited(false), Level(0),
+      : Kind(0), KindAudited(false), Level(0), LevelAudited(false),
         ExternalBounds("") {}
 
   std::optional<BoundsSafetyKind> getKind() const {
