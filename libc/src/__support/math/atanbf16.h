@@ -67,6 +67,12 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
   // > display = hexadecimal ;
   // > P = fpminimax(atan(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14|], [|SG, SG,
   // SG..SG|], [0, 1]);
+  //
+  // absolute error for the polynomial given by:
+  // dirtyinfnorm(atan(x) - x * P(x), [0, 1]) gives
+  // error ~ 0x1.482168p-24
+  // worst case error for it being ~ 0x1.dcf750p-23
+  // satisfying -> error < worst_case
   if (x_abs <= 0x3f80) {
     float result = fputil::polyeval(
         x_sq, 0x1.fffffcp-1f, -0x1.55519ep-2f, 0x1.98f6a8p-3f, -0x1.1f0a92p-3f,
@@ -84,6 +90,11 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
   // > display = hexadecimal ;
   // > P = fpminimax(atan(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14|], [|SG, SG, SG...
   // SG|], [0, 1]); (here its atan(1/|x|)/(1/|x|))
+  // absolute error for the polynomial given by:
+  // dirtyinfnorm(atan(x) - x * P(x), [0, 1]) gives
+  // error ~ 0x1.482168p-24
+  // worst case error for it being ~ 0x1.dcf750p-23
+  // satisfying -> error < worst_case
   float result =
       fputil::polyeval(x_inv_sq, 0x1.fffffcp-1f, -0x1.55519ep-2f,
                        0x1.98f6a8p-3f, -0x1.1f0a92p-3f, 0x1.95b654p-4f,
