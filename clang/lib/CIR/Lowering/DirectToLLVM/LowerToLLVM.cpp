@@ -46,6 +46,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace cir;
 using namespace llvm;
@@ -4925,7 +4926,8 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm) {
 }
 
 std::unique_ptr<llvm::Module>
-lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
+lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
+                             StringRef mlirSaveTempsOutFile) {
   llvm::TimeTraceScope scope("lower from CIR to LLVM directly");
 
   mlir::MLIRContext *mlirCtx = mlirModule.getContext();
@@ -4939,6 +4941,13 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
     // FIXME: Handle any errors where they occurs and return a nullptr here.
     report_fatal_error(
         "The pass manager failed to lower CIR to LLVMIR dialect!");
+  }
+
+  if (!mlirSaveTempsOutFile.empty()) {
+    std::error_code ec;
+    llvm::raw_fd_ostream out(mlirSaveTempsOutFile, ec);
+    if (!ec)
+      mlirModule->print(out);
   }
 
   mlir::registerBuiltinDialectTranslation(*mlirCtx);
