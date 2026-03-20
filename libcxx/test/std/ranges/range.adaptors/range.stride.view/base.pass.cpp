@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr _View base() const& requires copy_constructible<_View>;
-// constexpr _View base() &&;
+// constexpr V base() const& requires copy_constructible<V>;
+// constexpr V base() &&;
 
 #include <cassert>
 #include <ranges>

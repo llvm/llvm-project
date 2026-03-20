@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr __iterator& operator++()
+// constexpr iterator& operator++()
 // constexpr void operator++(int)
-// constexpr __iterator operator++(int)
+// constexpr iterator operator++(int)
 
+#include <cassert>
 #include <iterator>
-#include <vector>
+#include <ranges>
 
 #include "../types.h"
 
@@ -146,7 +147,7 @@ constexpr bool test_forward_operator_increment(Iter begin, Iter end) {
 }
 
 constexpr bool test_properly_handling_missing() {
-  // Check whether __missing_ gets handled properly.
+  // Check whether the "missing" distance to the end gets handled properly.
   using Base = BasicTestView<int*, int*>;
   int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   auto base    = Base(arr, arr + 10);
@@ -158,8 +159,8 @@ constexpr bool test_properly_handling_missing() {
   assert(*strider_iter == 8);
 
   // Now that we are back among the valid, we should
-  // have a normal stride length back (i.e., __missing_
-  // should be equal to 0).
+  // have a normal stride length back (i.e., there is no
+  // gap between the last stride and the end).
   strider_iter--;
   assert(*strider_iter == 1);
 
@@ -167,7 +168,7 @@ constexpr bool test_properly_handling_missing() {
   assert(*strider_iter == 8);
 
   // By striding past the end, we are going to generate
-  // another __missing_ != 0 value.
+  // another gap between the last stride and the end.
   strider_iter++;
   assert(strider_iter == strider.end());
 
@@ -179,27 +180,31 @@ constexpr bool test_properly_handling_missing() {
   assert(std::default_sentinel - strider.end() == 0);
   assert(std::default_sentinel - strider_iter == 0);
 
-  // Let's make sure that the newly regenerated __missing__ gets used.
+  // Let's make sure that the newly regenerated gap gets used.
   strider_iter += -2;
   assert(*strider_iter == 1);
 
   return true;
 }
 
-int main(int, char**) {
+constexpr bool test() {
   {
-    constexpr int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     test_forward_operator_increment(arr, arr + 11);
-    test_forward_operator_increment(vec.begin(), vec.end());
   }
+  test_properly_handling_missing();
+  return true;
+}
 
+int main(int, char**) {
+  test();
+  static_assert(test());
+
+  // Non-forward iterators can't be tested in a constexpr context.
   {
     int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     test_non_forward_operator_increment(SizedInputIter(arr), SizedInputIter(arr + 3), SizedInputIter(arr + 10));
   }
 
-  test_properly_handling_missing();
-  static_assert(test_properly_handling_missing());
   return 0;
 }

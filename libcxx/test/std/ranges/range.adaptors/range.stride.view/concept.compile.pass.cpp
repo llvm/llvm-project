@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// template <input_range _View> requires view<_View>
+// template <input_range V> requires view<V>
+
+#include <ranges>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"

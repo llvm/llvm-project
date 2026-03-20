@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// template <class _Range>
-// stride_view(_Range&&, range_difference_t<_Range>) -> stride_view<views::all_t<_Range>>;
+// template <class R>
+// stride_view(R&&, range_difference_t<R>) -> stride_view<views::all_t<R>>;
 
-#include "types.h"
+#include <cassert>
 #include <concepts>
 #include <ranges>
+
+#include "types.h"
 
 struct View : std::ranges::view_base {
   int* begin() const;
@@ -25,7 +27,7 @@ struct Range {
   int* end() const;
 };
 
-constexpr bool testCTAD() {
+constexpr bool test() {
   int a[] = {1, 2, 3, 4, 5};
 
   using BaseRange = BasicTestRange<cpp17_input_iterator<int*>>;
@@ -89,8 +91,8 @@ constexpr bool testCTAD() {
 }
 
 int main(int, char**) {
-  testCTAD();
-  static_assert(testCTAD());
+  test();
+  static_assert(test());
 
   return 0;
 }

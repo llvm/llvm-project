@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr auto size()
+// constexpr auto size() requires sized_range<V>
+// constexpr auto size() const requires sized_range<const V>
 
 #include <ranges>
 

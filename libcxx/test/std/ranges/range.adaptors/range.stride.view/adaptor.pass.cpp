@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// std::views::stride_view
+// std::views::stride
 
+#include <cassert>
 #include <ranges>
 
 #include "test_iterators.h"

@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-//  friend constexpr void iter_swap(__iterator const& __x, __iterator const& __y)
-//  noexcept(noexcept(ranges::iter_swap(__x.__current_, __y.__current_)))
-//  requires indirectly_swappable<iterator_t<_Base>>
+//  friend constexpr void iter_swap(const iterator& x, const iterator& y)
+//  noexcept(noexcept(ranges::iter_swap(x.current_, y.current_)))
+//  requires indirectly_swappable<iterator_t<Base>>
 
+#include <cassert>
 #include <ranges>
 
 #include "../types.h"

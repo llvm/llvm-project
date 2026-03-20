@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr __iterator(__iterator<!_Const> __i)
-//    requires _Const && convertible_to<ranges::iterator_t<_View>, iterator_t<_Base>> &&
-//                 convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
+// constexpr iterator(iterator<!Const> i)
+//    requires Const && convertible_to<iterator_t<V>, iterator_t<Base>> &&
+//                 convertible_to<sentinel_t<V>, sentinel_t<Base>>
 
 #include <ranges>
 
@@ -102,10 +102,10 @@ struct NotSimpleViewConstIterEnd : InputIter<NotSimpleViewConstIterEnd<CopyConve
 };
 
 /*
- * Goal: We will need a way to get a stride_view<true>::__iterator and a
- * stride_view<false>::__iterator because those are the two possible types
- * of the stride_view::__iterator constructor. The template value is determined
- * by whether the stride_view::__iterator is derivative of a stride_view over a
+ * Goal: We will need a way to get a stride_view::iterator<true> and a
+ * stride_view::iterator<false> because those are the two possible types
+ * of the stride_view::iterator constructor. The template value is determined
+ * by whether the stride_view::iterator is derivative of a stride_view over a
  * view that is simple.
  *
  * So, first things first, we need to build a stride_view over a (non-)simple view.
@@ -117,10 +117,10 @@ struct NotSimpleViewConstIterEnd : InputIter<NotSimpleViewConstIterEnd<CopyConve
  * for those conditions individually. We parameterize with a template to decide
  * whether to
  * 1. enable converting constructors between the non-const and the const version.
- * That feature is important for testing the stride_view::__iterator<true> converting
- * constructor from a stride_view::_iterator<false> iterator.
+ * That feature is important for testing the stride_view::iterator<true> converting
+ * constructor from a stride_view::iterator<false> iterator.
  * 2. enable copyability. That feature is important for testing whether the requirement
- * the that copy constructor for the stride_view::__iterator<false> type actually moves
+ * that the copy constructor for the stride_view::iterator<false> type actually moves
  * the underlying iterator.
  */
 template <bool CopyConvertible = false, bool MoveConvertible = true>
@@ -138,15 +138,14 @@ struct NotSimpleViewDifferentEnd : std::ranges::view_base {
   constexpr NotSimpleViewIterEnd end() { return {}; }
 };
 
-constexpr bool non_simple_view_iter_ctor_test() {
-  using NotSimpleStrideView          = std::ranges::stride_view<NotSimpleViewDifferentBegin<false>>;
-  using NotSimpleStrideViewIter      = std::ranges::iterator_t<NotSimpleStrideView>;
-  using NotSimpleStrideViewIterConst = std::ranges::iterator_t<const NotSimpleStrideView>;
-  static_assert(!std::is_same_v<NotSimpleStrideViewIterConst, NotSimpleStrideViewIter>);
-  return true;
-}
+constexpr bool test() {
+  {
+    using NotSimpleStrideView          = std::ranges::stride_view<NotSimpleViewDifferentBegin<false>>;
+    using NotSimpleStrideViewIter      = std::ranges::iterator_t<NotSimpleStrideView>;
+    using NotSimpleStrideViewIterConst = std::ranges::iterator_t<const NotSimpleStrideView>;
+    static_assert(!std::is_same_v<NotSimpleStrideViewIterConst, NotSimpleStrideViewIter>);
+  }
 
-constexpr bool non_const_iterator_copy_ctor() {
   // All tests share the following general configuration.
   //
   // Instantiate a stride view StrideView over a non-simple view (NotSimpleViewBeingStrided) whose
@@ -263,9 +262,9 @@ constexpr bool non_const_iterator_copy_ctor() {
 
     // Now, do what we wanted the whole time: make sure that we can copy construct a
     // stride_view::iterator<true> from a stride_view::iterator<false>. The copy
-    // constructor requires that the new __current_ StrideViewConstIter (type
+    // constructor requires that the new const iterator (type
     // NotSimpleViewBeingStridedConstIterator) be constructable
-    // from the moved str.begin() __current_ (type NotSimpleViewBeingStridedConstIterator).
+    // from the moved str.begin() iterator (type NotSimpleViewBeingStridedConstIterator).
     StrideViewConstIter iterator_copy{str.begin()};
   }
 
@@ -358,17 +357,16 @@ constexpr bool non_const_iterator_copy_ctor() {
 
     // Now, do what we wanted the whole time: make sure that we can copy construct a
     // stride_view::iterator<true> from a stride_view::iterator<false>. The copy
-    // constructor requires that the new __current_ StrideViewConstIter (type
+    // constructor requires that the new const iterator (type
     // NotSimpleViewBeingStridedConstIterator) be constructable
-    // from the moved str.begin() __current_ (type NotSimpleViewBeingStridedConstIterator).
+    // from the moved str.begin() iterator (type NotSimpleViewBeingStridedConstIterator).
     StrideViewConstIter iterator_copy{str.begin()};
   }
   return true;
 }
 
 int main(int, char**) {
-  non_simple_view_iter_ctor_test();
-  static_assert(non_simple_view_iter_ctor_test());
-
+  test();
+  static_assert(test());
   return 0;
 }

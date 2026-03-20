@@ -16,16 +16,12 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
-#include <__concepts/relation.h>
 #include <__config>
 #include <__functional/bind_back.h>
-#include <__functional/operations.h>
-#include <__functional/ranges_operations.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
-#include <__iterator/indirectly_comparable.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
@@ -115,7 +111,7 @@ public:
     if constexpr (common_range<const _View> && sized_range<const _View> && forward_range<const _View>) {
       auto __missing = (__stride_ - ranges::distance(__base_) % __stride_) % __stride_;
       return __iterator</*_Const=*/true>(this, ranges::end(__base_), __missing);
-    } else if constexpr (common_range<_View> && !bidirectional_range<_View>) {
+    } else if constexpr (common_range<const _View> && !bidirectional_range<const _View>) {
       return __iterator</*_Const=*/true>(this, ranges::end(__base_), 0);
     } else {
       return default_sentinel;

@@ -6,16 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// friend constexpr bool operator==(__iterator const& __x, default_sentinel_t)
-// friend constexpr bool operator==(__iterator const& __x, __iterator const& __y)
+// friend constexpr bool operator==(const iterator& x, default_sentinel_t)
+// friend constexpr bool operator==(const iterator& x, const iterator& y)
 
 #include <cassert>
+#include <concepts>
 #include <ranges>
 
 #include "../types.h"
 #include "test_iterators.h"
+
+// A stride_view iterator over an equality_comparable base should itself be equality_comparable.
+using EqualableView     = BasicTestView<cpp17_input_iterator<int*>>;
+using EqualableViewIter = std::ranges::iterator_t<std::ranges::stride_view<EqualableView>>;
+static_assert(std::equality_comparable<std::ranges::iterator_t<EqualableView>>);
+static_assert(std::equality_comparable<EqualableViewIter>);
+
+// A stride_view iterator over a non-equality_comparable base should NOT be equality_comparable.
+using UnEqualableView     = ViewOverNonCopyableIterator<cpp20_input_iterator<int*>>;
+using UnEqualableViewIter = std::ranges::iterator_t<std::ranges::stride_view<UnEqualableView>>;
+static_assert(!std::equality_comparable<std::ranges::iterator_t<UnEqualableView>>);
+static_assert(!std::equality_comparable<UnEqualableViewIter>);
 
 template <class Iter>
 constexpr void testOne() {

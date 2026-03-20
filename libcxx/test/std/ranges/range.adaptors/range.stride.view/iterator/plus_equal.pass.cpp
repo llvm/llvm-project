@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr __iterator& operator+=(difference_type __n)
+// constexpr iterator& operator+=(difference_type n)
 
+#include <cassert>
 #include <ranges>
-#include <utility>
 #include <vector>
 
 #include "../types.h"
@@ -19,8 +19,8 @@
 
 template <class T>
 concept CanPlus =
-    std::is_same_v<T&, decltype(std::declval<T>() += std::declval<typename T::__iterator::difference_type>())> &&
-    requires(T& t, T::__iterator::difference_type& u) { t += u; };
+    std::is_same_v<T&, decltype(std::declval<T>() += std::declval<typename T::difference_type>())> &&
+    requires(T& t, typename T::difference_type u) { t += u; };
 
 // Make sure that we cannot use += on a stride view iterator
 // over an input view.(sized sentinel)
@@ -55,20 +55,16 @@ using StrideViewOverRandomAccessViewIterator = std::ranges::iterator_t<std::rang
 static_assert(std::ranges::random_access_range<RandomAccessView<>>);
 static_assert(CanPlus<StrideViewOverRandomAccessViewIterator>);
 
-constexpr bool test_random_access_operator_plus_equal() {
+constexpr bool test() {
+  std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+
   using Iter = std::vector<int>::iterator;
   using Diff = Iter::difference_type;
-  std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-  // Test the operator+ between an iterator and its difference type. Pay attention solely to
-  // stride views over random-access ranges because operator+ is not applicable to others.
 
   auto begin    = vec.begin();
   auto end      = vec.end();
   Diff distance = 4;
 
-  // Test the forward-range operator+= between an iterator and its difference type.
-  // Do not use the RandomAccessView defined in types.h to give the test user more power
-  // to customize an iterator and a default sentinel.
   using Base = RandomAccessView<Iter>;
   static_assert(std::ranges::random_access_range<Base>);
 
@@ -89,21 +85,16 @@ constexpr bool test_random_access_operator_plus_equal() {
   auto stride_view_over_base_view_big_step = std::ranges::stride_view(base_view, big_step);
   sv_bv_begin                              = stride_view_over_base_view_big_step.begin();
 
-  // This += should move us into a position where the __missing_ will come into play.
-  // Do a -= 1 here to confirm that the __missing_ is taken into account.
+  // This += should move us into a position where the stride doesn't evenly divide the range.
+  // Do a -= 1 here to confirm that the remainder is taken into account.
   sv_bv_begin += 2;
   sv_bv_begin -= 1;
   assert(*sv_bv_begin == *(stride_view_over_base_view.begin() + big_step));
   return true;
 }
 
-consteval bool do_static_tests() {
-  assert(test_random_access_operator_plus_equal());
-  return true;
-}
-
 int main(int, char**) {
-  static_assert(do_static_tests());
-  assert(do_static_tests());
+  test();
+  static_assert(test());
   return 0;
 }

@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr __iterator operator+(difference_type __n, const __iterator &__i)
-// constexpr __iterator operator+(const __iterator &__i, difference_type __n)
+// constexpr iterator operator+(difference_type n, const iterator& i)
+// constexpr iterator operator+(const iterator& i, difference_type n)
 
+#include <cassert>
 #include <ranges>
 #include <vector>
 
@@ -19,10 +20,10 @@
 
 template <class T>
 concept CanPlus =
-    std::is_same_v<T, decltype(std::declval<T>() + std::declval<typename T::__iterator::difference_type>())> &&
-    std::is_same_v<T, decltype(std::declval<typename T::__iterator::difference_type>() + std::declval<T>())> &&
-    requires(T& t, T::__iterator::difference_type& u) { t = t + u; } &&
-    requires(T& t, T::__iterator::difference_type& u) { t = u + t; };
+    std::is_same_v<T, decltype(std::declval<T>() + std::declval<typename T::difference_type>())> &&
+    std::is_same_v<T, decltype(std::declval<typename T::difference_type>() + std::declval<T>())> &&
+    requires(T& t, typename T::difference_type u) { t = t + u; } &&
+    requires(T& t, typename T::difference_type u) { t = u + t; };
 
 // Make sure that we cannot use + on a stride view iterator and difference_type
 // over an input view.(sized sentinel)
@@ -57,20 +58,16 @@ using StrideViewOverRandomAccessViewIterator = std::ranges::iterator_t<std::rang
 static_assert(std::ranges::random_access_range<RandomAccessView<>>);
 static_assert(CanPlus<StrideViewOverRandomAccessViewIterator>);
 
-constexpr bool test_random_access_operator_plus_equal() {
-  using Iter = std::vector<int>::iterator;
-  using Diff = Iter::difference_type;
+constexpr bool test() {
   std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
   // Test the operator+ between an iterator and its difference type. Pay attention solely to
   // stride views over random-access ranges because operator+ is not applicable to others.
 
   auto begin    = vec.begin();
   auto end      = vec.end();
-  Diff distance = 4;
+  auto distance = 4;
 
-  // Do not use the RandomAccessView defined in types.h to give the test user more power
-  // to customize an iterator and a default sentinel.
-  using Base = RandomAccessView<Iter>;
+  using Base = RandomAccessView<std::vector<int>::iterator>;
   static_assert(std::ranges::random_access_range<Base>);
 
   auto base_view                  = Base(begin, end);
@@ -91,13 +88,8 @@ constexpr bool test_random_access_operator_plus_equal() {
   return true;
 }
 
-consteval bool do_static_tests() {
-  assert(test_random_access_operator_plus_equal());
-  return true;
-}
-
 int main(int, char**) {
-  static_assert(do_static_tests());
-  assert(do_static_tests());
+  test();
+  static_assert(test());
   return 0;
 }

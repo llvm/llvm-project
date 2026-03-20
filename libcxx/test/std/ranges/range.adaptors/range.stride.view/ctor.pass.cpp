@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr explicit stride_view(_View, range_difference_t<_View>)
+// constexpr explicit stride_view(V base, range_difference_t<V> stride)
 
+#include <cassert>
+#include <ranges>
 #include <type_traits>
 
 #include "test_convertible.h"
@@ -37,6 +39,23 @@ constexpr bool test() {
 
     // While we are here, make sure that the ctor captured the stride.
     assert(mosv.stride() == 1);
+  }
+  {
+    // Verify salient properties after construction.
+    int arr[] = {10, 20, 30, 40, 50};
+    using Base = BasicTestView<int*, int*>;
+    auto sv = std::ranges::stride_view(Base(arr, arr + 5), 2);
+
+    assert(sv.stride() == 2);
+    assert(*sv.begin() == 10);
+
+    auto it = sv.begin();
+    ++it;
+    assert(*it == 30);
+    ++it;
+    assert(*it == 50);
+    ++it;
+    assert(it == sv.end());
   }
   return true;
 }

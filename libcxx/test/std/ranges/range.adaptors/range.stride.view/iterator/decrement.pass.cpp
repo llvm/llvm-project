@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// constexpr __iterator& operator--()
-// constexpr __iterator operator--(int)
+// constexpr iterator& operator--()
+// constexpr iterator operator--(int)
 
+#include <cassert>
 #include <ranges>
 #include <vector>
 
@@ -83,11 +84,16 @@ constexpr bool test_operator_decrement(Iter begin, Iter end, Difference delta) {
   return true;
 }
 
-int main(int, char**) {
-  constexpr int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-  std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-  test_operator_decrement(vec.begin(), vec.end(), 3);
-  test_operator_decrement(arr, arr + 11, 3);
+constexpr bool test() {
+  {
+    int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    test_operator_decrement(arr, arr + 11, 3);
+  }
+  return true;
+}
 
+int main(int, char**) {
+  test();
+  static_assert(test());
   return 0;
 }

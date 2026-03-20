@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // template<class V>
 // inline constexpr bool enable_borrowed_range<stride_view<V>> = ranges::enable_borrowed_range<V>;

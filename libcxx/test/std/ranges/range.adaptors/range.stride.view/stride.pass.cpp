@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
-// constexpr range_difference_t<_View> stride() const noexcept;
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// constexpr range_difference_t<V> stride() const noexcept;
 
+#include <cassert>
 #include <ranges>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "types.h"
 
 constexpr bool test() {

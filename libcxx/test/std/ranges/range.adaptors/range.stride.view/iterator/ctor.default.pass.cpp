@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// __iterator() requires default_initializable<iterator_t<_Base>> = default;
+// iterator() requires default_initializable<iterator_t<Base>> = default;
 
 #include <ranges>
 
@@ -36,4 +36,18 @@ static_assert(!std::is_default_constructible< std::ranges::iterator_t<ViewWithNo
 static_assert(std::is_default_constructible<
               std::ranges::iterator_t< std::ranges::stride_view<std::ranges::ref_view<const int[3]>>>>());
 
-int main(int, char**) { return 0; }
+constexpr bool test() {
+  {
+    // Default construct an iterator over a default-constructible base.
+    using SV = std::ranges::stride_view<std::ranges::ref_view<const int[3]>>;
+    using It = std::ranges::iterator_t<SV>;
+    [[maybe_unused]] It it{};
+  }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
+  return 0;
+}

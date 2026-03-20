@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-//  friend constexpr range_rvalue_reference_t<_Base> iter_move(__iterator const& __it)
-//         noexcept(noexcept(ranges::iter_move(__it.__current_)))
+//  friend constexpr range_rvalue_reference_t<Base> iter_move(const iterator& i)
+//         noexcept(noexcept(ranges::iter_move(i.current_)))
 
+#include <cassert>
 #include <ranges>
 #include <vector>
 
