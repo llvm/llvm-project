@@ -844,6 +844,25 @@ struct IsAssumedSizeExtentOpConversion
   }
 };
 
+/// Bitcast between types of the same bit size.
+struct BitcastOpConversion : public fir::FIROpConversion<fir::BitcastOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::BitcastOp bitcast, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto fromTy = convertType(bitcast.getValue().getType());
+    auto toTy = convertType(bitcast.getRes().getType());
+    mlir::Value op0 = adaptor.getOperands()[0];
+    if (fromTy == toTy) {
+      rewriter.replaceOp(bitcast, op0);
+      return mlir::success();
+    }
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(bitcast, toTy, op0);
+    return mlir::success();
+  }
+};
+
 /// convert value of from-type to value of to-type
 struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
   using FIROpConversion::FIROpConversion;
@@ -4584,9 +4603,9 @@ void fir::populateFIRToLLVMConversionPatterns(
       AssumedSizeExtentOpConversion, IsAssumedSizeExtentOpConversion,
       BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
-      CmpcOpConversion, VolatileCastOpConversion, ConvertOpConversion,
-      CoordinateOpConversion, CopyOpConversion, DTEntryOpConversion,
-      DeclareOpConversion, DeclareValueOpConversion,
+      BitcastOpConversion, CmpcOpConversion, VolatileCastOpConversion,
+      ConvertOpConversion, CoordinateOpConversion, CopyOpConversion,
+      DTEntryOpConversion, DeclareOpConversion, DeclareValueOpConversion,
       DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
