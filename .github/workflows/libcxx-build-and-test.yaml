@@ -58,7 +58,8 @@ jobs:
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         # TODO: install venv in the Docker image instead
         run: |
-          apt install python3.12-venv
+          sudo apt-get update
+          sudo apt-get install python3.12-venv
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
@@ -108,7 +109,8 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}
         run: |
-          apt install python3.12-venv
+          sudo apt-get update
+          sudo apt-get install python3.12-venv
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
@@ -168,7 +170,8 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: ${{ matrix.config }}
         run: |
-          apt install python3.12-venv
+          sudo apt-get update
+          sudo apt-get install python3.12-venv
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
