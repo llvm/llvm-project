@@ -687,6 +687,8 @@ genCleanupDeallocateCoarray(Fortran::lower::AbstractConverter &converter,
   // (only via explicit DEALLOCATE or END TEAM)
   if (Fortran::semantics::IsSaved(sym) &&
       Fortran::semantics::IsFunctionResult(sym))
+  if (Fortran::semantics::IsSaved(sym) ||
+      Fortran::semantics::IsFunctionResult(sym))
     return;
 
   if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
