@@ -148,8 +148,8 @@ constexpr bool test_forward_operator_increment(Iter begin, Iter end) {
 
 constexpr bool test_properly_handling_missing() {
   // Check whether the "missing" distance to the end gets handled properly.
-  using Base = BasicTestView<int*, int*>;
-  int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  using Base   = BasicTestView<int*, int*>;
+  int arr[]    = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   auto base    = Base(arr, arr + 10);
   auto strider = std::ranges::stride_view<Base>(base, 7);
 
@@ -189,7 +189,7 @@ constexpr bool test_properly_handling_missing() {
 
 constexpr bool test() {
   {
-    int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     test_forward_operator_increment(arr, arr + 11);
   }
   test_properly_handling_missing();
@@ -202,7 +202,7 @@ int main(int, char**) {
 
   // Non-forward iterators can't be tested in a constexpr context.
   {
-    int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     test_non_forward_operator_increment(SizedInputIter(arr), SizedInputIter(arr + 3), SizedInputIter(arr + 10));
   }
 

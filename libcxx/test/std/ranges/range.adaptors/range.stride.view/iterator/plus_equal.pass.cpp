@@ -68,6 +68,7 @@ constexpr bool test() {
   using Base = RandomAccessView<Iter>;
   static_assert(std::ranges::random_access_range<Base>);
 
+  // += with stride 1: advancing by distance matches starting at begin + distance.
   auto base_view                  = Base(begin, end);
   auto stride_view_over_base_view = std::ranges::stride_view(base_view, 1);
 
@@ -81,6 +82,7 @@ constexpr bool test() {
   assert(*sv_bv_begin == *sv_bv_offset_begin);
   assert(*sv_bv_begin_after_distance == *sv_bv_offset_begin);
 
+  // += past the end, then -= back: the remainder is handled correctly.
   auto big_step                            = (end - 1) - begin;
   auto stride_view_over_base_view_big_step = std::ranges::stride_view(base_view, big_step);
   sv_bv_begin                              = stride_view_over_base_view_big_step.begin();

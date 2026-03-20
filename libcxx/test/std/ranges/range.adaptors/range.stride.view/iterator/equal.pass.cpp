@@ -37,7 +37,7 @@ constexpr void testOne() {
   using StrideView = std::ranges::stride_view<Range>;
 
   {
-    // simple test
+    // Equality and inequality between iterators, and comparison with end.
     {
       int buffer[] = {0, 1, 2, -1, 4, 5, 6, 7};
       const Range input(Iter{buffer}, Iter{buffer + 8});

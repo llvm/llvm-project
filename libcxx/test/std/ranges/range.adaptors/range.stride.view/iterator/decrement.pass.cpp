@@ -86,7 +86,8 @@ constexpr bool test_operator_decrement(Iter begin, Iter end, Difference delta) {
 
 constexpr bool test() {
   {
-    int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    // Pre-decrement and post-decrement from end with stride 3.
+    int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
     test_operator_decrement(arr, arr + 11, 3);
   }
   return true;

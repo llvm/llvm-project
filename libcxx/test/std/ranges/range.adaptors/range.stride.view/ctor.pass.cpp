@@ -18,44 +18,47 @@
 #include "test_iterators.h"
 #include "types.h"
 
-// There is no default ctor for stride_view.
-using View = BasicTestView<cpp17_input_iterator<int*>>;
-static_assert(!std::is_default_constructible_v<std::ranges::stride_view<View>>);
-
-// Test that the stride_view can only be explicitly constructed.
-static_assert(!test_convertible<std::ranges::stride_view<View>, View, int>());
-
 constexpr bool test() {
+  {
+    // There is no default ctor for stride_view.
+    using View = BasicTestView<cpp17_input_iterator<int*>>;
+    static_assert(!std::is_default_constructible_v<std::ranges::stride_view<View>>);
+
+    // Test that the stride_view can only be explicitly constructed.
+    static_assert(!test_convertible<std::ranges::stride_view<View>, View, int>());
+  }
+
   {
     int arr[] = {1, 2, 3};
     // Test that what we will stride over is move only.
-    static_assert(!std::is_copy_constructible_v<MoveOnlyView<cpp17_input_iterator<int*>>>);
-    static_assert(std::is_move_constructible_v<MoveOnlyView<cpp17_input_iterator<int*>>>);
+    using View = MoveOnlyView<cpp17_input_iterator<int*>>;
+    static_assert(!std::is_copy_constructible_v<View>);
+    static_assert(std::is_move_constructible_v<View>);
 
-    MoveOnlyView<cpp17_input_iterator<int*>> mov(cpp17_input_iterator<int*>(arr), cpp17_input_iterator<int*>(arr + 3));
+    View mov(cpp17_input_iterator<int*>(arr), cpp17_input_iterator<int*>(arr + 3));
     // Because MoveOnlyView is, well, move only, we can test that it is moved
     // from when the stride view is constructed.
-    std::ranges::stride_view<MoveOnlyView<cpp17_input_iterator<int*>>> mosv(std::move(mov), 1);
+    std::ranges::stride_view<View> strided(std::move(mov), 1);
 
     // While we are here, make sure that the ctor captured the stride.
-    assert(mosv.stride() == 1);
+    assert(strided.stride() == 1);
   }
   {
     // Verify salient properties after construction.
-    int arr[] = {10, 20, 30, 40, 50};
-    using Base = BasicTestView<int*, int*>;
-    auto sv = std::ranges::stride_view(Base(arr, arr + 5), 2);
+    int arr[]    = {10, 20, 30, 40, 50};
+    using Base   = BasicTestView<int*, int*>;
+    auto strided = std::ranges::stride_view(Base(arr, arr + 5), 2);
 
-    assert(sv.stride() == 2);
-    assert(*sv.begin() == 10);
+    assert(strided.stride() == 2);
+    assert(*strided.begin() == 10);
 
-    auto it = sv.begin();
+    auto it = strided.begin();
     ++it;
     assert(*it == 30);
     ++it;
     assert(*it == 50);
     ++it;
-    assert(it == sv.end());
+    assert(it == strided.end());
   }
   return true;
 }

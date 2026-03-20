@@ -23,10 +23,11 @@ concept iter_moveable = requires(T&& t) { std::ranges::iter_move(t); };
 
 constexpr bool test() {
   {
+    // iter_move with a noexcept iter_move on the base iterator.
     int a[] = {4, 3, 2, 1};
 
     int iter_move_counter(0);
-    using View       = IterMoveIterSwapTestRange<int*, true, true>;
+    using View       = IterMoveIterSwapTestRange<int*, /*IsSwappable=*/true, /*IsNoExcept=*/true>;
     using StrideView = std::ranges::stride_view<View>;
     auto svb         = StrideView(View(a, a + 4, &iter_move_counter), 1).begin();
 
@@ -45,10 +46,11 @@ constexpr bool test() {
   }
 
   {
+    // iter_move with a potentially-throwing iter_move on the base iterator.
     int a[] = {1, 2, 3, 4};
 
     int iter_move_counter(0);
-    using View       = IterMoveIterSwapTestRange<int*, true, false>;
+    using View       = IterMoveIterSwapTestRange<int*, /*IsSwappable=*/true, /*IsNoExcept=*/false>;
     using StrideView = std::ranges::stride_view<View>;
     auto svb         = StrideView(View(a, a + 4, &iter_move_counter), 1).begin();
 
@@ -67,10 +69,11 @@ constexpr bool test() {
   }
 
   {
+    // iter_move with a non-pointer base iterator (vector::iterator).
     std::vector<int> a = {4, 5, 6, 7, 8};
 
     int iter_move_counter(0);
-    using View = IterMoveIterSwapTestRange<std::vector<int>::iterator, true, false>;
+    using View = IterMoveIterSwapTestRange<std::vector<int>::iterator, /*IsSwappable=*/true, /*IsNoExcept=*/false>;
 
     using StrideView = std::ranges::stride_view<View>;
     auto svb         = StrideView(View(a.begin(), a.end(), &iter_move_counter), 1).begin();

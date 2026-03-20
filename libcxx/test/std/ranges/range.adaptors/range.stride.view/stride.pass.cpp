@@ -18,17 +18,13 @@
 
 constexpr bool test() {
   using View = BasicTestView<cpp17_input_iterator<int*>>;
-  int arr[]{1, 2, 3};
-  auto arrv(View(cpp17_input_iterator<int*>(arr), cpp17_input_iterator<int*>(arr + 3)));
-  // Mark str const so that we confirm that stride is a const member function.
-  const std::ranges::stride_view<View> str(arrv, 1);
+  int arr[]  = {1, 2, 3};
+  View view(cpp17_input_iterator<int*>(arr), cpp17_input_iterator<int*>(arr + 3));
 
-  // Make sure that stride member function is noexcept.
-  static_assert(noexcept(str.stride()));
-  // Make sure that the type returned by stride matches what is expected.
-  ASSERT_SAME_TYPE(std::ranges::range_difference_t<View>, decltype(str.stride()));
-  // Make sure that we get back a stride equal to the one that we gave in the ctor.
-  assert(str.stride() == 1);
+  const std::ranges::stride_view<View> strided(view, 2);
+  static_assert(noexcept(strided.stride()));
+  ASSERT_SAME_TYPE(std::ranges::range_difference_t<View>, decltype(strided.stride()));
+  assert(strided.stride() == 2);
 
   return true;
 }

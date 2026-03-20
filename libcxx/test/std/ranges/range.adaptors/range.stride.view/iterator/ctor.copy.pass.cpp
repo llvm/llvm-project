@@ -140,7 +140,8 @@ struct NotSimpleViewDifferentEnd : std::ranges::view_base {
 
 constexpr bool test() {
   {
-    using NotSimpleStrideView          = std::ranges::stride_view<NotSimpleViewDifferentBegin<false>>;
+    // Non-simple view produces distinct const vs non-const iterator types.
+    using NotSimpleStrideView          = std::ranges::stride_view<NotSimpleViewDifferentBegin</*CopyConvertible=*/false>>;
     using NotSimpleStrideViewIter      = std::ranges::iterator_t<NotSimpleStrideView>;
     using NotSimpleStrideViewIterConst = std::ranges::iterator_t<const NotSimpleStrideView>;
     static_assert(!std::is_same_v<NotSimpleStrideViewIterConst, NotSimpleStrideViewIter>);
@@ -180,10 +181,8 @@ constexpr bool test() {
   //                ---------------------------------
 
   {
-    // Stride over non-simple view over whose iterators are copy convertible -- should look (statically)
-    // like it is possible copy construct the stride view's iterator (the move-only requirement comes from
-    // a move of the current between the copied-from iterator to the copied-to iterator).
-    using NotSimpleViewBeingStrided = NotSimpleViewDifferentEnd<true, false>;
+    // Copy-convertible iterators, different end: conversion is possible.
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentEnd</*CopyConvertible=*/true, /*MoveConvertible=*/false>;
     // using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     // using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -200,10 +199,8 @@ constexpr bool test() {
   }
 
   {
-    // Stride over non-simple view over whose iterators are move convertible -- should look (statically)
-    // like it is possible copy construct the stride view's iterator (the move-only requirement comes from
-    // a move of the current between the copied-from iterator to the copied-to iterator).
-    using NotSimpleViewBeingStrided = NotSimpleViewDifferentEnd<false, true>;
+    // Move-convertible iterators, different end: conversion is possible.
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentEnd</*CopyConvertible=*/false, /*MoveConvertible=*/true>;
     // using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     // using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -220,9 +217,8 @@ constexpr bool test() {
   }
 
   {
-    // Stride over non-simple view over whose iterators are not convertible -- should not be able
-    // to copy construct the stride view's iterator.
-    using NotSimpleViewBeingStrided = NotSimpleViewDifferentEnd<false, false>;
+    // Non-convertible iterators, different end: conversion is NOT possible.
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentEnd</*CopyConvertible=*/false, /*MoveConvertible=*/false>;
     // using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     // using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -239,9 +235,8 @@ constexpr bool test() {
   }
 
   {
-    // Stride over non-simple view over whose iterators are not convertible -- should not be able
-    // to copy construct the stride view's iterator.
-    using NotSimpleViewBeingStrided         = NotSimpleViewDifferentEnd<false, true>;
+    // Move-convertible iterators, different end: runtime construction test.
+    using NotSimpleViewBeingStrided         = NotSimpleViewDifferentEnd</*CopyConvertible=*/false, /*MoveConvertible=*/true>;
     using NotSimpleViewBeingStridedIterator = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     // using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -269,10 +264,8 @@ constexpr bool test() {
   }
 
   {
-    // Stride over non-simple view over whose iterators are copy convertible -- should look (statically)
-    // like it is possible copy construct the stride view's iterator (the move-only requirement comes from
-    // a move of the current between the copied-from iterator to the copied-to iterator).
-    using NotSimpleViewBeingStrided = NotSimpleViewDifferentBegin<true, false>;
+    // Copy-convertible iterators, different begin: conversion is possible.
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentBegin</*CopyConvertible=*/true, /*MoveConvertible=*/false>;
     // using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     // using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -289,10 +282,8 @@ constexpr bool test() {
   }
 
   {
-    // Stride over non-simple view over whose iterators are move convertible -- should look (statically)
-    // like it is possible copy construct the stride view's iterator (the move-only requirement comes from
-    // a move of the current between the copied-from iterator to the copied-to iterator).
-    using NotSimpleViewBeingStrided = NotSimpleViewDifferentBegin<false, true>;
+    // Move-convertible iterators, different begin: conversion is possible.
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentBegin</*CopyConvertible=*/false, /*MoveConvertible=*/true>;
     // using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     // using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -309,9 +300,8 @@ constexpr bool test() {
   }
 
   {
-    // Stride over non-simple view over whose iterators are not convertible -- should not be able
-    // to copy construct the stride view's iterator.
-    using NotSimpleViewBeingStrided = NotSimpleViewDifferentBegin<false, false>;
+    // Non-convertible iterators, different begin: conversion is NOT possible.
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentBegin</*CopyConvertible=*/false, /*MoveConvertible=*/false>;
     // using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     // using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -328,9 +318,8 @@ constexpr bool test() {
   }
 
   {
-    // The NotSimpleViewBeingStrided template parameters mean that NotSimpleViewBeingStridedIterator
-    // can be move-converted to NotSimpleViewBeingStridedConstIterator but not copy-converted.
-    using NotSimpleViewBeingStrided              = NotSimpleViewDifferentBegin<false, true>;
+    // Move-convertible iterators, different begin: runtime construction test with full verification.
+    using NotSimpleViewBeingStrided              = NotSimpleViewDifferentBegin</*CopyConvertible=*/false, /*MoveConvertible=*/true>;
     using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 

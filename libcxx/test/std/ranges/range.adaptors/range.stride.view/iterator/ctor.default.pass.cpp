@@ -26,13 +26,9 @@ struct ViewWithNonDefaultConstructibleIterator : std::ranges::view_base {
 template <>
 inline constexpr bool std::ranges::enable_borrowed_range<ViewWithNonDefaultConstructibleIterator> = true;
 
-// If the type of the iterator of the range being strided is non-default
-// constructible, then the stride view's iterator should not be default
-// constructible, either!
+// The stride_view iterator is default-constructible iff the iterator type of the range being
+// strided is default-constructible.
 static_assert(!std::is_default_constructible< std::ranges::iterator_t<ViewWithNonDefaultConstructibleIterator>>());
-// If the type of the iterator of the range being strided is default
-// constructible, then the stride view's iterator should be default
-// constructible, too!
 static_assert(std::is_default_constructible<
               std::ranges::iterator_t< std::ranges::stride_view<std::ranges::ref_view<const int[3]>>>>());
 

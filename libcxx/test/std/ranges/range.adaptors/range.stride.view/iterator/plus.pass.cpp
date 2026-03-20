@@ -60,8 +60,6 @@ static_assert(CanPlus<StrideViewOverRandomAccessViewIterator>);
 
 constexpr bool test() {
   std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-  // Test the operator+ between an iterator and its difference type. Pay attention solely to
-  // stride views over random-access ranges because operator+ is not applicable to others.
 
   auto begin    = vec.begin();
   auto end      = vec.end();
@@ -70,20 +68,28 @@ constexpr bool test() {
   using Base = RandomAccessView<std::vector<int>::iterator>;
   static_assert(std::ranges::random_access_range<Base>);
 
-  auto base_view                  = Base(begin, end);
-  auto stride_view_over_base_view = std::ranges::stride_view(base_view, 1);
+  {
+    // iterator + distance produces the same element as starting at begin + distance.
+    auto base_view                  = Base(begin, end);
+    auto stride_view_over_base_view = std::ranges::stride_view(base_view, 1);
 
-  auto base_view_offset                  = Base(begin + distance, end);
-  auto stride_view_over_base_view_offset = std::ranges::stride_view(base_view_offset, 1);
+    auto base_view_offset                  = Base(begin + distance, end);
+    auto stride_view_over_base_view_offset = std::ranges::stride_view(base_view_offset, 1);
 
-  assert(*(stride_view_over_base_view.begin() + distance) == *(stride_view_over_base_view_offset.begin()));
+    assert(*(stride_view_over_base_view.begin() + distance) == *(stride_view_over_base_view_offset.begin()));
+  }
+  {
+    // iterator + 1 with a large stride reaches the same element as iterator + stride with stride 1.
+    auto base_view                           = Base(begin, end);
+    auto stride_view_over_base_view          = std::ranges::stride_view(base_view, 1);
+    auto distance_to_last                    = (end - 1) - begin;
+    auto stride_view_over_base_view_big_step = std::ranges::stride_view(base_view, distance_to_last);
 
-  auto distance_to_last                    = (end - 1) - begin;
-  auto stride_view_over_base_view_big_step = std::ranges::stride_view(base_view, distance_to_last);
-
-  assert(*(stride_view_over_base_view_big_step.begin() + 1) ==
-         *(stride_view_over_base_view.begin() + distance_to_last));
-  assert((stride_view_over_base_view_big_step.begin() + 2) == (stride_view_over_base_view.end()));
+    assert(*(stride_view_over_base_view_big_step.begin() + 1) ==
+           *(stride_view_over_base_view.begin() + distance_to_last));
+    // iterator + 2 past the end of a large-stride view equals the end of the stride-1 view.
+    assert((stride_view_over_base_view_big_step.begin() + 2) == (stride_view_over_base_view.end()));
+  }
 
   return true;
 }

@@ -23,26 +23,27 @@ static_assert(!std::ranges::sized_range<std::ranges::stride_view<BasicTestView<c
 
 // There is a size member function on a stride view over a view that
 // *is* a sized range
-static_assert(std::ranges::sized_range<BasicTestView<int*, sentinel_wrapper<int*>, true>>);
-static_assert(std::ranges::sized_range<std::ranges::stride_view<BasicTestView<int*, sentinel_wrapper<int*>, true>>>);
+static_assert(std::ranges::sized_range<BasicTestView<int*, sentinel_wrapper<int*>, /*IsSized=*/true>>);
+static_assert(
+    std::ranges::sized_range<std::ranges::stride_view<BasicTestView<int*, sentinel_wrapper<int*>, /*IsSized=*/true>>>);
 
 constexpr bool test() {
   {
     // Test with stride as exact multiple of number of elements in view strided over.
-    constexpr auto iota_twelve = std::views::iota(0, 12);
-    static_assert(std::ranges::sized_range<decltype(iota_twelve)>);
-    constexpr auto stride_iota_twelve = std::views::stride(iota_twelve, 3);
-    static_assert(std::ranges::sized_range<decltype(stride_iota_twelve)>);
-    static_assert(4 == stride_iota_twelve.size(), "Striding by 3 through a 12 member list has size 4.");
+    auto iota = std::views::iota(0, 12);
+    static_assert(std::ranges::sized_range<decltype(iota)>);
+    auto strided = std::views::stride(iota, 3);
+    static_assert(std::ranges::sized_range<decltype(strided)>);
+    assert(strided.size() == 4);
   }
 
   {
     // Test with stride as inexact multiple of number of elements in view strided over.
-    constexpr auto iota_twenty_two = std::views::iota(0, 22);
-    static_assert(std::ranges::sized_range<decltype(iota_twenty_two)>);
-    constexpr auto stride_iota_twenty_two = std::views::stride(iota_twenty_two, 3);
-    static_assert(std::ranges::sized_range<decltype(stride_iota_twenty_two)>);
-    static_assert(8 == stride_iota_twenty_two.size(), "Striding by 3 through a 22 member list has size 8.");
+    constexpr auto iota = std::views::iota(0, 22);
+    static_assert(std::ranges::sized_range<decltype(iota)>);
+    constexpr auto strided = std::views::stride(iota, 3);
+    static_assert(std::ranges::sized_range<decltype(strided)>);
+    assert(strided.size() == 8);
   }
   return true;
 }
