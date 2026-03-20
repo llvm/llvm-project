@@ -156,9 +156,10 @@ public:
     m_s.Format("    {0}: ", item.id);
 
     if (m_options.show_timestamps) {
-      m_s.Format("[{0}] ", item.timestamp
-                               ? formatv("{0:3} ns", *item.timestamp).str()
-                               : "unavailable");
+      if (item.timestamp)
+        m_s << formatv("[{0:3} ns]", *item.timestamp);
+      else
+        m_s << "[unavailable]";
     }
 
     if (item.event) {
