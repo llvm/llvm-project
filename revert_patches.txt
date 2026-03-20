@@ -11,10 +11,6 @@ breaks comgr builds
 breaks smoke*
 [Reland][IR] Add initial support for the byte type (#186888)
 ---
-breaks qmcpack x86
-[SLP]Add external uses estimations into tree throttling
-[SLP] Loop aware cost model/tree building
----
 breaks rocgdb UT
 [Clang][CodeGen] Restore isEmptyFieldForLayout for empty class handling
 ---
