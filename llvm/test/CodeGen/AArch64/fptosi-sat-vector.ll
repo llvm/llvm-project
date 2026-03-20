@@ -1552,8 +1552,7 @@ define <2 x i100> @test_signed_v2f32_v2i100(<2 x float> %f) {
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    movi v9.2s, #241, lsl #24
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    mov w8, #1895825407 // =0x70ffffff
-; CHECK-SD-NEXT:    fmov s10, w8
+; CHECK-SD-NEXT:    mvni v10.2s, #143, lsl #24
 ; CHECK-SD-NEXT:    mov x21, #-34359738368 // =0xfffffff800000000
 ; CHECK-SD-NEXT:    mov x22, #34359738367 // =0x7ffffffff
 ; CHECK-SD-NEXT:    mov s8, v0.s[1]
@@ -1611,8 +1610,7 @@ define <2 x i100> @test_signed_v2f32_v2i100(<2 x float> %f) {
 ; CHECK-GI-NEXT:    bl __fixsfti
 ; CHECK-GI-NEXT:    movi v9.2s, #241, lsl #24
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-GI-NEXT:    mov w8, #1895825407 // =0x70ffffff
-; CHECK-GI-NEXT:    fmov s10, w8
+; CHECK-GI-NEXT:    mvni v10.2s, #143, lsl #24
 ; CHECK-GI-NEXT:    mov x21, #34359738368 // =0x800000000
 ; CHECK-GI-NEXT:    mov x22, #34359738367 // =0x7ffffffff
 ; CHECK-GI-NEXT:    fcmp s0, s9
@@ -1670,10 +1668,9 @@ define <2 x i128> @test_signed_v2f32_v2i128(<2 x float> %f) {
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    bl __fixsfti
-; CHECK-SD-NEXT:    movi v9.2s, #255, lsl #24
+; CHECK-SD-NEXT:    movi d9, #0xff000000ff000000
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    mov w8, #2130706431 // =0x7effffff
-; CHECK-SD-NEXT:    fmov s10, w8
+; CHECK-SD-NEXT:    mvni v10.2s, #129, lsl #24
 ; CHECK-SD-NEXT:    mov x21, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-SD-NEXT:    mov x22, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-SD-NEXT:    mov s8, v0.s[1]
@@ -1729,10 +1726,9 @@ define <2 x i128> @test_signed_v2f32_v2i128(<2 x float> %f) {
 ; CHECK-GI-NEXT:    mov s8, v0.s[1]
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl __fixsfti
-; CHECK-GI-NEXT:    movi v9.2s, #255, lsl #24
+; CHECK-GI-NEXT:    movi d9, #0xff000000ff000000
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-GI-NEXT:    mov w8, #2130706431 // =0x7effffff
-; CHECK-GI-NEXT:    fmov s10, w8
+; CHECK-GI-NEXT:    mvni v10.2s, #129, lsl #24
 ; CHECK-GI-NEXT:    mov x21, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-GI-NEXT:    mov x22, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-GI-NEXT:    fcmp s0, s9
@@ -1967,8 +1963,7 @@ define <4 x i100> @test_signed_v4f32_v4i100(<4 x float> %f) {
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    movi v9.2s, #241, lsl #24
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    mov w8, #1895825407 // =0x70ffffff
-; CHECK-SD-NEXT:    fmov s10, w8
+; CHECK-SD-NEXT:    mvni v10.2s, #143, lsl #24
 ; CHECK-SD-NEXT:    mov x25, #-34359738368 // =0xfffffff800000000
 ; CHECK-SD-NEXT:    mov x26, #34359738367 // =0x7ffffffff
 ; CHECK-SD-NEXT:    mov s8, v0.s[1]
@@ -2069,8 +2064,7 @@ define <4 x i100> @test_signed_v4f32_v4i100(<4 x float> %f) {
 ; CHECK-GI-NEXT:    bl __fixsfti
 ; CHECK-GI-NEXT:    movi v11.2s, #241, lsl #24
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-GI-NEXT:    mov w8, #1895825407 // =0x70ffffff
-; CHECK-GI-NEXT:    fmov s12, w8
+; CHECK-GI-NEXT:    mvni v12.2s, #143, lsl #24
 ; CHECK-GI-NEXT:    mov x25, #34359738368 // =0x800000000
 ; CHECK-GI-NEXT:    mov x26, #34359738367 // =0x7ffffffff
 ; CHECK-GI-NEXT:    fcmp s0, s11
@@ -2162,10 +2156,9 @@ define <4 x i128> @test_signed_v4f32_v4i128(<4 x float> %f) {
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    bl __fixsfti
-; CHECK-SD-NEXT:    movi v9.2s, #255, lsl #24
+; CHECK-SD-NEXT:    movi d9, #0xff000000ff000000
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    mov w8, #2130706431 // =0x7effffff
-; CHECK-SD-NEXT:    fmov s10, w8
+; CHECK-SD-NEXT:    mvni v10.2s, #129, lsl #24
 ; CHECK-SD-NEXT:    mov x25, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-SD-NEXT:    mov x26, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-SD-NEXT:    mov s8, v0.s[1]
@@ -2264,10 +2257,9 @@ define <4 x i128> @test_signed_v4f32_v4i128(<4 x float> %f) {
 ; CHECK-GI-NEXT:    mov s8, v0.s[3]
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    bl __fixsfti
-; CHECK-GI-NEXT:    movi v11.2s, #255, lsl #24
+; CHECK-GI-NEXT:    movi d11, #0xff000000ff000000
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-GI-NEXT:    mov w8, #2130706431 // =0x7effffff
-; CHECK-GI-NEXT:    fmov s12, w8
+; CHECK-GI-NEXT:    mvni v12.2s, #129, lsl #24
 ; CHECK-GI-NEXT:    mov x25, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-GI-NEXT:    mov x26, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-GI-NEXT:    fcmp s0, s11
@@ -3163,9 +3155,8 @@ define <4 x i100> @test_signed_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-SD-NEXT:    fmov s0, s8
 ; CHECK-SD-NEXT:    bl __fixsfti
 ; CHECK-SD-NEXT:    movi v9.2s, #241, lsl #24
-; CHECK-SD-NEXT:    mov w8, #1895825407 // =0x70ffffff
+; CHECK-SD-NEXT:    mvni v10.2s, #143, lsl #24
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    fmov s10, w8
 ; CHECK-SD-NEXT:    mov x25, #-34359738368 // =0xfffffff800000000
 ; CHECK-SD-NEXT:    mov x26, #34359738367 // =0x7ffffffff
 ; CHECK-SD-NEXT:    mov h0, v0.h[1]
@@ -3302,10 +3293,9 @@ define <4 x i128> @test_signed_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    fmov s0, s8
 ; CHECK-SD-NEXT:    bl __fixsfti
-; CHECK-SD-NEXT:    movi v9.2s, #255, lsl #24
-; CHECK-SD-NEXT:    mov w8, #2130706431 // =0x7effffff
+; CHECK-SD-NEXT:    movi d9, #0xff000000ff000000
+; CHECK-SD-NEXT:    mvni v10.2s, #129, lsl #24
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    fmov s10, w8
 ; CHECK-SD-NEXT:    mov x25, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-SD-NEXT:    mov x26, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-SD-NEXT:    mov h0, v0.h[1]
@@ -3868,9 +3858,8 @@ define <8 x i100> @test_signed_v8f16_v8i100(<8 x half> %f) {
 ; CHECK-NEXT:    fmov s0, s8
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    movi v10.2s, #241, lsl #24
-; CHECK-NEXT:    mov w8, #1895825407 // =0x70ffffff
+; CHECK-NEXT:    mvni v9.2s, #143, lsl #24
 ; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
-; CHECK-NEXT:    fmov s9, w8
 ; CHECK-NEXT:    mov x22, #-34359738368 // =0xfffffff800000000
 ; CHECK-NEXT:    mov x23, #34359738367 // =0x7ffffffff
 ; CHECK-NEXT:    mov h0, v0.h[3]
@@ -4063,10 +4052,9 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ; CHECK-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
 ; CHECK-SD-NEXT:    fmov s0, s8
 ; CHECK-SD-NEXT:    bl __fixsfti
-; CHECK-SD-NEXT:    movi v9.2s, #255, lsl #24
-; CHECK-SD-NEXT:    mov w8, #2130706431 // =0x7effffff
+; CHECK-SD-NEXT:    movi d9, #0xff000000ff000000
+; CHECK-SD-NEXT:    mvni v10.2s, #129, lsl #24
 ; CHECK-SD-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
-; CHECK-SD-NEXT:    fmov s10, w8
 ; CHECK-SD-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-SD-NEXT:    mov x23, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-SD-NEXT:    mov h0, v0.h[1]

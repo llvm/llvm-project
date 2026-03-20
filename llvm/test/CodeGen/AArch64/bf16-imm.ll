@@ -21,8 +21,7 @@ define bfloat @Const1() {
 ;
 ; CHECK-NOFP16-LABEL: Const1:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NOFP16-NEXT:    ldr h0, [x8, :lo12:.LCPI1_0]
+; CHECK-NOFP16-NEXT:    movi v0.4h, #60, lsl #8
 ; CHECK-NOFP16-NEXT:    ret
 entry:
   ret bfloat 0xR3C00
@@ -36,8 +35,7 @@ define bfloat @Const2() {
 ;
 ; CHECK-NOFP16-LABEL: Const2:
 ; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NOFP16-NEXT:    ldr h0, [x8, :lo12:.LCPI2_0]
+; CHECK-NOFP16-NEXT:    movi v0.4h, #48, lsl #8
 ; CHECK-NOFP16-NEXT:    ret
 entry:
   ret bfloat 0xR3000
@@ -118,23 +116,10 @@ entry:
 }
 
 define bfloat @Const7() {
-; CHECK-FP16-SD-LABEL: Const7:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    mov w8, #20480 // =0x5000
-; CHECK-FP16-SD-NEXT:    fmov h0, w8
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NOFP16-LABEL: Const7:
-; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NOFP16-NEXT:    ldr h0, [x8, :lo12:.LCPI7_0]
-; CHECK-NOFP16-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: Const7:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI7_0
-; CHECK-FP16-GI-NEXT:    ldr h0, [x8, :lo12:.LCPI7_0]
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: Const7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v0.4h, #80, lsl #8
+; CHECK-NEXT:    ret
 entry:
   ret bfloat 0xR5000
 }

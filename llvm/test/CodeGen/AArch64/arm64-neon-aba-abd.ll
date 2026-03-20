@@ -206,11 +206,10 @@ define <2 x i32> @test_sabd_v2i32_const() {
 ;
 ; CHECK-GI-LABEL: test_sabd_v2i32_const:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI19_1
-; CHECK-GI-NEXT:    adrp x9, .LCPI19_0
-; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI19_1]
-; CHECK-GI-NEXT:    ldr d1, [x9, :lo12:.LCPI19_0]
-; CHECK-GI-NEXT:    sabd v0.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    movi d0, #0x00ffffffff0000
+; CHECK-GI-NEXT:    adrp x8, .LCPI19_0
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI19_0]
+; CHECK-GI-NEXT:    sabd v0.2s, v1.2s, v0.2s
 ; CHECK-GI-NEXT:    ret
   %1 = tail call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(
     <2 x i32> <i32 -2147483648, i32 2147450880>,

@@ -6,9 +6,8 @@
 define i32 @replace_isinf_call_f16(half %x) {
 ; CHECK-SD-LABEL: replace_isinf_call_f16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #31744 // =0x7c00
+; CHECK-SD-NEXT:    movi v1.4h, #124, lsl #8
 ; CHECK-SD-NEXT:    fabs h0, h0
-; CHECK-SD-NEXT:    fmov h1, w8
 ; CHECK-SD-NEXT:    fcmp h0, h1
 ; CHECK-SD-NEXT:    cset w0, eq
 ; CHECK-SD-NEXT:    ret

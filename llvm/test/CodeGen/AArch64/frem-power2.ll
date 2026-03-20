@@ -419,11 +419,11 @@ define <4 x float> @frem2_vec(<4 x float> %x) {
 ; CHECK-SD-LABEL: frem2_vec:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.4s, #63, lsl #24
-; CHECK-SD-NEXT:    movi v2.4s, #64, lsl #24
+; CHECK-SD-NEXT:    movi v2.4s, #192, lsl #24
 ; CHECK-SD-NEXT:    mov v3.16b, v0.16b
 ; CHECK-SD-NEXT:    fmul v1.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    frintz v1.4s, v1.4s
-; CHECK-SD-NEXT:    fmls v3.4s, v2.4s, v1.4s
+; CHECK-SD-NEXT:    fmla v3.4s, v2.4s, v1.4s
 ; CHECK-SD-NEXT:    mvni v1.4s, #128, lsl #24
 ; CHECK-SD-NEXT:    bit v0.16b, v3.16b, v1.16b
 ; CHECK-SD-NEXT:    ret

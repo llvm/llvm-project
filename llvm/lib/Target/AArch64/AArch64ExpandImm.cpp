@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
 #include "AArch64ExpandImm.h"
+#include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 
 using namespace llvm;
@@ -719,4 +720,142 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   // We found no possible two or three instruction sequence; use the general
   // four-instruction sequence.
   expandMOVImmSimple(Imm, BitSize, OneChunks, ZeroChunks, Insn);
+}
+
+bool AArch64_IMM::expandVectorMOVImm(
+    APInt Imm, const AArch64Subtarget *ST,
+    SmallVectorImpl<AArch64_IMM::ImmInsnModel> &Insn) {
+  assert((Imm.getBitWidth() == 64 || Imm.getBitWidth() == 128) &&
+         "Expected vector sized constant");
+  bool Is64Bit = Imm.getBitWidth() == 64;
+
+  if (ST->isNeonAvailable() && Imm.getHiBits(64) == Imm.getLoBits(64)) {
+    uint64_t Value = Imm.trunc(64).getZExtValue();
+    if (Value == 0) {
+      Insn.push_back({AArch64::FMOVD0, 0, 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType10(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVID : AArch64::MOVIv2d_ns,
+                      AArch64_AM::encodeAdvSIMDModImmType10(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType1(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32,
+                      AArch64_AM::encodeAdvSIMDModImmType1(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType2(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32,
+                      AArch64_AM::encodeAdvSIMDModImmType2(Value), 8});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType3(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32,
+                      AArch64_AM::encodeAdvSIMDModImmType3(Value), 16});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType4(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32,
+                      AArch64_AM::encodeAdvSIMDModImmType4(Value), 24});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType5(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVIv4i16 : AArch64::MOVIv8i16,
+                      AArch64_AM::encodeAdvSIMDModImmType5(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType6(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVIv4i16 : AArch64::MOVIv8i16,
+                      AArch64_AM::encodeAdvSIMDModImmType6(Value), 8});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType7(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVIv2s_msl : AArch64::MOVIv4s_msl,
+                      AArch64_AM::encodeAdvSIMDModImmType7(Value), 264});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType8(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVIv2s_msl : AArch64::MOVIv4s_msl,
+                      AArch64_AM::encodeAdvSIMDModImmType8(Value), 272});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType9(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MOVIv8b_ns : AArch64::MOVIv16b_ns,
+                      AArch64_AM::encodeAdvSIMDModImmType9(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType11(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::FMOVv2f32_ns : AArch64::FMOVv4f32_ns,
+                      AArch64_AM::encodeAdvSIMDModImmType11(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType12(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::FMOVDi : AArch64::FMOVv2f64_ns,
+                      AArch64_AM::encodeAdvSIMDModImmType12(Value), 0});
+      return true;
+    }
+
+    APInt NotImm = ~Imm;
+    Value = NotImm.trunc(64).getZExtValue();
+    if (AArch64_AM::isAdvSIMDModImmType1(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32,
+                      AArch64_AM::encodeAdvSIMDModImmType1(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType2(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32,
+                      AArch64_AM::encodeAdvSIMDModImmType2(Value), 8});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType3(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32,
+                      AArch64_AM::encodeAdvSIMDModImmType3(Value), 16});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType4(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32,
+                      AArch64_AM::encodeAdvSIMDModImmType4(Value), 24});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType5(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MVNIv4i16 : AArch64::MVNIv8i16,
+                      AArch64_AM::encodeAdvSIMDModImmType5(Value), 0});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType6(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MVNIv4i16 : AArch64::MVNIv8i16,
+                      AArch64_AM::encodeAdvSIMDModImmType6(Value), 8});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType7(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MVNIv2s_msl : AArch64::MVNIv4s_msl,
+                      AArch64_AM::encodeAdvSIMDModImmType7(Value), 264});
+      return true;
+    }
+    if (AArch64_AM::isAdvSIMDModImmType8(Value)) {
+      Insn.push_back({Is64Bit ? AArch64::MVNIv2s_msl : AArch64::MVNIv4s_msl,
+                      AArch64_AM::encodeAdvSIMDModImmType8(Value), 272});
+      return true;
+    }
+  }
+
+  // TODO: We should be able to support 64-bit destinations too
+  if (ST->hasSVE() && !Is64Bit && Imm.getHiBits(64) == Imm.getLoBits(64)) {
+    // See if we can make use of the SVE dup instruction.
+    APInt Val64 = Imm.trunc(64);
+    int32_t ImmVal, ShiftVal;
+    if (AArch64_AM::isSVECpyDupImm(64, Val64.getSExtValue(), ImmVal,
+                                   ShiftVal)) {
+      Insn.push_back({AArch64::DUP_ZI_D, (uint64_t)ImmVal, (uint64_t)ShiftVal});
+      return true;
+    }
+    uint64_t Encoding;
+    if (AArch64_AM::isSVELogicalImm(64, Val64.getZExtValue(), Encoding)) {
+      Insn.push_back({AArch64::DUPM_ZI, Encoding, 0});
+      return true;
+    }
+  }
+
+  return false;
 }

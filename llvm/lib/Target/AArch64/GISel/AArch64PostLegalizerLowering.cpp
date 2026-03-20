@@ -1110,6 +1110,67 @@ void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
   GBuildVec->eraseFromParent();
 }
 
+bool matchConstBuildVectorToFNeg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 const AArch64Subtarget &ST,
+                                 std::pair<APInt, unsigned> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  // Limit to v2f32, v4f32, f64, v2f64 or v4f16 and v8f16 with fullfp16.
+  if (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 128)
+    return false;
+  unsigned EltSize = Ty.getScalarSizeInBits();
+
+  APInt Imm(Ty.getSizeInBits(), 0);
+  for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx++) {
+    auto C =
+        getAnyConstantVRegValWithLookThrough(MI.getOperand(Idx).getReg(), MRI);
+    if (!C)
+      return false;
+    Imm |= C->Value.trunc(EltSize)
+               .zext(Ty.getSizeInBits())
+               .shl((Idx - 1) * EltSize);
+  }
+
+  SmallVector<AArch64_IMM::ImmInsnModel> Insns;
+  if (expandVectorMOVImm(Imm, &ST, Insns))
+    return false;
+
+  auto Check = [&](APInt &Imm, unsigned Size) {
+    APInt NImm = Imm ^ APInt::getSplat(Imm.getBitWidth(),
+                                       APInt::getHighBitsSet(Size, 1));
+    SmallVector<AArch64_IMM::ImmInsnModel> Insns;
+    MatchInfo.first = NImm;
+    MatchInfo.second = Size;
+    return expandVectorMOVImm(NImm, &ST, Insns);
+  };
+
+  return Check(Imm, 64) || Check(Imm, 32) ||
+         (ST.hasFullFP16() && Check(Imm, 16));
+}
+
+void applyConstBuildVectorToFNeg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B,
+                                 std::pair<APInt, unsigned> &MatchInfo) {
+  B.setInstrAndDebugLoc(MI);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  // Extract the Immediate into chunks of size EltSize
+  unsigned EltSize = MatchInfo.second;
+  unsigned NumLanes = Ty.getSizeInBits() / EltSize;
+  LLT VTy = NumLanes == 1 ? LLT::scalar(EltSize)
+                          : LLT::fixed_vector(NumLanes, EltSize);
+  SmallVector<APInt> Imms;
+  for (unsigned I = 0; I < NumLanes; I++)
+    Imms.push_back(MatchInfo.first.extractBits(EltSize, I * EltSize));
+  // Build the new BV and FNeg of it.
+  auto BV = NumLanes == 1 ? B.buildFConstant(VTy, APFloat(APFloat::IEEEdouble(),
+                                                          MatchInfo.first))
+                          : B.buildBuildVectorConstant(VTy, Imms);
+  auto FNeg = B.buildFNeg(Ty == VTy ? DstOp(MI.getOperand(0)) : DstOp(VTy), BV);
+  if (Ty != VTy)
+    B.buildBitcast(MI.getOperand(0), FNeg);
+  MI.eraseFromParent();
+}
+
 bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);

@@ -509,8 +509,7 @@ def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
 def SDT_AArch64Zip   : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>]>;
-def SDT_AArch64MOVIedit : SDTypeProfile<1, 1, [SDTCisInt<1>]>;
-def SDT_AArch64MOVIshift : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
+def SDT_AArch64MOVI : SDTypeProfile<1, 1, [SDTCisInt<1>]>;
 def SDT_AArch64vecimm : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                            SDTCisInt<2>, SDTCisInt<3>]>;
 def SDT_AArch64UnaryVec: SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
@@ -920,13 +919,7 @@ def AArch64trn1      : SDNode<"AArch64ISD::TRN1", SDT_AArch64Zip>;
 def AArch64trn2      : SDNode<"AArch64ISD::TRN2", SDT_AArch64Zip>;
 
 // Vector immediate moves
-def AArch64movi_edit : SDNode<"AArch64ISD::MOVIedit", SDT_AArch64MOVIedit>;
-def AArch64movi_shift : SDNode<"AArch64ISD::MOVIshift", SDT_AArch64MOVIshift>;
-def AArch64movi_msl : SDNode<"AArch64ISD::MOVImsl", SDT_AArch64MOVIshift>;
-def AArch64mvni_shift : SDNode<"AArch64ISD::MVNIshift", SDT_AArch64MOVIshift>;
-def AArch64mvni_msl : SDNode<"AArch64ISD::MVNImsl", SDT_AArch64MOVIshift>;
-def AArch64movi : SDNode<"AArch64ISD::MOVI", SDT_AArch64MOVIedit>;
-def AArch64fmov : SDNode<"AArch64ISD::FMOV", SDT_AArch64MOVIedit>;
+def AArch64movi : SDNode<"AArch64ISD::MOVI", SDT_AArch64MOVI>;
 
 def AArch64rev16 : SDNode<"AArch64ISD::REV16", SDT_AArch64Rev>;
 def AArch64rev32 : SDNode<"AArch64ISD::REV32", SDT_AArch64Rev>;
@@ -8692,46 +8685,32 @@ def : InstAlias<"orr.4s $Vd, $imm", (ORRv4i32 V128:$Vd, imm0_255:$imm, 0)>;
 }
 
 // AdvSIMD FMOV
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1, hasSideEffects = 0 in {
 def FMOVv2f64_ns : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1111, V128, fpimm8,
-                                              "fmov", ".2d",
-                       [(set (v2f64 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
+                                              "fmov", ".2d", []>;
 def FMOVv2f32_ns : SIMDModifiedImmVectorNoShift<0, 0, 0, 0b1111, V64,  fpimm8,
-                                              "fmov", ".2s",
-                       [(set (v2f32 V64:$Rd), (AArch64fmov imm0_255:$imm8))]>;
+                                              "fmov", ".2s", []>;
 def FMOVv4f32_ns : SIMDModifiedImmVectorNoShift<1, 0, 0, 0b1111, V128, fpimm8,
-                                              "fmov", ".4s",
-                       [(set (v4f32 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
+                                              "fmov", ".4s", []>;
 let Predicates = [HasNEON, HasFullFP16] in {
 def FMOVv4f16_ns : SIMDModifiedImmVectorNoShift<0, 0, 1, 0b1111, V64,  fpimm8,
-                                              "fmov", ".4h",
-                       [(set (v4f16 V64:$Rd), (AArch64fmov imm0_255:$imm8))]>;
+                                              "fmov", ".4h", []>;
 def FMOVv8f16_ns : SIMDModifiedImmVectorNoShift<1, 0, 1, 0b1111, V128, fpimm8,
-                                              "fmov", ".8h",
-                       [(set (v8f16 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
+                                              "fmov", ".8h", []>;
 } // Predicates = [HasNEON, HasFullFP16]
 }
 
 // AdvSIMD MOVI
 
 // EDIT byte mask: scalar
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
+let isReMaterializable = 1, isAsCheapAsAMove = 1, hasSideEffects = 0 in
 def MOVID      : SIMDModifiedImmScalarNoShift<0, 1, 0b1110, "movi",
                     [(set FPR64:$Rd, simdimmtype10:$imm8)]>;
-// The movi_edit node has the immediate value already encoded, so we use
-// a plain imm0_255 here.
-def : Pat<(f64 (AArch64movi_edit imm0_255:$shift)),
-          (MOVID imm0_255:$shift)>;
 
-// EDIT byte mask: 2d
-
-// The movi_edit node has the immediate value already encoded, so we use
-// a plain imm0_255 in the pattern
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
+// EDIT byte mask: 2ds
+let isReMaterializable = 1, isAsCheapAsAMove = 1, hasSideEffects = 0 in
 def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1110, V128,
-                                                simdimmtype10,
-                                                "movi", ".2d",
-                   [(set (v2i64 V128:$Rd), (AArch64movi_edit imm0_255:$imm8))]>;
+                                                simdimmtype10, "movi", ".2d", []>;
 
 let Predicates = [HasNEON] in {
 def : Pat<(f128 fpimm0), (f128 (MOVIv2d_ns (i32 0)))>;
@@ -8785,16 +8764,8 @@ def : Pat<(v8i8  immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
 }
 
 // EDIT per word & halfword: 2s, 4h, 4s, & 8h
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
+let isReMaterializable = 1, isAsCheapAsAMove = 1, hasSideEffects = 0 in
 defm MOVI      : SIMDModifiedImmVectorShift<0, 0b10, 0b00, "movi">;
-
-let Predicates = [HasNEON] in {
-  // Using the MOVI to materialize fp constants.
-  def : Pat<(f32 fpimm32SIMDModImmType4:$in),
-            (EXTRACT_SUBREG (MOVIv2i32 (fpimm32SIMDModImmType4XForm f32:$in),
-                                       (i32 24)),
-                            ssub)>;
-}
 
 let Predicates = [HasNEON] in {
 def : InstAlias<"movi $Vd.4h, $imm", (MOVIv4i16 V64:$Vd,  imm0_255:$imm, 0), 0>;
@@ -8808,38 +8779,23 @@ def : InstAlias<"movi.2s $Vd, $imm", (MOVIv2i32 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"movi.4s $Vd, $imm", (MOVIv4i32 V128:$Vd, imm0_255:$imm, 0), 0>;
 }
 
-def : Pat<(v2i32 (AArch64movi_shift imm0_255:$imm8, (i32 imm:$shift))),
-          (MOVIv2i32 imm0_255:$imm8, imm:$shift)>;
-def : Pat<(v4i32 (AArch64movi_shift imm0_255:$imm8, (i32 imm:$shift))),
-          (MOVIv4i32 imm0_255:$imm8, imm:$shift)>;
-def : Pat<(v4i16 (AArch64movi_shift imm0_255:$imm8, (i32 imm:$shift))),
-          (MOVIv4i16 imm0_255:$imm8, imm:$shift)>;
-def : Pat<(v8i16 (AArch64movi_shift imm0_255:$imm8, (i32 imm:$shift))),
-          (MOVIv8i16 imm0_255:$imm8, imm:$shift)>;
-
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1, hasSideEffects = 0 in {
 // EDIT per word: 2s & 4s with MSL shifter
-def MOVIv2s_msl  : SIMDModifiedImmMoveMSL<0, 0, {1,1,0,?}, V64, "movi", ".2s",
-                      [(set (v2i32 V64:$Rd),
-                            (AArch64movi_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
-def MOVIv4s_msl  : SIMDModifiedImmMoveMSL<1, 0, {1,1,0,?}, V128, "movi", ".4s",
-                      [(set (v4i32 V128:$Rd),
-                            (AArch64movi_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
+def MOVIv2s_msl  : SIMDModifiedImmMoveMSL<0, 0, {1,1,0,?}, V64, "movi", ".2s", []>;
+def MOVIv4s_msl  : SIMDModifiedImmMoveMSL<1, 0, {1,1,0,?}, V128, "movi", ".4s", []>;
 
 // Per byte: 8b & 16b
 def MOVIv8b_ns   : SIMDModifiedImmVectorNoShift<0, 0, 0, 0b1110, V64,  imm0_255,
-                                                 "movi", ".8b",
-                       [(set (v8i8 V64:$Rd), (AArch64movi imm0_255:$imm8))]>;
+                                                 "movi", ".8b", []>;
 
 def MOVIv16b_ns  : SIMDModifiedImmVectorNoShift<1, 0, 0, 0b1110, V128, imm0_255,
-                                                 "movi", ".16b",
-                       [(set (v16i8 V128:$Rd), (AArch64movi imm0_255:$imm8))]>;
+                                                 "movi", ".16b", []>;
 }
 
 // AdvSIMD MVNI
 
 // EDIT per word & halfword: 2s, 4h, 4s, & 8h
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in
+let isReMaterializable = 1, isAsCheapAsAMove = 1, hasSideEffects = 0 in
 defm MVNI      : SIMDModifiedImmVectorShift<1, 0b10, 0b00, "mvni">;
 
 let Predicates = [HasNEON] in {
@@ -8854,23 +8810,10 @@ def : InstAlias<"mvni.2s $Vd, $imm", (MVNIv2i32 V64:$Vd,  imm0_255:$imm, 0), 0>;
 def : InstAlias<"mvni.4s $Vd, $imm", (MVNIv4i32 V128:$Vd, imm0_255:$imm, 0), 0>;
 }
 
-def : Pat<(v2i32 (AArch64mvni_shift imm0_255:$imm8, (i32 imm:$shift))),
-          (MVNIv2i32 imm0_255:$imm8, imm:$shift)>;
-def : Pat<(v4i32 (AArch64mvni_shift imm0_255:$imm8, (i32 imm:$shift))),
-          (MVNIv4i32 imm0_255:$imm8, imm:$shift)>;
-def : Pat<(v4i16 (AArch64mvni_shift imm0_255:$imm8, (i32 imm:$shift))),
-          (MVNIv4i16 imm0_255:$imm8, imm:$shift)>;
-def : Pat<(v8i16 (AArch64mvni_shift imm0_255:$imm8, (i32 imm:$shift))),
-          (MVNIv8i16 imm0_255:$imm8, imm:$shift)>;
-
 // EDIT per word: 2s & 4s with MSL shifter
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
-def MVNIv2s_msl   : SIMDModifiedImmMoveMSL<0, 1, {1,1,0,?}, V64, "mvni", ".2s",
-                      [(set (v2i32 V64:$Rd),
-                            (AArch64mvni_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
-def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
-                      [(set (v4i32 V128:$Rd),
-                            (AArch64mvni_msl imm0_255:$imm8, (i32 imm:$shift)))]>;
+let isReMaterializable = 1, isAsCheapAsAMove = 1, hasSideEffects = 0 in {
+def MVNIv2s_msl   : SIMDModifiedImmMoveMSL<0, 1, {1,1,0,?}, V64, "mvni", ".2s", []>;
+def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s", []>;
 }
 
 // SABA patterns for add(x, abs(y)) -> saba(x, y, 0)
@@ -9350,16 +9293,15 @@ defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
                 TriOpFrag<(add_like node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
 
-def VImm0080:         PatLeaf<(AArch64movi_shift (i32 128), (i32 0))>;
-def VImm00008000:     PatLeaf<(AArch64movi_shift (i32 128), (i32 8))>;
-def VImm0000000080000000: PatLeaf<(AArch64NvCast (v2f64 (fneg (AArch64NvCast (v4i32 (AArch64movi_shift (i32 128), (i32 24)))))))>;
+def VImm0080:         PatLeaf<(AArch64movi (i64 0x0080008000800080))>;
+def VImm00008000:     PatLeaf<(AArch64movi (i64 0x0000800000008000))>;
+def VImm0000000080000000: PatLeaf<(AArch64NvCast (v2f64 (fneg (AArch64movi (i64 0x8000000080000000)))))>;
 
 // RADDHN patterns for when RSHRN shifts by half the size of the vector element
 def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))),
           (RADDHNv8i16_v8i8 V128:$Vn, (v8i16 (MOVIv2d_ns (i32 0))))>;
 def : Pat<(v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), VImm00008000), (i32 16)))),
           (RADDHNv4i32_v4i16 V128:$Vn, (v4i32 (MOVIv2d_ns (i32 0))))>;
-let AddedComplexity = 5 in
 def : Pat<(v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))),
           (RADDHNv2i64_v2i32 V128:$Vn, (v2i64 (MOVIv2d_ns (i32 0))))>;
 def : Pat<(v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))),
@@ -9370,6 +9312,7 @@ def : Pat<(v2i32 (int_aarch64_neon_rshrn (v2i64 V128:$Vn), (i32 32))),
           (RADDHNv2i64_v2i32 V128:$Vn, (v2i64 (MOVIv2d_ns (i32 0))))>;
 
 // RADDHN2 patterns for when RSHRN shifts by half the size of the vector element
+let AddedComplexity = 5 in {
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 V64:$Vd),
                  (v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))))),
@@ -9382,13 +9325,13 @@ def : Pat<(v8i16 (concat_vectors
           (RADDHNv4i32_v8i16
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v4i32 (MOVIv2d_ns (i32 0))))>;
-let AddedComplexity = 5 in
 def : Pat<(v4i32 (concat_vectors
                  (v2i32 V64:$Vd),
                  (v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))))),
           (RADDHNv2i64_v4i32
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v2i64 (MOVIv2d_ns (i32 0))))>;
+}
 def : Pat<(v16i8 (concat_vectors
                  (v8i8 V64:$Vd),
                  (v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))))),

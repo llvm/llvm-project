@@ -273,7 +273,16 @@ def build_vector_to_vector_insert : GICombineRule<
   (apply [{ applyLowerBuildToInsertVecElt(*${root}, MRI, B); }])
 >;
 
-def build_vector_lowering : GICombineGroup<[build_vector_to_dup,
+def const_build_vector_to_fneg_matchdata : GIDefMatchData<"std::pair<APInt, unsigned>">;
+def const_build_vector_to_fneg : GICombineRule<
+  (defs root:$root, const_build_vector_to_fneg_matchdata:$matchinfo),
+  (match (wip_match_opcode G_BUILD_VECTOR):$root,
+          [{ return matchConstBuildVectorToFNeg(*${root}, MRI, STI, ${matchinfo}); }]),
+  (apply [{ applyConstBuildVectorToFNeg(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
+def build_vector_lowering : GICombineGroup<[const_build_vector_to_fneg,
+                                            build_vector_to_dup,
                                             build_vector_to_vector_insert]>;
 
 def lower_vector_fcmp : GICombineRule<
