@@ -497,8 +497,31 @@ SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   return DefaultGlobalAS;
 }
 
+// Copied from Targets/AMDGPU.cpp to match AMDGPUTargetCodeGenInfo behavior.
+// Device kernels and variables with hidden visibility need protected
+// visibility.
+// TODO: unify this with AMDGPU.cpp.
+static bool requiresAMDGPUProtectedVisibility(const Decl *D,
+                                              llvm::GlobalValue *GV) {
+  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
+    return false;
+
+  return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
+         (D->hasAttr<DeviceKernelAttr>() ||
+          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
+          (isa<VarDecl>(D) &&
+           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
+            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType())));
+}
+
 void SPIRVTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (requiresAMDGPUProtectedVisibility(D, GV)) {
+    GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+    GV->setDSOLocal(true);
+  }
+
   if (GV->isDeclaration())
     return;
 
