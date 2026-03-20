@@ -436,6 +436,10 @@ public:
   void addBaseTypeRef(DIEValueList &Die, int64_t Idx);
 
   MDNodeSetVector &getDeferredLocalDecls() { return DeferredLocalDecls; }
+
+  void addLinkageNamesToDeclarations(const DwarfDebug &DD,
+                                     const DISubprogram &CalleeSP,
+                                     DIE &CalleeDIE);
 };
 
 } // end namespace llvm

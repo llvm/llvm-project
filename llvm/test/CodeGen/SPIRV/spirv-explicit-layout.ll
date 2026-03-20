@@ -74,7 +74,7 @@ entry:
 ; CHECK-NEXT: [[ptr:%[0-9]+]] = OpAccessChain [[storagebuffer_int_ptr]] [[handle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %handle, i32 1)
 
-; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[uint]] [[ptr]] Aligned 4
+; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[uint]] [[ptr]]
   %1 = load i32, ptr addrspace(11) %0, align 4
 
 ; CHECK-NEXT: OpReturnValue [[ld]]
@@ -88,7 +88,7 @@ define external %struct.S @private_load() {
 ; CHECK-NEXT: OpLabel
 entry:
 
-; CHECK: [[ld:%[0-9]+]] = OpLoad [[S]] [[private_var]] Aligned 4
+; CHECK: [[ld:%[0-9]+]] = OpLoad [[S]] [[private_var]]
   %1 = load %struct.S, ptr addrspace(10) @private, align 4
 
 ; CHECK-NEXT: OpReturnValue [[ld]]
@@ -102,7 +102,7 @@ define external %struct.S @storage_buffer_load() {
 ; CHECK-NEXT: OpLabel
 entry:
 
-; CHECK: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[storage_buffer]] Aligned 4
+; CHECK: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[storage_buffer]]
 ; CHECK-NEXT: [[copy:%[0-9]+]] = OpCopyLogical [[S]] [[ld]]
   %1 = load %struct.S, ptr addrspace(11) @storage_buffer, align 4
 
@@ -122,7 +122,7 @@ entry:
 ; CHECK-NEXT: [[ptr:%[0-9]+]] = OpAccessChain [[storagebuffer_S_ptr]] [[handle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) %handle, i32 1)
 
-; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[ptr]] Aligned 4
+; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[ptr]]
 ; CHECK-NEXT: [[copy:%[0-9]+]] = OpCopyLogical [[S]] [[ld]]
   %1 = load %struct.S, ptr addrspace(11) %0, align 4
 
@@ -143,7 +143,7 @@ entry:
 ; CHECK-NEXT: [[ptr:%[0-9]+]] = OpAccessChain [[storagebuffer_S_ptr]] [[handle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) %handle, i32 1)
 
-; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[ptr]] Aligned 4
+; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[ptr]]
 ; CHECK-NEXT: [[copy:%[0-9]+]] = OpCopyLogical [[S]] [[ld]]
   %1 = load %struct.S, ptr addrspace(11) %0, align 4
 

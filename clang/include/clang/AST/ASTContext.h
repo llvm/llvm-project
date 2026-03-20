@@ -389,8 +389,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
       GlobalArrayOperatorDeletesForVirtualDtor;
 
-  /// To remember which types did require a vector deleting dtor.
-  llvm::DenseSet<const CXXRecordDecl *> RequireVectorDeletingDtor;
+  /// To remember for which types we met new[] call, these potentially require a
+  /// vector deleting dtor.
+  llvm::DenseSet<const CXXRecordDecl *> MaybeRequireVectorDeletingDtor;
 
   /// The next string literal "version" to allocate during constant evaluation.
   /// This is used to distinguish between repeated evaluations of the same
@@ -787,7 +788,7 @@ private:
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   clang::PrintingPolicy PrintingPolicy;
-  std::unique_ptr<interp::Context> InterpContext;
+  mutable std::unique_ptr<interp::Context> InterpContext;
   std::unique_ptr<ParentMapContext> ParentMapCtx;
 
   /// Keeps track of the deallocated DeclListNodes for future reuse.
@@ -803,7 +804,7 @@ public:
   ASTMutationListener *Listener = nullptr;
 
   /// Returns the clang bytecode interpreter context.
-  interp::Context &getInterpContext();
+  interp::Context &getInterpContext() const;
 
   struct CUDAConstantEvalContext {
     /// Do not allow wrong-sided variables in constant expressions.
@@ -1839,12 +1840,6 @@ private:
   QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
                                    const FunctionProtoType::ExtProtoInfo &EPI,
                                    bool OnlyWantCanonical) const;
-  QualType
-  getAutoTypeInternal(QualType DeducedType, AutoTypeKeyword Keyword,
-                      bool IsDependent, bool IsPack = false,
-                      TemplateDecl *TypeConstraintConcept = nullptr,
-                      ArrayRef<TemplateArgument> TypeConstraintArgs = {},
-                      bool IsCanon = false) const;
 
 public:
   QualType getTypeDeclType(ElaboratedTypeKeyword Keyword,
@@ -2084,8 +2079,7 @@ public:
 
   /// C++11 deduced auto type.
   QualType
-  getAutoType(QualType DeducedType, AutoTypeKeyword Keyword, bool IsDependent,
-              bool IsPack = false,
+  getAutoType(DeducedKind DK, QualType DeducedAsType, AutoTypeKeyword Keyword,
               TemplateDecl *TypeConstraintConcept = nullptr,
               ArrayRef<TemplateArgument> TypeConstraintArgs = {}) const;
 
@@ -2100,17 +2094,11 @@ public:
   QualType getUnconstrainedType(QualType T) const;
 
   /// C++17 deduced class template specialization type.
-  QualType getDeducedTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
-                                                TemplateName Template,
-                                                QualType DeducedType,
-                                                bool IsDependent) const;
+  QualType getDeducedTemplateSpecializationType(DeducedKind DK,
+                                                QualType DeducedAsType,
+                                                ElaboratedTypeKeyword Keyword,
+                                                TemplateName Template) const;
 
-private:
-  QualType getDeducedTemplateSpecializationTypeInternal(
-      ElaboratedTypeKeyword Keyword, TemplateName Template,
-      QualType DeducedType, bool IsDependent, QualType Canon) const;
-
-public:
   /// Return the unique type for "size_t" (C99 7.17), defined in
   /// <stddef.h>.
   ///
@@ -3561,8 +3549,8 @@ public:
                                           OperatorDeleteKind K) const;
   bool dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
                              OperatorDeleteKind K) const;
-  void setClassNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
-  bool classNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
+  void setClassMaybeNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
+  bool classMaybeNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
 
   /// Retrieve the context for computing mangling numbers in the given
   /// DeclContext.

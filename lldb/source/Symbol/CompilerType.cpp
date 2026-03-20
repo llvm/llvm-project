@@ -177,6 +177,13 @@ bool CompilerType::IsMemberFunctionPointerType() const {
   return false;
 }
 
+bool CompilerType::IsMemberDataPointerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsMemberDataPointerType(m_type);
+  return false;
+}
+
 bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
@@ -308,6 +315,13 @@ bool CompilerType::IsVoidType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->IsVoidType(m_type);
+  return false;
+}
+
+bool CompilerType::HasPointerAuthQualifier() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->HasPointerAuthQualifier(m_type);
   return false;
 }
 

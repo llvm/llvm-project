@@ -2280,8 +2280,6 @@ LogicalResult tosa::SliceOp::verify() {
       return emitOpError("length of size is not equal to rank of input shape");
   }
 
-  constexpr int64_t kInferableDimSize = -1;
-
   SmallVector<int64_t> startValues;
   tosa::getConstShapeValues(start.getDefiningOp(), startValues);
   if (startValues.size()) {
@@ -2626,9 +2624,10 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     return mlir::success();
   }
 
-  int missingDims = llvm::count(shapeValues, -1);
+  int missingDims = llvm::count(shapeValues, kInferableDimSize);
   if (missingDims > 1)
-    return emitOpError() << "expected at most one target dimension to be -1";
+    return emitOpError() << "expected at most one target dimension to be "
+                         << kInferableDimSize;
 
   const auto outputType = dyn_cast<RankedTensorType>(getType());
   if (!outputType)
@@ -2639,11 +2638,12 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
 
   for (auto [newShapeDim, outputShapeDim] :
        zip(shapeValues, outputType.getShape())) {
-    if (newShapeDim != -1 && newShapeDim != ShapedType::kDynamic &&
+    if (newShapeDim != kInferableDimSize &&
+        newShapeDim != ShapedType::kDynamic &&
         outputShapeDim != ShapedType::kDynamic && newShapeDim != outputShapeDim)
       return emitOpError() << "new shape is inconsistent with result shape";
 
-    if (newShapeDim != ShapedType::kDynamic && newShapeDim < -1)
+    if (newShapeDim != ShapedType::kDynamic && newShapeDim < kInferableDimSize)
       return emitOpError() << "new shape has invalid tensor dimension size "
                            << newShapeDim;
   }

@@ -133,6 +133,7 @@ function (add_flangrt_library name)
   # Create selected library types.
   if (build_object)
     add_library("${name_object}" OBJECT ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    target_link_libraries(${name_object} PRIVATE ${extra_deps})
     set_target_properties(${name_object} PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         FOLDER "Flang-RT/Object Libraries"

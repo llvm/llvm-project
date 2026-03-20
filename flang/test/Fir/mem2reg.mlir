@@ -158,18 +158,17 @@ func.func @box_not_mem2reg(%arg0: !fir.ref<!fir.box<f32>> {fir.bindc_name = "i"}
 
 // -----
 
-// CHECK-LABEL:   func.func @block_argument_value(
-// CHECK-SAME:      %[[ARG0:.*]]: i32,
-// CHECK-SAME:      %[[ARG1:.*]]: i1) -> i32 {
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 42 : i32
-// CHECK:           fir.declare_value %[[CONSTANT_0]] {uniq_name = "_QFfooEjlocal"} : i32
-// CHECK:           llvm.cond_br %[[ARG1]], ^bb1, ^bb2
-// CHECK:         ^bb1:
-// CHECK:           fir.declare_value %[[ARG0]] {uniq_name = "_QFfooEjlocal"} : i32
-// CHECK:           llvm.br ^bb2
-// CHECK:         ^bb2:
-// CHECK:           return %[[CONSTANT_0]] : i32
-// CHECK:         }
+// Conditional store in a different block through fir.declare is not promoted
+// because MLIR mem2reg would not place the needed phi nodes correctly.
+
+// CHECK-LABEL: func.func @block_argument_value(
+// CHECK-SAME: %[[ARG0:.*]]: i32,
+// CHECK-SAME: %[[ARG1:.*]]: i1) -> i32 {
+// CHECK: fir.alloca i32
+// CHECK: fir.declare
+// CHECK: fir.store
+// CHECK: fir.store
+// CHECK: fir.load
 func.func @block_argument_value(%arg0: i32, %cdt: i1) -> i32 {
   %c42_i32 = arith.constant 42 : i32
   %3 = fir.alloca i32 {bindc_name = "jlocal", uniq_name = "_QFfooEjlocal"}
@@ -182,4 +181,37 @@ func.func @block_argument_value(%arg0: i32, %cdt: i1) -> i32 {
 ^bb2:
   %6 = fir.load %4 : !fir.ref<i32>
   return %6 : i32
+}
+
+// -----
+
+// Conditional store inside a loop through fir.declare must not be promoted.
+// MLIR's mem2reg does not register stores through declares as defining blocks,
+// so phi nodes at the loop header would be missing, losing the update.
+
+// CHECK-LABEL: func.func @loop_conditional_update(
+// CHECK-SAME: %[[ARG0:.*]]: i32,
+// CHECK-SAME: %[[ARG1:.*]]: i1) -> i32 {
+// CHECK: fir.alloca i32
+// CHECK: fir.declare
+// CHECK: fir.store
+// CHECK: fir.load
+// CHECK: fir.store
+// CHECK: fir.load
+func.func @loop_conditional_update(%arg0: i32, %cdt: i1) -> i32 {
+  %c1 = arith.constant 1 : i32
+  %alloca = fir.alloca i32 {bindc_name = "mywatch", uniq_name = "_QFkernelEmywatch"}
+  %declare = fir.declare %alloca {uniq_name = "_QFkernelEmywatch"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  fir.store %arg0 to %declare : !fir.ref<i32>
+  llvm.br ^loop
+^loop:
+  %val = fir.load %declare : !fir.ref<i32>
+  llvm.cond_br %cdt, ^update, ^exit
+^update:
+  %new = arith.subi %val, %c1 : i32
+  fir.store %new to %declare : !fir.ref<i32>
+  llvm.br ^loop
+^exit:
+  %result = fir.load %declare : !fir.ref<i32>
+  return %result : i32
 }

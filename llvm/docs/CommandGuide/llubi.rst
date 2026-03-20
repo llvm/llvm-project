@@ -70,6 +70,18 @@ INTERPRETER OPTIONS
 
   Set the value of `llvm.vscale` to N. The default value is 4.
 
+.. option:: -seed=N
+
+  Set the seed for random number generator to N. By default, the seed is 0.
+
+.. option:: -undef-behavior=mode
+
+  Set the behavior for undefined values (e.g., load from uninitialized memory or freeze a poison value).
+  The options for `mode` are:
+
+  * `nondet`: Each load from the same uninitialized byte yields a freshly random value. This is the default behavior.
+  * `zero`: Uninitialized values are treated as zero.
+
 EXIT STATUS
 -----------
 

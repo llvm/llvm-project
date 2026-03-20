@@ -230,7 +230,7 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
     // FIXME(perf): Since we do this check on every Load from a static
     // temporary, it might make sense to cache the value of the
     // isUsableInConstantExpressions call.
-    if (B->getEvalID() != S.Ctx.getEvalID() &&
+    if (B->getEvalID() != S.EvalID &&
         !MTE->isUsableInConstantExpressions(S.getASTContext())) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
@@ -298,6 +298,11 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
   // at the end.
   for (const Function::ParamDescriptor &PDesc : Func->args_reverse())
     TYPE_SWITCH(PDesc.T, S.Stk.discard<T>());
+
+  if (Func->hasThisPointer() && !Func->isThisPointerExplicit())
+    S.Stk.discard<Pointer>();
+  if (Func->hasRVO())
+    S.Stk.discard<Pointer>();
 }
 
 bool isConstexprUnknown(const Pointer &P) {
@@ -626,16 +631,8 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // In C++14 onwards, it is permitted to read a mutable member whose
   // lifetime began within the evaluation.
-  if (S.getLangOpts().CPlusPlus14 &&
-      Ptr.block()->getEvalID() == S.Ctx.getEvalID()) {
-    // FIXME: This check is necessary because (of the way) we revisit
-    // variables in Compiler.cpp:visitDeclRef. Revisiting a so far
-    // unknown variable will get the same EvalID and we end up allowing
-    // reads from mutable members of it.
-    if (!S.inConstantContext() && isConstexprUnknown(Ptr))
-      return false;
+  if (S.getLangOpts().CPlusPlus14 && Ptr.block()->getEvalID() == S.EvalID)
     return true;
-  }
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
@@ -1664,19 +1661,20 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return false;
 
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
+  auto Memory = new char[InterpFrame::allocSize(Func)];
+  auto NewFrame = new (Memory) InterpFrame(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame.get();
+  S.Current = NewFrame;
 
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
   if (Interpret(S)) {
-    NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
     return true;
   }
 
+  InterpFrame::free(NewFrame);
   // Interpreting the function failed somehow. Reset to
   // previous state.
   S.Current = FrameBefore;
@@ -1747,9 +1745,10 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
 
-  auto NewFrame = std::make_unique<InterpFrame>(S, Func, OpPC, VarArgSize);
+  auto Memory = new char[InterpFrame::allocSize(Func)];
+  auto NewFrame = new (Memory) InterpFrame(S, Func, OpPC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
-  S.Current = NewFrame.get();
+  S.Current = NewFrame;
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   // Note that we cannot assert(CallResult.hasValue()) here since
@@ -1761,13 +1760,13 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     S.InitializingBlocks.pop_back();
 
   if (!Success) {
+    InterpFrame::free(NewFrame);
     // Interpreting the function failed somehow. Reset to
     // previous state.
     S.Current = FrameBefore;
     return false;
   }
 
-  NewFrame.release(); // Frame was delete'd already.
   assert(S.Current == FrameBefore);
   return true;
 }
@@ -1911,8 +1910,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   if (!Ptr.isFunctionPointer())
     return Invalid(S, OpPC);
 
-  const FunctionPointer &FuncPtr = Ptr.asFunctionPointer();
-  const Function *F = FuncPtr.getFunction();
+  const Function *F = Ptr.asFunctionPointer().Func;
   assert(F);
   // Don't allow calling block pointers.
   if (!F->getDecl())

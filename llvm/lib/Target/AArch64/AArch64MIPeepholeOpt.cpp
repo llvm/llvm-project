@@ -81,16 +81,18 @@ using namespace llvm;
 
 namespace {
 
-struct AArch64MIPeepholeOpt : public MachineFunctionPass {
-  static char ID;
-
-  AArch64MIPeepholeOpt() : MachineFunctionPass(ID) {}
-
+class AArch64MIPeepholeOptImpl {
+public:
   const AArch64InstrInfo *TII;
   const AArch64RegisterInfo *TRI;
   MachineLoopInfo *MLI;
   MachineRegisterInfo *MRI;
 
+  explicit AArch64MIPeepholeOptImpl(MachineLoopInfo &MLI) : MLI(&MLI) {}
+
+  bool run(MachineFunction &MF);
+
+private:
   using OpcodePair = std::pair<unsigned, unsigned>;
   template <typename T>
   using SplitAndOpcFunc =
@@ -141,6 +143,13 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
+};
+
+struct AArch64MIPeepholeOptLegacy : public MachineFunctionPass {
+  static char ID;
+
+  AArch64MIPeepholeOptLegacy() : MachineFunctionPass(ID) {}
+
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -154,11 +163,11 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   }
 };
 
-char AArch64MIPeepholeOpt::ID = 0;
+char AArch64MIPeepholeOptLegacy::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64MIPeepholeOpt, "aarch64-mi-peephole-opt",
+INITIALIZE_PASS(AArch64MIPeepholeOptLegacy, "aarch64-mi-peephole-opt",
                 "AArch64 MI Peephole Optimization", false, false)
 
 template <typename T>
@@ -222,9 +231,10 @@ static bool splitDisjointBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc,
 }
 
 template <typename T>
-bool AArch64MIPeepholeOpt::trySplitLogicalImm(unsigned Opc, MachineInstr &MI,
-                                              SplitStrategy Strategy,
-                                              unsigned OtherOpc) {
+bool AArch64MIPeepholeOptImpl::trySplitLogicalImm(unsigned Opc,
+                                                  MachineInstr &MI,
+                                                  SplitStrategy Strategy,
+                                                  unsigned OtherOpc) {
   // Try below transformations.
   //
   // MOVi32imm + (ANDS?|EOR|ORR)Wrr ==> (AND|EOR|ORR)Wri + (ANDS?|EOR|ORR)Wri
@@ -277,7 +287,7 @@ bool AArch64MIPeepholeOpt::trySplitLogicalImm(unsigned Opc, MachineInstr &MI,
       });
 }
 
-bool AArch64MIPeepholeOpt::visitORR(MachineInstr &MI) {
+bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
   // Check this ORR comes from below zero-extend pattern.
   //
   // def : Pat<(i64 (zext GPR32:$src)),
@@ -341,7 +351,7 @@ bool AArch64MIPeepholeOpt::visitORR(MachineInstr &MI) {
   return true;
 }
 
-bool AArch64MIPeepholeOpt::visitCSEL(MachineInstr &MI) {
+bool AArch64MIPeepholeOptImpl::visitCSEL(MachineInstr &MI) {
   // Replace CSEL with MOV when both inputs are the same register.
   if (MI.getOperand(1).getReg() != MI.getOperand(2).getReg())
     return false;
@@ -361,7 +371,7 @@ bool AArch64MIPeepholeOpt::visitCSEL(MachineInstr &MI) {
   return true;
 }
 
-bool AArch64MIPeepholeOpt::visitINSERT(MachineInstr &MI) {
+bool AArch64MIPeepholeOptImpl::visitINSERT(MachineInstr &MI) {
   // Check this INSERT_SUBREG comes from below zero-extend pattern.
   //
   // From %reg = INSERT_SUBREG %reg(tied-def 0), %subreg, subidx
@@ -426,8 +436,8 @@ static bool splitAddSubImm(T Imm, unsigned RegSize, T &Imm0, T &Imm1) {
 }
 
 template <typename T>
-bool AArch64MIPeepholeOpt::visitADDSUB(
-    unsigned PosOpc, unsigned NegOpc, MachineInstr &MI) {
+bool AArch64MIPeepholeOptImpl::visitADDSUB(unsigned PosOpc, unsigned NegOpc,
+                                           MachineInstr &MI) {
   // Try below transformation.
   //
   // ADDWrr X, MOVi32imm ==> ADDWri + ADDWri
@@ -475,8 +485,9 @@ bool AArch64MIPeepholeOpt::visitADDSUB(
 }
 
 template <typename T>
-bool AArch64MIPeepholeOpt::visitADDSSUBS(
-    OpcodePair PosOpcs, OpcodePair NegOpcs, MachineInstr &MI) {
+bool AArch64MIPeepholeOptImpl::visitADDSSUBS(OpcodePair PosOpcs,
+                                             OpcodePair NegOpcs,
+                                             MachineInstr &MI) {
   // Try the same transformation as ADDSUB but with additional requirement
   // that the condition code usages are only for Equal and Not Equal
 
@@ -522,9 +533,9 @@ bool AArch64MIPeepholeOpt::visitADDSSUBS(
 
 // Checks if the corresponding MOV immediate instruction is applicable for
 // this peephole optimization.
-bool AArch64MIPeepholeOpt::checkMovImmInstr(MachineInstr &MI,
-                                            MachineInstr *&MovMI,
-                                            MachineInstr *&SubregToRegMI) {
+bool AArch64MIPeepholeOptImpl::checkMovImmInstr(MachineInstr &MI,
+                                                MachineInstr *&MovMI,
+                                                MachineInstr *&SubregToRegMI) {
   // Check whether current MBB is in loop and the AND is loop invariant.
   MachineBasicBlock *MBB = MI.getParent();
   MachineLoop *L = MLI->getLoopFor(MBB);
@@ -561,9 +572,9 @@ bool AArch64MIPeepholeOpt::checkMovImmInstr(MachineInstr &MI,
 }
 
 template <typename T>
-bool AArch64MIPeepholeOpt::splitTwoPartImm(
-    MachineInstr &MI,
-    SplitAndOpcFunc<T> SplitAndOpc, BuildMIFunc BuildInstr) {
+bool AArch64MIPeepholeOptImpl::splitTwoPartImm(MachineInstr &MI,
+                                               SplitAndOpcFunc<T> SplitAndOpc,
+                                               BuildMIFunc BuildInstr) {
   unsigned RegSize = sizeof(T) * 8;
   assert((RegSize == 32 || RegSize == 64) &&
          "Invalid RegSize for legal immediate peephole optimization");
@@ -641,7 +652,7 @@ bool AArch64MIPeepholeOpt::splitTwoPartImm(
   return true;
 }
 
-bool AArch64MIPeepholeOpt::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
+bool AArch64MIPeepholeOptImpl::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
   // Check if this INSvi[X]gpr comes from COPY of a source FPR128
   //
   // From
@@ -687,18 +698,61 @@ bool AArch64MIPeepholeOpt::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
 }
 
 // All instructions that set a FPR64 will implicitly zero the top bits of the
-// register.
+// register. When the def is expressed as a COPY from a GPR, turn it into an
+// explicit FMOV so it cannot be elided later in further passes.
 static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
-                                        MachineRegisterInfo *MRI) {
+                                        MachineRegisterInfo *MRI,
+                                        const AArch64InstrInfo *TII) {
   if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
     return false;
   const TargetRegisterClass *RC = MRI->getRegClass(MI->getOperand(0).getReg());
   if (RC != &AArch64::FPR64RegClass)
     return false;
+  if (MI->getOpcode() == TargetOpcode::COPY) {
+    MachineOperand &SrcOp = MI->getOperand(1);
+    if (!SrcOp.isReg())
+      return false;
+    if (SrcOp.getSubReg())
+      return false;
+    Register SrcReg = SrcOp.getReg();
+    auto IsGPR64Like = [&]() -> bool {
+      if (SrcReg.isVirtual())
+        return AArch64::GPR64allRegClass.hasSubClassEq(
+            MRI->getRegClass(SrcReg));
+      return AArch64::GPR64allRegClass.contains(SrcReg);
+    };
+    if (!IsGPR64Like())
+      return false;
+    assert(TII && "Expected InstrInfo when materializing COPYs");
+    // FMOVXDr insists on strict GPR64 operands, so fix up the COPY source.
+    MachineOperand &SrcMO = MI->getOperand(1);
+    bool SrcKill = SrcMO.isKill();
+    if (SrcReg.isVirtual()) {
+      if (MRI->getRegClass(SrcReg) != &AArch64::GPR64RegClass) {
+        // Pass the value through a temporary GPR64 vreg to satisfy the
+        // verifier.
+        Register NewSrc = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(TargetOpcode::COPY), NewSrc)
+            .addReg(SrcReg, getKillRegState(SrcKill));
+        SrcReg = NewSrc;
+        SrcKill = true;
+      }
+    } else if (!AArch64::GPR64RegClass.contains(SrcReg)) {
+      return false;
+    }
+    SrcMO.setReg(SrcReg);
+    SrcMO.setSubReg(0);
+    SrcMO.setIsKill(SrcKill);
+    // Replace the COPY with an explicit FMOV so the zeroing behaviour stays
+    // visible.
+    MI->setDesc(TII->get(AArch64::FMOVXDr));
+    return true;
+  }
   return MI->getOpcode() > TargetOpcode::GENERIC_OP_END;
 }
 
-bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
+bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   // Check the MI for low 64-bits sets zero for high 64-bits implicitly.
   // We are expecting below case.
   //
@@ -710,7 +764,7 @@ bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
   if (Low64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
   Low64MI = MRI->getUniqueVRegDef(Low64MI->getOperand(2).getReg());
-  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI))
+  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI, TII))
     return false;
 
   // Check there is `mov 0` MI for high 64-bits.
@@ -748,10 +802,10 @@ bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
   return true;
 }
 
-bool AArch64MIPeepholeOpt::visitFMOVDr(MachineInstr &MI) {
+bool AArch64MIPeepholeOptImpl::visitFMOVDr(MachineInstr &MI) {
   // An FMOVDr sets the high 64-bits to zero implicitly, similar to ORR for GPR.
   MachineInstr *Low64MI = MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
-  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI))
+  if (!Low64MI || !is64bitDefwithZeroHigh64bit(Low64MI, MRI, TII))
     return false;
 
   // Let's remove MIs for high 64-bits.
@@ -767,7 +821,7 @@ bool AArch64MIPeepholeOpt::visitFMOVDr(MachineInstr &MI) {
   return true;
 }
 
-bool AArch64MIPeepholeOpt::visitUBFMXri(MachineInstr &MI) {
+bool AArch64MIPeepholeOptImpl::visitUBFMXri(MachineInstr &MI) {
   // Check if the instruction is equivalent to a 32 bit LSR or LSL alias of
   // UBFM, and replace the UBFMXri instruction with its 32 bit variant, UBFMWri.
   int64_t Immr = MI.getOperand(2).getImm();
@@ -820,7 +874,7 @@ bool AArch64MIPeepholeOpt::visitUBFMXri(MachineInstr &MI) {
 // Across a basic-block we might have in i32 extract from a value that only
 // operates on upper bits (for example a sxtw). We can replace the COPY with a
 // new version skipping the sxtw.
-bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
+bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
   Register InputReg = MI.getOperand(1).getReg();
   if (MI.getOperand(1).getSubReg() != AArch64::sub_32 ||
       !MRI->hasOneNonDBGUse(InputReg))
@@ -882,14 +936,10 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
   return true;
 }
 
-bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const AArch64RegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MRI = &MF.getRegInfo();
 
   assert(MRI->isSSA() && "Expected to be run on SSA form!");
@@ -1006,6 +1056,26 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *llvm::createAArch64MIPeepholeOptPass() {
-  return new AArch64MIPeepholeOpt();
+bool AArch64MIPeepholeOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  return AArch64MIPeepholeOptImpl(MLI).run(MF);
+}
+
+FunctionPass *llvm::createAArch64MIPeepholeOptLegacyPass() {
+  return new AArch64MIPeepholeOptLegacy();
+}
+
+PreservedAnalyses
+AArch64MIPeepholeOptPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  MachineLoopInfo &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  const bool Changed = AArch64MIPeepholeOptImpl(MLI).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

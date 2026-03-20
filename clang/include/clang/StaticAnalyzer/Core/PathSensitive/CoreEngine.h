@@ -49,7 +49,6 @@ class ExprEngine;
 /// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
   friend class ExprEngine;
-  friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
   friend class NodeBuilderContext;
   friend class SwitchNodeBuilder;
@@ -97,10 +96,6 @@ private:
 
   void setBlockCounter(BlockCounter C);
 
-  void generateNode(const ProgramPoint &Loc,
-                    ProgramStateRef State,
-                    ExplodedNode *Pred);
-
   void HandleBlockEdge(const BlockEdge &E, ExplodedNode *Pred);
   void HandleBlockEntrance(const BlockEntrance &E, ExplodedNode *Pred);
   void HandleBlockExit(const CFGBlock *B, ExplodedNode *Pred);
@@ -121,9 +116,6 @@ private:
   void HandleVirtualBaseBranch(const CFGBlock *B, ExplodedNode *Pred);
 
 private:
-  ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
-                                          const ReturnStmt *RS);
-
   /// Helper function called by `HandleBranch()`. If the currently handled
   /// branch corresponds to a loop, this returns the number of already
   /// completed iterations in that loop, otherwise the return value is
@@ -176,12 +168,16 @@ public:
 
   auto aborted_blocks() const { return llvm::iterator_range(blocksAborted); }
 
+  ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
+                         ExplodedNode *Pred, bool MarkAsSink = false) const;
+
   /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
 
   /// Enqueue nodes that were created as a result of processing
   /// a statement onto the work list.
-  void enqueue(ExplodedNodeSet &Set, const CFGBlock *Block, unsigned Idx);
+  void enqueueStmtNodes(ExplodedNodeSet &Set, const CFGBlock *Block,
+                        unsigned Idx);
 
   /// enqueue the nodes corresponding to the end of function onto the
   /// end of path / work list.
@@ -235,6 +231,17 @@ public:
 /// be propagated to the next step / builder. They are the nodes which have been
 /// added to the builder (either as the input node set or as the newly
 /// constructed nodes) but did not have any outgoing transitions added.
+///
+/// TODO: This "main benefit" is often useless, in fact the only significant
+/// use is within `CheckerManager::ExpandGraphWithCheckers`. There this logic
+/// ensures that if a checker performs multiple transitions on the same path,
+/// then only the last of them is "built upon" by other checkers or the engine.
+///
+/// However, there are also many short-lived temporary `NodeBuilder` instances
+/// where the `generateNode` is called in a very predictable manner (once, or
+/// once for each source node) and the frontier management is overkill.
+/// These locations should be gradually simplified by using the method
+/// `CoreEngine::makeNode()` instead of the temporary `NodeBuilder`s.
 class NodeBuilder {
 protected:
   const NodeBuilderContext &C;
@@ -244,11 +251,6 @@ protected:
   /// The frontier set - a set of nodes which need to be propagated after
   /// the builder dies.
   ExplodedNodeSet &Frontier;
-
-  ExplodedNode *generateNodeImpl(const ProgramPoint &PP,
-                                 ProgramStateRef State,
-                                 ExplodedNode *Pred,
-                                 bool MarkAsSink = false);
 
 public:
   NodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
@@ -267,13 +269,8 @@ public:
   }
 
   /// Generates a node in the ExplodedGraph.
-  ExplodedNode *generateNode(const ProgramPoint &PP,
-                             ProgramStateRef State,
-                             ExplodedNode *Pred) {
-    return generateNodeImpl(
-        PP, State, Pred,
-        /*MarkAsSink=*/State->isPosteriorlyOverconstrained());
-  }
+  ExplodedNode *generateNode(const ProgramPoint &PP, ProgramStateRef State,
+                             ExplodedNode *Pred, bool MarkAsSink = false);
 
   /// Generates a sink in the ExplodedGraph.
   ///
@@ -283,7 +280,7 @@ public:
   ExplodedNode *generateSink(const ProgramPoint &PP,
                              ProgramStateRef State,
                              ExplodedNode *Pred) {
-    return generateNodeImpl(PP, State, Pred, true);
+    return generateNode(PP, State, Pred, true);
   }
 
   ExplodedNode *generateNode(const Stmt *S,
@@ -308,7 +305,6 @@ public:
 
   const ExplodedNodeSet &getResults() const { return Frontier; }
 
-  const NodeBuilderContext &getContext() const { return C; }
   bool hasGeneratedNodes() const { return HasGeneratedNodes; }
 
   void takeNodes(const ExplodedNodeSet &S) {
@@ -334,32 +330,6 @@ public:
 
   ExplodedNode *generateNode(ProgramStateRef State, bool branch,
                              ExplodedNode *Pred);
-};
-
-class IndirectGotoNodeBuilder : public NodeBuilder {
-  const CFGBlock &DispatchBlock;
-  const Expr *Target;
-
-public:
-  IndirectGotoNodeBuilder(ExplodedNodeSet &DstSet, NodeBuilderContext &Ctx,
-                          const Expr *Tgt, const CFGBlock *Dispatch)
-      : NodeBuilder(DstSet, Ctx), DispatchBlock(*Dispatch), Target(Tgt) {}
-
-  using iterator = CFGBlock::const_succ_iterator;
-
-  iterator begin() { return DispatchBlock.succ_begin(); }
-  iterator end() { return DispatchBlock.succ_end(); }
-
-  using NodeBuilder::generateNode;
-
-  ExplodedNode *generateNode(const CFGBlock *Block, ProgramStateRef State,
-                             ExplodedNode *Pred);
-
-  const Expr *getTarget() const { return Target; }
-
-  const LocationContext *getLocationContext() const {
-    return C.getLocationContext();
-  }
 };
 
 class SwitchNodeBuilder : public NodeBuilder {

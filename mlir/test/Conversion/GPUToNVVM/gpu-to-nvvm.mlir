@@ -1031,7 +1031,7 @@ module attributes {transform.with_named_sequence} {
         use_bare_ptr_call_conv = false}
     } {
       legal_dialects = ["llvm", "memref", "nvvm", "test"],
-      legal_ops = ["func.func", "gpu.module", "gpu.yield"],
+      legal_ops = ["gpu.module", "gpu.yield"],
       illegal_dialects = ["gpu"],
       illegal_ops = ["llvm.copysign", "llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
                     "llvm.ffloor", "llvm.frem", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",
@@ -1179,11 +1179,11 @@ gpu.module @test_module_cluster_block_ops {
     %1 = gpu.cluster_block_id y
     // CHECK: nvvm.read.ptx.sreg.cluster.ctaid.z range <i32, 0, 2> : i32
     %2 = gpu.cluster_block_id z
-    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.x range <i32, 1, 9> : i32
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.x range <i32, 8, 9> : i32
     %3 = gpu.cluster_dim_blocks x
-    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.y range <i32, 1, 5> : i32
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.y range <i32, 4, 5> : i32
     %4 = gpu.cluster_dim_blocks y
-    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.z range <i32, 1, 3> : i32
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.z range <i32, 2, 3> : i32
     %5 = gpu.cluster_dim_blocks z
 
     %6 = arith.addi %0, %1 : index

@@ -26,7 +26,7 @@ write_cmake_config("lit_site_cfg") {
     values += [
       "ASAN_TEST_APPLE_TARGET_IS_HOST_PYBOOL=1",
       "ASAN_TEST_DYNAMIC=1",
-     ]
+    ]
   } else {
     values += [
       "ASAN_TEST_APPLE_TARGET_IS_HOST_PYBOOL=0",

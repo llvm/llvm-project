@@ -136,7 +136,6 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   EMIT vp<[[RDX_START:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<4>
-; CHECK-NEXT:   EMIT vp<[[TC_MINUS_VF:%[0-9]+]]> = TC > VF ? TC - VF : 0 ir<%N>
 ; CHECK-NEXT:   EMIT vp<%index.part.next> = VF * Part + ir<0>
 ; CHECK-NEXT:   EMIT vp<%active.lane.mask.entry> = active lane mask vp<%index.part.next>, ir<%N>, ir<1>
 ; CHECK-NEXT: Successor(s): vector loop
@@ -155,8 +154,8 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<[[PTR_B]]>, vp<[[MASK]]>
 ; CHECK-NEXT:     EXPRESSION vp<[[REDUCE]]> = vp<[[MASK]]> + partial.reduce.add (mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32), <badref>)
 ; CHECK-NEXT:     EMIT vp<%index.next> = add vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[PART_IDX:%[0-9]+]]> = VF * Part + vp<[[CAN_IV]]>
-; CHECK-NEXT:     EMIT vp<%active.lane.mask.next> = active lane mask vp<[[PART_IDX]]>, vp<[[TC_MINUS_VF]]>, ir<1>
+; CHECK-NEXT:     EMIT vp<[[PART_IDX:%[0-9]+]]> = VF * Part + vp<%index.next>, vp<[[VF]]>
+; CHECK-NEXT:     EMIT vp<%active.lane.mask.next> = active lane mask vp<[[PART_IDX]]>, ir<%N>, ir<1>
 ; CHECK-NEXT:     EMIT vp<[[NOT_MASK:%[0-9]+]]> = not vp<%active.lane.mask.next>
 ; CHECK-NEXT:     EMIT branch-on-cond vp<[[NOT_MASK]]>
 ; CHECK-NEXT:   No successors

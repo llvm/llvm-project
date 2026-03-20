@@ -59,7 +59,6 @@ public:
   }
 
 private:
-  bool tryToReduceVL(MachineInstr &MI) const;
   bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToWholeRegister(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
@@ -96,106 +95,6 @@ bool RISCVVectorPeephole::hasSameEEW(const MachineInstr &User,
   unsigned SrcLog2EEW = RISCV::getDestLog2EEW(
       TII->get(RISCV::getRVVMCOpcode(Src.getOpcode())), SrcLog2SEW);
   return SrcLog2EEW == UserLog2SEW;
-}
-
-// Attempt to reduce the VL of an instruction whose sole use is feeding a
-// instruction with a narrower VL.  This currently works backwards from the
-// user instruction (which might have a smaller VL).
-bool RISCVVectorPeephole::tryToReduceVL(MachineInstr &MI) const {
-  // Note that the goal here is a bit multifaceted.
-  // 1) For store's reducing the VL of the value being stored may help to
-  //    reduce VL toggles.  This is somewhat of an artifact of the fact we
-  //    promote arithmetic instructions but VL predicate stores.
-  // 2) For vmv.v.v reducing VL eagerly on the source instruction allows us
-  //    to share code with the foldVMV_V_V transform below.
-  //
-  // Note that to the best of our knowledge, reducing VL is generally not
-  // a significant win on real hardware unless we can also reduce LMUL which
-  // this code doesn't try to do.
-  //
-  // TODO: We can handle a bunch more instructions here, and probably
-  // recurse backwards through operands too.
-  SmallVector<unsigned, 2> SrcIndices = {0};
-  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
-  default:
-    return false;
-  case RISCV::VSE8_V:
-  case RISCV::VSE16_V:
-  case RISCV::VSE32_V:
-  case RISCV::VSE64_V:
-    break;
-  case RISCV::VMV_V_V:
-    SrcIndices[0] = 2;
-    break;
-  case RISCV::VMERGE_VVM:
-    SrcIndices.assign({2, 3});
-    break;
-  case RISCV::VREDSUM_VS:
-  case RISCV::VREDMAXU_VS:
-  case RISCV::VREDMAX_VS:
-  case RISCV::VREDMINU_VS:
-  case RISCV::VREDMIN_VS:
-  case RISCV::VREDAND_VS:
-  case RISCV::VREDOR_VS:
-  case RISCV::VREDXOR_VS:
-  case RISCV::VWREDSUM_VS:
-  case RISCV::VWREDSUMU_VS:
-  case RISCV::VFREDUSUM_VS:
-  case RISCV::VFREDOSUM_VS:
-  case RISCV::VFREDMAX_VS:
-  case RISCV::VFREDMIN_VS:
-  case RISCV::VFWREDUSUM_VS:
-  case RISCV::VFWREDOSUM_VS:
-    SrcIndices[0] = 2;
-    break;
-  }
-
-  MachineOperand &VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
-  if (VL.isImm() && VL.getImm() == RISCV::VLMaxSentinel)
-    return false;
-
-  bool Changed = false;
-  for (unsigned SrcIdx : SrcIndices) {
-    Register SrcReg = MI.getOperand(SrcIdx).getReg();
-    // Note: one *use*, not one *user*.
-    if (!MRI->hasOneUse(SrcReg))
-      continue;
-
-    MachineInstr *Src = MRI->getVRegDef(SrcReg);
-    if (!Src || Src->hasUnmodeledSideEffects() ||
-        Src->getParent() != MI.getParent() || Src->getNumDefs() != 1 ||
-        !RISCVII::hasVLOp(Src->getDesc().TSFlags) ||
-        !RISCVII::hasSEWOp(Src->getDesc().TSFlags))
-      continue;
-
-    // Src's dest needs to have the same EEW as MI's input.
-    if (!hasSameEEW(MI, *Src))
-      continue;
-
-    bool ElementsDependOnVL = RISCVII::elementsDependOnVL(
-        TII->get(RISCV::getRVVMCOpcode(Src->getOpcode())).TSFlags);
-    if (ElementsDependOnVL || Src->mayRaiseFPException())
-      continue;
-
-    MachineOperand &SrcVL =
-        Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
-    if (VL.isIdenticalTo(SrcVL) || !RISCV::isVLKnownLE(VL, SrcVL))
-      continue;
-
-    if (!ensureDominates(VL, *Src))
-      continue;
-
-    if (VL.isImm())
-      SrcVL.ChangeToImmediate(VL.getImm());
-    else if (VL.isReg())
-      SrcVL.ChangeToRegister(VL.getReg(), false);
-
-    Changed = true;
-  }
-
-  // TODO: For instructions with a passthru, we could clear the passthru
-  // and tail policy since we've just proven the tail is not demanded.
-  return Changed;
 }
 
 /// Check if an operand is an immediate or a materialized ADDI $x0, imm.
@@ -530,34 +429,6 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   return true;
 }
 
-/// Check if it's safe to move From down to To, checking that no physical
-/// registers are clobbered.
-static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
-  assert(From.getParent() == To.getParent());
-  SmallVector<Register> PhysUses, PhysDefs;
-  for (const MachineOperand &MO : From.all_uses())
-    if (MO.getReg().isPhysical())
-      PhysUses.push_back(MO.getReg());
-  for (const MachineOperand &MO : From.all_defs())
-    if (MO.getReg().isPhysical())
-      PhysDefs.push_back(MO.getReg());
-  bool SawStore = false;
-  for (auto II = std::next(From.getIterator()); II != To.getIterator(); II++) {
-    for (Register PhysReg : PhysUses)
-      if (II->definesRegister(PhysReg, nullptr))
-        return false;
-    for (Register PhysReg : PhysDefs)
-      if (II->definesRegister(PhysReg, nullptr) ||
-          II->readsRegister(PhysReg, nullptr))
-        return false;
-    if (II->mayStore()) {
-      SawStore = true;
-      break;
-    }
-  }
-  return From.isSafeToMove(SawStore);
-}
-
 /// Given A and B are in the same MBB, returns true if A comes before B.
 static bool dominates(MachineBasicBlock::const_iterator A,
                       MachineBasicBlock::const_iterator B) {
@@ -585,7 +456,7 @@ bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
 
   MachineInstr *Def = MRI->getVRegDef(MO.getReg());
   if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
-    if (!isSafeToMove(Src, *Def->getNextNode()))
+    if (!RISCVInstrInfo::isSafeToMove(Src, *Def->getNextNode()))
       return false;
     Src.moveBefore(Def->getNextNode());
   }
@@ -631,7 +502,7 @@ bool RISCVVectorPeephole::foldUndefPassthruVMV_V_V(MachineInstr &MI) {
 ///
 /// %x = PseudoVADD_V_V_M1 %passthru, %a, %b, %vl1, sew, policy
 /// %y = PseudoVMV_V_V_M1 %passthru, %x, %vl2, sew, policy
-///    (where %vl1 <= %vl2, see related tryToReduceVL)
+///    (where %vl1 <= %vl2)
 ///
 /// ->
 ///
@@ -674,7 +545,7 @@ bool RISCVVectorPeephole::foldVMV_V_V(MachineInstr &MI) {
     NeedsCommute = {OpIdx1, OpIdx2};
   }
 
-  // Src VL will have already been reduced if legal (see tryToReduceVL),
+  // Src VL will have already been reduced if legal by RISCVVLOptimizer,
   // so we don't need to handle a smaller source VL here.  However, the
   // user's VL may be larger
   MachineOperand &SrcVL = Src->getOperand(RISCVII::getVLOpNum(Src->getDesc()));
@@ -908,7 +779,6 @@ bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
 
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       Changed |= convertToVLMAX(MI);
-      Changed |= tryToReduceVL(MI);
       Changed |= convertToUnmasked(MI);
       Changed |= convertToWholeRegister(MI);
       Changed |= convertAllOnesVMergeToVMv(MI);

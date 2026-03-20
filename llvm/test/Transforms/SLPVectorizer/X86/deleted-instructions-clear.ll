@@ -9,9 +9,9 @@ define void @test(i32 %arg, i32 %arg1, i64 %arg2) {
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, %[[BB3]] ], [ 0, %[[BB]] ]
 ; CHECK-NEXT:    [[PHI4:%.*]] = phi i64 [ [[OP_RDX7:%.*]], %[[BB3]] ], [ 0, %[[BB]] ]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 0, 1
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[SHL]] to i64
-; CHECK-NEXT:    [[SHL17:%.*]] = shl i32 [[SHL]], 0
+; CHECK-NEXT:    [[SHL34:%.*]] = shl i32 0, 1
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = sext i32 [[SHL34]] to i64
+; CHECK-NEXT:    [[SHL18:%.*]] = shl i32 [[SHL34]], 0
 ; CHECK-NEXT:    [[ADD18:%.*]] = add i64 1, 0
 ; CHECK-NEXT:    [[TRUNC19:%.*]] = trunc i64 [[ADD18]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i64> <i64 poison, i64 0, i64 poison, i64 0>, i64 [[PHI]], i32 0
@@ -26,26 +26,26 @@ define void @test(i32 %arg, i32 %arg1, i64 %arg2) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul <4 x i64> [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 0, [[TRUNC]]
 ; CHECK-NEXT:    [[SEXT15:%.*]] = sext i32 [[XOR]] to i64
-; CHECK-NEXT:    [[SEXT22:%.*]] = sext i32 [[SHL17]] to i64
-; CHECK-NEXT:    [[XOR24:%.*]] = xor i32 [[ARG]], [[TRUNC10]]
-; CHECK-NEXT:    [[SEXT25:%.*]] = sext i32 [[XOR24]] to i64
+; CHECK-NEXT:    [[SEXT23:%.*]] = sext i32 [[SHL18]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = xor i32 [[ARG]], [[TRUNC10]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = sext i32 [[SHL]] to i64
 ; CHECK-NEXT:    [[TRUNC27:%.*]] = trunc i64 [[ARG2]] to i32
-; CHECK-NEXT:    [[SEXT29:%.*]] = sext i32 [[SHL]] to i64
-; CHECK-NEXT:    [[XOR31:%.*]] = xor i32 [[ARG1]], [[TRUNC19]]
-; CHECK-NEXT:    [[SEXT32:%.*]] = sext i32 [[XOR31]] to i64
-; CHECK-NEXT:    [[SHL34:%.*]] = shl i32 [[ARG1]], 0
 ; CHECK-NEXT:    [[SEXT35:%.*]] = sext i32 [[SHL34]] to i64
+; CHECK-NEXT:    [[SHL17:%.*]] = xor i32 [[ARG1]], [[TRUNC19]]
+; CHECK-NEXT:    [[SEXT22:%.*]] = sext i32 [[SHL17]] to i64
+; CHECK-NEXT:    [[SHL35:%.*]] = shl i32 [[ARG1]], 0
+; CHECK-NEXT:    [[SEXT36:%.*]] = sext i32 [[SHL35]] to i64
 ; CHECK-NEXT:    [[XOR37:%.*]] = xor i32 [[ARG]], [[TRUNC27]]
 ; CHECK-NEXT:    [[SEXT38:%.*]] = sext i32 [[XOR37]] to i64
-; CHECK-NEXT:    [[TMP31:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP13]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i64 [[TMP31]], [[SEXT]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i64 [[SEXT15]], [[SEXT22]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i64 [[SEXT25]], [[SEXT29]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i64 [[SEXT32]], [[SEXT35]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = add i64 [[OP_RDX]], [[OP_RDX1]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = add i64 [[OP_RDX2]], [[OP_RDX3]]
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[OP_RDX6:%.*]] = add i64 [[OP_RDX4]], [[OP_RDX5]]
-; CHECK-NEXT:    [[OP_RDX7]] = add i64 [[OP_RDX6]], [[SEXT38]]
+; CHECK-NEXT:    [[OP_RDX8:%.*]] = add i64 [[SEXT15]], [[SEXT23]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i64 [[OP_RDX1]], [[SEXT35]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i64 [[SEXT22]], [[SEXT36]]
+; CHECK-NEXT:    [[OP_RDX9:%.*]] = add i64 [[OP_RDX6]], [[OP_RDX8]]
+; CHECK-NEXT:    [[OP_RDX10:%.*]] = add i64 [[OP_RDX2]], [[OP_RDX3]]
+; CHECK-NEXT:    [[OP_RDX11:%.*]] = add i64 [[OP_RDX9]], [[OP_RDX10]]
+; CHECK-NEXT:    [[OP_RDX7]] = add i64 [[OP_RDX11]], [[SEXT38]]
 ; CHECK-NEXT:    br i1 false, label %[[BB40:.*]], label %[[BB3]]
 ; CHECK:       [[BB40]]:
 ; CHECK-NEXT:    [[PHI41:%.*]] = phi i64 [ [[OP_RDX7]], %[[BB3]] ]

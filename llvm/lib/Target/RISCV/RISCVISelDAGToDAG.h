@@ -87,11 +87,8 @@ public:
   bool selectShiftMaskXLen(SDValue N, SDValue &ShAmt) {
     return selectShiftMask(N, Subtarget->getXLen(), ShAmt);
   }
-  bool selectShiftMask32(SDValue N, SDValue &ShAmt) {
-    return selectShiftMask(N, 32, ShAmt);
-  }
-  bool selectShiftMask64(SDValue N, SDValue &ShAmt) {
-    return selectShiftMask(N, 64, ShAmt);
+  template <unsigned Size> bool selectShiftMask(SDValue N, SDValue &ShAmt) {
+    return selectShiftMask(N, Size, ShAmt);
   }
 
   bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val);

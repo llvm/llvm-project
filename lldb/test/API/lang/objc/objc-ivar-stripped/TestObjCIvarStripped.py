@@ -1,6 +1,5 @@
 """Test printing ObjC objects that use unbacked properties - so that the static ivar offsets are incorrect."""
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -8,6 +7,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestObjCIvarStripped(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

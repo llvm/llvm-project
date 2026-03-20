@@ -9,14 +9,17 @@
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -263,6 +266,205 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   return rewriter.getArrayAttr(combinedAttrs);
 }
 
+//===----------------------------------------------------------------------===//
+// Cache control annotation utilities
+//
+// Instead of attaching cache control as MLIR attributes and handling them
+// during LLVM translation, we directly emit llvm.intr.ptr.annotation op in
+// MLIR.
+//===----------------------------------------------------------------------===//
+
+/// Build one cache-control payload string per attribute.
+///
+/// Each Attribute is expected to be an ArrayAttr of 3 IntegerAttr values:
+///   [SPIR-V decoration token, cache level, cache control value]
+///
+/// A single entry produces a string like:  {6442:"0,1"}
+/// where the quote characters (0x22) will appear as \22 in LLVM IR textual
+/// form.
+static SmallVector<std::string>
+buildCacheControlPayloads(ArrayRef<Attribute> attrs) {
+  SmallVector<std::string> payloads;
+  llvm::StringMap<bool> seen;
+
+  for (Attribute a : attrs) {
+    auto arr = dyn_cast<ArrayAttr>(a);
+    if (!arr)
+      continue;
+
+    auto vals = arr.getValue();
+    assert(vals.size() == 3 &&
+           "Expected exactly 3 integer values (Token, CacheLevel, "
+           "ControlValue) in cache control attribute.");
+
+    auto tokenAttr = dyn_cast<IntegerAttr>(vals[0]);
+    auto secondAttr = dyn_cast<IntegerAttr>(vals[1]);
+    auto thirdAttr = dyn_cast<IntegerAttr>(vals[2]);
+
+    if (!tokenAttr || !secondAttr || !thirdAttr)
+      continue;
+
+    // Produce: {SPIR-V decoration token:"L1 cache control,L3 cache control"}
+    // The quote char (0x22) is embedded literally; LLVM IR prints it as \22.
+    std::string entry = llvm::formatv("'{'{0}:\"{1},{2}\"'}'",
+                                      tokenAttr.getValue().getZExtValue(),
+                                      secondAttr.getValue().getZExtValue(),
+                                      thirdAttr.getValue().getZExtValue());
+
+    // Deduplicate identical annotations.
+    if (!seen.insert({entry, true}).second)
+      continue;
+
+    payloads.push_back(std::move(entry));
+  }
+  return payloads;
+}
+/// Counter for generating unique global variable names.
+static std::atomic<uint64_t> globalNameCounter{0};
+
+/// Get or create a global metadata string and return a !llvm.ptr<1> value
+/// pointing to it. The AddressOfOp is created at the current rewriter
+/// insertion point; the GlobalOp is created at the module start.
+static Value createMetadataStringPtr(ConversionPatternRewriter &rewriter,
+                                     Operation *moduleOp, Location loc,
+                                     StringRef value, StringRef nameHint) {
+  // Build null-terminated string.
+  std::string strWithNull = value.str();
+  strWithNull.push_back('\0');
+  StringRef strRef(strWithNull.data(), strWithNull.size());
+
+  auto as1PtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(), 1);
+
+  // Search for an existing global with the same content.
+  for (auto &op : moduleOp->getRegion(0).front()) {
+    if (auto existingGlobal = dyn_cast<LLVM::GlobalOp>(&op)) {
+      if (!existingGlobal.getSection() ||
+          *existingGlobal.getSection() != "llvm.metadata")
+        continue;
+      if (auto strAttr =
+              dyn_cast_or_null<StringAttr>(existingGlobal.getValueOrNull())) {
+        if (strAttr.getValue() == strRef) {
+          return LLVM::AddressOfOp::create(rewriter, loc, as1PtrTy,
+                                           existingGlobal.getSymName());
+        }
+      }
+    }
+  }
+
+  // Create new global at module start.
+  auto i8Type = rewriter.getI8Type();
+  auto arrayType = LLVM::LLVMArrayType::get(i8Type, strWithNull.size());
+  std::string globalName =
+      llvm::formatv("{0}.{1}", nameHint,
+                    globalNameCounter.fetch_add(1, std::memory_order_relaxed))
+          .str();
+
+  {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(&moduleOp->getRegion(0).front());
+
+    auto globalOp =
+        LLVM::GlobalOp::create(rewriter, loc, arrayType,
+                               /*isConstant=*/true, LLVM::Linkage::Private,
+                               globalName, rewriter.getStringAttr(strRef));
+    globalOp.setSection(StringRef("llvm.metadata"));
+    globalOp.setUnnamedAddr(LLVM::UnnamedAddr::Global);
+    globalOp.setAlignment(1);
+    globalOp.setAddrSpace(1);
+  }
+  // InsertionGuard restores the original insertion point here.
+
+  return LLVM::AddressOfOp::create(rewriter, loc, as1PtrTy, globalName);
+}
+
+/// Annotate a pointer value with cache control metadata by emitting chained
+/// `llvm.intr.ptr.annotation` ops (LLVM::PtrAnnotation).
+///
+/// This is the MLIR-level equivalent of handleDecorationCacheControl() from
+/// the LLVM translation layer. For each cache control attribute, it emits:
+///
+///   %ann = llvm.intr.ptr.annotation %ptr, @".str.cachecontrol.N",
+///              @".str.file.N", 0, null : !llvm.ptr<AS>
+///
+/// Multiple annotations are chained: the result of each annotation op is
+/// fed as the pointer input to the next one.
+///
+/// \param rewriter       The pattern rewriter.
+/// \param loc            Source location for created ops.
+/// \param ptr            The pointer value to annotate.
+/// \param cacheControls  The cache control ArrayAttr (from
+/// getCacheControlMetadata).
+/// \param moduleOp       The enclosing module (for creating globals).
+/// \returns The annotated pointer value (or the original ptr if no
+/// annotations).
+static Value annotatePtrWithCacheControl(ConversionPatternRewriter &rewriter,
+                                         Location loc, Value ptr,
+                                         ArrayAttr cacheControls,
+                                         Operation *moduleOp) {
+  SmallVector<std::string> payloads =
+      buildCacheControlPayloads(cacheControls.getValue());
+  if (payloads.empty())
+    return ptr;
+
+  auto ptrType = cast<LLVM::LLVMPointerType>(ptr.getType());
+  auto as1PtrTy = LLVM::LLVMPointerType::get(rewriter.getContext(), 1);
+  auto i32Ty = rewriter.getI32Type();
+
+  // Create shared constants for all annotations on this pointer.
+  Value fileStr =
+      createMetadataStringPtr(rewriter, moduleOp, loc, "", ".str.file");
+  Value lineVal = LLVM::ConstantOp::create(rewriter, loc, i32Ty, 0);
+  Value nullAS1 = LLVM::ZeroOp::create(rewriter, loc, as1PtrTy);
+
+  // Chain: each annotation takes the result of the previous one as its
+  // pointer operand.
+  Value curPtr = ptr;
+  for (const std::string &payload : payloads) {
+    Value annStr = createMetadataStringPtr(rewriter, moduleOp, loc, payload,
+                                           ".str.cachecontrol");
+    auto annOp = LLVM::PtrAnnotation::create(rewriter, loc, ptrType, curPtr,
+                                             annStr, fileStr, lineVal, nullAS1);
+    curPtr = annOp.getResult();
+  }
+
+  return curPtr;
+}
+
+/// Helper to apply cache control annotation on a pointer operand of a call.
+/// Replaces the pointer argument of the call with an annotated version.
+///
+/// For operations that produce a call (like block load/store/prefetch), the
+/// pointer is typically the first argument. This function:
+/// 1. Builds the annotation chain on the pointer.
+/// 2. Replaces the pointer operand in the provided args list.
+///
+/// \param rewriter     The pattern rewriter.
+/// \param loc          Source location.
+/// \param ptr          The original pointer value (first arg to the call).
+/// \param cacheControls  The cache control metadata.
+/// \param moduleOp     The enclosing module.
+/// \param args         The argument list (modified in place: args[ptrIdx] is
+/// replaced).
+/// \param ptrIdx       Index of the pointer in the args list (default 0).
+template <typename OpType>
+static void
+applyCacheControlAnnotation(ConversionPatternRewriter &rewriter, Location loc,
+                            OpType op, SmallVectorImpl<Value> &args,
+                            Operation *moduleOp, unsigned ptrIdx = 0) {
+  std::optional<ArrayAttr> optCacheControls =
+      getCacheControlMetadata(rewriter, op);
+  if (!optCacheControls)
+    return;
+
+  Value annotatedPtr = annotatePtrWithCacheControl(rewriter, loc, args[ptrIdx],
+                                                   *optCacheControls, moduleOp);
+  args[ptrIdx] = annotatedPtr;
+}
+
+//===----------------------------------------------------------------------===//
+// End cache control annotation utilities
+//===----------------------------------------------------------------------===//
+
 static LLVM::CallOp createDeviceFunctionCall(
     ConversionPatternRewriter &rewriter, StringRef funcName, Type retType,
     ArrayRef<Type> argTypes, ArrayRef<Value> args,
@@ -420,10 +622,17 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
   matchAndRewrite(PrefetchOp op, PrefetchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
+    auto *moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
+
     const std::string fnName{"_Z8prefetchPU3AS1Kcm"};
     Value one =
         LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), 1);
     SmallVector<Value> args{op.getPtr(), one};
+
+    // Annotate pointer with cache control before passing to the call.
+    applyCacheControlAnnotation(rewriter, loc, op, args, moduleOp,
+                                /*ptrIdx=*/0);
+
     SmallVector<Type> argTypes;
     for (auto arg : args)
       argTypes.push_back(arg.getType());
@@ -437,12 +646,9 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
         /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
     funcAttr.memEffectsAttr = memAttr;
 
-    LLVM::CallOp call = createDeviceFunctionCall(
-        rewriter, fnName, LLVM::LLVMVoidType::get(rewriter.getContext()),
-        argTypes, args, {}, funcAttr, op.getOperation());
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op))
-      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    createDeviceFunctionCall(rewriter, fnName,
+                             LLVM::LLVMVoidType::get(rewriter.getContext()),
+                             argTypes, args, {}, funcAttr, op.getOperation());
     rewriter.eraseOp(op);
     return success();
   }
@@ -506,6 +712,7 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
     constexpr bool isPrefetch = std::is_same_v<OpType, BlockPrefetch2dOp>;
 
     auto loc = op.getLoc();
+    auto *moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
     VectorType vecType;
     bool packReg = false;
     bool transpose = false;
@@ -528,6 +735,11 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, loc, VectorType::get(2, i32Type), byteCoord, op.getY(), one);
     SmallVector<Value> args{op.getPtr(), op.getBaseWidth(), op.getBaseHeight(),
                             op.getBasePitch(), byteCoord};
+
+    // Annotate pointer (args[0]) with cache control before the call.
+    applyCacheControlAnnotation(rewriter, loc, op, args, moduleOp,
+                                /*ptrIdx=*/0);
+
     SmallVector<Type> retTypes;
     Value spvLoadDstPtr;
     std::string funcName{"intel_sub_group_2d_block_"};
@@ -599,13 +811,10 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
     for (auto arg : args) {
       argTypes.push_back(arg.getType());
     }
-    LLVM::CallOp call = createDeviceFunctionCall(
+    createDeviceFunctionCall(
         rewriter, funcName, LLVM::LLVMVoidType::get(rewriter.getContext()),
         argTypes, args, paramAttrs, funcAttr, op.getOperation());
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op)) {
-      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
-    }
+
     if constexpr (isLoad)
       rewriter.replaceOp(
           op, LLVM::LoadOp::create(rewriter, loc, vecType, spvLoadDstPtr));
@@ -622,6 +831,9 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
   matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     constexpr bool isStore = std::is_same_v<OpType, xevm::BlockStoreOp>;
+    auto loc = op.getLoc();
+    auto *moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
+
     // Get OpenCL function name
     // https://registry.khronos.org/OpenCL/extensions/
     //         intel/cl_intel_subgroup_local_block_io.html
@@ -653,6 +865,14 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
     args.push_back(op.getPtr());
     argTypes.push_back(op.getPtr().getType());
     isUnsigned.push_back(true);
+
+    // Annotate pointer (args[0]) with cache control.
+    applyCacheControlAnnotation(rewriter, loc, op, args, moduleOp,
+                                /*ptrIdx=*/0);
+    // Update argTypes[0] in case the pointer type changed (it shouldn't
+    // change type, but the value is now the annotated pointer).
+    argTypes[0] = args[0].getType();
+
     Type retType;
     if constexpr (isStore) {
       args.push_back(op.getVal());
@@ -673,10 +893,7 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
     LLVM::CallOp call =
         createDeviceFunctionCall(rewriter, funcName, retType, argTypes, args,
                                  {}, funcAttr, op.getOperation());
-    if (std::optional<ArrayAttr> optCacheControls =
-            getCacheControlMetadata(rewriter, op)) {
-      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
-    }
+
     if constexpr (isStore)
       rewriter.eraseOp(op);
     else
@@ -693,9 +910,26 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
                   ConversionPatternRewriter &rewriter) const override {
     if (!op->hasAttr("cache_control"))
       return failure();
+
+    auto *moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
     std::optional<ArrayAttr> optCacheControls =
         getCacheControlMetadata(rewriter, op);
-    op->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    if (!optCacheControls) {
+      op->removeAttr("cache_control");
+      return success();
+    }
+
+    // Determine which operand is the pointer.
+    constexpr bool isStore = std::is_same_v<OpType, LLVM::StoreOp>;
+    unsigned ptrIdx = isStore ? 1 : 0;
+    Value ptr = op->getOperand(ptrIdx);
+
+    // Emit annotation intrinsic calls on the pointer.
+    Value annotatedPtr = annotatePtrWithCacheControl(
+        rewriter, op->getLoc(), ptr, *optCacheControls, moduleOp);
+
+    // Replace the pointer operand with the annotated one.
+    op->setOperand(ptrIdx, annotatedPtr);
     op->removeAttr("cache_control");
     return success();
   }
@@ -836,14 +1070,78 @@ class SubgroupOpWorkitemOpToOCLPattern : public OpConversionPattern<OpType> {
   }
 };
 
+class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(LLVM::AllocaOp op, LLVM::AllocaOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto ptrType = cast<LLVM::LLVMPointerType>(op.getType());
+    auto addrSpace = ptrType.getAddressSpace();
+    if (addrSpace != 3)
+      return failure();
+    auto symTable = op->getParentWithTrait<OpTrait::SymbolTable>();
+    if (!symTable)
+      return failure();
+    Block *moduleBody;
+    if (ModuleOp mod = dyn_cast<ModuleOp>(*symTable)) {
+      moduleBody = mod.getBody();
+    } else if (gpu::GPUModuleOp gpuMod =
+                   dyn_cast<gpu::GPUModuleOp>(*symTable)) {
+      moduleBody = gpuMod.getBody();
+    } else {
+      return failure();
+    }
+    auto val = op.getArraySize();
+    APInt cst;
+    if (!matchPattern(val, m_ConstantInt(&cst)))
+      return failure();
+    auto loc = op.getLoc();
+    auto globalType = LLVM::LLVMArrayType::get(
+        rewriter.getContext(), op.getElemType(), cst.getZExtValue());
+    LLVM::GlobalOp globalVar;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(moduleBody);
+      auto alignment = op.getAlignment();
+      globalVar = LLVM::GlobalOp::create(
+          rewriter, loc, globalType, /*isConstant=*/false,
+          /*linkage=*/LLVM::Linkage::Internal,
+          /*name=*/std::string("__global_alloca_") +
+              std::to_string(getNextGlobalIdx()),
+          /*value=*/Attribute(),
+          /*alignment=*/alignment ? *alignment : 0, /*addrSpace=*/addrSpace);
+    }
+    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, globalVar);
+    return success();
+  }
+
+private:
+  static unsigned getNextGlobalIdx() {
+    static unsigned globalIdx = 0;
+    return globalIdx++;
+  }
+};
+
+// Checks if shufflevector is used as a way to extract a contiguous slice
+// from a vector.
+// - source vector V1 and V2 are the same vector.
+// - mask size is not greater than the source vector size
+// - mask values represent a sequence of consecutive increasing numbers
+//   that stay in bounds of the source vector when used for indexing.
 static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
   if (op.getV1() != op.getV2())
     return false;
   auto maskAttr = op.getMask();
+  int64_t maskSize = static_cast<int64_t>(maskAttr.size());
+  int64_t sourceSize = op.getV1().getType().getNumElements();
+  if (maskSize > sourceSize)
+    return false;
   int64_t firstIndex = maskAttr[0];
-  for (int64_t i = 1; i < static_cast<int64_t>(maskAttr.size()); ++i) {
+  for (int64_t i = 1; i < maskSize; ++i) {
     int64_t index = maskAttr[i];
     if (index != firstIndex + i)
+      return false;
+    if (index >= sourceSize)
       return false;
   }
   return true;
@@ -929,8 +1227,13 @@ class HandleVectorExtractPattern
             LLVM::BitcastOp::create(rewriter, loc, ty, newShuffle);
         rewriter.replaceOp(op, newBitcast);
       } else if (isa<LLVM::ShuffleVectorOp>(srcOp)) {
-        // 2. Merge with another shuffle vector op
+        // 2. Merge with source shuffle vector op if, the source op is
+        //    also extracting a contigous slice and create a new
+        //    shuffle vector op directly from the source of
+        //    the first shuffle.
         auto srcShuffle = cast<LLVM::ShuffleVectorOp>(srcOp);
+        if (!isExtractingContiguousSlice(srcShuffle))
+          return failure();
         auto srcMask = srcShuffle.getMask();
         SmallVector<int32_t> combinedMask;
         for (auto index : mask) {
@@ -1014,8 +1317,20 @@ struct ConvertXeVMToLLVMPass
 
 void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                                                   RewritePatternSet &patterns) {
-  target.addDynamicallyLegalDialect<LLVM::LLVMDialect>(
-      [](Operation *op) { return !op->hasAttr("cache_control"); });
+  // some LLVM operations need to be converted.
+  target.addDynamicallyLegalDialect<LLVM::LLVMDialect>([](Operation *op) {
+    // llvm alloca op with addrspace 3 for OpenCL (Workgroup) is not handled
+    // properly by SPIRV backend. It needs to be rewritten as a sequence with
+    // llvm global.
+    if (isa<LLVM::AllocaOp>(op)) {
+      LLVM::AllocaOp aOp = cast<LLVM::AllocaOp>(op);
+      LLVM::LLVMPointerType pTy = cast<LLVM::LLVMPointerType>(aOp.getType());
+      auto addrSpace = pTy.getAddressSpace();
+      return addrSpace != 3;
+    }
+    // cache_control attribute should be converted.
+    return !op->hasAttr("cache_control");
+  });
   target.addIllegalDialect<XeVMDialect>();
   patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
                LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
@@ -1039,6 +1354,6 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                LaunchConfigOpToOCLPattern<GridDimZOp>,
                SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
-               SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>>(
-      patterns.getContext());
+               SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>,
+               AllocaToGlobalPattern>(patterns.getContext());
 }

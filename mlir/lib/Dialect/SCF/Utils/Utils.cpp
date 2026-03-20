@@ -549,6 +549,8 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
     return failure();
   }
   uint64_t tripCountValue = tripCount->getZExtValue();
+  if (tripCountValue == 0)
+    return success();
   if (unrollJamFactor > tripCountValue) {
     LDBG() << "unroll and jam factor is greater than trip count, set factor to "
               "trip "
@@ -957,7 +959,8 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   Value upperBound = getProductOfIntsOrIndexes(rewriter, loc, upperBounds);
   outermost.setUpperBound(upperBound);
 
-  rewriter.setInsertionPointToStart(innermost.getBody());
+  // Insert delinearization at the start of the outermost loop body.
+  rewriter.setInsertionPointToStart(outermost.getBody());
   auto [delinearizeIvs, preservedUsers] = delinearizeInductionVariable(
       rewriter, loc, outermost.getInductionVar(), upperBounds);
   rewriter.replaceAllUsesExcept(outermost.getInductionVar(), delinearizeIvs[0],
@@ -1347,6 +1350,15 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   getPerfectlyNestedLoopsImpl(forOps, rootForOp, sizes.size());
   if (forOps.size() < sizes.size())
     sizes = sizes.take_front(forOps.size());
+
+  // The strip-mining transformation splices loop bodies into a new inner loop
+  // without threading iter_args.  If any of the collected loops carries
+  // iter_args, the splice would produce invalid IR (yielded values from the
+  // inner scope used in the outer terminator).  Skip the transformation in
+  // that case.
+  if (llvm::any_of(forOps,
+                   [](scf::ForOp op) { return !op.getInitArgs().empty(); }))
+    return {};
 
   // Compute the tile sizes such that i-th outer loop executes size[i]
   // iterations.  Given that the loop current executes

@@ -20,18 +20,21 @@ constexpr std::uint32_t MakeOpcode(std::uint32_t base) {
 // Opcodes shared between the client and server for each function we support.
 enum RPCOpcodes : std::uint32_t {
   BeginExternalListOutput_Opcode = MakeOpcode(0),
-  EndIoStatement_Opcode = MakeOpcode(1),
-  OutputInteger8_Opcode = MakeOpcode(2),
-  OutputInteger16_Opcode = MakeOpcode(3),
-  OutputInteger32_Opcode = MakeOpcode(4),
-  OutputInteger64_Opcode = MakeOpcode(5),
-  OutputInteger128_Opcode = MakeOpcode(6),
-  OutputReal32_Opcode = MakeOpcode(7),
-  OutputReal64_Opcode = MakeOpcode(8),
-  OutputComplex32_Opcode = MakeOpcode(9),
-  OutputComplex64_Opcode = MakeOpcode(10),
-  OutputAscii_Opcode = MakeOpcode(11),
-  OutputLogical_Opcode = MakeOpcode(12),
+  BeginExternalFormattedOutput_Opcode = MakeOpcode(1),
+  EnableHandlers_Opcode = MakeOpcode(2),
+  EndIoStatement_Opcode = MakeOpcode(3),
+  OutputInteger8_Opcode = MakeOpcode(4),
+  OutputInteger16_Opcode = MakeOpcode(5),
+  OutputInteger32_Opcode = MakeOpcode(6),
+  OutputInteger64_Opcode = MakeOpcode(7),
+  OutputInteger128_Opcode = MakeOpcode(8),
+  OutputReal32_Opcode = MakeOpcode(9),
+  OutputReal64_Opcode = MakeOpcode(10),
+  OutputComplex32_Opcode = MakeOpcode(11),
+  OutputComplex64_Opcode = MakeOpcode(12),
+  OutputAscii_Opcode = MakeOpcode(13),
+  OutputCharacter_Opcode = MakeOpcode(14),
+  OutputLogical_Opcode = MakeOpcode(15),
 };
 
 } // namespace Fortran::runtime::io
