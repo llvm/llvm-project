@@ -1094,6 +1094,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
 - Fix code completion crash involving PCH serialized templates. (#GH139019)
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
+- Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
 
 OpenACC Specific Changes
 ------------------------
