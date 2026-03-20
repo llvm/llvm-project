@@ -560,11 +560,13 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
         return mlir::failure();
     } else if (auto reboxOp = mlir::dyn_cast_or_null<fir::ReboxOp>(
                    memref.getDefiningOp())) {
-      // Don't pull in rebox when it is referenced by an ACC data clause.
+      // Don't pull in rebox when the array_coor is inside an ACC construct
+      // and the rebox result is referenced by an ACC data clause.
       // The data legalization pipeline relies on the rebox result being the
       // copyin var; folding through it would leave the rebox source as an
       // unhandled live-in inside the compute region.
-      if (llvm::any_of(memref.getUsers(), [](mlir::Operation *u) {
+      if (op->getParentOfType<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS>() &&
+          llvm::any_of(memref.getUsers(), [](mlir::Operation *u) {
             return mlir::isa<ACC_DATA_ENTRY_OPS>(u);
           }))
         return mlir::failure();
