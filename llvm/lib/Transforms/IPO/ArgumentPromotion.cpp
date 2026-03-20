@@ -52,6 +52,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -335,8 +336,29 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
       continue;
     }
 
-    // There potentially are metadata uses for things like llvm.dbg.value.
-    // Replace them with poison, after handling the other regular uses.
+    const auto &ArgParts = ArgsToPromote.find(&Arg)->second;
+
+    // For single-part promoted pointer arguments, preserve debug info by
+    // emitting DW_OP_LLVM_implicit_pointer referencing the promoted scalar
+    // value.
+    // Multi-part promotions and dead arguments fall back to poisoning
+    // (multi-part would need DW_OP_LLVM_fragment combined with implicit
+    // pointer, which is future work).
+    if (ArgParts.size() == 1 && !Arg.use_empty()) {
+      Argument *PromotedNewArg = &*I2;
+      SmallVector<DbgVariableRecord *> DVRs;
+      findDbgUsers(&Arg, DVRs);
+      if (!DVRs.empty()) {
+        auto *ImplicitPtrExpr = DIExpression::get(
+            Arg.getContext(), {dwarf::DW_OP_LLVM_implicit_pointer});
+        for (auto *DVR : DVRs) {
+          DVR->replaceVariableLocationOp(&Arg, PromotedNewArg);
+          DVR->setExpression(ImplicitPtrExpr);
+        }
+      }
+    }
+
+    // Replace any remaining metadata uses with poison.
     llvm::scope_exit RauwPoisonMetadata(
         [&]() { Arg.replaceAllUsesWith(PoisonValue::get(Arg.getType())); });
 
