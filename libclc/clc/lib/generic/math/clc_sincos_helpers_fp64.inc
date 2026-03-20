@@ -41,6 +41,29 @@ __clc_sincos_reduced_eval(__CLC_DOUBLEN x, __CLC_DOUBLEN y) {
   return ret;
 }
 
+_CLC_DEF _CLC_OVERLOAD __CLC_SINCOS_RET_GENTYPE
+__clc_sincospi_reduced_eval(__CLC_GENTYPE x) {
+  __CLC_GENTYPE t = x * x;
+
+  __CLC_GENTYPE sx = __clc_mad(t, __clc_mad(t, __clc_mad(t, __clc_mad(t,
+              __clc_mad(t,
+                  0x1.e357ef99eb0bbp-12, -0x1.e2fe76fdffd2bp-8), 0x1.50782d5f14825p-4), -0x1.32d2ccdfe9424p-1),
+                  0x1.466bc67754fffp+1), -0x1.4abbce625be09p+2);
+  sx = x * t * sx;
+  sx = __clc_mad(x, 0x1.921fb54442d18p+1, sx);
+
+  __CLC_GENTYPE cx = __clc_mad(t, __clc_mad(t, __clc_mad(t, __clc_mad(t,
+              __clc_mad(t, __clc_mad(t,
+                  -0x1.b167302e21c33p-14, 0x1.f9c89ca1d4f33p-10), -0x1.a6d1e7294bff9p-6), 0x1.e1f5067b90b37p-3),
+                  -0x1.55d3c7e3c325bp+0), 0x1.03c1f081b5a67p+2), -0x1.3bd3cc9be45dep+2);
+  cx = __clc_mad(t, cx, 1.0);
+
+  __CLC_SINCOS_RET_GENTYPE ret;
+  ret.cos = cx;
+  ret.sin = sx;
+  return ret;
+}
+
 _CLC_DEF _CLC_OVERLOAD __CLC_DOUBLEN __clc_tan_reduced_eval(__CLC_DOUBLEN x,
                                                             __CLC_DOUBLEN xx,
                                                             __CLC_INTN is_odd) {
@@ -121,68 +144,6 @@ _CLC_DEF _CLC_OVERLOAD void __clc_sincos_piby4(__CLC_DOUBLEN x,
                           __clc_fma(__clc_fma(-x3, sp, __CLC_FP_LIT(0.5) * xx),
                                     x2, -xx));
   *cosval = cp;
-}
-
-_CLC_DEF _CLC_OVERLOAD void __clc_tan_piby4(__CLC_DOUBLEN x, __CLC_DOUBLEN xx,
-                                            private __CLC_DOUBLEN *leadval,
-                                            private __CLC_DOUBLEN *tailval) {
-  // 0x3fe921fb54442d18
-  const __CLC_DOUBLEN piby4_lead = 7.85398163397448278999e-01;
-  // 0x3c81a62633145c06
-  const __CLC_DOUBLEN piby4_tail = 3.06161699786838240164e-17;
-
-  // In order to maintain relative precision transform using the identity:
-  // tan(pi/4-x) = (1-tan(x))/(1+tan(x)) for arguments close to pi/4.
-  // Similarly use tan(x-pi/4) = (tan(x)-1)/(tan(x)+1) close to -pi/4.
-
-  __CLC_LONGN ca = x > 0.68;
-  __CLC_LONGN cb = x < -0.68;
-  __CLC_DOUBLEN transform = ca ? 1.0 : 0.0;
-  transform = cb ? -1.0 : transform;
-
-  __CLC_DOUBLEN tx = __clc_fma(-transform, x, piby4_lead) +
-                     __clc_fma(-transform, xx, piby4_tail);
-  __CLC_LONGN c = ca | cb;
-  x = c ? tx : x;
-  xx = c ? 0.0 : xx;
-
-  // Core Remez [2,3] approximation to tan(x+xx) on the interval [0,0.68].
-  __CLC_DOUBLEN t1 = x;
-  __CLC_DOUBLEN r = __clc_fma(2.0, x * xx, x * x);
-
-  __CLC_DOUBLEN a = __clc_fma(r,
-                              __clc_fma(r, 0.224044448537022097264602535574e-3,
-                                        -0.229345080057565662883358588111e-1),
-                              0.372379159759792203640806338901e0);
-
-  __CLC_DOUBLEN b =
-      __clc_fma(r,
-                __clc_fma(r,
-                          __clc_fma(r, -0.232371494088563558304549252913e-3,
-                                    0.260656620398645407524064091208e-1),
-                          -0.515658515729031149329237816945e0),
-                0.111713747927937668539901657944e1);
-
-  __CLC_DOUBLEN t2 = __clc_fma(MATH_DIVIDE(a, b), x * r, xx);
-
-  __CLC_DOUBLEN tp = t1 + t2;
-
-  // Compute -1.0/(t1 + t2) accurately
-  __CLC_DOUBLEN z1 =
-      __CLC_AS_GENTYPE(__CLC_AS_ULONGN(tp) & 0xffffffff00000000L);
-  __CLC_DOUBLEN z2 = t2 - (z1 - t1);
-  __CLC_DOUBLEN trec = -MATH_RECIP(tp);
-  __CLC_DOUBLEN trec_top =
-      __CLC_AS_GENTYPE(__CLC_AS_ULONGN(trec) & 0xffffffff00000000L);
-
-  __CLC_DOUBLEN tpr = __clc_fma(
-      __clc_fma(trec_top, z2, __clc_fma(trec_top, z1, 1.0)), trec, trec_top);
-
-  __CLC_DOUBLEN tpt = transform * (1.0 - MATH_DIVIDE(2.0 * tp, 1.0 + tp));
-  __CLC_DOUBLEN tptr = transform * (MATH_DIVIDE(2.0 * tp, tp - 1.0) - 1.0);
-
-  *leadval = c ? tpt : tp;
-  *tailval = c ? tptr : tpr;
 }
 
 // Reduction for small sized arguments
