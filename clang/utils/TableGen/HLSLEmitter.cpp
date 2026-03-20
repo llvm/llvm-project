@@ -15,6 +15,7 @@
 #include "TableGenBackends.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -280,21 +281,20 @@ static void emitDeclaration(const OverloadContext &Ctx, StringRef RetType,
     OS << (Ctx.IsConstexpr ? "constexpr " : "inline ");
   OS << RetType << " " << Ctx.FuncName << "(";
 
-  for (unsigned I = 0, N = ArgTypes.size(); I < N; ++I) {
-    if (I > 0)
-      OS << ", ";
-    OS << ArgTypes[I];
-    if (EmitNames)
-      OS << " " << GetParamName(I);
+  {
+    ListSeparator LS;
+    for (unsigned I = 0, N = ArgTypes.size(); I < N; ++I) {
+      OS << LS << ArgTypes[I];
+      if (EmitNames)
+        OS << " " << GetParamName(I);
+    }
   }
 
   if (IsDetail) {
     OS << ") {\n  return __detail::" << Ctx.DetailFunc << "(";
-    for (unsigned I = 0, N = ArgTypes.size(); I < N; ++I) {
-      if (I > 0)
-        OS << ", ";
-      OS << GetParamName(I);
-    }
+    ListSeparator LS;
+    for (unsigned I = 0, N = ArgTypes.size(); I < N; ++I)
+      OS << LS << GetParamName(I);
     OS << ");\n}\n";
   } else if (IsInline) {
     OS << ") { " << Ctx.Body << " }\n";
