@@ -1147,4 +1147,3 @@ void case27(CustomResource a) {
 // CHECK: [[META3]] = !{}
 // CHECK: [[META4]] = !{i64 4}
 //.
-
