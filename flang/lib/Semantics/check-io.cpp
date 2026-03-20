@@ -836,7 +836,7 @@ void IoChecker::Leave(const parser::ReadStmt &readStmt) {
   LeaveReadWrite();
   CheckForProhibitedSpecifier(IoSpecKind::Delim); // C1212
   CheckForProhibitedSpecifier(IoSpecKind::Sign); // C1212
-  CheckForProhibitedSpecifier(IoSpecKind::Leading_Zero); // C1212
+  CheckForProhibitedSpecifier(IoSpecKind::Leading_Zero); // F'2023 C1212
   CheckForProhibitedSpecifier(IoSpecKind::Rec, IoSpecKind::End); // C1220
   if (specifierSet_.test(IoSpecKind::Size)) {
     // F'2023 C1214 - allow with a warning
@@ -893,7 +893,7 @@ void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
   CheckForRequiredSpecifier(
       IoSpecKind::Sign, flags_.test(Flag::FmtOrNml), "FMT or NML"); // C1227
   CheckForRequiredSpecifier(IoSpecKind::Leading_Zero,
-      flags_.test(Flag::FmtOrNml), "FMT or NML"); // C1227
+      flags_.test(Flag::FmtOrNml), "FMT or NML"); // F'2023 C1227
   CheckForRequiredSpecifier(IoSpecKind::Delim,
       flags_.test(Flag::StarFmt) || specifierSet_.test(IoSpecKind::Nml),
       "FMT=* or NML"); // C1228
@@ -934,8 +934,6 @@ void IoChecker::LeaveReadWrite() const {
       "FMT or NML"); // C1227
   CheckForRequiredSpecifier(IoSpecKind::Round, flags_.test(Flag::FmtOrNml),
       "FMT or NML"); // C1227
-  CheckForRequiredSpecifier(IoSpecKind::Leading_Zero,
-      flags_.test(Flag::FmtOrNml), "FMT or NML"); // C1227
   CheckForUselessIomsg();
 }
 
