@@ -6,9 +6,9 @@
 target triple = "wasm32-unknown-unknown"
 
 
-@globalI8 = local_unnamed_addr addrspace(1) global i8 undef
-@globalI32 = local_unnamed_addr addrspace(1) global i32 undef
-@globalI64 = local_unnamed_addr addrspace(1) global i64 undef
+@globalI8 = local_unnamed_addr addrspace(1) global i8 0
+@globalI32 = local_unnamed_addr addrspace(1) global i32 0
+@globalI64 = local_unnamed_addr addrspace(1) global i64 0
 
 
 define i32 @zext_i8_i32() {

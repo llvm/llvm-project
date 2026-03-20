@@ -1053,7 +1053,8 @@ WebAssemblyTargetLowering::getCustomLoadAction(EVT ValVT, EVT MemVT,
   if (AddrSpace == WebAssembly::WASM_ADDRESS_SPACE_DEFAULT)
     return Legal;
 
-  if (AddrSpace == WebAssembly::WASM_ADDRESS_SPACE_VAR && (ExtType == ISD::SEXTLOAD || ExtType == ISD::ZEXTLOAD))
+  if (AddrSpace == WebAssembly::WASM_ADDRESS_SPACE_VAR &&
+      (ExtType == ISD::SEXTLOAD || ExtType == ISD::ZEXTLOAD))
     return Expand;
 
   return Custom;
