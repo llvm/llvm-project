@@ -88,7 +88,9 @@ public:
   MachineLoopInfo *MLI;
   MachineRegisterInfo *MRI;
 
-  bool run(MachineFunction &MF, MachineLoopInfo *MLI);
+  explicit AArch64MIPeepholeOptImpl(MachineLoopInfo &MLI) : MLI(&MLI) {}
+
+  bool run(MachineFunction &MF);
 
 private:
   using OpcodePair = std::pair<unsigned, unsigned>;
@@ -114,8 +116,8 @@ private:
   ///     %tmp = <Instr>ri %src (encode half IMM) [...]
   ///     %dst = <Instr>ri %tmp (encode half IMM) [...]
   template <typename T>
-  bool splitTwoPartImm(MachineInstr &MI, SplitAndOpcFunc<T> SplitAndOpc,
-                       BuildMIFunc BuildInstr);
+  bool splitTwoPartImm(MachineInstr &MI,
+                       SplitAndOpcFunc<T> SplitAndOpc, BuildMIFunc BuildInstr);
 
   bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
                         MachineInstr *&SubregToRegMI);
@@ -934,11 +936,10 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
   return true;
 }
 
-bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF, MachineLoopInfo *MLI) {
+bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const AArch64RegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
-  this->MLI = MLI;
   MRI = &MF.getRegInfo();
 
   assert(MRI->isSSA() && "Expected to be run on SSA form!");
@@ -1059,8 +1060,8 @@ bool AArch64MIPeepholeOptLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  return AArch64MIPeepholeOptImpl().run(MF, MLI);
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  return AArch64MIPeepholeOptImpl(MLI).run(MF);
 }
 
 FunctionPass *llvm::createAArch64MIPeepholeOptLegacyPass() {
@@ -1071,7 +1072,7 @@ PreservedAnalyses
 AArch64MIPeepholeOptPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
   MachineLoopInfo &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
-  const bool Changed = AArch64MIPeepholeOptImpl().run(MF, &MLI);
+  const bool Changed = AArch64MIPeepholeOptImpl(MLI).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
