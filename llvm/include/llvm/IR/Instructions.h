@@ -3287,9 +3287,6 @@ struct OperandTraits<CondBrInst> : public FixedNumOperandTraits<CondBrInst, 3> {
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CondBrInst, Value)
 
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
-
 //===----------------------------------------------------------------------===//
 //                     BranchInst Out-Of-Line Functions
 //===----------------------------------------------------------------------===//
@@ -3320,6 +3317,9 @@ inline void BranchInst::setCondition(Value *V) {
 inline void BranchInst::swapSuccessors() {
   cast<CondBrInst>(this)->swapSuccessors();
 }
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                               SwitchInst Class
