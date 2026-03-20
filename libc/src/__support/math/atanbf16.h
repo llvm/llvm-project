@@ -27,7 +27,7 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
   // > display = hexadecimal;
   // > round(pi/2, SG, RN);
   constexpr float PI_2 = 0x1.921fb6p0f;
- 
+
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits xbits(x);
 
@@ -51,12 +51,13 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
   }
 
   // atanbf16(+/-0) = +/-0
-
+if (LIBC_UNLIKELY(x_abs == 0))
+    return x;
   // For smaller x
-if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
-    return fputil::cast<bfloat16>(
-        fputil::multiply_add(static_cast<float>(x), -0x1p-25f, static_cast<float>(x)));
-}
+  if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
+    return fputil::cast<bfloat16>(fputil::multiply_add(
+        static_cast<float>(x), -0x1p-25f, static_cast<float>(x)));
+  }
   float xf = x;
   float x_sq = xf * xf;
 
@@ -76,13 +77,15 @@ if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
   // worst case error for it being ~ 0x1.dcf750p-23
   // satisfying -> error < worst_case
   auto atan_eval = [](float x0) {
-   return fputil::polyeval(x0,-0x1.5552c4p-2f, 0x1.990f2p-3f, -0x1.1f7dccp-3f, 0x1.97e49p-4f, -0x1.ebff34p-5f, 0x1.938e46p-6f, -0x1.3a28bcp-8f);
+    return fputil::polyeval(x0, -0x1.5552c4p-2f, 0x1.990f2p-3f, -0x1.1f7dccp-3f,
+                            0x1.97e49p-4f, -0x1.ebff34p-5f, 0x1.938e46p-6f,
+                            -0x1.3a28bcp-8f);
   };
 
   // |x| <= 1
   if (x_abs <= 0x3f80) {
     float result = atan_eval(x_sq);
-   return fputil::cast<bfloat16>(fputil::multiply_add(xf * x_sq, result, xf));
+    return fputil::cast<bfloat16>(fputil::multiply_add(xf * x_sq, result, xf));
   }
 
   // If |x| > 1:
@@ -92,8 +95,8 @@ if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
   float x_inv = fputil::sqrt<float>(x_inv_sq);
 
   float result = atan_eval(x_inv_sq);
-float atan_inv = fputil::multiply_add(x_inv * x_inv_sq, result, x_inv);
-return fputil::cast<bfloat16>(sign * (PI_2 - atan_inv));
+  float atan_inv = fputil::multiply_add(x_inv * x_inv_sq, result, x_inv);
+  return fputil::cast<bfloat16>(sign * (PI_2 - atan_inv));
 }
 
 } // namespace math
