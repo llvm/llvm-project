@@ -549,6 +549,8 @@ Improvements to Clang's diagnostics
 
 - Extended ``-Wnonportable-include-path`` to warn about trailing whitespace and dots in ``#include`` paths. (#GH190610)
 
+- Clang now emits error when attribute is missing closing ``]]`` followed by ``;;``. (#GH187223)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
