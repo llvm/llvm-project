@@ -144,11 +144,10 @@ struct TypeInfo {
 
 static void emitAvailability(raw_ostream &OS, StringRef Version,
                              bool Use16Bit = false) {
-  if (Use16Bit) {
+  if (Use16Bit)
     OS << "_HLSL_16BIT_AVAILABILITY(shadermodel, " << Version << ")\n";
-  } else {
+  else
     OS << "_HLSL_AVAILABILITY(shadermodel, " << Version << ")\n";
-  }
 }
 static std::string getVersionString(const Record *SM) {
   unsigned Major = SM->getValueAsInt("Major");
