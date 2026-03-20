@@ -22,6 +22,10 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
       ParamDescriptors(std::move(ParamDescriptors)), IsValid(false),
       IsFullyCompiled(false), HasThisPointer(HasThisPointer), HasRVO(HasRVO),
       HasBody(false), Defined(false) {
+  for (ParamDescriptor PD : this->ParamDescriptors) {
+    Params.insert({PD.Offset, PD});
+  }
+  assert(Params.size() == this->ParamDescriptors.size());
 
   if (const auto *F = dyn_cast<const FunctionDecl *>(Source)) {
     Variadic = F->isVariadic();
@@ -50,6 +54,12 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
     Immediate = false;
     Constexpr = false;
   }
+}
+
+Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
+  auto It = Params.find(Offset);
+  assert(It != Params.end() && "Invalid parameter offset");
+  return It->second;
 }
 
 SourceInfo Function::getSource(CodePtr PC) const {

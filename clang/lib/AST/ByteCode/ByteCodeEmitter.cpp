@@ -55,13 +55,18 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   }
 
   bool IsValid = !FuncDecl->isInvalidDecl();
-  // Register parameters and their index.
-  for (unsigned ParamIndex = 0, N = Func->getNumWrittenParams();
-       ParamIndex != N; ++ParamIndex) {
+  // Register parameters with their offset.
+  unsigned ParamIndex = 0;
+  unsigned Drop = Func->hasRVO() +
+                  (Func->hasThisPointer() && !Func->isThisPointerExplicit());
+
+  for (const auto &ParamDesc : llvm::drop_begin(Func->ParamDescriptors, Drop)) {
     const ParmVarDecl *PD = FuncDecl->getParamDecl(ParamIndex);
     if (PD->isInvalidDecl())
       IsValid = false;
-    this->Params.insert({PD, {ParamIndex, Ctx.canClassify(PD->getType())}});
+    this->Params.insert(
+        {PD, {ParamDesc.Offset, Ctx.canClassify(PD->getType())}});
+    ++ParamIndex;
   }
 
   Func->setDefined(true);
