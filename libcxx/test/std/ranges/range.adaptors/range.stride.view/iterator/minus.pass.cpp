@@ -141,7 +141,7 @@ constexpr bool test_forward_minus(Iter begin, Iter end) {
 }
 
 constexpr bool test_difference_minus() {
-  // operator-(iterator, difference_type) — only for random access ranges.
+  // operator-(iterator, difference_type) -- only for random access ranges.
   int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   using Base = BasicTestView<int*, int*>;
 
