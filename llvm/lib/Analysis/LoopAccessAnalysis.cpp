@@ -2689,6 +2689,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // to the same address.
   SmallPtrSet<Value *, 16> UniformStores;
 
+  SmallPtrSet<Value *, 16> PointersWithMultipleStores;
+
   for (StoreInst *ST : Stores) {
     Value *Ptr = ST->getPointerOperand();
 
@@ -2719,6 +2721,61 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
                       MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
                       Accesses.addStore(NewLoc, AccessTy);
                     });
+    } else {
+      PointersWithMultipleStores.insert(Ptr);
+    }
+  }
+
+  for (auto *Ptr : PointersWithMultipleStores) {
+    // NOTE: Known invariant stores are handled separately in both this
+    // file and LoopVectorizationLegality to support the case when
+    // reduction wasn't completely transformed into SSA form.
+    if (isInvariant(Ptr))
+      continue;
+
+    // If there are multiple writes into the same pointer we need to avoid the
+    // following scenario:
+    //
+    //   code:
+    //     if (RT_COND0) *p = x;
+    //     if (RT_COND1) *p = y;
+    //
+    //   execution:
+    //     Iter0     |  Iter1
+    //    no store   |   *p = 2
+    //     *p = 1    |  no store
+    //
+    // Scalar loop would leave `*p == 2`, yet two vectorized scatter's
+    // would result in `*p == 1` which is wrong. Conservatively assume that
+    // only known strided accesses guarantee no such cross iteration
+    // dependency.
+
+    SmallVector<StoreInst *> StoresToPtr(make_filter_range(
+        Stores, [&](StoreInst *ST) { return ST->getOperand(1) == Ptr; }));
+    StoreInst *LastStore = StoresToPtr.back();
+    Type *AccessTy = getLoadStoreType(LastStore);
+    if (!all_of(StoresToPtr, [&](StoreInst *SI) {
+          return getLoadStoreType(SI) == AccessTy;
+        })) {
+      LLVM_DEBUG(dbgs() << "LAA: Multiple stores to the same pointer with "
+                           "different access type\n");
+      return false;
+    }
+
+    if (getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides, false,
+                     false)) {
+      // Known strided access, no cross-iterations dependencies.
+      // TODO: Is `ShouldCheckWrap == false` really ok here?
+      continue;
+    }
+
+    // If LastStore is unmasked, then each iteration/lane is guaranteed to
+    // write a value and orderer semantics of @llvm.scatter/replication would
+    // ensure the final value is coming from the last lane.
+    if (!DT->dominates(LastStore, TheLoop->getLoopLatch()->getTerminator())) {
+      LLVM_DEBUG(dbgs() << "LAA: Last store " << *LastStore
+                        << " is masked, potential WAW hazard\n");
+      return false;
     }
   }
 

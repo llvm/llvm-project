@@ -40,7 +40,6 @@ exit:
 define void @waw_mask(ptr %p, i64 %stride, i64 %n, i64 %n0, i64 %n1) {
 ; CHECK-LABEL: 'waw_mask'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -121,7 +120,6 @@ exit:
 define void @waw_mask_unknown_stride(ptr %p, i64 %stride, i64 %n0, i64 %n1) {
 ; CHECK-LABEL: 'waw_mask_unknown_stride'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -168,7 +166,6 @@ exit:
 define void @no_cross_iter_dependency(ptr %p, i8 %a, i64 %n, i64 %n0, i64 %n1) {
 ; CHECK-LABEL: 'no_cross_iter_dependency'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -328,7 +325,6 @@ exit:
 define void @indirect_mask(ptr noalias %p, i64 %n, i64 %n0, i64 %n1) {
 ; CHECK-LABEL: 'indirect_mask'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
