@@ -1545,8 +1545,7 @@ Module *Target::GetExecutableModulePointer() {
 
 static bool IsSystemBinary(const ModuleSP &module_sp) {
   if (auto *objfile = module_sp->GetObjectFile())
-    if (auto *macho = llvm::dyn_cast<ObjectFileMachO>(objfile))
-      return macho->IsSharedCacheBinary();
+    return objfile->IsSystem();
   return false;
 }
 
