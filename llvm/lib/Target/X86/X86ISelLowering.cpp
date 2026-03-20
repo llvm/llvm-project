@@ -1369,6 +1369,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE,       VT, Custom);
       setOperationAction(ISD::CTLZ,             VT, Custom);
     }
+    setOperationAction(ISD::BITREVERSE,        MVT::i128, Custom);
 
     // These might be better off as horizontal vector ops.
     setOperationAction(ISD::ADD,                MVT::i16, Custom);
@@ -1513,6 +1514,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::OR, MVT::i256, Custom);
     setOperationAction(ISD::XOR, MVT::i256, Custom);
     setOperationAction(ISD::SELECT, MVT::i256, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::i256, Custom);
 
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
@@ -1895,6 +1897,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSHR, MVT::i256, Custom);
     setOperationAction(ISD::FSHL, MVT::i256, Custom);
     setOperationAction(ISD::SELECT, MVT::i512, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
@@ -2947,6 +2950,8 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     // Check for larger than legal scalar integer ops that might have been
     // custom lowered to vector instruction.
     switch (Opcode) {
+    case ISD::BITREVERSE:
+      return true;
     case ISD::SHL:
     case ISD::SRL:
     case ISD::SRA:
@@ -35848,11 +35853,29 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::BITREVERSE: {
-    assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
-    assert((Subtarget.hasXOP() || Subtarget.hasGFNI()) && "Expected XOP/GFNI");
-    // We can use VPPERM/GF2P8AFFINEQB by copying to a vector register and back.
-    // We'll need to move the scalar in two i32 pieces.
-    Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
+    EVT VT = N->getValueType(0);
+    if (VT == MVT::i64) {
+      assert((Subtarget.hasXOP() || Subtarget.hasGFNI()) &&
+             "Expected XOP/GFNI");
+      // We can use VPPERM/GF2P8AFFINEQB by copying to a vector register and
+      // back. We'll need to move the scalar in two i32 pieces.
+      Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
+      return;
+    }
+    assert((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
+           "Unexpected VT!");
+
+    SDValue N0 = N->getOperand(0);
+    unsigned NumElts = VT.getSizeInBits() / 64;
+    MVT VecVT = MVT::getVectorVT(MVT::i64, NumElts);
+    SDValue Vec = DAG.getBitcast(VecVT, N0);
+
+    // Reverse the vXi64 vector, then bitreverse each element.
+    SmallVector<int, 8> SwapMask(NumElts);
+    std::iota(SwapMask.rbegin(), SwapMask.rend(), 0);
+    Vec = DAG.getVectorShuffle(VecVT, dl, Vec, DAG.getPOISON(VecVT), SwapMask);
+    Vec = DAG.getNode(ISD::BITREVERSE, dl, VecVT, Vec);
+    Results.push_back(DAG.getBitcast(VT, Vec));
     return;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -54247,12 +54270,34 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
 static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   StoreSDNode *St = cast<StoreSDNode>(N);
   EVT StVT = St->getMemoryVT();
   SDLoc dl(St);
   SDValue StoredVal = St->getValue();
   EVT VT = StoredVal.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Pattern: store(trunc(load vXiY) to vXiZ) optimization
+  SDValue Src;
+  if (!St->isTruncatingStore() && Subtarget.hasAVX512()) {
+    EVT SrcVT;
+    if (sd_match(StoredVal,
+                 m_OneUse(m_Trunc(m_OneUse(m_Value(Src, m_VT(SrcVT)))))) &&
+        ISD::isNormalLoad(Src.getNode())) {
+      if ((SrcVT == MVT::v4i16 && VT == MVT::v4i8) ||
+          (SrcVT == MVT::v2i32 && VT == MVT::v2i8) ||
+          (SrcVT == MVT::v2i32 && VT == MVT::v2i16) ||
+          (SrcVT == MVT::v2i16 && VT == MVT::v2i8)) {
+        MVT ExtVT = SrcVT == MVT::v4i16 ? MVT::v4i32 : MVT::v2i64;
+        if (TLI.isTruncStoreLegal(ExtVT, VT)) {
+          SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, ExtVT, Src);
+          return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
+                                   VT, St->getMemOperand());
+        }
+      }
+    }
+  }
 
   // Convert a store of vXi1 into a store of iX and a bitcast.
   if (!Subtarget.hasAVX512() && VT == StVT && VT.isVector() &&
