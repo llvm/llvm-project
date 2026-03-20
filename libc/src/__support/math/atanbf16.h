@@ -36,27 +36,6 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
   bool x_sign = x_u >> 15;
   float sign = (x_sign ? -1.0f : 1.0f);
 
-  // |x| is +/-inf or NaN
-  if (LIBC_UNLIKELY(x_abs >= 0x7F80)) {
-    // NaN
-    if (xbits.is_nan()) {
-      if (xbits.is_signaling_nan()) {
-        fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::quiet_nan().get_val();
-      }
-      return x;
-    }
-    // atanbf16(+/-inf) = +/-pi/2
-    return fputil::cast<bfloat16>(sign * PI_2);
-  }
-
-  // atanbf16(+/-0) = +/-0
-  if (LIBC_UNLIKELY(x_abs == 0))
-    return x;
-
-  float xf = x;
-  float x_sq = xf * xf;
-
   // Taylor series -> [x - x^3/3 + x^5/5 - x^7/7 ...]
   // x * [1 - x^2/3 + x^4/5 - x^6/7...] -> x * P(x)
   // atan(x) = x * poly(x^2)
@@ -78,15 +57,35 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
                             -0x1.3a28bcp-8f);
   };
 
-  // For smaller x
-  if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
-    return fputil::cast<bfloat16>(fputil::multiply_add(xf, -0x1p-25f, xf));
-  }
+  float xf = x;
+  float x_sq = xf * xf;
 
   // |x| <= 1
   if (x_abs <= 0x3f80) {
+    // atanbf16(+/-0) = +/-0
+    if (LIBC_UNLIKELY(x_abs == 0))
+      return x;
+
+    // For smaller x
+    if (LIBC_UNLIKELY(x_abs <= 0x3db8))
+      return fputil::cast<bfloat16>(fputil::multiply_add(xf, -0x1p-25f, xf));
+
     float result = atan_eval(x_sq);
     return fputil::cast<bfloat16>(fputil::multiply_add(xf * x_sq, result, xf));
+  }
+
+  // |x| is +/-inf or NaN
+  if (LIBC_UNLIKELY(x_abs >= 0x7F80)) {
+    // NaN
+    if (xbits.is_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      return x;
+    }
+    // atanbf16(+/-inf) = +/-pi/2
+    return fputil::cast<bfloat16>(sign * PI_2);
   }
 
   // If |x| > 1:
