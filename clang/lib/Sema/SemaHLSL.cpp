@@ -4993,7 +4993,7 @@ static void handleArrayOfStructWithResources(
     EmbeddedResourceNameBuilder &NameBuilder, StructBindingContext &BindingCtx);
 
 // Scans base and all fields of a struct/class type to find all embedded
-// resources or resource arrays,. Creates a global variable for each resource
+// resources or resource arrays. Creates a global variable for each resource
 // found.
 static void handleStructWithResources(Sema &S, VarDecl *ParentVD,
                                       const CXXRecordDecl *RD,
