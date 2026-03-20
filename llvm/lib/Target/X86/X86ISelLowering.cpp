@@ -45506,6 +45506,22 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              OriginalDemandedElts, Known, TLO, Depth + 1))
       return true;
 
+    // Check whether we can fold away a cond ? 0 : 1 cmov after shrinking
+    // operands based on demanded bits.
+    KnownBits KnownFalseVal =
+        Known & KnownBits::makeConstant(OriginalDemandedBits);
+    KnownBits KnownTrueVal =
+        Known2 & KnownBits::makeConstant(OriginalDemandedBits);
+    if (KnownFalseVal.isZero() && KnownTrueVal.isConstant() &&
+        KnownTrueVal.getConstant().isOne() &&
+        Op.getValueType().isScalarInteger()) {
+      SDLoc DL(Op);
+      X86::CondCode CC = (X86::CondCode)Op.getConstantOperandVal(2);
+      SDValue SetCC = getSETCC(CC, Op.getOperand(3), DL, TLO.DAG);
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, DL, Op.getValueType(), SetCC));
+    }
+
     // Only known if known in both the LHS and RHS.
     Known = Known.intersectWith(Known2);
     return false;
