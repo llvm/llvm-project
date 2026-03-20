@@ -101,9 +101,13 @@ poly16_t test_vget_lane_p16(poly16x4_t a) {
 float32_t test_vget_lane_f16(float16x4_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u16i>
 // CIR: [[ELEM:%.*]] = cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u16i>
-// CIR: [[HALF:%.*]] = cir.cast bitcast [[ELEM]] : !u16i -> !cir.f16
-// CIR: [[RES:%.*]] = cir.cast floating [[HALF]] : !cir.f16 -> !cir.float
-// CIR: cir.return [[RES]] : !cir.float
+// CIR: cir.store align(2) [[ELEM]], %{{.*}} : !u16i, !cir.ptr<!u16i>
+// CIR: [[S16PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u16i> -> !cir.ptr<!s16i>
+// CIR: %{{.*}} = cir.load align(2) [[S16PTR]] : !cir.ptr<!s16i>, !s16i
+// CIR: [[F16PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!s16i> -> !cir.ptr<!cir.f16>
+// CIR: [[HALF:%.*]] = cir.load align(2) [[F16PTR]] : !cir.ptr<!cir.f16>, !cir.f16
+// CIR: %{{.*}} = cir.cast floating %{{.*}} : !cir.f16 -> !cir.float
+// CIR: cir.return %{{.*}} : !cir.float
 
 // LLVM: [[TMP:%.*]] = bitcast <4 x half> %{{.*}} to <4 x i16>
 // LLVM: [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP]], i32 1
@@ -212,9 +216,13 @@ poly16_t test_vgetq_lane_p16(poly16x8_t a) {
 float32_t test_vgetq_lane_f16(float16x8_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !u16i>
 // CIR: [[ELEM:%.*]] = cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<8 x !u16i>
-// CIR: [[HALF:%.*]] = cir.cast bitcast [[ELEM]] : !u16i -> !cir.f16
-// CIR: [[RES:%.*]] = cir.cast floating [[HALF]] : !cir.f16 -> !cir.float
-// CIR: cir.return [[RES]] : !cir.float
+// CIR: cir.store align(2) [[ELEM]], %{{.*}} : !u16i, !cir.ptr<!u16i>
+// CIR: [[S16PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u16i> -> !cir.ptr<!s16i>
+// CIR: %{{.*}} = cir.load align(2) [[S16PTR]] : !cir.ptr<!s16i>, !s16i
+// CIR: [[F16PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!s16i> -> !cir.ptr<!cir.f16>
+// CIR: [[HALF:%.*]] = cir.load align(2) [[F16PTR]] : !cir.ptr<!cir.f16>, !cir.f16
+// CIR: %{{.*}} = cir.cast floating %{{.*}} : !cir.f16 -> !cir.float
+// CIR: cir.return %{{.*}} : !cir.float
 
 // LLVM: [[TMP:%.*]] = bitcast <8 x half> %{{.*}} to <8 x i16>
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP]], i32 3
