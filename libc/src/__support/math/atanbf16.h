@@ -51,13 +51,9 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
   }
 
   // atanbf16(+/-0) = +/-0
-if (LIBC_UNLIKELY(x_abs == 0))
-    return x;
-  // For smaller x
-  if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
-    return fputil::cast<bfloat16>(fputil::multiply_add(
-        static_cast<float>(x), -0x1p-25f, static_cast<float>(x)));
-  }
+  if (LIBC_UNLIKELY(x_abs == 0))
+     return x;
+
   float xf = x;
   float x_sq = xf * xf;
 
@@ -68,12 +64,12 @@ if (LIBC_UNLIKELY(x_abs == 0))
 
   // Degree 14 polynomial of atan(x) generated using Sollya with command :
   // > display = hexadecimal ;
-  // > P = fpminimax(atan(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14|], [|SG, SG,
+  // > P = fpminimax(atan(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14|], [|1, SG,
   // SG..SG|], [0, 1]);
   //
   // relative error for the polynomial given by:
   // > dirtyinfnorm(atan(x)/x - P(x), [0, 1]);
-  // gives error ~ 0x1p-23
+  // gives error ~ 0x1.ee44001p-24
   // worst case error for it being ~ 0x1.dcf750p-23
   // satisfying -> error < worst_case
   auto atan_eval = [](float x0) {
@@ -81,6 +77,11 @@ if (LIBC_UNLIKELY(x_abs == 0))
                             0x1.97e49p-4f, -0x1.ebff34p-5f, 0x1.938e46p-6f,
                             -0x1.3a28bcp-8f);
   };
+
+  // For smaller x
+  if (LIBC_UNLIKELY(x_abs <= 0x3db8)) {
+    return fputil::cast<bfloat16>(fputil::multiply_add(xf, -0x1p-25f, xf));
+  }
 
   // |x| <= 1
   if (x_abs <= 0x3f80) {
