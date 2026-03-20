@@ -7,9 +7,9 @@
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/SupportFile.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
@@ -197,13 +197,13 @@ public:
     if (!sc.function)
       return {};
 
-    SupportFileSP source_file_sp;
+    SupportFileNSP source_file_nsp = std::make_shared<SupportFile>();
     uint32_t line_no;
-    sc.function->GetStartLineSourceInfo(source_file_sp, line_no);
+    sc.function->GetStartLineSourceInfo(source_file_nsp, line_no);
     // FIXME: these <compiler-generated> frames should be marked artificial
     // by the Swift compiler.
-    if (source_file_sp &&
-        source_file_sp->GetSpecOnly().GetFilename() == "<compiler-generated>" &&
+    if (source_file_nsp->GetSpecOnly().GetFilename() ==
+            "<compiler-generated>" &&
         line_no == 0)
       return m_hidden_frame;
 
