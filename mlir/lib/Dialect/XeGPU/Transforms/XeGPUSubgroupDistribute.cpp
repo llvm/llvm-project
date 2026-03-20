@@ -162,6 +162,11 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
           return isa<gpu::WarpExecuteOnLane0Op>(op);
         }))
       return failure();
+    gpu::ReturnOp origReturnOp = dyn_cast_if_present<gpu::ReturnOp>(
+        gpuFuncOp.getBlocks().back().getTerminator());
+    if (!origReturnOp)
+      return rewriter.notifyMatchFailure(
+          gpuFuncOp, "expected gpu.func terminator to be gpu.return");
     // Create a new function with the same signature and same attributes.
     SmallVector<Type> workgroupAttributionsTypes =
         llvm::map_to_vector(gpuFuncOp.getWorkgroupAttributions(),
@@ -187,12 +192,10 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
         newGpuFunc.getArgumentTypes());
     Block &warpBodyBlock = warpOp.getBodyRegion().front();
     // Replace the ReturnOp of the original gpu function with a YieldOp.
-    auto origRetunOp =
-        cast<gpu::ReturnOp>(gpuFuncOp.getBlocks().back().getTerminator());
-    rewriter.setInsertionPointAfter(origRetunOp);
-    gpu::YieldOp::create(rewriter, origRetunOp.getLoc(),
-                         origRetunOp.getOperands());
-    rewriter.eraseOp(origRetunOp);
+    rewriter.setInsertionPointAfter(origReturnOp);
+    gpu::YieldOp::create(rewriter, origReturnOp.getLoc(),
+                         origReturnOp.getOperands());
+    rewriter.eraseOp(origReturnOp);
     // Move the original function body to the WarpExecuteOnLane0Op body.
     rewriter.inlineRegionBefore(gpuFuncOp.getBody(), warpOp.getBodyRegion(),
                                 warpOp.getBodyRegion().begin());
@@ -1321,17 +1324,29 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
         cast<vector::MultiDimReductionOp>(yieldOperand->get().getDefiningOp());
     unsigned operandIdx = yieldOperand->getOperandNumber();
     VectorType sourceType = reductionOp.getSourceVectorType();
-    // Only 2D vectors are supported.
-    if (sourceType.getRank() != 2)
+    int64_t sourceRank = sourceType.getRank();
+    // Need at least a 2D source vector.
+    if (sourceRank < 2)
       return rewriter.notifyMatchFailure(warpOp,
-                                         "Only 2D reductions are supported.");
+                                         "Only 2D+ reductions are supported.");
+    // Leading dimensions (first rank-2) must be unit (size 1).
+    for (int64_t i = 0; i < sourceRank - 2; ++i) {
+      if (sourceType.getShape()[i] != 1)
+        return rewriter.notifyMatchFailure(
+            warpOp, "Only unit dimensions allowed for the leading dimensions.");
+    }
+    // Effective dimension indices (last 2 dims of the source).
+    int64_t rowIdx = sourceRank - 2;
+    int64_t columnIdx = sourceRank - 1;
     ArrayRef<int64_t> reductionDims = reductionOp.getReductionDims();
-    // Only 1 reduction dimension supported. This also ensures that the result
-    // is vector type.
     if (reductionDims.size() != 1)
-      return rewriter.notifyMatchFailure(
-          warpOp, "Only 1 reduction dimension is supported.");
+      return rewriter.notifyMatchFailure(warpOp,
+                                         "Only 1 reduction dim is supported.");
     int64_t reductionDim = reductionDims[0];
+    // The reduction dim must be among the last 2 dims.
+    if (reductionDim != rowIdx && reductionDim != columnIdx)
+      return rewriter.notifyMatchFailure(
+          warpOp, "Reduction dim must be among the last 2 dimensions.");
     VectorType distributedResultType =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     VectorType resultType = cast<VectorType>(reductionOp.getType());
@@ -1344,15 +1359,16 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(
           warpOp, "Failed to distribute the source vector type.");
     VectorType sourceDistType = sourceDistTypeOrFailure.value();
-    // Only single dimension distribution is supported.
-    bool dim0Distributed =
-        sourceDistType.getShape()[0] != sourceType.getShape()[0];
-    bool dim1Distributed =
-        sourceDistType.getShape()[1] != sourceType.getShape()[1];
-    if (dim0Distributed && dim1Distributed)
+    // Only single dimension distribution among the last 2 dims is supported.
+    bool rowDistributed =
+        sourceDistType.getShape()[rowIdx] != sourceType.getShape()[rowIdx];
+    bool columnDistributed = sourceDistType.getShape()[columnIdx] !=
+                             sourceType.getShape()[columnIdx];
+    if (rowDistributed && columnDistributed)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting source to be distributed in a single dimension.");
-    int64_t sourceDistDim = dim0Distributed ? 0 : (dim1Distributed ? 1 : -1);
+    int64_t sourceDistDim =
+        rowDistributed ? rowIdx : (columnDistributed ? columnIdx : -1);
     if (sourceDistDim == -1)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting a distributed source vector.");
@@ -1371,8 +1387,9 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
     // |  dim-1 distributed   |       0        | distributed    |
     // |  dim-1 distributed   |       1        | broadcasted    |
 
-    bool isReductionLaneLocal = (sourceDistDim == 0 && reductionDim == 1) ||
-                                (sourceDistDim == 1 && reductionDim == 0);
+    bool isReductionLaneLocal =
+        (sourceDistDim == rowIdx && reductionDim == columnIdx) ||
+        (sourceDistDim == columnIdx && reductionDim == rowIdx);
     if (isReductionLaneLocal && !resultDistributed)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting a distributed result for lane-local reduction.");
@@ -1520,12 +1537,9 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
         auto broadcastUnitDimsSet = broadcastOp.computeBroadcastedUnitDims();
         SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
                                                broadcastUnitDimsSet.end());
-        bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
-        if (!isEqualTo)
-          return rewriter.notifyMatchFailure(
-              warpOp, "For same-rank broadcast, source must be identical to "
-                      "adjusted result layouts with unit dims.");
-        resultLayout = resultLayout.setUnitDimData(broadcastUnitDims);
+        assert(sourceLayout.isEqualTo(
+                   sourceLayout.setUnitDimData(broadcastUnitDims)) &&
+               "The sg_data for unit dimensions should be set as 1");
         sourceLayout = sourceLayout.setUnitDimLayout(broadcastUnitDims);
       }
 
@@ -1963,7 +1977,8 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
                        "does not have 2D layout");
     ArrayRef<int64_t> perm = transposeOp.getPermutation();
     // Result layout must be a transpose of source layout.
-    if (!resultLayout.isTransposeOf(sourceLayout, perm))
+    if (!resultLayout.isTransposeOf(sourceLayout, perm,
+                                    xegpu::LayoutKind::Lane))
       return rewriter.notifyMatchFailure(
           transposeOp,
           "the source or result vector layouts must be 2D transposes of each "
@@ -2060,6 +2075,27 @@ struct VectorStepSliceDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+struct ConvertLayoutDistribution
+    : public OpRewritePattern<xegpu::ConvertLayoutOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
+                                PatternRewriter &rewriter) const override {
+    auto inputLayout = op.getInputLayoutAttr();
+    auto targetLayout = op.getTargetLayoutAttr();
+
+    if (!inputLayout || !targetLayout)
+      return rewriter.notifyMatchFailure(op, "missing layout attributes");
+
+    if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
+      return rewriter.notifyMatchFailure(
+          op, "lowering incompatible convert_layout not yet supported");
+    }
+    rewriter.replaceOp(op, op.getSource());
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -2077,7 +2113,7 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
                GpuBarrierDistribution, VectorMultiReductionDistribution,
                LoadDistribution, StoreDistribution, VectorTransposeDistribution,
                VectorBitcastDistribution, LoadMatrixDistribution,
-               StoreMatrixDistribution,
+               StoreMatrixDistribution, ConvertLayoutDistribution,
                MemrefExtractAlignedPointerAsIndexDistribution>(
       patterns.getContext(),
       /*pattern benefit=*/PatternHierarchy::Regular);

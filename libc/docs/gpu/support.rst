@@ -6,10 +6,6 @@ Supported Functions
 
 .. include:: ../check.rst
 
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
-
 The following functions and headers are supported at least partially on the
 device. Some functions are implemented fully on the GPU, while others require a
 `remote procedure call <libc_gpu_rpc>`_.

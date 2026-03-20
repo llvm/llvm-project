@@ -252,7 +252,7 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
-      Known.knownNot(fcZero);
+      Known.knownNot(fcZero | fcPosSubnormal);
   }
 
   if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
@@ -262,7 +262,7 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
     // This can't underflow if one of the operands is known normal.
     if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
-      Known.knownNot(fcZero);
+      Known.knownNot(fcZero | fcNegSubnormal);
   }
 
   return Known;

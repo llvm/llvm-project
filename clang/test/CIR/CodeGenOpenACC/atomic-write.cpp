@@ -8,7 +8,7 @@ struct ConvertsToScalar {
 };
 
 void use(int x, unsigned int y, float f, ConvertsToScalar cts) {
-  // CHECK: cir.func{{.*}}(%[[X_ARG:.*]]: !s32i{{.*}}, %[[Y_ARG:.*]]: !u32i{{.*}}, %[[F_ARG:.*]]: !cir.float{{.*}}){{.*}}, %[[CTS_ARG:.*]]: !rec_ConvertsToScalar{{.*}}) {
+  // CHECK: cir.func{{.*}}(%[[X_ARG:.*]]: !s32i{{.*}}, %[[Y_ARG:.*]]: !u32i{{.*}}, %[[F_ARG:.*]]: !cir.float{{.*}}){{.*}}, %[[CTS_ARG:.*]]: !rec_ConvertsToScalar{{.*}}) {{.*}}{
   // CHECK-NEXT: %[[X_ALLOC:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
   // CHECK-NEXT: %[[Y_ALLOC:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["y", init]
   // CHECK-NEXT: %[[F_ALLOC:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init]
@@ -22,7 +22,7 @@ void use(int x, unsigned int y, float f, ConvertsToScalar cts) {
   // CHECK-NEXT: %[[Y_LOAD:.*]] = cir.load {{.*}}%[[Y_ALLOC]] : !cir.ptr<!u32i>, !u32i
   // CHECK-NEXT: %[[Y_TO_FLOAT:.*]] = cir.cast int_to_float %[[Y_LOAD]] : !u32i -> !cir.float
   // CHECK-NEXT: %[[F_LOAD:.*]] = cir.load {{.*}}%[[F_ALLOC]] : !cir.ptr<!cir.float>, !cir.float
-  // CHECK-NEXT: %[[MUL:.*]] = cir.binop(mul, %[[Y_TO_FLOAT]], %[[F_LOAD]]) : !cir.float
+  // CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[Y_TO_FLOAT]], %[[F_LOAD]] : !cir.float
   // CHECK-NEXT: %[[RHS_CAST:.*]] = cir.cast float_to_int %[[MUL]] : !cir.float -> !s32i
   // CHECK-NEXT: acc.atomic.write %[[X_ALLOC]] = %[[RHS_CAST]] : !cir.ptr<!s32i>, !s32i
 #pragma acc atomic write

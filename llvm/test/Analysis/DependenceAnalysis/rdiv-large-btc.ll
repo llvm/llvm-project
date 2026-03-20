@@ -15,7 +15,7 @@
 ;     A[i1] = 0;
 ; }
 ;
-; FIXME: Both `A[i0] = 0` and `A[i1] = 0` must be executed, so there is a
+; Both `A[i0] = 0` and `A[i1] = 0` must be executed, so there is a
 ; dependency between them.
 ;
 define void @rdiv_large_btc(ptr %A) {
@@ -29,19 +29,19 @@ define void @rdiv_large_btc(ptr %A) {
 ;
 ; CHECK-EXACT-RDIV-LABEL: 'rdiv_large_btc'
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
-; CHECK-EXACT-RDIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
 ; CHECK-EXACT-RDIV-NEXT:    da analyze - none!
 ; CHECK-EXACT-RDIV-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-EXACT-RDIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-EXACT-RDIV-NEXT:    da analyze - output [*]!
 ;
 ; CHECK-SYMBOLIC-RDIV-LABEL: 'rdiv_large_btc'
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [|<]!
 ; CHECK-SYMBOLIC-RDIV-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - none!
+; CHECK-SYMBOLIC-RDIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   br label %loop.0.header

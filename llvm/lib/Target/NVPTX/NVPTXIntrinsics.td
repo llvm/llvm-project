@@ -23,7 +23,7 @@ def AS_match {
    return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_CONST;
   }];
   code param = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_PARAM;
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_ENTRY_PARAM;
   }];
 }
 
@@ -6164,8 +6164,8 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
 
   let AsmString = Prefix
                   # SpCtaKindStr
-                  # ".collector::a::" # CollectorUsage
                   # !if(IsAShift, ".ashift", "")
+                  # ".collector::a::" # CollectorUsage
                   # BaseOperandsStr
                   # InputDStr
                   # ScaleInpStr

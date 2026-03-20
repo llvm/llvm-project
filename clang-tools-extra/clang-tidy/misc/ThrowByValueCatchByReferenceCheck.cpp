@@ -31,8 +31,8 @@ void ThrowByValueCatchByReferenceCheck::registerMatchers(MatchFinder *Finder) {
 
 void ThrowByValueCatchByReferenceCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "CheckThrowTemporaries", true);
-  Options.store(Opts, "WarnOnLargeObjects", WarnOnLargeObject);
+  Options.store(Opts, "CheckThrowTemporaries", CheckAnonymousTemporaries);
+  Options.store(Opts, "WarnOnLargeObject", WarnOnLargeObject);
   Options.store(Opts, "MaxSize", MaxSizeOptions);
 }
 
@@ -51,8 +51,8 @@ bool ThrowByValueCatchByReferenceCheck::isFunctionParameter(
 bool ThrowByValueCatchByReferenceCheck::isCatchVariable(
     const DeclRefExpr *DeclRefExpr) {
   auto *ValueDecl = DeclRefExpr->getDecl();
-  if (auto *VarDecl = dyn_cast<clang::VarDecl>(ValueDecl))
-    return VarDecl->isExceptionVariable();
+  if (auto *Var = dyn_cast<VarDecl>(ValueDecl))
+    return Var->isExceptionVariable();
   return false;
 }
 

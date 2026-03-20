@@ -143,6 +143,28 @@ def ApplyFoldPackUnpackIntoEmptyPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyDataLayoutPropagationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.data_layout_propagation",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collection of patterns to bubble up or down data layout ops across other
+    operations.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$poison_padding);
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyExtractSliceSinkingPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.extract_slice_sinking",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Patterns to sink extract slice across other operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -288,9 +310,13 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Decomposes named complex operations, such as higher-dimensional
-    (depthwise) convolutions, into combinations of lower-dimensional equivalents
-    when possible.
+    Decomposes higher-dimensional convolution ops into lower-dimensional
+    equivalents when possible. This operates on both named ops and equivalent
+    `linalg.generic` ops that have convolution-like structure (as determined
+    by `inferConvolutionDims`).
+
+    The transformation always attempts to specialize the result back to a named
+    op when possible.
 
     #### Return modes
 

@@ -1338,14 +1338,14 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         declarator.setInvalidType(true);
       }
     }
-    Result = S.Context.getAutoType(QualType(), AutoKW,
-                                   /*IsDependent*/ false, /*IsPack=*/false,
+    Result = S.Context.getAutoType(DeducedKind::Undeduced, QualType(), AutoKW,
                                    TypeConstraintConcept, TemplateArgs);
     break;
   }
 
   case DeclSpec::TST_auto_type:
-    Result = Context.getAutoType(QualType(), AutoTypeKeyword::GNUAutoType, false);
+    Result = Context.getAutoType(DeducedKind::Undeduced, QualType(),
+                                 AutoTypeKeyword::GNUAutoType);
     break;
 
   case DeclSpec::TST_unknown_anytype:
@@ -9099,9 +9099,22 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
-    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
     case ParsedAttr::AT_AddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state);
+      attr.setUsedAsTypeAttr();
+      break;
+    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
+      HandleAddressSpaceTypeAttribute(type, attr, state);
+      if (state.getDeclarator().getContext() == DeclaratorContext::Prototype) {
+        if (state.getSema().getLangOpts().getHLSLVersion() <
+            LangOptions::HLSL_202x)
+          state.getSema().Diag(attr.getLoc(), diag::warn_hlsl_groupshared_202x);
+
+        // Note: we don't check for the usage of HLSLParamModifiers in/out/inout
+        // here because the check in the AT_HLSLParamModifier case is sufficient
+        // regardless of the order of groupshared or in/out/inout specified in
+        // the parameter. And checking there produces a better error message.
+      }
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
@@ -9192,6 +9205,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::AT_HLSLParamModifier: {
       HandleHLSLParamModifierAttr(state, type, attr, state.getSema());
+      if (attrs.hasAttribute(ParsedAttr::AT_HLSLGroupSharedAddressSpace)) {
+        state.getSema().Diag(attr.getLoc(), diag::err_hlsl_attr_incompatible)
+            << attr << "'groupshared'";
+        attr.setInvalid();
+        return;
+      }
       attr.setUsedAsTypeAttr();
       break;
     }
@@ -9310,6 +9329,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     }
     case ParsedAttr::AT_HLSLResourceClass:
+    case ParsedAttr::AT_HLSLResourceDimension:
     case ParsedAttr::AT_HLSLROV:
     case ParsedAttr::AT_HLSLRawBuffer:
     case ParsedAttr::AT_HLSLContainedType: {
@@ -9457,11 +9477,67 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
   // If this definition was instantiated from a template, map back to the
   // pattern from which it was instantiated.
-  if (isa<TagDecl>(D) && cast<TagDecl>(D)->isBeingDefined()) {
+  if (isa<TagDecl>(D) && cast<TagDecl>(D)->isBeingDefined())
     // We're in the middle of defining it; this definition should be treated
     // as visible.
     return true;
-  } else if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+
+  auto DefinitionIsAcceptable = [&](NamedDecl *D) {
+    // The (primary) definition might be in a visible module.
+    if (isAcceptable(D, Kind))
+      return true;
+
+    // A visible module might have a merged definition instead.
+    if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
+                             : hasVisibleMergedDefinition(D)) {
+      if (CodeSynthesisContexts.empty() &&
+          !getLangOpts().ModulesLocalVisibility) {
+        // Cache the fact that this definition is implicitly visible because
+        // there is a visible merged definition.
+        D->setVisibleDespiteOwningModule();
+      }
+      return true;
+    }
+
+    return false;
+  };
+  auto IsDefinition = [](NamedDecl *D) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+      return RD->isThisDeclarationADefinition();
+    if (auto *ED = dyn_cast<EnumDecl>(D))
+      return ED->isThisDeclarationADefinition();
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->isThisDeclarationADefinition();
+    if (auto *VD = dyn_cast<VarDecl>(D))
+      return VD->isThisDeclarationADefinition() == VarDecl::Definition;
+    llvm_unreachable("unexpected decl type");
+  };
+  auto FoundAcceptableDefinition = [&](NamedDecl *D) {
+    if (!isa<CXXRecordDecl, FunctionDecl, EnumDecl, VarDecl>(D))
+      return DefinitionIsAcceptable(D);
+
+    // See ASTDeclReader::attachPreviousDeclImpl. Now we still
+    // may demote definition to declaration for decls in haeder modules,
+    // so avoid looking at its redeclaration to save time.
+    // NOTE: If we don't demote definition to declarations for decls
+    // in header modules, remove the condition.
+    if (D->getOwningModule() && D->getOwningModule()->isHeaderLikeModule())
+      return DefinitionIsAcceptable(D);
+
+    for (auto *RD : D->redecls()) {
+      auto *ND = cast<NamedDecl>(RD);
+      if (!IsDefinition(ND))
+        continue;
+      if (DefinitionIsAcceptable(ND)) {
+        *Suggested = ND;
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     if (auto *Pattern = RD->getTemplateInstantiationPattern())
       RD = Pattern;
     D = RD->getDefinition();
@@ -9500,34 +9576,14 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
   *Suggested = D;
 
-  auto DefinitionIsAcceptable = [&] {
-    // The (primary) definition might be in a visible module.
-    if (isAcceptable(D, Kind))
-      return true;
-
-    // A visible module might have a merged definition instead.
-    if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
-                             : hasVisibleMergedDefinition(D)) {
-      if (CodeSynthesisContexts.empty() &&
-          !getLangOpts().ModulesLocalVisibility) {
-        // Cache the fact that this definition is implicitly visible because
-        // there is a visible merged definition.
-        D->setVisibleDespiteOwningModule();
-      }
-      return true;
-    }
-
-    return false;
-  };
-
-  if (DefinitionIsAcceptable())
+  if (FoundAcceptableDefinition(D))
     return true;
 
   // The external source may have additional definitions of this entity that are
   // visible, so complete the redeclaration chain now and ask again.
   if (auto *Source = Context.getExternalSource()) {
     Source->CompleteRedeclChain(D);
-    return DefinitionIsAcceptable();
+    return FoundAcceptableDefinition(D);
   }
 
   return false;

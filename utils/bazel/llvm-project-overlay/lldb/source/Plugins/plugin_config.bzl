@@ -23,7 +23,7 @@ DEFAULT_PLUGINS = [
     "ArchitecturePPC64",
     "ClangREPL",
     "CPlusPlusLanguage",
-    "CXXItaniumABI",
+    "CPPRuntime",
     "DisassemblerLLVMC",
     "HighlighterClang",
     "HighlighterDefault",
@@ -103,4 +103,5 @@ OBJCPP_COPTS = [
     "-std=c++{}".format(CMAKE_CXX_STANDARD),
     "-fno-objc-exceptions",
     "-Wno-shorten-64-to-32",
+    "-Wno-vla-cxx-extension",
 ]

@@ -687,7 +687,6 @@ define void @force_branch_cost(ptr readonly %src, ptr %dst) {
 ; COST1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST1:       [[VECTOR_BODY]]:
 ; COST1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST1-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; COST1-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
 ; COST1-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 2
 ; COST1-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 3
@@ -696,7 +695,6 @@ define void @force_branch_cost(ptr readonly %src, ptr %dst) {
 ; COST1-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 6
 ; COST1-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 7
 ; COST1-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 96
-; COST1-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; COST1-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], 96
 ; COST1-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], 192
 ; COST1-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 288
@@ -704,7 +702,7 @@ define void @force_branch_cost(ptr readonly %src, ptr %dst) {
 ; COST1-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], 480
 ; COST1-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 576
 ; COST1-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 672
-; COST1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP9]]
+; COST1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; COST1-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP10]]
 ; COST1-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP11]]
 ; COST1-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP12]]
@@ -712,7 +710,7 @@ define void @force_branch_cost(ptr readonly %src, ptr %dst) {
 ; COST1-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP14]]
 ; COST1-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP15]]
 ; COST1-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP16]]
-; COST1-NEXT:    [[TMP17:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[TMP1]]
+; COST1-NEXT:    [[TMP17:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[INDEX]]
 ; COST1-NEXT:    [[TMP18:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[TMP2]]
 ; COST1-NEXT:    [[TMP19:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[TMP3]]
 ; COST1-NEXT:    [[TMP20:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[TMP4]]
@@ -825,20 +823,18 @@ define void @force_branch_cost(ptr readonly %src, ptr %dst) {
 ; COST10-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST10:       [[VECTOR_BODY]]:
 ; COST10-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST10-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; COST10-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
 ; COST10-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 2
 ; COST10-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 3
 ; COST10-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 96
-; COST10-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; COST10-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 96
 ; COST10-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 192
 ; COST10-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 288
-; COST10-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
+; COST10-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; COST10-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
 ; COST10-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
 ; COST10-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP8]]
-; COST10-NEXT:    [[TMP9:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[TMP1]]
+; COST10-NEXT:    [[TMP9:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[INDEX]]
 ; COST10-NEXT:    [[TMP10:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[TMP2]]
 ; COST10-NEXT:    [[TMP11:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[TMP3]]
 ; COST10-NEXT:    [[TMP12:%.*]] = getelementptr [4 x i8], ptr [[SRC]], i64 [[TMP4]]

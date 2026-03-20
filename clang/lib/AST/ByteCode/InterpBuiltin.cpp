@@ -1193,7 +1193,7 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   // The first parameter is either an integer or a pointer.
   PrimType FirstArgT = *S.Ctx.classify(Call->getArg(0));
 
-  if (isIntegralType(FirstArgT)) {
+  if (isIntegerType(FirstArgT)) {
     const APSInt &Src = popToAPSInt(S.Stk, FirstArgT);
     APInt AlignMinusOne = Alignment.extOrTrunc(Src.getBitWidth()) - 1;
     if (BuiltinOp == Builtin::BI__builtin_align_up) {
@@ -2333,12 +2333,8 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
   bool UseFieldDesc = (Kind & 1u);
   bool ReportMinimum = (Kind & 2u);
   if (!UseFieldDesc || DetermineForCompleteObject) {
-    // Lower bound, so we can't fall back to this.
-    if (ReportMinimum && UseFieldDesc && !DetermineForCompleteObject)
-      return std::nullopt;
-
     // Can't read beyond the pointer decl desc.
-    if (!UseFieldDesc && !ReportMinimum && DeclDesc->getType()->isPointerType())
+    if (!ReportMinimum && DeclDesc->getType()->isPointerType())
       return std::nullopt;
 
     if (InvalidBase)

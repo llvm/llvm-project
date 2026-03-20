@@ -133,68 +133,42 @@ define i512 @shl_i512(i512 %a0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: shl_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %r14
-; AVX512F-NEXT:    pushq %rbx
 ; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512F-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovups %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; AVX512F-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %xmm0
+; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; AVX512F-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovdqu %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movl %eax, %ecx
 ; AVX512F-NEXT:    andl $63, %ecx
+; AVX512F-NEXT:    vmovq %rcx, %xmm1
+; AVX512F-NEXT:    vpbroadcastq %xmm1, %xmm1
 ; AVX512F-NEXT:    shrl $3, %eax
 ; AVX512F-NEXT:    andl $56, %eax
 ; AVX512F-NEXT:    negl %eax
-; AVX512F-NEXT:    movslq %eax, %r8
-; AVX512F-NEXT:    movq -56(%rsp,%r8), %rdx
-; AVX512F-NEXT:    movq -48(%rsp,%r8), %rax
-; AVX512F-NEXT:    movq %rax, %rsi
-; AVX512F-NEXT:    shldq %cl, %rdx, %rsi
-; AVX512F-NEXT:    movq -40(%rsp,%r8), %r10
-; AVX512F-NEXT:    movq %r10, %r9
-; AVX512F-NEXT:    shldq %cl, %rax, %r9
-; AVX512F-NEXT:    movq -32(%rsp,%r8), %rax
-; AVX512F-NEXT:    movq %rax, %r11
-; AVX512F-NEXT:    shldq %cl, %r10, %r11
-; AVX512F-NEXT:    movq -24(%rsp,%r8), %r10
-; AVX512F-NEXT:    movq %r10, %rbx
-; AVX512F-NEXT:    shldq %cl, %rax, %rbx
-; AVX512F-NEXT:    movq -16(%rsp,%r8), %rax
-; AVX512F-NEXT:    movq %rax, %r14
-; AVX512F-NEXT:    shldq %cl, %r10, %r14
-; AVX512F-NEXT:    movq -8(%rsp,%r8), %r10
-; AVX512F-NEXT:    shldq %cl, %rax, %r10
+; AVX512F-NEXT:    cltq
+; AVX512F-NEXT:    vmovdqu64 -64(%rsp,%rax), %zmm2
+; AVX512F-NEXT:    vpsllq %xmm1, %zmm2, %zmm3
+; AVX512F-NEXT:    valignq {{.*#+}} zmm0 = zmm0[7],zmm2[0,1,2,3,4,5,6]
+; AVX512F-NEXT:    vpsrlq $1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512F-NEXT:    vpsrlq %xmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    movq -64(%rsp,%r8), %rdi
-; AVX512F-NEXT:    shlxq %rcx, %rdi, %r8
-; AVX512F-NEXT:    # kill: def $cl killed $cl killed $rcx
-; AVX512F-NEXT:    shldq %cl, %rdi, %rdx
-; AVX512F-NEXT:    movq %r10, 56(%rax)
-; AVX512F-NEXT:    movq %r14, 48(%rax)
-; AVX512F-NEXT:    movq %rbx, 40(%rax)
-; AVX512F-NEXT:    movq %r11, 32(%rax)
-; AVX512F-NEXT:    movq %r9, 24(%rax)
-; AVX512F-NEXT:    movq %rsi, 16(%rax)
-; AVX512F-NEXT:    movq %rdx, 8(%rax)
-; AVX512F-NEXT:    movq %r8, (%rax)
-; AVX512F-NEXT:    addq $8, %rsp
-; AVX512F-NEXT:    popq %rbx
-; AVX512F-NEXT:    popq %r14
+; AVX512F-NEXT:    vporq %zmm0, %zmm3, %zmm0
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; AVX512F-NEXT:    popq %rcx
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shl_i512:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
+; AVX512VL-NEXT:    pushq %rax
 ; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %r10
@@ -210,53 +184,31 @@ define i512 @shl_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512VL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movl %eax, %ecx
 ; AVX512VL-NEXT:    andl $63, %ecx
+; AVX512VL-NEXT:    vpbroadcastq %rcx, %xmm0
 ; AVX512VL-NEXT:    shrl $3, %eax
 ; AVX512VL-NEXT:    andl $56, %eax
 ; AVX512VL-NEXT:    negl %eax
-; AVX512VL-NEXT:    movslq %eax, %r9
-; AVX512VL-NEXT:    movq -56(%rsp,%r9), %rdx
-; AVX512VL-NEXT:    movq -48(%rsp,%r9), %rax
-; AVX512VL-NEXT:    movq %rax, %rsi
-; AVX512VL-NEXT:    shldq %cl, %rdx, %rsi
-; AVX512VL-NEXT:    movq -40(%rsp,%r9), %r10
-; AVX512VL-NEXT:    movq %r10, %r8
-; AVX512VL-NEXT:    shldq %cl, %rax, %r8
-; AVX512VL-NEXT:    movq -32(%rsp,%r9), %r11
-; AVX512VL-NEXT:    movq %r11, %rbx
-; AVX512VL-NEXT:    shldq %cl, %r10, %rbx
+; AVX512VL-NEXT:    cltq
+; AVX512VL-NEXT:    vmovdqu64 -64(%rsp,%rax), %zmm1
+; AVX512VL-NEXT:    vpsllq %xmm0, %zmm1, %zmm2
+; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    valignq {{.*#+}} zmm1 = zmm3[7],zmm1[0,1,2,3,4,5,6]
+; AVX512VL-NEXT:    vpsrlq $1, %zmm1, %zmm1
+; AVX512VL-NEXT:    vpandnq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsrlq %xmm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    movq -24(%rsp,%r9), %rdi
-; AVX512VL-NEXT:    movq %rdi, %r10
-; AVX512VL-NEXT:    shldq %cl, %r11, %r10
-; AVX512VL-NEXT:    movq -64(%rsp,%r9), %r11
-; AVX512VL-NEXT:    movq -16(%rsp,%r9), %r14
-; AVX512VL-NEXT:    movq %r14, %r15
-; AVX512VL-NEXT:    shldq %cl, %rdi, %r15
-; AVX512VL-NEXT:    movq -8(%rsp,%r9), %rdi
-; AVX512VL-NEXT:    shldq %cl, %r14, %rdi
-; AVX512VL-NEXT:    shlxq %rcx, %r11, %r9
-; AVX512VL-NEXT:    # kill: def $cl killed $cl killed $rcx
-; AVX512VL-NEXT:    shldq %cl, %r11, %rdx
-; AVX512VL-NEXT:    movq %rdi, 56(%rax)
-; AVX512VL-NEXT:    movq %r15, 48(%rax)
-; AVX512VL-NEXT:    movq %r10, 40(%rax)
-; AVX512VL-NEXT:    movq %rbx, 32(%rax)
-; AVX512VL-NEXT:    movq %r8, 24(%rax)
-; AVX512VL-NEXT:    movq %rsi, 16(%rax)
-; AVX512VL-NEXT:    movq %rdx, 8(%rax)
-; AVX512VL-NEXT:    movq %r9, (%rax)
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
+; AVX512VL-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, 32(%rdi)
+; AVX512VL-NEXT:    vmovdqu %ymm0, (%rdi)
+; AVX512VL-NEXT:    popq %rcx
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: shl_i512:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %r15
-; AVX512VBMI-NEXT:    pushq %r14
-; AVX512VBMI-NEXT:    pushq %rbx
-; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; AVX512VBMI-NEXT:    pushq %rax
+; AVX512VBMI-NEXT:    movq %rdi, %rax
+; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; AVX512VBMI-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX512VBMI-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
@@ -265,50 +217,23 @@ define i512 @shl_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512VBMI-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; AVX512VBMI-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %eax, %ecx
-; AVX512VBMI-NEXT:    andl $63, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %eax
-; AVX512VBMI-NEXT:    andl $56, %eax
-; AVX512VBMI-NEXT:    negl %eax
-; AVX512VBMI-NEXT:    movslq %eax, %r9
-; AVX512VBMI-NEXT:    movq -56(%rsp,%r9), %rdx
-; AVX512VBMI-NEXT:    movq -48(%rsp,%r9), %rax
-; AVX512VBMI-NEXT:    movq %rax, %rsi
-; AVX512VBMI-NEXT:    shldq %cl, %rdx, %rsi
-; AVX512VBMI-NEXT:    movq -40(%rsp,%r9), %r10
-; AVX512VBMI-NEXT:    movq %r10, %r8
-; AVX512VBMI-NEXT:    shldq %cl, %rax, %r8
-; AVX512VBMI-NEXT:    movq -32(%rsp,%r9), %r11
-; AVX512VBMI-NEXT:    movq %r11, %rbx
-; AVX512VBMI-NEXT:    shldq %cl, %r10, %rbx
-; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    movq -24(%rsp,%r9), %rdi
-; AVX512VBMI-NEXT:    movq %rdi, %r10
-; AVX512VBMI-NEXT:    shldq %cl, %r11, %r10
-; AVX512VBMI-NEXT:    movq -64(%rsp,%r9), %r11
-; AVX512VBMI-NEXT:    movq -16(%rsp,%r9), %r14
-; AVX512VBMI-NEXT:    movq %r14, %r15
-; AVX512VBMI-NEXT:    shldq %cl, %rdi, %r15
-; AVX512VBMI-NEXT:    movq -8(%rsp,%r9), %rdi
-; AVX512VBMI-NEXT:    shldq %cl, %r14, %rdi
-; AVX512VBMI-NEXT:    shlxq %rcx, %r11, %r9
-; AVX512VBMI-NEXT:    # kill: def $cl killed $cl killed $rcx
-; AVX512VBMI-NEXT:    shldq %cl, %r11, %rdx
-; AVX512VBMI-NEXT:    movq %rdi, 56(%rax)
-; AVX512VBMI-NEXT:    movq %r15, 48(%rax)
-; AVX512VBMI-NEXT:    movq %r10, 40(%rax)
-; AVX512VBMI-NEXT:    movq %rbx, 32(%rax)
-; AVX512VBMI-NEXT:    movq %r8, 24(%rax)
-; AVX512VBMI-NEXT:    movq %rsi, 16(%rax)
-; AVX512VBMI-NEXT:    movq %rdx, 8(%rax)
-; AVX512VBMI-NEXT:    movq %r9, (%rax)
-; AVX512VBMI-NEXT:    popq %rbx
-; AVX512VBMI-NEXT:    popq %r14
-; AVX512VBMI-NEXT:    popq %r15
+; AVX512VBMI-NEXT:    vpbroadcastq %rdi, %zmm0
+; AVX512VBMI-NEXT:    movl %edi, %ecx
+; AVX512VBMI-NEXT:    shrl $3, %ecx
+; AVX512VBMI-NEXT:    andl $56, %ecx
+; AVX512VBMI-NEXT:    negl %ecx
+; AVX512VBMI-NEXT:    movslq %ecx, %rcx
+; AVX512VBMI-NEXT:    vmovdqu64 -64(%rsp,%rcx), %zmm1
+; AVX512VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm2 = zmm2[7],zmm1[0,1,2,3,4,5,6]
+; AVX512VBMI-NEXT:    vpshldvq %zmm0, %zmm2, %zmm1
+; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm1, 32(%rax)
+; AVX512VBMI-NEXT:    vmovdqu %ymm1, (%rax)
+; AVX512VBMI-NEXT:    popq %rcx
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %r = shl i512 %a0, %a1
@@ -428,16 +353,14 @@ define i512 @lshr_i512(i512 %a0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: lshr_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %r15
-; AVX512F-NEXT:    pushq %r14
-; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; AVX512F-NEXT:    pushq %rax
 ; AVX512F-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
-; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vmovdqu64 %zmm1, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; AVX512F-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    vmovups %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512F-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
@@ -445,44 +368,25 @@ define i512 @lshr_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512F-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movl %eax, %ecx
 ; AVX512F-NEXT:    andl $63, %ecx
+; AVX512F-NEXT:    vmovq %rcx, %xmm0
+; AVX512F-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; AVX512F-NEXT:    shrl $3, %eax
 ; AVX512F-NEXT:    andl $56, %eax
-; AVX512F-NEXT:    movq -112(%rsp,%rax), %rdx
-; AVX512F-NEXT:    movq -120(%rsp,%rax), %r9
-; AVX512F-NEXT:    movq %r9, %rsi
-; AVX512F-NEXT:    shrdq %cl, %rdx, %rsi
-; AVX512F-NEXT:    movq -104(%rsp,%rax), %r8
-; AVX512F-NEXT:    shrdq %cl, %r8, %rdx
-; AVX512F-NEXT:    movq -96(%rsp,%rax), %r10
-; AVX512F-NEXT:    shrdq %cl, %r10, %r8
-; AVX512F-NEXT:    movq -88(%rsp,%rax), %r11
-; AVX512F-NEXT:    shrdq %cl, %r11, %r10
-; AVX512F-NEXT:    movq -80(%rsp,%rax), %rbx
-; AVX512F-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512F-NEXT:    movq -128(%rsp,%rax), %r14
-; AVX512F-NEXT:    movq -72(%rsp,%rax), %r15
-; AVX512F-NEXT:    shrdq %cl, %r15, %rbx
-; AVX512F-NEXT:    shrdq %cl, %r9, %r14
+; AVX512F-NEXT:    vmovdqu64 -128(%rsp,%rax), %zmm2
+; AVX512F-NEXT:    vpsrlq %xmm0, %zmm2, %zmm3
+; AVX512F-NEXT:    valignq {{.*#+}} zmm1 = zmm2[1,2,3,4,5,6,7],zmm1[0]
+; AVX512F-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vpsllq %xmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    shrxq %rcx, %r15, %rcx
-; AVX512F-NEXT:    movq %rcx, 56(%rdi)
-; AVX512F-NEXT:    movq %rbx, 48(%rdi)
-; AVX512F-NEXT:    movq %r11, 40(%rdi)
-; AVX512F-NEXT:    movq %r10, 32(%rdi)
-; AVX512F-NEXT:    movq %r8, 24(%rdi)
-; AVX512F-NEXT:    movq %rdx, 16(%rdi)
-; AVX512F-NEXT:    movq %rsi, 8(%rdi)
-; AVX512F-NEXT:    movq %r14, (%rdi)
-; AVX512F-NEXT:    popq %rbx
-; AVX512F-NEXT:    popq %r14
-; AVX512F-NEXT:    popq %r15
+; AVX512F-NEXT:    vporq %zmm3, %zmm0, %zmm0
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; AVX512F-NEXT:    popq %rcx
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: lshr_i512:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
+; AVX512VL-NEXT:    pushq %rax
 ; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
@@ -498,91 +402,52 @@ define i512 @lshr_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512VL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movl %eax, %ecx
 ; AVX512VL-NEXT:    andl $63, %ecx
+; AVX512VL-NEXT:    vpbroadcastq %rcx, %xmm0
 ; AVX512VL-NEXT:    shrl $3, %eax
 ; AVX512VL-NEXT:    andl $56, %eax
-; AVX512VL-NEXT:    movq -112(%rsp,%rax), %rdx
-; AVX512VL-NEXT:    movq -120(%rsp,%rax), %r9
-; AVX512VL-NEXT:    movq %r9, %rsi
-; AVX512VL-NEXT:    shrdq %cl, %rdx, %rsi
-; AVX512VL-NEXT:    movq -104(%rsp,%rax), %r8
-; AVX512VL-NEXT:    shrdq %cl, %r8, %rdx
-; AVX512VL-NEXT:    movq -96(%rsp,%rax), %r10
-; AVX512VL-NEXT:    shrdq %cl, %r10, %r8
-; AVX512VL-NEXT:    movq -88(%rsp,%rax), %r11
-; AVX512VL-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VL-NEXT:    movq -80(%rsp,%rax), %rbx
-; AVX512VL-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VL-NEXT:    movq -72(%rsp,%rax), %r14
-; AVX512VL-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VL-NEXT:    movq -128(%rsp,%rax), %r15
-; AVX512VL-NEXT:    shrdq %cl, %r9, %r15
+; AVX512VL-NEXT:    vmovdqu64 -128(%rsp,%rax), %zmm1
+; AVX512VL-NEXT:    vpsrlq %xmm0, %zmm1, %zmm2
+; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    valignq {{.*#+}} zmm1 = zmm1[1,2,3,4,5,6,7],zmm3[0]
+; AVX512VL-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
+; AVX512VL-NEXT:    vpandnq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsllq %xmm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    shrxq %rcx, %r14, %rcx
-; AVX512VL-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VL-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VL-NEXT:    movq %r11, 40(%rdi)
-; AVX512VL-NEXT:    movq %r10, 32(%rdi)
-; AVX512VL-NEXT:    movq %r8, 24(%rdi)
-; AVX512VL-NEXT:    movq %rdx, 16(%rdi)
-; AVX512VL-NEXT:    movq %rsi, 8(%rdi)
-; AVX512VL-NEXT:    movq %r15, (%rdi)
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
+; AVX512VL-NEXT:    vporq %zmm2, %zmm0, %zmm0
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, 32(%rdi)
+; AVX512VL-NEXT:    vmovdqu %ymm0, (%rdi)
+; AVX512VL-NEXT:    popq %rcx
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: lshr_i512:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %r15
-; AVX512VBMI-NEXT:    pushq %r14
-; AVX512VBMI-NEXT:    pushq %rbx
+; AVX512VBMI-NEXT:    pushq %rax
+; AVX512VBMI-NEXT:    movq %rdi, %rax
 ; AVX512VBMI-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
-; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512VBMI-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512VBMI-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
+; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; AVX512VBMI-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512VBMI-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
+; AVX512VBMI-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    vmovups %xmm0, -{{[0-9]+}}(%rsp)
+; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; AVX512VBMI-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %eax, %ecx
-; AVX512VBMI-NEXT:    andl $63, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %eax
-; AVX512VBMI-NEXT:    andl $56, %eax
-; AVX512VBMI-NEXT:    movq -112(%rsp,%rax), %rdx
-; AVX512VBMI-NEXT:    movq -120(%rsp,%rax), %r9
-; AVX512VBMI-NEXT:    movq %r9, %rsi
-; AVX512VBMI-NEXT:    shrdq %cl, %rdx, %rsi
-; AVX512VBMI-NEXT:    movq -104(%rsp,%rax), %r8
-; AVX512VBMI-NEXT:    shrdq %cl, %r8, %rdx
-; AVX512VBMI-NEXT:    movq -96(%rsp,%rax), %r10
-; AVX512VBMI-NEXT:    shrdq %cl, %r10, %r8
-; AVX512VBMI-NEXT:    movq -88(%rsp,%rax), %r11
-; AVX512VBMI-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VBMI-NEXT:    movq -80(%rsp,%rax), %rbx
-; AVX512VBMI-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VBMI-NEXT:    movq -72(%rsp,%rax), %r14
-; AVX512VBMI-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rax), %r15
-; AVX512VBMI-NEXT:    shrdq %cl, %r9, %r15
-; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    shrxq %rcx, %r14, %rcx
-; AVX512VBMI-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VBMI-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VBMI-NEXT:    movq %r11, 40(%rdi)
-; AVX512VBMI-NEXT:    movq %r10, 32(%rdi)
-; AVX512VBMI-NEXT:    movq %r8, 24(%rdi)
-; AVX512VBMI-NEXT:    movq %rdx, 16(%rdi)
-; AVX512VBMI-NEXT:    movq %rsi, 8(%rdi)
-; AVX512VBMI-NEXT:    movq %r15, (%rdi)
-; AVX512VBMI-NEXT:    popq %rbx
-; AVX512VBMI-NEXT:    popq %r14
-; AVX512VBMI-NEXT:    popq %r15
+; AVX512VBMI-NEXT:    vpbroadcastq %rdi, %zmm0
+; AVX512VBMI-NEXT:    # kill: def $edi killed $edi killed $rdi def $rdi
+; AVX512VBMI-NEXT:    shrl $3, %edi
+; AVX512VBMI-NEXT:    andl $56, %edi
+; AVX512VBMI-NEXT:    vmovdqu64 -128(%rsp,%rdi), %zmm1
+; AVX512VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm2 = zmm1[1,2,3,4,5,6,7],zmm2[0]
+; AVX512VBMI-NEXT:    vpshrdvq %zmm0, %zmm2, %zmm1
+; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm1, 32(%rax)
+; AVX512VBMI-NEXT:    vmovdqu %ymm1, (%rax)
+; AVX512VBMI-NEXT:    popq %rcx
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %r = lshr i512 %a0, %a1
@@ -711,14 +576,12 @@ define i512 @ashr_i512(i512 %a0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: ashr_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %r15
-; AVX512F-NEXT:    pushq %r14
-; AVX512F-NEXT:    pushq %rbx
+; AVX512F-NEXT:    pushq %rax
+; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512F-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX512F-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    vmovups %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512F-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
@@ -735,49 +598,31 @@ define i512 @ashr_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512F-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movl %eax, %ecx
 ; AVX512F-NEXT:    andl $63, %ecx
+; AVX512F-NEXT:    vmovq %rcx, %xmm0
+; AVX512F-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; AVX512F-NEXT:    shrl $3, %eax
 ; AVX512F-NEXT:    andl $56, %eax
-; AVX512F-NEXT:    movq -112(%rsp,%rax), %rdx
-; AVX512F-NEXT:    movq -120(%rsp,%rax), %r9
-; AVX512F-NEXT:    movq %r9, %rsi
-; AVX512F-NEXT:    shrdq %cl, %rdx, %rsi
-; AVX512F-NEXT:    movq -104(%rsp,%rax), %r8
-; AVX512F-NEXT:    shrdq %cl, %r8, %rdx
-; AVX512F-NEXT:    movq -96(%rsp,%rax), %r10
-; AVX512F-NEXT:    shrdq %cl, %r10, %r8
-; AVX512F-NEXT:    movq -88(%rsp,%rax), %r11
-; AVX512F-NEXT:    shrdq %cl, %r11, %r10
-; AVX512F-NEXT:    movq -80(%rsp,%rax), %rbx
-; AVX512F-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512F-NEXT:    movq -128(%rsp,%rax), %r14
-; AVX512F-NEXT:    movq -72(%rsp,%rax), %r15
-; AVX512F-NEXT:    shrdq %cl, %r15, %rbx
-; AVX512F-NEXT:    shrdq %cl, %r9, %r14
+; AVX512F-NEXT:    vmovdqu64 -128(%rsp,%rax), %zmm1
+; AVX512F-NEXT:    vpsrlq %xmm0, %zmm1, %zmm2
+; AVX512F-NEXT:    vpsraq $63, -72(%rsp,%rax){1to8}, %zmm3
+; AVX512F-NEXT:    valignq {{.*#+}} zmm1 = zmm1[1,2,3,4,5,6,7],zmm3[0]
+; AVX512F-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vpsllq %xmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    sarxq %rcx, %r15, %rcx
-; AVX512F-NEXT:    movq %rcx, 56(%rdi)
-; AVX512F-NEXT:    movq %rbx, 48(%rdi)
-; AVX512F-NEXT:    movq %r11, 40(%rdi)
-; AVX512F-NEXT:    movq %r10, 32(%rdi)
-; AVX512F-NEXT:    movq %r8, 24(%rdi)
-; AVX512F-NEXT:    movq %rdx, 16(%rdi)
-; AVX512F-NEXT:    movq %rsi, 8(%rdi)
-; AVX512F-NEXT:    movq %r14, (%rdi)
-; AVX512F-NEXT:    popq %rbx
-; AVX512F-NEXT:    popq %r14
-; AVX512F-NEXT:    popq %r15
+; AVX512F-NEXT:    vporq %zmm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; AVX512F-NEXT:    popq %rcx
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: ashr_i512:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
+; AVX512VL-NEXT:    pushq %rax
+; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX512VL-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    vmovups %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512VL-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
@@ -794,49 +639,33 @@ define i512 @ashr_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512VL-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    movl %eax, %ecx
 ; AVX512VL-NEXT:    andl $63, %ecx
+; AVX512VL-NEXT:    vpbroadcastq %rcx, %xmm0
 ; AVX512VL-NEXT:    shrl $3, %eax
 ; AVX512VL-NEXT:    andl $56, %eax
-; AVX512VL-NEXT:    movq -112(%rsp,%rax), %rdx
-; AVX512VL-NEXT:    movq -120(%rsp,%rax), %r9
-; AVX512VL-NEXT:    movq %r9, %rsi
-; AVX512VL-NEXT:    shrdq %cl, %rdx, %rsi
-; AVX512VL-NEXT:    movq -104(%rsp,%rax), %r8
-; AVX512VL-NEXT:    shrdq %cl, %r8, %rdx
-; AVX512VL-NEXT:    movq -96(%rsp,%rax), %r10
-; AVX512VL-NEXT:    shrdq %cl, %r10, %r8
-; AVX512VL-NEXT:    movq -88(%rsp,%rax), %r11
-; AVX512VL-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VL-NEXT:    movq -80(%rsp,%rax), %rbx
-; AVX512VL-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VL-NEXT:    movq -72(%rsp,%rax), %r14
-; AVX512VL-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VL-NEXT:    movq -128(%rsp,%rax), %r15
-; AVX512VL-NEXT:    shrdq %cl, %r9, %r15
+; AVX512VL-NEXT:    vmovdqu64 -128(%rsp,%rax), %zmm1
+; AVX512VL-NEXT:    vpsrlq %xmm0, %zmm1, %zmm2
+; AVX512VL-NEXT:    vpsraq $63, -72(%rsp,%rax){1to2}, %xmm3
+; AVX512VL-NEXT:    valignq {{.*#+}} zmm1 = zmm1[1,2,3,4,5,6,7],zmm3[0]
+; AVX512VL-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
+; AVX512VL-NEXT:    vpandnq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsllq %xmm0, %zmm1, %zmm0
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    sarxq %rcx, %r14, %rcx
-; AVX512VL-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VL-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VL-NEXT:    movq %r11, 40(%rdi)
-; AVX512VL-NEXT:    movq %r10, 32(%rdi)
-; AVX512VL-NEXT:    movq %r8, 24(%rdi)
-; AVX512VL-NEXT:    movq %rdx, 16(%rdi)
-; AVX512VL-NEXT:    movq %rsi, 8(%rdi)
-; AVX512VL-NEXT:    movq %r15, (%rdi)
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
+; AVX512VL-NEXT:    vporq %zmm2, %zmm0, %zmm0
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, 32(%rdi)
+; AVX512VL-NEXT:    vmovdqu %ymm0, (%rdi)
+; AVX512VL-NEXT:    popq %rcx
+; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: ashr_i512:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %r15
-; AVX512VBMI-NEXT:    pushq %r14
-; AVX512VBMI-NEXT:    pushq %rbx
+; AVX512VBMI-NEXT:    pushq %rax
+; AVX512VBMI-NEXT:    movq %rdi, %rax
+; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; AVX512VBMI-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX512VBMI-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    vmovups %xmm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512VBMI-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
@@ -851,39 +680,18 @@ define i512 @ashr_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512VBMI-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    movq %r10, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %eax, %ecx
-; AVX512VBMI-NEXT:    andl $63, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %eax
-; AVX512VBMI-NEXT:    andl $56, %eax
-; AVX512VBMI-NEXT:    movq -112(%rsp,%rax), %rdx
-; AVX512VBMI-NEXT:    movq -120(%rsp,%rax), %r9
-; AVX512VBMI-NEXT:    movq %r9, %rsi
-; AVX512VBMI-NEXT:    shrdq %cl, %rdx, %rsi
-; AVX512VBMI-NEXT:    movq -104(%rsp,%rax), %r8
-; AVX512VBMI-NEXT:    shrdq %cl, %r8, %rdx
-; AVX512VBMI-NEXT:    movq -96(%rsp,%rax), %r10
-; AVX512VBMI-NEXT:    shrdq %cl, %r10, %r8
-; AVX512VBMI-NEXT:    movq -88(%rsp,%rax), %r11
-; AVX512VBMI-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VBMI-NEXT:    movq -80(%rsp,%rax), %rbx
-; AVX512VBMI-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VBMI-NEXT:    movq -72(%rsp,%rax), %r14
-; AVX512VBMI-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rax), %r15
-; AVX512VBMI-NEXT:    shrdq %cl, %r9, %r15
-; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    sarxq %rcx, %r14, %rcx
-; AVX512VBMI-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VBMI-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VBMI-NEXT:    movq %r11, 40(%rdi)
-; AVX512VBMI-NEXT:    movq %r10, 32(%rdi)
-; AVX512VBMI-NEXT:    movq %r8, 24(%rdi)
-; AVX512VBMI-NEXT:    movq %rdx, 16(%rdi)
-; AVX512VBMI-NEXT:    movq %rsi, 8(%rdi)
-; AVX512VBMI-NEXT:    movq %r15, (%rdi)
-; AVX512VBMI-NEXT:    popq %rbx
-; AVX512VBMI-NEXT:    popq %r14
-; AVX512VBMI-NEXT:    popq %r15
+; AVX512VBMI-NEXT:    vpbroadcastq %rdi, %zmm0
+; AVX512VBMI-NEXT:    # kill: def $edi killed $edi killed $rdi def $rdi
+; AVX512VBMI-NEXT:    shrl $3, %edi
+; AVX512VBMI-NEXT:    andl $56, %edi
+; AVX512VBMI-NEXT:    vpsraq $63, -72(%rsp,%rdi){1to2}, %xmm1
+; AVX512VBMI-NEXT:    vmovdqu64 -128(%rsp,%rdi), %zmm2
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm1 = zmm2[1,2,3,4,5,6,7],zmm1[0]
+; AVX512VBMI-NEXT:    vpshrdvq %zmm0, %zmm1, %zmm2
+; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm2, 32(%rax)
+; AVX512VBMI-NEXT:    vmovdqu %ymm2, (%rax)
+; AVX512VBMI-NEXT:    popq %rcx
+; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %r = ashr i512 %a0, %a1
   ret i512 %r
@@ -1008,162 +816,64 @@ define i512 @shl_i512_load(ptr %p0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: shl_i512_load:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %r14
-; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    vmovups (%rsi), %zmm0
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movl %edx, %ecx
-; AVX512F-NEXT:    andl $63, %ecx
-; AVX512F-NEXT:    shrl $3, %edx
-; AVX512F-NEXT:    andl $56, %edx
-; AVX512F-NEXT:    negl %edx
-; AVX512F-NEXT:    movslq %edx, %r8
-; AVX512F-NEXT:    movq -56(%rsp,%r8), %rdx
-; AVX512F-NEXT:    movq -48(%rsp,%r8), %rax
-; AVX512F-NEXT:    movq %rax, %rsi
-; AVX512F-NEXT:    shldq %cl, %rdx, %rsi
-; AVX512F-NEXT:    movq -40(%rsp,%r8), %r10
-; AVX512F-NEXT:    movq %r10, %r9
-; AVX512F-NEXT:    shldq %cl, %rax, %r9
-; AVX512F-NEXT:    movq -32(%rsp,%r8), %rax
-; AVX512F-NEXT:    movq %rax, %r11
-; AVX512F-NEXT:    shldq %cl, %r10, %r11
-; AVX512F-NEXT:    movq -24(%rsp,%r8), %r10
-; AVX512F-NEXT:    movq %r10, %rbx
-; AVX512F-NEXT:    shldq %cl, %rax, %rbx
-; AVX512F-NEXT:    movq -16(%rsp,%r8), %rax
-; AVX512F-NEXT:    movq %rax, %r14
-; AVX512F-NEXT:    shldq %cl, %r10, %r14
-; AVX512F-NEXT:    movq -8(%rsp,%r8), %r10
-; AVX512F-NEXT:    shldq %cl, %rax, %r10
+; AVX512F-NEXT:    movl %edx, %eax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [63,63]
+; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm2
+; AVX512F-NEXT:    shrl $6, %edx
+; AVX512F-NEXT:    movl $-1, %eax
+; AVX512F-NEXT:    shlxl %edx, %eax, %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpexpandq (%rsi), %zmm3 {%k1} {z}
+; AVX512F-NEXT:    vpsllq %xmm2, %zmm3, %zmm2
+; AVX512F-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    valignq {{.*#+}} zmm1 = zmm1[7],zmm3[0,1,2,3,4,5,6]
+; AVX512F-NEXT:    vpsrlq $1, %zmm1, %zmm1
+; AVX512F-NEXT:    vpsrlq %xmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    movq -64(%rsp,%r8), %rdi
-; AVX512F-NEXT:    shlxq %rcx, %rdi, %r8
-; AVX512F-NEXT:    # kill: def $cl killed $cl killed $rcx
-; AVX512F-NEXT:    shldq %cl, %rdi, %rdx
-; AVX512F-NEXT:    movq %r10, 56(%rax)
-; AVX512F-NEXT:    movq %r14, 48(%rax)
-; AVX512F-NEXT:    movq %rbx, 40(%rax)
-; AVX512F-NEXT:    movq %r11, 32(%rax)
-; AVX512F-NEXT:    movq %r9, 24(%rax)
-; AVX512F-NEXT:    movq %rsi, 16(%rax)
-; AVX512F-NEXT:    movq %rdx, 8(%rax)
-; AVX512F-NEXT:    movq %r8, (%rax)
-; AVX512F-NEXT:    addq $8, %rsp
-; AVX512F-NEXT:    popq %rbx
-; AVX512F-NEXT:    popq %r14
+; AVX512F-NEXT:    vporq %zmm0, %zmm2, %zmm0
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shl_i512_load:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    vmovups (%rsi), %ymm0
-; AVX512VL-NEXT:    vmovups 32(%rsi), %ymm1
-; AVX512VL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl %edx, %ecx
-; AVX512VL-NEXT:    andl $63, %ecx
-; AVX512VL-NEXT:    shrl $3, %edx
-; AVX512VL-NEXT:    andl $56, %edx
-; AVX512VL-NEXT:    negl %edx
-; AVX512VL-NEXT:    movslq %edx, %r9
-; AVX512VL-NEXT:    movq -56(%rsp,%r9), %rdx
-; AVX512VL-NEXT:    movq -48(%rsp,%r9), %rax
-; AVX512VL-NEXT:    movq %rax, %rsi
-; AVX512VL-NEXT:    shldq %cl, %rdx, %rsi
-; AVX512VL-NEXT:    movq -40(%rsp,%r9), %r10
-; AVX512VL-NEXT:    movq %r10, %r8
-; AVX512VL-NEXT:    shldq %cl, %rax, %r8
-; AVX512VL-NEXT:    movq -32(%rsp,%r9), %r11
-; AVX512VL-NEXT:    movq %r11, %rbx
-; AVX512VL-NEXT:    shldq %cl, %r10, %rbx
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    movq -24(%rsp,%r9), %rdi
-; AVX512VL-NEXT:    movq %rdi, %r10
-; AVX512VL-NEXT:    shldq %cl, %r11, %r10
-; AVX512VL-NEXT:    movq -64(%rsp,%r9), %r11
-; AVX512VL-NEXT:    movq -16(%rsp,%r9), %r14
-; AVX512VL-NEXT:    movq %r14, %r15
-; AVX512VL-NEXT:    shldq %cl, %rdi, %r15
-; AVX512VL-NEXT:    movq -8(%rsp,%r9), %rdi
-; AVX512VL-NEXT:    shldq %cl, %r14, %rdi
-; AVX512VL-NEXT:    shlxq %rcx, %r11, %r9
-; AVX512VL-NEXT:    # kill: def $cl killed $cl killed $rcx
-; AVX512VL-NEXT:    shldq %cl, %r11, %rdx
-; AVX512VL-NEXT:    movq %rdi, 56(%rax)
-; AVX512VL-NEXT:    movq %r15, 48(%rax)
-; AVX512VL-NEXT:    movq %r10, 40(%rax)
-; AVX512VL-NEXT:    movq %rbx, 32(%rax)
-; AVX512VL-NEXT:    movq %r8, 24(%rax)
-; AVX512VL-NEXT:    movq %rsi, 16(%rax)
-; AVX512VL-NEXT:    movq %rdx, 8(%rax)
-; AVX512VL-NEXT:    movq %r9, (%rax)
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
+; AVX512VL-NEXT:    movl %edx, %ecx
+; AVX512VL-NEXT:    vpbroadcastq %rcx, %xmm0
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [63,63]
+; AVX512VL-NEXT:    shrl $6, %edx
+; AVX512VL-NEXT:    movl $-1, %ecx
+; AVX512VL-NEXT:    shlxl %edx, %ecx, %ecx
+; AVX512VL-NEXT:    kmovd %ecx, %k1
+; AVX512VL-NEXT:    vpexpandq (%rsi), %zmm2 {%k1} {z}
+; AVX512VL-NEXT:    vpand %xmm1, %xmm0, %xmm3
+; AVX512VL-NEXT:    vpsllq %xmm3, %zmm2, %zmm3
+; AVX512VL-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    valignq {{.*#+}} zmm1 = zmm1[7],zmm2[0,1,2,3,4,5,6]
+; AVX512VL-NEXT:    vpsrlq $1, %zmm1, %zmm1
+; AVX512VL-NEXT:    vpsrlq %xmm0, %zmm1, %zmm0
+; AVX512VL-NEXT:    vporq %zmm0, %zmm3, %zmm0
+; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: shl_i512_load:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %r15
-; AVX512VBMI-NEXT:    pushq %r14
-; AVX512VBMI-NEXT:    pushq %rbx
-; AVX512VBMI-NEXT:    vmovups (%rsi), %ymm0
-; AVX512VBMI-NEXT:    vmovups 32(%rsi), %ymm1
-; AVX512VBMI-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512VBMI-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %edx, %ecx
-; AVX512VBMI-NEXT:    andl $63, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %edx
-; AVX512VBMI-NEXT:    andl $56, %edx
-; AVX512VBMI-NEXT:    negl %edx
-; AVX512VBMI-NEXT:    movslq %edx, %r9
-; AVX512VBMI-NEXT:    movq -56(%rsp,%r9), %rdx
-; AVX512VBMI-NEXT:    movq -48(%rsp,%r9), %rax
-; AVX512VBMI-NEXT:    movq %rax, %rsi
-; AVX512VBMI-NEXT:    shldq %cl, %rdx, %rsi
-; AVX512VBMI-NEXT:    movq -40(%rsp,%r9), %r10
-; AVX512VBMI-NEXT:    movq %r10, %r8
-; AVX512VBMI-NEXT:    shldq %cl, %rax, %r8
-; AVX512VBMI-NEXT:    movq -32(%rsp,%r9), %r11
-; AVX512VBMI-NEXT:    movq %r11, %rbx
-; AVX512VBMI-NEXT:    shldq %cl, %r10, %rbx
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    movq -24(%rsp,%r9), %rdi
-; AVX512VBMI-NEXT:    movq %rdi, %r10
-; AVX512VBMI-NEXT:    shldq %cl, %r11, %r10
-; AVX512VBMI-NEXT:    movq -64(%rsp,%r9), %r11
-; AVX512VBMI-NEXT:    movq -16(%rsp,%r9), %r14
-; AVX512VBMI-NEXT:    movq %r14, %r15
-; AVX512VBMI-NEXT:    shldq %cl, %rdi, %r15
-; AVX512VBMI-NEXT:    movq -8(%rsp,%r9), %rdi
-; AVX512VBMI-NEXT:    shldq %cl, %r14, %rdi
-; AVX512VBMI-NEXT:    shlxq %rcx, %r11, %r9
-; AVX512VBMI-NEXT:    # kill: def $cl killed $cl killed $rcx
-; AVX512VBMI-NEXT:    shldq %cl, %r11, %rdx
-; AVX512VBMI-NEXT:    movq %rdi, 56(%rax)
-; AVX512VBMI-NEXT:    movq %r15, 48(%rax)
-; AVX512VBMI-NEXT:    movq %r10, 40(%rax)
-; AVX512VBMI-NEXT:    movq %rbx, 32(%rax)
-; AVX512VBMI-NEXT:    movq %r8, 24(%rax)
-; AVX512VBMI-NEXT:    movq %rsi, 16(%rax)
-; AVX512VBMI-NEXT:    movq %rdx, 8(%rax)
-; AVX512VBMI-NEXT:    movq %r9, (%rax)
-; AVX512VBMI-NEXT:    popq %rbx
-; AVX512VBMI-NEXT:    popq %r14
-; AVX512VBMI-NEXT:    popq %r15
+; AVX512VBMI-NEXT:    movl %edx, %ecx
+; AVX512VBMI-NEXT:    shrl $6, %ecx
+; AVX512VBMI-NEXT:    movl $-1, %edi
+; AVX512VBMI-NEXT:    shlxl %ecx, %edi, %ecx
+; AVX512VBMI-NEXT:    kmovd %ecx, %k1
+; AVX512VBMI-NEXT:    vpexpandq (%rsi), %zmm0 {%k1} {z}
+; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm1
+; AVX512VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm2 = zmm2[7],zmm0[0,1,2,3,4,5,6]
+; AVX512VBMI-NEXT:    vpshldvq %zmm1, %zmm2, %zmm0
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %a0 = load i512, ptr %p0
@@ -1276,141 +986,67 @@ define i512 @lshr_i512_load(ptr %p0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: lshr_i512_load:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %r14
-; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    vmovups (%rsi), %zmm0
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movl %edx, %ecx
-; AVX512F-NEXT:    andl $63, %ecx
-; AVX512F-NEXT:    shrl $3, %edx
-; AVX512F-NEXT:    andl $56, %edx
-; AVX512F-NEXT:    movq -112(%rsp,%rdx), %rsi
-; AVX512F-NEXT:    movq -120(%rsp,%rdx), %rax
-; AVX512F-NEXT:    movq %rax, %r8
-; AVX512F-NEXT:    shrdq %cl, %rsi, %r8
-; AVX512F-NEXT:    movq -104(%rsp,%rdx), %r9
-; AVX512F-NEXT:    shrdq %cl, %r9, %rsi
-; AVX512F-NEXT:    movq -96(%rsp,%rdx), %r10
-; AVX512F-NEXT:    shrdq %cl, %r10, %r9
-; AVX512F-NEXT:    movq -88(%rsp,%rdx), %r11
-; AVX512F-NEXT:    shrdq %cl, %r11, %r10
-; AVX512F-NEXT:    movq -80(%rsp,%rdx), %rbx
-; AVX512F-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512F-NEXT:    movq -128(%rsp,%rdx), %r14
-; AVX512F-NEXT:    movq -72(%rsp,%rdx), %rdx
-; AVX512F-NEXT:    shrdq %cl, %rdx, %rbx
-; AVX512F-NEXT:    shrdq %cl, %rax, %r14
+; AVX512F-NEXT:    vmovdqu64 (%rsi), %zmm0
+; AVX512F-NEXT:    movl %edx, %eax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vpbroadcastq %xmm1, %xmm1
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [63,63]
+; AVX512F-NEXT:    vpand %xmm2, %xmm1, %xmm3
+; AVX512F-NEXT:    shrl $6, %edx
+; AVX512F-NEXT:    movl $-1, %eax
+; AVX512F-NEXT:    shlxl %edx, %eax, %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpsrlq %xmm3, %zmm0, %zmm3
+; AVX512F-NEXT:    vpandn %xmm2, %xmm1, %xmm1
+; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512F-NEXT:    valignq {{.*#+}} zmm0 = zmm0[1,2,3,4,5,6,7],zmm2[0]
+; AVX512F-NEXT:    vpaddq %zmm0, %zmm0, %zmm0
+; AVX512F-NEXT:    vpsllq %xmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    shrxq %rcx, %rdx, %rcx
-; AVX512F-NEXT:    movq %rcx, 56(%rdi)
-; AVX512F-NEXT:    movq %rbx, 48(%rdi)
-; AVX512F-NEXT:    movq %r11, 40(%rdi)
-; AVX512F-NEXT:    movq %r10, 32(%rdi)
-; AVX512F-NEXT:    movq %r9, 24(%rdi)
-; AVX512F-NEXT:    movq %rsi, 16(%rdi)
-; AVX512F-NEXT:    movq %r8, 8(%rdi)
-; AVX512F-NEXT:    movq %r14, (%rdi)
-; AVX512F-NEXT:    addq $8, %rsp
-; AVX512F-NEXT:    popq %rbx
-; AVX512F-NEXT:    popq %r14
+; AVX512F-NEXT:    vporq %zmm3, %zmm0, %zmm0
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: lshr_i512_load:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    pushq %rax
-; AVX512VL-NEXT:    vmovups (%rsi), %ymm0
-; AVX512VL-NEXT:    vmovups 32(%rsi), %ymm1
-; AVX512VL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl %edx, %ecx
-; AVX512VL-NEXT:    andl $63, %ecx
-; AVX512VL-NEXT:    shrl $3, %edx
-; AVX512VL-NEXT:    andl $56, %edx
-; AVX512VL-NEXT:    movq -112(%rsp,%rdx), %rsi
-; AVX512VL-NEXT:    movq -120(%rsp,%rdx), %rax
-; AVX512VL-NEXT:    movq %rax, %r8
-; AVX512VL-NEXT:    shrdq %cl, %rsi, %r8
-; AVX512VL-NEXT:    movq -104(%rsp,%rdx), %r9
-; AVX512VL-NEXT:    shrdq %cl, %r9, %rsi
-; AVX512VL-NEXT:    movq -96(%rsp,%rdx), %r10
-; AVX512VL-NEXT:    shrdq %cl, %r10, %r9
-; AVX512VL-NEXT:    movq -88(%rsp,%rdx), %r11
-; AVX512VL-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VL-NEXT:    movq -80(%rsp,%rdx), %rbx
-; AVX512VL-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VL-NEXT:    movq -72(%rsp,%rdx), %r14
-; AVX512VL-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VL-NEXT:    movq -128(%rsp,%rdx), %rdx
-; AVX512VL-NEXT:    shrdq %cl, %rax, %rdx
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    shrxq %rcx, %r14, %rcx
-; AVX512VL-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VL-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VL-NEXT:    movq %r11, 40(%rdi)
-; AVX512VL-NEXT:    movq %r10, 32(%rdi)
-; AVX512VL-NEXT:    movq %r9, 24(%rdi)
-; AVX512VL-NEXT:    movq %rsi, 16(%rdi)
-; AVX512VL-NEXT:    movq %r8, 8(%rdi)
-; AVX512VL-NEXT:    movq %rdx, (%rdi)
-; AVX512VL-NEXT:    addq $8, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
+; AVX512VL-NEXT:    vmovdqu64 (%rsi), %zmm0
+; AVX512VL-NEXT:    movl %edx, %ecx
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [63,63]
+; AVX512VL-NEXT:    vpbroadcastq %rcx, %xmm2
+; AVX512VL-NEXT:    shrl $6, %edx
+; AVX512VL-NEXT:    movl $-1, %ecx
+; AVX512VL-NEXT:    shlxl %edx, %ecx, %ecx
+; AVX512VL-NEXT:    kmovd %ecx, %k1
+; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpand %xmm1, %xmm2, %xmm3
+; AVX512VL-NEXT:    vpsrlq %xmm3, %zmm0, %zmm3
+; AVX512VL-NEXT:    vpandn %xmm1, %xmm2, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    valignq {{.*#+}} zmm0 = zmm0[1,2,3,4,5,6,7],zmm2[0]
+; AVX512VL-NEXT:    vpaddq %zmm0, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpsllq %xmm1, %zmm0, %zmm0
+; AVX512VL-NEXT:    vporq %zmm3, %zmm0, %zmm0
+; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: lshr_i512_load:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %r14
-; AVX512VBMI-NEXT:    pushq %rbx
-; AVX512VBMI-NEXT:    pushq %rax
-; AVX512VBMI-NEXT:    vmovups (%rsi), %ymm0
-; AVX512VBMI-NEXT:    vmovups 32(%rsi), %ymm1
-; AVX512VBMI-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512VBMI-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %edx, %ecx
-; AVX512VBMI-NEXT:    andl $63, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %edx
-; AVX512VBMI-NEXT:    andl $56, %edx
-; AVX512VBMI-NEXT:    movq -112(%rsp,%rdx), %rsi
-; AVX512VBMI-NEXT:    movq -120(%rsp,%rdx), %rax
-; AVX512VBMI-NEXT:    movq %rax, %r8
-; AVX512VBMI-NEXT:    shrdq %cl, %rsi, %r8
-; AVX512VBMI-NEXT:    movq -104(%rsp,%rdx), %r9
-; AVX512VBMI-NEXT:    shrdq %cl, %r9, %rsi
-; AVX512VBMI-NEXT:    movq -96(%rsp,%rdx), %r10
-; AVX512VBMI-NEXT:    shrdq %cl, %r10, %r9
-; AVX512VBMI-NEXT:    movq -88(%rsp,%rdx), %r11
-; AVX512VBMI-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VBMI-NEXT:    movq -80(%rsp,%rdx), %rbx
-; AVX512VBMI-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VBMI-NEXT:    movq -72(%rsp,%rdx), %r14
-; AVX512VBMI-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rdx), %rdx
-; AVX512VBMI-NEXT:    shrdq %cl, %rax, %rdx
+; AVX512VBMI-NEXT:    vmovdqu64 (%rsi), %zmm0
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    shrxq %rcx, %r14, %rcx
-; AVX512VBMI-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VBMI-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VBMI-NEXT:    movq %r11, 40(%rdi)
-; AVX512VBMI-NEXT:    movq %r10, 32(%rdi)
-; AVX512VBMI-NEXT:    movq %r9, 24(%rdi)
-; AVX512VBMI-NEXT:    movq %rsi, 16(%rdi)
-; AVX512VBMI-NEXT:    movq %r8, 8(%rdi)
-; AVX512VBMI-NEXT:    movq %rdx, (%rdi)
-; AVX512VBMI-NEXT:    addq $8, %rsp
-; AVX512VBMI-NEXT:    popq %rbx
-; AVX512VBMI-NEXT:    popq %r14
+; AVX512VBMI-NEXT:    movl %edx, %ecx
+; AVX512VBMI-NEXT:    shrl $6, %ecx
+; AVX512VBMI-NEXT:    movl $-1, %esi
+; AVX512VBMI-NEXT:    shlxl %ecx, %esi, %ecx
+; AVX512VBMI-NEXT:    kmovd %ecx, %k1
+; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm1
+; AVX512VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm2 = zmm0[1,2,3,4,5,6,7],zmm2[0]
+; AVX512VBMI-NEXT:    vpshrdvq %zmm1, %zmm2, %zmm0
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %a0 = load i512, ptr %p0
@@ -1539,174 +1175,76 @@ define i512 @ashr_i512_load(ptr %p0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: ashr_i512_load:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %r14
-; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    vmovups (%rsi), %ymm0
-; AVX512F-NEXT:    vmovaps 32(%rsi), %xmm1
-; AVX512F-NEXT:    movq 48(%rsi), %rax
-; AVX512F-NEXT:    movq 56(%rsi), %rcx
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    sarq $63, %rcx
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movl %edx, %ecx
-; AVX512F-NEXT:    andl $63, %ecx
-; AVX512F-NEXT:    shrl $3, %edx
-; AVX512F-NEXT:    andl $56, %edx
-; AVX512F-NEXT:    movq -112(%rsp,%rdx), %rsi
-; AVX512F-NEXT:    movq -120(%rsp,%rdx), %rax
-; AVX512F-NEXT:    movq %rax, %r8
-; AVX512F-NEXT:    shrdq %cl, %rsi, %r8
-; AVX512F-NEXT:    movq -104(%rsp,%rdx), %r9
-; AVX512F-NEXT:    shrdq %cl, %r9, %rsi
-; AVX512F-NEXT:    movq -96(%rsp,%rdx), %r10
-; AVX512F-NEXT:    shrdq %cl, %r10, %r9
-; AVX512F-NEXT:    movq -88(%rsp,%rdx), %r11
-; AVX512F-NEXT:    shrdq %cl, %r11, %r10
-; AVX512F-NEXT:    movq -80(%rsp,%rdx), %rbx
-; AVX512F-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512F-NEXT:    movq -128(%rsp,%rdx), %r14
-; AVX512F-NEXT:    movq -72(%rsp,%rdx), %rdx
-; AVX512F-NEXT:    shrdq %cl, %rdx, %rbx
-; AVX512F-NEXT:    shrdq %cl, %rax, %r14
+; AVX512F-NEXT:    vmovdqu64 (%rsi), %zmm0
+; AVX512F-NEXT:    vpsraq $63, %zmm0, %zmm1
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [7,7,7,7,7,7,7,7]
+; AVX512F-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512F-NEXT:    movl %edx, %eax
+; AVX512F-NEXT:    shrl $6, %edx
+; AVX512F-NEXT:    movl $-1, %ecx
+; AVX512F-NEXT:    shlxl %edx, %ecx, %ecx
+; AVX512F-NEXT:    kmovw %ecx, %k1
+; AVX512F-NEXT:    vmovdqa64 %zmm1, %zmm2
+; AVX512F-NEXT:    vpcompressq %zmm0, %zmm2 {%k1}
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [63,63]
+; AVX512F-NEXT:    vpand %xmm3, %xmm0, %xmm4
+; AVX512F-NEXT:    vpsrlq %xmm4, %zmm2, %zmm4
+; AVX512F-NEXT:    valignq {{.*#+}} zmm1 = zmm2[1,2,3,4,5,6,7],zmm1[0]
+; AVX512F-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vpandn %xmm3, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsllq %xmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    sarxq %rcx, %rdx, %rcx
-; AVX512F-NEXT:    movq %rcx, 56(%rdi)
-; AVX512F-NEXT:    movq %rbx, 48(%rdi)
-; AVX512F-NEXT:    movq %r11, 40(%rdi)
-; AVX512F-NEXT:    movq %r10, 32(%rdi)
-; AVX512F-NEXT:    movq %r9, 24(%rdi)
-; AVX512F-NEXT:    movq %rsi, 16(%rdi)
-; AVX512F-NEXT:    movq %r8, 8(%rdi)
-; AVX512F-NEXT:    movq %r14, (%rdi)
-; AVX512F-NEXT:    addq $8, %rsp
-; AVX512F-NEXT:    popq %rbx
-; AVX512F-NEXT:    popq %r14
+; AVX512F-NEXT:    vporq %zmm4, %zmm0, %zmm0
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: ashr_i512_load:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    pushq %rax
-; AVX512VL-NEXT:    vmovups (%rsi), %ymm0
-; AVX512VL-NEXT:    vmovaps 32(%rsi), %xmm1
-; AVX512VL-NEXT:    movq 48(%rsi), %rax
-; AVX512VL-NEXT:    movq 56(%rsi), %rcx
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    sarq $63, %rcx
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl %edx, %ecx
-; AVX512VL-NEXT:    andl $63, %ecx
-; AVX512VL-NEXT:    shrl $3, %edx
-; AVX512VL-NEXT:    andl $56, %edx
-; AVX512VL-NEXT:    movq -112(%rsp,%rdx), %rsi
-; AVX512VL-NEXT:    movq -120(%rsp,%rdx), %rax
-; AVX512VL-NEXT:    movq %rax, %r8
-; AVX512VL-NEXT:    shrdq %cl, %rsi, %r8
-; AVX512VL-NEXT:    movq -104(%rsp,%rdx), %r9
-; AVX512VL-NEXT:    shrdq %cl, %r9, %rsi
-; AVX512VL-NEXT:    movq -96(%rsp,%rdx), %r10
-; AVX512VL-NEXT:    shrdq %cl, %r10, %r9
-; AVX512VL-NEXT:    movq -88(%rsp,%rdx), %r11
-; AVX512VL-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VL-NEXT:    movq -80(%rsp,%rdx), %rbx
-; AVX512VL-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VL-NEXT:    movq -72(%rsp,%rdx), %r14
-; AVX512VL-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VL-NEXT:    movq -128(%rsp,%rdx), %rdx
-; AVX512VL-NEXT:    shrdq %cl, %rax, %rdx
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    sarxq %rcx, %r14, %rcx
-; AVX512VL-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VL-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VL-NEXT:    movq %r11, 40(%rdi)
-; AVX512VL-NEXT:    movq %r10, 32(%rdi)
-; AVX512VL-NEXT:    movq %r9, 24(%rdi)
-; AVX512VL-NEXT:    movq %rsi, 16(%rdi)
-; AVX512VL-NEXT:    movq %r8, 8(%rdi)
-; AVX512VL-NEXT:    movq %rdx, (%rdi)
-; AVX512VL-NEXT:    addq $8, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
+; AVX512VL-NEXT:    vmovdqu64 (%rsi), %zmm0
+; AVX512VL-NEXT:    vpsraq $63, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [7,7,7,7,7,7,7,7]
+; AVX512VL-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512VL-NEXT:    movl %edx, %ecx
+; AVX512VL-NEXT:    shrl $6, %edx
+; AVX512VL-NEXT:    movl $-1, %esi
+; AVX512VL-NEXT:    shlxl %edx, %esi, %edx
+; AVX512VL-NEXT:    kmovd %edx, %k1
+; AVX512VL-NEXT:    vmovdqa64 %zmm1, %zmm2
+; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm2 {%k1}
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [63,63]
+; AVX512VL-NEXT:    vpbroadcastq %rcx, %xmm3
+; AVX512VL-NEXT:    vpand %xmm0, %xmm3, %xmm4
+; AVX512VL-NEXT:    vpsrlq %xmm4, %zmm2, %zmm4
+; AVX512VL-NEXT:    valignq {{.*#+}} zmm1 = zmm2[1,2,3,4,5,6,7],zmm1[0]
+; AVX512VL-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
+; AVX512VL-NEXT:    vpandn %xmm0, %xmm3, %xmm0
+; AVX512VL-NEXT:    vpsllq %xmm0, %zmm1, %zmm0
+; AVX512VL-NEXT:    vporq %zmm4, %zmm0, %zmm0
+; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: ashr_i512_load:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %r14
-; AVX512VBMI-NEXT:    pushq %rbx
-; AVX512VBMI-NEXT:    pushq %rax
-; AVX512VBMI-NEXT:    vmovups (%rsi), %ymm0
-; AVX512VBMI-NEXT:    vmovaps 32(%rsi), %xmm1
-; AVX512VBMI-NEXT:    movq 48(%rsi), %rax
-; AVX512VBMI-NEXT:    movq 56(%rsi), %rcx
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    sarq $63, %rcx
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %edx, %ecx
-; AVX512VBMI-NEXT:    andl $63, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %edx
-; AVX512VBMI-NEXT:    andl $56, %edx
-; AVX512VBMI-NEXT:    movq -112(%rsp,%rdx), %rsi
-; AVX512VBMI-NEXT:    movq -120(%rsp,%rdx), %rax
-; AVX512VBMI-NEXT:    movq %rax, %r8
-; AVX512VBMI-NEXT:    shrdq %cl, %rsi, %r8
-; AVX512VBMI-NEXT:    movq -104(%rsp,%rdx), %r9
-; AVX512VBMI-NEXT:    shrdq %cl, %r9, %rsi
-; AVX512VBMI-NEXT:    movq -96(%rsp,%rdx), %r10
-; AVX512VBMI-NEXT:    shrdq %cl, %r10, %r9
-; AVX512VBMI-NEXT:    movq -88(%rsp,%rdx), %r11
-; AVX512VBMI-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VBMI-NEXT:    movq -80(%rsp,%rdx), %rbx
-; AVX512VBMI-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VBMI-NEXT:    movq -72(%rsp,%rdx), %r14
-; AVX512VBMI-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rdx), %rdx
-; AVX512VBMI-NEXT:    shrdq %cl, %rax, %rdx
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    sarxq %rcx, %r14, %rcx
-; AVX512VBMI-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VBMI-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VBMI-NEXT:    movq %r11, 40(%rdi)
-; AVX512VBMI-NEXT:    movq %r10, 32(%rdi)
-; AVX512VBMI-NEXT:    movq %r9, 24(%rdi)
-; AVX512VBMI-NEXT:    movq %rsi, 16(%rdi)
-; AVX512VBMI-NEXT:    movq %r8, 8(%rdi)
-; AVX512VBMI-NEXT:    movq %rdx, (%rdi)
-; AVX512VBMI-NEXT:    addq $8, %rsp
-; AVX512VBMI-NEXT:    popq %rbx
-; AVX512VBMI-NEXT:    popq %r14
+; AVX512VBMI-NEXT:    vmovdqu64 (%rsi), %zmm0
+; AVX512VBMI-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [7,7,7,7,7,7,7,7]
+; AVX512VBMI-NEXT:    vpsraq $63, %zmm0, %zmm2
+; AVX512VBMI-NEXT:    vpermq %zmm2, %zmm1, %zmm1
+; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm2
+; AVX512VBMI-NEXT:    movl %edx, %ecx
+; AVX512VBMI-NEXT:    shrl $6, %ecx
+; AVX512VBMI-NEXT:    movl $-1, %edx
+; AVX512VBMI-NEXT:    shlxl %ecx, %edx, %ecx
+; AVX512VBMI-NEXT:    kmovd %ecx, %k1
+; AVX512VBMI-NEXT:    vmovdqa64 %zmm1, %zmm3
+; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm3 {%k1}
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm0 = zmm3[1,2,3,4,5,6,7],zmm1[0]
+; AVX512VBMI-NEXT:    vpshrdvq %zmm2, %zmm0, %zmm3
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm3, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %a0 = load i512, ptr %p0
@@ -1802,55 +1340,58 @@ define i512 @shl_i512_200(i512 %a0) nounwind {
 ; SSE-LABEL: shl_i512_200:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movq %rsi, %rdi
+; SSE-NEXT:    shrdq $56, %rdx, %rdi
+; SSE-NEXT:    shrdq $56, %rcx, %rdx
+; SSE-NEXT:    shrdq $56, %r8, %rcx
 ; SSE-NEXT:    shldq $8, %r8, %r9
-; SSE-NEXT:    shldq $8, %rcx, %r8
-; SSE-NEXT:    shldq $8, %rdx, %rcx
-; SSE-NEXT:    shldq $8, %rsi, %rdx
 ; SSE-NEXT:    shlq $8, %rsi
-; SSE-NEXT:    movq %r9, 56(%rdi)
-; SSE-NEXT:    movq %r8, 48(%rdi)
-; SSE-NEXT:    movq %rcx, 40(%rdi)
-; SSE-NEXT:    movq %rdx, 32(%rdi)
-; SSE-NEXT:    movq %rsi, 24(%rdi)
+; SSE-NEXT:    movq %r9, 56(%rax)
+; SSE-NEXT:    movq %rcx, 48(%rax)
+; SSE-NEXT:    movq %rdx, 40(%rax)
+; SSE-NEXT:    movq %rdi, 32(%rax)
+; SSE-NEXT:    movq %rsi, 24(%rax)
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    movaps %xmm0, (%rdi)
-; SSE-NEXT:    movq $0, 16(%rdi)
+; SSE-NEXT:    movaps %xmm0, (%rax)
+; SSE-NEXT:    movq $0, 16(%rax)
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: shl_i512_200:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq %rdi, %rax
+; AVX2-NEXT:    movq %rsi, %rdi
+; AVX2-NEXT:    shrdq $56, %rdx, %rdi
+; AVX2-NEXT:    shrdq $56, %rcx, %rdx
+; AVX2-NEXT:    shrdq $56, %r8, %rcx
 ; AVX2-NEXT:    shldq $8, %r8, %r9
-; AVX2-NEXT:    shldq $8, %rcx, %r8
-; AVX2-NEXT:    shldq $8, %rdx, %rcx
-; AVX2-NEXT:    shldq $8, %rsi, %rdx
 ; AVX2-NEXT:    shlq $8, %rsi
-; AVX2-NEXT:    movq %r9, 56(%rdi)
-; AVX2-NEXT:    movq %r8, 48(%rdi)
-; AVX2-NEXT:    movq %rcx, 40(%rdi)
-; AVX2-NEXT:    movq %rdx, 32(%rdi)
-; AVX2-NEXT:    movq %rsi, 24(%rdi)
+; AVX2-NEXT:    movq %r9, 56(%rax)
+; AVX2-NEXT:    movq %rcx, 48(%rax)
+; AVX2-NEXT:    movq %rdx, 40(%rax)
+; AVX2-NEXT:    movq %rdi, 32(%rax)
+; AVX2-NEXT:    movq %rsi, 24(%rax)
 ; AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
-; AVX2-NEXT:    movq $0, 16(%rdi)
+; AVX2-NEXT:    vmovaps %xmm0, (%rax)
+; AVX2-NEXT:    movq $0, 16(%rax)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: shl_i512_200:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq %rdi, %rax
+; AVX512-NEXT:    movq %rsi, %rdi
+; AVX512-NEXT:    shrdq $56, %rdx, %rdi
+; AVX512-NEXT:    shrdq $56, %rcx, %rdx
+; AVX512-NEXT:    shrdq $56, %r8, %rcx
 ; AVX512-NEXT:    shldq $8, %r8, %r9
-; AVX512-NEXT:    shldq $8, %rcx, %r8
-; AVX512-NEXT:    shldq $8, %rdx, %rcx
-; AVX512-NEXT:    shldq $8, %rsi, %rdx
 ; AVX512-NEXT:    shlq $8, %rsi
-; AVX512-NEXT:    movq %r9, 56(%rdi)
-; AVX512-NEXT:    movq %r8, 48(%rdi)
-; AVX512-NEXT:    movq %rcx, 40(%rdi)
-; AVX512-NEXT:    movq %rdx, 32(%rdi)
-; AVX512-NEXT:    movq %rsi, 24(%rdi)
+; AVX512-NEXT:    movq %r9, 56(%rax)
+; AVX512-NEXT:    movq %rcx, 48(%rax)
+; AVX512-NEXT:    movq %rdx, 40(%rax)
+; AVX512-NEXT:    movq %rdi, 32(%rax)
+; AVX512-NEXT:    movq %rsi, 24(%rax)
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, (%rdi)
-; AVX512-NEXT:    movq $0, 16(%rdi)
+; AVX512-NEXT:    vmovaps %xmm0, (%rax)
+; AVX512-NEXT:    movq $0, 16(%rax)
 ; AVX512-NEXT:    retq
   %r = shl i512 %a0, 200
   ret i512 %r
@@ -2223,160 +1764,39 @@ define i512 @shl_1_i512(i512 %a0) nounwind {
 ;
 ; AVX512F-LABEL: shl_1_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %r14
-; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [1,0,0,0]
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movl %esi, %ecx
-; AVX512F-NEXT:    andl $63, %ecx
-; AVX512F-NEXT:    shrl $3, %esi
-; AVX512F-NEXT:    andl $56, %esi
-; AVX512F-NEXT:    negl %esi
-; AVX512F-NEXT:    movslq %esi, %r8
-; AVX512F-NEXT:    movq -56(%rsp,%r8), %rdx
-; AVX512F-NEXT:    movq -48(%rsp,%r8), %rax
-; AVX512F-NEXT:    movq %rax, %rsi
-; AVX512F-NEXT:    shldq %cl, %rdx, %rsi
-; AVX512F-NEXT:    movq -40(%rsp,%r8), %r10
-; AVX512F-NEXT:    movq %r10, %r9
-; AVX512F-NEXT:    shldq %cl, %rax, %r9
-; AVX512F-NEXT:    movq -32(%rsp,%r8), %rax
-; AVX512F-NEXT:    movq %rax, %r11
-; AVX512F-NEXT:    shldq %cl, %r10, %r11
-; AVX512F-NEXT:    movq -24(%rsp,%r8), %r10
-; AVX512F-NEXT:    movq %r10, %rbx
-; AVX512F-NEXT:    shldq %cl, %rax, %rbx
-; AVX512F-NEXT:    movq -16(%rsp,%r8), %rax
-; AVX512F-NEXT:    movq %rax, %r14
-; AVX512F-NEXT:    shldq %cl, %r10, %r14
-; AVX512F-NEXT:    movq -8(%rsp,%r8), %r10
-; AVX512F-NEXT:    shldq %cl, %rax, %r10
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    movq -64(%rsp,%r8), %rdi
-; AVX512F-NEXT:    shlxq %rcx, %rdi, %r8
-; AVX512F-NEXT:    # kill: def $cl killed $cl killed $rcx
-; AVX512F-NEXT:    shldq %cl, %rdi, %rdx
-; AVX512F-NEXT:    movq %r10, 56(%rax)
-; AVX512F-NEXT:    movq %r14, 48(%rax)
-; AVX512F-NEXT:    movq %rbx, 40(%rax)
-; AVX512F-NEXT:    movq %r11, 32(%rax)
-; AVX512F-NEXT:    movq %r9, 24(%rax)
-; AVX512F-NEXT:    movq %rsi, 16(%rax)
-; AVX512F-NEXT:    movq %rdx, 8(%rax)
-; AVX512F-NEXT:    movq %r8, (%rax)
-; AVX512F-NEXT:    addq $8, %rsp
-; AVX512F-NEXT:    popq %rbx
-; AVX512F-NEXT:    popq %r14
+; AVX512F-NEXT:    movl $1, %ecx
+; AVX512F-NEXT:    shlxq %rsi, %rcx, %rdx
+; AVX512F-NEXT:    shrl $6, %esi
+; AVX512F-NEXT:    shlxq %rsi, %rcx, %rcx
+; AVX512F-NEXT:    kmovw %ecx, %k1
+; AVX512F-NEXT:    vpbroadcastq %rdx, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shl_1_i512:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %r15
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm0 = [1,0,0,0]
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl %esi, %ecx
-; AVX512VL-NEXT:    andl $63, %ecx
-; AVX512VL-NEXT:    shrl $3, %esi
-; AVX512VL-NEXT:    andl $56, %esi
-; AVX512VL-NEXT:    negl %esi
-; AVX512VL-NEXT:    movslq %esi, %r9
-; AVX512VL-NEXT:    movq -56(%rsp,%r9), %rdx
-; AVX512VL-NEXT:    movq -48(%rsp,%r9), %rax
-; AVX512VL-NEXT:    movq %rax, %rsi
-; AVX512VL-NEXT:    shldq %cl, %rdx, %rsi
-; AVX512VL-NEXT:    movq -40(%rsp,%r9), %r10
-; AVX512VL-NEXT:    movq %r10, %r8
-; AVX512VL-NEXT:    shldq %cl, %rax, %r8
-; AVX512VL-NEXT:    movq -32(%rsp,%r9), %r11
-; AVX512VL-NEXT:    movq %r11, %rbx
-; AVX512VL-NEXT:    shldq %cl, %r10, %rbx
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    movq -24(%rsp,%r9), %rdi
-; AVX512VL-NEXT:    movq %rdi, %r10
-; AVX512VL-NEXT:    shldq %cl, %r11, %r10
-; AVX512VL-NEXT:    movq -64(%rsp,%r9), %r11
-; AVX512VL-NEXT:    movq -16(%rsp,%r9), %r14
-; AVX512VL-NEXT:    movq %r14, %r15
-; AVX512VL-NEXT:    shldq %cl, %rdi, %r15
-; AVX512VL-NEXT:    movq -8(%rsp,%r9), %rdi
-; AVX512VL-NEXT:    shldq %cl, %r14, %rdi
-; AVX512VL-NEXT:    shlxq %rcx, %r11, %r9
-; AVX512VL-NEXT:    # kill: def $cl killed $cl killed $rcx
-; AVX512VL-NEXT:    shldq %cl, %r11, %rdx
-; AVX512VL-NEXT:    movq %rdi, 56(%rax)
-; AVX512VL-NEXT:    movq %r15, 48(%rax)
-; AVX512VL-NEXT:    movq %r10, 40(%rax)
-; AVX512VL-NEXT:    movq %rbx, 32(%rax)
-; AVX512VL-NEXT:    movq %r8, 24(%rax)
-; AVX512VL-NEXT:    movq %rsi, 16(%rax)
-; AVX512VL-NEXT:    movq %rdx, 8(%rax)
-; AVX512VL-NEXT:    movq %r9, (%rax)
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
-; AVX512VL-NEXT:    popq %r15
+; AVX512VL-NEXT:    movl $1, %ecx
+; AVX512VL-NEXT:    shlxq %rsi, %rcx, %rdx
+; AVX512VL-NEXT:    shrl $6, %esi
+; AVX512VL-NEXT:    shlxq %rsi, %rcx, %rcx
+; AVX512VL-NEXT:    kmovd %ecx, %k1
+; AVX512VL-NEXT:    vpbroadcastq %rdx, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: shl_1_i512:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %r15
-; AVX512VBMI-NEXT:    pushq %r14
-; AVX512VBMI-NEXT:    pushq %rbx
-; AVX512VBMI-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovaps {{.*#+}} xmm0 = [1,0,0,0]
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %esi, %ecx
-; AVX512VBMI-NEXT:    andl $63, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %esi
-; AVX512VBMI-NEXT:    andl $56, %esi
-; AVX512VBMI-NEXT:    negl %esi
-; AVX512VBMI-NEXT:    movslq %esi, %r9
-; AVX512VBMI-NEXT:    movq -56(%rsp,%r9), %rdx
-; AVX512VBMI-NEXT:    movq -48(%rsp,%r9), %rax
-; AVX512VBMI-NEXT:    movq %rax, %rsi
-; AVX512VBMI-NEXT:    shldq %cl, %rdx, %rsi
-; AVX512VBMI-NEXT:    movq -40(%rsp,%r9), %r10
-; AVX512VBMI-NEXT:    movq %r10, %r8
-; AVX512VBMI-NEXT:    shldq %cl, %rax, %r8
-; AVX512VBMI-NEXT:    movq -32(%rsp,%r9), %r11
-; AVX512VBMI-NEXT:    movq %r11, %rbx
-; AVX512VBMI-NEXT:    shldq %cl, %r10, %rbx
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    movq -24(%rsp,%r9), %rdi
-; AVX512VBMI-NEXT:    movq %rdi, %r10
-; AVX512VBMI-NEXT:    shldq %cl, %r11, %r10
-; AVX512VBMI-NEXT:    movq -64(%rsp,%r9), %r11
-; AVX512VBMI-NEXT:    movq -16(%rsp,%r9), %r14
-; AVX512VBMI-NEXT:    movq %r14, %r15
-; AVX512VBMI-NEXT:    shldq %cl, %rdi, %r15
-; AVX512VBMI-NEXT:    movq -8(%rsp,%r9), %rdi
-; AVX512VBMI-NEXT:    shldq %cl, %r14, %rdi
-; AVX512VBMI-NEXT:    shlxq %rcx, %r11, %r9
-; AVX512VBMI-NEXT:    # kill: def $cl killed $cl killed $rcx
-; AVX512VBMI-NEXT:    shldq %cl, %r11, %rdx
-; AVX512VBMI-NEXT:    movq %rdi, 56(%rax)
-; AVX512VBMI-NEXT:    movq %r15, 48(%rax)
-; AVX512VBMI-NEXT:    movq %r10, 40(%rax)
-; AVX512VBMI-NEXT:    movq %rbx, 32(%rax)
-; AVX512VBMI-NEXT:    movq %r8, 24(%rax)
-; AVX512VBMI-NEXT:    movq %rsi, 16(%rax)
-; AVX512VBMI-NEXT:    movq %rdx, 8(%rax)
-; AVX512VBMI-NEXT:    movq %r9, (%rax)
-; AVX512VBMI-NEXT:    popq %rbx
-; AVX512VBMI-NEXT:    popq %r14
-; AVX512VBMI-NEXT:    popq %r15
+; AVX512VBMI-NEXT:    movl $1, %ecx
+; AVX512VBMI-NEXT:    shlxq %rsi, %rcx, %rdx
+; AVX512VBMI-NEXT:    shrl $6, %esi
+; AVX512VBMI-NEXT:    shlxq %rsi, %rcx, %rcx
+; AVX512VBMI-NEXT:    kmovd %ecx, %k1
+; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm0 {%k1} {z}
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %r = shl i512 1, %a0
@@ -2485,139 +1905,42 @@ define i512 @lshr_signbit_i512(i512 %a0) nounwind {
 ;
 ; AVX512F-LABEL: lshr_signbit_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %r14
-; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovaps {{.*#+}} zmm0 = [0,0,0,0,0,0,0,9223372036854775808]
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movl %esi, %ecx
-; AVX512F-NEXT:    andl $63, %ecx
-; AVX512F-NEXT:    shrl $3, %esi
-; AVX512F-NEXT:    andl $56, %esi
-; AVX512F-NEXT:    movq -112(%rsp,%rsi), %rdx
-; AVX512F-NEXT:    movq -120(%rsp,%rsi), %rax
-; AVX512F-NEXT:    movq %rax, %r8
-; AVX512F-NEXT:    shrdq %cl, %rdx, %r8
-; AVX512F-NEXT:    movq -104(%rsp,%rsi), %r9
-; AVX512F-NEXT:    shrdq %cl, %r9, %rdx
-; AVX512F-NEXT:    movq -96(%rsp,%rsi), %r10
-; AVX512F-NEXT:    shrdq %cl, %r10, %r9
-; AVX512F-NEXT:    movq -88(%rsp,%rsi), %r11
-; AVX512F-NEXT:    shrdq %cl, %r11, %r10
-; AVX512F-NEXT:    movq -80(%rsp,%rsi), %rbx
-; AVX512F-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512F-NEXT:    movq -128(%rsp,%rsi), %r14
-; AVX512F-NEXT:    movq -72(%rsp,%rsi), %rsi
-; AVX512F-NEXT:    shrdq %cl, %rsi, %rbx
-; AVX512F-NEXT:    shrdq %cl, %rax, %r14
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    shrxq %rcx, %rsi, %rcx
-; AVX512F-NEXT:    movq %rcx, 56(%rdi)
-; AVX512F-NEXT:    movq %rbx, 48(%rdi)
-; AVX512F-NEXT:    movq %r11, 40(%rdi)
-; AVX512F-NEXT:    movq %r10, 32(%rdi)
-; AVX512F-NEXT:    movq %r9, 24(%rdi)
-; AVX512F-NEXT:    movq %rdx, 16(%rdi)
-; AVX512F-NEXT:    movq %r8, 8(%rdi)
-; AVX512F-NEXT:    movq %r14, (%rdi)
-; AVX512F-NEXT:    addq $8, %rsp
-; AVX512F-NEXT:    popq %rbx
-; AVX512F-NEXT:    popq %r14
+; AVX512F-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; AVX512F-NEXT:    shrxq %rsi, %rcx, %rcx
+; AVX512F-NEXT:    shrl $6, %esi
+; AVX512F-NEXT:    movl $128, %edx
+; AVX512F-NEXT:    shrxq %rsi, %rdx, %rdx
+; AVX512F-NEXT:    kmovw %edx, %k1
+; AVX512F-NEXT:    vpbroadcastq %rcx, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: lshr_signbit_i512:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    pushq %rax
-; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovaps {{.*#+}} ymm1 = [0,0,0,9223372036854775808]
-; AVX512VL-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl %esi, %ecx
-; AVX512VL-NEXT:    andl $63, %ecx
-; AVX512VL-NEXT:    shrl $3, %esi
-; AVX512VL-NEXT:    andl $56, %esi
-; AVX512VL-NEXT:    movq -112(%rsp,%rsi), %rdx
-; AVX512VL-NEXT:    movq -120(%rsp,%rsi), %rax
-; AVX512VL-NEXT:    movq %rax, %r8
-; AVX512VL-NEXT:    shrdq %cl, %rdx, %r8
-; AVX512VL-NEXT:    movq -104(%rsp,%rsi), %r9
-; AVX512VL-NEXT:    shrdq %cl, %r9, %rdx
-; AVX512VL-NEXT:    movq -96(%rsp,%rsi), %r10
-; AVX512VL-NEXT:    shrdq %cl, %r10, %r9
-; AVX512VL-NEXT:    movq -88(%rsp,%rsi), %r11
-; AVX512VL-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VL-NEXT:    movq -80(%rsp,%rsi), %rbx
-; AVX512VL-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VL-NEXT:    movq -72(%rsp,%rsi), %r14
-; AVX512VL-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VL-NEXT:    movq -128(%rsp,%rsi), %rsi
-; AVX512VL-NEXT:    shrdq %cl, %rax, %rsi
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    shrxq %rcx, %r14, %rcx
-; AVX512VL-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VL-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VL-NEXT:    movq %r11, 40(%rdi)
-; AVX512VL-NEXT:    movq %r10, 32(%rdi)
-; AVX512VL-NEXT:    movq %r9, 24(%rdi)
-; AVX512VL-NEXT:    movq %rdx, 16(%rdi)
-; AVX512VL-NEXT:    movq %r8, 8(%rdi)
-; AVX512VL-NEXT:    movq %rsi, (%rdi)
-; AVX512VL-NEXT:    addq $8, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
+; AVX512VL-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; AVX512VL-NEXT:    shrxq %rsi, %rcx, %rcx
+; AVX512VL-NEXT:    shrl $6, %esi
+; AVX512VL-NEXT:    movl $128, %edx
+; AVX512VL-NEXT:    shrxq %rsi, %rdx, %rdx
+; AVX512VL-NEXT:    kmovd %edx, %k1
+; AVX512VL-NEXT:    vpbroadcastq %rcx, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: lshr_signbit_i512:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %r14
-; AVX512VBMI-NEXT:    pushq %rbx
-; AVX512VBMI-NEXT:    pushq %rax
-; AVX512VBMI-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovaps {{.*#+}} ymm1 = [0,0,0,9223372036854775808]
-; AVX512VBMI-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %esi, %ecx
-; AVX512VBMI-NEXT:    andl $63, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %esi
-; AVX512VBMI-NEXT:    andl $56, %esi
-; AVX512VBMI-NEXT:    movq -112(%rsp,%rsi), %rdx
-; AVX512VBMI-NEXT:    movq -120(%rsp,%rsi), %rax
-; AVX512VBMI-NEXT:    movq %rax, %r8
-; AVX512VBMI-NEXT:    shrdq %cl, %rdx, %r8
-; AVX512VBMI-NEXT:    movq -104(%rsp,%rsi), %r9
-; AVX512VBMI-NEXT:    shrdq %cl, %r9, %rdx
-; AVX512VBMI-NEXT:    movq -96(%rsp,%rsi), %r10
-; AVX512VBMI-NEXT:    shrdq %cl, %r10, %r9
-; AVX512VBMI-NEXT:    movq -88(%rsp,%rsi), %r11
-; AVX512VBMI-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VBMI-NEXT:    movq -80(%rsp,%rsi), %rbx
-; AVX512VBMI-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VBMI-NEXT:    movq -72(%rsp,%rsi), %r14
-; AVX512VBMI-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rsi), %rsi
-; AVX512VBMI-NEXT:    shrdq %cl, %rax, %rsi
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    shrxq %rcx, %r14, %rcx
-; AVX512VBMI-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VBMI-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VBMI-NEXT:    movq %r11, 40(%rdi)
-; AVX512VBMI-NEXT:    movq %r10, 32(%rdi)
-; AVX512VBMI-NEXT:    movq %r9, 24(%rdi)
-; AVX512VBMI-NEXT:    movq %rdx, 16(%rdi)
-; AVX512VBMI-NEXT:    movq %r8, 8(%rdi)
-; AVX512VBMI-NEXT:    movq %rsi, (%rdi)
-; AVX512VBMI-NEXT:    addq $8, %rsp
-; AVX512VBMI-NEXT:    popq %rbx
-; AVX512VBMI-NEXT:    popq %r14
+; AVX512VBMI-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; AVX512VBMI-NEXT:    shrxq %rsi, %rcx, %rcx
+; AVX512VBMI-NEXT:    shrl $6, %esi
+; AVX512VBMI-NEXT:    movl $128, %edx
+; AVX512VBMI-NEXT:    shrxq %rsi, %rdx, %rdx
+; AVX512VBMI-NEXT:    kmovd %edx, %k1
+; AVX512VBMI-NEXT:    vpbroadcastq %rcx, %zmm0 {%k1} {z}
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %s = shl i512 1, 511
@@ -2732,145 +2055,391 @@ define i512 @ashr_signbit_i512(i512 %a0) nounwind {
 ;
 ; AVX512F-LABEL: ashr_signbit_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %r14
-; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
-; AVX512F-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovaps {{.*#+}} zmm0 = [0,0,0,0,0,0,0,9223372036854775808]
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movl %esi, %ecx
-; AVX512F-NEXT:    andl $63, %ecx
-; AVX512F-NEXT:    shrl $3, %esi
-; AVX512F-NEXT:    andl $56, %esi
-; AVX512F-NEXT:    movq -112(%rsp,%rsi), %rdx
-; AVX512F-NEXT:    movq -120(%rsp,%rsi), %rax
-; AVX512F-NEXT:    movq %rax, %r8
-; AVX512F-NEXT:    shrdq %cl, %rdx, %r8
-; AVX512F-NEXT:    movq -104(%rsp,%rsi), %r9
-; AVX512F-NEXT:    shrdq %cl, %r9, %rdx
-; AVX512F-NEXT:    movq -96(%rsp,%rsi), %r10
-; AVX512F-NEXT:    shrdq %cl, %r10, %r9
-; AVX512F-NEXT:    movq -88(%rsp,%rsi), %r11
-; AVX512F-NEXT:    shrdq %cl, %r11, %r10
-; AVX512F-NEXT:    movq -80(%rsp,%rsi), %rbx
-; AVX512F-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512F-NEXT:    movq -128(%rsp,%rsi), %r14
-; AVX512F-NEXT:    movq -72(%rsp,%rsi), %rsi
-; AVX512F-NEXT:    shrdq %cl, %rsi, %rbx
-; AVX512F-NEXT:    shrdq %cl, %rax, %r14
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    sarxq %rcx, %rsi, %rcx
-; AVX512F-NEXT:    movq %rcx, 56(%rdi)
-; AVX512F-NEXT:    movq %rbx, 48(%rdi)
-; AVX512F-NEXT:    movq %r11, 40(%rdi)
-; AVX512F-NEXT:    movq %r10, 32(%rdi)
-; AVX512F-NEXT:    movq %r9, 24(%rdi)
-; AVX512F-NEXT:    movq %rdx, 16(%rdi)
-; AVX512F-NEXT:    movq %r8, 8(%rdi)
-; AVX512F-NEXT:    movq %r14, (%rdi)
-; AVX512F-NEXT:    addq $8, %rsp
-; AVX512F-NEXT:    popq %rbx
-; AVX512F-NEXT:    popq %r14
+; AVX512F-NEXT:    movl $511, %ecx # imm = 0x1FF
+; AVX512F-NEXT:    subl %esi, %ecx
+; AVX512F-NEXT:    movq $-1, %rdx
+; AVX512F-NEXT:    shlxq %rcx, %rdx, %rsi
+; AVX512F-NEXT:    shrl $6, %ecx
+; AVX512F-NEXT:    movl $1, %edi
+; AVX512F-NEXT:    shlxq %rcx, %rdi, %rdi
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    shlxq %rcx, %rdx, %rcx
+; AVX512F-NEXT:    kmovw %ecx, %k2
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512F-NEXT:    vpbroadcastq %rsi, %zmm0 {%k1}
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: ashr_signbit_i512:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %r14
-; AVX512VL-NEXT:    pushq %rbx
-; AVX512VL-NEXT:    pushq %rax
-; AVX512VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512VL-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovaps {{.*#+}} ymm0 = [0,0,0,9223372036854775808]
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl %esi, %ecx
-; AVX512VL-NEXT:    andl $63, %ecx
-; AVX512VL-NEXT:    shrl $3, %esi
-; AVX512VL-NEXT:    andl $56, %esi
-; AVX512VL-NEXT:    movq -112(%rsp,%rsi), %rdx
-; AVX512VL-NEXT:    movq -120(%rsp,%rsi), %rax
-; AVX512VL-NEXT:    movq %rax, %r8
-; AVX512VL-NEXT:    shrdq %cl, %rdx, %r8
-; AVX512VL-NEXT:    movq -104(%rsp,%rsi), %r9
-; AVX512VL-NEXT:    shrdq %cl, %r9, %rdx
-; AVX512VL-NEXT:    movq -96(%rsp,%rsi), %r10
-; AVX512VL-NEXT:    shrdq %cl, %r10, %r9
-; AVX512VL-NEXT:    movq -88(%rsp,%rsi), %r11
-; AVX512VL-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VL-NEXT:    movq -80(%rsp,%rsi), %rbx
-; AVX512VL-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VL-NEXT:    movq -72(%rsp,%rsi), %r14
-; AVX512VL-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VL-NEXT:    movq -128(%rsp,%rsi), %rsi
-; AVX512VL-NEXT:    shrdq %cl, %rax, %rsi
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    sarxq %rcx, %r14, %rcx
-; AVX512VL-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VL-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VL-NEXT:    movq %r11, 40(%rdi)
-; AVX512VL-NEXT:    movq %r10, 32(%rdi)
-; AVX512VL-NEXT:    movq %r9, 24(%rdi)
-; AVX512VL-NEXT:    movq %rdx, 16(%rdi)
-; AVX512VL-NEXT:    movq %r8, 8(%rdi)
-; AVX512VL-NEXT:    movq %rsi, (%rdi)
-; AVX512VL-NEXT:    addq $8, %rsp
-; AVX512VL-NEXT:    popq %rbx
-; AVX512VL-NEXT:    popq %r14
+; AVX512VL-NEXT:    movl $511, %ecx # imm = 0x1FF
+; AVX512VL-NEXT:    subl %esi, %ecx
+; AVX512VL-NEXT:    movq $-1, %rdx
+; AVX512VL-NEXT:    shlxq %rcx, %rdx, %rsi
+; AVX512VL-NEXT:    shrl $6, %ecx
+; AVX512VL-NEXT:    movl $1, %edi
+; AVX512VL-NEXT:    shlxq %rcx, %rdi, %rdi
+; AVX512VL-NEXT:    kmovd %edi, %k1
+; AVX512VL-NEXT:    shlxq %rcx, %rdx, %rcx
+; AVX512VL-NEXT:    kmovd %ecx, %k2
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VL-NEXT:    vpbroadcastq %rsi, %zmm0 {%k1}
+; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: ashr_signbit_i512:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %r14
-; AVX512VBMI-NEXT:    pushq %rbx
-; AVX512VBMI-NEXT:    pushq %rax
-; AVX512VBMI-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512VBMI-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovaps {{.*#+}} ymm0 = [0,0,0,9223372036854775808]
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %esi, %ecx
-; AVX512VBMI-NEXT:    andl $63, %ecx
-; AVX512VBMI-NEXT:    shrl $3, %esi
-; AVX512VBMI-NEXT:    andl $56, %esi
-; AVX512VBMI-NEXT:    movq -112(%rsp,%rsi), %rdx
-; AVX512VBMI-NEXT:    movq -120(%rsp,%rsi), %rax
-; AVX512VBMI-NEXT:    movq %rax, %r8
-; AVX512VBMI-NEXT:    shrdq %cl, %rdx, %r8
-; AVX512VBMI-NEXT:    movq -104(%rsp,%rsi), %r9
-; AVX512VBMI-NEXT:    shrdq %cl, %r9, %rdx
-; AVX512VBMI-NEXT:    movq -96(%rsp,%rsi), %r10
-; AVX512VBMI-NEXT:    shrdq %cl, %r10, %r9
-; AVX512VBMI-NEXT:    movq -88(%rsp,%rsi), %r11
-; AVX512VBMI-NEXT:    shrdq %cl, %r11, %r10
-; AVX512VBMI-NEXT:    movq -80(%rsp,%rsi), %rbx
-; AVX512VBMI-NEXT:    shrdq %cl, %rbx, %r11
-; AVX512VBMI-NEXT:    movq -72(%rsp,%rsi), %r14
-; AVX512VBMI-NEXT:    shrdq %cl, %r14, %rbx
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rsi), %rsi
-; AVX512VBMI-NEXT:    shrdq %cl, %rax, %rsi
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    sarxq %rcx, %r14, %rcx
-; AVX512VBMI-NEXT:    movq %rcx, 56(%rdi)
-; AVX512VBMI-NEXT:    movq %rbx, 48(%rdi)
-; AVX512VBMI-NEXT:    movq %r11, 40(%rdi)
-; AVX512VBMI-NEXT:    movq %r10, 32(%rdi)
-; AVX512VBMI-NEXT:    movq %r9, 24(%rdi)
-; AVX512VBMI-NEXT:    movq %rdx, 16(%rdi)
-; AVX512VBMI-NEXT:    movq %r8, 8(%rdi)
-; AVX512VBMI-NEXT:    movq %rsi, (%rdi)
-; AVX512VBMI-NEXT:    addq $8, %rsp
-; AVX512VBMI-NEXT:    popq %rbx
-; AVX512VBMI-NEXT:    popq %r14
+; AVX512VBMI-NEXT:    movl $511, %ecx # imm = 0x1FF
+; AVX512VBMI-NEXT:    subl %esi, %ecx
+; AVX512VBMI-NEXT:    movq $-1, %rdx
+; AVX512VBMI-NEXT:    shlxq %rcx, %rdx, %rsi
+; AVX512VBMI-NEXT:    shrl $6, %ecx
+; AVX512VBMI-NEXT:    movl $1, %edi
+; AVX512VBMI-NEXT:    shlxq %rcx, %rdi, %rdi
+; AVX512VBMI-NEXT:    kmovd %edi, %k1
+; AVX512VBMI-NEXT:    shlxq %rcx, %rdx, %rcx
+; AVX512VBMI-NEXT:    kmovd %ecx, %k2
+; AVX512VBMI-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VBMI-NEXT:    vpbroadcastq %rsi, %zmm0 {%k1}
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %s = shl i512 1, 511
   %r = ashr i512 %s, %a0
+  ret i512 %r
+}
+
+define i512 @shl_allbits_i512(i512 %a0) nounwind {
+; SSE-LABEL: shl_allbits_i512:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pushq %r14
+; SSE-NEXT:    pushq %rbx
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movl %esi, %ecx
+; SSE-NEXT:    andl $63, %ecx
+; SSE-NEXT:    shrl $3, %esi
+; SSE-NEXT:    andl $56, %esi
+; SSE-NEXT:    negl %esi
+; SSE-NEXT:    movslq %esi, %rax
+; SSE-NEXT:    movq -56(%rsp,%rax), %rdx
+; SSE-NEXT:    movq -48(%rsp,%rax), %r9
+; SSE-NEXT:    movq %r9, %rsi
+; SSE-NEXT:    shldq %cl, %rdx, %rsi
+; SSE-NEXT:    movq -40(%rsp,%rax), %r10
+; SSE-NEXT:    movq %r10, %r8
+; SSE-NEXT:    shldq %cl, %r9, %r8
+; SSE-NEXT:    movq -32(%rsp,%rax), %r9
+; SSE-NEXT:    movq %r9, %r11
+; SSE-NEXT:    shldq %cl, %r10, %r11
+; SSE-NEXT:    movq -24(%rsp,%rax), %r10
+; SSE-NEXT:    movq %r10, %rbx
+; SSE-NEXT:    shldq %cl, %r9, %rbx
+; SSE-NEXT:    movq -16(%rsp,%rax), %r9
+; SSE-NEXT:    movq %r9, %r14
+; SSE-NEXT:    shldq %cl, %r10, %r14
+; SSE-NEXT:    movq -8(%rsp,%rax), %r10
+; SSE-NEXT:    shldq %cl, %r9, %r10
+; SSE-NEXT:    movq -64(%rsp,%rax), %rax
+; SSE-NEXT:    movq %rax, %r9
+; SSE-NEXT:    shlq %cl, %r9
+; SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
+; SSE-NEXT:    shldq %cl, %rax, %rdx
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movq %r10, 56(%rdi)
+; SSE-NEXT:    movq %r14, 48(%rdi)
+; SSE-NEXT:    movq %rbx, 40(%rdi)
+; SSE-NEXT:    movq %r11, 32(%rdi)
+; SSE-NEXT:    movq %r8, 24(%rdi)
+; SSE-NEXT:    movq %rsi, 16(%rdi)
+; SSE-NEXT:    movq %rdx, 8(%rdi)
+; SSE-NEXT:    movq %r9, (%rdi)
+; SSE-NEXT:    addq $8, %rsp
+; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    popq %r14
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: shl_allbits_i512:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    pushq %r14
+; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    pushq %rax
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    movl %esi, %ecx
+; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    shrl $3, %esi
+; AVX2-NEXT:    andl $56, %esi
+; AVX2-NEXT:    negl %esi
+; AVX2-NEXT:    movslq %esi, %r8
+; AVX2-NEXT:    movq -56(%rsp,%r8), %rdx
+; AVX2-NEXT:    movq -48(%rsp,%r8), %rax
+; AVX2-NEXT:    movq %rax, %rsi
+; AVX2-NEXT:    shldq %cl, %rdx, %rsi
+; AVX2-NEXT:    movq -40(%rsp,%r8), %r10
+; AVX2-NEXT:    movq %r10, %r9
+; AVX2-NEXT:    shldq %cl, %rax, %r9
+; AVX2-NEXT:    movq -32(%rsp,%r8), %rax
+; AVX2-NEXT:    movq %rax, %r11
+; AVX2-NEXT:    shldq %cl, %r10, %r11
+; AVX2-NEXT:    movq -24(%rsp,%r8), %r10
+; AVX2-NEXT:    movq %r10, %rbx
+; AVX2-NEXT:    shldq %cl, %rax, %rbx
+; AVX2-NEXT:    movq -16(%rsp,%r8), %rax
+; AVX2-NEXT:    movq %rax, %r14
+; AVX2-NEXT:    shldq %cl, %r10, %r14
+; AVX2-NEXT:    movq -8(%rsp,%r8), %r10
+; AVX2-NEXT:    shldq %cl, %rax, %r10
+; AVX2-NEXT:    movq %rdi, %rax
+; AVX2-NEXT:    movq -64(%rsp,%r8), %rdi
+; AVX2-NEXT:    shlxq %rcx, %rdi, %r8
+; AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; AVX2-NEXT:    shldq %cl, %rdi, %rdx
+; AVX2-NEXT:    movq %r10, 56(%rax)
+; AVX2-NEXT:    movq %r14, 48(%rax)
+; AVX2-NEXT:    movq %rbx, 40(%rax)
+; AVX2-NEXT:    movq %r11, 32(%rax)
+; AVX2-NEXT:    movq %r9, 24(%rax)
+; AVX2-NEXT:    movq %rsi, 16(%rax)
+; AVX2-NEXT:    movq %rdx, 8(%rax)
+; AVX2-NEXT:    movq %r8, (%rax)
+; AVX2-NEXT:    addq $8, %rsp
+; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    popq %r14
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: shl_allbits_i512:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movq %rdi, %rax
+; AVX512F-NEXT:    movq $-1, %rcx
+; AVX512F-NEXT:    shlxq %rsi, %rcx, %rdx
+; AVX512F-NEXT:    shrl $6, %esi
+; AVX512F-NEXT:    movl $1, %edi
+; AVX512F-NEXT:    shlxq %rsi, %rdi, %rdi
+; AVX512F-NEXT:    kmovw %edi, %k1
+; AVX512F-NEXT:    shlxq %rsi, %rcx, %rcx
+; AVX512F-NEXT:    kmovw %ecx, %k2
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512F-NEXT:    vpbroadcastq %rdx, %zmm0 {%k1}
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rax)
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: shl_allbits_i512:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    movq %rdi, %rax
+; AVX512VL-NEXT:    movq $-1, %rcx
+; AVX512VL-NEXT:    shlxq %rsi, %rcx, %rdx
+; AVX512VL-NEXT:    shrl $6, %esi
+; AVX512VL-NEXT:    movl $1, %edi
+; AVX512VL-NEXT:    shlxq %rsi, %rdi, %rdi
+; AVX512VL-NEXT:    kmovd %edi, %k1
+; AVX512VL-NEXT:    shlxq %rsi, %rcx, %rcx
+; AVX512VL-NEXT:    kmovd %ecx, %k2
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VL-NEXT:    vpbroadcastq %rdx, %zmm0 {%k1}
+; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rax)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512VBMI-LABEL: shl_allbits_i512:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    movq %rdi, %rax
+; AVX512VBMI-NEXT:    movq $-1, %rcx
+; AVX512VBMI-NEXT:    shlxq %rsi, %rcx, %rdx
+; AVX512VBMI-NEXT:    shrl $6, %esi
+; AVX512VBMI-NEXT:    movl $1, %edi
+; AVX512VBMI-NEXT:    shlxq %rsi, %rdi, %rdi
+; AVX512VBMI-NEXT:    kmovd %edi, %k1
+; AVX512VBMI-NEXT:    shlxq %rsi, %rcx, %rcx
+; AVX512VBMI-NEXT:    kmovd %ecx, %k2
+; AVX512VBMI-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm0 {%k1}
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rax)
+; AVX512VBMI-NEXT:    vzeroupper
+; AVX512VBMI-NEXT:    retq
+  %r = shl i512 -1, %a0
+  ret i512 %r
+}
+
+define i512 @lshr_allbits_i512(i512 %a0) nounwind {
+; SSE-LABEL: lshr_allbits_i512:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pushq %r14
+; SSE-NEXT:    pushq %rbx
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movl %esi, %ecx
+; SSE-NEXT:    andl $63, %ecx
+; SSE-NEXT:    shrl $3, %esi
+; SSE-NEXT:    andl $56, %esi
+; SSE-NEXT:    movq -112(%rsp,%rsi), %rdx
+; SSE-NEXT:    movq -120(%rsp,%rsi), %rax
+; SSE-NEXT:    movq %rax, %r8
+; SSE-NEXT:    shrdq %cl, %rdx, %r8
+; SSE-NEXT:    movq -104(%rsp,%rsi), %r9
+; SSE-NEXT:    shrdq %cl, %r9, %rdx
+; SSE-NEXT:    movq -96(%rsp,%rsi), %r10
+; SSE-NEXT:    shrdq %cl, %r10, %r9
+; SSE-NEXT:    movq -88(%rsp,%rsi), %r11
+; SSE-NEXT:    shrdq %cl, %r11, %r10
+; SSE-NEXT:    movq -80(%rsp,%rsi), %rbx
+; SSE-NEXT:    shrdq %cl, %rbx, %r11
+; SSE-NEXT:    movq -72(%rsp,%rsi), %r14
+; SSE-NEXT:    shrdq %cl, %r14, %rbx
+; SSE-NEXT:    movq -128(%rsp,%rsi), %rsi
+; SSE-NEXT:    shrdq %cl, %rax, %rsi
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
+; SSE-NEXT:    shrq %cl, %r14
+; SSE-NEXT:    movq %r14, 56(%rdi)
+; SSE-NEXT:    movq %rbx, 48(%rdi)
+; SSE-NEXT:    movq %r11, 40(%rdi)
+; SSE-NEXT:    movq %r10, 32(%rdi)
+; SSE-NEXT:    movq %r9, 24(%rdi)
+; SSE-NEXT:    movq %rdx, 16(%rdi)
+; SSE-NEXT:    movq %r8, 8(%rdi)
+; SSE-NEXT:    movq %rsi, (%rdi)
+; SSE-NEXT:    addq $8, %rsp
+; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    popq %r14
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: lshr_allbits_i512:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    pushq %r14
+; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    pushq %rax
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
+; AVX2-NEXT:    movl %esi, %ecx
+; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    shrl $3, %esi
+; AVX2-NEXT:    andl $56, %esi
+; AVX2-NEXT:    movq -112(%rsp,%rsi), %rdx
+; AVX2-NEXT:    movq -120(%rsp,%rsi), %rax
+; AVX2-NEXT:    movq %rax, %r8
+; AVX2-NEXT:    shrdq %cl, %rdx, %r8
+; AVX2-NEXT:    movq -104(%rsp,%rsi), %r9
+; AVX2-NEXT:    shrdq %cl, %r9, %rdx
+; AVX2-NEXT:    movq -96(%rsp,%rsi), %r10
+; AVX2-NEXT:    shrdq %cl, %r10, %r9
+; AVX2-NEXT:    movq -88(%rsp,%rsi), %r11
+; AVX2-NEXT:    shrdq %cl, %r11, %r10
+; AVX2-NEXT:    movq -80(%rsp,%rsi), %rbx
+; AVX2-NEXT:    shrdq %cl, %rbx, %r11
+; AVX2-NEXT:    movq -128(%rsp,%rsi), %r14
+; AVX2-NEXT:    movq -72(%rsp,%rsi), %rsi
+; AVX2-NEXT:    shrdq %cl, %rsi, %rbx
+; AVX2-NEXT:    shrdq %cl, %rax, %r14
+; AVX2-NEXT:    movq %rdi, %rax
+; AVX2-NEXT:    shrxq %rcx, %rsi, %rcx
+; AVX2-NEXT:    movq %rcx, 56(%rdi)
+; AVX2-NEXT:    movq %rbx, 48(%rdi)
+; AVX2-NEXT:    movq %r11, 40(%rdi)
+; AVX2-NEXT:    movq %r10, 32(%rdi)
+; AVX2-NEXT:    movq %r9, 24(%rdi)
+; AVX2-NEXT:    movq %rdx, 16(%rdi)
+; AVX2-NEXT:    movq %r8, 8(%rdi)
+; AVX2-NEXT:    movq %r14, (%rdi)
+; AVX2-NEXT:    addq $8, %rsp
+; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    popq %r14
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: lshr_allbits_i512:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movq %rdi, %rax
+; AVX512F-NEXT:    movq $-1, %rcx
+; AVX512F-NEXT:    shrxq %rsi, %rcx, %rcx
+; AVX512F-NEXT:    shrl $6, %esi
+; AVX512F-NEXT:    movl $128, %edx
+; AVX512F-NEXT:    shrxq %rsi, %rdx, %rdx
+; AVX512F-NEXT:    kmovw %edx, %k1
+; AVX512F-NEXT:    movl $255, %edx
+; AVX512F-NEXT:    shrxq %rsi, %rdx, %rdx
+; AVX512F-NEXT:    kmovw %edx, %k2
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512F-NEXT:    vpbroadcastq %rcx, %zmm0 {%k1}
+; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: lshr_allbits_i512:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    movq %rdi, %rax
+; AVX512VL-NEXT:    movq $-1, %rcx
+; AVX512VL-NEXT:    shrxq %rsi, %rcx, %rcx
+; AVX512VL-NEXT:    shrl $6, %esi
+; AVX512VL-NEXT:    movl $128, %edx
+; AVX512VL-NEXT:    shrxq %rsi, %rdx, %rdx
+; AVX512VL-NEXT:    kmovd %edx, %k1
+; AVX512VL-NEXT:    movl $255, %edx
+; AVX512VL-NEXT:    shrxq %rsi, %rdx, %rdx
+; AVX512VL-NEXT:    kmovd %edx, %k2
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VL-NEXT:    vpbroadcastq %rcx, %zmm0 {%k1}
+; AVX512VL-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512VBMI-LABEL: lshr_allbits_i512:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    movq %rdi, %rax
+; AVX512VBMI-NEXT:    movq $-1, %rcx
+; AVX512VBMI-NEXT:    shrxq %rsi, %rcx, %rcx
+; AVX512VBMI-NEXT:    shrl $6, %esi
+; AVX512VBMI-NEXT:    movl $128, %edx
+; AVX512VBMI-NEXT:    shrxq %rsi, %rdx, %rdx
+; AVX512VBMI-NEXT:    kmovd %edx, %k1
+; AVX512VBMI-NEXT:    movl $255, %edx
+; AVX512VBMI-NEXT:    shrxq %rsi, %rdx, %rdx
+; AVX512VBMI-NEXT:    kmovd %edx, %k2
+; AVX512VBMI-NEXT:    vpternlogq {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512VBMI-NEXT:    vpbroadcastq %rcx, %zmm0 {%k1}
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; AVX512VBMI-NEXT:    vzeroupper
+; AVX512VBMI-NEXT:    retq
+  %r = lshr i512 -1, %a0
   ret i512 %r
 }
 
@@ -3099,63 +2668,51 @@ define i64 @lshr_extract_load_i512_i64(ptr %p0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: lshr_extract_load_i512_i64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %rax
 ; AVX512F-NEXT:    movq %rsi, %rcx
-; AVX512F-NEXT:    vmovups (%rdi), %zmm0
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movl %ecx, %edx
-; AVX512F-NEXT:    shrl $3, %edx
-; AVX512F-NEXT:    andl $56, %edx
-; AVX512F-NEXT:    movq -128(%rsp,%rdx), %rax
-; AVX512F-NEXT:    movq -120(%rsp,%rdx), %rdx
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512F-NEXT:    movl %ecx, %eax
+; AVX512F-NEXT:    shrl $6, %eax
+; AVX512F-NEXT:    movl $-1, %edx
+; AVX512F-NEXT:    shlxl %eax, %edx, %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512F-NEXT:    vmovq %xmm0, %rax
 ; AVX512F-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; AVX512F-NEXT:    shrdq %cl, %rdx, %rax
-; AVX512F-NEXT:    popq %rcx
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: lshr_extract_load_i512_i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %rax
-; AVX512VL-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovups 32(%rdi), %ymm1
 ; AVX512VL-NEXT:    movq %rsi, %rcx
-; AVX512VL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl %ecx, %edx
-; AVX512VL-NEXT:    shrl $3, %edx
-; AVX512VL-NEXT:    andl $56, %edx
-; AVX512VL-NEXT:    movq -128(%rsp,%rdx), %rax
-; AVX512VL-NEXT:    movq -120(%rsp,%rdx), %rdx
+; AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VL-NEXT:    movl %ecx, %eax
+; AVX512VL-NEXT:    shrl $6, %eax
+; AVX512VL-NEXT:    movl $-1, %edx
+; AVX512VL-NEXT:    shlxl %eax, %edx, %eax
+; AVX512VL-NEXT:    kmovd %eax, %k1
+; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
 ; AVX512VL-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; AVX512VL-NEXT:    shrdq %cl, %rdx, %rax
-; AVX512VL-NEXT:    popq %rcx
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: lshr_extract_load_i512_i64:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %rax
-; AVX512VBMI-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VBMI-NEXT:    vmovups 32(%rdi), %ymm1
 ; AVX512VBMI-NEXT:    movq %rsi, %rcx
-; AVX512VBMI-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512VBMI-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %ecx, %edx
-; AVX512VBMI-NEXT:    shrl $3, %edx
-; AVX512VBMI-NEXT:    andl $56, %edx
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rdx), %rax
-; AVX512VBMI-NEXT:    movq -120(%rsp,%rdx), %rdx
+; AVX512VBMI-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VBMI-NEXT:    movl %ecx, %eax
+; AVX512VBMI-NEXT:    shrl $6, %eax
+; AVX512VBMI-NEXT:    movl $-1, %edx
+; AVX512VBMI-NEXT:    shlxl %eax, %edx, %eax
+; AVX512VBMI-NEXT:    kmovd %eax, %k1
+; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512VBMI-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512VBMI-NEXT:    vmovq %xmm0, %rax
 ; AVX512VBMI-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; AVX512VBMI-NEXT:    shrdq %cl, %rdx, %rax
-; AVX512VBMI-NEXT:    popq %rcx
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %a0 = load i512, ptr %p0
@@ -3232,96 +2789,60 @@ define i64 @ashr_extract_load_i512_i64(ptr %p0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: ashr_extract_load_i512_i64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %rax
 ; AVX512F-NEXT:    movq %rsi, %rcx
-; AVX512F-NEXT:    vmovups (%rdi), %ymm0
-; AVX512F-NEXT:    vmovaps 32(%rdi), %xmm1
-; AVX512F-NEXT:    movq 48(%rdi), %rax
-; AVX512F-NEXT:    movq 56(%rdi), %rdx
-; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    sarq $63, %rdx
-; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movl %ecx, %edx
-; AVX512F-NEXT:    shrl $3, %edx
-; AVX512F-NEXT:    andl $56, %edx
-; AVX512F-NEXT:    movq -128(%rsp,%rdx), %rax
-; AVX512F-NEXT:    movq -120(%rsp,%rdx), %rdx
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512F-NEXT:    vpsraq $63, %zmm0, %zmm1
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [7,7,7,7,7,7,7,7]
+; AVX512F-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512F-NEXT:    movl %ecx, %eax
+; AVX512F-NEXT:    shrl $6, %eax
+; AVX512F-NEXT:    movl $-1, %edx
+; AVX512F-NEXT:    shlxl %eax, %edx, %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
+; AVX512F-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX512F-NEXT:    vmovq %xmm1, %rax
 ; AVX512F-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; AVX512F-NEXT:    shrdq %cl, %rdx, %rax
-; AVX512F-NEXT:    popq %rcx
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: ashr_extract_load_i512_i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %rax
+; AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; AVX512VL-NEXT:    movq %rsi, %rcx
-; AVX512VL-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovaps 32(%rdi), %xmm1
-; AVX512VL-NEXT:    movq 48(%rdi), %rax
-; AVX512VL-NEXT:    movq 56(%rdi), %rdx
-; AVX512VL-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    sarq $63, %rdx
-; AVX512VL-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movl %ecx, %edx
-; AVX512VL-NEXT:    shrl $3, %edx
-; AVX512VL-NEXT:    andl $56, %edx
-; AVX512VL-NEXT:    movq -128(%rsp,%rdx), %rax
-; AVX512VL-NEXT:    movq -120(%rsp,%rdx), %rdx
+; AVX512VL-NEXT:    vpsraq $63, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [7,7,7,7,7,7,7,7]
+; AVX512VL-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512VL-NEXT:    movl %ecx, %eax
+; AVX512VL-NEXT:    shrl $6, %eax
+; AVX512VL-NEXT:    movl $-1, %edx
+; AVX512VL-NEXT:    shlxl %eax, %edx, %eax
+; AVX512VL-NEXT:    kmovd %eax, %k1
+; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX512VL-NEXT:    vmovq %xmm1, %rax
 ; AVX512VL-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; AVX512VL-NEXT:    shrdq %cl, %rdx, %rax
-; AVX512VL-NEXT:    popq %rcx
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: ashr_extract_load_i512_i64:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %rax
+; AVX512VBMI-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; AVX512VBMI-NEXT:    movq %rsi, %rcx
-; AVX512VBMI-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VBMI-NEXT:    vmovaps 32(%rdi), %xmm1
-; AVX512VBMI-NEXT:    movq 48(%rdi), %rax
-; AVX512VBMI-NEXT:    movq 56(%rdi), %rdx
-; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    sarq $63, %rdx
-; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %ecx, %edx
-; AVX512VBMI-NEXT:    shrl $3, %edx
-; AVX512VBMI-NEXT:    andl $56, %edx
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rdx), %rax
-; AVX512VBMI-NEXT:    movq -120(%rsp,%rdx), %rdx
+; AVX512VBMI-NEXT:    vpsraq $63, %zmm0, %zmm1
+; AVX512VBMI-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [7,7,7,7,7,7,7,7]
+; AVX512VBMI-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512VBMI-NEXT:    movl %ecx, %eax
+; AVX512VBMI-NEXT:    shrl $6, %eax
+; AVX512VBMI-NEXT:    movl $-1, %edx
+; AVX512VBMI-NEXT:    shlxl %eax, %edx, %eax
+; AVX512VBMI-NEXT:    kmovd %eax, %k1
+; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
+; AVX512VBMI-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX512VBMI-NEXT:    vmovq %xmm1, %rax
 ; AVX512VBMI-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; AVX512VBMI-NEXT:    shrdq %cl, %rdx, %rax
-; AVX512VBMI-NEXT:    popq %rcx
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %a0 = load i512, ptr %p0
@@ -3370,45 +2891,33 @@ define i64 @lshr_extract_idx_load_i512_i64(ptr %p0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: lshr_extract_idx_load_i512_i64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    vmovups (%rdi), %zmm0
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    andl $7, %esi
-; AVX512F-NEXT:    movq -128(%rsp,%rsi,8), %rax
-; AVX512F-NEXT:    popq %rcx
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512F-NEXT:    movl $-1, %eax
+; AVX512F-NEXT:    shlxl %esi, %eax, %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovq %xmm0, %rax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: lshr_extract_idx_load_i512_i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %rax
-; AVX512VL-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovups 32(%rdi), %ymm1
-; AVX512VL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    andl $7, %esi
-; AVX512VL-NEXT:    movq -128(%rsp,%rsi,8), %rax
-; AVX512VL-NEXT:    popq %rcx
+; AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VL-NEXT:    movl $-1, %eax
+; AVX512VL-NEXT:    shlxl %esi, %eax, %eax
+; AVX512VL-NEXT:    kmovd %eax, %k1
+; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: lshr_extract_idx_load_i512_i64:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %rax
-; AVX512VBMI-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VBMI-NEXT:    vmovups 32(%rdi), %ymm1
-; AVX512VBMI-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512VBMI-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    andl $7, %esi
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rsi,8), %rax
-; AVX512VBMI-NEXT:    popq %rcx
+; AVX512VBMI-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VBMI-NEXT:    movl $-1, %eax
+; AVX512VBMI-NEXT:    shlxl %esi, %eax, %eax
+; AVX512VBMI-NEXT:    kmovd %eax, %k1
+; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512VBMI-NEXT:    vmovq %xmm0, %rax
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %a0 = load i512, ptr %p0
@@ -3474,78 +2983,42 @@ define i64 @ashr_extract_idx_load_i512_i64(ptr %p0, i512 %a1) nounwind {
 ;
 ; AVX512F-LABEL: ashr_extract_idx_load_i512_i64:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    pushq %rax
-; AVX512F-NEXT:    vmovups (%rdi), %ymm0
-; AVX512F-NEXT:    vmovaps 32(%rdi), %xmm1
-; AVX512F-NEXT:    movq 48(%rdi), %rax
-; AVX512F-NEXT:    movq 56(%rdi), %rcx
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    sarq $63, %rcx
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    andl $7, %esi
-; AVX512F-NEXT:    movq -128(%rsp,%rsi,8), %rax
-; AVX512F-NEXT:    popq %rcx
+; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512F-NEXT:    vpsraq $63, %zmm0, %zmm1
+; AVX512F-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [7,7,7,7,7,7,7,7]
+; AVX512F-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512F-NEXT:    movl $-1, %eax
+; AVX512F-NEXT:    shlxl %esi, %eax, %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
+; AVX512F-NEXT:    vmovq %xmm1, %rax
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: ashr_extract_idx_load_i512_i64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    pushq %rax
-; AVX512VL-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VL-NEXT:    vmovaps 32(%rdi), %xmm1
-; AVX512VL-NEXT:    movq 48(%rdi), %rax
-; AVX512VL-NEXT:    movq 56(%rdi), %rcx
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    sarq $63, %rcx
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    andl $7, %esi
-; AVX512VL-NEXT:    movq -128(%rsp,%rsi,8), %rax
-; AVX512VL-NEXT:    popq %rcx
+; AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VL-NEXT:    vpsraq $63, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [7,7,7,7,7,7,7,7]
+; AVX512VL-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512VL-NEXT:    movl $-1, %eax
+; AVX512VL-NEXT:    shlxl %esi, %eax, %eax
+; AVX512VL-NEXT:    kmovd %eax, %k1
+; AVX512VL-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vmovq %xmm1, %rax
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: ashr_extract_idx_load_i512_i64:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    pushq %rax
-; AVX512VBMI-NEXT:    vmovups (%rdi), %ymm0
-; AVX512VBMI-NEXT:    vmovaps 32(%rdi), %xmm1
-; AVX512VBMI-NEXT:    movq 48(%rdi), %rax
-; AVX512VBMI-NEXT:    movq 56(%rdi), %rcx
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    sarq $63, %rcx
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    andl $7, %esi
-; AVX512VBMI-NEXT:    movq -128(%rsp,%rsi,8), %rax
-; AVX512VBMI-NEXT:    popq %rcx
+; AVX512VBMI-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512VBMI-NEXT:    vpsraq $63, %zmm0, %zmm1
+; AVX512VBMI-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [7,7,7,7,7,7,7,7]
+; AVX512VBMI-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512VBMI-NEXT:    movl $-1, %eax
+; AVX512VBMI-NEXT:    shlxl %esi, %eax, %eax
+; AVX512VBMI-NEXT:    kmovd %eax, %k1
+; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm1 {%k1}
+; AVX512VBMI-NEXT:    vmovq %xmm1, %rax
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %a0 = load i512, ptr %p0

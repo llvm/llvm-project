@@ -12052,26 +12052,6 @@ uint64_t test_vqsubd_u64(uint64_t a, uint64_t b) {
   return vqsubd_u64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vshld_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VSHLD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.sshl.i64(i64 [[A]], i64 [[B]])
-// CHECK-NEXT:    ret i64 [[VSHLD_S64_I]]
-//
-int64_t test_vshld_s64(int64_t a, int64_t b) {
-  return vshld_s64(a, b);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vshld_u64(
-// CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VSHLD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.ushl.i64(i64 [[A]], i64 [[B]])
-// CHECK-NEXT:    ret i64 [[VSHLD_U64_I]]
-//
-uint64_t test_vshld_u64(uint64_t a, int64_t b) {
-  return vshld_u64(a, b);
-}
-
 // CHECK-LABEL: define dso_local i8 @test_vqshlb_s8(
 // CHECK-SAME: i8 noundef [[A:%.*]], i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -16878,17 +16858,6 @@ uint64_t test_vceqd_u64(uint64_t a, uint64_t b) {
   return (int64_t)vceqd_u64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vceqzd_u64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[A]], 0
-// CHECK-NEXT:    [[VCEQZD_I:%.*]] = sext i1 [[TMP0]] to i64
-// CHECK-NEXT:    ret i64 [[VCEQZD_I]]
-//
-int64_t test_vceqzd_u64(int64_t a) {
-  return (int64_t)vceqzd_u64(a);
-}
-
 // CHECK-LABEL: define dso_local i64 @test_vcged_s64(
 // CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -17432,28 +17401,6 @@ uint64_t test_vceqd_f64(float64_t a, float64_t b) {
   return (uint64_t)vceqd_f64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i32 @test_vceqzs_f32(
-// CHECK-SAME: float noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq float [[A]], 0.000000e+00
-// CHECK-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i32
-// CHECK-NEXT:    ret i32 [[VCEQZ_I]]
-//
-uint32_t test_vceqzs_f32(float32_t a) {
-  return (uint32_t)vceqzs_f32(a);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vceqzd_f64(
-// CHECK-SAME: double noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq double [[A]], 0.000000e+00
-// CHECK-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
-// CHECK-NEXT:    ret i64 [[VCEQZ_I]]
-//
-uint64_t test_vceqzd_f64(float64_t a) {
-  return (uint64_t)vceqzd_f64(a);
-}
-
 // CHECK-LABEL: define dso_local i32 @test_vcges_f32(
 // CHECK-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -17920,16 +17867,6 @@ uint64x1_t test_vrsra_n_u64(uint64x1_t a, uint64x1_t b) {
   return vrsra_n_u64(a, b, 1);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vshld_n_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHLD_N:%.*]] = shl i64 [[A]], 1
-// CHECK-NEXT:    ret i64 [[SHLD_N]]
-//
-int64_t test_vshld_n_s64(int64_t a) {
-  return (int64_t)vshld_n_s64(a, 1);
-}
-
 // CHECK-LABEL: define dso_local <1 x i64> @test_vshl_n_s64(
 // CHECK-SAME: <1 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -17940,16 +17877,6 @@ int64_t test_vshld_n_s64(int64_t a) {
 //
 int64x1_t test_vshl_n_s64(int64x1_t a) {
   return vshl_n_s64(a, 1);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vshld_n_u64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHLD_N:%.*]] = shl i64 [[A]], 63
-// CHECK-NEXT:    ret i64 [[SHLD_N]]
-//
-uint64_t test_vshld_n_u64(uint64_t a) {
-  return (uint64_t)vshld_n_u64(a, 63);
 }
 
 // CHECK-LABEL: define dso_local <1 x i64> @test_vshl_n_u64(
@@ -22415,26 +22342,6 @@ poly64x2_t test_vreinterpretq_p64_p8(poly8x16_t a) {
 //
 poly64x2_t test_vreinterpretq_p64_p16(poly16x8_t a) {
   return vreinterpretq_p64_p16(a);
-}
-
-// CHECK-LABEL: define dso_local float @test_vabds_f32(
-// CHECK-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VABDS_F32_I:%.*]] = call float @llvm.aarch64.sisd.fabd.f32(float [[A]], float [[B]])
-// CHECK-NEXT:    ret float [[VABDS_F32_I]]
-//
-float32_t test_vabds_f32(float32_t a, float32_t b) {
-  return vabds_f32(a, b);
-}
-
-// CHECK-LABEL: define dso_local double @test_vabdd_f64(
-// CHECK-SAME: double noundef [[A:%.*]], double noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VABDD_F64_I:%.*]] = call double @llvm.aarch64.sisd.fabd.f64(double [[A]], double [[B]])
-// CHECK-NEXT:    ret double [[VABDD_F64_I]]
-//
-float64_t test_vabdd_f64(float64_t a, float64_t b) {
-  return vabdd_f64(a, b);
 }
 
 // CHECK-LABEL: define dso_local <16 x i8> @test_vuqaddq_s8(

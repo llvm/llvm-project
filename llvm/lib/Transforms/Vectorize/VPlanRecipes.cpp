@@ -482,7 +482,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ReductionStartVector:
-  case VPInstruction::ExtractLastActive:
     return 3;
   case Instruction::Call: {
     // For unmasked calls, the last argument will the called function. Use that
@@ -506,6 +505,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
   case VPInstruction::ExtractLane:
+  case VPInstruction::ExtractLastActive:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -867,15 +867,16 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Res;
   }
   case VPInstruction::FirstActiveLane: {
+    Type *Ty = State.TypeAnalysis.inferScalarType(this);
     if (getNumOperands() == 1) {
       Value *Mask = State.get(getOperand(0));
-      return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
+      return Builder.CreateCountTrailingZeroElems(Ty, Mask,
                                                   /*ZeroIsPoison=*/false, Name);
     }
     // If there are multiple operands, create a chain of selects to pick the
     // first operand with an active lane and add the number of lanes of the
     // preceding operands.
-    Value *RuntimeVF = getRuntimeVF(Builder, Builder.getInt64Ty(), State.VF);
+    Value *RuntimeVF = getRuntimeVF(Builder, Ty, State.VF);
     unsigned LastOpIdx = getNumOperands() - 1;
     Value *Res = nullptr;
     for (int Idx = LastOpIdx; Idx >= 0; --Idx) {
@@ -884,12 +885,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
               ? Builder.CreateZExt(
                     Builder.CreateICmpEQ(State.get(getOperand(Idx)),
                                          Builder.getFalse()),
-                    Builder.getInt64Ty())
+                    Ty)
               : Builder.CreateCountTrailingZeroElems(
-                    Builder.getInt64Ty(), State.get(getOperand(Idx)),
+                    Ty, State.get(getOperand(Idx)),
                     /*ZeroIsPoison=*/false, Name);
       Value *Current = Builder.CreateAdd(
-          Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
+          Builder.CreateMul(RuntimeVF, ConstantInt::get(Ty, Idx)),
+          TrailingZeros);
       if (Res) {
         Value *Cmp = Builder.CreateICmpNE(TrailingZeros, RuntimeVF);
         Res = Builder.CreateSelect(Cmp, Current, Res);
@@ -905,13 +907,21 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::Reverse:
     return Builder.CreateVectorReverse(State.get(getOperand(0)), "reverse");
   case VPInstruction::ExtractLastActive: {
-    Value *Data = State.get(getOperand(0));
-    Value *Mask = State.get(getOperand(1));
-    Value *Default = State.get(getOperand(2), /*IsScalar=*/true);
-    Type *VTy = Data->getType();
-    return Builder.CreateIntrinsic(
-        Intrinsic::experimental_vector_extract_last_active, {VTy},
-        {Data, Mask, Default});
+    Value *Result = State.get(getOperand(0), /*IsScalar=*/true);
+    for (unsigned Idx = 1; Idx < getNumOperands(); Idx += 2) {
+      Value *Data = State.get(getOperand(Idx));
+      Value *Mask = State.get(getOperand(Idx + 1));
+      Type *VTy = Data->getType();
+
+      if (State.VF.isScalar())
+        Result = Builder.CreateSelect(Mask, Data, Result);
+      else
+        Result = Builder.CreateIntrinsic(
+            Intrinsic::experimental_vector_extract_last_active, {VTy},
+            {Data, Mask, Result});
+    }
+
+    return Result;
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -1099,7 +1109,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     }
 
     Type *CondTy = Ctx.Types.inferScalarType(getOperand(0));
-    if (!IsScalarCond)
+    if (!IsScalarCond && VF.isVector())
       CondTy = VectorType::get(CondTy, VF);
 
     llvm::CmpPredicate Pred;
@@ -1165,6 +1175,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
   case VPInstruction::FirstActiveLane: {
+    Type *Ty = Ctx.Types.inferScalarType(this);
     Type *ScalarTy = Ctx.Types.inferScalarType(getOperand(0));
     if (VF.isScalar())
       return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ScalarTy,
@@ -1172,12 +1183,12 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                         CmpInst::ICMP_EQ, Ctx.CostKind);
     // Calculate the cost of determining the lane index.
     auto *PredTy = toVectorTy(ScalarTy, VF);
-    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
-                                  Type::getInt64Ty(Ctx.LLVMCtx),
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts, Ty,
                                   {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
   case VPInstruction::LastActiveLane: {
+    Type *Ty = Ctx.Types.inferScalarType(this);
     Type *ScalarTy = Ctx.Types.inferScalarType(getOperand(0));
     if (VF.isScalar())
       return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ScalarTy,
@@ -1185,8 +1196,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                         CmpInst::ICMP_EQ, Ctx.CostKind);
     // Calculate the cost of determining the lane index: NOT + cttz_elts + SUB.
     auto *PredTy = toVectorTy(ScalarTy, VF);
-    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
-                                  Type::getInt64Ty(Ctx.LLVMCtx),
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts, Ty,
                                   {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
     InstructionCost Cost = Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
     // Add cost of NOT operation on the predicate.
@@ -1196,8 +1206,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         {TargetTransformInfo::OK_UniformConstantValue,
          TargetTransformInfo::OP_None});
     // Add cost of SUB operation on the index.
-    Cost += Ctx.TTI.getArithmeticInstrCost(
-        Instruction::Sub, Type::getInt64Ty(Ctx.LLVMCtx), Ctx.CostKind);
+    Cost += Ctx.TTI.getArithmeticInstrCost(Instruction::Sub, Ty, Ctx.CostKind);
     return Cost;
   }
   case VPInstruction::ExtractLastActive: {
@@ -2042,9 +2051,8 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   // a multiply, and add that into the cost.
   InstructionCost MulCost =
       Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
-  if (auto *CI = dyn_cast<VPConstantInt>(IncAmt))
-    if (CI->isOne())
-      MulCost = TTI::TCC_Free;
+  if (match(IncAmt, m_One()))
+    MulCost = TTI::TCC_Free;
 
   // Find the cost of the histogram operation itself.
   Type *PtrTy = VectorType::get(AddressTy, VF);
@@ -2240,6 +2248,9 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     case RecurKind::AnyOf:
       O << "any-of";
       break;
+    case RecurKind::FindLast:
+      O << "find-last";
+      break;
     case RecurKind::SMax:
       O << "smax";
       break;
@@ -2293,7 +2304,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   switch (Opcode) {
   case Instruction::Call:
-  case Instruction::Br:
+  case Instruction::UncondBr:
+  case Instruction::CondBr:
   case Instruction::PHI:
   case Instruction::GetElementPtr:
     llvm_unreachable("This instruction is handled by a different recipe.");
@@ -2503,9 +2515,8 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   // The step may be defined by a recipe in the preheader (e.g. if it requires
   // SCEV expansion), but for the canonical induction the step is required to be
   // 1, which is represented as live-in.
-  auto *StepC = dyn_cast<VPConstantInt>(getStepValue());
-  auto *StartC = dyn_cast<VPConstantInt>(getStartValue());
-  return StartC && StartC->isZero() && StepC && StepC->isOne() &&
+  return match(getStartValue(), m_ZeroInt()) &&
+         match(getStepValue(), m_One()) &&
          getScalarType() == getRegion()->getCanonicalIVType();
 }
 
@@ -2692,9 +2703,8 @@ void VPVectorEndPointerRecipe::materializeOffset(unsigned Part) {
   VPlan &Plan = *getParent()->getPlan();
   VPValue *VFVal = getVFValue();
   VPTypeAnalysis TypeInfo(Plan);
-  const DataLayout &DL =
-      Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(getPointer()));
+  const DataLayout &DL = Plan.getDataLayout();
+  Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(this));
   VPValue *Stride =
       Plan.getConstantInt(IndexTy, getStride(), /*IsSigned=*/true);
   Type *VFTy = TypeInfo.inferScalarType(VFVal);
@@ -3392,6 +3402,20 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
   return false;
 }
 
+/// Return true if \p R is a predicated load/store with a loop-invariant address
+/// only masked by the header mask.
+static bool isPredicatedUniformMemOpAfterTailFolding(const VPReplicateRecipe &R,
+                                                     const SCEV *PtrSCEV,
+                                                     VPCostContext &Ctx) {
+  const VPRegionBlock *ParentRegion = R.getRegion();
+  if (!ParentRegion || !ParentRegion->isReplicator() || !PtrSCEV ||
+      !Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
+    return false;
+  auto *BOM =
+      cast<VPBranchOnMaskRecipe>(&ParentRegion->getEntryBasicBlock()->front());
+  return vputils::isHeaderMask(BOM->getOperand(0), *ParentRegion->getPlan());
+}
+
 InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   Instruction *UI = cast<Instruction>(getUnderlyingValue());
@@ -3536,6 +3560,27 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo,
         UsedByLoadStoreAddress ? UI : nullptr);
 
+    // Check if this is a predicated load/store with a loop-invariant address
+    // only masked by the header mask. If so, return the uniform mem op cost.
+    if (isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
+      InstructionCost UniformCost =
+          ScalarMemOpCost +
+          Ctx.TTI.getAddressComputationCost(ScalarPtrTy, /*SE=*/nullptr,
+                                            /*Ptr=*/nullptr, Ctx.CostKind);
+      auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
+      if (IsLoad) {
+        return UniformCost +
+               Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast,
+                                      VectorTy, VectorTy, {}, Ctx.CostKind);
+      }
+
+      VPValue *StoredVal = getOperand(0);
+      if (!StoredVal->isDefinedOutsideLoopRegions())
+        UniformCost += Ctx.TTI.getIndexedVectorInstrCostFromEnd(
+            Instruction::ExtractElement, VectorTy, Ctx.CostKind, 0);
+      return UniformCost;
+    }
+
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
     InstructionCost ScalarCost =
         ScalarMemOpCost +
@@ -3570,12 +3615,10 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     const VPRegionBlock *ParentRegion = getRegion();
     if (ParentRegion && ParentRegion->isReplicator()) {
-      // TODO: Handle loop-invariant pointers in predicated blocks. For now,
-      // fall back to the legacy cost model.
-      if (!PtrSCEV || Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
+      if (!PtrSCEV)
         break;
       Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
-      Cost += Ctx.TTI.getCFInstrCost(Instruction::Br, Ctx.CostKind);
+      Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 
       auto *VecI1Ty = VectorType::get(
           IntegerType::getInt1Ty(Ctx.L->getHeader()->getContext()), VF);
@@ -3603,6 +3646,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::UIToFP:
   case Instruction::Trunc:
   case Instruction::FPTrunc:
+  case Instruction::Select:
   case Instruction::AddrSpaceCast: {
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
