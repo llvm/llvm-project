@@ -58,7 +58,7 @@ Session::Session(ExecutorProcessInfo EPI,
 
 Session::~Session() { waitForShutdown(); }
 
-void Session::attach(std::shared_ptr<ControllerAccess> CA) {
+void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
   assert(CA && "attach called with null CA object");
 
   {
@@ -73,7 +73,7 @@ void Session::attach(std::shared_ptr<ControllerAccess> CA) {
     TargetState = State::Attached;
   }
 
-  CA->connect();
+  CA->connect(std::move(BI));
 
   {
     std::scoped_lock<std::mutex> Lock(M);
