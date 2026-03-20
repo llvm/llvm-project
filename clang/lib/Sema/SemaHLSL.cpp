@@ -5442,7 +5442,7 @@ class InitListTransformer {
     QualType Ty = E->getType().getDesugaredType(Ctx);
 
     if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()) ||
-	Ty->isHLSLAttributedResourceType())
+        Ty->isHLSLAttributedResourceType())
       return castInitializer(E);
 
     if (auto *VecTy = Ty->getAs<VectorType>()) {
@@ -5540,7 +5540,7 @@ class InitListTransformer {
     Ty = Ty.getDesugaredType(Ctx);
     assert(ArgIt != ArgExprs.end() && "Something is off in iteration!");
     if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()) ||
-	Ty->isHLSLAttributedResourceType())
+        Ty->isHLSLAttributedResourceType())
       return *(ArgIt++);
 
     llvm::SmallVector<Expr *> Inits;
