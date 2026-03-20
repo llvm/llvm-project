@@ -537,7 +537,7 @@ public:
   ///     returned, else a valid object file interface will be
   ///     returned. The returned pointer is owned by this object and
   ///     remains valid as long as the object is around.
-  virtual ObjectFile *GetObjectFile();
+  ObjectFile *GetObjectFile();
 
   /// Get the unified section list for the module. This is the section list
   /// created by the module's object file and any debug info and symbol files
@@ -548,7 +548,7 @@ public:
   ///
   /// \return
   ///     Unified module section list.
-  virtual SectionList *GetSectionList();
+  SectionList *GetSectionList();
 
   /// Notify the module that the file addresses for the Sections have been
   /// updated.
@@ -557,7 +557,7 @@ public:
   /// should be called.  Any parts of the module, object file, or symbol file
   /// that has cached those file addresses must invalidate or update its
   /// cache.
-  virtual void SectionFileAddressesChanged();
+  void SectionFileAddressesChanged();
 
   /// Returns a reference to the UnwindTable for this Module
   ///
