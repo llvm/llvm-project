@@ -3870,12 +3870,10 @@ int llvm::biasPhysReg(const SUnit *SU, bool isTop, bool BiasPRegsExtra) {
       return isTop ? -1 : 1;
   }
 
-  if (BiasPRegsExtra && !isTop && MI->getNumOperands()) {
+  if (BiasPRegsExtra && !isTop && MI->getNumExplicitDefs() == 1)
     // Register coalescer will create cases of e.g. Load Address of a frame
     // index directly into a physreg.
-    const MachineOperand &DefMO = MI->getOperand(0);
-    return DefMO.isReg() && DefMO.isDef() && DefMO.getReg().isPhysical();
-  }
+    return MI->getOperand(0).getReg().isPhysical();
 
   return 0;
 }
