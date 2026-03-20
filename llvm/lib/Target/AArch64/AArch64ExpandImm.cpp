@@ -736,106 +736,106 @@ bool AArch64_IMM::expandVectorMOVImm(
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType10(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVID : AArch64::MOVIv2d_ns,
-                      AArch64_AM::encodeAdvSIMDModImmType10(Value), 0});
+      unsigned Opc = Is64Bit ? AArch64::MOVID : AArch64::MOVIv2d_ns;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType10(Value), 0});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType1(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32,
-                      AArch64_AM::encodeAdvSIMDModImmType1(Value), 0});
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType1(Value), 0});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType2(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32,
-                      AArch64_AM::encodeAdvSIMDModImmType2(Value), 8});
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType2(Value), 8});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType3(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32,
-                      AArch64_AM::encodeAdvSIMDModImmType3(Value), 16});
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType3(Value), 16});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType4(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32,
-                      AArch64_AM::encodeAdvSIMDModImmType4(Value), 24});
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2i32 : AArch64::MOVIv4i32;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType4(Value), 24});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType5(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVIv4i16 : AArch64::MOVIv8i16,
-                      AArch64_AM::encodeAdvSIMDModImmType5(Value), 0});
+      unsigned Opc = Is64Bit ? AArch64::MOVIv4i16 : AArch64::MOVIv8i16;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType5(Value), 0});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType6(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVIv4i16 : AArch64::MOVIv8i16,
-                      AArch64_AM::encodeAdvSIMDModImmType6(Value), 8});
+      unsigned Opc = Is64Bit ? AArch64::MOVIv4i16 : AArch64::MOVIv8i16;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType6(Value), 8});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType7(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVIv2s_msl : AArch64::MOVIv4s_msl,
-                      AArch64_AM::encodeAdvSIMDModImmType7(Value), 264});
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2s_msl : AArch64::MOVIv4s_msl;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType7(Value), 264});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType8(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVIv2s_msl : AArch64::MOVIv4s_msl,
-                      AArch64_AM::encodeAdvSIMDModImmType8(Value), 272});
+      unsigned Opc = Is64Bit ? AArch64::MOVIv2s_msl : AArch64::MOVIv4s_msl;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType8(Value), 272});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType9(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MOVIv8b_ns : AArch64::MOVIv16b_ns,
-                      AArch64_AM::encodeAdvSIMDModImmType9(Value), 0});
+      unsigned Opc = Is64Bit ? AArch64::MOVIv8b_ns : AArch64::MOVIv16b_ns;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType9(Value), 0});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType11(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::FMOVv2f32_ns : AArch64::FMOVv4f32_ns,
-                      AArch64_AM::encodeAdvSIMDModImmType11(Value), 0});
+      unsigned Opc = Is64Bit ? AArch64::FMOVv2f32_ns : AArch64::FMOVv4f32_ns;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType11(Value), 0});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType12(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::FMOVDi : AArch64::FMOVv2f64_ns,
-                      AArch64_AM::encodeAdvSIMDModImmType12(Value), 0});
+      unsigned Opc = Is64Bit ? AArch64::FMOVDi : AArch64::FMOVv2f64_ns;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType12(Value), 0});
       return true;
     }
 
     APInt NotImm = ~Imm;
     Value = NotImm.trunc(64).getZExtValue();
     if (AArch64_AM::isAdvSIMDModImmType1(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32,
-                      AArch64_AM::encodeAdvSIMDModImmType1(Value), 0});
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType1(Value), 0});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType2(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32,
-                      AArch64_AM::encodeAdvSIMDModImmType2(Value), 8});
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType2(Value), 8});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType3(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32,
-                      AArch64_AM::encodeAdvSIMDModImmType3(Value), 16});
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType3(Value), 16});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType4(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32,
-                      AArch64_AM::encodeAdvSIMDModImmType4(Value), 24});
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2i32 : AArch64::MVNIv4i32;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType4(Value), 24});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType5(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MVNIv4i16 : AArch64::MVNIv8i16,
-                      AArch64_AM::encodeAdvSIMDModImmType5(Value), 0});
+      unsigned Opc = Is64Bit ? AArch64::MVNIv4i16 : AArch64::MVNIv8i16;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType5(Value), 0});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType6(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MVNIv4i16 : AArch64::MVNIv8i16,
-                      AArch64_AM::encodeAdvSIMDModImmType6(Value), 8});
+      unsigned Opc = Is64Bit ? AArch64::MVNIv4i16 : AArch64::MVNIv8i16;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType6(Value), 8});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType7(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MVNIv2s_msl : AArch64::MVNIv4s_msl,
-                      AArch64_AM::encodeAdvSIMDModImmType7(Value), 264});
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2s_msl : AArch64::MVNIv4s_msl;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType7(Value), 264});
       return true;
     }
     if (AArch64_AM::isAdvSIMDModImmType8(Value)) {
-      Insn.push_back({Is64Bit ? AArch64::MVNIv2s_msl : AArch64::MVNIv4s_msl,
-                      AArch64_AM::encodeAdvSIMDModImmType8(Value), 272});
+      unsigned Opc = Is64Bit ? AArch64::MVNIv2s_msl : AArch64::MVNIv4s_msl;
+      Insn.push_back({Opc, AArch64_AM::encodeAdvSIMDModImmType8(Value), 272});
       return true;
     }
   }

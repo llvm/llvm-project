@@ -13016,7 +13016,7 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   const APInt ImmInt = Imm.bitcastToAPInt();
 
   if (!IsLegal && ImmInt.getBitWidth() <= 128) {
-    // Try duplicating it to all lanes and see if we can usea vector movi.
+    // Try duplicating it to all lanes and see if we can use a vector movi.
     APInt DefBits =
         ImmInt.getBitWidth() == 128 ? ImmInt : APInt::getSplat(64, ImmInt);
     SmallVector<AArch64_IMM::ImmInsnModel> Insn;
@@ -32851,9 +32851,8 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
 bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
   return Op.getOpcode() == AArch64ISD::DUP ||
          Op.getOpcode() == AArch64ISD::MOVI ||
-         // Ignoring fneg(movi(0)), because if it is folded to FPConstant(-0.0),
-         // ISel will select fmov(mov i64 0x8000000000000000), resulting in a
-         // fmov from fpr to gpr, which is more expensive than fneg(movi(0))
+         // ConstantBuildVector / TryWithFNeg may represent a negated constant
+         // as fneg(movi).
          (Op.getOpcode() == ISD::FNEG &&
           Op.getOperand(0).getOpcode() == AArch64ISD::MOVI) ||
          (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&

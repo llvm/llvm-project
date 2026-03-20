@@ -607,51 +607,12 @@ static bool isIntImmediateEq(SDValue N, const uint64_t ImmExpected) {
 }
 #endif
 
-static APInt DecodeFMOVImm(uint64_t Imm, unsigned RegWidth) {
-  assert(RegWidth == 32 || RegWidth == 64);
-  if (RegWidth == 32)
-    return APInt(RegWidth,
-                 uint32_t(AArch64_AM::decodeAdvSIMDModImmType11(Imm)));
-  return APInt(RegWidth, AArch64_AM::decodeAdvSIMDModImmType12(Imm));
-}
-
-// Decodes the raw integer splat value from a NEON splat operation.
-static std::optional<APInt> DecodeNEONSplat(SDValue N) {
-  assert(N.getValueType().isInteger() && "Only integers are supported");
-  if (N->getOpcode() == AArch64ISD::NVCAST)
-    N = N->getOperand(0);
-  unsigned SplatWidth = N.getScalarValueSizeInBits();
-  if (N.getOpcode() == AArch64ISD::FMOV)
-    return DecodeFMOVImm(N.getConstantOperandVal(0), SplatWidth);
-  if (N->getOpcode() == AArch64ISD::MOVI)
-    return APInt(SplatWidth, N.getConstantOperandVal(0));
-  if (N->getOpcode() == AArch64ISD::MOVIshift)
-    return APInt(SplatWidth, N.getConstantOperandVal(0)
-                                 << N.getConstantOperandVal(1));
-  if (N->getOpcode() == AArch64ISD::MVNIshift)
-    return ~APInt(SplatWidth, N.getConstantOperandVal(0)
-                                  << N.getConstantOperandVal(1));
-  if (N->getOpcode() == AArch64ISD::MOVIedit)
-    return APInt(SplatWidth, AArch64_AM::decodeAdvSIMDModImmType10(
-                                 N.getConstantOperandVal(0)));
-  if (N->getOpcode() == AArch64ISD::DUP)
-    if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
-      return Const->getAPIntValue().trunc(SplatWidth);
-  // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
-  // in AArch64ISelLowering.
-  return std::nullopt;
-}
-
-// If \p N is a NEON splat operation (movi, fmov, etc), return the splat value
-// matching the element size of N.
+// Decodes the integer splat value from a NEON splat operation.
 static std::optional<APInt> GetNEONSplatValue(SDValue N) {
-  unsigned SplatWidth = N.getScalarValueSizeInBits();
-  if (std::optional<APInt> SplatVal = DecodeNEONSplat(N)) {
-    if (SplatVal->getBitWidth() <= SplatWidth)
-      return APInt::getSplat(SplatWidth, *SplatVal);
-    if (SplatVal->isSplat(SplatWidth))
-      return SplatVal->trunc(SplatWidth);
-  }
+  unsigned RegWidth = N.getScalarValueSizeInBits();
+  if (N.getOpcode() == AArch64ISD::MOVI &&
+      N.getConstantOperandAPInt(0).isSplat(RegWidth))
+    return N.getConstantOperandAPInt(0).trunc(RegWidth);
   return std::nullopt;
 }
 
