@@ -22,10 +22,8 @@
 
 using namespace llvm;
 
-namespace {
-
 /// Minimum shader model version that supports 16-bit types.
-constexpr StringLiteral SM6_2 = "6.2";
+static constexpr StringLiteral SM6_2 = "6.2";
 
 //===----------------------------------------------------------------------===//
 // Type name helpers
@@ -62,6 +60,8 @@ static const Record *getElementTypeRecord(const Record *R) {
 //===----------------------------------------------------------------------===//
 // Type information
 //===----------------------------------------------------------------------===//
+
+namespace {
 
 /// Classifies how a type varies across overloads.
 enum TypeKindEnum {
@@ -135,6 +135,8 @@ struct TypeInfo {
   }
 };
 
+} // anonymous namespace
+
 //===----------------------------------------------------------------------===//
 // Availability helpers
 //===----------------------------------------------------------------------===//
@@ -159,6 +161,8 @@ static std::string getVersionString(const Record *SM) {
 // Type work item — describes one element type to emit overloads for
 //===----------------------------------------------------------------------===//
 
+namespace {
+
 /// A single entry in the worklist of types to process for an intrinsic.
 struct TypeWorkItem {
   /// Element type name (e.g. "half", "float"). Empty for fixed-arg-only
@@ -175,6 +179,8 @@ struct TypeWorkItem {
   /// If true, wrap overloads in #ifdef __HLSL_ENABLE_16_BIT / #endif.
   bool NeedsIfdefGuard = false;
 };
+
+} // anonymous namespace
 
 /// Fixed canonical ordering for overload types. Types are grouped as:
 ///   0: conditionally-16-bit (half)
@@ -201,6 +207,8 @@ static int getTypeSortPriority(const Record *ET) {
 //===----------------------------------------------------------------------===//
 // Overload context — shared state across all overloads of one intrinsic
 //===----------------------------------------------------------------------===//
+
+namespace {
 
 /// Shared state for emitting all overloads of a single HLSL intrinsic.
 struct OverloadContext {
@@ -242,6 +250,8 @@ struct OverloadContext {
 
   explicit OverloadContext(raw_ostream &OS) : OS(OS) {}
 };
+
+} // anonymous namespace
 
 /// Emit a complete function declaration or definition with pre-resolved types.
 static void emitDeclaration(const OverloadContext &Ctx, StringRef RetType,
@@ -449,7 +459,7 @@ static void buildWorklist(const Record *R,
 }
 
 /// Emit a Doxygen documentation comment from the Doc field.
-void emitDocComment(raw_ostream &OS, const Record *R) {
+static void emitDocComment(raw_ostream &OS, const Record *R) {
   StringRef Doc = R->getValueAsString("Doc");
   if (Doc.empty())
     return;
@@ -560,8 +570,6 @@ static void emitInlineBuiltin(raw_ostream &OS, const Record *R) {
     return;
   emitBuiltinOverloads(OS, R);
 }
-
-} // anonymous namespace
 
 namespace clang {
 
