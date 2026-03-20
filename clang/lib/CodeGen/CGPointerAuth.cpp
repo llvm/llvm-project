@@ -64,12 +64,13 @@ CodeGenModule::getPointerAuthDeclDiscriminator(GlobalDecl Declaration) {
 
   if (EntityHash == 0) {
     const auto *ND = cast<NamedDecl>(Declaration.getDecl());
-    // If the declaration has an AsmLabelAttr (e.g., LLDB expression evaluator
-    // attaches one to map imported decls to debuggee symbols), the asm label
-    // would be used as the mangled name, producing a wrong discriminator.
-    // Compute the real C++ mangled name instead so the discriminator matches
-    // what the original translation unit used.
-    if (ND->hasAttr<AsmLabelAttr>()) {
+    constexpr static llvm::StringLiteral LLDBLabelPrefix = "$__lldb_func:";
+    if (ND->hasAttr<AsmLabelAttr>() &&
+        ND->getAttr<AsmLabelAttr>()->getLabel().starts_with(LLDBLabelPrefix)) {
+      // If the declaration comes from LLDB, the asm label has a prefix that
+      // would producing a different discriminator. Compute the real C++ mangled
+      // name instead so the discriminator matches what the original translation
+      // unit used.
       SmallString<256> Buffer;
       llvm::raw_svector_ostream Out(Buffer);
       getCXXABI().getMangleContext().mangleCXXName(Declaration, Out);
