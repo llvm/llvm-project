@@ -102,11 +102,12 @@ jobs:
             -DBUILD_SHARED_LIBS=OFF \
             -DLLDB_BUILD_STATIC=ON \
             -DLLDB_ENABLE_LZMA=ON \
+            -DLLDB_ENABLE_CURSES=OFF \
+            -DLLDB_ENABLE_LIBEDIT=OFF \
             -DLIBLZMA_LIBRARY=/usr/lib/liblzma.a \
             -DLIBLZMA_INCLUDE_DIR=/usr/include \
             -DLLDB_ENABLE_PYTHON=OFF \
             -DLLVM_ENABLE_TERMINFO=ON \
-            -DLLVM_ENABLE_LIBEDIT=ON \
             -DLLVM_ENABLE_LIBXML2=OFF \
             -DLLVM_ENABLE_ZSTD=FORCE_ON \
             -DLLVM_INCLUDE_TESTS=OFF \
