@@ -35,9 +35,9 @@
 // cwg2947: 23 tentatively ready 2026-03-06
 
 //--- cwg2947_example1.cpp
-// #define DOT_BAR .bar
+// -D'DOT_BAR=.bar'
 export module foo DOT_BAR; // error: expansion of DOT_BAR; does not begin with ; or [
-// expected-error@-1 {{unexpected preprocessing token '.' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+// expected-error@-1 {{unexpected preprocessing token '.' after module name; expansion of 'DOT_BAR' is not part of module name}}
 
 //--- cwg2947_example2.cpp
 export module M MOD_ATTR;        // OK
@@ -46,7 +46,7 @@ export module M MOD_ATTR;        // OK
 //--- cwg2947_example3.cpp
 export module a
   .b;                         // error: preprocessing token after pp-module-name is not ; or [
-// expected-error@-1 {{unexpected preprocessing token '.' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+// expected-error@-1 {{unexpected preprocessing token '.' after module name; only ';' and '[' (start of attribute specifier sequence) are allowed}}
 
 //--- cwg2947_example4.cpp
 export module M [[

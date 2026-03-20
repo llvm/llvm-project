@@ -4417,9 +4417,20 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
 
   // Only ';' and '[' are allowed after module name.
   // We also check 'private' because the previous is not a module name.
-  if (!NextPPTok->isOneOf(tok::semi, tok::eod, tok::l_square, tok::kw_private))
-    Diag(*NextPPTok, diag::err_pp_unexpected_tok_after_module_name)
-        << getSpelling(*NextPPTok);
+  if (!NextPPTok->isOneOf(tok::semi, tok::eod, tok::l_square,
+                          tok::kw_private)) {
+    SourceLocation Loc = NextPPTok->getLocation();
+    auto DB = Diag(*NextPPTok, diag::err_pp_unexpected_tok_after_module_name)
+              << getSpelling(*NextPPTok) << Loc.isMacroID();
+
+    if (Loc.isMacroID()) {
+      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
+          Loc, getSourceManager(), getLangOpts());
+      IdentifierInfo *II = getIdentifierInfo(MacroName);
+      assert(II && "Macro should be defined");
+      DB << II;
+    }
+  }
 
   if (!DirToks.back().isOneOf(tok::semi, tok::eod)) {
     // Consume the pp-import-suffix and expand any macros in it now. We'll add
