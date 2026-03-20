@@ -15,8 +15,9 @@ jobs:
     container:
       image: alpine:3.23
     env:
-      SCCACHE_DIR: ${{ github.workspace }}/.cache/sccache
-      CCACHE_BASEDIR: ${{ github.workspace }}/.cache/sccache
+      CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      LLVM_CCACHE_MAXSIZE: 2G
       LTO_MODE: Thin
     defaults:
       run:
@@ -38,7 +39,7 @@ jobs:
             ninja \
             perl \
             python3 \
-            sccache \
+            ccache \
             swig \
             zstd-static \
             zstd-dev \
@@ -58,21 +59,21 @@ jobs:
           fetch-depth: 1
           fetch-tags: false
 
-      - name: Restore sccache cache
+      - name: Restore ccache cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.SCCACHE_DIR }}
-          key: sccache-alpine-static-${{ runner.os }}-${{ env.LTO_MODE }}-${{ hashFiles('.github/workflows/alpine-static-package.yml') }}
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-alpine-static-${{ runner.os }}-${{ env.LTO_MODE }}-${{ hashFiles('.github/workflows/alpine-static-package.yml') }}
           restore-keys: |
-            sccache-alpine-static-${{ runner.os }}-${{ env.LTO_MODE }}-
-            sccache-alpine-static-${{ runner.os }}-
+            ccache-alpine-static-${{ runner.os }}-${{ env.LTO_MODE }}-
+            ccache-alpine-static-${{ runner.os }}-
 
-      - name: Initialize sccache
+      - name: Initialize ccache
         run: |
           set -eux
-          mkdir -p "${SCCACHE_DIR}"
-          sccache --version
-          sccache --zero-stats || true
+          mkdir -p "${CCACHE_DIR}"
+          ccache --version
+          ccache --zero-stats || true
 
       - name: Configure (RelWithDebInfo + LTO + static)
         env:
@@ -84,18 +85,21 @@ jobs:
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++ \
-            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -DCMAKE_EXE_LINKER_FLAGS="-static -fuse-ld=lld" \
             -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
             -DCMAKE_MODULE_LINKER_FLAGS="-fuse-ld=lld" \
             -DLLVM_ENABLE_PROJECTS="lldb" \
             -DLLVM_ENABLE_LTO="${LTO_MODE}" \
+            -DLLVM_CCACHE_BUILD=ON \
+            -DLLVM_CCACHE_DIR="${CCACHE_DIR}" \
+            -DLLVM_CCACHE_MAXSIZE="${LLVM_CCACHE_MAXSIZE}" \
             -DLLVM_BUILD_LLVM_DYLIB=OFF \
+            -DLLVM_LINK_LLVM_DYLIB=OFF \
             -DLLVM_BUILD_TOOLS=OFF \
             -DLLVM_LINK_LLVM_DYLIB=OFF \
             -DLLVM_TARGETS_TO_BUILD="X86" \
             -DBUILD_SHARED_LIBS=OFF \
+            -DLLDB_BUILD_STATIC=ON \
             -DLLDB_ENABLE_PYTHON=OFF \
             -DLLVM_ENABLE_TERMINFO=ON \
             -DLLVM_ENABLE_LIBEDIT=ON \
@@ -111,11 +115,11 @@ jobs:
           set -eux
           ninja -C build lldb
 
-      - name: Show sccache stats
+      - name: Show ccache stats
         if: always()
         run: |
           set -eux
-          sccache --show-stats || true
+          ccache --show-stats || true
 
       - name: Install
         run: |
