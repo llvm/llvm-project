@@ -1,6 +1,7 @@
 libclc_configure_source_list(CLC_AMDGPU_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}
   address_space/clc_qualifier.cl
+  math/clc_cbrt.cl
   math/clc_exp.cl
   math/clc_exp2.cl
   math/clc_exp2_fast.cl
