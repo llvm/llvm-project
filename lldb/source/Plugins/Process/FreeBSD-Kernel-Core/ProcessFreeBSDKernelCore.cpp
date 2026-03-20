@@ -394,10 +394,7 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
   Target &target = GetTarget();
   Debugger &debugger = target.GetDebugger();
 
-  // Todo: GetCommandInterpreter().IsInteractive() is flaky. When it is
-  // stabilized, restore the following code.
-  // if (!debugger.GetCommandInterpreter().IsInteractive())
-  //   return;
+  // Todo: Return early when lldb is in non-batch mode.
 
   Status error;
 
