@@ -7157,8 +7157,8 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       converter.getFirOpBuilder(), loc, clauseOps);
 
   // Record the scalar element types of all function arguments so that
-  // the OpenMPToLLVMIRTranslation can recover pointee-type information
-  // lost in opaque pointers for correct LS / NDS / WDS computation.
+  // OpenMPToLLVMIRTranslation can recover pointee-type information lost
+  // in opaque pointers for correct LS / NDS / WDS computation.
   // We strip FIR wrappers (box, heap, ref, array) to get the plain scalar
   // type (e.g. i32, f64) that survives FIR-to-LLVM type conversion unchanged.
   if (auto *owningProc = eval.getOwningProcedure();

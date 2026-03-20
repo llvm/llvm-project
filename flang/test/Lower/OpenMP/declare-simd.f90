@@ -57,8 +57,8 @@ end subroutine  declare_simd_linear
 ! CHECK-LABEL: func.func @_QPdeclare_simd_linear(
 ! CHECK: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 4 {{.*}} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[C1:.*]] = arith.constant 1 : i32
-! CHECK: omp.declare_simd linear(ref(%[[I]]#0 : !fir.ref<i32> = %[[C1]] : i32))
+! CHECK: %[[C4:.*]] = arith.constant 4 : i32
+! CHECK: omp.declare_simd linear(ref(%[[I]]#0 : !fir.ref<i32> = %[[C4]] : i32))
 ! CHECK-SAME: linear_var_types([i32]) {arg_types = [f64, f64, i32, i32]}{{$}}
 ! CHECK: return
 
@@ -103,7 +103,7 @@ end subroutine declare_simd_uniform
 ! CHECK: %[[XDECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 1
 ! CHECK: %[[YDECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 2
 ! CHECK: omp.declare_simd uniform(%[[XDECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, %[[YDECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
-! CHECK-SAME: {arg_types = [f64, f64, i32, i32]}
+! CHECK-SAME: {arg_types = [f64, f64, i32, i32]}{{$}}
 ! CHECK: return
 
 subroutine declare_simd_inbranch()
@@ -155,13 +155,13 @@ end subroutine declare_simd_combined
 ! CHECK: %[[N_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 3 {{.*}} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 1 {{.*}} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
 ! CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 2 {{.*}} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
-! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[C4:.*]] = arith.constant 4 : i32
 
 ! CHECK: omp.declare_simd
 ! CHECK-SAME: aligned(%[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> -> 64 : i64,
 ! CHECK-SAME:         %[[Y_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> -> 64 : i64)
 ! CHECK-SAME: inbranch
-! CHECK-SAME: linear(ref(%[[I_DECL]]#0 : !fir.ref<i32> = %[[C1]] : i32))
+! CHECK-SAME: linear(ref(%[[I_DECL]]#0 : !fir.ref<i32> = %[[C4]] : i32))
 ! CHECK-SAME: linear_var_types([i32])
 ! CHECK-SAME: simdlen(8)
 ! CHECK-SAME: uniform(%[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>,
@@ -200,8 +200,8 @@ end subroutine declare_simd_linear_ref
 ! CHECK-LABEL: func.func @_QPdeclare_simd_linear_ref(
 ! CHECK: %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %[[SCOPE]] arg 1 {{.*}} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[C4:.*]] = arith.constant 4 : i32
-! CHECK: omp.declare_simd linear(ref(%[[X]]#0 : !fir.ref<i32> = %[[C4]] : i32))
+! CHECK: %[[C16:.*]] = arith.constant 16 : i32
+! CHECK: omp.declare_simd linear(ref(%[[X]]#0 : !fir.ref<i32> = %[[C16]] : i32))
 ! CHECK-SAME: linear_var_types([i32]) {arg_types = [i32]}{{$}}
 ! CHECK: return
 

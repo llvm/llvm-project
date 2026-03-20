@@ -11113,9 +11113,8 @@ static void populateLinearParam(
         paramAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearUVal;
         break;
       case omp::LinearModifier::val:
-        // Match clang: val on a non-reference (non-pointer SSA type) is
-        // semantically identical to plain linear.  Only pointer-typed
-        // vars (which may originate from C++ references) get LinearVal.
+        // val on a non-reference (non-pointer SSA type) is semantically
+        // identical to plain linear. Only pointer-typed vars get LinearVal.
         if (isa<LLVM::LLVMPointerType>(linearVars[i].getType()))
           paramAttr.Kind = llvm::OpenMPIRBuilder::DeclareSimdKindTy::LinearVal;
         else
@@ -11289,30 +11288,31 @@ static bool getAArch64PBV(Type ty, const DataLayout &dl) {
 // Computes the lane size (LS) of a return type or of an input parameter,
 // as defined by `LS(P)` in 3.2.1 of the AAVFABI.
 //
-// argElemType provides  the original language-level type for an opaque
-// `!llvm.ptr` parameter, enabling correct LS computation.
-static unsigned getAArch64LS(Type ty,
+// `paramTy` is the SSA type of the parameter (e.g. !llvm.ptr, i32, f64).
+// `paramElemTy` optionally provides the original language-level pointee type
+// from `arg_types` for opaque `!llvm.ptr` parameters whose pointee type has
+// been erased.
+static unsigned getAArch64LS(Type paramTy,
                              llvm::OpenMPIRBuilder::DeclareSimdKindTy kind,
-                             const DataLayout &dl,
-                             Type argElemType = nullptr) {
-  if (!getAArch64MTV(ty, kind)) {
-    if (auto ptrLikeTy = dyn_cast<omp::PointerLikeType>(ty)) {
+                             const DataLayout &dl, Type paramElemTy = nullptr) {
+  if (!getAArch64MTV(paramTy, kind)) {
+    if (auto ptrLikeTy = dyn_cast<omp::PointerLikeType>(paramTy)) {
       Type elemTy = ptrLikeTy.getElementType();
       if (elemTy && getAArch64PBV(elemTy, dl))
         return dl.getTypeSizeInBits(elemTy);
     }
     // For opaque !llvm.ptr, use the original type from arg_types
     // if available, since the pointee type is lost at LLVM IR level.
-    if (isa<LLVM::LLVMPointerType>(ty) && argElemType &&
-        getAArch64PBV(argElemType, dl))
-      return dl.getTypeSizeInBits(argElemType);
+    if (isa<LLVM::LLVMPointerType>(paramTy) && paramElemTy &&
+        getAArch64PBV(paramElemTy, dl))
+      return dl.getTypeSizeInBits(paramElemTy);
   }
 
-  if (getAArch64PBV(ty, dl))
-    return dl.getTypeSizeInBits(ty);
+  if (getAArch64PBV(paramTy, dl))
+    return dl.getTypeSizeInBits(paramTy);
 
-  return dl.getTypeSizeInBits(LLVM::LLVMPointerType::get(ty.getContext(),
-                                                         /*addressSpace=*/0));
+  return dl.getTypeSizeInBits(
+      LLVM::LLVMPointerType::get(paramTy.getContext(), /*addressSpace=*/0));
 }
 
 // Get Narrowest Data Size (NDS) and Widest Data Size (WDS) from the

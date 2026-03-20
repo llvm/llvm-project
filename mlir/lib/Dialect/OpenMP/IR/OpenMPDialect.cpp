@@ -5983,6 +5983,13 @@ LogicalResult DeclareSimdOp::verify() {
   if (getInbranch() && getNotinbranch())
     return emitOpError("cannot have both 'inbranch' and 'notinbranch'");
 
+  if (auto argTypes = getArgTypes()) {
+    if (argTypes->size() != func.getNumArguments())
+      return emitOpError() << "'arg_types' length (" << argTypes->size()
+                           << ") must match the number of function arguments ("
+                           << func.getNumArguments() << ")";
+  }
+
   if (failed(verifyLinearModifiers(*this, getLinearModifiers(), getLinearVars(),
                                    /*isDeclareSimd=*/true)))
     return failure();
