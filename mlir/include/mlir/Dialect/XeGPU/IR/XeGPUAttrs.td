@@ -616,9 +616,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     }
 
     int64_t getNumSubgroups() const {
-      SliceAttr attr = flatten();
-      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-      return parent.getRank();
+      return getParent().getNumSubgroups();
     }
 
     DenseI32ArrayAttr getOrder() const {

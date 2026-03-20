@@ -538,10 +538,8 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
         std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
     laneData[srcRank - 2] =
         std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
-    srcLayout = xegpu::LayoutAttr::get(
-        context, toInt32Attr(laneLayout), toInt32Attr(laneData),
-        (!orderAttr || orderAttr.empty()) ? nullptr
-                                          : toInt32Attr(consumerOrder));
+    srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
+                                       toInt32Attr(laneData));
   }
 
   return xegpu::SliceAttr::get(context, srcLayout,
