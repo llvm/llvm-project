@@ -94,19 +94,23 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
           if (VectorID == Intrinsic::not_intrinsic)
             return false;
-          // llvm.assume is safe to drop
-          if (VectorID == Intrinsic::assume) {
+          // The noalias.scope.decl intrinsic declares a noalias scope that
+          // is valid for a single iteration. Emitting it as a single-scalar
+          // replicate would incorrectly extend the scope across multiple
+          // original iterations packed into one vector iteration. Taking the
+          // conservative approach and drop it, but still allow vectorization.
+          if (VectorID == Intrinsic::experimental_noalias_scope_decl) {
             Ingredient.eraseFromParent();
             continue;
           }
           // These intrinsics are recognized by getVectorIntrinsicIDForCall
           // but are not widenable. Emit them as single-scalar replicate
-          // instead of widening
-          if (VectorID == Intrinsic::lifetime_end ||
+          // instead of widening.
+          if (VectorID == Intrinsic::assume ||
+              VectorID == Intrinsic::lifetime_end ||
               VectorID == Intrinsic::lifetime_start ||
               VectorID == Intrinsic::sideeffect ||
-              VectorID == Intrinsic::pseudoprobe ||
-              VectorID == Intrinsic::experimental_noalias_scope_decl) {
+              VectorID == Intrinsic::pseudoprobe) {
             NewRecipe = new VPReplicateRecipe(CI, Ingredient.operands(),
                                               /*IsSingleScalar=*/true,
                                               /*Mask=*/nullptr, *VPI, *VPI,

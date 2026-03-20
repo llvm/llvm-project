@@ -8009,6 +8009,7 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
     case Intrinsic::assume:
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
+    case Intrinsic::sideeffect:
     case Intrinsic::pseudoprobe:
       // For scalable vectors if one of the operands is variant then we still
       // want to mark as uniform, which will generate one instruction for just
