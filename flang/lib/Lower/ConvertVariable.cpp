@@ -917,8 +917,8 @@ static void genDerivedTypeComponentInit(
                   fir::HasValueOp::create(b, loc, initBox);
                 });
           }
-          auto srcAddr = fir::AddrOfOp::create(builder, loc, global.resultType(),
-                                               global.getSymbol());
+          auto srcAddr = fir::AddrOfOp::create(
+              builder, loc, global.resultType(), global.getSymbol());
           mlir::Value loadedBox = fir::LoadOp::create(builder, loc, srcAddr);
           fir::StoreOp::create(builder, loc, loadedBox, compAddr);
         } else {
@@ -1141,7 +1141,7 @@ void Fortran::lower::defaultInitializeAtRuntime(
               });
         }
         auto addrOf = fir::AddrOfOp::create(builder, loc, global.resultType(),
-                                          global.getSymbol());
+                                            global.getSymbol());
         fir::CopyOp::create(builder, loc, addrOf, fir::getBase(exv),
                             /*noOverlap=*/true);
       }
