@@ -19,10 +19,6 @@ static bool isRegDef(const MachineOperand &MO) {
   return MO.isReg() && MO.isDef();
 }
 
-static bool isPhysRegDef(const MachineOperand &MO) {
-  return isRegDef(MO) && MO.getReg().isPhysical();
-}
-
 void SystemZPreRASchedStrategy::initializeLatencyReduction() {
   // Enable latency reduction for a region that has a considerable amount of
   // data sequences that should be interlaved. These are SUs that only have
