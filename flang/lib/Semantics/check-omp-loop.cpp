@@ -247,7 +247,6 @@ void OmpStructureChecker::CheckNestedConstruct(
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   llvm::omp::Directive dir{beginSpec.DirId()};
   unsigned version{context_.langOptions().OpenMPVersion};
-  parser::CharBlock beginSource{beginSpec.DirName().source};
 
   // End-directive is not allowed in such cases:
   //   do 100 i = ...
@@ -258,6 +257,7 @@ void OmpStructureChecker::CheckNestedConstruct(
   auto &flags{std::get<parser::OmpDirectiveSpecification::Flags>(beginSpec.t)};
   if (flags.test(parser::OmpDirectiveSpecification::Flag::CrossesLabelDo)) {
     if (auto &endSpec{x.EndDir()}) {
+      parser::CharBlock beginSource{beginSpec.DirName().source};
       context_
           .Say(endSpec->DirName().source,
               "END %s directive is not allowed when the construct does not contain all loops that share a loop-terminating statement"_err_en_US,
@@ -297,12 +297,12 @@ void OmpStructureChecker::CheckNestedConstruct(
 
   if (std::optional<int64_t> numLoops{sequence.length()}) {
     if (*numLoops == 0) {
-      context_.Say(beginSource,
+      context_.Say(beginSpec.DirName().source,
           "This construct should contain a DO-loop or a loop-nest-generating OpenMP construct"_err_en_US);
     } else {
       auto assoc{llvm::omp::getDirectiveAssociation(dir)};
       if (*numLoops > 1 && assoc == llvm::omp::Association::LoopNest) {
-        context_.Say(beginSource,
+        context_.Say(beginSpec.DirName().source,
             "This construct applies to a loop nest, but has a loop sequence of "
             "length %" PRId64 ""_err_en_US,
             *numLoops);
@@ -310,12 +310,12 @@ void OmpStructureChecker::CheckNestedConstruct(
       if (assoc == llvm::omp::Association::LoopSeq) {
         if (auto requiredCount{GetRequiredCount(needFirst, needCount)}) {
           if (*requiredCount > 0 && *numLoops < *requiredCount) {
-            auto &msg{context_.Say(beginSource,
+            auto &msg{context_.Say(beginSpec.DirName().source,
                 "This construct requires a sequence of %" PRId64
                 " loops, but the loop sequence has a length of %" PRId64
                 ""_err_en_US,
                 *requiredCount, *numLoops)};
-            rangeReason.AttachTo(beginSource, msg);
+            rangeReason.AttachTo(msg);
           }
         }
       }
@@ -334,18 +334,18 @@ void OmpStructureChecker::CheckNestedConstruct(
     if (needDepth && haveDepth && *haveDepth > 0) {
       if (*needDepth > *haveDepth) {
         if (needPerfect) {
-          auto &msg{context_.Say(beginSource,
+          auto &msg{context_.Say(beginSpec.DirName().source,
               "This construct requires a perfect nest of depth %" PRId64
               ", but the associated nest is a perfect nest of depth %" PRId64
               ""_err_en_US,
               *needDepth, *haveDepth)};
-          depthReason.AttachTo(beginSource, msg);
+          depthReason.AttachTo(msg);
         } else {
-          auto &msg{context_.Say(beginSource,
+          auto &msg{context_.Say(beginSpec.DirName().source,
               "This construct requires a nest of depth %" PRId64
               ", but the associated nest has a depth of %" PRId64 ""_err_en_US,
               *needDepth, *haveDepth)};
-          depthReason.AttachTo(beginSource, msg);
+          depthReason.AttachTo(msg);
         }
       }
     }

@@ -23,7 +23,6 @@
 #include "flang/Semantics/tools.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 
 #include <optional>
 #include <string>
@@ -117,22 +116,12 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 struct Reason {
   parser::Messages msgs;
 
-  // Allow messages without a source location. They will acquire a location
-  // during AttachTo.
-  template <typename... Ts>
-  Reason &Say(parser::CharBlock source, Ts &&...args) {
-    auto &msg{msgs.Say(source, std::forward<Ts>(args)...)};
-    if (source.empty()) {
-      unsourced_.insert(&msg);
-    }
+  template <typename... Ts> Reason &Say(Ts &&...args) {
+    msgs.Say(std::forward<Ts>(args)...);
     return *this;
   }
   operator bool() const { return !msgs.empty(); }
-  parser::Message &AttachTo(parser::CharBlock source, parser::Message &msg);
-
-private:
-  // Set of messages without a source location.
-  llvm::DenseSet<const parser::Message *> unsourced_;
+  parser::Message &AttachTo(parser::Message &msg);
 };
 
 std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(

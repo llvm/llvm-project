@@ -532,20 +532,8 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
       instance.u);
 }
 
-parser::Message &Reason::AttachTo(
-    parser::CharBlock source, parser::Message &msg) {
-  parser::Messages sourced;
-  for (auto &&msg : msgs.messages()) {
-    if (unsourced_.contains(&msg)) {
-      llvm::StringRef fmt{"%s"};
-      sourced.Say(source,
-          parser::MessageFixedText(fmt.data(), fmt.size(), msg.severity()),
-          msg.ToString());
-    } else {
-      sourced.Say(std::move(msg));
-    }
-  }
-  sourced.AttachTo(msg);
+parser::Message &Reason::AttachTo(parser::Message &msg) {
+  msgs.AttachTo(msg);
   return msg;
 }
 
