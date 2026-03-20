@@ -176,6 +176,8 @@ public:
 
   bool IsMemberFunctionPointerType() const;
 
+  bool IsMemberDataPointerType() const;
+
   bool
   IsBlockPointerType(CompilerType *function_pointer_type_ptr = nullptr) const;
 
