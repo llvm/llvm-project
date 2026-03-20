@@ -190,42 +190,21 @@ void use_inline() {
 
 void seh_in_noexcept() noexcept { __try {} __finally {} }
 
-#if defined(ERR_ASYNC1)
+#if defined(ERR_ASYNC1) || defined(ERR_SYNC1)
 void seh_unwinding() {
   __try {
     HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
   } __except (1) {
   }
 }
-#elif defined(ERR_ASYNC2)
+#elif defined(ERR_ASYNC2) || defined(ERR_SYNC2)
 void seh_unwinding() {
   __try {
   } __except (1) {
     HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
   }
 }
-#elif defined(ERR_ASYNC3)
-void seh_unwinding() {
-  HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
-  __try {
-  } __except (1) {
-  }
-}
-#elif defined(ERR_SYNC1)
-void seh_unwinding() {
-  __try {
-    HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
-  } __except (1) {
-  }
-}
-#elif defined(ERR_SYNC2)
-void seh_unwinding() {
-  __try {
-  } __except (1) {
-    HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
-  }
-}
-#elif defined(ERR_SYNC3)
+#elif defined(ERR_ASYNC3) || defined(ERR_SYNC3)
 void seh_unwinding() {
   HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
   __try {
