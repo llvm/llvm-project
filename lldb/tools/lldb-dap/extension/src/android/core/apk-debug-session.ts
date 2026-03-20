@@ -36,6 +36,7 @@ export class ApkDebugSession {
     }
     const appId = this.componentName.split("/")[0];
     return [
+      `setting set plugin.jit-loader.gdb.enable off`,
       `platform select remote-android`,
       `platform connect unix-abstract-connect://${deviceSerial}/${appId}/lldb-platform.sock`,
       `process attach --name ${appId}`,
