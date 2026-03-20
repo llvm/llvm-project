@@ -37,11 +37,6 @@ struct ParamOffset {
   bool IsPtr;
 };
 
-struct FuncParam {
-  unsigned Index;
-  bool IsPtr;
-};
-
 class EvalIDScope;
 /// Holds all information required to evaluate constexpr code in a module.
 class Context final {
