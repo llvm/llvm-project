@@ -773,12 +773,12 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
         Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
       }
 
-        ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
-                              nullptr, SourceLocation(),
-                              ParsedAttr::Form::GNU(), nullptr);
+      ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
+                            nullptr, SourceLocation(), ParsedAttr::Form::GNU(),
+                            nullptr);
 
-        if (HasFuncScope)
-          Actions.ActOnExitFunctionContext();
+      if (HasFuncScope)
+        Actions.ActOnExitFunctionContext();
 
     } else {
       ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope, HasFuncScope);
