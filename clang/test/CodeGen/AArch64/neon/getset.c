@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=CIR %}
+// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=ALL,CIR %}
 
 //=============================================================================
 // NOTES
@@ -25,8 +25,7 @@
 // Extract one element from vector
 //===------------------------------------------------------===//
 
-// LLVM-LABEL: @test_vget_lane_u8(
-// CIR-LABEL: @test_vget_lane_u8(
+// ALL-LABEL: @test_vget_lane_u8(
 uint8_t test_vget_lane_u8(uint8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<8 x !u8i>
 
@@ -35,8 +34,7 @@ uint8_t test_vget_lane_u8(uint8x8_t a) {
   return vget_lane_u8(a, 7);
 }
 
-// LLVM-LABEL: @test_vget_lane_u16(
-// CIR-LABEL: @test_vget_lane_u16(
+// ALL-LABEL: @test_vget_lane_u16(
 uint16_t test_vget_lane_u16(uint16x4_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u16i>
@@ -46,8 +44,7 @@ uint16_t test_vget_lane_u16(uint16x4_t a) {
   return vget_lane_u16(a, 3);
 }
 
-// LLVM-LABEL: @test_vget_lane_u32(
-// CIR-LABEL: @test_vget_lane_u32(
+// ALL-LABEL: @test_vget_lane_u32(
 uint32_t test_vget_lane_u32(uint32x2_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u32i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u32i>
@@ -57,8 +54,7 @@ uint32_t test_vget_lane_u32(uint32x2_t a) {
   return vget_lane_u32(a, 1);
 }
 
-// LLVM-LABEL: @test_vget_lane_s8(
-// CIR-LABEL: @test_vget_lane_s8(
+// ALL-LABEL: @test_vget_lane_s8(
 int8_t test_vget_lane_s8(int8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<8 x !u8i>
 
@@ -67,8 +63,7 @@ int8_t test_vget_lane_s8(int8x8_t a) {
   return vget_lane_s8(a, 7);
 }
 
-// LLVM-LABEL: @test_vget_lane_s16(
-// CIR-LABEL: @test_vget_lane_s16(
+// ALL-LABEL: @test_vget_lane_s16(
 int16_t test_vget_lane_s16(int16x4_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u16i>
@@ -78,8 +73,7 @@ int16_t test_vget_lane_s16(int16x4_t a) {
   return vget_lane_s16(a, 3);
 }
 
-// LLVM-LABEL: @test_vget_lane_s32(
-// CIR-LABEL: @test_vget_lane_s32(
+// ALL-LABEL: @test_vget_lane_s32(
 int32_t test_vget_lane_s32(int32x2_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u32i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u32i>
@@ -89,8 +83,7 @@ int32_t test_vget_lane_s32(int32x2_t a) {
   return vget_lane_s32(a, 1);
 }
 
-// LLVM-LABEL: @test_vget_lane_p8(
-// CIR-LABEL: @test_vget_lane_p8(
+// ALL-LABEL: @test_vget_lane_p8(
 poly8_t test_vget_lane_p8(poly8x8_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<8 x !u8i>
 
@@ -99,8 +92,7 @@ poly8_t test_vget_lane_p8(poly8x8_t a) {
   return vget_lane_p8(a, 7);
 }
 
-// LLVM-LABEL: @test_vget_lane_p16(
-// CIR-LABEL: @test_vget_lane_p16(
+// ALL-LABEL: @test_vget_lane_p16(
 poly16_t test_vget_lane_p16(poly16x4_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u16i>
@@ -110,8 +102,7 @@ poly16_t test_vget_lane_p16(poly16x4_t a) {
   return vget_lane_p16(a, 3);
 }
 
-// LLVM-LABEL: @test_vget_lane_f32(
-// CIR-LABEL: @test_vget_lane_f32(
+// ALL-LABEL: @test_vget_lane_f32(
 float32_t test_vget_lane_f32(float32x2_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<2 x !cir.float>
 
@@ -120,8 +111,7 @@ float32_t test_vget_lane_f32(float32x2_t a) {
   return vget_lane_f32(a, 1);
 }
 
-// LLVM-LABEL: @test_vget_lane_f64(
-// CIR-LABEL: @test_vget_lane_f64(
+// ALL-LABEL: @test_vget_lane_f64(
 float64_t test_vget_lane_f64(float64x1_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<1 x !cir.double>
 
@@ -130,8 +120,7 @@ float64_t test_vget_lane_f64(float64x1_t a) {
   return vget_lane_f64(a, 0);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_u8(
-// CIR-LABEL: @test_vgetq_lane_u8(
+// ALL-LABEL: @test_vgetq_lane_u8(
 uint8_t test_vgetq_lane_u8(uint8x16_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<16 x !u8i>
 
@@ -140,8 +129,7 @@ uint8_t test_vgetq_lane_u8(uint8x16_t a) {
   return vgetq_lane_u8(a, 15);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_u16(
-// CIR-LABEL: @test_vgetq_lane_u16(
+// ALL-LABEL: @test_vgetq_lane_u16(
 uint16_t test_vgetq_lane_u16(uint16x8_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<8 x !u16i>
@@ -151,8 +139,7 @@ uint16_t test_vgetq_lane_u16(uint16x8_t a) {
   return vgetq_lane_u16(a, 7);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_u32(
-// CIR-LABEL: @test_vgetq_lane_u32(
+// ALL-LABEL: @test_vgetq_lane_u32(
 uint32_t test_vgetq_lane_u32(uint32x4_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u32i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u32i>
@@ -162,8 +149,7 @@ uint32_t test_vgetq_lane_u32(uint32x4_t a) {
   return vgetq_lane_u32(a, 3);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_s8(
-// CIR-LABEL: @test_vgetq_lane_s8(
+// ALL-LABEL: @test_vgetq_lane_s8(
 int8_t test_vgetq_lane_s8(int8x16_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<16 x !u8i>
 
@@ -172,8 +158,7 @@ int8_t test_vgetq_lane_s8(int8x16_t a) {
   return vgetq_lane_s8(a, 15);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_s16(
-// CIR-LABEL: @test_vgetq_lane_s16(
+// ALL-LABEL: @test_vgetq_lane_s16(
 int16_t test_vgetq_lane_s16(int16x8_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<8 x !u16i>
@@ -183,8 +168,7 @@ int16_t test_vgetq_lane_s16(int16x8_t a) {
   return vgetq_lane_s16(a, 7);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_s32(
-// CIR-LABEL: @test_vgetq_lane_s32(
+// ALL-LABEL: @test_vgetq_lane_s32(
 int32_t test_vgetq_lane_s32(int32x4_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u32i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u32i>
@@ -194,8 +178,7 @@ int32_t test_vgetq_lane_s32(int32x4_t a) {
   return vgetq_lane_s32(a, 3);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_p8(
-// CIR-LABEL: @test_vgetq_lane_p8(
+// ALL-LABEL: @test_vgetq_lane_p8(
 poly8_t test_vgetq_lane_p8(poly8x16_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<16 x !u8i>
 
@@ -204,8 +187,7 @@ poly8_t test_vgetq_lane_p8(poly8x16_t a) {
   return vgetq_lane_p8(a, 15);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_p16(
-// CIR-LABEL: @test_vgetq_lane_p16(
+// ALL-LABEL: @test_vgetq_lane_p16(
 poly16_t test_vgetq_lane_p16(poly16x8_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<8 x !u16i>
@@ -215,8 +197,7 @@ poly16_t test_vgetq_lane_p16(poly16x8_t a) {
   return vgetq_lane_p16(a, 7);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_f32(
-// CIR-LABEL: @test_vgetq_lane_f32(
+// ALL-LABEL: @test_vgetq_lane_f32(
 float32_t test_vgetq_lane_f32(float32x4_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<4 x !cir.float>
 
@@ -225,8 +206,7 @@ float32_t test_vgetq_lane_f32(float32x4_t a) {
   return vgetq_lane_f32(a, 3);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_f64(
-// CIR-LABEL: @test_vgetq_lane_f64(
+// ALL-LABEL: @test_vgetq_lane_f64(
 float64_t test_vgetq_lane_f64(float64x2_t a) {
 // CIR: cir.vec.extract %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<2 x !cir.double>
 
@@ -235,8 +215,7 @@ float64_t test_vgetq_lane_f64(float64x2_t a) {
   return vgetq_lane_f64(a, 1);
 }
 
-// LLVM-LABEL: @test_vget_lane_s64(
-// CIR-LABEL: @test_vget_lane_s64(
+// ALL-LABEL: @test_vget_lane_s64(
 int64_t test_vget_lane_s64(int64x1_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<1 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<1 x !u64i>
@@ -246,8 +225,7 @@ int64_t test_vget_lane_s64(int64x1_t a) {
   return vget_lane_s64(a, 0);
 }
 
-// LLVM-LABEL: @test_vget_lane_u64(
-// CIR-LABEL: @test_vget_lane_u64(
+// ALL-LABEL: @test_vget_lane_u64(
 uint64_t test_vget_lane_u64(uint64x1_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<1 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<1 x !u64i>
@@ -257,8 +235,7 @@ uint64_t test_vget_lane_u64(uint64x1_t a) {
   return vget_lane_u64(a, 0);
 }
 
-// LLVM-LABEL: @test_vget_lane_p64(
-// CIR-LABEL: @test_vget_lane_p64(
+// ALL-LABEL: @test_vget_lane_p64(
 poly64_t test_vget_lane_p64(poly64x1_t v) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<1 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<1 x !u64i>
@@ -268,8 +245,7 @@ poly64_t test_vget_lane_p64(poly64x1_t v) {
   return vget_lane_p64(v, 0);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_s64(
-// CIR-LABEL: @test_vgetq_lane_s64(
+// ALL-LABEL: @test_vgetq_lane_s64(
 int64_t test_vgetq_lane_s64(int64x2_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u64i>
@@ -279,8 +255,7 @@ int64_t test_vgetq_lane_s64(int64x2_t a) {
   return vgetq_lane_s64(a, 1);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_u64(
-// CIR-LABEL: @test_vgetq_lane_u64(
+// ALL-LABEL: @test_vgetq_lane_u64(
 uint64_t test_vgetq_lane_u64(uint64x2_t a) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u64i>
@@ -290,8 +265,7 @@ uint64_t test_vgetq_lane_u64(uint64x2_t a) {
   return vgetq_lane_u64(a, 1);
 }
 
-// LLVM-LABEL: @test_vgetq_lane_p64(
-// CIR-LABEL: @test_vgetq_lane_p64(
+// ALL-LABEL: @test_vgetq_lane_p64(
 poly64_t test_vgetq_lane_p64(poly64x2_t v) {
 // CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u64i>
