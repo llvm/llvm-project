@@ -2255,7 +2255,7 @@ SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
   SourceLocExprBits.Kind = llvm::to_underlying(Kind);
   // In dependent contexts, function names may change.
   setDependence(MayBeDependent(Kind) && ParentContext->isDependentContext()
-                    ? ExprDependence::Value
+                    ? ExprDependence::ValueInstantiation
                     : ExprDependence::None);
 }
 
