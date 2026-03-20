@@ -2,12 +2,13 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp
   ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
-  EntityIdTest.cpp
   EntityIdTableTest.cpp
+  EntityIdTest.cpp
   EntityLinkageTest.cpp
   EntityLinkerTest.cpp
   EntityNameTest.cpp
   ErrorBuilderTest.cpp
+  Frontend/TUSummaryExtractorFrontendActionTest.cpp
   ModelStringConversionsTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
@@ -24,17 +25,17 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   TUSummaryBuilderTest.cpp
 
   CLANG_LIBS
-  clangScalableStaticAnalysisFrameworkCore
   clangAST
   clangASTMatchers
   clangBasic
   clangFrontend
+  clangScalableStaticAnalysisFrameworkAnalyses
+  clangScalableStaticAnalysisFrameworkCore
+  clangScalableStaticAnalysisFrameworkFrontend
   clangSerialization
   clangTooling
-  clangUnifiedSymbolResolution
 
   LINK_LIBS
-  clangTesting
   LLVMTestingSupport
 
   LLVM_COMPONENTS

@@ -274,6 +274,9 @@ private:
   bool selectWaveExclusiveScanProduct(Register ResVReg, SPIRVTypeInst ResType,
                                       MachineInstr &I) const;
 
+  bool selectQuadSwap(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
+                      unsigned Direction) const;
+
   bool selectConst(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
@@ -553,11 +556,14 @@ static bool isConstReg(MachineRegisterInfo *MRI, MachineInstr *OpDef) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_INTRINSIC:
     case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
-      if (cast<GIntrinsic>(*OpDef).getIntrinsicID() !=
-          Intrinsic::spv_const_composite)
+    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS: {
+      GIntrinsic *GIntr = cast<GIntrinsic>(MI);
+      unsigned IntrID = GIntr->getIntrinsicID();
+      if (IntrID != Intrinsic::spv_const_composite &&
+          IntrID != Intrinsic::spv_undef)
         return false;
       continue;
+    }
     case TargetOpcode::G_BUILD_VECTOR:
     case TargetOpcode::G_SPLAT_VECTOR:
       for (unsigned i = OpDef->getNumExplicitDefs();
@@ -1760,11 +1766,11 @@ bool SPIRVInstructionSelector::selectMaskedGather(Register ResVReg,
   // 3: alignment (i32 immediate)
   // 4: mask (vector of i1)
   // 5: passthru/fill value
-  Register PtrsReg = I.getOperand(2).getReg();
-  uint32_t Alignment = I.getOperand(3).getImm();
-  Register MaskReg = I.getOperand(4).getReg();
-  Register PassthruReg = I.getOperand(5).getReg();
-  Register AlignmentReg = buildI32Constant(Alignment, I);
+  const Register PtrsReg = I.getOperand(2).getReg();
+  const uint32_t Alignment = I.getOperand(3).getImm();
+  const Register MaskReg = I.getOperand(4).getReg();
+  const Register PassthruReg = I.getOperand(5).getReg();
+  const Register AlignmentReg = buildI32Constant(Alignment, I);
 
   MachineBasicBlock &BB = *I.getParent();
   auto MIB =
@@ -1787,11 +1793,11 @@ bool SPIRVInstructionSelector::selectMaskedScatter(MachineInstr &I) const {
   // 2: vector of pointers
   // 3: alignment (i32 immediate)
   // 4: mask (vector of i1)
-  Register ValuesReg = I.getOperand(1).getReg();
-  Register PtrsReg = I.getOperand(2).getReg();
-  uint32_t Alignment = I.getOperand(3).getImm();
-  Register MaskReg = I.getOperand(4).getReg();
-  Register AlignmentReg = buildI32Constant(Alignment, I);
+  const Register ValuesReg = I.getOperand(1).getReg();
+  const Register PtrsReg = I.getOperand(2).getReg();
+  const uint32_t Alignment = I.getOperand(3).getImm();
+  const Register MaskReg = I.getOperand(4).getReg();
+  const Register AlignmentReg = buildI32Constant(Alignment, I);
   MachineBasicBlock &BB = *I.getParent();
 
   auto MIB =
@@ -3188,6 +3194,30 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScan(
   return true;
 }
 
+bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
+                                              SPIRVTypeInst ResType,
+                                              MachineInstr &I,
+                                              unsigned Direction) const {
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+  Register InputRegister = I.getOperand(2).getReg();
+
+  SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  bool ZeroAsNull = !STI.isShader();
+  Register DirectionReg =
+      GR.getOrCreateConstInt(Direction, I, IntTy, TII, ZeroAsNull);
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpGroupNonUniformQuadSwap))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
+                                     ZeroAsNull))
+      .addUse(InputRegister)
+      .addUse(DirectionReg)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
                                                   SPIRVTypeInst ResType,
                                                   MachineInstr &I,
@@ -4424,6 +4454,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveExclusiveScanSum(ResVReg, ResType, I);
   case Intrinsic::spv_wave_prefix_product:
     return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
+  case Intrinsic::spv_quad_read_across_x: {
+    return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 0);
+  }
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
@@ -6014,6 +6047,10 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     VarType = GR.getPointeeType(ResType);
     SC = GR.getPointerStorageClass(ResType);
   }
+
+  if (ResType->getOpcode() == SPIRV::OpTypeImage && ArraySize == 0)
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::RuntimeDescriptorArrayEXT);
 
   Register VarReg =
       buildPointerToResource(SPIRVTypeInst(VarType), SC, Set, Binding,

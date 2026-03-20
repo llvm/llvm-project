@@ -429,6 +429,8 @@ if config.have_llvm_driver:
 if config.clang_enable_cir:
     config.available_features.add("cir-enabled")
 
+if config.use_xcselect:
+    config.available_features.add("xcselect")
 
 # Tests that rely on chmod to restrict file permissions (e.g. write-permission
 # checks) are unreliable when run as root, since root bypasses file permissions.

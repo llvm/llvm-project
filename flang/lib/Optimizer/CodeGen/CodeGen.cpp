@@ -3287,7 +3287,7 @@ static inline bool attributeTypeIsCompatible(mlir::MLIRContext *ctx,
   // Get attr's LLVM element type.
   if (!attr)
     return true;
-  auto intOrFpEleAttr = mlir::dyn_cast<mlir::DenseIntOrFPElementsAttr>(attr);
+  auto intOrFpEleAttr = mlir::dyn_cast<mlir::DenseTypedElementsAttr>(attr);
   if (!intOrFpEleAttr)
     return true;
   auto tensorTy = mlir::dyn_cast<mlir::TensorType>(intOrFpEleAttr.getType());

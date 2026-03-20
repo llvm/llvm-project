@@ -12,37 +12,11 @@
 // RUN:   -fno-delayed-template-parsing
 
 #include <utility>
+#include <memory>
 
 typedef decltype(nullptr) nullptr_t;
 
 namespace std {
-
-template <typename T>
-struct unique_ptr {
-  unique_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-  T& operator[](size_t i) const;
-};
-
-template <typename T>
-struct shared_ptr {
-  shared_ptr();
-  T *get() const;
-  explicit operator bool() const;
-  void reset(T *ptr);
-  T &operator*() const;
-  T *operator->() const;
-};
-
-template <typename T>
-struct weak_ptr {
-  weak_ptr();
-  bool expired() const;
-};
 
 template <typename T>
 struct optional {
@@ -224,7 +198,7 @@ void standardSmartPtr() {
     // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
-    std::unique_ptr<A> ptr;
+    std::unique_ptr<A[]> ptr;
     std::move(ptr);
     ptr[0];
     // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved

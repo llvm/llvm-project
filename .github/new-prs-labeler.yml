@@ -695,6 +695,7 @@ clang:ssaf:
       - clang/docs/ScalableStaticAnalysisFramework/**
       - clang/include/clang/ScalableStaticAnalysisFramework/**
       - clang/lib/ScalableStaticAnalysisFramework/**
+      - clang/test/Analysis/Scalable/**
       - clang/unittests/ScalableStaticAnalysisFramework/**
 
 clang:static analyzer:

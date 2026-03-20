@@ -1142,6 +1142,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                    MatTy0->getNumColumns(),
                                    MatTy1->getNumColumns(), "hlsl.mul");
   }
+  case Builtin::BI__builtin_hlsl_transpose: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    auto *MatTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
+    llvm::MatrixBuilder MB(Builder);
+    return MB.CreateMatrixTranspose(Op0, MatTy->getNumRows(),
+                                    MatTy->getNumColumns());
+  }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
@@ -1387,6 +1394,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.prefix.product");
+  }
+  case Builtin::BI__builtin_hlsl_quad_read_across_x: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getQuadReadAcrossXIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), ID, {OpExpr->getType()}),
+                           ArrayRef{OpExpr}, "hlsl.quad.read.across.x");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);

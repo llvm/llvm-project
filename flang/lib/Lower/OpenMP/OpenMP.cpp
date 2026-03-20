@@ -2245,6 +2245,16 @@ static void genCanonicalLoopNest(
   firOpBuilder.setInsertionPointAfter(loops.front());
 }
 
+static void genInterchangeOp(Fortran::lower::AbstractConverter &converter,
+                             Fortran::lower::SymMap &symTable,
+                             lower::StatementContext &stmtCtx,
+                             Fortran::semantics::SemanticsContext &semaCtx,
+                             Fortran::lower::pft::Evaluation &eval,
+                             mlir::Location loc, const ConstructQueue &queue,
+                             ConstructQueue::const_iterator item) {
+  TODO(converter.getCurrentLocation(), "OpenMP Interchange");
+}
+
 static void genTileOp(Fortran::lower::AbstractConverter &converter,
                       Fortran::lower::SymMap &symTable,
                       lower::StatementContext &stmtCtx,
@@ -3739,6 +3749,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_teams:
     newOp = genTeamsOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
                        item);
+    break;
+  case llvm::omp::Directive::OMPD_interchange:
+    genInterchangeOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
+                     item);
     break;
   case llvm::omp::Directive::OMPD_tile:
     genTileOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
