@@ -122,7 +122,7 @@ And the hard way:
 .. code-block:: llvm
 
     %0 = add i32 %X, %X           ; yields i32:%0
-    %1 = add i32 %0, %0           /* yields i32:%1 */
+    %1 = add i32 %0, %0           ; yields i32:%1
     %result = add i32 %1, %1
 
 This last way of multiplying ``%X`` by 8 illustrates several important
@@ -787,8 +787,8 @@ be performed as loads and stores of the correct type since stores of other
 types may not propagate the external data.
 Therefore it is not legal to convert an existing load/store (or a
 ``llvm.memcpy`` / ``llvm.memmove`` intrinsic) of pointer types with external
-state to a load/store of an integer type with the same bitwidth, as that may drop
-the external state.
+state to a load/store of an integer or byte type with the same bitwidth, as that
+may drop the external state.
 
 
 .. _globalvars:
@@ -972,7 +972,9 @@ an optional ``unnamed_addr`` attribute, a return type, an optional
 name, a (possibly empty) argument list (each with optional :ref:`parameter
 attributes <paramattrs>`), optional :ref:`function attributes <fnattrs>`,
 an optional address space, an optional section, an optional partition,
-an optional alignment, an optional :ref:`comdat <langref_comdats>`,
+an optional minimum alignment,
+an optional preferred alignment,
+an optional :ref:`comdat <langref_comdats>`,
 an optional :ref:`garbage collector name <gc>`, an optional :ref:`prefix <prefixdata>`,
 an optional :ref:`prologue <prologuedata>`,
 an optional :ref:`personality <personalityfn>`,
@@ -986,8 +988,8 @@ Syntax::
            <ResultType> @<FunctionName> ([argument list])
            [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
            [section "name"] [partition "name"] [comdat [($name)]] [align N]
-           [gc] [prefix Constant] [prologue Constant] [personality Constant]
-           (!name !N)* { ... }
+           [prefalign(N)] [gc] [prefix Constant] [prologue Constant]
+           [personality Constant] (!name !N)* { ... }
 
 The argument list is a comma-separated sequence of arguments where each
 argument is of the following form:
@@ -1037,11 +1039,20 @@ LLVM allows an explicit section to be specified for functions. If the
 target supports it, it will emit functions to the section specified.
 Additionally, the function can be placed in a COMDAT.
 
-An explicit alignment may be specified for a function. If not present,
-or if the alignment is set to zero, the alignment of the function is set
-by the target to whatever it feels convenient. If an explicit alignment
-is specified, the function is forced to have at least that much
-alignment. All alignments must be a power of 2.
+An explicit minimum alignment (``align``) may be specified for a
+function. If not present, or if the alignment is set to zero, the
+alignment of the function is set according to the preferred alignment
+rules described below. If an explicit minimum alignment is specified, the
+function is forced to have at least that much alignment. All alignments
+must be a power of 2.
+
+An explicit preferred alignment (``prefalign``) may also be specified for
+a function (definitions only, and must be a power of 2). If a function
+does not have a preferred alignment attribute, the preferred alignment
+is determined in a target-specific way. The preferred alignment, if
+provided, is treated as a hint; the final alignment of the function will
+generally be set to a value somewhere between the minimum alignment and
+the preferred alignment.
 
 If the ``unnamed_addr`` attribute is given, the address is known to not
 be significant and two identical functions can be merged.
@@ -2077,6 +2088,19 @@ For example:
     The first three options are mutually exclusive, and the remaining options
     describe more details of how the function behaves. The remaining options
     are invalid for "free"-type functions.
+
+    Calls to functions annotated with ``allockind`` are subject to allocation
+    elision: Calls to allocator functions can be removed, and the allocation
+    served from a "virtual" allocator instead. Notably, this is allowed even if
+    the allocator calls have side-effects. In other words, for each allocation
+    there is a non-deterministic choice between calling the allocator as usual,
+    or using a virtual, side-effect-free allocator instead.
+
+    If multiple allocation functions operate on the same allocation,
+    allocation elision is only allowed for pairs of "alloc" and "free" with the
+    same ``"alloc-family"`` attribute. For this purpose, a "realloc" call may
+    be decomposed into "alloc" and "free" operations, as long as at least one
+    of them will be elided.
 ``"alloc-variant-zeroed"="FUNCTION"``
     This attribute indicates that another function is equivalent to an allocator function,
     but returns zeroed memory. The function must have "zeroed" allocation behavior,
@@ -2373,7 +2397,7 @@ For example:
     occurs inside a cycle in the dynamic call graph.
     For example:
 
-.. code-block:: llvm
+.. code-block:: text
 
     fn -> other_fn -> fn       ; fn is not norecurse
     other_fn -> fn -> other_fn ; fn is not norecurse
@@ -2765,7 +2789,7 @@ For example:
     specified, `max` must be a power-of-two greater-than-or-equal to `min` or 0
     to signify an unbounded maximum. The syntax `vscale_range(<val>)` can be
     used to set both `min` and `max` to the same value. Functions that don't
-    include this attribute make no assumptions about the value of `vscale`.
+    include this attribute make no assumptions about the range of `vscale`.
 ``nooutline``
     This attribute indicates that outlining passes should not modify the
     function.
@@ -3384,6 +3408,9 @@ as follows:
 ``v<size>:<abi>[:<pref>]``
     This specifies the alignment for a vector type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
+``ve``
+    Specifies that vectors are element-aligned by default, rather than having
+    natural alignment.
 ``f<size>:<abi>[:<pref>]``
     This specifies the alignment for a floating-point type of a given bit
     ``<size>``. Only values of ``<size>`` that are supported by the target
@@ -4162,9 +4189,9 @@ following flags to enable otherwise unsafe floating-point transformations.
    produces a :ref:`poison value <poisonvalues>` instead.
 
 ``nsz``
-   No Signed Zeros - Allow optimizations to treat the sign of a zero
-   argument or zero result as insignificant. This does not imply that -0.0
-   is poison and/or guaranteed to not exist in the operation.
+   No Signed Zeros - Unless otherwise mentioned, the sign bit of 0.0 or -0.0
+   input operands can be non-deterministically flipped. This does not imply
+   that -0.0 is poison and/or guaranteed to not exist in the operation.
 
 Note: For :ref:`phi <i_phi>`, :ref:`select <i_select>`, and :ref:`call <i_call>`
 instructions, the following return types are considered to be floating-point
@@ -4444,6 +4471,53 @@ Examples:
 | ``i1942652``   | a really big integer of over 1 million bits.   |
 +----------------+------------------------------------------------+
 
+.. _t_byte:
+
+Byte Type
+"""""""""
+
+:Overview:
+
+The byte type represents raw memory data in SSA registers. It should be used
+when it cannot be determined whether a value holds a pointer or another type at
+run time, or if the value contains uninitialized or poison data. Frontends are
+expected to use a byte type when:
+
+#. Lowering memory operations like `memcpy` and `memmove` to load/store pairs
+   without knowing the underlying type being copied.
+
+#. Working with union types that can hold a pointer alongside a non-pointer
+   type.
+
+#. Working with possibly uninitialized data.
+
+Otherwise, when known, the specific type should be used. Each bit can be:
+
+* An integer bit (0 or 1)
+* Part of a pointer value
+* ``poison``
+
+Any bit width from 1 bit to 2\ :sup:`23`\ (about 8 million) can be specified.
+
+:Syntax:
+
+::
+
+      bN
+
+The number of bits the byte occupies is specified by the ``N`` value.
+
+Examples:
+*********
+
++----------------+------------------------------------------------+
+| ``b1``         | a single-bit byte value.                       |
++----------------+------------------------------------------------+
+| ``b32``        | a 32-bit byte value.                           |
++----------------+------------------------------------------------+
+| ``b128``       | a 128-bit byte value.                          |
++----------------+------------------------------------------------+
+
 .. _t_floating:
 
 Floating-Point Types
@@ -4678,9 +4752,9 @@ elementtype may be any integer, floating-point, pointer type, or a sized
 target extension type that has the ``CanBeVectorElement`` property. Vectors
 of size zero are not allowed. For scalable vectors, the total number of
 elements is a constant multiple (called vscale) of the specified number
-of elements; vscale is a positive integer that is unknown at compile time
-and the same hardware-dependent constant for all scalable vectors at run
-time. The size of a specific scalable vector type is thus constant within
+of elements; vscale is a positive power-of-two integer that is unknown at
+compile time and the same hardware-dependent constant for all scalable vectors
+at run time. The size of a specific scalable vector type is thus constant within
 IR, even if the exact size in bytes cannot be determined until run time.
 
 :Examples:
@@ -4877,6 +4951,10 @@ Simple Constants
     Note that hexadecimal integers are sign extended from the number
     of active bits, i.e., the bit width minus the number of leading
     zeros. So '``s0x0001``' of type '``i16``' will be -1, not 1.
+**Byte constants**
+    Byte constants are used to initialize global variables of the :ref:`byte
+    <t_byte>` type. These are strictly equivalent to integer constants:
+    ``store b8 42, ptr %p`` is equivalent to ``store i8 42, ptr %p``.
 **Floating-point constants**
     Floating-point constants use standard decimal notation (e.g.
     123.421), exponential notation (e.g., 1.23421e+2), or a more precise
@@ -11602,6 +11680,9 @@ See :ref:`llvm.lifetime.start <int_lifestart>` and
 :ref:`llvm.lifetime.end <int_lifeend>` for the precise semantics of
 lifetime-manipulating intrinsics.
 
+If the element count is ``undef`` or ``poison``, this instruction has undefined
+behavior.
+
 Example:
 """"""""
 
@@ -11735,12 +11816,17 @@ is of scalar type then the number of bytes read does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
 example, loading an ``i24`` reads at most three bytes. When loading a
 value of a type like ``i20`` with a size that is not an integral number
-of bytes, the result is undefined if the value was not originally
-written using a store of the same type.
+of bytes, the load will be performed on the next larger multiple of the byte
+size (here ``i24``) and truncated. If any of the truncated bits are non-zero,
+the result is a poison value. As such, a non-byte-sized load behaves like a
+byte-sized load followed by a ``trunc nuw`` operation.
+
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
 padding from the loaded aggregate value.
 If ``<pointer>`` is not a well-defined value, the behavior is undefined.
+The behavior of loading a value of a type that differs from the type used to
+store it is described in the :ref:`bitcast <i_bitcast>` section.
 
 Examples:
 """""""""
@@ -11829,8 +11915,10 @@ of scalar type then the number of bytes written does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
 example, storing an ``i24`` writes at most three bytes. When writing a
 value of a type like ``i20`` with a size that is not an integral number
-of bytes, it is unspecified what happens to the extra bits that do not
-belong to the type, but they will typically be overwritten.
+of bytes, the value will be zero extended to the next larger multiple of the
+byte size (here ``i24``) and then stored. As such, a non-byte-sized store
+behaves like a ``zext`` followed by a byte-sized store.
+
 If ``<value>`` is of aggregate type, padding is filled with
 :ref:`undef <undefvalues>`.
 If ``<pointer>`` is not a well-defined value, the behavior is undefined.
@@ -12040,6 +12128,8 @@ operation. The operation must be one of the following keywords:
 -  fmin
 -  fmaximum
 -  fminimum
+-  fmaximumnum
+-  fminimumnum
 -  uinc_wrap
 -  udec_wrap
 -  usub_cond
@@ -12049,7 +12139,7 @@ For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight.
 For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum, this must be a floating-point
+as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point
 or fixed vector of floating-point type.  The type of the '``<pointer>``'
 operand must be a pointer to that type. If the ``atomicrmw`` is marked
 as ``volatile``, then the optimizer is not allowed to modify the
@@ -12094,6 +12184,8 @@ operation argument:
 -  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*` intrinsic)
 -  fmaximum: ``*ptr = maximum(*ptr, val)`` (match the `llvm.maximum.*` intrinsic)
 -  fminimum: ``*ptr = minimum(*ptr, val)`` (match the `llvm.minimum.*` intrinsic)
+-  fmaximumnum: ``*ptr = maximumnum(*ptr, val)`` (match the `llvm.maximumnum.*` intrinsic)
+-  fminimumnum: ``*ptr = minimumnum(*ptr, val)`` (match the `llvm.minimumnum.*` intrinsic)
 -  uinc_wrap: ``*ptr = (*ptr u>= val) ? 0 : (*ptr + 1)`` (increment value with wraparound to zero when incremented above input value)
 -  udec_wrap: ``*ptr = ((*ptr == 0) || (*ptr u> val)) ? val : (*ptr - 1)`` (decrement with wraparound to input value when decremented below zero).
 -  usub_cond: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if no unsigned overflow).
@@ -12997,10 +13089,10 @@ The '``bitcast``' instruction takes a value to cast, which must be a
 non-aggregate first class value, and a type to cast it to, which must
 also be a non-aggregate :ref:`first class <t_firstclass>` type. The
 bit sizes of ``value`` and the destination type, ``ty2``, must be
-identical. If the source type is a pointer, the destination type must
-also be a pointer of the same size. This instruction supports bitwise
-conversion of vectors to integers and to vectors of other types (as
-long as they have the same size).
+identical. If the source type is a pointer, the destination type must also be a
+pointer or a byte (vector of bytes) of the same size. This instruction supports
+bitwise conversion of vectors to integers and to vectors of other types (as long
+as they have the same size).
 
 Semantics:
 """"""""""
@@ -13010,14 +13102,43 @@ is always a *no-op cast* because no bits change with this
 conversion. The conversion is done as if the ``value`` had been stored
 to memory and read back as type ``ty2``. Pointer (or vector of
 pointers) types may only be converted to other pointer (or vector of
-pointers) types with the same address space through this instruction.
-To convert pointers to other types, use the :ref:`inttoptr <i_inttoptr>`
-or :ref:`ptrtoint <i_ptrtoint>` instructions first.
+pointers) types with the same address space or byte (or vector of bytes) types
+through this instruction. To convert pointers to other types, use the
+:ref:`inttoptr <i_inttoptr>` or :ref:`ptrtoint <i_ptrtoint>` instructions first.
 
 There is a caveat for bitcasts involving vector types in relation to
 endianness. For example ``bitcast <2 x i8> <value> to i16`` puts element zero
 of the vector in the least significant bits of the i16 for little-endian while
 element zero ends up in the most significant bits for big-endian.
+
+If ``value`` is of the :ref:`byte type <t_byte>`:
+
+* If ``ty2`` is a scalar type:
+
+    * If ``ty2`` is a byte type, the original bits are unchanged.
+
+    * If ``ty2`` is a pointer type:
+
+        * If at least one bit of ``value`` is ``poison``, the result is
+          ``poison``.
+
+        * If all bits of ``value`` are from the same pointer and are correctly
+          ordered (there were no pointer bit swaps), the result is that pointer.
+
+        * Otherwise, the result is a pointer with the address given by the
+          integer value of the input, and without provenance.
+
+    * If ``ty2`` is an integer or floating-point type:
+
+        * If at least one bit of ``value`` is ``poison``, the result is
+          ``poison``.
+
+        * Otherwise, the result is the value encoded by the input bits with
+          their provenance stripped without being exposed.
+
+* If ``ty2`` is a vector type, the input bits get sliced into chunks
+  corresponding to lanes of the output. Each lane is then converted using the
+  rules for scalar types above.
 
 Example:
 """"""""
@@ -13028,6 +13149,17 @@ Example:
       %Y = bitcast i32* %x to i16*      ; yields i16*:%x
       %Z = bitcast <2 x i32> %V to i64; ; yields i64: %V (depends on endianness)
       %Z = bitcast <2 x i32*> %V to <2 x i64*> ; yields <2 x i64*>
+
+      ; considering %bi to hold an integer and %bp to hold a pointer,
+      %a = bitcast b64 %bi to i64       ; returns an integer, no-op cast
+      %b = bitcast b64 %bp to i64       ; reinterprets the pointer as an integer, returning its address without exposing provenance
+      %c = bitcast b64 %bp to ptr       ; returns a pointer, no-op cast
+      %d = bitcast b64 %bi to ptr       ; reinterprets the integer as a pointer, returning a pointer with no provenance
+
+      %e = bitcast <2 x b32> %v to i64  ; reinterprets the raw bytes as an integer
+      %f = bitcast <2 x b32> %v to ptr  ; reinterprets the raw bytes as a pointer
+
+      %g = bitcast <2 x b32> %v to <4 x i16> ; reinterprets the raw bytes as integers
 
 .. _i_addrspacecast:
 
@@ -13460,6 +13592,7 @@ instructions may yield different values.
 While ``undef`` and ``poison`` pointers can be frozen, the result is a
 non-dereferenceable pointer. See the
 :ref:`Pointer Aliasing Rules <pointeraliasing>` section for more information.
+Values of the :ref:`byte type <t_byte>` are frozen on a per-bit basis.
 If an aggregate value or vector is frozen, the operand is frozen element-wise.
 The padding of an aggregate isn't considered, since it isn't visible
 without storing it into memory and loading it with a different type.
@@ -13487,6 +13620,9 @@ Example:
       %v.fr = freeze <2 x i32> %v                ; element-wise freeze
       %d = extractelement <2 x i32> %v.fr, i32 0 ; not undef
       %add.f = add i32 %d, %d                    ; even number
+
+      %l = load b32, ptr %p                      ; may be uninitialized
+      %f = freeze b32 %l                         ; freezes on a per-bit basis
 
       ; branching on frozen value
       %poison = add nsw i1 %k, undef   ; poison
@@ -18274,15 +18410,15 @@ support all types however.
 
       declare i32 @llvm.lround.i32.f32(float %Val)
       declare i32 @llvm.lround.i32.f64(double %Val)
-      declare i32 @llvm.lround.i32.f80(float %Val)
-      declare i32 @llvm.lround.i32.f128(double %Val)
-      declare i32 @llvm.lround.i32.ppcf128(double %Val)
+      declare i32 @llvm.lround.i32.f80(x86_fp80 %Val)
+      declare i32 @llvm.lround.i32.f128(fp128 %Val)
+      declare i32 @llvm.lround.i32.ppcf128(ppc_fp128 %Val)
 
       declare i64 @llvm.lround.i64.f32(float %Val)
       declare i64 @llvm.lround.i64.f64(double %Val)
-      declare i64 @llvm.lround.i64.f80(float %Val)
-      declare i64 @llvm.lround.i64.f128(double %Val)
-      declare i64 @llvm.lround.i64.ppcf128(double %Val)
+      declare i64 @llvm.lround.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.lround.i64.f128(fp128 %Val)
+      declare i64 @llvm.lround.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -18318,9 +18454,9 @@ floating-point type. Not all targets support all types however.
 
       declare i64 @llvm.llround.i64.f32(float %Val)
       declare i64 @llvm.llround.i64.f64(double %Val)
-      declare i64 @llvm.llround.i64.f80(float %Val)
-      declare i64 @llvm.llround.i64.f128(double %Val)
-      declare i64 @llvm.llround.i64.ppcf128(double %Val)
+      declare i64 @llvm.llround.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.llround.i64.f128(fp128 %Val)
+      declare i64 @llvm.llround.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -18358,15 +18494,15 @@ support all types however.
 
       declare i32 @llvm.lrint.i32.f32(float %Val)
       declare i32 @llvm.lrint.i32.f64(double %Val)
-      declare i32 @llvm.lrint.i32.f80(float %Val)
-      declare i32 @llvm.lrint.i32.f128(double %Val)
-      declare i32 @llvm.lrint.i32.ppcf128(double %Val)
+      declare i32 @llvm.lrint.i32.f80(x86_fp80 %Val)
+      declare i32 @llvm.lrint.i32.f128(fp128 %Val)
+      declare i32 @llvm.lrint.i32.ppcf128(ppc_fp128 %Val)
 
       declare i64 @llvm.lrint.i64.f32(float %Val)
       declare i64 @llvm.lrint.i64.f64(double %Val)
-      declare i64 @llvm.lrint.i64.f80(float %Val)
-      declare i64 @llvm.lrint.i64.f128(double %Val)
-      declare i64 @llvm.lrint.i64.ppcf128(double %Val)
+      declare i64 @llvm.lrint.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.lrint.i64.f128(fp128 %Val)
+      declare i64 @llvm.lrint.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -18405,9 +18541,9 @@ support all types however.
 
       declare i64 @llvm.llrint.i64.f32(float %Val)
       declare i64 @llvm.llrint.i64.f64(double %Val)
-      declare i64 @llvm.llrint.i64.f80(float %Val)
-      declare i64 @llvm.llrint.i64.f128(double %Val)
-      declare i64 @llvm.llrint.i64.ppcf128(double %Val)
+      declare i64 @llvm.llrint.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.llrint.i64.f128(fp128 %Val)
+      declare i64 @llvm.llrint.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -31501,8 +31637,8 @@ vectors such as ``<vscale x 16 x i8>``.
 Semantics:
 """"""""""
 
-``vscale`` is a positive value that is constant throughout program
-execution, but is unknown at compile time.
+``vscale`` is a positive power-of-two integer that is constant throughout
+program execution, but is unknown at compile time.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
 

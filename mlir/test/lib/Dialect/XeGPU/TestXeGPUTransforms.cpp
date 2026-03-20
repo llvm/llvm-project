@@ -273,12 +273,6 @@ struct TestXeGPUSgToWiDistributeExperimental
            "Work-item Distribution";
   }
 
-  Option<bool> enableRewriteMultiReductionToReductions{
-      *this, "enable-rewrite-multi-reduction-to-reductions",
-      llvm::cl::desc("Partially lower multi-reduction ops to reduction ops if "
-                     "the reduction dimension is distributed."),
-      llvm::cl::init(false)};
-
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
     registry.insert<arith::ArithDialect>();
     registry.insert<memref::MemRefDialect>();
@@ -305,18 +299,6 @@ struct TestXeGPUSgToWiDistributeExperimental
     };
     typeConverter.addSourceMaterialization(materializeCast);
     typeConverter.addTargetMaterialization(materializeCast);
-
-    // If `enableRewriteMultiReductionToReductions` is set, only focus on
-    // testing the partial lowering of vector::MultiReductionOp.
-    if (enableRewriteMultiReductionToReductions) {
-      xegpu::populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
-      ConversionTarget target(*ctx);
-      RewritePatternSet patterns(ctx);
-      xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(patterns,
-                                                                     target);
-      (void)applyPartialConversion(getOperation(), target, std::move(patterns));
-      return;
-    }
 
     ConversionTarget target(*ctx);
     RewritePatternSet patterns(ctx);
@@ -395,7 +377,7 @@ struct TestXeGPUPropagateLayouts
       signalPassFailure();
       return;
     }
-    if (failed(xegpu::propagateLayouts(builder, getOperation(), kind))) {
+    if (failed(xegpu::propagateLayouts(builder, getOperation(), kind, 32))) {
       signalPassFailure();
     }
   }
@@ -424,9 +406,8 @@ struct TestXeGPUResolveLayoutConflicts
       default;
 
   void runOnOperation() override {
-    if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
+    if (failed(xegpu::resolveLayoutConflicts(getOperation())))
       signalPassFailure();
-    }
   }
 };
 

@@ -30,6 +30,20 @@ void main() {
   // expected-note@* {{implicitly declared private here}}
 
   // expected-error@+2 {{cannot assign to return value because function 'operator[]' returns a const value}}
-  // expected-note@* {{function 'operator[]' which returns const-qualified type 'vector<float const hlsl_device &, 3>' declared here}}
+  // expected-note@* {{function 'operator[]' which returns const-qualified type 'vector<float, 3> const hlsl_device &' declared here}}
   Buff[0] = 0.0;
 }
+
+// expected-error@+2 {{class template 'StructuredBuffer' requires template arguments}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
+void f1(StructuredBuffer B) {}
+
+// expected-error@+2 {{class template 'StructuredBuffer' requires template arguments}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
+StructuredBuffer f2();
+
+struct S {
+// expected-error@+2 {{class template 'StructuredBuffer' requires template arguments}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_structured_resource_element_compatible<element_type> class StructuredBuffer {}}}
+  StructuredBuffer B;
+};

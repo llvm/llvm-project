@@ -156,11 +156,10 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 // CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_EXPR_1]], 0
 
 
-// CHECK: %[[GTN_IF_1:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[SI_VAR_IF_1:.*]])
 // CHECK: br label %[[OUTLINED_CALL_IF_BLOCK_1:.*]]
 // CHECK: [[OUTLINED_CALL_IF_BLOCK_1]]:
 // CHECK: %[[I32_IF_COND_VAR_1:.*]] = sext i1 %[[IF_COND_VAR_1]] to i32
-// CHECK: call void @__kmpc_fork_call_if(ptr @[[SI_VAR_IF_1]], i32 0, ptr @[[OMP_OUTLINED_FN_IF_1:.*]], i32 %[[I32_IF_COND_VAR_1]], ptr null)
+// CHECK: call void @__kmpc_fork_call_if(ptr @[[SI_VAR_IF_1:.*]], i32 0, ptr @[[OMP_OUTLINED_FN_IF_1:.*]], i32 %[[I32_IF_COND_VAR_1]], ptr null)
 // CHECK: br label %[[OUTLINED_EXIT_IF_1:.*]]
   omp.parallel if(%1) {
     omp.barrier
@@ -364,7 +363,7 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK: call void @__kmpc_barrier(ptr {{.*}}, i32 %[[THREAD_ID]])
 // CHECK: br label %omp_loop.after
 
-  omp.wsloop linear(%x = %step : !llvm.ptr) {
+  omp.wsloop linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -759,7 +758,7 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK: %[[MUL:.*]] = mul i32 %omp_loop.iv, {{.*}}
 // CHECK: %[[ADD:.*]] = add i32 %[[LOAD]], %[[MUL]]
 // CHECK: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]], align 4, !llvm.access.group !1
-  omp.simd linear(%x = %step : !llvm.ptr) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -791,7 +790,7 @@ llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 // CHECK: %[[MUL:.*]] = mul i64 %[[IV_I64]], {{.*}}
 // CHECK: %[[ADD:.*]] = add i64 %[[LOAD]], %[[MUL]]
 // CHECK: store i64 %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
-  omp.simd linear(%x = %step : !llvm.ptr) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -823,7 +822,7 @@ llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 // CHECK-NEXT: %[[MUL_FP:.*]] = sitofp i32 %[[MUL_INT]] to double
 // CHECK-NEXT: %[[ADD:.*]] = fadd double %[[LOAD]], %[[MUL_FP]]
 // CHECK-NEXT: store double %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
-  omp.simd linear(%x = %step : !llvm.ptr) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -3590,3 +3589,37 @@ llvm.func @nested_task_with_deps() {
 
 // CHECK:         ret void
 // CHECK:       }
+
+llvm.func @task_affinity_plain(%arr: !llvm.ptr {llvm.nocapture}) {
+  %len = llvm.mlir.constant(4 : i64) : i64
+
+  omp.parallel {
+    omp.single {
+      %ae = omp.affinity_entry %arr, %len
+        : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+
+      omp.task affinity(%ae : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define internal void @task_affinity_plain
+// CHECK: [[BASE:%.*]] = load ptr, ptr %gep_, align 8
+// CHECK: [[AFFLIST:%.*]] = alloca { i64, i64, i32 }, i64 1, align 8
+// CHECK: [[ENTRY:%.*]] = getelementptr inbounds { i64, i64, i32 }, ptr [[AFFLIST]], i64 0
+// addr
+// CHECK: [[ADDRI64:%.*]] = ptrtoint ptr [[BASE]] to i64
+// CHECK: [[ADDRGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 0
+// CHECK: store i64 [[ADDRI64]], ptr [[ADDRGEP]]
+// len
+// CHECK: [[LENGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 1
+// CHECK: store i64 4, ptr [[LENGEP]]
+// flags is always 0
+// CHECK: [[FLAGGEP:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 2
+// CHECK: store i32 0, ptr [[FLAGGEP]]
+// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity{{.*}}i32 1, ptr [[AFFLIST]]

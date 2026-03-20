@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj %s -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mcpu=mvp -filetype=obj %s -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+reference-types -filetype=obj %s -o - | llvm-readobj -r --expand-relocs - | FileCheck --check-prefix=REF %s
 
 # External functions

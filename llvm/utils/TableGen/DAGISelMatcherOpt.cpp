@@ -489,6 +489,7 @@ static void FactorNodes(MatcherList &ML) {
       EqualIt->pop_front();
       assert(FirstEmpty == EqualIt->empty() &&
              "Expect all to be empty if any are empty");
+      (void)FirstEmpty;
       Matcher *Tmp = EqualIt->empty() ? nullptr : EqualIt->front();
 
       // If the remainder is a ScopeMatcher, merge its contents so we can add

@@ -2705,7 +2705,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Ptr = CI->getArgOperand(0);
     Value *Val = CI->getArgOperand(1);
     Rep = Builder.CreateAtomicRMW(AtomicRMWInst::FAdd, Ptr, Val, MaybeAlign(),
-                                  AtomicOrdering::SequentiallyConsistent);
+                                  AtomicOrdering::Monotonic);
   } else if (Name.starts_with("atomic.load.inc.32.p") ||
              Name.starts_with("atomic.load.dec.32.p")) {
     Value *Ptr = CI->getArgOperand(0);
@@ -2713,7 +2713,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     auto Op = Name.starts_with("atomic.load.inc") ? AtomicRMWInst::UIncWrap
                                                   : AtomicRMWInst::UDecWrap;
     Rep = Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
-                                  AtomicOrdering::SequentiallyConsistent);
+                                  AtomicOrdering::Monotonic);
   } else if (Name == "clz.ll") {
     // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
     Value *Arg = CI->getArgOperand(0);
@@ -6352,6 +6352,16 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     AddingAttrs = RemovingAttrs = true;
   }
 
+  if (Attribute A = F.getFnAttribute("uniform-work-group-size");
+      A.isValid() && A.isStringAttribute() && !A.getValueAsString().empty()) {
+    AttrsToRemove.addAttribute("uniform-work-group-size");
+    RemovingAttrs = true;
+    if (A.getValueAsString() == "true") {
+      AttrsToAdd.addAttribute("uniform-work-group-size");
+      AddingAttrs = true;
+    }
+  }
+
   if (!F.empty()) {
     // For some reason this is called twice, and the first time is before any
     // instructions are loaded into the body.
@@ -6748,6 +6758,17 @@ void llvm::UpgradeAttributes(AttrBuilder &B) {
     B.removeAttribute("null-pointer-is-valid");
     if (NullPointerIsValid)
       B.addAttribute(Attribute::NullPointerIsValid);
+  }
+
+  A = B.getAttribute("uniform-work-group-size");
+  if (A.isValid()) {
+    StringRef Val = A.getValueAsString();
+    if (!Val.empty()) {
+      bool IsTrue = Val == "true";
+      B.removeAttribute("uniform-work-group-size");
+      if (IsTrue)
+        B.addAttribute("uniform-work-group-size");
+    }
   }
 }
 

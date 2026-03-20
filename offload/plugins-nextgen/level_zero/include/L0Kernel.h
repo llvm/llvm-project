@@ -124,8 +124,8 @@ public:
   Error initImpl(GenericDeviceTy &GenericDevice, DeviceImageTy &Image) override;
   /// Launch the L0 kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
-                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
   Error deinit() {
     CALL_ZE_RET_ERROR(zeKernelDestroy, zeKernel);

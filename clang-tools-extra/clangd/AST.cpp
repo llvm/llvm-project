@@ -27,8 +27,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Sema/HeuristicResolver.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -215,7 +215,8 @@ std::string printQualifiedName(const NamedDecl &ND) {
   Policy.SuppressScope = true;
   // (unnamed struct), not (unnamed struct at /path/to/foo.cc:42:1).
   // In clangd, context is usually available and paths are mostly noise.
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   ND.printQualifiedName(OS, Policy);
   assert(!StringRef(QName).starts_with("::"));
   return QName;

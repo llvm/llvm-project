@@ -101,12 +101,13 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   // If the node is only used by a CopyToReg and the dest reg is a vreg, use
   // the CopyToReg'd destination register instead of creating a new vreg.
   bool MatchReg = true;
-  const TargetRegisterClass *UseRC = nullptr;
+
   MVT VT = Op.getSimpleValueType();
 
-  // Stick to the preferred register classes for legal types.
-  if (TLI->isTypeLegal(VT))
-    UseRC = TLI->getRegClassFor(VT, Op->isDivergent());
+  // FIXME: The Untyped check is a workaround for SystemZ i128 inline assembly
+  // using i128, when it should probably be using v2i64.
+  const TargetRegisterClass *UseRC =
+      VT == MVT::Untyped ? nullptr : TLI->getRegClassFor(VT, Op->isDivergent());
 
   for (SDNode *User : Op->users()) {
     bool Match = true;

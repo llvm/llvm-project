@@ -741,6 +741,16 @@ TEST(IntegerRelationTest, simplify) {
   EXPECT_TRUE(rel.getNumEqualities() == 2);
 }
 
+TEST(IntegerRelationTest, simplifyRegression) {
+  IntegerRelation rel = parseRelationFromSet("(x, y, z): (2*x + z >= 5, "
+                                             "x + 3*z >= 7, 3*x + y >= 9)",
+                                             3);
+
+  auto simplified = rel;
+  simplified.simplify();
+  EXPECT_TRUE(rel.isEqual(simplified));
+}
+
 TEST(IntegerRelationTest, isFullDim) {
   IntegerRelation rel = parseRelationFromSet("(x): (1 >= 0)", 1);
   EXPECT_TRUE(rel.isFullDim());
