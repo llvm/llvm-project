@@ -6272,14 +6272,13 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             .addImm(0);      // bound-control
       };
       auto BuildClampInstr = [&](Register Dst, Register Src0, Register Src1) {
-        auto ClampInstr = BuildMI(
-            BB, MI, DL,
-            TII->get(IsFPOp ? Opc
-                            : TII->getVALUOp(
-                                  Opc == AMDGPU::S_SUB_I32
-                                      ? static_cast<unsigned>(AMDGPU::S_ADD_I32)
-                                      : Opc)),
-            Dst);
+        unsigned ClampOpc = Opc;
+        if (!IsFPOp) {
+          if (Opc == AMDGPU::S_SUB_I32)
+            ClampOpc = AMDGPU::S_ADD_I32;
+          ClampOpc = TII->getVALUOp(ClampOpc);
+        }
+        auto ClampInstr = BuildMI(BB, MI, DL, TII->get(ClampOpc), Dst);
         if (IsFPOp)
           ClampInstr.addImm(SISrcMods::NONE); // src0 mod
         ClampInstr.addReg(Src0);              // src0
