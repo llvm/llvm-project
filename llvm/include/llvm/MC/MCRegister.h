@@ -45,7 +45,7 @@ class MCRegister {
 
 public:
   constexpr MCRegister(unsigned Val = 0) : Reg(Val) {
-    // N.B. this does not assert `Val == NoRegister || `isPhysicalRegister(Val)`
+    // N.B. this does not assert `Val == NoRegister || isPhysicalRegister(Val)`
     // to avoid paying the compilation/runtime cost for developers of the
     // compiler and to allow target specific virtual registers.
     //
