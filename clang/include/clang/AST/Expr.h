@@ -6927,7 +6927,7 @@ public:
 class AtomicExpr : public Expr {
 public:
   enum AtomicOp {
-#define ATOMIC_BUILTIN(ID, TYPE, ATTRS) AO ## ID,
+#define ATOMIC_BUILTIN(ID, TYPE, ATTRS, LANGS) AO##ID,
 #include "clang/Basic/Builtins.inc"
     // Avoid trailing comma
     BI_First = 0
@@ -6990,7 +6990,7 @@ public:
   AtomicOp getOp() const { return Op; }
   StringRef getOpAsString() const {
     switch (Op) {
-#define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
+#define ATOMIC_BUILTIN(ID, TYPE, ATTRS, LANGS)                                 \
   case AO##ID:                                                                 \
     return #ID;
 #include "clang/Basic/Builtins.inc"

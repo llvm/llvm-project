@@ -2043,9 +2043,9 @@ void StmtPrinter::VisitPseudoObjectExpr(PseudoObjectExpr *Node) {
 void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   const char *Name = nullptr;
   switch (Node->getOp()) {
-#define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
-  case AtomicExpr::AO ## ID: \
-    Name = #ID "("; \
+#define ATOMIC_BUILTIN(ID, TYPE, ATTRS, LANGS)                                 \
+  case AtomicExpr::AO##ID:                                                     \
+    Name = #ID "(";                                                            \
     break;
 #include "clang/Basic/Builtins.inc"
   }

@@ -171,7 +171,9 @@ class Builtin {
   list<string> ArgNames = [];
 }
 
-class AtomicBuiltin : Builtin;
+class AtomicBuiltin<string languages = "ALL_LANGUAGES"> : Builtin {
+  string Languages = languages;
+}
 
 class LibBuiltin<string header, string languages = "ALL_LANGUAGES"> : Builtin {
   string Header = header;

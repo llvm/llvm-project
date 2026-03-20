@@ -2345,79 +2345,79 @@ def ScopedAtomicUDec : AtomicBuiltin {
 }
 
 // OpenCL 2.0 atomic builtins.
-def OpenCLAtomicInit : AtomicBuiltin {
+def OpenCLAtomicInit : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_init"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicLoad : AtomicBuiltin {
+def OpenCLAtomicLoad : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_load"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicStore : AtomicBuiltin {
+def OpenCLAtomicStore : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_store"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicCompareExchangeWeak : AtomicBuiltin {
+def OpenCLAtomicCompareExchangeWeak : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_compare_exchange_weak"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicCompareExchangeStrong : AtomicBuiltin {
+def OpenCLAtomicCompareExchangeStrong : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_compare_exchange_strong"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicExchange : AtomicBuiltin {
+def OpenCLAtomicExchange : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_exchange"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicFetchAdd : AtomicBuiltin {
+def OpenCLAtomicFetchAdd : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_fetch_add"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicFetchSub : AtomicBuiltin {
+def OpenCLAtomicFetchSub : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_fetch_sub"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicFetchAnd : AtomicBuiltin {
+def OpenCLAtomicFetchAnd : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_fetch_and"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicFetchOr : AtomicBuiltin {
+def OpenCLAtomicFetchOr : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_fetch_or"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicFetchXor : AtomicBuiltin {
+def OpenCLAtomicFetchXor : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_fetch_xor"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicFetchMin : AtomicBuiltin {
+def OpenCLAtomicFetchMin : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_fetch_min"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def OpenCLAtomicFetchMax : AtomicBuiltin {
+def OpenCLAtomicFetchMax : AtomicBuiltin<"ALL_OCL_LANGUAGES"> {
   let Spellings = ["__opencl_atomic_fetch_max"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
@@ -2449,73 +2449,73 @@ def AtomicFetchUDec : AtomicBuiltin {
 }
 
 // HIP atomic builtins.
-def HipAtomicLoad : AtomicBuiltin {
+def HipAtomicLoad : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_load"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicStore : AtomicBuiltin {
+def HipAtomicStore : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_store"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicCompareExchangeWeak : AtomicBuiltin {
+def HipAtomicCompareExchangeWeak : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_compare_exchange_weak"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicCompareExchangeStrong : AtomicBuiltin {
+def HipAtomicCompareExchangeStrong : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_compare_exchange_strong"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicExchange : AtomicBuiltin {
+def HipAtomicExchange : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_exchange"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicFetchAdd : AtomicBuiltin {
+def HipAtomicFetchAdd : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_fetch_add"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicFetchSub : AtomicBuiltin {
+def HipAtomicFetchSub : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_fetch_sub"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicFetchAnd : AtomicBuiltin {
+def HipAtomicFetchAnd : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_fetch_and"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicFetchOr : AtomicBuiltin {
+def HipAtomicFetchOr : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_fetch_or"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicFetchXor : AtomicBuiltin {
+def HipAtomicFetchXor : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_fetch_xor"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicFetchMin : AtomicBuiltin {
+def HipAtomicFetchMin : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_fetch_min"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def HipAtomicFetchMax : AtomicBuiltin {
+def HipAtomicFetchMax : AtomicBuiltin<"HIP_LANG"> {
   let Spellings = ["__hip_atomic_fetch_max"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";

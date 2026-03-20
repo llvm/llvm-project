@@ -90,7 +90,8 @@ struct Builtin {
     }
     OS << ", ";
     if (BT == BuiltinType::LibBuiltin || BT == BuiltinType::LangBuiltin ||
-        BT == BuiltinType::TargetLibBuiltin) {
+        BT == BuiltinType::TargetLibBuiltin ||
+        BT == BuiltinType::AtomicBuiltin) {
       OS << BuiltinRecord->getValueAsString("Languages");
     } else {
       OS << "ALL_LANGUAGES";
@@ -144,7 +145,10 @@ struct Builtin {
       OS << ", \"" << BuiltinRecord->getValueAsString("Features") << "\"";
       break;
     }
-    case BuiltinType::AtomicBuiltin:
+    case BuiltinType::AtomicBuiltin: {
+      OS << ", " << BuiltinRecord->getValueAsString("Languages");
+      break;
+    }
     case BuiltinType::Builtin:
       break;
     }
