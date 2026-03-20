@@ -25,7 +25,7 @@ using namespace dwarf;
 static cl::opt<bool> EmitAArch64DebugTLSLocation(
     "aarch64-emit-debug-tls-location",
     cl::desc("Emit the TLS DWARF location with DTPREL relocation for AArch64"),
-    cl::init(false), cl::Hidden);
+    cl::Hidden);
 
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
