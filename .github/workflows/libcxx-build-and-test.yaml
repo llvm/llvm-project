@@ -59,7 +59,7 @@ jobs:
         # TODO: install venv in the Docker image instead
         run: |
           sudo apt-get update
-          sudo apt-get install python3.12-venv
+          sudo apt-get install -y python3.12-venv
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
@@ -110,7 +110,7 @@ jobs:
       - name: ${{ matrix.config }}
         run: |
           sudo apt-get update
-          sudo apt-get install python3.12-venv
+          sudo apt-get install -y python3.12-venv
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
@@ -171,7 +171,7 @@ jobs:
       - name: ${{ matrix.config }}
         run: |
           sudo apt-get update
-          sudo apt-get install python3.12-venv
+          sudo apt-get install -y python3.12-venv
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r libcxx/test/requirements.txt
