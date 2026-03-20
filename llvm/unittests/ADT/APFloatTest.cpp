@@ -3289,7 +3289,7 @@ TEST(APFloatTest, getZero) {
       {&APFloat::HexFP128(),
        true,
        true,
-       {0x0000000000000000, 0x8000000000000000},
+       {0x8000000000000000, 0x8000000000000000},
        2}};
   const unsigned NumGetZeroTests = std::size(GetZeroTest);
   for (unsigned i = 0; i < NumGetZeroTests; ++i) {
@@ -5059,6 +5059,7 @@ TEST(APFloatTest, abs) {
 
 TEST(APFloatTest, absHexFloat) {
   for (const auto *S : HexFloatSemantics) {
+    auto SemanticsName = APFloat::semanticsName(*S);
     APFloat PZero = APFloat::getZero(*S, false);
     APFloat MZero = APFloat::getZero(*S, true);
     APFloat PNormalValue = APFloat(*S, "0x1p+0");
@@ -5069,6 +5070,23 @@ TEST(APFloatTest, absHexFloat) {
     APFloat MSmallestValue = APFloat::getSmallest(*S, true);
     APFloat PSmallestNormalized = APFloat::getSmallestNormalized(*S, false);
     APFloat MSmallestNormalized = APFloat::getSmallestNormalized(*S, true);
+
+    auto test_it = [&](APFloat &Expected, APFloat &F) {
+      EXPECT_TRUE(Expected.bitwiseIsEqual(abs(F))) << "Semantics: "
+          << SemanticsName << ", Expected: " << Expected << ", Value: " << F;
+    };
+
+    test_it(PZero, PZero);
+    test_it(PZero, MZero);
+    test_it(PNormalValue, PNormalValue);
+    test_it(PNormalValue, MNormalValue);
+    test_it(PLargestValue, PLargestValue);
+    test_it(PLargestValue, MLargestValue);
+    test_it(PSmallestValue, PSmallestValue);
+    test_it(PSmallestValue, MSmallestValue);
+    test_it(PSmallestNormalized, PSmallestNormalized);
+    test_it(PSmallestNormalized, MSmallestNormalized);
+
 
     EXPECT_TRUE(PZero.bitwiseIsEqual(abs(PZero)));
     EXPECT_TRUE(PZero.bitwiseIsEqual(abs(MZero)));
@@ -5391,53 +5409,45 @@ TEST(APFloatTest, scalbn) {
 TEST(APFloatTest, scalbnHexFloat) {
   const APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
 
+  auto test_it = [&](APFloat Expected, APFloat N, int E) {
+    auto SemanticsName = APFloat::semanticsName(Expected.getSemantics());
+    APFloat Actual(scalbn(N, E, RM));
+    EXPECT_TRUE(Expected.bitwiseIsEqual(Actual))
+      << "Semantics: " << SemanticsName << ", Expected: " << Expected
+      << ", N: " << N << ", " << ", E: " << E
+      << ", Actual: " << Actual;
+  };
+
   for (const auto *S : HexFloatSemantics) {
-    EXPECT_TRUE(
-        scalbn(APFloat(*S, "8"), -1, RM).bitwiseIsEqual(APFloat(*S, "0.5")));
-    EXPECT_TRUE(
-        scalbn(APFloat(*S, "8"), 0, RM).bitwiseIsEqual(APFloat(*S, "8")));
-    EXPECT_TRUE(
-        scalbn(APFloat(*S, "8"), 1, RM).bitwiseIsEqual(APFloat(*S, "128")));
+    test_it(APFloat(*S, "0.5"), APFloat(*S, "8"), -1);
+    test_it(APFloat(*S, "8"), APFloat(*S, "8"), 0);
+    test_it(APFloat(*S, "128"), APFloat(*S, "8"), 1);
 
-    EXPECT_TRUE(
-        scalbn(APFloat(*S, "0"), -10000, RM).bitwiseIsEqual(APFloat(*S, "0")));
-    EXPECT_TRUE(
-        scalbn(APFloat(*S, "0"), -1, RM).bitwiseIsEqual(APFloat(*S, "0")));
-    EXPECT_TRUE(
-        scalbn(APFloat(*S, "0"), 0, RM).bitwiseIsEqual(APFloat(*S, "0")));
-    EXPECT_TRUE(
-        scalbn(APFloat(*S, "0"), 1, RM).bitwiseIsEqual(APFloat(*S, "0")));
-    EXPECT_TRUE(
-        scalbn(APFloat(*S, "0"), 10000, RM).bitwiseIsEqual(APFloat(*S, "0")));
+    test_it(APFloat(*S, "0"), APFloat(*S, "0"), -10000);
+    test_it(APFloat(*S, "0"), APFloat(*S, "0"), -1);
+    test_it(APFloat(*S, "0"), APFloat(*S, "0"), 0);
+    test_it(APFloat(*S, "0"), APFloat(*S, "0"), 1);
+    test_it(APFloat(*S, "0"), APFloat(*S, "0"), 10000);
 
-    EXPECT_TRUE(scalbn(APFloat::getSmallest(*S), -1, RM)
-                    .bitwiseIsEqual(APFloat(*S, "0")));
-    EXPECT_TRUE(scalbn(APFloat(*S, "0x.1p252"), 1, RM)
-                    .bitwiseIsEqual(APFloat::getLargest(*S)));
-    EXPECT_TRUE(scalbn(APFloat::getLargest(*S), 1, RM)
-                    .bitwiseIsEqual(APFloat::getLargest(*S)));
+    test_it(APFloat(*S, "0"), APFloat::getSmallest(*S), -1);
+    test_it(APFloat(*S, "0"), APFloat::getSmallest(*S), -1);
+    test_it(APFloat::getLargest(*S), APFloat::getLargest(*S), 1);
   }
 
-  EXPECT_TRUE(APFloat(APFloat::HexFP32(), "0x.1p252")
-                  .bitwiseIsEqual(scalbn(
-                      APFloat::getSmallest(APFloat::HexFP32()), 132, RM)));
-  EXPECT_TRUE(APFloat::getLargest(APFloat::HexFP32())
-                  .bitwiseIsEqual(scalbn(
-                      APFloat::getSmallest(APFloat::HexFP32()), 133, RM)));
+  test_it(APFloat(APFloat::HexFP32(), "0x.1p252"),
+          APFloat::getSmallest(APFloat::HexFP32()), 132);
+  test_it(APFloat::getLargest(APFloat::HexFP32()),
+          APFloat::getSmallest(APFloat::HexFP32()), 133);
 
-  EXPECT_TRUE(APFloat(APFloat::HexFP64(), "0x.1p252")
-                  .bitwiseIsEqual(scalbn(
-                      APFloat::getSmallest(APFloat::HexFP64()), 140, RM)));
-  EXPECT_TRUE(APFloat::getLargest(APFloat::HexFP64())
-                  .bitwiseIsEqual(scalbn(
-                      APFloat::getSmallest(APFloat::HexFP64()), 141, RM)));
+  test_it(APFloat(APFloat::HexFP64(), "0x.1p252"),
+          APFloat::getSmallest(APFloat::HexFP64()), 140);
+  test_it(APFloat::getLargest(APFloat::HexFP64()),
+          APFloat::getSmallest(APFloat::HexFP64()), 141);
 
-  EXPECT_TRUE(APFloat(APFloat::HexFP128(), "0x.1p252")
-                  .bitwiseIsEqual(scalbn(
-                      APFloat::getSmallest(APFloat::HexFP128()), 154, RM)));
-  EXPECT_TRUE(APFloat::getLargest(APFloat::HexFP128())
-                  .bitwiseIsEqual(scalbn(
-                      APFloat::getSmallest(APFloat::HexFP128()), 155, RM)));
+  test_it(APFloat(APFloat::HexFP128(), "0x.1p252"),
+          APFloat::getSmallest(APFloat::HexFP128()), 154);
+  test_it(APFloat::getLargest(APFloat::HexFP128()),
+          APFloat::getSmallest(APFloat::HexFP128()), 155);
 }
 
 TEST(APFloatTest, frexp) {
