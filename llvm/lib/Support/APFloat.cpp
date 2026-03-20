@@ -6061,6 +6061,13 @@ HexFloat::HexFloat(const fltSemantics &ourSemantics)
   initialize(&ourSemantics);
 }
 
+void HexFloat::cohereLowSignAndExponent() {
+  if (semantics == &APFloatBase::HexFP128()) {
+    low_sign = sign;
+    low_exponent = isZero() ? exponent : exponent - 14;
+  }
+}
+
 HexFloat::HexFloat(const fltSemantics &ourSemantics, integerPart intValue)
     : semantics(&ourSemantics) {
   initialize(&ourSemantics);
@@ -6102,6 +6109,7 @@ HexFloat::HexFloat(const fltSemantics &ourSemantics, integerPart intValue)
     working_significand <<= -delta_width;
   }
   significand = working_significand;
+  cohereLowSignAndExponent();
 }
 
 HexFloat::HexFloat(const fltSemantics &ourSemantics, uninitializedTag)
@@ -6583,7 +6591,7 @@ void HexFloat::makeZero(bool Neg) {
   // with the exception of the sign bit which may be one to represent -0.0.
   sign = Neg ? 1 : 0;
   exponent = -64;
-  low_sign = 0;
+  low_sign = sign;
   low_exponent = -64;
   significand.clearAllBits();
 }
@@ -6605,6 +6613,7 @@ void HexFloat::makeLargest(bool Neg) {
   sign = Neg ? 1 : 0;
   exponent = semantics->maxExponent;
   significand.setAllBits();
+  cohereLowSignAndExponent();
 }
 
 void HexFloat::makeSmallest(bool Neg) {
@@ -6613,6 +6622,7 @@ void HexFloat::makeSmallest(bool Neg) {
   exponent = semantics->minExponent;
   significand.clearAllBits();
   significand.setBit(0);
+  cohereLowSignAndExponent();
 }
 
 void HexFloat::makeSmallestNormalized(bool Neg) {
@@ -6620,6 +6630,7 @@ void HexFloat::makeSmallestNormalized(bool Neg) {
   exponent = semantics->minExponent;
   significand.clearAllBits();
   significand.setBit(getNumPrecisionBits() - 4);
+  cohereLowSignAndExponent();
 }
 
 bool HexFloat::needsCleanup() const {
@@ -6664,6 +6675,7 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
       exponent = 1;
       significand.clearAllBits();
       significand.setBit(significand.getBitWidth() - 4);
+      cohereLowSignAndExponent();
     };
 
     // for an exponent < 1, half must be represented by
@@ -6857,6 +6869,8 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
   // if the significand is zero, make us a canonical zero
   if (significand.isZero())
     makeZero(isNegative());
+  else
+    cohereLowSignAndExponent();
 
   return opInexact;
 }
@@ -6929,10 +6943,11 @@ opStatus HexFloat::next(bool nextDown) {
         do_decrement();
     }
   }
+  cohereLowSignAndExponent();
   return opOK;
 }
 
-void HexFloat::changeSign() { sign = !sign; }
+void HexFloat::changeSign() { sign = !sign; low_sign = !low_sign;}
 
 opStatus HexFloat::convert(const fltSemantics &toSemantics,
                            roundingMode rounding_mode, bool *losesInfo) {
@@ -6968,8 +6983,10 @@ opStatus HexFloat::convert(const fltSemantics &toSemantics,
       significand = significand.zext(to_bits_precision);
       significand <<= (to_bits_precision - from_bits_precision);
       OnExit.LostInfo = false;
-      low_sign = 0;
-      low_exponent = -64;
+      if (&toSemantics == &APFloatBase::HexFP128()) {
+        low_sign = sign;
+        low_exponent = exponent -14;
+      }
     } else {
       // from_bits_precision > to_bits_precision i.e., narrowing
       // check for loss of precision
@@ -7372,6 +7389,7 @@ opStatus HexFloat::convertFromAPInt(const APInt &input, bool isSigned,
   sign = s;
   exponent = e;
   significand = api;
+  cohereLowSignAndExponent();
   return opOK;
 }
 
@@ -7624,6 +7642,8 @@ HexFloat::convertFromHexadecimalString(StringRef str,
                     .trunc(getNumPrecisionBits());
   exponent = exp;
 
+  cohereLowSignAndExponent();
+
   return opOK;
 }
 
@@ -7765,6 +7785,8 @@ HexFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
                     .trunc(getNumPrecisionBits());
   exponent = tmpExponent;
 
+  cohereLowSignAndExponent();
+
   return opOK;
 }
 
@@ -7777,6 +7799,7 @@ opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
     sign = ieee_sign;
     exponent = 63;
     significand.setAllBits();
+    cohereLowSignAndExponent();
   };
 
   if (ieee.isZero()) {
@@ -7839,6 +7862,7 @@ opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
     } else {
       sign = ieee_sign;
       exponent = ieee_exponent / 4;
+      cohereLowSignAndExponent();
       if (BitsInOurPrecision >= ieee_precision) {
         significand = ieee_significand.zext(BitsInOurPrecision);
         significand <<= (BitsInOurPrecision - ieee_precision);
@@ -7853,6 +7877,7 @@ opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
       } else {
         significand = ieee_significand;
       }
+      cohereLowSignAndExponent();
     }
   }
 
@@ -8041,6 +8066,7 @@ HexFloat scalbn(HexFloat X, int Exp, roundingMode RoundingMode) {
       X.exponent = e;
     }
   }
+  X.cohereLowSignAndExponent();
 
   return X;
 }
