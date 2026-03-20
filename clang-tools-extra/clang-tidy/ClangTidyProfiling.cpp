@@ -45,8 +45,7 @@ void ClangTidyProfiling::printUserFriendlyTable(llvm::raw_ostream &OS,
 
 void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
                                      llvm::TimerGroup &TG) {
-  if (!Storage)
-    return;
+  assert(Storage && "We should have a filename.");
   std::string TimestampStr;
   llvm::raw_string_ostream TmpOS(TimestampStr);
   TmpOS << Storage->Timestamp;
