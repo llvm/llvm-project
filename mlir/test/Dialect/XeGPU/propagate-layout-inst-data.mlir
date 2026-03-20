@@ -317,9 +317,9 @@ func.func @vector_2d_reduction_with_fractional_subgroup_size(%arg0: memref<1024x
 
 // -----
 gpu.module @test {
-// CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size_4(
+// CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4x1(
 // CHECK: %[[ReduceVal:.*]] = vector.multi_reduction <add>, %[[Val:.*]], %[[CST:.*]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 4]>, dims = [1, 2]>} [1, 2] : vector<1x16x4xf16> to vector<1xf16>
-func.func @vector_2d_reduction_with_fractional_subgroup_size_4(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
+func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4x1(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
     %cst = arith.constant dense<true> : vector<64xi1>
     %0 = vector.step : vector<64xindex>
     %1 = xegpu.load %arg0[%0], %cst  : memref<1024xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
