@@ -339,6 +339,11 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting,
 }
 
 std::error_code create_symlink(const Twine &to, const Twine &from) {
+  // The Win32 API normally allows forward slashes, but under some cases it does
+  // not correctly handle them in the target of a symlink.
+  SmallString<128> to_str;
+  llvm::sys::path::native(to, to_str);
+
   SmallVector<wchar_t, 128> wide_from;
   SmallVector<wchar_t, 128> wide_to;
   if (std::error_code ec = widenPath(from, wide_from))
@@ -346,20 +351,13 @@ std::error_code create_symlink(const Twine &to, const Twine &from) {
   if (std::error_code ec = widenPath(to, wide_to))
     return ec;
 
-  // The Win32 API normally allows forward slashes, but under some cases it does
-  // not correctly handle them in the target of a symlink.
-  for (wchar_t &C : wide_to)
-    if (C == L'/')
-      C = L'\\';
-
   // Windows requires SYMBOLIC_LINK_FLAG_DIRECTORY for directory symlinks, so
   // check first what type the target is. Relative symlink targets are relative
   // to the link's parent directory, not the CWD, so resolve accordingly before
   // checking attributes.
   SmallVector<wchar_t, 128> wide_resolved;
   const SmallVectorImpl<wchar_t> *attr_path = &wide_to;
-  SmallString<128> to_str;
-  to.toVector(to_str);
+
   if (sys::path::is_relative(to_str)) {
     SmallString<128> from_str;
     from.toVector(from_str);
