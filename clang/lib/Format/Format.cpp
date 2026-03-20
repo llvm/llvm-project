@@ -121,6 +121,7 @@ struct ScalarEnumerationTraits<FormatStyle::AttributeBreakingStyle> {
   static void enumeration(IO &IO, FormatStyle::AttributeBreakingStyle &Value) {
     IO.enumCase(Value, "Always", FormatStyle::ABS_Always);
     IO.enumCase(Value, "Leave", FormatStyle::ABS_Leave);
+    IO.enumCase(Value, "LeaveAll", FormatStyle::ABS_LeaveAll);
     IO.enumCase(Value, "Never", FormatStyle::ABS_Never);
   }
 };
