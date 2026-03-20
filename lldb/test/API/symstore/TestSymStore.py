@@ -1,5 +1,9 @@
+import http.server
 import os
 import shutil
+import socketserver
+import threading
+from functools import partial
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -62,7 +66,31 @@ class MockedSymStore:
         self._test.runCmd("settings clear plugin.symbol-locator.symstore")
 
 
-class SymStoreLocalTests(TestBase):
+class HTTPServer:
+    """
+    Context Manager to serve a local directory tree via HTTP.
+    """
+
+    def __init__(self, dir):
+        address = ("localhost", 0)  # auto-select free port
+        handler = partial(http.server.SimpleHTTPRequestHandler, directory=dir)
+        self._server = socketserver.ThreadingTCPServer(address, handler)
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+
+    def __enter__(self):
+        self._thread.start()
+        host, port = self._server.server_address
+        return f"http://{host}:{port}"
+
+    def __exit__(self, *exc_info):
+        if self._server:
+            self._server.shutdown()
+            self._server.server_close()
+        if self._thread:
+            self._thread.join()
+
+
+class SymStoreTests(TestBase):
     SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
@@ -99,10 +127,8 @@ class SymStoreLocalTests(TestBase):
         Check that breakpoint doesn't resolve with external lookup disabled.
         """
         exe, sym = self.build_inferior()
-        with MockedSymStore(self, exe, sym) as symstore_dir:
-            self.runCmd(
-                f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
-            )
+        with MockedSymStore(self, exe, sym) as dir:
+            self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {dir}")
             self.try_breakpoint(exe, ext_lookup=False, should_have_loc=False)
 
     def test_local_dir(self):
@@ -110,8 +136,18 @@ class SymStoreLocalTests(TestBase):
         Check that breakpoint resolves with local SymStore.
         """
         exe, sym = self.build_inferior()
-        with MockedSymStore(self, exe, sym) as symstore_dir:
-            self.runCmd(
-                f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
-            )
+        with MockedSymStore(self, exe, sym) as dir:
+            self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {dir}")
             self.try_breakpoint(exe, should_have_loc=True)
+
+    # TODO: Add test coverage for common HTTPS security scenarios, e.g. self-signed
+    # certs, non-HTTPS redirects, etc.
+    def test_http(self):
+        """
+        Check that breakpoint hits with remote SymStore.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as dir:
+            with HTTPServer(dir) as url:
+                self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {url}")
+                self.try_breakpoint(exe, should_have_loc=True)
