@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/BoxAnalyzer.h"
@@ -19,7 +20,6 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
-#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -32,7 +32,6 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
@@ -40,7 +39,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -593,14 +591,15 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     if (details && details->init()) {
       auto sym{*details->init()};
       if (sym) // Has a procedure target.
-        createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
-          Fortran::lower::StatementContext stmtCtx(
-              /*cleanupProhibited=*/true);
-          auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
-              converter, loc, *sym)};
-          auto castTo{builder.createConvert(loc, symTy, box)};
-          fir::HasValueOp::create(b, loc, castTo);
-        });
+        createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &b) {
+              Fortran::lower::StatementContext stmtCtx(
+                  /*cleanupProhibited=*/true);
+              auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
+                  converter, loc, *sym)};
+              auto castTo{builder.createConvert(loc, symTy, box)};
+              fir::HasValueOp::create(b, loc, castTo);
+            });
       else { // Has NULL() target.
         createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
           auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
@@ -889,12 +888,12 @@ static void genDerivedTypeComponentInit(
     if (!compFirTy)
       continue;
     // Compute the memory coordinate of the current component.
-    auto fieldIdx = builder.create<fir::FieldIndexOp>(
-        loc, fir::FieldType::get(recTy.getContext()), name, recTy,
+    auto fieldIdx = fir::FieldIndexOp::create(
+        builder, loc, fir::FieldType::get(recTy.getContext()), name, recTy,
         mlir::ValueRange{});
     auto compAddr =
-        builder.create<fir::CoordinateOp>(loc, builder.getRefType(compFirTy),
-                                          baseAddr, mlir::ValueRange{fieldIdx});
+        fir::CoordinateOp::create(builder, loc, builder.getRefType(compFirTy),
+                                  baseAddr, mlir::ValueRange{fieldIdx});
 
     // Case A: Standard data components (ObjectEntityDetails).
     if (objDetails) {
@@ -915,13 +914,13 @@ static void genDerivedTypeComponentInit(
                 builder, global, [&](fir::FirOpBuilder &b) {
                   mlir::Value initBox = Fortran::lower::genInitialDataTarget(
                       converter, loc, compFirTy, *objDetails->init());
-                  b.create<fir::HasValueOp>(loc, initBox);
+                  fir::HasValueOp::create(b, loc, initBox);
                 });
           }
-          auto srcAddr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
-                                                       global.getSymbol());
-          mlir::Value loadedBox = builder.create<fir::LoadOp>(loc, srcAddr);
-          builder.create<fir::StoreOp>(loc, loadedBox, compAddr);
+          auto srcAddr = fir::AddrOfOp::create(builder, loc, global.resultType(),
+                                               global.getSymbol());
+          mlir::Value loadedBox = fir::LoadOp::create(builder, loc, srcAddr);
+          fir::StoreOp::create(builder, loc, loadedBox, compAddr);
         } else {
           // Subcase A.1.2: Non-pointer components with explicit initialization.
           Fortran::lower::StatementContext stmtCtx(/*cleanupProhibited=*/true);
@@ -940,10 +939,10 @@ static void genDerivedTypeComponentInit(
                   dataAttr);
             }
             if (global) {
-              auto srcAddr = builder.create<fir::AddrOfOp>(
-                  loc, global.resultType(), global.getSymbol());
-              builder.create<fir::CopyOp>(loc, srcAddr, compAddr,
-                                          /*noOverlap=*/true);
+              auto srcAddr = fir::AddrOfOp::create(
+                  builder, loc, global.resultType(), global.getSymbol());
+              fir::CopyOp::create(builder, loc, srcAddr, compAddr,
+                                  /*noOverlap=*/true);
             } else {
               Fortran::lower::StatementContext inlineCtx;
               Fortran::lower::SymMap emptyMap;
@@ -951,7 +950,7 @@ static void genDerivedTypeComponentInit(
               hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
                   loc, converter, objDetails->init().value(), emptyMap,
                   inlineCtx);
-              builder.create<hlfir::AssignOp>(loc, rhs, lhs);
+              hlfir::AssignOp::create(builder, loc, rhs, lhs);
             }
           } else {
             // Scalar component: Evaluate the expression and store directly.
@@ -960,10 +959,10 @@ static void genDerivedTypeComponentInit(
             mlir::Value initVal = fir::getBase(exInitVal);
             if (fir::isa_ref_type(initVal.getType()) &&
                 !fir::isa_ref_type(compFirTy))
-              initVal = builder.create<fir::LoadOp>(loc, initVal);
+              initVal = fir::LoadOp::create(builder, loc, initVal);
             mlir::Value castVal =
                 builder.createConvert(loc, compFirTy, initVal);
-            builder.create<fir::StoreOp>(loc, castVal, compAddr);
+            fir::StoreOp::create(builder, loc, castVal, compAddr);
           }
         }
       } else if (Fortran::semantics::IsAllocatableOrPointer(compSym)) {
@@ -982,13 +981,13 @@ static void genDerivedTypeComponentInit(
               builder, global, [&](fir::FirOpBuilder &b) {
                 mlir::Value nullBox = fir::factory::createUnallocatedBox(
                     b, loc, compFirTy, mlir::ValueRange{});
-                b.create<fir::HasValueOp>(loc, nullBox);
+                fir::HasValueOp::create(b, loc, nullBox);
               });
         }
-        auto srcAddr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
-                                                     global.getSymbol());
-        mlir::Value loadedBox = builder.create<fir::LoadOp>(loc, srcAddr);
-        builder.create<fir::StoreOp>(loc, loadedBox, compAddr);
+        auto srcAddr = fir::AddrOfOp::create(builder, loc, global.resultType(),
+                                             global.getSymbol());
+        mlir::Value loadedBox = fir::LoadOp::create(builder, loc, srcAddr);
+        fir::StoreOp::create(builder, loc, loadedBox, compAddr);
       } else if (Fortran::lower::hasDefaultInitialization(compSym)) {
         // Subcase A.3: Nested derived type requires initialization.
         // Derived type has no explicit initialization but contains
@@ -1012,7 +1011,7 @@ static void genDerivedTypeComponentInit(
           mlir::Value initVal = genDefaultInitializerValue(
               converter, loc, compSym, compFirTy, stmtCtx);
           mlir::Value castVal = builder.createConvert(loc, compFirTy, initVal);
-          builder.create<fir::StoreOp>(loc, castVal, compAddr);
+          fir::StoreOp::create(builder, loc, castVal, compAddr);
         }
       }
     }
@@ -1041,13 +1040,13 @@ static void genDerivedTypeComponentInit(
                 } else {
                   procBox = fir::factory::createNullBoxProc(b, loc, compFirTy);
                 }
-                b.create<fir::HasValueOp>(loc, procBox);
+                fir::HasValueOp::create(b, loc, procBox);
               });
         }
-        auto srcAddr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
-                                                     global.getSymbol());
-        mlir::Value loadedBox = builder.create<fir::LoadOp>(loc, srcAddr);
-        builder.create<fir::StoreOp>(loc, loadedBox, compAddr);
+        auto srcAddr = fir::AddrOfOp::create(builder, loc, global.resultType(),
+                                             global.getSymbol());
+        mlir::Value loadedBox = fir::LoadOp::create(builder, loc, srcAddr);
+        fir::StoreOp::create(builder, loc, loadedBox, compAddr);
       } else {
         // Has no initialization.
         continue;
@@ -1068,8 +1067,8 @@ void Fortran::lower::defaultInitializeAtRuntime(
     // 15.5.2.12 point 3, absent optional dummies are not initialized.
     // Creating descriptor/passing null descriptor to the runtime would
     // create runtime crashes.
-    auto isPresent = builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
-                                                      fir::getBase(exv));
+    auto isPresent = fir::IsPresentOp::create(builder, loc, builder.getI1Type(),
+                                              fir::getBase(exv));
     builder.genIfThen(loc, isPresent)
         .genThen([&]() {
           auto box = builder.createBox(loc, exv);
@@ -1123,7 +1122,7 @@ void Fortran::lower::defaultInitializeAtRuntime(
                     converter, loc, details->init().value(), stmtCtx);
                 mlir::Value castTo =
                     builder.createConvert(loc, symTy, fir::getBase(initVal));
-                builder.create<fir::HasValueOp>(loc, castTo);
+                fir::HasValueOp::create(builder, loc, castTo);
               });
         } else if (!global) {
           global = builder.createGlobal(loc, symTy, globalName, linkage,
@@ -1138,13 +1137,13 @@ void Fortran::lower::defaultInitializeAtRuntime(
                 mlir::Value initVal = genDefaultInitializerValue(
                     converter, loc, sym, symTy, stmtCtx);
                 mlir::Value castTo = builder.createConvert(loc, symTy, initVal);
-                builder.create<fir::HasValueOp>(loc, castTo);
+                fir::HasValueOp::create(builder, loc, castTo);
               });
         }
-        auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
-                                                    global.getSymbol());
-        builder.create<fir::CopyOp>(loc, addrOf, fir::getBase(exv),
-                                    /*noOverlap=*/true);
+        auto addrOf = fir::AddrOfOp::create(builder, loc, global.resultType(),
+                                          global.getSymbol());
+        fir::CopyOp::create(builder, loc, addrOf, fir::getBase(exv),
+                            /*noOverlap=*/true);
       }
     } else {
       mlir::Value box = builder.createBox(loc, exv);
