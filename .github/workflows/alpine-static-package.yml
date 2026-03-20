@@ -102,6 +102,8 @@ jobs:
             -DBUILD_SHARED_LIBS=OFF \
             -DLLDB_BUILD_STATIC=ON \
             -DLLDB_ENABLE_LZMA=ON \
+            -DLIBLZMA_LIBRARY=/usr/lib/liblzma.a \
+            -DLIBLZMA_INCLUDE_DIR=/usr/include \
             -DLLDB_ENABLE_PYTHON=OFF \
             -DLLVM_ENABLE_TERMINFO=ON \
             -DLLVM_ENABLE_LIBEDIT=ON \
