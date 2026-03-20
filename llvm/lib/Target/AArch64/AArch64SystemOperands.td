@@ -906,36 +906,8 @@ multiclass TLBITableBase {
 defm TLBI  : TLBITableBase;
 defm TLBIP : TLBITableBase;
 
-multiclass TLBI_Base<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-                     bits<3> op2, RegUse reguse,
-                     list<string> extra_requires = []> {
-  foreach nxs = [0, 1] in {
-    defvar VariantName = !if(nxs, !strconcat(name, "nXS"), name);
-    defvar VariantRequires = !if(nxs,
-                                 extra_requires # ["AArch64::FeatureXS"],
-                                 extra_requires);
-    def : TLBIEntry<VariantName, op1, crn, crm, op2, reguse> {
-      let Encoding{7} = nxs;
-      let ExtraRequires = VariantRequires;
-    }
-  }
-}
-
-multiclass TLBIP_Base<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-                      bits<3> op2, SysAliasRegUse reguse = REG_REQUIRED,
-                      list<string> extra_requires = ["AArch64::FeatureD128"]> {
-  foreach nxs = [0, 1] in {
-    // TLBIP instructions aren't gated by FeatureXS like TLBI ones
-    defvar VariantName = !if(nxs, !strconcat(name, "nXS"), name);
-    def : TLBIPEntry<VariantName, op1, crn, crm, op2, reguse> {
-      let Encoding{7} = nxs;
-      let ExtraRequires = extra_requires;
-    }
-  }
-}
-
 multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn,
-                bits<4> crm, bits<3> op2, int reguse = REG_REQUIRED> {
+                bits<4> crm, bits<3> op2, RegValue reguse> {
   foreach nxs = [0, 1] in {
     defvar VariantName = !if(nxs, !strconcat(name, "nXS"), name);
     def : TLBIEntry<VariantName, op1, crn, crm, op2, reguse> {
@@ -956,7 +928,7 @@ multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn,
 }
 
 multiclass TLBI_RMI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn,
-                    bits<4> crm, bits<3> op2, int reguse = REG_REQUIRED> {
+                    bits<4> crm, bits<3> op2, RegValue reguse> {
   foreach nxs = [0, 1] in {
     defvar VariantName = !if(nxs, !strconcat(name, "nXS"), name);
     def : TLBIEntry<VariantName, op1, crn, crm, op2, reguse> {
@@ -978,109 +950,250 @@ multiclass TLBI_RMI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn,
   }
 }
 
+class TLBI<bit hasTLBIP, bits<3> op1, bits<4> crn,
+           bits<4> crm, bits<3> op2, RegValue reguse> {
+  string Name = NAME;
+  bit HasTLBIP = hasTLBIP;
+  bits<3> Op1 = op1;
+  bits<4> CRn = crn;
+  bits<4> CRm = crm;
+  bits<3> Op2 = op2;
+  RegValue RegUse = reguse;
+}
+
 // TLBI and TLBIP instructions encodings
-//                   hasTLBIP  op1    CRn     CRm     op2    reguse
-defm : TLBI<"IPAS2E1IS",    1, 0b100, 0b1000, 0b0000, 0b001, REG_REQUIRED>;
-defm : TLBI<"IPAS2LE1IS",   1, 0b100, 0b1000, 0b0000, 0b101, REG_REQUIRED>;
-defm : TLBI<"VMALLE1IS",    0, 0b000, 0b1000, 0b0011, 0b000, REG_OPTIONAL>;
-defm : TLBI<"ALLE2IS",      0, 0b100, 0b1000, 0b0011, 0b000, REG_OPTIONAL>;
-defm : TLBI<"ALLE3IS",      0, 0b110, 0b1000, 0b0011, 0b000, REG_OPTIONAL>;
-defm : TLBI<"VAE1IS",       1, 0b000, 0b1000, 0b0011, 0b001, REG_REQUIRED>;
-defm : TLBI<"VAE2IS",       1, 0b100, 0b1000, 0b0011, 0b001, REG_REQUIRED>;
-defm : TLBI<"VAE3IS",       1, 0b110, 0b1000, 0b0011, 0b001, REG_REQUIRED>;
-defm : TLBI<"ASIDE1IS",     0, 0b000, 0b1000, 0b0011, 0b010, REG_REQUIRED>;
-defm : TLBI<"VAAE1IS",      1, 0b000, 0b1000, 0b0011, 0b011, REG_REQUIRED>;
-defm : TLBI<"ALLE1IS",      0, 0b100, 0b1000, 0b0011, 0b100, REG_OPTIONAL>;
-defm : TLBI<"VALE1IS",      1, 0b000, 0b1000, 0b0011, 0b101, REG_REQUIRED>;
-defm : TLBI<"VALE2IS",      1, 0b100, 0b1000, 0b0011, 0b101, REG_REQUIRED>;
-defm : TLBI<"VALE3IS",      1, 0b110, 0b1000, 0b0011, 0b101, REG_REQUIRED>;
-defm : TLBI<"VMALLS12E1IS", 0, 0b100, 0b1000, 0b0011, 0b110, REG_OPTIONAL>;
-defm : TLBI<"VAALE1IS",     1, 0b000, 0b1000, 0b0011, 0b111, REG_REQUIRED>;
-defm : TLBI<"IPAS2E1",      1, 0b100, 0b1000, 0b0100, 0b001, REG_REQUIRED>;
-defm : TLBI<"IPAS2LE1",     1, 0b100, 0b1000, 0b0100, 0b101, REG_REQUIRED>;
-defm : TLBI<"VMALLE1",      0, 0b000, 0b1000, 0b0111, 0b000, REG_NONE>;
-defm : TLBI<"ALLE2",        0, 0b100, 0b1000, 0b0111, 0b000, REG_NONE>;
-defm : TLBI<"ALLE3",        0, 0b110, 0b1000, 0b0111, 0b000, REG_NONE>;
-defm : TLBI<"VAE1",         1, 0b000, 0b1000, 0b0111, 0b001, REG_REQUIRED>;
-defm : TLBI<"VAE2",         1, 0b100, 0b1000, 0b0111, 0b001, REG_REQUIRED>;
-defm : TLBI<"VAE3",         1, 0b110, 0b1000, 0b0111, 0b001, REG_REQUIRED>;
-defm : TLBI<"ASIDE1",       0, 0b000, 0b1000, 0b0111, 0b010, REG_REQUIRED>;
-defm : TLBI<"VAAE1",        1, 0b000, 0b1000, 0b0111, 0b011, REG_REQUIRED>;
-defm : TLBI<"ALLE1",        0, 0b100, 0b1000, 0b0111, 0b100, REG_NONE>;
-defm : TLBI<"VALE1",        1, 0b000, 0b1000, 0b0111, 0b101, REG_REQUIRED>;
-defm : TLBI<"VALE2",        1, 0b100, 0b1000, 0b0111, 0b101, REG_REQUIRED>;
-defm : TLBI<"VALE3",        1, 0b110, 0b1000, 0b0111, 0b101, REG_REQUIRED>;
-defm : TLBI<"VMALLS12E1",   0, 0b100, 0b1000, 0b0111, 0b110, REG_NONE>;
-defm : TLBI<"VAALE1",       1, 0b000, 0b1000, 0b0111, 0b111, REG_REQUIRED>;
+//               hasTLBIP  op1    CRn     CRm     op2    reguse
+def IPAS2E1IS    : TLBI<1, 0b100, 0b1000, 0b0000, 0b001, REG_REQUIRED>;
+def IPAS2LE1IS   : TLBI<1, 0b100, 0b1000, 0b0000, 0b101, REG_REQUIRED>;
+def VMALLE1IS    : TLBI<0, 0b000, 0b1000, 0b0011, 0b000, REG_OPTIONAL>;
+def ALLE2IS      : TLBI<0, 0b100, 0b1000, 0b0011, 0b000, REG_OPTIONAL>;
+def ALLE3IS      : TLBI<0, 0b110, 0b1000, 0b0011, 0b000, REG_OPTIONAL>;
+def VAE1IS       : TLBI<1, 0b000, 0b1000, 0b0011, 0b001, REG_REQUIRED>;
+def VAE2IS       : TLBI<1, 0b100, 0b1000, 0b0011, 0b001, REG_REQUIRED>;
+def VAE3IS       : TLBI<1, 0b110, 0b1000, 0b0011, 0b001, REG_REQUIRED>;
+def ASIDE1IS     : TLBI<0, 0b000, 0b1000, 0b0011, 0b010, REG_REQUIRED>;
+def VAAE1IS      : TLBI<1, 0b000, 0b1000, 0b0011, 0b011, REG_REQUIRED>;
+def ALLE1IS      : TLBI<0, 0b100, 0b1000, 0b0011, 0b100, REG_OPTIONAL>;
+def VALE1IS      : TLBI<1, 0b000, 0b1000, 0b0011, 0b101, REG_REQUIRED>;
+def VALE2IS      : TLBI<1, 0b100, 0b1000, 0b0011, 0b101, REG_REQUIRED>;
+def VALE3IS      : TLBI<1, 0b110, 0b1000, 0b0011, 0b101, REG_REQUIRED>;
+def VMALLS12E1IS : TLBI<0, 0b100, 0b1000, 0b0011, 0b110, REG_OPTIONAL>;
+def VAALE1IS     : TLBI<1, 0b000, 0b1000, 0b0011, 0b111, REG_REQUIRED>;
+def IPAS2E1      : TLBI<1, 0b100, 0b1000, 0b0100, 0b001, REG_REQUIRED>;
+def IPAS2LE1     : TLBI<1, 0b100, 0b1000, 0b0100, 0b101, REG_REQUIRED>;
+def VMALLE1      : TLBI<0, 0b000, 0b1000, 0b0111, 0b000, REG_NONE>;
+def ALLE2        : TLBI<0, 0b100, 0b1000, 0b0111, 0b000, REG_NONE>;
+def ALLE3        : TLBI<0, 0b110, 0b1000, 0b0111, 0b000, REG_NONE>;
+def VAE1         : TLBI<1, 0b000, 0b1000, 0b0111, 0b001, REG_REQUIRED>;
+def VAE2         : TLBI<1, 0b100, 0b1000, 0b0111, 0b001, REG_REQUIRED>;
+def VAE3         : TLBI<1, 0b110, 0b1000, 0b0111, 0b001, REG_REQUIRED>;
+def ASIDE1       : TLBI<0, 0b000, 0b1000, 0b0111, 0b010, REG_REQUIRED>;
+def VAAE1        : TLBI<1, 0b000, 0b1000, 0b0111, 0b011, REG_REQUIRED>;
+def ALLE1        : TLBI<0, 0b100, 0b1000, 0b0111, 0b100, REG_NONE>;
+def VALE1        : TLBI<1, 0b000, 0b1000, 0b0111, 0b101, REG_REQUIRED>;
+def VALE2        : TLBI<1, 0b100, 0b1000, 0b0111, 0b101, REG_REQUIRED>;
+def VALE3        : TLBI<1, 0b110, 0b1000, 0b0111, 0b101, REG_REQUIRED>;
+def VMALLS12E1   : TLBI<0, 0b100, 0b1000, 0b0111, 0b110, REG_NONE>;
+def VAALE1       : TLBI<1, 0b000, 0b1000, 0b0111, 0b111, REG_REQUIRED>;
+
+defvar TLBINames = [
+  "IPAS2E1IS", "IPAS2LE1IS", "VMALLE1IS", "ALLE2IS", "ALLE3IS",
+  "VAE1IS", "VAE2IS", "VAE3IS", "ASIDE1IS", "VAAE1IS",
+  "ALLE1IS", "VALE1IS", "VALE2IS", "VALE3IS", "VMALLS12E1IS",
+  "VAALE1IS", "IPAS2E1", "IPAS2LE1", "VMALLE1", "ALLE2",
+  "ALLE3", "VAE1", "VAE2", "VAE3", "ASIDE1", "VAAE1",
+  "ALLE1", "VALE1", "VALE2", "VALE3", "VMALLS12E1", "VAALE1"
+];
+
+foreach I = TLBINames in {
+  defvar Info = !cast<TLBI>(I);
+  def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 0;
+  }
+
+  def : TLBIEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 1;
+    let ExtraRequires = ["AArch64::FeatureXS"];
+  }
+
+  if !eq(Info.HasTLBIP, true) then {
+    foreach nxs = [0, 1] in {
+      defvar VariantName = !if(nxs, !strconcat(I, "nXS"), I);
+      def : TLBIPEntry<VariantName, Info.Op1, Info.CRn, Info.CRm, Info.Op2,
+                       Info.RegUse> {
+        let Encoding{7} = nxs;
+        let Requires = ["AArch64::FeatureD128"];
+      }
+    }
+  }
+}
 
 // Armv8.4-A Translation Lookaside Buffer Instructions (TLBI and TLBIP)
 // Armv8.4-A Outer Sharable TLB Maintenance instructions:
-//                       hasTLBIP  op1    CRn     CRm     op2    reguse
-defm : TLBI_RMI<"VMALLE1OS",    0, 0b000, 0b1000, 0b0001, 0b000, REG_OPTIONAL>;
-defm : TLBI_RMI<"VAE1OS",       1, 0b000, 0b1000, 0b0001, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"ASIDE1OS",     0, 0b000, 0b1000, 0b0001, 0b010, REG_REQUIRED>;
-defm : TLBI_RMI<"VAAE1OS",      1, 0b000, 0b1000, 0b0001, 0b011, REG_REQUIRED>;
-defm : TLBI_RMI<"VALE1OS",      1, 0b000, 0b1000, 0b0001, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"VAALE1OS",     1, 0b000, 0b1000, 0b0001, 0b111, REG_REQUIRED>;
-defm : TLBI_RMI<"IPAS2E1OS",    1, 0b100, 0b1000, 0b0100, 0b000, REG_REQUIRED>;
-defm : TLBI_RMI<"IPAS2LE1OS",   1, 0b100, 0b1000, 0b0100, 0b100, REG_REQUIRED>;
-defm : TLBI_RMI<"VAE2OS",       1, 0b100, 0b1000, 0b0001, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"VALE2OS",      1, 0b100, 0b1000, 0b0001, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"VMALLS12E1OS", 0, 0b100, 0b1000, 0b0001, 0b110, REG_OPTIONAL>;
-defm : TLBI_RMI<"VAE3OS",       1, 0b110, 0b1000, 0b0001, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"VALE3OS",      1, 0b110, 0b1000, 0b0001, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"ALLE2OS",      0, 0b100, 0b1000, 0b0001, 0b000, REG_OPTIONAL>;
-defm : TLBI_RMI<"ALLE1OS",      0, 0b100, 0b1000, 0b0001, 0b100, REG_OPTIONAL>;
-defm : TLBI_RMI<"ALLE3OS",      0, 0b110, 0b1000, 0b0001, 0b000, REG_OPTIONAL>;
+//               hasTLBIP  op1    CRn     CRm     op2    reguse
+def VMALLE1OS    : TLBI<0, 0b000, 0b1000, 0b0001, 0b000, REG_OPTIONAL>;
+def VAE1OS       : TLBI<1, 0b000, 0b1000, 0b0001, 0b001, REG_REQUIRED>;
+def ASIDE1OS     : TLBI<0, 0b000, 0b1000, 0b0001, 0b010, REG_REQUIRED>;
+def VAAE1OS      : TLBI<1, 0b000, 0b1000, 0b0001, 0b011, REG_REQUIRED>;
+def VALE1OS      : TLBI<1, 0b000, 0b1000, 0b0001, 0b101, REG_REQUIRED>;
+def VAALE1OS     : TLBI<1, 0b000, 0b1000, 0b0001, 0b111, REG_REQUIRED>;
+def IPAS2E1OS    : TLBI<1, 0b100, 0b1000, 0b0100, 0b000, REG_REQUIRED>;
+def IPAS2LE1OS   : TLBI<1, 0b100, 0b1000, 0b0100, 0b100, REG_REQUIRED>;
+def VAE2OS       : TLBI<1, 0b100, 0b1000, 0b0001, 0b001, REG_REQUIRED>;
+def VALE2OS      : TLBI<1, 0b100, 0b1000, 0b0001, 0b101, REG_REQUIRED>;
+def VMALLS12E1OS : TLBI<0, 0b100, 0b1000, 0b0001, 0b110, REG_OPTIONAL>;
+def VAE3OS       : TLBI<1, 0b110, 0b1000, 0b0001, 0b001, REG_REQUIRED>;
+def VALE3OS      : TLBI<1, 0b110, 0b1000, 0b0001, 0b101, REG_REQUIRED>;
+def ALLE2OS      : TLBI<0, 0b100, 0b1000, 0b0001, 0b000, REG_OPTIONAL>;
+def ALLE1OS      : TLBI<0, 0b100, 0b1000, 0b0001, 0b100, REG_OPTIONAL>;
+def ALLE3OS      : TLBI<0, 0b110, 0b1000, 0b0001, 0b000, REG_OPTIONAL>;
+
+defvar TLBI_RMI_OuterShareable = [
+  "VMALLE1OS", "VAE1OS", "ASIDE1OS", "VAAE1OS",
+  "VALE1OS", "VAALE1OS", "IPAS2E1OS", "IPAS2LE1OS",
+  "VAE2OS", "VALE2OS", "VMALLS12E1OS", "VAE3OS",
+  "VALE3OS", "ALLE2OS", "ALLE1OS", "ALLE3OS"
+];
+
+foreach I = TLBI_RMI_OuterShareable in {
+  defvar Info = !cast<TLBI>(I);
+  def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 0;
+    let Requires = ["AArch64::FeatureTLB_RMI"];
+  }
+
+  def : TLBIEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 1;
+    let Requires = ["AArch64::FeatureTLB_RMI", "AArch64::FeatureXS"];
+  }
+
+  if !eq(Info.HasTLBIP, true) then {
+    foreach nxs = [0, 1] in {
+      defvar VariantName = !if(nxs, !strconcat(I, "nXS"), I);
+      def : TLBIPEntry<VariantName, Info.Op1, Info.CRn, Info.CRm, Info.Op2,
+                       Info.RegUse> {
+        let Encoding{7} = nxs;
+        let Requires = ["AArch64::FeatureD128"];
+      }
+    }
+  }
+}
 
 // Armv8.4-A TLB and TLBIP Range Maintenance instructions:
-//                       hasTLBIP  op1    CRn     CRm     op2    reguse
-defm : TLBI_RMI<"RVAE1",        1, 0b000, 0b1000, 0b0110, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAAE1",       1, 0b000, 0b1000, 0b0110, 0b011, REG_REQUIRED>;
-defm : TLBI_RMI<"RVALE1",       1, 0b000, 0b1000, 0b0110, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAALE1",      1, 0b000, 0b1000, 0b0110, 0b111, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAE1IS",      1, 0b000, 0b1000, 0b0010, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAAE1IS",     1, 0b000, 0b1000, 0b0010, 0b011, REG_REQUIRED>;
-defm : TLBI_RMI<"RVALE1IS",     1, 0b000, 0b1000, 0b0010, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAALE1IS",    1, 0b000, 0b1000, 0b0010, 0b111, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAE1OS",      1, 0b000, 0b1000, 0b0101, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAAE1OS",     1, 0b000, 0b1000, 0b0101, 0b011, REG_REQUIRED>;
-defm : TLBI_RMI<"RVALE1OS",     1, 0b000, 0b1000, 0b0101, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAALE1OS",    1, 0b000, 0b1000, 0b0101, 0b111, REG_REQUIRED>;
-defm : TLBI_RMI<"RIPAS2E1IS",   1, 0b100, 0b1000, 0b0000, 0b010, REG_REQUIRED>;
-defm : TLBI_RMI<"RIPAS2LE1IS",  1, 0b100, 0b1000, 0b0000, 0b110, REG_REQUIRED>;
-defm : TLBI_RMI<"RIPAS2E1",     1, 0b100, 0b1000, 0b0100, 0b010, REG_REQUIRED>;
-defm : TLBI_RMI<"RIPAS2LE1",    1, 0b100, 0b1000, 0b0100, 0b110, REG_REQUIRED>;
-defm : TLBI_RMI<"RIPAS2E1OS",   1, 0b100, 0b1000, 0b0100, 0b011, REG_REQUIRED>;
-defm : TLBI_RMI<"RIPAS2LE1OS",  1, 0b100, 0b1000, 0b0100, 0b111, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAE2",        1, 0b100, 0b1000, 0b0110, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"RVALE2",       1, 0b100, 0b1000, 0b0110, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAE2IS",      1, 0b100, 0b1000, 0b0010, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"RVALE2IS",     1, 0b100, 0b1000, 0b0010, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAE2OS",      1, 0b100, 0b1000, 0b0101, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"RVALE2OS",     1, 0b100, 0b1000, 0b0101, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAE3",        1, 0b110, 0b1000, 0b0110, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"RVALE3",       1, 0b110, 0b1000, 0b0110, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAE3IS",      1, 0b110, 0b1000, 0b0010, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"RVALE3IS",     1, 0b110, 0b1000, 0b0010, 0b101, REG_REQUIRED>;
-defm : TLBI_RMI<"RVAE3OS",      1, 0b110, 0b1000, 0b0101, 0b001, REG_REQUIRED>;
-defm : TLBI_RMI<"RVALE3OS",     1, 0b110, 0b1000, 0b0101, 0b101, REG_REQUIRED>;
+//               hasTLBIP  op1    CRn     CRm     op2    reguse
+def RVAE1        : TLBI<1, 0b000, 0b1000, 0b0110, 0b001, REG_REQUIRED>;
+def RVAAE1       : TLBI<1, 0b000, 0b1000, 0b0110, 0b011, REG_REQUIRED>;
+def RVALE1       : TLBI<1, 0b000, 0b1000, 0b0110, 0b101, REG_REQUIRED>;
+def RVAALE1      : TLBI<1, 0b000, 0b1000, 0b0110, 0b111, REG_REQUIRED>;
+def RVAE1IS      : TLBI<1, 0b000, 0b1000, 0b0010, 0b001, REG_REQUIRED>;
+def RVAAE1IS     : TLBI<1, 0b000, 0b1000, 0b0010, 0b011, REG_REQUIRED>;
+def RVALE1IS     : TLBI<1, 0b000, 0b1000, 0b0010, 0b101, REG_REQUIRED>;
+def RVAALE1IS    : TLBI<1, 0b000, 0b1000, 0b0010, 0b111, REG_REQUIRED>;
+def RVAE1OS      : TLBI<1, 0b000, 0b1000, 0b0101, 0b001, REG_REQUIRED>;
+def RVAAE1OS     : TLBI<1, 0b000, 0b1000, 0b0101, 0b011, REG_REQUIRED>;
+def RVALE1OS     : TLBI<1, 0b000, 0b1000, 0b0101, 0b101, REG_REQUIRED>;
+def RVAALE1OS    : TLBI<1, 0b000, 0b1000, 0b0101, 0b111, REG_REQUIRED>;
+def RIPAS2E1IS   : TLBI<1, 0b100, 0b1000, 0b0000, 0b010, REG_REQUIRED>;
+def RIPAS2LE1IS  : TLBI<1, 0b100, 0b1000, 0b0000, 0b110, REG_REQUIRED>;
+def RIPAS2E1     : TLBI<1, 0b100, 0b1000, 0b0100, 0b010, REG_REQUIRED>;
+def RIPAS2LE1    : TLBI<1, 0b100, 0b1000, 0b0100, 0b110, REG_REQUIRED>;
+def RIPAS2E1OS   : TLBI<1, 0b100, 0b1000, 0b0100, 0b011, REG_REQUIRED>;
+def RIPAS2LE1OS  : TLBI<1, 0b100, 0b1000, 0b0100, 0b111, REG_REQUIRED>;
+def RVAE2        : TLBI<1, 0b100, 0b1000, 0b0110, 0b001, REG_REQUIRED>;
+def RVALE2       : TLBI<1, 0b100, 0b1000, 0b0110, 0b101, REG_REQUIRED>;
+def RVAE2IS      : TLBI<1, 0b100, 0b1000, 0b0010, 0b001, REG_REQUIRED>;
+def RVALE2IS     : TLBI<1, 0b100, 0b1000, 0b0010, 0b101, REG_REQUIRED>;
+def RVAE2OS      : TLBI<1, 0b100, 0b1000, 0b0101, 0b001, REG_REQUIRED>;
+def RVALE2OS     : TLBI<1, 0b100, 0b1000, 0b0101, 0b101, REG_REQUIRED>;
+def RVAE3        : TLBI<1, 0b110, 0b1000, 0b0110, 0b001, REG_REQUIRED>;
+def RVALE3       : TLBI<1, 0b110, 0b1000, 0b0110, 0b101, REG_REQUIRED>;
+def RVAE3IS      : TLBI<1, 0b110, 0b1000, 0b0010, 0b001, REG_REQUIRED>;
+def RVALE3IS     : TLBI<1, 0b110, 0b1000, 0b0010, 0b101, REG_REQUIRED>;
+def RVAE3OS      : TLBI<1, 0b110, 0b1000, 0b0101, 0b001, REG_REQUIRED>;
+def RVALE3OS     : TLBI<1, 0b110, 0b1000, 0b0101, 0b101, REG_REQUIRED>;
+
+defvar TLBI_RMI_Range = [
+  "RVAE1", "RVAAE1", "RVALE1", "RVAALE1",
+  "RVAE1IS", "RVAAE1IS", "RVALE1IS", "RVAALE1IS",
+  "RVAE1OS", "RVAAE1OS", "RVALE1OS", "RVAALE1OS",
+  "RIPAS2E1IS", "RIPAS2LE1IS", "RIPAS2E1",
+  "RIPAS2LE1", "RIPAS2E1OS", "RIPAS2LE1OS",
+  "RVAE2", "RVALE2", "RVAE2IS", "RVALE2IS",
+  "RVAE2OS", "RVALE2OS", "RVAE3", "RVALE3",
+  "RVAE3IS", "RVALE3IS", "RVAE3OS", "RVALE3OS"
+];
+
+foreach I = TLBI_RMI_Range in {
+  defvar Info = !cast<TLBI>(I);
+  def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 0;
+    let Requires = ["AArch64::FeatureTLB_RMI"];
+  }
+
+  def : TLBIEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 1;
+    let Requires = ["AArch64::FeatureTLB_RMI", "AArch64::FeatureXS"];
+  }
+
+  if !eq(Info.HasTLBIP, true) then {
+    foreach nxs = [0, 1] in {
+      defvar VariantName = !if(nxs, !strconcat(I, "nXS"), I);
+      def : TLBIPEntry<VariantName, Info.Op1, Info.CRn, Info.CRm, Info.Op2,
+                       Info.RegUse> {
+        let Encoding{7} = nxs;
+        let Requires = ["AArch64::FeatureD128"];
+      }
+    }
+  }
+}
 
 // Armv9-A Realm Management Extension TLBI Instructions
+//          hasTLBIP  op1    CRn     CRm     op2    reguse
+def RPAOS   : TLBI<0, 0b110, 0b1000, 0b0100, 0b011, REG_REQUIRED>;
+def RPALOS  : TLBI<0, 0b110, 0b1000, 0b0100, 0b111, REG_REQUIRED>;
+def PAALLOS : TLBI<0, 0b110, 0b1000, 0b0001, 0b100, REG_NONE>;
+def PAALL   : TLBI<0, 0b110, 0b1000, 0b0111, 0b100, REG_NONE>;
+
+defvar TLBI_RME = [
+  "RPAOS", "RPALOS", "PAALLOS", "PAALL"
+];
+
 let Requires = ["AArch64::FeatureRME"] in {
-//                   hasTLBIP  op1    CRn     CRm     op2    reguse
-defm : TLBI<"RPAOS",        0, 0b110, 0b1000, 0b0100, 0b011, REG_REQUIRED>;
-defm : TLBI<"RPALOS",       0, 0b110, 0b1000, 0b0100, 0b111, REG_REQUIRED>;
-defm : TLBI<"PAALLOS",      0, 0b110, 0b1000, 0b0001, 0b100, REG_NONE>;
-defm : TLBI<"PAALL",        0, 0b110, 0b1000, 0b0111, 0b100, REG_NONE>;
+foreach I = TLBI_RME in {
+  defvar Info = !cast<TLBI>(I);
+  def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 0;
+  }
+
+  def : TLBIEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 1;
+    let ExtraRequires = ["AArch64::FeatureXS"];
+  }
+}
 }
 
 // Armv9.5-A TLBI VMALL for Dirty State
+//               hasTLBIP  op1    CRn     CRm     op2    reguse
+def VMALLWS2E1   : TLBI<0, 0b100, 0b1000, 0b0110, 0b010, REG_NONE>;
+def VMALLWS2E1IS : TLBI<0, 0b100, 0b1000, 0b0010, 0b010, REG_OPTIONAL>;
+def VMALLWS2E1OS : TLBI<0, 0b100, 0b1000, 0b0101, 0b010, REG_OPTIONAL>;
+
+defvar TLBI_TLBIW = [
+  "VMALLWS2E1", "VMALLWS2E1IS", "VMALLWS2E1OS"
+];
+
 let Requires = ["AArch64::FeatureTLBIW"] in {
-//                   hasTLBIP  op1    CRn     CRm     op2    reguse
-defm : TLBI<"VMALLWS2E1",   0, 0b100, 0b1000, 0b0110, 0b010, REG_NONE>;
-defm : TLBI<"VMALLWS2E1IS", 0, 0b100, 0b1000, 0b0010, 0b010, REG_OPTIONAL>;
-defm : TLBI<"VMALLWS2E1OS", 0, 0b100, 0b1000, 0b0101, 0b010, REG_OPTIONAL>;
+foreach I = TLBI_TLBIW in {
+  defvar Info = !cast<TLBI>(I);
+  def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 0;
+  }
+
+  def : TLBIEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+    let Encoding{7} = 1;
+    let ExtraRequires = ["AArch64::FeatureXS"];
+  }
+}
 }
 
 //===----------------------------------------------------------------------===//
