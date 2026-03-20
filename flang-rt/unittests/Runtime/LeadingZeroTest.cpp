@@ -59,7 +59,7 @@ static bool CompareFormatReal(
 struct LeadingZeroTests : CrashHandlerFixture {};
 
 // LZP with F editing: value < 1 should print "0." before decimal digits
-TEST(LeadingZeroTests, LZP_F_editing) {
+TEST_F(LeadingZeroTests, LZP_F_editing) {
   static constexpr std::pair<const char *, const char *> cases[]{
       {"(LZP,F6.1)", "   0.2"},
       {"(LZP,F10.3)", "     0.200"},
@@ -77,7 +77,7 @@ TEST(LeadingZeroTests, LZP_F_editing) {
 }
 
 // LZS with F editing: value < 1 should suppress the leading zero
-TEST(LeadingZeroTests, LZS_F_editing) {
+TEST_F(LeadingZeroTests, LZS_F_editing) {
   static constexpr std::pair<const char *, const char *> cases[]{
       {"(LZS,F6.1)", "    .2"},
       {"(LZS,F10.3)", "      .200"},
@@ -95,7 +95,7 @@ TEST(LeadingZeroTests, LZS_F_editing) {
 }
 
 // LZ (processor-dependent, flang prints leading zero) with F editing
-TEST(LeadingZeroTests, LZ_F_editing) {
+TEST_F(LeadingZeroTests, LZ_F_editing) {
   static constexpr std::pair<const char *, const char *> cases[]{
       {"(LZ,F6.1)", "   0.2"},
       {"(LZ,F10.3)", "     0.200"},
@@ -111,7 +111,7 @@ TEST(LeadingZeroTests, LZ_F_editing) {
 }
 
 // LZP with E editing: value < 1 should print "0." before decimal digits
-TEST(LeadingZeroTests, LZP_E_editing) {
+TEST_F(LeadingZeroTests, LZP_E_editing) {
   static constexpr std::pair<const char *, const char *> cases[]{
       {"(LZP,E10.3)", " 0.200E+00"},
       {"(LZP,E12.5)", " 0.20000E+00"},
@@ -127,7 +127,7 @@ TEST(LeadingZeroTests, LZP_E_editing) {
 }
 
 // LZS with E editing: value < 1 should suppress the leading zero
-TEST(LeadingZeroTests, LZS_E_editing) {
+TEST_F(LeadingZeroTests, LZS_E_editing) {
   static constexpr std::pair<const char *, const char *> cases[]{
       {"(LZS,E10.3)", "  .200E+00"},
       {"(LZS,E12.5)", "  .20000E+00"},
@@ -143,21 +143,21 @@ TEST(LeadingZeroTests, LZS_E_editing) {
 }
 
 // LZP with D editing
-TEST(LeadingZeroTests, LZP_D_editing) {
+TEST_F(LeadingZeroTests, LZP_D_editing) {
   std::string got;
   ASSERT_TRUE(CompareFormatReal("(LZP,D10.3)", 0.2, " 0.200D+00", got))
       << "Expected ' 0.200D+00', got '" << got << "'";
 }
 
 // LZS with D editing
-TEST(LeadingZeroTests, LZS_D_editing) {
+TEST_F(LeadingZeroTests, LZS_D_editing) {
   std::string got;
   ASSERT_TRUE(CompareFormatReal("(LZS,D10.3)", 0.2, "  .200D+00", got))
       << "Expected '  .200D+00', got '" << got << "'";
 }
 
 // LZP with G editing — G routes to F when exponent is in range
-TEST(LeadingZeroTests, LZP_G_editing_F_path) {
+TEST_F(LeadingZeroTests, LZP_G_editing_F_path) {
   std::string got;
   // 0.2 with G10.3: exponent 0 is in [0,3], so G uses F editing
   ASSERT_TRUE(CompareFormatReal("(LZP,G10.3)", 0.2, " 0.200    ", got))
@@ -165,14 +165,14 @@ TEST(LeadingZeroTests, LZP_G_editing_F_path) {
 }
 
 // LZS with G editing — G routes to F when exponent is in range
-TEST(LeadingZeroTests, LZS_G_editing_F_path) {
+TEST_F(LeadingZeroTests, LZS_G_editing_F_path) {
   std::string got;
   ASSERT_TRUE(CompareFormatReal("(LZS,G10.3)", 0.2, "  .200    ", got))
       << "Expected '  .200    ', got '" << got << "'";
 }
 
 // LZP with G editing — G routes to E when exponent is out of range
-TEST(LeadingZeroTests, LZP_G_editing_E_path) {
+TEST_F(LeadingZeroTests, LZP_G_editing_E_path) {
   std::string got;
   // 0.0002 with G10.3: exponent -3 is < 0, so G uses E editing
   ASSERT_TRUE(CompareFormatReal("(LZP,G10.3)", 0.0002, " 0.200E-03", got))
@@ -180,14 +180,14 @@ TEST(LeadingZeroTests, LZP_G_editing_E_path) {
 }
 
 // LZS with G editing — G routes to E when exponent is out of range
-TEST(LeadingZeroTests, LZS_G_editing_E_path) {
+TEST_F(LeadingZeroTests, LZS_G_editing_E_path) {
   std::string got;
   ASSERT_TRUE(CompareFormatReal("(LZS,G10.3)", 0.0002, "  .200E-03", got))
       << "Expected '  .200E-03', got '" << got << "'";
 }
 
 // Switching between LZP and LZS in the same format
-TEST(LeadingZeroTests, SwitchBetweenLZPandLZS) {
+TEST_F(LeadingZeroTests, SwitchBetweenLZPandLZS) {
   char buffer[800];
   const char *format{"(LZP,F6.1,LZS,F6.1)"};
   auto cookie{IONAME(BeginInternalFormattedOutput)(
@@ -207,7 +207,7 @@ TEST(LeadingZeroTests, SwitchBetweenLZPandLZS) {
 }
 
 // LZP/LZS with negative values < 1 in magnitude
-TEST(LeadingZeroTests, NegativeValues) {
+TEST_F(LeadingZeroTests, NegativeValues) {
   std::string got;
   ASSERT_TRUE(CompareFormatReal("(LZP,F7.1)", -0.2, "   -0.2", got))
       << "Expected '   -0.2', got '" << got << "'";
@@ -216,7 +216,7 @@ TEST(LeadingZeroTests, NegativeValues) {
 }
 
 // LZP/LZS should not affect values >= 1 (leading zero is not optional)
-TEST(LeadingZeroTests, ValuesGreaterThanOne) {
+TEST_F(LeadingZeroTests, ValuesGreaterThanOne) {
   std::string got;
   ASSERT_TRUE(CompareFormatReal("(LZP,F6.1)", 1.2, "   1.2", got))
       << "Expected '   1.2', got '" << got << "'";
@@ -229,7 +229,7 @@ TEST(LeadingZeroTests, ValuesGreaterThanOne) {
 }
 
 // LZP/LZS with zero value
-TEST(LeadingZeroTests, ZeroValue) {
+TEST_F(LeadingZeroTests, ZeroValue) {
   std::string got;
   // LZP: zero value still prints leading zero before decimal point
   ASSERT_TRUE(CompareFormatReal("(LZP,F6.1)", 0.0, "   0.0", got))
@@ -240,7 +240,7 @@ TEST(LeadingZeroTests, ZeroValue) {
 }
 
 // LZP/LZS with scale factor (1P) — leading zero not optional when scale > 0
-TEST(LeadingZeroTests, WithScaleFactor) {
+TEST_F(LeadingZeroTests, WithScaleFactor) {
   std::string got;
   // With 1P, E editing puts one digit before the decimal point,
   // so LZS should not suppress it (it's not an optional zero)
@@ -251,7 +251,7 @@ TEST(LeadingZeroTests, WithScaleFactor) {
 }
 
 // LZP without comma separator (C1302 extension)
-TEST(LeadingZeroTests, WithoutCommaSeparator) {
+TEST_F(LeadingZeroTests, WithoutCommaSeparator) {
   std::string got;
   ASSERT_TRUE(CompareFormatReal("(LZPF6.1)", 0.2, "   0.2", got))
       << "Expected '   0.2', got '" << got << "'";
@@ -262,7 +262,7 @@ TEST(LeadingZeroTests, WithoutCommaSeparator) {
 }
 
 // LEADING_ZERO= specifier via SetLeadingZero runtime API
-TEST(LeadingZeroTests, SetLeadingZero_Suppress) {
+TEST_F(LeadingZeroTests, SetLeadingZero_Suppress) {
   // LEADING_ZERO='SUPPRESS' should suppress the optional leading zero
   char buffer[800];
   const char *format{"(F6.1)"};
@@ -281,7 +281,7 @@ TEST(LeadingZeroTests, SetLeadingZero_Suppress) {
       << "Expected '    .5', got '" << got << "'";
 }
 
-TEST(LeadingZeroTests, SetLeadingZero_Print) {
+TEST_F(LeadingZeroTests, SetLeadingZero_Print) {
   // LEADING_ZERO='PRINT' should print the optional leading zero
   char buffer[800];
   const char *format{"(F6.1)"};
@@ -300,7 +300,7 @@ TEST(LeadingZeroTests, SetLeadingZero_Print) {
       << "Expected '   0.5', got '" << got << "'";
 }
 
-TEST(LeadingZeroTests, SetLeadingZero_ProcessorDefined) {
+TEST_F(LeadingZeroTests, SetLeadingZero_ProcessorDefined) {
   // LEADING_ZERO='PROCESSOR_DEFINED' should behave like PRINT (flang default)
   char buffer[800];
   const char *format{"(F6.1)"};
@@ -320,7 +320,7 @@ TEST(LeadingZeroTests, SetLeadingZero_ProcessorDefined) {
 }
 
 // LEADING_ZERO= overridden by LZS/LZP edit descriptors in format
-TEST(LeadingZeroTests, SetLeadingZero_OverriddenByEditDescriptor) {
+TEST_F(LeadingZeroTests, SetLeadingZero_OverriddenByEditDescriptor) {
   // Set LEADING_ZERO='PRINT' but format uses LZS — LZS should win
   char buffer[800];
   const char *format{"(LZS,F6.1)"};
@@ -340,7 +340,7 @@ TEST(LeadingZeroTests, SetLeadingZero_OverriddenByEditDescriptor) {
 }
 
 // LEADING_ZERO= specifier via SetLeadingZero runtime API
-TEST(LeadingZeroTests, SetLeadingZeroSuppressViaAPI) {
+TEST_F(LeadingZeroTests, SetLeadingZeroSuppressViaAPI) {
   char buffer[800];
   const char *format{"(F6.1)"};
   auto cookie{IONAME(BeginInternalFormattedOutput)(
@@ -359,7 +359,7 @@ TEST(LeadingZeroTests, SetLeadingZeroSuppressViaAPI) {
       << "Expected '    .5', got '" << got << "'";
 }
 
-TEST(LeadingZeroTests, SetLeadingZeroPrintViaAPI) {
+TEST_F(LeadingZeroTests, SetLeadingZeroPrintViaAPI) {
   char buffer[800];
   const char *format{"(F6.1)"};
   auto cookie{IONAME(BeginInternalFormattedOutput)(
