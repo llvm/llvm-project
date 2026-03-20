@@ -680,8 +680,8 @@ define i32 @postinc_not_iv_backedge_value(i32 %k)  {
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], 2
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 1
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 2
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
@@ -694,7 +694,7 @@ define i32 @postinc_not_iv_backedge_value(i32 %k)  {
 ; INTERLEAVE-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], [[K]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP]], label %[[FOR_END]], label %[[FOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[FOR_END]]:
-; INTERLEAVE-NEXT:    [[INC_2_LCSSA:%.*]] = phi i32 [ [[INC_2]], %[[FOR_BODY]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[INC_2_LCSSA:%.*]] = phi i32 [ [[INC_2]], %[[FOR_BODY]] ], [ [[TMP1]], %[[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    ret i32 [[INC_2_LCSSA]]
 ;
 entry:

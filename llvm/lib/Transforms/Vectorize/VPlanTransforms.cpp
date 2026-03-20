@@ -2682,13 +2682,16 @@ static void licm(VPlan &Plan) {
       if (cannotHoistOrSinkRecipe(R))
         continue;
 
-      // narrowToSingleScalarRecipes should have already maximally narrowed
-      // replicates to single-scalar replicates. TODO: When unrolling
-      // replicatebyVF doesn't handle non-single-scalar replicates that are
-      // sunk yet.
-      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R))
-        if (RepR->isPredicated() || !RepR->isSingleScalar())
+      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
+        assert(!RepR->isPredicated() &&
+               "Expected prior transformation of predicated replicates to "
+               "replicate regions");
+        // narrowToSingleScalarRecipes should have already maximally narrowed
+        // replicates to single-scalar replicates. TODO: When unrolling,
+        // replicatebyVF crashes on non-single-scalar replicates that are sunk.
+        if (!RepR->isSingleScalar())
           continue;
+      }
 
       // TODO: Use R.definedValues() instead of casting to VPSingleDefRecipe to
       // support recipes with multiple defined values (e.g., interleaved loads).
