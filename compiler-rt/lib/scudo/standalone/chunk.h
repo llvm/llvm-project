@@ -53,11 +53,28 @@ namespace Chunk {
 // but https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61414 prevents it from
 // happening, as it will error, complaining the number of bits is not enough.
 enum Origin : u8 {
-  Malloc = 0,
-  New = 1,
-  NewArray = 2,
-  Memalign = 3,
+  Malloc = 0,   // malloc, calloc, realloc
+  New = 1,      // operator new
+  NewArray = 2, // operator new []
+  Memalign = 3, // aligned_alloc, memalign, posix_memalign, pvalloc, valloc
+
+  // These flags are not stored in the Origin in the header, used in deallocate
+  // for verification purposes.
+  Size = 0x10,  // Verify size parameter.
+  Align = 0x20, // Verify align parameter.
+
+  // NOTE: It is currently not possible to verify a new/new [] aligned
+  //       allocation calls delete/delete [] that is aligned due to only
+  //       having two bits to store the Origin in the header.
 };
+
+ALWAYS_INLINE u8 originBaseType(u8 Origin) {
+  return (Origin & 3) == Origin::Memalign ? Origin::Malloc : Origin & 0x3;
+}
+ALWAYS_INLINE bool originAligned(u8 Origin) {
+  return Origin == Origin::Memalign || (Origin & Origin::Align);
+}
+ALWAYS_INLINE bool originSized(u8 Origin) { return Origin & Origin::Size; }
 
 enum State : u8 { Available = 0, Allocated = 1, Quarantined = 2 };
 
@@ -71,6 +88,10 @@ struct UnpackedHeader {
   uptr SizeOrUnusedBytes : 20;
   uptr Offset : 16;
   uptr Checksum : 16;
+
+  ALWAYS_INLINE u8 getOrigin() { return OriginOrWasZeroed; }
+
+  ALWAYS_INLINE void setOrigin(u8 Origin) { OriginOrWasZeroed = Origin; }
 };
 typedef atomic_u64 AtomicPackedHeader;
 static_assert(sizeof(UnpackedHeader) == sizeof(PackedHeader), "");
