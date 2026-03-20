@@ -2610,14 +2610,50 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I, Register DestReg,
-                                unsigned SubIdx,
-                                const MachineInstr &Orig) const {
+                                unsigned SubIdx, const MachineInstr &Orig,
+                                LaneBitmask UsedLanes) const {
 
   // Try shrinking the instruction to remat only the part needed for current
   // context.
   // TODO: Handle more cases.
   unsigned Opcode = Orig.getOpcode();
   switch (Opcode) {
+  case AMDGPU::S_MOV_B64:
+  case AMDGPU::S_MOV_B64_IMM_PSEUDO: {
+    if (SubIdx != 0)
+      break;
+
+    if (!Orig.getOperand(1).isImm())
+      break;
+
+    // Shrink S_MOV_B64 to S_MOV_B32 when UsedLanes indicates only a single
+    // 32-bit lane of the 64-bit value is live at the rematerialization point.
+    if (UsedLanes.all())
+      break;
+
+    // Determine which half of the 64-bit immediate corresponds to the use.
+    unsigned OrigSubReg = Orig.getOperand(0).getSubReg();
+    unsigned LoSubReg = RI.composeSubRegIndices(OrigSubReg, AMDGPU::sub0);
+    unsigned HiSubReg = RI.composeSubRegIndices(OrigSubReg, AMDGPU::sub1);
+
+    bool NeedLo = (UsedLanes & RI.getSubRegIndexLaneMask(LoSubReg)).any();
+    bool NeedHi = (UsedLanes & RI.getSubRegIndexLaneMask(HiSubReg)).any();
+
+    if (NeedLo && NeedHi)
+      break;
+
+    int64_t Imm64 = Orig.getOperand(1).getImm();
+    int32_t Imm32 = NeedLo ? Lo_32(Imm64) : Hi_32(Imm64);
+
+    unsigned UseSubReg = NeedLo ? LoSubReg : HiSubReg;
+
+    // Emit S_MOV_B32 defining just the needed 32-bit subreg of DestReg.
+    BuildMI(MBB, I, Orig.getDebugLoc(), get(AMDGPU::S_MOV_B32))
+        .addReg(DestReg, RegState::Define | RegState::Undef, UseSubReg)
+        .addImm(Imm32);
+    return;
+  }
+
   case AMDGPU::S_LOAD_DWORDX16_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM: {
     if (SubIdx != 0)
@@ -2691,7 +2727,7 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
     break;
   }
 
-  TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig);
+  TargetInstrInfo::reMaterialize(MBB, I, DestReg, SubIdx, Orig, UsedLanes);
 }
 
 std::pair<MachineInstr*, MachineInstr*>
