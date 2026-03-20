@@ -3034,6 +3034,11 @@ unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
 }
 
+bool PPCInstrInfo::shouldVerifyInstSize(const MachineInstr &MI) const {
+  // FIXME: The size of STACKMAP is currently over-estimated.
+  return MI.getOpcode() != TargetOpcode::STACKMAP;
+}
+
 std::pair<unsigned, unsigned>
 PPCInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
   // PPC always uses a direct mask.

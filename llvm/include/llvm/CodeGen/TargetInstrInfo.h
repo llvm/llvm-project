@@ -428,6 +428,12 @@ public:
     return ~0U;
   }
 
+  /// Whether the correctness of the instruction size returned by
+  /// getInstSizeInBytes() should be verified.
+  virtual bool shouldVerifyInstSize(const MachineInstr &MI) const {
+    return false;
+  }
+
   /// Return true if the instruction is as cheap as a move instruction.
   ///
   /// Targets for different archs need to override this, and different

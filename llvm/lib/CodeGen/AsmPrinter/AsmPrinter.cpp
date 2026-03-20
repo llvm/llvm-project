@@ -2147,6 +2147,11 @@ void AsmPrinter::emitFunctionBody() {
       if (isVerbose())
         emitComments(MI, STI, OutStreamer->getCommentOS());
 
+#ifndef NDEBUG
+      MCFragment *OldFragment = OutStreamer->getCurrentFragment();
+      size_t OldFragSize = OldFragment->getFixedSize();
+#endif
+
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:
         emitCFIInstruction(MI);
@@ -2264,6 +2269,29 @@ void AsmPrinter::emitFunctionBody() {
         }
         break;
       }
+
+#ifndef NDEBUG
+      // Verify that the instruction size reported by InstrInfo matches the
+      // actually emitted size. Many backends performing branch relaxation
+      // on the MIR level rely on this for correctness.
+      if (OutStreamer->isObj()) {
+        const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+        MCFragment *NewFragment = OutStreamer->getCurrentFragment();
+        // Don't try to handle fragment splitting cases.
+        if (NewFragment == OldFragment && TII->shouldVerifyInstSize(MI)) {
+          unsigned ExpectedSize = TII->getInstSizeInBytes(MI);
+          unsigned ActualSize = NewFragment->getFixedSize() - OldFragSize;
+          // FIXME: InstrInfo currently over-estimates the size of STACKMAP.
+          if (ActualSize != ExpectedSize &&
+              MI.getOpcode() != TargetOpcode::STACKMAP) {
+            dbgs() << "Size mismatch for: " << MI << "\n";
+            dbgs() << "Expected size: " << ExpectedSize << "\n";
+            dbgs() << "Actual size: " << ActualSize << "\n";
+            abort();
+          }
+        }
+      }
+#endif
 
       if (MI.isCall()) {
         if (MF->getTarget().Options.BBAddrMap)
