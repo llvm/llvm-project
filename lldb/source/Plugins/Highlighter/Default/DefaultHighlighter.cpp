@@ -8,9 +8,9 @@
 
 #include "DefaultHighlighter.h"
 
-LLDB_PLUGIN_DEFINE_ADV(DefaultHighlighter, HighlighterDefault)
-
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE_ADV(DefaultHighlighter, HighlighterDefault)
 
 void DefaultHighlighter::Highlight(const HighlightStyle &options,
                                    llvm::StringRef line,

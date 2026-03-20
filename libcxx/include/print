@@ -69,9 +69,7 @@ _LIBCPP_EXPORTED_FROM_ABI bool __is_windows_terminal(FILE* __stream);
 // Note the function is only implemented on the Windows platform.
 _LIBCPP_EXPORTED_FROM_ABI void __write_to_windows_console(FILE* __stream, wstring_view __view);
 #    endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#  elif __has_include(<unistd.h>)
-_LIBCPP_EXPORTED_FROM_ABI bool __is_posix_terminal(FILE* __stream);
-#  endif // _LIBCPP_WIN32API
+#  endif   // _LIBCPP_WIN32API
 
 #  if _LIBCPP_STD_VER >= 23
 
@@ -197,21 +195,17 @@ inline constexpr bool __use_unicode_execution_charset = _MSVC_EXECUTION_CHARACTE
 inline constexpr bool __use_unicode_execution_charset = true;
 #    endif
 
+#    ifdef _LIBCPP_WIN32API
 _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal([[maybe_unused]] FILE* __stream) {
   // The macro _LIBCPP_TESTING_PRINT_IS_TERMINAL is used to change
   // the behavior in the test. This is not part of the public API.
-#    ifdef _LIBCPP_TESTING_PRINT_IS_TERMINAL
+#      ifdef _LIBCPP_TESTING_PRINT_IS_TERMINAL
   return _LIBCPP_TESTING_PRINT_IS_TERMINAL(__stream);
-#    elif _LIBCPP_AVAILABILITY_HAS_PRINT == 0 || !_LIBCPP_HAS_TERMINAL
-  return false;
-#    elif defined(_LIBCPP_WIN32API)
+#      else
   return std::__is_windows_terminal(__stream);
-#    elif __has_include(<unistd.h>)
-  return std::__is_posix_terminal(__stream);
-#    else
-#      error "Provide a way to determine whether a FILE* is a terminal"
-#    endif
+#      endif
 }
+#    endif // _LIBCPP_WIN32API
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void
@@ -236,26 +230,11 @@ __vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args, bool 
 // terminal when the output is redirected. Typically during testing the
 // output is redirected to be able to capture it. This makes it hard to
 // test this code path.
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void
-__vprint_unicode_posix(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl, bool __is_terminal) {
-  // TODO PRINT Should flush errors throw too?
-  if (__is_terminal)
-    std::fflush(__stream);
-
-  __print::__vprint_nonunicode(__stream, __fmt, __args, __write_nl);
-}
 
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void
-__vprint_unicode_windows(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl, bool __is_terminal) {
-  if (!__is_terminal)
-    return __print::__vprint_nonunicode(__stream, __fmt, __args, __write_nl);
-
-  // TODO PRINT Should flush errors throw too?
-  std::fflush(__stream);
-
+__vprint_unicode_windows([[maybe_unused]] FILE* __stream, string_view __fmt, format_args __args, bool __write_nl) {
   string __str = std::vformat(__fmt, __args);
   // UTF-16 uses the same number or less code units than UTF-8.
   // However the size of the code unit is 16 bits instead of 8 bits.
@@ -316,9 +295,15 @@ __vprint_unicode([[maybe_unused]] FILE* __stream,
   // Windows there is a different API. This API requires transcoding.
 
 #      ifndef _LIBCPP_WIN32API
-  __print::__vprint_unicode_posix(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));
+  __print::__vprint_nonunicode(__stream, __fmt, __args, __write_nl);
 #      elif _LIBCPP_HAS_WIDE_CHARACTERS
-  __print::__vprint_unicode_windows(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));
+  if (__print::__is_terminal(__stream)) {
+    // TODO PRINT Should flush errors throw too?
+    std::fflush(__stream);
+    __print::__vprint_unicode_windows(__stream, __fmt, __args, __write_nl);
+  } else {
+    __print::__vprint_nonunicode(__stream, __fmt, __args, __write_nl);
+  }
 #      else
 #        error "Windows builds with wchar_t disabled are not supported."
 #      endif

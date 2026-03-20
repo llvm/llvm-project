@@ -186,15 +186,14 @@ define i64 @cls_i64(i64 %x) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    clz a0, a0
-; CHECK-NEXT:    addi a2, a0, 32
+; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    j .LBB15_3
 ; CHECK-NEXT:  .LBB15_2:
 ; CHECK-NEXT:    xor a1, a1, a2
-; CHECK-NEXT:    clz a2, a1
+; CHECK-NEXT:    clz a0, a1
 ; CHECK-NEXT:  .LBB15_3:
-; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    waddau a0, a2, zero
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    wsubu a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i64 %x, 63
   %b = xor i64 %x, %a
@@ -584,6 +583,37 @@ define i32 @shlsat_i32(i32 %a, i32 %b) {
  ret i32 %sshlsat
 }
 
+define i8 @shlsati_i8(i8 %a) {
+; CHECK-LABEL: shlsati_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    sslai a0, a0, 5
+; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    ret
+ %sshlsat = tail call i8 @llvm.sshl.sat.i8(i8 %a, i8 5)
+ ret i8 %sshlsat
+}
+
+define i16 @shlsati_i16(i16 %a) {
+; CHECK-LABEL: shlsati_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    sslai a0, a0, 10
+; CHECK-NEXT:    srai a0, a0, 16
+; CHECK-NEXT:    ret
+ %sshlsat = tail call i16 @llvm.sshl.sat.i16(i16 %a, i16 10)
+ ret i16 %sshlsat
+}
+
+define i32 @shlsati_i32(i32 %a) {
+; CHECK-LABEL: shlsati_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sslai a0, a0, 21
+; CHECK-NEXT:    ret
+ %sshlsat = tail call i32 @llvm.sshl.sat.i32(i32 %a, i32 21)
+ ret i32 %sshlsat
+}
+
 define i8 @sadd_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: sadd_i8:
 ; CHECK:       # %bb.0:
@@ -750,6 +780,46 @@ define i64 @wmulsu_i32(i32 %x, i32 %y) {
   ret i64 %c
 }
 
+define i64 @wsla_i32(i32 %x, i64 %y) {
+; CHECK-LABEL: wsla_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsla a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = sext i32 %x to i64
+  %b = shl i64 %a, %y
+  ret i64 %b
+}
+
+define i64 @wsll_i32(i32 %x, i64 %y) {
+; CHECK-LABEL: wsll_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsll a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = zext i32 %x to i64
+  %b = shl i64 %a, %y
+  ret i64 %b
+}
+
+define i64 @wslai_i32(i32 %x) {
+; CHECK-LABEL: wslai_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wslai a0, a0, 23
+; CHECK-NEXT:    ret
+  %a = sext i32 %x to i64
+  %b = shl i64 %a, 23
+  ret i64 %b
+}
+
+define i64 @wslli_i32(i32 %x, i64 %y) {
+; CHECK-LABEL: wslli_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wslli a0, a0, 10
+; CHECK-NEXT:    ret
+  %a = zext i32 %x to i64
+  %b = shl i64 %a, 10
+  ret i64 %b
+}
+
 ; Test that mulh continues to be used with P.
 define i32 @mulh_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mulh_i32:
@@ -814,8 +884,7 @@ define i64 @wmaccu(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccu a2, a0, a1
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = zext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -828,8 +897,7 @@ define i64 @wmaccu_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccu_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccu a2, a0, a1
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = zext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -842,8 +910,7 @@ define i64 @wmacc(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmacc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmacc a2, a0, a1
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -856,8 +923,7 @@ define i64 @wmacc_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmacc_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmacc a2, a0, a1
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -870,8 +936,7 @@ define i64 @wmaccsu(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccsu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccsu a2, a0, a1
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -884,8 +949,7 @@ define i64 @wmaccsu_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccsu_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    wmaccsu a2, a0, a1
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -925,8 +989,7 @@ define i64 @wmacc_first_mul_multiple_uses(i32 %a, i32 %b, i32 %c, i32 %d, ptr %o
 ; CHECK-NEXT:    wmacc a2, a0, a1
 ; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    sw a5, 4(a4)
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -1144,5 +1207,38 @@ define i64 @wsubau_zext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
   %ext_b = zext i32 %b to i64
   %sub = sub i64 %acc, %ext_a
   %sum = add i64 %sub, %ext_b
+  ret i64 %sum
+}
+
+define i64 @waddu(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: waddu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    waddu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %sum = add i64 %ext_a, %ext_b
+  ret i64 %sum
+}
+
+define i64 @wsubu(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsubu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %diff = sub i64 %ext_a, %ext_b
+  ret i64 %diff
+}
+
+define i64 @wsub_from_neg_const(i32 %a) nounwind {
+; CHECK-LABEL: wsub_from_neg_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 42
+; CHECK-NEXT:    wsubu a0, a0, a1
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %sum = add i64 %ext_a, -42
   ret i64 %sum
 }

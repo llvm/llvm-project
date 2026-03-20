@@ -62,6 +62,156 @@ class SPIRV_TosaOpWithComplexResult<string mnemonic, int opcode, list<Trait> tra
   }];
 }
 
+class SPIRV_TosaElementwiseUnaryOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits,
+    [AllTypesMatch<["input1", "output"]>])> {
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput1().getType());
+    }
+  }];
+}
+
+class SPIRV_TosaFloatElementwiseUnaryOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaElementwiseUnaryOp<mnemonic, opcode, !listconcat(traits, [Pure])> {
+
+  let arguments = (ins
+    SPIRV_TosaFloat_TensorArm: $input1
+  );
+
+  let results = (outs
+    SPIRV_TosaFloat_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+class SPIRV_TosaBinaryOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [
+    AllElementTypesMatch<["input1", "input2"]>,
+    AllRanksMatch<["input1", "input2", "output"]>,
+    MatchBroadcastableShapes<"input1", "input2", "output">])> {
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput1().getType());
+    }
+    ::mlir::spirv::TensorArmType getInput2Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput2().getType());
+    }
+  }];
+}
+
+class SPIRV_TosaElementwiseBinaryOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaBinaryOp<mnemonic, opcode, !listconcat(traits, [
+    AllElementTypesMatch<["input1", "output"]>])> {
+}
+
+class SPIRV_TosaIntegerElementwiseBinaryOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaElementwiseBinaryOp<mnemonic, opcode, traits> {
+
+  let arguments = (ins
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+class SPIRV_TosaBoolElementwiseBinaryOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaElementwiseBinaryOp<mnemonic, opcode, !listconcat(traits, [Pure])> {
+
+  let arguments = (ins
+    SPIRV_Bool_TensorArm: $input1,
+    SPIRV_Bool_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+class SPIRV_TosaConvolutionOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [Pure,
+    TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
+    TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
+    TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
+    TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
+    TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
+    TypeConstraintImplicationOn<"input", BF16, "weight", [BF16]>,
+    TypeConstraintImplicationOn<"input", F16, "weight", [F16]>,
+    TypeConstraintImplicationOn<"input", F32, "weight", [F32]>,
+    TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
+    TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
+    TypeImpliesAccType<"input", I8, ["INT32"]>,
+    TypeImpliesAccType<"input", I16, ["INT48"]>,
+    TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
+    TypeImpliesAccType<"input", BF16, ["FP32"]>,
+    TypeImpliesAccType<"input", F32, ["FP32"]>,
+    AllElementTypesMatch<["bias", "output"]>,
+    AllElementTypesMatch<["input", "input_zp"]>,
+    AllElementTypesMatch<["weight", "weight_zp"]>])> {
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+    ::mlir::spirv::TensorArmType getWeightType() {
+      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
+    }
+    ::mlir::spirv::TensorArmType getBiasType() {
+      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
+    }
+  }];
+}
+
+class SPIRV_TosaComparisonOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [Pure,
+  AllElementTypesMatch<["input1", "input2"]>,
+  MatchBroadcastableShapes<"input1", "input2", "output">])> {
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm: $input1,
+    SPIRV_TosaNumerical_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput1().getType());
+    }
+    ::mlir::spirv::TensorArmType getInput2Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput2().getType());
+    }
+  }];
+}
 
 def SPIRV_TosaArgMaxOp : SPIRV_TosaOpWithResult<"ArgMax", 0, [Pure,
   OutputRankIsInputRankMinusOne<"input", "output">,
@@ -72,6 +222,7 @@ def SPIRV_TosaArgMaxOp : SPIRV_TosaOpWithResult<"ArgMax", 0, [Pure,
     Returns the index with the largest value across the given axis of the
     input tensor. If multiple locations have equal values, returns the first
     match along the search axis.
+    NaN Propagation Mode is ignored for inputs using integer element types.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_argmax
@@ -169,22 +320,7 @@ def SPIRV_TosaAvgPool2DOp : SPIRV_TosaOpWithResult<"AvgPool2D", 1, [Pure,
 }
 
 
-def SPIRV_TosaConv2DOp : SPIRV_TosaOpWithResult<"Conv2D", 2, [Pure,
-  TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
-  TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
-  TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
-  TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
-  TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
-  TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
-  TypeImpliesAccType<"input", I8, ["INT32"]>,
-  TypeImpliesAccType<"input", I16, ["INT48"]>,
-  TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
-  TypeImpliesAccType<"input", BF16, ["FP32"]>,
-  TypeImpliesAccType<"input", F32, ["FP32"]>,
-  AllElementTypesMatch<["bias", "output"]>,
-  AllElementTypesMatch<["input", "input_zp"]>,
-  AllElementTypesMatch<["weight", "weight_zp"]>]> {
+def SPIRV_TosaConv2DOp : SPIRV_TosaConvolutionOp<"Conv2D", 2> {
   let summary = "2D Convolution operator.";
 
   let description = [{
@@ -235,37 +371,10 @@ def SPIRV_TosaConv2DOp : SPIRV_TosaOpWithResult<"Conv2D", 2, [Pure,
     $weight_zp
     attr-dict `:` type(operands) `->` type(results)
   }];
-
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
-    ::mlir::spirv::TensorArmType getInputType() {
-      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
-    }
-    ::mlir::spirv::TensorArmType getWeightType() {
-      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
-    }
-    ::mlir::spirv::TensorArmType getBiasType() {
-      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
-    }
-  }];
 }
 
 
-def SPIRV_TosaConv3DOp : SPIRV_TosaOpWithResult<"Conv3D", 3, [Pure,
-  TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
-  TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
-  TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
-  TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
-  TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
-  TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
-  TypeImpliesAccType<"input", I8, ["INT32"]>,
-  TypeImpliesAccType<"input", I16, ["INT48"]>,
-  TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
-  TypeImpliesAccType<"input", BF16, ["FP32"]>,
-  TypeImpliesAccType<"input", F32, ["FP32"]>,
-  AllElementTypesMatch<["bias", "output"]>,
-  AllElementTypesMatch<["input", "input_zp"]>,
-  AllElementTypesMatch<["weight", "weight_zp"]>]> {
+def SPIRV_TosaConv3DOp : SPIRV_TosaConvolutionOp<"Conv3D", 3> {
   let summary = "3D Convolution operator.";
 
   let description = [{
@@ -315,37 +424,10 @@ def SPIRV_TosaConv3DOp : SPIRV_TosaOpWithResult<"Conv3D", 3, [Pure,
     $weight_zp
     attr-dict `:` type(operands) `->` type(results)
   }];
-
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
-    ::mlir::spirv::TensorArmType getInputType() {
-      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
-    }
-    ::mlir::spirv::TensorArmType getWeightType() {
-      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
-    }
-    ::mlir::spirv::TensorArmType getBiasType() {
-      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
-    }
-  }];
 }
 
 
-def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaOpWithResult<"DepthwiseConv2D", 4, [Pure,
-  TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
-  TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
-  TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
-  TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
-  TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
-  TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
-  TypeImpliesAccType<"input", I8, ["INT32"]>,
-  TypeImpliesAccType<"input", I16, ["INT48"]>,
-  TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
-  TypeImpliesAccType<"input", BF16, ["FP32"]>,
-  TypeImpliesAccType<"input", F32, ["FP32"]>,
-  AllElementTypesMatch<["bias", "output"]>,
-  AllElementTypesMatch<["input", "input_zp"]>,
-  AllElementTypesMatch<["weight", "weight_zp"]>]> {
+def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4> {
   let summary = "Depthwise 2D Convolution operator.";
 
   let description = [{
@@ -395,18 +477,6 @@ def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaOpWithResult<"DepthwiseConv2D", 4, [
     $input_zp `,`
     $weight_zp
     attr-dict `:` type(operands) `->` type(results)
-  }];
-
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
-    ::mlir::spirv::TensorArmType getInputType() {
-      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
-    }
-    ::mlir::spirv::TensorArmType getWeightType() {
-      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
-    }
-    ::mlir::spirv::TensorArmType getBiasType() {
-      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
-    }
   }];
 }
 
@@ -525,6 +595,7 @@ def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
     Performs a max pooling over the given input tensor. A sliding window of
     size given by <kernel size> is passed over the input tensor, with the
     maximum value being placed in the output tensor.
+    NaN Propagation Mode is ignored for inputs using integer element types.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_max_pool2d
@@ -614,22 +685,7 @@ def SPIRV_TosaRFFT2DOp : SPIRV_TosaOpWithComplexResult<"RFFT2D", 8, [Pure]> {
 }
 
 
-def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaOpWithResult<"TransposeConv2D", 9, [Pure,
-  TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I64]>,
-  TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
-  TypeConstraintImplicationOn<"input", F16, "output", [F16]>,
-  TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
-  TypeConstraintImplicationOn<"input", AnyInteger, "input", [I8, I16]>,
-  TypeConstraintImplicationOn<"weight", AnyInteger, "weight", [I8]>,
-  TypeImpliesAccType<"input", I8, ["INT32"]>,
-  TypeImpliesAccType<"input", I16, ["INT48"]>,
-  TypeImpliesAccType<"input", F16, ["FP16", "FP32"]>,
-  TypeImpliesAccType<"input", BF16, ["FP32"]>,
-  TypeImpliesAccType<"input", F32, ["FP32"]>,
-  AllElementTypesMatch<["bias", "output"]>,
-  AllElementTypesMatch<["input", "input_zp"]>,
-  AllElementTypesMatch<["weight", "weight_zp"]>]> {
+def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9> {
   let summary = "Transpose 2D Convolution operator.";
 
   let description = [{
@@ -678,18 +734,6 @@ def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaOpWithResult<"TransposeConv2D", 9, [
     $weight_zp
     attr-dict `:` type(operands) `->` type(results)
   }];
-
-  let extraClassDeclaration = extraBaseClassDeclaration#[{
-    ::mlir::spirv::TensorArmType getInputType() {
-      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
-    }
-    ::mlir::spirv::TensorArmType getWeightType() {
-      return cast<::mlir::spirv::TensorArmType>(getWeight().getType());
-    }
-    ::mlir::spirv::TensorArmType getBiasType() {
-      return cast<::mlir::spirv::TensorArmType>(getBias().getType());
-    }
-  }];
 }
 
 
@@ -699,11 +743,12 @@ def SPIRV_TosaClampOp : SPIRV_TosaOpWithResult<"Clamp", 10, [Pure,
   let summary = "Computes Clamp(min, max).";
 
   let description = [{
-    Clamp to an arbitrary minimum and maximum value.
-    Maximum and minimum values are specified as values in the range of the
-    input type.
+    Clamp to an arbitrary minimum and maximum value. Maximum and minimum values
+    are specified as values in the range of the input type. Integer element
+    types are always interpreted as signed.
     No zero point subtraction is done to the values, thus to clamp to the zero
     point value, the zero point itself should be supplied as the minimum value.
+    NaN Propagation Mode is ignored for inputs using integer element types.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_clamp
@@ -859,6 +904,1000 @@ def SPIRV_TosaTanhOp : SPIRV_TosaOpWithResult<"Tanh", 13, [Pure,
     ::mlir::spirv::TensorArmType getInputType() {
       return cast<::mlir::spirv::TensorArmType>(getInput().getType());
     }
+  }];
+}
+
+
+def SPIRV_TosaAddOp : SPIRV_TosaElementwiseBinaryOp<"Add", 14, [NoMemoryEffect]> {
+  let summary = "Addition operator.";
+
+  let description = [{
+    Elementwise Addition of input1 and input2. Axis of size 1 will be broadcast,
+    as necessary. Rank of input tensors must match. Integer element types are
+    always interpreted as signed. The behavior is undefined if the integer
+    addition overflows or underflows the signed integer range.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_add
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_add
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Add %arg0, %arg1 : !spirv.arm.tensor<4x7x3x10xi32>, !spirv.arm.tensor<4x7x3x1xi32> -> !spirv.arm.tensor<4x7x3x10xi32>
+    %0 = spirv.Tosa.Add %arg0, %arg1 : !spirv.arm.tensor<26x37x18xf16>, !spirv.arm.tensor<1x37x18xf16> -> !spirv.arm.tensor<26x37x18xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm: $input1,
+    SPIRV_TosaNumerical_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaArithmeticRightShiftOp : SPIRV_TosaElementwiseBinaryOp<"ArithmeticRightShift", 15, [NoMemoryEffect]> {
+  let summary = "Arithmetic Right Shift.";
+
+  let description = [{
+    Elementwise Arithmetic Right Shift of input1 by the amount specified in
+    input2. Axis of size 1 will be broadcast, as necessary. Rank of input
+    tensors must match. Integer element types are always interpreted as signed.
+    The behavior is undefined if the shift value is negative or greater or
+    equal to the bitwidth of the element type.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_arithmetic_right_shift
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_arithmetic_right_shift
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.ArithmeticRightShift round = true, %arg0, %arg1 : !spirv.arm.tensor<1x47x22xi16>, !spirv.arm.tensor<49x47x22xi16> -> !spirv.arm.tensor<49x47x22xi16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_BoolConstAttr: $round,
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `round` `=` $round `,`
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaBitwiseAndOp : SPIRV_TosaIntegerElementwiseBinaryOp<"BitwiseAnd", 16, [Pure]> {
+  let summary = "Bitwise AND operator.";
+
+  let description = [{
+    Elementwise Bitwise AND of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match. Integer element
+    types are always interpreted as signed.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_bitwise_and
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_bitwise_and
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.BitwiseAnd %arg0, %arg1 : !spirv.arm.tensor<4x1x7x12xi16>, !spirv.arm.tensor<4x13x7x12xi16> -> !spirv.arm.tensor<4x13x7x12xi16>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaBitwiseOrOp : SPIRV_TosaIntegerElementwiseBinaryOp<"BitwiseOr", 17, [Pure]> {
+  let summary = "Bitwise OR operator.";
+
+  let description = [{
+    Elementwise Bitwise OR of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match. Integer element
+    types are always interpreted as signed.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_bitwise_or
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_bitwise_or
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.BitwiseOr %arg0, %arg1 : !spirv.arm.tensor<11x30x23xi32>, !spirv.arm.tensor<1x30x23xi32> -> !spirv.arm.tensor<11x30x23xi32>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaBitwiseXorOp : SPIRV_TosaIntegerElementwiseBinaryOp<"BitwiseXor", 18, [Pure]> {
+  let summary = "Bitwise XOR operator.";
+
+  let description = [{
+    Elementwise Bitwise XOR of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match. Integer element
+    types are always interpreted as signed.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_bitwise_xor
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_bitwise_xor
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.BitwiseXor %arg0, %arg1 : !spirv.arm.tensor<4x8x13x9xi16>, !spirv.arm.tensor<4x8x1x9xi16> -> !spirv.arm.tensor<4x8x13x9xi16>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaIntDivOp : SPIRV_TosaElementwiseBinaryOp<"IntDiv", 19, [NoMemoryEffect]> {
+  let summary = "Integer Divide operator.";
+
+  let description = [{
+    Elementwise Integer Divide of input1 by input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match.  Integer element
+    types are always interpreted as signed. The behavior is undefined if the
+    divisor value is equal to zero and if the divisor value is min_value<si32>
+    and the dividend is -1.
+
+    The result of the divide is truncated towards zero. Expected use is for
+    operations on non-scaled integers. Floating point divide should use
+    `spirv.Tosa.Reciprocal` and `spirv.Tosa.Mul`. Quantized integer divide
+    should use `spirv.Tosa.Table`(for $ 1/x $) and `spirv.Tosa.Mul`.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_intdiv
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_intdiv
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.IntDiv %arg0, %arg1 : !spirv.arm.tensor<1x65533x1xi32>, !spirv.arm.tensor<2x65533x1xi32> -> !spirv.arm.tensor<2x65533x1xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Int32_TensorArm: $input1,
+    SPIRV_Int32_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_Int32_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaLogicalAndOp : SPIRV_TosaBoolElementwiseBinaryOp<"LogicalAnd", 20> {
+  let summary = "Logical AND operator.";
+
+  let description = [{
+    Elementwise Logical AND of input1 and input2. Axis of size 1 will be
+    broadcast, as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_and
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_and
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalAnd %arg0, %arg1 : !spirv.arm.tensor<2x1x7x11xi1>, !spirv.arm.tensor<2x4x7x11xi1> -> !spirv.arm.tensor<2x4x7x11xi1>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaLogicalLeftShiftOp : SPIRV_TosaIntegerElementwiseBinaryOp<"LogicalLeftShift", 21, [NoMemoryEffect]> {
+  let summary = "Logical Left Shift operator.";
+
+  let description = [{
+    Elementwise Logical Left Shift of input1 by the amount specified in input2.
+    Axis of size 1 will be broadcast, as necessary. Rank of input tensors
+    must match.  Integer element types are always interpreted as signed. The
+    behavior is undefined if the shift value is negative or greater or equal to
+    the bitwidth of the element type.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_left_shift
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_left_shift
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalLeftShift %arg0, %arg1 : !spirv.arm.tensor<7x1x11x4xi8>, !spirv.arm.tensor<7x8x11x4xi8> -> !spirv.arm.tensor<7x8x11x4xi8>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaLogicalRightShiftOp : SPIRV_TosaIntegerElementwiseBinaryOp<"LogicalRightShift", 22, [NoMemoryEffect]> {
+  let summary = "Logical Right Shift operator.";
+
+  let description = [{
+    Elementwise Logical Right Shift of input1 by the amount specified in input2.
+    Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
+    match.  Integer element types are always interpreted as signed. The
+    behavior is undefined if the shift value is negative or greater or equal to
+    the bitwidth of the element type.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_right_shift
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_right_shift
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalRightShift %arg0, %arg1 : !spirv.arm.tensor<6x13x1x19xi8>, !spirv.arm.tensor<6x13x6x19xi8> -> !spirv.arm.tensor<6x13x6x19xi8>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaLogicalOrOp : SPIRV_TosaBoolElementwiseBinaryOp<"LogicalOr", 23> {
+  let summary = "Logical OR operator.";
+
+  let description = [{
+    Elementwise logical OR of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_or
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_or
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalOr %arg0, %arg1 : !spirv.arm.tensor<3x6x12x5xi1>, !spirv.arm.tensor<3x6x1x5xi1> -> !spirv.arm.tensor<3x6x12x5xi1>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaLogicalXorOp : SPIRV_TosaBoolElementwiseBinaryOp<"LogicalXor", 24> {
+  let summary = "Logical XOR operator.";
+
+  let description = [{
+    Elementwise logical XOR of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_xor
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_xor
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalXor %arg0, %arg1 : !spirv.arm.tensor<11x4x9x12xi1>, !spirv.arm.tensor<11x4x9x1xi1> -> !spirv.arm.tensor<11x4x9x12xi1>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaMaximumOp : SPIRV_TosaElementwiseBinaryOp<"Maximum", 25, [Pure,
+  TypeConstraintImplicationOn<"input1", AnyInteger, "input1", [I32]>,
+  TypeConstraintImplicationOn<"input2", AnyInteger, "input2", [I32]>,
+  TypeConstraintImplicationOn<"output", AnyInteger, "output", [I32]>]> {
+  let summary = "Maximum.";
+
+  let description = [{
+    Elementwise maximum of input1 and input2. Axis of size 1 will be broadcast,
+    as necessary. Rank of input tensors must match. Integer element types are
+    always interpreted as signed.
+    NaN Propagation Mode is ignored for inputs using integer element types.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_maximum
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_maximum
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.Maximum nan_mode = <Propagate>, %arg0, %arg1 : !spirv.arm.tensor<1x2x65533x1xi32>, !spirv.arm.tensor<1x2x65533x2xi32> -> !spirv.arm.tensor<1x2x65533x2xi32>
+    %1 = spirv.Tosa.Maximum nan_mode = <Ignore>, %arg0, %arg1 : !spirv.arm.tensor<1x12x14x7xf16>, !spirv.arm.tensor<11x12x14x7xf16> -> !spirv.arm.tensor<11x12x14x7xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
+    SPIRV_TosaNumerical_TensorArm: $input1,
+    SPIRV_TosaNumerical_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `nan_mode` `=` $nan_mode `,`
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaMinimumOp : SPIRV_TosaElementwiseBinaryOp<"Minimum", 26, [Pure,
+  TypeConstraintImplicationOn<"input1", AnyInteger, "input1", [I32]>,
+  TypeConstraintImplicationOn<"input2", AnyInteger, "input2", [I32]>,
+  TypeConstraintImplicationOn<"output", AnyInteger, "output", [I32]>]> {
+  let summary = "Minimum.";
+
+  let description = [{
+    Elementwise minimum of input1 and input2. Axis of size 1 will be broadcast,
+    as necessary. Rank of input tensors must match. Integer element types are
+    always interpreted as signed.
+    NaN Propagation Mode is ignored for inputs using integer element types.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_minimum
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_minimum
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.Minimum nan_mode = <Propagate>, %arg0, %arg1 : !spirv.arm.tensor<15x2x10x11xi32>, !spirv.arm.tensor<15x1x10x11xi32> -> !spirv.arm.tensor<15x2x10x11xi32>
+    %1 = spirv.Tosa.Minimum nan_mode = <Propagate>, %arg0, %arg1 : !spirv.arm.tensor<1x65531x2x1xf32>, !spirv.arm.tensor<1x1x2x1xf32> -> !spirv.arm.tensor<1x65531x2x1xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
+    SPIRV_TosaNumerical_TensorArm: $input1,
+    SPIRV_TosaNumerical_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `nan_mode` `=` $nan_mode `,`
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaMulOp : SPIRV_TosaBinaryOp<"Mul", 27, [NoMemoryEffect,
+  AllElementTypesMatch<["input1", "input2"]>,
+  AllRanksMatch<["input1", "input2", "output"]>,
+  TypeConstraintImplicationOn<"input1", F16, "output", [F16]>,
+  TypeConstraintImplicationOn<"input1", F32, "output", [F32]>,
+  TypeConstraintImplicationOn<"input1", BF16, "output", [BF16]>,
+  TypeConstraintImplicationOn<"input1", AnyInteger, "output", [I32]>]> {
+  let summary = "Multiplication operator.";
+
+  let description = [{
+    Elementwise Multiplication (Hadamard product) of input1 and input2.
+    Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
+    match.  Integer element types are always interpreted as signed.
+    The shift value is used to right shift the result (rounded up) and
+    it is used only if input element type is i32 and it must be zero for the
+    other element types. The behavior is undefined if the integer
+    multiplication overflows or underflows the signed integer range or the
+    shift value exceeds the bitwidth of i32.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_mul
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_mul
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.Mul %arg0, %arg1, %0 : !spirv.arm.tensor<34x21x39xi32>, !spirv.arm.tensor<34x21x1xi32>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<34x21x39xi32>
+    %1 = spirv.Tosa.Mul %arg0, %arg1, %0 : !spirv.arm.tensor<57x1x55xf16>, !spirv.arm.tensor<57x37x55xf16>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<57x37x55xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm: $input1,
+    SPIRV_TosaNumerical_TensorArm: $input2,
+    SPIRV_Int8_1DTensorArmOfLength1: $shift
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2 `,`
+    $shift
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaPowOp : SPIRV_TosaElementwiseBinaryOp<"Pow", 28, [NoMemoryEffect]> {
+  let summary = "Power operator.";
+
+  let description = [{
+    Elementwise input1 value raised to the Power of input2.
+    Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
+    match. The behavior is undefined if the the input1 value is negative, or
+    both input values are zero or negative, or both input values are NaN or
+    infinite.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_pow
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_pow
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Pow %arg0, %arg1 : !spirv.arm.tensor<1x52x53xf16>, !spirv.arm.tensor<44x52x53xf16> -> !spirv.arm.tensor<44x52x53xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaFloat_TensorArm: $input1,
+    SPIRV_TosaFloat_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaFloat_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaSubOp : SPIRV_TosaElementwiseBinaryOp<"Sub", 29, [NoMemoryEffect,
+  TypeConstraintImplicationOn<"input1", AnyInteger, "input1", [I32]>,
+  TypeConstraintImplicationOn<"input2", AnyInteger, "input2", [I32]>,
+  TypeConstraintImplicationOn<"output", AnyInteger, "output", [I32]>]> {
+  let summary = "Subtraction operator.";
+
+  let description = [{
+    Elementwise Subtraction of input1 and input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match. Integer element
+    types are always interpreted as signed. The behavior is undefined if the
+    integer subtraction overflows or underflows the signed integer range.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_sub
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_sub
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Sub %arg0, %arg1 : !spirv.arm.tensor<6x10x6x6xi32>, !spirv.arm.tensor<1x10x6x6xi32> -> !spirv.arm.tensor<6x10x6x6xi32>
+    %0 = spirv.Tosa.Sub %arg0, %arg1 : !spirv.arm.tensor<1x10x13x12xf16>, !spirv.arm.tensor<6x10x13x12xf16> -> !spirv.arm.tensor<6x10x13x12xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm: $input1,
+    SPIRV_TosaNumerical_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaTableOp : SPIRV_TosaOpWithResult<"Table", 30, [NoMemoryEffect,
+  AllElementTypesMatch<["input1", "table"]>,
+  AllShapesMatch<["input1", "output"]>,
+  TypeConstraintImplicationOn<"input1", I8, "output", [I8]>,
+  TypeConstraintImplicationOn<"input1", I16, "output", [I32]>,
+  TableSizeConstraint<"input1", I8, 256>,
+  TableSizeConstraint<"input1", I16, 513>]> {
+  let summary = "Table lookup operator.";
+
+  let description = [{
+    Table lookup operation. For int8_t, perform a 256 entry table lookup
+    returning an int8_t value. For int16_t tables, the int16_t input is treated
+    as a fixed-point 9.7 value. The most significant 9 bits are used to index
+    into the table. The fractional 7 bits are used to interpolate based on
+    table[index] and table[index+1]. The behavior is undefined if during the
+    interpolation step, the integer subtraction table[index+1] - table[index]
+    overflows or underflows the signed int16 range.
+
+    For int16_t inputs, this operator returns a 16.7 interpolated value in an
+    int32_t. This value can then be input to the `spirv.Tosa.Rescale` operator
+    to scale to the required output data type. Note that int16_t table has 513
+    values to handle table[index+1] when index=511.
+
+    An int16_t to int16_t table lookup can be constructed as follows:
+    * Use the table operator to produce a fixed point 16.7 interpolated result
+    * Use `spirv.Tosa.Rescale` (in_t=int32_t, out_t=int16_t, scale=1<<14, shift=21)
+      to scale the output to int16_t range (or alternate scale as required)
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_table
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_table
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.Table %arg0, %0 : !spirv.arm.tensor<3x2x15x7xi8>, !spirv.arm.tensor<256xi8> -> !spirv.arm.tensor<3x2x15x7xi8>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm1D: $table
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $table
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return cast<::mlir::spirv::TensorArmType>(getInput1().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaAbsOp : SPIRV_TosaElementwiseUnaryOp<"Abs", 31, [NoMemoryEffect]> {
+  let summary = "Absolute value operation.";
+
+  let description = [{
+    Elementwise Absolute value operation. Input and Output types must match.
+    Integer element types are always interpreted as signed. The behaviour is
+    undefined if the input value is min_value<si32>.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_abs
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_abs
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Abs %arg0 : !spirv.arm.tensor<5x1x4x4xi32> -> !spirv.arm.tensor<5x1x4x4xi32>
+    %0 = spirv.Tosa.Abs %arg0 : !spirv.arm.tensor<3x6x14x8xf16> -> !spirv.arm.tensor<3x6x14x8xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm: $input1
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaBitwiseNotOp : SPIRV_TosaElementwiseUnaryOp<"BitwiseNot", 32, [Pure]> {
+  let summary = "Bitwise NOT operator.";
+
+  let description = [{
+    Elementwise Bitwise NOT of input tensor. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_bitwise_not
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_bitwise_not
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.BitwiseNot %arg0 : !spirv.arm.tensor<12x56x50xi32> -> !spirv.arm.tensor<12x56x50xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaInteger_TensorArm: $input1
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaCeilOp : SPIRV_TosaFloatElementwiseUnaryOp<"Ceil", 33> {
+  let summary = "Ceil operator.";
+
+  let description = [{
+    Elementwise Ceiling operation. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_ceil
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_ceil
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Ceil %arg0 : !spirv.arm.tensor<46x55x53xf16> -> !spirv.arm.tensor<46x55x53xf16>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaClzOp : SPIRV_TosaElementwiseUnaryOp<"Clz", 34, [Pure]> {
+  let summary = "Count Leading Zero operator.";
+
+  let description = [{
+    Elementwise Count Leading Zeros operation. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_clz
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_clz
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Clz %arg0 : !spirv.arm.tensor<14x10x7x5xi32> -> !spirv.arm.tensor<14x10x7x5xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Int32_TensorArm: $input1
+  );
+
+  let results = (outs
+    SPIRV_Int32_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaCosOp : SPIRV_TosaFloatElementwiseUnaryOp<"Cos", 35> {
+  let summary = "Cosine operator.";
+
+  let description = [{
+    Elementwise Cosine operation for values given in radians. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_cos
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_cos
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Cos %arg0 : !spirv.arm.tensor<44x49x51xf32> -> !spirv.arm.tensor<44x49x51xf32>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaExpOp : SPIRV_TosaFloatElementwiseUnaryOp<"Exp", 36> {
+  let summary = "Exp operator.";
+
+  let description = [{
+    Elementwise e to the power of x operation. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_exp
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_exp
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Exp %arg0 : !spirv.arm.tensor<37x53x47xf32> -> !spirv.arm.tensor<37x53x47xf32>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaFloorOp : SPIRV_TosaFloatElementwiseUnaryOp<"Floor", 37> {
+  let summary = "Floor operator.";
+
+  let description = [{
+    Elementwise Floor operation. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_floor
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_floor
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Floor %arg0 : !spirv.arm.tensor<40x52x42xf32> -> !spirv.arm.tensor<40x52x42xf32>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaLogOp : SPIRV_TosaFloatElementwiseUnaryOp<"Log", 38> {
+  let summary = "Log operator.";
+
+  let description = [{
+    Elementwise Natural Logarithm operation. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_log
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_log
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Log %arg0 : !spirv.arm.tensor<45x43x36xf16> -> !spirv.arm.tensor<45x43x36xf16>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaLogicalNotOp : SPIRV_TosaElementwiseUnaryOp<"LogicalNot", 39, [Pure]> {
+  let summary = "Logical NOT operator.";
+
+  let description = [{
+    Elementwise Logical NOT of input. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_not
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_not
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalNot %arg0 : !spirv.arm.tensor<54x26x10xi1> -> !spirv.arm.tensor<54x26x10xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Bool_TensorArm: $input1
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaNegateOp : SPIRV_TosaElementwiseUnaryOp<"Negate", 40, [NoMemoryEffect,
+  AllElementTypesMatch<["input1", "output", "input1_zp", "output_zp"]>]> {
+  let summary = "Negate operator.";
+
+  let description = [{
+    Elementwise Negation operation. Input and Output types must match. Integer
+    element types are always interpreted as signed. The behaviour is undefined
+    if the input value is min_value<si32>.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_negate
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_negate
+
+    #### Example:
+    ```mlir
+    %2 = spirv.Tosa.Negate %arg0, %0, %1 : !spirv.arm.tensor<3x1x65540x1xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<3x1x65540x1xi8>
+    %2 = spirv.Tosa.Negate %arg0, %0, %1 : !spirv.arm.tensor<2x7x15x13xf16>, !spirv.arm.tensor<1xf16>, !spirv.arm.tensor<1xf16> -> !spirv.arm.tensor<2x7x15x13xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm: $input1,
+    SPIRV_TosaNumerical_1DTensorArmOfLength1: $input1_zp,
+    SPIRV_TosaNumerical_1DTensorArmOfLength1: $output_zp
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input1_zp `,`
+    $output_zp
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaReciprocalOp : SPIRV_TosaFloatElementwiseUnaryOp<"Reciprocal", 41> {
+  let summary = "Reciprocal operator.";
+
+  let description = [{
+    Elementwise Reciprocal operation. Input and Output types must match. For
+    integer operation, a table should be used with the appropriate ranges.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_reciprocal
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_reciprocal
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Reciprocal %arg0 : !spirv.arm.tensor<38x47x44xf32> -> !spirv.arm.tensor<38x47x44xf32>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaRsqrtOp : SPIRV_TosaFloatElementwiseUnaryOp<"Rsqrt", 42> {
+  let summary = "Reverse Square Root operator.";
+
+  let description = [{
+    Elementwise Reciprocal Square Root operation ($ 1/sqrt $). Input and
+    Output types must match. For integer operation, a table should be used
+    with the appropriate ranges.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_rsqrt
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_rsqrt
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Rsqrt %arg0 : !spirv.arm.tensor<40x57x56xf32> -> !spirv.arm.tensor<40x57x56xf32>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaSinOp : SPIRV_TosaFloatElementwiseUnaryOp<"Sin", 43> {
+  let summary = "Sin operator.";
+
+  let description = [{
+    Elementwise Sine operation for values given in radians. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_sin
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_sin
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Sin %arg0 : !spirv.arm.tensor<49x38x58xf16> -> !spirv.arm.tensor<49x38x58xf16>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaSelectOp : SPIRV_TosaOpWithResult<"Select", 44, [Pure,
+  AllElementTypesMatch<["true_value", "false_value", "output"]>,
+  AllRanksMatch<["condition", "true_value", "false_value", "output"]>,
+  DeclareOpInterfaceMethods<SelectLikeOpInterface>]> {
+  let summary = "Select operator.";
+
+  let description = [{
+    Elementwise Select of the output based on a condition.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_select
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_select
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Select %cond, %trueVal, %falseVal : !spirv.arm.tensor<4x1x4x5xi1>, !spirv.arm.tensor<4x6x4x5xi8>, !spirv.arm.tensor<4x6x4x5xi8> -> !spirv.arm.tensor<4x6x4x5xi8>
+    %0 = spirv.Tosa.Select %cond, %trueVal, %falseVal : !spirv.arm.tensor<9x2x15x8xi1>, !spirv.arm.tensor<9x2x15x8xf16>, !spirv.arm.tensor<9x1x15x8xf16> -> !spirv.arm.tensor<9x2x15x8xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Bool_TensorArm: $condition,
+    SPIRV_TosaAny_TensorArm: $true_value,
+    SPIRV_TosaAny_TensorArm: $false_value
+  );
+
+  let results = (outs
+    SPIRV_TosaAny_TensorArm: $output
+  );
+
+  let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $condition `,`
+    $true_value `,`
+    $false_value
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getConditionType() {
+      return cast<::mlir::spirv::TensorArmType>(getCondition().getType());
+    }
+    ::mlir::spirv::TensorArmType getTrueValueType() {
+      return cast<::mlir::spirv::TensorArmType>(getTrueValue().getType());
+    }
+    ::mlir::spirv::TensorArmType getFalseValueType() {
+      return cast<::mlir::spirv::TensorArmType>(getFalseValue().getType());
+    }
+    ::mlir::Value getInput1() {
+      return getCondition();
+    }
+    ::mlir::Value getInput2() {
+      return getTrueValue();
+    }
+    ::mlir::Value getInput3() {
+      return getFalseValue();
+    }
+    ::mlir::spirv::TensorArmType getInput1Type() {
+      return getConditionType();
+    }
+    ::mlir::spirv::TensorArmType getInput2Type() {
+      return getTrueValueType();
+    }
+    ::mlir::spirv::TensorArmType getInput3Type() {
+      return getFalseValueType();
+    }
+  }];
+}
+
+
+def SPIRV_TosaEqualOp : SPIRV_TosaComparisonOp<"Equal", 45> {
+  let summary = "Equal comparison operation";
+
+  let description = [{
+    Elementwise Equal comparison operation: returns the truth value of
+    (input1 == input2) element-wise.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_equal
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_equal
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Equal %arg0, %arg1 : !spirv.arm.tensor<51x28x59xi32>, !spirv.arm.tensor<51x1x59xi32> -> !spirv.arm.tensor<51x28x59xi1>
+    %0 = spirv.Tosa.Equal %arg0, %arg1 : !spirv.arm.tensor<16x11x5x3xf32>, !spirv.arm.tensor<16x1x5x3xf32> -> !spirv.arm.tensor<16x11x5x3xi1>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaGreaterOp : SPIRV_TosaComparisonOp<"Greater", 46> {
+  let summary = "Greater comparison operation";
+
+  let description = [{
+    Elementwise Greater than comparison operation: returns the truth value of
+    (input1 > input2) element-wise.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_greater
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_greater
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Greater %arg0, %arg1 : !spirv.arm.tensor<11x10x10x2xi32>, !spirv.arm.tensor<11x10x10x1xi32> -> !spirv.arm.tensor<11x10x10x2xi1>
+    %0 = spirv.Tosa.Greater %arg0, %arg1 : !spirv.arm.tensor<6x3x12x4xf16>, !spirv.arm.tensor<6x3x1x4xf16> -> !spirv.arm.tensor<6x3x12x4xi1>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaGreaterEqualOp : SPIRV_TosaComparisonOp<"GreaterEqual", 47> {
+  let summary = "Greater or Equal comparison operation";
+
+  let description = [{
+    Elementwise Greater or Equal than comparison operation: returns the truth value of
+    (input1 >= input2) element-wise.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_greater_equal
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_greater_equal
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.GreaterEqual %arg0, %arg1 : !spirv.arm.tensor<10x17x7x1xi32>, !spirv.arm.tensor<10x17x7x16xi32> -> !spirv.arm.tensor<10x17x7x16xi1>
+    %0 = spirv.Tosa.GreaterEqual %arg0, %arg1 : !spirv.arm.tensor<3x17x6x3xf32>, !spirv.arm.tensor<1x17x6x3xf32> -> !spirv.arm.tensor<3x17x6x3xi1>
+    ```
   }];
 }
 

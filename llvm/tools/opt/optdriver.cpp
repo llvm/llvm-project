@@ -73,13 +73,6 @@ static codegen::RegisterSaveStatsFlag SSF;
 static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
     "Optimizations available (use \"-passes=\" for the new pass manager)"));
 
-static cl::opt<bool> EnableLegacyPassManager(
-    "bugpoint-enable-legacy-pm",
-    cl::desc(
-        "Enable the legacy pass manager. This is strictly for bugpoint "
-        "due to it not working with the new PM, please do not use otherwise."),
-    cl::init(false));
-
 // This flag specifies a textual description of the optimization pass pipeline
 // to run over the module. This flag switches opt to use the new pass manager
 // infrastructure, completely disabling all of the flags specific to the old
@@ -469,8 +462,8 @@ optMain(int argc, char **argv,
   LLVMContext Context;
 
   // TODO: remove shouldForceLegacyPM().
-  const bool UseNPM = (!EnableLegacyPassManager && !shouldForceLegacyPM()) ||
-                      PassPipeline.getNumOccurrences() > 0;
+  const bool UseNPM =
+      !shouldForceLegacyPM() || PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {
     errs() << "The `opt -passname` syntax for the new pass manager is "
@@ -664,7 +657,7 @@ optMain(int argc, char **argv,
 
   // Override function attributes based on CPUStr, FeaturesStr, and command line
   // flags.
-  codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
+  codegen::setFunctionAttributes(*M, CPUStr, FeaturesStr);
 
   // If the output is set to be emitted to standard out, and standard out is a
   // console, print out a warning message and refuse to do it.  We don't

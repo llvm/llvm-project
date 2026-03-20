@@ -2700,13 +2700,7 @@ def fir_CallOp : fir_Op<"call",
     }
 
     /// Set the callee for this operation.
-    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
-      if (auto calling =
-          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-        (*this)->setAttr(getCalleeAttrName(),
-                         llvm::cast<mlir::SymbolRefAttr>(callee));
-      setOperand(0, llvm::cast<mlir::Value>(callee));
-    }
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee);
   }];
 }
 
@@ -3490,7 +3484,7 @@ def fir_DeclareValueOp
     relatively to the operation using the value of the variable,
     this means that the when a mem2reg variable was assigned several
     values, the variable value printed in the debugger at a given code
-    point main not be the actual value the variable had at that code point
+    point may not be the actual value the variable had at that code point
     if instructions using the value were moved above the fir.declare_value.
   }];
 

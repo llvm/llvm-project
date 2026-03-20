@@ -119,6 +119,15 @@ static void eraseAllocation(int pos) {
   --numDeviceAllocations;
 }
 
+void CUFResetStream(cudaStream_t stream) {
+  CriticalSection critical{lock};
+  for (int i = 0; i < numDeviceAllocations; ++i) {
+    if (deviceAllocations[i].stream == stream) {
+      deviceAllocations[i].stream = nullptr;
+    }
+  }
+}
+
 extern "C" {
 
 void RTDEF(CUFRegisterAllocator)() {

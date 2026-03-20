@@ -153,7 +153,8 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
       Value *Ptr = Operands[1];
       return StoreInst::create(Val, Ptr, Align, WhereIt, Ctx);
     }
-    case Instruction::Opcode::Br:
+    case Instruction::Opcode::UncondBr:
+    case Instruction::Opcode::CondBr:
     case Instruction::Opcode::Ret:
     case Instruction::Opcode::PHI:
     case Instruction::Opcode::AddrSpaceCast:

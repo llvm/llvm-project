@@ -909,7 +909,7 @@ multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn, bits<4> crm
     }
     def : TLBIPEntry<!strconcat(name, "nXS"), op1, crn, crm, op2, needsreg, optionalreg> {
       let Encoding{7} = 1;
-      let ExtraRequires = ["AArch64::FeatureD128", "AArch64::FeatureXS"];
+      let ExtraRequires = ["AArch64::FeatureD128"];
     }
   }
 }
