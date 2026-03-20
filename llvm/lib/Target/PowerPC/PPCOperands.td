@@ -194,7 +194,7 @@ defm s32imm : SignedImmediateWithPCRel<i32,
 defm s34imm : SignedImmediateReloc<i32,
   [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
   "S34Imm", 34, "PPC::fixup_ppc_imm34">;
-defm neg_s32imm : SignedImmediate<i32,
+defm neg_s32imm : SignedImmediateReloc<i32,
   [{ return isInt<32>(Imm); }], NEG_S32,
   "NegS32Imm", 32, "PPC::fixup_ppc_imm32">;
 
@@ -208,7 +208,7 @@ defm s32imm64 : SignedImmediateWithPCRel<i64,
 defm s34imm64 : SignedImmediateWithPCRel<i64,
   [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
   "S34Imm", 34, "PPC::fixup_ppc_imm34", "PPC::fixup_ppc_pcrel34">;
-defm neg_s32imm64 : SignedImmediate<i64,
+defm neg_s32imm64 : SignedImmediateReloc<i64,
   [{ return isInt<32>(Imm); }], NEG_S32,
   "NegS32Imm", 32, "PPC::fixup_ppc_imm32">;
 

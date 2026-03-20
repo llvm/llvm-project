@@ -94,6 +94,8 @@ EvaluateCRExpr(const MCExpr *E) {
   llvm_unreachable("Invalid expression kind!");
 }
 
+static void addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx);
+
 namespace {
 
 struct PPCOperand;
@@ -160,48 +162,6 @@ public:
   const MCExpr *applySpecifier(const MCExpr *E, uint32_t,
                                MCContext &Ctx) override;
 };
-
-// Helper function to negate an operand - used by both PPCOperand and
-// PPCAsmParser to add the negation of \p Op as an operand to \p Inst.
-//
-// Originally this helper is only used to lower pseudo-subtraction mnemonics
-// (e.g. SUBI, SUBIS, SUBIC, SUBIC_rec, PSUBI) into their real ADD-family
-// equivalents by negating the immediate or expression operand before
-// appending it.  Now it's also used by PPCOperand for PSUBIS.
-//
-// The negation is performed as follows:
-// - If \p Op is an immediate, the negated integer value is added directly.
-// - If \p Op is a unary-minus expression (i.e. \c -E), the inner
-//   sub-expression \c E is added, effectively cancelling the double negation.
-// - If \p Op is a binary-subtraction expression (i.e. \c LHS-RHS), the
-//   operands are swapped to produce \c RHS-LHS.
-// - Otherwise, a new unary-minus expression wrapping \p Op's expression is
-//   created and added.
-//
-// \param Inst  The instruction being built; the negated operand is appended.
-// \param Op    The source operand whose value is to be negated.
-// \param Ctx   The MC context used to allocate new expression nodes.
-static void addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx) {
-  if (Op.isImm()) {
-    Inst.addOperand(MCOperand::createImm(-Op.getImm()));
-    return;
-  }
-  const MCExpr *Expr = Op.getExpr();
-  if (const MCUnaryExpr *UnExpr = dyn_cast<MCUnaryExpr>(Expr)) {
-    if (UnExpr->getOpcode() == MCUnaryExpr::Minus) {
-      Inst.addOperand(MCOperand::createExpr(UnExpr->getSubExpr()));
-      return;
-    }
-  } else if (const MCBinaryExpr *BinExpr = dyn_cast<MCBinaryExpr>(Expr)) {
-    if (BinExpr->getOpcode() == MCBinaryExpr::Sub) {
-      const MCExpr *NE =
-          MCBinaryExpr::createSub(BinExpr->getRHS(), BinExpr->getLHS(), Ctx);
-      Inst.addOperand(MCOperand::createExpr(NE));
-      return;
-    }
-  }
-  Inst.addOperand(MCOperand::createExpr(MCUnaryExpr::createMinus(Expr, Ctx)));
-}
 
 /// PPCOperand - Instances of this class represent a parsed PowerPC machine
 /// instruction.
@@ -859,6 +819,33 @@ void PPCOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     MAI.printExpr(OS, *getTLSReg());
     break;
   }
+}
+
+static void
+addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx) {
+  if (Op.isImm()) {
+    Inst.addOperand(MCOperand::createImm(-Op.getImm()));
+    return;
+  }
+  const MCExpr *Expr = Op.getExpr();
+  if (const MCUnaryExpr *UnExpr = dyn_cast<MCUnaryExpr>(Expr)) {
+    // For unary-minus expression (i.e. -E), the inner sub-expression E
+    // is added, effectively cancelling the double negation.
+    if (UnExpr->getOpcode() == MCUnaryExpr::Minus) {
+      Inst.addOperand(MCOperand::createExpr(UnExpr->getSubExpr()));
+      return;
+    }
+  } else if (const MCBinaryExpr *BinExpr = dyn_cast<MCBinaryExpr>(Expr)) {
+    // For binary-subtraction expression (i.e. LHS-RHS), the operands
+    // are swapped to produce RHS-LHS.
+    if (BinExpr->getOpcode() == MCBinaryExpr::Sub) {
+      const MCExpr *NE = MCBinaryExpr::createSub(BinExpr->getRHS(),
+                                                 BinExpr->getLHS(), Ctx);
+      Inst.addOperand(MCOperand::createExpr(NE));
+      return;
+    }
+  }
+  Inst.addOperand(MCOperand::createExpr(MCUnaryExpr::createMinus(Expr, Ctx)));
 }
 
 void PPCAsmParser::processInstruction(MCInst &Inst,

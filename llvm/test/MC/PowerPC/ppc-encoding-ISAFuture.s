@@ -40,6 +40,7 @@
 # CHECK-BE: dmxxinstdmr512 1, 2, 34, 0   # encoding: [0xf0,0x82,0x17,0x52]
 # CHECK-LE: dmxxinstdmr512 1, 2, 34, 0   # encoding: [0x52,0x17,0x82,0xf0]
             dmxxinstdmr512 1, 2, 34, 0
+
 # CHECK-BE: dmxxinstdmr512 1, 2, 34, 1   # encoding: [0xf0,0x83,0x17,0x52]
 # CHECK-LE: dmxxinstdmr512 1, 2, 34, 1   # encoding: [0x52,0x17,0x83,0xf0]
             dmxxinstdmr512 1, 2, 34, 1
