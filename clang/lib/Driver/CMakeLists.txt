@@ -106,6 +106,7 @@ add_clang_library(clangDriver
   LINK_LIBS
   clangBasic
   clangCAS
+  clangDependencyScanning
   clangFrontend
   clangScalableStaticAnalysisFrameworkCore
   clangScalableStaticAnalysisFrameworkFrontend
