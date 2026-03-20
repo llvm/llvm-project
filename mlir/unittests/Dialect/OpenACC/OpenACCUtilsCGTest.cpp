@@ -148,8 +148,8 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionWithLaunchArgs) {
   EXPECT_EQ(cr.getLaunchArgs()[0], pw.getResult());
   EXPECT_TRUE(llvm::isa<IndexType>(pw.getResult().getType()));
   ASSERT_FALSE(cr.getRegion().empty());
-  EXPECT_TRUE(llvm::isa<IndexType>(
-      cr.getRegion().front().getArgument(0).getType()));
+  EXPECT_TRUE(
+      llvm::isa<IndexType>(cr.getRegion().front().getArgument(0).getType()));
 
   func::ReturnOp::create(rewriter, loc);
 }
