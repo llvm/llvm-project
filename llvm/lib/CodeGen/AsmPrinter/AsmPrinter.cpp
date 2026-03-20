@@ -2277,13 +2277,18 @@ void AsmPrinter::emitFunctionBody() {
       if (OutStreamer->isObj()) {
         const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
         MCFragment *NewFragment = OutStreamer->getCurrentFragment();
+        TargetInstrInfo::InstSizeVerifyMode Mode =
+            TII->getInstSizeVerifyMode(MI);
         // Don't try to handle fragment splitting cases.
-        if (NewFragment == OldFragment && TII->shouldVerifyInstSize(MI)) {
+        if (NewFragment == OldFragment &&
+            Mode != TargetInstrInfo::InstSizeVerifyMode::NoVerify) {
           unsigned ExpectedSize = TII->getInstSizeInBytes(MI);
           unsigned ActualSize = NewFragment->getFixedSize() - OldFragSize;
-          // FIXME: InstrInfo currently over-estimates the size of STACKMAP.
-          if (ActualSize != ExpectedSize &&
-              MI.getOpcode() != TargetOpcode::STACKMAP) {
+          bool Valid =
+              Mode == TargetInstrInfo::InstSizeVerifyMode::AllowOverEstimate
+                  ? ActualSize <= ExpectedSize
+                  : ActualSize == ExpectedSize;
+          if (!Valid) {
             dbgs() << "Size mismatch for: " << MI << "\n";
             dbgs() << "Expected size: " << ExpectedSize << "\n";
             dbgs() << "Actual size: " << ActualSize << "\n";
