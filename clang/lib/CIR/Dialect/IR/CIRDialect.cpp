@@ -1773,10 +1773,6 @@ void cir::GlobalOp::build(
   if (addrSpace)
     odsState.addAttribute(getAddrSpaceAttrName(odsState.name), addrSpace);
 
-  addrSpace = normalizeDefaultAddressSpace(addrSpace);
-  if (addrSpace)
-    odsState.addAttribute(getAddrSpaceAttrName(odsState.name), addrSpace);
-
   cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
   odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
