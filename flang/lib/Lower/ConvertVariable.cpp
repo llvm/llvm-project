@@ -684,7 +684,13 @@ genCleanupDeallocateCoarray(Fortran::lower::AbstractConverter &converter,
   // SAVE (no ALLOCATABLE): never automatically deallocated or finalized
   // (see 7.5.6.4) ALLOCATABLE (no SAVE): automatically deallocated and
   // finalized at scope exit ALLOCATABLE and SAVE: Not deallocated at scope exit
-  // (only via explicit DEALLOCATE or END TEAM)
+  // Local coarray must have the SAVE and/or ALLOCATABLE attributes:
+  // 1. SAVE (no ALLOCATABLE): never automatically deallocated or finalized
+  //    (see 7.5.6.4) 
+  // 2. ALLOCATABLE (no SAVE): automatically deallocated and
+  //    finalized at scope exit 
+  // 3. ALLOCATABLE and SAVE: Not deallocated at scope exit
+  //    (only via explicit DEALLOCATE or END TEAM)
   if (Fortran::semantics::IsSaved(sym) &&
       Fortran::semantics::IsFunctionResult(sym))
   if (Fortran::semantics::IsSaved(sym) ||
