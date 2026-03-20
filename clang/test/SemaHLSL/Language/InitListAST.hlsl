@@ -49,6 +49,13 @@ struct SlicyBits {
   int W : 8;
 };
 
+struct Empty {
+};
+
+struct UnnamedOnly {
+  int : 8;
+};
+
 // Case 1: Extraneous braces get ignored in literal instantiation.
 // CHECK-LABEL: Dumping case1
 // CHECK: VarDecl {{.*}} used TF1 'TwoFloats' nrvo cinit
@@ -1058,4 +1065,24 @@ float case17() {
   IntAndFloat Structs[] = {1,2,3,4};
   float Floats[] = {Structs, Structs};
   return Floats[7];
+}
+
+// CHECK-LABEL: Dumping case18
+// CHECK: ParmVarDecl {{.*}} used E 'Empty'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} E1 'Empty' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'Empty'
+void case18(Empty E) {
+  Empty E1 = {E};
+}
+
+// CHECK-LABEL: Dumping case19
+// CHECK: ParmVarDecl {{.*}} used UO 'UnnamedOnly'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} UO2 'UnnamedOnly' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'UnnamedOnly'
+void case19(UnnamedOnly UO) {
+  UnnamedOnly UO2 = {UO};
 }

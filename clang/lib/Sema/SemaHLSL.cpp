@@ -5681,8 +5681,10 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   }
   size_t ExpectedSize = ILT.DestTypes.size();
   size_t ActualSize = ILT.ArgExprs.size();
-  if (ExpectedSize == 0 && ActualSize == 0)
+  if (ExpectedSize == 0 && ActualSize == 0) {
+    Init->resizeInits(Ctx, 0);
     return true;
+  }
 
   // Reject empty initializer if *any* incomplete array exists structurally
   if (ActualSize == 0 && containsIncompleteArrayType(Entity.getType())) {

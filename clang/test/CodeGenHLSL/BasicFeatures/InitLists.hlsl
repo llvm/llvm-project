@@ -1126,6 +1126,24 @@ void case26(TwoInts TI) {
   float4 F = float4(TI, 1, 2);
   float3 F2 = float3(3, TI);
 }
+
+// CHECK-LABEL: define hidden void @_Z6case275Empty
+// CHECK: [[E1:%.*]] = alloca %struct.Empty, align 1
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[E1]], ptr align 1 @__const._Z6case275Empty.E1, i32 1, i1 false)
+// CHECK: ret void
+void case27(Empty E) {
+  Empty E1 = {E};
+  // This is equivalent to Empty E1 = {};
+}
+
+// CHECK-LABEL: define hidden void @_Z6case2811UnnamedOnly
+// CHECK: [[UO2:%.*]] = alloca %struct.UnnamedOnly, align 1
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[UO2]], ptr align 1 @__const._Z6case2811UnnamedOnly.UO2, i32 1, i1 false)
+// CHECK: ret void
+void case28(UnnamedOnly UO) {
+  UnnamedOnly UO2 = {UO};
+  // This is equivalent to UnnamedOnly UO2 = {};
+}
 //.
 // CHECK: [[META3]] = !{}
 // CHECK: [[META4]] = !{i64 4}
