@@ -49,6 +49,7 @@ CanonicalDeclaration:
     Line: 1
     Column: 1
 Flags:    129
+Tags:    258
 Documentation:    'Foo doc'
 ReturnType:    'int'
 IncludeHeaders:
@@ -160,6 +161,10 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_EQ(static_cast<uint8_t>(Sym1.Flags), 129);
   EXPECT_TRUE(Sym1.Flags & Symbol::IndexedForCodeCompletion);
   EXPECT_FALSE(Sym1.Flags & Symbol::Deprecated);
+  // Tags: Deprecated (1<<1=2) | Static (1<<8=256) = 258
+  EXPECT_EQ(Sym1.Tags, 258u);
+  EXPECT_TRUE(Sym1.Tags & (1u << static_cast<unsigned>(SymbolTag::Deprecated)));
+  EXPECT_TRUE(Sym1.Tags & (1u << static_cast<unsigned>(SymbolTag::Static)));
   EXPECT_THAT(
       Sym1.IncludeHeaders,
       UnorderedElementsAre(
@@ -176,6 +181,7 @@ TEST(SerializationTest, YAMLConversions) {
             "file:///path/bar.h");
   EXPECT_FALSE(Sym2.Flags & Symbol::IndexedForCodeCompletion);
   EXPECT_TRUE(Sym2.Flags & Symbol::Deprecated);
+  EXPECT_EQ(Sym2.Tags, 0u); // no Tags in YAML → default zero
 
   ASSERT_TRUE(bool(ParsedYAML->Refs));
   EXPECT_THAT(
@@ -289,6 +295,109 @@ TEST(SerializationTest, SrcsTest) {
     EXPECT_EQ(IGNDeserialized.DirectIncludes, IGN.DirectIncludes);
     EXPECT_EQ(IGNDeserialized.URI, IGN.URI);
     EXPECT_EQ(IGNDeserialized.Flags, IGN.Flags);
+  }
+}
+
+// Verify that Symbol::Tags survive a full YAML -> RIFF -> read roundtrip.
+// This exercises both writeSymbol (new Tags field) and readSymbol.
+TEST(SerializationTest, TagsRoundTrip) {
+  // YAML fixture with a single symbol carrying non-zero Tags.
+  // Deprecated (SymbolTag=1) -> bit 1 -> 1<<1 = 2
+  // Static     (SymbolTag=8) -> bit 8 -> 1<<8 = 256
+  // Combined: 258
+  const char *TaggedYAML = R"(
+---
+!Symbol
+ID: AABBCCDDEEFF0011
+Name:   'Tagged'
+Scope:   'ns::'
+SymInfo:
+  Kind:            Function
+  Lang:            Cpp
+CanonicalDeclaration:
+  FileURI:        file:///tmp/tagged.h
+  Start:
+    Line: 0
+    Column: 0
+  End:
+    Line: 0
+    Column: 1
+Flags:    1
+Tags:    258
+...
+)";
+  const SymbolID TaggedID = cantFail(SymbolID::fromStr("AABBCCDDEEFF0011"));
+  constexpr SymbolTags ExpectedTags =
+      (1u << static_cast<unsigned>(SymbolTag::Deprecated)) | // bit 1  = 2
+      (1u << static_cast<unsigned>(SymbolTag::Static));      // bit 8  = 256
+  static_assert(ExpectedTags == 258u, "bitmask sanity check");
+
+  // ── Step 1: YAML deserialization ────────────────────────────────────────
+  auto FromYAML = readIndexFile(TaggedYAML);
+  ASSERT_TRUE(bool(FromYAML)) << FromYAML.takeError();
+  ASSERT_TRUE(bool(FromYAML->Symbols));
+  {
+    auto It = FromYAML->Symbols->find(TaggedID);
+    ASSERT_NE(It, FromYAML->Symbols->end())
+        << "symbol not found after YAML parse";
+    EXPECT_EQ(It->Tags, ExpectedTags)
+        << "Tags lost during YAML deserialization";
+  }
+
+  // ── Step 2: RIFF serialization + deserialization ────────────────────────
+  IndexFileOut Out(*FromYAML);
+  Out.Format = IndexFileFormat::RIFF;
+  std::string Serialized = llvm::to_string(Out);
+
+  auto FromRIFF = readIndexFile(Serialized);
+  ASSERT_TRUE(bool(FromRIFF)) << FromRIFF.takeError();
+  ASSERT_TRUE(bool(FromRIFF->Symbols));
+  {
+    auto It = FromRIFF->Symbols->find(TaggedID);
+    ASSERT_NE(It, FromRIFF->Symbols->end())
+        << "symbol not found after RIFF roundtrip";
+    EXPECT_EQ(It->Tags, ExpectedTags) << "Tags lost during RIFF serialization";
+    // Spot-check individual bits
+    EXPECT_TRUE(It->Tags &
+                (1u << static_cast<unsigned>(SymbolTag::Deprecated)));
+    EXPECT_TRUE(It->Tags & (1u << static_cast<unsigned>(SymbolTag::Static)));
+    EXPECT_FALSE(It->Tags & (1u << static_cast<unsigned>(SymbolTag::Abstract)));
+  }
+
+  // ── Step 3: Symbol with Tags=0 must survive too ─────────────────────────
+  const char *UntaggedYAML = R"(
+---
+!Symbol
+ID: 0000000000000001
+Name:   'Untagged'
+Scope:   ''
+SymInfo:
+  Kind:            Variable
+  Lang:            Cpp
+CanonicalDeclaration:
+  FileURI:        file:///tmp/untagged.h
+  Start:
+    Line: 0
+    Column: 0
+  End:
+    Line: 0
+    Column: 1
+Flags:    1
+...
+)";
+  auto FromUntaggedYAML = readIndexFile(UntaggedYAML);
+  ASSERT_TRUE(bool(FromUntaggedYAML)) << FromUntaggedYAML.takeError();
+  ASSERT_TRUE(bool(FromUntaggedYAML->Symbols));
+  IndexFileOut Out2(*FromUntaggedYAML);
+  Out2.Format = IndexFileFormat::RIFF;
+  auto FromUntaggedRIFF = readIndexFile(llvm::to_string(Out2));
+  ASSERT_TRUE(bool(FromUntaggedRIFF)) << FromUntaggedRIFF.takeError();
+  ASSERT_TRUE(bool(FromUntaggedRIFF->Symbols));
+  {
+    const SymbolID UntaggedID = cantFail(SymbolID::fromStr("0000000000000001"));
+    auto It = FromUntaggedRIFF->Symbols->find(UntaggedID);
+    ASSERT_NE(It, FromUntaggedRIFF->Symbols->end());
+    EXPECT_EQ(It->Tags, 0u) << "Tags must be zero for untagged symbol";
   }
 }
 
