@@ -35,16 +35,6 @@ namespace mlir {
                  genericOp.getDpsInputs()[(OPERANDS_SWAP) ? 0 : 1]},           \
       ValueRange{genericOp.getDpsInits()[0]}))
 
-#define REPLACE_UNARY_OP(NEWOP, NEWKIND)                                       \
-  static_cast<LinalgOp>(                                                       \
-      emitCategoryOp                                                           \
-          ? rewriter.replaceOpWithNewOp<ElementwiseOp>(                        \
-                genericOp, genericOp.getDpsInputs(), genericOp.getDpsInits(),  \
-                ElementwiseKindAttr::get(rewriter.getContext(), NEWKIND),      \
-                genericOp.getIndexingMaps())                                   \
-          : rewriter.replaceOpWithNewOp<NEWOP>(                                \
-                genericOp, genericOp.getDpsInputs(), genericOp.getDpsInits()))
-
 using namespace mlir;
 using namespace mlir::linalg;
 
@@ -105,44 +95,65 @@ specializeLinalgUnaryElementwise(RewriterBase &rewriter, GenericOp genericOp,
                     [](AffineMap map) { return map.isIdentity(); });
 
   // Early exit: Named ops cannot carry user-defined maps.
-  if (hasNonIdentityMaps && !emitCategoryOp) {
-    return failure();
-  }
+  if (hasNonIdentityMaps && !emitCategoryOp)
+    return rewriter.notifyMatchFailure(
+        genericOp,
+        "non-identity indexing maps prevent specialization to named op");
+
+  // Helper to dispatch between named op and `linalg.elementwise`.
+  // Lambdas with explicit template parameter list are a C++20 feature, hence
+  // the dummy op object.
+  auto replaceUnaryOp = [&](auto namedOp, ElementwiseKind kind) -> LinalgOp {
+    LinalgOp newOp;
+    if (!emitCategoryOp)
+      newOp = decltype(namedOp)::create(
+          rewriter, genericOp.getLoc(), genericOp.getDpsInputs(),
+          genericOp.getDpsInits(), ArrayRef<NamedAttribute>{});
+    else
+      newOp = ElementwiseOp::create(
+          rewriter, genericOp.getLoc(), genericOp.getDpsInputs(),
+          genericOp.getDpsInits(),
+          ElementwiseKindAttr::get(rewriter.getContext(), kind),
+          genericOp.getIndexingMaps());
+
+    rewriter.replaceOp(genericOp, newOp);
+    return newOp;
+  };
 
   // Inspect body operation to determine named op or elementwise kind.
   Operation *op = &genericOp.getBody()->front();
 
   if (isa<math::ExpOp>(op))
-    return REPLACE_UNARY_OP(ExpOp, ElementwiseKind::exp);
+    return replaceUnaryOp(ExpOp{}, ElementwiseKind::exp);
   if (isa<math::LogOp>(op))
-    return REPLACE_UNARY_OP(LogOp, ElementwiseKind::log);
+    return replaceUnaryOp(LogOp{}, ElementwiseKind::log);
   if (isa<math::AbsFOp>(op))
-    return REPLACE_UNARY_OP(AbsOp, ElementwiseKind::abs);
+    return replaceUnaryOp(AbsOp{}, ElementwiseKind::abs);
   if (isa<math::CeilOp>(op))
-    return REPLACE_UNARY_OP(CeilOp, ElementwiseKind::ceil);
+    return replaceUnaryOp(CeilOp{}, ElementwiseKind::ceil);
   if (isa<math::FloorOp>(op))
-    return REPLACE_UNARY_OP(FloorOp, ElementwiseKind::floor);
+    return replaceUnaryOp(FloorOp{}, ElementwiseKind::floor);
   if (isa<arith::NegFOp>(op))
-    return REPLACE_UNARY_OP(NegFOp, ElementwiseKind::negf);
+    return replaceUnaryOp(NegFOp{}, ElementwiseKind::negf);
   if (auto divOp = dyn_cast<arith::DivFOp>(op)) {
     if (auto constOp = dyn_cast_if_present<arith::ConstantOp>(
             divOp.getLhs().getDefiningOp()))
       if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
-        return REPLACE_UNARY_OP(ReciprocalOp, ElementwiseKind::reciprocal);
+        return replaceUnaryOp(ReciprocalOp{}, ElementwiseKind::reciprocal);
   }
   if (isa<math::RoundOp>(op))
-    return REPLACE_UNARY_OP(RoundOp, ElementwiseKind::round);
+    return replaceUnaryOp(RoundOp{}, ElementwiseKind::round);
   if (isa<math::SqrtOp>(op))
-    return REPLACE_UNARY_OP(SqrtOp, ElementwiseKind::sqrt);
+    return replaceUnaryOp(SqrtOp{}, ElementwiseKind::sqrt);
   if (isa<math::RsqrtOp>(op))
-    return REPLACE_UNARY_OP(RsqrtOp, ElementwiseKind::rsqrt);
+    return replaceUnaryOp(RsqrtOp{}, ElementwiseKind::rsqrt);
   if (auto mulOp = dyn_cast<arith::MulFOp>(op);
       mulOp && mulOp.getLhs() == mulOp.getRhs())
-    return REPLACE_UNARY_OP(SquareOp, ElementwiseKind::square);
+    return replaceUnaryOp(SquareOp{}, ElementwiseKind::square);
   if (isa<math::TanhOp>(op))
-    return REPLACE_UNARY_OP(TanhOp, ElementwiseKind::tanh);
+    return replaceUnaryOp(TanhOp{}, ElementwiseKind::tanh);
   if (isa<math::ErfOp>(op))
-    return REPLACE_UNARY_OP(ErfOp, ElementwiseKind::erf);
+    return replaceUnaryOp(ErfOp{}, ElementwiseKind::erf);
 
   return failure();
 }
