@@ -3245,6 +3245,12 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     exitWithErrorCode(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
+  dbgs() << "DEBUG: FS discriminator bit ranges:\n";
+  for (unsigned i = 0; i <= getNumFSPasses(); ++i) {
+    auto Pass = static_cast<FSDiscriminatorPass>(i);
+    dbgs() << "  Pass " << i << ": [" << getFSPassBitBegin(Pass) << ", "
+           << getFSPassBitEnd(Pass) << "]\n";
+  }
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
     return 0;

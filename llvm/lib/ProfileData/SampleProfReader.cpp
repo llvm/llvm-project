@@ -64,6 +64,39 @@ static cl::opt<bool> ProfileIsFSDisciminator(
 void SampleProfileReader::dumpFunctionProfile(const FunctionSamples &FS,
                                               raw_ostream &OS) {
   OS << "Function: " << FS.getContext().toString() << ": " << FS;
+
+  auto dumpFS = [&](const FunctionSamples &S, unsigned Indent,
+                    auto &Self) -> void {
+    OS.indent(Indent) << "Detailed body samples for "
+                      << S.getContext().toString() << ":\n";
+    for (const auto &I : S.getBodySamples()) {
+      const LineLocation &Loc = I.first;
+      const SampleRecord &Sample = I.second;
+      OS.indent(Indent + 2) << "LineOffset: " << Loc.LineOffset
+                            << ", Discriminator: " << Loc.Discriminator << " (0x"
+                            << Twine::utohexstr(Loc.Discriminator)
+                            << "), Samples: " << Sample.getSamples();
+      auto CallTargets = Sample.getSortedCallTargets();
+      if (!CallTargets.empty()) {
+        OS << ", CallTargets:";
+        for (const auto &J : CallTargets)
+          OS << " " << J.first << ":" << J.second;
+      }
+      OS << "\n";
+    }
+
+    for (const auto &I : S.getCallsiteSamples()) {
+      const LineLocation &Loc = I.first;
+      for (const auto &J : I.second) {
+        OS.indent(Indent) << "Callsite at LineOffset: " << Loc.LineOffset
+                          << ", Discriminator: " << Loc.Discriminator << " (0x"
+                          << Twine::utohexstr(Loc.Discriminator) << ")\n";
+        Self(J.second, Indent + 2, Self);
+      }
+    }
+  };
+
+  dumpFS(FS, 2, dumpFS);
 }
 
 /// Dump all the function profiles found on stream \p OS.

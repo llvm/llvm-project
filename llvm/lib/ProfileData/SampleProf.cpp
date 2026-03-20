@@ -128,7 +128,7 @@ const std::error_category &llvm::sampleprof_category() {
 void LineLocation::print(raw_ostream &OS) const {
   OS << LineOffset;
   if (Discriminator > 0)
-    OS << "." << Discriminator;
+    OS << "." << Discriminator << " (0x" << Twine::utohexstr(Discriminator) << ")";
 }
 
 raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,

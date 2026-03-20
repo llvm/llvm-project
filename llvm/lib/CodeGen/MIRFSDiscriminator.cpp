@@ -129,66 +129,157 @@ bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
                     << MF.getFunction().getName() << " Highbit=" << HighBit
                     << "\n");
 
-  for (MachineBasicBlock &BB : MF) {
-    for (MachineInstr &I : BB) {
-      if (HasPseudoProbe) {
-        // Only assign discriminators to pseudo probe instructions. Call
-        // instructions are excluded since their dwarf discriminators are used
-        // for other purposes, i.e, storing probe ids.
-        if (!I.isPseudoProbe())
+  extern cl::opt<bool> EnableNonUniqueDiscriminatorStart;
+  if (EnableNonUniqueDiscriminatorStart) {
+    // Pass 1: identify non-unique locations
+    for (MachineBasicBlock &BB : MF) {
+      for (MachineInstr &I : BB) {
+        if (HasPseudoProbe) {
+          if (!I.isPseudoProbe())
+            continue;
+        } else if (ImprovedFSDiscriminator && I.isMetaInstruction()) {
           continue;
-      } else if (ImprovedFSDiscriminator && I.isMetaInstruction()) {
-        continue;
+        }
+        const DILocation *DIL = I.getDebugLoc().get();
+        if (!DIL)
+          continue;
+
+        unsigned LineNo =
+            I.isPseudoProbe() ? I.getOperand(1).getImm() : DIL->getLine();
+        if (LineNo == 0)
+          continue;
+        unsigned Discriminator = DIL->getDiscriminator();
+        if ((Pass == FSDiscriminatorPass::Pass1) && I.isPseudoProbe()) {
+          Discriminator = 0;
+          I.setDebugLoc(DIL->cloneWithDiscriminator(0));
+        }
+        uint64_t CallStackHashVal = 0;
+        if (ImprovedFSDiscriminator)
+          CallStackHashVal = getCallStackHash(DIL);
+
+        LocationDiscriminator LD{DIL->getFilename(), LineNo, Discriminator,
+                                 CallStackHashVal};
+        LDBM[LD].insert(&BB);
       }
-      const DILocation *DIL = I.getDebugLoc().get();
-      if (!DIL)
-        continue;
+    }
 
-      // Use the id of pseudo probe to compute the discriminator.
-      unsigned LineNo =
-          I.isPseudoProbe() ? I.getOperand(1).getImm() : DIL->getLine();
-      if (LineNo == 0)
-        continue;
-      unsigned Discriminator = DIL->getDiscriminator();
-      // Clean up discriminators for pseudo probes at the first FS discriminator
-      // pass as their discriminators should not ever be used.
-      if ((Pass == FSDiscriminatorPass::Pass1) && I.isPseudoProbe()) {
-        Discriminator = 0;
-        I.setDebugLoc(DIL->cloneWithDiscriminator(0));
+    LocationDiscriminatorBBMap LDCM_BB_Seen;
+
+    // Pass 2: assign discriminators
+    for (MachineBasicBlock &BB : MF) {
+      for (MachineInstr &I : BB) {
+        if (HasPseudoProbe) {
+          if (!I.isPseudoProbe())
+            continue;
+        } else if (ImprovedFSDiscriminator && I.isMetaInstruction()) {
+          continue;
+        }
+        const DILocation *DIL = I.getDebugLoc().get();
+        if (!DIL)
+          continue;
+
+        unsigned LineNo =
+            I.isPseudoProbe() ? I.getOperand(1).getImm() : DIL->getLine();
+        if (LineNo == 0)
+          continue;
+        unsigned Discriminator = DIL->getDiscriminator();
+        uint64_t CallStackHashVal = 0;
+        if (ImprovedFSDiscriminator)
+          CallStackHashVal = getCallStackHash(DIL);
+
+        LocationDiscriminator LD{DIL->getFilename(), LineNo, Discriminator,
+                                 CallStackHashVal};
+        auto &BBMap = LDBM[LD];
+        if (BBMap.size() <= 1)
+          continue;
+
+        unsigned DiscriminatorCurrPass;
+        auto R = LDCM_BB_Seen[LD].insert(&BB);
+        DiscriminatorCurrPass = R.second ? ++LDCM[LD] : LDCM[LD];
+        DiscriminatorCurrPass = DiscriminatorCurrPass << LowBit;
+        if (!ImprovedFSDiscriminator)
+          DiscriminatorCurrPass += getCallStackHashV0(BB, I, DIL);
+        DiscriminatorCurrPass &= BitMaskThisPass;
+        unsigned NewD = Discriminator | DiscriminatorCurrPass;
+        const auto *const NewDIL = DIL->cloneWithDiscriminator(NewD);
+        if (!NewDIL) {
+          LLVM_DEBUG(dbgs() << "Could not encode discriminator: "
+                            << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                            << DIL->getColumn() << ":" << Discriminator << " "
+                            << I << "\n");
+          continue;
+        }
+
+        I.setDebugLoc(NewDIL);
+        NumNewD++;
+        LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                          << DIL->getColumn() << ": add FS discriminator, from "
+                          << Discriminator << " -> " << NewD << "\n");
+        Changed = true;
       }
-      uint64_t CallStackHashVal = 0;
-      if (ImprovedFSDiscriminator)
-        CallStackHashVal = getCallStackHash(DIL);
+    }
+  } else {
+    for (MachineBasicBlock &BB : MF) {
+      for (MachineInstr &I : BB) {
+        if (HasPseudoProbe) {
+          // Only assign discriminators to pseudo probe instructions. Call
+          // instructions are excluded since their dwarf discriminators are used
+          // for other purposes, i.e, storing probe ids.
+          if (!I.isPseudoProbe())
+            continue;
+        } else if (ImprovedFSDiscriminator && I.isMetaInstruction()) {
+          continue;
+        }
+        const DILocation *DIL = I.getDebugLoc().get();
+        if (!DIL)
+          continue;
 
-      LocationDiscriminator LD{DIL->getFilename(), LineNo, Discriminator,
-                               CallStackHashVal};
-      auto &BBMap = LDBM[LD];
-      auto R = BBMap.insert(&BB);
-      if (BBMap.size() == 1)
-        continue;
+        // Use the id of pseudo probe to compute the discriminator.
+        unsigned LineNo =
+            I.isPseudoProbe() ? I.getOperand(1).getImm() : DIL->getLine();
+        if (LineNo == 0)
+          continue;
+        unsigned Discriminator = DIL->getDiscriminator();
+        // Clean up discriminators for pseudo probes at the first FS discriminator
+        // pass as their discriminators should not ever be used.
+        if ((Pass == FSDiscriminatorPass::Pass1) && I.isPseudoProbe()) {
+          Discriminator = 0;
+          I.setDebugLoc(DIL->cloneWithDiscriminator(0));
+        }
+        uint64_t CallStackHashVal = 0;
+        if (ImprovedFSDiscriminator)
+          CallStackHashVal = getCallStackHash(DIL);
 
-      unsigned DiscriminatorCurrPass;
-      DiscriminatorCurrPass = R.second ? ++LDCM[LD] : LDCM[LD];
-      DiscriminatorCurrPass = DiscriminatorCurrPass << LowBit;
-      if (!ImprovedFSDiscriminator)
-        DiscriminatorCurrPass += getCallStackHashV0(BB, I, DIL);
-      DiscriminatorCurrPass &= BitMaskThisPass;
-      unsigned NewD = Discriminator | DiscriminatorCurrPass;
-      const auto *const NewDIL = DIL->cloneWithDiscriminator(NewD);
-      if (!NewDIL) {
-        LLVM_DEBUG(dbgs() << "Could not encode discriminator: "
-                          << DIL->getFilename() << ":" << DIL->getLine() << ":"
-                          << DIL->getColumn() << ":" << Discriminator << " "
-                          << I << "\n");
-        continue;
+        LocationDiscriminator LD{DIL->getFilename(), LineNo, Discriminator,
+                                 CallStackHashVal};
+        auto &BBMap = LDBM[LD];
+        auto R = BBMap.insert(&BB);
+        if (BBMap.size() == 1)
+          continue;
+
+        unsigned DiscriminatorCurrPass;
+        DiscriminatorCurrPass = R.second ? ++LDCM[LD] : LDCM[LD];
+        DiscriminatorCurrPass = DiscriminatorCurrPass << LowBit;
+        if (!ImprovedFSDiscriminator)
+          DiscriminatorCurrPass += getCallStackHashV0(BB, I, DIL);
+        DiscriminatorCurrPass &= BitMaskThisPass;
+        unsigned NewD = Discriminator | DiscriminatorCurrPass;
+        const auto *const NewDIL = DIL->cloneWithDiscriminator(NewD);
+        if (!NewDIL) {
+          LLVM_DEBUG(dbgs() << "Could not encode discriminator: "
+                            << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                            << DIL->getColumn() << ":" << Discriminator << " "
+                            << I << "\n");
+          continue;
+        }
+
+        I.setDebugLoc(NewDIL);
+        NumNewD++;
+        LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                          << DIL->getColumn() << ": add FS discriminator, from "
+                          << Discriminator << " -> " << NewD << "\n");
+        Changed = true;
       }
-
-      I.setDebugLoc(NewDIL);
-      NumNewD++;
-      LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
-                        << DIL->getColumn() << ": add FS discriminator, from "
-                        << Discriminator << " -> " << NewD << "\n");
-      Changed = true;
     }
   }
 
