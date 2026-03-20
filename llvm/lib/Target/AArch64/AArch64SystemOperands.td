@@ -867,12 +867,13 @@ def REG_OPTIONAL : RegValue;
 def REG_REQUIRED : RegValue;
 
 class TLBICommon<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-                 bits<3> op2, RegValue reguse> {
+                 bits<3> op2, bit nxs, RegValue reguse> : SysAliasRegUseField<reguse> {
   string Name = name;
   bits<14> Encoding;
   RegValue RegUse = reguse;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
+  let Encoding{7} = nxs;
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
   list<string> Requires = [];
@@ -881,12 +882,12 @@ class TLBICommon<string name, bits<3> op1, bits<4> crn, bits<4> crm,
 }
 
 class TLBIEntry<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-                bits<3> op2, RegValue reguse>
-  : TLBICommon<name, op1, crn, crm, op2, reguse>;
+                bits<3> op2, bit nxs, RegValue reguse>
+  : TLBICommon<name, op1, crn, crm, op2, nxs, reguse>;
 
 class TLBIPEntry<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-                 bits<3> op2, RegValue reguse>
-  : TLBICommon<name, op1, crn, crm, op2, reguse>;
+                 bits<3> op2, bit nxs, RegValue reguse>
+  : TLBICommon<name, op1, crn, crm, op2, nxs, reguse>;
 
 multiclass TLBITableBase {
   def NAME # Table : GenericTable {
@@ -955,23 +956,19 @@ defvar TLBIBase = [
 ];
 
 foreach I = TLBIBase in {
-  def : TLBIEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-    let Encoding{7} = 0;
-  }
+  def : TLBIEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, 0, I.RegUse>;
 
-  def : TLBIEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-    let Encoding{7} = 1;
+  def : TLBIEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, 1, I.RegUse> {
     let ExtraRequires = ["AArch64::FeatureXS"];
   }
 
   if !eq(I.HasTLBIP, true) then {
-    def : TLBIPEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-      let Encoding{7} = 0;
+    def : TLBIPEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, 0, I.RegUse> {
       let Requires = ["AArch64::FeatureD128"];
     }
 
-    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-      let Encoding{7} = 1;
+    // *nxs variants are gated by `FEAT_D128` not `FEAT_XS`
+    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, 1, I.RegUse> {
       let Requires = ["AArch64::FeatureD128"];
     }
   }
@@ -1029,24 +1026,21 @@ defvar TLBIRMI = [
 ];
 
 foreach I = TLBIRMI in {
-  def : TLBIEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-    let Encoding{7} = 0;
+  def : TLBIEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, 0, I.RegUse> {
     let Requires = ["AArch64::FeatureTLB_RMI"];
   }
 
-  def : TLBIEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-    let Encoding{7} = 1;
+  def : TLBIEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, 1, I.RegUse> {
     let Requires = ["AArch64::FeatureXS"];
   }
 
   if !eq(I.HasTLBIP, true) then {
-    def : TLBIPEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-      let Encoding{7} = 0;
+    def : TLBIPEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, 0, I.RegUse> {
       let Requires = ["AArch64::FeatureD128"];
     }
 
-    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-      let Encoding{7} = 1;
+    // *nxs variants are gated by `FEAT_D128` not `FEAT_XS`
+    def : TLBIPEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, 1, I.RegUse> {
       let Requires = ["AArch64::FeatureD128"];
     }
   }
@@ -1063,9 +1057,8 @@ defvar TLBIRME = [
 
 let Requires = ["AArch64::FeatureRME"] in {
 foreach I = TLBIRME in {
-  def : TLBIEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-    let Encoding{7} = 0;
-  }
+  // No *nxs variants
+  def : TLBIEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, 0, I.RegUse>;
 }
 }
 
@@ -1079,14 +1072,9 @@ defvar TLBITLBIW = [
 
 let Requires = ["AArch64::FeatureTLBIW"] in {
 foreach I = TLBITLBIW in {
-  def : TLBIEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-    let Encoding{7} = 0;
-  }
-
-  def : TLBIEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, I.RegUse> {
-    let Encoding{7} = 1;
-    let ExtraRequires = ["AArch64::FeatureXS"];
-  }
+  // *nxs variants are gated by `FEAT_TLBIW` not `FEAT_XS`
+  def : TLBIEntry<I.Name, I.Op1, I.CRn, I.CRm, I.Op2, 0, I.RegUse>;
+  def : TLBIEntry<!strconcat(I.Name, "nXS"), I.Op1, I.CRn, I.CRm, I.Op2, 1, I.RegUse>;
 }
 }
 
