@@ -283,18 +283,18 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Kernel depends on %zu data copying events.\n", NumWaitEvents);
-  Error SyncErrors = Error::success();
+  Error AllErrors = Error::success();
   auto addError = [&](Error Err) {
-    SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
+    AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
   };
   CALL_ZE_HANDLE_ERROR(addError, zeCommandListAppendLaunchKernel, CmdList,
                        zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
                        WaitEvents);
   Lock.unlock();
-  if (SyncErrors) {
+  if (AllErrors) {
     if (auto Err = l0Device.releaseEvent(Event))
       addError(std::move(Err));
-    return SyncErrors;
+    return AllErrors;
   }
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
@@ -307,13 +307,14 @@ static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
                          L0DefaultTimeout);
     if (auto Err = l0Device.releaseEvent(Event))
       addError(std::move(Err));
+    if (AllErrors)
+      return AllErrors;
   }
-  if (!SyncErrors)
-    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-         "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
-         IdStr);
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
+       IdStr);
 
-  return SyncErrors;
+  return Plugin::success();
 }
 
 static Error launchKernelWithCmdQueue(L0DeviceTy &l0Device,
