@@ -415,7 +415,7 @@ void SwiftLanguageRuntime::SetupReflection() {
     return;
 
   LLDB_SCOPED_TIMER();
-  
+
   // The global ABI bit is read by the Swift runtime library.
   SetupABIBit();
   SetupExclusivity();
@@ -3318,7 +3318,7 @@ llvm::Expected<uint64_t> FindPrologueSize(Process &process,
                                                     eSymbolContextSymbol);
   if (!sc_ok || (!sc.symbol && !sc.function))
     return llvm::createStringError(llvm::formatv(
-        "Failed to find a symbol context for address {1:x}", load_address));
+        "Failed to find a symbol context for address {0:x}", load_address));
 
   uint64_t prologue_size = sc.symbol ? sc.symbol->GetPrologueByteSize()
                                      : sc.function->GetPrologueByteSize();
