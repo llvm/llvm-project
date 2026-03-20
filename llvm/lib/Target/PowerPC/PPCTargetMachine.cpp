@@ -39,6 +39,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -249,7 +250,9 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
   if (TT.isOSAIX())
     return CodeModel::Small;
 
-  assert(TT.isOSBinFormatELF() && "All remaining PPC OSes are ELF based.");
+  if (!TT.isOSBinFormatELF())
+    reportFatalUsageError(
+        "The only supported target OS's are AIX and ELF-based OS's");
 
   if (TT.isArch32Bit())
     return CodeModel::Small;
