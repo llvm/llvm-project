@@ -19,7 +19,7 @@ namespace clang::tidy::llvm_check {
 /// passed by reference instead.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/avoid-passing-as-ref.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/llvm/avoid-passing-as-ref.html
 class AvoidPassingAsRefCheck : public ClangTidyCheck {
 public:
   AvoidPassingAsRefCheck(StringRef Name, ClangTidyContext *Context);
