@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
@@ -430,8 +431,7 @@ static VectorType trimNonScalableUnitDims(VectorType oldType) {
 }
 
 static bool isUnitDimMask(Value maskDimSize) {
-  auto cst = maskDimSize.getDefiningOp<arith::ConstantIndexOp>();
-  return cst && cst.value() == 1;
+  return matchPattern(maskDimSize, m_One());
 }
 static bool isUnitDimMask(int64_t maskDimSize) { return maskDimSize == 1; }
 
