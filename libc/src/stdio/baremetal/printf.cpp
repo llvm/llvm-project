@@ -26,7 +26,12 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
                                  // destruction automatically.
   va_end(vlist);
 
+#ifdef LIBC_COPT_PRINTF_MODULAR
+  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
+  return vfprintf_internal<true>(stdout, format, args);
+#else
   return vfprintf_internal(stdout, format, args);
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -890,7 +890,8 @@ def CIR_IfOp : CIR_Op<"if", [
 def CIR_ConditionOp : CIR_Op<"condition", [
   Terminator,
   DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
-    "getSuccessorRegions"
+    "getSuccessorRegions",
+    "getMutableSuccessorOperands"
   ]>
 ]> {
   let summary = "Loop continuation condition.";
@@ -1037,7 +1038,9 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def CIR_ResumeOp : CIR_Op<"resume", [
-  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+    "getMutableSuccessorOperands"
+  ]>,
   Terminator,
   ParentOneOf<["cir::TryOp", "cir::CleanupScopeOp", "cir::FuncOp"]>
 ]> {
@@ -1276,6 +1279,74 @@ def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
       "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$cleanupBuilder)>
   ];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// CmpThreeWayOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
+  let summary = "Compare two values with C++ three-way comparison semantics";
+  let description = [{
+    The `cir.cmp3way` operation models the builtin `<=>` operator in C++20.
+    It takes two operands with the same type and produces a result indicating
+    the ordering between the two input operands.
+
+    The result of the operation is a signed integer that indicates the ordering
+    between the two input operands.
+
+    There are three kinds of ordering: strong, weak and partial ordering.
+    Comparing different types of values yields different kinds of orderings.
+    The `info` parameter gives the ordering kind and other necessary information
+    about the comparison.
+
+    Example:
+
+    ```mlir
+    !s32i = !cir.int<s, 32>
+
+    #cmpinfo_partial_ltn1eq0gt1unn127 =
+      #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
+    #cmpinfo_strong_ltn1eq0gt1 =
+      #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
+
+    %0 = cir.const #cir.int<0> : !s32i
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.cmp3way #cmpinfo_strong_ltn1eq0gt1 %0, %1 : !s32i -> !s8i
+
+    %3 = cir.const #cir.fp<0.0> : !cir.float
+    %4 = cir.const #cir.fp<1.0> : !cir.float
+    %5 = cir.cmp3way #cmpinfo_partial_ltn1eq0gt1unn127 %3, %4 : !cir.float -> !s8i
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_AnyType:$lhs,
+    CIR_AnyType:$rhs,
+    CIR_CmpThreeWayInfoAttr:$info
+  );
+
+  let results = (outs CIR_AnySIntType:$result);
+
+  let assemblyFormat = [{
+    qualified($info) $lhs `,` $rhs `:` qualified(type($lhs))
+    `->` qualified(type($result)) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Determine whether this three-way comparison produces a partial ordering
+    bool isPartialOrdering() {
+      cir::CmpOrdering o = getInfo().getOrdering();
+      return o == cir::CmpOrdering::Partial;
+    }
+
+    /// Determine whether this three-way comparison compares integral operands.
+    bool isIntegralComparison() {
+      return mlir::isa<cir::IntType>(getLhs().getType());
+    }
+  }];
 
   let hasLLVMLowering = false;
 }
@@ -2154,44 +2225,30 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
-// BinOpOverflowOp
+// Checked Binary Arithmetic Operations (with overflow)
 //===----------------------------------------------------------------------===//
 
-def CIR_BinOpOverflowKind : CIR_I32EnumAttr<
-  "BinOpOverflowKind", "checked binary arithmetic operation kind", [
-    I32EnumAttrCase<"Add", 0, "add">,
-    I32EnumAttrCase<"Sub", 1, "sub">,
-    I32EnumAttrCase<"Mul", 2, "mul">
-]>;
-
-def CIR_BinOpOverflowOp : CIR_Op<"binop.overflow", [Pure, SameTypeOperands]> {
-  let summary = "Perform binary integral arithmetic with overflow checking";
-  let description = [{
-    `cir.binop.overflow` performs binary arithmetic operations with overflow
-    checking on integral operands.
-
-    The `kind` argument specifies the kind of arithmetic operation to perform.
-    It can be either `add`, `sub`, or `mul`. The `lhs` and `rhs` arguments
-    specify the input operands of the arithmetic operation. The types of `lhs`
-    and `rhs` must be the same.
-
-    `cir.binop.overflow` produces two SSA values. `result` is the result of the
-    arithmetic operation truncated to its specified type. `overflow` is a
-    boolean value indicating whether overflow happens during the operation.
-
-    The exact semantic of this operation is as follows:
-
-      - `lhs` and `rhs` are promoted to an imaginary integral type that has
-        infinite precision.
-      - The arithmetic operation is performed on the promoted operands.
-      - The infinite-precision result is truncated to the type of `result`. The
-        truncated result is assigned to `result`.
-      - If the truncated result is equal to the un-truncated result, `overflow`
-        is assigned to false. Otherwise, `overflow` is assigned to true.
-  }];
+// Base class for binary arithmetic operations with overflow checking.
+//
+// Each op produces two SSA values: `result` is the arithmetic result truncated
+// to its specified type, and `overflow` is a boolean indicating whether
+// overflow occurred.
+//
+// The exact semantics are:
+//   - `lhs` and `rhs` are promoted to an imaginary infinite-precision
+//     integral type.
+//   - The arithmetic operation is performed on the promoted operands.
+//   - The infinite-precision result is truncated to the type of `result`.
+//   - `overflow` is true if the truncated result differs from the
+//     infinite-precision result.
+//
+// The type of `result` may differ from the operand type. This models C
+// builtins like `__builtin_*_overflow` where operands and the result can
+// have different widths or signedness.
+class CIR_BinOpOverflow<string mnemonic, list<Trait> traits = []>
+    : CIR_Op<mnemonic, !listconcat([Pure, SameTypeOperands], traits)> {
 
   let arguments = (ins
-    CIR_BinOpOverflowKind:$kind,
     CIR_IntType:$lhs,
     CIR_IntType:$rhs
   );
@@ -2199,32 +2256,61 @@ def CIR_BinOpOverflowOp : CIR_Op<"binop.overflow", [Pure, SameTypeOperands]> {
   let results = (outs CIR_IntType:$result, CIR_BoolType:$overflow);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
-    `(` qualified(type($result)) `,` qualified(type($overflow)) `)`
+    $lhs `,` $rhs `:` qualified(type($lhs)) `->` qualified(type($result))
     attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "cir::IntType":$resultTy,
-                   "cir::BinOpOverflowKind":$kind,
                    "mlir::Value":$lhs,
                    "mlir::Value":$rhs), [{
       auto overflowTy = cir::BoolType::get($_builder.getContext());
-      build($_builder, $_state, resultTy, overflowTy, kind, lhs, rhs);
+      build($_builder, $_state, resultTy, overflowTy, lhs, rhs);
     }]>
   ];
 
-  let extraLLVMLoweringPatternDecl = [{
-    static std::string getLLVMIntrinName(cir::BinOpOverflowKind opKind,
-                                         bool isSigned, unsigned width);
+}
 
-    struct EncompassedTypeInfo {
-      bool sign;
-      unsigned width;
-    };
+def CIR_AddOverflowOp : CIR_BinOpOverflow<"add.overflow", [Commutative]> {
+  let summary = "Integer addition with overflow checking";
+  let description = [{
+    `cir.add.overflow` performs addition with overflow checking on integral
+    operands. See `CIR_BinOpOverflow` for semantics.
 
-    static EncompassedTypeInfo computeEncompassedTypeWidth(cir::IntType operandTy,
-                                                           cir::IntType resultTy);
+    Example:
+
+    ```mlir
+    %result, %overflow = cir.add.overflow %a, %b : !u32i -> !u32i
+    %result, %overflow = cir.add.overflow %a, %b : !cir.int<s, 33> -> !s32i
+    ```
+  }];
+}
+
+def CIR_SubOverflowOp : CIR_BinOpOverflow<"sub.overflow"> {
+  let summary = "Integer subtraction with overflow checking";
+  let description = [{
+    `cir.sub.overflow` performs subtraction with overflow checking on integral
+    operands. See `CIR_BinOpOverflow` for semantics.
+
+    Example:
+
+    ```mlir
+    %result, %overflow = cir.sub.overflow %a, %b : !u32i -> !u32i
+    ```
+  }];
+}
+
+def CIR_MulOverflowOp : CIR_BinOpOverflow<"mul.overflow", [Commutative]> {
+  let summary = "Integer multiplication with overflow checking";
+  let description = [{
+    `cir.mul.overflow` performs multiplication with overflow checking on
+    integral operands. See `CIR_BinOpOverflow` for semantics.
+
+    Example:
+
+    ```mlir
+    %result, %overflow = cir.mul.overflow %a, %b : !u32i -> !u32i
+    ```
   }];
 }
 
@@ -2748,6 +2834,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
+                       OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
                        OptionalAttr<CIR_TLSModel>:$tls_model,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
@@ -2769,6 +2856,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     ($tls_model^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
+    (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
@@ -2789,6 +2877,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
       "llvm::StringRef":$sym_name,
       "mlir::Type":$sym_type,
       CArg<"bool", "false">:$isConstant,
+      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace,
       // CIR defaults to external linkage.
       CArg<"cir::GlobalLinkageKind",
            "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,

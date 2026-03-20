@@ -6598,6 +6598,11 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
+
+  // If the sdiv has an 'exact' bit we can use a simpler lowering.
+  if (N->getFlags().hasExact())
+    return BuildExactSDIV(*this, N, dl, DAG, Created);
+
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
@@ -6622,10 +6627,6 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
         !isOperationLegal(ISD::MUL, MulVT))
       return SDValue();
   }
-
-  // If the sdiv has an 'exact' bit we can use a simpler lowering.
-  if (N->getFlags().hasExact())
-    return BuildExactSDIV(*this, N, dl, DAG, Created);
 
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
 
@@ -6766,6 +6767,11 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
                                   bool IsAfterLegalTypes,
                                   SmallVectorImpl<SDNode *> &Created) const {
   SDLoc dl(N);
+
+  // If the udiv has an 'exact' bit we can use a simpler lowering.
+  if (N->getFlags().hasExact())
+    return BuildExactUDIV(*this, N, dl, DAG, Created);
+
   EVT VT = N->getValueType(0);
   EVT SVT = VT.getScalarType();
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
@@ -6790,10 +6796,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
         !isOperationLegal(ISD::MUL, MulVT))
       return SDValue();
   }
-
-  // If the udiv has an 'exact' bit we can use a simpler lowering.
-  if (N->getFlags().hasExact())
-    return BuildExactUDIV(*this, N, dl, DAG, Created);
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -8184,8 +8186,6 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   // If (1 << HBitWidth) % divisor == 1, we can add the two halves together and
   // then add in the carry.
-  // TODO: If we can't split it in half, we might be able to split into 3 or
-  // more pieces using a smaller bit width.
   if (HalfMaxPlus1.urem(Divisor).isOne()) {
     assert(!LL == !LH && "Expected both input halves or no input halves!");
     if (!LL)
@@ -8237,6 +8237,72 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                               DAG.getConstant(0, dl, HiLoVT));
       Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Carry);
     }
+  } else {
+    // If we cannot split in two halves, look for a smaller chunk width W
+    // such that (1 << W) % Divisor == 1.
+    unsigned BitWidth = VT.getScalarSizeInBits();
+    unsigned BestChunkWidth = 0;
+
+    // Determine the legal scalar integer type for chunk operations.
+    EVT LegalVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    unsigned LegalWidth = LegalVT.getScalarSizeInBits();
+    unsigned MaxChunk = std::min<unsigned>(LegalWidth, BitWidth);
+
+    // Search for I where 2^I % Divisor == 1
+    for (unsigned I = MaxChunk, E = MaxChunk / 2; I > E; --I) {
+      APInt Mod = APInt::getOneBitSet(Divisor.getBitWidth(), I).urem(Divisor);
+
+      if (Mod.isOne()) {
+        // Ensure (NumChunks * MaxChunkValue) doesn't overflow LegalVT
+        unsigned NumChunks = divideCeil(BitWidth, I);
+
+        // Ensure the sum won't overflow the hardware register (LegalWidth).
+        // Summing N chunks adds ceil(log2(N)) extra carry bits to the width.
+        // Safety check: Base Chunk Width (I) + Carry Bits <= Register Width.
+        if (I + llvm::bit_width(NumChunks - 1) <= LegalWidth) {
+          BestChunkWidth = I;
+          break;
+        }
+      }
+    }
+
+    if (!BestChunkWidth)
+      return false;
+
+    SDValue In =
+        LL ? DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH) : N->getOperand(0);
+    if (TrailingZeros) {
+      // Save the shifted off bits if we need the remainder.
+      if (Opcode != ISD::UDIV) {
+        APInt Mask = APInt::getLowBitsSet(BitWidth, TrailingZeros);
+        PartialRem =
+            DAG.getNode(ISD::AND, dl, VT, In, DAG.getConstant(Mask, dl, VT));
+      }
+      EVT ShiftVT = getShiftAmountTy(VT, DAG.getDataLayout());
+      In = DAG.getNode(ISD::SRL, dl, VT, In,
+                       DAG.getShiftAmountConstant(TrailingZeros, ShiftVT, dl));
+
+      std::tie(LL, LH) = DAG.SplitScalar(In, dl, HiLoVT, HiLoVT);
+    } else if (!LL) {
+      std::tie(LL, LH) = DAG.SplitScalar(In, dl, HiLoVT, HiLoVT);
+    }
+
+    SDValue TotalSum = DAG.getConstant(0, dl, LegalVT);
+    SDValue Mask = DAG.getConstant(
+        APInt::getLowBitsSet(LegalWidth, BestChunkWidth), dl, LegalVT);
+
+    for (unsigned I = 0; I < BitWidth; I += BestChunkWidth) {
+      SDValue Shift = DAG.getShiftAmountConstant(I, VT, dl);
+      SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
+      // Truncate to LegalVT
+      SDValue TruncChunk = DAG.getNode(ISD::TRUNCATE, dl, LegalVT, Chunk);
+      // For the last chunk, we might not need a mask if it's smaller than
+      // BestChunkWidth, but applying it is always safe.
+      SDValue MaskedChunk =
+          DAG.getNode(ISD::AND, dl, LegalVT, TruncChunk, Mask);
+      TotalSum = DAG.getNode(ISD::ADD, dl, LegalVT, TotalSum, MaskedChunk);
+    }
+    Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, TotalSum);
   }
 
   // If we didn't find a sum, we can't do the expansion.
@@ -8276,7 +8342,9 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     if (TrailingZeros) {
       RemL = DAG.getNode(ISD::SHL, dl, HiLoVT, RemL,
                          DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
-      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRem);
+
+      SDValue PartialRemLo = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, PartialRem);
+      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRemLo);
     }
     Result.push_back(RemL);
     Result.push_back(DAG.getConstant(0, dl, HiLoVT));
@@ -12998,9 +13066,11 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
   if (ResultVT.bitsGT(VecEltVT)) {
     // If the result type of vextract is wider than the load, then issue an
     // extending load instead.
-    ISD::LoadExtType ExtType = isLoadExtLegal(ISD::ZEXTLOAD, ResultVT, VecEltVT)
-                                   ? ISD::ZEXTLOAD
-                                   : ISD::EXTLOAD;
+    ISD::LoadExtType ExtType =
+        isLoadLegal(ResultVT, VecEltVT, Alignment,
+                    OriginalLoad->getAddressSpace(), ISD::ZEXTLOAD, false)
+            ? ISD::ZEXTLOAD
+            : ISD::EXTLOAD;
     Load = DAG.getExtLoad(ExtType, DL, ResultVT, OriginalLoad->getChain(),
                           NewPtr, MPI, VecEltVT, Alignment,
                           OriginalLoad->getMemOperand()->getFlags(),
