@@ -675,7 +675,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   if (std::optional<uint64_t> LDT = codegen::getExplicitLargeDataThreshold())
     Target->setLargeDataThreshold(*LDT);
 
-  assert(M && "Should have exited if we didn't have a module!");
   if (codegen::getFloatABIForCalls() != FloatABI::Default)
     Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
