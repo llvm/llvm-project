@@ -56,7 +56,9 @@ bb6:                                              ; preds = %bb5, %bb4, %bb2
 }
 
 ; Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none)
-declare i64 @llvm.smin.i64(i64, i64)
+declare i64 @llvm.smin.i64(i64, i64) #0
+
+attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 
 !0 = !{!"branch_weights", i32 -2147483648, i32 0}
 ;.
