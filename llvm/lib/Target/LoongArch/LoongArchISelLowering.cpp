@@ -9470,11 +9470,11 @@ static int getEstimateRefinementSteps(EVT VT,
 
 static bool
 isSupportedReciprocalEstimateType(EVT VT, const LoongArchSubtarget &Subtarget) {
+  assert(Subtarget.hasFrecipe() &&
+         "Reciprocal estimate queried on unsupported target");
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::f32:
-    // f32 is the minimal FP type for reciprocal estimate instructions. Since
-    // this query assumes the target supports such instructions, f32 is
-    // always supported.
+    // f32 is the base type for reciprocal estimate instructions.
     return true;
 
   case MVT::f64:
