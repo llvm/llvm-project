@@ -45,11 +45,10 @@ define i64 @load_cond_ga_dword(i64 %a, i32 %b, i32 %c) {
 ; RV64I-WITH-SFB:       # %bb.0:
 ; RV64I-WITH-SFB-NEXT:    sext.w a2, a2
 ; RV64I-WITH-SFB-NEXT:    sext.w a1, a1
-; RV64I-WITH-SFB-NEXT:    lui a3, %hi(ga)
-; RV64I-WITH-SFB-NEXT:    addi a3, a3, %lo(ga)
+; RV64I-WITH-SFB-NEXT:    lui a3, %hi(ga+8)
 ; RV64I-WITH-SFB-NEXT:    bne a1, a2, .LBB0_2
 ; RV64I-WITH-SFB-NEXT:  # %bb.1:
-; RV64I-WITH-SFB-NEXT:    ld a0, 8(a3)
+; RV64I-WITH-SFB-NEXT:    ld a0, %lo(ga+8)(a3)
 ; RV64I-WITH-SFB-NEXT:  .LBB0_2:
 ; RV64I-WITH-SFB-NEXT:    ret
   %addr = getelementptr i8, ptr @ga, i32 8
@@ -89,11 +88,10 @@ define i64 @load_cond_ga_word_sext(i64 %a, i32 %b, i32 %c) {
 ; RV64I-WITH-SFB:       # %bb.0:
 ; RV64I-WITH-SFB-NEXT:    sext.w a2, a2
 ; RV64I-WITH-SFB-NEXT:    sext.w a1, a1
-; RV64I-WITH-SFB-NEXT:    lui a3, %hi(ga)
-; RV64I-WITH-SFB-NEXT:    addi a3, a3, %lo(ga)
+; RV64I-WITH-SFB-NEXT:    lui a3, %hi(ga+12)
 ; RV64I-WITH-SFB-NEXT:    bne a1, a2, .LBB1_2
 ; RV64I-WITH-SFB-NEXT:  # %bb.1:
-; RV64I-WITH-SFB-NEXT:    lw a0, 12(a3)
+; RV64I-WITH-SFB-NEXT:    lw a0, %lo(ga+12)(a3)
 ; RV64I-WITH-SFB-NEXT:  .LBB1_2:
 ; RV64I-WITH-SFB-NEXT:    ret
   %addr = getelementptr i8, ptr @ga, i32 12
@@ -107,11 +105,10 @@ define i64 @load_cond_ga_word_sext(i64 %a, i32 %b, i32 %c) {
 define i64 @load_cond_ga_word_zext(i64 %a, i32 %b, i32 %c) {
 ; RV32I-WITH-SFB-LABEL: load_cond_ga_word_zext:
 ; RV32I-WITH-SFB:       # %bb.0:
-; RV32I-WITH-SFB-NEXT:    lui a4, %hi(ga)
-; RV32I-WITH-SFB-NEXT:    addi a4, a4, %lo(ga)
+; RV32I-WITH-SFB-NEXT:    lui a4, %hi(ga+12)
 ; RV32I-WITH-SFB-NEXT:    bne a2, a3, .LBB2_2
 ; RV32I-WITH-SFB-NEXT:  # %bb.1:
-; RV32I-WITH-SFB-NEXT:    lw a0, 12(a4)
+; RV32I-WITH-SFB-NEXT:    lw a0, %lo(ga+12)(a4)
 ; RV32I-WITH-SFB-NEXT:  .LBB2_2:
 ; RV32I-WITH-SFB-NEXT:    bne a2, a3, .LBB2_4
 ; RV32I-WITH-SFB-NEXT:  # %bb.3:
@@ -121,10 +118,10 @@ define i64 @load_cond_ga_word_zext(i64 %a, i32 %b, i32 %c) {
 ;
 ; XQCI-WITH-SFB-LABEL: load_cond_ga_word_zext:
 ; XQCI-WITH-SFB:       # %bb.0:
-; XQCI-WITH-SFB-NEXT:    qc.e.li a4, ga
+; XQCI-WITH-SFB-NEXT:    qc.e.li a4, ga+12
 ; XQCI-WITH-SFB-NEXT:    bne a2, a3, .LBB2_2
 ; XQCI-WITH-SFB-NEXT:  # %bb.1:
-; XQCI-WITH-SFB-NEXT:    lw a0, 12(a4)
+; XQCI-WITH-SFB-NEXT:    lw a0, 0(a4)
 ; XQCI-WITH-SFB-NEXT:  .LBB2_2:
 ; XQCI-WITH-SFB-NEXT:    bne a2, a3, .LBB2_4
 ; XQCI-WITH-SFB-NEXT:  # %bb.3:
@@ -136,11 +133,10 @@ define i64 @load_cond_ga_word_zext(i64 %a, i32 %b, i32 %c) {
 ; RV64I-WITH-SFB:       # %bb.0:
 ; RV64I-WITH-SFB-NEXT:    sext.w a2, a2
 ; RV64I-WITH-SFB-NEXT:    sext.w a1, a1
-; RV64I-WITH-SFB-NEXT:    lui a3, %hi(ga)
-; RV64I-WITH-SFB-NEXT:    addi a3, a3, %lo(ga)
+; RV64I-WITH-SFB-NEXT:    lui a3, %hi(ga+12)
 ; RV64I-WITH-SFB-NEXT:    bne a1, a2, .LBB2_2
 ; RV64I-WITH-SFB-NEXT:  # %bb.1:
-; RV64I-WITH-SFB-NEXT:    lwu a0, 12(a3)
+; RV64I-WITH-SFB-NEXT:    lwu a0, %lo(ga+12)(a3)
 ; RV64I-WITH-SFB-NEXT:  .LBB2_2:
 ; RV64I-WITH-SFB-NEXT:    ret
   %addr = getelementptr i8, ptr @ga, i32 12
@@ -163,10 +159,10 @@ define i32 @load_cond_ga_word(i32 %a, i32 %b, i32 %c) {
 ;
 ; XQCI-WITH-SFB-LABEL: load_cond_ga_word:
 ; XQCI-WITH-SFB:       # %bb.0:
-; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga
+; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga+4
 ; XQCI-WITH-SFB-NEXT:    bne a1, a2, .LBB3_2
 ; XQCI-WITH-SFB-NEXT:  # %bb.1:
-; XQCI-WITH-SFB-NEXT:    lw a0, 4(a3)
+; XQCI-WITH-SFB-NEXT:    lw a0, 0(a3)
 ; XQCI-WITH-SFB-NEXT:  .LBB3_2:
 ; XQCI-WITH-SFB-NEXT:    ret
 ;
@@ -199,10 +195,10 @@ define i32 @load_cond_ga_half_sext(i32 %a, i32 %b, i32 %c) {
 ;
 ; XQCI-WITH-SFB-LABEL: load_cond_ga_half_sext:
 ; XQCI-WITH-SFB:       # %bb.0:
-; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga
+; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga+6
 ; XQCI-WITH-SFB-NEXT:    bne a1, a2, .LBB4_2
 ; XQCI-WITH-SFB-NEXT:  # %bb.1:
-; XQCI-WITH-SFB-NEXT:    lh a0, 6(a3)
+; XQCI-WITH-SFB-NEXT:    lh a0, 0(a3)
 ; XQCI-WITH-SFB-NEXT:  .LBB4_2:
 ; XQCI-WITH-SFB-NEXT:    ret
 ;
@@ -236,10 +232,10 @@ define i32 @load_cond_ga_half_zext(i32 %a, i32 %b, i32 %c) {
 ;
 ; XQCI-WITH-SFB-LABEL: load_cond_ga_half_zext:
 ; XQCI-WITH-SFB:       # %bb.0:
-; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga
+; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga+6
 ; XQCI-WITH-SFB-NEXT:    bne a1, a2, .LBB5_2
 ; XQCI-WITH-SFB-NEXT:  # %bb.1:
-; XQCI-WITH-SFB-NEXT:    lhu a0, 6(a3)
+; XQCI-WITH-SFB-NEXT:    lhu a0, 0(a3)
 ; XQCI-WITH-SFB-NEXT:  .LBB5_2:
 ; XQCI-WITH-SFB-NEXT:    ret
 ;
@@ -273,10 +269,10 @@ define i32 @load_cond_ga_byte_sext(i32 %a, i32 %b, i32 %c) {
 ;
 ; XQCI-WITH-SFB-LABEL: load_cond_ga_byte_sext:
 ; XQCI-WITH-SFB:       # %bb.0:
-; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga
+; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga+7
 ; XQCI-WITH-SFB-NEXT:    bne a1, a2, .LBB6_2
 ; XQCI-WITH-SFB-NEXT:  # %bb.1:
-; XQCI-WITH-SFB-NEXT:    lb a0, 7(a3)
+; XQCI-WITH-SFB-NEXT:    lb a0, 0(a3)
 ; XQCI-WITH-SFB-NEXT:  .LBB6_2:
 ; XQCI-WITH-SFB-NEXT:    ret
 ;
@@ -310,10 +306,10 @@ define i32 @load_cond_ga_byte_zext(i32 %a, i32 %b, i32 %c) {
 ;
 ; XQCI-WITH-SFB-LABEL: load_cond_ga_byte_zext:
 ; XQCI-WITH-SFB:       # %bb.0:
-; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga
+; XQCI-WITH-SFB-NEXT:    qc.e.li a3, ga+7
 ; XQCI-WITH-SFB-NEXT:    bne a1, a2, .LBB7_2
 ; XQCI-WITH-SFB-NEXT:  # %bb.1:
-; XQCI-WITH-SFB-NEXT:    lbu a0, 7(a3)
+; XQCI-WITH-SFB-NEXT:    lbu a0, 0(a3)
 ; XQCI-WITH-SFB-NEXT:  .LBB7_2:
 ; XQCI-WITH-SFB-NEXT:    ret
 ;
@@ -350,10 +346,10 @@ define i32 @load_cond_ga_word_imm(i32 %a, i32 %b) {
 ;
 ; XQCI-WITH-SFB-LABEL: load_cond_ga_word_imm:
 ; XQCI-WITH-SFB:       # %bb.0:
-; XQCI-WITH-SFB-NEXT:    qc.e.li a2, ga
+; XQCI-WITH-SFB-NEXT:    qc.e.li a2, ga+4
 ; XQCI-WITH-SFB-NEXT:    qc.bnei a1, 14, .LBB8_2
 ; XQCI-WITH-SFB-NEXT:  # %bb.1:
-; XQCI-WITH-SFB-NEXT:    lw a0, 4(a2)
+; XQCI-WITH-SFB-NEXT:    lw a0, 0(a2)
 ; XQCI-WITH-SFB-NEXT:  .LBB8_2:
 ; XQCI-WITH-SFB-NEXT:    ret
 ;
