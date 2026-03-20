@@ -16,12 +16,12 @@
 
 #include "../../ModelStringConversions.h"
 #include "JSONEntitySummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntitySummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/FormatProviders.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"

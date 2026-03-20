@@ -84,69 +84,27 @@ protected:
   static auto &get##FIELD_NAME(CLASS &X) { return X.FIELD_NAME; }
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/PrivateFieldNames.def"
 
-  /// Generates a per-format plugin registry for analysis result
-  /// serializers and deserializers.
+  /// Per-format plugin registry for analysis result (de)serializers.
   ///
   /// Each concrete format (e.g. JSONFormat) instantiates this template once
-  /// via a \c using alias, then exposes that alias publicly so that analysis
-  /// authors can register (de)serialization support with a single declaration:
+  /// via a public \c using alias. Analysis authors register support with:
   ///
-  ///   static MyFormat::AnalysisResultRegistryGenerator::Add<MyAnalysisResult>
+  ///   static MyFormat::AnalysisResultRegistry::Add<MyAnalysisResult>
   ///       Reg(serializeFn, deserializeFn);
   ///
-  /// ---
-  /// Design overview
-  /// ---
+  /// The serializer receives \c const MyAnalysisResult & directly — the
+  /// \c Add wrapper handles the downcast from \c AnalysisResult internally.
   ///
-  /// **Registry isolation via \p FormatT.**
-  /// The underlying store is \c llvm::Registry<Entry>, which is a global
-  /// linked list keyed on the \c Entry type. Because \c Entry is a member of
-  /// this template, each \c (FormatT, SerializerFn, DeserializerFn)
-  /// instantiation produces a distinct \c Entry type and therefore a distinct
-  /// \c llvm::Registry — even if two formats happen to share the same
-  /// serializer/deserializer function signatures. The \p FormatT parameter
-  /// exists solely to provide this isolation; it is otherwise unused inside
-  /// the template body.
+  /// \p FormatT is otherwise unused — it exists because \c llvm::Registry
+  /// is keyed on the \c Entry type, so two formats that happen to share the
+  /// same serializer/deserializer signatures would collide without a
+  /// disambiguating template parameter.
   ///
-  /// **Bridging \c function_ref into \c llvm::Registry.**
-  /// \c llvm::function_ref is a non-owning view of a callable — it cannot be
-  /// stored inside the registry because the registry only keeps nullary
-  /// factories of the form <tt>[]{ return make_unique<ConcreteEntry>(); }</tt>
-  /// that capture no state. Two mechanisms bridge this gap:
-  ///
-  ///   1. *Function-local statics as per-analysis storage.*
-  ///      Inside \c Add<AnalysisResultT>::Add(...), two function-local statics
-  ///      — \c SavedSerialize and \c SavedDeserialize — are initialized from
-  ///      the constructor arguments on the first (and only) call. Because
-  ///      \c Add<T>::Add(...) is a distinct function for each \c T, each
-  ///      analysis type gets its own pair of statics with program lifetime,
-  ///      giving the \c function_ref values a stable home.
-  ///
-  ///   2. *\c ConcreteEntry as a local struct.*
-  ///      \c ConcreteEntry is defined inside the \c Add constructor body so
-  ///      that its default constructor can read \c SavedSerialize and
-  ///      \c SavedDeserialize from the enclosing function scope. When
-  ///      \c llvm::Registry later calls \c E.instantiate() during \c lookup,
-  ///      it invokes \c ConcreteEntry(), which re-wraps those stored values
-  ///      into a fresh \c Entry — reconstructing the \c function_ref from the
-  ///      same stable underlying callables.
-  ///
-  /// **One-time registration via a function-local static \c Reg.**
-  /// \c static typename RegistryT::template Add<ConcreteEntry> Reg(NameStr,"")
-  /// is also a function-local static. C++ guarantees it is initialized exactly
-  /// once, on the first call to \c Add<T>::Add(...). Its constructor appends a
-  /// node to the \c llvm::Registry linked list, associating \c NameStr with
-  /// the \c ConcreteEntry factory. All subsequent calls to \c Add<T>::Add(...)
-  /// hit the \c Registered guard first and abort with a fatal error, making
-  /// duplicate registrations a detectable programmer mistake rather than a
-  /// silent no-op.
-  ///
-  /// **Lookup.**
-  /// \c lookup iterates \c RegistryT::entries() and compares each node's name
-  /// (available directly on the entry node without instantiation) against the
-  /// requested \c AnalysisName. Only the matching node is instantiated via
-  /// \c E.instantiate(), which invokes \c ConcreteEntry() and returns the
-  /// stored \c function_ref pair.
+  /// \c function_ref is non-owning, but \c llvm::Registry only stores
+  /// nullary factories (no captured state). Function-local statics inside
+  /// \c Add<T>::Add(...) give each analysis's \c function_ref values a
+  /// stable, program-lifetime home, and a local \c ConcreteEntry struct
+  /// reads them back when the registry instantiates the factory.
   template <class FormatT, class SerializerFn, class DeserializerFn>
   class AnalysisResultRegistryGenerator {
   public:
@@ -161,14 +119,32 @@ protected:
     using RegistryT = llvm::Registry<Entry>;
 
     template <class AnalysisResultT> struct Add {
-      Add(SerializerFn Serialize, DeserializerFn Deserialize) {
+      /// Extracts the typed serializer signature from \c SerializerFn.
+      /// Given \c function_ref<R(const AnalysisResult &, Args...)>, produces
+      /// a function-pointer type \c R(*)(const AnalysisResultT &, Args...) and
+      /// a static \c wrap() that downcasts and forwards.
+      template <class> struct SerializerAdapter;
+      template <class R, class... Args>
+      struct SerializerAdapter<
+          llvm::function_ref<R(const AnalysisResult &, Args...)>> {
+        using TypedFnPtr = R (*)(const AnalysisResultT &, Args...);
+        static inline TypedFnPtr Saved = nullptr;
+        static R wrap(const AnalysisResult &Base, Args... args) {
+          return Saved(static_cast<const AnalysisResultT &>(Base), args...);
+        }
+      };
+      using SA = SerializerAdapter<SerializerFn>;
+
+      Add(typename SA::TypedFnPtr TypedSerialize, DeserializerFn Deserialize) {
         static bool Registered = false;
         if (Registered) {
           ErrorBuilder::fatal("support is already registered for analysis: {0}",
                               AnalysisResultT::analysisName());
         }
         Registered = true;
-        static SerializerFn SavedSerialize = Serialize;
+        SA::Saved = TypedSerialize;
+        static auto *SerializeWrap = &SA::wrap;
+        static SerializerFn SavedSerialize(SerializeWrap);
         static DeserializerFn SavedDeserialize = Deserialize;
 
         struct ConcreteEntry : Entry {

@@ -19,7 +19,6 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Serialization/JSONFormatTest/JSONFormatTest.cpp
   Serialization/JSONFormatTest/LUSummaryTest.cpp
   Serialization/JSONFormatTest/TUSummaryTest.cpp
-  Serialization/JSONFormatTest/WPASuiteTest.cpp
   SummaryData/SummaryDataTest.cpp
   SummaryNameTest.cpp
   TestFixture.cpp

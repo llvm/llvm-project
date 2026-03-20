@@ -44,7 +44,7 @@ namespace path = llvm::sys::path;
 // Summary Type
 //===----------------------------------------------------------------------===//
 
-enum class SummaryType { TU, LU };
+enum class SummaryType { TU, LU, WPA };
 
 //===----------------------------------------------------------------------===//
 // Command-Line Options
@@ -62,7 +62,9 @@ cl::list<std::string> LoadPlugins("load",
 cl::opt<SummaryType> Type(
     "type", cl::desc("Summary type (required unless --list is given)"),
     cl::values(clEnumValN(SummaryType::TU, "tu", "Translation unit summary"),
-               clEnumValN(SummaryType::LU, "lu", "Link unit summary")),
+               clEnumValN(SummaryType::LU, "lu", "Link unit summary"),
+               clEnumValN(SummaryType::WPA, "wpa",
+                          "Whole-program analysis suite")),
     cl::cat(SsafFormatCategory));
 
 cl::opt<std::string> InputPath(cl::Positional, cl::desc("<input file>"),
@@ -337,6 +339,10 @@ void convert(const FormatInput &FI) {
       run(FI, &SerializationFormat::readLUSummary,
           &SerializationFormat::writeLUSummary);
     }
+    return;
+  case SummaryType::WPA:
+    run(FI, &SerializationFormat::readWPASuite,
+        &SerializationFormat::writeWPASuite);
     return;
   }
 
