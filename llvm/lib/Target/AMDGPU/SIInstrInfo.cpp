@@ -5260,12 +5260,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       break;
     }
     case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
+    case AMDGPU::OPERAND_INPUT_MODS:
       if (!MI.getOperand(i).isImm() || !isInlineConstant(MI, i)) {
         ErrInfo = "Expected inline constant for operand.";
         return false;
       }
       break;
-    case AMDGPU::OPERAND_INPUT_MODS:
     case AMDGPU::OPERAND_SDWA_VOPC_DST:
     case AMDGPU::OPERAND_KIMM16:
       break;
@@ -5548,28 +5548,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (isVOP3(MI) && UsesLiteral && !ST.hasVOP3Literal()) {
       ErrInfo = "VOP3 instruction uses literal";
       return false;
-    }
-
-    // Verify VOP3/VOP3P source modifiers.
-    if (isVOP3(MI) || isVOP3P(MI)) {
-      int Src0ModIdx =
-          AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0_modifiers);
-      int Src1ModIdx =
-          AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1_modifiers);
-      int Src2ModIdx =
-          AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2_modifiers);
-
-      for (int ModIdx : {Src0ModIdx, Src1ModIdx, Src2ModIdx}) {
-        if (ModIdx == -1)
-          continue;
-
-        const MachineOperand &MO = MI.getOperand(ModIdx);
-        if (!MO.isImm()) {
-          ErrInfo =
-              "Source modifier of VOP3/VOP3P instruction should be immediate";
-          return false;
-        }
-      }
     }
   }
 
