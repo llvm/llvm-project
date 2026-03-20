@@ -6,8 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_cospi.h"
-#include "clc/math/clc_sincospi.h"
-
-#define __CLC_BODY "clc_cospi.inc"
-#include "clc/math/gentype.inc"
+_CLC_DECL _CLC_OVERLOAD __CLC_INTN
+__clc_piArgReductionS(private __CLC_GENTYPE *r, __CLC_GENTYPE x);

@@ -41,6 +41,33 @@ __clc_sincos_reduced_eval(__CLC_FLOATN x) {
   return ret;
 }
 
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_SINCOS_RET_GENTYPE
+__clc_sincospi_reduced_eval(__CLC_GENTYPE x) {
+  __CLC_GENTYPE t = x * x;
+
+  __CLC_GENTYPE sx =
+      __clc_mad(t,
+                __clc_mad(t, __clc_mad(t, 0x1.eb5482p-3f, -0x1.3e497cp-1f),
+                          0x1.468e6cp+1f),
+                -0x1.4abc1cp+2f);
+  sx = x * t * sx;
+  sx = __clc_mad(x, 0x1.921fb6p+1f, sx);
+
+  __CLC_GENTYPE cx = __clc_mad(
+      t,
+      __clc_mad(t,
+                __clc_mad(t, __clc_mad(t, 0x1.97ca88p-5f, 0x1.c85d3ap-3f),
+                          -0x1.55a3b4p+0f),
+                0x1.03c1a6p+2f),
+      -0x1.3bd3ccp+2f);
+  cx = __clc_mad(t, cx, 1.0f);
+
+  __CLC_SINCOS_RET_GENTYPE ret;
+  ret.cos = cx;
+  ret.sin = sx;
+  return ret;
+}
+
 // Evaluate single precisions sin and cos of value in interval [-pi/4, pi/4]
 _CLC_DEF _CLC_OVERLOAD void __clc_sincos_piby4(__CLC_FLOATN x,
                                                private __CLC_FLOATN *sinval,
