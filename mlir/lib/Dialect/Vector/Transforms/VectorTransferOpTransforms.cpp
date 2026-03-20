@@ -526,23 +526,23 @@ class TransferReadDropUnitDimsPattern
     Value maskOp = transferReadOp.getMask();
     if (maskOp) {
       LDBG() << "  -> Processing mask operation";
-      FailureOr<Value> rankReducedMask = failure();
+      FailureOr<Value> rankReducedMaskOp = failure();
       if (auto createMaskOp = maskOp.getDefiningOp<vector::CreateMaskOp>())
-        rankReducedMask =
+        rankReducedMaskOp =
             maskDropNonScalableUnitDims(rewriter, loc, createMaskOp);
       else if (auto constantMaskOp =
                    maskOp.getDefiningOp<vector::ConstantMaskOp>())
-        rankReducedMask =
+        rankReducedMaskOp =
             maskDropNonScalableUnitDims(rewriter, loc, constantMaskOp);
 
-      if (failed(rankReducedMask)) {
+      if (failed(rankReducedMaskOp)) {
         LDBG() << "  -> Failed to reduce mask dimensions";
         return rewriter.notifyMatchFailure(
             transferReadOp,
             "unsupported mask op, only 'vector.create_mask' and "
             "'vector.constant_mask' are currently supported");
       }
-      maskOp = *rankReducedMask;
+      maskOp = *rankReducedMaskOp;
       LDBG() << "  -> Successfully reduced mask dimensions";
     }
 
