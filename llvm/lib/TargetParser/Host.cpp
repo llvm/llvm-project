@@ -682,7 +682,7 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
   if (EBX == 0x68747541 && EDX == 0x69746e65 && ECX == 0x444d4163)
     return VendorSignatures::AUTHENTIC_AMD;
 
-  // "Hygo nGen uien"
+  // "Hygo nGen uine"
   if (EBX == 0x6f677948 && EDX == 0x6e65476e && ECX == 0x656e6975)
     return VendorSignatures::HYGON_GENUINE;
 
