@@ -83,10 +83,9 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index,
                   OB.getFileName());
     return;
   }
-  if (InnerBinaries.empty()) {
-    reportWarning("nested OffloadBinary contains no entries", OB.getFileName());
-    return;
-  }
+  assert(!InnerBinaries.empty() &&
+         "An offload binary with a magic number should contain at least one "
+         "binary");
 
   outs() << Indent(Level) << left_justify("nested images", 16)
          << InnerBinaries.size() << "\n";
