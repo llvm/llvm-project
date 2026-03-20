@@ -27,6 +27,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Transforms/IPO/OpenMPOpt.h"
 
 using namespace llvm;
 
@@ -220,6 +221,10 @@ static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
 }
 
 static bool lowerCtorsAndDtors(Module &M) {
+  // Only run this pass for OpenMP offload compilation
+  if (!llvm::omp::isOpenMPDevice(M))
+    return false;
+
   bool Modified = false;
   Modified |= createInitOrFiniKernel(M, "llvm.global_ctors", /*IsCtor =*/true);
   Modified |= createInitOrFiniKernel(M, "llvm.global_dtors", /*IsCtor =*/false);
