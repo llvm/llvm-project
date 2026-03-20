@@ -65,6 +65,7 @@ class InitListExpr;
 class HLSLBufferDecl;
 class HLSLRootSignatureDecl;
 class HLSLVkBindingAttr;
+class HLSLVkExtExtensionAttr;
 class HLSLResourceBindingAttr;
 class Type;
 class RecordType;

@@ -1842,6 +1842,14 @@ void SemaHLSL::handleVkBindingAttr(Decl *D, const ParsedAttr &AL) {
                  HLSLVkBindingAttr(getASTContext(), AL, Binding, Set));
 }
 
+void SemaHLSL::handleVkExtExtensionAttr(Decl *D, const ParsedAttr &AL) {
+  StringRef Str;
+  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str))
+    return;
+  D->addAttr(::new (getASTContext())
+                 HLSLVkExtExtensionAttr(getASTContext(), AL, Str));
+}
+
 void SemaHLSL::handleVkLocationAttr(Decl *D, const ParsedAttr &AL) {
   uint32_t Location;
   if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Location))

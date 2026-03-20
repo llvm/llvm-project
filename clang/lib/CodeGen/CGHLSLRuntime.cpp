@@ -32,6 +32,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -468,12 +469,44 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   LayoutTypes[StructType] = LayoutTy;
 }
 
+class VkExtExtensionVisitor
+    : public RecursiveASTVisitor<VkExtExtensionVisitor> {
+  llvm::StringSet<> &Extensions;
+
+public:
+  VkExtExtensionVisitor(llvm::StringSet<> &Exts) : Extensions(Exts) {}
+  bool VisitDecl(Decl *D) {
+    for (const auto *ExtAttr : D->specific_attrs<HLSLVkExtExtensionAttr>()) {
+      Extensions.insert(ExtAttr->getExtensionName());
+    }
+    return true;
+  }
+};
+
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
   auto &CodeGenOpts = CGM.getCodeGenOpts();
   auto &LangOpts = CGM.getLangOpts();
   llvm::Module &M = CGM.getModule();
   Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV()) {
+    llvm::StringSet<> SPIRVExtensions;
+    VkExtExtensionVisitor Visitor(SPIRVExtensions);
+    Visitor.TraverseDecl(CGM.getContext().getTranslationUnitDecl());
+
+    if (!SPIRVExtensions.empty()) {
+      llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+      llvm::NamedMDNode *SpirvExtMD =
+          CGM.getModule().getOrInsertNamedMetadata("spirv.ext");
+
+      for (const auto &Ext : SPIRVExtensions) {
+        auto *MStr = llvm::MDString::get(Ctx, Ext.getKey());
+        SpirvExtMD->addOperand(llvm::MDNode::get(Ctx, MStr));
+      }
+    }
+  }
+
   if (T.getArch() == Triple::ArchType::dxil)
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
   if (CodeGenOpts.ResMayAlias)

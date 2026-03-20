@@ -170,6 +170,7 @@ public:
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
   void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkExtExtensionAttr(Decl *D, const ParsedAttr &AL);
   void handleVkLocationAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);

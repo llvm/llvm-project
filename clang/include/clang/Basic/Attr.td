@@ -4991,6 +4991,14 @@ def HLSLVkBinding : InheritableAttr {
   let Documentation = [HLSLVkBindingDocs];
 }
 
+def HLSLVkExtExtension : InheritableAttr {
+  let Spellings = [CXX11<"vk", "ext_extension">];
+  let Subjects = SubjectList<[Function, Var, Field, TypedefName, Tag, HLSLBufferObj], ErrorDiag>;
+  let Args = [StringArgument<"ExtensionName">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkExtExtensionDocs];
+}
+
 def HLSLResourceBinding: InheritableAttr {
   let Spellings = [HLSLAnnotation<"register">];
   let Subjects = SubjectList<[HLSLBufferObj, ExternalGlobalVar], ErrorDiag>;

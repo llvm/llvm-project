@@ -9181,6 +9181,13 @@ The descriptor set is optional and defaults to 0 if not provided.
   }];
 }
 
+def HLSLVkExtExtensionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``[[vk::ext_extension]]`` attribute allows you to explicitly specify the required SPIR-V extensions for a shader. This is particularly useful for ensuring that the generated SPIR-V code includes the necessary extensions for certain features or capabilities.
+  }];
+}
+
 def HLSLVkLocationDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
