@@ -6817,11 +6817,18 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
   const unsigned SVTBits = SVT.getSizeInBits();
 
+  // Allow i32 to be widened to i64 for uncooperative divisors if i64 MULHU or
+  // UMUL_LOHI is supported.
+  const EVT WideSVT = MVT::i64;
+  const bool HasWideMULHU =
+      VT == MVT::i32 &&
+      isOperationLegalOrCustom(ISD::MULHU, WideSVT, IsAfterLegalization);
+  const bool HasWideUMUL_LOHI =
+      VT == MVT::i32 &&
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
+  const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
+
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
-  const bool HasWideVT64MULHU =
-      isOperationLegalOrCustom(ISD::MULHU, MVT::i64, IsAfterLegalization);
-  const bool HasWideVT64UMUL_LOHI =
-      isOperationLegalOrCustom(ISD::UMUL_LOHI, MVT::i64, IsAfterLegalization);
   bool UseWiden = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
@@ -6840,8 +6847,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       PreShift = PostShift = DAG.getUNDEF(ShSVT);
       MagicFactor = NPQFactor = DAG.getUNDEF(SVT);
     } else {
-      const bool AllowWiden = (EltBits == 32 && !VT.isVector() &&
-                               (HasWideVT64MULHU || HasWideVT64UMUL_LOHI));
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
@@ -6850,7 +6855,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
       if (magics.Widen) {
         UseWiden = true;
-        MagicFactor = DAG.getConstant(magics.Magic, dl, MVT::i64);
+        MagicFactor = DAG.getConstant(magics.Magic, dl, WideSVT);
       } else {
         MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
       }
@@ -6906,18 +6911,20 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
 
   if (UseWiden) {
-    // Compute: (i64(x) * MagicFactor) >> 64
-    SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, N0);
+    // Compute: (WideSVT(x) * MagicFactor) >> WideSVTBits.
+    SDValue WideN0 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideSVT, N0);
 
-    // Perform 64x64 -> 128 multiplication and extract high 64 bits
+    // Perform WideSVTxWideSVT -> 2*WideSVT multiplication and extract high
+    // WideSVT bits
     SDValue High;
-    if (HasWideVT64MULHU) {
-      High = DAG.getNode(ISD::MULHU, dl, MVT::i64, X64, MagicFactor);
+    if (HasWideMULHU) {
+      High = DAG.getNode(ISD::MULHU, dl, WideSVT, WideN0, MagicFactor);
     } else {
+      assert(HasWideUMUL_LOHI);
       SDValue LoHi =
-          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(MVT::i64, MVT::i64),
-                      X64, MagicFactor);
-      High = SDValue(LoHi.getNode(), 1);
+          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(WideSVT, WideSVT),
+                      WideN0, MagicFactor);
+      High = LoHi.getValue(1);
     }
 
     Created.push_back(High.getNode());
