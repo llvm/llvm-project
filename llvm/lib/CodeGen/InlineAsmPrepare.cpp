@@ -116,7 +116,6 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
     std::string NewConstraint;
 
     auto I = Constraint.begin(), E = Constraint.end();
-    bool IsTied = false;
     bool IsOutput = false;
     bool HasIndirect = false;
 
@@ -137,16 +136,13 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
     if (*I == '+') {
       ++I;
       NewConstraint += '+';
-      IsTied = true;
     }
     if (I == E)
       return {std::string(), MemoryEffects::none()};
 
     std::string RestConstraint(I, E);
     if (isRegMemConstraint(RestConstraint)) {
-      if (!IsOutput || IsTied)
-        NewME |= MemoryEffects::argMemOnly(ModRefInfo::Ref);
-      if (IsOutput || IsTied)
+      if (IsOutput)
         NewME |= MemoryEffects::argMemOnly(ModRefInfo::Mod);
       if (!HasIndirect)
         NewConstraint += '*';
@@ -156,27 +152,6 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
   }
 
   return {llvm::join(Constraints, ","), NewME};
-}
-
-/// Build a map of tied constraints. TiedOutput[i] = j means Constraint i is an
-/// input tied to output constraint j.
-static void
-buildTiedConstraintMap(const InlineAsm::ConstraintInfoVector &Constraints,
-                       SmallVectorImpl<int> &TiedOutput) {
-  for (unsigned I = 0, E = Constraints.size(); I != E; ++I) {
-    const InlineAsm::ConstraintInfo &C = Constraints[I];
-    if (C.Type == InlineAsm::isOutput && C.hasMatchingInput()) {
-      int InputIdx = C.MatchingInput;
-      if (InputIdx >= 0 && InputIdx < (int)Constraints.size())
-        TiedOutput[InputIdx] = I;
-    }
-
-    if (C.Type == InlineAsm::isInput && C.hasMatchingInput()) {
-      int OutputIdx = C.MatchingInput;
-      if (OutputIdx >= 0 && OutputIdx < (int)Constraints.size())
-        TiedOutput[I] = OutputIdx;
-    }
-  }
 }
 
 /// Process an output constraint, creating allocas for converted constraints.
@@ -208,26 +183,10 @@ static void processOutputConstraint(
 /// Process an input constraint, handling tied constraints and conversions.
 static void processInputConstraint(
     const InlineAsm::ConstraintInfo &C, Value *ArgVal, Type *InputElementType,
-    ArrayRef<int> TiedOutput,
-    ArrayRef<std::pair<AllocaInst *, Type *>> OutputAllocas,
-    unsigned ConstraintIdx, IRBuilder<> &Builder, IRBuilder<> &EntryBuilder,
+    IRBuilder<> &Builder, IRBuilder<> &EntryBuilder,
     SmallVectorImpl<Value *> &NewArgs,
     SmallVectorImpl<std::pair<unsigned, Type *>> &ElementTypeAttrs) {
   Type *ArgTy = ArgVal->getType();
-
-  if (TiedOutput[ConstraintIdx] != -1) {
-    int MatchIdx = TiedOutput[ConstraintIdx];
-    if (auto [Slot, _] = OutputAllocas[MatchIdx]; Slot) {
-      // The matched output was converted to memory. Store this input into the
-      // alloca.
-      Builder.CreateStore(ArgVal, Slot);
-
-      // Pass the alloca pointer as the argument, instead of ArgVal. This
-      // ensures the tied "0" constraint matches the "*m" output.
-      NewArgs.push_back(Slot);
-      return;
-    }
-  }
 
   if (C.hasRegMemConstraints() && !C.isIndirect) {
     // Converted to memory constraint. Create alloca, store input, pass pointer
@@ -366,10 +325,6 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   SmallVector<std::pair<AllocaInst *, Type *>, 8> OutputAllocas(
       Constraints.size(), std::make_pair(nullptr, nullptr));
 
-  // Build tied constraint map.
-  SmallVector<int, 8> TiedOutput(Constraints.size(), -1);
-  buildTiedConstraintMap(Constraints, TiedOutput);
-
   // Process constraints.
   unsigned ArgNo = 0;
   unsigned OutputIdx = 0;
@@ -394,8 +349,7 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
       }
     } else if (C.Type == InlineAsm::isInput) {
       Value *ArgVal = CB->getArgOperand(ArgNo);
-      processInputConstraint(C, ArgVal, CB->getParamElementType(ArgNo),
-                             TiedOutput, OutputAllocas, I, Builder,
+      processInputConstraint(C, ArgVal, CB->getParamElementType(ArgNo), Builder,
                              EntryBuilder, NewArgs, ElementTypeAttrs);
       ArgNo++;
     }
