@@ -52,13 +52,46 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include <atomic>
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
 using namespace Fortran::utils::openmp;
+
+// Forward declarations
+static fir::RecordType buildConditionalLpType(
+    Fortran::lower::AbstractConverter &converter,
+    const llvm::SetVector<const Fortran::semantics::Symbol *> &condLpSyms,
+    mlir::Location loc);
+
+static mlir::omp::DeclareReductionOp buildConditionalLastPrivateReduction(
+    Fortran::lower::AbstractConverter &converter, fir::RecordType lpCondType,
+    const llvm::SetVector<const Fortran::semantics::Symbol *> &condLpSyms);
+
+static void rewriteConditionalLpAssignsInWsLoops(
+    Fortran::lower::AbstractConverter &converter, mlir::omp::WsloopOp wsloopOp,
+    fir::RecordType lpType,
+    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
+    mlir::Location loc);
+
+static void rewriteConditionalLpAssignsInSections(
+    Fortran::lower::AbstractConverter &converter,
+    mlir::omp::SectionsOp sectionsOp, fir::RecordType lpType,
+    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
+    mlir::Location loc);
+
+static void initConditionalLpStruct(fir::FirOpBuilder &builder,
+                                    mlir::Location loc,
+                                    fir::RecordType lpCondType,
+                                    mlir::Value structRef);
+
+static mlir::Value
+getOrCreateConditionalLpGlobal(Fortran::lower::AbstractConverter &converter,
+                               mlir::Location loc, fir::RecordType lpType);
 
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
@@ -815,6 +848,16 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
     llvm::SmallVector<const semantics::Symbol *> processedSyms;
     for (const Object &object : objects) {
       const semantics::Symbol *sym = object.sym();
+      if (!sym) {
+        // Null sentinel: this entry corresponds to a compiler-synthesized
+        // reduction (e.g. the conditional lastprivate struct) that has no
+        // Fortran symbol.  We must keep a placeholder so that processedSyms
+        // stays in lock-step with `vars` and `args` — the later
+        // llvm::zip_equal(processedSyms, vars, args) asserts equal lengths.
+        // The matching block argument is silently skipped below.
+        processedSyms.push_back(nullptr);
+        continue;
+      }
       if (const auto *commonDet =
               sym->detailsIf<semantics::CommonBlockDetails>()) {
         llvm::transform(commonDet->objects(), std::back_inserter(processedSyms),
@@ -824,7 +867,9 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
       }
     }
 
-    for (auto [sym, var, arg] : llvm::zip_equal(processedSyms, vars, args))
+    for (auto [sym, var, arg] : llvm::zip_equal(processedSyms, vars, args)) {
+      if (!sym)
+        continue; // Skip synthetic reduction entries.
       converter.bindSymbol(
           *sym,
           hlfir::translateToExtendedValue(
@@ -832,6 +877,7 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
               /*contiguousHint=*/
               evaluate::IsSimplyContiguous(*sym, converter.getFoldingContext()))
               .first);
+    }
   };
 
   // Process in clause name alphabetical order to match block arguments order.
@@ -2980,6 +3026,26 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                                    converter.getCurrentLocation(), clauseOps);
 }
 
+// Forward declaration.
+static void
+emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
+                                 mlir::Location loc);
+
+/// Walk up the parent-op chain from the current insertion point and return
+/// the nearest enclosing \c omp::ParallelOp, or \c nullptr if none exists
+/// (i.e. the construct is orphaned).  The walk handles intervening ops such
+/// as \c fir::IfOp that may appear between the worksharing construct and its
+/// enclosing parallel region.
+static mlir::omp::ParallelOp
+findEnclosingParallelOp(fir::FirOpBuilder &builder) {
+  for (auto *op = builder.getInsertionBlock()->getParentOp(); op;
+       op = op->getParentOp()) {
+    if (auto parallelOp = mlir::dyn_cast<mlir::omp::ParallelOp>(op))
+      return parallelOp;
+  }
+  return {};
+}
+
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3006,13 +3072,58 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            /*useDelayedPrivatization=*/false, symTable);
   dsp.processStep1();
 
+  // Detect conditional lastprivate symbols for sections.
+  auto &condLpSyms = dsp.getConditionalLastprivateSymbols();
+  fir::RecordType lpType;
+  mlir::Value lpAlloca;
+  if (!condLpSyms.empty()) {
+    lpType = buildConditionalLpType(converter, condLpSyms, loc);
+    mlir::omp::DeclareReductionOp declRedOp =
+        buildConditionalLastPrivateReduction(converter, lpType, condLpSyms);
+
+    // Create the struct alloca outside the parent parallel (if any).
+    // In the orphaned case (no enclosing ParallelOp), use a
+    // module-scope global so that all threads share one reduction target.
+    auto enclosingParallel = findEnclosingParallelOp(builder);
+    bool isOrphaned = !enclosingParallel;
+
+    // Guard against nested parallelism in the orphaned case.
+    // Emit this BEFORE touching the global to avoid racing on it.
+    if (isOrphaned)
+      emitNestedParallelGuardForCondLp(converter, loc);
+
+    if (!isOrphaned) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(enclosingParallel);
+      lpAlloca = builder.createTemporary(loc, lpType);
+      initConditionalLpStruct(builder, loc, lpType, lpAlloca);
+    } else {
+      lpAlloca = getOrCreateConditionalLpGlobal(converter, loc, lpType);
+      // The global is shared across all threads. Use omp.single (which
+      // has an implicit barrier at exit) so that exactly one thread
+      // initialises and all threads wait before entering the construct.
+      mlir::omp::SingleOperands initSingleOps;
+      auto singleOp = mlir::omp::SingleOp::create(builder, loc, initSingleOps);
+      mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
+      builder.setInsertionPointToStart(singleBlock);
+      initConditionalLpStruct(builder, loc, lpType, lpAlloca);
+      mlir::omp::TerminatorOp::create(builder, loc);
+      builder.setInsertionPointAfter(singleOp);
+    }
+
+    clauseOps.reductionVars.push_back(lpAlloca);
+    clauseOps.reductionByref.push_back(true);
+    clauseOps.reductionSyms.push_back(
+        mlir::SymbolRefAttr::get(builder.getContext(), declRedOp.getSymName()));
+    reductionObjects.push_back(Object{{nullptr, std::nullopt}});
+  }
+
   List<Clause> nonDsaClauses;
   List<const clause::Lastprivate *> lastprivates;
 
   for (const Clause &clause : item->clauses) {
     if (clause.id == llvm::omp::Clause::OMPC_lastprivate) {
       auto &lastp = std::get<clause::Lastprivate>(clause.u);
-      lastprivateModifierNotSupported(lastp, converter.getCurrentLocation());
       lastprivates.push_back(&lastp);
     } else {
       switch (clause.id) {
@@ -3067,6 +3178,26 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         sectionQueue, sectionQueue.begin());
   }
 
+  // Capture original addresses and rewrite conditional LP assigns in sections.
+  llvm::MapVector<mlir::Value, std::string> condLpOrigAddrs;
+  if (!condLpSyms.empty()) {
+    for (const auto *sym : condLpSyms) {
+      mlir::Value addr = converter.getSymbolAddress(*sym);
+      if (addr)
+        condLpOrigAddrs[addr] = sym->name().ToString();
+    }
+    rewriteConditionalLpAssignsInSections(converter, sectionsOp, lpType,
+                                          condLpOrigAddrs, loc);
+  }
+
+  // Collect conditional LP symbol names so we can skip them in the normal
+  // lastprivate copy-back (they are handled by the reduction path).
+  llvm::SmallDenseSet<const semantics::Symbol *> condLpSymSet(
+      condLpSyms.begin(), condLpSyms.end());
+
+  // Track whether any non-conditional lastprivate copy-backs were emitted.
+  bool hasNonCondLastprivate = false;
+
   if (!lastprivates.empty()) {
     mlir::Region &sectionsBody = sectionsOp.getRegion();
     assert(sectionsBody.hasOneBlock());
@@ -3085,6 +3216,10 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       const auto &objList = std::get<ObjectList>(lastp->t);
       for (const Object &object : objList) {
         semantics::Symbol *sym = object.sym();
+        // Skip conditional LP symbols — handled by the reduction path.
+        if (condLpSymSet.count(sym))
+          continue;
+        hasNonCondLastprivate = true;
         if (const auto *common =
                 sym->detailsIf<semantics::CommonBlockDetails>()) {
           for (const auto &obj : common->objects())
@@ -3099,11 +3234,44 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // Perform DataSharingProcessor's step2 out of SECTIONS
   builder.setInsertionPointAfter(sectionsOp.getOperation());
   dsp.processStep2(sectionsOp, false);
-  // Emit implicit barrier to synchronize threads and avoid data
-  // races on post-update of lastprivate variables when `nowait`
-  // clause is present.
-  if (clauseOps.nowait && !lastprivates.empty())
+  // Emit barrier when nowait is present and there are lastprivate copy-backs
+  // (either non-conditional or conditional).  The barrier ensures all threads
+  // have completed their work before lastprivate values are read/copied.
+  //
+  // NOTE: The LLVM OpenMP runtime currently imposes an implicit barrier
+  // inside __kmpc_reduce for tree reductions.  If the runtime were modified
+  // to release losing threads early when nowait is specified, we could use
+  // the return value from the tree reduction (case 1 = winner) to let the
+  // winner thread perform the copy-back without a separate barrier.
+  if (clauseOps.nowait && (hasNonCondLastprivate || !condLpSyms.empty()))
     mlir::omp::BarrierOp::create(builder, loc);
+
+  // Copy-back: copy winning values from the shared reduction struct to the
+  // original variables.  When nowait is absent, the worksharing construct's
+  // implicit end-barrier guarantees all reductions are combined before we
+  // reach this point.  When nowait is present, the barrier above ensures
+  // the reduction is fully finalized before reading the struct.
+  // Wrapped in omp.single so exactly one thread performs the stores.
+  if (!condLpSyms.empty()) {
+    mlir::omp::SingleOperands singleClauseOps;
+    auto singleOp = mlir::omp::SingleOp::create(builder, loc, singleClauseOps);
+    mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
+    builder.setInsertionPointToStart(singleBlock);
+
+    for (auto &[origAddr, symName] : condLpOrigAddrs) {
+      unsigned valFieldIdx = lpType.getFieldIndex(symName);
+      mlir::Type valType = lpType.getType(valFieldIdx);
+
+      fir::IntOrValue valFIdx =
+          mlir::IntegerAttr::get(builder.getI32Type(), valFieldIdx);
+      mlir::Value fieldAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(valType), lpAlloca,
+          llvm::SmallVector<fir::IntOrValue, 1>{valFIdx});
+      mlir::Value val = fir::LoadOp::create(builder, loc, fieldAddr);
+      fir::StoreOp::create(builder, loc, val, origAddr);
+    }
+    mlir::omp::TerminatorOp::create(builder, loc);
+  }
 
   return sectionsOp;
 }
@@ -3708,6 +3876,154 @@ static mlir::omp::DistributeOp genStandaloneDistribute(
   return distributeOp;
 }
 
+/// Zero-initialize the value fields and set index fields to -1 in a
+/// conditional-lastprivate reduction struct.
+///
+/// The struct groups all value fields first, then all index fields:
+///   {val_0, val_1, ..., idx_0, idx_1, ...}
+/// so fields [0, numVars) are value fields and [numVars, 2*numVars) are
+/// the corresponding iteration index fields.
+///
+/// The -1 sentinel on index fields ensures the combiner's "sequentially
+/// last" comparison treats the slot as "no iteration has written yet"
+/// (any real canonical loop IV >= 0 beats -1).
+static void initConditionalLpStruct(fir::FirOpBuilder &builder,
+                                    mlir::Location loc,
+                                    fir::RecordType lpCondType,
+                                    mlir::Value structRef) {
+  auto fields = lpCondType.getTypeList();
+  unsigned numVars = fields.size() / 2;
+  for (unsigned i = 0, e = fields.size(); i < e; ++i) {
+    mlir::Type fieldTy = fields[i].second;
+    fir::IntOrValue idx = mlir::IntegerAttr::get(builder.getI32Type(), i);
+    mlir::Value fieldAddr = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(fieldTy), structRef,
+        llvm::SmallVector<fir::IntOrValue, 1>{idx});
+    mlir::Value initVal;
+    if (i >= numVars) // index field (second half)
+      initVal = builder.createIntegerConstant(loc, fieldTy, -1);
+    else // value field (first half)
+      initVal = fir::factory::createZeroValue(builder, loc, fieldTy);
+    fir::StoreOp::create(builder, loc, initVal, fieldAddr);
+  }
+}
+
+/// Emit a runtime guard for orphaned conditional-lastprivate worksharing
+/// constructs.  The module-scope global used for the reduction struct is
+/// shared across all teams, so concurrent nested teams would race on it.
+/// Clang has a similar limitation for conditional lastprivate due to its
+/// use of a shared global variable.
+///
+/// Emits:  if (omp_get_level() > 1) ERROR STOP "<message>"
+static void
+emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
+                                 mlir::Location loc) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::MLIRContext *ctx = builder.getContext();
+  mlir::Type i32Ty = builder.getI32Type();
+
+  // Declare omp_get_level_() -> i32 if not already present.
+  auto funcTy = mlir::FunctionType::get(ctx, {}, {i32Ty});
+  if (!builder.getNamedFunction("omp_get_level_"))
+    builder.createFunction(loc, "omp_get_level_", funcTy);
+
+  mlir::Value level =
+      fir::CallOp::create(builder, loc,
+                          builder.getNamedFunction("omp_get_level_"),
+                          mlir::ValueRange{})
+          .getResult(0);
+  mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
+  mlir::Value isNested = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::sgt, level, one);
+
+  auto ifOp = fir::IfOp::create(builder, loc, /*resultTypes=*/{}, isNested,
+                                /*withElse=*/false);
+  builder.setInsertionPoint(ifOp.getThenRegion().front().getTerminator());
+
+  // Build a global string constant for the error message.
+  llvm::StringRef msg =
+      "orphaned worksharing construct with lastprivate(conditional:) "
+      "is not supported in nested parallelism";
+  std::string globalName = "_lp_cond_nested_msg";
+  size_t msgLen = msg.size();
+  auto charTy = fir::CharacterType::get(ctx, 1, msgLen);
+  if (!builder.getNamedGlobal(globalName)) {
+    fir::GlobalOp global = builder.createGlobal(
+        loc, charTy, globalName, builder.createInternalLinkage(),
+        /*value=*/mlir::Attribute{}, /*isConst=*/true);
+    mlir::Region &region = global.getRegion();
+    mlir::Block *block = builder.createBlock(&region);
+    builder.setInsertionPointToStart(block);
+    mlir::Value val = fir::StringLitOp::create(builder, loc, charTy, msg);
+    fir::HasValueOp::create(builder, loc, val);
+    builder.setInsertionPoint(ifOp.getThenRegion().front().getTerminator());
+  }
+
+  // Declare _FortranAStopStatementText if not already present.
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::Type ptrTy = builder.getRefType(builder.getIntegerType(8));
+  auto stopTy = mlir::FunctionType::get(ctx, {ptrTy, i64Ty, i1Ty, i1Ty}, {});
+  if (!builder.getNamedFunction("_FortranAStopStatementText"))
+    builder.createFunction(loc, "_FortranAStopStatementText", stopTy);
+
+  mlir::Value msgAddr =
+      fir::AddrOfOp::create(builder, loc, builder.getRefType(charTy),
+                            builder.getSymbolRefAttr(globalName));
+  mlir::Value msgPtr = builder.createConvert(loc, ptrTy, msgAddr);
+  mlir::Value len = builder.createIntegerConstant(loc, i64Ty, msgLen);
+  mlir::Value trueVal = builder.createIntegerConstant(loc, i1Ty, 1);
+  mlir::Value falseVal = builder.createIntegerConstant(loc, i1Ty, 0);
+  fir::CallOp::create(builder, loc,
+                      builder.getNamedFunction("_FortranAStopStatementText"),
+                      mlir::ValueRange{msgPtr, len, trueVal, falseVal});
+
+  builder.setInsertionPointAfter(ifOp);
+}
+
+/// Return the address of a module-scope global for the conditional-lastprivate
+/// reduction struct.  This is used in the *orphaned* worksharing case (sections
+/// or wsloop inside a subroutine called from a parallel region) where the
+/// parent op is a FuncOp, not a ParallelOp.
+///
+/// Because there is no enclosing omp.parallel in the same function, a stack
+/// alloca would give every thread its own private copy and the cross-thread
+/// reduction combine would never merge results.  A global provides a single
+/// shared address that all threads in the team can reduce into — the same
+/// semantics a dummy argument provides for ordinary user REDUCTION variables.
+///
+/// Nested parallelism (concurrent teams executing the same orphaned construct)
+/// would race on this global; a runtime guard emitted by
+/// emitNestedParallelGuardForCondLp() aborts in that case.
+static mlir::Value
+getOrCreateConditionalLpGlobal(lower::AbstractConverter &converter,
+                               mlir::Location loc, fir::RecordType lpType) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Derive a unique global name from the RecordType name.
+  // Type name is "_lp_cond_t.lN.M", global becomes "_lp_cond_global.lN.M".
+  llvm::StringRef typeName = lpType.getName();
+  assert(typeName.starts_with("_lp_cond_t") &&
+         "unexpected conditional LP type name prefix");
+  std::string globalName =
+      "_lp_cond_global" +
+      typeName.substr(llvm::StringRef("_lp_cond_t").size()).str();
+
+  // Create the global if it does not already exist.
+  // The global is re-initialized by initConditionalLpStruct before each
+  // worksharing construct invocation (to reset values from prior calls),
+  // so a simple zero-init suffices here.
+  fir::GlobalOp global = builder.getNamedGlobal(globalName);
+  if (!global) {
+    builder.createGlobal(loc, lpType, globalName,
+                         builder.createInternalLinkage());
+    global = builder.getNamedGlobal(globalName);
+  }
+  assert(global && "global should have been created");
+  return fir::AddrOfOp::create(builder, loc, global.resultType(),
+                               global.getSymbol());
+}
+
 static mlir::omp::WsloopOp genStandaloneDo(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
@@ -3723,6 +4039,61 @@ static mlir::omp::WsloopOp genStandaloneDo(
                            enableDelayedPrivatization, symTable);
   dsp.processStep1(&wsloopClauseOps);
 
+  // Conditional lastprivate: build struct type, declare_reduction, and
+  // inject a synthetic reduction variable into the wsloop.
+  auto &condLpSyms = dsp.getConditionalLastprivateSymbols();
+  fir::RecordType lpType; // hoisted for post-loop rewrite pass
+  mlir::Value lpAlloca;   // hoisted for post-reduction copy-back
+  if (!condLpSyms.empty()) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    lpType = buildConditionalLpType(converter, condLpSyms, loc);
+    mlir::omp::DeclareReductionOp declRedOp =
+        buildConditionalLastPrivateReduction(converter, lpType, condLpSyms);
+
+    // Create the struct alloca OUTSIDE the parent omp.parallel (if any),
+    // so the reduction result persists after the parallel region ends.
+    // In the orphaned case (no enclosing ParallelOp), use a
+    // module-scope global so that all threads share one reduction target.
+    auto enclosingParallel = findEnclosingParallelOp(builder);
+    bool isOrphaned = !enclosingParallel;
+
+    // Guard against nested parallelism in the orphaned case.
+    // Emit this BEFORE touching the global to avoid racing on it.
+    if (isOrphaned)
+      emitNestedParallelGuardForCondLp(converter, loc);
+
+    if (!isOrphaned) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(enclosingParallel);
+      lpAlloca = builder.createTemporary(loc, lpType);
+      // Index fields are initialised to -1 so the combiner's "sequentially
+      // last" comparison treats them as "no iteration has written yet"
+      // (any real canonical loop IV >= 0 beats -1).
+      initConditionalLpStruct(builder, loc, lpType, lpAlloca);
+    } else {
+      lpAlloca = getOrCreateConditionalLpGlobal(converter, loc, lpType);
+      // The global is shared across all threads. Use omp.single (which
+      // has an implicit barrier at exit) so that exactly one thread
+      // initialises and all threads wait before entering the construct.
+      mlir::omp::SingleOperands initSingleOps;
+      auto singleOp = mlir::omp::SingleOp::create(builder, loc, initSingleOps);
+      mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
+      builder.setInsertionPointToStart(singleBlock);
+      initConditionalLpStruct(builder, loc, lpType, lpAlloca);
+      mlir::omp::TerminatorOp::create(builder, loc);
+      builder.setInsertionPointAfter(singleOp);
+    }
+
+    // Append to wsloop clause operands.
+    wsloopClauseOps.reductionVars.push_back(lpAlloca);
+    wsloopClauseOps.reductionByref.push_back(true);
+    wsloopClauseOps.reductionSyms.push_back(
+        mlir::SymbolRefAttr::get(builder.getContext(), declRedOp.getSymName()));
+
+    // Use a null-symbol Object as a sentinel — bindPrivateLike will skip it.
+    wsloopReductionObjects.push_back(Object{{nullptr, std::nullopt}});
+  }
+
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
@@ -3736,9 +4107,63 @@ static mlir::omp::WsloopOp genStandaloneDo(
   auto wsloopOp = genWrapperOp<mlir::omp::WsloopOp>(
       converter, loc, wsloopClauseOps, wsloopArgs);
 
+  // Capture original addresses of conditional LP symbols
+  // before the loop body is lowered.  These SSA values are the addresses
+  // visible at this point (dummy arguments or host variables); they must
+  // not be remapped by privatization since conditional lastprivate
+  // variables are shared (they appear in a reduction clause, not private).
+  llvm::MapVector<mlir::Value, std::string> condLpOrigAddrs;
+  for (const auto *sym : condLpSyms) {
+    mlir::Value addr = converter.getSymbolAddress(*sym);
+    if (addr)
+      condLpOrigAddrs[addr] = sym->name().ToString();
+  }
+
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
                 loopNestClauseOps, iv, {{wsloopOp, wsloopArgs}},
                 llvm::omp::Directive::OMPD_do, dsp);
+
+  // Rewrite assignments to conditional LP symbols
+  // to store into struct fields + record iteration index.
+  if (!condLpSyms.empty()) {
+    rewriteConditionalLpAssignsInWsLoops(converter, wsloopOp, lpType,
+                                         condLpOrigAddrs, loc);
+  }
+
+  // Post-reduction copy-back.  When nowait is absent, the wsloop's implicit
+  // end-barrier guarantees all reductions are combined.  When nowait is
+  // present, an explicit barrier is needed before reading the struct.
+  // Wrapped in omp.single so exactly one thread performs the stores.
+  if (!condLpSyms.empty()) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::OpBuilder::InsertionGuard guard(builder);
+
+    // Insert right after the wsloop, still inside the parallel body.
+    builder.setInsertionPointAfter(wsloopOp);
+
+    if (wsloopClauseOps.nowait)
+      mlir::omp::BarrierOp::create(builder, loc);
+
+    mlir::omp::SingleOperands singleClauseOps;
+    auto singleOp = mlir::omp::SingleOp::create(builder, loc, singleClauseOps);
+    mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
+    builder.setInsertionPointToStart(singleBlock);
+
+    for (auto &[origAddr, symName] : condLpOrigAddrs) {
+      unsigned valFieldIdx = lpType.getFieldIndex(symName);
+      mlir::Type valType = lpType.getType(valFieldIdx);
+
+      fir::IntOrValue valFIdx =
+          mlir::IntegerAttr::get(builder.getI32Type(), valFieldIdx);
+      mlir::Value fieldAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(valType), lpAlloca,
+          llvm::SmallVector<fir::IntOrValue, 1>{valFIdx});
+      mlir::Value val = fir::LoadOp::create(builder, loc, fieldAddr);
+      fir::StoreOp::create(builder, loc, val, origAddr);
+    }
+    mlir::omp::TerminatorOp::create(builder, loc);
+  }
+
   return wsloopOp;
 }
 
@@ -4681,6 +5106,366 @@ getReductionType(lower::AbstractConverter &converter,
          "declare reduction currently only supports trivial types, "
          "fixed-length CHARACTER, or derived types containing them");
   return reductionType;
+}
+
+/// Compute a flattened canonical (0-based, always ascending) iteration number
+/// from all loop IVs.  For a single loop, this is simply (IV - LB) / step.
+/// For collapsed loops with dimensions d0..dN, the flattened index is:
+///   c0 * (N1*N2*...*Nk) + c1 * (N2*...*Nk) + ... + ck
+/// where ci = (IVi - LBi) / stepi and Ni = (UBi - LBi) / stepi + 1.
+/// This yields a unique monotonic index regardless of loop direction,
+/// which is essential for the combiner's `sgt` comparison to correctly
+/// identify the sequentially last iteration.
+static mlir::Value
+computeFlattenedCanonicalIV(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::omp::LoopNestOp loopNestOp) {
+  mlir::Region &region = loopNestOp.getRegion();
+  auto lbs = loopNestOp.getLoopLowerBounds();
+  auto ubs = loopNestOp.getLoopUpperBounds();
+  auto steps = loopNestOp.getLoopSteps();
+  unsigned numDims = lbs.size();
+
+  // Use i64 for the flattened index to avoid overflow.
+  mlir::Type i64Ty = builder.getI64Type();
+
+  // Compute canonical IV and trip count for each dimension.
+  llvm::SmallVector<mlir::Value> canonIVs(numDims);
+  llvm::SmallVector<mlir::Value> tripCounts(numDims);
+  for (unsigned d = 0; d < numDims; ++d) {
+    mlir::Value iv = region.front().getArgument(d);
+    mlir::Type ivType = iv.getType();
+    mlir::Value lb = lbs[d];
+    mlir::Value ub = ubs[d];
+    mlir::Value step = steps[d];
+    if (lb.getType() != ivType)
+      lb = fir::ConvertOp::create(builder, loc, ivType, lb);
+    if (ub.getType() != ivType)
+      ub = fir::ConvertOp::create(builder, loc, ivType, ub);
+    if (step.getType() != ivType)
+      step = fir::ConvertOp::create(builder, loc, ivType, step);
+
+    mlir::Value diff = mlir::arith::SubIOp::create(builder, loc, iv, lb);
+    mlir::Value ci = mlir::arith::DivSIOp::create(builder, loc, diff, step);
+    canonIVs[d] = fir::ConvertOp::create(builder, loc, i64Ty, ci);
+
+    // Trip count: (UB - LB) / step + 1  (loop bounds are inclusive).
+    mlir::Value range = mlir::arith::SubIOp::create(builder, loc, ub, lb);
+    mlir::Value trips = mlir::arith::DivSIOp::create(builder, loc, range, step);
+    mlir::Value one = builder.createIntegerConstant(loc, ivType, 1);
+    trips = mlir::arith::AddIOp::create(builder, loc, trips, one);
+    tripCounts[d] = fir::ConvertOp::create(builder, loc, i64Ty, trips);
+  }
+
+  // Flatten: result = c0*N1*N2*...*Nk + c1*N2*...*Nk + ... + ck
+  mlir::Value flatIdx = canonIVs[0];
+  for (unsigned d = 1; d < numDims; ++d) {
+    flatIdx = mlir::arith::MulIOp::create(builder, loc, flatIdx, tripCounts[d]);
+    flatIdx = mlir::arith::AddIOp::create(builder, loc, flatIdx, canonIVs[d]);
+  }
+  return flatIdx;
+}
+
+/// Common helper: within a given region, replace uses of original variable
+/// addresses with struct value fields and inject index stores after each
+/// assignment.
+/// \p genIndexVal is called at the point of each assignment to produce the
+/// i64 index value to store (e.g. canonical loop IV or constant section index).
+static void rewriteCondLpInRegion(
+    fir::FirOpBuilder &builder, mlir::Location loc, fir::RecordType lpType,
+    mlir::Value structArg, mlir::Region &region,
+    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
+    llvm::function_ref<mlir::Value(fir::FirOpBuilder &, mlir::Location)>
+        genIndexVal) {
+  // Step 1: Replace uses of original addresses with struct value field addrs.
+  llvm::MapVector<mlir::Value, std::string> valAddrToSymName;
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&region.front());
+
+    for (auto &[origAddrConst, symName] : condLpOrigAddrs) {
+      mlir::Value origAddr = origAddrConst;
+      unsigned valFieldIdx = lpType.getFieldIndex(symName);
+      mlir::Type valType = lpType.getType(valFieldIdx);
+
+      fir::IntOrValue valFIdx =
+          mlir::IntegerAttr::get(builder.getI32Type(), valFieldIdx);
+      mlir::Value valAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(valType), structArg,
+          llvm::SmallVector<fir::IntOrValue, 1>{valFIdx});
+
+      origAddr.replaceUsesWithIf(valAddr, [&](mlir::OpOperand &use) {
+        return region.isAncestor(use.getOwner()->getParentRegion());
+      });
+
+      valAddrToSymName[valAddr] = symName;
+    }
+  }
+
+  // Step 2: Walk ops that write to struct value fields (hlfir.assign and
+  // fir.store) and inject a store of the index value after each write.
+  // Both forms must be tracked because lowering may produce either depending
+  // on the variable type and context.
+  llvm::SmallVector<mlir::Operation *> toAnnotate;
+  region.walk([&](hlfir::AssignOp assignOp) {
+    if (valAddrToSymName.count(assignOp.getLhs()))
+      toAnnotate.push_back(assignOp);
+  });
+  region.walk([&](fir::StoreOp storeOp) {
+    if (valAddrToSymName.count(storeOp.getMemref()))
+      toAnnotate.push_back(storeOp);
+  });
+
+  // Compute the index value once at the region entry so that it dominates
+  // all write sites (which may be inside nested fir.if blocks).
+  mlir::Value indexVal;
+  if (!toAnnotate.empty()) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&region.front());
+    indexVal = genIndexVal(builder, loc);
+    if (indexVal.getType() != builder.getI64Type())
+      indexVal =
+          fir::ConvertOp::create(builder, loc, builder.getI64Type(), indexVal);
+  }
+
+  for (mlir::Operation *writeOp : toAnnotate) {
+    mlir::Value target;
+    if (auto assignOp = mlir::dyn_cast<hlfir::AssignOp>(writeOp))
+      target = assignOp.getLhs();
+    else
+      target = mlir::cast<fir::StoreOp>(writeOp).getMemref();
+
+    std::string symName = valAddrToSymName.lookup(target);
+    unsigned idxFieldIdx = lpType.getFieldIndex("k" + symName);
+    mlir::Type idxType = lpType.getType(idxFieldIdx);
+
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointAfter(writeOp);
+
+    fir::IntOrValue idxFIdx =
+        mlir::IntegerAttr::get(builder.getI32Type(), idxFieldIdx);
+    mlir::Value idxAddr = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(idxType), structArg,
+        llvm::SmallVector<fir::IntOrValue, 1>{idxFIdx});
+
+    fir::StoreOp::create(builder, loc, indexVal, idxAddr);
+  }
+}
+
+/// Rewrite references to conditional lastprivate symbols inside the
+/// loop body to use the reduction struct's value fields instead. Then inject
+/// a store of the canonical iteration number into the corresponding index
+/// field after each assignment.
+static void rewriteConditionalLpAssignsInWsLoops(
+    lower::AbstractConverter &converter, mlir::omp::WsloopOp wsloopOp,
+    fir::RecordType lpType,
+    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
+    mlir::Location loc) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Get the struct reduction block arg (last reduction, since we appended it).
+  auto blockArgIface =
+      mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(*wsloopOp);
+  mlir::Value structArg = blockArgIface.getReductionBlockArgs().back();
+
+  // Get the loop nest op and compute a flattened canonical IV across all
+  // dimensions (handles both single and collapsed loops).
+  auto loopNestOp =
+      mlir::cast<mlir::omp::LoopNestOp>(wsloopOp.getWrappedLoop());
+
+  rewriteCondLpInRegion(
+      builder, loc, lpType, structArg, loopNestOp.getRegion(), condLpOrigAddrs,
+      [&](fir::FirOpBuilder &b, mlir::Location l) -> mlir::Value {
+        return computeFlattenedCanonicalIV(b, l, loopNestOp);
+      });
+}
+
+/// Rewrite conditional lastprivate assignments inside an omp.sections region.
+/// For each omp.section, replace uses of the original variable address with
+/// the struct's value field, and store the compile-time section index into
+/// the index field after each assignment.
+static void rewriteConditionalLpAssignsInSections(
+    lower::AbstractConverter &converter, mlir::omp::SectionsOp sectionsOp,
+    fir::RecordType lpType,
+    const llvm::MapVector<mlir::Value, std::string> &condLpOrigAddrs,
+    mlir::Location loc) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Region &sectionsRegion = sectionsOp.getRegion();
+
+  unsigned sectionIdx = 0;
+  for (mlir::Operation &op : sectionsRegion.front()) {
+    auto sectionOp = mlir::dyn_cast<mlir::omp::SectionOp>(op);
+    if (!sectionOp)
+      continue;
+
+    auto sectionArgIface =
+        mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(*sectionOp);
+    mlir::Value sectionStructArg =
+        sectionArgIface.getReductionBlockArgs().back();
+
+    unsigned idx = sectionIdx++;
+    rewriteCondLpInRegion(
+        builder, loc, lpType, sectionStructArg, sectionOp.getRegion(),
+        condLpOrigAddrs,
+        [idx](fir::FirOpBuilder &b, mlir::Location l) -> mlir::Value {
+          return b.createIntegerConstant(l, b.getI64Type(), idx);
+        });
+  }
+}
+
+static mlir::omp::DeclareReductionOp buildConditionalLastPrivateReduction(
+    lower::AbstractConverter &converter, fir::RecordType lpCondType,
+    const llvm::SetVector<const semantics::Symbol *> &condLpSyms) {
+
+  // Init callback: initialize all fields of the lp_t struct.
+  // Value fields get 0; index fields get -1.
+  //
+  // Returns a null mlir::Value to signal that initialization has already
+  // been performed directly on ompPriv.  The reduction infrastructure
+  // (populateByRefInitAndCleanupRegions → initAndCleanupUnboxedDerivedType)
+  // checks for a non-null scalarInitValue before emitting a store, so
+  // returning null here safely skips the redundant store.
+  auto genInitValueCB = [lpCondType](fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Type type,
+                                     mlir::Value ompOrig,
+                                     mlir::Value ompPriv) -> mlir::Value {
+    initConditionalLpStruct(builder, loc, lpCondType, ompPriv);
+    return mlir::Value{};
+  };
+
+  // Combiner callback: for each (value, index) pair, pick the later iteration.
+  // Fields are arranged as: {val_0, ..., val_{N-1}, idx_0, ..., idx_{N-1}}
+  // where idx field names are "k" + val field name.
+  // If rhs.idx > lhs.idx, copy rhs value and index into lhs.
+  auto genCombinerCB = [lpCondType](fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Type type,
+                                    mlir::Value lhs, mlir::Value rhs,
+                                    bool isByRef) {
+    fir::RecordType lpType = lpCondType; // non-const copy for getFieldIndex
+    auto fields = lpType.getTypeList();
+    unsigned numVars = fields.size() / 2;
+
+    // Walk the first half (value fields). Index field name = "k" +
+    // value name.
+    for (unsigned i = 0; i < numVars; ++i) {
+      auto [valName, valType] = fields[i];
+      std::string idxName = "k" + valName;
+      unsigned valIdx = lpType.getFieldIndex(valName);
+      unsigned idxIdx = lpType.getFieldIndex(idxName);
+      mlir::Type idxType = lpType.getType(idxIdx);
+
+      // Get addresses of LHS and RHS index fields
+      fir::IntOrValue idxFieldIdx =
+          mlir::IntegerAttr::get(builder.getI32Type(), idxIdx);
+      mlir::Value lhsIdxAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(idxType), lhs,
+          llvm::SmallVector<fir::IntOrValue, 1>{idxFieldIdx});
+      mlir::Value rhsIdxAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(idxType), rhs,
+          llvm::SmallVector<fir::IntOrValue, 1>{idxFieldIdx});
+
+      mlir::Value lhsIdx = fir::LoadOp::create(builder, loc, lhsIdxAddr);
+      mlir::Value rhsIdx = fir::LoadOp::create(builder, loc, rhsIdxAddr);
+
+      // Compare: rhs index > lhs index  (signed, iteration indices)
+      mlir::Value cmp = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::sgt, rhsIdx, lhsIdx);
+
+      // If RHS comes from a later iteration, copy its value and index to LHS
+      auto ifOp = fir::IfOp::create(builder, loc, cmp, /*else*/ false);
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+
+      // Copy value field: rhs.val_s → lhs.val_s
+      fir::IntOrValue valFieldIdx =
+          mlir::IntegerAttr::get(builder.getI32Type(), valIdx);
+      mlir::Value rhsValAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(valType), rhs,
+          llvm::SmallVector<fir::IntOrValue, 1>{valFieldIdx});
+      mlir::Value lhsValAddr = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(valType), lhs,
+          llvm::SmallVector<fir::IntOrValue, 1>{valFieldIdx});
+      mlir::Value rhsVal = fir::LoadOp::create(builder, loc, rhsValAddr);
+      fir::StoreOp::create(builder, loc, rhsVal, lhsValAddr);
+
+      // Copy index field: rhs.idx_s → lhs.idx_s
+      fir::StoreOp::create(builder, loc, rhsIdx, lhsIdxAddr);
+
+      builder.setInsertionPointAfter(ifOp);
+    }
+
+    // By-ref: yield the accumulator (LHS)
+    mlir::omp::YieldOp::create(builder, loc, lhs);
+  };
+
+  // RecordType is always by-ref
+  bool isByRef = true;
+  mlir::Location loc = converter.getCurrentLocation();
+  mlir::Type redType = fir::ReferenceType::get(lpCondType);
+  std::string reductionName = ReductionProcessor::getReductionName(
+      "lp_cond", converter.getKindMap(), redType, isByRef);
+
+  return ReductionProcessor::createDeclareReductionHelper<
+      mlir::omp::DeclareReductionOp>(converter, reductionName, redType, loc,
+                                     isByRef, genCombinerCB, genInitValueCB);
+}
+
+/// Build a FIR RecordType for conditional lastprivate reduction.
+/// For symbols {x, y}, creates:
+///   !fir.type<_lp_cond_t.lN.M{x:T_x, y:T_y, kx:i64, ky:i64}>
+/// where N is the source line number and M is a monotonic counter.
+static fir::RecordType buildConditionalLpType(
+    lower::AbstractConverter &converter,
+    const llvm::SetVector<const semantics::Symbol *> &condLpSyms,
+    mlir::Location loc) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::MLIRContext *context = builder.getContext();
+
+  // Derive a unique suffix from the source location and a monotonic counter.
+  // The line number makes names traceable to source; the counter prevents
+  // collisions when INCLUDE files place directives on identical line numbers.
+  // Use atomic for thread-safety in case flang ever lowers in parallel.
+  static std::atomic<unsigned> counter{0};
+  unsigned line = 0;
+  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+    line = fileLoc.getLine();
+  else if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(loc)) {
+    for (mlir::Location sub : fusedLoc.getLocations()) {
+      if (auto fileSub = mlir::dyn_cast<mlir::FileLineColLoc>(sub)) {
+        line = fileSub.getLine();
+        break;
+      }
+    }
+  }
+  std::string typeName =
+      "_lp_cond_t.l" + std::to_string(line) + "." + std::to_string(counter++);
+
+  auto lpCondType = fir::RecordType::get(context, typeName);
+
+  // if it exists return, else build
+  if (lpCondType.isFinalized())
+    return lpCondType;
+
+  // Build field list: first all value fields, then all index fields.
+  // Grouping values before indices (rather than interleaving value/index
+  // pairs) can reduce padding holes when value types differ from i64.
+  llvm::SmallVector<std::pair<std::string, mlir::Type>> fields;
+
+  // Value fields first.
+  for (const auto *sym : condLpSyms) {
+    std::string symName = sym->name().ToString();
+    mlir::Type symType = converter.genType(*sym);
+    fields.push_back({symName, symType});
+  }
+
+  // Then index fields (i64).
+  for (const auto *sym : condLpSyms) {
+    std::string indexName = "k" + sym->name().ToString();
+    fields.push_back({indexName, builder.getI64Type()});
+  }
+
+  // Finalize the type with the field list
+  lpCondType.finalize({}, fields);
+
+  return lpCondType;
 }
 
 // Represent the reduction combiner as a clause, return reference to it.

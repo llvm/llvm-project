@@ -71,6 +71,13 @@ ReductionProcessor::createDeclareReduction<fir::DeclareReductionOp>(
     const ReductionIdentifier redId, mlir::Type type, mlir::Location loc,
     bool isByRef);
 
+template mlir::omp::DeclareReductionOp
+ReductionProcessor::createDeclareReductionHelper<mlir::omp::DeclareReductionOp>(
+    AbstractConverter &converter, llvm::StringRef reductionOpName,
+    mlir::Type type, mlir::Location loc, bool isByRef,
+    GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB,
+    const semantics::Symbol *sym);
+
 ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
     const omp::clause::ProcedureDesignator &pd) {
   auto redType = llvm::StringSwitch<std::optional<ReductionIdentifier>>(
