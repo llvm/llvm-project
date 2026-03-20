@@ -57,12 +57,6 @@
 
 namespace llvm {
 
-/// Interface for keeping UniformValues in sync when IR values are deleted.
-/// IR specialization installs a concrete CallbackVH-based implementation.
-struct UniformValueCallbackManager {
-  virtual ~UniformValueCallbackManager() = default;
-};
-
 // Forward decl from llvm/CodeGen/MachineInstr.h
 class MachineInstr;
 
@@ -382,10 +376,6 @@ public:
   /// Divergence is seeded by calls to \p markDivergent.
   void compute();
 
-  /// \brief Register callbacks (e.g., CallbackVH for IR) to keep
-  /// UniformValues in sync when values are deleted after analysis.
-  void registerCallbacks();
-
   /// \brief Whether any value was marked or analyzed to be divergent.
   bool hasDivergence() const { return HasDivergence; }
 
@@ -409,6 +399,10 @@ public:
   bool isDivergent(ConstValueRefT V) const {
     if (!HasBranchDivergence)
       return false;
+    // Only values that were present during analysis are tracked in
+    // UniformValues (Instructions/Arguments for IR, Registers for MIR).
+    // Other values (e.g. constants, globals) are always uniform but are
+    // not added to UniformValues; this check avoids false divergence.
     if (ContextT::isNeverDivergent(V))
       return false;
     return !UniformValues.contains(V);
@@ -453,10 +447,6 @@ protected:
   // then values are removed as divergence is propagated. After analysis,
   // values not in this set are conservatively treated as divergent.
   DenseSet<ConstValueRefT> UniformValues;
-
-  // For IR: callbacks to remove from UniformValues on value deletion,
-  // avoiding stale pointers when addresses are reused.
-  std::unique_ptr<UniformValueCallbackManager> UniformValueCallbacks;
 
   // Internal worklist for divergence propagation.
   std::vector<const InstructionT *> Worklist;
