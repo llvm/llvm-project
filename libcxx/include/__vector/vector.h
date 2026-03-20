@@ -815,7 +815,7 @@ private:
   }
 
   _LIBCPP_NODEBUG _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __swap_layouts(__split_buffer<_Tp, allocator_type>& __sb) {
+  __swap_layouts(_SplitBuffer& __sb) {
     __sb.__swap_layouts(__begin_, __end_, __cap_);
   }
 };
