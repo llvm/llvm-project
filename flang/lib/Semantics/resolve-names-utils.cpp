@@ -694,20 +694,6 @@ public:
     }
     return false;
   }
-  template <typename T> bool operator()(const evaluate::ConditionalExpr<T> &x) {
-    // Map symbols in all conditions and values
-    for (const auto &cond : x.conditions()) {
-      if ((*this)(cond)) {
-        return true;
-      }
-    }
-    for (const auto &val : x.values()) {
-      if ((*this)(val)) {
-        return true;
-      }
-    }
-    return false;
-  }
   void MapSymbolExprs(Symbol &);
   Symbol *CopySymbol(const Symbol *);
 

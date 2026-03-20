@@ -193,11 +193,8 @@ public:
   Result operator()(const ConditionalExpr<T> &conditional) const {
     // Per F2023 10.1.4(7), the shape is determined by the selected branch,
     // so return unknown extents for the rank.
-    if (!conditional.values().empty()) {
-      int rank{conditional.values().front().Rank()};
-      return Shape(rank, std::nullopt);
-    }
-    return ScalarShape();
+    int rank{conditional.thenValue().Rank()};
+    return Shape(rank, std::nullopt);
   }
   template <typename D, typename R, typename LO, typename RO>
   Result operator()(const Operation<D, R, LO, RO> &operation) const {

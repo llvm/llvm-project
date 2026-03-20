@@ -305,18 +305,8 @@ public:
     }
     return anyVector ? false : (*this)(aRef.base());
   }
-  template <typename T> bool operator()(const evaluate::ConditionalExpr<T> &x) {
-    // Check all conditions and values for duplicated subscripts
-    for (const auto &cond : x.conditions()) {
-      if ((*this)(cond)) {
-        return true;
-      }
-    }
-    for (const auto &val : x.values()) {
-      if ((*this)(val)) {
-        return true;
-      }
-    }
+  template <typename T> bool operator()(const evaluate::ConditionalExpr<T> &) {
+    // A conditional expression is not a variable and cannot be definable.
     return false;
   }
 

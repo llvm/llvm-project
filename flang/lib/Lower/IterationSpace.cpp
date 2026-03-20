@@ -214,13 +214,10 @@ private:
   }
   template <typename T>
   RT find(const Fortran::evaluate::ConditionalExpr<T> &x) {
-    // Find array bases in all conditions and values
-    for (const auto &cond : x.conditions()) {
-      (void)find(cond);
-    }
-    for (const auto &val : x.values()) {
-      (void)find(val);
-    }
+    // Find array bases in condition and values
+    (void)find(x.condition());
+    (void)find(x.thenValue());
+    (void)find(x.elseValue());
     return {};
   }
   RT find(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x) {

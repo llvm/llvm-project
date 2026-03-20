@@ -203,24 +203,15 @@ private:
   }
   template <typename T> void Show(const evaluate::ConditionalExpr<T> &x) {
     Indent("conditional expr "s + std::string(TypeOf<T>::name));
-    const auto &conds = x.conditions();
-    const auto &vals = x.values();
-    // Show condition-value pairs
-    for (const auto &[cond, val] : llvm::zip(conds, vals)) {
-      Indent("branch");
-      Indent("condition");
-      Show(cond);
-      Outdent();
-      Indent("value");
-      Show(val);
-      Outdent();
-      Outdent();
-    }
-    if (!vals.empty()) {
-      Indent("default value");
-      Show(vals.back());
-      Outdent();
-    }
+    Indent("condition");
+    Show(x.condition());
+    Outdent();
+    Indent("then");
+    Show(x.thenValue());
+    Outdent();
+    Indent("else");
+    Show(x.elseValue());
+    Outdent();
     Outdent();
   }
   void Show(const evaluate::Relational<evaluate::SomeType> &x);

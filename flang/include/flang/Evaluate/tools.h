@@ -1074,16 +1074,6 @@ struct GetSymbolVectorHelper
   Result operator()(const Component &) const;
   Result operator()(const ArrayRef &) const;
   Result operator()(const CoarrayRef &) const;
-  template <typename T> Result operator()(const ConditionalExpr<T> &x) {
-    Result result;
-    for (const auto &cond : x.conditions()) {
-      result = Combine(std::move(result), (*this)(cond));
-    }
-    for (const auto &val : x.values()) {
-      result = Combine(std::move(result), (*this)(val));
-    }
-    return result;
-  }
 };
 template <typename A> SymbolVector GetSymbolVector(const A &x) {
   return GetSymbolVectorHelper{}(x);
@@ -1172,20 +1162,6 @@ public:
     return !admitPureCall_ || !procRef.proc().IsPure();
   }
   bool operator()(const CoarrayRef &) { return true; }
-  template <typename T> bool operator()(const ConditionalExpr<T> &x) {
-    // A conditional expression is unsafe to copy if any of its parts are unsafe
-    for (const auto &condition : x.conditions()) {
-      if ((*this)(condition)) {
-        return true;
-      }
-    }
-    for (const auto &value : x.values()) {
-      if ((*this)(value)) {
-        return true;
-      }
-    }
-    return false;
-  }
 
 private:
   bool admitPureCall_{false};

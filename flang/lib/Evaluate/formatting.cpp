@@ -590,14 +590,21 @@ llvm::raw_ostream &ArrayConstructor<SomeDerived>::AsFortran(
 template <typename T>
 llvm::raw_ostream &ConditionalExpr<T>::AsFortran(llvm::raw_ostream &o) const {
   o << '(';
-  for (std::size_t i = 0; i < conditions_.size(); ++i) {
-    conditions_[i].AsFortran(o);
+  const ConditionalExpr<T> *node{this};
+  while (true) {
+    node->condition().AsFortran(o);
     o << " ? ";
-    values_[i].AsFortran(o);
+    node->thenValue().AsFortran(o);
     o << " : ";
+    // Continue chain for nested ConditionalExpr; else emit terminal value.
+    if (const auto *nested =
+            std::get_if<ConditionalExpr<T>>(&node->elseValue().u)) {
+      node = nested;
+    } else {
+      node->elseValue().AsFortran(o);
+      break;
+    }
   }
-  // Last value is the else clause
-  values_.back().AsFortran(o);
   return o << ')';
 }
 

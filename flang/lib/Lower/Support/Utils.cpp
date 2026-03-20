@@ -160,15 +160,8 @@ public:
   }
   template <typename T>
   static unsigned getHashValue(const Fortran::evaluate::ConditionalExpr<T> &x) {
-    unsigned conds = 1u;
-    for (const auto &cond : x.conditions()) {
-      conds -= getHashValue(cond);
-    }
-    unsigned vals = 3u;
-    for (const auto &val : x.values()) {
-      vals += getHashValue(val);
-    }
-    return conds * 151u - vals;
+    return getHashValue(x.condition()) * 151u -
+           getHashValue(x.thenValue()) * 3u + getHashValue(x.elseValue());
   }
   template <Fortran::common::TypeCategory TC, int KIND>
   static unsigned getHashValue(
@@ -432,21 +425,9 @@ public:
   static bool isEqual(const Fortran::evaluate::ConditionalExpr<T> &x,
                       const Fortran::evaluate::ConditionalExpr<T> &y) {
     // Compare all conditions and values
-    if (x.conditions().size() != y.conditions().size() ||
-        x.values().size() != y.values().size()) {
-      return false;
-    }
-    for (size_t i = 0; i < x.conditions().size(); ++i) {
-      if (!isEqual(x.conditions()[i], y.conditions()[i])) {
-        return false;
-      }
-    }
-    for (size_t i = 0; i < x.values().size(); ++i) {
-      if (!isEqual(x.values()[i], y.values()[i])) {
-        return false;
-      }
-    }
-    return true;
+    return isEqual(x.condition(), y.condition()) &&
+           isEqual(x.thenValue(), y.thenValue()) &&
+           isEqual(x.elseValue(), y.elseValue());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::RealToIntPower<A> &x,

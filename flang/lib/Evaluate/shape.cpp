@@ -221,63 +221,14 @@ ConstantSubscript GetSize(const ConstantSubscripts &shape) {
   return size;
 }
 
-// Helper visitor for ContainsAnyImpliedDoIndex
-struct ImpliedDoIndexVisitor : public AnyTraverse<ImpliedDoIndexVisitor> {
-  using Base = AnyTraverse<ImpliedDoIndexVisitor>;
-  ImpliedDoIndexVisitor() : Base{*this} {}
-  using Base::operator();
-  bool operator()(const ImpliedDoIndex &) { return true; }
-
-  // Template helper for ConditionalExpr handlers
-  template <typename T> bool CheckConditionalExpr(const ConditionalExpr<T> &x) {
-    for (const auto &cond : x.conditions()) {
-      if ((*this)(cond)) {
-        return true;
-      }
-    }
-    for (const auto &val : x.values()) {
-      if ((*this)(val)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // ConditionalExpr handlers - check all conditions and values for implied DO
-  // indices
-  template <int KIND>
-  bool operator()(const ConditionalExpr<Type<TypeCategory::Integer, KIND>> &x) {
-    return CheckConditionalExpr(x);
-  }
-  template <int KIND>
-  bool operator()(const ConditionalExpr<Type<TypeCategory::Logical, KIND>> &x) {
-    return CheckConditionalExpr(x);
-  }
-  template <int KIND>
-  bool operator()(const ConditionalExpr<Type<TypeCategory::Real, KIND>> &x) {
-    return CheckConditionalExpr(x);
-  }
-  template <int KIND>
-  bool operator()(const ConditionalExpr<Type<TypeCategory::Complex, KIND>> &x) {
-    return CheckConditionalExpr(x);
-  }
-  template <int KIND>
-  bool operator()(
-      const ConditionalExpr<Type<TypeCategory::Unsigned, KIND>> &x) {
-    return CheckConditionalExpr(x);
-  }
-  template <int KIND>
-  bool operator()(
-      const ConditionalExpr<Type<TypeCategory::Character, KIND>> &x) {
-    return CheckConditionalExpr(x);
-  }
-  bool operator()(const ConditionalExpr<SomeKind<TypeCategory::Derived>> &x) {
-    return CheckConditionalExpr(x);
-  }
-};
-
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &expr) {
-  return ImpliedDoIndexVisitor{}(expr);
+  struct MyVisitor : public AnyTraverse<MyVisitor> {
+    using Base = AnyTraverse<MyVisitor>;
+    MyVisitor() : Base{*this} {}
+    using Base::operator();
+    bool operator()(const ImpliedDoIndex &) { return true; }
+  };
+  return MyVisitor{}(expr);
 }
 
 // Determines lower bound on a dimension.  This can be other than 1 only

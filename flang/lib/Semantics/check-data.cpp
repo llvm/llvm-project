@@ -174,21 +174,6 @@ public:
     }
   }
 
-  template <typename T> bool operator()(const evaluate::ConditionalExpr<T> &x) {
-    // Check all conditions and values
-    for (const auto &cond : x.conditions()) {
-      if (!(*this)(cond)) {
-        return false;
-      }
-    }
-    for (const auto &val : x.values()) {
-      if (!(*this)(val)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
 private:
   bool CheckSubscriptExpr(
       const std::optional<evaluate::IndirectSubscriptIntegerExpr> &x) const {

@@ -226,7 +226,7 @@ public:
   }
   // Conditional expressions (Fortran 2023)
   template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
-    return Combine(x.conditions(), x.values());
+    return Combine(x.condition(), x.thenValue(), x.elseValue());
   }
 
   // Operations and wrappers

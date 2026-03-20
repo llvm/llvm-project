@@ -396,25 +396,6 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
     (moveAppend(v, std::move(results)), ...);
     return v;
   }
-
-  template <typename T>
-  Result operator()(const evaluate::ConditionalExpr<T> &x) const {
-    // Collect designators from all conditions and values
-    Result result;
-    for (const auto &cond : x.conditions()) {
-      Result condResult = (*this)(cond);
-      for (auto &s : condResult) {
-        result.push_back(std::move(s));
-      }
-    }
-    for (const auto &val : x.values()) {
-      Result valResult = (*this)(val);
-      for (auto &s : valResult) {
-        result.push_back(std::move(s));
-      }
-    }
-    return result;
-  }
 };
 
 std::vector<SomeExpr> GetAllDesignators(const SomeExpr &expr) {

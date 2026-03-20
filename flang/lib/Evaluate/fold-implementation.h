@@ -143,6 +143,8 @@ Expr<ImpliedDoIndex::Result> FoldOperation(
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &, ArrayConstructor<T> &&);
 Expr<SomeDerived> FoldOperation(FoldingContext &, StructureConstructor &&);
+template <typename T>
+Expr<T> FoldOperation(FoldingContext &, ConditionalExpr<T> &&);
 
 template <typename T>
 std::optional<Constant<T>> Folder<T>::GetNamedConstant(const Symbol &symbol0) {
@@ -2209,6 +2211,21 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
         }
       },
       x.right().u);
+}
+
+template <typename T>
+Expr<T> FoldOperation(FoldingContext &context, ConditionalExpr<T> &&x) {
+  // Fold all sub-expressions first.
+  x.condition() = Fold(context, std::move(x.condition()));
+  x.thenValue() = Fold(context, std::move(x.thenValue()));
+  x.elseValue() = Fold(context, std::move(x.elseValue()));
+  // If the condition is a scalar logical constant, select the branch.
+  auto folded{Fold(
+      context, ConvertToType<LogicalResult>(Expr<SomeLogical>{x.condition()}))};
+  if (auto cst{GetScalarConstantValue<LogicalResult>(folded)}) {
+    return cst->IsTrue() ? std::move(x.thenValue()) : std::move(x.elseValue());
+  }
+  return Expr<T>{std::move(x)};
 }
 
 template <typename T>

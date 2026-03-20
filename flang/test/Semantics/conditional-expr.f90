@@ -137,13 +137,13 @@ subroutine error_non_logical_condition()
   real :: r
   character :: ch
 
-  !ERROR: Condition in conditional expression must be LOGICAL; have INTEGER(4)
+  !ERROR: Must have LOGICAL type, but is INTEGER(4)
   i = (i ? x : y)
 
-  !ERROR: Condition in conditional expression must be LOGICAL; have REAL(4)
+  !ERROR: Must have LOGICAL type, but is REAL(4)
   i = (r ? x : y)
 
-  !ERROR: Condition in conditional expression must be LOGICAL; have CHARACTER(KIND=1,LEN=1_8)
+  !ERROR: Must have LOGICAL type, but is CHARACTER(KIND=1,LEN=1_8)
   i = (ch ? x : y)
 end subroutine
 
@@ -229,7 +229,7 @@ subroutine error_array_condition()
   logical :: flags(5)
   integer :: x(5), y(5), result(5)
 
-  !ERROR: Condition in conditional expression must be scalar; have rank 1
+  !ERROR: Must be a scalar value, but is a rank-1 array
   result = (flags ? x : y)
 end subroutine
 

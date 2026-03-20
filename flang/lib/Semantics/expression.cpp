@@ -3896,22 +3896,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
   for (const auto &branch : branches) {
     const auto &condition{std::get<parser::ScalarLogicalExpr>(branch.t)};
     const auto &value{std::get<common::Indirection<parser::Expr>>(branch.t)};
-    MaybeExpr condExpr{Analyze(condition.thing.thing.value())};
+    MaybeExpr condExpr{Analyze(condition)};
     if (!condExpr) {
-      return std::nullopt;
-    }
-    if (!std::get_if<Expr<SomeLogical>>(&condExpr->u)) {
-      if (const auto type{condExpr->GetType()}) {
-        Say("Condition in conditional expression must be LOGICAL; have %s"_err_en_US,
-            type->AsFortran());
-      } else {
-        Say("Condition in conditional expression must be LOGICAL"_err_en_US);
-      }
-      return std::nullopt;
-    }
-    if (condExpr->Rank() != 0) {
-      Say("Condition in conditional expression must be scalar; have rank %d"_err_en_US,
-          condExpr->Rank());
       return std::nullopt;
     }
     conditions.push_back(std::move(condExpr));
@@ -3940,7 +3926,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
       "values must have exactly one more element than conditions");
 
   // F2023 C1004: Each expr shall have the same declared type, kind type
-  // parameters, and rank Reject typeless expressions (BOZ and NULL)
+  // parameters, and rank.
+  // Reject typeless expressions (BOZ and NULL)
   for (const auto &value : values) {
     // BOZ arrays are auto-converted in array constructors, but bare BOZ are not
     // allowed
@@ -4014,35 +4001,25 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
     }
   }
 
-  // Dispatch on the runtime type of values[0] to build the appropriately
-  // typed ConditionalExpr, with nested visitation to unwrap category->specific
-  // types.
+  // Build a right-skewed ConditionalExpr tree from the else value.
+  // Dispatch on values.back() to recover the concrete type; std::get
+  // is safe because all types were validated above.
   return common::visit(
       common::visitors{
           [&](const BOZLiteralConstant &) -> MaybeExpr {
             DIE("BOZ literal should have been eliminated by type validation");
           },
-          [&](Expr<SomeDerived> &&derivedExpr) -> MaybeExpr {
-            std::vector<Expr<SomeLogical>> typedConditions;
-            typedConditions.reserve(conditions.size());
-            for (auto &cond : conditions) {
-              auto *logicalExpr{std::get_if<Expr<SomeLogical>>(&cond->u)};
-              CHECK(logicalExpr && "Condition should be SomeLogical");
-              typedConditions.emplace_back(std::move(*logicalExpr));
+          [&](Expr<SomeDerived> &&elseExpr) -> MaybeExpr {
+            Expr<SomeDerived> result{std::move(elseExpr)};
+            for (int i = static_cast<int>(conditions.size()) - 1; i >= 0; --i) {
+              Expr<SomeLogical> cond{
+                  std::move(std::get<Expr<SomeLogical>>(conditions[i]->u))};
+              Expr<SomeDerived> thenVal{
+                  std::move(std::get<Expr<SomeDerived>>(values[i]->u))};
+              result = Expr<SomeDerived>{evaluate::ConditionalExpr<SomeDerived>{
+                  std::move(cond), std::move(thenVal), std::move(result)}};
             }
-            std::vector<Expr<SomeDerived>> typedValues;
-            typedValues.reserve(values.size());
-            // Use the moved-in first value directly, then process remaining
-            // values
-            typedValues.emplace_back(std::move(derivedExpr));
-            for (auto &val : llvm::drop_begin(values, 1)) {
-              auto *derivedVal{std::get_if<Expr<SomeDerived>>(&val->u)};
-              CHECK(derivedVal && "Value should be SomeDerived");
-              typedValues.emplace_back(std::move(*derivedVal));
-            }
-            return AsGenericExpr(
-                Expr<SomeDerived>{evaluate::ConditionalExpr<SomeDerived>{
-                    std::move(typedConditions), std::move(typedValues)}});
+            return AsGenericExpr(std::move(result));
           },
           [&](auto &&categoryExpr) -> MaybeExpr {
             using CategoryType = std::decay_t<decltype(categoryExpr)>;
@@ -4057,37 +4034,26 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
             } else {
               return common::visit(
                   [&](auto &&specificExpr) -> MaybeExpr {
-                    using SpecificType = std::decay_t<decltype(specificExpr)>;
-                    using T = typename SpecificType::Result;
-                    std::vector<Expr<SomeLogical>> typedConditions;
-                    typedConditions.reserve(conditions.size());
-                    for (auto &cond : conditions) {
-                      auto *logicalExpr{
-                          std::get_if<Expr<SomeLogical>>(&cond->u)};
-                      CHECK(logicalExpr && "Condition should be SomeLogical");
-                      typedConditions.emplace_back(std::move(*logicalExpr));
+                    using T =
+                        typename std::decay_t<decltype(specificExpr)>::Result;
+                    Expr<T> result{std::move(specificExpr)};
+                    for (int i = static_cast<int>(conditions.size()) - 1;
+                        i >= 0; --i) {
+                      Expr<SomeLogical> cond{std::move(
+                          std::get<Expr<SomeLogical>>(conditions[i]->u))};
+                      Expr<T> thenVal{std::move(std::get<Expr<T>>(
+                          std::get<CategoryType>(values[i]->u).u))};
+                      result =
+                          Expr<T>{evaluate::ConditionalExpr<T>{std::move(cond),
+                              std::move(thenVal), std::move(result)}};
                     }
-                    std::vector<Expr<T>> typedValues;
-                    typedValues.reserve(values.size());
-                    // Use the moved-in first value directly, then process
-                    // remaining values
-                    typedValues.emplace_back(std::move(specificExpr));
-                    for (auto &val : llvm::drop_begin(values, 1)) {
-                      auto *catExpr{std::get_if<CategoryType>(&val->u)};
-                      CHECK(catExpr && "Value should be CategoryType");
-                      auto *specificVal{std::get_if<Expr<T>>(&catExpr->u)};
-                      CHECK(specificVal && "Value should be Expr<T>");
-                      typedValues.emplace_back(std::move(*specificVal));
-                    }
-                    return AsGenericExpr(CategoryType{Expr<T>{
-                        evaluate::ConditionalExpr<T>{std::move(typedConditions),
-                            std::move(typedValues)}}});
+                    return AsGenericExpr(CategoryType{std::move(result)});
                   },
                   categoryExpr.u);
             }
           },
       },
-      std::move(values[0]->u));
+      std::move(values.back()->u));
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::DefinedUnary &x) {

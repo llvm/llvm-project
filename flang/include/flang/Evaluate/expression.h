@@ -397,27 +397,25 @@ public:
   using Result = T;
   CLASS_BOILERPLATE(ConditionalExpr)
   ConditionalExpr(
-      std::vector<Expr<SomeLogical>> &&conds, std::vector<Expr<Result>> &&vals)
-      : conditions_{std::move(conds)}, values_{std::move(vals)} {
-    CHECK(values_.size() == conditions_.size() + 1);
-  }
+      Expr<SomeLogical> &&cond, Expr<Result> &&thenVal, Expr<Result> &&elseVal)
+      : condition_{std::move(cond)}, thenValue_{std::move(thenVal)},
+        elseValue_{std::move(elseVal)} {}
   bool operator==(const ConditionalExpr &) const;
-  const std::vector<Expr<SomeLogical>> &conditions() const {
-    return conditions_;
-  }
-  std::vector<Expr<SomeLogical>> &conditions() { return conditions_; }
-  const std::vector<Expr<Result>> &values() const { return values_; }
-  std::vector<Expr<Result>> &values() { return values_; }
-  int Rank() const { return values_.empty() ? 0 : values_.front().Rank(); }
-  std::optional<DynamicType> GetType() const {
-    return values_.empty() ? std::nullopt : values_.front().GetType();
-  }
+  Expr<SomeLogical> &condition() { return condition_.value(); }
+  const Expr<SomeLogical> &condition() const { return condition_.value(); }
+  Expr<Result> &thenValue() { return thenValue_.value(); }
+  const Expr<Result> &thenValue() const { return thenValue_.value(); }
+  Expr<Result> &elseValue() { return elseValue_.value(); }
+  const Expr<Result> &elseValue() const { return elseValue_.value(); }
+  int Rank() const { return thenValue().Rank(); }
+  std::optional<DynamicType> GetType() const { return thenValue().GetType(); }
   static constexpr int Corank() { return 0; }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
-  std::vector<Expr<SomeLogical>> conditions_; // size N
-  std::vector<Expr<Result>> values_; // size N+1 (includes else)
+  common::CopyableIndirection<Expr<SomeLogical>> condition_;
+  common::CopyableIndirection<Expr<Result>> thenValue_;
+  common::CopyableIndirection<Expr<Result>> elseValue_;
 };
 
 // Array constructors

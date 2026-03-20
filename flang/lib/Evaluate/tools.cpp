@@ -1085,18 +1085,6 @@ struct CollectSymbolsHelper
   semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
     return {symbol};
   }
-  template <typename T>
-  semantics::UnorderedSymbolSet operator()(const ConditionalExpr<T> &x) {
-    // Collect symbols from all conditions and values
-    semantics::UnorderedSymbolSet result;
-    for (const auto &cond : x.conditions()) {
-      result.merge((*this)(cond));
-    }
-    for (const auto &val : x.values()) {
-      result.merge((*this)(val));
-    }
-    return result;
-  }
 };
 template <typename A> semantics::UnorderedSymbolSet CollectSymbols(const A &x) {
   return CollectSymbolsHelper{}(x);
@@ -1129,18 +1117,6 @@ struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
   }
   semantics::UnorderedSymbolSet operator()(const ProcedureRef &) const {
     return {};
-  }
-  template <typename T>
-  semantics::UnorderedSymbolSet operator()(const ConditionalExpr<T> &x) {
-    // Collect CUDA symbols from all conditions and values
-    semantics::UnorderedSymbolSet result;
-    for (const auto &cond : x.conditions()) {
-      result.merge((*this)(cond));
-    }
-    for (const auto &val : x.values()) {
-      result.merge((*this)(val));
-    }
-    return result;
   }
 };
 template <typename A>
@@ -1209,19 +1185,8 @@ struct HasVectorSubscriptHelper
   bool operator()(const ProcedureRef &) const {
     return false; // don't descend into function call arguments
   }
-  template <typename T> bool operator()(const ConditionalExpr<T> &x) {
-    // Check if any condition or value has a vector subscript
-    for (const auto &cond : x.conditions()) {
-      if ((*this)(cond)) {
-        return true;
-      }
-    }
-    for (const auto &val : x.values()) {
-      if ((*this)(val)) {
-        return true;
-      }
-    }
-    return false;
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    return false; // not a variable designator
   }
 };
 
@@ -1249,20 +1214,6 @@ struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
   }
   // Only look for constant not in subscript.
   bool operator()(const Subscript &) const { return false; }
-  template <typename T> bool operator()(const ConditionalExpr<T> &x) {
-    // Check if any condition or value has a constant
-    for (const auto &cond : x.conditions()) {
-      if ((*this)(cond)) {
-        return true;
-      }
-    }
-    for (const auto &val : x.values()) {
-      if ((*this)(val)) {
-        return true;
-      }
-    }
-    return false;
-  }
 };
 
 bool HasConstant(const Expr<SomeType> &expr) {
@@ -1277,21 +1228,6 @@ struct HasStructureComponentHelper
   using Base::operator();
 
   bool operator()(const Component &) const { return true; }
-
-  template <typename T> bool operator()(const ConditionalExpr<T> &x) {
-    // Check if any condition or value has a structure component
-    for (const auto &cond : x.conditions()) {
-      if ((*this)(cond)) {
-        return true;
-      }
-    }
-    for (const auto &val : x.values()) {
-      if ((*this)(val)) {
-        return true;
-      }
-    }
-    return false;
-  }
 };
 
 bool HasStructureComponent(const Expr<SomeType> &expr) {
@@ -1356,21 +1292,6 @@ public:
       }
     }
     return call.proc().GetName();
-  }
-
-  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
-    // Check if any condition or value contains an impure call
-    for (const auto &cond : x.conditions()) {
-      if (auto result{(*this)(cond)}) {
-        return result;
-      }
-    }
-    for (const auto &val : x.values()) {
-      if (auto result{(*this)(val)}) {
-        return result;
-      }
-    }
-    return std::nullopt;
   }
 
 private:
@@ -1811,11 +1732,17 @@ struct ArgumentExtractor
   template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
     // ConditionalExpr is a top-level operation; collect its immediate operands
     Arguments args;
-    for (const auto &cond : x.conditions()) {
-      args.push_back(AsSomeExpr(cond));
-    }
-    for (const auto &val : x.values()) {
-      args.push_back(AsSomeExpr(val));
+    const ConditionalExpr<T> *node{&x};
+    while (true) {
+      args.push_back(AsSomeExpr(node->condition()));
+      args.push_back(AsSomeExpr(node->thenValue()));
+      if (const auto *nested =
+              std::get_if<ConditionalExpr<T>>(&node->elseValue().u)) {
+        node = nested;
+      } else {
+        args.push_back(AsSomeExpr(node->elseValue()));
+        break;
+      }
     }
     return {Operator::Conditional, std::move(args)};
   }
@@ -1989,11 +1916,7 @@ struct ConvertCollector
 
   template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
     // For conditional expressions, collect conversions from all values only
-    Result result;
-    for (const auto &val : x.values()) {
-      result = Combine(std::move(result), (*this)(val));
-    }
-    return result;
+    return Combine((*this)(x.thenValue()), (*this)(x.elseValue()));
   }
 
   template <typename... Rs>
@@ -2086,22 +2009,6 @@ struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
   template <typename T>
   bool operator()(const evaluate::FunctionRef<T> &x) const {
     return evaluate::AsGenericExpr(common::Clone(x)) == var;
-  }
-
-  template <typename T>
-  bool operator()(const evaluate::ConditionalExpr<T> &x) const {
-    // Check if any condition or value contains the variable
-    for (const auto &cond : x.conditions()) {
-      if ((*this)(cond)) {
-        return true;
-      }
-    }
-    for (const auto &val : x.values()) {
-      if ((*this)(val)) {
-        return true;
-      }
-    }
-    return false;
   }
 
 private:
