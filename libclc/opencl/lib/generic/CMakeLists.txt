@@ -45,6 +45,7 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   atomic/atomic_work_item_fence.cl
   collective/work_group_any_all.cl
   collective/work_group_broadcast.cl
+  collective/work_group_reduce.cl
   common/degrees.cl
   common/mix.cl
   common/radians.cl
@@ -207,7 +208,6 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   subgroup/sub_group_broadcast.cl
   subgroup/sub_group_reduce.cl
   subgroup/subgroup.cl
-  subnormal_config.cl
   synchronization/sub_group_barrier.cl
   synchronization/work_group_barrier.cl
   workitem/get_enqueued_local_size.cl

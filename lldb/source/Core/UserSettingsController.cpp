@@ -55,7 +55,7 @@ void Properties::DumpAllPropertyValues(const ExecutionContext *exe_ctx,
                                        bool is_json) {
   if (is_json) {
     llvm::json::Value json = m_collection_sp->ToJSON(exe_ctx);
-    strm.Printf("%s", llvm::formatv("{0:2}", json).str().c_str());
+    strm << llvm::formatv("{0:2}", json);
   } else
     m_collection_sp->DumpValue(exe_ctx, strm, dump_mask);
 }

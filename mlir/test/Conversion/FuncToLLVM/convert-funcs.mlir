@@ -96,3 +96,10 @@ func.func private @badllvmlinkage(i32) attributes { "llvm.linkage" = 3 : i64 } /
 func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true, "llvm.emit_c_interface" } {
   return
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @empty_res_attrs()
+func.func @empty_res_attrs() attributes {res_attrs = []} {
+  return
+}

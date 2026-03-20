@@ -1707,9 +1707,9 @@ public:
       std::string output;
       int status = -1;
       int signo = -1;
-      error = (platform_sp->RunShellCommand(m_options.m_shell_interpreter, cmd,
-                                            working_dir, &status, &signo,
-                                            &output, m_options.m_timeout));
+      error = (platform_sp->RunShellCommand(
+          m_options.m_shell_interpreter, cmd, working_dir, &status, &signo,
+          &output, nullptr, m_options.m_timeout));
       if (!output.empty())
         result.GetOutputStream().PutCString(output);
       if (status > 0) {

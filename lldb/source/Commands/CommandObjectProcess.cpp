@@ -264,8 +264,8 @@ protected:
 
           const char *archname =
               exe_module_sp->GetArchitecture().GetArchitectureName();
-          result.AppendMessageWithFormat(
-              "Process %" PRIu64 " launched: '%s' (%s)\n", process_sp->GetID(),
+          result.AppendMessageWithFormatv(
+              "Process {0} launched: '{1}' ({2})", process_sp->GetID(),
               exe_module_sp->GetFileSpec().GetPath().c_str(), archname);
         }
         result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -383,8 +383,8 @@ protected:
     if (!old_exec_module_sp) {
       // We might not have a module if we attached to a raw pid...
       if (new_exec_module_sp) {
-        result.AppendMessageWithFormat(
-            "Executable binary set to \"%s\".\n",
+        result.AppendMessageWithFormatv(
+            "Executable binary set to \"{0}\".",
             new_exec_module_sp->GetFileSpec().GetPath().c_str());
       }
     } else if (!new_exec_module_sp) {
@@ -399,8 +399,8 @@ protected:
     }
 
     if (!old_arch_spec.IsValid()) {
-      result.AppendMessageWithFormat(
-          "Architecture set to: %s.\n",
+      result.AppendMessageWithFormatv(
+          "Architecture set to: {0}.",
           target->GetArchitecture().GetTriple().getTriple().c_str());
     } else if (!old_arch_spec.IsExactMatch(target->GetArchitecture())) {
       result.AppendWarningWithFormat(
@@ -719,8 +719,8 @@ protected:
         // PushProcessIOHandler().
         process->SyncIOHandler(iohandler_id, std::chrono::seconds(2));
 
-        result.AppendMessageWithFormat("Process %" PRIu64 " resuming\n",
-                                       process->GetID());
+        result.AppendMessageWithFormatv("Process {0} resuming",
+                                        process->GetID());
         if (synchronous_execution) {
           // If any state changed events had anything to say, add that to the
           // result
@@ -1122,8 +1122,8 @@ protected:
         Status error(process->GetTarget().GetPlatform()->UnloadImage(
             process, image_token));
         if (error.Success()) {
-          result.AppendMessageWithFormat(
-              "Unloading shared library with index %u...ok\n", image_token);
+          result.AppendMessageWithFormatv(
+              "Unloading shared library with index {0}...ok", image_token);
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           result.AppendErrorWithFormat("failed to unload image: %s",
@@ -1468,12 +1468,12 @@ protected:
       addr_t data_mask = process->GetDataAddressMask();
       if (code_mask != LLDB_INVALID_ADDRESS_MASK) {
         int bits = std::bitset<64>(~code_mask).count();
-        result.AppendMessageWithFormat(
-            "Addressable code address mask: 0x%" PRIx64 "\n", code_mask);
-        result.AppendMessageWithFormat(
-            "Addressable data address mask: 0x%" PRIx64 "\n", data_mask);
-        result.AppendMessageWithFormat(
-            "Number of bits used in addressing (code): %d\n", bits);
+        result.AppendMessageWithFormatv("Addressable code address mask: {0:x}",
+                                        code_mask);
+        result.AppendMessageWithFormatv("Addressable data address mask: {0:x}",
+                                        data_mask);
+        result.AppendMessageWithFormatv(
+            "Number of bits used in addressing (code): {0}", bits);
       }
 
       PlatformSP platform_sp = process->GetTarget().GetPlatform();

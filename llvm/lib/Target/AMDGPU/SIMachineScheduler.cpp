@@ -971,7 +971,7 @@ void SIScheduleBlockCreator::colorMergeConstantLoadsNextGroup() {
 
     // No predecessor: Vgpr constant loading.
     // Low latency instructions usually have a predecessor (the address)
-    if (SU->Preds.size() > 0 && !DAG->IsLowLatencySU[SU->NodeNum])
+    if (!SU->Preds.empty() && !DAG->IsLowLatencySU[SU->NodeNum])
       continue;
 
     for (SDep& SuccDep : SU->Succs) {

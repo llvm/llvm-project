@@ -1198,11 +1198,11 @@ static constexpr MathOperation mathOperations[] = {
     {"aint", RTNAME_STRING(TruncF128), FuncTypeReal16Real16, genLibF128Call},
     // llvm.round behaves the same way as libm's round.
     {"anint", "llvm.round.f32", genFuncType<Ty::Real<4>, Ty::Real<4>>,
-     genMathOp<mlir::LLVM::RoundOp>},
+     genMathOp<mlir::math::RoundOp>},
     {"anint", "llvm.round.f64", genFuncType<Ty::Real<8>, Ty::Real<8>>,
-     genMathOp<mlir::LLVM::RoundOp>},
+     genMathOp<mlir::math::RoundOp>},
     {"anint", "llvm.round.f80", genFuncType<Ty::Real<10>, Ty::Real<10>>,
-     genMathOp<mlir::LLVM::RoundOp>},
+     genMathOp<mlir::math::RoundOp>},
     {"anint", RTNAME_STRING(RoundF128), FuncTypeReal16Real16, genLibF128Call},
     {"asin", "asinf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::AsinOp>},
@@ -8736,12 +8736,6 @@ static mlir::Value genExtremumResult(mlir::Location loc,
                                      fir::FirOpBuilder &builder,
                                      mlir::Value left, mlir::Value right) {
   mlir::Type type = left.getType();
-  mlir::arith::CmpIPredicate integerPredicate =
-      type.isUnsignedInteger() ? isMax ? mlir::arith::CmpIPredicate::ugt
-                                       : mlir::arith::CmpIPredicate::ult
-      : isMax                  ? mlir::arith::CmpIPredicate::sgt
-                               : mlir::arith::CmpIPredicate::slt;
-  mlir::Value pred;
   if (fir::isa_real(type)) {
     switch (builder.getFPMaxminBehavior()) {
     case Fortran::common::FPMaxminBehavior::Portable:
@@ -8782,26 +8776,41 @@ static mlir::Value genExtremumResult(mlir::Location loc,
 
     llvm_unreachable("unsupported FPMaxminBehavior");
   } else if (fir::isa_integer(type)) {
-    mlir::Value cmpLeft = left;
-    mlir::Value cmpRight = right;
+    // It is probably okay to use signed index.maxs/mins, but
+    // maybe the caller needs to specify signedness.
+    // There are currently no callers that pass values of index
+    // type, so just emit a TODO.
+    if (mlir::isa<mlir::IndexType>(type))
+      TODO(loc, "extremum for index type");
+
     if (type.isUnsignedInteger()) {
+      // arith.maxui/minui operands must have singless type.
       mlir::Type signlessType = mlir::IntegerType::get(
           builder.getContext(), type.getIntOrFloatBitWidth(),
           mlir::IntegerType::SignednessSemantics::Signless);
-      cmpLeft = builder.createConvert(loc, signlessType, left);
-      cmpRight = builder.createConvert(loc, signlessType, right);
+      left = builder.createConvert(loc, signlessType, left);
+      right = builder.createConvert(loc, signlessType, right);
+
+      mlir::Value result;
+      if constexpr (isMax)
+        result = mlir::arith::MaxUIOp::create(builder, loc, left, right);
+      else
+        result = mlir::arith::MinUIOp::create(builder, loc, left, right);
+
+      return builder.createConvert(loc, type, result);
+    } else {
+      if constexpr (isMax)
+        return mlir::arith::MaxSIOp::create(builder, loc, left, right);
+      else
+        return mlir::arith::MinSIOp::create(builder, loc, left, right);
     }
-    pred = mlir::arith::CmpIOp::create(builder, loc, integerPredicate, cmpLeft,
-                                       cmpRight);
   } else if (fir::isa_char(type) || fir::isa_char(fir::unwrapRefType(type))) {
     // TODO: ! character min and max is tricky because the result
     // length is the length of the longest argument!
     // So we may need a temp.
     TODO(loc, "intrinsic: min and max for CHARACTER");
   }
-  assert(pred && "pred must be defined");
-
-  return mlir::arith::SelectOp::create(builder, loc, pred, left, right);
+  llvm_unreachable("unsupported extremum");
 }
 
 // UNLINK
