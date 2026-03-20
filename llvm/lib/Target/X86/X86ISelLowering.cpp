@@ -1369,6 +1369,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE,       VT, Custom);
       setOperationAction(ISD::CTLZ,             VT, Custom);
     }
+    setOperationAction(ISD::BITREVERSE,        MVT::i128, Custom);
 
     // These might be better off as horizontal vector ops.
     setOperationAction(ISD::ADD,                MVT::i16, Custom);
@@ -1513,6 +1514,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::OR, MVT::i256, Custom);
     setOperationAction(ISD::XOR, MVT::i256, Custom);
     setOperationAction(ISD::SELECT, MVT::i256, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::i256, Custom);
 
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
@@ -1895,6 +1897,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSHR, MVT::i256, Custom);
     setOperationAction(ISD::FSHL, MVT::i256, Custom);
     setOperationAction(ISD::SELECT, MVT::i512, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
@@ -2947,6 +2950,8 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     // Check for larger than legal scalar integer ops that might have been
     // custom lowered to vector instruction.
     switch (Opcode) {
+    case ISD::BITREVERSE:
+      return true;
     case ISD::SHL:
     case ISD::SRL:
     case ISD::SRA:
@@ -35902,11 +35907,29 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::BITREVERSE: {
-    assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
-    assert((Subtarget.hasXOP() || Subtarget.hasGFNI()) && "Expected XOP/GFNI");
-    // We can use VPPERM/GF2P8AFFINEQB by copying to a vector register and back.
-    // We'll need to move the scalar in two i32 pieces.
-    Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
+    EVT VT = N->getValueType(0);
+    if (VT == MVT::i64) {
+      assert((Subtarget.hasXOP() || Subtarget.hasGFNI()) &&
+             "Expected XOP/GFNI");
+      // We can use VPPERM/GF2P8AFFINEQB by copying to a vector register and
+      // back. We'll need to move the scalar in two i32 pieces.
+      Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
+      return;
+    }
+    assert((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
+           "Unexpected VT!");
+
+    SDValue N0 = N->getOperand(0);
+    unsigned NumElts = VT.getSizeInBits() / 64;
+    MVT VecVT = MVT::getVectorVT(MVT::i64, NumElts);
+    SDValue Vec = DAG.getBitcast(VecVT, N0);
+
+    // Reverse the vXi64 vector, then bitreverse each element.
+    SmallVector<int, 8> SwapMask(NumElts);
+    std::iota(SwapMask.rbegin(), SwapMask.rend(), 0);
+    Vec = DAG.getVectorShuffle(VecVT, dl, Vec, DAG.getPOISON(VecVT), SwapMask);
+    Vec = DAG.getNode(ISD::BITREVERSE, dl, VecVT, Vec);
+    Results.push_back(DAG.getBitcast(VT, Vec));
     return;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -58332,31 +58355,61 @@ static SDValue combineFPToSInt(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Custom handling for VCVTTPS2QQS/VCVTTPS2UQQS
 static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert((Opcode == ISD::FP_TO_SINT_SAT || Opcode == ISD::FP_TO_UINT_SAT) &&
+         "Unexpected opcode for combineFP_TO_xINT_SAT");
   if (!Subtarget.hasAVX10_2())
     return SDValue();
 
-  bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT_SAT;
-  EVT SrcVT = N->getOperand(0).getValueType();
+  bool IsSigned = Opcode == ISD::FP_TO_SINT_SAT;
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
   EVT DstVT = N->getValueType(0);
-  SDLoc dl(N);
+  EVT SatVT = cast<VTSDNode>(N->getOperand(1))->getVT();
+  SDLoc DL(N);
 
-  if (SrcVT == MVT::v2f32 && DstVT == MVT::v2i64) {
-    SDValue V2F32Value = DAG.getUNDEF(SrcVT);
-
-    // Concatenate the original v2f32 input and V2F32Value to create v4f32
-    SDValue NewSrc = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32,
-                                 N->getOperand(0), V2F32Value);
-
-    // Select the FP_TO_SINT_SAT/FP_TO_UINT_SAT node
+  // Preserve the existing full-width v2f32 -> v2i64 target-specific combine.
+  if (SrcVT == MVT::v2f32 && DstVT == MVT::v2i64 &&
+      SatVT.getScalarSizeInBits() == 64) {
+    SDValue Undef = DAG.getUNDEF(SrcVT);
+    SDValue NewSrc =
+        DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4f32, Src, Undef);
     if (IsSigned)
-      return DAG.getNode(X86ISD::FP_TO_SINT_SAT, dl, MVT::v2i64, NewSrc);
-
-    return DAG.getNode(X86ISD::FP_TO_UINT_SAT, dl, MVT::v2i64, NewSrc);
+      return DAG.getNode(X86ISD::FP_TO_SINT_SAT, DL, MVT::v2i64, NewSrc);
+    return DAG.getNode(X86ISD::FP_TO_UINT_SAT, DL, MVT::v2i64, NewSrc);
   }
-  return SDValue();
+
+  bool IsVector = SrcVT.isVector();
+  if (IsVector && !SrcVT.isFixedLengthVector())
+    return SDValue();
+
+  EVT SrcEltVT = SrcVT.getScalarType();
+  if (SrcEltVT != MVT::f32 && SrcEltVT != MVT::f64)
+    return SDValue();
+
+  unsigned DstWidth = DstVT.getScalarSizeInBits();
+  unsigned SatWidth = SatVT.getScalarSizeInBits();
+  // Only canonicalize narrow SatVT cases.
+  if ((DstWidth != 32 && DstWidth != 64) || SatWidth >= DstWidth)
+    return SDValue();
+
+  EVT FullSatVT = EVT::getIntegerVT(*DAG.getContext(), DstWidth);
+  SDValue FullSatTy = DAG.getValueType(FullSatVT);
+  SDValue Full = DAG.getNode(Opcode, DL, DstVT, Src, FullSatTy);
+  if (IsSigned) {
+    APInt Min = APInt::getSignedMinValue(SatWidth).sext(DstWidth);
+    APInt Max = APInt::getSignedMaxValue(SatWidth).sext(DstWidth);
+    SDValue MinC = DAG.getConstant(Min, DL, DstVT);
+    SDValue MaxC = DAG.getConstant(Max, DL, DstVT);
+    SDValue ClampedMin = DAG.getNode(ISD::SMAX, DL, DstVT, Full, MinC);
+    return DAG.getNode(ISD::SMIN, DL, DstVT, ClampedMin, MaxC);
+  }
+
+  APInt Max = APInt::getMaxValue(SatWidth).zext(DstWidth);
+  SDValue MaxC = DAG.getConstant(Max, DL, DstVT);
+  return DAG.getNode(ISD::UMIN, DL, DstVT, Full, MaxC);
 }
 
 // Turn uniform-constant splat rotates into VROTLI/VROTRI

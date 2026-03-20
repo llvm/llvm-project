@@ -69,6 +69,9 @@
 #define __CLC_CONVERT_S_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_S_GENTYPE)
 #define __CLC_CONVERT_U_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_U_GENTYPE)
 
+#define __CLC_GENTYPE_S_SIGNBIT (__CLC_S_GENTYPE)((1ll << (__CLC_FPSIZE - 1)))
+#define __CLC_GENTYPE_U_SIGNBIT (__CLC_U_GENTYPE)((1ull << (__CLC_FPSIZE - 1u)))
+
 #if (!defined(__CLC_HALF_ONLY) && !defined(__CLC_DOUBLE_ONLY))
 #define __CLC_SCALAR_GENTYPE float
 #define __CLC_FPSIZE 32
