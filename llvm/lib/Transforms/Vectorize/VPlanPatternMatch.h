@@ -219,6 +219,22 @@ struct match_poison {
   }
 };
 
+template <typename OpTy> struct match_widen {
+  OpTy Op;
+
+  template <typename ITy> bool match(ITy *V) const {
+    // TODO: Handle more widen recipes.
+    if (isa<VPWidenCastRecipe, VPWidenRecipe>(V))
+      return Op.match(V);
+    return false;
+  }
+};
+
+// Match a VPWiden* recipe.
+template <typename OpTy> inline match_widen<OpTy> m_Widen(const OpTy &Op) {
+  return {Op};
+}
+
 /// Match a VPIRValue that's poison.
 inline match_poison m_Poison() { return match_poison(); }
 
