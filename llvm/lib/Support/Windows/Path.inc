@@ -367,10 +367,17 @@ std::error_code create_symlink(const Twine &to, const Twine &from) {
       return ec;
     attr_path = &wide_resolved;
   }
-  DWORD Attr = ::GetFileAttributesW(attr_path->begin());
   DWORD Flags = 0;
-  if (Attr != INVALID_FILE_ATTRIBUTES && (Attr & FILE_ATTRIBUTE_DIRECTORY))
+  DWORD Attr = ::GetFileAttributesW(attr_path->begin());
+  if (Attr == INVALID_FILE_ATTRIBUTES) {
+    DWORD Err = ::GetLastError();
+    if (Err != ERROR_FILE_NOT_FOUND && Err != ERROR_PATH_NOT_FOUND)
+      return mapWindowsError(Err);
+    // Target doesn't exist. Default to a file symlink, matching the Unix
+    // behavior of allowing dangling symlinks.
+  } else if (Attr & FILE_ATTRIBUTE_DIRECTORY) {
     Flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+  }
 
   // Try with SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE first, which works
   // in non-UWP programs and when Developer Mode is enabled on Windows 10+.
