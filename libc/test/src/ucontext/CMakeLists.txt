@@ -10,6 +10,8 @@ if(TARGET libc.src.ucontext.getcontext)
     DEPENDS
       libc.src.ucontext.getcontext
       libc.src.ucontext.setcontext
+      libc.src.ucontext.makecontext
+      libc.src.ucontext.swapcontext
       libc.src.signal.sigemptyset
       libc.src.signal.sigaddset
       libc.src.signal.sigprocmask

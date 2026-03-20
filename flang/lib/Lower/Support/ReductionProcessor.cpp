@@ -46,7 +46,8 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
 
 template bool ReductionProcessor::processReductionArguments<
     fir::DeclareReductionOp, llvm::SmallVector<fir::ReduceOperationEnum>>(
@@ -55,7 +56,8 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
 
 template mlir::omp::DeclareReductionOp
 ReductionProcessor::createDeclareReduction<mlir::omp::DeclareReductionOp>(
@@ -658,7 +660,8 @@ bool ReductionProcessor::processReductionArguments(
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols) {
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   if constexpr (std::is_same_v<RedOperatorListTy,
@@ -701,6 +704,21 @@ bool ReductionProcessor::processReductionArguments(
   }
 
   for (const semantics::Symbol *symbol : reductionSymbols) {
+    // If a cached reduction variable exists for this symbol, reuse it.
+    // This ensures that composite constructs (e.g. DO SIMD) where both
+    // the outer wrapper (wsloop) and inner wrapper (simd) process the same
+    // reduction clause share the same SSA value, enabling genLoopVars()'s
+    // IRMapping to correctly remap inner wrapper operands to outer wrapper
+    // block arguments.
+    if (reductionVarCache) {
+      auto it = reductionVarCache->find(symbol);
+      if (it != reductionVarCache->end()) {
+        reductionVars.push_back(it->second);
+        reduceVarByRef.push_back(doReductionByRef(it->second));
+        continue;
+      }
+    }
+
     mlir::Value symVal = converter.getSymbolAddress(*symbol);
 
     if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
@@ -753,7 +771,12 @@ bool ReductionProcessor::processReductionArguments(
 
     reductionVars.push_back(
         builder.createConvert(currentLocation, refTy, symVal));
-    reduceVarByRef.push_back(doReductionByRef(symVal));
+    reduceVarByRef.push_back(doReductionByRef(reductionVars.back()));
+
+    // Cache the final SSA value for this symbol so that subsequent calls
+    // (e.g. for the inner wrapper in a composite construct) reuse it.
+    if (reductionVarCache)
+      reductionVarCache->try_emplace(symbol, reductionVars.back());
   }
 
   unsigned idx = 0;

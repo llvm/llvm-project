@@ -1265,6 +1265,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # ucontext.h entrypoints
     libc.src.ucontext.getcontext
     libc.src.ucontext.setcontext
+    libc.src.ucontext.makecontext
+    libc.src.ucontext.swapcontext
 
     # stdio.h entrypoints
     libc.src.stdio.clearerr

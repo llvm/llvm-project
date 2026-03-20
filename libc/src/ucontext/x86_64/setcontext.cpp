@@ -12,32 +12,22 @@
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/size_t.h"
-#include "include/llvm-libc-macros/signal-macros.h"
 #include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-__attribute__((naked)) LLVM_LIBC_FUNCTION(int, setcontext,
-                                          (const ucontext_t *ucp)) noexcept {
+[[gnu::naked]]
+LLVM_LIBC_FUNCTION(int, setcontext, (const ucontext_t *ucp)) {
   asm(R"(
       # ucp is in rdi
       
       # Restore the signal mask using rt_sigprocmask syscall.
       # rt_sigprocmask(SIG_SETMASK, &ucp->uc_sigmask, NULL, sizeof(sigset_t))
-      # Note: Restoring the signal mask early means that if a signal
-      # arrives before the context switch is complete, it will run on
-      # the old stack with the new mask. Doing this later is difficult
-      # because the syscall clobbers registers.
-      #
-      # Note: We could avoid these stack operations by saving rdi in a
-      # non-volatile register (like r12) across the syscall, since all
-      # registers will be overwritten anyway. We stick to the stack for
-      # simplicity and readability.
       pushq %%rdi # Save ucp
       leaq %c[sigmask](%%rdi), %%rsi # set = &ucp->uc_sigmask
       xorq %%rdx, %%rdx # oldset = NULL
       movq $%c[sigset_size], %%r10 # sigsetsize = sizeof(sigset_t)
-      movq $%c[sig_setmask], %%rdi # how = SIG_SETMASK
+      movq $2, %%rdi # how = SIG_SETMASK
       movq $%c[syscall_num], %%rax
       syscall
       popq %%rdi # Restore ucp
@@ -60,18 +50,17 @@ __attribute__((naked)) LLVM_LIBC_FUNCTION(int, setcontext,
       mov %c[rax](%%rdi), %%rax
       mov %c[rcx](%%rdi), %%rcx
 
-      # Restore stack pointer
+      # Restore stack pointer and instruction pointer
       mov %c[rsp](%%rdi), %%rsp
-      # Push saved RIP onto the new stack to use ret later
-      pushq %c[rip](%%rdi)
+      mov %c[rip](%%rdi), %%r11 # Use r11 as temp for rip
       
       # Restore RSI and RDI last
       mov %c[rsi](%%rdi), %%rsi
       mov %c[rdi](%%rdi), %%rdi
 
-      retq
+      jmpq *%%r11 # Jump to the saved instruction pointer
       )" ::[sigset_size] "i"(sizeof(sigset_t)),
-      [syscall_num] "i"(SYS_rt_sigprocmask), [sig_setmask] "i"(SIG_SETMASK),
+      [syscall_num] "i"(SYS_rt_sigprocmask),
       [r8] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.gregs[REG_R8])),
       [r9] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.gregs[REG_R9])),
       [r10] "i"(__builtin_offsetof(ucontext_t, uc_mcontext.gregs[REG_R10])),
