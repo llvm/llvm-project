@@ -6,17 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/float/definitions.h"
-#include "clc/math/clc_ep.h"
-#include "clc/math/clc_fabs.h"
-#include "clc/math/clc_fma.h"
-#include "clc/math/clc_frexp.h"
-#include "clc/math/clc_ldexp.h"
-#include "clc/math/clc_mad.h"
-#include "clc/math/math.h"
-#include "clc/relational/clc_isinf.h"
-#include "clc/relational/clc_isnan.h"
-
 /*
    Algorithm:
 
@@ -72,54 +61,57 @@
 
 */
 
-_CLC_OVERLOAD _CLC_DEF float
+#ifdef __CLC_SCALAR
+
+#if __CLC_FPSIZE == 32
+_CLC_OVERLOAD _CLC_DEF __CLC_FLOATN
 #if defined(COMPILING_LOG2)
-__clc_log2(float x)
+__clc_log2(__CLC_FLOATN x)
 #elif defined(COMPILING_LOG10)
-__clc_log10(float x)
+__clc_log10(__CLC_FLOATN x)
 #else
-__clc_log(float x)
+__clc_log(__CLC_FLOATN x)
 #endif
 {
 
 #if defined(COMPILING_LOG2)
-  const float LOG2E = 0x1.715476p+0f;      // 1.4426950408889634
-  const float LOG2E_HEAD = 0x1.700000p+0f; // 1.4375
-  const float LOG2E_TAIL = 0x1.547652p-8f; // 0.00519504072
+  const __CLC_FLOATN LOG2E = 0x1.715476p+0f;      // 1.4426950408889634
+  const __CLC_FLOATN LOG2E_HEAD = 0x1.700000p+0f; // 1.4375
+  const __CLC_FLOATN LOG2E_TAIL = 0x1.547652p-8f; // 0.00519504072
 #elif defined(COMPILING_LOG10)
-  const float LOG10E = 0x1.bcb7b2p-2f;        // 0.43429448190325182
-  const float LOG10E_HEAD = 0x1.bc0000p-2f;   // 0.43359375
-  const float LOG10E_TAIL = 0x1.6f62a4p-11f;  // 0.0007007319
-  const float LOG10_2_HEAD = 0x1.340000p-2f;  // 0.30078125
-  const float LOG10_2_TAIL = 0x1.04d426p-12f; // 0.000248745637
+  const __CLC_FLOATN LOG10E = 0x1.bcb7b2p-2f;        // 0.43429448190325182
+  const __CLC_FLOATN LOG10E_HEAD = 0x1.bc0000p-2f;   // 0.43359375
+  const __CLC_FLOATN LOG10E_TAIL = 0x1.6f62a4p-11f;  // 0.0007007319
+  const __CLC_FLOATN LOG10_2_HEAD = 0x1.340000p-2f;  // 0.30078125
+  const __CLC_FLOATN LOG10_2_TAIL = 0x1.04d426p-12f; // 0.000248745637
 #else
-  const float LOG2_HEAD = 0x1.62e000p-1f;  // 0.693115234
-  const float LOG2_TAIL = 0x1.0bfbe8p-15f; // 0.0000319461833
+  const __CLC_FLOATN LOG2_HEAD = 0x1.62e000p-1f;  // 0.693115234
+  const __CLC_FLOATN LOG2_TAIL = 0x1.0bfbe8p-15f; // 0.0000319461833
 #endif
 
   uint xi = __clc_as_uint(x);
   uint ax = xi & EXSIGNBIT_SP32;
 
   // Calculations for |x-1| < 2^-4
-  float r = x - 1.0f;
+  __CLC_FLOATN r = x - 1.0f;
   int near1 = __clc_fabs(r) < 0x1.0p-4f;
-  float u2 = MATH_DIVIDE(r, 2.0f + r);
-  float corr = u2 * r;
-  float u = u2 + u2;
-  float v = u * u;
-  float znear1, z1, z2;
+  __CLC_FLOATN u2 = MATH_DIVIDE(r, 2.0f + r);
+  __CLC_FLOATN corr = u2 * r;
+  __CLC_FLOATN u = u2 + u2;
+  __CLC_FLOATN v = u * u;
+  __CLC_FLOATN znear1, z1, z2;
 
   // 2/(5 * 2^5), 2/(3 * 2^3)
   z2 = __clc_mad(u, __clc_mad(v, 0x1.99999ap-7f, 0x1.555556p-4f) * v, -corr);
 
 #if defined(COMPILING_LOG2)
-  z1 = __clc_as_float(__clc_as_int(r) & 0xffff0000);
+  z1 = __CLC_AS_FLOATN(__CLC_AS_INTN(r) & 0xffff0000);
   z2 = z2 + (r - z1);
   znear1 = __clc_mad(
       z1, LOG2E_HEAD,
       __clc_mad(z2, LOG2E_HEAD, __clc_mad(z1, LOG2E_TAIL, z2 * LOG2E_TAIL)));
 #elif defined(COMPILING_LOG10)
-  z1 = __clc_as_float(__clc_as_int(r) & 0xffff0000);
+  z1 = __CLC_AS_FLOATN(__clc_as_int(r) & 0xffff0000);
   z2 = z2 + (r - z1);
   znear1 = __clc_mad(
       z1, LOG10E_HEAD,
@@ -132,24 +124,24 @@ __clc_log(float x)
   int m = (int)(xi >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
 
   // Normalize subnormal
-  uint xis = __clc_as_uint(__clc_as_float(xi | 0x3f800000) - 1.0f);
+  uint xis = __CLC_AS_UINTN(__CLC_AS_FLOATN(xi | 0x3f800000) - 1.0f);
   int ms = (int)(xis >> EXPSHIFTBITS_SP32) - 253;
   int c = m == -127;
   m = c ? ms : m;
   uint xin = c ? xis : xi;
 
-  float mf = (float)m;
+  __CLC_FLOATN mf = (__CLC_FLOATN)m;
   uint indx = (xin & 0x007f0000) + ((xin & 0x00008000) << 1);
 
   // F - Y
-  float f = __clc_as_float(0x3f000000 | indx) -
-            __clc_as_float(0x3f000000 | (xin & MANTBITS_SP32));
+  __CLC_FLOATN f = __CLC_AS_FLOATN(0x3f000000 | indx) -
+                   __CLC_AS_FLOATN(0x3f000000 | (xin & MANTBITS_SP32));
 
   indx = indx >> 16;
   r = f * __CLC_USE_TABLE(log_inv_tbl, indx);
 
   // 1/3,  1/2
-  float poly = __clc_mad(__clc_mad(r, 0x1.555556p-2f, 0.5f), r * r, r);
+  __CLC_FLOATN poly = __clc_mad(__clc_mad(r, 0x1.555556p-2f, 0.5f), r * r, r);
 
 #if defined(COMPILING_LOG2)
   float2 tv = __CLC_USE_TABLE(log2_tbl, indx);
@@ -165,63 +157,63 @@ __clc_log(float x)
   z2 = __clc_mad(mf, LOG2_TAIL, -poly) + tv.s1;
 #endif
 
-  float z = z1 + z2;
+  __CLC_FLOATN z = z1 + z2;
   z = near1 ? znear1 : z;
 
   // Corner cases
   z = ax >= PINFBITPATT_SP32 ? x : z;
-  z = xi != ax ? __clc_as_float(QNANBITPATT_SP32) : z;
-  z = ax == 0 ? __clc_as_float(NINFBITPATT_SP32) : z;
+  z = xi != ax ? __CLC_AS_FLOATN(QNANBITPATT_SP32) : z;
+  z = ax == 0 ? __CLC_AS_FLOATN(NINFBITPATT_SP32) : z;
 
   return z;
 }
 
-#ifdef cl_khr_fp64
+#elif __CLC_FPSIZE == 64
 
-_CLC_OVERLOAD _CLC_DEF double
+_CLC_OVERLOAD _CLC_DEF __CLC_DOUBLEN
 #if defined(COMPILING_LOG2)
-__clc_log2(double a)
+__clc_log2(__CLC_DOUBLEN a)
 #elif defined(COMPILING_LOG10)
-__clc_log10(double a)
+__clc_log10(__CLC_DOUBLEN a)
 #else
-__clc_log(double a)
+__clc_log(__CLC_DOUBLEN a)
 #endif
 {
-  int a_exp;
-  double m = __clc_frexp(a, &a_exp);
-  int b = m < (2.0 / 3.0);
+  __CLC_INTN a_exp;
+  __CLC_DOUBLEN m = __clc_frexp(a, &a_exp);
+  __CLC_INTN b = m < (2.0 / 3.0);
   m = __clc_ldexp(m, b);
-  int e = a_exp - b;
+  __CLC_INTN e = a_exp - b;
 
-  __clc_ep_pair_double x = __clc_ep_div(m - 1.0, __clc_ep_fast_add(1.0, m));
-  double s = x.hi * x.hi;
-  double p = __clc_mad(s, __clc_mad(s, __clc_mad(s,
+  __CLC_EP_PAIR x = __clc_ep_div(m - 1.0, __clc_ep_fast_add(1.0, m));
+  __CLC_DOUBLEN s = x.hi * x.hi;
+  __CLC_DOUBLEN p = __clc_mad(s, __clc_mad(s, __clc_mad(s,
              __clc_mad(s, __clc_mad(s, __clc_mad(s, 0x1.3ab76bf559e2bp-3, 0x1.385386b47b09ap-3),
                0x1.7474dd7f4df2ep-3), 0x1.c71c016291751p-3),
                0x1.249249b27acf1p-2), 0x1.99999998ef7b6p-2), 0x1.5555555555780p-1);
-  __clc_ep_pair_double r =
+  __CLC_EP_PAIR r =
       __clc_ep_fast_add(__clc_ep_ldexp(x, 1), s * x.hi * p);
 
 #if defined COMPILING_LOG2
   r = __clc_ep_add(
-      (double)e,
+      __CLC_CONVERT_DOUBLEN(e),
       __clc_ep_mul(
           __clc_ep_make_pair(0x1.71547652b82fep+0, 0x1.777d0ffda0d24p-56), r));
 #elif defined COMPILING_LOG10
   r = __clc_ep_add(
       __clc_ep_mul(
           __clc_ep_make_pair(0x1.34413509f79ffp-2, -0x1.9dc1da994fd21p-59),
-          (double)e),
+          __CLC_CONVERT_DOUBLEN(e)),
       __clc_ep_mul(
           __clc_ep_make_pair(0x1.bcb7b1526e50ep-2, 0x1.95355baaafad3p-57), r));
 #else
   r = __clc_ep_add(__clc_ep_mul(__clc_ep_make_pair(0x1.62e42fefa39efp-1,
                                                    0x1.abc9e3b39803fp-56),
-                                (double)e),
+                                __CLC_CONVERT_DOUBLEN(e)),
                    r);
 #endif
 
-  double ret = r.hi;
+  __CLC_DOUBLEN ret = r.hi;
 
   ret = __clc_isinf(a) ? a : ret;
   ret = a < 0.0 ? DBL_NAN : ret;
@@ -230,23 +222,22 @@ __clc_log(double a)
   return ret;
 }
 
-#endif // cl_khr_fp64
+#elif __CLC_FPSIZE == 16
 
-#ifdef cl_khr_fp16
-
-_CLC_OVERLOAD _CLC_DEF half
+_CLC_OVERLOAD _CLC_DEF __CLC_HALFN
 #if defined(COMPILING_LOG2)
-__clc_log2(half x) {
-  return (half)__clc_log2((float)x);
+__clc_log2(__CLC_HALFN x) {
+  return __CLC_CONVERT_HALFN(__clc_log2(__CLC_CONVERT_FLOATN(x)));
 }
 #elif defined(COMPILING_LOG10)
-__clc_log10(half x) {
-  return (half)__clc_log10((float)x);
+__clc_log10(__CLC_HALFN x) {
+  return __CLC_CONVERT_HALFN(__clc_log10(__CLC_CONVERT_FLOATN(x)));
 }
 #else
-__clc_log(half x) {
-  return (half)__clc_log((float)x);
+__clc_log(__CLC_HALFN x) {
+  return __CLC_CONVERT_HALFN(__clc_log(__CLC_CONVERT_FLOATN(x));
 }
 #endif
 
-#endif // cl_khr_fp16
+#endif // __CLC_FPSIZE
+#endif // __CLC_SCALAR

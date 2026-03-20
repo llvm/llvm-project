@@ -515,6 +515,33 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_semid_ds
+  HDRS
+    struct_semid_ds.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_semid_ds
+    libc.include.sys_sem
+)
+
+add_proxy_header_library(
+  struct_sembuf
+  HDRS
+    struct_sembuf.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sembuf
+    libc.include.sys_sem
+)
+
+add_proxy_header_library(
+  struct_seminfo
+  HDRS
+    struct_seminfo.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_seminfo
+    libc.include.sys_sem
+)
+
+add_proxy_header_library(
   gid_t
   HDRS
     gid_t.h

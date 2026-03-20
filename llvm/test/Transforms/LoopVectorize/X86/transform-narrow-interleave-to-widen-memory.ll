@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux"
 define void @test_4xi64(ptr noalias %data, ptr noalias %factor, i64 noundef %n) {
 ; CHECK-LABEL: define void @test_4xi64(
 ; CHECK-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -83,9 +83,10 @@ define void @test_4xi64(ptr noalias %data, ptr noalias %factor, i64 noundef %n) 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[N_VEC1]], %[[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[DATA_2:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L_2:%.*]] = load i64, ptr [[DATA_2]], align 8
 ; CHECK-NEXT:    [[DATA_0:%.*]] = getelementptr inbounds { i64, i64, i64, i64 }, ptr [[DATA]], i64 [[IV1]], i32 0

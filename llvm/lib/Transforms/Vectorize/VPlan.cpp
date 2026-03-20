@@ -891,7 +891,7 @@ VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
   if (auto *Inc = vputils::findCanonicalIVIncrement(*getPlan()))
     return Inc;
 
-  assert(!Plan.getVFxUF().isMaterialized() &&
+  assert(!getPlan()->getVFxUF().isMaterialized() &&
          "must only create increment by VFxUF, if VFxUF has not been "
          "materialized yet");
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
