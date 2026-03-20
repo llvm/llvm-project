@@ -94,15 +94,16 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
           if (VectorID == Intrinsic::not_intrinsic)
             return false;
+
           // The noalias.scope.decl intrinsic declares a noalias scope that
           // is valid for a single iteration. Emitting it as a single-scalar
           // replicate would incorrectly extend the scope across multiple
-          // original iterations packed into one vector iteration. Taking the
-          // conservative approach and drop it, but still allow vectorization.
-          if (VectorID == Intrinsic::experimental_noalias_scope_decl) {
-            Ingredient.eraseFromParent();
-            continue;
-          }
+          // original iterations packed into one vector iteration.
+          // FIXME: If we want to vectorize this this loop, then we have to drop
+          // all the associated !alias.scope and !noalias.
+          if (VectorID == Intrinsic::experimental_noalias_scope_decl)
+            return false;
+
           // These intrinsics are recognized by getVectorIntrinsicIDForCall
           // but are not widenable. Emit them as single-scalar replicate
           // instead of widening.

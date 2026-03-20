@@ -19,8 +19,8 @@ define void @test_assume(ptr %arr, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[INDEX]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp sgt i64 [[INDEX]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP9]])
 ; CHECK-NEXT:    br label %[[INNER1:.*]]
 ; CHECK:       [[INNER1]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER1]] ]
