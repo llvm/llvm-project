@@ -9498,8 +9498,8 @@ SDValue LoongArchTargetLowering::getSqrtEstimate(SDValue Operand,
                                                  int &RefinementSteps,
                                                  bool &UseOneConstNR,
                                                  bool Reciprocal) const {
-  ssert(Enabled != ReciprocalEstimate::Disabled &&
-        "Enabled should never be Disabled here");
+  assert(Enabled != ReciprocalEstimate::Disabled &&
+         "Enabled should never be Disabled here");
 
   if (!Subtarget.hasFrecipe())
     return SDValue();
@@ -9533,8 +9533,8 @@ SDValue LoongArchTargetLowering::getRecipEstimate(SDValue Operand,
                                                   SelectionDAG &DAG,
                                                   int Enabled,
                                                   int &RefinementSteps) const {
-  ssert(Enabled != ReciprocalEstimate::Disabled &&
-        "Enabled should never be Disabled here");
+  assert(Enabled != ReciprocalEstimate::Disabled &&
+         "Enabled should never be Disabled here");
 
   if (!Subtarget.hasFrecipe())
     return SDValue();
