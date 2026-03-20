@@ -163,8 +163,7 @@ define i8 @test8(i8 %x) nounwind {
 ; X86-LABEL: test8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrb %al
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    shrl %eax
 ; X86-NEXT:    imull $211, %eax, %eax
 ; X86-NEXT:    shrl $13, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -186,8 +185,7 @@ define i8 @test9(i8 %x) nounwind {
 ; X86-LABEL: test9:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrb $2, %al
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    shrl $2, %eax
 ; X86-NEXT:    imull $71, %eax, %eax
 ; X86-NEXT:    shrl $11, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax

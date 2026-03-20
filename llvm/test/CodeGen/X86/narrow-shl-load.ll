@@ -44,7 +44,8 @@ define i32 @test3(ptr%P) nounwind ssp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $128, (%rdi)
 ; CHECK-NEXT:    movsbl (%rdi), %eax
-; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    shrl $8, %eax
 ; CHECK-NEXT:    retq
   store volatile i32 128, ptr %P
   %tmp4.pre = load i32, ptr %P

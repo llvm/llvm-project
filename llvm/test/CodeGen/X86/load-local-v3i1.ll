@@ -98,21 +98,20 @@ define void @local_load_v3i1(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr %p
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrb %cl
 ; CHECK-NEXT:    andb $1, %cl
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrb $2, %dl
-; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movzbl %al, %ebp
-; CHECK-NEXT:    movzbl %dl, %r14d
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %r14d
+; CHECK-NEXT:    shrl $2, %ebp
 ; CHECK-NEXT:    movzbl %cl, %r15d
 ; CHECK-NEXT:    movq %rsi, %rdi
-; CHECK-NEXT:    movl %ebp, %esi
+; CHECK-NEXT:    movl %r14d, %esi
 ; CHECK-NEXT:    movl %r15d, %edx
-; CHECK-NEXT:    movl %r14d, %ecx
+; CHECK-NEXT:    movl %ebp, %ecx
 ; CHECK-NEXT:    callq masked_load_v3@PLT
 ; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    movl %ebp, %esi
+; CHECK-NEXT:    movl %r14d, %esi
 ; CHECK-NEXT:    movl %r15d, %edx
-; CHECK-NEXT:    movl %r14d, %ecx
+; CHECK-NEXT:    movl %ebp, %ecx
 ; CHECK-NEXT:    callq masked_store4_v3@PLT
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx

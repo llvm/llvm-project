@@ -29,7 +29,7 @@ define void @f(ptr %0) {
 ; AVX2-NEXT:    shrb $6, %cl
 ; AVX2-NEXT:    andb $1, %cl
 ; AVX2-NEXT:    vpinsrb $12, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    shrb $7, %al
+; AVX2-NEXT:    shrl $7, %eax
 ; AVX2-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
 ; AVX2-NEXT:    movl $1, %eax
 ; AVX2-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0

@@ -518,8 +518,7 @@ define <16 x i8> @urem_op1_constant(ptr %p) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzbl (%rdi), %eax
 ; SSE-NEXT:    movl %eax, %ecx
-; SSE-NEXT:    shrb %cl
-; SSE-NEXT:    movzbl %cl, %ecx
+; SSE-NEXT:    shrl %ecx
 ; SSE-NEXT:    imull $49, %ecx, %ecx
 ; SSE-NEXT:    shrl $10, %ecx
 ; SSE-NEXT:    imull $42, %ecx, %ecx
@@ -532,8 +531,7 @@ define <16 x i8> @urem_op1_constant(ptr %p) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzbl (%rdi), %eax
 ; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    shrb %cl
-; AVX-NEXT:    movzbl %cl, %ecx
+; AVX-NEXT:    shrl %ecx
 ; AVX-NEXT:    imull $49, %ecx, %ecx
 ; AVX-NEXT:    shrl $10, %ecx
 ; AVX-NEXT:    imull $42, %ecx, %ecx
