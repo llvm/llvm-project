@@ -71,10 +71,10 @@ func.func @alloca_nonconvertible() {
   return
 }
 
-// compiler generated alloca will not perserve declare
+// compiler generated alloca will not preserve declare
 // CHECK-LABEL: func.func @peep_declare
 // CHECK:       [[ALLOCA:%.+]] = memref.alloca() : memref<i32>
-// CHECK-NOT:   fircg.ext_declare
+// CHECK-NOT:   fir.declare
 // CHECK:       memref.store %c1_i32, [[ALLOCA]][] : memref<i32>
 func.func @peep_declare() {
   %c1_i32 = arith.constant 1 : i32
@@ -85,10 +85,10 @@ func.func @peep_declare() {
 }
 
 // check that attributes are copied when they exist
-// CHECK-LABEL: func.func @perserve_declare
+// CHECK-LABEL: func.func @preserve_declare
 // CHECK:       [[ALLOCA:%.*]] = memref.alloca() {bindc_name = "x", uniq_name = "y"} : memref<i32>
 // CHECK-NOT:   memref.store %c1_i32, [[ALLOCA]][] : memref<i32>
-func.func @perserve_declare() {
+func.func @preserve_declare() {
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.alloca i32 {bindc_name = "x", uniq_name = "y"}
   %1 = fir.declare %0 {uniq_name = "some_name"} : (!fir.ref<i32>) -> !fir.ref<i32>
