@@ -238,7 +238,8 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
 
-      # Include a `config.h`-style header at the top of all compilation units.
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
       target_compile_options(${tgtname} PRIVATE
           "$<$<COMPILE_LANGUAGE:CXX>:-include${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
@@ -247,7 +248,8 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
         )
 
-      # Include a `config.h`-style header at the top of all compilation units.
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
       target_compile_options(${tgtname} PRIVATE
           "$<$<COMPILE_LANGUAGE:CXX>:/FI${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
@@ -256,7 +258,8 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
         )
 
-      # Include a `config.h`-style header at the top of all compilation units.
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
       target_compile_options(${tgtname} PRIVATE
           "$<$<COMPILE_LANGUAGE:CXX>:-qinclude=${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
