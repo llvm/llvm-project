@@ -39,20 +39,13 @@ static std::string makeCharacterLiteral(const StringLiteral *Literal) {
 }
 
 template <typename T>
-static bool forAllLeavesOfTernaryTree(const Expr *E, const T &HandleNode) {
-  if constexpr (std::is_void_v<decltype(HandleNode(E))>) {
-    return forAllLeavesOfTernaryTree(E, [&](const Expr *Exp) {
-      HandleNode(Exp);
-      return true;
-    });
-  } else {
-    E = E->IgnoreParenImpCasts();
-    if (const auto *Ternary = dyn_cast<ConditionalOperator>(E)) {
-      return forAllLeavesOfTernaryTree(Ternary->getTrueExpr(), HandleNode) &&
-             forAllLeavesOfTernaryTree(Ternary->getFalseExpr(), HandleNode);
-    }
-    return HandleNode(E);
+static bool forAllLeavesOfTernaryTree(const Expr *Node, const T &HandleLeaf) {
+  Node = Node->IgnoreParenImpCasts();
+  if (const auto *Ternary = dyn_cast<ConditionalOperator>(Node)) {
+    return forAllLeavesOfTernaryTree(Ternary->getTrueExpr(), HandleLeaf) &&
+           forAllLeavesOfTernaryTree(Ternary->getFalseExpr(), HandleLeaf);
   }
+  return HandleLeaf(Node);
 }
 
 FasterStringFindCheck::FasterStringFindCheck(StringRef Name,
@@ -109,6 +102,7 @@ void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
   forAllLeavesOfTernaryTree(Literal, [&](const Expr *E) {
     Diag << FixItHint::CreateReplacement(
         E->getSourceRange(), makeCharacterLiteral(cast<StringLiteral>(E)));
+    return true;
   });
 }
 
