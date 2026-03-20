@@ -1492,9 +1492,9 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
                isa<CallInst>(U)) {
       U->replaceUsesOfWith(Old, New);
     } else if (auto *Phi = dyn_cast<PHINode>(U)) {
-      Phi->replaceUsesOfWith(Old, New);
       if (Phi->getType() != New->getType()) {
         Phi->mutateType(New->getType());
+        Phi->replaceUsesOfWith(Old, New);
         // Convert extractvalue users of the mutated PHI to spv_extractv
         SmallVector<ExtractValueInst *, 4> EVUsers;
         for (User *PhiUser : Phi->users())
@@ -1512,6 +1512,8 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
           DeletedInstrs.insert(EV);
           EV->eraseFromParent();
         }
+      } else {
+        Phi->replaceUsesOfWith(Old, New);
       }
     } else {
       llvm_unreachable("illegal aggregate intrinsic user");
