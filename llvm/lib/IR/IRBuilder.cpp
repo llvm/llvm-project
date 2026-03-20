@@ -208,11 +208,8 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
           AddRounding = DefaultConstrainedRounding != RoundingMode::Dynamic;
           AddExceptions = DefaultConstrainedExcept != fp::ebStrict;
         } else {
-          AddRounding =
-              DefaultConstrainedRounding != RoundingMode::NearestTiesToEven;
+          AddRounding = false;
           AddExceptions = false;
-          assert(DefaultConstrainedExcept == fp::ebIgnore &&
-                 "FP exception in default mode must be ignored");
         }
 
         // The options specified by the specified bundles have higher

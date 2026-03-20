@@ -153,8 +153,8 @@ protected:
   FastMathFlags FMF;
 
   bool IsFPConstrained = false;
-  fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebIgnore;
-  RoundingMode DefaultConstrainedRounding = RoundingMode::NearestTiesToEven;
+  fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
+  RoundingMode DefaultConstrainedRounding = RoundingMode::Dynamic;
 
   ArrayRef<OperandBundleDef> DefaultOperandBundles;
 
@@ -349,18 +349,6 @@ public:
   /// floating point intrinsic calls. Fast math flags are unaffected
   /// by this setting.
   void setIsFPConstrained(bool IsCon) { IsFPConstrained = IsCon; }
-
-  /// Enable/Disable code generation for strictfp functions.
-  void setFPMode(bool IsStrictFP) {
-    if (IsStrictFP) {
-      setDefaultConstrainedRounding(RoundingMode::Dynamic);
-      setDefaultConstrainedExcept(fp::ebStrict);
-    } else {
-      setDefaultConstrainedRounding(RoundingMode::NearestTiesToEven);
-      setDefaultConstrainedExcept(fp::ebIgnore);
-    }
-    setIsFPConstrained(IsStrictFP);
-  }
 
   /// Query for the use of constrained floating point math
   bool getIsFPConstrained() { return IsFPConstrained; }

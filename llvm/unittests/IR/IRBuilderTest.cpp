@@ -330,8 +330,6 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
 
   // See if we get constrained intrinsics instead of non-constrained
   // instructions.
-  Builder.setDefaultConstrainedRounding(RoundingMode::Dynamic);
-  Builder.setDefaultConstrainedExcept(fp::ebStrict);
   Builder.setIsFPConstrained(true);
   auto Parent = BB->getParent();
   Parent->addFnAttr(Attribute::StrictFP);
@@ -500,12 +498,12 @@ TEST_F(IRBuilderTest, ConstrainedFPFunctionCall) {
       Function::Create(FTy, Function::ExternalLinkage, "", M.get());
   BasicBlock *CalleeBB = BasicBlock::Create(Ctx, "", Callee);
   IRBuilder<> CalleeBuilder(CalleeBB);
-  CalleeBuilder.setFPMode(true);
+  CalleeBuilder.setIsFPConstrained(true);
   CalleeBuilder.setConstrainedFPFunctionAttr();
   CalleeBuilder.CreateRetVoid();
 
   // Now call the empty constrained FP function.
-  Builder.setFPMode(true);
+  Builder.setIsFPConstrained(true);
   Builder.setConstrainedFPFunctionAttr();
   CallInst *FCall = Builder.CreateCall(Callee, {});
 
@@ -616,26 +614,6 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
     EXPECT_TRUE(ME.doesNotAccessMemory());
   }
 
-  // If the builder object specifies a rounding mode, the resulting call will
-  // include the corresponding "fp.round" operand bundle.
-  {
-    Builder.setDefaultConstrainedRounding(RoundingMode::TowardNegative);
-    SmallVector<OperandBundleDef, 1> Bundles;
-    Value *V = Builder.CreateCall(Fn, {FnArg}, Bundles);
-    auto *I = cast<IntrinsicInst>(V);
-    EXPECT_TRUE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
-    EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_except).has_value());
-    EXPECT_EQ(Intrinsic::nearbyint, I->getIntrinsicID());
-    EXPECT_EQ(RoundingMode::TowardNegative, I->getRoundingMode());
-    RoundingSpec RS = I->getRoundingSpec();
-    EXPECT_EQ(RoundingMode::TowardNegative, RS.getEffective());
-    EXPECT_TRUE(RS.isStatic());
-    EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
-    MemoryEffects ME = I->getMemoryEffects();
-    EXPECT_TRUE(ME.doesNotAccessMemory());
-    Builder.setFPMode(false);
-  }
-
   // If the builder object specifies a rounding mode but the provided operand
   // bundles already contain an "fp.round" bundle, the builder's specified mode
   // is ignored.
@@ -655,7 +633,7 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
     EXPECT_EQ(fp::ebIgnore, I->getExceptionBehavior());
     MemoryEffects ME = I->getMemoryEffects();
     EXPECT_TRUE(ME.doesNotAccessMemory());
-    Builder.setFPMode(false);
+    Builder.setIsFPConstrained(false);
   }
 
   // If the builder object specifies a non-default rounding mode and the operand
@@ -671,7 +649,7 @@ TEST_F(IRBuilderTest, FPBundlesDefault) {
     EXPECT_FALSE(I->getOperandBundle(LLVMContext::OB_fp_round).has_value());
     EXPECT_EQ(Intrinsic::trunc, I->getIntrinsicID());
     EXPECT_EQ(RoundingMode::NearestTiesToEven, I->getRoundingMode());
-    Builder.setFPMode(false);
+    Builder.setIsFPConstrained(false);
   }
 
   // Check the state of a call with "fp.except" bundle only.
@@ -728,7 +706,7 @@ TEST_F(IRBuilderTest, FPBundlesStrict) {
   Function *Fn = Intrinsic::getOrInsertDeclaration(
       M.get(), Intrinsic::nearbyint, {Type::getDoubleTy(Ctx)});
 
-  Builder.setFPMode(true);
+  Builder.setIsFPConstrained(true);
 
   // Check the state of a call without FP bundles.
   {
