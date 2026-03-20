@@ -7,16 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fract.h"
 #include "clc/math/clc_mad.h"
-#include "clc/math/clc_native_recip.h"
-#include "clc/math/clc_sincos_helpers.h"
+#include "clc/math/clc_rint.h"
 #include "clc/math/clc_trigpi_helpers.h"
-#include "clc/math/math.h"
-#include "clc/relational/clc_isinf.h"
-#include "clc/relational/clc_select.h"
 
-#define __CLC_BODY "clc_tanpi.inc"
+#define __CLC_BODY "clc_trigpi_helpers.inc"
 #include "clc/math/gentype.inc"

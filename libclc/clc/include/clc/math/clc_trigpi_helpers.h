@@ -6,17 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_fabs.h"
-#include "clc/math/clc_mad.h"
-#include "clc/math/clc_native_recip.h"
-#include "clc/math/clc_sincos_helpers.h"
-#include "clc/math/clc_trigpi_helpers.h"
-#include "clc/math/math.h"
-#include "clc/relational/clc_isinf.h"
-#include "clc/relational/clc_select.h"
+#ifndef __CLC_MATH_CLC_TRIGPI_HELPERS_H__
+#define __CLC_MATH_CLC_TRIGPI_HELPERS_H__
 
-#define __CLC_BODY "clc_tanpi.inc"
+#include "clc/internal/clc.h"
+
+#define __CLC_BODY "clc/math/clc_trigpi_helpers_decl.inc"
 #include "clc/math/gentype.inc"
+
+#endif // __CLC_MATH_CLC_TRIGPI_HELPERS_H__
