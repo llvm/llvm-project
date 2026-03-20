@@ -1452,7 +1452,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         Plan->getZero(TypeInfo.inferScalarType(Def)));
 
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_AllOnes()))) {
-    // Preserve nsw on the mul
+    // Preserve nsw from the Mul on the new Sub.
     VPIRFlags::WrapFlagsTy NW = {
         false, cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap()};
     return Def->replaceAllUsesWith(
