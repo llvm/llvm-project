@@ -1893,7 +1893,7 @@ def FeatureISAVersion11_Common : FeatureSet<
 
 // There are few workarounds that need to be added to all targets. This
 // pessimizes codegen a bit on the generic GFX11 target. This generic target
-// does not include GFX1170 due to incompatible changes.
+// does not include GFX11_7 due to incompatible changes.
 def FeatureISAVersion11_Generic: FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
@@ -1960,7 +1960,7 @@ def FeatureISAVersion11_5_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
     [])>;
 
-def FeatureISAVersion11_7_0 : FeatureSet<
+def FeatureISAVersion11_7_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureGFX11_7Insts,
      FeatureSALUFloatInsts,
