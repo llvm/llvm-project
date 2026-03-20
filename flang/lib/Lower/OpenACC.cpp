@@ -1759,7 +1759,7 @@ void AccDataMap::remapDataOperandSymbols(
       llvm::cast<hlfir::DeclareOp>(*computeDef).setSkipRebox(true);
 
     symbolMap.addVariableDefinition(
-        symbol, llvm::cast<fir::FortranVariableOpInterface>(computeDef), true);
+        symbol, llvm::cast<fir::FortranVariableOpInterface>(computeDef));
   }
 
   for (const auto &comp : components) {
@@ -2832,6 +2832,50 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
+  // When CUDA Fortran is enabled, extra symbols are created in the host_data
+  // scope for use_device objects. Bind them to the outer scope's symbols before
+  // processing any clauses, since the if clause may reference these symbols.
+  if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
+    for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+      if (const auto *useDevice =
+              std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
+        const Fortran::parser::AccObjectList &objectList{useDevice->v};
+        for (const auto &accObject : objectList.v) {
+          const Fortran::semantics::Symbol *newSym = nullptr;
+          if (const auto *designator =
+                  std::get_if<Fortran::parser::Designator>(&accObject.u)) {
+            if (const auto *name =
+                    Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
+              newSym = name->symbol;
+            } else if (const auto *arrayElement = Fortran::parser::Unwrap<
+                           Fortran::parser::ArrayElement>(*designator)) {
+              const Fortran::parser::Name &name =
+                  Fortran::parser::GetLastName(arrayElement->Base());
+              newSym = name.symbol;
+            } else if (const auto *component = Fortran::parser::Unwrap<
+                           Fortran::parser::StructureComponent>(*designator)) {
+              const Fortran::parser::DataRef &base{component->Base()};
+              if (const auto *name =
+                      std::get_if<Fortran::parser::Name>(&base.u)) {
+                newSym = name->symbol;
+              }
+            }
+          } else if (const auto *name =
+                         std::get_if<Fortran::parser::Name>(&accObject.u)) {
+            newSym = name->symbol;
+          }
+          if (newSym) {
+            const Fortran::semantics::Symbol *origSym =
+                localSymbols.lookupSymbolByName(newSym->name().ToString());
+            if (origSym)
+              localSymbols.copySymbolBinding(*origSym, *newSym);
+          }
+        }
+      }
+    }
+  }
+
+  AccDataMap dataMap;
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto *ifClause =
@@ -2839,66 +2883,25 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
       genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
     } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
       addIfPresentAttr = true;
-    }
-  }
-
-  if (ifCond) {
-    if (auto cst =
-            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp()))
-      if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
-        if (boolAttr.getValue()) {
-          // get rid of the if condition if it is always true.
-          ifCond = mlir::Value();
-        }
-      }
-  }
-
-  AccDataMap dataMap;
-  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
-    if (const auto *useDevice =
-            std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
-      // For CUDA Fortran interoperability, extra symbols are used in the
-      // host_data region. Look for them and bind their values with the symbols
-      // in the outer scope.
-      const Fortran::parser::AccObjectList &objectList{useDevice->v};
-      for (const auto &accObject : objectList.v) {
-        const Fortran::semantics::Symbol *newSym = nullptr;
-        if (const auto *designator =
-                std::get_if<Fortran::parser::Designator>(&accObject.u)) {
-          if (const auto *name =
-                  Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
-            newSym = name->symbol;
-          } else if (const auto *arrayElement =
-                         Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
-                             *designator)) {
-            const Fortran::parser::Name &name =
-                Fortran::parser::GetLastName(arrayElement->Base());
-            newSym = name.symbol;
-          } else if (const auto *component = Fortran::parser::Unwrap<
-                         Fortran::parser::StructureComponent>(*designator)) {
-            const Fortran::parser::DataRef &base{component->Base()};
-            if (const auto *name =
-                    std::get_if<Fortran::parser::Name>(&base.u)) {
-              newSym = name->symbol;
-            }
-          }
-        } else if (const auto *name =
-                       std::get_if<Fortran::parser::Name>(&accObject.u)) {
-          newSym = name->symbol;
-        }
-        if (newSym) {
-          const Fortran::semantics::Symbol *origSym =
-              localSymbols.lookupSymbolByName(newSym->name().ToString());
-          if (origSym && *origSym != *newSym)
-            localSymbols.copySymbolBinding(*origSym, *newSym);
-        }
-      }
+    } else if (const auto *useDevice =
+                   std::get_if<Fortran::parser::AccClause::UseDevice>(
+                       &clause.u)) {
       genDataOperandOperations<mlir::acc::UseDeviceOp>(
           useDevice->v, converter, semanticsContext, stmtCtx, dataOperands,
           mlir::acc::DataClause::acc_use_device,
           /*structured=*/true, /*implicit=*/false, /*async=*/{},
           /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
           /*setDeclareAttr=*/false, &dataMap);
+    }
+  }
+
+  if (ifCond) {
+    if (auto cst =
+            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp())) {
+      if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
+        if (boolAttr.getValue()) // get rid of the if condition when true.
+          ifCond = mlir::Value();
+      }
     }
   }
 

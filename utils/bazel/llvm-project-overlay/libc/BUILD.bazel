@@ -3276,6 +3276,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16divf128",
+    hdrs = ["src/__support/math/bf16divf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_bf16fma",
     hdrs = ["src/__support/math/bf16fma.h"],
     deps = [
@@ -3701,6 +3713,25 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_math_sincosf16_utils",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_daddf128",
+    hdrs = ["src/__support/math/daddf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_daddl",
+    hdrs = ["src/__support/math/daddl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
     ],
 )
 
@@ -6461,6 +6492,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "bf16divf128",
+    additional_deps = [
+        ":__support_math_bf16divf128",
+    ],
+)
+
+libc_math_function(
     name = "canonicalizef",
     additional_deps = [
         ":__support_math_canonicalizef",
@@ -6627,10 +6665,18 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "daddl")
+libc_math_function(
+    name = "daddl",
+    additional_deps = [
+        ":__support_math_daddl",
+    ],
+)
 
 libc_math_function(
     name = "daddf128",
+    additional_deps = [
+        ":__support_math_daddf128",
+    ],
 )
 
 libc_math_function(name = "ddivl")
@@ -10155,6 +10201,7 @@ libc_support_library(
 libc_support_library(
     name = "printf_writer",
     hdrs = ["src/stdio/printf_core/writer.h"],
+    textual_hdrs = ["src/stdio/printf_core/write_modes.def"],
     deps = [
         ":__support_cpp_string_view",
         ":__support_macros_config",

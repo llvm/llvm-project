@@ -35,45 +35,56 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_tan(__CLC_GENTYPE x) {
   __CLC_GENTYPE r0;
   __CLC_INTN regn = __clc_argReductionS(&r0, absx);
 
-  __CLC_GENTYPE t = __clc_tan_reduced_eval(r0, regn & 1);
+  __CLC_GENTYPE t = __clc_tan_reduced_eval(r0, (regn & 1) != 0);
 
   return __CLC_AS_FLOATN(__CLC_AS_UINTN(t) ^ x_signbit);
 }
 
 #elif __CLC_FPSIZE == 64
 
-_CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_tan(__CLC_GENTYPE x) {
-  x = __clc_select(x, __CLC_GENTYPE_NAN,
-                   __CLC_CONVERT_S_GENTYPE(__clc_isinf(x)));
+_CLC_DEF _CLC_OVERLOAD __CLC_DOUBLEN __clc_tan(__CLC_DOUBLEN x) {
+  x = __clc_select(x, __CLC_GENTYPE_NAN, __CLC_CONVERT_LONGN(__clc_isinf(x)));
 
-  __CLC_GENTYPE y = __clc_fabs(x);
+  __CLC_DOUBLEN absx = __clc_fabs(x);
 
-  __CLC_BIT_INTN is_medium = y < 0x1.0p+30;
+  __CLC_DOUBLEN reduced_lo, reduced_hi;
+  __CLC_INTN regn = __clc_argReductionS(&reduced_lo, &reduced_hi, absx);
 
-  __CLC_INTN regn_m, regn_l;
-  __CLC_GENTYPE r_m, r_l, rr_m, rr_l;
+  __CLC_DOUBLEN t =
+      __clc_tan_reduced_eval(reduced_hi, reduced_lo, (regn & 1) != 0);
 
-  __clc_remainder_piby2_medium(y, &r_m, &rr_m, &regn_m);
-  __clc_remainder_piby2_large(y, &r_l, &rr_l, &regn_l);
-
-  __CLC_GENTYPE r = is_medium ? r_m : r_l;
-  __CLC_GENTYPE rr = is_medium ? rr_m : rr_l;
-  __CLC_INTN regn = __CLC_CONVERT_INTN(is_medium) ? regn_m : regn_l;
-
-  __CLC_GENTYPE lead, tail;
-  __clc_tan_piby4(r, rr, &lead, &tail);
-
-  __CLC_LONGN t =
-      __CLC_AS_LONGN(__CLC_CONVERT_BIT_INTN((regn & 1) != 0) ? tail : lead);
-  t ^= __CLC_CONVERT_BIT_INTN(x < 0.0) << 63;
-
-  return __CLC_AS_GENTYPE(t);
+  t = __CLC_AS_DOUBLEN(__CLC_AS_LONGN(t) ^
+                       (__CLC_AS_LONGN(x) & (__CLC_LONGN)SIGNBIT_DP64));
+  return __CLC_AS_DOUBLEN(t);
 }
 
 #elif __CLC_FPSIZE == 16
 
+_CLC_DEF _CLC_OVERLOAD __CLC_HALFN __clc_tan_reduced_eval(__CLC_HALFN x,
+                                                          __CLC_INTN is_odd) {
+  __CLC_HALFN s = x * x;
+
+  __CLC_HALFN t =
+      __clc_mad(s, __clc_mad(s, 0x1.794p-4h, 0x1.e3cp-4h), 0x1.57p-2h);
+  t = __clc_mad(x, s * t, x);
+
+  __CLC_HALFN tr = -1.0h / t;
+  return __CLC_CONVERT_SHORTN(is_odd) ? tr : t;
+}
+
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_tan(__CLC_GENTYPE x) {
-  return __CLC_CONVERT_GENTYPE(__clc_tan(__CLC_CONVERT_FLOATN(x)));
+  x = __clc_select(x, __CLC_GENTYPE_NAN, __CLC_CONVERT_SHORTN(__clc_isinf(x)));
+  __CLC_HALFN absx = __clc_fabs(x);
+
+  __CLC_HALFN reduced;
+  __CLC_INTN n = __clc_argReductionS(&reduced, absx);
+
+  __CLC_HALFN t = __clc_tan_reduced_eval(reduced, (n & 1) != 0);
+
+  __CLC_S_GENTYPE result_i =
+      (__CLC_AS_SHORTN(t) ^
+       (__CLC_AS_SHORTN(x) & (__CLC_S_GENTYPE)SIGNBIT_FP16));
+  return __CLC_AS_HALFN(result_i);
 }
 
 #endif

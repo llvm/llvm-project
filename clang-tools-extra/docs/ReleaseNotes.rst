@@ -357,6 +357,9 @@ Changes in existing checks
   - Fixed a false positive involving ``if`` statements which contain
     a ``return``, ``break``, etc., jumped over by a ``goto``.
 
+  - Fixed the check potentially breaking code by deleting one too many
+    characters following an ``else`` or a curly brace.
+
   - Added support for handling attributed ``if`` then-branches such as
     ``[[likely]]`` and ``[[unlikely]]``.
 

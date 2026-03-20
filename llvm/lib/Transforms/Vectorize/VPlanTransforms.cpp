@@ -3193,6 +3193,22 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       OldRecipes.push_back(R);
     }
   }
+
+  // Replace remaining (HeaderMask && Mask) with vp.merge (True, Mask,
+  // False, EVL)
+  for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+    VPValue *Mask;
+    if (match(U, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask)))) {
+      auto *LogicalAnd = cast<VPInstruction>(U);
+      auto *Merge = new VPWidenIntrinsicRecipe(
+          Intrinsic::vp_merge, {Plan.getTrue(), Mask, Plan.getFalse(), EVL},
+          TypeInfo.inferScalarType(Mask), {}, {}, LogicalAnd->getDebugLoc());
+      Merge->insertBefore(LogicalAnd);
+      LogicalAnd->replaceAllUsesWith(Merge);
+      OldRecipes.push_back(LogicalAnd);
+    }
+  }
+
   // Erase old recipes at the end so we don't invalidate TypeInfo.
   for (VPRecipeBase *R : reverse(OldRecipes)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
@@ -4146,7 +4162,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
                                                   VPBasicBlock *HeaderVPBB,
                                                   VPBasicBlock *LatchVPBB,
-                                                  VPBasicBlock *MiddleVPBB) {
+                                                  VPBasicBlock *MiddleVPBB,
+                                                  UncountableExitStyle Style) {
   struct EarlyExitInfo {
     VPBasicBlock *EarlyExitingVPBB;
     VPIRBasicBlock *EarlyExitVPBB;
@@ -4223,6 +4240,9 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
 
   VPValue *IsAnyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
+
+  assert(Style == UncountableExitStyle::ReadOnly &&
+         "Early exit store masking not implemented");
 
   // Create the vector.early.exit blocks.
   SmallVector<VPBasicBlock *> VectorEarlyExitVPBBs(Exits.size());

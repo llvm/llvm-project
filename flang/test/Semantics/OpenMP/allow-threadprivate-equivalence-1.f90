@@ -8,7 +8,7 @@ program equiv
     integer :: e,d,f
     integer :: x,y,z
 
-    !WARNING: Variable 'a' from common block 'ba' appears in an EQUIVALENCE statement and a THREADPRIVATE directive, which does not conform to the OpenMP API specification.
+    !WARNING: A variable in a THREADPRIVATE directive used in an EQUIVALENCE statement is an OpenMP extension (variable 'a' from common block '/ba/') [-Wopenmp-threadprivate-equivalence]
     !$omp threadprivate(/ba/)
 
     equivalence (x,a)

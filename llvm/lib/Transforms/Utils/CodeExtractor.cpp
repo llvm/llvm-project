@@ -959,6 +959,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::AlwaysInline:
       case Attribute::Cold:
       case Attribute::DisableSanitizerInstrumentation:
+      case Attribute::Flatten:
       case Attribute::FnRetThunkExtern:
       case Attribute::Hot:
       case Attribute::HybridPatchable:
