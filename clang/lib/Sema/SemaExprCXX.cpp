@@ -7812,8 +7812,15 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   while (isa_and_nonnull<CapturedDecl>(DC))
     DC = DC->getParent();
   const bool IsInLambdaDeclContext = isLambdaCallOperator(DC);
+
+  // Do not check for potential captures if the function in which the lambda
+  // is defined does not have a valid decl. (GH187183)
+  FunctionDecl *FD = getCurFunctionDecl();
+  bool IsValidParentFunc = !FD || !FD->isInvalidDecl();
+
   if (IsInLambdaDeclContext && CurrentLSI &&
-      CurrentLSI->hasPotentialCaptures() && !FullExpr.isInvalid())
+      CurrentLSI->hasPotentialCaptures() && !FullExpr.isInvalid() &&
+      IsValidParentFunc)
     CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(FE, CurrentLSI,
                                                               *this);
   return MaybeCreateExprWithCleanups(FullExpr);

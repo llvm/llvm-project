@@ -366,6 +366,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
 - Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
+- Fixed a crash when a lambda expression capturing local array is used in an invalid template constructor. (#GH187183)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
 
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching 
