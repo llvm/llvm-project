@@ -84,14 +84,6 @@ void initTool(int argc, const char **argv, llvm::StringRef Version,
               llvm::cl::OptionCategory &Category, llvm::StringRef ToolHeading);
 
 //===----------------------------------------------------------------------===//
-// Format Registry
-//===----------------------------------------------------------------------===//
-
-/// Returns the SerializationFormat registered for \p Extension, or nullptr if
-/// none is registered. Results are cached for the lifetime of the process.
-SerializationFormat *getFormatForExtension(llvm::StringRef Extension);
-
-//===----------------------------------------------------------------------===//
 // Data Structures
 //===----------------------------------------------------------------------===//
 

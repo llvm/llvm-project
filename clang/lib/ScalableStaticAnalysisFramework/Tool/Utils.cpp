@@ -21,58 +21,22 @@
 #include <memory>
 #include <string>
 
-namespace clang::ssaf {
+using namespace clang;
+using namespace ssaf;
 
 namespace path = llvm::sys::path;
 
-static llvm::StringRef ToolName;
-static llvm::StringRef ToolVersion;
+namespace {
 
-llvm::StringRef getToolName() { return ToolName; }
+llvm::StringRef ToolName;
+llvm::StringRef ToolVersion;
 
 void printVersion(llvm::raw_ostream &OS) {
   OS << ToolName << " " << ToolVersion << "\n";
 }
 
-[[noreturn]] void fail(const char *Msg) {
-  llvm::WithColor::error(llvm::errs(), ToolName) << Msg << "\n";
-  llvm::sys::Process::Exit(1);
-}
-
-[[noreturn]] void fail(llvm::Error Err) {
-  std::string Message = llvm::toString(std::move(Err));
-  fail(Message.data());
-}
-
-void loadPlugins(llvm::ArrayRef<std::string> Paths) {
-  for (const std::string &PluginPath : Paths) {
-    std::string ErrMsg;
-    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(PluginPath.c_str(),
-                                                          &ErrMsg)) {
-      fail(ErrorMessages::FailedToLoadPlugin, PluginPath, ErrMsg);
-    }
-  }
-}
-
-void initTool(int argc, const char **argv, llvm::StringRef Version,
-              llvm::cl::OptionCategory &Category, llvm::StringRef ToolHeading) {
-  // path::stem strips the .exe extension on Windows so ToolName is consistent.
-  ToolName = path::stem(argv[0]);
-
-  // Set tool version for the version printer.
-  ToolVersion = Version;
-
-  // Hide options unrelated to the tool from --help output.
-  llvm::cl::HideUnrelatedOptions(Category);
-
-  // Register a custom version printer for the --version flag.
-  llvm::cl::SetVersionPrinter(printVersion);
-
-  // Parse command-line arguments and exit with an error if they are invalid.
-  std::string Overview = (ToolHeading + "\n").str();
-  llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
-}
-
+// Returns the SerializationFormat registered for \p Extension, or nullptr if
+// none is registered. Results are cached for the lifetime of the process.
 // FIXME: This will be revisited after we add support for registering formats
 // with extensions.
 SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
@@ -108,6 +72,50 @@ SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
   return Result;
 }
 
+} // namespace
+
+llvm::StringRef ssaf::getToolName() { return ToolName; }
+
+[[noreturn]] void ssaf::fail(const char *Msg) {
+  llvm::WithColor::error(llvm::errs(), ToolName) << Msg << "\n";
+  llvm::sys::Process::Exit(1);
+}
+
+[[noreturn]] void ssaf::fail(llvm::Error Err) {
+  std::string Message = llvm::toString(std::move(Err));
+  ssaf::fail(Message.data());
+}
+
+void ssaf::loadPlugins(llvm::ArrayRef<std::string> Paths) {
+  for (const std::string &PluginPath : Paths) {
+    std::string ErrMsg;
+    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(PluginPath.c_str(),
+                                                          &ErrMsg)) {
+      fail(ErrorMessages::FailedToLoadPlugin, PluginPath, ErrMsg);
+    }
+  }
+}
+
+void ssaf::initTool(int argc, const char **argv, llvm::StringRef Version,
+                    llvm::cl::OptionCategory &Category,
+                    llvm::StringRef ToolHeading) {
+  // path::stem strips the .exe extension on Windows so ToolName is consistent.
+  ToolName = path::stem(argv[0]);
+
+  // Set tool version for the version printer.
+  ToolVersion = Version;
+
+  // Hide options unrelated to the tool from --help output.
+  llvm::cl::HideUnrelatedOptions(Category);
+
+  // Register a custom version printer for the --version flag.
+  llvm::cl::SetVersionPrinter(printVersion);
+
+  // Parse command-line arguments and exit with an error if they are invalid.
+  std::string Overview = (ToolHeading + "\n").str();
+  llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
+}
+
 SummaryFile SummaryFile::fromPath(llvm::StringRef Path) {
   llvm::StringRef Extension = path::extension(Path);
   if (Extension.empty()) {
@@ -125,5 +133,3 @@ SummaryFile SummaryFile::fromPath(llvm::StringRef Path) {
 
   return {Path.str(), Format};
 }
-
-} // namespace clang::ssaf
