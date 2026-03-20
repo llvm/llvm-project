@@ -595,6 +595,21 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
   return NewF;
 }
 
+static std::string fixMultiOutputConstraintString(StringRef Constraints) {
+  // We should only have one =r return for the made up ASM type.
+  SmallVector<StringRef> Tmp;
+  SplitString(Constraints, Tmp, ",");
+  std::string SafeConstraints("=r,");
+  for (unsigned I = 0u; I != Tmp.size() - 1; ++I) {
+    if (Tmp[I].starts_with('=') && isalnum(Tmp[I][1]))
+      continue;
+    SafeConstraints.append(Tmp[I]).append({','});
+  }
+  SafeConstraints.append(Tmp.back());
+
+  return SafeConstraints;
+}
+
 // Mutates indirect and inline ASM callsites iff if aggregate argument/return
 // types are present with the types replaced by i32 types. The change in types
 // is noted in 'spv.mutated_callsites' metadata for later restoration. For ASM
@@ -648,20 +663,18 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
       CB->setName("spv.named_mutated_callsite." + F->getName() + "." +
                   CB->getName());
 
-    StringRef MaybeConstraints;
+    std::string Constraints;
     if (auto *ASM = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
-      MaybeConstraints = ASM->getConstraintString();
-      // We should only have one =r return for the made up ASM type.
+      Constraints = fixMultiOutputConstraintString(ASM->getConstraintString());
+
       CB->setCalledOperand(InlineAsm::get(
-          NewFnTy, ASM->getAsmString(),
-          MaybeConstraints.substr(MaybeConstraints.find_last_of('=')),
-          ASM->hasSideEffects(), ASM->isAlignStack(), ASM->getDialect(),
-          ASM->canThrow()));
+          NewFnTy, ASM->getAsmString(), Constraints, ASM->hasSideEffects(),
+          ASM->isAlignStack(), ASM->getDialect(), ASM->canThrow()));
     }
 
     addFunctionTypeMutation(
         F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
-        std::move(ChangedTypes), CB->getName(), MaybeConstraints);
+        std::move(ChangedTypes), CB->getName(), Constraints);
   }
 
   for (auto &&[CB, NewFTy] : Calls) {
