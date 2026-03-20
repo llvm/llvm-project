@@ -2857,7 +2857,8 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder(
     std::optional<::mlir::RegisteredOperationName> info =
       {1}.name.getRegisteredInfo();
     if (failed(info->setOpPropertiesFromAttribute({1}.name, properties,
-        {1}.attributes.getDictionary({1}.getContext()), nullptr)))
+        {1}.attributes.getDictionary({1}.getContext()),
+        [&]() { return ::mlir::emitError({1}.location); })))
       ::llvm::report_fatal_error("Property conversion failed.");
   })",
                     opClass.getClassName(), builderOpState);
@@ -3150,7 +3151,8 @@ void OpEmitter::genCollectiveParamBuilder(CollectiveBuilderKind kind) {
     std::optional<::mlir::RegisteredOperationName> info =
       {1}.name.getRegisteredInfo();
     if (failed(info->setOpPropertiesFromAttribute({1}.name, properties,
-        {1}.attributes.getDictionary({1}.getContext()), nullptr)))
+        {1}.attributes.getDictionary({1}.getContext()),
+        [&]() { return ::mlir::emitError({1}.location); })))
       ::llvm::report_fatal_error("Property conversion failed.");
   })",
                     opClass.getClassName(), builderOpState);
