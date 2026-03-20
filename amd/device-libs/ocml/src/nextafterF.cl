@@ -13,7 +13,7 @@ MATH_MANGLE(nextafter)(float x, float y)
     float up = MATH_MANGLE(succ)(x);
     float down = MATH_MANGLE(pred)(x);
 
-    float ret = y;
+    float ret = DAZ_OPT() ? BUILTIN_CANONICALIZE_F32(y) : y;
     if (x < y)
         ret = up;
     if (x > y)
