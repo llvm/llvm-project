@@ -739,10 +739,11 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
       constantCount.erase();
   } else {
     // Otherwise, emit the check.
-    cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXAggrConstructorCall: dynamic-length array expression");
   }
 
-  // Tradional LLVM codegen emits a loop here. CIR lowers to a loop as part of
+  // Traditional LLVM codegen emits a loop here. CIR lowers to a loop as part of
   // LoweringPrepare.
 
   // The alignment of the base, adjusted by the size of a single element,
