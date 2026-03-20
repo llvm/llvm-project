@@ -335,7 +335,8 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   // Emit the epilog instructions.
   if (EnableUnwindV2) {
     // Ensure the fixups and appended content apply to the same fragment.
-    OS->ensureHeadroom(info->EpilogMap.size() * 2);
+    // size byte + flags byte + 2 per epilog (for the distance).
+    OS->ensureHeadroom(2 + info->EpilogMap.size() * 2);
 
     bool IsLast = true;
     for (const auto &Epilog : llvm::reverse(info->EpilogMap)) {
