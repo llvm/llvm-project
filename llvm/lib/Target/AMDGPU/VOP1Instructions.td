@@ -393,10 +393,6 @@ def : GCNPat<(i32 (fp_to_uint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)
              (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
 def : GCNPat<(i32 (fp_to_sint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)), i32)),
              (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_uint_sat f32:$src0, i32)), (V_CVT_U32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat f32:$src0, i32)), (V_CVT_I32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_uint_sat f64:$src0, i32)), (V_CVT_U32_F64_e32 (f64 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat f64:$src0, i32)), (V_CVT_I32_F64_e32 (f64 $src0))>;
 
 def : GCNPat<(i32 (fp_to_uint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
              (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
@@ -406,10 +402,6 @@ def : GCNPat<(i32 (fp_to_uint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifie
              (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
 def : GCNPat<(i32 (fp_to_sint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
              (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_uint_sat_gi f32:$src0)), (V_CVT_U32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi f32:$src0)), (V_CVT_I32_F32_e32 (f32 $src0))>;
-def : GCNPat<(i32 (fp_to_uint_sat_gi f64:$src0)), (V_CVT_U32_F64_e32 (f64 $src0))>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi f64:$src0)), (V_CVT_I32_F64_e32 (f64 $src0))>;
 
 defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 
@@ -631,6 +623,29 @@ def : GCNPat<
     (V_CVT_F16_F32_fake16_e32 $src)
 >;
 }
+
+// These i16 conversions naturally saturate.
+multiclass fp16_fp_to_int_sat_Pats<Instruction cvt_u16_f16_inst_e64,
+                                   Instruction cvt_i16_f16_inst_e64> {
+  def : GCNPat<(i16 (fp_to_uint_sat (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)), i16)),
+               (cvt_u16_f16_inst_e64 $src0_modifiers, $src0)>;
+  def : GCNPat<(i16 (fp_to_sint_sat (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)), i16)),
+               (cvt_i16_f16_inst_e64 $src0_modifiers, $src0)>;
+
+  def : GCNPat<(i16 (fp_to_uint_sat_gi (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)))),
+               (cvt_u16_f16_inst_e64 $src0_modifiers, $src0)>;
+  def : GCNPat<(i16 (fp_to_sint_sat_gi (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)))),
+               (cvt_i16_f16_inst_e64 $src0_modifiers, $src0)>;
+}
+
+let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in
+defm : fp16_fp_to_int_sat_Pats<V_CVT_U16_F16_e64, V_CVT_I16_F16_e64>;
+
+let True16Predicate = UseRealTrue16Insts in
+defm : fp16_fp_to_int_sat_Pats<V_CVT_U16_F16_t16_e64, V_CVT_I16_F16_t16_e64>;
+
+let True16Predicate = UseFakeTrue16Insts in
+defm : fp16_fp_to_int_sat_Pats<V_CVT_U16_F16_fake16_e64, V_CVT_I16_F16_fake16_e64>;
 
 def VOP_SWAP_I32 : VOPProfile<[i32, i32, untyped, untyped]> {
   let Outs32 = (outs VGPR_32:$vdst, VRegSrc_32:$vdst1);
@@ -890,6 +905,7 @@ let SubtargetPredicate = isGFX11Plus in {
     let True16Predicate = UseRealTrue16Insts;
   }
   // Restrict src0 to be VGPR
+  let isConvergent = 1 in
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
                                       [], /*VOP1Only=*/ 1>;
   let isAsCheapAsAMove = 1, isMoveImm = 1 in
@@ -1202,6 +1218,7 @@ defm V_CTZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x03a,
 defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
 defm V_SWAP_B16              : VOP1Only_Real_gfx11_gfx12_gfx13<0x066>;
+let isConvergent =1 in
 defm V_PERMLANE64_B32        : VOP1Only_Real_gfx11_gfx12_gfx13<0x067>;
 defm V_MOV_B16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x01c, "v_mov_b16">;
 defm V_NOT_B16               : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x069>;

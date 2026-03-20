@@ -48,12 +48,14 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
 #include "clang/Sema/SemaMSP430.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
@@ -705,6 +707,13 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
         << AL << /*IsMember=*/!isa<CXXRecordDecl>(D);
     return;
   }
+
+  if (auto *DA = getDLLAttr(D); DA && !DA->isInherited()) {
+    S.Diag(DA->getLoc(), diag::warn_dllattr_ignored_exclusion_takes_precedence)
+        << DA << AL;
+    D->dropAttrs<DLLExportAttr, DLLImportAttr>();
+  }
+
   D->addAttr(::new (S.Context)
                  ExcludeFromExplicitInstantiationAttr(S.Context, AL));
 }
@@ -3623,6 +3632,10 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams,
                                       AL.getLoc()))
       return;
+  } else if (S.Context.getTargetInfo().getTriple().isOSAIX()) {
+    if (S.PPC().checkTargetClonesAttr(Params, Locations, NewParams,
+                                      AL.getLoc()))
+      return;
   }
   Params.clear();
   for (auto &SmallStr : NewParams)
@@ -3830,14 +3843,6 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   if (S.getCurFunctionOrMethodDecl()) {
-    S.Diag(AL.getLoc(), diag::err_init_priority_object_attr);
-    AL.setInvalid();
-    return;
-  }
-  QualType T = cast<VarDecl>(D)->getType();
-  if (S.Context.getAsArrayType(T))
-    T = S.Context.getBaseElementType(T);
-  if (!T->isRecordType()) {
     S.Diag(AL.getLoc(), diag::err_init_priority_object_attr);
     AL.setInvalid();
     return;
@@ -6477,6 +6482,13 @@ static void handleDLLAttr(Sema &S, Decl *D, const ParsedAttr &A) {
     }
   }
 
+  if (auto *EA = D->getAttr<ExcludeFromExplicitInstantiationAttr>()) {
+    S.Diag(A.getRange().getBegin(),
+           diag::warn_dllattr_ignored_exclusion_takes_precedence)
+        << A << EA;
+    return;
+  }
+
   Attr *NewAttr = A.getKind() == ParsedAttr::AT_DLLExport
                       ? (Attr *)S.mergeDLLExportAttr(D, A)
                       : (Attr *)S.mergeDLLImportAttr(D, A);
@@ -6754,6 +6766,10 @@ static void handleZeroCallUsedRegsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   D->dropAttr<ZeroCallUsedRegsAttr>();
   D->addAttr(ZeroCallUsedRegsAttr::Create(S.Context, Kind, AL));
+}
+
+static void handleNoPFPAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
+  D->addAttr(NoFieldProtectionAttr::Create(S.Context, AL));
 }
 
 static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7225,6 +7241,29 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
   return false;
 }
 
+PersonalityAttr *Sema::mergePersonalityAttr(Decl *D, FunctionDecl *Routine,
+                                            const AttributeCommonInfo &CI) {
+  if (PersonalityAttr *PA = D->getAttr<PersonalityAttr>()) {
+    const FunctionDecl *Personality = PA->getRoutine();
+    if (Context.isSameEntity(Personality, Routine))
+      return nullptr;
+    Diag(PA->getLocation(), diag::err_mismatched_personality);
+    Diag(CI.getLoc(), diag::note_previous_attribute);
+    D->dropAttr<PersonalityAttr>();
+  }
+  return ::new (Context) PersonalityAttr(Context, CI, Routine);
+}
+
+static void handlePersonalityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  Expr *E = AL.getArgAsExpr(0);
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
+    if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DRE->getDecl()))
+      if (Attr *A = S.mergePersonalityAttr(D, FD, AL))
+        return D->addAttr(A);
+  S.Diag(E->getExprLoc(), diag::err_attribute_personality_arg_not_function)
+      << AL.getAttrName();
+}
+
 /// ProcessDeclAttribute - Apply the specific attribute to the specified decl if
 /// the attribute applies to decls.  If the attribute is a type attribute, just
 /// silently ignore it if a GNU attribute.
@@ -7260,6 +7299,19 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
       S.DiagnoseUnknownAttribute(AL);
     }
     return;
+  }
+
+  if (S.getLangOpts().HLSL && isa<FunctionDecl>(D) &&
+      AL.getKind() == ParsedAttr::AT_NoInline) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+      for (const ParmVarDecl *PVD : FD->parameters()) {
+        if (PVD->hasAttr<HLSLGroupSharedAddressSpaceAttr>()) {
+          S.Diag(AL.getLoc(), diag::err_hlsl_attr_incompatible)
+              << "'noinline'" << "'groupshared' parameter";
+          return;
+        }
+      }
+    }
   }
 
   // Check if argument population must delayed to after template instantiation.
@@ -7863,6 +7915,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleCountedByAttrField(S, D, AL);
     break;
 
+  case ParsedAttr::AT_NoFieldProtection:
+    handleNoPFPAttrField(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_Personality:
+    handlePersonalityAttr(S, D, AL);
+    break;
+
   // Microsoft attributes:
   case ParsedAttr::AT_LayoutVersion:
     handleLayoutVersion(S, D, AL);
@@ -8144,6 +8204,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_GCCStruct:
     handleGCCStructAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_PointerFieldProtection:
+    if (!S.getLangOpts().PointerFieldProtectionAttr)
+      S.Diag(AL.getLoc(),
+             diag::err_attribute_pointer_field_protection_experimental)
+          << AL << AL.isRegularKeywordAttribute() << D->getLocation();
+    handleSimpleAttribute<PointerFieldProtectionAttr>(S, D, AL);
     break;
   }
 }
@@ -8658,5 +8726,15 @@ void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
         << NI.getName() << ParamTy << Ty;
     D->dropAttr<CleanupAttr>();
     return;
+  }
+}
+
+void Sema::ActOnInitPriorityAttr(Decl *D, const Attr *A) {
+  QualType T = cast<VarDecl>(D)->getType();
+  if (this->Context.getAsArrayType(T))
+    T = this->Context.getBaseElementType(T);
+  if (!T->isRecordType()) {
+    this->Diag(A->getLoc(), diag::err_init_priority_object_attr);
+    D->dropAttr<InitPriorityAttr>();
   }
 }

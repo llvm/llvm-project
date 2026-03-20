@@ -570,10 +570,19 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
                                           isBaseVirtual);
 }
 
-static bool isMemcpyEquivalentSpecialMember(const CXXMethodDecl *D) {
+static bool isMemcpyEquivalentSpecialMember(CodeGenModule &CGM,
+                                            const CXXMethodDecl *D) {
   auto *CD = dyn_cast<CXXConstructorDecl>(D);
   if (!(CD && CD->isCopyOrMoveConstructor()) &&
       !D->isCopyAssignmentOperator() && !D->isMoveAssignmentOperator())
+    return false;
+
+  // Non-trivially-copyable fields with pointer field protection need to be
+  // copied one by one.
+  ASTContext &Ctx = CGM.getContext();
+  const CXXRecordDecl *Parent = D->getParent();
+  if (!Ctx.arePFPFieldsTriviallyCopyable(Parent) &&
+      Ctx.hasPFPFields(Ctx.getCanonicalTagType(Parent)))
     return false;
 
   // We can emit a memcpy for a trivial copy or move constructor/assignment.
@@ -641,7 +650,8 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
     QualType BaseElementTy = CGF.getContext().getBaseElementType(Array);
     CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
     if (BaseElementTy.isPODType(CGF.getContext()) ||
-        (CE && isMemcpyEquivalentSpecialMember(CE->getConstructor()))) {
+        (CE &&
+         isMemcpyEquivalentSpecialMember(CGF.CGM, CE->getConstructor()))) {
       unsigned SrcArgIndex =
           CGF.CGM.getCXXABI().getSrcArgforCopyCtor(Constructor, Args);
       llvm::Value *SrcPtr =
@@ -909,6 +919,11 @@ public:
     if (PointerAuthQualifier Q = F->getType().getPointerAuth();
         Q && Q.isAddressDiscriminated())
       return false;
+    // Non-trivially-copyable fields with pointer field protection need to be
+    // copied one by one.
+    if (!CGF.getContext().arePFPFieldsTriviallyCopyable(ClassDecl) &&
+        CGF.getContext().isPFPField(F))
+      return false;
     return true;
   }
 
@@ -1044,7 +1059,8 @@ private:
     CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(MemberInit->getInit());
 
     // Bail out on non-memcpyable, not-trivially-copyable members.
-    if (!(CE && isMemcpyEquivalentSpecialMember(CE->getConstructor())) &&
+    if (!(CE &&
+          isMemcpyEquivalentSpecialMember(CGF.CGM, CE->getConstructor())) &&
         !(FieldType.isTriviallyCopyableType(CGF.getContext()) ||
           FieldType->isReferenceType()))
       return false;
@@ -1153,7 +1169,7 @@ private:
       return nullptr;
     } else if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(S)) {
       CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MCE->getCalleeDecl());
-      if (!(MD && isMemcpyEquivalentSpecialMember(MD)))
+      if (!(MD && isMemcpyEquivalentSpecialMember(CGF.CGM, MD)))
         return nullptr;
       MemberExpr *IOA = dyn_cast<MemberExpr>(MCE->getImplicitObjectArgument());
       if (!IOA)
@@ -1234,6 +1250,7 @@ public:
 
   void finish() { emitAggregatedStmts(); }
 };
+
 } // end anonymous namespace
 
 static bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit) {
@@ -2157,7 +2174,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(
   // because of GCC extensions that permit zero-length arrays.  There
   // are probably legitimate places where we could assume that this
   // doesn't happen, but it's not clear that it's worth it.
-  llvm::BranchInst *zeroCheckBranch = nullptr;
+  llvm::CondBrInst *zeroCheckBranch = nullptr;
 
   // Optimize for a constant count.
   llvm::ConstantInt *constantCount = dyn_cast<llvm::ConstantInt>(numElements);
@@ -2287,7 +2304,7 @@ void CodeGenFunction::EmitCXXConstructorCall(
   // If this is a trivial constructor, emit a memcpy now before we lose
   // the alignment information on the argument.
   // FIXME: It would be better to preserve alignment information into CallArg.
-  if (isMemcpyEquivalentSpecialMember(D)) {
+  if (isMemcpyEquivalentSpecialMember(CGM, D)) {
     assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
 
     const Expr *Arg = E->getArg(0);
@@ -2355,7 +2372,7 @@ void CodeGenFunction::EmitCXXConstructorCall(
   // If this is a trivial constructor, just emit what's needed. If this is a
   // union copy constructor, we must emit a memcpy, because the AST does not
   // model that copy.
-  if (isMemcpyEquivalentSpecialMember(D)) {
+  if (isMemcpyEquivalentSpecialMember(CGM, D)) {
     assert(Args.size() == 2 && "unexpected argcount for trivial ctor");
     QualType SrcTy = D->getParamDecl(0)->getType().getNonReferenceType();
     Address Src = makeNaturalAddressForPointer(

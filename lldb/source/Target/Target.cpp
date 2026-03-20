@@ -1545,9 +1545,7 @@ Module *Target::GetExecutableModulePointer() {
 static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
                                            Target *target) {
   Status error;
-  StreamString feedback_stream;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error,
-                                                             feedback_stream)) {
+  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error)) {
     if (error.AsCString())
       target->GetDebugger().GetAsyncErrorStream()->Printf(
           "unable to load scripting data for module %s - error reported was "
@@ -1555,9 +1553,6 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
           module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
           error.AsCString());
   }
-  if (feedback_stream.GetSize())
-    target->GetDebugger().GetAsyncErrorStream()->Printf(
-        "%s\n", feedback_stream.GetData());
 }
 
 void Target::ClearModules(bool delete_locations) {
@@ -2619,7 +2614,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
-      || language == eLanguageTypeUnknown) {
+      || language == eLanguageTypeAssembly ||
+      language == eLanguageTypeUnknown) {
     LanguageSet languages_for_expressions =
         Language::GetLanguagesSupportingTypeSystemsForExpressions();
 
@@ -2822,11 +2818,8 @@ llvm::Error Target::SetLabel(llvm::StringRef label) {
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);
     if (target_sp && target_sp->GetLabel() == label) {
-        return llvm::make_error<llvm::StringError>(
-            llvm::formatv(
-                "Cannot use label '{0}' since it's set in target #{1}.", label,
-                i),
-            llvm::inconvertibleErrorCode());
+      return llvm::createStringErrorV(
+          "Cannot use label '{0}' since it's set in target #{1}.", label, i);
     }
   }
 
@@ -5380,13 +5373,13 @@ llvm::Error
 EvaluateExpressionOptions::SetBooleanLanguageOption(llvm::StringRef option_name,
                                                     bool value) {
   if (option_name.empty())
-    return llvm::createStringError("Can't set an option with an empty name.");
+    return llvm::createStringError("can't set an option with an empty name");
 
   if (StructuredData::ObjectSP existing_sp =
           GetLanguageOptions().GetValueForKey(option_name);
       existing_sp && existing_sp->GetType() != eStructuredDataTypeBoolean)
-    return llvm::createStringErrorV("Trying to override existing option '{0}' "
-                                    "of type '{1}' with a boolean value.",
+    return llvm::createStringErrorV("trying to override existing option '{0}' "
+                                    "of type '{1}' with a boolean value",
                                     option_name, existing_sp->GetType());
 
   GetLanguageOptions().AddBooleanItem(option_name, value);
@@ -5399,12 +5392,11 @@ llvm::Expected<bool> EvaluateExpressionOptions::GetBooleanLanguageOption(
   const StructuredData::Dictionary &opts = GetLanguageOptions();
 
   if (!opts.HasKey(option_name))
-    return llvm::createStringErrorV("Option '{0}' does not exist.",
-                                    option_name);
+    return llvm::createStringErrorV("option '{0}' does not exist", option_name);
 
   bool result;
   if (!opts.GetValueForKeyAsBoolean(option_name, result))
-    return llvm::createStringErrorV("Failed to get option '{0}' as boolean.",
+    return llvm::createStringErrorV("failed to get option '{0}' as boolean",
                                     option_name);
 
   return result;

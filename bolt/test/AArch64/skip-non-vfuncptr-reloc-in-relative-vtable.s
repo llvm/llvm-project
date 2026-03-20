@@ -31,5 +31,5 @@ _fake_rtti_data:
 _ZTV3gooE:
 	.word	0
 	.word	_fake_rtti_data-_ZTV3gooE-8
-	.word	foo@PLT-_ZTV3gooE-8
+	.word	%pltpcrel(foo)
 	.size	_ZTV3gooE, 12

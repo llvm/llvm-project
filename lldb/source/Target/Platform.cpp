@@ -182,14 +182,16 @@ Status Platform::GetSharedModule(
       resolved_spec.GetFileSpec().PrependPathComponent(m_sdk_sysroot);
       // Try to get shared module with resolved spec.
       error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr);
+                                          did_create_ptr,
+                                          /*invoke_locate_callback=*/false);
     }
     // If we don't have sysroot or it didn't work then
     // try original module spec.
     if (!error.Success()) {
       resolved_spec = spec;
       error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr);
+                                          did_create_ptr,
+                                          /*invoke_locate_callback=*/false);
     }
     if (error.Success() && module_sp)
       module_sp->SetPlatformFileSpec(resolved_spec.GetFileSpec());
@@ -1010,17 +1012,10 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
 
   // Allow any StructuredData process-bound plugins to adjust the launch info
   // if needed
-  size_t i = 0;
-  bool iteration_complete = false;
-  // Note iteration can't simply go until a nullptr callback is returned, as it
-  // is valid for a plugin to not supply a filter.
-  auto get_filter_func = PluginManager::GetStructuredDataFilterCallbackAtIndex;
-  for (auto filter_callback = get_filter_func(i, iteration_complete);
-       !iteration_complete;
-       filter_callback = get_filter_func(++i, iteration_complete)) {
-    if (filter_callback) {
+  for (auto &cbs : PluginManager::GetStructuredDataPluginCallbacks()) {
+    if (cbs.filter_callback) {
       // Give this ProcessLaunchInfo filter a chance to adjust the launch info.
-      error = (*filter_callback)(launch_info, &target);
+      error = (*cbs.filter_callback)(launch_info, &target);
       if (!error.Success()) {
         LLDB_LOGF(log,
                   "Platform::%s() StructuredDataPlugin launch "
@@ -1248,9 +1243,12 @@ lldb_private::Status Platform::RunShellCommand(
                     // process to exit
     std::string
         *command_output, // Pass nullptr if you don't want the command output
+    std::string *separated_error_output, // Pass nullptr if you don't want the
+                                         // command error output
     const Timeout<std::micro> &timeout) {
   return RunShellCommand(llvm::StringRef(), command, working_dir, status_ptr,
-                         signo_ptr, command_output, timeout);
+                         signo_ptr, command_output, separated_error_output,
+                         timeout);
 }
 
 lldb_private::Status Platform::RunShellCommand(
@@ -1264,10 +1262,13 @@ lldb_private::Status Platform::RunShellCommand(
                     // process to exit
     std::string
         *command_output, // Pass nullptr if you don't want the command output
+    std::string *separated_error_output, // Pass nullptr if you don't want the
+                                         // command error output
     const Timeout<std::micro> &timeout) {
   if (IsHost())
     return Host::RunShellCommand(shell, command, working_dir, status_ptr,
-                                 signo_ptr, command_output, timeout);
+                                 signo_ptr, command_output,
+                                 separated_error_output, timeout);
   return Status::FromErrorString(
       "unable to run a remote command without a platform");
 }
@@ -1525,6 +1526,10 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
   if (module_spec.GetUUID().IsValid()) {
     resolved_module_spec.GetUUID() = module_spec.GetUUID();
   }
+
+  // Retain the target context from the original module_spec since
+  // process->GetModuleSpec might have cleared it.
+  resolved_module_spec.SetTarget(module_spec.GetTargetSP());
 
   // Call locate module callback if set. This allows users to implement their
   // own module cache system. For example, to leverage build system artifacts,
@@ -2106,6 +2111,37 @@ Platform::LocateModuleCallback Platform::GetLocateModuleCallback() const {
   return m_locate_module_callback;
 }
 
+void Platform::WarnIfInvalidUnsanitizedScriptExists(
+    Stream &os,
+    const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
+    const FileSpec &original_fspec, const FileSpec &fspec) {
+  if (!sanitized_name.RequiredSanitization())
+    return;
+
+  // Path to unsanitized script name doesn't exist. Nothing to warn about.
+  if (!FileSystem::Instance().Exists(original_fspec))
+    return;
+
+  std::string reason_for_complaint =
+      sanitized_name.IsKeyword()
+          ? llvm::formatv("conflicts with the keyword '{0}'",
+                          sanitized_name.GetConflictingKeyword())
+                .str()
+          : "contains reserved characters";
+
+  if (FileSystem::Instance().Exists(fspec))
+    os.Format("debug script '{0}' cannot be loaded because '{1}' {2}. "
+              "Ignoring '{1}' and loading '{3}' instead.\n",
+              original_fspec.GetPath(), original_fspec.GetFilename(),
+              std::move(reason_for_complaint), fspec.GetFilename());
+  else
+    os.Format("debug script '{0}' cannot be loaded because '{1}' {2}. "
+              "If you intend to have this script loaded, please rename it to "
+              "'{3}' and retry.\n",
+              original_fspec.GetPath(), original_fspec.GetFilename(),
+              std::move(reason_for_complaint), fspec.GetFilename());
+}
+
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   for (const PlatformSP &platform_sp : m_platforms) {
@@ -2135,12 +2171,8 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
       return platform_sp;
   }
 
-  PlatformCreateInstance create_callback;
   // First try exact arch matches across all platform plug-ins
-  uint32_t idx;
-  for (idx = 0;
-       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
-       ++idx) {
+  for (auto create_callback : PluginManager::GetPlatformCreateCallbacks()) {
     PlatformSP platform_sp = create_callback(false, &arch);
     if (platform_sp &&
         platform_sp->IsCompatibleArchitecture(
@@ -2150,9 +2182,7 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
     }
   }
   // Next try compatible arch matches across all platform plug-ins
-  for (idx = 0;
-       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
-       ++idx) {
+  for (auto create_callback : PluginManager::GetPlatformCreateCallbacks()) {
     PlatformSP platform_sp = create_callback(false, &arch);
     if (platform_sp && platform_sp->IsCompatibleArchitecture(
                            arch, process_host_arch, ArchSpec::CompatibleMatch,
@@ -2239,10 +2269,7 @@ bool PlatformList::LoadPlatformBinaryAndSetup(Process *process,
                                               lldb::addr_t addr, bool notify) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  PlatformCreateInstance create_callback;
-  for (int idx = 0;
-       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
-       ++idx) {
+  for (auto create_callback : PluginManager::GetPlatformCreateCallbacks()) {
     ArchSpec arch;
     PlatformSP platform_sp = create_callback(true, &arch);
     if (platform_sp) {

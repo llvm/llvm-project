@@ -50,6 +50,9 @@ public:
   /// Emit an error to the reader.
   virtual InFlightDiagnostic emitError(const Twine &msg = {}) const = 0;
 
+  /// Emit a warning to the reader.
+  virtual InFlightDiagnostic emitWarning(const Twine &msg = {}) const = 0;
+
   /// Retrieve the dialect version by name if available.
   virtual FailureOr<const DialectVersion *>
   getDialectVersion(StringRef dialectName) const = 0;
@@ -398,6 +401,10 @@ public:
   /// written as-is, with no additional compression or compaction.
   virtual void writeOwnedBlob(ArrayRef<char> blob) = 0;
 
+  /// Write a blob to the bytecode, which is not owned by the caller. The blob
+  /// is copied into the bytecode, and need not strictly outlive the call.
+  virtual void writeUnownedBlob(ArrayRef<char> blob) = 0;
+
   /// Write a bool to the output stream.
   virtual void writeOwnedBool(bool value) = 0;
 
@@ -517,6 +524,36 @@ auto get(MLIRContext *context, Ts &&...params) {
   } else {
     // Otherwise, pass to the base get.
     return T::Base::get(context, std::forward<Ts>(params)...);
+  }
+}
+
+namespace detail {
+template <typename T, typename... Ts>
+using has_get_checked_method = decltype(T::getChecked(std::declval<Ts>()...));
+} // namespace detail
+
+/// Helper method analogous to `get`, but uses `getChecked` when available to
+/// allow graceful failure on invalid parameters instead of asserting.
+///
+/// Only the no-context form of `getChecked` is tried here. Types that expose
+/// `getChecked(emitError, params...)` without a leading `MLIRContext*` (e.g.
+/// MemRefType, VectorType, RankedTensorType) will use it for graceful failure.
+/// Everything else falls back to `get<T>()`.  We intentionally do NOT try
+/// `T::getChecked(emitError, context, params...)`: for types that only inherit
+/// the base `StorageUserBase::getChecked` template (e.g. ArrayAttr), that
+/// template instantiation requires a complete storage type which may not be
+/// available in the bytecode reading TU.
+template <typename T, typename... Ts>
+auto getChecked(function_ref<InFlightDiagnostic()> emitError,
+                MLIRContext *context, Ts &&...params) {
+  if constexpr (llvm::is_detected<detail::has_get_checked_method, T,
+                                  function_ref<InFlightDiagnostic()>,
+                                  Ts...>::value) {
+    (void)context;
+    return T::getChecked(emitError, std::forward<Ts>(params)...);
+  } else {
+    // Fall back to get() for types that don't define a no-context getChecked.
+    return get<T>(context, std::forward<Ts>(params)...);
   }
 }
 

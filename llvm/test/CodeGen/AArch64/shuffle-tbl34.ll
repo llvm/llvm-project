@@ -244,18 +244,9 @@ define <4 x i32> @shuffle4_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x 
   ret <4 x i32> %z
 }
 
-; CHECK: .LCPI6_0:
-; CHECK: 	.byte	0                               // 0x0
-; CHECK: 	.byte	7                               // 0x7
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	1                               // 0x1
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	255                             // 0xff
 ; CHECK: 	.section	.rodata.cst16,"aM",@progbits,16
 ; CHECK: 	.p2align	4
-; CHECK: .LCPI6_1:
+; CHECK: .LCPI6_0:
 ; CHECK: 	.byte	0                               // 0x0
 ; CHECK: 	.byte	16                              // 0x10
 ; CHECK: 	.byte	19                              // 0x13
@@ -276,15 +267,16 @@ define <16 x i8> @shuffle4_v8i8_v16i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 
 ; CHECK-LABEL: shuffle4_v8i8_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov x8, #-63744 // =0xffffffffffff0700
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    adrp x8, .LCPI6_0
 ; CHECK-NEXT:    mov v2.d[1], v2.d[0]
+; CHECK-NEXT:    movk x8, #511, lsl #16
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI6_0]
-; CHECK-NEXT:    adrp x8, .LCPI6_1
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    adrp x8, .LCPI6_0
 ; CHECK-NEXT:    tbl v3.8b, { v2.16b }, v1.8b
 ; CHECK-NEXT:    tbl v2.8b, { v0.16b }, v1.8b
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI6_1]
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI6_0]
 ; CHECK-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
 ; CHECK-NEXT:    ret
   %x = shufflevector <8 x i8> %a, <8 x i8> %b, <4 x i32> <i32 0, i32 7, i32 5, i32 1>
@@ -294,15 +286,6 @@ define <16 x i8> @shuffle4_v8i8_v16i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 
 }
 
 ; CHECK: .LCPI7_0:
-; CHECK: 	.byte	0                               // 0x0
-; CHECK: 	.byte	7                               // 0x7
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	1                               // 0x1
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: .LCPI7_1:
 ; CHECK: 	.byte	0                               // 0x0
 ; CHECK: 	.byte	8                               // 0x8
 ; CHECK: 	.byte	11                              // 0xb
@@ -316,14 +299,15 @@ define <8 x i8> @shuffle4_v8i8_v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    adrp x8, .LCPI7_0
+; CHECK-NEXT:    mov x8, #-63744 // =0xffffffffffff0700
+; CHECK-NEXT:    movk x8, #511, lsl #16
 ; CHECK-NEXT:    mov v2.d[1], v2.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI7_0]
-; CHECK-NEXT:    adrp x8, .LCPI7_1
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    adrp x8, .LCPI7_0
 ; CHECK-NEXT:    tbl v2.8b, { v2.16b }, v1.8b
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI7_1]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI7_0]
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    ret
@@ -531,18 +515,9 @@ define <4 x i32> @shuffle3_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
   ret <4 x i32> %z
 }
 
-; CHECK: .LCPI14_0:
-; CHECK: 	.byte	4                               // 0x4
-; CHECK: 	.byte	8                               // 0x8
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	14                              // 0xe
-; CHECK: 	.byte	3                               // 0x3
-; CHECK: 	.byte	255                             // 0xff
-; CHECK: 	.byte	255                             // 0xff
 ; CHECK: 	.section	.rodata.cst16,"aM",@progbits,16
 ; CHECK: 	.p2align	4
-; CHECK: .LCPI14_1:
+; CHECK: .LCPI14_0:
 ; CHECK: 	.byte	255                             // 0xff
 ; CHECK: 	.byte	255                             // 0xff
 ; CHECK: 	.byte	15                              // 0xf
@@ -563,16 +538,17 @@ define <8 x i8> @insert4_v8i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c, <16 x i8> 
 ; CHECK-LABEL: insert4_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov x9, #-63484 // =0xffffffffffff0804
 ; CHECK-NEXT:    mov v4.16b, v3.16b
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    adrp x8, .LCPI14_0
-; CHECK-NEXT:    adrp x9, .LCPI14_1
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    movk x9, #782, lsl #32
 ; CHECK-NEXT:    mov v3.16b, v1.16b
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI14_0]
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI14_1]
-; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
-; CHECK-NEXT:    tbl v1.16b, { v3.16b, v4.16b }, v2.16b
+; CHECK-NEXT:    fmov d2, x9
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
+; CHECK-NEXT:    tbl v1.16b, { v3.16b, v4.16b }, v1.16b
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v2.8b
 ; CHECK-NEXT:    trn1 v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    trn2 v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret

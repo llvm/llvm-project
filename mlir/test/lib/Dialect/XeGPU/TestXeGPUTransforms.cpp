@@ -284,7 +284,8 @@ struct TestXeGPUSgToWiDistributeExperimental
 
   TestXeGPUSgToWiDistributeExperimental() = default;
   TestXeGPUSgToWiDistributeExperimental(
-      const TestXeGPUSgToWiDistributeExperimental &pass) = default;
+      const TestXeGPUSgToWiDistributeExperimental &pass)
+      : PassWrapper(pass) {}
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
@@ -298,6 +299,7 @@ struct TestXeGPUSgToWiDistributeExperimental
     };
     typeConverter.addSourceMaterialization(materializeCast);
     typeConverter.addTargetMaterialization(materializeCast);
+
     ConversionTarget target(*ctx);
     RewritePatternSet patterns(ctx);
     xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
@@ -375,7 +377,7 @@ struct TestXeGPUPropagateLayouts
       signalPassFailure();
       return;
     }
-    if (failed(xegpu::propagateLayouts(builder, getOperation(), kind))) {
+    if (failed(xegpu::propagateLayouts(builder, getOperation(), kind, 32))) {
       signalPassFailure();
     }
   }
@@ -404,9 +406,8 @@ struct TestXeGPUResolveLayoutConflicts
       default;
 
   void runOnOperation() override {
-    if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
+    if (failed(xegpu::resolveLayoutConflicts(getOperation())))
       signalPassFailure();
-    }
   }
 };
 

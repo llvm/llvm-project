@@ -926,7 +926,8 @@ FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
                         eTypeOptionHideNames = (1u << 6),
                         eTypeOptionNonCacheable = (1u << 7),
                         eTypeOptionHideEmptyAggregates = (1u << 8),
-                        eTypeOptionFrontEndWantsDereference = (1u << 9)};
+                        eTypeOptionFrontEndWantsDereference = (1u << 9),
+                        eTypeOptionCustomSubscripting = (1u << 10)};
 
 /// This is the return value for frame comparisons.  If you are comparing frame
 /// A to frame B the following cases arise:
@@ -1351,6 +1352,13 @@ enum SymbolDownload {
   eSymbolDownloadOff = 0,
   eSymbolDownloadBackground = 1,
   eSymbolDownloadForeground = 2,
+};
+
+enum SymbolSharedCacheUse {
+  eSymbolSharedCacheUseHostLLDBMemory = 1,
+  eSymbolSharedCacheUseHostSharedCache = 2,
+  eSymbolSharedCacheUseHostAndInferiorSharedCache = 3,
+  eSymbolSharedCacheUseInferiorSharedCacheOnly = 4,
 };
 
 /// Used in the SBProcess AddressMask/FixAddress methods.

@@ -128,6 +128,17 @@ func.func @ctlz_vector(%arg: vector<4xi32>) -> vector<4xi32> {
 
 // -----
 
+// Index type has no fixed bitwidth; expand pass must not expand ctlz on index
+// (would assert in getIntOrFloatBitWidth). Op is left unchanged.
+// CHECK-LABEL: func @ctlz_index
+func.func @ctlz_index(%arg: index) -> index {
+  // CHECK: math.ctlz %{{.*}} : index
+  %res = math.ctlz %arg : index
+  return %res : index
+}
+
+// -----
+
 // CHECK-LABEL:    func @fmaf_func
 // CHECK-SAME:     ([[ARG0:%.+]]: f64, [[ARG1:%.+]]: f64, [[ARG2:%.+]]: f64) -> f64
 func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
