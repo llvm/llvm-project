@@ -7,9 +7,13 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   AsmParser
   BinaryFormat
+  CodeGen
   Core
+  MC
   Passes
   SPIRVCodeGen
+  SPIRVDesc
+  SPIRVInfo
   SPIRVAnalysis
   Support
   TargetParser
