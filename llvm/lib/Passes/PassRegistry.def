@@ -800,12 +800,14 @@ LOOP_PASS_WITH_PARAMS(
     parseLICMOptions, "allowspeculation;no-allowspeculation")
 LOOP_PASS_WITH_PARAMS(
     "loop-rotate", "LoopRotatePass",
-    [](std::pair<bool, bool> Params) {
-      return LoopRotatePass(Params.first, Params.second);
+    [](LoopRotateOptions Params) {
+      return LoopRotatePass(Params.EnableHeaderDuplication, Params.PrepareForLTO,
+                            Params.CheckExitCount);
     },
     parseLoopRotateOptions,
     "no-header-duplication;header-duplication;"
-    "no-prepare-for-lto;prepare-for-lto")
+    "no-prepare-for-lto;prepare-for-lto;"
+    "no-check-exit-count;check-exit-count")
 LOOP_PASS_WITH_PARAMS(
     "simple-loop-unswitch", "SimpleLoopUnswitchPass",
     [](std::pair<bool, bool> Params) {
