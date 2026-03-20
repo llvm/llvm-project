@@ -30,7 +30,9 @@
 ; NESTED: arch            nested
 ; NESTED: nested images   2
 ; NESTED:   OFFLOADING IMAGE [0.0]:
+; NESTED:   arch            abc
 ; NESTED:   OFFLOADING IMAGE [0.1]:
+; NESTED:   arch            def
 
 ; Test complex nested OffloadBinary construction with multiple levels.
 ; RUN: llvm-offload-binary -o %t7 --image=file=%s,arch=abc,triple=x-y-z --image=file=%t5,arch=nested,triple=x-y-z
@@ -46,7 +48,9 @@
 ; NESTED2:   arch            nested
 ; NESTED2:   nested images   2
 ; NESTED2:     OFFLOADING IMAGE [0.1.0]:
+; NESTED2:     arch            abc
 ; NESTED2:     OFFLOADING IMAGE [0.1.1]:
+; NESTED2:     arch            def
 ; NESTED2: OFFLOADING IMAGE [1]:
 ; NESTED2: arch            nested2
 ; NESTED2: nested images   2
