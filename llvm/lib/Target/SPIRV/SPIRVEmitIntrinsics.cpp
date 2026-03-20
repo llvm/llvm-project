@@ -1502,8 +1502,7 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
             EVUsers.push_back(EV);
         for (ExtractValueInst *EV : EVUsers) {
           B.SetInsertPoint(EV);
-          SmallVector<Value *> Args;
-          Args.push_back(Phi);
+          SmallVector<Value *> Args(EV->operand_values());
           for (unsigned Idx : EV->indices())
             Args.push_back(B.getInt32(Idx));
           auto *NewEV =

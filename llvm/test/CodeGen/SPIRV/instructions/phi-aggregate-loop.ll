@@ -3,6 +3,7 @@
 
 ; CHECK-DAG: %[[#ARRTY:]] = OpTypeArray
 ; CHECK-DAG: %[[#ARRVECTY:]] = OpTypeArray
+; CHECK-DAG: %[[#STRUCTTY:]] = OpTypeStruct
 
 ; CHECK: %[[#]] = OpPhi
 ; CHECK: %[[#PHI1:]] = OpPhi %[[#ARRTY]]
@@ -51,5 +52,30 @@ loop:
 exit:
   %final = extractvalue [1 x <4 x float>] %agg, 0
   store <4 x float> %final, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+; CHECK: %[[#]] = OpPhi
+; CHECK: %[[#PHI3:]] = OpPhi %[[#STRUCTTY]]
+; CHECK: %[[#]] = OpCompositeExtract %[[#]] %[[#PHI3]]
+; CHECK: %[[#]] = OpFAdd
+; CHECK: %[[#]] = OpCompositeInsert %[[#STRUCTTY]]
+define void @loop_phi_struct(ptr addrspace(1) %out) {
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ %next, %loop ], [ 0, %entry ]
+  %agg = phi {float} [ %agg.new, %loop ], [ zeroinitializer, %entry ]
+  %prev = extractvalue {float} %agg, 0
+  %sum = fadd float %prev, 1.0
+  %agg.new = insertvalue {float} poison, float %sum, 0
+  %next = add i32 %i, 1
+  %cond = icmp slt i32 %next, 64
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  %final = extractvalue {float} %agg, 0
+  store float %final, ptr addrspace(1) %out, align 4
   ret void
 }
