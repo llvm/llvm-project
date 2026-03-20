@@ -1087,7 +1087,11 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
   }
 
   // If this is a variadic function, add an unspecified parameter.
-  DITypeArray FnArgs = Sub->getType()->getTypeArray();
+  auto *SPTy = Sub->getType();
+  if (!SPTy)
+    return ScopeDIE;
+
+  DITypeArray FnArgs = SPTy->getTypeArray();
 
   // If we have a single element of null, it is a function that returns void.
   // If we have more than one elements and the last one is null, it is a

@@ -60,6 +60,15 @@ struct S5 { int foo() { return 42; }};
 &S5::foo
 // CHECK-NEXT: (int (S5::*)()) Function @0x{{[0-9a-f]+}}
 
+// Namespaced types deduced via auto
+namespace Outer { struct Foo {}; }
+auto x = Outer::Foo(); x
+// CHECK-NEXT: (Outer::Foo &) @0x{{[0-9a-f]+}}
+
+namespace Outer { template<class T> struct Bar {}; }
+auto y = Outer::Bar<int>(); y
+// CHECK-NEXT: (Outer::Bar<int> &) @0x{{[0-9a-f]+}}
+
 // int i = 12;
 // int &iref = i;
 // iref

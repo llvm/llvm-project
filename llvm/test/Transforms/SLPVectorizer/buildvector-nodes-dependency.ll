@@ -10,6 +10,9 @@ define double @test() {
 ; X86:       cond.true:
 ; X86-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP0]], i32 1
 ; X86-NEXT:    [[TMP2:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
+; X86-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; X86-NEXT:    [[TMP16:%.*]] = fmul <2 x double> [[TMP15]], zeroinitializer
+; X86-NEXT:    [[TMP17:%.*]] = fmul <2 x double> [[TMP15]], zeroinitializer
 ; X86-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; X86-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], zeroinitializer
 ; X86-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP4]], zeroinitializer
@@ -22,24 +25,15 @@ define double @test() {
 ; X86-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[TMP10]], [[TMP2]]
 ; X86-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> [[TMP12]], <2 x i32> <i32 0, i32 3>
 ; X86-NEXT:    [[TMP14:%.*]] = fsub <2 x double> [[TMP13]], zeroinitializer
-; X86-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-; X86-NEXT:    [[TMP16:%.*]] = fmul <4 x double> [[TMP15]], <double 0.000000e+00, double 0.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; X86-NEXT:    [[TMP17:%.*]] = fmul <4 x double> [[TMP16]], <double 0.000000e+00, double 0.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; X86-NEXT:    [[TMP18:%.*]] = fmul <4 x double> zeroinitializer, [[TMP17]]
-; X86-NEXT:    [[TMP19:%.*]] = shufflevector <2 x double> [[TMP14]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> <double poison, double poison, double 0.000000e+00, double 0.000000e+00>, <4 x double> [[TMP19]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; X86-NEXT:    [[TMP21:%.*]] = fadd <4 x double> [[TMP18]], [[TMP20]]
-; X86-NEXT:    [[TMP22:%.*]] = fmul <4 x double> [[TMP18]], [[TMP20]]
-; X86-NEXT:    [[TMP23:%.*]] = shufflevector <4 x double> [[TMP21]], <4 x double> [[TMP22]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; X86-NEXT:    [[TMP24:%.*]] = fsub <4 x double> [[TMP23]], zeroinitializer
-; X86-NEXT:    [[TMP25:%.*]] = fmul <4 x double> [[TMP23]], zeroinitializer
-; X86-NEXT:    [[TMP26:%.*]] = shufflevector <4 x double> [[TMP24]], <4 x double> [[TMP25]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; X86-NEXT:    [[TMP27:%.*]] = extractelement <4 x double> [[TMP26]], i32 1
-; X86-NEXT:    [[TMP28:%.*]] = extractelement <4 x double> [[TMP26]], i32 3
-; X86-NEXT:    [[ADD27:%.*]] = fadd double [[TMP28]], [[TMP27]]
-; X86-NEXT:    [[TMP29:%.*]] = extractelement <4 x double> [[TMP26]], i32 0
-; X86-NEXT:    [[TMP30:%.*]] = extractelement <4 x double> [[TMP26]], i32 2
-; X86-NEXT:    [[ADD12:%.*]] = fadd double [[TMP30]], [[TMP29]]
+; X86-NEXT:    [[TMP18:%.*]] = fmul <2 x double> [[TMP16]], zeroinitializer
+; X86-NEXT:    [[TMP19:%.*]] = fmul <2 x double> zeroinitializer, [[TMP18]]
+; X86-NEXT:    [[TMP20:%.*]] = fadd <2 x double> [[TMP19]], [[TMP14]]
+; X86-NEXT:    [[TMP21:%.*]] = fsub <2 x double> [[TMP20]], zeroinitializer
+; X86-NEXT:    [[TMP22:%.*]] = fmul <2 x double> [[TMP17]], zeroinitializer
+; X86-NEXT:    [[TMP23:%.*]] = fmul <2 x double> zeroinitializer, [[TMP22]]
+; X86-NEXT:    [[TMP24:%.*]] = fadd <2 x double> [[TMP23]], [[TMP21]]
+; X86-NEXT:    [[ADD12:%.*]] = extractelement <2 x double> [[TMP24]], i32 0
+; X86-NEXT:    [[ADD27:%.*]] = extractelement <2 x double> [[TMP24]], i32 1
 ; X86-NEXT:    [[ADD29:%.*]] = fadd double [[ADD12]], [[ADD27]]
 ; X86-NEXT:    ret double [[ADD29]]
 ;
