@@ -2870,3 +2870,20 @@ define i32 @test_sext_demanded_elts(<4 x i32> %a0, ptr %p) {
   ret i32 %res
 }
 
+
+define <4 x i32> @known_nonzero_shuffle(<4 x i32> %a, <4 x i32> %b) {
+; X86-LABEL: known_nonzero_shuffle:
+; X86:       # %bb.0:
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    retl
+;
+; X64-LABEL: known_nonzero_shuffle:
+; X64:       # %bb.0:
+; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; X64-NEXT:    retq
+	%shuf = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+	ret <4 x i32> %shuf
+}
+
