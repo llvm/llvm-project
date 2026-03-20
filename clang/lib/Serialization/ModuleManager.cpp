@@ -164,6 +164,24 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
                  getModuleCache().getInMemoryModuleCache().lookupPCM(
                      FileName)) {
     ModuleBuffer = Buffer;
+    if (!FileName.getImplicitModuleSuffixLength()) {
+      // Explicitly-built PCM files maintain consistency via mtime/size
+      // expectations on their imports. Even if we've previously successfully
+      // loaded a PCM file and stored it in the in-memory module cache, that
+      // does not mean its mtime/size matches current importer's expectations.
+      // Get that information so that it can be checked below.
+      // FIXME: Even though this FileManager access is likely already cached, we
+      // should store this directly in the in-memory module cache.
+      OptionalFileEntryRef Entry =
+          FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
+                                     /*CacheFailure=*/false);
+      if (!Entry) {
+        ErrorStr = "module file not found";
+        return Missing;
+      }
+      ModTime = Entry->getModificationTime();
+      Size = Entry->getSize();
+    }
   } else if (getModuleCache().getInMemoryModuleCache().shouldBuildPCM(
                  FileName)) {
     // Report that the module is out of date, since we tried (and failed) to
@@ -179,14 +197,6 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
       ErrorStr = "module file not found";
       return Missing;
     }
-
-    // FIXME: Consider moving this after this else branch so that we check
-    // size/mtime expectations even when pulling the module file out of the
-    // in-memory module cache or the provided in-memory buffers.
-    // Check file properties.
-    if (checkModuleFile(Entry->getSize(), Entry->getModificationTime(),
-                        ExpectedSize, ExpectedModTime, ErrorStr))
-      return OutOfDate;
 
     // Get a buffer of the file and close the file descriptor when done.
     // The file is volatile because in a parallel build we expect multiple
@@ -220,6 +230,10 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
   NewModule->Buffer = ModuleBuffer;
   // Initialize the stream.
   NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
+
+  // Check file properties.
+  if (checkModuleFile(Size, ModTime, ExpectedSize, ExpectedModTime, ErrorStr))
+    return OutOfDate;
 
   // Read the signature eagerly now so that we can check it.  Avoid calling
   // ReadSignature unless there's something to check though.
