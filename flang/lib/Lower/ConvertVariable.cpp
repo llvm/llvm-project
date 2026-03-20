@@ -686,9 +686,9 @@ genCleanupDeallocateCoarray(Fortran::lower::AbstractConverter &converter,
   // finalized at scope exit ALLOCATABLE and SAVE: Not deallocated at scope exit
   // Local coarray must have the SAVE and/or ALLOCATABLE attributes:
   // 1. SAVE (no ALLOCATABLE): never automatically deallocated or finalized
-  //    (see 7.5.6.4) 
+  //    (see 7.5.6.4)
   // 2. ALLOCATABLE (no SAVE): automatically deallocated and
-  //    finalized at scope exit 
+  //    finalized at scope exit
   // 3. ALLOCATABLE and SAVE: Not deallocated at scope exit
   //    (only via explicit DEALLOCATE or END TEAM)
   if (Fortran::semantics::IsSaved(sym) &&
@@ -714,9 +714,8 @@ genCleanupDeallocateCoarray(Fortran::lower::AbstractConverter &converter,
     if (auto mutBox = exv.getBoxOf<fir::MutableBoxValue>())
       Fortran::lower::genDeallocateIfAllocated(converter, *mutBox, loc);
     else
-      mif::DeallocCoarrayOp::create(*builder, loc, fir::getBase(exv),
-                                    /*stat*/ mlir::Value{},
-                                    /*errmsg*/ mlir::Value{});
+      fir::emitFatalError(
+          loc, "Non-allocatable coarrays are never automatically deallocated");
   });
 }
 
