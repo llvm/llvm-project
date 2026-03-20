@@ -12,6 +12,7 @@ class TrivialHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
+
     def log_request(self, *args, **kwargs):
         if len(self.requestline) > 0:
             if len(self.headers) > 0:
