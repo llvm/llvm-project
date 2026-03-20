@@ -180,6 +180,9 @@ bool has_unsafe_characters(llvm::StringRef s) {
   return s == "." || s == "..";
 }
 
+// TODO: This is a dump initial implementation: It always downloads the file, it
+// doesn't validate the result, it doesn't employ proper buffering for large
+// files.
 std::optional<FileSpec>
 requestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
                                   llvm::StringRef pdb_name) {

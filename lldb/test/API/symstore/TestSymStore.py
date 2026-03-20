@@ -140,6 +140,8 @@ class SymStoreTests(TestBase):
             self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {dir}")
             self.try_breakpoint(exe, should_have_loc=True)
 
+    # TODO: Add test coverage for common HTTPS security scenarios, e.g. self-signed
+    # certs, non-HTTPS redirects, etc.
     def test_http(self):
         """
         Check that breakpoint hits with remote SymStore.
