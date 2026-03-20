@@ -110,9 +110,18 @@ private:
 
 class MockControllerAccess : public Session::ControllerAccess {
 public:
+  using OnConnectFn = move_only_function<void(BootstrapInfo &BI)>;
+
   MockControllerAccess(Session &SS) : Session::ControllerAccess(SS), SS(SS) {}
 
-  void connect() override {}
+  void setOnConnect(OnConnectFn OnConnect) {
+    this->OnConnect = std::move(OnConnect);
+  }
+
+  void connect(BootstrapInfo BI) override {
+    if (OnConnect)
+      OnConnect(BI);
+  }
 
   void disconnect() override {
     std::unique_lock<std::mutex> Lock(M);
@@ -251,6 +260,7 @@ private:
   size_t CallId = 0;
   std::unordered_map<size_t, OnCallHandlerCompleteFn> Pending;
   std::condition_variable ShutdownCV;
+  OnConnectFn OnConnect;
 };
 
 class CallViaMockControllerAccess {
@@ -396,7 +406,7 @@ TEST(ControllerAccessTest, Basics) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
 
@@ -419,7 +429,7 @@ TEST(ControllerAccessTest, ValidCallToController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -459,7 +469,7 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   S.detach();
 
@@ -483,7 +493,7 @@ TEST(ControllerAccessTest, CallFromController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -507,4 +517,35 @@ TEST(ControllerAccessTest, RedundantAsyncShutdown) {
   bool RedundantCallbackRan = false;
   S.shutdown([&]() { RedundantCallbackRan = true; });
   EXPECT_TRUE(RedundantCallbackRan);
+}
+
+TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+
+  // Test values.
+  constexpr const char *SymName = "test_sym";
+  const char Sym = '.';
+  constexpr const char *SecretKey = "luggage_combo";
+  constexpr const char *SecretValue = "12345";
+
+  // Build a BootstrapInfo with custom symbols and values.
+  BootstrapInfo BI(S);
+  std::pair<const char *, const void *> TestSyms[] = {
+      {SymName, static_cast<const void *>(&Sym)}};
+  cantFail(BI.symbols().addUnique(TestSyms));
+  BI.values()[SecretKey] = SecretValue;
+
+  bool OnConnectRan = false;
+  auto CA = std::make_shared<MockControllerAccess>(S);
+  CA->setOnConnect([&](BootstrapInfo &BI) {
+    EXPECT_EQ(BI.symbols().at(SymName), static_cast<const void *>(&Sym));
+    EXPECT_EQ(BI.values().at(SecretKey), SecretValue);
+    OnConnectRan = true;
+  });
+  S.attach(CA, std::move(BI));
+
+  ASSERT_TRUE(OnConnectRan);
+
+  S.waitForShutdown();
 }

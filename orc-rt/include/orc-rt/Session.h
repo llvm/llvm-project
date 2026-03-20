@@ -13,6 +13,7 @@
 #ifndef ORC_RT_SESSION_H
 #define ORC_RT_SESSION_H
 
+#include "orc-rt/BootstrapInfo.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorProcessInfo.h"
 #include "orc-rt/LockedAccess.h"
@@ -83,7 +84,7 @@ public:
     /// If connect fails to establish communication with the controller,
     /// ControllerAccess implementations must call notifyDisconnected before
     /// returning from connect.
-    virtual void connect() = 0;
+    virtual void connect(BootstrapInfo BI) = 0;
 
     /// Initiate disconnection from the controller.
     ///
@@ -190,7 +191,7 @@ public:
     return addService(std::make_unique<ServiceT>(std::forward<ArgTs>(Args)...));
   }
 
-  /// Initiate connection with controller.
+  /// Initiate connection with controller, using the given BootstrapInfo.
   ///
   /// Upon first call, assuming that the Session has not already been detached
   /// or shutdown, this will take (shared) ownership of CA and call its connect
@@ -198,7 +199,7 @@ public:
   ///
   /// If detach or shutdown have already been called then this method will not
   /// take ownership of CA or call its connect method.
-  void attach(std::shared_ptr<ControllerAccess> CA);
+  void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
 
   /// Initiate detach from the controller.
   ///
