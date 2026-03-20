@@ -2370,7 +2370,7 @@ static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall) {
   TheCall->setArg(0, Arg);
 
   QualType ArgTy = Arg->getType();
-  if (!ArgTy->isUnsignedIntegerType() && !ArgTy->isExtVectorBoolType()) {
+  if (!ArgTy->isUnsignedIntegerType()) {
     S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
         << 1 << /* scalar */ 1 << /* unsigned integer ty */ 3 << /* no fp */ 0
         << ArgTy;
