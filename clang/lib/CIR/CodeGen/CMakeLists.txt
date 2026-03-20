@@ -68,6 +68,8 @@ add_clang_library(clangCIR
   DEPENDS
   MLIRCIR
   MLIRCIROpInterfacesIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
 
   LINK_LIBS
   clangAST
