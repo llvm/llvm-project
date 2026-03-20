@@ -22,7 +22,7 @@ MATH_MANGLE(sinpi)(half x)
     half s = (r.i & (short)1) == (short)0 ? sc.s : sc.c;
     short flip = r.i > (short)1 ? (short)SIGNBIT_HP16 : (short)0;
 
-    s = AS_HALF((short)(AS_SHORT(s) ^ (flip ^ (AS_SHORT(x) ^ (short)SIGNBIT_HP16))));
+    s = AS_HALF((short)(AS_SHORT(s) ^ (flip ^ (AS_SHORT(x) & (short)SIGNBIT_HP16))));
 
     return s;
 }
