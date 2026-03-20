@@ -386,7 +386,7 @@ public:
 
   mlir::Value visit(mlir::Attribute attr) {
     return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)
-        .Case<cir::IntAttr, cir::FPAttr, cir::ConstComplexAttr,
+        .Case<cir::BoolAttr, cir::IntAttr, cir::FPAttr, cir::ConstComplexAttr,
               cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
               cir::ConstPtrAttr, cir::GlobalViewAttr, cir::TypeInfoAttr,
               cir::UndefAttr, cir::VTableAttr, cir::ZeroAttr>(
@@ -394,6 +394,7 @@ public:
         .Default([&](auto attrT) { return mlir::Value(); });
   }
 
+  mlir::Value visitCirAttr(cir::BoolAttr boolAttr);
   mlir::Value visitCirAttr(cir::IntAttr intAttr);
   mlir::Value visitCirAttr(cir::FPAttr fltAttr);
   mlir::Value visitCirAttr(cir::ConstComplexAttr complexAttr);
@@ -509,6 +510,16 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm." + name, llvmResTy,
                                    adaptor.getOperands());
   return mlir::success();
+}
+
+/// BoolAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
+  mlir::Location loc = parentOp->getLoc();
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+  mlir::Value boolVal = mlir::LLVM::ConstantOp::create(
+      rewriter, loc, converter->convertType(boolAttr.getType()),
+      boolAttr.getValue());
+  return emitToMemory(rewriter, layout, boolAttr.getType(), boolVal);
 }
 
 /// IntAttr visitor.
