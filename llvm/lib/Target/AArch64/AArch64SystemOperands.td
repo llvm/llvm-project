@@ -996,16 +996,14 @@ def VALE3        : TLBI<1, 0b110, 0b1000, 0b0111, 0b101, REG_REQUIRED>;
 def VMALLS12E1   : TLBI<0, 0b100, 0b1000, 0b0111, 0b110, REG_NONE>;
 def VAALE1       : TLBI<1, 0b000, 0b1000, 0b0111, 0b111, REG_REQUIRED>;
 
-defvar TLBINames = [
+foreach I = [
   "IPAS2E1IS", "IPAS2LE1IS", "VMALLE1IS", "ALLE2IS", "ALLE3IS",
   "VAE1IS", "VAE2IS", "VAE3IS", "ASIDE1IS", "VAAE1IS",
   "ALLE1IS", "VALE1IS", "VALE2IS", "VALE3IS", "VMALLS12E1IS",
   "VAALE1IS", "IPAS2E1", "IPAS2LE1", "VMALLE1", "ALLE2",
   "ALLE3", "VAE1", "VAE2", "VAE3", "ASIDE1", "VAAE1",
   "ALLE1", "VALE1", "VALE2", "VALE3", "VMALLS12E1", "VAALE1"
-];
-
-foreach I = TLBINames in {
+  ] in {
   defvar Info = !cast<TLBI>(I);
   def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
     let Encoding{7} = 0;
@@ -1017,13 +1015,14 @@ foreach I = TLBINames in {
   }
 
   if !eq(Info.HasTLBIP, true) then {
-    foreach nxs = [0, 1] in {
-      defvar VariantName = !if(nxs, !strconcat(I, "nXS"), I);
-      def : TLBIPEntry<VariantName, Info.Op1, Info.CRn, Info.CRm, Info.Op2,
-                       Info.RegUse> {
-        let Encoding{7} = nxs;
-        let Requires = ["AArch64::FeatureD128"];
-      }
+    def : TLBIPEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+      let Encoding{7} = 0;
+      let Requires = ["AArch64::FeatureD128"];
+    }
+
+    def : TLBIPEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+      let Encoding{7} = 1;
+      let Requires = ["AArch64::FeatureD128"];
     }
   }
 }
@@ -1047,37 +1046,6 @@ def VALE3OS      : TLBI<1, 0b110, 0b1000, 0b0001, 0b101, REG_REQUIRED>;
 def ALLE2OS      : TLBI<0, 0b100, 0b1000, 0b0001, 0b000, REG_OPTIONAL>;
 def ALLE1OS      : TLBI<0, 0b100, 0b1000, 0b0001, 0b100, REG_OPTIONAL>;
 def ALLE3OS      : TLBI<0, 0b110, 0b1000, 0b0001, 0b000, REG_OPTIONAL>;
-
-defvar TLBI_RMI_OuterShareable = [
-  "VMALLE1OS", "VAE1OS", "ASIDE1OS", "VAAE1OS",
-  "VALE1OS", "VAALE1OS", "IPAS2E1OS", "IPAS2LE1OS",
-  "VAE2OS", "VALE2OS", "VMALLS12E1OS", "VAE3OS",
-  "VALE3OS", "ALLE2OS", "ALLE1OS", "ALLE3OS"
-];
-
-foreach I = TLBI_RMI_OuterShareable in {
-  defvar Info = !cast<TLBI>(I);
-  def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
-    let Encoding{7} = 0;
-    let Requires = ["AArch64::FeatureTLB_RMI"];
-  }
-
-  def : TLBIEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
-    let Encoding{7} = 1;
-    let Requires = ["AArch64::FeatureTLB_RMI", "AArch64::FeatureXS"];
-  }
-
-  if !eq(Info.HasTLBIP, true) then {
-    foreach nxs = [0, 1] in {
-      defvar VariantName = !if(nxs, !strconcat(I, "nXS"), I);
-      def : TLBIPEntry<VariantName, Info.Op1, Info.CRn, Info.CRm, Info.Op2,
-                       Info.RegUse> {
-        let Encoding{7} = nxs;
-        let Requires = ["AArch64::FeatureD128"];
-      }
-    }
-  }
-}
 
 // Armv8.4-A TLB and TLBIP Range Maintenance instructions:
 //               hasTLBIP  op1    CRn     CRm     op2    reguse
@@ -1112,7 +1080,11 @@ def RVALE3IS     : TLBI<1, 0b110, 0b1000, 0b0010, 0b101, REG_REQUIRED>;
 def RVAE3OS      : TLBI<1, 0b110, 0b1000, 0b0101, 0b001, REG_REQUIRED>;
 def RVALE3OS     : TLBI<1, 0b110, 0b1000, 0b0101, 0b101, REG_REQUIRED>;
 
-defvar TLBI_RMI_Range = [
+foreach I = [
+  "VMALLE1OS", "VAE1OS", "ASIDE1OS", "VAAE1OS",
+  "VALE1OS", "VAALE1OS", "IPAS2E1OS", "IPAS2LE1OS",
+  "VAE2OS", "VALE2OS", "VMALLS12E1OS", "VAE3OS",
+  "VALE3OS", "ALLE2OS", "ALLE1OS", "ALLE3OS",
   "RVAE1", "RVAAE1", "RVALE1", "RVAALE1",
   "RVAE1IS", "RVAAE1IS", "RVALE1IS", "RVAALE1IS",
   "RVAE1OS", "RVAAE1OS", "RVALE1OS", "RVAALE1OS",
@@ -1121,9 +1093,7 @@ defvar TLBI_RMI_Range = [
   "RVAE2", "RVALE2", "RVAE2IS", "RVALE2IS",
   "RVAE2OS", "RVALE2OS", "RVAE3", "RVALE3",
   "RVAE3IS", "RVALE3IS", "RVAE3OS", "RVALE3OS"
-];
-
-foreach I = TLBI_RMI_Range in {
+  ] in {
   defvar Info = !cast<TLBI>(I);
   def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
     let Encoding{7} = 0;
@@ -1132,17 +1102,18 @@ foreach I = TLBI_RMI_Range in {
 
   def : TLBIEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
     let Encoding{7} = 1;
-    let Requires = ["AArch64::FeatureTLB_RMI", "AArch64::FeatureXS"];
+    let Requires = ["AArch64::FeatureXS"];
   }
 
   if !eq(Info.HasTLBIP, true) then {
-    foreach nxs = [0, 1] in {
-      defvar VariantName = !if(nxs, !strconcat(I, "nXS"), I);
-      def : TLBIPEntry<VariantName, Info.Op1, Info.CRn, Info.CRm, Info.Op2,
-                       Info.RegUse> {
-        let Encoding{7} = nxs;
-        let Requires = ["AArch64::FeatureD128"];
-      }
+    def : TLBIPEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+      let Encoding{7} = 0;
+      let Requires = ["AArch64::FeatureD128"];
+    }
+
+    def : TLBIPEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
+      let Encoding{7} = 1;
+      let Requires = ["AArch64::FeatureD128"];
     }
   }
 }
@@ -1154,20 +1125,13 @@ def RPALOS  : TLBI<0, 0b110, 0b1000, 0b0100, 0b111, REG_REQUIRED>;
 def PAALLOS : TLBI<0, 0b110, 0b1000, 0b0001, 0b100, REG_NONE>;
 def PAALL   : TLBI<0, 0b110, 0b1000, 0b0111, 0b100, REG_NONE>;
 
-defvar TLBI_RME = [
-  "RPAOS", "RPALOS", "PAALLOS", "PAALL"
-];
-
 let Requires = ["AArch64::FeatureRME"] in {
-foreach I = TLBI_RME in {
+foreach I = [
+  "RPAOS", "RPALOS", "PAALLOS", "PAALL"
+  ] in {
   defvar Info = !cast<TLBI>(I);
   def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
     let Encoding{7} = 0;
-  }
-
-  def : TLBIEntry<!strconcat(I, "nXS"), Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
-    let Encoding{7} = 1;
-    let ExtraRequires = ["AArch64::FeatureXS"];
   }
 }
 }
@@ -1178,12 +1142,10 @@ def VMALLWS2E1   : TLBI<0, 0b100, 0b1000, 0b0110, 0b010, REG_NONE>;
 def VMALLWS2E1IS : TLBI<0, 0b100, 0b1000, 0b0010, 0b010, REG_OPTIONAL>;
 def VMALLWS2E1OS : TLBI<0, 0b100, 0b1000, 0b0101, 0b010, REG_OPTIONAL>;
 
-defvar TLBI_TLBIW = [
-  "VMALLWS2E1", "VMALLWS2E1IS", "VMALLWS2E1OS"
-];
-
 let Requires = ["AArch64::FeatureTLBIW"] in {
-foreach I = TLBI_TLBIW in {
+foreach I = [
+  "VMALLWS2E1", "VMALLWS2E1IS", "VMALLWS2E1OS"
+  ] in {
   defvar Info = !cast<TLBI>(I);
   def : TLBIEntry<I, Info.Op1, Info.CRn, Info.CRm, Info.Op2, Info.RegUse> {
     let Encoding{7} = 0;
