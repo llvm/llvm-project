@@ -240,7 +240,7 @@ function (add_flangrt_library name)
 
       # Include a `config.h`-style header at the top of all compilation units.
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:-include "${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h">
+          "$<$<COMPILE_LANGUAGE:CXX>:-include${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
@@ -249,7 +249,7 @@ function (add_flangrt_library name)
 
       # Include a `config.h`-style header at the top of all compilation units.
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:/FI "${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h">
+          "$<$<COMPILE_LANGUAGE:CXX>:/FI${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
       target_compile_options(${tgtname} PRIVATE
@@ -258,7 +258,7 @@ function (add_flangrt_library name)
 
       # Include a `config.h`-style header at the top of all compilation units.
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:-qinclude="${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h">
+          "$<$<COMPILE_LANGUAGE:CXX>:-qinclude=${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
     endif ()
 
