@@ -6239,7 +6239,16 @@ private:
     genConstructExitBranch(*getEval().controlSuccessor);
   }
   void genFIR(const Fortran::parser::GotoStmt &) {
-    genConstructExitBranch(*getEval().controlSuccessor);
+    auto &targetEval = *getEval().controlSuccessor;
+    if (Fortran::lower::isInOpenACCLoop(*builder)) {
+      mlir::Block *targetBlock = targetEval.block;
+      mlir::Region *currentRegion = &builder->getRegion();
+      if (targetBlock && targetBlock->getParent() != currentRegion) {
+        mlir::acc::YieldOp::create(*builder, toLocation());
+        return;
+      }
+    }
+    genConstructExitBranch(targetEval);
   }
 
   // Nop statements - No code, or code is generated at the construct level.
