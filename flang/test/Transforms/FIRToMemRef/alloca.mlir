@@ -86,11 +86,11 @@ func.func @peep_declare() {
 
 // check that attributes are copied when they exist
 // CHECK-LABEL: func.func @no_peep_declare
-// CHECK:       memref.alloca() {bindc_name = "x", uniq_name = "y"} : memref<i32>
+// CHECK:       memref.alloca() {acc.var_name = #acc.var_name<"z">, bindc_name = "x", uniq_name = "y"} : memref<i32>
 // CHECK-NOT:   memref.store %c1_i32, %alloca[] : memref<i32>
 func.func @no_peep_declare() {
   %c1_i32 = arith.constant 1 : i32
-  %0 = fir.alloca i32 {bindc_name = "x", uniq_name = "y"}
+  %0 = fir.alloca i32 {acc.var_name = #acc.var_name<"z">, bindc_name = "x", uniq_name = "y"}
   %1 = fir.declare %0 {uniq_name = "some_name"} : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %c1_i32 to %1 : !fir.ref<i32>
   return
