@@ -20948,6 +20948,14 @@ TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
                "}",
                Alignment);
 
+  Alignment.ColumnLimit = 40;
+  verifyFormat("switch (level) {\n"
+               "default: return \"a bit longer string\";\n"
+               "case log::warning: return \"foo\";\n"
+               "}",
+               Alignment);
+  Alignment.ColumnLimit = 80;
+
   Alignment.AlignConsecutiveShortCaseStatements.AcrossEmptyLines = true;
 
   verifyFormat("switch (level) {\n"
@@ -21040,6 +21048,14 @@ TEST_F(FormatTest, AlignConsecutiveShortCaseStatements) {
                "case log::warning : return \"warning\";\n"
                "case log::error   :\n"
                "default           : return \"default\";\n"
+               "}",
+               Alignment);
+
+  verifyFormat("switch (level) {\n"
+               "case log::error   :\n"
+               "default           : return \"default\";\n"
+               "case log::info    : return \"info\";\n"
+               "case log::warning : return \"warning\";\n"
                "}",
                Alignment);
 }
