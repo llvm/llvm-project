@@ -11,55 +11,53 @@ define void @wombat(ptr %x) {
 ; CHECK-LABEL: define void @wombat(
 ; CHECK-SAME: ptr [[X:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    br label %[[BB2:.*]]
-; CHECK:       [[BB1:.*]]:
+; CHECK-NEXT:    br label %[[BB4:.*]]
+; CHECK:       [[EXIT:.*]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ADD:%.*]], %[[BB6:.*]] ], [ 0, %[[BB]] ]
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i64 [ [[PHI7:%.*]], %[[BB6]] ], [ 0, %[[BB]] ]
-; CHECK-NEXT:    br i1 true, label %[[BB4:.*]], label %[[BB6]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    br i1 false, label %[[BB6]], label %[[BB5:.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[ADD:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[BB]] ]
+; CHECK-NEXT:    [[PHI3:%.*]] = phi i64 [ [[PHI7:%.*]], %[[LOOP_LATCH]] ], [ 0, %[[BB]] ]
+; CHECK-NEXT:    br i1 true, label %[[BB5:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[BB5]]:
+; CHECK-NEXT:    br i1 false, label %[[LOOP_LATCH]], label %[[BB6:.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[X]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 @llvm.smin.i64(i64 [[LOAD]], i64 [[PHI3]])
-; CHECK-NEXT:    br label %[[BB6]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    [[PHI7]] = phi i64 [ [[PHI3]], %[[BB4]] ], [ [[CALL]], %[[BB5]] ], [ [[PHI3]], %[[BB2]] ]
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[PHI7]] = phi i64 [ [[PHI3]], %[[BB5]] ], [ [[CALL]], %[[BB6]] ], [ [[PHI3]], %[[BB4]] ]
 ; CHECK-NEXT:    [[ADD]] = add i64 [[PHI]], 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i64 [[PHI]], 1
-; CHECK-NEXT:    br i1 [[ICMP]], label %[[BB1]], label %[[BB2]]
+; CHECK-NEXT:    br i1 [[ICMP]], label %[[EXIT]], label %[[BB4]]
 ;
-bb:
-  br label %bb2
+entry:
+  br label %loop.header
 
-bb1:                                              ; preds = %bb6
+exit:                                              ; preds = %loop.latch
   ret void
 
-bb2:                                              ; preds = %bb6, %bb
-  %phi = phi i64 [ %add, %bb6 ], [ 0, %bb ]
-  %phi3 = phi i64 [ %phi7, %bb6 ], [ 0, %bb ]
-  br i1 true, label %bb4, label %bb6
+loop.header:                                              ; preds = %loop.latch, %entry
+  %phi = phi i64 [ %add, %loop.latch ], [ 0, %entry ]
+  %phi3 = phi i64 [ %phi7, %loop.latch ], [ 0, %entry ]
+  br i1 true, label %bb4, label %loop.latch
 
-bb4:                                              ; preds = %bb2
-  br i1 false, label %bb6, label %bb5, !prof !0
+bb4:                                              ; preds = %loop.header
+  br i1 false, label %loop.latch, label %bb5, !prof !0
 
 bb5:                                              ; preds = %bb4
   %load = load i64, ptr %x, align 8
   %call = call i64 @llvm.smin.i64(i64 %load, i64 %phi3)
-  br label %bb6
+  br label %loop.latch
 
-bb6:                                              ; preds = %bb5, %bb4, %bb2
-  %phi7 = phi i64 [ %phi3, %bb4 ], [ %call, %bb5 ], [ %phi3, %bb2 ]
+loop.latch:                                              ; preds = %bb5, %bb4, %loop.header
+  %phi7 = phi i64 [ %phi3, %bb4 ], [ %call, %bb5 ], [ %phi3, %loop.header ]
   %add = add i64 %phi, 1
   %icmp = icmp eq i64 %phi, 1
-  br i1 %icmp, label %bb1, label %bb2
+  br i1 %icmp, label %exit, label %loop.header
 }
 
 ; Function Attrs: nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none)
 declare i64 @llvm.smin.i64(i64, i64) #0
-
-attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 
 !0 = !{!"branch_weights", i32 -2147483648, i32 0}
 ;.
