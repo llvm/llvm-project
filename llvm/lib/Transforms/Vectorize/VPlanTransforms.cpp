@@ -5933,6 +5933,7 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
 
   // reduce.add(ext(mul(ext(A), ext(B))))
   // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
+  // TODO: Support this optimization for float types.
   if (match(BinOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
                                       m_ZExtOrSExt(m_VPValue()))))) {
     auto *Ext = cast<VPWidenCastRecipe>(BinOp);
@@ -6127,6 +6128,11 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
       Range);
 }
 
+static TTI::PartialReductionExtendKind
+getPartialReductionExtendKind(VPWidenCastRecipe *Cast) {
+  return TTI::getPartialReductionExtendKind(Cast->getOpcode());
+}
+
 /// Checks if \p Op (which is an operand of \p UpdateR) is an extended reduction
 /// operand. This is an operand where the source of the value (e.g. a load) has
 /// been extended (sext, zext, or fpext) before it is used in the reduction.
@@ -6146,85 +6152,67 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
   assert(is_contained(UpdateR->operands(), Op) &&
          "Op should be operand of UpdateR");
 
-  // If Op is an extend, then it's still a valid partial reduction if the
-  // extended mul fulfills the other requirements.
-  // For example, reduce.add(ext(mul(ext(A), ext(B)))) is still a valid partial
-  // reduction since the inner extends will be widened. We already have oneUse
-  // checks on the inner extends so widening them is safe.
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
-  if (match(Op, m_ZExtOrSExt(m_Mul(m_VPValue(), m_VPValue()))) ||
-      match(Op, m_FPExt(m_FMul(m_VPValue(), m_VPValue())))) {
-    auto *CastRecipe = dyn_cast<VPWidenCastRecipe>(Op);
-    if (!CastRecipe)
-      return std::nullopt;
-    auto CastOp = static_cast<Instruction::CastOps>(CastRecipe->getOpcode());
-    OuterExtKind = TTI::getPartialReductionExtendKind(CastOp);
-    Op = CastRecipe->getOperand(0);
-  }
-
-  // If the update is a binary op, check both of its operands to see if
-  // they are extends. Otherwise, see if the update comes directly from an
-  // extend.
-  std::array<VPWidenCastRecipe *, 2> CastRecipes = {};
-
-  // Match extends and populate CastRecipes. Returns false if matching fails.
-  auto MatchExtends = [OuterExtKind,
-                       &CastRecipes](ArrayRef<VPValue *> Operands) {
-    assert(Operands.size() <= 2 && "expected at most 2 operands");
-
-    for (const auto &[I, OpVal] : enumerate(Operands)) {
-      // Allow constant as second operand - validation happens in
-      // isValidPartialReduction.
-      const APInt *Unused;
-      if (I > 0 && CastRecipes[0] && match(OpVal, m_APInt(Unused)))
-        continue;
-
-      VPValue *ExtInput;
-      if (!match(OpVal, m_ZExtOrSExt(m_VPValue(ExtInput))) &&
-          !match(OpVal, m_FPExt(m_VPValue(ExtInput))))
-        return false;
-
-      CastRecipes[I] = dyn_cast<VPWidenCastRecipe>(OpVal);
-      if (!CastRecipes[I])
-        return false;
-
-      // The outer extend kind must match the inner extends for folding.
-      if (OuterExtKind) {
-        auto CastOp =
-            static_cast<Instruction::CastOps>(CastRecipes[I]->getOpcode());
-        if (*OuterExtKind != TTI::getPartialReductionExtendKind(CastOp))
-          return false;
-      }
+  if (match(Op, m_AnyExtend(m_VPValue()))) {
+    auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
+    VPValue *CastSource = CastRecipe->getOperand(0);
+    if (match(CastSource, m_Mul(m_VPValue(), m_VPValue())) ||
+        match(CastSource, m_FMul(m_VPValue(), m_VPValue()))) {
+      // Match: ext(mul(...))
+      // Record the outer extend kind and set `Op` to the mul. We can then match
+      // this as a binary operation. Note: We can optimize out the outer extend
+      // by widening the inner extends to match it. See
+      // optimizeExtendsForPartialReduction.
+      Op = CastSource;
+      OuterExtKind = getPartialReductionExtendKind(CastRecipe);
+    } else if (UpdateR->getOpcode() == Instruction::Add ||
+               UpdateR->getOpcode() == Instruction::FAdd) {
+      // Match: UpdateR(PrevValue, ext(...))
+      // TODO: Remove the add/fadd restriction (we should be able to handle this
+      // case for sub reductions too).
+      return ExtendedReductionOperand{UpdateR, {CastRecipe, nullptr}};
     }
-    return CastRecipes[0] != nullptr;
-  };
-
-  // If Op is a binary operator, check both of its operands to see if they are
-  // extends. Otherwise, see if the update comes directly from an extend.
-  auto *BinOp = dyn_cast<VPWidenRecipe>(Op);
-  if (BinOp && Instruction::isBinaryOp(BinOp->getOpcode())) {
-    if (!BinOp->hasOneUse())
-      return std::nullopt;
-
-    // Handle neg(binop(ext, ext)) pattern.
-    VPValue *OtherOp = nullptr;
-    if (match(BinOp, m_Sub(m_ZeroInt(), m_VPValue(OtherOp))))
-      BinOp = dyn_cast<VPWidenRecipe>(OtherOp);
-
-    if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()) ||
-        !MatchExtends(BinOp->operands()))
-      return std::nullopt;
-  } else if (match(UpdateR, m_Add(m_VPValue(), m_VPValue())) ||
-             match(UpdateR, m_FAdd(m_VPValue(), m_VPValue()))) {
-    // We already know Op is an operand of UpdateR.
-    if (!MatchExtends({Op}))
-      return std::nullopt;
-    BinOp = UpdateR;
-  } else {
-    return std::nullopt;
   }
 
-  return ExtendedReductionOperand{BinOp, CastRecipes};
+  if (!Op->hasOneUse())
+    return std::nullopt;
+
+  // Handle neg(...) pattern (aka sub(0, ...)).
+  VPValue *NegatedOp = nullptr;
+  if (match(Op, m_Sub(m_ZeroInt(), m_VPValue(NegatedOp))))
+    Op = NegatedOp;
+
+  VPWidenRecipe *BinOp = dyn_cast<VPWidenRecipe>(Op);
+  if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
+    return std::nullopt;
+
+  // The rest of the matching assumes `Op` is a (possibly extended/negated)
+  // binary operation.
+
+  VPValue *LHS = BinOp->getOperand(0);
+  VPValue *RHS = BinOp->getOperand(1);
+
+  // The LHS of the operation must always be an extend.
+  if (!match(LHS, m_AnyExtend(m_VPValue())))
+    return std::nullopt;
+
+  auto *LHSCast = cast<VPWidenCastRecipe>(LHS);
+
+  // The RHS of the operation can be an extend or a constant integer.
+  // The constant will be validated in isValidPartialReduction.
+  VPWidenCastRecipe *RHSCast = nullptr;
+  if (match(RHS, m_AnyExtend(m_VPValue())))
+    RHSCast = cast<VPWidenCastRecipe>(RHS);
+  else if (!isa<VPConstantInt>(RHS))
+    return std::nullopt;
+
+  // The outer extend kind must match the inner extends for folding.
+  for (VPWidenCastRecipe *Cast : {LHSCast, RHSCast})
+    if (Cast && OuterExtKind &&
+        getPartialReductionExtendKind(Cast) != OuterExtKind)
+      return std::nullopt;
+
+  return ExtendedReductionOperand{BinOp, {LHSCast, RHSCast}};
 }
 
 /// Examines each operation in the reduction chain corresponding to \p RedPhiR,
