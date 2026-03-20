@@ -12165,12 +12165,18 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
     return Op;
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
-  // Here we create 2 or 4 v16i8 loads to load the pair or accumulator value in
-  // 2 or 4 vsx registers.
   assert((VT != MVT::v512i1 || Subtarget.hasMMA()) &&
          "Type unsupported without MMA");
   assert((VT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
          "Type unsupported without paired vector support");
+
+  // For v256i1 on ISA Future, let the load go through to instruction selection
+  // where it will be matched to lxvp/plxvp by the instruction patterns.
+  if (VT == MVT::v256i1 && Subtarget.isISAFuture())
+    return Op;
+
+  // For other cases, create 2 or 4 v16i8 loads to load the pair or accumulator
+  // value in 2 or 4 vsx registers.
   Align Alignment = LN->getAlign();
   SmallVector<SDValue, 4> Loads;
   SmallVector<SDValue, 4> LoadChains;
@@ -12333,12 +12339,19 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
     return Op;
 
   // Type v256i1 is used for pairs and v512i1 is used for accumulators.
-  // Here we create 2 or 4 v16i8 stores to store the pair or accumulator
-  // underlying registers individually.
   assert((StoreVT != MVT::v512i1 || Subtarget.hasMMA()) &&
          "Type unsupported without MMA");
   assert((StoreVT != MVT::v256i1 || Subtarget.pairedVectorMemops()) &&
          "Type unsupported without paired vector support");
+
+  // For v256i1 on ISA Future, let the store go through to instruction selection
+  // where it will be matched to stxvp/pstxvp by the instruction patterns.
+  if (StoreVT == MVT::v256i1 && Subtarget.isISAFuture() &&
+      !DisableAutoPairedVecSt)
+    return Op;
+
+  // For other cases, create 2 or 4 v16i8 stores to store the pair or
+  // accumulator underlying registers individually.
   Align Alignment = SN->getAlign();
   SmallVector<SDValue, 4> Stores;
   unsigned NumVecs = 2;
@@ -15755,8 +15768,11 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     assert(Operand.getOpcode() == ISD::LOAD && "Must be LoadSDNode here.");
 
     auto *LoadNode = cast<LoadSDNode>(Operand);
-    return DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
-                       LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    SDValue NewLoad =
+        DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
+                    LoadNode->getBasePtr(), LoadNode->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(Operand.getValue(1), NewLoad.getValue(1));
+    return NewLoad;
   };
 
   // Following code transforms the DAG

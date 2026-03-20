@@ -35,10 +35,10 @@ void ZerosSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], <4 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 32
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x double> [[V]], ptr [[V_ADDR]], align 32
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 32
+// CHECK-NEXT:    store <4 x double> [[V]], ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP0]], i32 0
 // CHECK-NEXT:    store double [[TMP2]], ptr [[TMP1]], align 8
@@ -90,10 +90,10 @@ void OnesSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], <4 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 32
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x double> [[V]], ptr [[V_ADDR]], align 32
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 32
+// CHECK-NEXT:    store <4 x double> [[V]], ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 4
@@ -146,10 +146,10 @@ void TwosSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], <4 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 32
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x double> [[V]], ptr [[V_ADDR]], align 32
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 32
+// CHECK-NEXT:    store <4 x double> [[V]], ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 8
@@ -202,10 +202,10 @@ void ThreesSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-SAME: ptr noalias noundef nonnull align 8 dereferenceable(128) [[A:%.*]], <4 x double> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 32
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x double>, align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x double> [[V]], ptr [[V_ADDR]], align 32
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 32
+// CHECK-NEXT:    store <4 x double> [[V]], ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 12
