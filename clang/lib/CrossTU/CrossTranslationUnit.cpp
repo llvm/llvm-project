@@ -397,6 +397,10 @@ void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
     Context.getDiagnostics().Report(diag::warn_ctu_incompat_triple)
         << IE.getFileName() << IE.getTripleToName() << IE.getTripleFromName();
     return;
+  case index_error_code::success:
+    llvm_unreachable("There should not be a success error. This case should "
+                     "have been handled by the caller.");
+    return;
   case index_error_code::unspecified:
   case index_error_code::missing_definition:
   case index_error_code::failed_import:
