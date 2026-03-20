@@ -74,20 +74,20 @@ export void call3() {
 
 // flatten array of vector to array with cast
 // CHECK-LABEL: define void {{.*}}call5
-// CHECK: [[A:%.*]] = alloca [1 x <2 x float>], align 8
+// CHECK: [[A:%.*]] = alloca [1 x <2 x float>], align 4
 // CHECK-NEXT: [[B:%.*]] = alloca [2 x i32], align 4
-// CHECK-NEXT: [[Tmp:%.*]] = alloca [1 x <2 x float>], align 8
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[A]], ptr align 8 {{.*}}, i32 8, i1 false)
+// CHECK-NEXT: [[Tmp:%.*]] = alloca [1 x <2 x float>], align 4
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[A]], ptr align 4 {{.*}}, i32 8, i1 false)
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 {{.*}}, i32 8, i1 false)
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[Tmp]], ptr align 8 [[A]], i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[A]], i32 8, i1 false)
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds [2 x i32], ptr [[B]], i32 0, i32 1
 // CHECK-NEXT: [[VG:%.*]] = getelementptr inbounds [1 x <2 x float>], ptr [[Tmp]], i32 0, i32 0
-// CHECK-NEXT: [[L:%.*]] = load <2 x float>, ptr [[VG]], align 8
+// CHECK-NEXT: [[L:%.*]] = load <2 x float>, ptr [[VG]], align 4
 // CHECK-NEXT: [[VL:%.*]] = extractelement <2 x float> [[L]], i32 0
 // CHECK-NEXT: [[C:%.*]] = fptosi float [[VL]] to i32
 // CHECK-NEXT: store i32 [[C]], ptr [[G1]], align 4
-// CHECK-NEXT: [[L4:%.*]] = load <2 x float>, ptr [[VG]], align 8
+// CHECK-NEXT: [[L4:%.*]] = load <2 x float>, ptr [[VG]], align 4
 // CHECK-NEXT: [[VL5:%.*]] = extractelement <2 x float> [[L4]], i32 1
 // CHECK-NEXT: [[C6:%.*]] = fptosi float [[VL5]] to i32
 // CHECK-NEXT: store i32 [[C6]], ptr [[G2]], align 4
@@ -183,5 +183,5 @@ struct Derived : BFields {
 // CHECK-NEXT: store i32 [[X]], ptr [[Gep3]], align 4
 // CHECK-NEXT: ret void
 export void call8(Derived D) {
-  int A[4] = (int[4])D;  
+  int A[4] = (int[4])D;
 }

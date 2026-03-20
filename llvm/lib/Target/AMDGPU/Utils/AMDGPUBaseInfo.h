@@ -11,6 +11,7 @@
 
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
@@ -31,6 +32,7 @@ struct Align;
 class Argument;
 class Function;
 class GlobalValue;
+class MachineInstr;
 class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
@@ -1099,12 +1101,15 @@ enum InstCounterType {
   BVH_CNT,                           // gfx12+ only.
   KM_CNT,                            // gfx12+ only.
   X_CNT,                             // gfx1250.
+  ASYNC_CNT,                         // gfx1250.
   NUM_EXTENDED_INST_CNTS,
   VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
   VM_VSRC,                          // gfx12+ expert mode only.
   NUM_EXPERT_INST_CNTS,
   NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
 };
+
+StringLiteral getInstCounterName(InstCounterType T);
 
 // Return an iterator over all counters between LOAD_CNT (the first counter)
 // and \c MaxCounter (exclusive, default value yields an enumeration over
@@ -1125,118 +1130,86 @@ namespace AMDGPU {
 /// Large values (including the maximum possible integer) can be used to
 /// represent "don't care" waits.
 class Waitcnt {
-  unsigned LoadCnt = ~0u; // Corresponds to Vmcnt prior to gfx12.
-  unsigned ExpCnt = ~0u;
-  unsigned DsCnt = ~0u;     // Corresponds to LGKMcnt prior to gfx12.
-  unsigned StoreCnt = ~0u;  // Corresponds to VScnt on gfx10/gfx11.
-  unsigned SampleCnt = ~0u; // gfx12+ only.
-  unsigned BvhCnt = ~0u;    // gfx12+ only.
-  unsigned KmCnt = ~0u;     // gfx12+ only.
-  unsigned XCnt = ~0u;      // gfx1250.
-  unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
-  unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
+  std::array<unsigned, NUM_INST_CNTS> Cnt;
 
 public:
-  unsigned get(InstCounterType T) const {
-    switch (T) {
-    case LOAD_CNT:
-      return LoadCnt;
-    case EXP_CNT:
-      return ExpCnt;
-    case DS_CNT:
-      return DsCnt;
-    case STORE_CNT:
-      return StoreCnt;
-    case SAMPLE_CNT:
-      return SampleCnt;
-    case BVH_CNT:
-      return BvhCnt;
-    case KM_CNT:
-      return KmCnt;
-    case X_CNT:
-      return XCnt;
-    case VA_VDST:
-      return VaVdst;
-    case VM_VSRC:
-      return VmVsrc;
-    default:
-      llvm_unreachable("bad InstCounterType");
-    }
-  }
-  void set(InstCounterType T, unsigned Val) {
-    switch (T) {
-    case LOAD_CNT:
-      LoadCnt = Val;
-      break;
-    case EXP_CNT:
-      ExpCnt = Val;
-      break;
-    case DS_CNT:
-      DsCnt = Val;
-      break;
-    case STORE_CNT:
-      StoreCnt = Val;
-      break;
-    case SAMPLE_CNT:
-      SampleCnt = Val;
-      break;
-    case BVH_CNT:
-      BvhCnt = Val;
-      break;
-    case KM_CNT:
-      KmCnt = Val;
-      break;
-    case X_CNT:
-      XCnt = Val;
-      break;
-    case VA_VDST:
-      VaVdst = Val;
-      break;
-    case VM_VSRC:
-      VmVsrc = Val;
-      break;
-    default:
-      llvm_unreachable("bad InstCounterType");
-    }
-  }
+  unsigned get(InstCounterType T) const { return Cnt[T]; }
+  void set(InstCounterType T, unsigned Val) { Cnt[T] = Val; }
 
-  Waitcnt() = default;
+  Waitcnt() { fill(Cnt, ~0u); }
   // Pre-gfx12 constructor.
   Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt, unsigned VsCnt)
-      : LoadCnt(VmCnt), ExpCnt(ExpCnt), DsCnt(LgkmCnt), StoreCnt(VsCnt) {}
+      : Waitcnt() {
+    Cnt[LOAD_CNT] = VmCnt;
+    Cnt[EXP_CNT] = ExpCnt;
+    Cnt[DS_CNT] = LgkmCnt;
+    Cnt[STORE_CNT] = VsCnt;
+  }
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
-          unsigned VaVdst, unsigned VmVsrc)
-      : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
-        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt),
-        VaVdst(VaVdst), VmVsrc(VmVsrc) {}
-
-  bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
-
-  bool hasWaitExceptStoreCnt() const {
-    return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
-           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u ||
-           VaVdst != ~0u || VmVsrc != ~0u;
+          unsigned AsyncCnt, unsigned VaVdst, unsigned VmVsrc)
+      : Waitcnt() {
+    Cnt[LOAD_CNT] = LoadCnt;
+    Cnt[DS_CNT] = DsCnt;
+    Cnt[EXP_CNT] = ExpCnt;
+    Cnt[STORE_CNT] = StoreCnt;
+    Cnt[SAMPLE_CNT] = SampleCnt;
+    Cnt[BVH_CNT] = BvhCnt;
+    Cnt[KM_CNT] = KmCnt;
+    Cnt[X_CNT] = XCnt;
+    Cnt[ASYNC_CNT] = AsyncCnt;
+    Cnt[VA_VDST] = VaVdst;
+    Cnt[VM_VSRC] = VmVsrc;
   }
 
-  bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
+  bool hasWait() const {
+    return any_of(Cnt, [](unsigned Val) { return Val != ~0u; });
+  }
 
-  bool hasWaitDepctr() const { return VaVdst != ~0u || VmVsrc != ~0u; }
+  bool hasWaitExceptStoreCnt() const {
+    for (InstCounterType T : inst_counter_types()) {
+      if (T == STORE_CNT)
+        continue;
+      if (Cnt[T] != ~0u)
+        return true;
+    }
+    return false;
+  }
+
+  bool hasWaitStoreCnt() const { return Cnt[STORE_CNT] != ~0u; }
+
+  bool hasWaitDepctr() const {
+    return Cnt[VA_VDST] != ~0u || Cnt[VM_VSRC] != ~0u;
+  }
 
   Waitcnt combined(const Waitcnt &Other) const {
     // Does the right thing provided self and Other are either both pre-gfx12
     // or both gfx12+.
-    return Waitcnt(
-        std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
-        std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
-        std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
-        std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt),
-        std::min(VaVdst, Other.VaVdst), std::min(VmVsrc, Other.VmVsrc));
+    Waitcnt Wait;
+    for (InstCounterType T : inst_counter_types())
+      Wait.Cnt[T] = std::min(Cnt[T], Other.Cnt[T]);
+    return Wait;
   }
 
-  friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait);
+  void print(raw_ostream &OS) const {
+    ListSeparator LS;
+    for (InstCounterType T : inst_counter_types())
+      OS << LS << getInstCounterName(T) << ": " << Cnt[T];
+    if (LS.unused())
+      OS << "none";
+    OS << '\n';
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait) {
+    Wait.print(OS);
+    return OS;
+  }
 };
 
 /// Represents the hardware counter limits for different wait count types.
@@ -1249,6 +1222,7 @@ struct HardwareLimits {
   unsigned BvhcntMax;    // gfx12+ only.
   unsigned KmcntMax;     // gfx12+ only.
   unsigned XcntMax;      // gfx1250.
+  unsigned AsyncMax;     // gfx1250.
   unsigned VaVdstMax;    // gfx12+ expert mode only.
   unsigned VmVsrcMax;    // gfx12+ expert mode only.
 
@@ -1351,6 +1325,10 @@ unsigned getSamplecntBitMask(const IsaVersion &Version);
 /// \returns Bvhcnt bit mask for given isa \p Version.
 /// Returns 0 for versions that do not support BVHcnt
 unsigned getBvhcntBitMask(const IsaVersion &Version);
+
+/// \returns Asynccnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support Asynccnt
+unsigned getAsynccntBitMask(const IsaVersion &Version);
 
 /// \returns Dscnt bit mask for given isa \p Version.
 /// Returns 0 for versions that do not support DScnt
@@ -1574,6 +1552,9 @@ void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
 LLVM_READNONE
 uint64_t encodeMsg(uint64_t MsgId, uint64_t OpId, uint64_t StreamId);
 
+/// Returns true if the message does not use the m0 operand.
+bool msgDoesNotUseM0(int64_t MsgId, const MCSubtargetInfo &STI);
+
 } // namespace SendMsg
 
 unsigned getInitialPSInputAddr(const Function &F);
@@ -1724,7 +1705,6 @@ bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGFX11(const MCSubtargetInfo &STI);
-bool isGFX1170(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
@@ -1987,6 +1967,18 @@ unsigned getVGPREncodingMSBs(MCRegister Reg, const MCRegisterInfo &MRI);
 /// If \p Reg is a low VGPR return a corresponding high VGPR with \p MSBs set.
 MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
                            const MCRegisterInfo &MRI);
+
+/// \returns VGPR MSBs encoded in a S_SETREG_IMM32_B32 \p MI if it sets
+/// it. If \p HasSetregVGPRMSBFixup is true then size of the ID_MODE mask is
+/// ignored.
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
+                                                   bool HasSetregVGPRMSBFixup);
+
+/// \returns VGPR MSBs encoded in a S_SETREG_IMM32_B32 \p MI if it sets
+/// it. If \p HasSetregVGPRMSBFixup is true then size of the ID_MODE mask is
+/// ignored.
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MCInst &MI,
+                                                   bool HasSetregVGPRMSBFixup);
 
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2

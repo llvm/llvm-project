@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
+#include <optional>
 
 namespace clang::lifetimes::internal {
 
@@ -103,19 +104,23 @@ public:
 
 class ExpireFact : public Fact {
   LoanID LID;
+  // Expired origin (e.g., its variable goes out of scope).
+  std::optional<OriginID> OID;
   SourceLocation ExpiryLoc;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Expire; }
 
-  ExpireFact(LoanID LID, SourceLocation ExpiryLoc)
-      : Fact(Kind::Expire), LID(LID), ExpiryLoc(ExpiryLoc) {}
+  ExpireFact(LoanID LID, SourceLocation ExpiryLoc,
+             std::optional<OriginID> OID = std::nullopt)
+      : Fact(Kind::Expire), LID(LID), OID(OID), ExpiryLoc(ExpiryLoc) {}
 
   LoanID getLoanID() const { return LID; }
+  std::optional<OriginID> getOriginID() const { return OID; }
   SourceLocation getExpiryLoc() const { return ExpiryLoc; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &LM,
-            const OriginManager &) const override;
+            const OriginManager &OM) const override;
 };
 
 class OriginFlowFact : public Fact {

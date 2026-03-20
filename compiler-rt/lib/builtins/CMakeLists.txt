@@ -890,7 +890,6 @@ set(s390x_SOURCES
 
 
 set(wasm_SOURCES
-  wasm/__c_longjmp.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
