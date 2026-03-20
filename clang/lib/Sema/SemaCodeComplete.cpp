@@ -4696,7 +4696,16 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
     // Enumerate all top-level modules.
     SmallVector<Module *, 8> Modules;
     SemaRef.PP.getHeaderSearchInfo().collectAllModules(Modules);
+    Module *CurrentModule = SemaRef.getCurrentModule();
     for (unsigned I = 0, N = Modules.size(); I != N; ++I) {
+      // Skip module partitions that don't belong to the current file's declared
+      // module.
+      if (Modules[I]->isModulePartition()) {
+        if (!CurrentModule ||
+            Modules[I]->getPrimaryModuleInterfaceName() !=
+                CurrentModule->getPrimaryModuleInterfaceName())
+          continue;
+      }
       Builder.AddTypedTextChunk(
           Builder.getAllocator().CopyString(Modules[I]->Name));
       Results.AddResult(Result(
