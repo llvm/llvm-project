@@ -694,21 +694,51 @@ static unsigned getEncodedRMWOperation(const AtomicRMWInst &I) {
   unsigned Encoding = 0;
   switch (I.getOperation()) {
   default: llvm_unreachable("Unknown RMW operation!");
-  case AtomicRMWInst::Xchg: Encoding = bitc::RMW_XCHG; break;
-  case AtomicRMWInst::Add: Encoding = bitc::RMW_ADD; break;
-  case AtomicRMWInst::Sub: Encoding = bitc::RMW_SUB; break;
-  case AtomicRMWInst::And: Encoding = bitc::RMW_AND; break;
-  case AtomicRMWInst::Nand: Encoding = bitc::RMW_NAND; break;
-  case AtomicRMWInst::Or: Encoding = bitc::RMW_OR; break;
-  case AtomicRMWInst::Xor: Encoding = bitc::RMW_XOR; break;
-  case AtomicRMWInst::Max: Encoding = bitc::RMW_MAX; break;
-  case AtomicRMWInst::Min: Encoding = bitc::RMW_MIN; break;
-  case AtomicRMWInst::UMax: Encoding = bitc::RMW_UMAX; break;
-  case AtomicRMWInst::UMin: Encoding = bitc::RMW_UMIN; break;
-  case AtomicRMWInst::FAdd: Encoding = bitc::RMW_FADD; break;
-  case AtomicRMWInst::FSub: Encoding = bitc::RMW_FSUB; break;
-  case AtomicRMWInst::FMax: Encoding = bitc::RMW_FMAX; break;
-  case AtomicRMWInst::FMin: Encoding = bitc::RMW_FMIN; break;
+  case AtomicRMWInst::Xchg:
+    Encoding = bitc::RMW_XCHG;
+    break;
+  case AtomicRMWInst::Add:
+    Encoding = bitc::RMW_ADD;
+    break;
+  case AtomicRMWInst::Sub:
+    Encoding = bitc::RMW_SUB;
+    break;
+  case AtomicRMWInst::And:
+    Encoding = bitc::RMW_AND;
+    break;
+  case AtomicRMWInst::Nand:
+    Encoding = bitc::RMW_NAND;
+    break;
+  case AtomicRMWInst::Or:
+    Encoding = bitc::RMW_OR;
+    break;
+  case AtomicRMWInst::Xor:
+    Encoding = bitc::RMW_XOR;
+    break;
+  case AtomicRMWInst::Max:
+    Encoding = bitc::RMW_MAX;
+    break;
+  case AtomicRMWInst::Min:
+    Encoding = bitc::RMW_MIN;
+    break;
+  case AtomicRMWInst::UMax:
+    Encoding = bitc::RMW_UMAX;
+    break;
+  case AtomicRMWInst::UMin:
+    Encoding = bitc::RMW_UMIN;
+    break;
+  case AtomicRMWInst::FAdd:
+    Encoding = bitc::RMW_FADD;
+    break;
+  case AtomicRMWInst::FSub:
+    Encoding = bitc::RMW_FSUB;
+    break;
+  case AtomicRMWInst::FMax:
+    Encoding = bitc::RMW_FMAX;
+    break;
+  case AtomicRMWInst::FMin:
+    Encoding = bitc::RMW_FMIN;
+    break;
   case AtomicRMWInst::FMaximum:
     Encoding = bitc::RMW_FMAXIMUM;
     break;

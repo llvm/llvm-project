@@ -274,10 +274,9 @@ bool AtomicExpandImpl::canReuseWholeValueAtomicRMW(AtomicRMWInst *AI) {
     return false;
 
   AI->setElementwise(false);
-  bool CanReuse =
-      atomicSizeSupported(TLI, AI) &&
-      TLI->shouldExpandAtomicRMWInIR(AI) ==
-          TargetLoweringBase::AtomicExpansionKind::None;
+  bool CanReuse = atomicSizeSupported(TLI, AI) &&
+                  TLI->shouldExpandAtomicRMWInIR(AI) ==
+                      TargetLoweringBase::AtomicExpansionKind::None;
   AI->setElementwise(true);
   return CanReuse;
 }
@@ -383,7 +382,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     bool Converted = false;
     if (!PreserveElementwiseRMW &&
         TLI->shouldCastAtomicRMWIInIR(RMWI) ==
-        TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
+            TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       RMWI = convertAtomicXchgToIntegerType(RMWI);
       Converted = true;
     }

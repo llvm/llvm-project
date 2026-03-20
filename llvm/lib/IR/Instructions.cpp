@@ -4399,10 +4399,9 @@ AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
 }
 
 AtomicRMWInst *AtomicRMWInst::cloneImpl() const {
-  AtomicRMWInst *Result =
-      new AtomicRMWInst(getOperation(), getOperand(0), getOperand(1),
-                        getAlign(), getOrdering(), getSyncScopeID(),
-                        isElementwise());
+  AtomicRMWInst *Result = new AtomicRMWInst(
+      getOperation(), getOperand(0), getOperand(1), getAlign(), getOrdering(),
+      getSyncScopeID(), isElementwise());
   Result->setVolatile(isVolatile());
   return Result;
 }

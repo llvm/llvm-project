@@ -1094,10 +1094,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      Custom);
 
   if (STI.hasVectorAtom()) {
-    setOperationAction(ISD::ATOMIC_LOAD_FADD, {MVT::v2f32, MVT::v4f32},
-                       Custom);
-    for (MVT VT : {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v2bf16,
-                    MVT::v4bf16, MVT::v8bf16})
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, {MVT::v2f32, MVT::v4f32}, Custom);
+    for (MVT VT : {MVT::v2f16, MVT::v4f16, MVT::v8f16, MVT::v2bf16, MVT::v4bf16,
+                   MVT::v8bf16})
       setOperationAction(
           {ISD::ATOMIC_LOAD_FADD, ISD::ATOMIC_LOAD_FMIN, ISD::ATOMIC_LOAD_FMAX},
           VT, Custom);
@@ -3424,9 +3423,9 @@ enum AtomVecOp : unsigned {
   ATOM_VEC_FMAX = 2,
 };
 
-
 // Replace a vector ATOMIC_LOAD_F{ADD,MIN,MAX} with an NVPTXISD::ATOM_VEC_V{N}
-// node that scalarizes the vector argument and result. We do this because vector types are illegal in NVPTX.
+// node that scalarizes the vector argument and result. We do this because
+// vector types are illegal in NVPTX.
 static void replaceVectorAtomicRMW(SDNode *N, SelectionDAG &DAG,
                                    SmallVectorImpl<SDValue> &Results) {
   auto *AN = cast<AtomicSDNode>(N);
@@ -3437,18 +3436,32 @@ static void replaceVectorAtomicRMW(SDNode *N, SelectionDAG &DAG,
 
   unsigned NVPTXOpc;
   switch (NumElts) {
-  case 2: NVPTXOpc = NVPTXISD::ATOM_VEC_V2; break;
-  case 4: NVPTXOpc = NVPTXISD::ATOM_VEC_V4; break;
-  case 8: NVPTXOpc = NVPTXISD::ATOM_VEC_V8; break;
-  default: llvm_unreachable("Unsupported vector width for atom");
+  case 2:
+    NVPTXOpc = NVPTXISD::ATOM_VEC_V2;
+    break;
+  case 4:
+    NVPTXOpc = NVPTXISD::ATOM_VEC_V4;
+    break;
+  case 8:
+    NVPTXOpc = NVPTXISD::ATOM_VEC_V8;
+    break;
+  default:
+    llvm_unreachable("Unsupported vector width for atom");
   }
 
   unsigned OpCode;
   switch (N->getOpcode()) {
-  case ISD::ATOMIC_LOAD_FADD: OpCode = ATOM_VEC_FADD; break;
-  case ISD::ATOMIC_LOAD_FMIN: OpCode = ATOM_VEC_FMIN; break;
-  case ISD::ATOMIC_LOAD_FMAX: OpCode = ATOM_VEC_FMAX; break;
-  default: llvm_unreachable("Unsupported atomic op for vector atom");
+  case ISD::ATOMIC_LOAD_FADD:
+    OpCode = ATOM_VEC_FADD;
+    break;
+  case ISD::ATOMIC_LOAD_FMIN:
+    OpCode = ATOM_VEC_FMIN;
+    break;
+  case ISD::ATOMIC_LOAD_FMAX:
+    OpCode = ATOM_VEC_FMAX;
+    break;
+  default:
+    llvm_unreachable("Unsupported atomic op for vector atom");
   }
 
   SmallVector<SDValue, 10> Ops;
@@ -3463,9 +3476,8 @@ static void replaceVectorAtomicRMW(SDNode *N, SelectionDAG &DAG,
   SmallVector<EVT, 9> ResVTs(NumElts, EltVT);
   ResVTs.push_back(MVT::Other);
 
-  SDValue Result = DAG.getMemIntrinsicNode(NVPTXOpc, DL,
-                                           DAG.getVTList(ResVTs), Ops,
-                                           VecVT, AN->getMemOperand());
+  SDValue Result = DAG.getMemIntrinsicNode(NVPTXOpc, DL, DAG.getVTList(ResVTs),
+                                           Ops, VecVT, AN->getMemOperand());
 
   SmallVector<SDValue, 8> Elts;
   for (unsigned I = 0; I < NumElts; ++I)

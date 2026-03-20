@@ -8962,7 +8962,8 @@ int LLParser::parseCmpXchg(Instruction *&Inst, PerFunctionState &PFS) {
 }
 
 /// parseAtomicRMW
-///   ::= 'atomicrmw' 'volatile'? 'elementwise'? BinOp TypeAndValue ',' TypeAndValue
+///   ::= 'atomicrmw' 'volatile'? 'elementwise'? BinOp TypeAndValue ','
+///   TypeAndValue
 ///       'singlethread'? AtomicOrdering
 int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   Value *Ptr, *Val; LocTy PtrLoc, ValLoc;
@@ -9091,21 +9092,19 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     }
   }
 
-  // Elementwise ops are legal on <3 x i32>, for example, because we can expand, so
-  // check the scalar type, not the vector type.
-  unsigned Size =
-      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(
-          IsElementwise ? ScalarTy : Val->getType());
+  // Elementwise ops are legal on <3 x i32>, for example, because we can expand,
+  // so check the scalar type, not the vector type.
+  unsigned Size = PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(
+      IsElementwise ? ScalarTy : Val->getType());
   if (Size < 8 || (Size & (Size - 1)))
     return error(ValLoc, "atomicrmw operand must be power-of-two byte-sized"
                          " integer");
   const Align DefaultAlignment(
       PFS.getFunction().getDataLayout().getTypeStoreSize(
           Val->getType()));
-  AtomicRMWInst *RMWI =
-      new AtomicRMWInst(Operation, Ptr, Val,
-                        Alignment.value_or(DefaultAlignment), Ordering, SSID,
-                        IsElementwise);
+  AtomicRMWInst *RMWI = new AtomicRMWInst(Operation, Ptr, Val,
+                                          Alignment.value_or(DefaultAlignment),
+                                          Ordering, SSID, IsElementwise);
   RMWI->setVolatile(IsVolatile);
   Inst = RMWI;
   return AteExtraComma ? InstExtraComma : InstNormal;

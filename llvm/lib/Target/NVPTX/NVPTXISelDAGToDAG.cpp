@@ -2296,10 +2296,17 @@ void NVPTXDAGToDAGISel::selectVectorAtomicRMW(SDNode *N) {
 
   unsigned NumElts;
   switch (N->getOpcode()) {
-  case NVPTXISD::ATOM_VEC_V2: NumElts = 2; break;
-  case NVPTXISD::ATOM_VEC_V4: NumElts = 4; break;
-  case NVPTXISD::ATOM_VEC_V8: NumElts = 8; break;
-  default: llvm_unreachable("Unexpected opcode");
+  case NVPTXISD::ATOM_VEC_V2:
+    NumElts = 2;
+    break;
+  case NVPTXISD::ATOM_VEC_V4:
+    NumElts = 4;
+    break;
+  case NVPTXISD::ATOM_VEC_V8:
+    NumElts = 8;
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
   }
 
   // Node layout: chain, ptr, val0..valN-1, op_code
@@ -2331,18 +2338,32 @@ void NVPTXDAGToDAGISel::selectVectorAtomicRMW(SDNode *N) {
 
   unsigned TypeIdx;
   switch (EltVT.SimpleTy) {
-  case MVT::f32:  TypeIdx = 0; break;
-  case MVT::f16:  TypeIdx = 1; break;
-  case MVT::bf16: TypeIdx = 2; break;
-  default: report_fatal_error("Unsupported element type for vector atom");
+  case MVT::f32:
+    TypeIdx = 0;
+    break;
+  case MVT::f16:
+    TypeIdx = 1;
+    break;
+  case MVT::bf16:
+    TypeIdx = 2;
+    break;
+  default:
+    report_fatal_error("Unsupported element type for vector atom");
   }
 
   unsigned WidthIdx;
   switch (NumElts) {
-  case 2: WidthIdx = 0; break;
-  case 4: WidthIdx = 1; break;
-  case 8: WidthIdx = 2; break;
-  default: report_fatal_error("Unsupported vector width for vector atom");
+  case 2:
+    WidthIdx = 0;
+    break;
+  case 4:
+    WidthIdx = 1;
+    break;
+  case 8:
+    WidthIdx = 2;
+    break;
+  default:
+    report_fatal_error("Unsupported vector width for vector atom");
   }
 
   unsigned Opc = OpcTable[OpCode][TypeIdx][WidthIdx];
