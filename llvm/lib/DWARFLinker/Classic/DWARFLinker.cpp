@@ -767,10 +767,10 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
       return Flags;
     // For assembly language files, try to preserve DWARF info by using
     // function ranges when available, falling back to labels otherwise.
-    if (Unit.getLanguage() == dwarf::DW_LANG_Mips_Assembler) {
-      if (auto Range = RelocMgr.getAddressRangeForAddress(*LowPc)) {
-        Unit.addFunctionRange(std::get<0>(*Range), std::get<1>(*Range),
-                              MyInfo.AddrAdjust);
+    if (Unit.getLanguage() == dwarf::DW_LANG_Mips_Assembler ||
+        Unit.getLanguage() == dwarf::DW_LANG_Assembly) {
+      if (auto Range = RelocMgr.getAssemblyRangeForAddress(*LowPc)) {
+        Unit.addFunctionRange(Range->LowPC, Range->HighPC, MyInfo.AddrAdjust);
       } else {
         Unit.addLabelLowPc(*LowPc, MyInfo.AddrAdjust);
       }

@@ -83,13 +83,19 @@ public:
   /// Erases all data.
   virtual void clear() = 0;
 
-  /// Returns the address range containing \p Addr if available.
   /// This is used for assembly files where labels may not have high_pc
   /// but the debug map has range information from symbols.
-  /// \returns the range [LowPC, HighPC) containing Addr and the relocation
-  /// adjustment, or std::nullopt if no such range exists.
-  virtual std::optional<std::tuple<uint64_t, uint64_t, int64_t>>
-  getAddressRangeForAddress(uint64_t Addr) {
+  struct AssemblyRange {
+    AssemblyRange(uint64_t LowPC, uint64_t HighPC)
+        : LowPC(LowPC), HighPC(HighPC) {}
+    uint64_t LowPC;
+    uint64_t HighPC;
+  };
+
+  /// Returns the address range containing \p Addr if available.
+  /// \returns the range [LowPC, HighPC) containing Addr.
+  virtual std::optional<AssemblyRange>
+  getAssemblyRangeForAddress(uint64_t Addr) {
     return std::nullopt;
   }
 

@@ -239,11 +239,10 @@ private:
       AddressRanges.clear();
     }
 
-    std::optional<std::tuple<uint64_t, uint64_t, int64_t>>
-    getAddressRangeForAddress(uint64_t Addr) override {
+    std::optional<AssemblyRange>
+    getAssemblyRangeForAddress(uint64_t Addr) override {
       if (auto Range = AddressRanges.getRangeThatContains(Addr))
-        return std::make_tuple(Range->Range.start(), Range->Range.end(),
-                               Range->Value);
+        return AssemblyRange(Range->Range.start(), Range->Range.end());
       return std::nullopt;
     }
   };
