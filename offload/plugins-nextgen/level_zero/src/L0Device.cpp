@@ -1183,10 +1183,8 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   if (!ELFObjOrErr)
     return HandleErr(ELFObjOrErr.takeError());
 
-  /*Each array object represents the name of a constructor or destructor
-    function along with its priority.*/
-  using ArrayObject = std::pair<StringRef, uint16_t>;
-  SmallVector<ArrayObject> Funcs;
+  using FuncNameAndPriority = std::pair<StringRef, uint16_t>;
+  SmallVector<FuncNameAndPriority> Funcs;
   for (ELFSymbolRef Sym : (*ELFObjOrErr)->symbols()) {
     auto NameOrErr = Sym.getName();
     if (!NameOrErr)
@@ -1211,10 +1209,11 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   }
 
   // Sort the created array to be in priority order.
-  llvm::sort(Funcs, [=](auto X, auto Y) { return X.second < Y.second; });
+  llvm::sort(Funcs,
+             [=](const auto &X, const auto &Y) { return X.second < Y.second; });
 
-  auto BufferOrErr =
-      allocate(Funcs.size() * sizeof(void *), nullptr, TARGET_ALLOC_DEVICE);
+  auto BufferOrErr = allocate(Funcs.size() * sizeof(void *),
+                              /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE);
   if (!BufferOrErr)
     return HandleErr(BufferOrErr.takeError());
 
@@ -1229,7 +1228,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   auto *GlobalPtrStop = reinterpret_cast<uintptr_t *>(Buffer) + Funcs.size();
 
   SmallVector<void *> FunctionPtrs(Funcs.size());
-  std::size_t Idx = 0;
+  size_t Idx = 0;
   for (auto [Name, Priority] : Funcs) {
     GlobalTy FunctionAddr(Name.str(), sizeof(void *), &FunctionPtrs[Idx++]);
     if (auto Err = Handler.readGlobalFromDevice(*this, Image, FunctionAddr))
