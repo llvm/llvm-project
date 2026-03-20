@@ -149,6 +149,7 @@ static void emitAvailability(raw_ostream &OS, StringRef Version,
   else
     OS << "_HLSL_AVAILABILITY(shadermodel, " << Version << ")\n";
 }
+
 static std::string getVersionString(const Record *SM) {
   unsigned Major = SM->getValueAsInt("Major");
   unsigned Minor = SM->getValueAsInt("Minor");
@@ -553,6 +554,7 @@ static void emitBuiltinOverloads(raw_ostream &OS, const Record *R) {
   emitWorklistOverloads(OS, Ctx, Worklist, EmitScalarOverload, VectorSizes,
                         MatrixDimensions);
 }
+
 /// Emit alias overloads for a single HLSLBuiltin record.
 /// Skips records that have inline bodies (DetailFunc or Body).
 static void emitAliasBuiltin(raw_ostream &OS, const Record *R) {
