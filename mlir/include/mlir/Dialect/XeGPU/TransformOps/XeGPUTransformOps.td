@@ -196,9 +196,9 @@ def ConvertLayoutOp : Op<Transform_Dialect, "xegpu.convert_layout", [
   let summary = "Convert xegpu.layout attribute for a value.";
   let description = [{
     Adds an `xegpu.convert_layout` op to convert the `xegpu.layout` attribute
-    of a value. The input and target layouts are defined by the `*sg_layout`,
-    `*sg_data` and optional `*inst_data` attributes. Returns a handle to the
-    emitted `xegpu.convert_layout` op.
+    of a value before its first use. The input and target layouts are defined
+    by the `*sg_layout`, `*sg_data` and optional `*inst_data` and `*order`
+    attributes. Returns a handle to the emitted `xegpu.convert_layout` op.
   }];
 
   let arguments = (ins TransformValueHandleTypeInterface:$target,
