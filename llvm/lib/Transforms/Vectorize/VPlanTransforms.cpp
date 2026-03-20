@@ -1451,6 +1451,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Plan->getZero(TypeInfo.inferScalarType(Def)));
 
+  if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_AllOnes()))) {
+    // Preserve nsw from the Mul on the new Sub.
+    VPIRFlags::WrapFlagsTy NW = {
+        false, cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap()};
+    return Def->replaceAllUsesWith(
+        Builder.createSub(Plan->getZero(TypeInfo.inferScalarType(A)), A,
+                          Def->getDebugLoc(), "", NW));
+  }
+
   const APInt *APC;
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
       APC->isPowerOf2())
