@@ -342,8 +342,6 @@ Bug Fixes in This Version
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-- Fix an ambiguous reference to the builtin `type_info` (available when using
-  `-fms-compatibility`) with modules. (#GH38400)
 - Fix a crash when passing an unresolved overload set to ``__builtin_classify_type``. (#GH175589)
 - Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
 
