@@ -1309,7 +1309,6 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
       continue;
 
     // If the variable has an attached offset expression, extract it.
-    // FIXME: Try to handle DW_OP_deref as well.
     int64_t ExprOffset = 0;
     int64_t DerefOffset = LocalVarDef::NoDeref;
     if (VI.Expr) {
