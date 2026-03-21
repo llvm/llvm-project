@@ -31,7 +31,7 @@ uint8_t test_vget_lane_u8(uint8x8_t a) {
 
 // ALL-LABEL: @test_vget_lane_u16(
 uint16_t test_vget_lane_u16(uint16x4_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u16i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s16i> -> !cir.vector<4 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u16i>
 
 // LLVM: [[VGET_LANE:%.*]] = extractelement <4 x i16> %{{.*}}, i32 3
@@ -41,7 +41,7 @@ uint16_t test_vget_lane_u16(uint16x4_t a) {
 
 // ALL-LABEL: @test_vget_lane_u32(
 uint32_t test_vget_lane_u32(uint32x2_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u32i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s32i> -> !cir.vector<2 x !u32i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u32i>
 
 // LLVM: [[VGET_LANE:%.*]] = extractelement <2 x i32> %{{.*}}, i32 1
@@ -60,7 +60,7 @@ int8_t test_vget_lane_s8(int8x8_t a) {
 
 // ALL-LABEL: @test_vget_lane_s16(
 int16_t test_vget_lane_s16(int16x4_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u16i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s16i> -> !cir.vector<4 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u16i>
 
 // LLVM: [[VGET_LANE:%.*]] = extractelement <4 x i16> %{{.*}}, i32 3
@@ -70,7 +70,7 @@ int16_t test_vget_lane_s16(int16x4_t a) {
 
 // ALL-LABEL: @test_vget_lane_s32(
 int32_t test_vget_lane_s32(int32x2_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u32i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s32i> -> !cir.vector<2 x !u32i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u32i>
 
 // LLVM: [[VGET_LANE:%.*]] = extractelement <2 x i32> %{{.*}}, i32 1
@@ -89,7 +89,7 @@ poly8_t test_vget_lane_p8(poly8x8_t a) {
 
 // ALL-LABEL: @test_vget_lane_p16(
 poly16_t test_vget_lane_p16(poly16x4_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u16i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s16i> -> !cir.vector<4 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u16i>
 
 // LLVM: [[VGET_LANE:%.*]] = extractelement <4 x i16> %{{.*}}, i32 3
@@ -99,7 +99,7 @@ poly16_t test_vget_lane_p16(poly16x4_t a) {
 
 // ALL-LABEL: @test_vget_lane_f16(
 float32_t test_vget_lane_f16(float16x4_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u16i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s16i> -> !cir.vector<4 x !u16i>
 // CIR: [[ELEM:%.*]] = cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u16i>
 // CIR: cir.store align(2) [[ELEM]], %{{.*}} : !u16i, !cir.ptr<!u16i>
 // CIR: [[S16PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u16i> -> !cir.ptr<!s16i>
@@ -146,7 +146,7 @@ uint8_t test_vgetq_lane_u8(uint8x16_t a) {
 
 // ALL-LABEL: @test_vgetq_lane_u16(
 uint16_t test_vgetq_lane_u16(uint16x8_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !u16i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s16i> -> !cir.vector<8 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<8 x !u16i>
 
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <8 x i16> %{{.*}}, i32 7
@@ -156,7 +156,7 @@ uint16_t test_vgetq_lane_u16(uint16x8_t a) {
 
 // ALL-LABEL: @test_vgetq_lane_u32(
 uint32_t test_vgetq_lane_u32(uint32x4_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u32i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !u32i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u32i>
 
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <4 x i32> %{{.*}}, i32 3
@@ -175,7 +175,7 @@ int8_t test_vgetq_lane_s8(int8x16_t a) {
 
 // ALL-LABEL: @test_vgetq_lane_s16(
 int16_t test_vgetq_lane_s16(int16x8_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !u16i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s16i> -> !cir.vector<8 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<8 x !u16i>
 
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <8 x i16> %{{.*}}, i32 7
@@ -185,7 +185,7 @@ int16_t test_vgetq_lane_s16(int16x8_t a) {
 
 // ALL-LABEL: @test_vgetq_lane_s32(
 int32_t test_vgetq_lane_s32(int32x4_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !u32i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !u32i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<4 x !u32i>
 
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <4 x i32> %{{.*}}, i32 3
@@ -204,7 +204,7 @@ poly8_t test_vgetq_lane_p8(poly8x16_t a) {
 
 // ALL-LABEL: @test_vgetq_lane_p16(
 poly16_t test_vgetq_lane_p16(poly16x8_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !u16i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s16i> -> !cir.vector<8 x !u16i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<8 x !u16i>
 
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <8 x i16> %{{.*}}, i32 7
@@ -214,7 +214,7 @@ poly16_t test_vgetq_lane_p16(poly16x8_t a) {
 
 // ALL-LABEL: @test_vgetq_lane_f16(
 float32_t test_vgetq_lane_f16(float16x8_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<8 x !u16i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s16i> -> !cir.vector<8 x !u16i>
 // CIR: [[ELEM:%.*]] = cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<8 x !u16i>
 // CIR: cir.store align(2) [[ELEM]], %{{.*}} : !u16i, !cir.ptr<!u16i>
 // CIR: [[S16PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!u16i> -> !cir.ptr<!s16i>
@@ -252,7 +252,7 @@ float64_t test_vgetq_lane_f64(float64x2_t a) {
 
 // ALL-LABEL: @test_vget_lane_s64(
 int64_t test_vget_lane_s64(int64x1_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<1 x !u64i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<1 x !s64i> -> !cir.vector<1 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<1 x !u64i>
 
 // LLVM: [[VGET_LANE:%.*]] = extractelement <1 x i64> %{{.*}}, i32 0
@@ -262,7 +262,7 @@ int64_t test_vget_lane_s64(int64x1_t a) {
 
 // ALL-LABEL: @test_vget_lane_u64(
 uint64_t test_vget_lane_u64(uint64x1_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<1 x !u64i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<1 x !s64i> -> !cir.vector<1 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<1 x !u64i>
 
 // LLVM: [[VGET_LANE:%.*]] = extractelement <1 x i64> %{{.*}}, i32 0
@@ -272,7 +272,7 @@ uint64_t test_vget_lane_u64(uint64x1_t a) {
 
 // ALL-LABEL: @test_vget_lane_p64(
 poly64_t test_vget_lane_p64(poly64x1_t v) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<1 x !u64i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<1 x !s64i> -> !cir.vector<1 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<1 x !u64i>
 
 // LLVM: [[VGET_LANE:%.*]] = extractelement <1 x i64> %{{.*}}, i32 0
@@ -282,7 +282,7 @@ poly64_t test_vget_lane_p64(poly64x1_t v) {
 
 // ALL-LABEL: @test_vgetq_lane_s64(
 int64_t test_vgetq_lane_s64(int64x2_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u64i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u64i>
 
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <2 x i64> %{{.*}}, i32 1
@@ -292,7 +292,7 @@ int64_t test_vgetq_lane_s64(int64x2_t a) {
 
 // ALL-LABEL: @test_vgetq_lane_u64(
 uint64_t test_vgetq_lane_u64(uint64x2_t a) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u64i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u64i>
 
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <2 x i64> %{{.*}}, i32 1
@@ -302,7 +302,7 @@ uint64_t test_vgetq_lane_u64(uint64x2_t a) {
 
 // ALL-LABEL: @test_vgetq_lane_p64(
 poly64_t test_vgetq_lane_p64(poly64x2_t v) {
-// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<2 x !u64i>
+// CIR: [[V:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
 // CIR: cir.vec.extract [[V]][%{{.*}} : {{.*}}] : !cir.vector<2 x !u64i>
 
 // LLVM: [[VGETQ_LANE:%.*]] = extractelement <2 x i64> %{{.*}}, i32 1
