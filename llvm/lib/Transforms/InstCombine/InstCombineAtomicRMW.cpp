@@ -14,6 +14,7 @@
 #include "llvm/IR/Instructions.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 /// Return true if and only if the given instruction does not modify the memory
 /// location referenced.  Note that an idemptent atomicrmw may still have
@@ -121,18 +122,17 @@ Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   // Canonicalize atomicrmw add(ptr, neg(X)) -> atomicrmw sub(ptr, X)
   //              atomicrmw sub(ptr, neg(X)) -> atomicrmw add(ptr, X)
   // old + (-X) == old - X and old - (-X) == old + X; the returned old value
-  // is identical in both cases. We only do this for non-constant X; constants
-  // are already properly handled elsewhere.
+  // is identical in both cases. We match strictly on `sub 0, X` (negation) to
+  // avoid infinite loops: a general negation of `sub A, B` yields `sub B, A`,
+  // which would infinitely be negated back on the next iteration.
   auto Op = RMWI.getOperation();
   if (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub) {
     Value *Val = RMWI.getValOperand();
-    if (!isa<Constant>(Val)) {
-      if (Value *X = Negator::Negate(/*LHSIsZero=*/false, /*IsNSW=*/false, Val,
-                                     *this)) {
-        RMWI.setOperation(Op == AtomicRMWInst::Add ? AtomicRMWInst::Sub
-                                                   : AtomicRMWInst::Add);
-        return replaceOperand(RMWI, 1, X);
-      }
+    Value *X;
+    if (match(Val, m_Neg(m_Value(X)))) {
+      RMWI.setOperation(Op == AtomicRMWInst::Add ? AtomicRMWInst::Sub
+                                                 : AtomicRMWInst::Add);
+      return replaceOperand(RMWI, 1, X);
     }
   }
 

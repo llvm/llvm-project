@@ -38,30 +38,58 @@ define i64 @fn_adds(ptr %a, i64 %n) {
 }
 
 ; Canonicalize atomicrmw sub(ptr, neg(n)) -> atomicrmw add(ptr, n)
-define void @fn_sub_neg(ptr %a, i64 %n) {
-; CHECK-LABEL: define void @fn_sub_neg(
+define i64 @fn_sub_neg(ptr %a, i64 %n) {
+; CHECK-LABEL: define i64 @fn_sub_neg(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[A]], i64 [[N]] monotonic, align 8
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %neg = sub i64 0, %n
-  atomicrmw sub ptr %a, i64 %neg monotonic
-  ret void
+  %1 = atomicrmw sub ptr %a, i64 %neg monotonic
+  ret i64 %1
 }
 
-; Don't canonicalize if the negated value has multiple uses -- that would add an extra instruction.
-define void @fn_add_1_with_use(ptr %a, i64 %n) {
-; CHECK-LABEL: define void @fn_add_1_with_use(
+; Don't canonicalize if the negated value has multiple uses -- as that would add an extra instruction.
+define i64 @fn_add_1_with_use(ptr %a, i64 %n) {
+; CHECK-LABEL: define i64 @fn_add_1_with_use(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    call void @use(i64 [[ADD]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[A]], i64 [[ADD]] monotonic, align 8
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %add = add i64 %n, 1
   call void @use(i64 %add)
-  atomicrmw add ptr %a, i64 %add monotonic
-  ret void
+  %1 = atomicrmw add ptr %a, i64 %add monotonic
+  ret i64 %1
+}
+
+; Don't canonicalize atomicrmw sub(ptr, sub(a, b)) -> atomicrmw add(ptr, sub(b, a)),
+; as that would create an infinite loop by continuously swapping the sub operands.
+define i64 @fn_sub_of_two_vars(ptr %p, i64 %a, i64 %b) {
+; CHECK-LABEL: define i64 @fn_sub_of_two_vars(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw sub ptr [[P]], i64 [[SUB]] monotonic, align 8
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %sub = sub i64 %a, %b
+  %1 = atomicrmw sub ptr %p, i64 %sub monotonic
+  ret i64 %1
+}
+
+; Don't canonicalize atomicrmw add(ptr, sub(a, b)) -> atomicrmw sub(ptr, sub(b, a)),
+; as that would create an infinite loop by continuously swapping the sub operands.
+define i64 @fn_add_of_two_vars(ptr %p, i64 %a, i64 %b) {
+; CHECK-LABEL: define i64 @fn_add_of_two_vars(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i64 [[SUB]] monotonic, align 8
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %sub = sub i64 %a, %b
+  %1 = atomicrmw add ptr %p, i64 %sub monotonic
+  ret i64 %1
 }
 
 declare void @use(i64)
