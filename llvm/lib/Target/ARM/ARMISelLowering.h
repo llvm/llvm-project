@@ -611,6 +611,7 @@ class VectorType;
     SDValue LowerAEABIUnalignedStore(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerUMINUMAX(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;

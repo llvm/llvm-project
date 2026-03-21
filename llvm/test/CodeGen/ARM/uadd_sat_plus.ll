@@ -103,14 +103,13 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y, i16 zeroext %z) nounw
 ; CHECK-T1-NEXT:    uxth r1, r1
 ; CHECK-T1-NEXT:    adds r0, r0, r1
 ; CHECK-T1-NEXT:    ldr r1, .LCPI2_0
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    blo .LBB2_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    mov r0, r1
-; CHECK-T1-NEXT:  .LBB2_2:
+; CHECK-T1-NEXT:    subs r2, r1, r0
+; CHECK-T1-NEXT:    sbcs r1, r1
+; CHECK-T1-NEXT:    ands r1, r2
+; CHECK-T1-NEXT:    adds r0, r0, r1
 ; CHECK-T1-NEXT:    bx lr
 ; CHECK-T1-NEXT:    .p2align 2
-; CHECK-T1-NEXT:  @ %bb.3:
+; CHECK-T1-NEXT:  @ %bb.1:
 ; CHECK-T1-NEXT:  .LCPI2_0:
 ; CHECK-T1-NEXT:    .long 65535 @ 0xffff
 ;
@@ -149,11 +148,11 @@ define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y, i8 zeroext %z) nounwind {
 ; CHECK-T1-NEXT:    muls r1, r2, r1
 ; CHECK-T1-NEXT:    uxtb r1, r1
 ; CHECK-T1-NEXT:    adds r0, r0, r1
-; CHECK-T1-NEXT:    cmp r0, #255
-; CHECK-T1-NEXT:    blo .LBB3_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    movs r0, #255
-; CHECK-T1-NEXT:  .LBB3_2:
+; CHECK-T1-NEXT:    movs r1, #255
+; CHECK-T1-NEXT:    subs r2, r1, r0
+; CHECK-T1-NEXT:    sbcs r1, r1
+; CHECK-T1-NEXT:    ands r1, r2
+; CHECK-T1-NEXT:    adds r0, r0, r1
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2NODSP-LABEL: func8:
@@ -191,11 +190,10 @@ define zeroext i4 @func4(i4 zeroext %x, i4 zeroext %y, i4 zeroext %z) nounwind {
 ; CHECK-T1-NEXT:    movs r2, #15
 ; CHECK-T1-NEXT:    ands r1, r2
 ; CHECK-T1-NEXT:    adds r0, r0, r1
-; CHECK-T1-NEXT:    cmp r0, #15
-; CHECK-T1-NEXT:    blo .LBB4_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    mov r0, r2
-; CHECK-T1-NEXT:  .LBB4_2:
+; CHECK-T1-NEXT:    subs r1, r2, r0
+; CHECK-T1-NEXT:    sbcs r2, r2
+; CHECK-T1-NEXT:    ands r2, r1
+; CHECK-T1-NEXT:    adds r0, r0, r2
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: func4:

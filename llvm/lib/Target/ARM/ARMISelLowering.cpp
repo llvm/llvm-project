@@ -600,6 +600,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->isThumb1Only())
     setOperationAction(ISD::ABS, MVT::i32, Custom);
 
+  if (Subtarget->isThumb1Only()) {
+    setOperationAction(ISD::UMIN, MVT::i32, Custom);
+    setOperationAction(ISD::UMAX, MVT::i32, Custom);
+  }
+
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
@@ -10406,6 +10411,39 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
   return Result2;
 }
 
+SDValue ARMTargetLowering::LowerUMINUMAX(SDValue Op, SelectionDAG &DAG) const {
+  assert(Subtarget->isThumb1Only() && "Expected Thumb1-only target");
+  SDLoc dl(Op);
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+  bool IsMax = (Op.getOpcode() == ISD::UMAX);
+  // Branchless unsigned min/max using carry arithmetic.
+  //
+  // umax(a, b):                       umin(a, b):
+  //   subs  r2, r1, r0  ; diff=b-a      subs  r2, r1, r0  ; diff=b-a
+  //   sbcs  r3, r3       ; mask=0/-1     sbcs  r3, r3       ; mask=0/-1
+  //   bics  r2, r3       ; diff&~mask    ands  r2, r3       ; diff&mask
+  //   adds  r0, r0, r2  ; a+masked       adds  r0, r0, r2  ; a+masked
+  //
+  // When b>=a: carry set, mask=0.  umax selects diff (=b-a), umin selects 0.
+  // When b<a:  carry clear, mask=-1. umax selects 0, umin selects diff.
+  SDValue SubWithFlags =
+      DAG.getNode(ARMISD::SUBC, dl, DAG.getVTList(MVT::i32, FlagsVT), B, A);
+  SDValue Diff = SubWithFlags.getValue(0);
+  SDValue Flags = SubWithFlags.getValue(1);
+  // Use B for both SUBE operands: B is dead after SUBC, so the register
+  // allocator can let sbcs clobber B's register without an extra copy.
+  SDValue Mask = DAG.getNode(ARMISD::SUBE, dl, DAG.getVTList(MVT::i32, FlagsVT),
+                             B, B, Flags)
+                     .getValue(0);
+
+  if (IsMax)
+    Mask = DAG.getNOT(dl, Mask, MVT::i32);
+
+  SDValue MaskedDiff = DAG.getNode(ISD::AND, dl, MVT::i32, Diff, Mask);
+  return DAG.getNode(ISD::ADD, dl, MVT::i32, A, MaskedDiff);
+}
+
 SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Lowering node: "; Op.dump());
   switch (Op.getOpcode()) {
@@ -10496,6 +10534,9 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UADDSAT:
   case ISD::USUBSAT:
     return LowerADDSUBSAT(Op, DAG, Subtarget);
+  case ISD::UMIN:
+  case ISD::UMAX:
+    return LowerUMINUMAX(Op, DAG);
   case ISD::LOAD: {
     auto *LD = cast<LoadSDNode>(Op);
     EVT MemVT = LD->getMemoryVT();
