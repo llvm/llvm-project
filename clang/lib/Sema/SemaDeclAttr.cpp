@@ -2703,30 +2703,22 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Handle anyAppleOS specially: create implicit platform-specific attributes
   // instead of the original anyAppleOS attribute.
   if (II->getName() == "anyappleos") {
-    // Validate and correct anyAppleOS versions.
-    auto ValidateAndCorrectVersion =
-        [&](const llvm::VersionTuple &Version,
-            SourceLocation Loc) -> llvm::VersionTuple {
-      if (Version.empty())
-        return Version;
-      auto [IsValid, CorrectedVersion] =
-          AvailabilitySpec::validateAnyAppleOSVersion(Version);
-      if (!IsValid) {
-        S.Diag(Loc, diag::warn_availability_invalid_os_version)
-            << Version.getAsString() << "anyAppleOS";
-        S.Diag(Loc, diag::note_availability_invalid_os_version_adjusted)
-            << CorrectedVersion.getAsString();
-      }
-      return CorrectedVersion;
+    // Validate anyAppleOS versions; reject versions older than 26.0.
+    auto ValidateVersion = [&](const llvm::VersionTuple &Version,
+                               SourceLocation Loc) -> bool {
+      if (AvailabilitySpec::validateAnyAppleOSVersion(Version))
+        return true;
+      S.Diag(Loc, diag::err_availability_invalid_anyappleos_version)
+          << Version.getAsString();
+      return false;
     };
 
-    // Correct the versions.
-    auto CorrectedIntroduced =
-        ValidateAndCorrectVersion(Introduced.Version, Introduced.KeywordLoc);
-    auto CorrectedDeprecated =
-        ValidateAndCorrectVersion(Deprecated.Version, Deprecated.KeywordLoc);
-    auto CorrectedObsoleted =
-        ValidateAndCorrectVersion(Obsoleted.Version, Obsoleted.KeywordLoc);
+    // Validate the versions; bail out if any are invalid.
+    bool Valid = ValidateVersion(Introduced.Version, Introduced.KeywordLoc);
+    Valid &= ValidateVersion(Deprecated.Version, Deprecated.KeywordLoc);
+    Valid &= ValidateVersion(Obsoleted.Version, Obsoleted.KeywordLoc);
+    if (!Valid)
+      return;
 
     llvm::Triple T = S.Context.getTargetInfo().getTriple();
 
@@ -2753,10 +2745,10 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
             : Sema::AP_InferredFromAnyAppleOS;
 
     AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
-        ND, AL, NewII, /*Implicit=*/true, CorrectedIntroduced,
-        CorrectedDeprecated, CorrectedObsoleted, IsUnavailable, Str, IsStrict,
+        ND, AL, NewII, /*Implicit=*/true, Introduced.Version,
+        Deprecated.Version, Obsoleted.Version, IsUnavailable, Str, IsStrict,
         Replacement, AvailabilityMergeKind::None, ExpandedPriority,
-        IIEnvironment, CorrectedIntroduced);
+        IIEnvironment, Introduced.Version);
     if (NewAttr)
       D->addAttr(NewAttr);
 

@@ -39,10 +39,6 @@ class AvailabilitySpec {
 
   SourceLocation BeginLoc, EndLoc;
 
-  /// Minimum version required for anyAppleOS availability. This version is used
-  /// for both availability attributes and runtime checks.
-  static constexpr llvm::VersionTuple MinAnyAppleOSVersion{26, 0};
-
 public:
   AvailabilitySpec(VersionTuple Version, StringRef Platform,
                    SourceLocation BeginLoc, SourceLocation EndLoc)
@@ -61,14 +57,9 @@ public:
   /// Returns true when this represents the '*' case.
   bool isOtherPlatformSpec() const { return Version.empty(); }
 
-  /// Validates and corrects an anyAppleOS version. Returns a pair where the
-  /// first element indicates if the version was valid (>= 26.0), and the second
-  /// element is the corrected version (clamped to 26.0 if it was too old).
-  static std::pair<bool, llvm::VersionTuple>
-  validateAnyAppleOSVersion(const llvm::VersionTuple &Version) {
-    if (Version.empty() || Version >= MinAnyAppleOSVersion)
-      return {true, Version};
-    return {false, MinAnyAppleOSVersion};
+  /// Returns true if the anyAppleOS version is valid (empty or >= 26.0).
+  static bool validateAnyAppleOSVersion(const llvm::VersionTuple &Version) {
+    return Version.empty() || Version >= llvm::VersionTuple(26, 0);
   }
 };
 

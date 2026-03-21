@@ -1213,11 +1213,8 @@ def err_avail_query_expected_platform_name : Error<
 
 def err_avail_query_unrecognized_platform_name : Error<
   "unrecognized platform name %0">;
-def warn_avail_query_anyappleos_min_version : Warning<
-  "invalid anyAppleOS version '%0' in availability check">,
-  InGroup<InvalidVersionAvailability>;
-def note_avail_query_anyappleos_adjusted : Note<
-  "implicitly treating version as '%0'">;
+def err_avail_query_anyappleos_min_version : Error<
+  "invalid anyAppleOS version '%0' in availability check">;
 def err_availability_query_wildcard_required: Error<
   "must handle potential future platforms with '*'">;
 def err_availability_query_repeated_platform: Error<

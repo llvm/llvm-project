@@ -96,20 +96,20 @@ void func_introduced_28(void) __attribute__((availability(anyAppleOS, introduced
 
 void test_invalid_versions() {
   // Test invalid version numbers (< 26.0) in __builtin_available
-  if (__builtin_available(anyAppleOS 25, *)) { // expected-warning {{invalid anyAppleOS version '25' in availability check}} expected-note {{implicitly treating version as '26.0'}}
+  if (__builtin_available(anyAppleOS 25, *)) { // expected-error {{invalid anyAppleOS version '25' in availability check}}
     func_introduced_26();
   }
 
-  if (__builtin_available(anyAppleOS 14, *)) { // expected-warning {{invalid anyAppleOS version '14' in availability check}} expected-note {{implicitly treating version as '26.0'}}
+  if (__builtin_available(anyAppleOS 14, *)) { // expected-error {{invalid anyAppleOS version '14' in availability check}}
     func_introduced_26();
   }
 
   // Test invalid version numbers in @available
-  if (@available(anyAppleOS 25, *)) { // expected-warning {{invalid anyAppleOS version '25' in availability check}} expected-note {{implicitly treating version as '26.0'}}
+  if (@available(anyAppleOS 25, *)) { // expected-error {{invalid anyAppleOS version '25' in availability check}}
     func_introduced_26();
   }
 
-  if (@available(anyAppleOS 10, *)) { // expected-warning {{invalid anyAppleOS version '10' in availability check}} expected-note {{implicitly treating version as '26.0'}}
+  if (@available(anyAppleOS 10, *)) { // expected-error {{invalid anyAppleOS version '10' in availability check}}
     func_introduced_26();
   }
 }

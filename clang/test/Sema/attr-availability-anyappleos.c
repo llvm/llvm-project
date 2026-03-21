@@ -11,22 +11,14 @@
 void f_introduced_26(void) __attribute__((availability(anyAppleOS, introduced=26.0)));
 
 void f_introduced_25(void) __attribute__((availability(anyAppleOS, introduced=25.0))); // \
-  macos-warning{{invalid anyAppleOS version '25.0' in availability attribute}} \
-  macos-note{{implicitly treating version as '26.0'}} \
-  ios-warning{{invalid anyAppleOS version '25.0' in availability attribute}} \
-  ios-note{{implicitly treating version as '26.0'}} \
-  tvos-warning{{invalid anyAppleOS version '25.0' in availability attribute}} \
-  tvos-note{{implicitly treating version as '26.0'}} \
-  watchos-warning{{invalid anyAppleOS version '25.0' in availability attribute}} \
-  watchos-note{{implicitly treating version as '26.0'}} \
-  xros-warning{{invalid anyAppleOS version '25.0' in availability attribute}} \
-  xros-note{{implicitly treating version as '26.0'}} \
-  maccatalyst-warning{{invalid anyAppleOS version '25.0' in availability attribute}} \
-  maccatalyst-note{{implicitly treating version as '26.0'}} \
-  driverkit-warning{{invalid anyAppleOS version '25.0' in availability attribute}} \
-  driverkit-note{{implicitly treating version as '26.0'}} \
-  android-warning{{invalid anyAppleOS version '25.0' in availability attribute}} \
-  android-note{{implicitly treating version as '26.0'}}
+  macos-error{{invalid anyAppleOS version '25.0' in availability attribute}} \
+  ios-error{{invalid anyAppleOS version '25.0' in availability attribute}} \
+  tvos-error{{invalid anyAppleOS version '25.0' in availability attribute}} \
+  watchos-error{{invalid anyAppleOS version '25.0' in availability attribute}} \
+  xros-error{{invalid anyAppleOS version '25.0' in availability attribute}} \
+  maccatalyst-error{{invalid anyAppleOS version '25.0' in availability attribute}} \
+  driverkit-error{{invalid anyAppleOS version '25.0' in availability attribute}} \
+  android-error{{invalid anyAppleOS version '25.0' in availability attribute}}
 
 void f_introduced_28(void) __attribute__((availability(anyAppleOS, introduced=28.0))); // \
   macos-note{{'f_introduced_28' has been marked as being introduced in macOS 28.0 here, but the deployment target is macOS 27.0}} \
@@ -110,8 +102,8 @@ void f_ios26_unavailable(void) __attribute__((availability(ios, introduced=26.0)
 void test(void) {
   f_introduced_26();
 
-  // f_introduced_25 should be treated as if it was introduced in 26.0,
-  // so it should be available at deployment target 27.0 with no warning.
+  // f_introduced_25 has an invalid version so no implicit availability
+  // attribute was created; no diagnostic at the call site.
   f_introduced_25();
 
   f_introduced_28(); // \
