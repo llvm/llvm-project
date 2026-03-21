@@ -176,6 +176,8 @@ struct AssemblerInvocation {
   unsigned X86RelaxRelocations : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned X86Sse2Avx : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned LargeEHEncoding : 1;
 
   RelocSectionSymType RelocSectionSym = RelocSectionSymType::All;
 
@@ -226,6 +228,7 @@ public:
     ImplicitMapsyms = 0;
     X86RelaxRelocations = 0;
     X86Sse2Avx = 0;
+    LargeEHEncoding = 0;
   }
 
   static bool CreateFromArgs(AssemblerInvocation &Res,
@@ -405,6 +408,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.ImplicitMapsyms = Args.hasArg(OPT_mmapsyms_implicit);
   Opts.X86RelaxRelocations = !Args.hasArg(OPT_mrelax_relocations_no);
   Opts.X86Sse2Avx = Args.hasArg(OPT_msse2avx);
+  Opts.LargeEHEncoding = Args.hasArg(OPT_mlarge_eh_encoding);
 
   Opts.AsSecureLogFile = Args.getLastArgValue(OPT_as_secure_log_file);
 
@@ -473,6 +477,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   MCOptions.ImplicitMapSyms = Opts.ImplicitMapsyms;
   MCOptions.X86RelaxRelocations = Opts.X86RelaxRelocations;
   MCOptions.X86Sse2Avx = Opts.X86Sse2Avx;
+  MCOptions.LargeEHEncoding = Opts.LargeEHEncoding;
   MCOptions.CompressDebugSections = Opts.CompressDebugSections;
   MCOptions.AsSecureLogFile = Opts.AsSecureLogFile;
 

@@ -2409,6 +2409,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   Args.addOptInFlag(CmdArgs, options::OPT_mrelax_all,
                     options::OPT_mno_relax_all);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_mlarge_eh_encoding,
+                    options::OPT_mno_large_eh_encoding);
+
   // Only default to -mincremental-linker-compatible if we think we are
   // targeting the MSVC linker.
   bool DefaultIncrementalLinkerCompatible =
@@ -5137,6 +5140,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (TC.useIntegratedAs()) {
       Args.ClaimAllArgs(options::OPT_mrelax_all);
       Args.ClaimAllArgs(options::OPT_mno_relax_all);
+      Args.ClaimAllArgs(options::OPT_mlarge_eh_encoding);
+      Args.ClaimAllArgs(options::OPT_mno_large_eh_encoding);
       Args.ClaimAllArgs(options::OPT_mincremental_linker_compatible);
       Args.ClaimAllArgs(options::OPT_mno_incremental_linker_compatible);
       switch (C.getDefaultToolChain().getArch()) {
@@ -5384,6 +5389,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         options::OPT_fno_dwarf_directory_asm,
         options::OPT_mrelax_all,
         options::OPT_mno_relax_all,
+        options::OPT_mlarge_eh_encoding,
+        options::OPT_mno_large_eh_encoding,
         options::OPT_ftrap_function_EQ,
         options::OPT_ffixed_r9,
         options::OPT_mfix_cortex_a53_835769,
