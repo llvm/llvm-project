@@ -3583,8 +3583,8 @@ private:
     bool needsExitSelector = getEval().lowerAsUnstructured();
     if (needsExitSelector) {
       AccRegionExitInfo exitInfo;
-      exitInfo.selector = builder->createTemporary(
-          toLocation(), builder->getI32Type());
+      exitInfo.selector =
+          builder->createTemporary(toLocation(), builder->getI32Type());
       mlir::Value zero = builder->createIntegerConstant(
           toLocation(), builder->getI32Type(), 0);
       fir::StoreOp::create(*builder, toLocation(), zero, exitInfo.selector);
@@ -3698,8 +3698,7 @@ private:
       auto exitInfo = accRegionExitStack.pop_back_val();
       if (!exitInfo.exits.empty()) {
         mlir::Location loc = toLocation();
-        mlir::Value sel =
-            fir::LoadOp::create(*builder, loc, exitInfo.selector);
+        mlir::Value sel = fir::LoadOp::create(*builder, loc, exitInfo.selector);
         mlir::Block *continueBlock =
             builder->getBlock()->splitBlock(builder->getBlock()->end());
         if (exitInfo.exits.size() == 1) {
@@ -3707,14 +3706,13 @@ private:
               loc, builder->getI32Type(), exitInfo.exits[0].first);
           mlir::Value cmp = mlir::arith::CmpIOp::create(
               *builder, loc, mlir::arith::CmpIPredicate::eq, sel, id);
-          mlir::cf::CondBranchOp::create(*builder, loc, cmp,
-                                         exitInfo.exits[0].second,
-                                         continueBlock);
+          mlir::cf::CondBranchOp::create(
+              *builder, loc, cmp, exitInfo.exits[0].second, continueBlock);
         } else {
           // Multiple exit targets: chain of comparisons.
           for (auto &[id, target] : exitInfo.exits) {
-            mlir::Value idVal = builder->createIntegerConstant(
-                loc, builder->getI32Type(), id);
+            mlir::Value idVal =
+                builder->createIntegerConstant(loc, builder->getI32Type(), id);
             mlir::Value cmp = mlir::arith::CmpIOp::create(
                 *builder, loc, mlir::arith::CmpIPredicate::eq, sel, idVal);
             mlir::Block *nextCheck =
@@ -7305,7 +7303,7 @@ private:
 
   /// Track GOTO exits from ACC regions for jump table generation.
   struct AccRegionExitInfo {
-    mlir::Value selector{};       // alloca i32 for exit selector
+    mlir::Value selector{}; // alloca i32 for exit selector
     llvm::SmallVector<std::pair<int, mlir::Block *>> exits; // {id, target}
     int nextId = 1;
   };
