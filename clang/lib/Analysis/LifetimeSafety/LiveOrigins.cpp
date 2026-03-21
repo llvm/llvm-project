@@ -9,6 +9,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "Dataflow.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang::lifetimes::internal {
@@ -64,6 +65,8 @@ static SourceLocation GetFactLoc(CausingFactType F) {
       return FieldEsc->getFieldDecl()->getLocation();
     if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
       return GlobalEsc->getGlobal()->getLocation();
+    if (auto *CallEsc = dyn_cast<CallEscapeFact>(OEF))
+      return CallEsc->getArgument()->getExprLoc();
   }
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
@@ -148,6 +151,9 @@ public:
   /// An escaping origin (e.g., via return) makes the origin live with definite
   /// confidence, as it dominates this program point.
   Lattice transfer(Lattice In, const OriginEscapesFact &OEF) {
+    // CallEscapeFact should not affect liveness
+    if (isa<CallEscapeFact>(&OEF))
+      return In;
     OriginID OID = OEF.getEscapedOriginID();
     return Lattice(Factory.add(In.LiveOrigins, OID,
                                LivenessInfo(&OEF, LivenessKind::Must)));

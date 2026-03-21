@@ -14,6 +14,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/Stmt.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
@@ -21,6 +22,7 @@
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -943,13 +945,45 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         ArrayRef<const Expr *> Args,
                                         bool IsGslConstruction) {
   OriginList *CallList = getOriginsList(*Call);
+  SourceManager &SM = AC.getASTContext().getSourceManager();
+  // To avoid over-reporting, we assume the following are noescape:
+  // - All parameters to functions declared in the system headers
+  // - The implicit `this` parameter for member functions
+  auto IsArgNoEscape = [FD, &SM](unsigned I) -> bool {
+    const ParmVarDecl *PVD = nullptr;
+    if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+        Method && Method->isInstance()) {
+      // There is currently no way to declare 'this' is noescape for member
+      // functions We therefore return true as the user cannot do anything via
+      // annotation, so we make the conservative approximation
+      if (I == 0) {
+        return true;
+      }
+      if ((I - 1) < Method->getNumParams()) {
+        PVD = Method->getParamDecl(I - 1);
+      }
+    } else if (I < FD->getNumParams()) {
+      PVD = FD->getParamDecl(I);
+    }
+    if (PVD && !SM.isInSystemHeader(PVD->getLocation()))
+      return PVD->hasAttr<clang::NoEscapeAttr>();
+    return true;
+  };
+  // All arguments to a function are a use of the corresponding expressions.
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    handleUse(Args[I]);
+    OriginList *ArgList = getOriginsList(*Args[I]);
+    if (!IsArgNoEscape(I)) {
+      for (OriginList *L = ArgList; L; L = L->peelOuterOrigin()) {
+        EscapesInCurrentBlock.push_back(FactMgr.createFact<CallEscapeFact>(
+            L->getOuterOriginID(), Call, I, Args[I]));
+      }
+    }
+  }
   // Ignore functions returning values with no origin.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD)
     return;
-  // All arguments to a function are a use of the corresponding expressions.
-  for (const Expr *Arg : Args)
-    handleUse(Arg);
   handleInvalidatingCall(Call, FD, Args);
   handleDestructiveCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);

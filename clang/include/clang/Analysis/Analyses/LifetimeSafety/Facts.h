@@ -244,29 +244,23 @@ public:
 /// This fact enables us to catch that the noescape parameter j escapes through
 /// the call to function f
 class CallEscapeFact : public OriginEscapesFact {
-  // Currently the analysis handles the following call-like expressions:
-  // - VisitCXXOperatorCallExpr to handle CXXOperatorCallExpr, a sub-class of
-  // CallExpr.
-  // - VisitCXXMemberCallExpr to handle CXXMemberCallExpr, a sub-class of
-  // CallExpr.
-  // - VisitCXXConstructExpr and handleGSLPointerConstruction deal with
-  // CXXConstructExpr. Whilst call like, it is not a sub-class of CallExpr.
-  // Therefore, this type is taken to be the union of CallExpr * and
-  // CXXConstructExpr *:
-  using CallLikeExprPtr = llvm::PointerUnion<CallExpr *, CXXConstructExpr *>;
-  const CallLikeExprPtr Call;
+  const Expr *Call;
+  const Expr *Argument;
   const unsigned ArgumentIndex;
 
 public:
-  CallEscapeFact(OriginID OID, const CallLikeExprPtr Call, const unsigned Index)
+  CallEscapeFact(OriginID OID, const Expr *Call, const unsigned Index,
+                 const Expr *Argument)
       : OriginEscapesFact(OID, EscapeKind::Call), Call(Call),
-        ArgumentIndex(Index) {}
+        Argument(Argument), ArgumentIndex(Index) {}
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::OriginEscapes &&
            static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
                EscapeKind::Call;
   }
-  const CallLikeExprPtr getCall() const { return Call; };
+  const Expr *getCall() const { return Call; };
+  unsigned getArgumentIndex() const { return ArgumentIndex; };
+  const Expr *getArgument() const { return Argument; };
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
