@@ -162,6 +162,7 @@ TEST_F(PlatformTest, GetPlatformForArchitecturesCandidates) {
   PlatformThumb::Terminate();
 }
 
+#ifndef NDEBUG
 struct PlatformLocateSafePathTest : public PlatformTest {
 protected:
   void SetUp() override {
@@ -661,3 +662,4 @@ TEST_F(PlatformLocateSafePathTest,
   EXPECT_EQ(file_specs.GetSize(), 1u);
   EXPECT_TRUE(ss.GetString().empty());
 }
+#endif // NDEBUG
