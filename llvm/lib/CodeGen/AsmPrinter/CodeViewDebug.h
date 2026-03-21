@@ -75,7 +75,7 @@ public:
     /// Value for `DerefOffset` indicating this is not an indirect load.
     constexpr static int32_t NoDeref = INT32_MIN;
 
-    /// Offset to add after dereferencing `CVRegister + StructOffset` for
+    /// Offset to add after dereferencing `CVRegister + DataOffset` for
     /// indirect loads. If this is not an indirect load, it's set to NoDeref.
     int32_t DerefOffset = NoDeref;
 
