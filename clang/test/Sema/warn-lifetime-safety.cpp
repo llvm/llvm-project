@@ -2101,4 +2101,13 @@ void pointer_in_array_use_after_scope() {
   (void)*arr[0]; // Should warn.
 }
 
+struct S {
+  static S operator()(int, int&&);
+};
+
+void indexing_with_static_operator() {
+  // no warnings expected
+  S()(1, 2);
+}
+
 } // namespace array
