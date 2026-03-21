@@ -1,16 +1,5 @@
-# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
-# RUN: llvm-pdbutil dump --types %t.pdb | FileCheck %s
-
-# Test that forward references can be found (requires type hashes).
-
-# CHECK:       0x1002 | LF_STRUCTURE [size = 36] `Foo`
-# CHECK-NEXT:           unique name: `.?AUFoo@@`
-# CHECK-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
-# CHECK-NEXT:           options: forward ref (-> 0x1006) | has unique name, sizeof 0
-# CHECK:       0x1006 | LF_STRUCTURE [size = 36] `Foo`
-# CHECK-NEXT:           unique name: `.?AUFoo@@`
-
 ---
+# Essentially the same as forward-refs1.yaml but with struct Bar { int b; };
 TpiStream:
   Version:         VC80
   Records:
@@ -29,8 +18,8 @@ TpiStream:
         MemberCount:     0
         Options:         [ None, ForwardReference, HasUniqueName ]
         FieldList:       0
-        Name:            Foo
-        UniqueName:      '.?AUFoo@@'
+        Name:            Bar
+        UniqueName:      '.?AUBar@@'
         DerivationList:  0
         VTableShape:     0
         Size:            0
@@ -55,20 +44,20 @@ TpiStream:
             Attrs:           3
             Type:            116
             FieldOffset:     0
-            Name:            a
+            Name:            b
         - Kind:            LF_ONEMETHOD
           OneMethod:
             Type:            4100
             Attrs:           259
             VFTableOffset:   -1
-            Name:            Foo
+            Name:            Bar
     - Kind:            LF_STRUCTURE
       Class:
         MemberCount:     2
         Options:         [ None, HasConstructorOrDestructor, HasUniqueName ]
         FieldList:       4101
-        Name:            Foo
-        UniqueName:      '.?AUFoo@@'
+        Name:            Bar
+        UniqueName:      '.?AUBar@@'
         DerivationList:  0
         VTableShape:     0
         Size:            4

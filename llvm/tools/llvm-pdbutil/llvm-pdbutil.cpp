@@ -1398,10 +1398,12 @@ static void mergePdbs() {
   auto &DestTpi = Builder.getTpiBuilder();
   auto &DestIpi = Builder.getIpiBuilder();
   MergedTpi.ForEachRecord([&DestTpi](TypeIndex TI, const CVType &Type) {
-    DestTpi.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    DestTpi.addTypeRecord(Type.RecordData, Hash);
   });
   MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, const CVType &Type) {
-    DestIpi.addTypeRecord(Type.RecordData, std::nullopt);
+    uint32_t Hash = ExitOnErr(llvm::pdb::hashTypeRecord(Type));
+    DestIpi.addTypeRecord(Type.RecordData, Hash);
   });
   Builder.getInfoBuilder().addFeature(PdbRaw_FeatureSig::VC140);
 
