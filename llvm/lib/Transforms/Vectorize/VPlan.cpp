@@ -892,8 +892,7 @@ VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
     return Inc;
 
   assert(!getPlan()->getVFxUF().isMaterialized() &&
-         "must only create increment by VFxUF, if VFxUF has not been "
-         "materialized yet");
+         "VFxUF can be used only before it is materialized.");
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   return VPBuilder(ExitingLatch->getTerminator())
       .createOverflowingOp(Instruction::Add, {CanIV, &getPlan()->getVFxUF()},
@@ -1259,6 +1258,23 @@ VPlan *VPlan::duplicate() {
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPIRValue *OldLiveIn : getLiveIns())
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
+
+  if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
+    Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);
+  // else NewTripCount will be created and inserted into Old2NewVPValues when
+  // TripCount is cloned. In any case NewPlan->TripCount is updated below.
+
+  if (auto *LoopRegion = getVectorLoopRegion()) {
+    auto *OldCanIV = LoopRegion->getCanonicalIV();
+    auto *NewCanIV = NewPlan->getVectorLoopRegion()->getCanonicalIV();
+    assert(OldCanIV && NewCanIV &&
+           "Loop regions of both plans must have canonical IVs.");
+    Old2NewVPValues[OldCanIV] = NewCanIV;
+  }
+
+  assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
+         "All VPSymbolicValues must be handled below");
+
   // Map and propagate materialized state for symbolic values.
   for (auto [OldSV, NewSV] :
        {std::pair{&VectorTripCount, &NewPlan->VectorTripCount},
@@ -1274,18 +1290,6 @@ VPlan *VPlan::duplicate() {
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
     if (BackedgeTakenCount->isMaterialized())
       NewPlan->BackedgeTakenCount->markMaterialized();
-  }
-  if (auto *TripCountIRV = dyn_cast_or_null<VPIRValue>(TripCount))
-    Old2NewVPValues[TripCountIRV] = NewPlan->getOrAddLiveIn(TripCountIRV);
-  // else NewTripCount will be created and inserted into Old2NewVPValues when
-  // TripCount is cloned. In any case NewPlan->TripCount is updated below.
-
-  if (auto *LoopRegion = getVectorLoopRegion()) {
-    auto *OldCanIV = LoopRegion->getCanonicalIV();
-    auto *NewCanIV = NewPlan->getVectorLoopRegion()->getCanonicalIV();
-    assert(OldCanIV && NewCanIV &&
-           "Loop regions of both plans must have canonical IVs.");
-    Old2NewVPValues[OldCanIV] = NewCanIV;
   }
 
   remapOperands(Entry, NewEntry, Old2NewVPValues);

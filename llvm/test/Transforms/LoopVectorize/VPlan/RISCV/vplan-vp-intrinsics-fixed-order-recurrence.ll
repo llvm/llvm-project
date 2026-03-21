@@ -4,7 +4,7 @@
 
 define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
-; IF-EVL-NOT: CURRENT-ITERATION-PHIj
+; IF-EVL-NOT: CURRENT-ITERATION-PHI
 ;
 ; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VF:%[0-9]+]]> = VF

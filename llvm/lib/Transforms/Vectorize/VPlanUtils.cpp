@@ -645,7 +645,6 @@ vputils::getMemoryLocation(const VPRecipeBase &R) {
 }
 
 VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
-  VPValue *Step;
   VPInstruction *Increment = nullptr;
   VPSymbolicValue &VFxUF = Plan.getVFxUF();
 
@@ -654,8 +653,11 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     Increment = cast<VPInstruction>(U);
   };
 
-  VPRegionValue *CanIV = Plan.getVectorLoopRegion()->getCanonicalIV();
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPRegionValue *CanIV = LoopRegion->getCanonicalIV();
+  assert(CanIV && "Expected loop region to have a canonical IV");
   for (VPUser *U : CanIV->users()) {
+    VPValue *Step;
     if (!match(U, m_c_Add(m_Specific(CanIV), m_VPValue(Step))))
       continue;
 
@@ -667,13 +669,11 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 
     // VFxUF has been materialized; look for increment by UF.
     VPSymbolicValue &UF = Plan.getUF();
-    if (Step == &UF) {
-      SetIncrement(U);
+    if (!UF.isMaterialized()) {
+      if (Step == &UF)
+        SetIncrement(U);
       continue;
     }
-
-    if (!UF.isMaterialized())
-      continue;
 
     unsigned ConcreteUF = Plan.getConcreteUF();
     if ((ConcreteUF == 1 &&
@@ -685,8 +685,10 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
   }
 
   assert((!VFxUF.isMaterialized() || Increment) &&
-         "When VFxUF has been materialized, "
-         "an UF based increment must exist");
+         "After materializing VFxUF, an increment based on UF must exist");
+  assert((!Increment ||
+          LoopRegion->hasCanonicalIVNUW() == Increment->hasNoUnsignedWrap()) &&
+         "NUW flag in region and increment must match");
   return Increment;
 }
 

@@ -439,8 +439,8 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   DebugLoc DL = DebugLoc::getUnknown();
   auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
-  auto *OutermostVPPhi = cast<VPPhi>(&OutermostHeaderVPBB->front());
   if (HeaderVPB == OutermostHeaderVPBB) {
+    auto *OutermostVPPhi = cast<VPPhi>(&OutermostHeaderVPBB->front());
     CanIVTy = OutermostVPPhi->getOperand(0)->getLiveInIRValue()->getType();
     DL = OutermostVPPhi->getDebugLoc();
   }
@@ -467,6 +467,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   // Update canonical IV users for the outermost loop only.
   if (HeaderVPB == OutermostHeaderVPBB) {
+    auto *OutermostVPPhi = cast<VPPhi>(&OutermostHeaderVPBB->front());
     OutermostVPPhi->replaceAllUsesWith(R->getCanonicalIV());
     OutermostVPPhi->eraseFromParent();
   }
@@ -525,13 +526,6 @@ static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
       ExitIRI->setIncomingValueForBlock(MiddleVPBB, Exiting);
     }
   }
-}
-
-/// Return an iterator range to iterate over pairs of matching phi nodes in
-/// \p Header and \p ScalarHeader, skipping the canonical IV in the former.
-static auto getMatchingPhisForScalarLoop(VPBasicBlock *Header,
-                                         VPBasicBlock *ScalarHeader) {
-  return zip_equal(drop_begin(Header->phis()), ScalarHeader->phis());
 }
 
 static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
@@ -593,8 +587,8 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   assert(equal(ScalarPH->getPredecessors(),
                ArrayRef<VPBlockBase *>({MiddleVPBB, Plan.getEntry()})) &&
          "unexpected predecessor order of scalar ph");
-  for (const auto &[PhiR, ScalarPhiR] :
-       getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarHeader())) {
+  for (const auto &[PhiR, ScalarPhiR] : zip_equal(
+           drop_begin(HeaderVPBB->phis()), Plan.getScalarHeader()->phis())) {
     auto *VectorPhiR = cast<VPPhi>(&PhiR);
     VPValue *BackedgeVal = VectorPhiR->getOperand(1);
     VPValue *ResumeFromVectorLoop =
@@ -776,9 +770,8 @@ void VPlanTransforms::createHeaderPhiRecipes(
     PhiR->eraseFromParent();
   }
 
-  for (const auto &[HeaderPhiR, ScalarPhiR] :
-       zip_equal(drop_begin(HeaderVPBB->phis()),
-                 Plan.getScalarPreheader()->phis())) {
+  for (const auto &[HeaderPhiR, ScalarPhiR] : zip_equal(
+           drop_begin(HeaderVPBB->phis()), Plan.getScalarPreheader()->phis())) {
     auto *ResumePhiR = cast<VPPhi>(&ScalarPhiR);
     if (isa<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhiR)) {
       ResumePhiR->setName("scalar.recur.init");

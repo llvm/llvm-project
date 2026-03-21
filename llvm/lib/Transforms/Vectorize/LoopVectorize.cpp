@@ -9151,7 +9151,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   // When vectorizing the epilogue loop, the canonical induction needs to start
   // at the resume value from the main vector loop. Find the resume value
   // created during execution of the main VPlan. It must be the first phi in the
-  // loop preheader. Set it as the start value for the canonical IV.
+  // loop preheader. Add this resume value as an offset to the canonical IV of
+  // the epilogue loop.
   using namespace llvm::PatternMatch;
   PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
   for (Value *Inc : EPResumeVal->incoming_values()) {
@@ -9189,6 +9190,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   // Replace all users of the canonical IV with the offset version, except for
   // the Add itself and the canonical IV increment.
   auto *Increment = vputils::findCanonicalIVIncrement(Plan);
+  assert(Increment && "Must have a canonical IV increment at this point");
   IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U, unsigned) {
     return &U != Add && &U != Increment;
   });
@@ -9200,7 +9202,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
          "expected BranchOnCount in exiting block");
   Builder.setInsertPoint(BranchOnCount);
   VPInstruction *OffsetIVInc = Builder.createAdd(Increment, VPV);
-  BranchOnCount->setOperand(0, OffsetIVInc);
+  Increment->replaceAllUsesWith(OffsetIVInc);
+  OffsetIVInc->setOperand(0, Increment);
 
   DenseMap<Value *, Value *> ToFrozen;
   SmallVector<Instruction *> InstsToMove;

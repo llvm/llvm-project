@@ -528,7 +528,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   };
 
   VPValue *CanIV = LoopRegion->getCanonicalIV();
-  // Note: canonical IV's are retained even if they have no users.
+  // Note: canonical IVs are retained even if they have no users.
   if (CanIV->getNumUsers() != 0)
     OpenIntervals.insert(CanIV);
 

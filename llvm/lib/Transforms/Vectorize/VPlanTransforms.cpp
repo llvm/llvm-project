@@ -1664,18 +1664,21 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  // Hoist an invariant increment Y of a phi X, by having X start at Y.
-  if ((match(Def, m_Add(m_c_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) ||
-       match(Def, m_Add(m_VPValue(X), m_VPValue(Y)))) &&
+  // Look for cycles where Def is of the form:
+  //  X = phi(0, IVInc)  ; used by IVInc and all other users of the form
+  //  Inc  = X + Y
+  //  IVInc = X + Step ; used by X and one other user of the form:
+  //  Def = IVInc + Y
+  // Transforms this by folding the increment Y into the phi's start value and
+  // updating the users Inc and IVInc to use X and IVInc respectively.
+  if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
       isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) && isa<VPPhi>(X)) {
     auto *Phi = cast<VPPhi>(X);
-    auto *IVInc =
-        cast<VPSingleDefRecipe>(Phi->getOperand(1)->getDefiningRecipe());
-    if (match(Phi->getOperand(0), m_ZeroInt()) &&
-        match(IVInc, m_c_Add(m_Specific(Phi), m_VPValue())) &&
+    auto *IVInc = Def->getOperand(0);
+    if (match(Phi->getOperand(0), m_ZeroInt()) && Phi->getOperand(1) == IVInc &&
         all_of(Phi->users(),
                [IVInc, Phi, Y](VPUser *U) {
-                 return U == IVInc ||
+                 return U == IVInc->getDefiningRecipe() ||
                         match(U, m_Add(m_Specific(Phi), m_Specific(Y)));
                }) &&
         all_of(IVInc->users(), [Phi, IVInc, Y](VPUser *U) {
@@ -1684,7 +1687,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         })) {
       Phi->setOperand(0, Y);
       for (VPUser *U : to_vector(Phi->users()))
-        if (U != IVInc)
+        if (U != IVInc->getDefiningRecipe())
           cast<VPSingleDefRecipe>(U)->replaceAllUsesWith(Phi);
       for (VPUser *U : to_vector(IVInc->users()))
         if (U != Phi)
@@ -3532,12 +3535,11 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
       LatchBr,
       m_BranchOnCond(m_SpecificCmp(CmpInst::ICMP_EQ, m_VPValue(CanIVInc),
                                    m_Specific(&Plan.getVectorTripCount()))));
-  assert(
-      FoundIncrement &&
-      match(CanIVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
-                            m_Specific(&Plan.getVFxUF()))) &&
-      "Expected BranchOnCond with ICmp comparing CanIV increment with vector "
-      "trip count");
+  assert(FoundIncrement &&
+         match(CanIVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
+                               m_Specific(&Plan.getVFxUF()))) &&
+         "Expected BranchOnCond with ICmp comparing CanIV + VFxUF with vector "
+         "trip count");
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
   VPBuilder Builder(LatchBr);

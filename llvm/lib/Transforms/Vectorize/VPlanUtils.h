@@ -141,8 +141,8 @@ template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
 }
 
-/// Find the canonical IV increment the canonical IV of \p Plan's vector loop
-/// region. Returns nullptr if not found.
+/// Find the canonical IV increment of \p Plan's vector loop region. Returns
+/// nullptr if not found.
 VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects

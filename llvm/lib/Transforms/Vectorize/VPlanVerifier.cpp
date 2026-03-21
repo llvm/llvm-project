@@ -98,7 +98,7 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
 
     if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
         RecipeI->getIterator() != VPBB->begin()) {
-      errs() << "CurrentIteration PHI is not the first phi\n";
+      errs() << "CurrentIteration PHI is not the first recipe\n";
       return false;
     }
 

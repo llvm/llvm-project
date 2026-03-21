@@ -2281,8 +2281,8 @@ protected:
 ///  * VPActiveLaneMaskPHIRecipe
 ///  * VPEVLBasedIVPHIRecipe
 ///
-///  Note that the canonical IV is modeled as a VPRegionValue associated with
-///  loop regions.
+/// Note that the canonical IV is modeled as a VPRegionValue associated with
+/// its loop region.
 class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
@@ -4381,10 +4381,8 @@ class VPCanonicalIVInfo {
   bool HasNUW = true;
 
 public:
-  VPCanonicalIVInfo(Type *Ty, DebugLoc DL, VPRegionBlock *Region,
-                    bool HasNUW = true)
-      : CanIV(std::make_unique<VPRegionValue>(Ty, DL, Region)), HasNUW(HasNUW) {
-  }
+  VPCanonicalIVInfo(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
+      : CanIV(std::make_unique<VPRegionValue>(Ty, DL, Region)) {}
 
   VPRegionValue *getRegionValue() { return CanIV.get(); }
   const VPRegionValue *getRegionValue() const { return CanIV.get(); }
@@ -4507,11 +4505,9 @@ public:
   /// its entry, and its exiting block to its successor.
   void dissolveToCFGLoop();
 
-  /// Get the canonical IV increment instruction. If the exiting terminator
-  /// is a BranchOnCount or BranchOnCond with an IV increment, return this
-  /// increment. Otherwise, create a new increment before the terminator and
-  /// return it. The canonical IV increment is subject to DCE if unused, unlike
-  /// the canonical IV itself.
+  /// Get the canonical IV increment instruction if it exists. Otherwise, create
+  /// a new increment before the terminator and return it. The canonical IV
+  /// increment is subject to DCE if unused, unlike the canonical IV itself.
   VPInstruction *getOrCreateCanonicalIVIncrement();
 
   /// Return the canonical induction variable of the region, null for
