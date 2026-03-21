@@ -5040,8 +5040,11 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   //
   // Helper to check for comma expressions, which are not allowed as indices for
   // matrix subscript expressions.
-  auto CheckAndReportCommaError = [this, base, rbLoc](Expr *E) {
-    if (isa<BinaryOperator>(E) && cast<BinaryOperator>(E)->isCommaOp()) {
+  //
+  // In C++23, we get multiple arguments instead of a comma expression.
+  auto CheckAndReportCommaError = [&](Expr *E) {
+    if (ArgExprs.size() > 1 ||
+        (isa<BinaryOperator>(E) && cast<BinaryOperator>(E)->isCommaOp())) {
       Diag(E->getExprLoc(), diag::err_matrix_subscript_comma)
           << SourceRange(base->getBeginLoc(), rbLoc);
       return true;
@@ -5061,7 +5064,6 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // MatrixSubscriptExpr.
   auto *matSubscriptE = dyn_cast<MatrixSubscriptExpr>(base);
   if (matSubscriptE) {
-    assert(ArgExprs.size() == 1);
     if (CheckAndReportCommaError(ArgExprs.front()))
       return ExprError();
 
@@ -5098,7 +5100,6 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
 
   // If the base is a matrix type, try to create a new MatrixSubscriptExpr.
   if (base->getType()->isMatrixType()) {
-    assert(ArgExprs.size() == 1);
     if (CheckAndReportCommaError(ArgExprs.front()))
       return ExprError();
 
@@ -5146,13 +5147,20 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // The above statement indicates that x[] can be used with one or more array
   // indices. In this case, i=p->x[a][b] will be turned into i=p->GetX(a, b),
   // and p->x[a][b] = i will be turned into p->PutX(a, b, i);
+  //
+  // Since C++23, MSVC accepts multiple arguments; e.g. given
+  //
+  //   struct S {
+  //     int get_x(int, int);
+  //     __declspec(property(get=get_x)) int x[][];
+  //   };
+  //
+  // MSVC accepts both 'S().x[1][2]' and 'S().x[1, 2]'.
   if (IsMSPropertySubscript) {
-    assert(ArgExprs.size() == 1);
-    // Build MS property subscript expression if base is MS property reference
-    // or MS property subscript.
-    return new (Context)
-        MSPropertySubscriptExpr(base, ArgExprs.front(), Context.PseudoObjectTy,
-                                VK_LValue, OK_Ordinary, rbLoc);
+    for (Expr *Arg : ArgExprs)
+      base = new (Context) MSPropertySubscriptExpr(
+          base, Arg, Context.PseudoObjectTy, VK_LValue, OK_Ordinary, rbLoc);
+    return base;
   }
 
   // Use C++ overloaded-operator rules if either operand has record
@@ -5163,6 +5171,18 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   //
   // ObjC pointers have their own subscripting logic that is not tied
   // to overload resolution and so should not take this path.
+  //
+  // Issue a better diagnostic if we tried to pass multiple arguments to
+  // a builtin subscript operator rather than diagnosing this as a generic
+  // overload resolution failure.
+  if (ArgExprs.size() != 1 &&
+      !base->getType()->isRecordType() &&
+      !base->getType()->isObjCObjectPointerType()) {
+    Diag(base->getExprLoc(), diag::err_ovl_builtin_subscript_expects_single_arg)
+        << base->getType() << base->getSourceRange();
+    return ExprError();
+  }
+
   if (getLangOpts().CPlusPlus && !base->getType()->isObjCObjectPointerType() &&
       ((base->getType()->isRecordType() ||
         (ArgExprs.size() != 1 || isa<PackExpansionExpr>(ArgExprs[0]) ||
