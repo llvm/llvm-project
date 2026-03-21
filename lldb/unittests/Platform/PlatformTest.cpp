@@ -168,6 +168,8 @@ TEST_F(PlatformTest, CreateUnknown) {
   ASSERT_EQ(list.GetOrCreate("dummy"), nullptr);
 }
 
+// TestingProperties are only available in non-asserts builds.
+#ifndef NDEBUG
 struct PlatformLocateSafePathTest : public PlatformTest {
 protected:
   void SetUp() override {
@@ -667,3 +669,4 @@ TEST_F(PlatformLocateSafePathTest,
   EXPECT_EQ(file_specs.GetSize(), 1u);
   EXPECT_TRUE(ss.GetString().empty());
 }
+#endif // NDEBUG
