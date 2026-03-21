@@ -102,9 +102,6 @@
 ; CHECK:     IsConst: 0
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
-; CHECK:     IsRestrict: 0
-; CHECK:     IsThisPtr&: 0
-; CHECK:     IsThisPtr&&: 0
 ; CHECK:     SizeOf: 4
 ; CHECK:   }
 ; CHECK:   FieldList (0x100A) {
@@ -156,6 +153,7 @@
 ; CHECK:     SizeOf: 16
 ; CHECK:     Name:
 ; CHECK:   }
+; CHECK: ]
 
 source_filename = "test/DebugInfo/COFF/types-array-advanced.ll"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
