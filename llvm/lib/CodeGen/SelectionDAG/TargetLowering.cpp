@@ -6628,6 +6628,27 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
+  bool HasMULHS = isOperationLegalOrCustom(ISD::MULHS, VT, IsAfterLegalization);
+  bool HasSMUL_LOHI =
+      isOperationLegalOrCustom(ISD::SMUL_LOHI, VT, IsAfterLegalization);
+
+  if (!HasMULHS && !HasSMUL_LOHI && MulVT == EVT()) {
+    // If type twice as wide legal, widen and use a mul plus a shift.
+    unsigned Size = VT.getScalarSizeInBits();
+    EVT WideVT = VT.changeElementType(
+        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), Size * 2));
+    // Some targets like AMDGPU try to go from SDIV to SDIVREM which is then
+    // custom lowered. This is very expensive so avoid it at all costs for
+    // constant divisors.
+    if ((!IsAfterLegalTypes && isOperationExpand(ISD::SDIV, VT) &&
+         isOperationCustom(ISD::SDIVREM, VT.getScalarType())) ||
+        isOperationLegalOrCustom(ISD::MUL, WideVT))
+      MulVT = WideVT;
+  }
+
+  if (!HasMULHS && !HasSMUL_LOHI && MulVT == EVT())
+    return SDValue();
+
   SmallVector<SDValue, 16> MagicFactors, Factors, Shifts, ShiftMasks;
 
   auto BuildSDIVPattern = [&](ConstantSDNode *C) {
@@ -6693,44 +6714,21 @@ SDValue TargetLowering::BuildSDIV(SDNode *N, SelectionDAG &DAG,
   }
 
   // Multiply the numerator (operand 0) by the magic value.
-  // FIXME: We should support doing a MUL in a wider type.
   auto GetMULHS = [&](SDValue X, SDValue Y) {
-    // If the type isn't legal, use a wider mul of the type calculated
-    // earlier.
-    if (!isTypeLegal(VT)) {
-      X = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, X);
-      Y = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, Y);
-      Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
-      Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
-                      DAG.getShiftAmountConstant(EltBits, MulVT, dl));
-      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
-    }
-
-    if (isOperationLegalOrCustom(ISD::MULHS, VT, IsAfterLegalization))
+    if (HasMULHS)
       return DAG.getNode(ISD::MULHS, dl, VT, X, Y);
-    if (isOperationLegalOrCustom(ISD::SMUL_LOHI, VT, IsAfterLegalization)) {
+    if (HasSMUL_LOHI) {
       SDValue LoHi =
           DAG.getNode(ISD::SMUL_LOHI, dl, DAG.getVTList(VT, VT), X, Y);
-      return SDValue(LoHi.getNode(), 1);
+      return LoHi.getValue(1);
     }
-    // If type twice as wide legal, widen and use a mul plus a shift.
-    unsigned Size = VT.getScalarSizeInBits();
-    EVT WideVT = VT.changeElementType(
-        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), Size * 2));
-    // Some targets like AMDGPU try to go from SDIV to SDIVREM which is then
-    // custom lowered. This is very expensive so avoid it at all costs for
-    // constant divisors.
-    if ((!IsAfterLegalTypes && isOperationExpand(ISD::SDIV, VT) &&
-         isOperationCustom(ISD::SDIVREM, VT.getScalarType())) ||
-        isOperationLegalOrCustom(ISD::MUL, WideVT)) {
-      X = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, X);
-      Y = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, Y);
-      Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
-      Y = DAG.getNode(ISD::SRL, dl, WideVT, Y,
-                      DAG.getShiftAmountConstant(EltBits, WideVT, dl));
-      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
-    }
-    return SDValue();
+
+    X = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, X);
+    Y = DAG.getNode(ISD::SIGN_EXTEND, dl, MulVT, Y);
+    Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
+    Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
+                    DAG.getShiftAmountConstant(EltBits, MulVT, dl));
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
   };
 
   SDValue Q = GetMULHS(N0, MagicFactor);
@@ -6797,6 +6795,27 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
+  bool HasMULHU = isOperationLegalOrCustom(ISD::MULHU, VT, IsAfterLegalization);
+  bool HasUMUL_LOHI =
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, VT, IsAfterLegalization);
+
+  if (!HasMULHU && !HasUMUL_LOHI && MulVT == EVT()) {
+    // If type twice as wide legal, widen and use a mul plus a shift.
+    unsigned Size = VT.getScalarSizeInBits();
+    EVT WideVT = VT.changeElementType(
+        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), Size * 2));
+    // Some targets like AMDGPU try to go from SDIV to SDIVREM which is then
+    // custom lowered. This is very expensive so avoid it at all costs for
+    // constant divisors.
+    if ((!IsAfterLegalTypes && isOperationExpand(ISD::UDIV, VT) &&
+         isOperationCustom(ISD::UDIVREM, VT.getScalarType())) ||
+        isOperationLegalOrCustom(ISD::MUL, WideVT))
+      MulVT = WideVT;
+  }
+
+  if (!HasMULHU && !HasUMUL_LOHI && MulVT == EVT())
+    return SDValue();
+
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
@@ -6817,11 +6836,18 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
   const unsigned SVTBits = SVT.getSizeInBits();
 
+  // Allow i32 to be widened to i64 for uncooperative divisors if i64 MULHU or
+  // UMUL_LOHI is supported.
+  const EVT WideSVT = MVT::i64;
+  const bool HasWideMULHU =
+      VT == MVT::i32 &&
+      isOperationLegalOrCustom(ISD::MULHU, WideSVT, IsAfterLegalization);
+  const bool HasWideUMUL_LOHI =
+      VT == MVT::i32 &&
+      isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
+  const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
+
   bool UseNPQ = false, UsePreShift = false, UsePostShift = false;
-  const bool HasWideVT64MULHU =
-      isOperationLegalOrCustom(ISD::MULHU, MVT::i64, IsAfterLegalization);
-  const bool HasWideVT64UMUL_LOHI =
-      isOperationLegalOrCustom(ISD::UMUL_LOHI, MVT::i64, IsAfterLegalization);
   bool UseWiden = false;
   SmallVector<SDValue, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
@@ -6840,8 +6866,6 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
       PreShift = PostShift = DAG.getUNDEF(ShSVT);
       MagicFactor = NPQFactor = DAG.getUNDEF(SVT);
     } else {
-      const bool AllowWiden = (EltBits == 32 && !VT.isVector() &&
-                               (HasWideVT64MULHU || HasWideVT64UMUL_LOHI));
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
               Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
@@ -6850,7 +6874,7 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 
       if (magics.Widen) {
         UseWiden = true;
-        MagicFactor = DAG.getConstant(magics.Magic, dl, MVT::i64);
+        MagicFactor = DAG.getConstant(magics.Magic, dl, WideSVT);
       } else {
         MagicFactor = DAG.getConstant(magics.Magic.zext(SVTBits), dl, SVT);
       }
@@ -6906,18 +6930,20 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
 
   if (UseWiden) {
-    // Compute: (i64(x) * MagicFactor) >> 64
-    SDValue X64 = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, N0);
+    // Compute: (WideSVT(x) * MagicFactor) >> WideSVTBits.
+    SDValue WideN0 = DAG.getNode(ISD::ZERO_EXTEND, dl, WideSVT, N0);
 
-    // Perform 64x64 -> 128 multiplication and extract high 64 bits
+    // Perform WideSVTxWideSVT -> 2*WideSVT multiplication and extract high
+    // WideSVT bits
     SDValue High;
-    if (HasWideVT64MULHU) {
-      High = DAG.getNode(ISD::MULHU, dl, MVT::i64, X64, MagicFactor);
+    if (HasWideMULHU) {
+      High = DAG.getNode(ISD::MULHU, dl, WideSVT, WideN0, MagicFactor);
     } else {
+      assert(HasWideUMUL_LOHI);
       SDValue LoHi =
-          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(MVT::i64, MVT::i64),
-                      X64, MagicFactor);
-      High = SDValue(LoHi.getNode(), 1);
+          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(WideSVT, WideSVT),
+                      WideN0, MagicFactor);
+      High = LoHi.getValue(1);
     }
 
     Created.push_back(High.getNode());
@@ -6930,44 +6956,21 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
     Created.push_back(Q.getNode());
   }
 
-  // FIXME: We should support doing a MUL in a wider type.
   auto GetMULHU = [&](SDValue X, SDValue Y) {
-    // If the type isn't legal, use a wider mul of the type calculated
-    // earlier.
-    if (!isTypeLegal(VT)) {
-      X = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, X);
-      Y = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, Y);
-      Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
-      Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
-                      DAG.getShiftAmountConstant(EltBits, MulVT, dl));
-      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
-    }
-
-    if (isOperationLegalOrCustom(ISD::MULHU, VT, IsAfterLegalization))
+    if (HasMULHU)
       return DAG.getNode(ISD::MULHU, dl, VT, X, Y);
-    if (isOperationLegalOrCustom(ISD::UMUL_LOHI, VT, IsAfterLegalization)) {
+    if (HasUMUL_LOHI) {
       SDValue LoHi =
           DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(VT, VT), X, Y);
-      return SDValue(LoHi.getNode(), 1);
+      return LoHi.getValue(1);
     }
-    // If type twice as wide legal, widen and use a mul plus a shift.
-    unsigned Size = VT.getScalarSizeInBits();
-    EVT WideVT = VT.changeElementType(
-        *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), Size * 2));
-    // Some targets like AMDGPU try to go from UDIV to UDIVREM which is then
-    // custom lowered. This is very expensive so avoid it at all costs for
-    // constant divisors.
-    if ((!IsAfterLegalTypes && isOperationExpand(ISD::UDIV, VT) &&
-         isOperationCustom(ISD::UDIVREM, VT.getScalarType())) ||
-        isOperationLegalOrCustom(ISD::MUL, WideVT)) {
-      X = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, X);
-      Y = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, Y);
-      Y = DAG.getNode(ISD::MUL, dl, WideVT, X, Y);
-      Y = DAG.getNode(ISD::SRL, dl, WideVT, Y,
-                      DAG.getShiftAmountConstant(EltBits, WideVT, dl));
-      return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
-    }
-    return SDValue(); // No mulhu or equivalent
+
+    X = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, X);
+    Y = DAG.getNode(ISD::ZERO_EXTEND, dl, MulVT, Y);
+    Y = DAG.getNode(ISD::MUL, dl, MulVT, X, Y);
+    Y = DAG.getNode(ISD::SRL, dl, MulVT, Y,
+                    DAG.getShiftAmountConstant(EltBits, MulVT, dl));
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Y);
   };
 
   // Multiply the numerator (operand 0) by the magic value.

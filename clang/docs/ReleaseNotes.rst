@@ -108,6 +108,10 @@ Clang Python Bindings Potentially Breaking Changes
   with objects of other classes.
 - ``TranslationUnit.get_tokens`` now throws an error if both the ``extent`` and
   ``locations`` argument are passed. Previousy, ``locations`` took precedence.
+- ``_CXUnsavedFile`` will be renamed to ``UnsavedFile`` for consistency.
+  ``UnsavedFile`` is already available to use and existing uses should
+  be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a 
+  future release.
 
 What's New in Clang |release|?
 ==============================
@@ -398,6 +402,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
 - Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
 - Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
+- Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
 
 OpenACC Specific Changes
 ------------------------
@@ -501,6 +506,7 @@ libclang
 - Visit constraints of `auto` type to properly visit concept usages (#GH166580)
 - Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
+- The clang_Module_getASTFile API is deprecated and now always returns nullptr
 
 Code Completion
 ---------------
@@ -539,6 +545,8 @@ Python Binding Changes
   ``CodeCompletionResults.results`` should be changed to directly use
   ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
   so it can be used the same as ``CodeCompletionResults.results``.
+- Added a new helper method ``get_version`` to the class ``Config`` to read the
+  version string of the libclang in use.
 
 OpenMP Support
 --------------

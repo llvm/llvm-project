@@ -16,14 +16,16 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 void SuspiciousSemicolonCheck::registerMatchers(MatchFinder *Finder) {
+  Finder->addMatcher(ifStmt(hasThen(nullStmt().bind("semi")),
+                            unless(hasElse(stmt())), unless(isConstexpr()))
+                         .bind("stmt"),
+                     this);
+  Finder->addMatcher(forStmt(hasBody(nullStmt().bind("semi"))).bind("stmt"),
+                     this);
   Finder->addMatcher(
-      stmt(anyOf(ifStmt(hasThen(nullStmt().bind("semi")),
-                        unless(hasElse(stmt())), unless(isConstexpr())),
-                 forStmt(hasBody(nullStmt().bind("semi"))),
-                 cxxForRangeStmt(hasBody(nullStmt().bind("semi"))),
-                 whileStmt(hasBody(nullStmt().bind("semi")))))
-          .bind("stmt"),
-      this);
+      cxxForRangeStmt(hasBody(nullStmt().bind("semi"))).bind("stmt"), this);
+  Finder->addMatcher(whileStmt(hasBody(nullStmt().bind("semi"))).bind("stmt"),
+                     this);
 }
 
 void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
