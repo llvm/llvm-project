@@ -108,11 +108,31 @@ xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
                                        VectorType originalType) {
   if (!layout)
     return failure();
-  auto distributedShape = layout.computeDistributedShape(
-      SmallVector<int64_t>(originalType.getShape()));
-  if (failed(distributedShape))
-    return failure();
-  return VectorType::get(*distributedShape, originalType.getElementType());
+  assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
+         "Expecting a valid layout.");
+  SmallVector<int64_t> effectiveLaneLayout =
+      layout.getEffectiveLaneLayoutAsInt();
+  assert(static_cast<size_t>(originalType.getRank()) >=
+             effectiveLaneLayout.size() &&
+         "Rank of the original vector type should be greater or equal to the "
+         "size of the lane layout to distribute the vector type.");
+  // TODO: replace the implementation with
+  //   auto distributedShape = layout.computeDistributedShape(
+  //       SmallVector<int64_t>(originalType.getShape()));
+  SmallVector<int64_t> distributedShape(originalType.getShape());
+  // Only distribute the last `laneLayout.size()` dimensions. The remaining
+  // dimensions are not distributed.
+  unsigned distributionStart =
+      originalType.getRank() - effectiveLaneLayout.size();
+  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
+    if (i < distributionStart)
+      continue;
+    // Check if the dimension can be distributed evenly.
+    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
+      return failure();
+    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
+  }
+  return VectorType::get(distributedShape, originalType.getElementType());
 }
 
 std::string xegpu::getTemporaryLayoutName(const OpOperand &operand) {
