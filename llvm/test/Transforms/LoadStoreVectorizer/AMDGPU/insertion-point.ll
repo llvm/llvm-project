@@ -28,7 +28,7 @@ entry:
 
   %add = fadd float %ld.c, %ld.c.idx.1
   store float %add, ptr addrspace(1) %b, align 4
-  store i32 %foo, ptr addrspace(3) null, align 4
+  store i32 %foo, ptr addrspace(3) zeroinitializer, align 4
   ret void
 }
 
@@ -55,7 +55,7 @@ entry:
 
   %add = fadd float %ld.c, %ld.c.idx.1
   store float %add, ptr addrspace(1) %b, align 4
-  store i32 %foo, ptr addrspace(3) null, align 4
+  store i32 %foo, ptr addrspace(3) zeroinitializer, align 4
   ret void
 }
 

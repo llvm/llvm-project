@@ -74,3 +74,8 @@
 
 // RUN: %clang_cl --target=x86_64-unknown-windows-msvc /Tc%s -flto -fuse-ld=lld -### -fprofile-sample-use=%S/Inputs/file.prof 2>&1 | FileCheck -check-prefix=CHECK-SAMPLE-PROFILE %s
 // CHECK-SAMPLE-PROFILE: "-lto-sample-profile:{{.*}}/file.prof"
+
+// RUN: %clang_cl /Tc%s -fuse-ld=lld -Xlinker --version -### 2>&1 \
+// RUN: | FileCheck %s --check-prefix=XLINKER --implicit-check-not="warning:"
+// XLINKER: lld-link
+// XLINKER: --version

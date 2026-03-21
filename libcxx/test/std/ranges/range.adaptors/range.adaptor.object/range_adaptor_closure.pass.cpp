@@ -13,6 +13,7 @@
 #include <ranges>
 
 #include <algorithm>
+#include <cassert>
 #include <vector>
 
 #include "test_range.h"

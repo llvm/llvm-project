@@ -63,6 +63,7 @@ public:
     HasFastHalfType = true;
     HasFloat16 = true;
     NoAsmVariants = true;
+    VectorsAreElementAligned = true;
     PlatformMinVersion = Triple.getOSVersion();
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
     resetDataLayout();

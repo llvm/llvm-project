@@ -20,10 +20,6 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "mlir/CAPI/Support.h"
-
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Regex.h"
 
 namespace mlir {
 namespace python {
@@ -62,11 +58,14 @@ public:
   bool loadDialectModule(std::string_view dialectNamespace);
 
   /// Adds a user-friendly Attribute builder.
-  /// Raises an exception if the mapping already exists and replace == false.
+  /// Raises an exception if the mapping already exists and replace == false
+  /// and allow_existing == false.
+  /// Silently skips registration if allow_existing == true and the mapping
+  /// already exists (first registration wins).
   /// This is intended to be called by implementation code.
   void registerAttributeBuilder(const std::string &attributeKind,
-                                nanobind::callable pyFunc,
-                                bool replace = false);
+                                nanobind::callable pyFunc, bool replace = false,
+                                bool allow_existing = false);
 
   /// Adds a user-friendly type caster. Raises an exception if the mapping
   /// already exists and replace == false. This is intended to be called by
@@ -82,10 +81,10 @@ public:
                            bool replace = false);
 
   /// Adds a concrete implementation dialect class.
-  /// Raises an exception if the mapping already exists.
+  /// Raises an exception if the mapping already exists and replace == false.
   /// This is intended to be called by implementation code.
   void registerDialectImpl(const std::string &dialectNamespace,
-                           nanobind::object pyClass);
+                           nanobind::object pyClass, bool replace = false);
 
   /// Adds a concrete implementation operation class.
   /// Raises an exception if the mapping already exists and replace == false.

@@ -400,7 +400,8 @@ private:
   FragmentsSetTy ParentFragments;
 
   /// Indicate if the function body was folded into another function.
-  /// Used by ICF optimization.
+  /// Used by ICF optimization. Always points to the root parent function
+  /// (i.e., a function that is not itself folded).
   BinaryFunction *FoldedIntoFunction{nullptr};
 
   /// All fragments for a parent function.
@@ -682,7 +683,8 @@ private:
   ///
   /// Prefer to use BinaryContext::getFunctionForSymbol(EntrySymbol, &ID)
   /// instead of calling this function directly.
-  uint64_t getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
+  std::optional<uint64_t>
+  getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
 
   /// If the function represents a secondary split function fragment, set its
   /// parent fragment to \p BF.

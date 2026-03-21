@@ -246,7 +246,7 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
 }
 
 ol_result_t printRoot(std::ostream &S) {
-  OFFLOAD_ERR(olInit());
+  OFFLOAD_ERR(olInit(nullptr));
   S << "Liboffload Version: " << OL_VERSION_MAJOR << "." << OL_VERSION_MINOR
     << "." << OL_VERSION_PATCH << "\n";
 

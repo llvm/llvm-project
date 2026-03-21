@@ -572,7 +572,7 @@ static void getGapMask(const Constant &MaskConst, unsigned Factor,
     bool AllZero = true;
     for (unsigned Idx = 0U; Idx < LeafMaskLen; ++Idx) {
       Constant *C = MaskConst.getAggregateElement(F + Idx * Factor);
-      if (!C->isZeroValue()) {
+      if (!C->isNullValue()) {
         AllZero = false;
         break;
       }
@@ -594,7 +594,7 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
       // Check if all the intrinsic arguments are the same, except those that
       // are zeros, which we mark as gaps in the gap mask.
       for (auto [Idx, Arg] : enumerate(IMI->args())) {
-        if (auto *C = dyn_cast<Constant>(Arg); C && C->isZeroValue()) {
+        if (auto *C = dyn_cast<Constant>(Arg); C && C->isNullValue()) {
           GapMask.clearBit(Idx);
           continue;
         }

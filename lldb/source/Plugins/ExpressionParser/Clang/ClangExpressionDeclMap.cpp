@@ -58,7 +58,6 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 using namespace lldb;
@@ -706,8 +705,9 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     if (!namespace_map)
       return;
 
-    LLDB_LOGV(log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
-              namespace_map.get(), namespace_map->size());
+    LLDB_LOG_VERBOSE(
+        log, "  CEDM::FEVD Inspecting (NamespaceMap*){0:x} ({1} entries)",
+        namespace_map.get(), namespace_map->size());
 
     for (ClangASTImporter::NamespaceMapItem &n : *namespace_map) {
       LLDB_LOG(log, "  CEDM::FEVD Searching namespace {0} in module {1}",
@@ -2011,8 +2011,8 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
 
     CXXMethodDecl *method_decl = m_clang_ast_context->AddMethodToCXXRecordType(
         copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", /*asm_label=*/{},
-        method_type, lldb::eAccessPublic, is_virtual, is_static, is_inline,
-        is_explicit, is_attr_used, is_artificial);
+        method_type, is_virtual, is_static, is_inline, is_explicit,
+        is_attr_used, is_artificial);
 
     LLDB_LOG(log,
              "  CEDM::AddThisType Added function $__lldb_expr "

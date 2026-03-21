@@ -83,11 +83,13 @@ public:
 
   bool useFP16ConversionIntrinsics() const override { return false; }
 
+  bool isCLZForZeroUndef() const override { return false; }
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override {
-    if (GPU != OffloadArch::UNUSED)
+    if (GPU != OffloadArch::Unused)
       Features[OffloadArchToString(GPU)] = true;
     // Only add PTX feature if explicitly requested. Otherwise, let the backend
     // use the minimum required PTX version for the target SM.
@@ -146,7 +148,7 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    return StringToOffloadArch(Name) != OffloadArch::UNKNOWN;
+    return StringToOffloadArch(Name) != OffloadArch::Unknown;
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
@@ -157,7 +159,7 @@ public:
 
   bool setCPU(const std::string &Name) override {
     GPU = StringToOffloadArch(Name);
-    return GPU != OffloadArch::UNKNOWN;
+    return GPU != OffloadArch::Unknown;
   }
 
   void setSupportedOpenCLOpts() override {
@@ -165,6 +167,7 @@ public:
     Opts["cl_clang_storage_class_specifiers"] = true;
     Opts["__cl_clang_function_pointers"] = true;
     Opts["__cl_clang_variadic_functions"] = true;
+    Opts["__cl_clang_function_scope_local_variables"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
     Opts["__cl_clang_bitfields"] = true;
 
@@ -175,6 +178,10 @@ public:
     Opts["cl_khr_global_int32_extended_atomics"] = true;
     Opts["cl_khr_local_int32_base_atomics"] = true;
     Opts["cl_khr_local_int32_extended_atomics"] = true;
+
+    Opts["__opencl_c_images"] = true;
+    Opts["__opencl_c_3d_image_writes"] = true;
+    Opts["cl_khr_3d_image_writes"] = true;
 
     Opts["__opencl_c_generic_address_space"] = true;
   }

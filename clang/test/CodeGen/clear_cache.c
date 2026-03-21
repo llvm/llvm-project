@@ -6,11 +6,11 @@ char buffer[32] = "This is a largely unused buffer";
 // __builtin___clear_cache always maps to @llvm.clear_cache, but what
 // each back-end produces is different, and this is tested in LLVM
 
-// CHECK-LABEL: define {{[^@]+}}@main(
+// CHECK-LABEL: @main(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds (i8, ptr @buffer, i64 32))
+// CHECK-NEXT:    call void @llvm.clear_cache(ptr @buffer, ptr getelementptr inbounds nuw (i8, ptr @buffer, i64 32))
 // CHECK-NEXT:    ret i32 0
 //
 int main(void) {

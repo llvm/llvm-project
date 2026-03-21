@@ -282,7 +282,16 @@ int64_t ValueBoundsConstraintSet::insert(Value value,
     if (positionToValueDim[i].has_value())
       valueDimToPosition[*positionToValueDim[i]] = i;
 
-  if (addToWorklist) {
+  // Do not add block arguments from non-entry blocks to the worklist. The
+  // ValueBoundsOpInterface cannot derive any bounds for such values (they
+  // arise from unstructured control flow), so putting them on the worklist
+  // would be a no-op. More importantly, suppressing the worklist push ensures
+  // that processWorklist never calls getExpr on such a value a second time,
+  // which would otherwise cause the same value to be looked up as already
+  // mapped (triggering an unintended bug path).
+  if (addToWorklist &&
+      (!isa<BlockArgument>(value) ||
+       cast<BlockArgument>(value).getOwner()->isEntryBlock())) {
     LDBG() << "Push to worklist: " << value
            << " (dim: " << dim.value_or(kIndexValue) << ")";
     worklist.push(pos);
@@ -334,9 +343,6 @@ int64_t ValueBoundsConstraintSet::getPos(Value value,
                                          std::optional<int64_t> dim) const {
 #ifndef NDEBUG
   assertValidValueDim(value, dim);
-  assert((isa<OpResult>(value) ||
-          cast<BlockArgument>(value).getOwner()->isEntryBlock()) &&
-         "unstructured control flow is not supported");
 #endif // NDEBUG
   LDBG() << "Getting pos for: " << value
          << " (dim: " << dim.value_or(kIndexValue)

@@ -29,6 +29,7 @@ add_llvm_unittest(CASTests
   CASTestConfig.cpp
   NamedValuesSchemaTest.cpp
   ObjectStoreTest.cpp
+  OnDiskCommonUtils.cpp
 
   ${ONDISK_CAS_TEST_SOURCES}
   )

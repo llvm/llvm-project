@@ -2966,11 +2966,12 @@ void tools::addMachineOutlinerArgs(const Driver &D,
         D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
       }
     } else {
-      // Disable all outlining behaviour.
-      //
-      // FIXME: This should probably use the `nooutline` attribute rather than
-      // tweaking Pipeline Pass flags, so `-mno-outline` and `-moutline` objects
-      // can be combined correctly during LTO.
+      if (!IsLTO)
+        // Disable all outlining behaviour using `nooutline` attribute, in case
+        // Linker Invocation lacks `-mno-outline`.
+        CmdArgs.push_back("-mno-outline");
+
+      // Disable Pass in Pipeline
       addArg(Twine("-enable-machine-outliner=never"));
     }
   }
@@ -3068,19 +3069,29 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   }
 }
 
-void tools::addOpenCLBuiltinsLib(const Driver &D,
+void tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
-  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
-  if (!A)
-    return;
 
-  // If the namespec is of the form :filename we use it exactly.
-  StringRef LibclcNamespec(A->getValue());
+  StringRef LibclcNamespec;
+  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
+  if (A) {
+    // If the namespec is of the form :filename we use it exactly.
+    LibclcNamespec = A->getValue();
+  } else {
+    if (!TT.isAMDGPU() || TT.getEnvironment() != llvm::Triple::LLVM)
+      return;
+
+    // TODO: Should this accept following -stdlib to override?
+    if (DriverArgs.hasArg(options::OPT_no_offloadlib,
+                          options::OPT_nodefaultlibs, options::OPT_nostdlib))
+      return;
+  }
+
   bool FilenameSearch = LibclcNamespec.consume_front(":");
   if (FilenameSearch) {
     SmallString<128> LibclcFile(LibclcNamespec);
-    if (llvm::sys::fs::exists(LibclcFile)) {
+    if (D.getVFS().exists(LibclcFile)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
       CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
       return;
@@ -3102,7 +3113,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D,
     if (!CPU.empty()) {
       SmallString<128> CPUPath(BasePath);
       llvm::sys::path::append(CPUPath, CPU, "libclc.bc");
-      if (llvm::sys::fs::exists(CPUPath)) {
+      if (D.getVFS().exists(CPUPath)) {
         CC1Args.push_back("-mlink-builtin-bitcode");
         CC1Args.push_back(DriverArgs.MakeArgString(CPUPath));
         return;
@@ -3113,7 +3124,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D,
   // Fall back to the generic library for the triple.
   SmallString<128> GenericPath(BasePath);
   llvm::sys::path::append(GenericPath, "libclc.bc");
-  if (llvm::sys::fs::exists(GenericPath)) {
+  if (D.getVFS().exists(GenericPath)) {
     CC1Args.push_back("-mlink-builtin-bitcode");
     CC1Args.push_back(DriverArgs.MakeArgString(GenericPath));
     return;

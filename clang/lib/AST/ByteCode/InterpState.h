@@ -118,6 +118,10 @@ public:
     // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
     return Floating(Mem, llvm::APFloatBase::SemanticsToEnum(Sem));
   }
+  const CXXRecordDecl **allocMemberPointerPath(unsigned Length) {
+    return reinterpret_cast<const CXXRecordDecl **>(
+        this->allocate(Length * sizeof(CXXRecordDecl *)));
+  }
 
   /// Note that a step has been executed. If there are no more steps remaining,
   /// diagnoses and returns \c false.
@@ -155,6 +159,8 @@ public:
   /// Whether infinite evaluation steps have been requested. If this is false,
   /// we use the StepsLeft value above.
   const bool InfiniteSteps = false;
+  /// ID identifying this evaluation.
+  const unsigned EvalID;
 
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;

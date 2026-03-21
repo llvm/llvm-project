@@ -803,3 +803,110 @@ define float @ret_known_inf_or_nan_fmul_known_inf_or_nan(float nofpclass(norm su
   %fmul = fmul float %arg0, %arg1
   ret float %fmul
 }
+
+; Cannot introduce overflow, propagate no-infs
+define float @ret_fmul__not_inf__half(float nofpclass(inf) %x) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__not_inf__half(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 5.000000e-01
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, 0.5
+  ret float %mul
+}
+
+; Cannot introduce overflow, propagate no-infs
+define float @ret_fmul__not_inf__neghalf(float nofpclass(inf) %x) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__not_inf__neghalf(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], -5.000000e-01
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, -0.5
+  ret float %mul
+}
+
+define float @ret_fmul__not_pinf__half(float nofpclass(pinf) %x) {
+; CHECK-LABEL: define float @ret_fmul__not_pinf__half(
+; CHECK-SAME: float nofpclass(pinf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 5.000000e-01
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, 0.5
+  ret float %mul
+}
+
+define float @ret_fmul__not_ninf__half(float nofpclass(ninf) %x) {
+; CHECK-LABEL: define float @ret_fmul__not_ninf__half(
+; CHECK-SAME: float nofpclass(ninf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 5.000000e-01
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, 0.5
+  ret float %mul
+}
+
+; Cannot introduce overflow, propagate no-infs
+define float @ret_fmul__not_inf__1(float nofpclass(inf) %x) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__not_inf__1(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 1.000000e+00
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, 1.0
+  ret float %mul
+}
+
+; Cannot introduce overflow, propagate no-infs
+define float @ret_fmul__not_inf__neg1(float nofpclass(inf) %x) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__not_inf__neg1(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], -1.000000e+00
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, -1.0
+  ret float %mul
+}
+
+define float @ret_fmul__not_inf__2(float nofpclass(inf) %x) {
+; CHECK-LABEL: define float @ret_fmul__not_inf__2(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 2.000000e+00
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, 2.0
+  ret float %mul
+}
+
+; Negative test
+define float @ret_fmul__not_inf__nextup_1(float nofpclass(inf) %x) {
+; CHECK-LABEL: define float @ret_fmul__not_inf__nextup_1(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 0x3FF0000020000000
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, 0x3ff0000020000000
+  ret float %mul
+}
+
+; Negative test
+define float @ret_fmul__not_inf__1.5(float nofpclass(inf) %x) {
+; CHECK-LABEL: define float @ret_fmul__not_inf__1.5(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 1.500000e+00
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, 1.5
+  ret float %mul
+}
+
+; Negative test
+define float @ret_fmul__not_inf__neg1.5(float nofpclass(inf) %x) {
+; CHECK-LABEL: define float @ret_fmul__not_inf__neg1.5(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], -1.500000e+00
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, -1.5
+  ret float %mul
+}

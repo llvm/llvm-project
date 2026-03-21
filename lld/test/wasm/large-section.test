@@ -1,9 +1,11 @@
+# REQUIRES: llvm-64-bits
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %t/chunk1.s -o %t/chunk1.o
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %t/chunk2.s -o %t/chunk2.o
 # --no-gc-sections to prevent the linker from optimizing the chunk away, otherwise it produces a tiny output
 # RUN: wasm-ld --no-entry --no-gc-sections %t/chunk1.o %t/chunk2.o -o %t/combined.wasm
 # RUN: llvm-readobj --sections %t/combined.wasm | FileCheck %s
+# RUN: rm %t/chunk1.o %t/chunk2.o %t/combined.wasm
 
 # Check that the linker doesn't crash with large data sections that together exceed 2GB.
 # CHECK: Type: DATA (0xB)

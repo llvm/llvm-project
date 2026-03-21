@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
-#define LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
+#ifndef LLDB_SOURCE_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
+#define LLDB_SOURCE_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
 
 #include "lldb/Core/ProtocolServer.h"
 #include "lldb/Host/MainLoop.h"

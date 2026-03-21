@@ -3645,6 +3645,28 @@ void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
   auto *PrevVD = cast<VarDecl>(Previous);
   D->RedeclLink.setPrevious(PrevVD);
   D->First = PrevVD->First;
+
+  // We should keep at most one definition on the chain.
+  // FIXME: Cache the definition once we've found it. Building a chain with
+  // N definitions currently takes O(N^2) time here.
+  auto *VD = static_cast<VarDecl *>(D);
+  if (VD->isThisDeclarationADefinition() == VarDecl::Definition) {
+    for (VarDecl *CurD = PrevVD; CurD; CurD = CurD->getPreviousDecl()) {
+      if (CurD->isThisDeclarationADefinition() == VarDecl::Definition) {
+        // FIXME: For header modules, there are some problems if we don't
+        // demote definition to declaration.
+        // See clang/test/Modules/module-init-forcelly-loaded-module.cpp
+        // for example. Maybe we are able to handle the CodeGen part
+        // to avoid it emitting duplicated definitions. But just workaround
+        // now temporarily.
+        if (VD->getOwningModule() &&
+            VD->getOwningModule()->isHeaderLikeModule())
+          VD->demoteThisDefinitionToDeclaration();
+        Reader.mergeDefinitionVisibility(CurD, VD);
+        break;
+      }
+    }
+  }
 }
 
 static bool isUndeducedReturnType(QualType T) {
@@ -4958,6 +4980,11 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
           Reader.getContext(), AllocatorKind, Allocator, Alignment, SR));
       break;
     }
+
+    case DeclUpdateKind::DeclMarkedOpenMPIndirectCall:
+      D->addAttr(OMPTargetIndirectCallAttr::CreateImplicit(Reader.getContext(),
+                                                           readSourceRange()));
+      break;
 
     case DeclUpdateKind::DeclExported: {
       unsigned SubmoduleID = readSubmoduleID();

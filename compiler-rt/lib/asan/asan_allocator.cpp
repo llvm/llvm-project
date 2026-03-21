@@ -93,6 +93,11 @@ class ChunkHeader {
   atomic_uint8_t chunk_state;
   u8 alloc_type : 2;
   u8 lsan_tag : 2;
+#if SANITIZER_WINDOWS
+  // True if this was a zero-size allocation upgraded to size 1.
+  // Used to report the original size (0) to the user via HeapSize/RtlSizeHeap.
+  u8 from_zero_alloc : 1;
+#endif
 
   // align < 8 -> 0
   // else      -> log2(min(align, 512)) - 2
@@ -610,6 +615,9 @@ struct Allocator {
     uptr chunk_beg = user_beg - kChunkHeaderSize;
     AsanChunk *m = reinterpret_cast<AsanChunk *>(chunk_beg);
     m->alloc_type = alloc_type;
+#if SANITIZER_WINDOWS
+    m->from_zero_alloc = upgraded_from_zero;
+#endif
     CHECK(size);
     m->SetUsedSize(size);
     m->user_requested_alignment_log = user_requested_alignment_log;
@@ -862,6 +870,23 @@ struct Allocator {
     if (m->Beg() != p) return 0;
     return m->UsedSize();
   }
+
+#if SANITIZER_WINDOWS
+  // Returns true if the allocation at p was a zero-size request that was
+  // internally upgraded to size 1.
+  bool FromZeroAllocation(uptr p) {
+    return reinterpret_cast<AsanChunk*>(p - kChunkHeaderSize)->from_zero_alloc;
+  }
+
+  // Marks an existing size 1 allocation as having originally been zero-size.
+  // Used by SharedReAlloc which augments size 0 to 1 before calling
+  // asan_realloc, bypassing Allocate's own zero-size tracking.
+  void MarkAsZeroAllocation(uptr p) {
+    AsanChunk* m = reinterpret_cast<AsanChunk*>(p - kChunkHeaderSize);
+    m->from_zero_alloc = 1;
+    PoisonShadow(p, ASAN_SHADOW_GRANULARITY, kAsanHeapLeftRedzoneMagic);
+  }
+#endif
 
   uptr AllocationSizeFast(uptr p) {
     return reinterpret_cast<AsanChunk *>(p - kChunkHeaderSize)->UsedSize();
@@ -1125,6 +1150,17 @@ uptr asan_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
     GET_STACK_TRACE_FATAL(pc, bp);
     ReportMallocUsableSizeNotOwned((uptr)ptr, &stack);
   }
+#if SANITIZER_WINDOWS
+  // Zero-size allocations are internally upgraded to size 1 so that
+  // malloc(0)/new(0) return unique non-NULL pointers as required by the
+  // standard. Windows heap APIs (HeapSize, RtlSizeHeap, _msize) should still
+  // report the originally requested size (0).
+  if (usable_size > 0 &&
+      instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr))) {
+    DCHECK(usable_size == 1);
+    return 0;
+  }
+#endif
   return usable_size;
 }
 
@@ -1221,9 +1257,24 @@ void asan_delete_array_sized_aligned(void *ptr, uptr size, uptr alignment,
   asan_delete_sized_aligned(ptr, size, alignment, stack, /*array=*/true);
 }
 
-uptr asan_mz_size(const void *ptr) {
-  return instance.AllocationSize(reinterpret_cast<uptr>(ptr));
+uptr asan_mz_size(const void* ptr) {
+  uptr size = instance.AllocationSize(reinterpret_cast<uptr>(ptr));
+
+#if SANITIZER_WINDOWS
+  if (size > 0 && instance.FromZeroAllocation(reinterpret_cast<uptr>(ptr))) {
+    DCHECK(size == 1);
+    return 0;
+  }
+#endif
+
+  return size;
 }
+
+#if SANITIZER_WINDOWS
+void asan_mark_zero_allocation(void* ptr) {
+  instance.MarkAsZeroAllocation(reinterpret_cast<uptr>(ptr));
+}
+#endif
 
 void asan_mz_force_lock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   instance.ForceLock();

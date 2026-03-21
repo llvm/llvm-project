@@ -45,6 +45,7 @@ class OptimizationRemarkEmitter;
 class TargetTransformInfo;
 class TargetLibraryInfo;
 class VPRecipeBuilder;
+struct VPRegisterUsage;
 struct VFRange;
 
 extern cl::opt<bool> EnableVPlanNativePath;
@@ -233,6 +234,12 @@ public:
     return createNaryOp(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name);
   }
 
+  VPInstruction *createLogicalOr(VPValue *LHS, VPValue *RHS,
+                                 DebugLoc DL = DebugLoc::getUnknown(),
+                                 const Twine &Name = "") {
+    return createNaryOp(VPInstruction::LogicalOr, {LHS, RHS}, DL, Name);
+  }
+
   VPInstruction *createSelect(VPValue *Cond, VPValue *TrueVal,
                               VPValue *FalseVal,
                               DebugLoc DL = DebugLoc::getUnknown(),
@@ -317,6 +324,13 @@ public:
                                      const Twine &Name = "") {
     return tryInsertInstruction(
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
+  }
+
+  VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
+                                          DebugLoc DL,
+                                          const VPIRMetadata &Metadata = {}) {
+    return tryInsertInstruction(new VPInstructionWithType(
+        Instruction::Load, Addr, ResultTy, {}, Metadata, DL));
   }
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -516,7 +530,7 @@ class LoopVectorizationPlanner {
   ///
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
-  InstructionCost cost(VPlan &Plan, ElementCount VF) const;
+  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid
@@ -595,8 +609,8 @@ public:
   /// \return The most profitable vectorization factor and the cost of that VF
   /// for vectorizing the epilogue. Returns VectorizationFactor::Disabled if
   /// epilogue vectorization is not supported for the loop.
-  VectorizationFactor
-  selectEpilogueVectorizationFactor(const ElementCount MainLoopVF, unsigned IC);
+  VectorizationFactor selectEpilogueVectorizationFactor(ElementCount MainLoopVF,
+                                                        unsigned IC);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);
