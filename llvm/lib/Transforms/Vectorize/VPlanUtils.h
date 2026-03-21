@@ -192,6 +192,10 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
 
+/// Finds the speculative-load oracle in \p Plan's vector loop header, if any.
+/// Requires loop regions to be created.
+VPSpeculativeLoadOracleRecipe *findSpeculativeLoadOracle(VPlan &Plan);
+
 /// Returns the (early exiting block, exit block) pairs of \p Plan, i.e. all
 /// edges to an exit block that do not come from \p MiddleVPBB.
 SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>

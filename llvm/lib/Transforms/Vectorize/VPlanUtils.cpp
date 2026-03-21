@@ -616,6 +616,13 @@ VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
   return nullptr;
 }
 
+VPSpeculativeLoadOracleRecipe *vputils::findSpeculativeLoadOracle(VPlan &Plan) {
+  for (VPRecipeBase &R : *Plan.getVectorLoopRegion()->getEntryBasicBlock())
+    if (auto *Oracle = dyn_cast<VPSpeculativeLoadOracleRecipe>(&R))
+      return Oracle;
+  return nullptr;
+}
+
 SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>
 vputils::getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB) {
   SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>> Exits;

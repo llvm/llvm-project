@@ -436,6 +436,7 @@ public:
     VPReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
+    VPSpeculativeLoadOracleSC,
     VPVectorPointerSC,
     VPVectorEndPointerSC,
     VPWidenCallSC,
@@ -640,6 +641,7 @@ public:
     case VPRecipeBase::VPReductionSC:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
+    case VPRecipeBase::VPSpeculativeLoadOracleSC:
     case VPRecipeBase::VPVectorPointerSC:
     case VPRecipeBase::VPVectorEndPointerSC:
     case VPRecipeBase::VPWidenCallSC:
@@ -1328,6 +1330,9 @@ public:
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.
     IncomingAliasMask,
+    // Yields the value of the plan's live-in at the index given by operand 0,
+    // supplied externally when the plan is executed.
+    LiveIn,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     // Abstract instruction that compares two values and branches. This is
@@ -3544,6 +3549,53 @@ public:
   }
 };
 
+/// Defines the oracle function for a @llvm.speculative.load intrinsic call. It
+/// contains a nested VPlan which is used to generate the oracle function,
+/// returning the number of bytes read by the intrinsic.
+class VPSpeculativeLoadOracleRecipe : public VPSingleDefRecipe {
+  std::unique_ptr<VPlan> OraclePlan;
+
+  /// The number of bytes to load per lane.
+  uint64_t AccessSize;
+
+  /// Symbolic value for the base index, which will be passed as argument.
+  std::unique_ptr<VPSymbolicValue> BaseIndex;
+
+public:
+  VPSpeculativeLoadOracleRecipe(
+      std::unique_ptr<VPlan> Oracle, uint64_t AccessSize,
+      ArrayRef<VPValue *> Args,
+      std::unique_ptr<VPSymbolicValue> BaseIndex = nullptr);
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPSpeculativeLoadOracleSC)
+
+  VPSpeculativeLoadOracleRecipe *clone() override;
+  void execute(VPTransformState &State) override;
+
+  InstructionCost computeCost(ElementCount VF, VPCostContext &) const override {
+    return VF.isScalable() ? InstructionCost::getInvalid() : InstructionCost(0);
+  }
+
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  /// Returns the plan the oracle function is generated from.
+  const VPlan &getOraclePlan() const { return *OraclePlan; }
+
+  /// Returns the number of bytes each lane of a speculative load using this
+  /// oracle reads.
+  uint64_t getAccessSize() const { return AccessSize; }
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &Tracker) const override;
+#endif
+};
+
 /// A recipe to combine multiple recipes into a single 'expression' recipe,
 /// which should be considered a single entity for cost-modeling and transforms.
 /// The recipe needs to be 'decomposed', i.e. replaced by its individual
@@ -5173,6 +5225,9 @@ public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the live-ins of this VPlan to \p O.
   void printLiveIns(raw_ostream &O) const;
+
+  /// Print this VPlan to \p O, headed by \p Title.
+  void print(raw_ostream &O, const Twine &Title) const;
 
   /// Print this VPlan to \p O.
   LLVM_ABI_FOR_TEST void print(raw_ostream &O) const;
