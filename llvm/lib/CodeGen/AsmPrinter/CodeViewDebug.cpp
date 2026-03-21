@@ -1338,10 +1338,13 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
       // No encoding currently exists for scalable offsets; bail out.
       continue;
     }
+    if (DerefOffset < INT32_MIN || DerefOffset > INT32_MAX)
+      continue;
 
     // Calculate the label ranges.
-    LocalVarDef DefRange = createDefRangeMem(
-        CVReg, FrameOffset.getFixed() + ExprOffset, DerefOffset);
+    LocalVarDef DefRange =
+        createDefRangeMem(CVReg, FrameOffset.getFixed() + ExprOffset,
+                          static_cast<int32_t>(DerefOffset));
 
     LocalVariable Var;
     Var.DIVar = VI.Var;
