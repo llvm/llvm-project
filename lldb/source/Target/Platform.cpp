@@ -27,6 +27,7 @@
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ModuleCache.h"
 #include "lldb/Target/Platform.h"
@@ -41,6 +42,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
 // Define these constants from POSIX mman.h rather than include the file so
@@ -155,10 +157,79 @@ Status Platform::GetFileWithUUID(const FileSpec &platform_file,
   return Status();
 }
 
+FileSpecList Platform::LocateExecutableScriptingResourcesFromSafePaths(
+    Stream &feedback_stream, FileSpec module_spec, const Target &target) {
+  assert(module_spec);
+  assert(target.GetDebugger().GetScriptInterpreter());
+
+  // For now only Python scripts supported for auto-loading.
+  if (target.GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
+    return {};
+
+  ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
+      target.GetDebugger()
+          .GetScriptInterpreter()
+          ->GetSanitizedScriptingModuleName(
+              module_spec.GetFileNameStrippingExtension().GetStringRef());
+
+  FileSpecList file_list;
+  FileSpecList paths = Debugger::GetSafeAutoLoadPaths();
+
+  // Iterate in reverse so we consider the latest appended path first.
+  for (FileSpec path : llvm::reverse(paths)) {
+    path.AppendPathComponent(sanitized_name.GetOriginalName());
+
+    // Resolve relative paths and '~'.
+    FileSystem::Instance().Resolve(path);
+
+    if (!FileSystem::Instance().Exists(path))
+      continue;
+
+    FileSpec script_fspec = path;
+    script_fspec.AppendPathComponent(
+        llvm::formatv("{0}.py", sanitized_name.GetSanitizedName()).str());
+
+    FileSpec orig_script_fspec = path;
+    orig_script_fspec.AppendPathComponent(
+        llvm::formatv("{0}.py", sanitized_name.GetOriginalName()).str());
+
+    WarnIfInvalidUnsanitizedScriptExists(feedback_stream, sanitized_name,
+                                         orig_script_fspec, script_fspec);
+
+    if (FileSystem::Instance().Exists(script_fspec))
+      file_list.Append(script_fspec);
+
+    // If we successfully found a directory in a safe auto-load path
+    // stop looking at any other paths.
+    break;
+  }
+
+  return file_list;
+}
+
+FileSpecList Platform::LocateExecutableScriptingResourcesForPlatform(
+    Target *target, Module &module, Stream &feedback_stream) {
+  return {};
+}
+
 FileSpecList
 Platform::LocateExecutableScriptingResources(Target *target, Module &module,
                                              Stream &feedback_stream) {
-  return FileSpecList();
+  if (!target)
+    return {};
+
+  // Give derived platforms a chance to locate scripting resources.
+  if (FileSpecList fspecs = LocateExecutableScriptingResourcesForPlatform(
+          target, module, feedback_stream);
+      !fspecs.IsEmpty())
+    return fspecs;
+
+  const FileSpec &module_spec = module.GetFileSpec();
+  if (!module_spec)
+    return {};
+
+  return LocateExecutableScriptingResourcesFromSafePaths(feedback_stream,
+                                                         module_spec, *target);
 }
 
 Status Platform::GetSharedModule(
