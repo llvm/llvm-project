@@ -640,14 +640,14 @@ define i16 @scalar_i16_signed_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; X64-NEXT:    cmpw %si, %di
 ; X64-NEXT:    setle %al
 ; X64-NEXT:    leal -1(%rax,%rax), %ecx
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    movswl %di, %edx
-; X64-NEXT:    movswl %si, %esi
-; X64-NEXT:    subl %edx, %esi
-; X64-NEXT:    cmovll %eax, %esi
-; X64-NEXT:    movzwl %si, %eax
+; X64-NEXT:    movl %edi, %edx
+; X64-NEXT:    subl %esi, %edx
+; X64-NEXT:    movswl %di, %r8d
+; X64-NEXT:    movswl %si, %eax
+; X64-NEXT:    subl %r8d, %eax
+; X64-NEXT:    cmovll %edx, %eax
 ; X64-NEXT:    shrl %eax
+; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    imull %ecx, %eax
 ; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -667,8 +667,8 @@ define i16 @scalar_i16_signed_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:  .LBB10_2:
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    shrl %eax
+; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X86-NEXT:    imull %edx, %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -692,14 +692,14 @@ define i16 @scalar_i16_unsigned_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; X64-NEXT:    cmpw %di, %si
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    leal -1(%rax,%rax), %ecx
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    movzwl %di, %edx
-; X64-NEXT:    movzwl %si, %esi
-; X64-NEXT:    subl %edx, %esi
-; X64-NEXT:    cmovbl %eax, %esi
+; X64-NEXT:    movl %edi, %edx
+; X64-NEXT:    subl %esi, %edx
+; X64-NEXT:    movzwl %di, %r8d
 ; X64-NEXT:    movzwl %si, %eax
+; X64-NEXT:    subl %r8d, %eax
+; X64-NEXT:    cmovbl %edx, %eax
 ; X64-NEXT:    shrl %eax
+; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    imull %ecx, %eax
 ; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -719,8 +719,8 @@ define i16 @scalar_i16_unsigned_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:  .LBB11_2:
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    shrl %eax
+; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X86-NEXT:    imull %edx, %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -747,13 +747,13 @@ define i16 @scalar_i16_signed_mem_reg(ptr %a1_addr, i16 %a2) nounwind {
 ; X64-NEXT:    cmpw %si, %cx
 ; X64-NEXT:    setle %al
 ; X64-NEXT:    leal -1(%rax,%rax), %edx
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    movswl %si, %esi
-; X64-NEXT:    subl %ecx, %esi
-; X64-NEXT:    cmovll %eax, %esi
-; X64-NEXT:    movzwl %si, %eax
+; X64-NEXT:    movl %ecx, %edi
+; X64-NEXT:    subl %esi, %edi
+; X64-NEXT:    movswl %si, %eax
+; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    cmovll %edi, %eax
 ; X64-NEXT:    shrl %eax
+; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    imull %edx, %eax
 ; X64-NEXT:    addl %ecx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -774,8 +774,8 @@ define i16 @scalar_i16_signed_mem_reg(ptr %a1_addr, i16 %a2) nounwind {
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:  .LBB12_2:
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    shrl %eax
+; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X86-NEXT:    imull %edx, %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -806,8 +806,8 @@ define i16 @scalar_i16_signed_reg_mem(i16 %a1, ptr %a2_addr) nounwind {
 ; X64-NEXT:    movswl %di, %esi
 ; X64-NEXT:    subl %esi, %eax
 ; X64-NEXT:    cmovll %edx, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    shrl %eax
+; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    imull %ecx, %eax
 ; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -828,8 +828,8 @@ define i16 @scalar_i16_signed_reg_mem(i16 %a1, ptr %a2_addr) nounwind {
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:  .LBB13_2:
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    shrl %eax
+; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X86-NEXT:    imull %edx, %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -860,8 +860,8 @@ define i16 @scalar_i16_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X64-NEXT:    subl %eax, %esi
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    cmovll %esi, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    shrl %eax
+; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    imull %edx, %eax
 ; X64-NEXT:    addl %ecx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -883,8 +883,8 @@ define i16 @scalar_i16_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:  .LBB14_2:
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    shrl %eax
+; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
 ; X86-NEXT:    imull %edx, %eax
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax

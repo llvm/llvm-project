@@ -725,10 +725,10 @@ define <16 x i8> @test_buildvector_v16i8_register_zero_2(i8 %a2, i8 %a3, i8 %a6,
 define void @PR46461(i16 %x, ptr %y) {
 ; SSE-LABEL: PR46461:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movzwl %di, %eax
-; SSE-NEXT:    movd %eax, %xmm0
+; SSE-NEXT:    shrl %edi
+; SSE-NEXT:    andl $32767, %edi # imm = 0x7FFF
+; SSE-NEXT:    movd %edi, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE-NEXT:    psrld $1, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, 48(%rsi)
 ; SSE-NEXT:    movdqa %xmm0, 32(%rsi)
 ; SSE-NEXT:    movdqa %xmm0, 16(%rsi)
@@ -737,10 +737,10 @@ define void @PR46461(i16 %x, ptr %y) {
 ;
 ; AVX1-LABEL: PR46461:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    movzwl %di, %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    shrl %edi
+; AVX1-NEXT:    andl $32767, %edi # imm = 0x7FFF
+; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
@@ -749,9 +749,9 @@ define void @PR46461(i16 %x, ptr %y) {
 ;
 ; AVX2-LABEL: PR46461:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movzwl %di, %eax
-; AVX2-NEXT:    shrl %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    shrl %edi
+; AVX2-NEXT:    andl $32767, %edi # imm = 0x7FFF
+; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)

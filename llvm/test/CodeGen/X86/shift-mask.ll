@@ -119,21 +119,13 @@ define i16 @test_i16_shl_lshr_1(i16 %a0) {
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
-; X64-MASK-LABEL: test_i16_shl_lshr_1:
-; X64-MASK:       # %bb.0:
-; X64-MASK-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-MASK-NEXT:    leal (,%rdi,4), %eax
-; X64-MASK-NEXT:    andl $65504, %eax # imm = 0xFFE0
-; X64-MASK-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-MASK-NEXT:    retq
-;
-; X64-SHIFT-LABEL: test_i16_shl_lshr_1:
-; X64-SHIFT:       # %bb.0:
-; X64-SHIFT-NEXT:    movzwl %di, %eax
-; X64-SHIFT-NEXT:    shrl $3, %eax
-; X64-SHIFT-NEXT:    shll $5, %eax
-; X64-SHIFT-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-SHIFT-NEXT:    retq
+; X64-LABEL: test_i16_shl_lshr_1:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (,%rdi,4), %eax
+; X64-NEXT:    andl $65504, %eax # imm = 0xFFE0
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
   %1 = lshr i16 %a0, 3
   %2 = shl i16 %1, 5
   ret i16 %2
@@ -148,21 +140,13 @@ define i16 @test_i16_shl_lshr_2(i16 %a0) {
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
-; X64-MASK-LABEL: test_i16_shl_lshr_2:
-; X64-MASK:       # %bb.0:
-; X64-MASK-NEXT:    movl %edi, %eax
-; X64-MASK-NEXT:    shrl $2, %eax
-; X64-MASK-NEXT:    andl $16376, %eax # imm = 0x3FF8
-; X64-MASK-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-MASK-NEXT:    retq
-;
-; X64-SHIFT-LABEL: test_i16_shl_lshr_2:
-; X64-SHIFT:       # %bb.0:
-; X64-SHIFT-NEXT:    movzwl %di, %eax
-; X64-SHIFT-NEXT:    shrl $5, %eax
-; X64-SHIFT-NEXT:    shll $3, %eax
-; X64-SHIFT-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-SHIFT-NEXT:    retq
+; X64-LABEL: test_i16_shl_lshr_2:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl $2, %eax
+; X64-NEXT:    andl $16376, %eax # imm = 0x3FF8
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
   %1 = lshr i16 %a0, 5
   %2 = shl i16 %1, 3
   ret i16 %2
