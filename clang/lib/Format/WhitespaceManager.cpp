@@ -443,7 +443,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
 }
 
 namespace {
-enum class AlignStrategy { Normal, Macros, CaseBody, CaseColon };
+enum class AlignStrategy { Normal, Macro, CaseBody, CaseColon };
 } // namespace
 
 // Walk through a subset of the changes, starting at StartAt, and find
@@ -557,7 +557,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
   unsigned I = StartAt;
   const auto E = Changes.size();
-  for (const auto LoopEnd = E - (Strategy == AlignStrategy::CaseBody ? 1 : 0);
+  for (const auto LoopEnd = Strategy == AlignStrategy::CaseBody ? E - 1 : E;
        I != LoopEnd; ++I) {
     auto &CurrentChange = Changes[I];
     if (CurrentChange.indentAndNestingLevel() < IndentAndNestingLevel)
@@ -606,9 +606,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
       continue;
 
     const auto IndexToAlign = Strategy == AlignStrategy::CaseBody ? I + 1 : I;
-    const auto &ChangeToAlign = Strategy == AlignStrategy::CaseBody
-                                    ? Changes[IndexToAlign]
-                                    : CurrentChange;
+    const auto &ChangeToAlign = Changes[IndexToAlign];
+
     const auto [AlignTheToken,
                 ShiftAlignment] = [&]() -> std::pair<bool, bool> {
       switch (Strategy) {
@@ -634,7 +633,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
           Tok = Tok->getNextNonComment();
         return {Tok && Tok->isOneOf(tok::kw_case, tok::kw_default), false};
       }
-      case AlignStrategy::Macros:
+      case AlignStrategy::Macro:
       case AlignStrategy::Normal:
         return {true, false};
       }
@@ -796,7 +795,7 @@ void WhitespaceManager::alignConsecutiveMacros() {
     return Current->endsSequence(tok::identifier, tok::pp_define);
   };
 
-  AlignTokens<decltype(AlignMacrosMatches) &, AlignStrategy::Macros>(
+  AlignTokens<decltype(AlignMacrosMatches) &, AlignStrategy::Macro>(
       Style, AlignMacrosMatches, Changes, 0, Style.AlignConsecutiveMacros);
 }
 
