@@ -990,11 +990,13 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     }
 
     if (ParseAsExpression) {
-      Diag(Tok,
-           getLangOpts().CPlusPlus26
-               ? diag::warn_cxx20_compat_static_assert_user_generated_message
-               : diag::ext_cxx_static_assert_user_generated_message);
       AssertMessage = ParseConstantExpressionInExprEvalContext();
+      if (Tok.is(tok::r_paren)) {
+        Diag(Tok,
+             getLangOpts().CPlusPlus26
+                 ? diag::warn_cxx20_compat_static_assert_user_generated_message
+                 : diag::ext_cxx_static_assert_user_generated_message);
+      }
     } else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
       AssertMessage = ParseUnevaluatedStringLiteralExpression();
     else {
@@ -1010,7 +1012,8 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     }
   }
 
-  if (T.consumeClose())
+  bool StopAt = Tok.isNot(tok::r_paren);
+  if (T.consumeClose() || StopAt)
     return nullptr;
 
   DeclEnd = Tok.getLocation();
