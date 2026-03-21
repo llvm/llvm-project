@@ -2919,7 +2919,7 @@ class Type(Structure):
         """
         return conf.lib.clang_Type_getSizeOf(self)  # type: ignore [no-any-return]
 
-    def get_offset(self, fieldname: str) -> int:
+    def get_offset(self, fieldname: TUnion[str, bytes]) -> int:
         """
         Retrieve the offset of a field in the record.
         """
