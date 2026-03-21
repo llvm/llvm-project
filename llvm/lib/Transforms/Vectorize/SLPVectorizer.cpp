@@ -10267,7 +10267,7 @@ static std::pair<size_t, size_t> generateKeySubkey(
     } else {
       SubKey = hash_value(I->getOpcode());
     }
-    Key = hash_combine(hash_value(I->getParent()), Key);
+    Key = hash_combine(hash_value(I->getParent()->getNumber()), Key);
   }
   return std::make_pair(Key, SubKey);
 }
@@ -13353,7 +13353,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
     return;
 
   auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
-    Key = hash_combine(hash_value(LI->getParent()), Key);
+    Key = hash_combine(hash_value(LI->getParent()->getNumber()), Key);
     Value *Ptr =
         getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth);
     if (LoadKeyUsed.contains(Key)) {
@@ -26325,7 +26325,7 @@ public:
     SmallSet<size_t, 2> LoadKeyUsed;
 
     auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
-      Key = hash_combine(hash_value(LI->getParent()), Key);
+      Key = hash_combine(hash_value(LI->getParent()->getNumber()), Key);
       Value *Ptr =
           getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth);
       if (!LoadKeyUsed.insert(Key).second) {
