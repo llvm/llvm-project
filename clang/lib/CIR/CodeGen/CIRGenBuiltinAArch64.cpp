@@ -180,6 +180,35 @@ static mlir::Value emitNeonSplat(CIRGenBuilderTy &builder, mlir::Location loc,
   int64_t laneCst = getIntValueFromConstOp(lane);
   llvm::SmallVector<int64_t, 4> shuffleMask(resEltCnt, laneCst);
   return builder.createVecShuffle(loc, v, shuffleMask);
+  }
+
+/// Build a constant shift amount vector of `vecTy` to shift a vector
+/// Here `shitfVal` is a constant integer that will be splated into a
+/// a const vector of `vecTy` which is the return of this function
+static mlir::Value emitNeonShiftVector(CIRGenBuilderTy &builder,
+                                       mlir::Value shiftVal,
+                                       cir::VectorType vecTy,
+                                       mlir::Location loc, bool neg) {
+  int shiftAmt = getIntValueFromConstOp(shiftVal);
+  if (neg)
+    shiftAmt = -shiftAmt;
+  llvm::SmallVector<mlir::Attribute> vecAttr{
+      vecTy.getSize(),
+      // ConstVectorAttr requires cir::IntAttr
+      cir::IntAttr::get(vecTy.getElementType(), shiftAmt)};
+  cir::ConstVectorAttr constVecAttr = cir::ConstVectorAttr::get(
+      vecTy, mlir::ArrayAttr::get(builder.getContext(), vecAttr));
+  return cir::ConstantOp::create(builder, loc, constVecAttr);
+}
+
+static mlir::Value
+emitCommonNeonShift(CIRGenBuilderTy &builder, mlir::Location loc,
+                    cir::VectorType resTy, mlir::Value shifTgt,
+                    mlir::Value shiftAmt, bool shiftLeft, bool negAmt = false) {
+  shiftAmt = emitNeonShiftVector(builder, shiftAmt, resTy, loc, negAmt);
+  return cir::ShiftOp::create(builder, loc, resTy,
+                              builder.createBitcast(shifTgt, resTy), shiftAmt,
+                              shiftLeft);
 }
 
 static mlir::Value emitCommonNeonBuiltinExpr(
@@ -419,12 +448,8 @@ static mlir::Value emitCommonNeonBuiltinExpr(
                          ctx.BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vshl_n_v:
-  case NEON::BI__builtin_neon_vshlq_n_v: {
-    auto rhsScalar = cgf.getBuilder().createIntCast(ops[1], vTy.getElementType());
-    auto rhsVec = cir::VecSplatOp::create(cgf.getBuilder(),loc, vTy, rhsScalar);
-    auto lhsVec = cgf.getBuilder().createBitcast(ops[0], vTy);
-    return cgf.getBuilder().createShiftLeft(loc, lhsVec, rhsVec);
-  }
+  case NEON::BI__builtin_neon_vshlq_n_v:
+    return emitCommonNeonShift(cgf.getBuilder(), loc, vTy, ops[0], ops[1], true);
   case NEON::BI__builtin_neon_vshll_n_v:
   case NEON::BI__builtin_neon_vshrn_n_v:
   case NEON::BI__builtin_neon_vshr_n_v:
