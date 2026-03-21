@@ -449,7 +449,8 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     return mlir::Value{};
   case NEON::BI__builtin_neon_vshl_n_v:
   case NEON::BI__builtin_neon_vshlq_n_v:
-    return emitCommonNeonShift(cgf.getBuilder(), loc, vTy, ops[0], ops[1], true);
+    return emitCommonNeonShift(cgf.getBuilder(), loc, vTy, ops[0], ops[1],
+                               true);
   case NEON::BI__builtin_neon_vshll_n_v:
   case NEON::BI__builtin_neon_vshrn_n_v:
   case NEON::BI__builtin_neon_vshr_n_v:
