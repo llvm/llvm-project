@@ -5749,9 +5749,9 @@ libc_support_library(
     name = "__support_math_sqrtbf16",
     hdrs = ["src/__support/math/sqrtbf16.h"],
     deps = [
+        ":__support_common",
         ":__support_fputil_bfloat16",
         ":__support_fputil_sqrt",
-        ":__support_common",
         ":__support_macros_config",
     ],
 )

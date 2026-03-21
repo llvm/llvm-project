@@ -1,4 +1,4 @@
-//===-- Implementation header for sqrtf16 -----------------------*- C++ -*-===//
+//===-- Implementation header for sqrtbf16 ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SQRTF16_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_SQRTF16_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SQRTBF16_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_SQRTBF16_H
 
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/sqrt.h"
@@ -17,9 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE bfloat16 sqrtbf16(bfloat16 x) {
-    return fputil::sqrt<bfloat16>(x);
-}
+LIBC_INLINE bfloat16 sqrtbf16(bfloat16 x) { return fputil::sqrt<bfloat16>(x); }
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL

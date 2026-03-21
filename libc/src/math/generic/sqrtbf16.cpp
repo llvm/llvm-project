@@ -11,6 +11,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(bfloat16, sqrtbf16, (bfloat16 x)) { return math::sqrtbf16(x); }
+LLVM_LIBC_FUNCTION(bfloat16, sqrtbf16, (bfloat16 x)) {
+  return math::sqrtbf16(x);
+}
 
 } // namespace LIBC_NAMESPACE_DECL
