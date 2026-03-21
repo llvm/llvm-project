@@ -2682,8 +2682,8 @@ define <32 x float> @test_mfma_loop_non_splat_ret_use() #0 {
 ; GFX908-NEXT:    v_accvgpr_write_b32 a3, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a2, 0
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, 0
-; GFX908-NEXT:    s_mov_b32 s4, 16
 ; GFX908-NEXT:    v_mov_b32_e32 v0, 1.0
+; GFX908-NEXT:    s_mov_b32 s4, 16
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GFX908-NEXT:  .LBB11_1: ; %for.cond.preheader
 ; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1

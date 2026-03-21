@@ -26,8 +26,8 @@ MyObj* return_local_addr() {
 // CHECK-NEXT:       Dest: [[O_RET_VAL:[0-9]+]] (Expr: ImplicitCastExpr, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_P]] (Decl: p, Type : MyObj *)
 // CHECK:   Expire ([[L_X]] (Path: x))
-// CHECK:   Expire ({{[0-9]+}} (Path: p))
-// CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr, Type : MyObj *))
+// CHECK:   Expire ({{[0-9]+}} (Path: p), Origin: [[O_P]] (Decl: p, Type : MyObj *))
+// CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr, Type : MyObj *), via Return)
 }
 
 // Loan Expiration (Automatic Variable, C++)

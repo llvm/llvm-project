@@ -1187,7 +1187,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       return common::visit(
           [&](auto &kx) {
             if (auto len{kx.LEN()}) {
-              if (IsScopeInvariantExpr(*len)) {
+              if (IsScopeInvariantExpr(*len, &context)) {
                 return Fold(context, ConvertToType<T>(*std::move(len)));
               } else {
                 return Expr<T>{std::move(funcRef)};
@@ -1509,7 +1509,7 @@ Expr<TypeParamInquiry::Result> FoldOperation(
           paramValue{
               declType->derivedTypeSpec().FindParameter(parameterName)}) {
         const semantics::MaybeIntExpr &paramExpr{paramValue->GetExplicit()};
-        if (paramExpr && IsConstantExpr(*paramExpr)) {
+        if (paramExpr && IsConstantExpr(*paramExpr, &context)) {
           Expr<SomeInteger> intExpr{*paramExpr};
           return Fold(context,
               ConvertToType<TypeParamInquiry::Result>(std::move(intExpr)));
@@ -1530,7 +1530,7 @@ Expr<TypeParamInquiry::Result> FoldOperation(
           if (details) {
             isLen = details->attr() == common::TypeParamAttr::Len;
             const semantics::MaybeIntExpr &initExpr{details->init()};
-            if (initExpr && IsConstantExpr(*initExpr) &&
+            if (initExpr && IsConstantExpr(*initExpr, &context) &&
                 (!isLen || ToInt64(*initExpr))) {
               Expr<SomeInteger> expr{*initExpr};
               return Fold(context,

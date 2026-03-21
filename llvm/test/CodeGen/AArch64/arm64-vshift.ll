@@ -2,13 +2,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:    warning: Instruction selection used fallback path for sqshrn1s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqshrun1s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrn1s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for sqrshrun1s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqrshrn1s
-; CHECK-GI-NEXT:    warning: Instruction selection used fallback path for uqshrn1s
-
 define <8 x i8> @sqshl8b(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl8b:
 ; CHECK:       // %bb.0:
@@ -2514,8 +2507,7 @@ define <1 x i64> @neon_ushl_vscalar_constant_shift(ptr %A) nounwind {
 define i64 @neon_ushl_scalar_constant_shift(ptr %A) nounwind {
 ; CHECK-SD-LABEL: neon_ushl_scalar_constant_shift:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    shl d0, d0, #1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
@@ -2807,8 +2799,7 @@ define <1 x i64> @neon_sshll_vscalar_constant_shift(ptr %A) nounwind {
 define i64 @neon_sshll_scalar_constant_shift(ptr %A) nounwind {
 ; CHECK-SD-LABEL: neon_sshll_scalar_constant_shift:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    shl d0, d0, #1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
@@ -2831,8 +2822,7 @@ define i64 @neon_sshll_scalar_constant_shift(ptr %A) nounwind {
 define i64 @neon_sshll_scalar_constant_shift_m1(ptr %A) nounwind {
 ; CHECK-SD-LABEL: neon_sshll_scalar_constant_shift_m1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    sshr d0, d0, #1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret

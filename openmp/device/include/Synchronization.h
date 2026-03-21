@@ -42,20 +42,7 @@ enum MemScopeTy {
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 V inc(Ty *Address, V Val, atomic::OrderingTy Ordering,
       MemScopeTy MemScope = MemScopeTy::device) {
-#if defined(__SPIRV__)
-  uint32_t Old;
-  while (true) {
-    Old = load(Address, Ordering, MemScope);
-    if (Old >= Val) {
-      if (cas(Address, Old, 0u, Ordering, Ordering, MemScope))
-        break;
-    } else if (cas(Address, Old, Old + 1, Ordering, Ordering, MemScope))
-      break;
-  }
-  return Old;
-#else
   return __scoped_atomic_fetch_uinc(Address, Val, Ordering, MemScope);
-#endif
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
@@ -75,11 +62,7 @@ V add(Ty *Address, V Val, atomic::OrderingTy Ordering,
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 V load(Ty *Address, atomic::OrderingTy Ordering,
        MemScopeTy MemScope = MemScopeTy::device) {
-#ifdef __NVPTX__
-  return __scoped_atomic_fetch_add(Address, V(0), Ordering, MemScope);
-#else
   return __scoped_atomic_load_n(Address, Ordering, MemScope);
-#endif
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
@@ -192,6 +175,25 @@ atomicExchange(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
 
 } // namespace atomic
 
+namespace fence {
+
+/// Memory fence with \p Ordering semantics for the team.
+static inline void team(atomic::OrderingTy Ordering) {
+  __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
+}
+
+/// Memory fence with \p Ordering semantics for the contention group.
+static inline void kernel(atomic::OrderingTy Ordering) {
+  __scoped_atomic_thread_fence(Ordering, atomic::device);
+}
+
+/// Memory fence with \p Ordering semantics for the system.
+static inline void system(atomic::OrderingTy Ordering) {
+  __scoped_atomic_thread_fence(Ordering, atomic::system);
+}
+
+} // namespace fence
+
 namespace synchronize {
 
 /// Initialize the synchronization machinery. Must be called by all threads.
@@ -204,8 +206,18 @@ static inline void warp(LaneMaskTy Mask) { __gpu_sync_lane(Mask); }
 /// barrier according to \p Ordering. Note that the fence might be part of the
 /// barrier.
 static inline void threads(atomic::OrderingTy Ordering) {
-#ifdef __NVPTX__
+#if defined(__NVPTX__)
   __nvvm_barrier_sync(8);
+#elif defined(__AMDGPU__)
+  if (Ordering != atomic::relaxed)
+    fence::team(Ordering == atomic::acq_rel ? atomic::release
+                                            : atomic::seq_cst);
+
+  __builtin_amdgcn_s_barrier();
+
+  if (Ordering != atomic::relaxed)
+    fence::team(Ordering == atomic::acq_rel ? atomic::acquire
+                                            : atomic::seq_cst);
 #else
   __gpu_sync_threads();
 #endif
@@ -228,38 +240,6 @@ threadsAligned(atomic::OrderingTy Ordering);
 ///}
 
 } // namespace synchronize
-
-// FIXME: NVPTX does not respect the memory scope argument.
-namespace fence {
-
-/// Memory fence with \p Ordering semantics for the team.
-static inline void team(atomic::OrderingTy Ordering) {
-#ifdef __NVPTX__
-  __nvvm_membar_cta();
-#else
-  __scoped_atomic_thread_fence(Ordering, atomic::workgroup);
-#endif
-}
-
-/// Memory fence with \p Ordering semantics for the contention group.
-static inline void kernel(atomic::OrderingTy Ordering) {
-#ifdef __NVPTX__
-  __nvvm_membar_gl();
-#else
-  __scoped_atomic_thread_fence(Ordering, atomic::device);
-#endif
-}
-
-/// Memory fence with \p Ordering semantics for the system.
-static inline void system(atomic::OrderingTy Ordering) {
-#ifdef __NVPTX__
-  __nvvm_membar_sys();
-#else
-  __scoped_atomic_thread_fence(Ordering, atomic::system);
-#endif
-}
-
-} // namespace fence
 
 } // namespace ompx
 

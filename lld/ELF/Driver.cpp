@@ -236,8 +236,10 @@ bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
       IRObjectFile::findBitcodeInMemBuffer(mb);
   if (errorToBool(fatLTOData.takeError()))
     return false;
-  files.push_back(std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
-                                                offsetInArchive, lazy));
+  auto file = std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
+                                            offsetInArchive, lazy);
+  file->obj->fatLTOObject(true);
+  files.push_back(std::move(file));
   return true;
 }
 
@@ -3017,6 +3019,13 @@ static void readSecurityNotes(Ctx &ctx) {
                   << ": -z force-ibt: file does not have "
                      "GNU_PROPERTY_X86_FEATURE_1_IBT property";
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
+    }
+    if (ctx.arg.zGcs == GcsPolicy::Always &&
+        !(features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)) {
+      if (ctx.arg.zGcsReport == ReportPolicy::None)
+        Warn(ctx) << f
+                  << ": -z gcs: file does not have "
+                     "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
     }
     if (ctx.arg.zPacPlt && !(hasValidPauthAbiCoreInfo ||
                              (features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC))) {

@@ -80,7 +80,7 @@ enum {
 
 ModuleListProperties::ModuleListProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>("symbols");
-  m_collection_sp->Initialize(g_modulelist_properties);
+  m_collection_sp->Initialize(g_modulelist_properties_def);
   m_collection_sp->SetValueChangedCallback(ePropertySymLinkPaths,
                                            [this] { UpdateSymlinkMappings(); });
 
@@ -115,6 +115,13 @@ SymbolDownload ModuleListProperties::GetSymbolAutoDownload() const {
   const uint32_t idx = ePropertyAutoDownload;
   return GetPropertyAtIndexAs<lldb::SymbolDownload>(
       idx, static_cast<lldb::SymbolDownload>(
+               g_modulelist_properties[idx].default_uint_value));
+}
+
+SymbolSharedCacheUse ModuleListProperties::GetSharedCacheBinaryLoading() const {
+  const uint32_t idx = ePropertySharedCacheBinaryLoading;
+  return GetPropertyAtIndexAs<lldb::SymbolSharedCacheUse>(
+      idx, static_cast<lldb::SymbolSharedCacheUse>(
                g_modulelist_properties[idx].default_uint_value));
 }
 
@@ -1081,11 +1088,10 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
             old_modules->push_back(module_sp);
 
           Log *log = GetLog(LLDBLog::Modules);
-          if (log != nullptr)
-            LLDB_LOGF(
-                log, "%p '%s' module changed: removing from global module list",
-                static_cast<void *>(module_sp.get()),
-                module_sp->GetFileSpec().GetFilename().GetCString());
+          LLDB_LOGF(log,
+                    "%p '%s' module changed: removing from global module list",
+                    static_cast<void *>(module_sp.get()),
+                    module_sp->GetFileSpec().GetFilename().GetCString());
 
           shared_module_list.Remove(module_sp);
           module_sp.reset();
@@ -1101,18 +1107,26 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   if (module_sp)
     return error;
 
-  // Try target's platform locate module callback before second attempt.
+  // Try platform's locate module callback before second attempt.
+  // The platform can come from either the Target (if available) or directly
+  // from the ModuleSpec (useful when Target is not yet created, e.g., during
+  // target creation for launch mode).
   if (invoke_locate_callback) {
-    TargetSP target_sp = module_spec.GetTargetSP();
-    if (target_sp && target_sp->IsValid()) {
-      if (PlatformSP platform_sp = target_sp->GetPlatform()) {
-        FileSpec symbol_file_spec;
-        platform_sp->CallLocateModuleCallbackIfSet(
-            module_spec, module_sp, symbol_file_spec, did_create_ptr);
-        if (module_sp) {
-          // The callback found a module.
-          return error;
-        }
+    PlatformSP platform_sp;
+    if (TargetSP target_sp = module_spec.GetTargetSP()) {
+      if (target_sp->IsValid())
+        platform_sp = target_sp->GetPlatform();
+    }
+    if (!platform_sp)
+      platform_sp = module_spec.GetPlatformSP();
+
+    if (platform_sp) {
+      FileSpec symbol_file_spec;
+      platform_sp->CallLocateModuleCallbackIfSet(
+          module_spec, module_sp, symbol_file_spec, did_create_ptr);
+      if (module_sp) {
+        // The callback found a module.
+        return error;
       }
     }
   }
@@ -1320,7 +1334,6 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const ModuleWP module_wp) {
 
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 std::list<Status> &errors,
-                                                Stream &feedback_stream,
                                                 bool continue_on_error) {
   if (!target)
     return false;
@@ -1334,8 +1347,7 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
   for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
-      if (!module->LoadScriptingResourceInTarget(target, error,
-                                                 feedback_stream)) {
+      if (!module->LoadScriptingResourceInTarget(target, error)) {
         if (error.Fail() && error.AsCString()) {
           error = Status::FromErrorStringWithFormat(
               "unable to load scripting data for "

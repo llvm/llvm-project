@@ -280,6 +280,9 @@ def parseOptionsAndInitTestdirs():
         configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
         configuration.yaml2obj = shutil.which("yaml2obj", path=args.llvm_tools_dir)
+        configuration.nm = shutil.which(
+            "llvm-nm", path=args.llvm_tools_dir
+        ) or shutil.which("nm", path=args.llvm_tools_dir)
 
     if not configuration.get_filecheck_path():
         logging.warning("No valid FileCheck executable; some tests may fail...")
@@ -465,6 +468,9 @@ def parseOptionsAndInitTestdirs():
 
     if args.enabled_plugins:
         configuration.enabled_plugins = args.enabled_plugins
+
+    if args.enable_mte:
+        configuration.mte_enabled = True
 
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:

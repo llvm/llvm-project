@@ -39,8 +39,8 @@
 ; CHECK: %[[#Volatile:]] = OpFunctionParameter %[[#]]
 
 ; CHECK: %[[#Entry:]] = OpLabel
-; CHECK: %[[#IsZeroLen:]] = OpIEqual %[[#]] %[[#Zero:]] %[[#Len]]
-; CHECK: OpBranchConditional %[[#IsZeroLen]] %[[#End:]] %[[#WhileBody:]]
+; CHECK: %[[#IsNonZeroLen:]] = OpINotEqual %[[#]] %[[#Len]] %[[#Zero:]]
+; CHECK: OpBranchConditional %[[#IsNonZeroLen]] %[[#WhileBody:]] %[[#End:]]
 
 ; CHECK: %[[#WhileBody]] = OpLabel
 ; CHECK: %[[#Offset:]] = OpPhi %[[#]] %[[#Zero]] %[[#Entry]] %[[#OffsetInc:]] %[[#WhileBody]]

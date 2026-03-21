@@ -398,7 +398,7 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
     TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-    TTI::TargetCostKind CostKind) const {
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
   if (!VF.isFixed() || !ST->hasSIMD128())
     return Invalid;
@@ -451,19 +451,6 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
     return OpAExtend == TTI::PR_SignExtend ? Cost * 2 : Cost * 4;
 
   return Invalid;
-}
-
-InstructionCost
-WebAssemblyTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                          TTI::TargetCostKind CostKind) const {
-  switch (ICA.getID()) {
-  case Intrinsic::experimental_vector_extract_last_active:
-    // TODO: Remove once the intrinsic can be lowered without crashes.
-    return InstructionCost::getInvalid();
-  default:
-    break;
-  }
-  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
 TTI::ReductionShuffle WebAssemblyTTIImpl::getPreferredExpandedReductionShuffle(

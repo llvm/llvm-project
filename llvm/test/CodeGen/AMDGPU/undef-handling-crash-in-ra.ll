@@ -50,7 +50,6 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    v_mov_b32_e32 v60, s66
 ; CHECK-NEXT:    v_mov_b32_e32 v61, s67
 ; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[62:63]
-; CHECK-NEXT:    ; kill: def $sgpr15 killed $sgpr15
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:    flat_load_dwordx2 a[32:33], v[56:57]
@@ -67,7 +66,6 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    flat_store_dwordx2 v[44:45], v[58:59]
 ; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[62:63]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ; kill: def $sgpr15 killed $sgpr15
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
 ; CHECK-NEXT:    flat_load_dwordx2 v[0:1], v[46:47] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -184,6 +182,6 @@ sw.bb7.i.i.i3.i.i:                                ; preds = %bb.3
 bb.4: ; preds = %sw.bb7.i.i.i3.i.i, %bb.3
   %phi.4 = phi <4 x i32> [ %phi.3, %bb.3 ], [ %insert.0, %sw.bb7.i.i.i3.i.i ]
   %extract = extractelement <4 x i32> %phi.4, i64 0
-  store i32 %extract, ptr addrspace(5) null, align 4
+  store i32 %extract, ptr addrspace(5) zeroinitializer, align 4
   ret void
 }

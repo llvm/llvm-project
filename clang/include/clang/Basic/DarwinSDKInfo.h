@@ -181,25 +181,37 @@ public:
   using PlatformInfoStorageType = SmallVector<SDKPlatformInfo, 2>;
 
   DarwinSDKInfo(
-      std::string FilePath, VersionTuple Version,
-      VersionTuple MaximumDeploymentTarget,
+      std::string FilePath, llvm::Triple::OSType OS,
+      llvm::Triple::EnvironmentType Environment, VersionTuple Version,
+      StringRef DisplayName, VersionTuple MaximumDeploymentTarget,
       PlatformInfoStorageType PlatformInfos,
       llvm::DenseMap<OSEnvPair::StorageType,
                      std::optional<RelatedTargetVersionMapping>>
           VersionMappings =
               llvm::DenseMap<OSEnvPair::StorageType,
                              std::optional<RelatedTargetVersionMapping>>())
-      : FilePath(FilePath), Version(Version),
+      : FilePath(FilePath), OS(OS), Environment(Environment), Version(Version),
+        DisplayName(DisplayName),
         MaximumDeploymentTarget(MaximumDeploymentTarget),
         PlatformInfos(std::move(PlatformInfos)),
         VersionMappings(std::move(VersionMappings)) {}
 
   StringRef getFilePath() const { return FilePath; }
 
+  llvm::Triple::OSType getOS() const { return OS; }
+
+  llvm::Triple::EnvironmentType getEnvironment() const { return Environment; }
+
   const llvm::VersionTuple &getVersion() const { return Version; }
+
+  const StringRef getDisplayName() const { return DisplayName; }
 
   const SDKPlatformInfo &getCanonicalPlatformInfo() const {
     return PlatformInfos[0];
+  }
+
+  bool supportsTriple(llvm::Triple Triple) const {
+    return llvm::find(PlatformInfos, Triple) != PlatformInfos.end();
   }
 
   const StringRef getPlatformPrefix(llvm::Triple Triple) const {
@@ -233,7 +245,10 @@ public:
 
 private:
   std::string FilePath;
+  llvm::Triple::OSType OS;
+  llvm::Triple::EnvironmentType Environment;
   VersionTuple Version;
+  std::string DisplayName;
   VersionTuple MaximumDeploymentTarget;
   PlatformInfoStorageType PlatformInfos;
   // Need to wrap the value in an optional here as the value has to be default

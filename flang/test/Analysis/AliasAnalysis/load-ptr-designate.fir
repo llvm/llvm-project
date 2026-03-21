@@ -236,12 +236,10 @@ func.func @_QPtest.fir() {
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> t_obj%alloc.tgt.fir#0: MayAlias
 
 // The address in an allocatable cannot alias the address of that allocatable.
-// TODO: Thus, we expect all cases below to be NoAlias.  However, target dummy
-// args are currently indiscrimnately analyzed as MayAlias.
 // CHECK-DAG: obj%alloc#0 <-> obj%alloc.tgt#0: NoAlias
-// CHECK-DAG: t_obj%alloc#0 <-> t_obj%alloc.tgt#0: MayAlias
+// CHECK-DAG: t_obj%alloc#0 <-> t_obj%alloc.tgt#0: NoAlias
 // CHECK-DAG: obj%alloc.fir#0 <-> obj%alloc.tgt.fir#0: NoAlias
-// CHECK-DAG: t_obj%alloc.fir#0 <-> t_obj%alloc.tgt.fir#0: MayAlias
+// CHECK-DAG: t_obj%alloc.fir#0 <-> t_obj%alloc.tgt.fir#0: NoAlias
 
 // The address of a composite aliases the address of any component but not the
 // address in a pointer or allocatable component.

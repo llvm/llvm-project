@@ -33,7 +33,7 @@ namespace impl {
 ///{
 #ifdef __AMDGPU__
 
-[[clang::loader_uninitialized]] static Local<uint32_t> namedBarrierTracker;
+[[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
 
 void namedBarrierInit() {
   // Don't have global ctors, and shared memory is not zero init
@@ -85,12 +85,6 @@ void namedBarrier() {
     }
   }
   fence::team(atomic::release);
-}
-
-void syncWarp(__kmpc_impl_lanemask_t) {
-  // This is a no-op on current AMDGPU hardware but it is used by the optimizer
-  // to enforce convergent behaviour between control flow graphs.
-  __builtin_amdgcn_wave_barrier();
 }
 
 void syncThreadsAligned(atomic::OrderingTy Ordering) {

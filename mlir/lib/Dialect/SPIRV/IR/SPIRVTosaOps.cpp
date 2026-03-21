@@ -11,137 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/InterleavedRange.h"
+#include <algorithm>
 
 namespace mlir::spirv {
-
-//===----------------------------------------------------------------------===//
-// TOSA Operator Verifiers.
-//===----------------------------------------------------------------------===//
-
-namespace {
-
-LogicalResult verifyConvOp(Operation *op, Type inputETy, Type resultETy,
-                           TosaExtAccType accType) {
-  if (inputETy.isInteger() && !inputETy.isInteger(8) &&
-      !inputETy.isInteger(16)) {
-    return op->emitOpError(
-        "input element type can only be of width 8 or 16 when integer type");
-  }
-
-  if (inputETy.isInteger(8) && !resultETy.isInteger(32)) {
-    return op->emitOpError("expect result type to be i32, got ") << resultETy;
-  }
-
-  if (inputETy.isInteger(16) && !resultETy.isInteger(64)) {
-    return op->emitOpError("expect result type to be i64, got ") << resultETy;
-  }
-
-  if (inputETy.isF16() && !resultETy.isF16()) {
-    return op->emitOpError("expect result type to be f16, got ") << resultETy;
-  }
-
-  if (inputETy.isF32() && !resultETy.isF32()) {
-    return op->emitOpError("expect result type to be f32, got ") << resultETy;
-  }
-
-  if (inputETy.isInteger(8) && accType != TosaExtAccType::INT32) {
-    return op->emitOpError("accumulator type for i8 tensorARM is not i32");
-  }
-
-  if (inputETy.isInteger(16) && accType != TosaExtAccType::INT48) {
-    return op->emitOpError("accumulator type for i16 tensorARM is not i48");
-  }
-
-  if (inputETy.isF16() &&
-      !llvm::is_contained({TosaExtAccType::FP16, TosaExtAccType::FP32},
-                          accType)) {
-    return op->emitOpError(
-        "accumulator type for f16 tensorARM is not f16 or f32");
-  }
-
-  if (inputETy.isBF16() && accType != TosaExtAccType::FP32) {
-    return op->emitOpError("accumulator type for bf16 tensorARM is not f32");
-  }
-
-  if (inputETy.isF32() && accType != TosaExtAccType::FP32) {
-    return op->emitOpError("accumulator type for f32 tensorARM is not f32");
-  }
-
-  return success();
-}
-
-} // namespace
-
-//===----------------------------------------------------------------------===//
-// spirv.TosaArgmaxOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult TosaArgMaxOp::verify() {
-  ShapedType inputTy = getInputType();
-  ShapedType resultTy = getResultType();
-
-  if (inputTy.hasRank() && resultTy.hasRank() &&
-      resultTy.getRank() !=
-          (inputTy.getRank() > 1 ? inputTy.getRank() - 1 : 1)) {
-    return emitOpError(
-               "result rank must be max of 1 and (input rank - 1), got ")
-           << resultTy.getRank();
-  }
-
-  const uint32_t axis = getAxis();
-  if (inputTy.hasRank() && axis >= inputTy.getRank()) {
-    return emitOpError(
-               "specified axis is greater than the rank of input, got axis = ")
-           << axis << " and input rank = " << inputTy.getRank();
-  }
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.TosaConv2DOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult TosaConv2DOp::verify() {
-  Type inputETy = getInputType().getElementType();
-  Type resultETy = getResultType().getElementType();
-  TosaExtAccType accType = getAccType();
-  return verifyConvOp(this->getOperation(), inputETy, resultETy, accType);
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.TosaConv3DOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult TosaConv3DOp::verify() {
-  Type inputETy = getInputType().getElementType();
-  Type resultETy = getResultType().getElementType();
-  TosaExtAccType accType = getAccType();
-  return verifyConvOp(this->getOperation(), inputETy, resultETy, accType);
-}
-
-//===----------------------------------------------------------------------===//
-// SPIRV Tosa DepthwiseConv2D Ops:
-//===----------------------------------------------------------------------===//
-
-LogicalResult TosaDepthwiseConv2DOp::verify() {
-  Type inputETy = getInputType().getElementType();
-  Type resultETy = getResultType().getElementType();
-  TosaExtAccType accType = getAccType();
-  return verifyConvOp(this->getOperation(), inputETy, resultETy, accType);
-}
-
-//===----------------------------------------------------------------------===//
-// SPIRV Tosa TransposeConv2D Ops:
-//===----------------------------------------------------------------------===//
-
-LogicalResult TosaTransposeConv2DOp::verify() {
-  Type inputETy = getInputType().getElementType();
-  Type resultETy = getResultType().getElementType();
-  TosaExtAccType accType = getAccType();
-  return verifyConvOp(this->getOperation(), inputETy, resultETy, accType);
-}
 
 //===----------------------------------------------------------------------===//
 // SPIRV Tosa Custom formatters
@@ -174,6 +48,69 @@ void printSPIRV_I32_1DArmTensor(OpAsmPrinter &printer, Operation *,
   printer << llvm::interleaved_array(
       llvm::map_range(attr.getValues<APInt>(),
                       [](const APInt &a) { return a.getSExtValue(); }));
+}
+
+//===----------------------------------------------------------------------===//
+// SPIRV Tosa Custom verifiers
+//===----------------------------------------------------------------------===//
+
+LogicalResult TosaSelectOp::verify() {
+  TensorArmType condType = getConditionType();
+  TensorArmType trueValType = getTrueValueType();
+  TensorArmType falseValType = getFalseValueType();
+  TensorArmType resultType = getResultType();
+
+  if (llvm::any_of(ArrayRef<TensorArmType>{condType, trueValType, falseValType,
+                                           resultType},
+                   [](TensorArmType type) { return !type.hasRank(); }))
+    return success();
+
+  ArrayRef<int64_t> condShape = condType.getShape();
+  ArrayRef<int64_t> trueValShape = trueValType.getShape();
+  ArrayRef<int64_t> falseValShape = falseValType.getShape();
+  ArrayRef<int64_t> resultShape = resultType.getShape();
+
+  if (!llvm::all_equal({condShape.size(), trueValShape.size(),
+                        falseValShape.size(), resultShape.size()})) {
+    // The AllRanksMatch predicate enforces that all ranks are equal.
+    // This is just an extra safe guard for the code coming after that
+    // assumes that all ranks are equal.
+    return failure();
+  }
+
+  for (auto dims :
+       llvm::zip_equal(condShape, trueValShape, falseValShape, resultShape)) {
+    auto [condDim, trueValDim, falseValDim, resultDim] = dims;
+
+    if (llvm::any_of(
+            ArrayRef<int64_t>{condDim, trueValDim, falseValDim, resultDim},
+            [](int64_t dim) { return ShapedType::isDynamic(dim); })) {
+      continue;
+    }
+
+    auto isPairBroadcastable = [](int64_t lhs, int64_t rhs) {
+      return lhs == rhs || lhs == 1 || rhs == 1;
+    };
+
+    if (!isPairBroadcastable(condDim, trueValDim) ||
+        !isPairBroadcastable(condDim, falseValDim) ||
+        !isPairBroadcastable(trueValDim, falseValDim)) {
+      return emitOpError(
+          "failed to verify that the shape of inputs: condition, "
+          "true_value, and false_value are compatible for "
+          "broadcasting");
+    }
+
+    int64_t bradcastedInputDim =
+        std::max(condDim, std::max(trueValDim, falseValDim));
+    if (bradcastedInputDim != resultDim) {
+      return emitOpError(
+          "failed to verify that the broadcast shape of inputs: condition, "
+          "true_value, and false_value is equal to "
+          "the output shape");
+    }
+  }
+  return success();
 }
 
 } // namespace mlir::spirv

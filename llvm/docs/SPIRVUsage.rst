@@ -253,6 +253,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds Image Channel Data Type definitions for RAW10 and RAW12 image formats.
    * - ``SPV_ALTERA_arbitrary_precision_floating_point``
      - Adds instructions for arbitrary precision floating-point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
+   * - ``SPV_KHR_fma``
+     - Adds a core fused-multiply-add (fma) instruction to replace the different variants that have existed in extended instruction sets.
 
 
 SPIR-V representation in LLVM IR
@@ -631,6 +633,15 @@ LLVM IR representations.
 +--------------------+---------------------------------------------------------+
 | SPIR-V instruction | LLVM IR                                                 |
 +====================+=========================================================+
+| OpMemoryModel      | .. code-block:: llvm                                    |
+|                    |                                                         |
+|                    |    !spirv.MemoryModel = !{!0}                           |
+|                    |    !0 = !{i32 0, i32 1}                                 |
+|                    |    ; Set addressing model to Logical (0) and memory     |
+|                    |    ; model to GLSL450 (1). Valid memory models:         |
+|                    |    ; Simple (0), GLSL450 (1), OpenCL (2),               |
+|                    |    ; VulkanKHR (3).                                     |
++--------------------+---------------------------------------------------------+
 | OpExecutionMode    | .. code-block:: llvm                                    |
 |                    |                                                         |
 |                    |    !spirv.ExecutionMode = !{!0}                         |

@@ -429,13 +429,20 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
-  Triple TT(M.getTargetTriple());
-  if (TT.getArch() == Triple::r600)
-    return false;
-
   auto *PrintfFunction = M.getFunction("printf");
   if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
       M.getModuleFlag("openmp"))
+    return false;
+
+  // Verify the signature of the printf function and skip if it isn't correct.
+  const FunctionType *PrintfFunctionTy = PrintfFunction->getFunctionType();
+  if (PrintfFunctionTy->getNumParams() != 1 || !PrintfFunctionTy->isVarArg() ||
+      !PrintfFunctionTy->getReturnType()->isIntegerTy(32))
+    return false;
+  Type *PrintfFormatArgTy = PrintfFunctionTy->getParamType(0);
+  if (!PrintfFormatArgTy->isPointerTy() ||
+      !AMDGPU::isFlatGlobalAddrSpace(
+          PrintfFormatArgTy->getPointerAddressSpace()))
     return false;
 
   for (auto &U : PrintfFunction->uses()) {

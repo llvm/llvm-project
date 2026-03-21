@@ -49,10 +49,10 @@
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/HeuristicResolver.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -248,7 +248,7 @@ locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
       LocatedSymbol Macro;
       Macro.Name = std::string(M->Name);
       Macro.PreferredDeclaration = *Loc;
-      Macro.Definition = Loc;
+      Macro.Definition = std::move(Loc);
       Macro.ID = getSymbolID(M->Name, M->Info, AST.getSourceManager());
       return Macro;
     }
@@ -306,25 +306,33 @@ std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
 
   RelationsRequest Req;
   Req.Predicate = Predicate;
-  Req.Subjects = std::move(IDs);
+  llvm::DenseSet<SymbolID> SeenIDs;
+  llvm::DenseSet<SymbolID> Queue = std::move(IDs);
   std::vector<LocatedSymbol> Results;
-  Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
-    auto DeclLoc =
-        indexToLSPLocation(Object.CanonicalDeclaration, MainFilePath);
-    if (!DeclLoc) {
-      elog("Find overrides: {0}", DeclLoc.takeError());
-      return;
-    }
-    Results.emplace_back();
-    Results.back().Name = Object.Name.str();
-    Results.back().PreferredDeclaration = *DeclLoc;
-    auto DefLoc = indexToLSPLocation(Object.Definition, MainFilePath);
-    if (!DefLoc) {
-      elog("Failed to convert location: {0}", DefLoc.takeError());
-      return;
-    }
-    Results.back().Definition = *DefLoc;
-  });
+  while (!Queue.empty()) {
+    Req.Subjects = std::move(Queue);
+    Queue = {};
+    Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
+      if (!SeenIDs.insert(Object.ID).second)
+        return;
+      Queue.insert(Object.ID);
+      auto DeclLoc =
+          indexToLSPLocation(Object.CanonicalDeclaration, MainFilePath);
+      if (!DeclLoc) {
+        elog("Find overrides: {0}", DeclLoc.takeError());
+        return;
+      }
+      Results.emplace_back();
+      Results.back().Name = Object.Name.str();
+      Results.back().PreferredDeclaration = *DeclLoc;
+      auto DefLoc = indexToLSPLocation(Object.Definition, MainFilePath);
+      if (!DefLoc) {
+        elog("Failed to convert location: {0}", DefLoc.takeError());
+        return;
+      }
+      Results.back().Definition = *DefLoc;
+    });
+  }
   return Results;
 }
 
@@ -1470,7 +1478,7 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
   ReferencesResult::Reference Result;
   Result.Loc.range = rangeTillEOL(SM.getBufferData(SM.getMainFileID()),
                                   IncludeOnLine->HashOffset);
-  Result.Loc.uri = URIMainFile;
+  Result.Loc.uri = std::move(URIMainFile);
   Results.References.push_back(std::move(Result));
   return Results;
 }
@@ -1806,7 +1814,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   index::SymbolInfo SymInfo = index::getSymbolInfo(&ND);
   // FIXME: This is not classifying constructors, destructors and operators
   // correctly.
-  SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo.Kind);
+  SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo);
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
@@ -1863,7 +1871,7 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   HierarchyItem HI;
   HI.name = std::string(S.Name);
   HI.detail = (S.Scope + S.Name).str();
-  HI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
+  HI.kind = indexSymbolKindToSymbolKind(S.SymInfo);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
   // (https://github.com/clangd/clangd/issues/59).

@@ -16,7 +16,6 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Mapping.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Misc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Parallelism.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/Profiling.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Reduction.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/State.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Synchronization.cpp
@@ -53,8 +52,8 @@ elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^nvptx")
   set(target_name "nvptx")
   list(APPEND compile_options --cuda-feature=+ptx63)
-elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv64" OR
-       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv64")
+elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" OR
+       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
   set(target_name "spirv") 
 endif()
 

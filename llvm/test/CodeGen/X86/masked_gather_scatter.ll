@@ -5,7 +5,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512vl -mattr=+avx512dq -code-model=large < %s | FileCheck %s --check-prefixes=ALL,X64,X64-SKX,X64-SKX-LARGE
 ; RUN: llc -mtriple=i386-unknown-linux-gnu  -mattr=+avx512vl -mattr=+avx512dq < %s | FileCheck %s --check-prefixes=ALL,X86,X86-SKX
 ; RUN: opt -mtriple=x86_64-apple-darwin -passes=scalarize-masked-mem-intrin -mcpu=corei7-avx -S < %s | FileCheck %s -check-prefixes=SCALAR
-; RUN: opt -mtriple=x86_64-apple-darwin -passes=scalarize-masked-mem-intrin -mcpu=corei7-avx -S < %s | FileCheck %s -check-prefixes=SCALAR
 ; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu -mcpu=skx < %s -o /dev/null
 
 @glob_array = internal unnamed_addr constant [16 x i32] [i32 1, i32 1, i32 2, i32 3, i32 5, i32 8, i32 13, i32 21, i32 34, i32 55, i32 89, i32 144, i32 233, i32 377, i32 610, i32 987], align 16
@@ -50,6 +49,7 @@ declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> , i32, <8 x i1> , <8 
 
 
 ; SCALAR-LABEL: test2
+; SCALAR:      !prof !0
 ; SCALAR:      extractelement <16 x ptr>
 ; SCALAR-NEXT: load float
 ; SCALAR-NEXT: insertelement <16 x float>
@@ -58,9 +58,9 @@ declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> , i32, <8 x i1> , <8 
 ; SCALAR-NEXT:  %res.phi.else = phi
 ; SCALAR-NEXT:  and i16 %{{.*}}, 2
 ; SCALAR-NEXT:  icmp ne i16 %{{.*}}, 0
-; SCALAR-NEXT:  br i1 %{{.*}}, label %cond.load1, label %else2
+; SCALAR-NEXT:  br i1 %{{.*}}, label %cond.load1, label %else2, !prof !1
 
-define <16 x float> @test2(ptr %base, <16 x i32> %ind, i16 %mask) {
+define <16 x float> @test2(ptr %base, <16 x i32> %ind, i16 %mask) !prof !0 {
 ; X64-LABEL: test2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -151,9 +151,10 @@ define <16 x i32> @test4(ptr %base, <16 x i32> %ind, i16 %mask) {
 
 
 ; SCALAR-LABEL: test5
+; SCALAR:        !prof !0
 ; SCALAR:        and i16 %scalar_mask, 1
 ; SCALAR-NEXT:   icmp ne i16 %{{.*}}, 0
-; SCALAR-NEXT:   br i1 %{{.*}}, label %cond.store, label %else
+; SCALAR-NEXT:   br i1 %{{.*}}, label %cond.store, label %else, !prof !1
 ; SCALAR: cond.store:
 ; SCALAR-NEXT:  %Elt0 = extractelement <16 x i32> %val, i64 0
 ; SCALAR-NEXT:  %Ptr0 = extractelement <16 x ptr> %gep.random, i64 0
@@ -162,9 +163,9 @@ define <16 x i32> @test4(ptr %base, <16 x i32> %ind, i16 %mask) {
 ; SCALAR: else:
 ; SCALAR-NEXT:   and i16 %scalar_mask, 2
 ; SCALAR-NEXT:   icmp ne i16 %{{.*}}, 0
-; SCALAR-NEXT:  br i1 %{{.*}}, label %cond.store1, label %else2
+; SCALAR-NEXT:  br i1 %{{.*}}, label %cond.store1, label %else2, !prof !1
 
-define void @test5(ptr %base, <16 x i32> %ind, i16 %mask, <16 x i32>%val) {
+define void @test5(ptr %base, <16 x i32> %ind, i16 %mask, <16 x i32>%val) !prof !0 {
 ; X64-LABEL: test5:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %esi, %k1
@@ -5565,3 +5566,8 @@ define {<16 x float>, <16 x float>} @test_gather_structpt2_16f32_mask_index_pair
   %pair2 = insertvalue {<16 x float>, <16 x float>} %pair1, <16 x float> %res, 1
   ret {<16 x float>, <16 x float>} %pair2
 }
+
+!0 = !{!"function_entry_count", i64 1000}
+
+; SCALAR:      !0 = !{!"function_entry_count", i64 1000}
+; SCALAR-NEXT: !1 = !{!"unknown", !"scalarize-masked-mem-intrin"}

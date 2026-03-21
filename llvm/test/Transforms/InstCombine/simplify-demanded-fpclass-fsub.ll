@@ -20,6 +20,7 @@ declare nofpclass(nan ninf nzero nsub nnorm) half @returns_positive()
 declare nofpclass(nan pinf pzero psub pnorm) half @returns_negative()
 
 declare nofpclass(inf zero sub norm) half @returns_nan()
+declare nofpclass(qnan inf zero sub norm) half @returns_snan()
 
 declare nofpclass(nan inf zero sub) half @returns_norm()
 declare nofpclass(nan inf zero sub pnorm) half @returns_nnorm()
@@ -1204,5 +1205,33 @@ define nofpclass(snan) half @ret_no_snan__known_negative__fsub__known_positive()
   ret half %result
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
+define nofpclass(snan) half @qnan_result_demands_snan_lhs(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_lhs(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = fsub half %select, %unknown1
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_rhs(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_rhs(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = fsub half %unknown1, %select
+  ret half %result
+}
+
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }

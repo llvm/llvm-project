@@ -80,7 +80,7 @@ define i8 @reverse_cmp_v8i1(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE42-LABEL: reverse_cmp_v8i1:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pcmpeqw %xmm1, %xmm0
-; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[u,15,u,13,u,11,u,9,u,7,u,5,u,3,u,1]
+; SSE42-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[14,15,12,13,10,11,8,9,6,7,4,5,2,3,0,1]
 ; SSE42-NEXT:    packsswb %xmm0, %xmm0
 ; SSE42-NEXT:    pmovmskb %xmm0, %eax
 ; SSE42-NEXT:    # kill: def $al killed $al killed $eax

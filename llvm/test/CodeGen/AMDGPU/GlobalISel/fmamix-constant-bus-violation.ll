@@ -103,4 +103,4 @@ define float @test_fmamix_constant_bus_violation_vss(i32 %val.0, i32 inreg %val.
   ret float %fma
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }

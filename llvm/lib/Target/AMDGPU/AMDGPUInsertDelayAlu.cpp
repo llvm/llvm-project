@@ -68,7 +68,9 @@ public:
 
   // Get the delay type for a MachineInstr.
   DelayType getDelayType(const MachineInstr &MI) {
-    if (SIInstrInfo::isTRANS(MI))
+    // Non-F64 TRANS instructions use a separate delay type.
+    if (SIInstrInfo::isTRANS(MI) &&
+        !AMDGPU::isDPMACCInstruction(MI.getOpcode()))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
     if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))

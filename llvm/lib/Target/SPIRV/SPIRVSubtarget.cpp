@@ -11,12 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVSubtarget.h"
+
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVCommandLine.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVTargetMachine.h"
+
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
@@ -32,15 +35,13 @@ static cl::opt<bool>
                         cl::desc("SPIR-V Translator compatibility mode"),
                         cl::Optional, cl::init(false));
 
-static cl::opt<std::set<SPIRV::Extension::Extension>, false,
-               SPIRVExtensionsParser>
+static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
     Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
 
 // Provides access to the cl::opt<...> `Extensions` variable from outside of the
 // module.
-void SPIRVSubtarget::addExtensionsToClOpt(
-    const std::set<SPIRV::Extension::Extension> &AllowList) {
+void SPIRVSubtarget::addExtensionsToClOpt(const ExtensionSet &AllowList) {
   Extensions.insert(AllowList.begin(), AllowList.end());
 }
 
@@ -89,15 +90,18 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   // Set the environment based on the target triple.
   if (TargetTriple.getOS() == Triple::Vulkan)
     Env = Shader;
-  else if (TargetTriple.getEnvironment() == Triple::OpenCL ||
+  else if (TargetTriple.getOS() == Triple::OpenCL ||
            TargetTriple.getVendor() == Triple::AMD)
     Env = Kernel;
   else
     Env = Unknown;
 
   // Set the default extensions based on the target triple.
-  if (TargetTriple.getVendor() == Triple::Intel)
+  if (TargetTriple.getVendor() == Triple::Intel) {
     Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
+    Extensions.insert(
+        SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
+  }
   if (TargetTriple.getVendor() == Triple::AMD)
     Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple);
 
@@ -173,11 +177,75 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
   accountForAMDShaderTrinaryMinmax();
 }
 
+void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
+  if (E == Unknown)
+    report_fatal_error("Unknown environment is not allowed.");
+  if (Env != Unknown && Env != E)
+    report_fatal_error("Environment is already set to a different value.");
+  if (Env == E)
+    return;
+
+  Env = E;
+
+  // Reinitialize Env-dependent state aka ExtInstSet and legalizer info.
+  initAvailableExtInstSets();
+  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
+}
+
+void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
+  if (Env != Unknown) {
+    assert(!(isKernel() && any_of(M,
+                                  [](const Function &F) {
+                                    return F.hasFnAttribute("hlsl.shader");
+                                  })) &&
+           "Module has hlsl.shader attributes but environment is Kernel");
+    return;
+  }
+
+  bool HasShaderAttr = false;
+  for (const Function &F : M) {
+    if (F.hasFnAttribute("hlsl.shader")) {
+      HasShaderAttr = true;
+      break;
+    }
+  }
+
+  if (!HasShaderAttr) {
+    if (auto *MemModel = M.getNamedMetadata("spirv.MemoryModel")) {
+      if (MemModel->getNumOperands() == 0)
+        report_fatal_error("Invalid spirv.MemoryModel metadata");
+      auto *MemMD = MemModel->getOperand(0);
+      if (MemMD->getNumOperands() < 2)
+        report_fatal_error("Invalid spirv.MemoryModel operand");
+      unsigned MemModelVal =
+          mdconst::extract<ConstantInt>(MemMD->getOperand(1))->getZExtValue();
+      switch (MemModelVal) {
+      case SPIRV::MemoryModel::Simple:
+      case SPIRV::MemoryModel::GLSL450:
+        HasShaderAttr = true;
+        break;
+      case SPIRV::MemoryModel::VulkanKHR:
+        HasShaderAttr = true;
+        AvailableExtensions.insert(
+            SPIRV::Extension::SPV_KHR_vulkan_memory_model);
+        break;
+      case SPIRV::MemoryModel::OpenCL:
+        break;
+      default:
+        report_fatal_error(
+            "Unknown memory model in spirv.MemoryModel metadata");
+      }
+    }
+  }
+
+  setEnv(HasShaderAttr ? Shader : Kernel);
+}
+
 // Set available extensions after SPIRVSubtarget is created.
 void SPIRVSubtarget::initAvailableExtensions(
-    const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
+    const ExtensionSet &AllowedExtIds) {
   AvailableExtensions.clear();
-  const std::set<SPIRV::Extension::Extension> &ValidExtensions =
+  const ExtensionSet &ValidExtensions =
       SPIRVExtensionsParser::getValidExtensions(TargetTriple);
 
   for (const auto &Ext : AllowedExtIds) {

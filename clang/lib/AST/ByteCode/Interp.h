@@ -217,6 +217,12 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
 bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
                     bool InitializerFailed);
 
+/// DerivedToBaseMemberPointer
+bool CastMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off,
+                          const RecordDecl *BaseDecl);
+/// BaseToDerivedMemberPointer
+bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
+                             const RecordDecl *BaseDecl);
 enum class ArithOp { Add, Sub };
 
 //===----------------------------------------------------------------------===//
@@ -289,6 +295,10 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   // Short-circuit fixed-points here since the error handling is easier.
   if constexpr (std::is_same_v<T, FixedPoint>)
     return handleFixedPointOverflow(S, OpPC, Result);
+
+  // If wrapping is enabled, the new value is fine.
+  if (S.Current->getExpr(OpPC)->getType().isWrapType())
+    return true;
 
   // Slow path - compute the result using another bit of precision.
   APSInt Value = OpAP<APSInt>()(LHS.toAPSInt(Bits), RHS.toAPSInt(Bits));
@@ -475,10 +485,8 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     const T &RHSR = RHS.elem<T>(0);
     const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
-    const T Zero = T::from(0, Bits);
 
-    if (Compare(RHSR, Zero) == ComparisonCategoryResult::Equal &&
-        Compare(RHSI, Zero) == ComparisonCategoryResult::Equal) {
+    if (RHSR.isZero() && RHSI.isZero()) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_expr_divide_by_zero);
       return false;
@@ -501,7 +509,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     if (T::add(A, B, Bits, &Den))
       return false;
 
-    if (Compare(Den, Zero) == ComparisonCategoryResult::Equal) {
+    if (Den.isZero()) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_expr_divide_by_zero);
       return false;
@@ -700,9 +708,12 @@ bool Neg(InterpState &S, CodePtr OpPC) {
       return true;
     }
 
-    assert(isIntegralType(Name) &&
+    assert(isIntegerType(Name) &&
            "don't expect other types to fail at constexpr negation");
     S.Stk.push<T>(Result);
+
+    if (S.Current->getExpr(OpPC)->getType().isWrapType())
+      return true;
 
     APSInt NegatedValue = -Value.toAPSInt(Value.bitWidth() + 1);
     if (S.checkingForUndefinedBehavior()) {
@@ -771,6 +782,11 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     }
   }
   assert(CanOverflow);
+
+  if (S.Current->getExpr(OpPC)->getType().isWrapType()) {
+    Ptr.deref<T>() = Result;
+    return true;
+  }
 
   // Something went wrong with the previous operation. Compute the
   // result with another bit of precision.
@@ -1164,14 +1180,14 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
 
   // Otherwise we need to do a bunch of extra checks before returning Unordered.
   if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
-      RHS.getOffset() == 0) {
+      RHS.isBlockPointer() && RHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << LHS.toDiagnosticString(S.getASTContext());
     return false;
   }
   if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
-      LHS.getOffset() == 0) {
+      LHS.isBlockPointer() && LHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << RHS.toDiagnosticString(S.getASTContext());
@@ -1410,11 +1426,11 @@ bool SetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool GetParam(InterpState &S, CodePtr OpPC, uint32_t I) {
+bool GetParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.checkingPotentialConstantExpression()) {
     return false;
   }
-  S.Stk.push<T>(S.Current->getParam<T>(I));
+  S.Stk.push<T>(S.Current->getParam<T>(Index));
   return true;
 }
 
@@ -1544,6 +1560,14 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
       Val.take(NewMemory);
     }
 
+  } else if constexpr (std::is_same_v<T, MemberPointer>) {
+    auto &Val = P.deref<MemberPointer>();
+    unsigned PathLength = Val.getPathLength();
+    auto *NewPath = new (S.P) const CXXRecordDecl *[PathLength];
+    for (unsigned I = 0; I != PathLength; ++I) {
+      NewPath[I] = Val.getPathEntry(I);
+    }
+    Val.takePath(NewPath);
   } else if constexpr (needsAlloc<T>()) {
     auto &Val = P.deref<T>();
     if (!Val.singleWord()) {
@@ -1703,16 +1727,15 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
 
   const Pointer &Field = Ptr.atField(F->Offset);
 
+  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
-    if (T::isSigned())
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .sextOrTrunc(Value.bitWidth()));
+    if constexpr (T::isSigned())
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).sextOrTrunc(Value.bitWidth()));
     else
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .zextOrTrunc(Value.bitWidth()));
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).zextOrTrunc(Value.bitWidth()));
 
     Field.deref<T>() = Result;
   } else {
@@ -1735,16 +1758,15 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC,
 
   const Pointer &Field = Ptr.atField(F->Offset);
 
+  unsigned BitWidth = std::min(F->Decl->getBitWidthValue(), Value.bitWidth());
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Value.bitWidth());
-    if (T::isSigned())
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .sextOrTrunc(Value.bitWidth()));
+    if constexpr (T::isSigned())
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).sextOrTrunc(Value.bitWidth()));
     else
-      Result.copy(Value.toAPSInt()
-                      .trunc(F->Decl->getBitWidthValue())
-                      .zextOrTrunc(Value.bitWidth()));
+      Result.copy(
+          Value.toAPSInt().trunc(BitWidth).zextOrTrunc(Value.bitWidth()));
 
     Field.deref<T>() = Result;
   } else {
@@ -1764,10 +1786,10 @@ inline bool GetPtrLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
-inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t I) {
+inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.Current->isBottomFrame())
     return false;
-  S.Stk.push<Pointer>(S.Current->getParamPointer(I));
+  S.Stk.push<Pointer>(S.Current->getParamPointer(Index));
   return true;
 }
 
@@ -1869,12 +1891,6 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
   return true;
 }
 
-inline bool GetMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off) {
-  const auto &Ptr = S.Stk.pop<MemberPointer>();
-  S.Stk.push<MemberPointer>(Ptr.atInstanceBase(Off));
-  return true;
-}
-
 inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (S.checkingPotentialConstantExpression())
     return false;
@@ -1973,8 +1989,7 @@ bool Load(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.isBlockPointer())
     return false;
-  if (const Descriptor *D = Ptr.getFieldDesc();
-      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
+  if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -1987,8 +2002,7 @@ bool LoadPop(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.isBlockPointer())
     return false;
-  if (const Descriptor *D = Ptr.getFieldDesc();
-      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
+  if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -2296,7 +2310,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     if (N > 1)
       S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
           << N << /*non-array*/ true << 0;
-    return Pointer(Ptr.asFunctionPointer().getFunction(), N);
+    return Pointer(Ptr.asFunctionPointer().Func, N);
   } else if (!Ptr.isBlockPointer()) {
     return std::nullopt;
   }
@@ -3484,8 +3498,8 @@ inline bool Alloc(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID(),
-                                DynamicAllocator::Form::NonArray);
+  Block *B =
+      Allocator.allocate(Desc, S.EvalID, DynamicAllocator::Form::NonArray);
   assert(B);
   S.Stk.push<Pointer>(B);
   return true;
@@ -3520,9 +3534,8 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B =
-      Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
-                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
+  Block *B = Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
+                                S.EvalID, DynamicAllocator::Form::Array);
   assert(B);
   if (NumElements.isZero())
     S.Stk.push<Pointer>(B);
@@ -3556,9 +3569,8 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B =
-      Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
-                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
+  Block *B = Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
+                                S.EvalID, DynamicAllocator::Form::Array);
   assert(B);
   if (NumElements.isZero())
     S.Stk.push<Pointer>(B);
