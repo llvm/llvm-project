@@ -60,3 +60,43 @@ define i8 @load_i8_multi_gep_const_zero_array(i64 %idx1, i64 %idx2) {
   %load = load i8, ptr %gep
   ret i8 %load
 }
+
+@allones_i32 = constant i32 -1
+
+define b8 @load_b8_from_allones_i32() {
+; CHECK-LABEL: @load_b8_from_allones_i32(
+; CHECK-NEXT:    [[LOAD:%.*]] = load b8, ptr @allones_i32, align 1
+; CHECK-NEXT:    ret b8 [[LOAD]]
+;
+  %load = load b8, ptr @allones_i32
+  ret b8 %load
+}
+
+define b8 @load_b8_from_i32_constant() {
+; CHECK-LABEL: @load_b8_from_i32_constant(
+; CHECK-NEXT:    [[LOAD:%.*]] = load b8, ptr @GV, align 1
+; CHECK-NEXT:    ret b8 [[LOAD]]
+;
+  %load = load b8, ptr @GV
+  ret b8 %load
+}
+
+define b8 @load_b8_from_fp_constant() {
+; CHECK-LABEL: @load_b8_from_fp_constant(
+; CHECK-NEXT:    [[LOAD:%.*]] = load b8, ptr @constvec, align 1
+; CHECK-NEXT:    ret b8 [[LOAD]]
+;
+  %load = load b8, ptr @constvec
+  ret b8 %load
+}
+
+define <4 x b8> @load_vb8_from_allones_gep(i64 %idx) {
+; CHECK-LABEL: @load_vb8_from_allones_gep(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr @allones_i32, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x b8>, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret <4 x b8> [[LOAD]]
+;
+  %gep = getelementptr i8, ptr @allones_i32, i64 %idx
+  %load = load <4 x b8>, ptr %gep
+  ret <4 x b8> %load
+}
