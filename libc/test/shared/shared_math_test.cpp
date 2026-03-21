@@ -6,6 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define LIBC_ENABLE_CONSTEXPR 1
+
+#include "shared/math/log.h"
+
+#ifdef LIBC_HAS_CONSTANT_EVALUATION
+
+//===-- Double Tests ------------------------------------------------------===//
+
+static_assert(0x0p+0 == LIBC_NAMESPACE::shared::log(1.0));
+
+//===----------------------------------------------------------------------===//
+
+#endif // LIBC_HAS_CONSTANT_EVALUATION
+
+#undef LIBC_ENABLE_CONSTEXPR
+
 #include "shared/math.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -254,7 +270,6 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::ffma(0.0, 0.0, 0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::hypot(0.0, 0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::fsqrt(0.0));
-  EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log(1.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log10(1.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log1p(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log2(1.0));
