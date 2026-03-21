@@ -11,11 +11,9 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -363,7 +361,7 @@ static bool isSpecifiedAfterMove(const ValueDecl *VD) {
   // Use the definition for the declaration, as it is the expected place to add
   // the annotations.
   const CXXRecordDecl *DefinitionDecl = RecordDecl->getDefinition();
-  if (DefinitionDecl != nullptr) {
+  if (DefinitionDecl) {
     for (const auto *Attr : DefinitionDecl->specific_attrs<AnnotateAttr>())
       if (isNullAfterMoveAnnotate(Attr))
         return true;
