@@ -296,9 +296,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     if (isAcquireOrStronger(LI->getOrdering()) && ShouldInsertFences) {
       AtomicOrdering FenceOrdering = LI->getOrdering();
       LI->setOrdering(AtomicOrdering::Monotonic);
-      MadeChange = bracketInstWithFences(LI, FenceOrdering);
+      MadeChange |= bracketInstWithFences(LI, FenceOrdering);
     } else if (!ShouldInsertFences) {
-      MadeChange = tryInsertTrailingSeqCstFence(LI);
+      MadeChange |= tryInsertTrailingSeqCstFence(LI);
     }
 
     MadeChange |= tryExpandAtomicLoad(LI);
@@ -325,9 +325,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     if (isReleaseOrStronger(SI->getOrdering()) && ShouldInsertFences) {
       AtomicOrdering FenceOrdering = SI->getOrdering();
       SI->setOrdering(AtomicOrdering::Monotonic);
-      MadeChange = bracketInstWithFences(SI, FenceOrdering);
+      MadeChange |= bracketInstWithFences(SI, FenceOrdering);
     } else if (!ShouldInsertFences) {
-      MadeChange = tryInsertTrailingSeqCstFence(SI);
+      MadeChange |= tryInsertTrailingSeqCstFence(SI);
     }
 
     MadeChange |= tryExpandAtomicStore(SI);
@@ -353,19 +353,17 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
         ShouldInsertFences) {
       AtomicOrdering FenceOrdering = RMWI->getOrdering();
       RMWI->setOrdering(TLI->atomicOperationOrderAfterFenceSplit(RMWI));
-      MadeChange = bracketInstWithFences(RMWI, FenceOrdering);
+      MadeChange |= bracketInstWithFences(RMWI, FenceOrdering);
     } else if (!ShouldInsertFences) {
-      MadeChange = tryInsertTrailingSeqCstFence(RMWI);
+      MadeChange |= tryInsertTrailingSeqCstFence(RMWI);
     }
 
     // There are two different ways of expanding RMW instructions:
     // - into a load if it is idempotent
     // - into a Cmpxchg/LL-SC loop otherwise
     // we try them in that order.
-    bool Expanded = (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
-                    tryExpandAtomicRMW(RMWI);
-
-    MadeChange |= Expanded;
+    MadeChange |= (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
+                  tryExpandAtomicRMW(RMWI);
     return MadeChange;
   }
 
@@ -400,12 +398,12 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
             TLI->atomicOperationOrderAfterFenceSplit(CASI);
         CASI->setSuccessOrdering(CASOrdering);
         CASI->setFailureOrdering(CASOrdering);
-        MadeChange = bracketInstWithFences(CASI, FenceOrdering);
+        MadeChange |= bracketInstWithFences(CASI, FenceOrdering);
       }
     } else if (CmpXchgExpansion !=
                TargetLoweringBase::AtomicExpansionKind::LLSC) {
       // CmpXchg LLSC is handled in expandAtomicCmpXchg().
-      MadeChange = tryInsertTrailingSeqCstFence(CASI);
+      MadeChange |= tryInsertTrailingSeqCstFence(CASI);
     }
 
     MadeChange |= tryExpandAtomicCmpXchg(CASI);
