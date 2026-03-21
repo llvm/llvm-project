@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/StringSaver.h"
@@ -105,6 +106,11 @@ template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
 template <typename T, typename... Args>
 OwnedPtr<T> allocatePtr(Args &&...args) {
   return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
+template <typename T, typename... Args>
+T *allocatePtr(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
+  return new (Alloc.Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
 // A helper function to access the underlying pointer from an owned pointer,
@@ -197,7 +203,7 @@ struct CommentInfo : public llvm::ilist_node<CommentInfo> {
                             // (for (T)ParamCommand).
 };
 
-struct Reference {
+struct Reference : public llvm::ilist_node<Reference> {
   // This variant (that takes no qualified name parameter) uses the Name as the
   // QualName (very useful in unit tests to reduce verbosity). This can't use an
   // empty string to indicate the default because we need to accept the empty
@@ -273,7 +279,7 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  OwningVec<Reference> Namespaces;
+  llvm::simple_ilist<Reference> Namespaces;
   OwningVec<Reference> Records;
   OwningVec<FunctionInfo> Functions;
   OwningVec<EnumInfo> Enums;

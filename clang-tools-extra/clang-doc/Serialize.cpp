@@ -458,8 +458,10 @@ bool Serializer::shouldSerializeInfo(bool PublicOnly,
 //
 // See MakeAndInsertIntoParent().
 void Serializer::InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
-  Scope.Namespaces.emplace_back(Info.USR, Info.Name, InfoType::IT_namespace,
-                                Info.Name, getInfoRelativePath(Info.Namespace));
+  Reference *R = allocatePtr<Reference>(TransientArena, Info.USR, Info.Name,
+                                        InfoType::IT_namespace, Info.Name,
+                                        getInfoRelativePath(Info.Namespace));
+  Scope.Namespaces.push_back(*R);
 }
 
 void Serializer::InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
