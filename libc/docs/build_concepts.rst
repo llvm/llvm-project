@@ -14,8 +14,8 @@ configurations depending on your target environment and intended usage.
 The Five Build Scenarios
 ========================
 
-1. Overlay Mode (Incremental Adoption)
---------------------------------------
+1. Overlay Mode (Augmenting the System Libc)
+--------------------------------------------
 
 In Overlay Mode, LLVM-libc functions are compiled alongside the host's existing 
 system library (like ``glibc``). Only the functions explicitly implemented in 
