@@ -68,8 +68,7 @@ LIBC_INLINE bfloat16 atanbf16(bfloat16 x) {
 
     // For smaller x
     if (LIBC_UNLIKELY(x_abs <= 0x3db8))
-      return fputil::cast<bfloat16>(fputil::multiply_add(
-          static_cast<double>(xf), -0x1p-25, static_cast<double>(xf)));
+      return fputil::cast<bfloat16>(fputil::multiply_add(xf, -0x1p-9f, xf));
 
     float result = atan_eval(x_sq);
     return fputil::cast<bfloat16>(fputil::multiply_add(xf * x_sq, result, xf));
