@@ -317,16 +317,6 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
                                                  {v1, v2});
   };
 
-  SmallVector<OpFoldResult> outputShape = expandShape.getMixedOutputShape();
-  // Fill up the expanded strides, with the information we can deduce from the
-  // resulting shape.
-  OpFoldResult currentStride = builder.getIndexAttr(1);
-  SmallVector<OpFoldResult> expandedStrides(groupSize);
-  for (int i = groupSize - 1; i >= 0; --i) {
-    expandedStrides[i] = currentStride;
-    currentStride = mul(currentStride, outputShape[reassocGroup[i]]);
-  }
-
   // Collect the statically known information about the original stride.
   Value source = expandShape.getSrc();
   auto sourceType = cast<MemRefType>(source.getType());
@@ -336,9 +326,14 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
                                 ? origStrides[groupId]
                                 : builder.getIndexAttr(strides[groupId]);
 
-  // Apply the original stride to all the strides.
-  for (int64_t i = 0; i < groupSize; ++i)
-    expandedStrides[i] = mul(origStride, expandedStrides[i]);
+  // Fill up the expanded strides.
+  OpFoldResult currentStride = origStride;
+  SmallVector<OpFoldResult> outputShape = expandShape.getMixedOutputShape();
+  SmallVector<OpFoldResult> expandedStrides(groupSize);
+  for (int i = groupSize - 1; i >= 0; --i) {
+    expandedStrides[i] = currentStride;
+    currentStride = mul(currentStride, outputShape[reassocGroup[i]]);
+  }
 
   return expandedStrides;
 }
