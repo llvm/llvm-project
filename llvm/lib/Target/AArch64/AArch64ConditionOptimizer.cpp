@@ -430,17 +430,19 @@ static bool isLessThan(AArch64CC::CondCode Cmp) {
 
 bool AArch64ConditionOptimizerImpl::tryOptimizePair(CmpCondPair &First,
                                                     CmpCondPair &Second) {
+  if (!((isGreaterThan(First.CC) || isLessThan(First.CC)) &&
+        (isGreaterThan(Second.CC) || isLessThan(Second.CC))))
+    return false;
+
   int FirstImmTrueValue = First.getImm();
   int SecondImmTrueValue = Second.getImm();
+
+  // Normalize immediate of CMN (ADDS) instructions
   if (First.getOpc() == AArch64::ADDSWri || First.getOpc() == AArch64::ADDSXri)
     FirstImmTrueValue = -FirstImmTrueValue;
   if (Second.getOpc() == AArch64::ADDSWri ||
       Second.getOpc() == AArch64::ADDSXri)
     SecondImmTrueValue = -SecondImmTrueValue;
-
-  if (!((isGreaterThan(First.CC) || isLessThan(First.CC)) &&
-        (isGreaterThan(Second.CC) || isLessThan(Second.CC))))
-    return false;
 
   CmpInfo FirstAdj = getAdjustedCmpInfo(First.CmpMI, First.CC);
   CmpInfo SecondAdj = getAdjustedCmpInfo(Second.CmpMI, Second.CC);
