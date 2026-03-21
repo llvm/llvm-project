@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -655,6 +656,13 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   // All arguments to a function are a use of the corresponding expressions.
   for (const Expr *Arg : Args)
     handleUse(Arg);
+
+  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call);
+      OCE && OCE->getOperator() == OO_Call && FD->isStatic()) {
+    // Ignore first element
+    Args = Args.slice(1);
+  }
+
   handleInvalidatingCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   if (!CallList)
