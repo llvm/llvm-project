@@ -1,0 +1,304 @@
+// RUN: cir-opt %s --remove-dead-values -o - | FileCheck %s
+//
+// Tests that RecursiveMemoryEffects on region-based ops enables correct DCE:
+// - Ops whose regions contain no memory effects can be eliminated when unused.
+// - Ops whose regions contain stores/calls are preserved even when unused.
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_S = !cir.record<struct "S" padded {!u8i}>
+
+module {
+
+// ---------------------------------------------------------------------------
+// cir.ternary
+// ---------------------------------------------------------------------------
+
+// Unused cir.ternary with a pure body (only cir.const, cir.yield, no stores)
+// → no memory effects via RecursiveMemoryEffects → DCE'd.
+//
+// CHECK-LABEL: cir.func @ternary_pure_body_dce
+// CHECK-NOT:     cir.ternary
+// CHECK:         cir.return
+  cir.func @ternary_pure_body_dce(%arg0: !cir.bool, %arg1: !s32i) -> !s32i {
+    %unused = cir.ternary (%arg0, true {
+      %c = cir.const #cir.int<1> : !s32i
+      cir.yield %c : !s32i
+    }, false {
+      cir.yield %arg1 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %arg1 : !s32i
+  }
+
+// Unused cir.ternary with a store in one region inherits that write effect
+// → preserved despite unused result.
+//
+// CHECK-LABEL: cir.func @ternary_store_preserved
+// CHECK:         cir.ternary
+// CHECK:         cir.store
+// CHECK:         cir.return
+  cir.func @ternary_store_preserved(%arg0: !cir.bool,
+                                    %arg1: !cir.ptr<!s32i>) -> !s32i {
+    %c0 = cir.const #cir.int<0> : !s32i
+    %unused = cir.ternary (%arg0, true {
+      %c = cir.const #cir.int<42> : !s32i
+      cir.store %c, %arg1 : !s32i, !cir.ptr<!s32i>
+      cir.yield %c : !s32i
+    }, false {
+      cir.yield %c0 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %c0 : !s32i
+  }
+
+// ---------------------------------------------------------------------------
+// cir.if
+// ---------------------------------------------------------------------------
+
+// cir.if with a pure body (no store) → no effects → DCE'd.
+//
+// CHECK-LABEL: cir.func @if_pure_body_dce
+// CHECK-NOT:     cir.if
+// CHECK:         cir.return
+  cir.func @if_pure_body_dce(%arg0: !cir.bool) {
+    cir.if %arg0 {
+      %c = cir.const #cir.int<1> : !s32i
+      cir.yield
+    }
+    cir.return
+  }
+
+// cir.if with a store in its body → preserved.
+//
+// CHECK-LABEL: cir.func @if_store_preserved
+// CHECK:         cir.if
+// CHECK:         cir.store
+// CHECK:         cir.return
+  cir.func @if_store_preserved(%arg0: !cir.bool, %arg1: !cir.ptr<!s32i>) {
+    %c = cir.const #cir.int<1> : !s32i
+    cir.if %arg0 {
+      cir.store %c, %arg1 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+
+// ---------------------------------------------------------------------------
+// cir.switch / cir.case
+// ---------------------------------------------------------------------------
+
+// cir.switch with all-pure cases (only cir.const, cir.yield) → no effects
+// via RecursiveMemoryEffects on cir.case and cir.switch → DCE'd.
+//
+// CHECK-LABEL: cir.func @switch_pure_body_dce
+// CHECK-NOT:     cir.switch
+// CHECK:         cir.return
+  cir.func @switch_pure_body_dce(%arg0: !s32i) {
+    cir.switch (%arg0 : !s32i) {
+      cir.case (equal, [#cir.int<1> : !s32i]) {
+        %c = cir.const #cir.int<42> : !s32i
+        cir.yield
+      }
+      cir.case (default, []) {
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.return
+  }
+
+// cir.switch whose cases contain stores → preserved.
+//
+// CHECK-LABEL: cir.func @switch_store_preserved
+// CHECK:         cir.switch
+// CHECK:         cir.store
+// CHECK:         cir.return
+  cir.func @switch_store_preserved(%arg0: !s32i, %arg1: !cir.ptr<!s32i>) {
+    cir.switch (%arg0 : !s32i) {
+      cir.case (equal, [#cir.int<1> : !s32i]) {
+        %c = cir.const #cir.int<42> : !s32i
+        cir.store %c, %arg1 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.case (default, []) {
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.return
+  }
+
+// ---------------------------------------------------------------------------
+// cir.while / cir.do / cir.for
+// ---------------------------------------------------------------------------
+
+// cir.while with a store in its body → preserved.
+//
+// CHECK-LABEL: cir.func @while_store_preserved
+// CHECK:         cir.while
+// CHECK:         cir.store
+// CHECK:         cir.return
+  cir.func @while_store_preserved(%arg0: !cir.bool, %arg1: !cir.ptr<!s32i>) {
+    %c = cir.const #cir.int<1> : !s32i
+    cir.while {
+      cir.condition(%arg0)
+    } do {
+      cir.store %c, %arg1 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+
+// cir.do with a store in its body → preserved.
+//
+// CHECK-LABEL: cir.func @do_store_preserved
+// CHECK:         cir.do
+// CHECK:         cir.store
+// CHECK:         cir.return
+  cir.func @do_store_preserved(%arg0: !cir.bool, %arg1: !cir.ptr<!s32i>) {
+    %c = cir.const #cir.int<1> : !s32i
+    cir.do {
+      cir.store %c, %arg1 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    } while {
+      cir.condition(%arg0)
+    }
+    cir.return
+  }
+
+// cir.for with a store in its body → preserved.
+//
+// CHECK-LABEL: cir.func @for_store_preserved
+// CHECK:         cir.for
+// CHECK:         cir.store
+// CHECK:         cir.return
+  cir.func @for_store_preserved(%arg0: !cir.bool, %arg1: !cir.ptr<!s32i>) {
+    %c = cir.const #cir.int<1> : !s32i
+    cir.for : cond {
+      cir.condition(%arg0)
+    } body {
+      cir.store %c, %arg1 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    } step {
+      cir.yield
+    }
+    cir.return
+  }
+
+// cir.while containing a cir.if that stores: write effect propagates through
+// two nesting levels via RecursiveMemoryEffects → while preserved.
+//
+// CHECK-LABEL: cir.func @nested_if_in_while_store_preserved
+// CHECK:         cir.while
+// CHECK:         cir.if
+// CHECK:         cir.store
+// CHECK:         cir.return
+  cir.func @nested_if_in_while_store_preserved(%arg0: !cir.bool,
+                                               %arg1: !cir.bool,
+                                               %arg2: !cir.ptr<!s32i>) {
+    %c = cir.const #cir.int<1> : !s32i
+    cir.while {
+      cir.condition(%arg0)
+    } do {
+      cir.if %arg1 {
+        cir.store %c, %arg2 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.return
+  }
+
+// ---------------------------------------------------------------------------
+// cir.try
+// ---------------------------------------------------------------------------
+
+// cir.try with a store in the try body → preserved.
+//
+// CHECK-LABEL: cir.func @try_store_preserved
+// CHECK:         cir.try
+// CHECK:         cir.store
+// CHECK:         cir.return
+  cir.func @try_store_preserved(%arg0: !cir.ptr<!s32i>) {
+    %c = cir.const #cir.int<1> : !s32i
+    cir.try {
+      cir.store %c, %arg0 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %exn = cir.begin_catch %eh_token
+          : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.return
+  }
+
+// ---------------------------------------------------------------------------
+// cir.await
+// ---------------------------------------------------------------------------
+
+// cir.await whose resume region contains a store → preserved.
+//
+// CHECK-LABEL: cir.func coroutine @await_store_preserved
+// CHECK:         cir.await
+// CHECK:         cir.store
+// CHECK:         cir.return
+  cir.func coroutine @await_store_preserved(%arg0: !cir.bool,
+                                            %arg1: !cir.ptr<!s32i>) {
+    %c = cir.const #cir.int<1> : !s32i
+    cir.await(user, ready : {
+      cir.condition(%arg0)
+    }, suspend : {
+      cir.yield
+    }, resume : {
+      cir.store %c, %arg1 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    },)
+    cir.return
+  }
+
+// ---------------------------------------------------------------------------
+// cir.array.ctor / cir.array.dtor
+// ---------------------------------------------------------------------------
+
+// cir.array.ctor calls a constructor inside its region → call has effects
+// → preserved.
+//
+// CHECK-LABEL: cir.func @array_ctor_preserved
+// CHECK:         cir.array.ctor
+// CHECK:         cir.call
+// CHECK:         cir.return
+  cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)
+  cir.func @array_ctor_preserved(
+      %arg0: !cir.ptr<!cir.array<!rec_S x 4>>) {
+    cir.array.ctor %arg0 : !cir.ptr<!cir.array<!rec_S x 4>> {
+    ^bb0(%elem: !cir.ptr<!rec_S>):
+      cir.call @_ZN1SC1Ev(%elem) : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+// cir.array.dtor calls a destructor inside its region → preserved.
+//
+// CHECK-LABEL: cir.func @array_dtor_preserved
+// CHECK:         cir.array.dtor
+// CHECK:         cir.call
+// CHECK:         cir.return
+  cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
+  cir.func @array_dtor_preserved(
+      %arg0: !cir.ptr<!cir.array<!rec_S x 4>>) {
+    cir.array.dtor %arg0 : !cir.ptr<!cir.array<!rec_S x 4>> {
+    ^bb0(%elem: !cir.ptr<!rec_S>):
+      cir.call @_ZN1SD1Ev(%elem) : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+}

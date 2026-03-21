@@ -337,6 +337,7 @@ void cir::ConditionOp::getSuccessorRegions(
   if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
     regions.emplace_back(&loopOp.getBody());
     regions.push_back(RegionSuccessor::parent());
+    return;
   }
 
   // Parent is an await: condition may branch to resume or suspend regions.

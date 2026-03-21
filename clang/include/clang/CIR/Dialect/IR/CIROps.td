@@ -836,7 +836,8 @@ def CIR_ReturnOp : CIR_Op<"return", [
 
 def CIR_IfOp : CIR_Op<"if", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
+  RecursiveMemoryEffects
 ]> {
   let summary = "the if-then-else operation";
   let description = [{
@@ -1364,7 +1365,7 @@ def CIR_CaseOpKind : CIR_I32EnumAttr<"CaseOpKind", "case kind", [
 
 def CIR_CaseOp : CIR_Op<"case", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, AutomaticAllocationScope
+  RecursivelySpeculatable, AutomaticAllocationScope, RecursiveMemoryEffects
 ]> {
   let summary = "Case operation";
   let description = [{
@@ -2004,7 +2005,7 @@ def CIR_IndirectBrOp : CIR_Op<"indirect_br", [
 //===----------------------------------------------------------------------===//
 
 class CIR_LoopOpBase<string mnemonic> : CIR_Op<mnemonic, [
-  LoopOpInterface, NoRegionArguments
+  LoopOpInterface, NoRegionArguments, RecursiveMemoryEffects
 ]> {
   let extraClassDefinition = [{
     void $cppClass::getSuccessorRegions(
@@ -2703,7 +2704,8 @@ def CIR_SelectOp : CIR_Op<"select", [
 
 def CIR_TernaryOp : CIR_Op<"ternary", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
+  RecursiveMemoryEffects
 ]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
   let description = [{
@@ -4040,7 +4042,7 @@ def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
 
 def CIR_AwaitOp : CIR_Op<"await",[
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, NoRegionArguments
+  RecursivelySpeculatable, NoRegionArguments, RecursiveMemoryEffects
 ]> {
   let summary = "Wraps C++ co_await implicit logic";
   let description = [{
@@ -4531,7 +4533,7 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
 // ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//
 
-def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
+def CIR_ArrayCtor : CIR_Op<"array.ctor", [RecursiveMemoryEffects]> {
   let summary = "Initialize array elements with C++ constructors";
   let description = [{
     Initialize each array element using the same C++ constructor. This
@@ -4573,7 +4575,7 @@ def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
   let hasLLVMLowering = false;
 }
 
-def CIR_ArrayDtor : CIR_Op<"array.dtor"> {
+def CIR_ArrayDtor : CIR_Op<"array.dtor", [RecursiveMemoryEffects]> {
   let summary = "Destroy array elements with C++ destructors";
   let description = [{
     Destroy each array element using the same C++ destructor. This operation
@@ -6765,7 +6767,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 
 def CIR_TryOp : CIR_Op<"try",[
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, AutomaticAllocationScope
+  RecursivelySpeculatable, AutomaticAllocationScope, RecursiveMemoryEffects
 ]> {
   let summary = "C++ try block";
   let description = [{
