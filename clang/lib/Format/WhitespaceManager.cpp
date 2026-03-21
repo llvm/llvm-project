@@ -478,13 +478,14 @@ enum class AlignStrategy { Normal, Macro, CaseBody, CaseColon };
 // When RightJustify and ACS.PadOperators are true, operators in each block to
 // be aligned will be padded on the left to the same length before aligning.
 //
-// For the Macro or CaseX strategy we will not look at the indentaion and
-// nesting level to recurse into the line for alignment. We will also not count
-// the commas.
+// For the Macro, CaseBody, or CaseColon strategies we will not look at the
+// indentaion and nesting level to recurse into the line for alignment. We will
+// also not count the commas.
 //
-// The CaseX strategies also have some special handling, because we need to be
-// able align empty cases (rsp. use the position to push out other case bodies),
-// but stop on non short cases, which needs a bit of lookahead.
+// The CaseBody and CaseColon strategies also have some special handling,
+// because we need to be able align empty cases (rsp. use the position to push
+// out other case bodies), but stop on non short cases, which needs a bit of
+// lookahead.
 template <typename F, AlignStrategy Strategy = AlignStrategy::Normal>
 static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
                             SmallVector<WhitespaceManager::Change, 16> &Changes,
@@ -607,7 +608,6 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
     const auto IndexToAlign = Strategy == AlignStrategy::CaseBody ? I + 1 : I;
     const auto &ChangeToAlign = Changes[IndexToAlign];
-
     const auto [AlignTheToken,
                 ShiftAlignment] = [&]() -> std::pair<bool, bool> {
       switch (Strategy) {
