@@ -1792,6 +1792,9 @@ def ext_bit_int : Extension<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
+def err_unexpected_tok_after_module_name : Error<
+  "unexpected '%0' after module name, only ';' and '[' (start of attribute "
+  "specifier sequence) are allowed">;
 def err_unexpected_module_or_import_decl : Error<
   "%select{module|import}0 declaration can only appear at the top level">;
 def err_attribute_not_module_attr : Error<
