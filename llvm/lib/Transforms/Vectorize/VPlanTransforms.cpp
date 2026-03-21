@@ -2280,6 +2280,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
                              C->second == Instruction::ExtractValue)))
       return false;
 
+    // Each live-in represents a distinct external input.
+    if (match(Def, m_VPInstruction<VPInstruction::LiveIn>()))
+      return false;
+
     // Widened loads (including the EVL variant) are handled, as cse() only
     // reuses them within a block with no intervening memory write. Any other
     // memory access is rejected.
@@ -3483,11 +3487,10 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
 
-  // Dereferenceability is checked separately for uncountable exit loops with
-  // stores, as only the loads contributing to the exit condition need to
-  // be checked.
+  // Dereferenceability is checked separately for uncountable exit loops without
+  // stores; loads that may fault are replaced by speculative loads, if allowed.
   if (Style == UncountableExitStyle::ReadOnly &&
-      !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC)) {
+      !replaceUnsafeLoadsWithSpeculative(Plan, TheLoop, PSE, DT, AC)) {
     reportVectorizationFailure(
         "Auto-vectorization of early exit loops with potentially "
         "faulting loads is not supported",

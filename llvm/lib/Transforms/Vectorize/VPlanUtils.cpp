@@ -480,8 +480,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
-          VPV))
+  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe,
+          VPSpeculativeLoadOracleRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isVectorToScalar();
@@ -615,6 +615,13 @@ VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
   for (VPRecipeBase &R : *Plan.getVectorPreheader())
     if (match(&R, m_VPInstruction<VPInstruction::IncomingAliasMask>()))
       return cast<VPInstruction>(&R);
+  return nullptr;
+}
+
+VPSpeculativeLoadOracleRecipe *vputils::findSpeculativeLoadOracle(VPlan &Plan) {
+  for (VPRecipeBase &R : *Plan.getVectorPreheader())
+    if (auto *Oracle = dyn_cast<VPSpeculativeLoadOracleRecipe>(&R))
+      return Oracle;
   return nullptr;
 }
 

@@ -489,6 +489,12 @@ public:
     return createNaryOp(Instruction::Freeze, Op, DL, Name);
   }
 
+  VPInstruction *createLiveIn(Type *ResultTy, const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(VPInstruction::LiveIn, {}, {},
+                                                  {}, DebugLoc::getUnknown(),
+                                                  Name, ResultTy));
+  }
+
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
     assert(Op->getScalarType() != ResultTy &&
