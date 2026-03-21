@@ -677,18 +677,6 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   auto srcShape = sourceTy.getShape();
   auto resShape = resultTy.getShape();
 
-  size_t dimDiff = resultTy.getRank() - sourceTy.getRank();
-  if (dimDiff == 0) {
-    Operation *srcOp = broadcast.getSource().getDefiningOp();
-    if (!srcOp)
-      return;
-    [[maybe_unused]] bool hasUnitDim =
-        llvm::any_of(srcShape, [](int64_t dim) { return dim == 1; });
-    assert(
-        hasUnitDim && isa<vector::ShapeCastOp>(srcOp) &&
-        "When broadcasting from unit-dim, the producer op must be shape_cast!");
-  }
-
   auto resultLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
