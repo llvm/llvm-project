@@ -168,7 +168,7 @@ TEST_F(PlatformTest, CreateUnknown) {
   ASSERT_EQ(list.GetOrCreate("dummy"), nullptr);
 }
 
-// TestingProperties are only available in non-asserts builds.
+// TestingProperties are only available in asserts builds.
 #ifndef NDEBUG
 struct PlatformLocateSafePathTest : public PlatformTest {
 protected:
