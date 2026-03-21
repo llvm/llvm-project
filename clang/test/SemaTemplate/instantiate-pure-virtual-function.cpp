@@ -23,6 +23,7 @@ namespace call_pure_virtual_function_from_virtual {
   public:
     const void foo(const T &) { B::bar(1); } // expected-warning {{instantiation of function 'call_pure_virtual_function_from_virtual::B<int>::bar' required here, but no definition is available}}
     // expected-note@-1 {{add an explicit instantiation declaration to suppress this warning if 'call_pure_virtual_function_from_virtual::B<int>::bar' is explicitly instantiated in another translation unit}}
+    // expected-note@-2 {{e.g., 'extern template}}
     virtual const void bar(unsigned int) = 0; // expected-note {{forward declaration of template entity is here}}
   };
 
@@ -54,7 +55,10 @@ namespace non_pure_virtual_function {
 // expected-note@-3 {{add an explicit instantiation declaration to suppress this warning if 'non_pure_virtual_function::B<int>::bar' is explicitly instantiated in another translation unit}}
 // expected-note@-4 {{add an explicit instantiation declaration to suppress this warning if 'non_pure_virtual_function::B<int>::bar' is explicitly instantiated in another translation unit}}
 // expected-note@-5 {{add an explicit instantiation declaration to suppress this warning if 'non_pure_virtual_function::B<int>::bar' is explicitly instantiated in another translation unit}}
-// expected-note@-6 {{used here}}
+// expected-note@-6 {{e.g., 'extern template}}
+// expected-note@-7 {{e.g., 'extern template}}
+// expected-note@-8 {{e.g., 'extern template}}
+// expected-note@-9 {{used here}}
 
   public:
     constexpr void bar(unsigned int) override { }
