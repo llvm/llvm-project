@@ -433,3 +433,75 @@ define <2 x i64> @bitcast_constexpr_4f32_2i64_1111() {
   %res = bitcast <4 x float> splat (float 1.0) to <2 x i64>
   ret <2 x i64> %res
 }
+
+define <2 x b64> @bitcast_constexpr_16b8_2b64() {
+; CHECK-LABEL: @bitcast_constexpr_16b8_2b64(
+; CHECK-NEXT:    ret <2 x b64> bitcast (<16 x b8> splat (b8 2) to <2 x b64>)
+;
+  %res = bitcast <16 x b8> splat (b8 2) to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <2 x i64> @bitcast_constexpr_4b32_2i64() {
+; CHECK-LABEL: @bitcast_constexpr_4b32_2i64(
+; CHECK-NEXT:    ret <2 x i64> bitcast (<4 x b32> <b32 0, b32 1, b32 2, b32 3> to <2 x i64>)
+;
+  %res = bitcast <4 x b32> <b32 0, b32 1, b32 2, b32 3> to <2 x i64>
+  ret <2 x i64> %res
+}
+
+define <4 x i32> @bitcast_constexpr_2b64_4i32() {
+; CHECK-LABEL: @bitcast_constexpr_2b64_4i32(
+; CHECK-NEXT:    ret <4 x i32> bitcast (<2 x b64> <b64 0, b64 1> to <4 x i32>)
+;
+  %res = bitcast <2 x b64> <b64 0, b64 1> to <4 x i32>
+  ret <4 x i32> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4b32_2b64() {
+; CHECK-LABEL: @bitcast_constexpr_4b32_2b64(
+; CHECK-NEXT:    ret <2 x b64> bitcast (<4 x b32> <b32 0, b32 1, b32 2, b32 3> to <2 x b64>)
+;
+  %res = bitcast <4 x b32> <b32 0, b32 1, b32 2, b32 3> to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <16 x b8> @bitcast_constexpr_2b64_16b8() {
+; CHECK-LABEL: @bitcast_constexpr_2b64_16b8(
+; CHECK-NEXT:    ret <16 x b8> bitcast (<2 x b64> <b64 0, b64 1> to <16 x b8>)
+;
+  %res = bitcast <2 x b64> <b64 0, b64 1> to <16 x b8>
+  ret <16 x b8> %res
+}
+
+define <2 x i32> @bitcast_constexpr_scalar_b64_to_vector_2i32() {
+; CHECK-LABEL: @bitcast_constexpr_scalar_b64_to_vector_2i32(
+; CHECK-NEXT:    ret <2 x i32> bitcast (b64 1 to <2 x i32>)
+;
+  %res = bitcast b64 1 to <2 x i32>
+  ret <2 x i32> %res
+}
+
+define <4 x float> @bitcast_constexpr_2b64_4f32() {
+; CHECK-LABEL: @bitcast_constexpr_2b64_4f32(
+; CHECK-NEXT:    ret <4 x float> bitcast (<2 x b64> <b64 0, b64 1> to <4 x float>)
+;
+  %res = bitcast <2 x b64> <b64 0, b64 1> to <4 x float>
+  ret <4 x float> %res
+}
+
+define <2 x i64> @bitcast_constexpr_allones_4b32_2i64() {
+; CHECK-LABEL: @bitcast_constexpr_allones_4b32_2i64(
+; CHECK-NEXT:    ret <2 x i64> splat (i64 -1)
+;
+  %res = bitcast <4 x b32> splat (b32 -1) to <2 x i64>
+  ret <2 x i64> %res
+}
+
+define <4 x i32> @bitcast_constexpr_allones_4b32_4i32() {
+; CHECK-LABEL: @bitcast_constexpr_allones_4b32_4i32(
+; CHECK-NEXT:    ret <4 x i32> splat (i32 -1)
+;
+  %res = bitcast <4 x b32> splat (b32 -1) to <4 x i32>
+  ret <4 x i32> %res
+}
