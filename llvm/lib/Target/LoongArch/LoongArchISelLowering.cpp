@@ -9963,6 +9963,7 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
   default:
     break;
   case LoongArchISD::VPICK_ZEXT_ELT: {
+    assert(isa<VTSDNode>(Op->getOperand(2)) && "Unexpected operand!");
     EVT VT = cast<VTSDNode>(Op->getOperand(2))->getVT();
     unsigned VTBits = VT.getScalarSizeInBits();
     assert(BitWidth >= VTBits && "Unexpected width!");
