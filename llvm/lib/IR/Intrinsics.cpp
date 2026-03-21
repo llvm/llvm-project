@@ -868,6 +868,17 @@ bool Intrinsic::hasConstrainedFPRoundingModeOperand(Intrinsic::ID QID) {
   }
 }
 
+bool Intrinsic::isFPOperation(ID IID) {
+  switch (IID) {
+#define FUNCTION(NAME, ROUND_MODE, DAGN) case Intrinsic::NAME:
+#include "llvm/IR/FloatingPointOps.def"
+#undef INSTRUCTION
+    return true;
+  default:
+    return false;
+  }
+}
+
 // This class represents a position in the intrinsic's type signature and is
 // used to generate error messages in `matchIntrinsicType`. The printed position
 // can be of the following forms:

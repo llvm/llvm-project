@@ -1208,19 +1208,19 @@ define float @test_pow_afn_f32_strictfp(float %x, float %y) #2 {
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[TMP2]], float 0.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = select nnan nsz afn i1 [[TMP3]], float 1.000000e+00, float [[X]]
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = call nnan nsz afn float @llvm.fabs.f32(float [[TMP4]]) #[[ATTR3]]
-; NOPRELINK-NEXT:    [[TMP6:%.*]] = call nnan nsz afn float @llvm.log2.f32(float [[TMP5]]) #[[ATTR3]]
+; NOPRELINK-NEXT:    [[TMP6:%.*]] = call nnan nsz afn float @llvm.log2.f32(float [[TMP5]]) #[[ATTR5:[0-9]+]]
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call nnan nsz afn float @llvm.experimental.constrained.fmul.f32(float [[TMP2]], float [[TMP6]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-; NOPRELINK-NEXT:    [[TMP8:%.*]] = call nnan nsz afn float @llvm.exp2.f32(float [[TMP7]]) #[[ATTR3]]
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = call nnan nsz afn float @llvm.trunc.f32(float [[TMP2]]) #[[ATTR3]]
+; NOPRELINK-NEXT:    [[TMP8:%.*]] = call nnan nsz afn float @llvm.exp2.f32(float [[TMP7]]) #[[ATTR5]]
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = call nnan nsz afn float @llvm.trunc.f32(float [[TMP2]]) #[[ATTR5]]
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[TMP9]], float [[TMP2]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = call nnan nsz afn float @llvm.experimental.constrained.fmul.f32(float [[TMP2]], float 5.000000e-01, metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-; NOPRELINK-NEXT:    [[TMP12:%.*]] = call nnan nsz afn float @llvm.trunc.f32(float [[TMP11]]) #[[ATTR3]]
+; NOPRELINK-NEXT:    [[TMP12:%.*]] = call nnan nsz afn float @llvm.trunc.f32(float [[TMP11]]) #[[ATTR5]]
 ; NOPRELINK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[TMP12]], float [[TMP11]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
 ; NOPRELINK-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP13]], true
 ; NOPRELINK-NEXT:    [[TMP15:%.*]] = and i1 [[TMP10]], [[TMP14]]
 ; NOPRELINK-NEXT:    [[TMP16:%.*]] = select nnan nsz afn i1 [[TMP15]], float [[TMP4]], float 1.000000e+00
 ; NOPRELINK-NEXT:    [[TMP17:%.*]] = call nnan nsz afn float @llvm.copysign.f32(float [[TMP8]], float [[TMP16]]) #[[ATTR3]]
-; NOPRELINK-NEXT:    [[TMP18:%.*]] = call nnan nsz afn float @llvm.trunc.f32(float [[TMP2]]) #[[ATTR3]]
+; NOPRELINK-NEXT:    [[TMP18:%.*]] = call nnan nsz afn float @llvm.trunc.f32(float [[TMP2]]) #[[ATTR5]]
 ; NOPRELINK-NEXT:    [[TMP19:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[TMP18]], float [[TMP2]], metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR3]]
 ; NOPRELINK-NEXT:    [[TMP20:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[TMP4]], float 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict") #[[ATTR3]]
 ; NOPRELINK-NEXT:    [[TMP21:%.*]] = xor i1 [[TMP19]], true
@@ -1256,15 +1256,10 @@ define float @test_pow_afn_f32_strictfp(float %x, float %y) #2 {
 }
 
 define float @test_pow_fast_f32_nobuiltin(float %x, float %y) {
-; PRELINK-LABEL: define float @test_pow_fast_f32_nobuiltin
-; PRELINK-SAME: (float [[X:%.*]], float [[Y:%.*]]) {
-; PRELINK-NEXT:    [[POW:%.*]] = tail call fast float @_Z3powff(float [[X]], float [[Y]]) #[[ATTR6:[0-9]+]]
-; PRELINK-NEXT:    ret float [[POW]]
-;
-; NOPRELINK-LABEL: define float @test_pow_fast_f32_nobuiltin
-; NOPRELINK-SAME: (float [[X:%.*]], float [[Y:%.*]]) {
-; NOPRELINK-NEXT:    [[POW:%.*]] = tail call fast float @_Z3powff(float [[X]], float [[Y]]) #[[ATTR5:[0-9]+]]
-; NOPRELINK-NEXT:    ret float [[POW]]
+; CHECK-LABEL: define float @test_pow_fast_f32_nobuiltin
+; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[POW:%.*]] = tail call fast float @_Z3powff(float [[X]], float [[Y]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    ret float [[POW]]
 ;
   %pow = tail call fast float @_Z3powff(float %x, float %y) #3
   ret float %pow

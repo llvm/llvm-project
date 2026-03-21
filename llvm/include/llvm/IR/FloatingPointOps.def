@@ -1,0 +1,72 @@
+//===- llvm/IR/FloatingPointOps.def - FP intrinsics -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Defines set of intrinsics, which are classified as floating-point operations.
+//
+//===----------------------------------------------------------------------===//
+
+// Describes floating-point operation.
+// Arguments of the entries are:
+// N - intrinsic function name,
+// R - true if the operation depends on rounding mode
+// D - DAG node corresponding to the intrinsic.
+#ifndef FUNCTION
+#define FUNCTION(N,R,D)
+#endif
+
+// Describes a floating-point operation that is lowered to DAG nodes STRICT_*
+// in strictfp functions.
+#ifndef LEGACY_DAG
+#define LEGACY_DAG(N,R,D) FUNCTION(N,R,D)
+#endif
+
+// Describes a floating-point operation that is lowered to DAG nodes STRICT_*
+// in strictfp functions, and requires special expansion in the DAG builder.
+#ifndef LEGACY_EXP
+#define LEGACY_EXP(N,R,D) FUNCTION(N,R,D)
+#endif
+
+LEGACY_DAG(nearbyint,      1, FNEARBYINT)
+LEGACY_DAG(trunc,          0, FTRUNC)
+LEGACY_DAG(ceil,           0, FCEIL)
+LEGACY_DAG(floor,          0, FFLOOR)
+LEGACY_DAG(round,          0, FROUND)
+LEGACY_DAG(roundeven,      0, FROUNDEVEN)
+LEGACY_DAG(rint,           1, FRINT)
+LEGACY_DAG(lround,         0, LROUND)
+LEGACY_DAG(llround,        0, LLROUND)
+LEGACY_DAG(lrint,          1, LRINT)
+LEGACY_DAG(llrint,         1, LLRINT)
+LEGACY_DAG(minnum,         0, FMINNUM)
+LEGACY_DAG(maxnum,         0, FMAXNUM)
+LEGACY_DAG(minimum,        0, FMINIMUM)
+LEGACY_DAG(maximum,        0, FMAXIMUM)
+LEGACY_DAG(sqrt,           1, FSQRT)
+LEGACY_EXP(exp,            1, FEXP)
+LEGACY_EXP(exp2,           1, FEXP2)
+LEGACY_EXP(log,            1, FLOG)
+LEGACY_EXP(log2,           1, FLOG2)
+LEGACY_EXP(log10,          1, FLOG10)
+LEGACY_EXP(pow,            1, FPOW)
+LEGACY_EXP(powi,           1, FPOWI)
+LEGACY_DAG(sin,            1, FSIN)
+LEGACY_DAG(cos,            1, FCOS)
+LEGACY_DAG(tan,            1, FTAN)
+LEGACY_DAG(sinh,           1, FSINH)
+LEGACY_DAG(cosh,           1, FCOSH)
+LEGACY_DAG(tanh,           1, FTANH)
+LEGACY_DAG(asin,           1, FASIN)
+LEGACY_DAG(acos,           1, FACOS)
+LEGACY_DAG(atan,           1, FATAN)
+LEGACY_DAG(atan2,          1, FATAN2)
+LEGACY_DAG(ldexp,          1, FLDEXP)
+LEGACY_DAG(fma,            1, FMA)
+
+#undef FUNCTION
+#undef LEGACY_DAG
+#undef LEGACY_EXP

@@ -2554,12 +2554,8 @@ public:
   CallInst *CreateCall(FunctionType *FTy, Value *Callee,
                        ArrayRef<Value *> Args = {}, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(FTy, Callee, Args, DefaultOperandBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI))
-      setFPAttrs(CI, FPMathTag, FMF);
-    return Insert(CI, Name);
+    return CreateCall(FTy, Callee, Args, DefaultOperandBundles, Name,
+                      FPMathTag);
   }
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
@@ -2571,14 +2567,7 @@ public:
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> OpBundles,
-                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
-    if (IsFPConstrained)
-      setConstrainedFPCallAttr(CI);
-    if (isa<FPMathOperator>(CI))
-      setFPAttrs(CI, FPMathTag, FMF);
-    return Insert(CI, Name);
-  }
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr);
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> OpBundles,

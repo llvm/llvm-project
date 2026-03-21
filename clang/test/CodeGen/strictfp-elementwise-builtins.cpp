@@ -48,9 +48,9 @@ float4 strict_elementwise_min(float4 a, float4 b) {
 }
 
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z26strict_elementwise_maximumDv4_fS_
-// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ELT_MAXIMUM:%.*]] = tail call <4 x float> @llvm.maximum.v4f32(<4 x float> [[A]], <4 x float> [[B]]) #[[ATTR4]]
+// CHECK-NEXT:    [[ELT_MAXIMUM:%.*]] = tail call <4 x float> @llvm.maximum.v4f32(<4 x float> [[A]], <4 x float> [[B]]) #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    ret <4 x float> [[ELT_MAXIMUM]]
 //
 float4 strict_elementwise_maximum(float4 a, float4 b) {
@@ -58,9 +58,9 @@ float4 strict_elementwise_maximum(float4 a, float4 b) {
 }
 
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z26strict_elementwise_minimumDv4_fS_
-// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ELT_MINIMUM:%.*]] = tail call <4 x float> @llvm.minimum.v4f32(<4 x float> [[A]], <4 x float> [[B]]) #[[ATTR4]]
+// CHECK-NEXT:    [[ELT_MINIMUM:%.*]] = tail call <4 x float> @llvm.minimum.v4f32(<4 x float> [[A]], <4 x float> [[B]]) #[[ATTR5]]
 // CHECK-NEXT:    ret <4 x float> [[ELT_MINIMUM]]
 //
 float4 strict_elementwise_minimum(float4 a, float4 b) {
