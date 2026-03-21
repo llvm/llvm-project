@@ -1143,8 +1143,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       auto *MatTy = QTy0->castAs<ConstantMatrixType>();
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
-      unsigned N = QTy1->castAs<VectorType>()->getNumElements();
-      assert(N == Cols && "vector length must match matrix column count");
+      assert(QTy1->castAs<VectorType>()->getNumElements() == Cols &&
+             "vector length must match matrix column count");
       if (IsRowMajor)
         Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
