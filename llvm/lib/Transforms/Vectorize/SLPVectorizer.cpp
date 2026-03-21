@@ -26982,6 +26982,15 @@ public:
         // Vectorize a tree.
         Value *VectorizedRoot = V.vectorizeTree(
             LocalExternallyUsedValues, InsertPt, VectorValuesAndScales);
+        // Update TrackedToOrig mapping, since the tracked values might be
+        // updated.
+        for (Value *RdxVal : Candidates) {
+          Value *OrigVal = TrackedToOrig.at(RdxVal);
+          Value *TransformedRdxVal = TrackedVals.at(OrigVal);
+          if (TransformedRdxVal != RdxVal)
+            TrackedToOrig.try_emplace(TransformedRdxVal, OrigVal);
+        }
+
         if (RK == ReductionOrdering::Ordered) {
           // No need to generate reduction here, emit extractelements instead in
           // the tree vectorizer.
@@ -26999,15 +27008,6 @@ public:
           VectorizedTree = ReductionRoot;
           continue;
         }
-        // Update TrackedToOrig mapping, since the tracked values might be
-        // updated.
-        for (Value *RdxVal : Candidates) {
-          Value *OrigVal = TrackedToOrig.at(RdxVal);
-          Value *TransformedRdxVal = TrackedVals.at(OrigVal);
-          if (TransformedRdxVal != RdxVal)
-            TrackedToOrig.try_emplace(TransformedRdxVal, OrigVal);
-        }
-
         Builder.SetInsertPoint(InsertPt);
 
         // To prevent poison from leaking across what used to be sequential,
