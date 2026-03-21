@@ -23205,6 +23205,16 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     return nullptr;
   }
 
+  // Any schedulable copyable with split vectorize parent - skip, not supported
+  // currently.
+  // TODO: investigate fix for this early exit.
+  if (S.areInstructionsWithCopyableElements() && EI.UserTE &&
+      EI.UserTE->State == TreeEntry::SplitVectorize &&
+      any_of(VL, [&](Value *V) {
+        return !S.isNonSchedulable(V) && S.isCopyableElement(V);
+      }))
+    return std::nullopt;
+
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");
