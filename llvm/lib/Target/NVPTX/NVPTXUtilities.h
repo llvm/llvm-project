@@ -153,7 +153,8 @@ inline raw_ostream &operator<<(raw_ostream &O, Scope S) {
   return O;
 }
 
-inline std::string AddressSpaceToString(AddressSpace A) {
+inline const char *addressSpaceToString(AddressSpace A,
+                                        bool UseParamSubqualifiers = false) {
   switch (A) {
   case AddressSpace::Generic:
     return "generic";
@@ -166,8 +167,9 @@ inline std::string AddressSpaceToString(AddressSpace A) {
   case AddressSpace::SharedCluster:
     return "shared::cluster";
   case AddressSpace::EntryParam:
+    return UseParamSubqualifiers ? "param::entry" : "param";
   case AddressSpace::DeviceParam:
-    return "param";
+    return UseParamSubqualifiers ? "param::func" : "param";
   case AddressSpace::Local:
     return "local";
   }
@@ -176,7 +178,7 @@ inline std::string AddressSpaceToString(AddressSpace A) {
 }
 
 inline raw_ostream &operator<<(raw_ostream &O, AddressSpace A) {
-  O << AddressSpaceToString(A);
+  O << addressSpaceToString(A);
   return O;
 }
 

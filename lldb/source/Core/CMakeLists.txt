@@ -85,6 +85,24 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
     clangDriver
   )
 
+set(LLDB_SAFE_AUTO_LOAD_PATHS "" CACHE STRING
+    "Semicolon-separated list of paths that LLDB will automatically load scripting resources from.")
+
+# Turn list of paths into a comma-separated list to be #include'd
+# into a C-array.
+set(_entries "")
+foreach(path IN LISTS LLDB_SAFE_AUTO_LOAD_PATHS)
+  string(REPLACE "\\" "\\\\" escaped_path "${path}")
+  list(APPEND _entries "\"${escaped_path}\",")
+endforeach()
+string(JOIN "\n" SAFE_PATH_ENTRIES ${_entries})
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/SafeAutoloadPaths.inc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/SafeAutoloadPaths.inc
+  @ONLY
+)
+
 add_dependencies(lldbCore
   LLDBCorePropertiesGen
   LLDBCorePropertiesEnumGen)

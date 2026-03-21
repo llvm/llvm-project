@@ -192,7 +192,7 @@ requestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
   // Make sure URL will be valid, portable, and compatible with symbol servers.
   if (has_unsafe_characters(pdb_name)) {
     Debugger::ReportWarning(llvm::formatv(
-        "Rejecting HTTP lookup for PDB file due to unsafe characters in "
+        "rejecting HTTP lookup for PDB file due to unsafe characters in "
         "name: {0}",
         pdb_name));
     return {};
@@ -201,13 +201,13 @@ requestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
   // Construct the path for local storage. Configurable cache coming soon.
   llvm::SmallString<128> cache_file;
   if (!path::cache_directory(cache_file)) {
-    Debugger::ReportWarning("Failed to determine cache directory for SymStore");
+    Debugger::ReportWarning("failed to determine cache directory for SymStore");
     return {};
   }
   path::append(cache_file, "lldb", "SymStore", pdb_name, key);
   if (std::error_code ec = fs::create_directories(cache_file)) {
     Debugger::ReportWarning(
-        llvm::formatv("Failed to create cache directory '{0}': {1}", cache_file,
+        llvm::formatv("failed to create cache directory '{0}': {1}", cache_file,
                       ec.message()));
     return {};
   }

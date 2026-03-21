@@ -17532,6 +17532,8 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
                "#elif ((a || b) && c) || d\n"
                "#endif",
                NoSpace);
+  // Space between sizeof and C compound literal.
+  verifyFormat("a = sizeof (int){};", NoSpace);
 
   FormatStyle Space = getLLVMStyle();
   Space.SpaceBeforeParens = FormatStyle::SBPO_Always;

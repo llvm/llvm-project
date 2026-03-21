@@ -1,0 +1,24 @@
+# REQUIRES: python, asserts, system-darwin
+#
+# Test that when a dSYM exists but has no Python script inside,
+# the safe-path script is loaded as a fallback.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/TestModule.out
+# RUN: mkdir -p %t/safe-path/TestModule
+
+# RUN: cp %t/script.py %t/safe-path/TestModule/TestModule.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'settings append testing.safe-auto-load-paths %t/safe-path' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 | FileCheck %s
+
+# CHECK: SAFE_PATH_FALLBACK
+
+#--- main.c
+int main() { return 0; }
+
+#--- script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SAFE_PATH_FALLBACK", file=sys.stderr)

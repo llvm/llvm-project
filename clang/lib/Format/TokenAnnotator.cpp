@@ -4991,6 +4991,17 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                spaceRequiredBeforeParens(Right);
       }
     }
+    auto CompoundLiteral = [](const FormatToken &Tok) {
+      if (Tok.isNot(tok::l_paren))
+        return false;
+      const auto *RParen = Tok.MatchingParen;
+      if (!RParen)
+        return false;
+      const auto *Next = RParen->Next;
+      return Next && Next->is(tok::l_brace) && Next->is(BK_BracedInit);
+    };
+    if (Left.is(tok::kw_sizeof) && CompoundLiteral(Right))
+      return true;
     // Handle builtins like identifiers.
     if (Line.Type != LT_PreprocessorDirective &&
         (Left.Tok.getIdentifierInfo() || Left.is(tok::r_paren))) {

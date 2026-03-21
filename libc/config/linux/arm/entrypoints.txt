@@ -475,6 +475,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl

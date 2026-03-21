@@ -4407,7 +4407,6 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
 
   // Consume the pp-import-suffix and expand any macros in it now, if we're not
   // at the semicolon already.
-  SourceLocation End = DirToks.back().getLocation();
   std::optional<Token> NextPPTok = DirToks.back();
   if (DirToks.back().is(tok::eod)) {
     NextPPTok = peekNextPPToken();
@@ -4425,14 +4424,14 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     // Consume the pp-import-suffix and expand any macros in it now. We'll add
     // it back into the token stream later.
     CollectPPImportSuffix(DirToks);
-    End = DirToks.back().getLocation();
   }
 
-  if (DirToks.back().isNot(tok::eod))
-    End = CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
-                              /*EnableMacros=*/false, &DirToks);
-  else
-    End = DirToks.pop_back_val().getLocation();
+  SourceLocation End =
+      DirToks.back().isNot(tok::eod)
+          ? CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName(),
+                                /*EnableMacros=*/false, &DirToks)
+
+          : DirToks.pop_back_val().getLocation();
 
   if (!IncludeMacroStack.empty()) {
     Diag(StartLoc, diag::err_pp_module_decl_in_header)

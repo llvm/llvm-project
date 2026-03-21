@@ -1284,3 +1284,41 @@ define void @foo(i8 %v0) {
   EXPECT_DEATH(Add1N->getNumUnscheduledSuccs(), ".*");
 #endif
 }
+
+// Don't udpate the unscheduled succs if the user is scheduled.
+TEST_F(DependencyGraphTest, MaintainUnscheduledSuccsWhenUserScheduled) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0) {
+  %add0 = add i8 %v0, 0
+  %add1 = add i8 %v0, 1
+  %modify = add i8 %add0, 1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Modify = cast<sandboxir::BinaryOperator>(&*It++);
+  // DAG contains all Add0, Add1 and Modify
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Add0, Add1, Modify});
+  auto *Add0N = DAG.getNode(Add0);
+  auto *Add1N = DAG.getNode(Add1);
+  auto *ModifyN = DAG.getNode(Modify);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 1u);
+  // Mark Modify as scheduled and decrement Add1N's unscheduled succs.
+  ModifyN->setScheduled();
+  Add0N->decrUnscheduledSuccs();
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 0u);
+  EXPECT_EQ(Add1N->getNumUnscheduledSuccs(), 0u);
+
+  // Change Modify's operand and make sure that this won't update Add0N's or
+  // Add1N's unscheduled succs because ModifyN is "scheduled".
+  Modify->setOperand(0, Add1);
+  EXPECT_EQ(Add0N->getNumUnscheduledSuccs(), 0u);
+  EXPECT_EQ(Add1N->getNumUnscheduledSuccs(), 0u);
+}

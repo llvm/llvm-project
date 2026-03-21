@@ -262,8 +262,9 @@ Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
         Offset = Add(OneUseSum, Offset);
 
       // Rewrite the GEP to reuse the computed offset. This also includes
-      // offsets from preceding one-use GEPs.
+      // offsets from preceding one-use GEPs of matched type.
       if (RewriteGEPs && Inst &&
+          Offset->getType()->isVectorTy() == GEP->getType()->isVectorTy() &&
           !(GEP->getSourceElementType()->isIntegerTy(8) &&
             GEP->getOperand(1) == Offset)) {
         replaceInstUsesWith(

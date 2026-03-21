@@ -12,6 +12,21 @@ int caller(int (*fn)(int, int), int a, int b) { return fn(a, b); }
 // process-specific, so this catches inter-process key mismatches.
 int (*__ptrauth(1, 0, 0) global_fp)(int, int) = &add;
 
+// A helper that uses computed gotos (labels-as-values) to implement a
+// simple dispatch table to test -fptrauth-indirect-gotos support.
+int indirect_goto_dispatch(int idx) {
+  static void *table[] = {&&case0, &&case1, &&case2};
+  if (idx < 0 || idx > 2)
+    return -1;
+  goto *table[idx];
+case0:
+  return 10;
+case1:
+  return 20;
+case2:
+  return 30;
+}
+
 int main(void) {
   printf("%d %d\n", add(2, 3), mul(4, 5));
   return 0; // break here

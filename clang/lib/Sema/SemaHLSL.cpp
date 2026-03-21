@@ -111,6 +111,24 @@ static bool convertToRegisterType(StringRef Slot, RegisterType *RT) {
   }
 }
 
+static char getRegisterTypeChar(RegisterType RT) {
+  switch (RT) {
+  case RegisterType::SRV:
+    return 't';
+  case RegisterType::UAV:
+    return 'u';
+  case RegisterType::CBuffer:
+    return 'b';
+  case RegisterType::Sampler:
+    return 's';
+  case RegisterType::C:
+    return 'c';
+  case RegisterType::I:
+    return 'i';
+  }
+  llvm_unreachable("unexpected RegisterType value");
+}
+
 static ResourceClass getResourceClass(RegisterType RT) {
   switch (RT) {
   case RegisterType::SRV:
@@ -161,6 +179,15 @@ static Builtin::ID getSpecConstBuiltinId(const Type *Type) {
   default:
     return Builtin::NotBuiltin;
   }
+}
+
+static StringRef createRegisterString(ASTContext &AST, RegisterType RegType,
+                                      unsigned N) {
+  llvm::SmallString<16> Buffer;
+  llvm::raw_svector_ostream OS(Buffer);
+  OS << getRegisterTypeChar(RegType);
+  OS << N;
+  return AST.backupStr(OS.str());
 }
 
 DeclBindingInfo *ResourceBindings::addDeclBindingInfo(const VarDecl *VD,
@@ -4819,13 +4846,108 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
   Decl->setType(Type);
 }
 
+namespace {
+
+// Helper class for assigning bindings to resources declared within a struct.
+// It keeps track of all binding attributes declared on a struct instance, and
+// the offsets for each register type that have been assigned so far.
+// Handles both explicit and implicit bindings.
+class StructBindingContext {
+  // Bindings and offsets per register type. We only need to support four
+  // register types - SRV (u), UAV (t), CBuffer (c), and Sampler (s).
+  HLSLResourceBindingAttr *RegBindingsAttrs[4];
+  unsigned RegBindingOffset[4];
+
+  // Make sure the RegisterType values are what we expect
+  static_assert(static_cast<unsigned>(RegisterType::SRV) == 0 &&
+                    static_cast<unsigned>(RegisterType::UAV) == 1 &&
+                    static_cast<unsigned>(RegisterType::CBuffer) == 2 &&
+                    static_cast<unsigned>(RegisterType::Sampler) == 3,
+                "unexpected register type values");
+
+  // Vulkan binding attribute does not vary by register type.
+  HLSLVkBindingAttr *VkBindingAttr;
+  unsigned VkBindingOffset;
+
+public:
+  // Constructor: gather all binding attributes on a struct instance and
+  // initialize offsets.
+  StructBindingContext(VarDecl *VD) {
+    for (unsigned i = 0; i < 4; ++i) {
+      RegBindingsAttrs[i] = nullptr;
+      RegBindingOffset[i] = 0;
+    }
+    VkBindingAttr = nullptr;
+    VkBindingOffset = 0;
+
+    ASTContext &AST = VD->getASTContext();
+    bool IsSpirv = AST.getTargetInfo().getTriple().isSPIRV();
+
+    for (Attr *A : VD->attrs()) {
+      if (auto *RBA = dyn_cast<HLSLResourceBindingAttr>(A)) {
+        RegisterType RegType = RBA->getRegisterType();
+        unsigned RegTypeIdx = static_cast<unsigned>(RegType);
+        // Ignore unsupported register annotations, such as 'c' or 'i'.
+        if (RegTypeIdx < 4)
+          RegBindingsAttrs[RegTypeIdx] = RBA;
+        continue;
+      }
+      // Gather the Vulkan binding attributes only if the target is SPIR-V.
+      if (IsSpirv) {
+        if (auto *VBA = dyn_cast<HLSLVkBindingAttr>(A))
+          VkBindingAttr = VBA;
+      }
+    }
+  }
+
+  // Creates a binding attribute for a resource based on the gathered attributes
+  // and the required register type and range.
+  Attr *createBindingAttr(SemaHLSL &S, ASTContext &AST, RegisterType RegType,
+                          unsigned Range) {
+    assert(static_cast<unsigned>(RegType) < 4 && "unexpected register type");
+
+    if (VkBindingAttr) {
+      unsigned Offset = VkBindingOffset;
+      VkBindingOffset += Range;
+      return HLSLVkBindingAttr::CreateImplicit(
+          AST, VkBindingAttr->getBinding() + Offset, VkBindingAttr->getSet(),
+          VkBindingAttr->getRange());
+    }
+
+    HLSLResourceBindingAttr *RBA =
+        RegBindingsAttrs[static_cast<unsigned>(RegType)];
+    HLSLResourceBindingAttr *NewAttr = nullptr;
+
+    if (RBA && RBA->hasRegisterSlot()) {
+      // Explicit binding - create a new attribute with offseted slot number
+      // based on the required register type.
+      unsigned Offset = RegBindingOffset[static_cast<unsigned>(RegType)];
+      RegBindingOffset[static_cast<unsigned>(RegType)] += Range;
+
+      unsigned NewSlotNumber = RBA->getSlotNumber() + Offset;
+      StringRef NewSlotNumberStr =
+          createRegisterString(AST, RBA->getRegisterType(), NewSlotNumber);
+      NewAttr = HLSLResourceBindingAttr::CreateImplicit(
+          AST, NewSlotNumberStr, RBA->getSpace(), RBA->getRange());
+      NewAttr->setBinding(RegType, NewSlotNumber, RBA->getSpaceNumber());
+    } else {
+      // No binding attribute or space-only binding - create a binding
+      // attribute for implicit binding.
+      NewAttr = HLSLResourceBindingAttr::CreateImplicit(AST, "", "0", {});
+      NewAttr->setBinding(RegType, std::nullopt,
+                          RBA ? RBA->getSpaceNumber() : 0);
+      NewAttr->setImplicitBindingOrderID(S.getNextImplicitBindingOrderID());
+    }
+    return NewAttr;
+  }
+};
+
 // Creates a global variable declaration for a resource field embedded in a
 // struct, assigns it a binding, initializes it, and associates it with the
 // struct declaration via an HLSLAssociatedResourceDeclAttr.
-static void createGlobalResourceDeclForStruct(Sema &S, VarDecl *ParentVD,
-                                              SourceLocation Loc,
-                                              IdentifierInfo *Id,
-                                              QualType ResTy) {
+static void createGlobalResourceDeclForStruct(
+    Sema &S, VarDecl *ParentVD, SourceLocation Loc, IdentifierInfo *Id,
+    QualType ResTy, StructBindingContext &BindingCtx) {
   assert(isResourceRecordTypeOrArrayOf(ResTy) &&
          "expected resource type or array of resources");
 
@@ -4846,13 +4968,11 @@ static void createGlobalResourceDeclForStruct(Sema &S, VarDecl *ParentVD,
     ResHandleTy = HLSLAttributedResourceType::findHandleTypeOnResource(
         ResTy.getTypePtr());
   }
-  // FIXME: Explicit bindings will be handled in a follow-up change. For now
-  // just add an implicit binding attribute.
-  auto *Attr =
-      HLSLResourceBindingAttr::CreateImplicit(S.getASTContext(), "", "0", {});
-  Attr->setBinding(getRegisterType(ResHandleTy), std::nullopt, 0);
-  Attr->setImplicitBindingOrderID(S.HLSL().getNextImplicitBindingOrderID());
-  ResDecl->addAttr(Attr);
+  // Add a binding attribute to the global resource declaration.
+  Attr *BindingAttr = BindingCtx.createBindingAttr(
+      S.HLSL(), AST, getRegisterType(ResHandleTy), Range);
+  ResDecl->addAttr(BindingAttr);
+  ResDecl->addAttr(InternalLinkageAttr::CreateImplicit(AST));
   ResDecl->setImplicit();
 
   if (Range == 1)
@@ -4868,17 +4988,17 @@ static void createGlobalResourceDeclForStruct(Sema &S, VarDecl *ParentVD,
   S.Consumer.HandleTopLevelDecl(DG);
 }
 
-static void
-handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
-                                 const ConstantArrayType *CAT,
-                                 EmbeddedResourceNameBuilder &NameBuilder);
+static void handleArrayOfStructWithResources(
+    Sema &S, VarDecl *ParentVD, const ConstantArrayType *CAT,
+    EmbeddedResourceNameBuilder &NameBuilder, StructBindingContext &BindingCtx);
 
 // Scans base and all fields of a struct/class type to find all embedded
 // resources or resource arrays. Creates a global variable for each resource
 // found.
-static void
-handleStructWithResources(Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
-                          EmbeddedResourceNameBuilder &NameBuilder) {
+static void handleStructWithResources(Sema &S, VarDecl *ParentVD,
+                                      const CXXRecordDecl *RD,
+                                      EmbeddedResourceNameBuilder &NameBuilder,
+                                      StructBindingContext &BindingCtx) {
 
   // Scan the base classes.
   assert(RD->getNumBases() <= 1 && "HLSL doesn't support multiple inheritance");
@@ -4888,7 +5008,7 @@ handleStructWithResources(Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
     if (QT->isHLSLIntangibleType()) {
       CXXRecordDecl *BaseRD = QT->getAsCXXRecordDecl();
       NameBuilder.pushBaseName(BaseRD->getName());
-      handleStructWithResources(S, ParentVD, BaseRD, NameBuilder);
+      handleStructWithResources(S, ParentVD, BaseRD, NameBuilder, BindingCtx);
       NameBuilder.pop();
     }
   }
@@ -4903,14 +5023,15 @@ handleStructWithResources(Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
     if (isResourceRecordTypeOrArrayOf(FDTy)) {
       IdentifierInfo *II = NameBuilder.getNameAsIdentifier(S.getASTContext());
       createGlobalResourceDeclForStruct(S, ParentVD, FD->getLocation(), II,
-                                        FDTy);
+                                        FDTy, BindingCtx);
     } else if (const auto *RD = FDTy->getAsCXXRecordDecl()) {
-      handleStructWithResources(S, ParentVD, RD, NameBuilder);
+      handleStructWithResources(S, ParentVD, RD, NameBuilder, BindingCtx);
 
     } else if (const auto *ArrayTy = dyn_cast<ConstantArrayType>(FDTy)) {
       assert(!FDTy->isHLSLResourceRecordArray() &&
              "resource arrays should have been already handled");
-      handleArrayOfStructWithResources(S, ParentVD, ArrayTy, NameBuilder);
+      handleArrayOfStructWithResources(S, ParentVD, ArrayTy, NameBuilder,
+                                       BindingCtx);
     }
     NameBuilder.pop();
   }
@@ -4920,7 +5041,8 @@ handleStructWithResources(Sema &S, VarDecl *ParentVD, const CXXRecordDecl *RD,
 static void
 handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
                                  const ConstantArrayType *CAT,
-                                 EmbeddedResourceNameBuilder &NameBuilder) {
+                                 EmbeddedResourceNameBuilder &NameBuilder,
+                                 StructBindingContext &BindingCtx) {
 
   QualType ElementTy = CAT->getElementType().getCanonicalType();
   assert(ElementTy->isHLSLIntangibleType() && "Expected HLSL intangible type");
@@ -4934,12 +5056,16 @@ handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
   for (unsigned I = 0, E = CAT->getSize().getZExtValue(); I < E; ++I) {
     NameBuilder.pushArrayIndex(I);
     if (ElementRD)
-      handleStructWithResources(S, ParentVD, ElementRD, NameBuilder);
+      handleStructWithResources(S, ParentVD, ElementRD, NameBuilder,
+                                BindingCtx);
     else
-      handleArrayOfStructWithResources(S, ParentVD, SubCAT, NameBuilder);
+      handleArrayOfStructWithResources(S, ParentVD, SubCAT, NameBuilder,
+                                       BindingCtx);
     NameBuilder.pop();
   }
 }
+
+} // namespace
 
 // Scans all fields of a user-defined struct (or array of structs)
 // to find all embedded resources or resource arrays. For each resource
@@ -4948,18 +5074,19 @@ handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
 // attribute.
 void SemaHLSL::handleGlobalStructOrArrayOfWithResources(VarDecl *VD) {
   EmbeddedResourceNameBuilder NameBuilder(VD->getName());
+  StructBindingContext BindingCtx(VD);
 
   const Type *VDTy = VD->getType().getTypePtr();
   assert(VDTy->isHLSLIntangibleType() && !isResourceRecordTypeOrArrayOf(VD) &&
          "Expected non-resource struct or array type");
 
   if (const CXXRecordDecl *RD = VDTy->getAsCXXRecordDecl()) {
-    handleStructWithResources(SemaRef, VD, RD, NameBuilder);
+    handleStructWithResources(SemaRef, VD, RD, NameBuilder, BindingCtx);
     return;
   }
 
   if (const auto *CAT = dyn_cast<ConstantArrayType>(VDTy)) {
-    handleArrayOfStructWithResources(SemaRef, VD, CAT, NameBuilder);
+    handleArrayOfStructWithResources(SemaRef, VD, CAT, NameBuilder, BindingCtx);
     return;
   }
 }

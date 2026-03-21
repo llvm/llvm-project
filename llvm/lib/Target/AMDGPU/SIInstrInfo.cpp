@@ -5298,12 +5298,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       break;
     }
     case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
+    case AMDGPU::OPERAND_INPUT_MODS:
       if (!MI.getOperand(i).isImm() || !isInlineConstant(MI, i)) {
         ErrInfo = "Expected inline constant for operand.";
         return false;
       }
       break;
-    case AMDGPU::OPERAND_INPUT_MODS:
     case AMDGPU::OPERAND_SDWA_VOPC_DST:
     case AMDGPU::OPERAND_KIMM16:
       break;

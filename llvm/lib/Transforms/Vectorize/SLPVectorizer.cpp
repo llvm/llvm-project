@@ -10267,7 +10267,7 @@ static std::pair<size_t, size_t> generateKeySubkey(
     } else {
       SubKey = hash_value(I->getOpcode());
     }
-    Key = hash_combine(hash_value(I->getParent()), Key);
+    Key = hash_combine(hash_value(I->getParent()->getNumber()), Key);
   }
   return std::make_pair(Key, SubKey);
 }
@@ -13353,7 +13353,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
     return;
 
   auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
-    Key = hash_combine(hash_value(LI->getParent()), Key);
+    Key = hash_combine(hash_value(LI->getParent()->getNumber()), Key);
     Value *Ptr =
         getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth);
     if (LoadKeyUsed.contains(Key)) {
@@ -23205,6 +23205,16 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     return nullptr;
   }
 
+  // Any schedulable copyable with split vectorize parent - skip, not supported
+  // currently.
+  // TODO: investigate fix for this early exit.
+  if (S.areInstructionsWithCopyableElements() && EI.UserTE &&
+      EI.UserTE->State == TreeEntry::SplitVectorize &&
+      any_of(VL, [&](Value *V) {
+        return !S.isNonSchedulable(V) && S.isCopyableElement(V);
+      }))
+    return std::nullopt;
+
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");
@@ -26325,7 +26335,7 @@ public:
     SmallSet<size_t, 2> LoadKeyUsed;
 
     auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
-      Key = hash_combine(hash_value(LI->getParent()), Key);
+      Key = hash_combine(hash_value(LI->getParent()->getNumber()), Key);
       Value *Ptr =
           getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth);
       if (!LoadKeyUsed.insert(Key).second) {
@@ -26982,6 +26992,15 @@ public:
         // Vectorize a tree.
         Value *VectorizedRoot = V.vectorizeTree(
             LocalExternallyUsedValues, InsertPt, VectorValuesAndScales);
+        // Update TrackedToOrig mapping, since the tracked values might be
+        // updated.
+        for (Value *RdxVal : Candidates) {
+          Value *OrigVal = TrackedToOrig.at(RdxVal);
+          Value *TransformedRdxVal = TrackedVals.at(OrigVal);
+          if (TransformedRdxVal != RdxVal)
+            TrackedToOrig.try_emplace(TransformedRdxVal, OrigVal);
+        }
+
         if (RK == ReductionOrdering::Ordered) {
           // No need to generate reduction here, emit extractelements instead in
           // the tree vectorizer.
@@ -26999,15 +27018,6 @@ public:
           VectorizedTree = ReductionRoot;
           continue;
         }
-        // Update TrackedToOrig mapping, since the tracked values might be
-        // updated.
-        for (Value *RdxVal : Candidates) {
-          Value *OrigVal = TrackedToOrig.at(RdxVal);
-          Value *TransformedRdxVal = TrackedVals.at(OrigVal);
-          if (TransformedRdxVal != RdxVal)
-            TrackedToOrig.try_emplace(TransformedRdxVal, OrigVal);
-        }
-
         Builder.SetInsertPoint(InsertPt);
 
         // To prevent poison from leaking across what used to be sequential,

@@ -820,6 +820,26 @@ func.func @slice_singleton() -> tensor<1x1xi32> {
 
 // -----
 
+// CHECK-LABEL: @test_slice_resource_no_fold
+func.func @test_slice_resource_no_fold() -> tensor<1x1xi32> {
+  %input = "tosa.const"() {values = dense_resource<slice_resource> : tensor<3x4xi32>} : () -> tensor<3x4xi32>
+  %start = tosa.const_shape {values = dense<[1, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %size = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // CHECK: tosa.slice
+  %slice= tosa.slice %input, %start, %size : (tensor<3x4xi32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1xi32>
+  return %slice : tensor<1x1xi32>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      slice_resource: "0x040000000700000000000000000000000000000000000000000000000900000000000000000000000000000000000000"
+    }
+  }
+#-}
+
+// -----
+
 // CHECK: func.func @cast_float_to_float
 func.func @cast_float_to_float() -> tensor<f16> {
   %splat = "tosa.const"() {values = dense<42.0> : tensor<f32>} : () -> tensor<f32>

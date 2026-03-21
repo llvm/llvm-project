@@ -193,7 +193,7 @@ namespace {
       list.push_back(UnqualUsingEntry(UD->getNominatedNamespace(), Common));
     }
 
-    void done() { llvm::sort(list, UnqualUsingEntry::Comparator()); }
+    void done() { llvm::stable_sort(list, UnqualUsingEntry::Comparator()); }
 
     typedef ListTy::const_iterator const_iterator;
 

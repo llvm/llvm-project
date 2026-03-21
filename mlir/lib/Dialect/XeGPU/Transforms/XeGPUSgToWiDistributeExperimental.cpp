@@ -838,8 +838,11 @@ struct SgToWiConvertLayout
                   ConversionPatternRewriter &rewriter) const override {
     auto inputLayout = op.getInputLayoutAttr();
     auto targetLayout = op.getTargetLayoutAttr();
+    auto resShape = cast<VectorType>(op.getResult().getType()).getShape();
+    SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
 
-    if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
+    if (!inputLayout.isCompatibleWith(targetLayout, resShapeVec,
+                                      xegpu::LayoutKind::Lane)) {
       return rewriter.notifyMatchFailure(
           op, "lowering incompatible convert_layout not yet supported");
     }
