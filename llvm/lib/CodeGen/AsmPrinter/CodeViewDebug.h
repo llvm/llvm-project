@@ -453,8 +453,6 @@ private:
   getTypeIndexForThisPtr(const DIDerivedType *PtrTy,
                          const DISubroutineType *SubroutineTy);
 
-  codeview::TypeIndex getTypeIndexForReferenceTo(const DIType *Ty);
-
   codeview::TypeIndex getMemberFunctionType(const DISubprogram *SP,
                                             const DICompositeType *Class);
 

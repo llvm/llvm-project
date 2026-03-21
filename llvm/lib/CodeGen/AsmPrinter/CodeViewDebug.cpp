@@ -2728,15 +2728,6 @@ CodeViewDebug::getTypeIndexForThisPtr(const DIDerivedType *PtrTy,
   return recordTypeIndexForDINode(PtrTy, TI, SubroutineTy);
 }
 
-TypeIndex CodeViewDebug::getTypeIndexForReferenceTo(const DIType *Ty) {
-  PointerRecord PR(getTypeIndex(Ty),
-                   getPointerSizeInBytes() == 8 ? PointerKind::Near64
-                                                : PointerKind::Near32,
-                   PointerMode::LValueReference, PointerOptions::None,
-                   Ty->getSizeInBits() / 8);
-  return TypeTable.writeLeafType(PR);
-}
-
 TypeIndex CodeViewDebug::getCompleteTypeIndex(const DIType *Ty) {
   // The null DIType is the void type. Don't try to hash it.
   if (!Ty)
