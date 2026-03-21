@@ -52,7 +52,7 @@ using namespace mlir;
 /// this, the value stored can be well defined at block boundaries, allowing
 /// the propagation of replacement through blocks.
 ///
-/// The way regions are handled in the trnasformation is by offering an
+/// The way regions are handled in the transformation is by offering an
 /// interface to express the behavior of the allocation value at the edges of
 /// the regions: from a particular definition reaching the region operation, the
 /// operation will specify what the reaching definition at the entry of its
