@@ -5,7 +5,8 @@
 program omp
   integer i, j, k
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 1
+  !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   do i = 0, 10
     select case (i)
@@ -21,7 +22,8 @@ program omp
   end do
   !$omp end do
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   do i = 0, 10
     do j = 0, 10

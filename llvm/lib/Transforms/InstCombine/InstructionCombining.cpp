@@ -262,8 +262,9 @@ Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
         Offset = Add(OneUseSum, Offset);
 
       // Rewrite the GEP to reuse the computed offset. This also includes
-      // offsets from preceding one-use GEPs.
+      // offsets from preceding one-use GEPs of matched type.
       if (RewriteGEPs && Inst &&
+          Offset->getType()->isVectorTy() == GEP->getType()->isVectorTy() &&
           !(GEP->getSourceElementType()->isIntegerTy(8) &&
             GEP->getOperand(1) == Offset)) {
         replaceInstUsesWith(
@@ -4071,8 +4072,9 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   // If there are more than 2 instructions, check that they are noops
   // i.e., they won't hurt the performance of the generated code.
   if (FreeInstrBB->size() != 2) {
-    for (const Instruction &Inst : FreeInstrBB->instructionsWithoutDebug()) {
-      if (&Inst == &FI || &Inst == FreeInstrBBTerminator)
+    for (const Instruction &Inst : *FreeInstrBB) {
+      if (&Inst == &FI || &Inst == FreeInstrBBTerminator ||
+          isa<PseudoProbeInst>(Inst))
         continue;
       auto *Cast = dyn_cast<CastInst>(&Inst);
       if (!Cast || !Cast->isNoopCast(DL))
@@ -6145,11 +6147,11 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
 
 void InstCombiner::computeBackEdges() {
   // Collect backedges.
-  SmallPtrSet<BasicBlock *, 16> Visited;
+  SmallVector<bool> Visited(F.getMaxBlockNumber());
   for (BasicBlock *BB : RPOT) {
-    Visited.insert(BB);
+    Visited[BB->getNumber()] = true;
     for (BasicBlock *Succ : successors(BB))
-      if (Visited.contains(Succ))
+      if (Visited[Succ->getNumber()])
         BackEdges.insert({BB, Succ});
   }
   ComputedBackEdges = true;

@@ -6,7 +6,7 @@
 // CHECK-FIXES: #include <ranges>
 
 #include "use-ranges/fake_std.h"
-#include "smart-ptr/unique_ptr.h"
+#include <memory>
 
 void Positives() {
   std::vector<int> I, J;

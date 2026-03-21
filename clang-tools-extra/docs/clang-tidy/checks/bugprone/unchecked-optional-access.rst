@@ -310,6 +310,25 @@ advantages:
     scope. This gives the user the best of both worlds -- the safety of a
     dynamic check, but without incurring redundant costs.
 
+GoogleTest awareness
+--------------------
+
+The check recognizes common macros like ``ASSERT_TRUE`` and ``ASSERT_FALSE``:
+
+.. code-block:: c++
+
+   TEST(OptionalTest, CheckValue) {
+     std::optional<int> opt;
+     EXPECT_TRUE(opt.has_value());
+     EXPECT_EQ(opt.value(), 42); // unsafe: EXPECT_TRUE doesn't terminate test.
+
+     ASSERT_TRUE(opt.has_value());
+     EXPECT_EQ(opt.value(), 42); // safe: ASSERT_TRUE terminates if no value.
+   }
+
+Less common macros such as ``ASSERT_NE(..., nullopt)`` and ``ASSERT_THAT`` are
+not currently supported and are ignored, which may result in false positives.
+
 Options
 -------
 

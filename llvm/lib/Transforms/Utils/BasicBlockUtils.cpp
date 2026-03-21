@@ -24,6 +24,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
@@ -346,6 +347,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   if (PredecessorWithTwoSuccessors) {
     // Delete the unconditional branch from BB.
     BB->back().eraseFromParent();
+    // Add unreachable to now empty BB.
+    new UnreachableInst(BB->getContext(), BB);
 
     // Update branch in the predecessor.
     PredBB_BI->setSuccessor(FallThruPath, NewSucc);
@@ -355,6 +358,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
     // Move terminator instruction.
     BB->back().moveBeforePreserving(*PredBB, PredBB->end());
+    // Add unreachable to now empty BB.
+    new UnreachableInst(BB->getContext(), BB);
 
     // Terminator may be a memory accessing instruction too.
     if (MSSAU)
@@ -362,8 +367,6 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
               MSSAU->getMemorySSA()->getMemoryAccess(PredBB->getTerminator())))
         MSSAU->moveToPlace(MUD, PredBB, MemorySSA::End);
   }
-  // Add unreachable to now empty BB.
-  new UnreachableInst(BB->getContext(), BB);
 
   // Inherit predecessors name if it exists.
   if (!PredBB->hasName())

@@ -86,6 +86,8 @@ Changes to LLVM infrastructure
 * The ``Br`` opcode was split into two opcodes separating unconditional
   (``UncondBr``) and conditional (``CondBr``) branches.
 
+* ``BranchInst`` was deprecated in favor of ``UncondBrInst`` and ``CondBrInst``.
+
 * The operand order of ``CondBr`` instructions was adjusted to match the
   successor order. This can cause subtle breakage when using ``getOperand`` or
   ``setOperand`` to access successors.
@@ -95,6 +97,9 @@ Changes to building LLVM
 
 Changes to TableGen
 -------------------
+
+* Outer let statements use ``ID{n-m}`` instead of ``ID<n-m>`` to be consistent
+  with inner let statements.
 
 Changes to Interprocedural Optimizations
 ----------------------------------------
@@ -166,6 +171,7 @@ Changes to the RISC-V Backend
 * `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
 * Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
   Reordering Structured Data) extension.
+* `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -213,6 +219,7 @@ Changes to the LLVM tools
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
+* Add `-mtune` option to `llc`.
 
 Changes to LLDB
 ---------------
