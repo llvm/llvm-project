@@ -1463,7 +1463,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{S32}, {{Sgpr32}, {}}})
       .Any({{S64}, {{Sgpr64}, {}}});
 
-  addRulesForIOpcs({amdgcn_groupstaticsize}).Any({{S32}, {{Sgpr32}, {IntrId}}});
+  addRulesForIOpcs({amdgcn_groupstaticsize, amdgcn_pops_exiting_wave_id},
+                   Standard)
+      .Uni(S32, {{Sgpr32}, {IntrId}});
 
   // Intrinsics with no register operands.
   addRulesForIOpcs({amdgcn_endpgm,
