@@ -1147,6 +1147,133 @@ void AArch64::applyBranchToBranchOpt() const {
                              redirectControlTransferRelocations);
 }
 
+// Returns true if the AArch64 relocation type is a direct branch/call that
+// does not constitute an address-taken use of a function symbol.  A function
+// reached only via such relocations never has its address stored anywhere and
+// therefore does not need a BTI landing pad.
+static bool isAArch64DirectBranchReloc(RelType type) {
+  switch (type) {
+  case R_AARCH64_CALL26:
+  case R_AARCH64_JUMP26:
+  case R_AARCH64_CONDBR19:
+  case R_AARCH64_TSTBR14:
+  case R_AARCH64_PLT32:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// BTI link-time relaxation: replace a redundant "bti c" instruction at the
+// entry of a function with a NOP when the linker can prove that the function
+// is never the target of an indirect branch.
+//
+// The compiler conservatively adds "bti c" to every function with external
+// linkage because it cannot know at compile time whether the function will be
+// called indirectly.  The linker, however, has whole-program visibility and
+// can determine which functions are only ever reached via direct BL/B
+// branches.  For those functions the "bti c" is redundant and can be replaced
+// with a NOP, reducing code size without compromising security.
+//
+// A function's "bti c" is KEPT when any of the following hold:
+//   isGlobal(sym):       preemptible (dynamic interposition), exported to
+//                        .dynsym, or in a shared library where all globally
+//                        visible symbols are potentially called indirectly.
+//   isAddressTaken(sym): has a PLT entry (PLT uses an indirect branch),
+//                        has a GOT entry (address can be loaded and used as a
+//                        function pointer), is an ifunc (always uses IPLT),
+//                        or is referenced by a non-direct-branch relocation
+//                        (address stored in data or computed in code for use
+//                        as a function pointer).
+void elf::relaxAArch64BTI(Ctx &ctx) {
+  if (!ctx.arg.relax)
+    return;
+  if (!(ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI))
+    return;
+
+  // Step 1: Scan all processed relocations across all input sections and
+  // collect the set of function symbols whose address is taken via a
+  // non-direct-branch relocation.  Such symbols cannot have their "bti c"
+  // removed because their address may be loaded and used to perform an
+  // indirect call (BLR) at runtime.
+  DenseSet<const Symbol *> addrTaken;
+  for (InputSectionBase *sec : ctx.inputSections) {
+    if (!(sec->flags & SHF_ALLOC) || sec == &InputSection::discarded)
+      continue;
+    for (const Relocation &rel : sec->relocs()) {
+      if (!rel.sym || !rel.sym->isDefined())
+        continue;
+      if (rel.sym->type != STT_FUNC && rel.sym->type != STT_GNU_IFUNC)
+        continue;
+      // A direct branch relocation does not expose the function's address;
+      // any other relocation type potentially does.
+      if (!isAArch64DirectBranchReloc(rel.type))
+        addrTaken.insert(rel.sym);
+    }
+  }
+
+  // Step 2: Collect (section, offset) pairs where a "bti c" instruction
+  // should be replaced with a NOP.
+  DenseMap<InputSection *, SmallVector<uint64_t, 4>> toNOP;
+
+  auto tryRelax = [&](Symbol &sym) {
+    auto *d = dyn_cast<Defined>(&sym);
+    if (!d)
+      return;
+
+    // isGlobal(sym): keep "bti c" for symbols visible outside this link unit.
+    if (d->isPreemptible || d->isExported)
+      return;
+    // In a shared library every non-hidden global symbol is reachable from
+    // outside and may be called indirectly.
+    if (ctx.arg.shared)
+      return;
+
+    // isAddressTaken(sym): keep "bti c" if the address is used indirectly.
+    if (d->isInPlt(ctx) || d->isInGot(ctx) || d->isGnuIFunc())
+      return;
+    if (addrTaken.count(d))
+      return;
+
+    auto *isec = dyn_cast_or_null<InputSection>(d->section);
+    if (!isec || !(isec->flags & SHF_EXECINSTR))
+      return;
+
+    uint64_t off = d->value;
+    if (off + 4 > isec->getSize())
+      return;
+
+    const uint8_t *buf = isec->content().begin();
+    if (!buf || read32le(buf + off) != 0xd503245f) // bti c
+      return;
+
+    toNOP[isec].push_back(off);
+  };
+
+  for (Symbol *sym : ctx.symtab->getSymbols())
+    tryRelax(*sym);
+
+  // Local symbols may also carry a "bti c" when their address was taken in
+  // the source.  The addrTaken set (built above) already accounts for this:
+  // if a local symbol's address is referenced by a non-branch relocation it
+  // will be in addrTaken and will not be relaxed.
+  for (ELFFileBase *file : ctx.objectFiles)
+    for (Symbol *sym : file->getLocalSymbols())
+      tryRelax(*sym);
+
+  // Step 3: For each section that needs modification, allocate a fresh
+  // mutable copy of the content, patch the "bti c" instructions to NOPs,
+  // and redirect the section to use the new buffer.
+  for (auto &[isec, offsets] : toNOP) {
+    ArrayRef<uint8_t> orig = isec->content();
+    uint8_t *newBuf = makeThreadLocalN<uint8_t>(orig.size());
+    memcpy(newBuf, orig.data(), orig.size());
+    for (uint64_t off : offsets)
+      write32le(newBuf + off, 0xd503201f); // nop
+    isec->content_ = newBuf;
+  }
+}
+
 // AArch64 may use security features in variant PLT sequences. These are:
 // Pointer Authentication (PAC), introduced in armv8.3-a and Branch Target
 // Indicator (BTI) introduced in armv8.5-a. The additional instructions used
