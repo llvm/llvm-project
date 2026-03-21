@@ -1431,6 +1431,9 @@ void elf::postScanRelocations(Ctx &ctx) {
 
   if (ctx.arg.branchToBranch)
     ctx.target->applyBranchToBranchOpt();
+
+  if (ctx.arg.emachine == EM_AARCH64)
+    relaxAArch64BTI(ctx);
 }
 
 static bool mergeCmp(const InputSection *a, const InputSection *b) {
