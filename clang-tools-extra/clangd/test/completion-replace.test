@@ -161,6 +161,111 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:      }
 ---
-{"jsonrpc":"2.0","id":5,"method":"shutdown"}
+# Case 5 (replace stops at paren): "S().ab^c(123)"
+# Replace range covers only the identifier, not the '(' or arguments.
+# insert: [4,6], replace: [4,7]
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":5},"contentChanges":[{"text":"struct S { int a; int abc; int chrząszcz; };\nint main() {\nS().abc(123);\n}"}]}}
+---
+{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":6}}}
+#      CHECK:  "id": 5
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK:      "filterText": "abc",
+# CHECK-NEXT:      "insertText": "abc",
+# CHECK:      "textEdit": {
+# CHECK-NEXT:        "insert": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 6,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 4,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "newText": "abc",
+# CHECK-NEXT:        "replace": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 7,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 4,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+---
+# Case 6 (replace stops at angle bracket): "S().ab^c<int>()"
+# Replace range covers only the identifier, not '<' or template arguments.
+# insert: [4,6], replace: [4,7]
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":6},"contentChanges":[{"text":"struct S { int a; int abc; int chrząszcz; };\nint main() {\nS().abc<int>();\n}"}]}}
+---
+{"jsonrpc":"2.0","id":6,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":6}}}
+#      CHECK:  "id": 6
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK:      "filterText": "abc",
+# CHECK-NEXT:      "insertText": "abc",
+# CHECK:      "textEdit": {
+# CHECK-NEXT:        "insert": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 6,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 4,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "newText": "abc",
+# CHECK-NEXT:        "replace": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 7,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 4,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+---
+# Case 7 (replace stops before '='): "S().ab^c = 1;"
+# Replace range covers only the identifier, not the space or '='.
+# insert: [4,6], replace: [4,7]
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp","version":7},"contentChanges":[{"text":"struct S { int a; int abc; int chrząszcz; };\nint main() {\nS().abc = 1;\n}"}]}}
+---
+{"jsonrpc":"2.0","id":7,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":6}}}
+#      CHECK:  "id": 7
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK:      "filterText": "abc",
+# CHECK-NEXT:      "insertText": "abc",
+# CHECK:      "textEdit": {
+# CHECK-NEXT:        "insert": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 6,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 4,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "newText": "abc",
+# CHECK-NEXT:        "replace": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 7,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 4,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+---
+{"jsonrpc":"2.0","id":8,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}

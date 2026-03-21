@@ -4037,6 +4037,32 @@ TEST(CompletionTest, ReplaceRange) {
   EXPECT_EQ(Completions.InsertRange, A.range("insert"));
   EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
 
+  // Replace range stops at '(' (method call).
+  const char *BeforeParen =
+      "struct S { int abcd(); }; void f() { S s; "
+      "s.$replace[[$insert[[ab^]]cd]](123); }";
+  Completions = completions(BeforeParen, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeParen);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at '<' (template arguments).
+  const char *BeforeAngle =
+      "struct S { template <typename T> int abcd(); }; void f() { S s; "
+      "s.$replace[[$insert[[ab^]]cd]]<int>(); }";
+  Completions = completions(BeforeAngle, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeAngle);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at ' ' (before '=').
+  const char *BeforeEquals =
+      "void f() { int $replace[[$insert[[ab^]]cd]] = 1; }";
+  Completions = completions(BeforeEquals, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeEquals);
+  EXPECT_EQ(Completions.InsertRange, A.range("insert"));
+  EXPECT_EQ(Completions.ReplaceRange, A.range("replace"));
+
   // EnableInsertReplace off: ReplaceRange should not be set.
   Opts.EnableInsertReplace = false;
   const char *NoReplace = "auto x = [[abc]]^";
@@ -4075,6 +4101,27 @@ TEST(CompletionTest, ReplaceRangeNoCompile) {
   const char *MidWordUTF8 = "auto x = $replace[[$insert[[ab^]]]]🙂cd";
   Results = completionsNoCompile(MidWordUTF8, /*IndexSymbols=*/{}, Opts);
   A = Annotations(MidWordUTF8);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at '(' (method call).
+  const char *BeforeParen = "auto x = $replace[[$insert[[ab^]]cd]](123);";
+  Results = completionsNoCompile(BeforeParen, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeParen);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at '<' (template arguments).
+  const char *BeforeAngle = "auto x = $replace[[$insert[[ab^]]cd]]<int>();";
+  Results = completionsNoCompile(BeforeAngle, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeAngle);
+  EXPECT_EQ(Results.InsertRange, A.range("insert"));
+  EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
+
+  // Replace range stops at ' ' (before '=').
+  const char *BeforeEquals = "auto $replace[[$insert[[ab^]]cd]] = 1;";
+  Results = completionsNoCompile(BeforeEquals, /*IndexSymbols=*/{}, Opts);
+  A = Annotations(BeforeEquals);
   EXPECT_EQ(Results.InsertRange, A.range("insert"));
   EXPECT_EQ(Results.ReplaceRange, A.range("replace"));
 

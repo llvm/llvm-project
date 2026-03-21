@@ -867,10 +867,14 @@ TEST_F(LexerTest, FindEndOfIdentifierContinuation) {
 
   // ASCII identifiers.
   EXPECT_EQ(Measure("abcd", 0), 4u);  // Full identifier.
-  EXPECT_EQ(Measure("abcd", 2), 2u);  // Mid-identifier.
-  EXPECT_EQ(Measure("ab12", 2), 2u);  // At digit.
-  EXPECT_EQ(Measure("ab cd", 2), 0u); // At space.
-  EXPECT_EQ(Measure("ab+cd", 2), 0u); // At non-identifier.
+  EXPECT_EQ(Measure("abcd", 1), 3u);  // Mid-identifier.
+  EXPECT_EQ(Measure("ab12", 1), 3u);  // At digit.
+  EXPECT_EQ(Measure("ab cd", 1), 1u); // At space.
+  EXPECT_EQ(Measure("ab+cd", 1), 1u); // At non-identifier.
+  EXPECT_EQ(Measure("ab(cd)", 1), 1u);   // At '('.
+  EXPECT_EQ(Measure("ab<cd>(ef)", 1), 1u); // At '<'.
+  EXPECT_EQ(Measure("ab{cd}", 1), 1u);   // At '{'.
+  EXPECT_EQ(Measure("ab=cd;", 1), 1u);    // At '='.
 
   // UTF-8 identifier characters.
   LangOpts.CPlusPlus = true;
