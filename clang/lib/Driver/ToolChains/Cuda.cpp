@@ -320,7 +320,7 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
 
 void CudaInstallationDetector::CheckCudaVersionSupportsArch(
     OffloadArch Arch) const {
-  if (Arch == OffloadArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
+  if (Arch == OffloadArch::Unknown || Version == CudaVersion::UNKNOWN ||
       ArchsWithBadVersion[(int)Arch])
     return;
 
@@ -412,7 +412,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Obtain architecture from the action.
   OffloadArch gpu_arch = StringToOffloadArch(GPUArchName);
-  assert(gpu_arch != OffloadArch::UNKNOWN &&
+  assert(gpu_arch != OffloadArch::Unknown &&
          "Device action expected to have an architecture.");
 
   // Check that our installation's ptxas supports gpu_arch.
