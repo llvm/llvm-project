@@ -121,12 +121,14 @@ Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   // Canonicalize atomicrmw add(ptr, neg(X)) -> atomicrmw sub(ptr, X)
   //              atomicrmw sub(ptr, neg(X)) -> atomicrmw add(ptr, X)
   // old + (-X) == old - X and old - (-X) == old + X; the returned old value
-  // is identical in both cases.
+  // is identical in both cases. We only do this for non-constant X; constants
+  // are already properly handled elsewhere.
   auto Op = RMWI.getOperation();
   if (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub) {
     Value *Val = RMWI.getValOperand();
-    if (!isa<Constant>(Val) || match(Val, PatternMatch::m_Negative())) {
-      if (Value *X = Negator::Negate(true, false, Val, *this)) {
+    if (!isa<Constant>(Val)) {
+      if (Value *X = Negator::Negate(/*LHSIsZero=*/false, /*IsNSW=*/false, Val,
+                                     *this)) {
         RMWI.setOperation(Op == AtomicRMWInst::Add ? AtomicRMWInst::Sub
                                                    : AtomicRMWInst::Add);
         return replaceOperand(RMWI, 1, X);
