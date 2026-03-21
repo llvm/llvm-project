@@ -15,6 +15,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
@@ -2006,6 +2007,12 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
 void OMPClausePrinter::VisitOMPCountsClause(OMPCountsClause *Node) {
   OS << "counts(";
   llvm::interleaveComma(Node->getCountsRefs(), OS, [&](const Expr *E) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
+      if (const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl()))
+        if (ECD->isImplicit() && ECD->getName() == "omp_fill") {
+          OS << "omp_fill";
+          return;
+        }
     E->printPretty(OS, nullptr, Policy, 0);
   });
   OS << ")";

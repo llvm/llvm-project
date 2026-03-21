@@ -2993,9 +2993,42 @@ OMPClause *Parser::ParseOpenMPSizesClause() {
 OMPClause *Parser::ParseOpenMPCountsClause() {
   SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
   SmallVector<Expr *, 4> ValExprs;
-  if (ParseOpenMPExprListClause(OMPC_counts, ClauseNameLoc, OpenLoc, CloseLoc,
-                                ValExprs))
+
+  assert(getOpenMPClauseName(OMPC_counts) == PP.getSpelling(Tok) &&
+         "Expected parsing to start at clause name");
+  ClauseNameLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected) << tok::l_paren;
     return nullptr;
+  }
+
+  do {
+    if (Tok.is(tok::identifier) &&
+        Tok.getIdentifierInfo()->getName() == "omp_fill") {
+      SourceLocation FillLoc = Tok.getLocation();
+      ConsumeToken();
+      ExprResult ER = Actions.OpenMP().ActOnOpenMPCountsFillExpr(FillLoc);
+      if (!ER.isUsable()) {
+        T.skipToEnd();
+        return nullptr;
+      }
+      ValExprs.push_back(ER.get());
+    } else {
+      ExprResult Val = ParseConstantExpression();
+      if (!Val.isUsable()) {
+        T.skipToEnd();
+        return nullptr;
+      }
+      ValExprs.push_back(Val.get());
+    }
+  } while (TryConsumeToken(tok::comma));
+
+  if (T.consumeClose())
+    return nullptr;
+  OpenLoc = T.getOpenLocation();
+  CloseLoc = T.getCloseLocation();
 
   return Actions.OpenMP().ActOnOpenMPCountsClause(ValExprs, ClauseNameLoc,
                                                   OpenLoc, CloseLoc);
