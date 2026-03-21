@@ -82,48 +82,18 @@ bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
   return true;
 }
 
-inline void removeNameHelpers(const SmallVector<CallInst *> &ToRemove,
-                              Function *PredicateName) {
-  for (auto &&CI : ToRemove) {
-    CI->dropDroppableUses();
-
-    assert(CI->hasNUndroppableUses(0) &&
-           "spv_assign_name should not have direct uses!");
-
-    CI->eraseFromParent();
-  }
-  PredicateName->dropDroppableUses();
-  PredicateName->removeDeadConstantUsers();
-
-  assert(PredicateName->hasZeroLiveUses() &&
-         "Feature predicate metadata encoding should not have direct uses!");
-
-  PredicateName->eraseFromParent();
-}
-
 bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
-  // We used the spv_assign_name intrinsic encode predicate identity, and
-  // nothing else could have inserted the intrinsic at this point.
-  Function *PredicateName = M.getFunction("spirv.llvm_spv_assign_name_i1");
-
-  assert(PredicateName && "Feature predicates must be encoded into metadata!");
-
   StringMap<unsigned> IDs;
-  SmallVector<CallInst *> ToRemove;
-  for (auto &&U : PredicateName->users()) {
+  for (auto &&U : F->users()) {
     auto *CI = dyn_cast<CallInst>(U);
     if (!CI)
       continue;
 
-    auto *SpecID = dyn_cast<CallInst>(CI->getArgOperand(0));
+    auto *SpecID = dyn_cast<ConstantInt>(CI->getArgOperand(0));
     if (!SpecID)
       continue;
 
-    auto *Arg0 = dyn_cast<ConstantInt>(SpecID->getArgOperand(0));
-    if (!Arg0)
-      continue;
-
-    unsigned ID = Arg0->getZExtValue();
+    unsigned ID = SpecID->getZExtValue();
     if (ID != UINT32_MAX)
       continue;
 
@@ -131,14 +101,11 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
     // associated with the predicate being evaluated, which is encoded via
     // spv_assign_name.
     auto *MD =
-        cast<MDNode>(cast<MetadataAsValue>(CI->getOperand(1))->getMetadata());
+        cast<MDNode>(cast<MetadataAsValue>(CI->getOperand(2))->getMetadata());
     auto *P = cast<MDString>(MD->getOperand(0));
 
     ID = IDs.try_emplace(P->getString(), IDs.size()).first->second;
-    SpecID->setArgOperand(
-        0, ConstantInt::get(SpecID->getArgOperand(0)->getType(), ID));
-
-    ToRemove.push_back(CI);
+    CI->setArgOperand(0, ConstantInt::get(CI->getArgOperand(0)->getType(), ID));
   }
 
   if (IDs.empty())
@@ -157,8 +124,6 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
                      GlobalVariable::LinkageTypes::ExternalLinkage,
                      PredSpecIDStr, "llvm.amdgcn.feature.predicate.ids");
 
-  removeNameHelpers(ToRemove, PredicateName);
-
   return true;
 }
 
@@ -175,7 +140,8 @@ bool SPIRVPrepareGlobals::runOnModule(Module &M) {
   // TODO: Currently, for AMDGCN flavoured SPIR-V, the symbol can only be
   //       inserted via feature predicate use, but in the future this will need
   //       revisiting if we start making more liberal use of the intrinsic.
-  if (Function *F = M.getFunction("_Z20__spirv_SpecConstantib"))
+  if (Function *F = Intrinsic::getDeclarationIfExists(
+        &M, Intrinsic::spv_named_boolean_spec_constant))
     Changed |= tryAssignPredicateSpecConstIDs(M, F);
 
   return Changed;

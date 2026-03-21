@@ -460,20 +460,14 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
 }
 
 static Value *GetAMDGPUPredicate(CodeGenFunction &CGF, Twine Name) {
-  Function *SpecConstFn = CGF.getSpecConstantFunction(CGF.getContext().BoolTy);
-  llvm::Type *SpecIdTy = SpecConstFn->getArg(0)->getType();
-  Constant *SpecId = ConstantInt::getAllOnesValue(SpecIdTy);
-  CallInst *Call = CGF.Builder.CreateCall(
-      SpecConstFn, {SpecId, ConstantInt::getFalse(CGF.getLLVMContext())});
+  Constant *SpecId = ConstantInt::getAllOnesValue(CGF.Int32Ty);
 
-  // Encode the predicate as metadata, making it available to
-  // SPIRVPrepareGlobals.
   LLVMContext &Ctx = CGF.getLLVMContext();
   MDNode *Predicate = MDNode::get(Ctx, MDString::get(Ctx, Name.str()));
-
-  std::vector<Value *> Args = {Call, MetadataAsValue::get(Ctx, Predicate)};
-  CGF.Builder.CreateIntrinsic(Intrinsic::spv_assign_name, {Call->getType()},
-                              Args);
+  std::vector<Value *> Args = {SpecId, ConstantInt::getFalse(Ctx),
+                               MetadataAsValue::get(Ctx, Predicate)};
+  CallInst *Call = CGF.Builder.CreateIntrinsic(
+      Intrinsic::spv_named_boolean_spec_constant, Args);
 
   return Call;
 }
