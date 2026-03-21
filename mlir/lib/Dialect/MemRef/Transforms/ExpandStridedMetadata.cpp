@@ -290,8 +290,8 @@ getExpandedSizes(memref::ExpandShapeOp expandShape, OpBuilder &builder,
 ///                                    reassIdx#i+1..reassIdx#i+group.size-1)
 ///
 /// Where reassIdx#i is the reassociation index for at index i in \p groupId
-/// and expandOutputShape#j is taken directly from the mixed (static and dynamic)
-/// output shape
+/// and expandOutputShape#j is taken directly from the mixed (static and
+/// dynamic) output shape
 ///
 /// \post result.size() == expandShape.getReassociationIndices()[groupId].size()
 ///
