@@ -400,6 +400,9 @@ public:
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
                                            LValueBaseInfo *baseInfo = nullptr,
                                            bool forPointeeType = false);
+  clang::CharUnits
+  getNaturalPointeeTypeAlignment(clang::QualType t,
+                                 LValueBaseInfo *baseInfo = nullptr);
 
   /// Returns the minimum object size for an object of the given class type
   /// (or a class derived from it).
