@@ -544,6 +544,9 @@ public:
   /// (Binop (cast C), (select C, T, F))
   ///    -> (select C, C0, C1)
   Instruction *foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I);
+  /// (add (zext (udiv A, C)), (zext (icmp ne (urem A, C), 0)))
+  ///    -> (zext (udiv (add nuw A, C-1), C))
+  Instruction *foldDivCeil(BinaryOperator &I);
 
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").

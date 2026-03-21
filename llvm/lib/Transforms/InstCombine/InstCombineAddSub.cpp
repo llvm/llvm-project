@@ -1523,6 +1523,40 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
   return nullptr;
 }
 
+// Fold the div_ceil idiom:
+//   add(zext(udiv(A, C)), zext(icmp ne(urem(A, C), 0)))
+//     -> zext(udiv(add nuw(A, C - 1), C))
+// The quotient-plus-round-up pattern is equivalent to a ceiling division,
+// which lets the backend strength-reduce the division by a constant.
+Instruction *InstCombinerImpl::foldDivCeil(BinaryOperator &I) {
+  Value *A;
+  const APInt *C1, *C2;
+  CmpPredicate Pred;
+
+  auto UDivPat = m_OneUse(m_UDiv(m_Value(A), m_APInt(C1)));
+  auto LHS = m_OneUse(m_ZExt(UDivPat));
+
+  auto URemPat = m_OneUse(m_URem(m_Deferred(A), m_APInt(C2)));
+  auto ICmpPat = m_OneUse(m_ICmp(Pred, URemPat, m_Zero()));
+  auto RHS = m_ZExt(ICmpPat);
+
+  if (!match(&I, m_c_Add(LHS, RHS)) || Pred != ICmpInst::ICMP_NE ||
+      *C1 != *C2 || !C1->ugt(1))
+    return nullptr;
+
+  // A + (C-1) must not overflow unsigned. Check via KnownBits: if the max
+  // possible value of A satisfies MaxA <= UINT_MAX - (C-1), it's safe.
+  KnownBits Known = computeKnownBits(A, &I);
+  APInt MaxA = Known.getMaxValue();
+  if (!MaxA.ule(APInt::getMaxValue(MaxA.getBitWidth()) - (*C1 - 1)))
+    return nullptr;
+
+  Value *CMinusOne = ConstantInt::get(A->getType(), *C1 - 1);
+  Value *NUWAdd = Builder.CreateAdd(A, CMinusOne, "", /*HasNUW=*/true);
+  Value *Div = Builder.CreateUDiv(NUWAdd, ConstantInt::get(A->getType(), *C1));
+  return new ZExtInst(Div, I.getType());
+}
+
 Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Value *V = simplifyAddInst(I.getOperand(0), I.getOperand(1),
                                  I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
@@ -1913,6 +1947,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return Res;
 
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
+    return Res;
+
+  if (Instruction *Res = foldDivCeil(I))
     return Res;
 
   // Re-enqueue users of the induction variable of add recurrence if we infer

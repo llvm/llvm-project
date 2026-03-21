@@ -12,13 +12,10 @@ declare void @use(i64)
 ; bits in [1, 32], so bits + 6 <= 38, no overflow.
 define i64 @divceil_i8_bounded(i8 range(i8 1, 33) %bits) {
 ; CHECK-LABEL: @divceil_i8_bounded(
-; CHECK-NEXT:    [[TMP2:%.*]] = udiv i8 [[TMP1:%.*]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i8 [[BITS:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i8 [[TMP1]], 7
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg i8 [[TMP2]] to i64
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[TMP1]], 7
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i8 [[R]], 0
-; CHECK-NEXT:    [[ROUND:%.*]] = zext i1 [[COND]] to i64
-; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw nsw i64 [[RESULT]], [[ROUND]]
-; CHECK-NEXT:    ret i64 [[RESULT1]]
+; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %d = udiv i8 %bits, 7
   %d.ext = zext i8 %d to i64
@@ -32,13 +29,10 @@ define i64 @divceil_i8_bounded(i8 range(i8 1, 33) %bits) {
 ; Commuted: zext(icmp) on the left, zext(udiv) on the right.
 define i64 @divceil_i8_bounded_commuted(i8 range(i8 1, 33) %bits) {
 ; CHECK-LABEL: @divceil_i8_bounded_commuted(
-; CHECK-NEXT:    [[TMP2:%.*]] = udiv i8 [[TMP1:%.*]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i8 [[BITS:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i8 [[TMP1]], 7
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg i8 [[TMP2]] to i64
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[TMP1]], 7
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i8 [[R]], 0
-; CHECK-NEXT:    [[ROUND:%.*]] = zext i1 [[COND]] to i64
-; CHECK-NEXT:    [[RESULT1:%.*]] = add nuw nsw i64 [[ROUND]], [[RESULT]]
-; CHECK-NEXT:    ret i64 [[RESULT1]]
+; CHECK-NEXT:    ret i64 [[RESULT]]
 ;
   %d = udiv i8 %bits, 7
   %d.ext = zext i8 %d to i64
