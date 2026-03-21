@@ -162,6 +162,7 @@ TEST_F(PlatformTest, GetPlatformForArchitecturesCandidates) {
   PlatformThumb::Terminate();
 }
 
+// TestingProperties are only available in asserts builds.
 #ifndef NDEBUG
 struct PlatformLocateSafePathTest : public PlatformTest {
 protected:
