@@ -129,6 +129,12 @@ public:
     maybePruneImpl(Path, PruneInterval, PruneAfter);
   }
 
+  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer) override {
+    // FIXME: This could use an in-memory cache to avoid IO, and only write to
+    // disk at the end of the scan.
+    return writeImpl(Path, Buffer);
+  }
+
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
