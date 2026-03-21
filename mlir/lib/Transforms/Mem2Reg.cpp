@@ -88,7 +88,7 @@ using namespace mlir;
 /// do so aborts promotion at this step).
 ///
 /// At this point, promotion is guaranteed to happen, and the transformation
-/// phase can begin. For each region of the program, a two step procvess is
+/// phase can begin. For each region of the program, a two step process is
 /// carried out.
 /// - The first step of the per-region process computes the reaching definition
 /// of the memory slot at each blocking user. This is the core of the mem2reg
