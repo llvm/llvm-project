@@ -144,12 +144,13 @@ define <2 x i8> @ctlz_to_sub_bw_cttz_vec_splat(<2 x i8> %a0) {
   ret <2 x i8> %clz
 }
 
-; ctlz(zext(x), true) -> zext(ctlz(x, true)) + (DestWidth - SrcWidth)
+; ctlz(zext(x), is_zero_poison) -> zext(ctlz(x, is_zero_poison)) + (DestWidth - SrcWidth)
 define i128 @ctlz_zext_i32_to_i128(i32 %x) {
 ; CHECK-LABEL: define i128 @ctlz_zext_i32_to_i128(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X]] to i128
-; CHECK-NEXT:    [[RES:%.*]] = call range(i128 96, 129) i128 @llvm.ctlz.i128(i128 [[Z]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP1]], 96
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i32 [[TMP2]] to i128
 ; CHECK-NEXT:    ret i128 [[RES]]
 ;
   %z = zext i32 %x to i128
@@ -157,12 +158,13 @@ define i128 @ctlz_zext_i32_to_i128(i32 %x) {
   ret i128 %clz
 }
 
-; Negative: ZeroIsPoison=false should not fold
+; ZeroIsPoison=false folds the same way; the flag is passed through.
 define i128 @ctlz_zext_i32_to_i128_no_poison(i32 %x) {
 ; CHECK-LABEL: define i128 @ctlz_zext_i32_to_i128_no_poison(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X]] to i128
-; CHECK-NEXT:    [[CLZ:%.*]] = call range(i128 96, 129) i128 @llvm.ctlz.i128(i128 [[Z]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    [[NARROW:%.*]] = add nuw nsw i32 [[TMP1]], 96
+; CHECK-NEXT:    [[CLZ:%.*]] = zext nneg i32 [[NARROW]] to i128
 ; CHECK-NEXT:    ret i128 [[CLZ]]
 ;
   %z = zext i32 %x to i128
@@ -184,5 +186,3 @@ define i128 @ctlz_zext_i32_to_i128_multiuse(i32 %x) {
   %add = add i128 %clz, %z
   ret i128 %add
 }
-
-declare i128 @llvm.ctlz.i128(i128, i1)

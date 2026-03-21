@@ -55,9 +55,9 @@ define <vscale x 2 x i16> @trunc_ctlz_zext_nxv2i16_nxv2i64(<vscale x 2 x i16> %x
 
 define <2 x i17> @trunc_ctlz_zext_v2i17_v2i32_multiple_uses(<2 x i17> %x) {
 ; CHECK-LABEL: @trunc_ctlz_zext_v2i17_v2i32_multiple_uses(
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i17> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[P:%.*]] = call range(i32 15, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[Z]], i1 false)
-; CHECK-NEXT:    [[ZZ:%.*]] = trunc nuw nsw <2 x i32> [[P]] to <2 x i17>
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i17 0, 18) <2 x i17> @llvm.ctlz.v2i17(<2 x i17> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <2 x i17> [[TMP1]], splat (i17 15)
+; CHECK-NEXT:    [[P:%.*]] = zext nneg <2 x i17> [[ZZ]] to <2 x i32>
 ; CHECK-NEXT:    call void @use(<2 x i32> [[P]])
 ; CHECK-NEXT:    ret <2 x i17> [[ZZ]]
 ;
@@ -89,9 +89,9 @@ define <vscale x 2 x i16> @trunc_ctlz_zext_nxv2i16_nxv2i63_multiple_uses(<vscale
 
 define i16 @trunc_ctlz_zext_i10_i32(i10 %x) {
 ; CHECK-LABEL: @trunc_ctlz_zext_i10_i32(
-; CHECK-NEXT:    [[Z:%.*]] = zext i10 [[X:%.*]] to i32
-; CHECK-NEXT:    [[P:%.*]] = call range(i32 22, 33) i32 @llvm.ctlz.i32(i32 [[Z]], i1 false)
-; CHECK-NEXT:    [[ZZ:%.*]] = trunc nuw nsw i32 [[P]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i10 0, 11) i10 @llvm.ctlz.i10(i10 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[NARROW:%.*]] = add nuw nsw i10 [[TMP1]], 22
+; CHECK-NEXT:    [[ZZ:%.*]] = zext nneg i10 [[NARROW]] to i16
 ; CHECK-NEXT:    ret i16 [[ZZ]]
 ;
   %z = zext i10 %x to i32
@@ -107,9 +107,8 @@ define i16 @trunc_ctlz_zext_i10_i32(i10 %x) {
 
 define i3 @trunc_ctlz_zext_i3_i34(i3 %x) {
 ; CHECK-LABEL: @trunc_ctlz_zext_i3_i34(
-; CHECK-NEXT:    [[Z:%.*]] = zext i3 [[X:%.*]] to i34
-; CHECK-NEXT:    [[P:%.*]] = call range(i34 31, 35) i34 @llvm.ctlz.i34(i34 [[Z]], i1 false)
-; CHECK-NEXT:    [[T:%.*]] = trunc i34 [[P]] to i3
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i3 0, -4) i3 @llvm.ctlz.i3(i3 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[T:%.*]] = add nsw i3 [[TMP1]], -1
 ; CHECK-NEXT:    ret i3 [[T]]
 ;
   %z = zext i3 %x to i34
