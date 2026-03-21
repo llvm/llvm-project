@@ -4488,11 +4488,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                 return replaceInstUsesWith(SI, Cmp0);
 
               if (isGuaranteedNotToBeUndef(Cmp0, &AC, &SI, &DT)) {
-                // select (fcmp ord %cmp0, 0), y, (fdiv 1, x)
-                //   => select (fcmp ord %cmp0, 0), y, x
+                // select (fcmp ord x, 0), y, (fdiv 1, x)
+                //   => select (fcmp ord x, 0), y, x
                 //
-                // select (fcmp uno %cmp0, 0), (fdiv 1, x), y
-                //   => select (fcmp uno %cmp0, 0), x, y
+                // select (fcmp uno x, 0), (fdiv 1, x), y
+                //   => select (fcmp uno x, 0), x, y
                 replaceOperand(SI, Pred == CmpInst::FCMP_ORD ? 2 : 1, Cmp0);
                 return &SI;
               }
@@ -4512,8 +4512,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
             // canonicalize can be dropped for direct replacement without
             // looking for the intermediate maybe-canonicalizing operation.
             if (Mode == DenormalMode::getIEEE()) {
-              // select (fcmp ord %cmp0, 0), canonicalize(x), y
-              //  => select (fcmp ord %cmp0, 0), x, y
+              // select (fcmp ord x, 0), canonicalize(x), y
+              //  => select (fcmp ord x, 0), x, y
 
               replaceOperand(SI, Pred == CmpInst::FCMP_ORD ? 1 : 2, Cmp0);
               return &SI;
@@ -4525,16 +4525,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
             // payload bits. We can only do this if there were a no-op like
             // floating-point instruction which may have changed the nan bits
             // anyway.
-            if (RcpIfNan) {
-              if (Mode == DenormalMode::getIEEE())
-                return replaceInstUsesWith(SI, Cmp0);
-
-              if (Mode.inputsAreZero() || Mode.outputsAreZero())
-                return replaceInstUsesWith(SI, MatchCmp0);
-            }
 
             // Leave the dynamic mode case alone. This would introduce new
             // constraints if the mode may be refined later.
+            if (RcpIfNan && (Mode.inputsAreZero() || Mode.outputsAreZero()))
+              return replaceInstUsesWith(SI, MatchCmp0);
+            assert(RcpIfNan || Mode != DenormalMode::getIEEE());
           }
         }
       }
