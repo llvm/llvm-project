@@ -8122,7 +8122,7 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
 //   Remainder = Sum % Constant;
 //
 // If (1 << (BitWidth / 2)) % Constant != 1, we can search for a smaller value
-// W such that W != (BitWidth / 2) and (1 << W) % Constant != 1. We can break
+// W such that W != (BitWidth / 2) and (1 << W) % Constant == 1. We can break
 // High:Low into 3 chunks of W bits and compute remainder as
 //   Sum = Chunk0 + Chunk1 + Chunk2;
 //   Remainder = Sum % Constant;
@@ -8219,6 +8219,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   if (!LL)
     std::tie(LL, LH) = DAG.SplitScalar(N->getOperand(0), dl, HiLoVT, HiLoVT);
 
+  bool HasFSHR = isOperationLegal(ISD::FSHR, HiLoVT);
+
   // Shift the input by the number of TrailingZeros in the divisor. The
   // shifted out bits will be added to the remainder later.
   SDValue PartialRem;
@@ -8230,7 +8232,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                                DAG.getConstant(Mask, dl, HiLoVT));
     }
 
-    if (isOperationLegal(ISD::FSHR, HiLoVT))
+    if (HasFSHR)
       LL = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
     else
@@ -8284,7 +8286,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         Chunk =
             DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
                         DAG.getShiftAmountConstant(I - HBitWidth, HiLoVT, dl));
-      } else if (isOperationLegal(ISD::FSHR, HiLoVT)) {
+      } else if (HasFSHR) {
         Chunk = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
                             DAG.getShiftAmountConstant(I, HiLoVT, dl));
       } else {
