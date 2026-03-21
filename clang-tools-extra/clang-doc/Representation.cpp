@@ -188,7 +188,7 @@ bool CommentInfo::operator==(const CommentInfo &Other) const {
     return false;
 
   return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
-                    llvm::deref<std::equal_to<>>{});
+                    Other.Children.end());
 }
 
 bool CommentInfo::operator<(const CommentInfo &Other) const {
@@ -203,9 +203,9 @@ bool CommentInfo::operator<(const CommentInfo &Other) const {
     return true;
 
   if (FirstCI == SecondCI) {
-    return std::lexicographical_compare(
-        Children.begin(), Children.end(), Other.Children.begin(),
-        Other.Children.end(), llvm::deref<std::less<>>());
+    return std::lexicographical_compare(Children.begin(), Children.end(),
+                                        Other.Children.begin(),
+                                        Other.Children.end());
   }
 
   return false;
