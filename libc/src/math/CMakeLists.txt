@@ -63,6 +63,7 @@ add_math_entrypoint_object(asinpif)
 add_math_entrypoint_object(asinpif16)
 
 add_math_entrypoint_object(atan)
+add_math_entrypoint_object(atanbf16)
 add_math_entrypoint_object(atanf)
 add_math_entrypoint_object(atanf16)
 

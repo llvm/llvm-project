@@ -30,6 +30,7 @@
 #include "math/atan2f.h"
 #include "math/atan2f128.h"
 #include "math/atan2f16.h"
+#include "math/atanbf16.h"
 #include "math/atanf.h"
 #include "math/atanf16.h"
 #include "math/atanhf.h"
