@@ -757,6 +757,32 @@ struct ClangDocContext {
   bool FTimeTrace; // Indicates if ftime trace is turned on
 };
 
+// Ensure arena allocated types remain safe to allocate in the arena.
+// Only trivially destructible types are safe, so enforce that at compile-time.
+static_assert(std::is_trivially_destructible_v<ConstraintInfo>);
+static_assert(std::is_trivially_destructible_v<FieldTypeInfo>);
+static_assert(std::is_trivially_destructible_v<Location>);
+static_assert(std::is_trivially_destructible_v<Reference>);
+static_assert(std::is_trivially_destructible_v<TemplateParamInfo>);
+static_assert(std::is_trivially_destructible_v<TypeInfo>);
+
+// FIXME: These types need to be trivially destructible for arena allocation.
+static_assert(!std::is_trivially_destructible_v<CommentInfo>);
+static_assert(!std::is_trivially_destructible_v<ConceptInfo>);
+static_assert(!std::is_trivially_destructible_v<EnumInfo>);
+static_assert(!std::is_trivially_destructible_v<FriendInfo>);
+static_assert(!std::is_trivially_destructible_v<FunctionInfo>);
+static_assert(!std::is_trivially_destructible_v<Info>);
+static_assert(!std::is_trivially_destructible_v<MemberTypeInfo>);
+static_assert(!std::is_trivially_destructible_v<NamespaceInfo>);
+static_assert(!std::is_trivially_destructible_v<RecordInfo>);
+static_assert(!std::is_trivially_destructible_v<ScopeChildren>);
+static_assert(!std::is_trivially_destructible_v<SymbolInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateInfo>);
+static_assert(!std::is_trivially_destructible_v<TemplateSpecializationInfo>);
+static_assert(!std::is_trivially_destructible_v<TypedefInfo>);
+static_assert(!std::is_trivially_destructible_v<VarInfo>);
+
 } // namespace doc
 } // namespace clang
 
