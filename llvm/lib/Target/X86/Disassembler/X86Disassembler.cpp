@@ -214,7 +214,6 @@ static bool isREX2(struct InternalInstruction *insn, uint8_t prefix) {
   return insn->mode == MODE_64BIT && prefix == 0xd5;
 }
 
-
 /// Sets an instruction's segmentOverride based on CPU mode, respecting ignored
 /// overrides.
 static void setSegmentOverride(struct InternalInstruction *insn,
