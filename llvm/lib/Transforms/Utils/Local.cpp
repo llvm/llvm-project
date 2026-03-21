@@ -138,9 +138,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
   IRBuilder<> Builder(T);
 
   // Branch - See if we are conditional jumping on constant
-  if (auto *BI = dyn_cast<BranchInst>(T)) {
-    if (BI->isUnconditional()) return false;  // Can't optimize uncond branch
-
+  if (auto *BI = dyn_cast<CondBrInst>(T)) {
     BasicBlock *Dest1 = BI->getSuccessor(0);
     BasicBlock *Dest2 = BI->getSuccessor(1);
 
@@ -154,7 +152,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Dest1->removePredecessor(BI->getParent());
 
       // Replace the conditional branch with an unconditional one.
-      BranchInst *NewBI = Builder.CreateBr(Dest1);
+      UncondBrInst *NewBI = Builder.CreateBr(Dest1);
 
       // Transfer the metadata to the new branch instruction.
       NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
@@ -178,7 +176,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
-      BranchInst *NewBI = Builder.CreateBr(Destination);
+      UncondBrInst *NewBI = Builder.CreateBr(Destination);
 
       // Transfer the metadata to the new branch instruction.
       NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
@@ -223,17 +221,21 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         // left, unless the metadata doesn't match the switch.
         if (NCases > 1 && MD) {
           // Collect branch weights into a vector.
-          SmallVector<uint32_t, 8> Weights;
-          extractBranchWeights(MD, Weights);
+          SmallVector<uint64_t, 8> Weights;
+          extractFromBranchWeightMD64(MD, Weights);
 
           // Merge weight of this case to the default weight.
           unsigned Idx = It->getCaseIndex();
-          // TODO: Add overflow check.
+
+          // Check for and prevent uint64_t overflow by reducing branch weights.
+          if (Weights[0] > UINT64_MAX - Weights[Idx + 1])
+            fitWeights(Weights);
+
           Weights[0] += Weights[Idx + 1];
           // Remove weight for this case.
           std::swap(Weights[Idx + 1], Weights.back());
           Weights.pop_back();
-          setBranchWeights(*SI, Weights, hasBranchWeightOrigin(MD));
+          setFittedBranchWeights(*SI, Weights, hasBranchWeightOrigin(MD));
         }
         // Remove this entry.
         BasicBlock *ParentBB = SI->getParent();
@@ -313,9 +315,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           FirstCase.getCaseValue(), "cond");
 
       // Insert the new branch.
-      BranchInst *NewBr = Builder.CreateCondBr(Cond,
-                                               FirstCase.getCaseSuccessor(),
-                                               SI->getDefaultDest());
+      CondBrInst *NewBr = Builder.CreateCondBr(
+          Cond, FirstCase.getCaseSuccessor(), SI->getDefaultDest());
       SmallVector<uint32_t> Weights;
       if (extractBranchWeights(*SI, Weights) && Weights.size() == 2) {
         uint32_t DefWeight = Weights[0];
@@ -457,6 +458,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     case Intrinsic::wasm_trunc_unsigned:
     case Intrinsic::ptrauth_auth:
     case Intrinsic::ptrauth_resign:
+    case Intrinsic::ptrauth_resign_load_relative:
       return true;
     default:
       return false;
@@ -925,17 +927,18 @@ using IncomingValueMap = SmallDenseMap<BasicBlock *, Value *, 16>;
 /// \returns the selected value.
 static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
                                           IncomingValueMap &IncomingValues) {
+  IncomingValueMap::const_iterator It = IncomingValues.find(BB);
   if (!isa<UndefValue>(OldVal)) {
-    assert((!IncomingValues.count(BB) ||
-            IncomingValues.find(BB)->second == OldVal) &&
+    assert((It != IncomingValues.end() &&
+            (!(It->second) || It->second == OldVal)) &&
            "Expected OldVal to match incoming value from BB!");
 
-    IncomingValues.insert(std::make_pair(BB, OldVal));
+    IncomingValues.insert_or_assign(BB, OldVal);
     return OldVal;
   }
 
-  IncomingValueMap::const_iterator It = IncomingValues.find(BB);
-  if (It != IncomingValues.end()) return It->second;
+  if (It != IncomingValues.end() && It->second)
+    return It->second;
 
   return OldVal;
 }
@@ -943,19 +946,28 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
 /// Create a map from block to value for the operands of a
 /// given phi.
 ///
-/// Create a map from block to value for each non-undef value flowing
-/// into \p PN.
+/// This function initializes the map with UndefValue for all predecessors
+/// in BBPreds, and then updates the map with concrete non-undef values
+/// found in the PHI node.
 ///
 /// \param PN The phi we are collecting the map for.
+/// \param BBPreds The list of all predecessor blocks to initialize with Undef.
 /// \param IncomingValues [out] The map from block to value for this phi.
 static void gatherIncomingValuesToPhi(PHINode *PN,
+                                      const PredBlockVector &BBPreds,
                                       IncomingValueMap &IncomingValues) {
-  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-    BasicBlock *BB = PN->getIncomingBlock(i);
-    Value *V = PN->getIncomingValue(i);
+  for (BasicBlock *Pred : BBPreds)
+    IncomingValues[Pred] = nullptr;
 
-    if (!isa<UndefValue>(V))
-      IncomingValues.insert(std::make_pair(BB, V));
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+    Value *V = PN->getIncomingValue(i);
+    if (isa<UndefValue>(V))
+      continue;
+
+    BasicBlock *BB = PN->getIncomingBlock(i);
+    auto It = IncomingValues.find(BB);
+    if (It != IncomingValues.end())
+      It->second = V;
   }
 }
 
@@ -974,12 +986,14 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 
     BasicBlock *BB = PN->getIncomingBlock(i);
     IncomingValueMap::const_iterator It = IncomingValues.find(BB);
+    if (It == IncomingValues.end())
+      continue;
 
     // Keep track of undef/poison incoming values. Those must match, so we fix
     // them up below if needed.
     // Note: this is conservatively correct, but we could try harder and group
     // the undef values per incoming basic block.
-    if (It == IncomingValues.end()) {
+    if (!It->second) {
       TrueUndefOps.push_back(i);
       continue;
     }
@@ -1077,6 +1091,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
+  // Map BBPreds to defined values or nullptr (representing undefined values).
   IncomingValueMap IncomingValues;
 
   // We are merging two blocks - BB, and the block containing PN - and
@@ -1088,7 +1103,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   // values flowing into PN, we want to rewrite those values to be
   // consistent with the non-undef values.
 
-  gatherIncomingValuesToPhi(PN, IncomingValues);
+  gatherIncomingValuesToPhi(PN, BBPreds, IncomingValues);
 
   // If this incoming value is one of the PHI nodes in BB, the new entries
   // in the PHI node are the entries from the old PHI.
@@ -1143,7 +1158,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
          "TryToSimplifyUncondBranchFromEmptyBlock called on entry block!");
 
   // We can't simplify infinite loops.
-  BasicBlock *Succ = cast<BranchInst>(BB->getTerminator())->getSuccessor(0);
+  BasicBlock *Succ = cast<UncondBrInst>(BB->getTerminator())->getSuccessor(0);
   if (BB == Succ)
     return false;
 
@@ -2584,7 +2599,7 @@ CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
 
   // Follow the call by a branch to the normal destination.
   BasicBlock *NormalDestBB = II->getNormalDest();
-  auto *BI = BranchInst::Create(NormalDestBB, II->getIterator());
+  auto *BI = UncondBrInst::Create(NormalDestBB, II->getIterator());
   // Although it takes place after the call itself, the new branch is still
   // performing part of the control-flow functionality of the invoke, so we use
   // II's DebugLoc.
@@ -2643,13 +2658,12 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   return Split;
 }
 
-static bool markAliveBlocks(Function &F,
-                            SmallPtrSetImpl<BasicBlock *> &Reachable,
+static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
                             DomTreeUpdater *DTU = nullptr) {
   SmallVector<BasicBlock*, 128> Worklist;
   BasicBlock *BB = &F.front();
   Worklist.push_back(BB);
-  Reachable.insert(BB);
+  Reachable[BB->getNumber()] = true;
   bool Changed = false;
   do {
     BB = Worklist.pop_back_val();
@@ -2755,6 +2769,7 @@ static bool markAliveBlocks(Function &F,
           BasicBlock *UnreachableNormalDest = BasicBlock::Create(
               Ctx, OrigNormalDest->getName() + ".unreachable",
               II->getFunction(), OrigNormalDest);
+          Reachable.resize(II->getFunction()->getMaxBlockNumber());
           auto *UI = new UnreachableInst(Ctx, UnreachableNormalDest);
           UI->setDebugLoc(DebugLoc::getTemporary());
           II->setNormalDest(UnreachableNormalDest);
@@ -2769,7 +2784,7 @@ static bool markAliveBlocks(Function &F,
             // jump to the normal destination branch.
             BasicBlock *NormalDestBB = II->getNormalDest();
             BasicBlock *UnwindDestBB = II->getUnwindDest();
-            BranchInst::Create(NormalDestBB, II->getIterator());
+            UncondBrInst::Create(NormalDestBB, II->getIterator());
             UnwindDestBB->removePredecessor(II->getParent());
             II->eraseFromParent();
             if (DTU)
@@ -2835,9 +2850,12 @@ static bool markAliveBlocks(Function &F,
     }
 
     Changed |= ConstantFoldTerminator(BB, true, nullptr, DTU);
-    for (BasicBlock *Successor : successors(BB))
-      if (Reachable.insert(Successor).second)
+    for (BasicBlock *Successor : successors(BB)) {
+      if (!Reachable[Successor->getNumber()]) {
         Worklist.push_back(Successor);
+        Reachable[Successor->getNumber()] = true;
+      }
+    }
   } while (!Worklist.empty());
   return Changed;
 }
@@ -2882,20 +2900,14 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
 /// otherwise.
 bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
                                    MemorySSAUpdater *MSSAU) {
-  SmallPtrSet<BasicBlock *, 16> Reachable;
+  SmallVector<bool, 16> Reachable(F.getMaxBlockNumber());
   bool Changed = markAliveBlocks(F, Reachable, DTU);
-
-  // If there are unreachable blocks in the CFG...
-  if (Reachable.size() == F.size())
-    return Changed;
-
-  assert(Reachable.size() < F.size());
 
   // Are there any blocks left to actually delete?
   SmallSetVector<BasicBlock *, 8> BlocksToRemove;
   for (BasicBlock &BB : F) {
     // Skip reachable basic blocks
-    if (Reachable.count(&BB))
+    if (Reachable[BB.getNumber()])
       continue;
     // Skip already-deleted blocks
     if (DTU && DTU->isBBPendingDeletion(&BB))
@@ -2960,6 +2972,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_range:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
+        break;
+      case LLVMContext::MD_nofpclass:
+        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+          K->setMetadata(Kind, MDNode::getMostGenericNoFPClass(JMD, KMD));
         break;
       case LLVMContext::MD_fpmath:
         if (!AAOnly)
@@ -3148,6 +3164,14 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
 
     case LLVMContext::MD_range:
       copyRangeMetadata(DL, Source, N, Dest);
+      break;
+
+    case LLVMContext::MD_nofpclass:
+      // This only applies if the floating-point type interpretation. This
+      // should handle degenerate cases like casting between a scalar and single
+      // element vector.
+      if (NewType->getScalarType() == Source.getType()->getScalarType())
+        Dest.setMetadata(ID, N);
       break;
     }
   }

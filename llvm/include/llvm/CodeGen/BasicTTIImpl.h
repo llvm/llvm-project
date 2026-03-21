@@ -255,7 +255,7 @@ private:
           getScalarizationOverhead(
               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
               /*Insert=*/false, /*Extract=*/true, CostKind) +
-          VF * (thisT()->getCFInstrCost(Instruction::Br, CostKind) +
+          VF * (thisT()->getCFInstrCost(Instruction::CondBr, CostKind) +
                 thisT()->getCFInstrCost(Instruction::PHI, CostKind));
     }
 
@@ -305,8 +305,7 @@ private:
       std::optional<unsigned> CallRetElementIndex = {}) const {
     Type *RetTy = ICA.getReturnType();
     // Vector variants of the intrinsic can be mapped to a vector library call.
-    auto const *LibInfo = ICA.getLibInfo();
-    if (!LibInfo || !isa<StructType>(RetTy) ||
+    if (!isa<StructType>(RetTy) ||
         !isVectorizedStructTy(cast<StructType>(RetTy)))
       return std::nullopt;
 
@@ -380,6 +379,7 @@ protected:
   ~BasicTTIImplBase() override = default;
 
   using TargetTransformInfoImplBase::DL;
+  using TargetTransformInfoImplBase::getScalarizationOverhead;
 
 public:
   /// \name Scalar TTI Implementations
@@ -801,9 +801,8 @@ public:
     return BaseT::preferPredicateOverEpilogue(TFI);
   }
 
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const override {
-    return BaseT::getPreferredTailFoldingStyle(IVUpdateMayOverflow);
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
+    return BaseT::getPreferredTailFoldingStyle();
   }
 
   std::optional<Instruction *>
@@ -888,15 +887,17 @@ public:
   std::optional<unsigned> getVScaleForTuning() const override {
     return std::nullopt;
   }
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return false; }
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
   /// extracted from vectors.
-  InstructionCost getScalarizationOverhead(
-      VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const override {
+  InstructionCost
+  getScalarizationOverhead(VectorType *InTy, const APInt &DemandedElts,
+                           bool Insert, bool Extract,
+                           TTI::TargetCostKind CostKind,
+                           bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                           TTI::VectorInstrContext VIC =
+                               TTI::VectorInstrContext::None) const override {
     /// FIXME: a bitfield is not a reasonable abstraction for talking about
     /// which elements are needed from a scalable vector
     if (isa<ScalableVectorType>(InTy))
@@ -914,12 +915,13 @@ public:
         continue;
       if (Insert) {
         Value *InsertedVal = VL.empty() ? nullptr : VL[i];
-        Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, Ty,
-                                            CostKind, i, nullptr, InsertedVal);
+        Cost +=
+            thisT()->getVectorInstrCost(Instruction::InsertElement, Ty,
+                                        CostKind, i, nullptr, InsertedVal, VIC);
       }
       if (Extract)
         Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty,
-                                            CostKind, i, nullptr, nullptr);
+                                            CostKind, i, nullptr, nullptr, VIC);
     }
 
     return Cost;
@@ -947,23 +949,27 @@ public:
   }
 
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
-  InstructionCost getScalarizationOverhead(VectorType *InTy, bool Insert,
-                                           bool Extract,
-                                           TTI::TargetCostKind CostKind) const {
+  InstructionCost getScalarizationOverhead(
+      VectorType *InTy, bool Insert, bool Extract, TTI::TargetCostKind CostKind,
+      bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     if (isa<ScalableVectorType>(InTy))
       return InstructionCost::getInvalid();
     auto *Ty = cast<FixedVectorType>(InTy);
 
     APInt DemandedElts = APInt::getAllOnes(Ty->getNumElements());
+    // Use CRTP to allow target overrides
     return thisT()->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                             CostKind);
+                                             CostKind, ForPoisonSrc, VL, VIC);
   }
 
   /// Estimate the overhead of scalarizing an instruction's
   /// operands. The (potentially vector) types to use for each of
   /// argument are passes via Tys.
   InstructionCost getOperandsScalarizationOverhead(
-      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind) const override {
+      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind,
+      TTI::VectorInstrContext VIC =
+          TTI::VectorInstrContext::None) const override {
     InstructionCost Cost = 0;
     for (Type *Ty : Tys) {
       // Disregard things like metadata arguments.
@@ -973,7 +979,8 @@ public:
 
       if (auto *VecTy = dyn_cast<VectorType>(Ty))
         Cost += getScalarizationOverhead(VecTy, /*Insert*/ false,
-                                         /*Extract*/ true, CostKind);
+                                         /*Extract*/ true, CostKind,
+                                         /*ForPoisonSrc=*/true, {}, VIC);
     }
 
     return Cost;
@@ -1251,10 +1258,32 @@ public:
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
-          ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
-        if (DstLT.first == SrcLT.first &&
-            TLI->isLoadExtLegal(LType, ExtVT, LoadVT))
-          return 0;
+            Opcode == Instruction::ZExt ? ISD::ZEXTLOAD : ISD::SEXTLOAD;
+        if (I) {
+          if (auto *LI = dyn_cast<LoadInst>(I->getOperand(0))) {
+            if (DstLT.first == SrcLT.first &&
+                TLI->isLoadLegal(ExtVT, LoadVT, LI->getAlign(),
+                                 LI->getPointerAddressSpace(), LType, false))
+              return 0;
+          } else if (auto *II = dyn_cast<IntrinsicInst>(I->getOperand(0))) {
+            switch (II->getIntrinsicID()) {
+            case Intrinsic::masked_load: {
+              Type *PtrType = II->getArgOperand(0)->getType();
+              assert(PtrType->isPointerTy());
+
+              if (DstLT.first == SrcLT.first &&
+                  TLI->isLoadLegal(
+                      ExtVT, LoadVT, II->getParamAlign(0).valueOrOne(),
+                      PtrType->getPointerAddressSpace(), LType, false))
+                return 0;
+
+              break;
+            }
+            default:
+              break;
+            }
+          }
+        }
       }
       break;
     case Instruction::AddrSpaceCast:
@@ -1428,10 +1457,11 @@ public:
     return 1;
   }
 
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override {
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override {
     return getRegUsageForType(Val->getScalarType());
   }
 
@@ -1439,26 +1469,32 @@ public:
   /// vector with 'Scalar' being the value being extracted,'User' being the user
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Scalar,
-                                     ArrayRef<std::tuple<Value *, User *, int>>
-                                         ScalarUserAndIdx) const override {
-    return thisT()->getVectorInstrCost(Opcode, Val, CostKind, Index, nullptr,
-                                       nullptr);
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+      TTI::VectorInstrContext VIC =
+          TTI::VectorInstrContext::None) const override {
+    return getVectorInstrCost(Opcode, Val, CostKind, Index, nullptr, nullptr,
+                              VIC);
   }
 
-  InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index) const override {
+  InstructionCost
+  getVectorInstrCost(const Instruction &I, Type *Val,
+                     TTI::TargetCostKind CostKind, unsigned Index,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override {
     Value *Op0 = nullptr;
     Value *Op1 = nullptr;
     if (auto *IE = dyn_cast<InsertElementInst>(&I)) {
       Op0 = IE->getOperand(0);
       Op1 = IE->getOperand(1);
     }
+    // If VIC is None, compute it from the instruction
+    if (VIC == TTI::VectorInstrContext::None)
+      VIC = TTI::getVectorInstrContextHint(&I);
     return thisT()->getVectorInstrCost(I.getOpcode(), Val, CostKind, Index, Op0,
-                                       Op1);
+                                       Op1, VIC);
   }
 
   InstructionCost
@@ -1539,7 +1575,8 @@ public:
       if (Opcode == Instruction::Store)
         LA = getTLI()->getTruncStoreAction(LT.second, MemVT);
       else
-        LA = getTLI()->getLoadExtAction(ISD::EXTLOAD, LT.second, MemVT);
+        LA = getTLI()->getLoadAction(LT.second, MemVT, Alignment, AddressSpace,
+                                     ISD::EXTLOAD, false);
 
       if (LA != TargetLowering::Legal && LA != TargetLowering::Custom) {
         // This is a vector load/store for some illegal type that is scalarized.
@@ -2001,7 +2038,10 @@ public:
     }
     case Intrinsic::vector_splice_left:
     case Intrinsic::vector_splice_right: {
-      unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
+      auto *COffset = dyn_cast<ConstantInt>(Args[2]);
+      if (!COffset)
+        break;
+      unsigned Index = COffset->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_Splice, cast<VectorType>(RetTy),
           cast<VectorType>(Args[0]->getType()), {}, CostKind,
@@ -2044,32 +2084,33 @@ public:
       InstructionCost Cost = 0;
       Cost +=
           thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
-      Cost +=
-          thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
       Cost += thisT()->getArithmeticInstrCost(
           BinaryOperator::Shl, RetTy, CostKind, OpInfoX,
           {OpInfoZ.Kind, TTI::OP_None});
       Cost += thisT()->getArithmeticInstrCost(
           BinaryOperator::LShr, RetTy, CostKind, OpInfoY,
           {OpInfoZ.Kind, TTI::OP_None});
-      // Non-constant shift amounts requires a modulo. If the typesize is a
-      // power-2 then this will be converted to an and, otherwise it will use a
-      // urem.
-      if (!OpInfoZ.isConstant())
+
+      if (!OpInfoZ.isConstant()) {
+        Cost += thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy,
+                                                CostKind);
+        // Non-constant shift amounts requires a modulo. If the typesize is a
+        // power-2 then this will be converted to an and, otherwise it will use
+        // a urem.
         Cost += thisT()->getArithmeticInstrCost(
             isPowerOf2_32(RetTy->getScalarSizeInBits()) ? BinaryOperator::And
                                                         : BinaryOperator::URem,
             RetTy, CostKind, OpInfoZ,
             {TTI::OK_UniformConstantValue, TTI::OP_None});
-      // For non-rotates (X != Y) we must add shift-by-zero handling costs.
-      if (X != Y) {
-        Type *CondTy = RetTy->getWithNewBitWidth(1);
-        Cost +=
-            thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
-                                        CmpInst::ICMP_EQ, CostKind);
-        Cost +=
-            thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
-                                        CmpInst::ICMP_EQ, CostKind);
+        // For non-rotates (X != Y) we must add shift-by-zero handling costs.
+        if (X != Y) {
+          Type *CondTy = RetTy->getWithNewBitWidth(1);
+          Cost += thisT()->getCmpSelInstrCost(
+              BinaryOperator::ICmp, RetTy, CondTy, CmpInst::ICMP_EQ, CostKind);
+          Cost +=
+              thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+        }
       }
       return Cost;
     }
@@ -2682,6 +2723,9 @@ public:
     case Intrinsic::scmp:
       ISD = ISD::SCMP;
       break;
+    case Intrinsic::clmul:
+      ISD = ISD::CLMUL;
+      break;
     }
 
     auto *ST = dyn_cast<StructType>(RetTy);
@@ -2996,6 +3040,22 @@ public:
         return LT.first + FCanonicalizeCost * 2;
       }
       break;
+    }
+    case Intrinsic::clmul: {
+      // This cost model should match the expansion in
+      // TargetLowering::expandCLMUL.
+      InstructionCost PerBitCostMul =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
+          thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      InstructionCost PerBitCostBittest =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, RetTy,
+                                      ICmpInst::BAD_ICMP_PREDICATE, CostKind) +
+          thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, RetTy,
+                                      ICmpInst::ICMP_NE, CostKind);
+      InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
+      return RetTy->getScalarSizeInBits() * PerBitCost;
     }
     default:
       break;

@@ -209,12 +209,9 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // explicitly checked for this property.
   /// TODO: there should be a single function for all ops to do this so we
   /// do not have to special case. Maybe a trait, or just a method, unclear atm.
-  bool mustDivide = false;
-  (void)mustDivide;
   VectorType superVectorType;
   if (auto transfer = dyn_cast<VectorTransferOpInterface>(op)) {
     superVectorType = transfer.getVectorType();
-    mustDivide = true;
   } else if (op.getNumResults() == 0) {
     if (!isa<func::ReturnOp>(op)) {
       op.emitError("NYI: assuming only return operations can have 0 "
@@ -235,20 +232,11 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
     return false;
   }
 
-  // Get the ratio.
+  // Get the ratio. If the shapes are incompatible (e.g., different ranks or
+  // non-integer divisibility), the operation does not operate on a super-vector
+  // of the given sub-vector type.
   auto ratio =
       computeShapeRatio(superVectorType.getShape(), subVectorType.getShape());
-
-  // Sanity check.
-  assert((ratio || !mustDivide) &&
-         "vector.transfer operation in which super-vector size is not an"
-         " integer multiple of sub-vector size");
-
-  // This catches cases that are not strictly necessary to have multiplicity but
-  // still aren't divisible by the sub-vector shape.
-  // This could be useful information if we wanted to reshape at the level of
-  // the vector type (but we would have to look at the compute and distinguish
-  // between parallel, reduction and possibly other cases.
   return ratio.has_value();
 }
 
@@ -260,6 +248,10 @@ bool vector::isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   ArrayRef<int64_t> vectorShape =
       vectorType.getShape().drop_while([](auto v) { return v == 1; });
   auto vecRank = vectorShape.size();
+
+  // A single element is always contiguous.
+  if (vecRank == 0)
+    return true;
 
   if (!memrefType.areTrailingDimsContiguous(vecRank))
     return false;
@@ -300,11 +292,12 @@ SmallVector<OpFoldResult> vector::getMixedSizesXfer(bool hasTensorSemantics,
                                                     RewriterBase &rewriter) {
   auto loc = xfer->getLoc();
 
-  Value base = TypeSwitch<Operation *, Value>(xfer)
-                   .Case<vector::TransferReadOp>(
-                       [&](auto readOp) { return readOp.getBase(); })
-                   .Case<vector::TransferWriteOp>(
-                       [&](auto writeOp) { return writeOp.getOperand(1); });
+  Value base =
+      TypeSwitch<Operation *, Value>(xfer)
+          .Case([&](vector::TransferReadOp readOp) { return readOp.getBase(); })
+          .Case([&](vector::TransferWriteOp writeOp) {
+            return writeOp.getOperand(1);
+          });
 
   SmallVector<OpFoldResult> mixedSourceDims =
       hasTensorSemantics ? tensor::getMixedSizes(rewriter, loc, base)

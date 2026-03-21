@@ -2,6 +2,8 @@
 
 %struct.S = type <{ float }>
 
+; CHECK-NOT: OpCapability Linkage
+
 ; CHECK-DAG: %[[#F32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#UINT:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#S_S:]] = OpTypeStruct %[[#F32]]

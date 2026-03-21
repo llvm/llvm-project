@@ -1432,14 +1432,14 @@ _mm_cvtepi16_epi8(__m128i __A) {
       12, 13, 14, 15);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvtepi16_epi8 (__m128i __O, __mmask8 __M, __m128i __A) {
   return (__m128i) __builtin_ia32_pmovwb128_mask ((__v8hi) __A,
                (__v16qi) __O,
                __M);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128_CONSTEXPR
+static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtepi16_epi8 (__mmask8 __M, __m128i __A) {
   return (__m128i) __builtin_ia32_pmovwb128_mask ((__v8hi) __A,
                (__v16qi) _mm_setzero_si128(),

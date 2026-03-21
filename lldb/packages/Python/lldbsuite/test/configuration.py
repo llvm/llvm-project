@@ -12,6 +12,7 @@ import os
 
 
 # Third-party modules
+from typing import Optional
 import unittest
 
 # LLDB Modules
@@ -60,6 +61,9 @@ settings = []
 
 # Path to the FileCheck testing tool. Not optional.
 filecheck = None
+
+# Path to the nm tool.
+nm: Optional[str] = None
 
 # Path to the yaml2obj tool. Not optional.
 yaml2obj = None
@@ -143,6 +147,9 @@ libcxx_library_dir = None
 # A plugin whose tests will be enabled, like intel-pt.
 enabled_plugins = []
 
+# Whether MTE (Memory Tagging Extension) is enabled.
+mte_enabled = False
+
 # the build type of lldb
 # Typical values include Debug, Release, RelWithDebInfo and MinSizeRel
 cmake_build_type = None
@@ -169,6 +176,14 @@ def get_filecheck_path():
     """
     if filecheck and os.path.lexists(filecheck):
         return filecheck
+
+
+def get_nm_path():
+    """
+    Get the path to the nm tool.
+    """
+    if nm and os.path.lexists(nm):
+        return nm
 
 
 def get_yaml2obj_path():

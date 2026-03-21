@@ -1,4 +1,4 @@
-// RUN: mlir-opt -verify-roundtrip %s
+// RUN: mlir-opt -verify-roundtrip %s | FileCheck %s
 
 
 // CHECK-LABEL: func @baz
@@ -122,8 +122,68 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {will_return} : () -> ()
   llvm.call @baz() {will_return} : () -> ()
 
+// CHECK: llvm.call @baz() {noreturn} : () -> ()
+  llvm.call @baz() {noreturn} : () -> ()
+
+// CHECK: llvm.call @baz() {returns_twice} : () -> ()
+  llvm.call @baz() {returns_twice} : () -> ()
+
+// CHECK: llvm.call @baz() {hot} : () -> ()
+  llvm.call @baz() {hot} : () -> ()
+
+// CHECK: llvm.call @baz() {cold} : () -> ()
+  llvm.call @baz() {cold} : () -> ()
+
+// CHECK: llvm.call @baz() {noduplicate} : () -> ()
+  llvm.call @baz() {noduplicate} : () -> ()
+
+// CHECK: llvm.call @baz() {no_caller_saved_registers} : () -> ()
+  llvm.call @baz() {no_caller_saved_registers} : () -> ()
+
+// CHECK: llvm.call @baz() {nocallback} : () -> ()
+  llvm.call @baz() {nocallback} : () -> ()
+
+// CHECK: llvm.call @baz() {modular_format = "format str"} : () -> ()
+  llvm.call @baz() {modular_format = "format str"} : () -> ()
+
 // CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
   llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltins = []} : () -> ()
+  llvm.call @baz() {nobuiltins = []} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltins = ["asdf", "defg"]} : () -> ()
+  llvm.call @baz() {nobuiltins = ["asdf", "defg"]} : () -> ()
+
+// CHECK: llvm.call @baz() {allocsize = array<i32: 5>} : () -> ()
+  llvm.call @baz() {allocsize = array<i32: 5>} : () -> ()
+
+// CHECK: llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
+  llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
+
+// CHECK: llvm.call @baz() {minsize} : () -> ()
+  llvm.call @baz() {minsize} : () -> ()
+
+// CHECK: llvm.call @baz() {optsize} : () -> ()
+  llvm.call @baz() {optsize} : () -> ()
+
+// CHECK: llvm.call @baz() {builtin} : () -> ()
+  llvm.call @baz() {builtin} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltin} : () -> ()
+  llvm.call @baz() {nobuiltin} : () -> ()
+
+// CHECK: llvm.call @baz() {save_reg_params} : () -> ()
+  llvm.call @baz() {save_reg_params} : () -> ()
+
+// CHECK: llvm.call @baz() {zero_call_used_regs = "all"} : () -> ()
+  llvm.call @baz() {zero_call_used_regs="all"} : () -> ()
+
+// CHECK: llvm.call @baz() {zero_call_used_regs = "thing"} : () -> ()
+  llvm.call @baz() {zero_call_used_regs="thing"} : () -> ()
+
+// CHECK: llvm.call @baz() {default_func_attrs = {justKey, key = "value"}} : () -> ()
+  llvm.call @baz() {default_func_attrs={justKey, key = "value"}} : () -> ()
 
 // Terminator operations and their successors.
 //
@@ -186,8 +246,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 //
 // CHECK: %[[PTR:.*]] = llvm.inttoptr %[[I32]] : i32 to !llvm.ptr
 // CHECK: %{{.*}} = llvm.ptrtoint %[[PTR]] : !llvm.ptr to i32
+// CHECK: %{{.*}} = llvm.ptrtoaddr %[[PTR]] : !llvm.ptr to i64
   %25 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
   %26 = llvm.ptrtoint %25 : !llvm.ptr to i32
+  %a26 = llvm.ptrtoaddr %25 : !llvm.ptr to i64
+  %vp = llvm.mlir.poison : vector<3 x !llvm.ptr>
+  %va26 = llvm.ptrtoaddr %vp : vector<3 x !llvm.ptr> to vector<3 x i64>
 
 // Extended and Quad floating point
 //
@@ -1053,3 +1117,39 @@ llvm.func @escapedtypename() {
   %1 = llvm.alloca %0 x !llvm.struct<"bucket<string, double, '\\b'>::Iterator", (ptr, i64, i64)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   llvm.return
 }
+
+// Metadata attributes and llvm.named_metadata op.
+
+llvm.func @md_kernel() {
+  llvm.return
+}
+
+// CHECK: llvm.named_metadata "foo.version" [#llvm.md_node<#llvm.md_const<1 : i32>, #llvm.md_const<0 : i32>, #llvm.md_const<0 : i32>>]
+llvm.named_metadata "foo.version" [
+  #llvm.md_node<
+    #llvm.md_const<1 : i32>,
+    #llvm.md_const<0 : i32>,
+    #llvm.md_const<0 : i32>
+  >
+]
+
+// CHECK: llvm.named_metadata "foo.language" [#llvm.md_node<#llvm.md_string<"Bar">, #llvm.md_const<1 : i32>, #llvm.md_const<2 : i32>>]
+llvm.named_metadata "foo.language" [
+  #llvm.md_node<
+    #llvm.md_string<"Bar">,
+    #llvm.md_const<1 : i32>,
+    #llvm.md_const<2 : i32>
+  >
+]
+
+// CHECK: llvm.named_metadata "foo.kernel" [#llvm.md_node<#llvm.md_func<@md_kernel>, #llvm.md_node<>, #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>>]
+llvm.named_metadata "foo.kernel" [
+  #llvm.md_node<
+    #llvm.md_func<@md_kernel>,
+    #llvm.md_node<>,
+    #llvm.md_node<
+      #llvm.md_const<0 : i32>,
+      #llvm.md_string<"foo.buffer">
+    >
+  >
+]

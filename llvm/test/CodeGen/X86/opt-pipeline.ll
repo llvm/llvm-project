@@ -70,13 +70,16 @@
 ; CHECK-NEXT:       X86 Partial Reduction
 ; CHECK-NEXT:       Expand indirectbr instructions
 ; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Post-Dominator Tree Construction
+; CHECK-NEXT:       Branch Probability Analysis
+; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       ObjC ARC contraction
-; CHECK-NEXT:       Prepare callbr
+; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
 ; CHECK-NEXT:       Module Verifier
@@ -145,8 +148,8 @@
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
-; CHECK-NEXT:       Machine Instruction Scheduler
 ; CHECK-NEXT:       Machine Block Frequency Analysis
+; CHECK-NEXT:       Machine Instruction Scheduler
 ; CHECK-NEXT:       Debug Variable Analysis
 ; CHECK-NEXT:       Live Stack Slot Analysis
 ; CHECK-NEXT:       Virtual Register Map

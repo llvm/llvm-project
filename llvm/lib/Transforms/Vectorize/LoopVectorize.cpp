@@ -198,6 +198,13 @@ static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
 
+/// Note: This currently only applies to `llvm.masked.load` and
+/// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
+static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
+    "force-target-supports-masked-memory-ops", cl::init(false), cl::Hidden,
+    cl::desc("Assume the target supports masked memory operations (used for "
+             "testing)."));
+
 // Option prefer-predicate-over-epilogue indicates that an epilogue is undesired,
 // that predication is preferred, and this lists all options. I.e., the
 // vectorizer will try to fold the tail-loop (epilogue) into the vector body
@@ -243,9 +250,6 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
         clEnumValN(TailFoldingStyle::DataAndControlFlow, "data-and-control",
                    "Create lane mask using active.lane.mask intrinsic, and use "
                    "it for both data and control flow"),
-        clEnumValN(TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck,
-                   "data-and-control-without-rt-check",
-                   "Similar to data-and-control, but remove the runtime check"),
         clEnumValN(TailFoldingStyle::DataWithEVL, "data-with-evl",
                    "Use predicated EVL instructions for tail folding. If EVL "
                    "is unsupported, fallback to data-without-lane-mask.")));
@@ -318,7 +322,7 @@ static cl::opt<bool> EnableLoadStoreRuntimeInterleave(
         "Enable runtime interleaving until load/store ports are saturated"));
 
 /// The number of stores in a loop that are allowed to need predication.
-static cl::opt<unsigned> NumberOfStoresToPredicate(
+cl::opt<unsigned> NumberOfStoresToPredicate(
     "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
     cl::desc("Max number of stores to be predicated behind an if."));
 
@@ -364,7 +368,22 @@ cl::opt<bool>
                           cl::init(false),
 #endif
                           cl::Hidden,
-                          cl::desc("Verfiy VPlans after VPlan transforms."));
+                          cl::desc("Verify VPlans after VPlan transforms."));
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+cl::opt<bool> llvm::VPlanPrintAfterAll(
+    "vplan-print-after-all", cl::init(false), cl::Hidden,
+    cl::desc("Print VPlans after all VPlan transformations."));
+
+cl::list<std::string> llvm::VPlanPrintAfterPasses(
+    "vplan-print-after", cl::Hidden,
+    cl::desc("Print VPlans after specified VPlan transformations (regexp)."));
+
+cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
+    "vplan-print-vector-region-scope", cl::init(false), cl::Hidden,
+    cl::desc("Limit VPlan printing to vector loop region in "
+             "`-vplan-print-after*` if the plan has one."));
+#endif
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
 // VPlan-native vectorization path. It must be used in conjuction with
@@ -1167,7 +1186,8 @@ public:
   bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment,
                           unsigned AddressSpace) const {
     return Legal->isConsecutivePtr(DataType, Ptr) &&
-           TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace);
+           (ForceTargetSupportsMaskedMemoryOps ||
+            TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace));
   }
 
   /// Returns true if the target machine supports masked load operation
@@ -1175,7 +1195,8 @@ public:
   bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment,
                          unsigned AddressSpace) const {
     return Legal->isConsecutivePtr(DataType, Ptr) &&
-           TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace);
+           (ForceTargetSupportsMaskedMemoryOps ||
+            TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace));
   }
 
   /// Returns true if the target machine can represent \p V as a masked gather
@@ -1244,6 +1265,10 @@ public:
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                           const BasicBlock *BB);
 
+  /// Returns true if an artificially high cost for emulated masked memrefs
+  /// should be used.
+  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
+
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
   /// First result is for scalarization (will be invalid for scalable
@@ -1308,34 +1333,27 @@ public:
   }
 
   /// Returns the TailFoldingStyle that is best for the current loop.
-  TailFoldingStyle getTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
-    if (!ChosenTailFoldingStyle)
-      return TailFoldingStyle::None;
-    return IVUpdateMayOverflow ? ChosenTailFoldingStyle->first
-                               : ChosenTailFoldingStyle->second;
+  TailFoldingStyle getTailFoldingStyle() const {
+    return ChosenTailFoldingStyle;
   }
 
-  /// Selects and saves TailFoldingStyle for 2 options - if IV update may
-  /// overflow or not.
+  /// Selects and saves TailFoldingStyle.
   /// \param IsScalableVF true if scalable vector factors enabled.
   /// \param UserIC User specific interleave count.
-  void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
-    assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
+  void setTailFoldingStyle(bool IsScalableVF, unsigned UserIC) {
+    assert(ChosenTailFoldingStyle == TailFoldingStyle::None &&
+           "Tail folding must not be selected yet.");
     if (!Legal->canFoldTailByMasking()) {
-      ChosenTailFoldingStyle = {TailFoldingStyle::None, TailFoldingStyle::None};
+      ChosenTailFoldingStyle = TailFoldingStyle::None;
       return;
     }
 
     // Default to TTI preference, but allow command line override.
-    ChosenTailFoldingStyle = {
-        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
-        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
+    ChosenTailFoldingStyle = TTI.getPreferredTailFoldingStyle();
     if (ForceTailFoldingStyle.getNumOccurrences())
-      ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
-                                ForceTailFoldingStyle.getValue()};
+      ChosenTailFoldingStyle = ForceTailFoldingStyle.getValue();
 
-    if (ChosenTailFoldingStyle->first != TailFoldingStyle::DataWithEVL &&
-        ChosenTailFoldingStyle->second != TailFoldingStyle::DataWithEVL)
+    if (ChosenTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
@@ -1347,10 +1365,9 @@ public:
     // if it's allowed, or DataWithoutLaneMask otherwise.
     if (ScalarEpilogueStatus == CM_ScalarEpilogueAllowed ||
         ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate)
-      ChosenTailFoldingStyle = {TailFoldingStyle::None, TailFoldingStyle::None};
+      ChosenTailFoldingStyle = TailFoldingStyle::None;
     else
-      ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
-                                TailFoldingStyle::DataWithoutLaneMask};
+      ChosenTailFoldingStyle = TailFoldingStyle::DataWithoutLaneMask;
 
     LLVM_DEBUG(
         dbgs() << "LV: Preference for VP intrinsics indicated. Will "
@@ -1362,8 +1379,6 @@ public:
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
   bool foldTailByMasking() const {
-    // TODO: check if it is possible to check for None style independent of
-    // IVUpdateMayOverflow flag in getTailFoldingStyle.
     return getTailFoldingStyle() != TailFoldingStyle::None;
   }
 
@@ -1373,9 +1388,7 @@ public:
     if (!EnableWideActiveLaneMask)
       return false;
 
-    TailFoldingStyle TF = getTailFoldingStyle();
-    return TF == TailFoldingStyle::DataAndControlFlow ||
-           TF == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+    return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
   }
 
   /// Return maximum safe number of elements to be processed per vector
@@ -1412,11 +1425,18 @@ public:
 
   /// Returns true if the predicated reduction select should be used to set the
   /// incoming value for the reduction phi.
-  bool usePredicatedReductionSelect() const {
+  bool usePredicatedReductionSelect(RecurKind RecurrenceKind) const {
     // Force to use predicated reduction select since the EVL of the
     // second-to-last iteration might not be VF*UF.
     if (foldTailWithEVL())
       return true;
+
+    // Note: For FindLast recurrences we prefer a predicated select to simplify
+    // matching in handleFindLastReductions(), rather than handle multiple
+    // cases.
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(RecurrenceKind))
+      return true;
+
     return PreferPredicatedReductionSelect ||
            TTI.preferPredicatedReductionSelect();
   }
@@ -1503,12 +1523,13 @@ private:
   /// disabled or unsupported, then the scalable part will be equal to
   /// ElementCount::getScalable(0).
   FixedScalableVFPair computeFeasibleMaxVF(unsigned MaxTripCount,
-                                           ElementCount UserVF,
+                                           ElementCount UserVF, unsigned UserIC,
                                            bool FoldTailByMasking);
 
-  /// If \p VF > MaxTripcount, clamps it to the next lower VF that is <=
-  /// MaxTripCount.
+  /// If \p VF * \p UserIC > MaxTripcount, clamps VF to the next lower VF that
+  /// results in VF * UserIC <= MaxTripCount.
   ElementCount clampVFByMaxTripCount(ElementCount VF, unsigned MaxTripCount,
+                                     unsigned UserIC,
                                      bool FoldTailByMasking) const;
 
   /// \return the maximized element count based on the targets vector
@@ -1517,7 +1538,7 @@ private:
   ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
                                        unsigned SmallestType,
                                        unsigned WidestType,
-                                       ElementCount MaxSafeVF,
+                                       ElementCount MaxSafeVF, unsigned UserIC,
                                        bool FoldTailByMasking);
 
   /// Checks if scalable vectorization is supported and enabled. Caches the
@@ -1555,10 +1576,6 @@ private:
   InstructionCost getScalarizationOverhead(Instruction *I,
                                            ElementCount VF) const;
 
-  /// Returns true if an artificially high cost for emulated masked memrefs
-  /// should be used.
-  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
-
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
   /// to this type.
@@ -1583,10 +1600,8 @@ private:
   /// iterations to execute in the scalar loop.
   ScalarEpilogueLowering ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
 
-  /// Control finally chosen tail folding style. The first element is used if
-  /// the IV update may overflow, the second element - if it does not.
-  std::optional<std::pair<TailFoldingStyle, TailFoldingStyle>>
-      ChosenTailFoldingStyle;
+  /// Control finally chosen tail folding style.
+  TailFoldingStyle ChosenTailFoldingStyle = TailFoldingStyle::None;
 
   /// true if scalable vectorization is supported and enabled.
   std::optional<bool> IsScalableVectorizationAllowed;
@@ -2075,13 +2090,11 @@ public:
 
 static bool useActiveLaneMask(TailFoldingStyle Style) {
   return Style == TailFoldingStyle::Data ||
-         Style == TailFoldingStyle::DataAndControlFlow ||
-         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+         Style == TailFoldingStyle::DataAndControlFlow;
 }
 
 static bool useActiveLaneMaskForControlFlow(TailFoldingStyle Style) {
-  return Style == TailFoldingStyle::DataAndControlFlow ||
-         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+  return Style == TailFoldingStyle::DataAndControlFlow;
 }
 
 // Return true if \p OuterLp is an outer loop annotated with hints for explicit
@@ -2156,17 +2169,13 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
 // LoopVectorizationCostModel and LoopVectorizationPlanner.
 //===----------------------------------------------------------------------===//
 
-/// Compute the transformed value of Index at offset StartValue using step
-/// StepValue.
-/// For integer induction, returns StartValue + Index * StepValue.
-/// For pointer induction, returns StartValue[Index * StepValue].
 /// FIXME: The newly created binary instructions should contain nsw/nuw
 /// flags, which can be found from the original scalar operations.
-static Value *
-emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
-                     Value *Step,
-                     InductionDescriptor::InductionKind InductionKind,
-                     const BinaryOperator *InductionBinOp) {
+Value *
+llvm::emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
+                           Value *Step,
+                           InductionDescriptor::InductionKind InductionKind,
+                           const BinaryOperator *InductionBinOp) {
   using namespace llvm::PatternMatch;
   Type *StepTy = Step->getType();
   Value *CastedIndex = StepTy->isIntegerTy()
@@ -2371,21 +2380,8 @@ Value *EpilogueVectorizerMainLoop::createIterationCountCheck(
       // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
     } // else step known to be < trip count, use CheckMinIters preset to false.
-  } else if (VF.isScalable() && !TTI->isVScaleKnownToBeAPowerOfTwo() &&
-             !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
-             Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
-    // vscale is not necessarily a power-of-2, which means we cannot guarantee
-    // an overflow to zero when updating induction variables and so an
-    // additional overflow check is required before entering the vector loop.
-
-    // Get the maximum unsigned value for the type.
-    Value *MaxUIntTripCount =
-        ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask());
-    Value *LHS = Builder.CreateSub(MaxUIntTripCount, Count);
-
-    // Don't execute the vector loop if (UMax - n) < (VF * UF).
-    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
   }
+
   return CheckMinIters;
 }
 
@@ -2590,7 +2586,7 @@ LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
 
   IntrinsicCostAttributes CostAttrs(ID, RetTy, Arguments, ParamTys, FMF,
                                     dyn_cast<IntrinsicInst>(CI),
-                                    InstructionCost::getInvalid(), TLI);
+                                    InstructionCost::getInvalid());
   return TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }
 
@@ -2863,7 +2859,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   // context sensitive reasoning for isSafeToSpeculativelyExecute.
   if (isSafeToSpeculativelyExecute(I) ||
       (isa<LoadInst, StoreInst, CallInst>(I) && !Legal->isMaskRequired(I)) ||
-      isa<BranchInst, SwitchInst, PHINode, AllocaInst>(I))
+      isa<UncondBrInst, CondBrInst, SwitchInst, PHINode, AllocaInst>(I))
     return false;
 
   // If the instruction was executed conditionally in the original scalar loop,
@@ -2902,11 +2898,14 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
              TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
   }
   case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::SRem:
   case Instruction::URem:
     // If the divisor is loop-invariant no predication is needed.
     return !Legal->isInvariant(I->getOperand(1));
+  case Instruction::SDiv:
+  case Instruction::SRem:
+    // Conservative for now, since masked-off lanes may be poison and could
+    // trigger signed overflow.
+    return true;
   }
 }
 
@@ -3445,7 +3444,8 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 }
 
 FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
-    unsigned MaxTripCount, ElementCount UserVF, bool FoldTailByMasking) {
+    unsigned MaxTripCount, ElementCount UserVF, unsigned UserIC,
+    bool FoldTailByMasking) {
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
@@ -3541,12 +3541,12 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
                              ElementCount::getScalable(0));
   if (auto MaxVF =
           getMaximizedVFForTarget(MaxTripCount, SmallestType, WidestType,
-                                  MaxSafeFixedVF, FoldTailByMasking))
+                                  MaxSafeFixedVF, UserIC, FoldTailByMasking))
     Result.FixedVF = MaxVF;
 
   if (auto MaxVF =
           getMaximizedVFForTarget(MaxTripCount, SmallestType, WidestType,
-                                  MaxSafeScalableVF, FoldTailByMasking))
+                                  MaxSafeScalableVF, UserIC, FoldTailByMasking))
     if (MaxVF.isScalable()) {
       Result.ScalableVF = MaxVF;
       LLVM_DEBUG(dbgs() << "LV: Found feasible scalable VF = " << MaxVF
@@ -3599,7 +3599,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   switch (ScalarEpilogueStatus) {
   case CM_ScalarEpilogueAllowed:
-    return computeFeasibleMaxVF(MaxTC, UserVF, false);
+    return computeFeasibleMaxVF(MaxTC, UserVF, UserIC, false);
   case CM_ScalarEpilogueNotAllowedUsePredicate:
     [[fallthrough]];
   case CM_ScalarEpilogueNotNeededUsePredicate:
@@ -3638,7 +3638,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
-  FixedScalableVFPair MaxFactors = computeFeasibleMaxVF(MaxTC, UserVF, true);
+  FixedScalableVFPair MaxFactors =
+      computeFeasibleMaxVF(MaxTC, UserVF, UserIC, true);
 
   // Avoid tail folding if the trip count is known to be a multiple of any VF
   // we choose.
@@ -3646,7 +3647,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
     std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
-    if (MaxVScale && TTI.isVScaleKnownToBeAPowerOfTwo()) {
+    if (MaxVScale) {
       MaxPowerOf2RuntimeVF = std::max<unsigned>(
           *MaxPowerOf2RuntimeVF,
           *MaxVScale * MaxFactors.ScalableVF.getKnownMinValue());
@@ -3716,7 +3717,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
   bool ContainsScalableVF = MaxFactors.ScalableVF.isNonZero();
-  setTailFoldingStyles(ContainsScalableVF, UserIC);
+  setTailFoldingStyle(ContainsScalableVF, UserIC);
   if (foldTailByMasking()) {
     if (foldTailWithEVL()) {
       LLVM_DEBUG(
@@ -3793,7 +3794,8 @@ bool LoopVectorizationCostModel::useMaxBandwidth(
 }
 
 ElementCount LoopVectorizationCostModel::clampVFByMaxTripCount(
-    ElementCount VF, unsigned MaxTripCount, bool FoldTailByMasking) const {
+    ElementCount VF, unsigned MaxTripCount, unsigned UserIC,
+    bool FoldTailByMasking) const {
   unsigned EstimatedVF = VF.getKnownMinValue();
   if (VF.isScalable() && TheFunction->hasFnAttribute(Attribute::VScaleRange)) {
     auto Attr = TheFunction->getFnAttribute(Attribute::VScaleRange);
@@ -3807,16 +3809,24 @@ ElementCount LoopVectorizationCostModel::clampVFByMaxTripCount(
   if (MaxTripCount > 0 && requiresScalarEpilogue(true))
     MaxTripCount -= 1;
 
-  if (MaxTripCount && MaxTripCount <= EstimatedVF &&
+  // When the user specifies an interleave count, we need to ensure that
+  // VF * UserIC <= MaxTripCount to avoid a dead vector loop.
+  unsigned IC = UserIC > 0 ? UserIC : 1;
+  unsigned EstimatedVFTimesIC = EstimatedVF * IC;
+
+  if (MaxTripCount && MaxTripCount <= EstimatedVFTimesIC &&
       (!FoldTailByMasking || isPowerOf2_32(MaxTripCount))) {
     // If upper bound loop trip count (TC) is known at compile time there is no
-    // point in choosing VF greater than TC (as done in the loop below). Select
-    // maximum power of two which doesn't exceed TC. If VF is
+    // point in choosing VF greater than TC / IC (as done in the loop below).
+    // Select maximum power of two which doesn't exceed TC / IC. If VF is
     // scalable, we only fall back on a fixed VF when the TC is less than or
     // equal to the known number of lanes.
-    auto ClampedUpperTripCount = llvm::bit_floor(MaxTripCount);
+    auto ClampedUpperTripCount = llvm::bit_floor(MaxTripCount / IC);
+    if (ClampedUpperTripCount == 0)
+      ClampedUpperTripCount = 1;
     LLVM_DEBUG(dbgs() << "LV: Clamping the MaxVF to maximum power of two not "
-                         "exceeding the constant trip count: "
+                         "exceeding the constant trip count"
+                      << (UserIC > 0 ? " divided by UserIC" : "") << ": "
                       << ClampedUpperTripCount << "\n");
     return ElementCount::get(ClampedUpperTripCount,
                              FoldTailByMasking ? VF.isScalable() : false);
@@ -3826,7 +3836,7 @@ ElementCount LoopVectorizationCostModel::clampVFByMaxTripCount(
 
 ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     unsigned MaxTripCount, unsigned SmallestType, unsigned WidestType,
-    ElementCount MaxSafeVF, bool FoldTailByMasking) {
+    ElementCount MaxSafeVF, unsigned UserIC, bool FoldTailByMasking) {
   bool ComputeScalableMaxVF = MaxSafeVF.isScalable();
   const TypeSize WidestRegister = TTI.getRegisterBitWidth(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
@@ -3855,8 +3865,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     return ElementCount::getFixed(1);
   }
 
-  ElementCount MaxVF = clampVFByMaxTripCount(MaxVectorElementCount,
-                                             MaxTripCount, FoldTailByMasking);
+  ElementCount MaxVF = clampVFByMaxTripCount(
+      MaxVectorElementCount, MaxTripCount, UserIC, FoldTailByMasking);
   // If the MaxVF was already clamped, there's no point in trying to pick a
   // larger one.
   if (MaxVF != MaxVectorElementCount)
@@ -3886,7 +3896,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
       }
     }
 
-    MaxVF = clampVFByMaxTripCount(MaxVF, MaxTripCount, FoldTailByMasking);
+    MaxVF =
+        clampVFByMaxTripCount(MaxVF, MaxTripCount, UserIC, FoldTailByMasking);
 
     if (MaxVectorElementCount != MaxVF) {
       // Invalidate any widening decisions we might have made, in case the loop
@@ -3937,8 +3948,10 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   // To avoid the need for FP division:
   //      (CostA / EstimatedWidthA) < (CostB / EstimatedWidthB)
   // <=>  (CostA * EstimatedWidthB) < (CostB * EstimatedWidthA)
+  bool LowerCostWithoutTC =
+      CmpFn(CostA * EstimatedWidthB, CostB * EstimatedWidthA);
   if (!MaxTripCount)
-    return CmpFn(CostA * EstimatedWidthB, CostB * EstimatedWidthA);
+    return LowerCostWithoutTC;
 
   auto GetCostForTC = [MaxTripCount, HasTail](unsigned VF,
                                               InstructionCost VectorCost,
@@ -3959,7 +3972,16 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
 
   auto RTCostA = GetCostForTC(EstimatedWidthA, CostA, A.ScalarCost);
   auto RTCostB = GetCostForTC(EstimatedWidthB, CostB, B.ScalarCost);
-  return CmpFn(RTCostA, RTCostB);
+  bool LowerCostWithTC = CmpFn(RTCostA, RTCostB);
+  LLVM_DEBUG(if (LowerCostWithTC != LowerCostWithoutTC) {
+    dbgs() << "LV: VF " << (LowerCostWithTC ? A.Width : B.Width)
+           << " has lower cost than VF "
+           << (LowerCostWithTC ? B.Width : A.Width)
+           << " when taking the cost of the remaining scalar loop iterations "
+              "into consideration for a maximum trip count of "
+           << MaxTripCount << ".\n";
+  });
+  return LowerCostWithTC;
 }
 
 bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
@@ -4032,22 +4054,20 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 
     unsigned Opcode =
         TypeSwitch<const VPRecipeBase *, unsigned>(R)
-            .Case<VPHeaderPHIRecipe>(
-                [](const auto *R) { return Instruction::PHI; })
-            .Case<VPWidenStoreRecipe>(
-                [](const auto *R) { return Instruction::Store; })
-            .Case<VPWidenLoadRecipe>(
-                [](const auto *R) { return Instruction::Load; })
+            .Case([](const VPHeaderPHIRecipe *R) { return Instruction::PHI; })
+            .Case(
+                [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
+            .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                   VPWidenCastRecipe>(
                 [](const auto *R) { return R->getOpcode(); })
-            .Case<VPInterleaveRecipe>([](const VPInterleaveRecipe *R) {
+            .Case([](const VPInterleaveRecipe *R) {
               return R->getStoredValues().empty() ? Instruction::Load
                                                   : Instruction::Store;
             })
-            .Case<VPReductionRecipe>([](const auto *R) {
+            .Case([](const VPReductionRecipe *R) {
               return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
             });
 
@@ -4108,40 +4128,40 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       // result. Note that this includes VPInstruction where some opcodes may
       // produce a vector, to preserve existing behavior as VPInstructions model
       // aspects not directly mapped to existing IR instructions.
-      switch (R.getVPDefID()) {
-      case VPDef::VPDerivedIVSC:
-      case VPDef::VPScalarIVStepsSC:
-      case VPDef::VPReplicateSC:
-      case VPDef::VPInstructionSC:
-      case VPDef::VPCanonicalIVPHISC:
-      case VPDef::VPVectorPointerSC:
-      case VPDef::VPVectorEndPointerSC:
-      case VPDef::VPExpandSCEVSC:
-      case VPDef::VPEVLBasedIVPHISC:
-      case VPDef::VPPredInstPHISC:
-      case VPDef::VPBranchOnMaskSC:
+      switch (R.getVPRecipeID()) {
+      case VPRecipeBase::VPDerivedIVSC:
+      case VPRecipeBase::VPScalarIVStepsSC:
+      case VPRecipeBase::VPReplicateSC:
+      case VPRecipeBase::VPInstructionSC:
+      case VPRecipeBase::VPCanonicalIVPHISC:
+      case VPRecipeBase::VPCurrentIterationPHISC:
+      case VPRecipeBase::VPVectorPointerSC:
+      case VPRecipeBase::VPVectorEndPointerSC:
+      case VPRecipeBase::VPExpandSCEVSC:
+      case VPRecipeBase::VPPredInstPHISC:
+      case VPRecipeBase::VPBranchOnMaskSC:
         continue;
-      case VPDef::VPReductionSC:
-      case VPDef::VPActiveLaneMaskPHISC:
-      case VPDef::VPWidenCallSC:
-      case VPDef::VPWidenCanonicalIVSC:
-      case VPDef::VPWidenCastSC:
-      case VPDef::VPWidenGEPSC:
-      case VPDef::VPWidenIntrinsicSC:
-      case VPDef::VPWidenSC:
-      case VPDef::VPBlendSC:
-      case VPDef::VPFirstOrderRecurrencePHISC:
-      case VPDef::VPHistogramSC:
-      case VPDef::VPWidenPHISC:
-      case VPDef::VPWidenIntOrFpInductionSC:
-      case VPDef::VPWidenPointerInductionSC:
-      case VPDef::VPReductionPHISC:
-      case VPDef::VPInterleaveEVLSC:
-      case VPDef::VPInterleaveSC:
-      case VPDef::VPWidenLoadEVLSC:
-      case VPDef::VPWidenLoadSC:
-      case VPDef::VPWidenStoreEVLSC:
-      case VPDef::VPWidenStoreSC:
+      case VPRecipeBase::VPReductionSC:
+      case VPRecipeBase::VPActiveLaneMaskPHISC:
+      case VPRecipeBase::VPWidenCallSC:
+      case VPRecipeBase::VPWidenCanonicalIVSC:
+      case VPRecipeBase::VPWidenCastSC:
+      case VPRecipeBase::VPWidenGEPSC:
+      case VPRecipeBase::VPWidenIntrinsicSC:
+      case VPRecipeBase::VPWidenSC:
+      case VPRecipeBase::VPBlendSC:
+      case VPRecipeBase::VPFirstOrderRecurrencePHISC:
+      case VPRecipeBase::VPHistogramSC:
+      case VPRecipeBase::VPWidenPHISC:
+      case VPRecipeBase::VPWidenIntOrFpInductionSC:
+      case VPRecipeBase::VPWidenPointerInductionSC:
+      case VPRecipeBase::VPReductionPHISC:
+      case VPRecipeBase::VPInterleaveEVLSC:
+      case VPRecipeBase::VPInterleaveSC:
+      case VPRecipeBase::VPWidenLoadEVLSC:
+      case VPRecipeBase::VPWidenLoadSC:
+      case VPRecipeBase::VPWidenStoreEVLSC:
+      case VPRecipeBase::VPWidenStoreSC:
         break;
       default:
         llvm_unreachable("unhandled recipe");
@@ -4231,13 +4251,6 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       if (VF.isScalar())
         continue;
 
-      /// If the register pressure needs to be considered for VF,
-      /// don't consider the VF as valid if it exceeds the number
-      /// of registers for the target.
-      if (CM.shouldConsiderRegPressureForVF(VF) &&
-          RUs[I].exceedsMaxNumRegs(TTI, ForceTargetNumVectorRegs))
-        continue;
-
       InstructionCost C = CM.expectedCost(VF);
 
       // Add on other costs that are modelled in VPlan, but not in the legacy
@@ -4273,12 +4286,12 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           }
           case VPInstruction::ActiveLaneMask: {
             unsigned Multiplier =
-                cast<ConstantInt>(VPI->getOperand(2)->getLiveInIRValue())
-                    ->getZExtValue();
+                cast<VPConstantInt>(VPI->getOperand(2))->getZExtValue();
             C += VPI->cost(VF * Multiplier, CostCtx);
             break;
           }
           case VPInstruction::ExplicitVectorLength:
+          case VPInstruction::AnyOf:
             C += VPI->cost(VF, CostCtx);
             break;
           default:
@@ -4286,6 +4299,10 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           }
         }
       }
+
+      // Add the cost of any spills due to excess register usage
+      if (CM.shouldConsiderRegPressureForVF(VF))
+        C += RUs[I].spillCost(CostCtx, ForceTargetNumVectorRegs);
 
       VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
       unsigned Width =
@@ -4336,6 +4353,33 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 }
 #endif
 
+/// Returns true if the VPlan contains a VPReductionPHIRecipe with
+/// FindLast recurrence kind.
+static bool hasFindLastReductionPhi(VPlan &Plan) {
+  return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+                [](VPRecipeBase &R) {
+                  auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
+                  return RedPhi &&
+                         RecurrenceDescriptor::isFindLastRecurrenceKind(
+                             RedPhi->getRecurrenceKind());
+                });
+}
+
+/// Returns true if the VPlan contains header phi recipes that are not currently
+/// supported for epilogue vectorization.
+static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
+  return any_of(
+      Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+      [](VPRecipeBase &R) {
+        if (auto *WidenInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+          return !WidenInd->getPHINode();
+        auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
+        return RedPhi && (RecurrenceDescriptor::isFindLastRecurrenceKind(
+                              RedPhi->getRecurrenceKind()) ||
+                          !RedPhi->getUnderlyingValue());
+      });
+}
+
 bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
     ElementCount VF) const {
   // Cross iteration phis such as fixed-order recurrences and FMaxNum/FMinNum
@@ -4343,9 +4387,15 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         if (!Legal->isReductionVariable(&Phi))
           return Legal->isFixedOrderRecurrence(&Phi);
-        return RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
-            Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind());
+        RecurKind Kind =
+            Legal->getRecurrenceDescriptor(&Phi).getRecurrenceKind();
+        return RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(Kind);
       }))
+    return false;
+
+  // FindLast reductions and inductions without underlying PHI require special
+  // handling and are currently not supported for epilogue vectorization.
+  if (hasUnsupportedHeaderPhiRecipe(getPlanFor(VF)))
     return false;
 
   // Phis with uses outside of the loop require special handling and are
@@ -4380,13 +4430,8 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   // account. For now we apply a very crude heuristic and only consider loops
   // with vectorization factors larger than a certain value.
 
-  // Allow the target to opt out entirely.
-  if (!TTI.preferEpilogueVectorization())
-    return false;
-
-  // We also consider epilogue vectorization unprofitable for targets that don't
-  // consider interleaving beneficial (eg. MVE).
-  if (TTI.getMaxInterleaveFactor(VF) <= 1)
+  // Allow the target to opt out.
+  if (!TTI.preferEpilogueVectorization(VF * IC))
     return false;
 
   unsigned MinVFThreshold = EpilogueVectorizationMinVF.getNumOccurrences() > 0
@@ -4396,7 +4441,7 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
 }
 
 VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
-    const ElementCount MainLoopVF, unsigned IC) {
+    ElementCount MainLoopVF, unsigned IC) {
   VectorizationFactor Result = VectorizationFactor::Disabled();
   if (!EnableEpilogueVectorization) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is disabled.\n");
@@ -4440,6 +4485,25 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     return Result;
   }
 
+  // Check if a plan's vector loop processes fewer iterations than VF (e.g. when
+  // interleave groups have been narrowed) narrowInterleaveGroups)  and return
+  // the adjusted, effective VF.
+  using namespace VPlanPatternMatch;
+  auto GetEffectiveVF = [](VPlan &Plan, ElementCount VF) -> ElementCount {
+    auto *Exiting = Plan.getVectorLoopRegion()->getExitingBasicBlock();
+    if (match(&Exiting->back(),
+              m_BranchOnCount(m_Add(m_CanonicalIV(), m_Specific(&Plan.getUF())),
+                              m_VPValue())))
+      return ElementCount::get(1, VF.isScalable());
+    return VF;
+  };
+
+  // Check if the main loop processes fewer than MainLoopVF elements per
+  // iteration (e.g. due to narrowing interleave groups). Adjust MainLoopVF
+  // as needed.
+  VPlan &MainPlan = getPlanFor(MainLoopVF);
+  MainLoopVF = GetEffectiveVF(MainPlan, MainLoopVF);
+
   // If MainLoopVF = vscale x 2, and vscale is expected to be 4, then we know
   // the main loop handles 8 lanes per iteration. We could still benefit from
   // vectorizing the epilogue loop with VF=4.
@@ -4449,8 +4513,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
   unsigned MaxTripCount = 0;
-  const SCEV *TC = vputils::getSCEVExprForVPValue(
-      getPlanFor(MainLoopVF).getTripCount(), PSE);
+  const SCEV *TC = vputils::getSCEVExprForVPValue(MainPlan.getTripCount(), PSE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
   const SCEV *KnownMinTC;
   bool ScalableTC = match(TC, m_scev_c_Mul(m_SCEV(KnownMinTC), m_SCEVVScale()));
@@ -4493,29 +4556,32 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     if (!hasPlanWithVF(NextVF.Width))
       continue;
 
+    ElementCount EffectiveVF =
+        GetEffectiveVF(getPlanFor(NextVF.Width), NextVF.Width);
     // Skip candidate VFs with widths >= the (estimated) runtime VF (scalable
     // vectors) or > the VF of the main loop (fixed vectors).
-    if ((!NextVF.Width.isScalable() && MainLoopVF.isScalable() &&
-         ElementCount::isKnownGE(NextVF.Width, EstimatedRuntimeVF)) ||
-        (NextVF.Width.isScalable() &&
-         ElementCount::isKnownGE(NextVF.Width, MainLoopVF)) ||
-        (!NextVF.Width.isScalable() && !MainLoopVF.isScalable() &&
-         ElementCount::isKnownGT(NextVF.Width, MainLoopVF)))
+    if ((!EffectiveVF.isScalable() && MainLoopVF.isScalable() &&
+         ElementCount::isKnownGE(EffectiveVF, EstimatedRuntimeVF)) ||
+        (EffectiveVF.isScalable() &&
+         ElementCount::isKnownGE(EffectiveVF, MainLoopVF)) ||
+        (!EffectiveVF.isScalable() && !MainLoopVF.isScalable() &&
+         ElementCount::isKnownGT(EffectiveVF, MainLoopVF)))
       continue;
 
-    // If NextVF is greater than the number of remaining iterations, the
-    // epilogue loop would be dead. Skip such factors.
+    // If EffectiveVF is greater than the number of remaining iterations, the
+    // epilogue loop would be dead. Skip such factors. If the epilogue plan
+    // also has narrowed interleave groups, use the effective VF since
+    // the epilogue step will be reduced to its IC.
     // TODO: We should also consider comparing against a scalable
     // RemainingIterations when SCEV be able to evaluate non-canonical
     // vscale-based expressions.
     if (!ScalableRemIter) {
-      // Handle the case where NextVF and RemainingIterations are in different
-      // numerical spaces.
-      ElementCount EC = NextVF.Width;
-      if (NextVF.Width.isScalable())
-        EC = ElementCount::getFixed(
-            estimateElementCount(NextVF.Width, CM.getVScaleForTuning()));
-      if (SkipVF(SE.getElementCount(TCType, EC), RemainingIterations))
+      // Handle the case where EffectiveVF and RemainingIterations are in
+      // different numerical spaces.
+      if (EffectiveVF.isScalable())
+        EffectiveVF = ElementCount::getFixed(
+            estimateElementCount(EffectiveVF, CM.getVScaleForTuning()));
+      if (SkipVF(SE.getElementCount(TCType, EffectiveVF), RemainingIterations))
         continue;
     }
 
@@ -4567,7 +4633,7 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
   // For each block.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the loop.
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
+    for (Instruction &I : *BB) {
       Type *T = I.getType();
 
       // Skip ignored values.
@@ -4630,8 +4696,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-             IsaPred<VPEVLBasedIVPHIRecipe>)) {
-    LLVM_DEBUG(dbgs() << "LV: Preference for VP intrinsics indicated. "
+             IsaPred<VPCurrentIterationPHIRecipe>)) {
+    LLVM_DEBUG(dbgs() << "LV: Loop requires variable-length step. "
                          "Unroll factor forced to be 1.\n");
     return 1;
   }
@@ -4650,13 +4716,20 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
       any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
              IsaPred<VPReductionPHIRecipe>);
 
+  // FIXME: implement interleaving for FindLast transform correctly.
+  if (hasFindLastReductionPhi(Plan))
+    return 1;
+
+  VPRegisterUsage R =
+      calculateRegisterUsageForPlan(Plan, {VF}, TTI, CM.ValuesToIgnore)[0];
+
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
   if (LoopCost == 0) {
     if (VF.isScalar())
       LoopCost = CM.expectedCost(VF);
     else
-      LoopCost = cost(Plan, VF);
+      LoopCost = cost(Plan, VF, &R);
     assert(LoopCost.isValid() && "Expected to have chosen a VF with valid cost");
 
     // Loop body is free and there is no need for interleaving.
@@ -4664,8 +4737,6 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
       return 1;
   }
 
-  VPRegisterUsage R =
-      calculateRegisterUsageForPlan(Plan, {VF}, TTI, CM.ValuesToIgnore)[0];
   // We divide by these constants so assume that we have at least one
   // instruction that uses at least one register.
   for (auto &Pair : R.MaxLocalUsers) {
@@ -4716,6 +4787,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   // Clamp the interleave ranges to reasonable counts.
   unsigned MaxInterleaveCount = TTI.getMaxInterleaveFactor(VF);
+  LLVM_DEBUG(dbgs() << "LV: MaxInterleaveFactor for the target is "
+                    << MaxInterleaveCount << "\n");
 
   // Check if the user has overridden the max.
   if (VF.isScalar()) {
@@ -4817,7 +4890,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   LLVM_DEBUG(dbgs() << "LV: Loop cost is " << LoopCost << '\n'
                     << "LV: IC is " << IC << '\n'
                     << "LV: VF is " << VF << '\n');
-  const bool AggressivelyInterleaveReductions =
+  const bool AggressivelyInterleave =
       TTI.enableAggressiveInterleaving(HasReductions);
   if (!ScalarInterleavingRequiresRuntimePointerCheck &&
       !ScalarInterleavingRequiresPredication && LoopCost < SmallLoopCost) {
@@ -4918,7 +4991,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
     // If there are scalar reductions and TTI has enabled aggressive
     // interleaving for reductions, we will interleave to expose ILP.
-    if (VF.isScalar() && AggressivelyInterleaveReductions) {
+    if (VF.isScalar() && AggressivelyInterleave) {
       LLVM_DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");
       // Interleave no less than SmallIC but not as aggressive as the normal IC
       // to satisfy the rare situation when resources are too limited.
@@ -4931,7 +5004,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   // Interleave if this is a large loop (small loops are already dealt with by
   // this point) that could benefit from interleaving.
-  if (AggressivelyInterleaveReductions) {
+  if (AggressivelyInterleave) {
     LLVM_DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");
     return IC;
   }
@@ -5151,7 +5224,7 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     InstructionCost BlockCost;
 
     // For each instruction in the old loop.
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
+    for (Instruction &I : *BB) {
       // Skip ignored values.
       if (ValuesToIgnore.count(&I) || ValuesToIgnoreForVF.count(&I) ||
           (VF.isVector() && VecValuesToIgnore.count(&I)))
@@ -5195,21 +5268,15 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
   return Cost;
 }
 
-/// Gets Address Access SCEV after verifying that the access pattern
-/// is loop invariant except the induction variable dependence.
+/// Gets the address access SCEV for Ptr, if it should be used for cost modeling
+/// according to isAddressSCEVForCost.
 ///
 /// This SCEV can be sent to the Target in order to estimate the address
 /// calculation cost.
 static const SCEV *getAddressAccessSCEV(
               Value *Ptr,
-              LoopVectorizationLegality *Legal,
               PredicatedScalarEvolution &PSE,
               const Loop *TheLoop) {
-
-  auto *Gep = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!Gep)
-    return nullptr;
-
   const SCEV *Addr = PSE.getSCEV(Ptr);
   return vputils::isAddressSCEVForCost(Addr, *PSE.getSE(), TheLoop) ? Addr
                                                                     : nullptr;
@@ -5234,7 +5301,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 
   // Figure out whether the access is strided and get the stride value
   // if it's known in compile time
-  const SCEV *PtrSCEV = getAddressAccessSCEV(Ptr, Legal, PSE, TheLoop);
+  const SCEV *PtrSCEV = getAddressAccessSCEV(Ptr, PSE, TheLoop);
 
   // Get the cost of the scalar memory instruction and address computation.
   InstructionCost Cost = VF.getFixedValue() * TTI.getAddressComputationCost(
@@ -5264,7 +5331,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
     Cost += TTI.getScalarizationOverhead(
         VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
         /*Insert=*/false, /*Extract=*/true, CostKind);
-    Cost += TTI.getCFInstrCost(Instruction::Br, CostKind);
+    Cost += TTI.getCFInstrCost(Instruction::CondBr, CostKind);
 
     if (useEmulatedMaskMemRefHack(I, VF))
       // Artificially setting to a high enough value to practically disable
@@ -5623,11 +5690,17 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   if (!RetTy->isVoidTy() &&
       (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore())) {
 
+    TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
+    if (isa<LoadInst>(I))
+      VIC = TTI::VectorInstrContext::Load;
+    else if (isa<StoreInst>(I))
+      VIC = TTI::VectorInstrContext::Store;
+
     for (Type *VectorTy : getContainedTypes(RetTy)) {
       Cost += TTI.getScalarizationOverhead(
           cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
-          /*Insert=*/true,
-          /*Extract=*/false, CostKind);
+          /*Insert=*/true, /*Extract=*/false, CostKind,
+          /*ForPoisonSrc=*/true, {}, VIC);
     }
   }
 
@@ -5648,7 +5721,11 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   SmallVector<Type *> Tys;
   for (auto *V : filterExtractingOperands(Ops, VF))
     Tys.push_back(maybeVectorizeType(V->getType(), VF));
-  return Cost + TTI.getOperandsScalarizationOverhead(Tys, CostKind);
+
+  TTI::VectorInstrContext OperandVIC = isa<StoreInst>(I)
+                                           ? TTI::VectorInstrContext::Store
+                                           : TTI::VectorInstrContext::None;
+  return Cost + TTI.getOperandsScalarizationOverhead(Tys, CostKind, OperandVIC);
 }
 
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
@@ -5838,9 +5915,9 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // if the loaded register is involved in an address computation, it is
       // instead changed here when we know this is the case.
       InstWidening Decision = getWideningDecision(I, VF);
-      if (Decision == CM_Widen || Decision == CM_Widen_Reverse ||
-          (!isPredicatedInst(I) && !Legal->isUniformMemOp(*I, VF) &&
-           Decision == CM_Scalarize)) {
+      if (!isPredicatedInst(I) &&
+          (Decision == CM_Widen || Decision == CM_Widen_Reverse ||
+           (!Legal->isUniformMemOp(*I, VF) && Decision == CM_Scalarize))) {
         // Scalarize a widened load of address or update the cost of a scalar
         // load of an address.
         setWideningDecision(
@@ -6018,12 +6095,12 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       InstructionCost Cost = ScalarCost;
       InstWidening Decision = CM_Scalarize;
 
-      if (VectorCost <= Cost) {
+      if (VectorCost.isValid() && VectorCost <= Cost) {
         Cost = VectorCost;
         Decision = CM_VectorCall;
       }
 
-      if (IntrinsicCost <= Cost) {
+      if (IntrinsicCost.isValid() && IntrinsicCost <= Cost) {
         Cost = IntrinsicCost;
         Decision = CM_IntrinsicCall;
       }
@@ -6115,7 +6192,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // is scalarized or not. Therefore, we handle GEPs with the memory
     // instruction cost.
     return 0;
-  case Instruction::Br: {
+  case Instruction::UncondBr:
+  case Instruction::CondBr: {
     // In cases of scalarized and predicated instructions, there will be VF
     // predicated blocks in the vectorized loop. Each branch around these
     // blocks requires also an extract of its vector compare i1 element.
@@ -6123,8 +6201,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // a single branch controlling the loop, so there is no extra overhead from
     // scalarization.
     bool ScalarPredicatedBB = false;
-    BranchInst *BI = cast<BranchInst>(I);
-    if (VF.isVector() && BI->isConditional() &&
+    CondBrInst *BI = dyn_cast<CondBrInst>(I);
+    if (VF.isVector() && BI &&
         (PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(0)) ||
          PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))) &&
         BI->getParent() != TheLoop->getLoopLatch())
@@ -6137,16 +6215,16 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       // Return cost for branches around scalarized and predicated blocks.
       auto *VecI1Ty =
           VectorType::get(IntegerType::getInt1Ty(RetTy->getContext()), VF);
-      return (
-          TTI.getScalarizationOverhead(
-              VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
-              /*Insert*/ false, /*Extract*/ true, CostKind) +
-          (TTI.getCFInstrCost(Instruction::Br, CostKind) * VF.getFixedValue()));
+      return (TTI.getScalarizationOverhead(
+                  VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
+                  /*Insert*/ false, /*Extract*/ true, CostKind) +
+              (TTI.getCFInstrCost(Instruction::CondBr, CostKind) *
+               VF.getFixedValue()));
     }
 
     if (I->getParent() == TheLoop->getLoopLatch() || VF.isScalar())
       // The back-edge branch will remain, as will all scalar branches.
-      return TTI.getCFInstrCost(Instruction::Br, CostKind);
+      return TTI.getCFInstrCost(Instruction::UncondBr, CostKind);
 
     // This branch will be eliminated by if-conversion.
     return 0;
@@ -6529,10 +6607,8 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 
       // Queue branches for analysis. They are dead, if their successors only
       // contain dead instructions.
-      if (auto *Br = dyn_cast<BranchInst>(&I)) {
-        if (Br->isConditional())
-          DeadOps.push_back(&I);
-      }
+      if (isa<CondBrInst>(&I))
+        DeadOps.push_back(&I);
     }
 
   // Mark ops feeding interleave group members as free, if they are only used
@@ -6560,14 +6636,14 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   auto IsEmptyBlock = [this](BasicBlock *BB) {
     return all_of(*BB, [this](Instruction &I) {
       return ValuesToIgnore.contains(&I) || VecValuesToIgnore.contains(&I) ||
-             (isa<BranchInst>(&I) && !cast<BranchInst>(&I)->isConditional());
+             isa<UncondBrInst>(&I);
     });
   };
   for (unsigned I = 0; I != DeadOps.size(); ++I) {
     auto *Op = dyn_cast<Instruction>(DeadOps[I]);
 
     // Check if the branch should be considered dead.
-    if (auto *Br = dyn_cast_or_null<BranchInst>(Op)) {
+    if (auto *Br = dyn_cast_or_null<CondBrInst>(Op)) {
       BasicBlock *ThenBB = Br->getSuccessor(0);
       BasicBlock *ElseBB = Br->getSuccessor(1);
       // Don't considers branches leaving the loop for simplification.
@@ -6643,7 +6719,8 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
     // In-loop AnyOf and FindIV reductions are not yet supported.
     RecurKind Kind = RdxDesc.getRecurrenceKind();
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) ||
-        RecurrenceDescriptor::isFindIVRecurrenceKind(Kind))
+        RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) ||
+        RecurrenceDescriptor::isFindLastRecurrenceKind(Kind))
       continue;
 
     // If the target would prefer this reduction to happen "in-loop", then we
@@ -6912,7 +6989,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   SetVector<Instruction *> ExitInstrs;
   // Collect all exit conditions.
   for (BasicBlock *EB : Exiting) {
-    auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
+    auto *Term = dyn_cast<CondBrInst>(EB->getTerminator());
     if (!Term || CostCtx.skipCostComputation(Term, VF.isVector()))
       continue;
     if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
@@ -6957,6 +7034,11 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     Cost += BranchCost;
   }
 
+  // Don't apply special costs when instruction cost is forced to make sure the
+  // forced cost is used for each recipe.
+  if (ForceTargetInstructionCost.getNumOccurrences())
+    return Cost;
+
   // Pre-compute costs for instructions that are forced-scalar or profitable to
   // scalarize. Their costs will be computed separately in the legacy cost
   // model.
@@ -6985,13 +7067,18 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   return Cost;
 }
 
-InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
-                                               ElementCount VF) const {
+InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
+                                               VPRegisterUsage *RU) const {
   VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind, PSE, OrigLoop);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
+
+  // Add the cost of spills due to excess register usage
+  if (CM.shouldConsiderRegPressureForVF(VF))
+    Cost += RU->spillCost(CostCtx, ForceTargetNumVectorRegs);
+
 #ifndef NDEBUG
   unsigned EstimatedWidth = estimateElementCount(VF, CM.getVScaleForTuning());
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost
@@ -7015,6 +7102,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                                                   VPCostContext &CostCtx,
                                                   Loop *TheLoop,
                                                   ElementCount VF) {
+  using namespace VPlanPatternMatch;
   // First collect all instructions for the recipes in Plan.
   auto GetInstructionForCost = [](const VPRecipeBase *R) -> Instruction * {
     if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
@@ -7061,7 +7149,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
       // cost model won't cost it whilst the legacy will.
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
-        using namespace VPlanPatternMatch;
         if (none_of(FOR->users(),
                     match_fn(m_VPInstruction<
                              VPInstruction::FirstOrderRecurrenceSplice>())))
@@ -7103,6 +7190,11 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
           vputils::onlyFirstLaneUsed(R.getVPSingleValue()))
         return true;
 
+      // The legacy cost model won't calculate the cost of the LogicalAnd which
+      // will be replaced with vp_merge.
+      if (match(&R, m_Intrinsic<Intrinsic::vp_merge>()))
+        return true;
+
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
       /// legacy cost model, the legacy cost overestimates the actual cost.
@@ -7115,16 +7207,30 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (Instruction *UI = GetInstructionForCost(&R)) {
         // If we adjusted the predicate of the recipe, the cost in the legacy
         // cost model may be different.
-        using namespace VPlanPatternMatch;
         CmpPredicate Pred;
         if (match(&R, m_Cmp(Pred, m_VPValue(), m_VPValue())) &&
             cast<VPRecipeWithIRFlags>(R).getPredicate() !=
                 cast<CmpInst>(UI)->getPredicate())
           return true;
+
+        // Recipes with underlying instructions being moved out of the loop
+        // region by LICM may cause discrepancies between the legacy cost model
+        // and the VPlan-based cost model.
+        if (!VPBB->getEnclosingLoopRegion())
+          return true;
+
         SeenInstrs.insert(UI);
       }
     }
   }
+
+  // If a reverse recipe has been sunk to the middle block (e.g., for a load
+  // whose result is only used as a live-out), VPlan avoids the per-iteration
+  // reverse shuffle cost that the legacy model accounts for.
+  if (any_of(*Plan.getMiddleBlock(), [](const VPRecipeBase &R) {
+        return match(&R, m_VPInstruction<VPInstruction::Reverse>());
+      }))
+    return true;
 
   // Return true if the loop contains any instructions that are not also part of
   // the VPlan or are skipped for VPlan-based cost computations. This indicates
@@ -7184,9 +7290,10 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
                                P->vectorFactors().end());
 
     SmallVector<VPRegisterUsage, 8> RUs;
-    if (any_of(VFs, [this](ElementCount VF) {
-          return CM.shouldConsiderRegPressureForVF(VF);
-        }))
+    bool ConsiderRegPressure = any_of(VFs, [this](ElementCount VF) {
+      return CM.shouldConsiderRegPressureForVF(VF);
+    });
+    if (ConsiderRegPressure)
       RUs = calculateRegisterUsageForPlan(*P, VFs, TTI, CM.ValuesToIgnore);
 
     for (unsigned I = 0; I < VFs.size(); I++) {
@@ -7209,15 +7316,9 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
         continue;
       }
 
-      InstructionCost Cost = cost(*P, VF);
+      InstructionCost Cost =
+          cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
-
-      if (CM.shouldConsiderRegPressureForVF(VF) &&
-          RUs[I].exceedsMaxNumRegs(TTI, ForceTargetNumVectorRegs)) {
-        LLVM_DEBUG(dbgs() << "LV(REG): Not considering vector loop of width "
-                          << VF << " because it uses too many registers\n");
-        continue;
-      }
 
       if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail()))
         BestFactor = CurrentFactor;
@@ -7274,20 +7375,12 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   return BestFactor;
 }
 
-static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
-  using namespace VPlanPatternMatch;
-  assert(RdxResult->getOpcode() == VPInstruction::ComputeFindIVResult &&
-         "RdxResult must be ComputeFindIVResult");
-  VPValue *StartVPV = RdxResult->getOperand(1);
-  match(StartVPV, m_Freeze(m_VPValue(StartVPV)));
-  return StartVPV->getLiveInIRValue();
-}
-
 // If \p EpiResumePhiR is resume VPPhi for a reduction when vectorizing the
 // epilog loop, fix the reduction's scalar PHI node by adding the incoming value
 // from the main vector loop.
 static void fixReductionScalarResumeWhenVectorizingEpilog(
     VPPhi *EpiResumePhiR, PHINode &EpiResumePhi, BasicBlock *BypassBlock) {
+  using namespace VPlanPatternMatch;
   // Get the VPInstruction computing the reduction result in the middle block.
   // The first operand may not be from the middle block if it is not connected
   // to the scalar preheader. In that case, there's nothing to fix.
@@ -7295,15 +7388,30 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   match(Incoming, VPlanPatternMatch::m_ZExtOrSExt(
                       VPlanPatternMatch::m_VPValue(Incoming)));
   auto *EpiRedResult = dyn_cast<VPInstruction>(Incoming);
-  if (!EpiRedResult ||
-      (EpiRedResult->getOpcode() != VPInstruction::ComputeAnyOfResult &&
-       EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult &&
-       EpiRedResult->getOpcode() != VPInstruction::ComputeFindIVResult))
+  if (!EpiRedResult)
     return;
 
-  auto *EpiRedHeaderPhi =
-      cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
-  RecurKind Kind = EpiRedHeaderPhi->getRecurrenceKind();
+  VPValue *BackedgeVal;
+  bool IsFindIV = false;
+  if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+      EpiRedResult->getOpcode() == VPInstruction::ComputeReductionResult)
+    BackedgeVal = EpiRedResult->getOperand(EpiRedResult->getNumOperands() - 1);
+  else if (matchFindIVResult(EpiRedResult, m_VPValue(BackedgeVal), m_VPValue()))
+    IsFindIV = true;
+  else
+    return;
+
+  auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
+      vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+  if (!EpiRedHeaderPhi) {
+    match(BackedgeVal,
+          VPlanPatternMatch::m_Select(VPlanPatternMatch::m_VPValue(),
+                                      VPlanPatternMatch::m_VPValue(BackedgeVal),
+                                      VPlanPatternMatch::m_VPValue()));
+    EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
+        vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+  }
+
   Value *MainResumeValue;
   if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
     assert((VPI->getOpcode() == VPInstruction::Broadcast ||
@@ -7312,9 +7420,9 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
   } else
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
+  if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
     [[maybe_unused]] Value *StartV =
-        EpiRedResult->getOperand(1)->getLiveInIRValue();
+        EpiRedResult->getOperand(0)->getLiveInIRValue();
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
     assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
            "AnyOf expected to start with ICMP_NE");
@@ -7322,20 +7430,8 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
            "AnyOf expected to start by comparing main resume value to original "
            "start value");
     MainResumeValue = Cmp->getOperand(0);
-  } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
-    Value *StartV = getStartValueFromReductionResult(EpiRedResult);
-    Value *SentinelV = EpiRedResult->getOperand(2)->getLiveInIRValue();
-    using namespace llvm::PatternMatch;
-    Value *Cmp, *OrigResumeV, *CmpOp;
-    [[maybe_unused]] bool IsExpectedPattern =
-        match(MainResumeValue,
-              m_Select(m_OneUse(m_Value(Cmp)), m_Specific(SentinelV),
-                       m_Value(OrigResumeV))) &&
-        (match(Cmp, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(OrigResumeV),
-                                   m_Value(CmpOp))) &&
-         ((CmpOp == StartV && isGuaranteedNotToBeUndefOrPoison(CmpOp))));
-    assert(IsExpectedPattern && "Unexpected reduction resume pattern");
-    MainResumeValue = OrigResumeV;
+  } else if (IsFindIV) {
+    MainResumeValue = cast<SelectInst>(MainResumeValue)->getFalseValue();
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
 
@@ -7357,17 +7453,16 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ++LoopsEarlyExitVectorized;
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
-  VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  VPlanTransforms::runPass(VPlanTransforms::materializePacksAndUnpacks,
-                           BestVPlan);
-  VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
-  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
+  RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
+  RUN_VPLAN_PASS(VPlanTransforms::materializePacksAndUnpacks, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::materializeBroadcasts, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator());
   if (HasBranchWeights) {
     std::optional<unsigned> VScale = CM.getVScaleForTuning();
-    VPlanTransforms::runPass(VPlanTransforms::addBranchWeightToMiddleTerminator,
-                             BestVPlan, BestVF, VScale);
+    RUN_VPLAN_PASS(VPlanTransforms::addBranchWeightToMiddleTerminator,
+                   BestVPlan, BestVF, VScale);
   }
 
   // Checks are the same for all VPlans, added to BestVPlan only for
@@ -7393,27 +7488,24 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     return DenseMap<const SCEV *, Value *>();
   }
 
-  VPlanTransforms::narrowInterleaveGroups(
-      BestVPlan, BestVF,
-      TTI.getRegisterBitWidth(BestVF.isScalable()
-                                  ? TargetTransformInfo::RGK_ScalableVector
-                                  : TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
+  // Convert the exit condition to AVLNext == 0 for EVL tail folded loops.
+  VPlanTransforms::convertEVLExitCond(BestVPlan);
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
-  // Canonicalize EVL loops after regions are dissolved.
-  VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
+  // Convert loops with variable-length stepping after regions are dissolved.
+  VPlanTransforms::convertToVariableLengthStep(BestVPlan);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
-      CM.requiresScalarEpilogue(BestVF.isVector()));
-  VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
+      CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF());
+  VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
 
@@ -7421,11 +7513,12 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // making any changes to the CFG.
   DenseMap<const SCEV *, Value *> ExpandedSCEVs =
       VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
-  if (!ILV.getTripCount())
+  if (!ILV.getTripCount()) {
     ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
-  else
+  } else {
     assert(VectorizingEpilogue && "should only re-use the existing trip "
                                   "count during epilogue vectorization");
+  }
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
@@ -7443,8 +7536,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                         State.CFG.PrevBB->getSingleSuccessor(), &BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
-  assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
-         "final VPlan is invalid");
+  assert(verifyVPlanIsValid(BestVPlan) && "final VPlan is invalid");
 
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
@@ -7521,7 +7613,7 @@ BasicBlock *EpilogueVectorizerMainLoop::createVectorizedLoopSkeleton() {
       emitIterationCountCheck(VectorPH, ScalarPH, true);
   EPI.EpilogueIterationCountCheck->setName("iter.check");
 
-  VectorPH = cast<BranchInst>(EPI.EpilogueIterationCountCheck->getTerminator())
+  VectorPH = cast<CondBrInst>(EPI.EpilogueIterationCountCheck->getTerminator())
                  ->getSuccessor(1);
   // Generate the iteration count check for the main loop, *after* the check
   // for the epilogue loop, so that the path-length is shorter for the case
@@ -7532,7 +7624,7 @@ BasicBlock *EpilogueVectorizerMainLoop::createVectorizedLoopSkeleton() {
   EPI.MainLoopIterationCountCheck =
       emitIterationCountCheck(VectorPH, ScalarPH, false);
 
-  return cast<BranchInst>(EPI.MainLoopIterationCountCheck->getTerminator())
+  return cast<CondBrInst>(EPI.MainLoopIterationCountCheck->getTerminator())
       ->getSuccessor(1);
 }
 
@@ -7579,7 +7671,7 @@ BasicBlock *EpilogueVectorizerMainLoop::emitIterationCountCheck(
     VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, VectorPH);
   }
 
-  BranchInst &BI = *BranchInst::Create(Bypass, VectorPH, CheckMinIters);
+  CondBrInst &BI = *CondBrInst::Create(CheckMinIters, Bypass, VectorPH);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
     setBranchWeights(BI, MinItersBypassWeights, /*IsExpected=*/false);
   ReplaceInstWithInst(TCCheckBlock->getTerminator(), &BI);
@@ -7658,9 +7750,9 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(WillWiden, Range))
     return nullptr;
 
-  VPValue *Mask = nullptr;
-  if (Legal->isMaskRequired(I))
-    Mask = getBlockInMask(Builder.getInsertBlock());
+  // If a mask is not required, drop it - use unmasked version for safe loads.
+  // TODO: Determine if mask is needed in VPlan.
+  VPValue *Mask = Legal->isMaskRequired(I) ? VPI->getMask() : nullptr;
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
@@ -7744,7 +7836,7 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
   auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
       VPI->getOperand(0)->getDefiningRecipe());
   PHINode *Phi = WidenIV->getPHINode();
-  VPValue *Start = WidenIV->getStartValue();
+  VPIRValue *Start = WidenIV->getStartValue();
   const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
 
   // It is always safe to copy over the NoWrap and FastMath flags. In
@@ -7825,20 +7917,18 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
   if (ShouldUseVectorCall) {
     if (MaskPos.has_value()) {
       // We have 2 cases that would require a mask:
-      //   1) The block needs to be predicated, either due to a conditional
+      //   1) The call needs to be predicated, either due to a conditional
       //      in the scalar loop or use of an active lane mask with
       //      tail-folding, and we use the appropriate mask for the block.
-      //   2) No mask is required for the block, but the only available
-      //      vector variant at this VF requires a mask, so we synthesize an
-      //      all-true mask.
-      VPValue *Mask = Legal->isMaskRequired(CI)
-                          ? getBlockInMask(Builder.getInsertBlock())
-                          : Plan.getTrue();
+      //   2) No mask is required for the call instruction, but the only
+      //      available vector variant at this VF requires a mask, so we
+      //      synthesize an all-true mask.
+      VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
 
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
-    Ops.push_back(VPI->getOperand(VPI->getNumOperands() - 1));
+    Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     return new VPWidenCallRecipe(CI, Variant, Ops, *VPI, *VPI,
                                  VPI->getDebugLoc());
   }
@@ -7847,8 +7937,8 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
 }
 
 bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
-  assert(!isa<BranchInst>(I) && !isa<PHINode>(I) && !isa<LoadInst>(I) &&
-         !isa<StoreInst>(I) && "Instruction should have been handled earlier");
+  assert((!isa<UncondBrInst, CondBrInst, PHINode, LoadInst, StoreInst>(I)) &&
+         "Instruction should have been handled earlier");
   // Instruction should be widened, unless it is scalar after vectorization,
   // scalarization is profitable or it is predicated.
   auto WillScalarize = [this, I](ElementCount VF) -> bool {
@@ -7872,8 +7962,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
     // If not provably safe, use a select to form a safe divisor before widening the
     // div/rem operation itself.  Otherwise fall through to general handling below.
     if (CM.isPredicatedInst(I)) {
-      SmallVector<VPValue *> Ops(VPI->operands());
-      VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
+      SmallVector<VPValue *> Ops(VPI->operandsWithoutMask());
+      VPValue *Mask = VPI->getMask();
       VPValue *One = Plan.getConstantInt(I->getType(), 1u);
       auto *SafeRHS =
           Builder.createSelect(Mask, Ops[1], One, VPI->getDebugLoc());
@@ -7901,10 +7991,10 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
-    return new VPWidenRecipe(*I, VPI->operands(), *VPI, *VPI,
+    return new VPWidenRecipe(*I, VPI->operandsWithoutMask(), *VPI, *VPI,
                              VPI->getDebugLoc());
   case Instruction::ExtractValue: {
-    SmallVector<VPValue *> NewOps(VPI->operands());
+    SmallVector<VPValue *> NewOps(VPI->operandsWithoutMask());
     auto *EVI = cast<ExtractValueInst>(I);
     assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
     unsigned Idx = EVI->getIndices()[0];
@@ -7930,7 +8020,7 @@ VPHistogramRecipe *VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
   if (Legal->isMaskRequired(HI->Store))
-    HGramOps.push_back(getBlockInMask(Builder.getInsertBlock()));
+    HGramOps.push_back(VPI->getMask());
 
   return new VPHistogramRecipe(Opcode, HGramOps, VPI->getDebugLoc());
 }
@@ -7984,7 +8074,7 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
     // added initially. Masked replicate recipes will later be placed under an
     // if-then construct to prevent side-effects. Generate recipes to compute
     // the block mask for this region.
-    BlockInMask = getBlockInMask(Builder.getInsertBlock());
+    BlockInMask = VPI->getMask();
   }
 
   // Note that there is some custom logic to mark some intrinsics as uniform
@@ -7994,207 +8084,9 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
   auto *Recipe =
-      new VPReplicateRecipe(I, VPI->operands(), IsUniform, BlockInMask, *VPI,
-                            *VPI, VPI->getDebugLoc());
+      new VPReplicateRecipe(I, VPI->operandsWithoutMask(), IsUniform,
+                            BlockInMask, *VPI, *VPI, VPI->getDebugLoc());
   return Recipe;
-}
-
-/// Find all possible partial reductions in the loop and track all of those that
-/// are valid so recipes can be formed later.
-void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
-  // Find all possible partial reductions, grouping chains by their PHI. This
-  // grouping allows invalidating the whole chain, if any link is not a valid
-  // partial reduction.
-  MapVector<Instruction *,
-            SmallVector<std::pair<PartialReductionChain, unsigned>>>
-      ChainsByPhi;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
-    if (Instruction *RdxExitInstr = RdxDesc.getLoopExitInstr())
-      getScaledReductions(Phi, RdxExitInstr, Range, ChainsByPhi[Phi]);
-  }
-
-  // A partial reduction is invalid if any of its extends are used by
-  // something that isn't another partial reduction. This is because the
-  // extends are intended to be lowered along with the reduction itself.
-
-  // Build up a set of partial reduction ops for efficient use checking.
-  SmallPtrSet<User *, 4> PartialReductionOps;
-  for (const auto &[_, Chains] : ChainsByPhi)
-    for (const auto &[PartialRdx, _] : Chains)
-      PartialReductionOps.insert(PartialRdx.ExtendUser);
-
-  auto ExtendIsOnlyUsedByPartialReductions =
-      [&PartialReductionOps](Instruction *Extend) {
-        return all_of(Extend->users(), [&](const User *U) {
-          return PartialReductionOps.contains(U);
-        });
-      };
-
-  // Check if each use of a chain's two extends is a partial reduction
-  // and only add those that don't have non-partial reduction users.
-  for (const auto &[_, Chains] : ChainsByPhi) {
-    for (const auto &[Chain, Scale] : Chains) {
-      if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
-          (!Chain.ExtendB ||
-           ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
-        ScaledReductionMap.try_emplace(Chain.Reduction, Scale);
-    }
-  }
-
-  // Check that all partial reductions in a chain are only used by other
-  // partial reductions with the same scale factor. Otherwise we end up creating
-  // users of scaled reductions where the types of the other operands don't
-  // match.
-  for (const auto &[Phi, Chains] : ChainsByPhi) {
-    for (const auto &[Chain, Scale] : Chains) {
-      auto AllUsersPartialRdx = [ScaleVal = Scale, RdxPhi = Phi,
-                                 this](const User *U) {
-        auto *UI = cast<Instruction>(U);
-        if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader())
-          return UI == RdxPhi;
-        return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
-               !OrigLoop->contains(UI->getParent());
-      };
-
-      // If any partial reduction entry for the phi is invalid, invalidate the
-      // whole chain.
-      if (!all_of(Chain.Reduction->users(), AllUsersPartialRdx)) {
-        for (const auto &[Chain, _] : Chains)
-          ScaledReductionMap.erase(Chain.Reduction);
-        break;
-      }
-    }
-  }
-}
-
-bool VPRecipeBuilder::getScaledReductions(
-    Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
-    SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains) {
-  if (!CM.TheLoop->contains(RdxExitInstr))
-    return false;
-
-  auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
-  if (!Update)
-    return false;
-
-  Value *Op = Update->getOperand(0);
-  Value *PhiOp = Update->getOperand(1);
-  if (Op == PHI)
-    std::swap(Op, PhiOp);
-
-  using namespace llvm::PatternMatch;
-  // If Op is an extend, then it's still a valid partial reduction if the
-  // extended mul fulfills the other requirements.
-  // For example, reduce.add(ext(mul(ext(A), ext(B)))) is still a valid partial
-  // reduction since the inner extends will be widened. We already have oneUse
-  // checks on the inner extends so widening them is safe.
-  std::optional<TTI::PartialReductionExtendKind> OuterExtKind = std::nullopt;
-  if (match(Op, m_ZExtOrSExt(m_Mul(m_Value(), m_Value())))) {
-    auto *Cast = cast<CastInst>(Op);
-    OuterExtKind = TTI::getPartialReductionExtendKind(Cast->getOpcode());
-    Op = Cast->getOperand(0);
-  }
-
-  // Try and get a scaled reduction from the first non-phi operand.
-  // If one is found, we use the discovered reduction instruction in
-  // place of the accumulator for costing.
-  if (auto *OpInst = dyn_cast<Instruction>(Op)) {
-    if (getScaledReductions(PHI, OpInst, Range, Chains)) {
-      PHI = Chains.rbegin()->first.Reduction;
-
-      Op = Update->getOperand(0);
-      PhiOp = Update->getOperand(1);
-      if (Op == PHI)
-        std::swap(Op, PhiOp);
-    }
-  }
-  if (PhiOp != PHI)
-    return false;
-
-  // If the update is a binary operator, check both of its operands to see if
-  // they are extends. Otherwise, see if the update comes directly from an
-  // extend.
-  Instruction *Exts[2] = {nullptr};
-  BinaryOperator *ExtendUser = dyn_cast<BinaryOperator>(Op);
-  std::optional<unsigned> BinOpc;
-  Type *ExtOpTypes[2] = {nullptr};
-  TTI::PartialReductionExtendKind ExtKinds[2] = {TTI::PR_None};
-
-  auto CollectExtInfo = [this, OuterExtKind, &Exts, &ExtOpTypes,
-                         &ExtKinds](SmallVectorImpl<Value *> &Ops) -> bool {
-    for (const auto &[I, OpI] : enumerate(Ops)) {
-      const APInt *C;
-      if (I > 0 && match(OpI, m_APInt(C)) &&
-          canConstantBeExtended(C, ExtOpTypes[0], ExtKinds[0])) {
-        ExtOpTypes[I] = ExtOpTypes[0];
-        ExtKinds[I] = ExtKinds[0];
-        continue;
-      }
-      Value *ExtOp;
-      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
-        return false;
-      Exts[I] = cast<Instruction>(OpI);
-
-      // TODO: We should be able to support live-ins.
-      if (!CM.TheLoop->contains(Exts[I]))
-        return false;
-
-      ExtOpTypes[I] = ExtOp->getType();
-      ExtKinds[I] = TTI::getPartialReductionExtendKind(Exts[I]);
-      // The outer extend kind must be the same as the inner extends, so that
-      // they can be folded together.
-      if (OuterExtKind.has_value() && OuterExtKind.value() != ExtKinds[I])
-        return false;
-    }
-    return true;
-  };
-
-  if (ExtendUser) {
-    if (!ExtendUser->hasOneUse())
-      return false;
-
-    // Use the side-effect of match to replace BinOp only if the pattern is
-    // matched, we don't care at this point whether it actually matched.
-    match(ExtendUser, m_Neg(m_BinOp(ExtendUser)));
-
-    SmallVector<Value *> Ops(ExtendUser->operands());
-    if (!CollectExtInfo(Ops))
-      return false;
-
-    BinOpc = std::make_optional(ExtendUser->getOpcode());
-  } else if (match(Update, m_Add(m_Value(), m_Value()))) {
-    // We already know the operands for Update are Op and PhiOp.
-    SmallVector<Value *> Ops({Op});
-    if (!CollectExtInfo(Ops))
-      return false;
-
-    ExtendUser = Update;
-    BinOpc = std::nullopt;
-  } else
-    return false;
-
-  PartialReductionChain Chain(RdxExitInstr, Exts[0], Exts[1], ExtendUser);
-
-  TypeSize PHISize = PHI->getType()->getPrimitiveSizeInBits();
-  TypeSize ASize = ExtOpTypes[0]->getPrimitiveSizeInBits();
-  if (!PHISize.hasKnownScalarFactor(ASize))
-    return false;
-  unsigned TargetScaleFactor = PHISize.getKnownScalarFactor(ASize);
-
-  if (LoopVectorizationPlanner::getDecisionAndClampRange(
-          [&](ElementCount VF) {
-            InstructionCost Cost = TTI->getPartialReductionCost(
-                Update->getOpcode(), ExtOpTypes[0], ExtOpTypes[1],
-                PHI->getType(), VF, ExtKinds[0], ExtKinds[1], BinOpc,
-                CM.CostKind);
-            return Cost.isValid();
-          },
-          Range)) {
-    Chains.emplace_back(Chain, TargetScaleFactor);
-    return true;
-  }
-
-  return false;
 }
 
 VPRecipeBase *
@@ -8227,15 +8119,13 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
       VPI->getOpcode() == Instruction::Store)
     return tryToWidenMemory(VPI, Range);
 
-  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
-    return tryToCreatePartialReduction(VPI, ScaleFactor.value());
-
   if (!shouldWiden(Instr, Range))
     return nullptr;
 
   if (VPI->getOpcode() == Instruction::GetElementPtr)
-    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr), R->operands(),
-                                *VPI, VPI->getDebugLoc());
+    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr),
+                                VPI->operandsWithoutMask(), *VPI,
+                                VPI->getDebugLoc());
 
   if (Instruction::isCast(VPI->getOpcode())) {
     auto *CI = cast<CastInst>(Instr);
@@ -8246,46 +8136,6 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
   }
 
   return tryToWiden(VPI);
-}
-
-VPRecipeBase *
-VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
-                                             unsigned ScaleFactor) {
-  assert(Reduction->getNumOperands() == 2 &&
-         "Unexpected number of operands for partial reduction");
-
-  VPValue *BinOp = Reduction->getOperand(0);
-  VPValue *Accumulator = Reduction->getOperand(1);
-  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
-  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
-      (isa<VPReductionRecipe>(BinOpRecipe) &&
-       cast<VPReductionRecipe>(BinOpRecipe)->isPartialReduction()))
-    std::swap(BinOp, Accumulator);
-
-  if (auto *RedPhiR = dyn_cast<VPReductionPHIRecipe>(Accumulator))
-    RedPhiR->setVFScaleFactor(ScaleFactor);
-
-  assert(ScaleFactor ==
-             vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
-         "all accumulators in chain must have same scale factor");
-
-  auto *ReductionI = Reduction->getUnderlyingInstr();
-  if (Reduction->getOpcode() == Instruction::Sub) {
-    SmallVector<VPValue *, 2> Ops;
-    Ops.push_back(Plan.getConstantInt(ReductionI->getType(), 0));
-    Ops.push_back(BinOp);
-    BinOp = new VPWidenRecipe(*ReductionI, Ops, VPIRFlags(*ReductionI),
-                              VPIRMetadata(), ReductionI->getDebugLoc());
-    Builder.insert(BinOp->getDefiningRecipe());
-  }
-
-  VPValue *Cond = nullptr;
-  if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent()))
-    Cond = getBlockInMask(Builder.getInsertBlock());
-
-  return new VPReductionRecipe(
-      RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
-      RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8317,6 +8167,28 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
       CM.getInLoopReductions(), Hints.allowReordering());
 
+  VPlanTransforms::simplifyRecipes(*VPlan0);
+  // If we're vectorizing a loop with an uncountable exit, make sure that the
+  // recipes are safe to handle.
+  // TODO: Remove this once we can properly check the VPlan itself for both
+  //       the presence of an uncountable exit and the presence of stores in
+  //       the loop inside handleEarlyExits itself.
+  UncountableExitStyle EEStyle = UncountableExitStyle::NoUncountableExit;
+  if (Legal->hasUncountableEarlyExit())
+    EEStyle = Legal->hasUncountableExitWithSideEffects()
+                  ? UncountableExitStyle::MaskedHandleExitInScalarLoop
+                  : UncountableExitStyle::ReadOnly;
+
+  if (!VPlanTransforms::handleEarlyExits(*VPlan0, EEStyle, OrigLoop, PSE, *DT,
+                                         Legal->getAssumptionCache()))
+    return;
+  VPlanTransforms::addMiddleCheck(*VPlan0, CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *VPlan0);
+  if (CM.foldTailByMasking())
+    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *VPlan0);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize,
+                           *VPlan0);
+
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
@@ -8325,13 +8197,19 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       // Now optimize the initial VPlan.
       VPlanTransforms::hoistPredicatedLoads(*Plan, PSE, OrigLoop);
       VPlanTransforms::sinkPredicatedStores(*Plan, PSE, OrigLoop);
-      VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
-                               *Plan, CM.getMinimalBitwidths());
-      VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
-      // TODO: try to put it close to addActiveLaneMask().
-      if (CM.foldTailWithEVL())
-        VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
-                                 *Plan, CM.getMaxSafeElements());
+      RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
+                     CM.getMinimalBitwidths());
+      RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
+      // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
+      if (CM.foldTailWithEVL()) {
+        RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
+                       CM.getMaxSafeElements());
+        RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
+      }
+
+      if (auto P = VPlanTransforms::narrowInterleaveGroups(*Plan, TTI))
+        VPlans.push_back(std::move(P));
+
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
@@ -8356,11 +8234,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
-  VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
-                                  CM.foldTailByMasking());
-
-  VPlanTransforms::createLoopRegions(*Plan);
+  // Update the branch in the middle block if a scalar epilogue is required.
+  VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
+  if (!RequiresScalarEpilogueCheck && MiddleVPBB->getNumSuccessors() == 2) {
+    auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
+    assert(MiddleVPBB->getSuccessors()[1] == Plan->getScalarPreheader() &&
+           "second successor must be scalar preheader");
+    BranchOnCond->setOperand(0, Plan->getFalse());
+  }
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8370,7 +8251,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   for (ElementCount VF : Range)
     IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, VF);
 
-  TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
+  TailFoldingStyle Style = CM.getTailFoldingStyle();
   // Use NUW for the induction increment if we proved that it won't overflow in
   // the vector loop or when not folding the tail. In the later case, we know
   // that the canonical induction increment will not overflow as the vector trip
@@ -8413,20 +8294,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   }
 
   // ---------------------------------------------------------------------------
-  // Predicate and linearize the top-level loop region.
-  // ---------------------------------------------------------------------------
-  auto BlockMaskCache = VPlanTransforms::introduceMasksAndLinearize(
-      *Plan, CM.foldTailByMasking());
-
-  // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
-  VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, Builder,
-                                BlockMaskCache);
-  // TODO: Handle partial reductions with EVL tail folding.
-  if (!CM.foldTailWithEVL())
-    RecipeBuilder.collectScaledReductions(Range);
+  VPRecipeBuilder RecipeBuilder(*Plan, TLI, Legal, CM, Builder);
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -8434,11 +8305,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       HeaderVPBB);
 
-  auto *MiddleVPBB = Plan->getMiddleBlock();
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
-  // Mapping from VPValues in the initial plan to their widened VPValues. Needed
-  // temporarily to update created block masks.
-  DenseMap<VPValue *, VPValue *> Old2New;
 
   // Collect blocks that need predication for in-loop reduction recipes.
   DenseSet<BasicBlock *> BlocksNeedingPredication;
@@ -8446,8 +8313,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     if (CM.blockNeedsPredicationForAnyReason(BB))
       BlocksNeedingPredication.insert(BB);
 
-  VPlanTransforms::createInLoopReductionRecipes(
-      *Plan, BlockMaskCache, BlocksNeedingPredication, Range.Start);
+  VPlanTransforms::createInLoopReductionRecipes(*Plan, BlocksNeedingPredication,
+                                                Range.Start);
 
   // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
@@ -8476,8 +8343,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
         // Only create recipe for the final invariant store of the reduction.
         if (Legal->isInvariantStoreOfReduction(SI)) {
           auto *Recipe = new VPReplicateRecipe(
-              SI, R.operands(), true /* IsUniform */, nullptr /*Mask*/, *VPI,
-              *VPI, VPI->getDebugLoc());
+              SI, VPI->operandsWithoutMask(), true /* IsUniform */,
+              nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
           Recipe->insertBefore(*MiddleVPBB, MBIP);
         }
         R.eraseFromParent();
@@ -8500,22 +8367,13 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       }
       if (Recipe->getNumDefinedValues() == 1) {
         VPI->replaceAllUsesWith(Recipe->getVPSingleValue());
-        Old2New[VPI] = Recipe->getVPSingleValue();
       } else {
         assert(Recipe->getNumDefinedValues() == 0 &&
                "Unexpected multidef recipe");
-        R.eraseFromParent();
       }
+      R.eraseFromParent();
     }
   }
-
-  // replaceAllUsesWith above may invalidate the block masks. Update them here.
-  // TODO: Include the masks as operands in the predicated VPlan directly
-  // to remove the need to keep a map of masks beyond the predication
-  // transform.
-  RecipeBuilder.updateBlockMaskCache(Old2New);
-  for (VPValue *Old : Old2New.keys())
-    Old->getDefiningRecipe()->eraseFromParent();
 
   assert(isa<VPRegionBlock>(LoopRegion) &&
          !LoopRegion->getEntryBasicBlock()->empty() &&
@@ -8525,8 +8383,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // TODO: We can't call runPass on these transforms yet, due to verifier
   // failures.
   VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
-  DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8535,26 +8391,38 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   addReductionResultComputation(Plan, RecipeBuilder, Range.Start);
 
+  // Optimize FindIV reductions to use sentinel-based approach when possible.
+  RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
+                 *OrigLoop);
+  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
+                                                 CM.foldTailByMasking());
+
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
-  if (!VPlanTransforms::runPass(VPlanTransforms::handleMultiUseReductions,
-                                *Plan))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan, ORE,
+                      OrigLoop))
     return nullptr;
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
-  if (!VPlanTransforms::runPass(VPlanTransforms::handleMaxMinNumReductions,
-                                *Plan))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleMaxMinNumReductions, *Plan))
     return nullptr;
 
-  // Transform recipes to abstract recipes if it is legal and beneficial and
-  // clamp the range for better cost estimation.
+  // Create whole-vector selects for find-last recurrences.
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
+    return nullptr;
+
+  // Create partial reduction recipes for scaled reductions and transform
+  // recipes to abstract recipes if it is legal and beneficial and clamp the
+  // range for better cost estimation.
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
     VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
                           OrigLoop);
-    VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
-                             CostCtx, Range);
+    RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
+                   Range);
+    RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
+                   Range);
   }
 
   for (ElementCount VF : Range)
@@ -8564,36 +8432,31 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  VPlanTransforms::runPass(VPlanTransforms::createInterleaveGroups, *Plan,
-                           InterleaveGroups, RecipeBuilder,
-                           CM.isScalarEpilogueAllowed());
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, RecipeBuilder, CM.isScalarEpilogueAllowed());
 
   // Replace VPValues for known constant strides.
-  VPlanTransforms::runPass(VPlanTransforms::replaceSymbolicStrides, *Plan, PSE,
-                           Legal->getLAI()->getSymbolicStrides());
+  RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *Plan, PSE,
+                 Legal->getLAI()->getSymbolicStrides());
 
   auto BlockNeedsPredication = [this](BasicBlock *BB) {
     return Legal->blockNeedsPredication(BB);
   };
-  VPlanTransforms::runPass(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan,
-                           BlockNeedsPredication);
+  RUN_VPLAN_PASS(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan,
+                 BlockNeedsPredication);
 
   // Sink users of fixed-order recurrence past the recipe defining the previous
   // value and introduce FirstOrderRecurrenceSplice VPInstructions.
-  if (!VPlanTransforms::runPass(VPlanTransforms::adjustFixedOrderRecurrences,
-                                *Plan, Builder))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::adjustFixedOrderRecurrences, *Plan,
+                      Builder))
     return nullptr;
 
   if (useActiveLaneMask(Style)) {
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once
     // TailFoldingStyle is visible there.
     bool ForControlFlow = useActiveLaneMaskForControlFlow(Style);
-    bool WithoutRuntimeCheck =
-        Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
-    VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
-                                       WithoutRuntimeCheck);
+    VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, PSE);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -8610,30 +8473,30 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   auto Plan = VPlanTransforms::buildVPlan0(
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
-  VPlanTransforms::handleEarlyExits(*Plan,
-                                    /*HasUncountableExit*/ false);
-  VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
-                                  /*TailFolded*/ false);
+
+  VPlanTransforms::createHeaderPhiRecipes(
+      *Plan, PSE, *OrigLoop, Legal->getInductionVars(),
+      MapVector<PHINode *, RecurrenceDescriptor>(),
+      SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
+      /*AllowReordering=*/false);
+  [[maybe_unused]] bool CanHandleExits = VPlanTransforms::handleEarlyExits(
+      *Plan, UncountableExitStyle::NoUncountableExit, OrigLoop, PSE, *DT,
+      Legal->getAssumptionCache());
+  assert(CanHandleExits &&
+         "early-exits are not supported in VPlan-native path");
+  VPlanTransforms::addMiddleCheck(*Plan, /*TailFolded*/ false);
 
   VPlanTransforms::createLoopRegions(*Plan);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
 
-  if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
-          *Plan,
-          [this](PHINode *P) {
-            return Legal->getIntOrFpInductionDescriptor(P);
-          },
-          *TLI))
+  if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
     return nullptr;
 
-  // TODO: IVEndValues are not used yet in the native path, to optimize exit
-  // values.
-  // TODO: We can't call runPass on the transform yet, due to verifier
-  // failures.
-  DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
+  // Optimize induction live-out users to use precomputed end values.
+  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
+                                                 /*FoldTail=*/false);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -8652,9 +8515,12 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!PhiR)
+    // TODO: Remove check for constant incoming value once removeDeadRecipes is
+    // used on VPlan0.
+    if (!PhiR || isa<VPIRValue>(PhiR->getOperand(1)))
       continue;
 
+    RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
     Type *PhiTy = TypeInfo.inferScalarType(PhiR);
@@ -8669,23 +8535,18 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     auto *RR = dyn_cast<VPReductionRecipe>(OrigExitingVPV->getDefiningRecipe());
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         (!RR || !RR->isPartialReduction())) {
-      VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
-      std::optional<FastMathFlags> FMFs =
-          PhiTy->isFloatingPointTy()
-              ? std::make_optional(RdxDesc.getFastMathFlags())
-              : std::nullopt;
+      VPValue *Cond = vputils::findHeaderMask(*Plan);
       NewExitingVPV =
-          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", FMFs);
+          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", *PhiR);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
-        return isa<VPInstruction>(&U) &&
-               (cast<VPInstruction>(&U)->getOpcode() ==
-                    VPInstruction::ComputeAnyOfResult ||
-                cast<VPInstruction>(&U)->getOpcode() ==
-                    VPInstruction::ComputeReductionResult ||
-                cast<VPInstruction>(&U)->getOpcode() ==
-                    VPInstruction::ComputeFindIVResult);
+        using namespace VPlanPatternMatch;
+        return match(
+            &U, m_CombineOr(
+                    m_VPInstruction<VPInstruction::ComputeAnyOfResult>(),
+                    m_VPInstruction<VPInstruction::ComputeReductionResult>()));
       });
-      if (CM.usePredicatedReductionSelect())
+
+      if (CM.usePredicatedReductionSelect(RecurrenceKind))
         PhiR->setOperand(1, NewExitingVPV);
     }
 
@@ -8705,26 +8566,29 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
-    RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
-    if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind)) {
+    // For AnyOf reductions, find the select among PhiR's users. This is used
+    // both to find NewVal for ComputeAnyOfResult and to adjust the reduction.
+    VPRecipeBase *AnyOfSelect = nullptr;
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
+      AnyOfSelect = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
+        return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+      }));
+    }
+    if (AnyOfSelect) {
       VPValue *Start = PhiR->getStartValue();
-      VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
-      FinalReductionResult =
-          Builder.createNaryOp(VPInstruction::ComputeFindIVResult,
-                               {PhiR, Start, Sentinel, NewExitingVPV}, ExitDL);
-    } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      VPValue *Start = PhiR->getStartValue();
+      // NewVal is the non-phi operand of the select.
+      VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
+                            ? AnyOfSelect->getOperand(2)
+                            : AnyOfSelect->getOperand(1);
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
-                               {PhiR, Start, NewExitingVPV}, ExitDL);
+                               {Start, NewVal, NewExitingVPV}, ExitDL);
     } else {
-      VPIRFlags Flags =
-          RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind)
-              ? VPIRFlags(RdxDesc.getFastMathFlags())
-              : VPIRFlags();
+      VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
+                      PhiR->getFastMathFlags());
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
-                               {PhiR, NewExitingVPV}, Flags, ExitDL);
+                               {NewExitingVPV}, Flags, ExitDL);
     }
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
@@ -8752,8 +8616,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         PhiR->setOperand(1, Extnd->getVPSingleValue());
 
       // Update ComputeReductionResult with the truncated exiting value and
-      // extend its result.
-      FinalReductionResult->setOperand(1, Trunc);
+      // extend its result. Operand 0 provides the values to be reduced.
+      FinalReductionResult->setOperand(0, Trunc);
       FinalReductionResult =
           Builder.createScalarCast(ExtendOpc, FinalReductionResult, PhiTy, {});
     }
@@ -8763,6 +8627,12 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     for (auto *U : to_vector(OrigExitingVPV->users())) {
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
+        continue;
+      // Skip FindIV reduction chain recipes (ComputeReductionResult, icmp).
+      if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind) &&
+          match(U, m_CombineOr(
+                       m_VPInstruction<VPInstruction::ComputeReductionResult>(),
+                       m_VPInstruction<Instruction::ICmp>())))
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
 
@@ -8779,62 +8649,47 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // with a boolean reduction phi node to check if the condition is true in
     // any iteration. The final value is selected by the final
     // ComputeReductionResult.
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *Select = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
-        return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
-      }));
-      VPValue *Cmp = Select->getOperand(0);
+    if (AnyOfSelect) {
+      VPValue *Cmp = AnyOfSelect->getOperand(0);
       // If the compare is checking the reduction PHI node, adjust it to check
       // the start value.
       if (VPRecipeBase *CmpR = Cmp->getDefiningRecipe())
         CmpR->replaceUsesOfWith(PhiR, PhiR->getStartValue());
-      Builder.setInsertPoint(Select);
+      Builder.setInsertPoint(AnyOfSelect);
 
       // If the true value of the select is the reduction phi, the new value is
       // selected if the negated condition is true in any iteration.
-      if (Select->getOperand(1) == PhiR)
+      if (AnyOfSelect->getOperand(1) == PhiR)
         Cmp = Builder.createNot(Cmp);
       VPValue *Or = Builder.createOr(PhiR, Cmp);
-      Select->getVPSingleValue()->replaceAllUsesWith(Or);
-      // Delete Select now that it has invalid types.
-      ToDelete.push_back(Select);
+      AnyOfSelect->getVPSingleValue()->replaceAllUsesWith(Or);
+      // Delete AnyOfSelect now that it has invalid types.
+      ToDelete.push_back(AnyOfSelect);
 
       // Convert the reduction phi to operate on bools.
       PhiR->setOperand(0, Plan->getFalse());
       continue;
     }
 
-    if (RecurrenceDescriptor::isFindIVRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
-      // Adjust the start value for FindFirstIV/FindLastIV recurrences to use
-      // the sentinel value after generating the ResumePhi recipe, which uses
-      // the original start value.
-      PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
-    }
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
-         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))) {
+         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
-          getRecurrenceIdentity(RK, PhiTy, RdxDesc.getFastMathFlags()));
-      // If the PHI is used by a partial reduction, set the scale factor.
-      unsigned ScaleFactor =
-          RecipeBuilder.getScalingForReduction(RdxDesc.getLoopExitInstr())
-              .value_or(1);
-      auto *ScaleFactorVPV = Plan->getConstantInt(32, ScaleFactor);
+          getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlags()));
+      auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
-          {PhiR->getStartValue(), Iden, ScaleFactorVPV},
-          PhiTy->isFloatingPointTy() ? RdxDesc.getFastMathFlags()
-                                     : FastMathFlags());
+          {PhiR->getStartValue(), Iden, ScaleFactorVPV}, *PhiR);
       PhiR->setOperand(0, StartV);
     }
   }
   for (VPRecipeBase *R : ToDelete)
     R->eraseFromParent();
 
-  VPlanTransforms::runPass(VPlanTransforms::clearReductionWrapFlags, *Plan);
+  RUN_VPLAN_PASS(VPlanTransforms::clearReductionWrapFlags, *Plan);
 }
 
 void LoopVectorizationPlanner::attachRuntimeChecks(
@@ -8877,40 +8732,15 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount) const {
-  // vscale is not necessarily a power-of-2, which means we cannot guarantee
-  // an overflow to zero when updating induction variables and so an
-  // additional overflow check is required before entering the vector loop.
-  bool IsIndvarOverflowCheckNeededForVF =
-      VF.isScalable() && !TTI.isVScaleKnownToBeAPowerOfTwo() &&
-      !isIndvarOverflowCheckKnownFalse(&CM, VF, UF) &&
-      CM.getTailFoldingStyle() !=
-          TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
-  const uint32_t *BranchWeigths =
+  const uint32_t *BranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
           : nullptr;
   VPlanTransforms::addMinimumIterationCheck(
       Plan, VF, UF, MinProfitableTripCount,
       CM.requiresScalarEpilogue(VF.isVector()), CM.foldTailByMasking(),
-      IsIndvarOverflowCheckNeededForVF, OrigLoop, BranchWeigths,
+      OrigLoop, BranchWeights,
       OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
-}
-
-void VPDerivedIVRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
-
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (FPBinOp)
-    State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
-
-  Value *Step = State.get(getStepValue(), VPLane(0));
-  Value *Index = State.get(getOperand(1), VPLane(0));
-  Value *DerivedIV = emitTransformedIndex(
-      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
-      cast_if_present<BinaryOperator>(FPBinOp));
-  DerivedIV->setName(Name);
-  State.set(this, DerivedIV, VPLane(0));
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising
@@ -9103,21 +8933,15 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
                                         VPCostContext &CostCtx, VPlan &Plan,
                                         ScalarEpilogueLowering SEL,
                                         std::optional<unsigned> VScale) {
-  InstructionCost TotalCost = Checks.getCost();
-  if (!TotalCost.isValid())
+  InstructionCost RtC = Checks.getCost();
+  if (!RtC.isValid())
     return false;
-
-  // Add on the cost of any work required in the vector early exit block, if
-  // one exists.
-  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
-
-  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.
   if (VF.Width.isScalar()) {
     // TODO: Should we rename VectorizeMemoryCheckThreshold?
-    if (TotalCost > VectorizeMemoryCheckThreshold) {
+    if (RtC > VectorizeMemoryCheckThreshold) {
       LLVM_DEBUG(
           dbgs()
           << "LV: Interleaving only is not profitable due to runtime checks\n");
@@ -9132,6 +8956,12 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   if (ScalarC == 0)
     return true;
 
+  InstructionCost TotalCost = RtC;
+  // Add on the cost of any work required in the vector early exit block, if
+  // one exists.
+  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
+  TotalCost += Plan.getMiddleBlock()->cost(VF.Width, CostCtx);
+
   // First, compute the minimum iteration count required so that the vector
   // loop outperforms the scalar loop.
   //  The total cost of the scalar loop is
@@ -9141,10 +8971,10 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //  * ScalarC is the cost of a single scalar iteration.
   //
   //  The total cost of the vector loop is
-  //    RtC + VecC * (TC / VF) + EpiC
+  //    TotalCost + VecC * (TC / VF) + EpiC
   //  where
-  //  * RtC is the sum of the costs cost of
-  //    - the generated runtime checks
+  //  * TotalCost is the sum of the costs cost of
+  //    - the generated runtime checks, i.e. RtC
   //    - performing any additional work in the vector.early.exit block for
   //      loops with uncountable early exits.
   //    - the middle block, if ExpectedTC <=  VF.Width.
@@ -9156,18 +8986,18 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   //
   // Vectorization is profitable once the total vector cost is less than the
   // total scalar cost:
-  //   RtC + VecC * (TC / VF) + EpiC <  ScalarC * TC
+  //   TotalCost + VecC * (TC / VF) + EpiC <  ScalarC * TC
   //
   // Now we can compute the minimum required trip count TC as
-  //   VF * (RtC + EpiC) / (ScalarC * VF - VecC) < TC
+  //   VF * (TotalCost + EpiC) / (ScalarC * VF - VecC) < TC
   //
   // For now we assume the epilogue cost EpiC = 0 for simplicity. Note that
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
   unsigned IntVF = estimateElementCount(VF.Width, VScale);
-  uint64_t RtC = TotalCost.getValue();
   uint64_t Div = ScalarC * IntVF - VF.Cost.getValue();
-  uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
+  uint64_t MinTC1 =
+      Div == 0 ? 0 : divideCeil(TotalCost.getValue() * IntVF, Div);
 
   // Second, compute a minimum iteration count so that the cost of the
   // runtime checks is only a fraction of the total scalar loop cost. This
@@ -9176,7 +9006,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // * TC. To bound the runtime check to be a fraction 1/X of the scalar
   // cost, compute
   //   RtC < ScalarC * TC * (1 / X)  ==>  RtC * X / ScalarC < TC
-  uint64_t MinTC2 = divideCeil(RtC * 10, ScalarC);
+  uint64_t MinTC2 = divideCeil(RtC.getValue() * 10, ScalarC);
 
   // Now pick the larger minimum. If it is not a multiple of VF and a scalar
   // epilogue is allowed, choose the next closest multiple of VF. This should
@@ -9239,7 +9069,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     VPIRInst->eraseFromParent();
     ResumePhi->eraseFromParent();
   }
-  VPlanTransforms::runPass(VPlanTransforms::removeDeadRecipes, MainPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, MainPlan);
 
   using namespace VPlanPatternMatch;
   // When vectorizing the epilogue, FindFirstIV & FindLastIV reductions can
@@ -9253,14 +9083,16 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     VPBuilder Builder(Plan.getEntry());
     for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
       auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI || VPI->getOpcode() != VPInstruction::ComputeFindIVResult)
+      if (!VPI)
         continue;
-      VPValue *OrigStart = VPI->getOperand(1);
+      VPValue *OrigStart;
+      if (!matchFindIVResult(VPI, m_VPValue(), m_VPValue(OrigStart)))
+        continue;
       if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
         continue;
       VPInstruction *Freeze =
           Builder.createNaryOp(Instruction::Freeze, {OrigStart}, {}, "fr");
-      VPI->setOperand(1, Freeze);
+      VPI->setOperand(2, Freeze);
       if (UpdateResumePhis)
         OrigStart->replaceUsesWithIf(Freeze, [Freeze](VPUser &U, unsigned) {
           return Freeze != &U && isa<VPPhi>(&U);
@@ -9270,11 +9102,17 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   AddFreezeForFindLastIVReductions(MainPlan, true);
   AddFreezeForFindLastIVReductions(EpiPlan, false);
 
-  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
-  VPValue *VectorTC = &MainPlan.getVectorTripCount();
+  VPValue *VectorTC = nullptr;
+  auto *Term =
+      MainPlan.getVectorLoopRegion()->getExitingBasicBlock()->getTerminator();
+  [[maybe_unused]] bool MatchedTC =
+      match(Term, m_BranchOnCount(m_VPValue(), m_VPValue(VectorTC)));
+  assert(MatchedTC && "must match vector trip count");
+
   // If there is a suitable resume value for the canonical induction in the
   // scalar (which will become vector) epilogue loop, use it and move it to the
   // beginning of the scalar preheader. Otherwise create it below.
+  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
   auto ResumePhiIter =
       find_if(MainScalarPH->phis(), [VectorTC](VPRecipeBase &R) {
         return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
@@ -9282,11 +9120,15 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       });
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {
+    using namespace llvm::VPlanPatternMatch;
+    assert(
+        match(MainPlan.getVectorLoopRegion()->getCanonicalIV()->getStartValue(),
+              m_ZeroInt()) &&
+        "canonical IV must start at 0");
+    Type *Ty = VPTypeAnalysis(MainPlan).inferScalarType(VectorTC);
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
     ResumePhi = ScalarPHBuilder.createScalarPhi(
-        {VectorTC,
-         MainPlan.getVectorLoopRegion()->getCanonicalIV()->getStartValue()},
-        {}, "vec.epilog.resume.val");
+        {VectorTC, MainPlan.getZero(Ty)}, {}, "vec.epilog.resume.val");
   } else {
     ResumePhi = cast<VPPhi>(&*ResumePhiIter);
     if (MainScalarPH->begin() == MainScalarPH->end())
@@ -9354,7 +9196,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
-  VPInstruction *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
+  VPInstruction *Add = Builder.createAdd(IV, VPV);
   IV->replaceAllUsesWith(Add);
   Add->setOperand(0, IV);
 
@@ -9367,19 +9209,34 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      auto *RdxResult =
-          cast<VPInstruction>(*find_if(ReductionPhi->users(), [](VPUser *U) {
-            auto *VPI = dyn_cast<VPInstruction>(U);
-            return VPI &&
-                   (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
-                    VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
-                    VPI->getOpcode() == VPInstruction::ComputeFindIVResult);
-          }));
+      // Find the reduction result by searching users of the phi or its backedge
+      // value.
+      auto IsReductionResult = [](VPRecipeBase *R) {
+        auto *VPI = dyn_cast<VPInstruction>(R);
+        if (!VPI)
+          return false;
+        return VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+               VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+      };
+      auto *RdxResult = cast<VPInstruction>(
+          vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
+      assert(RdxResult && "expected to find reduction result");
+
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
-      RecurKind RK = ReductionPhi->getRecurrenceKind();
-      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-        Value *StartV = RdxResult->getOperand(1)->getLiveInIRValue();
+
+      // Check for FindIV pattern by looking for icmp user of RdxResult.
+      // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
+      using namespace VPlanPatternMatch;
+      VPValue *SentinelVPV = nullptr;
+      bool IsFindIV = any_of(RdxResult->users(), [&](VPUser *U) {
+        return match(U, VPlanPatternMatch::m_SpecificICmp(
+                            ICmpInst::ICMP_NE, m_Specific(RdxResult),
+                            m_VPValue(SentinelVPV)));
+      });
+
+      if (RdxResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
+        Value *StartV = RdxResult->getOperand(0)->getLiveInIRValue();
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
         // to the start value.
@@ -9388,24 +9245,24 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
-      } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
-        Value *StartV = getStartValueFromReductionResult(RdxResult);
-        ToFrozen[StartV] = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
-            EPI.MainLoopIterationCountCheck);
+      } else if (IsFindIV) {
+        assert(SentinelVPV && "expected to find icmp using RdxResult");
 
-        // VPReductionPHIRecipe for FindFirstIV/FindLastIV reductions requires
-        // an adjustment to the resume value. The resume value is adjusted to
-        // the sentinel value when the final value from the main vector loop
-        // equals the start value. This ensures correctness when the start value
-        // might not be less than the minimum value of a monotonically
-        // increasing induction variable.
+        // Get the frozen start value from the main loop.
+        Value *FrozenStartV = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
+            EPI.MainLoopIterationCountCheck);
+        if (auto *FreezeI = dyn_cast<FreezeInst>(FrozenStartV))
+          ToFrozen[FreezeI->getOperand(0)] = FrozenStartV;
+
+        // Adjust resume: select(icmp eq ResumeV, FrozenStartV), Sentinel,
+        // ResumeV
         BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
         IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
-        Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
+        Value *Cmp = Builder.CreateICmpEQ(ResumeV, FrozenStartV);
         if (auto *I = dyn_cast<Instruction>(Cmp))
           InstsToMove.push_back(I);
-        Value *Sentinel = RdxResult->getOperand(2)->getLiveInIRValue();
-        ResumeV = Builder.CreateSelect(Cmp, Sentinel, ResumeV);
+        ResumeV =
+            Builder.CreateSelect(Cmp, SentinelVPV->getLiveInIRValue(), ResumeV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
       } else {
@@ -9414,7 +9271,23 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
           assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
                  "unexpected start value");
-          VPI->setOperand(0, StartVal);
+          // Partial sub-reductions always start at 0 and account for the
+          // reduction start value in a final subtraction. Update it to use the
+          // resume value from the main vector loop.
+          if (PhiR->getVFScaleFactor() > 1 &&
+              PhiR->getRecurrenceKind() == RecurKind::Sub) {
+            auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
+            assert(Sub->getOpcode() == Instruction::Sub && "Unexpected opcode");
+            assert(isa<VPIRValue>(Sub->getOperand(0)) &&
+                   "Expected operand to match the original start value of the "
+                   "reduction");
+            assert(VPlanPatternMatch::match(VPI->getOperand(0),
+                                            VPlanPatternMatch::m_ZeroInt()) &&
+                   "Expected start value for partial sub-reduction to start at "
+                   "zero");
+            Sub->setOperand(0, StartVal);
+          } else
+            VPI->setOperand(0, StartVal);
           continue;
         }
       }
@@ -9528,12 +9401,29 @@ static void fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, Loop *L,
   // Fix induction resume values from the additional bypass block.
   IRBuilder<> BypassBuilder(BypassBlock, BypassBlock->getFirstInsertionPt());
   for (const auto &[IVPhi, II] : LVL.getInductionVars()) {
-    auto *Inc = cast<PHINode>(IVPhi->getIncomingValueForBlock(PH));
     Value *V = createInductionAdditionalBypassValues(
         IVPhi, II, BypassBuilder, ExpandedSCEVs, MainVectorTripCount,
         LVL.getPrimaryInduction());
     // TODO: Directly add as extra operand to the VPResumePHI recipe.
-    Inc->setIncomingValueForBlock(BypassBlock, V);
+    if (auto *Inc = dyn_cast<PHINode>(IVPhi->getIncomingValueForBlock(PH))) {
+      if (Inc->getBasicBlockIndex(BypassBlock) != -1)
+        Inc->setIncomingValueForBlock(BypassBlock, V);
+    } else {
+      // If the resume value in the scalar preheader was simplified (e.g., when
+      // narrowInterleaveGroups optimized away the resume PHIs), create a new
+      // PHI to merge the bypass value with the original value.
+      Value *OrigVal = IVPhi->getIncomingValueForBlock(PH);
+      PHINode *NewPhi =
+          PHINode::Create(IVPhi->getType(), pred_size(PH), "bc.resume.val",
+                          PH->getFirstNonPHIIt());
+      for (auto *Pred : predecessors(PH)) {
+        if (Pred == BypassBlock)
+          NewPhi->addIncoming(V, Pred);
+        else
+          NewPhi->addIncoming(OrigVal, Pred);
+      }
+      IVPhi->setIncomingValueForBlock(PH, NewPhi);
+    }
   }
 }
 
@@ -9551,7 +9441,7 @@ static void connectEpilogueVectorLoop(
       cast<VPIRBasicBlock>(EpiPlan.getEntry())->getIRBasicBlock();
 
   BasicBlock *VecEpiloguePreHeader =
-      cast<BranchInst>(VecEpilogueIterationCountCheck->getTerminator())
+      cast<CondBrInst>(VecEpilogueIterationCountCheck->getTerminator())
           ->getSuccessor(1);
   // Adjust the control flow taking the state info from the main loop
   // vectorization into account.
@@ -9689,18 +9579,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (LVL.hasUncountableEarlyExit() && !EnableEarlyExitVectorization) {
-    reportVectorizationFailure("Auto-vectorization of loops with uncountable "
-                               "early exit is not enabled",
-                               "UncountableEarlyExitLoopsDisabled", ORE, L);
-    return false;
-  }
-
-  if (!LVL.getPotentiallyFaultingLoads().empty()) {
-    reportVectorizationFailure("Auto-vectorization of loops with potentially "
-                               "faulting load is not supported",
-                               "PotentiallyFaultingLoadsNotSupported", ORE, L);
-    return false;
+  if (LVL.hasUncountableEarlyExit()) {
+    if (!EnableEarlyExitVectorization) {
+      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                                 "early exit is not enabled",
+                                 "UncountableEarlyExitLoopsDisabled", ORE, L);
+      return false;
+    }
   }
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
@@ -10039,9 +9924,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                            BestPlan);
     // TODO: Move to general VPlan pipeline once epilogue loops are also
     // supported.
-    VPlanTransforms::runPass(
-        VPlanTransforms::materializeConstantVectorTripCount, BestPlan, VF.Width,
-        IC, PSE);
+    RUN_VPLAN_PASS(VPlanTransforms::materializeConstantVectorTripCount,
+                   BestPlan, VF.Width, IC, PSE);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                  VF.MinProfitableTripCount);
 

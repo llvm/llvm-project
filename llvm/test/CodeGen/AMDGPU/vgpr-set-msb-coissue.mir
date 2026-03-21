@@ -62,3 +62,25 @@ body:             |
   $vgpr256 = nofpexcept V_EXP_F32_e32 killed $vgpr257, implicit $mode, implicit $exec
   S_ENDPGM 0
 ...
+
+---
+name:            triple
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $vgpr4, $vgpr515
+    ; CHECK-LABEL: name: triple
+    ; CHECK: liveins: $vgpr4, $vgpr515
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_SET_VGPR_MSB 68, implicit-def $mode
+    ; CHECK-NEXT: $vgpr260 = V_AND_B32_e32 496, $vgpr260, implicit $exec
+    ; CHECK-NEXT: S_SET_VGPR_MSB 17544, implicit-def $mode
+    ; CHECK-NEXT: $vgpr514 = V_LSHRREV_B32_e32 4, $vgpr515, implicit $exec
+    ; CHECK-NEXT: S_SET_VGPR_MSB 34884, implicit-def $mode
+    ; CHECK-NEXT: $vgpr260 = V_AND_B32_e32 496, $vgpr260, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr260 = V_AND_B32_e32 496, $vgpr260, implicit $exec
+    $vgpr514 = V_LSHRREV_B32_e32 4, $vgpr515, implicit $exec
+    $vgpr260 = V_AND_B32_e32 496, $vgpr260, implicit $exec
+    S_ENDPGM 0
+...

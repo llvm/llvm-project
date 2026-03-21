@@ -31,7 +31,6 @@ static void handleDiagnostic(const SMDiagnostic &Diag, void *Ctx) {
   Diag.print(/*ProgName=*/nullptr, OS, /*ShowColors*/ false,
              /*ShowKindLabels*/ true);
   OS << '\n';
-  OS.flush();
 }
 
 YAMLParseError::YAMLParseError(StringRef Msg, SourceMgr &SM,

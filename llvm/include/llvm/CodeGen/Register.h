@@ -47,7 +47,7 @@ public:
     return Register::StackSlotZero <= Reg && Reg < Register::VirtualRegFlag;
   }
 
-  /// Convert a non-negative frame index to a stack slot register value.
+  /// Convert a frame index to a stack slot register value.
   static Register index2StackSlot(int FI) {
     assert(isInt<MaxFrameIndexBitwidth>(FI) &&
            "Frame index must be at most 30 bits.");

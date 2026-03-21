@@ -4,6 +4,12 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "libc++")
 
+# Unset the C++ Standard: other projects sometimes override this global property, which
+# is incompatible with libc++ (since we set our own standard via other means).
+# TODO: Figure out which other part of the build is setting this and resolve the issue
+#       at the root.
+unset(CMAKE_CXX_STANDARD CACHE)
+
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 # Add path for custom modules
@@ -106,8 +112,6 @@ option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
    embedded)." ON)
-option(LIBCXX_HAS_TERMINAL_AVAILABLE
-  "Build libc++ with support for checking whether a stream is a terminal." ON)
 option(LIBCXX_ENABLE_WIDE_CHARACTERS
   "Whether to include support for wide characters in the library. Disabling
    wide character support can be useful when porting to platforms that don't
@@ -218,6 +222,9 @@ set(LIBCXX_ABI_NAMESPACE "__${LIBCXX_ABI_VERSION}" CACHE STRING "The inline ABI 
 if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
   message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE must be a reserved identifier, got '${LIBCXX_ABI_NAMESPACE}'.")
 endif()
+set(LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION "2" CACHE STRING
+  "Minimum version of the libc++ headers that are allowed to be used by binaries linked against the libc++ library. This
+   version must correspond to the major version of an LLVM release.")
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
 
@@ -501,11 +508,13 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
 
-  # Use C++23 for all targets.
-  set_target_properties(${target} PROPERTIES
-    CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
-    CXX_EXTENSIONS NO)
+  # Use C++26 for all targets. Note that we don't use CXX_STANDARD or cxx_std_foo
+  # since that requires a newer CMake than is available.
+  if (LIBCXX_TARGETING_CLANG_CL)
+    target_compile_options(${target} PRIVATE /std:c++latest)
+  else()
+    target_compile_options(${target} PRIVATE -std=c++26)
+  endif()
 
   # When building the dylib, don't warn for unavailable aligned allocation
   # functions based on the deployment target -- they are always available
@@ -536,6 +545,7 @@ function(cxx_add_basic_build_flags target)
   # Let the library headers know they are currently being used to build the
   # library.
   target_compile_definitions(${target} PRIVATE -D_LIBCPP_BUILDING_LIBRARY)
+  target_compile_definitions(${target} PRIVATE -D_LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION=${LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION})
 
   # Make sure the library can be build without transitive includes. This makes
   # it easier to upgrade the library to a newer language standard without build
@@ -645,7 +655,7 @@ target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
 # will not be compiled into it, resulting in false positives.
 # For context, read: https://github.com/llvm/llvm-project/pull/72677#pullrequestreview-1765402800
 string(FIND "${LLVM_USE_SANITIZER}" "Address" building_with_asan)
-if (NOT "${building_with_asan}" STREQUAL "-1")
+if ("${building_with_asan}" STREQUAL "0")
   config_define(ON _LIBCPP_INSTRUMENTED_WITH_ASAN)
 else()
   config_define(OFF _LIBCPP_INSTRUMENTED_WITH_ASAN)
@@ -746,7 +756,6 @@ config_define(${LIBCXX_ABI_FORCE_ITANIUM} _LIBCPP_ABI_FORCE_ITANIUM)
 config_define(${LIBCXX_ABI_FORCE_MICROSOFT} _LIBCPP_ABI_FORCE_MICROSOFT)
 config_define(${LIBCXX_ENABLE_THREADS} _LIBCPP_HAS_THREADS)
 config_define(${LIBCXX_ENABLE_MONOTONIC_CLOCK} _LIBCPP_HAS_MONOTONIC_CLOCK)
-config_define(${LIBCXX_HAS_TERMINAL_AVAILABLE} _LIBCPP_HAS_TERMINAL)
 if (NOT LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION STREQUAL "default")
   config_define("${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION)
 endif()
@@ -773,12 +782,10 @@ if (RUNTIMES_USE_LIBC STREQUAL "picolibc")
   config_define(1 _LIBCPP_LIBC_NEWLIB)
 elseif (RUNTIMES_USE_LIBC STREQUAL "newlib")
   config_define(1 _LIBCPP_LIBC_NEWLIB)
+elseif (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
+  config_define(1 _LIBCPP_LIBC_LLVM_LIBC)
 endif()
 
-# TODO: Remove in LLVM 21. We're leaving an error to make this fail explicitly.
-if (LIBCXX_ENABLE_ASSERTIONS)
-  message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been removed. Please use LIBCXX_HARDENING_MODE instead.")
-endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "none")
   config_define(2 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "fast")

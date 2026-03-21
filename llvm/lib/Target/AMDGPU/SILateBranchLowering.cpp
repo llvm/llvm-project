@@ -17,6 +17,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/InitializePasses.h"
 
@@ -32,6 +33,7 @@ private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   MachineDominatorTree *MDT;
+  MachineLoopInfo *MLI;
   const AMDGPU::LaneMaskConstants &LMC;
 
   void expandChainCall(MachineInstr &MI, const GCNSubtarget &ST,
@@ -39,9 +41,10 @@ private:
   void earlyTerm(MachineInstr &MI, MachineBasicBlock *EarlyExitBlock);
 
 public:
-  SILateBranchLowering(const GCNSubtarget &ST, MachineDominatorTree *MDT)
+  SILateBranchLowering(const GCNSubtarget &ST, MachineDominatorTree *MDT,
+                       MachineLoopInfo *MLI)
       : ST(ST), TII(ST.getInstrInfo()), TRI(&TII->getRegisterInfo()), MDT(MDT),
-        LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
+        MLI(MLI), LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
 
   bool run(MachineFunction &MF);
 };
@@ -54,7 +57,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
     auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    return SILateBranchLowering(ST, MDT).run(MF);
+    auto *MLIWP = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MachineLoopInfo *MLI = MLIWP ? &MLIWP->getLI() : nullptr;
+    return SILateBranchLowering(ST, MDT, MLI).run(MF);
   }
 
   StringRef getPassName() const override {
@@ -64,6 +69,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -117,7 +123,7 @@ static void generateEndPgm(MachineBasicBlock &MBB,
 }
 
 static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
-                       MachineDominatorTree *MDT) {
+                       MachineDominatorTree *MDT, MachineLoopInfo *MLI) {
   MachineBasicBlock *SplitBB = MBB.splitAt(MI, /*UpdateLiveIns*/ true);
 
   // Update dominator tree
@@ -129,6 +135,12 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   }
   DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
   MDT->applyUpdates(DTUpdates);
+
+  // Update loop info if available
+  if (MLI) {
+    if (MachineLoop *Loop = MLI->getLoopFor(&MBB))
+      Loop->addBasicBlockToLoop(SplitBB, *MLI);
+  }
 }
 
 static void copyOpWithoutRegFlags(MachineInstrBuilder &MIB,
@@ -199,7 +211,7 @@ void SILateBranchLowering::earlyTerm(MachineInstr &MI,
   auto Next = std::next(MI.getIterator());
 
   if (Next != MBB.end() && !Next->isTerminator())
-    splitBlock(MBB, *BranchMI, MDT);
+    splitBlock(MBB, *BranchMI, MDT, MLI);
 
   MBB.addSuccessor(EarlyExitBlock);
   MDT->insertEdge(&MBB, EarlyExitBlock);
@@ -210,11 +222,14 @@ llvm::SILateBranchLoweringPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   auto *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  if (!SILateBranchLowering(ST, MDT).run(MF))
+  auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
+  if (!SILateBranchLowering(ST, MDT, MLI).run(MF))
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses()
-      .preserve<MachineDominatorTreeAnalysis>();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
+  return PA;
 }
 
 bool SILateBranchLowering::run(MachineFunction &MF) {

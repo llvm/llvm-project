@@ -279,6 +279,51 @@ define <8 x double> @concat_fma_fmsub_v8f64_v4f64_constant_repeatedop_commute(<4
   ret <8 x double> %r
 }
 
+; FMA can't be concatenated until after max intrinsics have lowered, but then the v4f32 broadcasted constant is hidden behind an EXTRACT_SUBVECTOR
+define <8 x float> @concat_fma_v8f32_v4f32_late_concat(<4 x float> %x, <4 x float> %y, <8 x float> %z) {
+; FMA4-LABEL: concat_fma_v8f32_v4f32_late_concat:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vbroadcastf128 {{.*#+}} ymm3 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; FMA4-NEXT:    # ymm3 = mem[0,1,0,1]
+; FMA4-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; FMA4-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; FMA4-NEXT:    vmaxps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; FMA4-NEXT:    vfmaddps {{.*#+}} ymm0 = (ymm0 * ymm0) + ymm3
+; FMA4-NEXT:    vmaxps %ymm3, %ymm0, %ymm0
+; FMA4-NEXT:    vaddps %ymm2, %ymm0, %ymm0
+; FMA4-NEXT:    retq
+;
+; AVX2-LABEL: concat_fma_v8f32_v4f32_late_concat:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; AVX2-NEXT:    vmaxps %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm0 * ymm0) + ymm3
+; AVX2-NEXT:    vmaxps %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vaddps %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: concat_fma_v8f32_v4f32_late_concat:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vmaxps %ymm3, %ymm2, %ymm2
+; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm0 * ymm0) + ymm3
+; AVX512-NEXT:    vmaxps %ymm3, %ymm0, %ymm0
+; AVX512-NEXT:    vaddps %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %xx = call <4 x float> @llvm.fma.v4f32(<4 x float> %x, <4 x float> %x, <4 x float> splat (float 2.000000e+00))
+  %yy = call <4 x float> @llvm.fma.v4f32(<4 x float> %y, <4 x float> %y, <4 x float> splat (float 2.000000e+00))
+  %lo = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %xx, <4 x float> splat (float 2.000000e+00))
+  %hi = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %yy, <4 x float> splat (float 2.000000e+00))
+  %rhs = call <8 x float> @llvm.x86.avx.max.ps.256(<8 x float> %z, <8 x float> splat (float 2.000000e+00))
+  %lhs = shufflevector <4 x float> %lo, <4 x float> %hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %add = fadd <8 x float> %lhs, %rhs
+  ret <8 x float> %add
+}
+
 ; negative - too many operands to concat
 define <8 x float> @concat_fmadd_v8f32_v4f32(<4 x float> %a0, <4 x float> %a1, <4 x float> %b0, <4 x float> %b1, <4 x float> %c0, <4 x float> %c1) {
 ; FMA4-LABEL: concat_fmadd_v8f32_v4f32:

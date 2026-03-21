@@ -40,7 +40,7 @@ public:
   void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
                     const Module *Imported) override {
     ASSERT_TRUE(NextCheckingIndex < IsImportingNamedModulesAssertions.size());
-    EXPECT_EQ(PP.isInImportingCXXNamedModules(),
+    EXPECT_EQ(PP.isImportingCXXNamedModules(),
               IsImportingNamedModulesAssertions[NextCheckingIndex]);
     NextCheckingIndex++;
 

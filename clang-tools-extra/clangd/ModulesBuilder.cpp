@@ -265,7 +265,7 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   Preprocessor PP(PPOpts, *Diags, LangOpts, SourceMgr, HeaderInfo,
                   ModuleLoader);
 
-  IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
+  std::shared_ptr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
   CodeGenOptions CodeGenOpts;
   ASTReader Reader(PP, *ModCache, /*ASTContext=*/nullptr,
@@ -275,8 +275,8 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   // listener.
   Reader.setListener(nullptr);
 
-  if (Reader.ReadAST(ModuleFilePath, serialization::MK_MainFile,
-                     SourceLocation(),
+  if (Reader.ReadAST(ModuleFileName::makeExplicit(ModuleFilePath),
+                     serialization::MK_MainFile, SourceLocation(),
                      ASTReader::ARR_None) != ASTReader::Success)
     return false;
 

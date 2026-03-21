@@ -42,7 +42,7 @@ protected:
     const VarDecl &Var;
     const Stmt &BlockStmt;
     const DeclStmt &VarDeclStmt;
-    clang::ASTContext &ASTCtx;
+    ASTContext &ASTCtx;
     const bool IssueFix;
     const bool IsVarUnused;
     const bool IsVarOnlyUsedAsConst;

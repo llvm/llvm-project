@@ -148,7 +148,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
   SetSynchronous(synchronous_execution);
   CheckInWithManager();
-  m_collection_sp->Initialize(g_interpreter_properties);
+  m_collection_sp->Initialize(g_interpreter_properties_def);
 }
 
 bool CommandInterpreter::GetExpandRegexAliases() const {
@@ -1187,13 +1187,14 @@ CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
       command_sp = pos->second;
   }
 
+  StringList local_matches;
+
   if (!exact && !command_sp) {
     // We will only get into here if we didn't find any exact matches.
 
     CommandObjectSP user_match_sp, user_mw_match_sp, alias_match_sp,
         real_match_sp;
 
-    StringList local_matches;
     if (matches == nullptr)
       matches = &local_matches;
 
@@ -1544,7 +1545,8 @@ bool CommandInterpreter::AliasExists(llvm::StringRef cmd) const {
 }
 
 bool CommandInterpreter::UserCommandExists(llvm::StringRef cmd) const {
-  return m_user_dict.find(cmd) != m_user_dict.end();
+  return llvm::is_contained(m_user_dict, cmd) ||
+         llvm::is_contained(m_user_mw_dict, cmd);
 }
 
 bool CommandInterpreter::UserMultiwordCommandExists(llvm::StringRef cmd) const {

@@ -32,13 +32,13 @@ struct NotExtendedByDeclBoundToPredicate {
   }
 
   StringRef ID;
-  ::clang::DynTypedNode Node;
+  DynTypedNode Node;
 };
 
 AST_MATCHER_P(MaterializeTemporaryExpr, isExtendedByDeclBoundTo, StringRef,
               ID) {
-  const NotExtendedByDeclBoundToPredicate Predicate{
-      ID, ::clang::DynTypedNode::create(Node)};
+  const NotExtendedByDeclBoundToPredicate Predicate{ID,
+                                                    DynTypedNode::create(Node)};
   return Builder->removeBindings(Predicate);
 }
 
@@ -57,8 +57,7 @@ ReferenceToConstructedTemporaryCheck::getCheckTraversalKind() const {
 void ReferenceToConstructedTemporaryCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
-      varDecl(unless(isExpansionInSystemHeader()),
-              hasType(qualType(references(qualType().bind("type")))),
+      varDecl(hasType(qualType(references(qualType().bind("type")))),
               decl().bind("var"),
               hasInitializer(expr(hasDescendant(
                   materializeTemporaryExpr(

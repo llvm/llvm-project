@@ -862,6 +862,16 @@ isl_stat isl_tab_push_callback(struct isl_tab *tab,
 	return push_union(tab, isl_tab_undo_callback, u);
 }
 
+/* Push a record onto the undo stack indicating that inequality "ineq"
+ * has been turned into an equality constraint (in the first position).
+ */
+static isl_stat isl_tab_push_ineq_to_eq(struct isl_tab *tab, int ineq)
+{
+	union isl_tab_undo_val u = { .n = ineq };
+
+	return push_union(tab, isl_tab_undo_ineq_to_eq, u);
+}
+
 struct isl_tab *isl_tab_init_samples(struct isl_tab *tab)
 {
 	if (!tab)
@@ -1583,8 +1593,8 @@ static int row_is_manifestly_non_integral(struct isl_tab *tab, int row)
 	if (tab->M && !isl_int_eq(tab->mat->row[row][2],
 				  tab->mat->row[row][0]))
 		return 0;
-	if (isl_seq_first_non_zero(tab->mat->row[row] + off + tab->n_dead,
-				    tab->n_col - tab->n_dead) != -1)
+	if (isl_seq_any_non_zero(tab->mat->row[row] + off + tab->n_dead,
+				    tab->n_col - tab->n_dead))
 		return 0;
 
 	return !isl_int_is_divisible_by(tab->mat->row[row][1],
@@ -2032,8 +2042,8 @@ static int row_is_manifestly_zero(struct isl_tab *tab, int row)
 		return 0;
 	if (row_is_big(tab, row))
 		return 0;
-	return isl_seq_first_non_zero(tab->mat->row[row] + off + tab->n_dead,
-					tab->n_col - tab->n_dead) == -1;
+	return !isl_seq_any_non_zero(tab->mat->row[row] + off + tab->n_dead,
+					tab->n_col - tab->n_dead);
 }
 
 /* Add an equality that is known to be valid for the given tableau.
@@ -3072,26 +3082,51 @@ isl_stat isl_tab_swap_constraints(struct isl_tab *tab, int con1, int con2)
 /* Rotate the "n" constraints starting at "first" to the right,
  * putting the last constraint in the position of the first constraint.
  */
-static int rotate_constraints(struct isl_tab *tab, int first, int n)
+static isl_stat rotate_constraints_right(struct isl_tab *tab, int first, int n)
 {
 	int i, last;
 	struct isl_tab_var var;
 
 	if (n <= 1)
-		return 0;
+		return isl_stat_ok;
 
 	last = first + n - 1;
 	var = tab->con[last];
 	for (i = last; i > first; --i) {
 		tab->con[i] = tab->con[i - 1];
 		if (update_con_after_move(tab, i, i - 1) < 0)
-			return -1;
+			return isl_stat_error;
 	}
 	tab->con[first] = var;
 	if (update_con_after_move(tab, first, last) < 0)
-		return -1;
+		return isl_stat_error;
 
-	return 0;
+	return isl_stat_ok;
+}
+
+/* Rotate the "n" constraints starting at "first" to the left,
+ * putting the first constraint in the position of the last constraint.
+ */
+static isl_stat rotate_constraints_left(struct isl_tab *tab, int first, int n)
+{
+	int i, last;
+	struct isl_tab_var var;
+
+	if (n <= 1)
+		return isl_stat_ok;
+
+	last = first + n - 1;
+	var = tab->con[first];
+	for (i = first; i < last; ++i) {
+		tab->con[i] = tab->con[i + 1];
+		if (update_con_after_move(tab, i, i + 1) < 0)
+			return isl_stat_error;
+	}
+	tab->con[last] = var;
+	if (update_con_after_move(tab, last, first) < 0)
+		return isl_stat_error;
+
+	return isl_stat_ok;
 }
 
 /* Drop the "n" entries starting at position "first" in tab->con, moving all
@@ -3191,12 +3226,18 @@ static __isl_give isl_basic_map *gauss_if_shared(__isl_take isl_basic_map *bmap,
  * If "tab" contains any constraints that are not in "bmap" then they
  * appear after those in "bmap" and they should be left untouched.
  *
+ * If the operation may need to be undone, then keep track
+ * of the inequality constraints that have been turned
+ * into equality constraints.
+ *
  * Note that this function only calls isl_basic_map_gauss
  * (in case some equality constraints got detected)
- * if "bmap" has more than one reference.
+ * if "bmap" has more than one reference and if the operation
+ * does not need to be undone.
  * If it only has a single reference, then it is left in a temporary state,
  * because the caller may require this state.
  * Calling isl_basic_map_gauss is then the responsibility of the caller.
+ * This is also the case if the operation may need to be undone.
  */
 __isl_give isl_basic_map *isl_tab_make_equalities_explicit(struct isl_tab *tab,
 	__isl_take isl_basic_map *bmap)
@@ -3214,18 +3255,59 @@ __isl_give isl_basic_map *isl_tab_make_equalities_explicit(struct isl_tab *tab,
 		if (!isl_tab_is_equality(tab, bmap->n_eq + i))
 			continue;
 		isl_basic_map_inequality_to_equality(bmap, i);
-		if (rotate_constraints(tab, 0, tab->n_eq + i + 1) < 0)
+		if (rotate_constraints_right(tab, 0, tab->n_eq + i + 1) < 0)
 			return isl_basic_map_free(bmap);
-		if (rotate_constraints(tab, tab->n_eq + i + 1,
+		if (rotate_constraints_right(tab, tab->n_eq + i + 1,
 					bmap->n_ineq - i) < 0)
 			return isl_basic_map_free(bmap);
 		tab->n_eq++;
+		if (tab->need_undo)
+			isl_tab_push_ineq_to_eq(tab, i);
 	}
 
-	if (n_eq != tab->n_eq)
+	if (!tab->need_undo && n_eq != tab->n_eq)
 		bmap = gauss_if_shared(bmap, tab);
 
 	return bmap;
+}
+
+/* Undo the effect of turning an inequality constraint
+ * into an equality constraint in isl_tab_make_equalities_explicit.
+ * "ineq" is the original position of the inequality constraint that
+ * now appears as the first equality constraint.
+ *
+ * That is, the order
+ *
+ *		I E E E E E A A A L B B B B
+ *
+ * needs to be changed back into
+ *
+ *		E E E E E A A A I B B B B L
+ *
+ * where I is the inequality turned equality, the E are the original equalities,
+ * the A inequalities originally before I,
+ * the B inequalities originally after I and
+ * L the originally last inequality.
+ *
+ * Two groups of constraints therefore need to be rotated left,
+ * those up to and including the original position of I and
+ * those after this position.
+ */
+static isl_stat first_eq_to_ineq(struct isl_tab *tab, int ineq)
+{
+	unsigned n_ineq, n_eq;
+
+	if (!tab)
+		return isl_stat_error;
+
+	n_ineq = tab->n_con - tab->n_eq;
+	tab->n_eq--;
+	n_eq = tab->n_eq;
+	if (rotate_constraints_left(tab, 0, n_eq + ineq + 1) < 0)
+		return isl_stat_error;
+	if (rotate_constraints_left(tab, n_eq + ineq + 1, n_ineq - ineq) < 0)
+		return isl_stat_error;
+	return isl_stat_ok;
 }
 
 static int con_is_redundant(struct isl_tab *tab, struct isl_tab_var *var)
@@ -3331,8 +3413,8 @@ int isl_tab_is_equality(struct isl_tab *tab, int con)
 	off = 2 + tab->M;
 	return isl_int_is_zero(tab->mat->row[row][1]) &&
 		!row_is_big(tab, row) &&
-		isl_seq_first_non_zero(tab->mat->row[row] + off + tab->n_dead,
-					tab->n_col - tab->n_dead) == -1;
+		!isl_seq_any_non_zero(tab->mat->row[row] + off + tab->n_dead,
+					tab->n_col - tab->n_dead);
 }
 
 /* Return the minimal value of the affine expression "f" with denominator
@@ -3448,7 +3530,6 @@ static isl_bool is_constant(struct isl_tab *tab, struct isl_tab_var *var,
 	isl_mat *mat = tab->mat;
 	int n;
 	int row;
-	int pos;
 
 	if (!var->is_row)
 		return isl_bool_false;
@@ -3456,8 +3537,7 @@ static isl_bool is_constant(struct isl_tab *tab, struct isl_tab_var *var,
 	if (row_is_big(tab, row))
 		return isl_bool_false;
 	n = tab->n_col - tab->n_dead;
-	pos = isl_seq_first_non_zero(mat->row[row] + off + tab->n_dead, n);
-	if (pos != -1)
+	if (isl_seq_any_non_zero(mat->row[row] + off + tab->n_dead, n))
 		return isl_bool_false;
 	if (value)
 		isl_int_divexact(*value, mat->row[row][1], mat->row[row][0]);
@@ -4002,6 +4082,8 @@ static isl_stat perform_undo(struct isl_tab *tab, struct isl_tab_undo *undo)
 		break;
 	case isl_tab_undo_callback:
 		return undo->u.callback->run(undo->u.callback);
+	case isl_tab_undo_ineq_to_eq:
+		return first_eq_to_ineq(tab, undo->u.n);
 	default:
 		isl_assert(tab->mat->ctx, 0, return isl_stat_error);
 	}
@@ -4051,6 +4133,7 @@ isl_stat isl_tab_rollback(struct isl_tab *tab, struct isl_tab_undo *snap)
 static enum isl_ineq_type separation_type(struct isl_tab *tab, unsigned row)
 {
 	int pos;
+	int separate;
 	unsigned off = 2 + tab->M;
 
 	if (tab->rational)
@@ -4072,11 +4155,11 @@ static enum isl_ineq_type separation_type(struct isl_tab *tab, unsigned row)
 			tab->mat->row[row][off + tab->n_dead + pos]))
 		return isl_ineq_separate;
 
-	pos = isl_seq_first_non_zero(
+	separate = isl_seq_any_non_zero(
 			tab->mat->row[row] + off + tab->n_dead + pos + 1,
 			tab->n_col - tab->n_dead - pos - 1);
 
-	return pos == -1 ? isl_ineq_adj_ineq : isl_ineq_separate;
+	return !separate ? isl_ineq_adj_ineq : isl_ineq_separate;
 }
 
 /* Check the effect of inequality "ineq" on the tableau "tab".
@@ -4176,6 +4259,21 @@ __isl_keep isl_basic_set *isl_tab_peek_bset(struct isl_tab *tab)
 	return bset_from_bmap(tab->bmap);
 }
 
+/* Print information about a tab variable representing a variable or
+ * a constraint.
+ * In particular, print its position (row or column) in the tableau and
+ * an indication of whether it is zero, redundant and/or frozen.
+ * Note that only constraints can be frozen.
+ */
+static void print_tab_var(FILE *out, struct isl_tab_var *var)
+{
+	fprintf(out, "%c%d%s%s", var->is_row ? 'r' : 'c',
+				var->index,
+				var->is_zero ? " [=0]" :
+				var->is_redundant ? " [R]" : "",
+				var->frozen ? " [F]" : "");
+}
+
 static void isl_tab_print_internal(__isl_keep struct isl_tab *tab,
 	FILE *out, int indent)
 {
@@ -4199,20 +4297,14 @@ static void isl_tab_print_internal(__isl_keep struct isl_tab *tab,
 			fprintf(out, (i == tab->n_param ||
 				      i == tab->n_var - tab->n_div) ? "; "
 								    : ", ");
-		fprintf(out, "%c%d%s", tab->var[i].is_row ? 'r' : 'c',
-					tab->var[i].index,
-					tab->var[i].is_zero ? " [=0]" :
-					tab->var[i].is_redundant ? " [R]" : "");
+		print_tab_var(out, &tab->var[i]);
 	}
 	fprintf(out, "]\n");
 	fprintf(out, "%*s[", indent, "");
 	for (i = 0; i < tab->n_con; ++i) {
 		if (i)
 			fprintf(out, ", ");
-		fprintf(out, "%c%d%s", tab->con[i].is_row ? 'r' : 'c',
-					tab->con[i].index,
-					tab->con[i].is_zero ? " [=0]" :
-					tab->con[i].is_redundant ? " [R]" : "");
+		print_tab_var(out, &tab->con[i]);
 	}
 	fprintf(out, "]\n");
 	fprintf(out, "%*s[", indent, "");

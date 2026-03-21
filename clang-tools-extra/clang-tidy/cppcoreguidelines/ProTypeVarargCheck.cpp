@@ -178,6 +178,16 @@ void ProTypeVarargCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Matched = Result.Nodes.getNodeAs<CallExpr>("callvararg")) {
     if (hasSingleVariadicArgumentWithValue(Matched, 0))
       return;
+
+    // Skip builtins with custom type checking - they use variadics as an
+    // implementation detail to accept multiple types, not for C-style varargs.
+    // TODO: Remove some of the entries from the `AllowedVariadics` list.
+    if (const auto *FD = Matched->getDirectCallee())
+      if (const unsigned BuiltinID = FD->getBuiltinID();
+          BuiltinID &&
+          Result.Context->BuiltinInfo.hasCustomTypechecking(BuiltinID))
+        return;
+
     diag(Matched->getExprLoc(), "do not call c-style vararg functions");
   }
 

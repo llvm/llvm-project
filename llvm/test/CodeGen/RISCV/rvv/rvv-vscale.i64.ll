@@ -199,3 +199,97 @@ entry:
   ret i64 %1
 }
 
+define i64 @vscale_umin() vscale_range(4,1024) nounwind {
+; RV64-LABEL: vscale_umin:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    li a0, 4
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: vscale_umin:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    li a0, 4
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-VLEN256EXACT-LABEL: vscale_umin:
+; RV64-VLEN256EXACT:       # %bb.0: # %entry
+; RV64-VLEN256EXACT-NEXT:    li a0, 4
+; RV64-VLEN256EXACT-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = mul i64 %0, 4
+  %2 = call i64 @llvm.umin(i64 %1, i64 4)
+  ret i64 %2
+}
+
+
+define i64 @vscale_umax() vscale_range(4,1024) nounwind {
+; RV64-LABEL: vscale_umax:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lui a0, 1
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: vscale_umax:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lui a0, 1
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-VLEN256EXACT-LABEL: vscale_umax:
+; RV64-VLEN256EXACT:       # %bb.0: # %entry
+; RV64-VLEN256EXACT-NEXT:    lui a0, 1
+; RV64-VLEN256EXACT-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = mul i64 %0, 4
+  %2 = call i64 @llvm.umax(i64 %1, i64 4096)
+  ret i64 %2
+}
+
+
+define i64 @vscale_smin() vscale_range(4,1024) nounwind {
+; RV64-LABEL: vscale_smin:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    li a0, 4
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: vscale_smin:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    li a0, 4
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-VLEN256EXACT-LABEL: vscale_smin:
+; RV64-VLEN256EXACT:       # %bb.0: # %entry
+; RV64-VLEN256EXACT-NEXT:    li a0, 4
+; RV64-VLEN256EXACT-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = mul i64 %0, 4
+  %2 = call i64 @llvm.smin(i64 %1, i64 4)
+  ret i64 %2
+}
+
+
+define i64 @vscale_smax() vscale_range(4,1024) nounwind {
+; RV64-LABEL: vscale_smax:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lui a0, 1
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: vscale_smax:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lui a0, 1
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-VLEN256EXACT-LABEL: vscale_smax:
+; RV64-VLEN256EXACT:       # %bb.0: # %entry
+; RV64-VLEN256EXACT-NEXT:    lui a0, 1
+; RV64-VLEN256EXACT-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.vscale.i64()
+  %1 = mul i64 %0, 4
+  %2 = call i64 @llvm.smax(i64 %1, i64 4096)
+  ret i64 %2
+}

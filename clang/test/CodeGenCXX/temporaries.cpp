@@ -714,11 +714,11 @@ namespace MultipleExtension {
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1AD1Ev, {{.*}} @[[TEMPA]]
   // CHECK: store {{.*}} @[[TEMPA]], {{.*}} @[[TEMPE:_ZGRN17MultipleExtension2e1E.*]],
 
-  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[TEMPE]], i64 8))
+  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds nuw (i8, ptr @[[TEMPE]], i64 8))
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e1E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
-  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds nuw ({{.*}} @[[TEMPE]], i32 0, i32 2)
+  // CHECK: store {{.*}} getelementptr inbounds nuw (i8, ptr @[[TEMPD]], i64 4), {{.*}} getelementptr inbounds nuw (i8, ptr @[[TEMPE]], i64 16)
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1ED1Ev, {{.*}} @[[TEMPE]]
   // CHECK: store {{.*}} @[[TEMPE]], ptr @_ZN17MultipleExtension2e1E, align 8
 
@@ -728,11 +728,11 @@ namespace MultipleExtension {
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1AD1Ev, {{.*}} @[[TEMPA]]
   // CHECK: store {{.*}} @[[TEMPA]], {{.*}} @[[E:_ZN17MultipleExtension2e2E]]
 
-  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds ({{.*}} @[[E]], i64 8))
+  // CHECK: call void @_ZN17MultipleExtension1BC1Ev({{.*}} getelementptr inbounds nuw (i8, ptr @[[E]], i64 8))
 
   // CHECK: call void @_ZN17MultipleExtension1DC1Ev({{.*}} @[[TEMPD:_ZGRN17MultipleExtension2e2E.*]])
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1DD1Ev, {{.*}} @[[TEMPD]]
-  // CHECK: store {{.*}} @[[TEMPD]], {{.*}} getelementptr inbounds nuw ({{.*}} @[[E]], i32 0, i32 2)
+  // CHECK: store {{.*}} getelementptr inbounds nuw (i8, ptr @[[TEMPD]], i64 4), {{.*}} getelementptr inbounds nuw (i8, ptr @[[E]], i64 16)
   // CHECK: call i32 @__cxa_atexit({{.*}} @_ZN17MultipleExtension1ED1Ev, {{.*}} @[[E]]
 
 

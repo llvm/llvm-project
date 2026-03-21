@@ -527,8 +527,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
             builder, operandLocation, dataExv, dataExvIsAssumedSize,
             strideIncludeLowerExtent);
       }
-      if (genDefaultBounds && fir::characterWithDynamicLen(
-                                  fir::unwrapRefType(info.addr.getType())) ||
+      if ((genDefaultBounds && fir::characterWithDynamicLen(
+                                   fir::unwrapRefType(info.addr.getType()))) ||
           mlir::isa<fir::BoxCharType>(
               fir::unwrapRefType(info.addr.getType()))) {
         bounds = {fir::factory::genBoundsOpFromBoxChar<BoundsOp, BoundsType>(

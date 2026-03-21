@@ -13,7 +13,6 @@
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
-using namespace llvm;
 using namespace mlir::python::nanobind_adaptors;
 
 namespace mlir {
@@ -42,6 +41,7 @@ struct AttributeType : PyConcreteType<AttributeType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLAttributeTypeGetTypeID;
   static constexpr const char *pyClassName = "AttributeType";
+  static inline const MlirStringRef name = mlirPDLAttributeTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -65,6 +65,7 @@ struct OperationType : PyConcreteType<OperationType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLOperationTypeGetTypeID;
   static constexpr const char *pyClassName = "OperationType";
+  static inline const MlirStringRef name = mlirPDLOperationTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -88,6 +89,7 @@ struct RangeType : PyConcreteType<RangeType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLRangeTypeGetTypeID;
   static constexpr const char *pyClassName = "RangeType";
+  static inline const MlirStringRef name = mlirPDLRangeTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -118,6 +120,7 @@ struct TypeType : PyConcreteType<TypeType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLTypeTypeGetTypeID;
   static constexpr const char *pyClassName = "TypeType";
+  static inline const MlirStringRef name = mlirPDLTypeTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -141,6 +144,7 @@ struct ValueType : PyConcreteType<ValueType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirPDLValueTypeGetTypeID;
   static constexpr const char *pyClassName = "ValueType";
+  static inline const MlirStringRef name = mlirPDLValueTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

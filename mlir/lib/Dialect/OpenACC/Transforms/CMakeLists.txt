@@ -1,6 +1,12 @@
 add_mlir_dialect_library(MLIROpenACCTransforms
+  ACCBindRoutine.cpp
+  ACCComputeLowering.cpp
+  ACCRoutineLowering.cpp
+  ACCRoutineToGPUFunc.cpp
+  ACCDeclareGPUModuleInsertion.cpp
   ACCIfClauseLowering.cpp
   ACCImplicitData.cpp
+  ACCRecipeMaterialization.cpp
   ACCLoopTiling.cpp
   ACCImplicitDeclare.cpp
   ACCImplicitRoutine.cpp
@@ -8,6 +14,8 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   ACCSpecializeForDevice.cpp
   ACCSpecializeForHost.cpp
   LegalizeDataValues.cpp
+  OffloadLiveInValueCanonicalization.cpp
+  OffloadTargetVerifier.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/OpenACC
@@ -23,6 +31,8 @@ add_mlir_dialect_library(MLIROpenACCTransforms
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRArithDialect
+  MLIRArithUtils
   MLIROpenACCAnalysis
   MLIROpenACCDialect
   MLIROpenACCUtils

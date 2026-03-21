@@ -46,6 +46,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
@@ -57,6 +59,10 @@
 #include <vector>
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 MetadataAsValue::MetadataAsValue(Type *Ty, Metadata *MD)
     : Value(Ty, MetadataAsValueVal), MD(MD) {
@@ -613,6 +619,14 @@ MDString *MDString::get(LLVMContext &Context, StringRef Str) {
     return &MapEntry;
   MapEntry.Entry = &*I.first;
   return &MapEntry;
+}
+
+MDString *MDString::getIfExists(LLVMContext &Context, StringRef Str) {
+  auto &Store = Context.pImpl->MDStringCache;
+  auto I = Store.find(Str);
+  if (I == Store.end())
+    return nullptr;
+  return &I->getValue();
 }
 
 StringRef MDString::getString() const {
@@ -1222,7 +1236,7 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
   auto IsLegal = [](const Instruction &I) -> bool {
     switch (I.getOpcode()) {
     case Instruction::Invoke:
-    case Instruction::Br:
+    case Instruction::CondBr:
     case Instruction::Switch:
     case Instruction::Call:
     case Instruction::IndirectBr:
@@ -1254,6 +1268,9 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
   if (ACall && BCall && ACall->getCalledFunction() &&
       BCall->getCalledFunction())
     return mergeDirectCallProfMetadata(A, B, AInstr, BInstr);
+
+  if (A == B && !ProfcheckDisableMetadataFixes)
+    return A;
 
   // The rest of the cases are not implemented but could be added
   // when there are use cases.
@@ -1386,6 +1403,23 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   for (auto *I : EndPoints)
     MDs.push_back(ConstantAsMetadata::get(I));
   return MDNode::get(A->getContext(), MDs);
+}
+
+MDNode *MDNode::getMostGenericNoFPClass(MDNode *A, MDNode *B) {
+  if (!A || !B)
+    return nullptr;
+
+  if (A == B)
+    return A;
+
+  ConstantInt *AVal = mdconst::extract<ConstantInt>(A->getOperand(0));
+  ConstantInt *BVal = mdconst::extract<ConstantInt>(B->getOperand(0));
+  unsigned Intersect = AVal->getZExtValue() & BVal->getZExtValue();
+  if (Intersect == 0)
+    return nullptr;
+
+  return MDNode::get(A->getContext(), ConstantAsMetadata::get(ConstantInt::get(
+                                          AVal->getType(), Intersect)));
 }
 
 MDNode *MDNode::getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B) {
@@ -1855,12 +1889,13 @@ void Instruction::getAllMetadataImpl(
 }
 
 bool Instruction::extractProfTotalWeight(uint64_t &TotalVal) const {
-  assert(
-      (getOpcode() == Instruction::Br || getOpcode() == Instruction::Select ||
-       getOpcode() == Instruction::Call || getOpcode() == Instruction::Invoke ||
-       getOpcode() == Instruction::IndirectBr ||
-       getOpcode() == Instruction::Switch) &&
-      "Looking for branch weights on something besides branch");
+  assert((getOpcode() == Instruction::CondBr ||
+          getOpcode() == Instruction::Select ||
+          getOpcode() == Instruction::Call ||
+          getOpcode() == Instruction::Invoke ||
+          getOpcode() == Instruction::IndirectBr ||
+          getOpcode() == Instruction::Switch) &&
+         "Looking for branch weights on something besides branch");
 
   return ::extractProfTotalWeight(*this, TotalVal);
 }

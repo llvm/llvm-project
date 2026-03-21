@@ -75,7 +75,7 @@ public:
   bool runOnModule(Module &M) override;
 
 private:
-  int cfguard_module_flag = 0;
+  ControlFlowGuardMode CFGuardModuleFlag = ControlFlowGuardMode::Disabled;
   FunctionType *GuardFnType = nullptr;
   FunctionType *DispatchFnType = nullptr;
   Constant *GuardFnCFGlobal = nullptr;
@@ -593,6 +593,11 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
 
   Value *RetVal = Call;
   if (TransformDirectToSRet) {
+    // The x64 side returns this value indirectly via a hidden pointer (sret).
+    // Mark the thunk's pointer arg with sret so that ISel saves it and copies
+    // it into x8 (RAX) on return, matching the x64 calling convention.
+    Thunk->addParamAttr(
+        1, Attribute::getWithStructRetType(M->getContext(), RetTy));
     IRB.CreateStore(RetVal, Thunk->getArg(1));
   } else if (X64RetType != RetTy) {
     Value *CastAlloca = IRB.CreateAlloca(X64RetType);
@@ -758,7 +763,8 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
 
   // Load the global symbol as a pointer to the check function.
   Value *GuardFn;
-  if (cfguard_module_flag == 2 && !CB->hasFnAttr("guard_nocf"))
+  if ((CFGuardModuleFlag == ControlFlowGuardMode::Enabled) &&
+      !CB->hasFnAttr("guard_nocf"))
     GuardFn = GuardFnCFGlobal;
   else
     GuardFn = GuardFnGlobal;
@@ -794,9 +800,7 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   M = &Mod;
 
   // Check if this module has the cfguard flag and read its value.
-  if (auto *MD =
-          mdconst::extract_or_null<ConstantInt>(M->getModuleFlag("cfguard")))
-    cfguard_module_flag = MD->getZExtValue();
+  CFGuardModuleFlag = M->getControlFlowGuardMode();
 
   PtrTy = PointerType::getUnqual(M->getContext());
   I64Ty = Type::getInt64Ty(M->getContext());

@@ -1,5 +1,7 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; FIXME: re-enable when validator issue if fixed
+; https://github.com/llvm/llvm-project/issues/186756
 
 ; CHECK: %[[Int8Ty:[0-9]+]] = OpTypeInt 8 0
 ; CHECK: %[[Int8PtrTy:[0-9]+]] = OpTypePointer Generic %[[Int8Ty]]
@@ -12,11 +14,11 @@
 ; CHECK: %[[VtblTy:[0-9]+]] = OpTypeStruct %[[ArrTy]] %[[ArrTy]] %[[ArrTy]] %[[ArrTy]] %[[ArrTy]]
 ; CHECK: %[[Int64Ty:[0-9]+]] = OpTypeInt 64 0
 ; CHECK: %[[GlobVtblPtrTy:[0-9]+]] = OpTypePointer CrossWorkgroup %[[VtblTy]]
+; CHECK: %[[Const184:[0-9]+]] = OpConstant %[[Int64Ty]] 184
 ; CHECK: %[[ConstMinus184:[0-9]+]] = OpConstant %[[Int64Ty]] 18446744073709551432
 ; CHECK: %[[ConstMinus16:[0-9]+]] = OpConstant %[[Int64Ty]] 18446744073709551600
 ; CHECK: %[[Const168:[0-9]+]] = OpConstant %[[Int64Ty]] 168
 ; CHECK: %[[Nullptr:[0-9]+]] = OpConstantNull %[[GlobInt8PtrTy]]
-; CHECK: %[[Const184:[0-9]+]] = OpConstant %[[Int64Ty]] 184
 ; CHECK: %[[Const184toPtr:[0-9]+]] = OpSpecConstantOp %[[GlobInt8PtrTy]] ConvertUToPtr %[[Const184]]
 ; CHECK: %[[Const168toPtr:[0-9]+]] = OpSpecConstantOp %[[GlobInt8PtrTy]] ConvertUToPtr %[[Const168]]
 ; CHECK: %[[ConstMinus16toPtr:[0-9]+]] = OpSpecConstantOp %[[GlobInt8PtrTy]] ConvertUToPtr %[[ConstMinus16]]
@@ -33,6 +35,7 @@
                                                             [5 x ptr addrspace(1)] [ptr addrspace(1) inttoptr (i64 184 to ptr addrspace(1)), ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null],
                                                             [5 x ptr addrspace(1)] [ptr addrspace(1) inttoptr (i64 168 to ptr addrspace(1)), ptr addrspace(1) inttoptr (i64 -16 to ptr addrspace(1)), ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null],
                                                             [5 x ptr addrspace(1)] [ptr addrspace(1) inttoptr (i64 -184 to ptr addrspace(1)), ptr addrspace(1) inttoptr (i64 -184 to ptr addrspace(1)), ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null] }
+@VTT = linkonce_odr unnamed_addr addrspace(1) constant [1 x ptr addrspace(1)][ptr addrspace(1) getelementptr inbounds inrange(-24, 16) ({ [5 x ptr addrspace(1)], [5 x ptr addrspace(1)], [5 x ptr addrspace(1)], [5 x ptr addrspace(1)], [5 x ptr addrspace(1)] }, ptr addrspace(1) @vtable, i32 0, i32 4, i32 3)]
 
 define linkonce_odr spir_func void @foo(ptr addrspace(4) %this) {
 entry:

@@ -575,9 +575,9 @@ public:
 #    ifdef _LIBCPP_CXX03_LANG
   // Preserve the ability to compare with literal 0,
   // and implicitly convert to bool, but not implicitly convert to int.
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI operator void*() const { return fail() ? nullptr : (void*)this; }
+  _LIBCPP_HIDE_FROM_ABI operator void*() const { return fail() ? nullptr : (void*)this; }
 #    else
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI explicit operator bool() const { return !fail(); }
+  _LIBCPP_HIDE_FROM_ABI explicit operator bool() const { return !fail(); }
 #    endif
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool operator!() const { return fail(); }

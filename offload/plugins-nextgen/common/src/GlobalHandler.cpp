@@ -27,7 +27,7 @@ using namespace omp;
 using namespace target;
 using namespace plugin;
 using namespace error;
-using namespace debug;
+using namespace llvm::offload::debug;
 
 Expected<std::unique_ptr<ObjectFile>>
 GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {
@@ -76,13 +76,13 @@ Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
       return Err;
   }
 
-  ODBG(ODT_DataTransfer) << "Successfully " << (Device2Host ? "read" : "write")
-                         << " " << HostGlobal.getSize()
-                         << " bytes associated with global symbol '"
-                         << HostGlobal.getName() << "' "
-                         << (Device2Host ? "from" : "to") << " the device ("
-                         << DeviceGlobal.getPtr() << " -> "
-                         << HostGlobal.getPtr() << ").";
+  ODBG(OLDT_DataTransfer) << "Successfully " << (Device2Host ? "read" : "write")
+                          << " " << HostGlobal.getSize()
+                          << " bytes associated with global symbol '"
+                          << HostGlobal.getName() << "' "
+                          << (Device2Host ? "from" : "to") << " the device ("
+                          << DeviceGlobal.getPtr() << " -> "
+                          << HostGlobal.getPtr() << ").";
 
   return Plugin::success();
 }
@@ -159,11 +159,11 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
                          HostGlobal.getName().data(), ImageGlobal.getSize(),
                          HostGlobal.getSize());
 
-  ODBG(ODT_DataTransfer) << "Global symbol '" << HostGlobal.getName()
-                         << "' was found in the ELF image and "
-                         << HostGlobal.getSize() << " bytes will copied from "
-                         << ImageGlobal.getPtr() << " to "
-                         << HostGlobal.getPtr() << ".";
+  ODBG(OLDT_DataTransfer) << "Global symbol '" << HostGlobal.getName()
+                          << "' was found in the ELF image and "
+                          << HostGlobal.getSize() << " bytes will copied from "
+                          << ImageGlobal.getPtr() << " to "
+                          << HostGlobal.getPtr() << ".";
 
   assert(Image.getStart() <= ImageGlobal.getPtr() &&
          utils::advancePtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <

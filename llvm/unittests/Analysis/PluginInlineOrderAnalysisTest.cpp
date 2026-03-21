@@ -145,26 +145,26 @@ define i32 @fib_loop(i32 %n){
     %curr = alloca i32
     %last = alloca i32
     %i = alloca i32
-    store i32 1, i32* %curr
-    store i32 1, i32* %last
-    store i32 2, i32* %i
+    store i32 1, ptr %curr
+    store i32 1, ptr %last
+    store i32 2, ptr %i
     br label %loop_cond
   loop_cond:
-    %i_val = load i32, i32* %i
+    %i_val = load i32, ptr %i
     %cmp = icmp slt i32 %i_val, %n
     br i1 %cmp, label %loop_body, label %loop_end
   loop_body:
-    %curr_val = load i32, i32* %curr
-    %last_val = load i32, i32* %last
+    %curr_val = load i32, ptr %curr
+    %last_val = load i32, ptr %last
     %add = add i32 %curr_val, %last_val
-    store i32 %add, i32* %last
-    store i32 %curr_val, i32* %curr
-    %i_val2 = load i32, i32* %i
+    store i32 %add, ptr %last
+    store i32 %curr_val, ptr %curr
+    %i_val2 = load i32, ptr %i
     %add2 = add i32 %i_val2, 1
-    store i32 %add2, i32* %i
+    store i32 %add2, ptr %i
     br label %loop_cond
   loop_end:
-    %curr_val3 = load i32, i32* %curr
+    %curr_val3 = load i32, ptr %curr
     ret i32 %curr_val3
 }
 
@@ -187,32 +187,32 @@ define i32 @foo(i32 %n){
 define i32 @fib_check(){
     %correct = alloca i32
     %i = alloca i32
-    store i32 1, i32* %correct
-    store i32 0, i32* %i
+    store i32 1, ptr %correct
+    store i32 0, ptr %i
     br label %loop_cond
   loop_cond:
-    %i_val = load i32, i32* %i
+    %i_val = load i32, ptr %i
     %cmp = icmp slt i32 %i_val, 10
     br i1 %cmp, label %loop_body, label %loop_end
   loop_body:
-    %i_val2 = load i32, i32* %i
+    %i_val2 = load i32, ptr %i
     %call = call i32 @fib_loop(i32 %i_val2)
-    %i_val3 = load i32, i32* %i
+    %i_val3 = load i32, ptr %i
     %call2 = call i32 @foo(i32 %i_val3)
     %cmp2 = icmp ne i32 %call, %call2
     br i1 %cmp2, label %if_true, label %if_false
   if_true:
-    store i32 0, i32* %correct
+    store i32 0, ptr %correct
     br label %if_end
   if_false:
     br label %if_end
   if_end:
-    %i_val4 = load i32, i32* %i
+    %i_val4 = load i32, ptr %i
     %add = add i32 %i_val4, 1
-    store i32 %add, i32* %i
+    store i32 %add, ptr %i
     br label %loop_cond
   loop_end:
-    %correct_val = load i32, i32* %correct
+    %correct_val = load i32, ptr %correct
     ret i32 %correct_val
 }
   )"};

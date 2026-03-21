@@ -129,7 +129,12 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
 
   uint64_t EHFramePtrEnc = DE.getU8(&Offset);
   W.startLine() << format("eh_frame_ptr_enc: 0x%" PRIx64 "\n", EHFramePtrEnc);
-  if (EHFramePtrEnc != (dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4))
+  unsigned EHFramePtrSize = 0;
+  if (EHFramePtrEnc == (dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4))
+    EHFramePtrSize = 4;
+  else if (EHFramePtrEnc == (dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata8))
+    EHFramePtrSize = 8;
+  else
     reportError(object::createError("unexpected encoding eh_frame_ptr_enc"),
                 ObjF.getFileName());
 
@@ -141,11 +146,18 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
 
   uint64_t TableEnc = DE.getU8(&Offset);
   W.startLine() << format("table_enc: 0x%" PRIx64 "\n", TableEnc);
-  if (TableEnc != (dwarf::DW_EH_PE_datarel | dwarf::DW_EH_PE_sdata4))
-    reportError(object::createError("unexpected encoding table_enc"),
+  unsigned TableEntrySize = 0;
+  if (TableEnc == (dwarf::DW_EH_PE_datarel | dwarf::DW_EH_PE_sdata4))
+    TableEntrySize = 4;
+  else if (TableEnc == (dwarf::DW_EH_PE_datarel | dwarf::DW_EH_PE_sdata8))
+    TableEntrySize = 8;
+  else
+    reportError(object::createError("unexpected encoding table_enc 0x" +
+                                    Twine::utohexstr(TableEnc)),
                 ObjF.getFileName());
 
-  auto EHFramePtr = DE.getSigned(&Offset, 4) + EHFrameHdrAddress + 4;
+  auto EHFramePtr =
+      DE.getSigned(&Offset, EHFramePtrSize) + EHFrameHdrAddress + 4;
   W.startLine() << format("eh_frame_ptr: 0x%" PRIx64 "\n", EHFramePtr);
 
   auto FDECount = DE.getUnsigned(&Offset, 4);
@@ -153,12 +165,13 @@ void PrinterContext<ELFT>::printEHFrameHdr(const Elf_Phdr *EHFramePHdr) const {
 
   unsigned NumEntries = 0;
   uint64_t PrevPC = 0;
-  while (Offset + 8 <= EHFramePHdr->p_memsz && NumEntries < FDECount) {
+  while (Offset + 2 * TableEntrySize <= EHFramePHdr->p_memsz &&
+         NumEntries < FDECount) {
     DictScope D(W, std::string("entry ") + std::to_string(NumEntries));
 
-    auto InitialPC = DE.getSigned(&Offset, 4) + EHFrameHdrAddress;
+    auto InitialPC = DE.getSigned(&Offset, TableEntrySize) + EHFrameHdrAddress;
     W.startLine() << format("initial_location: 0x%" PRIx64 "\n", InitialPC);
-    auto Address = DE.getSigned(&Offset, 4) + EHFrameHdrAddress;
+    auto Address = DE.getSigned(&Offset, TableEntrySize) + EHFrameHdrAddress;
     W.startLine() << format("address: 0x%" PRIx64 "\n", Address);
 
     if (InitialPC < PrevPC)

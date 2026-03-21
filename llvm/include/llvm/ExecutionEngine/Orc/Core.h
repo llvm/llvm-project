@@ -440,6 +440,19 @@ private:
   ResourceTrackerSP RT;
 };
 
+/// Returned by operations that fail because a JITDylib has been closed.
+class LLVM_ABI JITDylibDefunct : public ErrorInfo<JITDylibDefunct> {
+public:
+  static char ID;
+
+  JITDylibDefunct(JITDylibSP JD) : JD(std::move(JD)) {}
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+
+private:
+  JITDylibSP JD;
+};
+
 /// Used to notify a JITDylib that the given set of symbols failed to
 /// materialize.
 class LLVM_ABI FailedToMaterialize : public ErrorInfo<FailedToMaterialize> {
@@ -1395,6 +1408,15 @@ public:
   /// Add a symbol name to the SymbolStringPool and return a pointer to it.
   SymbolStringPtr intern(StringRef SymName) { return EPC->intern(SymName); }
 
+  /// Set a WaitingOnGraph::Recorder to capture WaitingOnGraph operations.
+  ///
+  /// This method can be called at most once. If called, it should be called
+  /// before any symbols are materialized.
+  void setWaitingOnGraphOpRecorder(WaitingOnGraph::OpRecorder &R) {
+    assert(!GOpRecorder && "WaitingOnGraph recorder already set");
+    GOpRecorder = &R;
+  }
+
   /// Set the Platform for this ExecutionSession.
   void setPlatform(std::unique_ptr<Platform> P) { this->P = std::move(P); }
 
@@ -1814,6 +1836,7 @@ private:
 
   std::vector<JITDylibSP> JDs;
   WaitingOnGraph G;
+  WaitingOnGraph::OpRecorder *GOpRecorder = nullptr;
 
   // FIXME: Remove this (and runOutstandingMUs) once the linking layer works
   //        with callbacks from asynchronous queries.
@@ -1887,7 +1910,8 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU,
     });
 
   return ES.runSessionLocked([&, this]() -> Error {
-    assert(State == Open && "JD is defunct");
+    if (State != Open)
+      return make_error<JITDylibDefunct>(this);
 
     if (auto Err = defineImpl(*MU))
       return Err;

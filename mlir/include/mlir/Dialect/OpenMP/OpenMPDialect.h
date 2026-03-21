@@ -37,6 +37,16 @@
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.h.inc"
 
+/// Operations implementing LoopWrapperInterface.
+#define OMP_LOOP_WRAPPER_OPS                                                   \
+  mlir::omp::WorkshareLoopWrapperOp, mlir::omp::LoopOp, mlir::omp::WsloopOp,   \
+      mlir::omp::SimdOp, mlir::omp::DistributeOp, mlir::omp::TaskloopOp
+
+/// Operations implementing OutlineableOpenMPOpInterface.
+#define OMP_OUTLINEABLE_OPS                                                    \
+  mlir::omp::ParallelOp, mlir::omp::TeamsOp, mlir::omp::TaskOp,                \
+      mlir::omp::TargetOp
+
 namespace mlir::omp {
 /// Find the omp.new_cli, generator, and consumer of a canonical loop info.
 std::tuple<NewCliOp, OpOperand *, OpOperand *> decodeCli(mlir::Value cli);

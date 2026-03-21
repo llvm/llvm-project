@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static constexpr llvm::StringRef DefaultExclusionStr =
+static constexpr StringRef DefaultExclusionStr =
     "::std::map;::std::unordered_map;::std::flat_map";
 
 ProBoundsAvoidUncheckedContainerAccessCheck::
@@ -95,7 +95,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::registerMatchers(
               cxxMethodDecl(
                   hasOverloadedOperatorName("[]"),
                   anyOf(parameterCountIs(0), parameterCountIs(1)),
-                  unless(matchers::matchesAnyListedName(ExcludedClasses)))
+                  unless(matchers::matchesAnyListedRegexName(ExcludedClasses)))
                   .bind("operator")))
           .bind("caller"),
       this);

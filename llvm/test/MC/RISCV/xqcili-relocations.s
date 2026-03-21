@@ -22,13 +22,13 @@ this_section:
 # ASM: qc.li a0, %qc.abs20(undef)
 # OBJ: qc.li a0, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM192 undef{{$}}
+# OBJ-NEXT: R_RISCV_QC_ABS20_U undef{{$}}
 qc.li a0, %qc.abs20(undef)
 
 # ASM: qc.e.li s0, undef
 # OBJ-NEXT: qc.e.li s0, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM194 undef{{$}}
+# OBJ-NEXT: R_RISCV_QC_E_32 undef{{$}}
 qc.e.li s0, undef
 
 
@@ -44,25 +44,25 @@ qc.e.li s1, abs_symbol
 # ASM: qc.li a2, %qc.abs20(same_section)
 # OBJ-NEXT: qc.li a2, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM192 same_section{{$}}
+# OBJ-NEXT: R_RISCV_QC_ABS20_U same_section{{$}}
 qc.li a2, %qc.abs20(same_section)
 
 # ASM: qc.e.li s2, same_section
 # OBJ-NEXT: qc.e.li s2, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM194 same_section{{$}}
+# OBJ-NEXT: R_RISCV_QC_E_32 same_section{{$}}
 qc.e.li s2, same_section
 
 # ASM: qc.li a3, %qc.abs20(other_section)
 # OBJ-NEXT: qc.li a3, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM192 other_section{{$}}
+# OBJ-NEXT: R_RISCV_QC_ABS20_U other_section{{$}}
 qc.li a3, %qc.abs20(other_section)
 
 # ASM: qc.e.li s3, other_section
 # OBJ-NEXT: qc.e.li s3, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM194 other_section{{$}}
+# OBJ-NEXT: R_RISCV_QC_E_32 other_section{{$}}
 qc.e.li s3, other_section
 
 # ASM-LABEL: same_section:
@@ -75,7 +75,7 @@ same_section:
 # ASM: qc.li a1, %qc.abs20(0)
 # OBJ: qc.li a1, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM192 *ABS*{{$}}
+# OBJ-NEXT: R_RISCV_QC_ABS20_U *ABS*{{$}}
 # OBJ-NEXT: R_RISCV_RELAX
 qc.li a1, %qc.abs20(abs_symbol)
 
@@ -86,14 +86,14 @@ qc.e.li s1, abs_symbol
 # ASM: qc.li a1, %qc.abs20(undef)
 # OBJ-NEXT: qc.li a1, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM192 undef{{$}}
+# OBJ-NEXT: R_RISCV_QC_ABS20_U undef{{$}}
 # OBJ-NEXT: R_RISCV_RELAX
 qc.li a1, %qc.abs20(undef)
 
 # ASM: qc.e.li s1, undef
 # OBJ-NEXT: qc.e.li s1, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM194 undef{{$}}
+# OBJ-NEXT: R_RISCV_QC_E_32 undef{{$}}
 # OBJ-NEXT: R_RISCV_RELAX
 qc.e.li s1, undef
 
@@ -103,14 +103,14 @@ qc.e.li s1, undef
 # ASM: qc.li a1, %qc.abs20(undef)
 # OBJ-NEXT: qc.li a1, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM192 undef{{$}}
+# OBJ-NEXT: R_RISCV_QC_ABS20_U undef{{$}}
 # OBJ-NEXT: R_RISCV_RELAX
 qc.li a1, %qc.abs20(undef)
 
 # ASM: qc.e.li a2, undef
 # OBJ-NEXT: qc.e.li a2, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM194 undef{{$}}
+# OBJ-NEXT: R_RISCV_QC_E_32 undef{{$}}
 # OBJ-NEXT: R_RISCV_RELAX
 qc.e.li a2, undef
 
