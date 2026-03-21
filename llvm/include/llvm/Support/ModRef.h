@@ -275,6 +275,11 @@ public:
     return ME.getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
+  /// Whether this function accesses inaccessible memory.
+  bool doesAccessInaccessibleMem() const {
+    return isModOrRefSet(getModRef(Location::InaccessibleMem));
+  }
+
   /// Whether location is target memory location.
   bool isTargetMemLoc(IRMemLocation Loc) const {
     for (auto L : targetMemLocations())

@@ -58,6 +58,9 @@ Makes programs 10x faster by doing Special New Thing.
   intrinsics. These are equivalent to `fptrunc` and `fpext` with half
   with a bitcast.
 
+* Calls to floating-point intrinsics implicitly acquire side effects if
+  containing function has strictfp attribute.
+
 * "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
   migrated to first-class denormal_fpenv attribute.
 
