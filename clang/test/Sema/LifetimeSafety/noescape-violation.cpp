@@ -8,9 +8,10 @@ struct [[gsl::Owner]] MyObj {
 };
 
 struct [[gsl::Pointer()]] View {
-  View(const MyObj&); // Borrows from MyObj
+  View(const MyObj& obj [[clang::noescape]]); // Borrows from MyObj
   View();
   void use() const;
+  void let_parameter_escape(const MyObj& obj) const;
 };
 
 View return_noescape_directly(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
@@ -150,9 +151,9 @@ struct ObjConsumer {
   View member_view; // expected-note {{escapes to this field}}
 };
 
-// FIXME: Escaping through another param is not detected.
-void escape_through_param(const MyObj& in, std::vector<View> &v) {
-  v.push_back(in);
+void escape_through_param(const MyObj& in [[clang::noescape]], std::vector<View> &v) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
+  // Has wrong reporting by virtue of how the reportNoescapeViolations is written. Will fix in the next commit!
+  v.push_back(in); // expected-note {{returned here}}
 }
 
 View reassign_to_second(
