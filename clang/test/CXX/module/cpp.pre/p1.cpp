@@ -153,7 +153,7 @@ export module m:n;
 
 //--- unexpected_character_in_pp_module_suffix.cpp
 export module m();
-// expected-error@-1 {{unexpected preprocessing token '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+// expected-error@-1 {{unexpected '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
 
 //--- semi_in_same_line.cpp
 export module m // OK
@@ -189,13 +189,13 @@ module x;
 //--- func_like_macro.cpp
 // #define m(x) x
 export module m
-     (foo); // expected-error {{unexpected preprocessing token '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+     (foo); // expected-error {{unexpected '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
 
 //--- lparen.cpp
 // #define m(x) x
 // #define LPAREN (
 export module m
-    LPAREN foo); // expected-error {{unexpected preprocessing token 'LPAREN' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
+    LPAREN foo); // expected-error {{unexpected '(' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
 
 //--- control_line.cpp
 #if 0 // #1
