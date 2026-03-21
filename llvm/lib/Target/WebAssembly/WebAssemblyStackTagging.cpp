@@ -294,12 +294,8 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
         auto TagEnd = [&](Instruction *Node) {
           untagAlloca(AI, Node, Size, UntagStoreDecl, IntPtrType);
         };
-        if (!DT || !PDT ||
-            !memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec,
-                                          TagEnd)) {
-          for (auto *End : Info.LifetimeEnd)
-            End->eraseFromParent();
-        }
+        memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec,
+                                     TagEnd);
       }
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
