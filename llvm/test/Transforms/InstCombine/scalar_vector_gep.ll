@@ -4,9 +4,6 @@
 ; InstCombine was trying to fold the scalar GEP %getelementptr13, into
 ; the subsequent vector GEPs, resulting in a type mismatch.
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
 define <8 x i64> @pluto.6(ptr %arg1, i64 %mul, <8 x i64> %shufflevector, <8 x i64> %add, <8 x i64> %phi16) {
 ; CHECK-LABEL: define <8 x i64> @pluto.6(
 ; CHECK-SAME: ptr [[ARG1:%.*]], i64 [[MUL:%.*]], <8 x i64> [[SHUFFLEVECTOR:%.*]], <8 x i64> [[ADD:%.*]], <8 x i64> [[PHI16:%.*]]) {
