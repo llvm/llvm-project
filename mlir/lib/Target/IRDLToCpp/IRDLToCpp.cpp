@@ -82,14 +82,17 @@ static std::string toCppName(StringRef input, bool capitalizeFirst = false) {
   else
     output.push_back(input.front());
 
-  // Walk the input converting any `*[._$][a-z]` snake case into `*[A-Z]`
+  // Walk the input converting any `*[._$]+[a-z]` snake case into `*[A-Z]`
   // camelCase.
-  for (size_t pos = 1, e = input.size(); pos < e; ++pos) {
-    if ((input[pos] == '_' || input[pos] == '.' || input[pos] == '$') &&
-        pos != (e - 1) && std::islower(input[pos + 1]))
-      output.push_back(llvm::toUpper(input[++pos]));
-    else
-      output.push_back(input[pos]);
+  bool isSpecial = false;
+  for (char c : input.drop_front()) {
+    if (c == '_' || c == '.' || c == '$')
+      isSpecial = true;
+    else if (isSpecial) {
+      output.push_back(llvm::toUpper(c));
+      isSpecial = false;
+    } else
+      output.push_back(c);
   }
   return output;
 }
