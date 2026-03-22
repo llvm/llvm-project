@@ -76,3 +76,14 @@
 ; Test extracting inner OffloadBinary with --image filter.
 ; RUN: llvm-offload-binary %t7 --image=file=%t8,arch=nested,triple=x-y-z
 ; RUN: diff %t5 %t8
+
+; Test malformed outer OffloadBinary is handled gracefully.
+; RUN: not llvm-offload-binary %S/bad-offload.input 2>&1 | FileCheck --check-prefix=MALFORMED-OUTER %s
+
+; MALFORMED-OUTER: llvm-offload-binary: error: Invalid data was encountered while parsing the file
+
+; Test malformed inner OffloadBinary is handled gracefully.
+; RUN: llvm-offload-binary -o %t9 --image=file=%S/bad-offload.input,arch=nested,triple=x-y-z
+; RUN: not llvm-offload-binary %t9 2>&1 | FileCheck --check-prefix=MALFORMED-INNER %s
+
+; MALFORMED-INNER: llvm-offload-binary: error: Invalid data was encountered while parsing the file
