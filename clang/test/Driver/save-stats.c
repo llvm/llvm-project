@@ -24,6 +24,8 @@
 // RUN: %clang --target=x86_64-unknown-linux -save-stats -flto -o obj/dir/save-stats.exe -Wl,-plugin-opt=-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang --target=x86_64-unknown-freebsd -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang --target=x86_64-unknown-freebsd -save-stats -flto -o obj/dir/save-stats.exe -Wl,-plugin-opt=-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
+// RUN: %clang --target=x86_64-unknown-netbsd -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
+// RUN: %clang --target=x86_64-unknown-netbsd -save-stats -flto -o obj/dir/save-stats.exe -Wl,-plugin-opt=-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang --target=x86_64-unknown-openbsd -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang --target=x86_64-unknown-openbsd -save-stats -flto -o obj/dir/save-stats.exe -Wl,-plugin-opt=-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // RUN: %clang --target=x86_64-unknown-fuchsia -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO

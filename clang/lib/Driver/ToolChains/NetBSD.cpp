@@ -274,6 +274,10 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
+                  D.getLTOMode() == LTOK_Thin);
+
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -436,6 +440,8 @@ Tool *NetBSD::buildAssembler() const {
 }
 
 Tool *NetBSD::buildLinker() const { return new tools::netbsd::Linker(*this); }
+
+bool NetBSD::HasNativeLLVMSupport() const { return true; }
 
 ToolChain::CXXStdlibType NetBSD::GetDefaultCXXStdlibType() const {
   switch (getArch()) {
