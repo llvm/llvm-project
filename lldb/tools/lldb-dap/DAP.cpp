@@ -126,7 +126,7 @@ llvm::StringRef DAP::debug_adapter_path = "";
 DAP::DAP(Log &log, const ReplMode default_repl_mode,
          const std::vector<String> &pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
-    : log(log), transport(transport), reference_storage(log),
+    : log(log), transport(transport), reference_storage(log, configuration),
       broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),

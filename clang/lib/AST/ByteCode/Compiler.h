@@ -406,6 +406,11 @@ private:
     return *this->classify(T->getAs<VectorType>()->getElementType());
   }
 
+  PrimType classifyMatrixElementType(QualType T) const {
+    assert(T->isMatrixType());
+    return *this->classify(T->getAs<MatrixType>()->getElementType());
+  }
+
   bool emitComplexReal(const Expr *SubExpr);
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,

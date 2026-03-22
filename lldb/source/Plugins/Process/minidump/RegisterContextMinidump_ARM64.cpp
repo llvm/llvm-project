@@ -398,7 +398,7 @@ static RegisterInfo g_reg_infos[] = {
         OFFSET(cpsr),
         eEncodingUint,
         eFormatHex,
-        {INV, arm64_dwarf::cpsr, LLDB_REGNUM_GENERIC_FLAGS, INV, reg_cpsr},
+        {INV, INV, LLDB_REGNUM_GENERIC_FLAGS, INV, reg_cpsr},
         nullptr,
         nullptr,
         nullptr,

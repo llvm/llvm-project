@@ -37,9 +37,9 @@ define <vscale x 1 x i1> @splice_nxv1i1_offset_negone(<vscale x 1 x i1> %a, <vsc
 ; VLDEP-NEXT:    vmv.v.i v8, 0
 ; VLDEP-NEXT:    csrr a0, vlenb
 ; VLDEP-NEXT:    vmerge.vim v10, v8, 1, v0
+; VLDEP-NEXT:    srli a0, a0, 3
 ; VLDEP-NEXT:    vmv1r.v v0, v9
 ; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
-; VLDEP-NEXT:    srli a0, a0, 3
 ; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
@@ -121,9 +121,9 @@ define <vscale x 2 x i1> @splice_nxv2i1_offset_negone(<vscale x 2 x i1> %a, <vsc
 ; VLDEP-NEXT:    vmv.v.i v8, 0
 ; VLDEP-NEXT:    csrr a0, vlenb
 ; VLDEP-NEXT:    vmerge.vim v10, v8, 1, v0
+; VLDEP-NEXT:    srli a0, a0, 2
 ; VLDEP-NEXT:    vmv1r.v v0, v9
 ; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
-; VLDEP-NEXT:    srli a0, a0, 2
 ; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
@@ -205,9 +205,9 @@ define <vscale x 4 x i1> @splice_nxv4i1_offset_negone(<vscale x 4 x i1> %a, <vsc
 ; VLDEP-NEXT:    vmv.v.i v8, 0
 ; VLDEP-NEXT:    csrr a0, vlenb
 ; VLDEP-NEXT:    vmerge.vim v10, v8, 1, v0
+; VLDEP-NEXT:    srli a0, a0, 1
 ; VLDEP-NEXT:    vmv1r.v v0, v9
 ; VLDEP-NEXT:    vmerge.vim v8, v8, 1, v0
-; VLDEP-NEXT:    srli a0, a0, 1
 ; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
 ; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
@@ -369,9 +369,9 @@ define <vscale x 16 x i1> @splice_nxv16i1_offset_negone(<vscale x 16 x i1> %a, <
 ; VLDEP-NEXT:    vmv.v.i v10, 0
 ; VLDEP-NEXT:    csrr a0, vlenb
 ; VLDEP-NEXT:    vmerge.vim v12, v10, 1, v0
+; VLDEP-NEXT:    slli a0, a0, 1
 ; VLDEP-NEXT:    vmv1r.v v0, v9
 ; VLDEP-NEXT:    vmerge.vim v8, v10, 1, v0
-; VLDEP-NEXT:    slli a0, a0, 1
 ; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vsetivli zero, 1, e8, m2, ta, ma
 ; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
@@ -453,9 +453,9 @@ define <vscale x 32 x i1> @splice_nxv32i1_offset_negone(<vscale x 32 x i1> %a, <
 ; VLDEP-NEXT:    vmv.v.i v12, 0
 ; VLDEP-NEXT:    csrr a0, vlenb
 ; VLDEP-NEXT:    vmerge.vim v16, v12, 1, v0
+; VLDEP-NEXT:    slli a0, a0, 2
 ; VLDEP-NEXT:    vmv1r.v v0, v9
 ; VLDEP-NEXT:    vmerge.vim v8, v12, 1, v0
-; VLDEP-NEXT:    slli a0, a0, 2
 ; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vsetivli zero, 1, e8, m4, ta, ma
 ; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
@@ -537,9 +537,9 @@ define <vscale x 64 x i1> @splice_nxv64i1_offset_negone(<vscale x 64 x i1> %a, <
 ; VLDEP-NEXT:    vmv.v.i v16, 0
 ; VLDEP-NEXT:    csrr a0, vlenb
 ; VLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; VLDEP-NEXT:    slli a0, a0, 3
 ; VLDEP-NEXT:    vmv1r.v v0, v9
 ; VLDEP-NEXT:    vmerge.vim v8, v16, 1, v0
-; VLDEP-NEXT:    slli a0, a0, 3
 ; VLDEP-NEXT:    addi a0, a0, -1
 ; VLDEP-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
 ; VLDEP-NEXT:    vslidedown.vx v8, v8, a0

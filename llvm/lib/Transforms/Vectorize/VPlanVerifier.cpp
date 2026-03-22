@@ -293,6 +293,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         break;
       }
     }
+    if (const auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
+      unsigned NumOps = ScalarIVSteps->getNumOperands();
+      if (NumOps != 3 && NumOps != 4) {
+        errs() << "VPScalarIVStepsRecipe must have 3 or 4 operands\n";
+        return false;
+      }
+    }
   }
 
   auto *IRBB = dyn_cast<VPIRBasicBlock>(VPBB);

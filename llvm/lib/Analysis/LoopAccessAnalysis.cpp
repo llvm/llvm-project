@@ -235,7 +235,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   // Check if we have a suitable dereferencable assumption we can use.
   Instruction *CtxI = &*L->getHeader()->getFirstNonPHIIt();
   if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
-    if (isa<BranchInst>(LoopPred->getTerminator()))
+    if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
   RetainedKnowledge DerefRK;
@@ -250,8 +250,12 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
                          return true;
                        });
   if (DerefRK) {
-    DerefBytesSCEV =
-        SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));
+    const SCEV *DerefRKSCEV = SE.getSCEV(DerefRK.IRArgValue);
+    Type *CommonTy =
+        SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
+    DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
+    DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
+    DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
   }
 
   if (DerefBytesSCEV->isZero())
@@ -318,14 +322,30 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
-    DenseMap<std::pair<const SCEV *, Type *>,
+    DenseMap<std::pair<const SCEV *, const SCEV *>,
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds,
+    DominatorTree *DT, AssumptionCache *AC,
+    std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
+  auto &DL = Lp->getHeader()->getDataLayout();
+  Type *IdxTy = DL.getIndexType(PtrExpr->getType());
+  const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
+
+  // Delegate to the SCEV-based overload, passing through the cache.
+  return getStartAndEndForAccess(Lp, PtrExpr, EltSizeSCEV, BTC, MaxBTC, SE,
+                                 PointerBounds, DT, AC, LoopGuards);
+}
+
+std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
+    const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
+    const SCEV *BTC, const SCEV *MaxBTC, ScalarEvolution *SE,
+    DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
     std::optional<ScalarEvolution::LoopGuards> &LoopGuards) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
   if (PointerBounds) {
     auto [Iter, Ins] = PointerBounds->insert(
-        {{PtrExpr, AccessTy},
+        {{PtrExpr, EltSizeSCEV},
          {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
     if (!Ins)
       return Iter->second;
@@ -336,8 +356,6 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
   const SCEV *ScEnd;
 
   auto &DL = Lp->getHeader()->getDataLayout();
-  Type *IdxTy = DL.getIndexType(PtrExpr->getType());
-  const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
@@ -795,9 +813,8 @@ namespace {
 /// dependence checking.
 class AccessAnalysis {
 public:
-  /// Read or write access location.
-  typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
-  typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
+  using MemAccessInfo =
+      PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>;
 
   AccessAnalysis(const Loop *TheLoop, AAResults *AA, const LoopInfo *LI,
                  DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
@@ -855,9 +872,7 @@ public:
 
   /// Goes over all memory accesses, checks whether a RT check is needed
   /// and builds sets of dependent accesses.
-  void buildDependenceSets() {
-    processMemAccesses();
-  }
+  void buildDependenceSets();
 
   /// Initial processing of memory accesses determined that we need to
   /// perform dependency checking.
@@ -872,10 +887,10 @@ public:
     DepChecker.clearDependences();
   }
 
-  const MemAccessInfoList &getDependenciesToCheck() const { return CheckDeps; }
+  ArrayRef<MemAccessInfo> getDependenciesToCheck() const { return CheckDeps; }
 
 private:
-  typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
+  using PtrAccessMap = MapVector<MemAccessInfo, SmallSetVector<Type *, 1>>;
 
   /// Adjust the MemoryLocation so that it represents accesses to this
   /// location across all iterations, rather than a single one.
@@ -903,10 +918,6 @@ private:
     return ScopeList;
   }
 
-  /// Go over all memory access and check whether runtime pointer checks
-  /// are needed and build sets of dependency check candidates.
-  void processMemAccesses();
-
   /// Map of all accesses. Values are the types used to access memory pointed to
   /// by the pointer.
   PtrAccessMap Accesses;
@@ -915,7 +926,7 @@ private:
   const Loop *TheLoop;
 
   /// List of accesses that need a further dependence check.
-  MemAccessInfoList CheckDeps;
+  SmallVector<MemAccessInfo, 8> CheckDeps;
 
   /// Set of pointers that are read only.
   SmallPtrSet<Value*, 16> ReadOnlyPtr;
@@ -1509,7 +1520,7 @@ bool AccessAnalysis::canCheckPtrAtRT(
   return CanDoRTIfNeeded;
 }
 
-void AccessAnalysis::processMemAccesses() {
+void AccessAnalysis::buildDependenceSets() {
   // We process the set twice: first we process read-write pointers, last we
   // process read-only pointers. This allows us to skip dependence tests for
   // read-only pointers.
@@ -1532,17 +1543,12 @@ void AccessAnalysis::processMemAccesses() {
   // only need to check for potential pointer dependencies within each alias
   // set.
   for (const auto &AS : AST) {
-    // Note that both the alias-set tracker and the alias sets themselves used
-    // ordered collections internally and so the iteration order here is
-    // deterministic.
-    auto ASPointers = AS.getPointers();
-
-    bool SetHasWrite = false;
+    bool AliasSetHasWrite = false;
 
     // Map of (pointer to underlying objects, accessed address space) to last
     // access encountered.
-    typedef DenseMap<std::pair<const Value *, unsigned>, MemAccessInfo>
-        UnderlyingObjToAccessMap;
+    using UnderlyingObjToAccessMap =
+        DenseMap<std::pair<const Value *, unsigned>, MemAccessInfo>;
     UnderlyingObjToAccessMap ObjToLastAccess;
 
     // Set of access to check after all writes have been processed.
@@ -1550,20 +1556,21 @@ void AccessAnalysis::processMemAccesses() {
 
     // Iterate over each alias set twice, once to process read/write pointers,
     // and then to process read-only pointers.
-    for (int SetIteration = 0; SetIteration < 2; ++SetIteration) {
-      bool UseDeferred = SetIteration > 0;
+
+    auto ProcessAccesses = [&](bool UseDeferred) {
       PtrAccessMap &S = UseDeferred ? DeferredAccesses : Accesses;
 
-      for (const Value *ConstPtr : ASPointers) {
+      // Note that both the alias-set tracker and the alias sets themselves used
+      // ordered collections internally and so the iteration order here is
+      // deterministic.
+      for (const Value *ConstPtr : AS.getPointers()) {
         Value *Ptr = const_cast<Value *>(ConstPtr);
 
         // For a single memory access in AliasSetTracker, Accesses may contain
         // both read and write, and they both need to be handled for CheckDeps.
-        for (const auto &[AC, _] : S) {
-          if (AC.getPointer() != Ptr)
+        for (auto [AccessPtr, IsWrite] : S.keys()) {
+          if (AccessPtr != Ptr)
             continue;
-
-          bool IsWrite = AC.getInt();
 
           // If we're using the deferred access set, then it contains only
           // reads.
@@ -1595,13 +1602,13 @@ void AccessAnalysis::processMemAccesses() {
           // this is a read only check other writes for conflicts (but only if
           // there is no other write to the ptr - this is an optimization to
           // catch "a[i] = a[i] + " without having to do a dependence check).
-          if ((IsWrite || IsReadOnlyPtr) && SetHasWrite) {
+          if ((IsWrite || IsReadOnlyPtr) && AliasSetHasWrite) {
             CheckDeps.push_back(Access);
             IsRTCheckAnalysisNeeded = true;
           }
 
           if (IsWrite)
-            SetHasWrite = true;
+            AliasSetHasWrite = true;
 
           // Create sets of pointers connected by a shared alias set and
           // underlying object.
@@ -1632,7 +1639,10 @@ void AccessAnalysis::processMemAccesses() {
           }
         }
       }
-    }
+    };
+
+    ProcessAccesses(false);
+    ProcessAccesses(true);
   }
 }
 
@@ -2381,7 +2391,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 }
 
 bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
-                                   const MemAccessInfoList &CheckDeps) {
+                                   ArrayRef<MemAccessInfo> CheckDeps) {
 
   MinDepDistBytes = -1;
   SmallPtrSet<MemAccessInfo, 8> Visited;
@@ -2399,8 +2409,8 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
     while (AI != AE) {
       Visited.insert(*AI);
       bool AIIsWrite = AI->getInt();
-      // Check loads only against next equivalent class, but stores also against
-      // other stores in the same equivalence class - to the same address.
+      // Reads from the same pointer don't create extra hazards, but multiple
+      // stores do (WAW), so start from AI for writes and next(AI) for reads.
       EquivalenceClasses<MemAccessInfo>::member_iterator OI =
           (AIIsWrite ? AI : std::next(AI));
       while (OI != AE) {
@@ -2408,8 +2418,9 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
         auto &Acc = Accesses[*AI];
         for (std::vector<unsigned>::iterator I1 = Acc.begin(), I1E = Acc.end();
              I1 != I1E; ++I1)
-          // Scan all accesses of another equivalence class, but only the next
-          // accesses of the same equivalent class.
+          // When checking for WAW (OI == AI) caused by multiple writes to the
+          // same pointer, start I2 at the next access past I1 to avoid
+          // self-comparison.
           for (std::vector<unsigned>::iterator
                    I2 = (OI == AI ? std::next(I1) : Accesses[*OI].begin()),
                    I2E = (OI == AI ? I1E : Accesses[*OI].end());
@@ -2552,6 +2563,10 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   // loop info, as it may be arbitrary.
   LoopBlocksRPO RPOT(TheLoop);
   RPOT.perform(LI);
+
+  // Don't return early as soon as we found a memory access that cannot be
+  // vectorize - HasConvergentOp must still be computed as it is part of LAI's
+  // public API (used by LoopDistribute).
   for (BasicBlock *BB : RPOT) {
     // Scan the BB and collect legal loads and stores. Also detect any
     // convergent instructions.
@@ -2561,12 +2576,12 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           HasConvergentOp = true;
       }
 
-      // With both a non-vectorizable memory instruction and a convergent
-      // operation, found in this loop, no reason to continue the search.
+      // Unsafe to vectorize and we already found a convergent operation, can
+      // early return now.
       if (HasComplexMemInst && HasConvergentOp)
         return false;
 
-      // Avoid hitting recordAnalysis multiple times.
+      // Already unsafe to vectorize; keep scanning for convergent ops.
       if (HasComplexMemInst)
         continue;
 
@@ -2697,6 +2712,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
       if (blockNeedsPredication(ST->getParent(), TheLoop, DT))
         Loc.AATags.TBAA = nullptr;
 
+      // Expand forked pointers (i.e., a phi of multiple strided pointers) into
+      // all alternatives.
       visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
                     [&Accesses, AccessTy, Loc](Value *Ptr) {
                       MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
@@ -2714,14 +2731,14 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
   for (LoadInst *LD : Loads) {
     Value *Ptr = LD->getPointerOperand();
-    // If we did *not* see this pointer before, insert it to the
-    // read list. If we *did* see it before, then it is already in
-    // the read-write list. This allows us to vectorize expressions
-    // such as A[i] += x;  Because the address of A[i] is a read-write
-    // pointer. This only works if the index of A[i] is consecutive.
-    // If the address of i is unknown (for example A[B[i]]) then we may
-    // read a few words, modify, and write a few words, and some of the
-    // words may be written to the same address.
+    // If we did *not* see this pointer before, insert it to the read list. If
+    // we *did* see it before, then it is already in the read-write list. This
+    // allows us to vectorize expressions such as A[i] += x; Because the address
+    // of A[i] is a read-write pointer. This only works if the index of A[i] is
+    // strictly monotonic, which we approximate (conservatively) via
+    // getPtrStride. If the address is unknown (e.g. A[B[i]]) then we may read,
+    // modify, and write overlapping words. Note that "zero stride" is unsafe
+    // and is being handled below.
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
     if (Seen.insert({Ptr, AccessTy}).second ||
@@ -2746,6 +2763,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     if (blockNeedsPredication(LD->getParent(), TheLoop, DT))
       Loc.AATags.TBAA = nullptr;
 
+    // Expand forked pointers (i.e., a phi of multiple strided pointers) into
+    // all alternatives.
     visitPointers(const_cast<Value *>(Loc.Ptr), *TheLoop,
                   [&Accesses, AccessTy, Loc, IsReadOnlyPtr](Value *Ptr) {
                     MemoryLocation NewLoc = Loc.getWithNewPtr(Ptr);
@@ -2753,8 +2772,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
                   });
   }
 
-  // If we write (or read-write) to a single destination and there are no
-  // other reads in this loop then is it safe to vectorize.
+  // If we write (or read-write) to a single destination and there are no other
+  // reads in this loop then is it safe to vectorize: the vectorized stores
+  // preserve ordering via replication or order-preserving @llvm.masked.scatter.
   if (NumReadWrites == 1 && NumReads == 0) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
     return true;

@@ -34,7 +34,7 @@ void f(int i, int j) {
 // CIR:   %[[SEVENTEEN:.*]] = cir.const #cir.int<17> : !s32i
 // CIR:   %[[J_LOAD:.*]] = cir.load align(4) %[[J_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[I_LOAD:.*]] = cir.load align(4) %[[I_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:   %[[ADD:.*]] = cir.binop(add, %[[I_LOAD]], %[[J_LOAD]]) nsw : !s32i
+// CIR:   %[[ADD:.*]] = cir.add nsw %[[I_LOAD]], %[[J_LOAD]] : !s32i
 // CIR:   cir.store align(4) %[[ADD]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.store align(4) %[[SEVENTEEN]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.return

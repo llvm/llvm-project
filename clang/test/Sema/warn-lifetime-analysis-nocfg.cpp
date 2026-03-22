@@ -77,8 +77,9 @@ struct Y {
 };
 
 void dangligGslPtrFromTemporary() {
-  MyIntPointer p = Y{}.a; // TODO
-  (void)p;
+  MyIntPointer p = Y{}.a; // cfg-warning {{object whose reference is captured does not live long enough}} \
+                          // cfg-note {{destroyed here}}
+  (void)p;                // cfg-note {{later used here}}
 }
 
 struct DanglingGslPtrField {
@@ -831,23 +832,6 @@ void test13() {
 
 } // namespace GH100526
 
-namespace std {
-template <typename T>
-class __set_iterator {};
-
-template<typename T>
-struct BB {
-  typedef  __set_iterator<T> iterator;
-};
-
-template <typename T>
-class set {
-public:
-  ~set();
-  typedef typename BB<T>::iterator iterator;
-  iterator begin() const;
-};
-} // namespace std
 namespace GH118064{
 
 void test() {
@@ -1304,3 +1288,8 @@ void test() {
     const auto ptrTSC = StringTemplateSpecC<char>().data();  // Both have attribute         // expected-warning {{temporary whose address is used}}
 }
 } // namespace GH175391
+
+void string_insert_GH_186817() {
+    std::string msg;
+    msg.insert(0, std::string_view(std::string("a temporary")));
+}

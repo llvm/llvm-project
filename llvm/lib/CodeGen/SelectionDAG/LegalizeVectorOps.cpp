@@ -298,7 +298,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     ISD::LoadExtType ExtType = LD->getExtensionType();
     EVT LoadedVT = LD->getMemoryVT();
     if (LoadedVT.isVector() && ExtType != ISD::NON_EXTLOAD)
-      Action = TLI.getLoadExtAction(ExtType, LD->getValueType(0), LoadedVT);
+      Action = TLI.getLoadAction(LD->getValueType(0), LoadedVT, LD->getAlign(),
+                                 LD->getAddressSpace(), ExtType, false);
     break;
   }
   case ISD::STORE: {
@@ -389,6 +390,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTPOP:
+  case ISD::CLMUL:
+  case ISD::CLMULH:
+  case ISD::CLMULR:
   case ISD::SELECT:
   case ISD::VSELECT:
   case ISD::SELECT_CC:
@@ -423,6 +427,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FLDEXP:
   case ISD::FPOWI:
   case ISD::FPOW:
+  case ISD::FCBRT:
   case ISD::FLOG:
   case ISD::FLOG2:
   case ISD::FLOG10:
@@ -456,6 +461,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::USUBO:
   case ISD::SMULO:
   case ISD::UMULO:
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
   case ISD::FCANONICALIZE:
   case ISD::FFREXP:
   case ISD::FMODF:
@@ -1320,6 +1326,15 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   }
   case ISD::FPOW: {
     RTLIB::Libcall LC = RTLIB::getPOW(Node->getValueType(0));
+    if (tryExpandVecMathCall(Node, LC, Results))
+      return;
+
+    // TODO: Try to see if there's a narrower call available to use before
+    // scalarizing.
+    break;
+  }
+  case ISD::FCBRT: {
+    RTLIB::Libcall LC = RTLIB::getCBRT(Node->getValueType(0));
     if (tryExpandVecMathCall(Node, LC, Results))
       return;
 

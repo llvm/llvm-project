@@ -1739,8 +1739,8 @@ bool ComplexDeinterleavingGraph::collectPotentialReductions(BasicBlock *B) {
   if (Factor != 2)
     return false;
 
-  auto *Br = dyn_cast<BranchInst>(B->getTerminator());
-  if (!Br || Br->getNumSuccessors() != 2)
+  auto *Br = dyn_cast<CondBrInst>(B->getTerminator());
+  if (!Br)
     return false;
 
   // Identify simple one-block loop
@@ -2472,7 +2472,7 @@ void ComplexDeinterleavingGraph::processReductionOperation(
   auto *FinalReductionReal = ReductionInfo[Real].second;
   auto *FinalReductionImag = ReductionInfo[Imag].second;
 
-  auto *Br = cast<BranchInst>(BackEdge->getTerminator());
+  auto *Br = cast<CondBrInst>(BackEdge->getTerminator());
   BasicBlock *ExitBB = Br->getSuccessor(Br->getSuccessor(0) == BackEdge);
   Builder.SetInsertPoint(&*ExitBB->getFirstInsertionPt());
 

@@ -52,6 +52,8 @@ public:
                           const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
+  ConstraintType getConstraintType(StringRef Constraint) const override;
+
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
