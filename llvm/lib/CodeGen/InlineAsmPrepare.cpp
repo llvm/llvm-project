@@ -262,13 +262,20 @@ reconstructReturnValue(Type *RetTy, CallInst *NewCall,
     return nullptr;
 
   if (isa<StructType>(RetTy)) {
-    // Multiple outputs. Reconstruct the struct.
+    // Multiple direct outputs. Reconstruct the struct.
+    //
+    // Indirect outputs (isIndirect == true) write through a pointer argument
+    // and do not contribute to the return value struct; skip them.
     Value *Res = PoisonValue::get(RetTy);
     unsigned NewRetIdx = 0;
     unsigned OriginalOutIdx = 0;
 
     for (unsigned I = 0, E = Constraints.size(); I != E; ++I) {
       if (Constraints[I].Type != InlineAsm::isOutput)
+        continue;
+      // Indirect outputs ("=*...") write through a pointer arg and are not
+      // part of the return value; they must not consume a result slot.
+      if (Constraints[I].isIndirect)
         continue;
 
       Value *Val = nullptr;
