@@ -438,6 +438,7 @@ int main(int argc, char **argv) {
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
   MCOptions.AsmVerbose = true;
+  MCOptions.MCNoExecStack = NoExecStack;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MCOptions.InstPrinterOptions = InstPrinterOptions;
 
@@ -685,10 +686,8 @@ int main(int argc, char **argv) {
                                            std::move(CE), std::move(MAB)));
 
     Triple T(TripleName);
-    if (T.isLFI()) {
-      Str->initSections(NoExecStack, *STI);
+    if (T.isLFI())
       initializeLFIMCStreamer(*Str.get(), Ctx, T);
-    }
   } else if (FileType == OFT_Null) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
   } else {
@@ -721,9 +720,6 @@ int main(int argc, char **argv) {
         : DwoOut ? MAB->createDwoObjectWriter(*OS, DwoOut->os())
                : MAB->createObjectWriter(*OS),
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
-    if (NoExecStack)
-      Str->switchSection(
-          Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }
