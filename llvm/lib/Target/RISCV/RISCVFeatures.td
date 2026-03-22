@@ -536,7 +536,9 @@ def FeatureStdExtZbkc
 def HasStdExtZbkc
     : Predicate<"Subtarget->hasStdExtZbkc()">,
       AssemblerPredicate<(all_of FeatureStdExtZbkc),
-          "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+                         "'Zbc' (Carry-Less Multiplication) or "
+                         "'Zbkc' (Carry-less multiply instructions "
+                         "for Cryptography)">;
 
 def FeatureStdExtZbc
     : RISCVExtension<1, 0, "Carry-Less Multiplication",
@@ -545,13 +547,6 @@ def FeatureStdExtZbc
 def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
                    AssemblerPredicate<(all_of FeatureStdExtZbc),
                                       "'Zbc' (Carry-Less Multiplication)">;
-
-def HasStdExtZbcOrZbkc
-    : Predicate<"Subtarget->hasStdExtZbc() || Subtarget->hasStdExtZbkc()">,
-      AssemblerPredicate<(any_of FeatureStdExtZbc, FeatureStdExtZbkc),
-                         "'Zbc' (Carry-Less Multiplication) or "
-                         "'Zbkc' (Carry-less multiply instructions "
-                         "for Cryptography)">;
 
 // Cryptography Extensions
 
@@ -882,6 +877,14 @@ def FeatureStdExtZvdot4a8i
 def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
                          AssemblerPredicate<(all_of FeatureStdExtZvdot4a8i),
                          "'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)">;
+
+// Vector Reordering Structured Data
+def FeatureStdExtZvzip
+    : RISCVExperimentalExtension<0, 1, "Vector Reordering Structured Data",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvzip),
+                         "'Zvzip' (Vector Reordering Structured Data)">;
 
 // Vector instruction predicates
 
@@ -1997,6 +2000,13 @@ def TuneShortForwardBranchILoad
           "Enable short forward branch optimization for load instructions",
           [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
+
+def TuneShortForwardBranchImm
+    : SubtargetFeature<"short-forward-branch-imm", "HasShortForwardBranchImm",
+                       "true", "Enable short forward branch optimization for branches with immediates",
+                       [TuneShortForwardBranchIALU]>;
+def HasShortForwardBranchImm : Predicate<"Subtarget->hasShortForwardBranchImm()">;
+def NoShortForwardBranchImm : Predicate<"!Subtarget->hasShortForwardBranchImm()">;
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.

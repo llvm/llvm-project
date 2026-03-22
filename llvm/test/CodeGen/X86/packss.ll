@@ -535,13 +535,7 @@ define <64 x i8> @_mm512_packss_epi16_manual(<32 x i16> %a, <32 x i16> %b) nounw
 ;
 ; AVX512-LABEL: _mm512_packss_epi16_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
-; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
-; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
-; AVX512-NEXT:    vpmovswb %zmm3, %ymm0
-; AVX512-NEXT:    vpmovswb %zmm2, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpacksswb %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    ret{{[l|q]}}
 ;
 ; X64-SSE-LABEL: _mm512_packss_epi16_manual:
@@ -688,13 +682,7 @@ define <32 x i16> @_mm512_packss_epi32_manual(<16 x i32> %a, <16 x i32> %b) noun
 ;
 ; AVX512-LABEL: _mm512_packss_epi32_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
-; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
-; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
-; AVX512-NEXT:    vpmovsdw %zmm3, %ymm0
-; AVX512-NEXT:    vpmovsdw %zmm2, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpackssdw %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    ret{{[l|q]}}
 ;
 ; X64-SSE-LABEL: _mm512_packss_epi32_manual:

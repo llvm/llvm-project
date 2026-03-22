@@ -2176,6 +2176,9 @@ multiclass sve_int_dup_mask_imm<string asm> {
             (!cast<Instruction>(NAME) i64:$imm)>;
   def : Pat<(nxv2bf16 (splat_vector (bf16 (SVELogicalBFPImmPat i64:$imm)))),
             (!cast<Instruction>(NAME) i64:$imm)>;
+
+  def : Pat<(v2i64 (AArch64dup (i64 (SVELogicalImm64Pat i64:$imm)))),
+            (EXTRACT_SUBREG (!cast<Instruction>(NAME) i64:$imm), zsub)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7511,6 +7514,20 @@ multiclass sve_int_perm_clast_vz<bit ab, string asm, SDPatternOperator op> {
   def : SVE_3_Op_Pat<f64, op, nxv2i1, f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 
   def : SVE_3_Op_Pat<bf16, op, nxv8i1, bf16, nxv8bf16, !cast<Instruction>(NAME # _H)>;
+
+  // Unpacked variants must use container types to ensure that stray bits in
+  // the incoming predicate don't affect the result. We need some extra
+  // insert/extract subreg ops to handle the scalar types correctly.
+  def : Pat<(f16 (op nxv4i1:$Pg, f16:$default, nxv4f16:$vec)),
+            (EXTRACT_SUBREG (!cast<Instruction>(NAME # _S) $Pg, (INSERT_SUBREG (IMPLICIT_DEF), $default, hsub), $vec), hsub)>;
+  def : Pat<(f16 (op nxv2i1:$Pg, f16:$default, nxv2f16:$vec)),
+            (EXTRACT_SUBREG (!cast<Instruction>(NAME # _D) $Pg, (INSERT_SUBREG (IMPLICIT_DEF), $default, hsub), $vec), hsub)>;
+  def : Pat<(bf16 (op nxv4i1:$Pg, bf16:$default, nxv4bf16:$vec)),
+            (EXTRACT_SUBREG (!cast<Instruction>(NAME # _S) $Pg, (INSERT_SUBREG (IMPLICIT_DEF), $default, hsub), $vec), hsub)>;
+  def : Pat<(bf16 (op nxv2i1:$Pg, bf16:$default, nxv2bf16:$vec)),
+            (EXTRACT_SUBREG (!cast<Instruction>(NAME # _D) $Pg, (INSERT_SUBREG (IMPLICIT_DEF), $default, hsub), $vec), hsub)>;
+  def : Pat<(f32 (op nxv2i1:$Pg, f32:$default, nxv2f32:$vec)),
+            (EXTRACT_SUBREG (!cast<Instruction>(NAME # _D) $Pg, (f64 (INSERT_SUBREG (IMPLICIT_DEF), $default, ssub)), $vec), ssub)>;            
 }
 
 class sve_int_perm_clast_zz<bits<2> sz8_64, bit ab, string asm,
