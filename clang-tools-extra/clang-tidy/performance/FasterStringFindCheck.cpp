@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FasterStringFindCheck.h"
+#include "../utils/ASTUtils.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -36,16 +37,6 @@ static std::string makeCharacterLiteral(const StringLiteral *Literal) {
     Result.replace(OpenPos + 1, 1, "\\'");
 
   return Result;
-}
-
-template <typename T>
-static bool forAllLeavesOfTernaryTree(const Expr *Node, const T &HandleLeaf) {
-  Node = Node->IgnoreParenImpCasts();
-  if (const auto *Ternary = dyn_cast<ConditionalOperator>(Node)) {
-    return forAllLeavesOfTernaryTree(Ternary->getTrueExpr(), HandleLeaf) &&
-           forAllLeavesOfTernaryTree(Ternary->getFalseExpr(), HandleLeaf);
-  }
-  return HandleLeaf(Node);
 }
 
 FasterStringFindCheck::FasterStringFindCheck(StringRef Name,
@@ -87,7 +78,7 @@ void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FindFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
   const auto *Literal = Result.Nodes.getNodeAs<Expr>("literal");
 
-  if (!forAllLeavesOfTernaryTree(Literal, [](const Expr *E) {
+  if (!utils::forAllLeavesOfTernaryTree(Literal, [](const Expr *E) {
         const auto *Literal = dyn_cast<StringLiteral>(E);
         return Literal && Literal->getLength() == 1;
       }))
@@ -99,7 +90,7 @@ void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
                          "efficient overload accepting a character")
                     << FindFunc;
 
-  forAllLeavesOfTernaryTree(Literal, [&](const Expr *E) {
+  utils::forAllLeavesOfTernaryTree(Literal, [&](const Expr *E) {
     Diag << FixItHint::CreateReplacement(
         E->getSourceRange(), makeCharacterLiteral(cast<StringLiteral>(E)));
     return true;

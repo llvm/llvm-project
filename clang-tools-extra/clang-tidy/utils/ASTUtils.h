@@ -45,6 +45,23 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
 const IndirectFieldDecl *
 findOutermostIndirectFieldDeclForField(const FieldDecl *FD);
 
+// Given an expression containing arbitrarily nested ternary operators, such as:
+//     foo ? 10 : (bar ? rand() : 0)
+// Executes the given callback on each of the leaf nodes (in this case,
+// on  '10', 'rand()', and '0').
+//
+// If the callback ever returns false, traversal is aborted and
+// 'forAllLeavesOfTernaryTree' returns false too.
+template <typename T>
+inline bool forAllLeavesOfTernaryTree(const Expr *Node, const T &HandleLeaf) {
+  Node = Node->IgnoreParenImpCasts();
+  if (const auto *Ternary = dyn_cast<ConditionalOperator>(Node)) {
+    return forAllLeavesOfTernaryTree(Ternary->getTrueExpr(), HandleLeaf) &&
+           forAllLeavesOfTernaryTree(Ternary->getFalseExpr(), HandleLeaf);
+  }
+  return HandleLeaf(Node);
+}
+
 } // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_ASTUTILS_H
