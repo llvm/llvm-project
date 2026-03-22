@@ -5,11 +5,11 @@ define double @test(double %0) {
 ; CHECK-LABEL: define double @test(
 ; CHECK-SAME: double [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double 1.000000e+00>, double [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x double> [[TMP3]], i32 0
-; CHECK-NEXT:    [[ADD35_I_31721:%.*]] = fadd double [[TMP4]], 0.000000e+00
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul double [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 0.000000e+00, double -0.000000e+00>
+; CHECK-NEXT:    [[ADD35_I_31721:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[ADD35_I_1_3:%.*]] = fadd double [[ADD35_I_31721]], [[TMP4]]
 ; CHECK-NEXT:    [[ADD35_I_2_2:%.*]] = fadd double [[ADD35_I_31721]], [[ADD35_I_1_3]]
 ; CHECK-NEXT:    [[ADD35_I_4_1:%.*]] = fadd double [[ADD35_I_2_2]], [[ADD35_I_2_2]]

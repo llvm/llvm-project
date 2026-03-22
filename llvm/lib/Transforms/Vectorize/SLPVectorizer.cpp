@@ -16690,6 +16690,26 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       VectorizableTree.front()->hasState() &&
       VectorizableTree.front()->getOpcode() == Instruction::ExtractElement)
     return true;
+  if (VectorizableTree.size() == 1 && !ForReduction &&
+      VectorizableTree.front()->isGather() &&
+      any_of(VectorizableTree.front()->Scalars, IsaPred<Instruction>))
+    return true;
+  if (VectorizableTree.size() <= MinTreeSize && !ForReduction &&
+      all_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->isGather() || TE->State == TreeEntry::SplitVectorize;
+      }))
+    return true;
+  if (VectorizableTree.size() == 1 && !ForReduction && SLPCostThreshold < 0 &&
+      VectorizableTree.front()->hasState() &&
+      VectorizableTree.front()->getOpcode() == Instruction::ExtractElement &&
+      (VectorizableTree.front()->getVectorFactor() == 2 ||
+       all_of(
+           VectorizableTree.front()->Scalars,
+           [&](Value *V) {
+             auto *I = dyn_cast<Instruction>(V);
+             return !I || !areAllUsersVectorized(I, UserIgnoreList);
+           })))
+    return true;
   // No need to vectorize inserts of gathered values.
   if (VectorizableTree.size() == 2 &&
       isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
@@ -26367,6 +26387,7 @@ public:
     };
 
     SmallVector<Value *> ReducedValsCandidates;
+    bool AdjustedToOrdered = false;
     while (!Worklist.empty()) {
       auto [TreeN, Level] = Worklist.pop_back_val();
       SmallVector<Value *> PossibleRedVals;
@@ -26384,6 +26405,7 @@ public:
           !PossibleOrderedReductionOps.empty() &&
           RK == ReductionOrdering::Unordered) {
         RK = ReductionOrdering::Ordered;
+        AdjustedToOrdered = true;
         SmallPtrSet<const Instruction *, 4> Ops;
         for (const auto &P : PossibleOrderedReductionOps)
           Ops.insert(P.first);
@@ -26396,9 +26418,17 @@ public:
         PossibleOrderedReductionOps.clear();
       }
     }
+    // Too many integer reduced values candidates for the ordered reductions
+    // after adjustements - try to switch to unordered reductions instead.
+    constexpr unsigned ReducedValsLimit = 1024;
+    if (ReducedValsCandidates.size() > ReducedValsLimit && AdjustedToOrdered &&
+        ReducedValsCandidates.front()->getType()->isIntOrIntVectorTy())
+      return false;
     // Add reduction values. The values are sorted for better vectorization
     // results.
     for (Value *V : ReducedValsCandidates) {
+      if (RK == ReductionOrdering::Ordered && !isa<Instruction>(V))
+        continue;
       size_t Key, Idx;
       std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
                                              /*AllowAlternate=*/false);
@@ -26452,7 +26482,11 @@ public:
                      const TargetLibraryInfo &TLI, AssumptionCache *AC,
                      DominatorTree &DT) {
     constexpr unsigned RegMaxNumber = 4;
-    constexpr unsigned RedValsMaxNumber = 128;
+    const unsigned RedValsMaxNumber =
+        (RK == ReductionOrdering::Ordered &&
+         ReductionRoot->getType()->isIntOrIntVectorTy())
+            ? 48
+            : 128;
     // If there are a sufficient number of reduction values, reduce
     // to a nearby power-of-2. We can safely generate oversized
     // vectors and rely on the backend to split them to legal sizes.
@@ -26856,7 +26890,9 @@ public:
           V.buildTree(VL, IgnoreList);
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
                                                 ReductionOrdering::Unordered)) {
-          if (!AdjustReducedVals())
+          constexpr unsigned CandidatesLimit = 64;
+          if (!AdjustReducedVals(RK == ReductionOrdering::Ordered &&
+                                 Candidates.size() >= CandidatesLimit))
             V.analyzedReductionVals(VL);
           continue;
         }
