@@ -1507,8 +1507,12 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
         OverloadSet.Add(Method, Results.size());
       }
   R.DeclaringEntity = IsInDeclarationContext;
-  R.FunctionCanBeCall = canFunctionBeCalled(R.getDeclaration(), BaseExprType) &&
-                        !IsAddressOfOperand;
+  R.FunctionCanBeCall =
+      canFunctionBeCalled(R.getDeclaration(), BaseExprType) &&
+      // If the user wrote `&` before the function name, assume the
+      // user is more likely to take the address of the function rather
+      // than call it and take the address of the result.
+      !IsAddressOfOperand;
 
   // Insert this result into the set of results.
   Results.push_back(R);
