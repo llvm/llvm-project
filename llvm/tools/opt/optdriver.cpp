@@ -66,6 +66,7 @@ using namespace llvm;
 using namespace opt_tool;
 
 static codegen::RegisterCodeGenFlags CFG;
+static codegen::RegisterMTuneFlag MTF;
 static codegen::RegisterSaveStatsFlag SSF;
 
 // The OptimizationList is automatically populated with registered Passes by the
@@ -489,8 +490,10 @@ optMain(int argc, char **argv,
 
   // If user just wants to list available options, skip module loading.
   auto MAttrs = codegen::getMAttrs();
+  std::string CPUStr = codegen::getCPUStr();
+  std::string TuneCPUStr = codegen::getTuneCPUStr();
   bool SkipModule =
-      codegen::getCPUStr() == "help" || is_contained(MAttrs, "help");
+      CPUStr == "help" || TuneCPUStr == "help" || is_contained(MAttrs, "help");
   if (SkipModule) {
     Triple TheTriple;
     if (!TargetTriple.empty())
@@ -498,15 +501,25 @@ optMain(int argc, char **argv,
     else
       TheTriple = Triple(sys::getDefaultTargetTriple());
 
-    // Create the target machine just to print the help info. Use unique_ptr
-    // to avoid a memory leak.
-    Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
-        codegen::createTargetMachineForTriple(TheTriple.str(),
-                                              GetCodeGenOptLevel());
-    if (Error E = ExpectedTM.takeError()) {
-      errs() << argv[0] << ": " << toString(std::move(E)) << "\n";
+    std::string Error;
+    const Target *TheTarget =
+        TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+    if (!TheTarget) {
+      errs() << argv[0] << ": " << Error << "\n";
       return 1;
     }
+
+    // Pass "help" as CPU for -mtune=help
+    std::string SkipModuleCPU = (TuneCPUStr == "help" ? "help" : CPUStr);
+    TargetOptions Options =
+        codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+    // Create the target machine just to print the help info. Use unique_ptr
+    // to avoid a memory leak.
+    std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
+        TheTriple, SkipModuleCPU, codegen::getFeaturesStr(), Options,
+        codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
+        GetCodeGenOptLevel()));
+    assert(TM && "Could not allocate target machine!");
 
     // If we don't have a module then just exit now. We do this down
     // here since the CPU/Feature help is underneath the target machine
@@ -653,10 +666,15 @@ optMain(int argc, char **argv,
   }
 
   Triple ModuleTriple(M->getTargetTriple());
-  std::string CPUStr, FeaturesStr;
+  // Avoid setting target function attributes if no arch is found, by resetting
+  // them first
+  CPUStr.clear();
+  TuneCPUStr.clear();
+  std::string FeaturesStr;
   std::unique_ptr<TargetMachine> TM;
   if (ModuleTriple.getArch()) {
     CPUStr = codegen::getCPUStr();
+    TuneCPUStr = codegen::getTuneCPUStr();
     FeaturesStr = codegen::getFeaturesStr();
     Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
         codegen::createTargetMachineForTriple(ModuleTriple.str(),
@@ -681,9 +699,9 @@ optMain(int argc, char **argv,
         codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
   }
 
-  // Override function attributes based on CPUStr, FeaturesStr, and command line
-  // flags.
-  codegen::setFunctionAttributes(*M, CPUStr, FeaturesStr);
+  // Override function attributes based on CPUStr, TuneCPUStr, FeaturesStr, and
+  // command line flags.
+  codegen::setFunctionAttributes(*M, CPUStr, FeaturesStr, TuneCPUStr);
 
   // If the output is set to be emitted to standard out, and standard out is a
   // console, print out a warning message and refuse to do it.  We don't
