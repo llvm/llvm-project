@@ -14,7 +14,6 @@
 #include "WhitespaceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <limits>
 #include <optional>
@@ -634,11 +633,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
           Tok = Tok->getNextNonComment();
         return {Tok && Tok->isOneOf(tok::kw_case, tok::kw_default), false};
       }
-      case AlignStrategy::Macro:
-      case AlignStrategy::Normal:
+      default: // AlignStrategy::Macro and AlignStrategy::Normal:
         return {true, false};
-      default:
-        llvm_unreachable("Unhandled AlignStrategy");
       }
     }();
 
