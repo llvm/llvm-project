@@ -22,8 +22,8 @@ irdl.dialect @test_regions_op_missing_name {
 irdl.dialect @test_regions_op_wrong_name {
     irdl.operation @op {
         %r1 = irdl.region
-        // expected-error @below {{name of region #0 must contain only lowercase letters, digits and underscores}}
-        irdl.regions(test$test: %r1)
+        // expected-error @below {{name of region #0 must contain only lowercase letters, digits, underscores, dollar signs or dots}}
+        irdl.regions(testTest: %r1)
     }
 }
 

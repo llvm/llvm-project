@@ -65,16 +65,43 @@ static std::string joinNameList(llvm::ArrayRef<std::string> names) {
   return nameArray;
 }
 
+// Convert a operation/type/attribute name to a valid identifier in C++.
+// The conversion is done by removing dots, underscores and dollar signs and
+// capitalizing the following character. For example, `name.with.dots` will be
+// converted to `nameWithDots` with `capitalizeFirst = false`.
+static std::string toCppName(StringRef input, bool capitalizeFirst = false) {
+  if (input.empty())
+    return "";
+
+  std::string output;
+  output.reserve(input.size());
+
+  // Push the first character, capatilizing if necessary.
+  if (capitalizeFirst && std::islower(input.front()))
+    output.push_back(llvm::toUpper(input.front()));
+  else
+    output.push_back(input.front());
+
+  // Walk the input converting any `*[._$][a-z]` snake case into `*[A-Z]`
+  // camelCase.
+  for (size_t pos = 1, e = input.size(); pos < e; ++pos) {
+    if ((input[pos] == '_' || input[pos] == '.' || input[pos] == '$') &&
+        pos != (e - 1) && std::islower(input[pos + 1]))
+      output.push_back(llvm::toUpper(input[++pos]));
+    else
+      output.push_back(input[pos]);
+  }
+  return output;
+}
+
 /// Generates the C++ type name for a TypeOp
 static std::string typeToCppName(irdl::TypeOp type) {
-  return llvm::formatv("{0}Type",
-                       convertToCamelFromSnakeCase(type.getSymName(), true));
+  return llvm::formatv("{0}Type", toCppName(type.getSymName(), true));
 }
 
 /// Generates the C++ class name for an OperationOp
 static std::string opToCppName(irdl::OperationOp op) {
-  return llvm::formatv("{0}Op",
-                       convertToCamelFromSnakeCase(op.getSymName(), true));
+  return llvm::formatv("{0}Op", toCppName(op.getSymName(), true));
 }
 
 /// Generates TypeStrings from a TypeOp
@@ -193,15 +220,13 @@ static void generateOpGetterDeclarations(irdl::detail::dictionary &dict,
   auto regionAdaptorGetters = std::string{};
 
   for (size_t i = 0, end = opStrings.opOperandNames.size(); i < end; ++i) {
-    const auto op =
-        llvm::convertToCamelFromSnakeCase(opStrings.opOperandNames[i], true);
+    const auto op = toCppName(opStrings.opOperandNames[i], true);
     opGetters += llvm::formatv("::mlir::Value get{0}() { return "
                                "getStructuredOperands({1}).front(); }\n  ",
                                op, i);
   }
   for (size_t i = 0, end = opStrings.opResultNames.size(); i < end; ++i) {
-    const auto op =
-        llvm::convertToCamelFromSnakeCase(opStrings.opResultNames[i], true);
+    const auto op = toCppName(opStrings.opResultNames[i], true);
     resGetters += llvm::formatv(
         R"(::mlir::Value get{0}() { return ::llvm::cast<::mlir::Value>(getStructuredResults({1}).front()); }
   )",
@@ -209,8 +234,7 @@ static void generateOpGetterDeclarations(irdl::detail::dictionary &dict,
   }
 
   for (size_t i = 0, end = opStrings.opRegionNames.size(); i < end; ++i) {
-    const auto op =
-        llvm::convertToCamelFromSnakeCase(opStrings.opRegionNames[i], true);
+    const auto op = toCppName(opStrings.opRegionNames[i], true);
     regionAdaptorGetters += llvm::formatv(
         R"(::mlir::Region &get{0}() { return *getRegions()[{1}]; }
   )",
@@ -235,18 +259,16 @@ static void generateOpBuilderDeclarations(irdl::detail::dictionary &dict,
   auto resultParams =
       llvm::join(llvm::map_range(opStrings.opResultNames,
                                  [](StringRef name) -> std::string {
-                                   return llvm::formatv(
-                                       "::mlir::Type {0}, ",
-                                       llvm::convertToCamelFromSnakeCase(name));
+                                   return llvm::formatv("::mlir::Type {0}, ",
+                                                        toCppName(name));
                                  }),
                  "");
 
   auto operandParams =
       llvm::join(llvm::map_range(opStrings.opOperandNames,
                                  [](StringRef name) -> std::string {
-                                   return llvm::formatv(
-                                       "::mlir::Value {0}, ",
-                                       llvm::convertToCamelFromSnakeCase(name));
+                                   return llvm::formatv("::mlir::Value {0}, ",
+                                                        toCppName(name));
                                  }),
                  "");
 
@@ -716,8 +738,7 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
     for (auto &pathElement : llvm::reverse(namespaceAbsolutePath))
       namespaceCloseStream << "} // namespace " << pathElement << "\n";
 
-    std::string cppShortName =
-        llvm::convertToCamelFromSnakeCase(dialectName, true);
+    std::string cppShortName = toCppName(dialectName, true);
     std::string dialectBaseTypeName = llvm::formatv("{0}Type", cppShortName);
     std::string cppName = llvm::formatv("{0}Dialect", cppShortName);
 
