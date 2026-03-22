@@ -6396,6 +6396,21 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
           Diag(PointOfInstantiation,
                diag::note_inst_declaration_extern_suggestion)
               << Suggestion;
+          // Suggest explicit specialization syntax.
+          std::string SpecSuggestion;
+          {
+            llvm::raw_string_ostream OS(SpecSuggestion);
+            OS << "template <> ";
+            std::string QualName;
+            llvm::raw_string_ostream NameOS(QualName);
+            Var->getNameForDiagnostic(NameOS, getPrintingPolicy(),
+                                      /*Qualified=*/true);
+            Var->getType().print(OS, getPrintingPolicy(), QualName);
+            OS << ";";
+          }
+          Diag(PointOfInstantiation,
+               diag::note_inst_declaration_specialization_suggestion)
+              << SpecSuggestion;
         }
       }
       return;

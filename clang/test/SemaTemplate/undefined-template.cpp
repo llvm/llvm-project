@@ -38,12 +38,14 @@ char func_02() {
   return C1<int>::s_var_1; // expected-warning{{instantiation of variable 'C1<int>::s_var_1' required here, but no definition is available}}
                            // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::s_var_1' is explicitly instantiated in another translation unit}}
                            // expected-note@-2{{use 'extern template char C1<int>::s_var_1;'}}
+                           // expected-note@-3{{use 'template <> char C1<int>::s_var_1;'}}
 }
 
 char func_03() {
   return C1<char>::s_var_2; // expected-warning{{instantiation of variable 'C1<char>::s_var_2' required here, but no definition is available}}
                             // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<char>::s_var_2' is explicitly instantiated in another translation unit}}
                             // expected-note@-2{{use 'extern template char C1<char>::s_var_2;'}}
+                            // expected-note@-3{{use 'template <> char C1<char>::s_var_2;'}}
 }
 
 void func_04() {
@@ -82,6 +84,7 @@ char func_11() {
   return C1<int>::s_tvar_2<long>; // expected-warning{{instantiation of variable 'C1<int>::s_tvar_2<long>' required here, but no definition is available}}
                                   // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::s_tvar_2<long>' is explicitly instantiated in another translation unit}}
                                   // expected-note@-2{{use 'extern template char C1<int>::s_tvar_2<long>;'}}
+                                  // expected-note@-3{{use 'template <> char C1<int>::s_tvar_2<long>;'}}
 }
 
 void func_12() {
@@ -101,6 +104,7 @@ char func_15() {
   return C1<int>::C2<char>::s_var_2;  //expected-warning {{instantiation of variable 'C1<int>::C2<char>::s_var_2' required here, but no definition is available}}
                                       // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::C2<char>::s_var_2' is explicitly instantiated in another translation unit}}
                                       // expected-note@-2{{use 'extern template char C1<int>::C2<char>::s_var_2;'}}
+                                      // expected-note@-3{{use 'template <> char C1<int>::C2<char>::s_var_2;'}}
 }
 
 void func_16() {
@@ -129,6 +133,7 @@ char func_21() {
   return C1<int>::C2<long>::s_tvar_2<long>; // expected-warning{{instantiation of variable 'C1<int>::C2<long>::s_tvar_2<long>' required here, but no definition is available}}
                                   // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::C2<long>::s_tvar_2<long>' is explicitly instantiated in another translation unit}}
                                   // expected-note@-2{{use 'extern template char C1<int>::C2<long>::s_tvar_2<long>;'}}
+                                  // expected-note@-3{{use 'template <> char C1<int>::C2<long>::s_tvar_2<long>;'}}
 }
 
 void func_22(C1<int>::C2<long> *x) {
