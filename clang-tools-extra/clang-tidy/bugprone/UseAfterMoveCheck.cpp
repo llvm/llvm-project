@@ -325,8 +325,7 @@ void UseAfterMoveFinder::getUsesAndReinits(
 }
 
 static std::optional<StringRef> getStringLiteral(const Expr *E) {
-  if (!E)
-    return std::nullopt;
+  assert(E);
   if (const auto *SL = dyn_cast<StringLiteral>(E->IgnoreParenImpCasts()))
     return SL->getString();
   return std::nullopt;
@@ -360,8 +359,7 @@ static bool isSpecifiedAfterMove(const ValueDecl *VD) {
 
   // Use the definition for the declaration, as it is the expected place to add
   // the annotations.
-  const CXXRecordDecl *DefinitionDecl = RecordDecl->getDefinition();
-  if (DefinitionDecl) {
+  if (const CXXRecordDecl *DefinitionDecl = RecordDecl->getDefinition()) {
     for (const auto *Attr : DefinitionDecl->specific_attrs<AnnotateAttr>())
       if (isNullAfterMoveAnnotate(Attr))
         return true;
