@@ -145,11 +145,13 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
       return {std::string(), MemoryEffects::none()};
 
     std::string RestConstraint(I, E);
-    if (isRegMemConstraint(RestConstraint)) {
-      if (IsOutput)
-        NewME |= MemoryEffects::argMemOnly(ModRefInfo::Mod);
-      if (!HasIndirect)
-        NewConstraint += '*';
+    if (isRegMemConstraint(RestConstraint) && !HasIndirect) {
+      // Only add memory effects and the indirect marker for constraints that
+      // are not already indirect. An already-indirect "rm" constraint (e.g.
+      // "=*rm") already uses memory and its effects are accounted for.
+      NewME |= MemoryEffects::argMemOnly(IsOutput ? ModRefInfo::Mod
+                                                  : ModRefInfo::Ref);
+      NewConstraint += '*';
     }
 
     Constraints.push_back(NewConstraint + RestConstraint);
