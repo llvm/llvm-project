@@ -6296,7 +6296,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   }
 
   case ISD::VECTOR_SHUFFLE: {
-    if (!Op.getValueType().isScalableVector())
+    if (!Op.getValueType().isFixedVector())
       return false;
 
     unsigned NumElts = DemandedElts.getBitWidth();
