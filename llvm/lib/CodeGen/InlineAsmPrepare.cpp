@@ -361,7 +361,12 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
 
   // Process constraints.
   unsigned ArgNo = 0;
-  unsigned OutputIdx = 0;
+  // DirectOutputIdx counts only direct (non-indirect) outputs, which are the
+  // ones that appear as elements of the call's return type. Indirect outputs
+  // ("=*...") consume an argument instead and are not in the return struct, so
+  // they must not advance this counter. This is distinct from the flat
+  // constraint index I, which counts all constraints regardless of kind.
+  unsigned DirectOutputIdx = 0;
   for (unsigned I = 0, E = Constraints.size(); I != E; ++I) {
     const InlineAsm::ConstraintInfo &C = Constraints[I];
 
@@ -380,7 +385,7 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
       } else {
         Type *RetTy = CB->getType();
         Type *SlotTy = isa<StructType>(RetTy)
-                           ? cast<StructType>(RetTy)->getElementType(OutputIdx)
+                           ? cast<StructType>(RetTy)->getElementType(DirectOutputIdx)
                            : RetTy;
         unsigned PrevArgCount = NewArgs.size();
         processOutputConstraint(C, SlotTy, EntryBuilder, NewArgs, NewRetTypes,
@@ -390,7 +395,7 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
         // with no corresponding original arg.
         if (NewArgs.size() > PrevArgCount)
           NewArgToOrigArg.push_back(-1);
-        OutputIdx++;
+        DirectOutputIdx++;
       }
     } else if (C.Type == InlineAsm::isInput) {
       Value *ArgVal = CB->getArgOperand(ArgNo);
