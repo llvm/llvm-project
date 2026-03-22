@@ -62590,7 +62590,8 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   // we have specializations to turn 32-bit multiply/shl into LEA or other ops.
   // Also, see the comment in "IsDesirableToPromoteOp" - where we additionally
   // check for a constant operand to the multiply.
-  if ((Opc == ISD::MUL || Opc == ISD::SHL) && VT == MVT::i8)
+  //
+  if ((Opc == ISD::MUL || Opc == ISD::SHL || Opc == ISD::SRL) && VT == MVT::i8)
     return false;
 
   // i16 instruction encodings are longer and some i16 instructions are slow,

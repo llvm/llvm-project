@@ -11481,8 +11481,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     if (N1C->getAPIntValue().uge(BitSize))
       return DAG.getUNDEF(VT);
 
-    if (!LegalTypes || (!TLI.isTypeDesirableForOp(ISD::SRL, VT) &&
-                        TLI.isTypeDesirableForOp(ISD::SRL, SmallVT))) {
+    if (!LegalTypes || (TLI.isTypeDesirableForOp(ISD::SRL, SmallVT))) {
       uint64_t ShiftAmt = N1C->getZExtValue();
       SDLoc DL0(N0);
       SDValue SmallShift =
