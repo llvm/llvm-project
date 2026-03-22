@@ -545,6 +545,8 @@ Python Binding Changes
   ``CodeCompletionResults.results`` should be changed to directly use
   ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
   so it can be used the same as ``CodeCompletionResults.results``.
+- Added a new helper method ``get_version`` to the class ``Config`` to read the
+  version string of the libclang in use.
 
 OpenMP Support
 --------------
