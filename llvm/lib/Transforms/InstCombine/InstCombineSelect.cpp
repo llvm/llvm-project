@@ -668,7 +668,7 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   Value *CmpRHS = Cmp->getOperand(1);
   ICmpInst::Predicate Pred = Cmp->getPredicate();
 
-  if (isKnownNonNegative(TVal, SQ)) {
+  if (TVal->getType()->isIntegerTy() && isKnownNonNegative(TVal, SQ)) {
     // (X < Y) ? C : (X - Y)     (C non-negative)
     if (Pred == CmpInst::ICMP_SLT &&
         match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
@@ -686,7 +686,7 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
     }
   }
 
-  if (isKnownNonNegative(FVal, SQ)) {
+  if (FVal->getType()->isIntegerTy() && isKnownNonNegative(FVal, SQ)) {
     // (X < Y) ? (Y - X) : C    (C non-negative)
     if (Pred == CmpInst::ICMP_SLT &&
         match(TVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS)))) {
