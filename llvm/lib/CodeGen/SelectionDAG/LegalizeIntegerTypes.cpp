@@ -3113,6 +3113,10 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::READCYCLECOUNTER:
   case ISD::READSTEADYCOUNTER: ExpandIntRes_READCOUNTER(N, Lo, Hi); break;
   case ISD::SDIV:        ExpandIntRes_SDIV(N, Lo, Hi); break;
+  case ISD::SDIVREM:
+  case ISD::UDIVREM:
+    ExpandIntRes_DIVREM(N, Lo, Hi);
+    break;
   case ISD::SIGN_EXTEND: ExpandIntRes_SIGN_EXTEND(N, Lo, Hi); break;
   case ISD::SIGN_EXTEND_INREG: ExpandIntRes_SIGN_EXTEND_INREG(N, Lo, Hi); break;
   case ISD::SREM:        ExpandIntRes_SREM(N, Lo, Hi); break;
@@ -4898,6 +4902,71 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
 
   // Use the calculated overflow everywhere.
   ReplaceValueWith(SDValue(Node, 1), Ovf);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, SDValue &Lo,
+                                           SDValue &Hi) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  bool isSigned = (N->getOpcode() == ISD::SDIVREM);
+  RTLIB::Libcall LC = isSigned ? RTLIB::SDIVREM_I128 : RTLIB::UDIVREM_I128;
+
+  // If no fused divrem libcall is available, fall back to separate div and rem
+  // nodes that the existing type-legalization handlers can expand
+  // independently.
+  if (DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
+    unsigned DivOp = isSigned ? ISD::SDIV : ISD::UDIV;
+    unsigned RemOp = isSigned ? ISD::SREM : ISD::UREM;
+    SDValue Ops[2] = {N->getOperand(0), N->getOperand(1)};
+    SDValue Q = DAG.getNode(DivOp, dl, VT, Ops);
+    SDValue R = DAG.getNode(RemOp, dl, VT, Ops);
+    SplitInteger(Q, Lo, Hi);
+    ReplaceValueWith(SDValue(N, 1), R);
+    return;
+  }
+
+  // Emit __divmodti4 / __udivmodti4:
+  //   RetTy libcall(RetTy a, RetTy b, RetTy *rem)
+  // The quotient is the return value; the remainder is written via the pointer.
+  Type *RetTy = VT.getTypeForEVT(*DAG.getContext());
+  TargetLowering::ArgListTy Args;
+  for (const SDValue &Op : N->op_values()) {
+    TargetLowering::ArgListEntry Entry(
+        Op, Op.getValueType().getTypeForEVT(*DAG.getContext()));
+    Entry.IsSExt = isSigned;
+    Entry.IsZExt = !isSigned;
+    Args.push_back(Entry);
+  }
+
+  SDValue FIPtr = DAG.CreateStackTemporary(VT);
+  TargetLowering::ArgListEntry PtrEntry(
+      FIPtr, PointerType::getUnqual(RetTy->getContext()));
+  PtrEntry.IsSExt = PtrEntry.IsZExt = false;
+  Args.push_back(PtrEntry);
+
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(dl)
+      .setChain(DAG.getEntryNode())
+      .setLibCallee(
+          DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+          DAG.getExternalSymbol(LCImpl, TLI.getPointerTy(DAG.getDataLayout())),
+          std::move(Args))
+      .setSExtResult(isSigned)
+      .setZExtResult(!isSigned);
+
+  std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
+
+  // Quotient is the return value; split it into Lo/Hi for the expanded type.
+  SplitInteger(CallInfo.first, Lo, Hi);
+
+  // Remainder is written to the stack temporary; load it back and register
+  // it as the replacement for result 1 of the original SDIVREM/UDIVREM node.
+  int FI = cast<FrameIndexSDNode>(FIPtr)->getIndex();
+  SDValue Rem = DAG.getLoad(
+      VT, dl, CallInfo.second, FIPtr,
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
+  ReplaceValueWith(SDValue(N, 1), Rem);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_SDIV(SDNode *N,

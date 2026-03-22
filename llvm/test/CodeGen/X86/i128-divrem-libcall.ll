@@ -2,83 +2,50 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu   | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu  | FileCheck %s --check-prefix=A64
 
-; Test that sdiv+srem / udiv+urem on i128 with the same operands are candidates
-; for fusing into a single __divmodti4 / __udivmodti4 call.
-;
-; Currently this is a missed optimization: two separate helper calls are emitted
-; (__divti3 + __modti3, or __udivti3 + __umodti3) instead of one fused call.
-; See: DAGCombiner::useDivRem, ExpandIntRes_DIVREM, RuntimeLibcalls SDIVREM_I128.
+; Verify that sdiv+srem / udiv+urem on i128 with the same operands lower to a
+; single __divmodti4 / __udivmodti4 call rather than two separate helper calls.
+; DAGCombiner::useDivRem fuses the pair into ISD::SDIVREM/UDIVREM, which is
+; then expanded to the fused libcall via ExpandIntRes_DIVREM in the type
+; legalizer.
 
 define void @sdivrem_i128(ptr %out, i128 %n, i128 %d) nounwind {
 ; X64-LABEL: sdivrem_i128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    pushq %r15
-; X64-NEXT:    pushq %r14
-; X64-NEXT:    pushq %r13
-; X64-NEXT:    pushq %r12
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    movq %r8, %rbx
-; X64-NEXT:    movq %rcx, %r14
-; X64-NEXT:    movq %rdx, %r15
-; X64-NEXT:    movq %rsi, %r12
-; X64-NEXT:    movq %rdi, %r13
+; X64-NEXT:    subq $16, %rsp
+; X64-NEXT:    movq %r8, %rax
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq %rsp, %r8
 ; X64-NEXT:    movq %rsi, %rdi
 ; X64-NEXT:    movq %rdx, %rsi
 ; X64-NEXT:    movq %rcx, %rdx
-; X64-NEXT:    movq %r8, %rcx
-; X64-NEXT:    callq __divti3@PLT
-; X64-NEXT:    movq %rax, (%rsp) # 8-byte Spill
-; X64-NEXT:    movq %rdx, %rbp
-; X64-NEXT:    movq %r12, %rdi
-; X64-NEXT:    movq %r15, %rsi
-; X64-NEXT:    movq %r14, %rdx
-; X64-NEXT:    movq %rbx, %rcx
-; X64-NEXT:    callq __modti3@PLT
-; X64-NEXT:    movq %rbp, 8(%r13)
-; X64-NEXT:    movq (%rsp), %rcx # 8-byte Reload
-; X64-NEXT:    movq %rcx, (%r13)
-; X64-NEXT:    movq %rdx, 24(%r13)
-; X64-NEXT:    movq %rax, 16(%r13)
-; X64-NEXT:    addq $8, %rsp
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    callq __divmodti4@PLT
+; X64-NEXT:    movaps (%rsp), %xmm0
+; X64-NEXT:    movq %rdx, 8(%rbx)
+; X64-NEXT:    movq %rax, (%rbx)
+; X64-NEXT:    movaps %xmm0, 16(%rbx)
+; X64-NEXT:    addq $16, %rsp
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    popq %r12
-; X64-NEXT:    popq %r13
-; X64-NEXT:    popq %r14
-; X64-NEXT:    popq %r15
-; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
 ;
 ; A64-LABEL: sdivrem_i128:
 ; A64:       // %bb.0:
-; A64-NEXT:    stp x30, x25, [sp, #-64]! // 16-byte Folded Spill
-; A64-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
-; A64-NEXT:    mov x23, x0
-; A64-NEXT:    mov x0, x2
-; A64-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; A64-NEXT:    mov x21, x3
-; A64-NEXT:    mov x22, x2
+; A64-NEXT:    sub sp, sp, #32
+; A64-NEXT:    mov x8, x4
+; A64-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; A64-NEXT:    mov x1, x3
-; A64-NEXT:    mov x2, x4
+; A64-NEXT:    mov x19, x0
+; A64-NEXT:    mov x4, sp
+; A64-NEXT:    mov x0, x2
+; A64-NEXT:    mov x2, x8
 ; A64-NEXT:    mov x3, x5
-; A64-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; A64-NEXT:    mov x19, x5
-; A64-NEXT:    mov x20, x4
-; A64-NEXT:    bl __divti3
-; A64-NEXT:    mov x24, x0
-; A64-NEXT:    mov x25, x1
-; A64-NEXT:    mov x0, x22
-; A64-NEXT:    mov x1, x21
-; A64-NEXT:    mov x2, x20
-; A64-NEXT:    mov x3, x19
-; A64-NEXT:    bl __modti3
-; A64-NEXT:    stp x24, x25, [x23]
-; A64-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; A64-NEXT:    stp x0, x1, [x23, #16]
-; A64-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; A64-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
-; A64-NEXT:    ldp x30, x25, [sp], #64 // 16-byte Folded Reload
+; A64-NEXT:    bl __divmodti4
+; A64-NEXT:    ldp x8, x9, [sp]
+; A64-NEXT:    stp x0, x1, [x19]
+; A64-NEXT:    stp x8, x9, [x19, #16]
+; A64-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; A64-NEXT:    add sp, sp, #32
 ; A64-NEXT:    ret
   %q = sdiv i128 %n, %d
   %r = srem i128 %n, %d
@@ -92,73 +59,41 @@ define void @sdivrem_i128(ptr %out, i128 %n, i128 %d) nounwind {
 define void @udivrem_i128(ptr %out, i128 %n, i128 %d) nounwind {
 ; X64-LABEL: udivrem_i128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    pushq %r15
-; X64-NEXT:    pushq %r14
-; X64-NEXT:    pushq %r13
-; X64-NEXT:    pushq %r12
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    movq %r8, %rbx
-; X64-NEXT:    movq %rcx, %r14
-; X64-NEXT:    movq %rdx, %r15
-; X64-NEXT:    movq %rsi, %r12
-; X64-NEXT:    movq %rdi, %r13
+; X64-NEXT:    subq $16, %rsp
+; X64-NEXT:    movq %r8, %rax
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq %rsp, %r8
 ; X64-NEXT:    movq %rsi, %rdi
 ; X64-NEXT:    movq %rdx, %rsi
 ; X64-NEXT:    movq %rcx, %rdx
-; X64-NEXT:    movq %r8, %rcx
-; X64-NEXT:    callq __udivti3@PLT
-; X64-NEXT:    movq %rax, (%rsp) # 8-byte Spill
-; X64-NEXT:    movq %rdx, %rbp
-; X64-NEXT:    movq %r12, %rdi
-; X64-NEXT:    movq %r15, %rsi
-; X64-NEXT:    movq %r14, %rdx
-; X64-NEXT:    movq %rbx, %rcx
-; X64-NEXT:    callq __umodti3@PLT
-; X64-NEXT:    movq %rbp, 8(%r13)
-; X64-NEXT:    movq (%rsp), %rcx # 8-byte Reload
-; X64-NEXT:    movq %rcx, (%r13)
-; X64-NEXT:    movq %rdx, 24(%r13)
-; X64-NEXT:    movq %rax, 16(%r13)
-; X64-NEXT:    addq $8, %rsp
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    callq __udivmodti4@PLT
+; X64-NEXT:    movaps (%rsp), %xmm0
+; X64-NEXT:    movq %rdx, 8(%rbx)
+; X64-NEXT:    movq %rax, (%rbx)
+; X64-NEXT:    movaps %xmm0, 16(%rbx)
+; X64-NEXT:    addq $16, %rsp
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    popq %r12
-; X64-NEXT:    popq %r13
-; X64-NEXT:    popq %r14
-; X64-NEXT:    popq %r15
-; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
 ;
 ; A64-LABEL: udivrem_i128:
 ; A64:       // %bb.0:
-; A64-NEXT:    stp x30, x25, [sp, #-64]! // 16-byte Folded Spill
-; A64-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
-; A64-NEXT:    mov x23, x0
-; A64-NEXT:    mov x0, x2
-; A64-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; A64-NEXT:    mov x21, x3
-; A64-NEXT:    mov x22, x2
+; A64-NEXT:    sub sp, sp, #32
+; A64-NEXT:    mov x8, x4
+; A64-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; A64-NEXT:    mov x1, x3
-; A64-NEXT:    mov x2, x4
+; A64-NEXT:    mov x19, x0
+; A64-NEXT:    mov x4, sp
+; A64-NEXT:    mov x0, x2
+; A64-NEXT:    mov x2, x8
 ; A64-NEXT:    mov x3, x5
-; A64-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; A64-NEXT:    mov x19, x5
-; A64-NEXT:    mov x20, x4
-; A64-NEXT:    bl __udivti3
-; A64-NEXT:    mov x24, x0
-; A64-NEXT:    mov x25, x1
-; A64-NEXT:    mov x0, x22
-; A64-NEXT:    mov x1, x21
-; A64-NEXT:    mov x2, x20
-; A64-NEXT:    mov x3, x19
-; A64-NEXT:    bl __umodti3
-; A64-NEXT:    stp x24, x25, [x23]
-; A64-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; A64-NEXT:    stp x0, x1, [x23, #16]
-; A64-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; A64-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
-; A64-NEXT:    ldp x30, x25, [sp], #64 // 16-byte Folded Reload
+; A64-NEXT:    bl __udivmodti4
+; A64-NEXT:    ldp x8, x9, [sp]
+; A64-NEXT:    stp x0, x1, [x19]
+; A64-NEXT:    stp x8, x9, [x19, #16]
+; A64-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; A64-NEXT:    add sp, sp, #32
 ; A64-NEXT:    ret
   %q = udiv i128 %n, %d
   %r = urem i128 %n, %d

@@ -1788,6 +1788,8 @@ defset list<RuntimeLibcallImpl> Int128RTLibcalls = {
   def __lshrti3 : RuntimeLibcallImpl<SRL_I128>;
   def __ashrti3 : RuntimeLibcallImpl<SRA_I128>;
   def __multi3 : RuntimeLibcallImpl<MUL_I128>;
+  def __divmodti4 : RuntimeLibcallImpl<SDIVREM_I128>;
+  def __udivmodti4 : RuntimeLibcallImpl<UDIVREM_I128>;
 }
 
 //--------------------------------------------------------------------

@@ -5072,7 +5072,8 @@ SDValue DAGCombiner::useDivRem(SDNode *Node) {
   if (VT.isVector() || !VT.isInteger())
     return SDValue();
 
-  if (!TLI.isTypeLegal(VT) && !TLI.isOperationCustom(DivRemOpc, VT))
+  if (!TLI.isTypeLegal(VT) && !TLI.isOperationCustom(DivRemOpc, VT) &&
+      !isDivRemLibcallAvailable(Node, isSigned, DAG))
     return SDValue();
 
   // If DIVREM is going to get expanded into a libcall,
