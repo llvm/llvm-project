@@ -2,17 +2,17 @@
 // RUN: -config='{CheckOptions: \
 // RUN:  {modernize-pass-by-value.ValuesOnly: true}}' -- -isystem %S/../Inputs/Headers
 #include <s.h>
+#include <type_traits>
 
 // CHECK-FIXES: #include <utility>
 
-template <class T> struct remove_reference      {typedef T type;};
-template <class T> struct remove_reference<T&>  {typedef T type;};
-template <class T> struct remove_reference<T&&> {typedef T type;};
 
+namespace std {
 template <typename T>
 typename remove_reference<T>::type&& move(T&& arg) {
   return static_cast<typename remove_reference<T>::type&&>(arg);
 }
+} // namespace std
 
 struct C {
   C() = default;
@@ -37,7 +37,7 @@ struct D : B {
 struct E : B {
   E() : B() {}
   E(const E &RHS) : B(RHS) {}
-  E(E &&RHS) : B(move(RHS)) {} // ok
+  E(E &&RHS) : B(std::move(RHS)) {} // ok
 };
 
 struct F {
@@ -81,7 +81,7 @@ struct M {
 
 struct N {
   B Mem;
-  N(N &&RHS) : Mem(move(RHS.Mem)) {}
+  N(N &&RHS) : Mem(std::move(RHS.Mem)) {}
 };
 
 struct O {

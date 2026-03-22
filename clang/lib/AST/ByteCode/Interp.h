@@ -1426,11 +1426,11 @@ bool SetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool GetParam(InterpState &S, CodePtr OpPC, uint32_t I) {
+bool GetParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.checkingPotentialConstantExpression()) {
     return false;
   }
-  S.Stk.push<T>(S.Current->getParam<T>(I));
+  S.Stk.push<T>(S.Current->getParam<T>(Index));
   return true;
 }
 
@@ -1786,10 +1786,10 @@ inline bool GetPtrLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
-inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t I) {
+inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.Current->isBottomFrame())
     return false;
-  S.Stk.push<Pointer>(S.Current->getParamPointer(I));
+  S.Stk.push<Pointer>(S.Current->getParamPointer(Index));
   return true;
 }
 
@@ -2310,7 +2310,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     if (N > 1)
       S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
           << N << /*non-array*/ true << 0;
-    return Pointer(Ptr.asFunctionPointer().getFunction(), N);
+    return Pointer(Ptr.asFunctionPointer().Func, N);
   } else if (!Ptr.isBlockPointer()) {
     return std::nullopt;
   }

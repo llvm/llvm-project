@@ -12,36 +12,37 @@ define dso_local i32 @g() local_unnamed_addr {
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT19]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[A_020:%.*]] = phi ptr [ [[A_020_BE:%.*]], [[WHILE_BODY_BACKEDGE:%.*]] ], [ undef, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x ptr> [ [[TMP14:%.*]], [[WHILE_BODY_BACKEDGE]] ], [ undef, [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
+; CHECK-NEXT:    [[B_021:%.*]] = phi ptr [ [[B_021_BE:%.*]], [[WHILE_BODY_BACKEDGE]] ], [ undef, [[ENTRY]] ]
+; CHECK-NEXT:    [[A_20:%.*]] = phi ptr [ [[A_020_BE1:%.*]], [[WHILE_BODY_BACKEDGE]] ], [ undef, [[ENTRY]] ]
+; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[A_020]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A_020]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
-; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, ptr [[A_020]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> splat (i64 1)
+; CHECK-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i32, ptr [[A_20]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B_021]], i64 1
 ; CHECK-NEXT:    switch i32 [[TMP4]], label [[WHILE_BODY_BACKEDGE]] [
 ; CHECK-NEXT:      i32 2, label [[SW_BB:%.*]]
 ; CHECK-NEXT:      i32 4, label [[SW_BB6:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP5]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i32, ptr [[B_021]], i64 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i32
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, ptr [[A_020]], i64 2
+; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, ptr [[A_20]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP8]], ptr [[INCDEC_PTR1]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> splat (i64 2)
+; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, ptr [[A_020]], i64 2
 ; CHECK-NEXT:    br label [[WHILE_BODY_BACKEDGE]]
 ; CHECK:       sw.bb6:
+; CHECK-NEXT:    [[INCDEC_PTR8:%.*]] = getelementptr inbounds i32, ptr [[A_20]], i64 2
 ; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, ptr [[A_020]], i64 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[INCDEC_PTR]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> splat (i64 2)
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x ptr> [[TMP5]], i32 1
-; CHECK-NEXT:    store i32 [[TMP11]], ptr [[TMP13]], align 4
+; CHECK-NEXT:    [[INCDEC_PTR9:%.*]] = getelementptr inbounds i32, ptr [[B_021]], i64 2
+; CHECK-NEXT:    store i32 [[TMP11]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    br label [[WHILE_BODY_BACKEDGE]]
 ; CHECK:       while.body.backedge:
-; CHECK-NEXT:    [[A_020_BE]] = phi ptr [ [[INCDEC_PTR1]], [[WHILE_BODY]] ], [ [[INCDEC_PTR7]], [[SW_BB6]] ], [ [[INCDEC_PTR4]], [[SW_BB]] ]
-; CHECK-NEXT:    [[TMP14]] = phi <2 x ptr> [ [[TMP5]], [[WHILE_BODY]] ], [ [[TMP12]], [[SW_BB6]] ], [ [[TMP9]], [[SW_BB]] ]
+; CHECK-NEXT:    [[A_020_BE]] = phi ptr [ [[INCDEC_PTR]], [[WHILE_BODY]] ], [ [[INCDEC_PTR7]], [[SW_BB6]] ], [ [[INCDEC_PTR5]], [[SW_BB]] ]
+; CHECK-NEXT:    [[B_021_BE]] = phi ptr [ [[TMP6]], [[WHILE_BODY]] ], [ [[INCDEC_PTR9]], [[SW_BB6]] ], [ [[INCDEC_PTR3]], [[SW_BB]] ]
+; CHECK-NEXT:    [[A_020_BE1]] = phi ptr [ [[INCDEC_PTR1]], [[WHILE_BODY]] ], [ [[INCDEC_PTR8]], [[SW_BB6]] ], [ [[INCDEC_PTR4]], [[SW_BB]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret i32 undef
