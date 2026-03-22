@@ -2813,7 +2813,14 @@ bool SPIRVInstructionSelector::selectBarrierInst(MachineInstr &I,
 
   assert(((Scope != SPIRV::Scope::Workgroup) ||
           ((MemSem & SPIRV::MemorySemantics::WorkgroupMemory) > 0)) &&
-         "Spirv Scope: Workgroup must set WorkGroupMemory semantic");
+         "Workgroup Scope must set WorkGroupMemory semantic "
+         "in Barrier instruction");
+
+  assert(((Scope != SPIRV::Scope::Device) ||
+          ((MemSem & SPIRV::MemorySemantics::UniformMemory) > 0 &&
+           (MemSem & SPIRV::MemorySemantics::ImageMemory) > 0)) &&
+         "Device Scope must set UniformMemory and ImageMemory semantic "
+         "in Barrier instruction");
 
   Register MemSemReg = buildI32Constant(MemSem, I);
   Register ScopeReg = buildI32Constant(Scope, I);
