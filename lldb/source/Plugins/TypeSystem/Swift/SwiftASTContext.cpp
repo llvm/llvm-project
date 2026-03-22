@@ -1706,7 +1706,10 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
 
     // Consume any -working-directory arguments.
     StringRef cwd(clang_argument);
-    if (cwd.consume_front("-working-directory")) {
+    if (cwd.consume_front("-working-directory=")) {
+      cur_working_dir = cwd;
+      continue;
+    } else if (cwd.consume_front("-working-directory")) {
       cur_working_dir = cwd;
       continue;
     }
