@@ -10267,7 +10267,7 @@ static std::pair<size_t, size_t> generateKeySubkey(
     } else {
       SubKey = hash_value(I->getOpcode());
     }
-    Key = hash_combine(hash_value(I->getParent()), Key);
+    Key = hash_combine(hash_value(I->getParent()->getNumber()), Key);
   }
   return std::make_pair(Key, SubKey);
 }
@@ -13353,7 +13353,7 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
     return;
 
   auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
-    Key = hash_combine(hash_value(LI->getParent()), Key);
+    Key = hash_combine(hash_value(LI->getParent()->getNumber()), Key);
     Value *Ptr =
         getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth);
     if (LoadKeyUsed.contains(Key)) {
@@ -23205,6 +23205,16 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     return nullptr;
   }
 
+  // Any schedulable copyable with split vectorize parent - skip, not supported
+  // currently.
+  // TODO: investigate fix for this early exit.
+  if (S.areInstructionsWithCopyableElements() && EI.UserTE &&
+      EI.UserTE->State == TreeEntry::SplitVectorize &&
+      any_of(VL, [&](Value *V) {
+        return !S.isNonSchedulable(V) && S.isCopyableElement(V);
+      }))
+    return std::nullopt;
+
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");
@@ -26325,7 +26335,7 @@ public:
     SmallSet<size_t, 2> LoadKeyUsed;
 
     auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
-      Key = hash_combine(hash_value(LI->getParent()), Key);
+      Key = hash_combine(hash_value(LI->getParent()->getNumber()), Key);
       Value *Ptr =
           getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth);
       if (!LoadKeyUsed.insert(Key).second) {

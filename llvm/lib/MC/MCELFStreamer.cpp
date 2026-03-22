@@ -358,10 +358,13 @@ void MCELFStreamer::finalizeCGProfile() {
 
 void MCELFStreamer::finishImpl() {
   // Emit .note.GNU-stack, similar to AsmPrinter::doFinalization.
-  if (const MCTargetOptions *TO = getContext().getTargetOptions())
-    if (TO->MCNoExecStack)
-      switchSection(getContext().getAsmInfo()->getStackSection(getContext(),
-                                                               /*Exec=*/false));
+  MCContext &Ctx = getContext();
+  if (const MCTargetOptions *TO = Ctx.getTargetOptions()) {
+    auto *StackSec = Ctx.getAsmInfo()->getStackSection(Ctx,
+                                                       /*Exec=*/false);
+    if (StackSec && TO->MCNoExecStack)
+      switchSection(StackSec);
+  }
 
   // Emit the .gnu attributes section if any attributes have been added.
   if (!GNUAttributes.empty()) {
