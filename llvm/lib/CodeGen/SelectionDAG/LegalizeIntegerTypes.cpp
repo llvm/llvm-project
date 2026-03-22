@@ -4909,10 +4909,17 @@ void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, SDValue &Lo,
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   bool IsSigned = (N->getOpcode() == ISD::SDIVREM);
-  RTLIB::Libcall LC = IsSigned ? RTLIB::SDIVREM_I128 : RTLIB::UDIVREM_I128;
 
-  // If no fused divrem libcall is available, fall back to separate div and rem.
-  if (DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
+  // Only i128 is handled here; other widths require generalizing this
+  // function to select the libcall by VT.
+  RTLIB::Libcall LC = IsSigned ? RTLIB::SDIVREM_I128 : RTLIB::UDIVREM_I128;
+  assert(VT == MVT::i128 &&
+         "ExpandIntRes_DIVREM only handles i128; generalize by VT first");
+
+  // If no fused divrem libcall is available (or VT is not i128 in release
+  // builds), fall back to separate div and rem.
+  if (VT != MVT::i128 ||
+      DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
     unsigned DivOp = IsSigned ? ISD::SDIV : ISD::UDIV;
     unsigned RemOp = IsSigned ? ISD::SREM : ISD::UREM;
     SDValue Ops[2] = {N->getOperand(0), N->getOperand(1)};

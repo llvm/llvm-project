@@ -2670,6 +2670,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UDIV, MVT::i128, Custom);
     setOperationAction(ISD::SREM, MVT::i128, Custom);
     setOperationAction(ISD::UREM, MVT::i128, Custom);
+    setOperationAction(ISD::SDIVREM, MVT::i128, Custom);
+    setOperationAction(ISD::UDIVREM, MVT::i128, Custom);
     setOperationAction(ISD::FP_TO_SINT, MVT::i128, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i128, Custom);
     setOperationAction(ISD::SINT_TO_FP, MVT::i128, Custom);
@@ -30632,6 +30634,72 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   return DAG.getBitcast(VT, CallInfo.first);
 }
 
+void X86TargetLowering::LowerWin64_i128DIVREM(SDNode *N, SelectionDAG &DAG,
+                                              SDValue &Quot,
+                                              SDValue &Rem) const {
+  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  EVT VT = N->getValueType(0);
+  assert(VT == MVT::i128 && "Unexpected type");
+
+  bool isSigned = N->getOpcode() == ISD::SDIVREM;
+  RTLIB::Libcall LC = isSigned ? RTLIB::SDIVREM_I128 : RTLIB::UDIVREM_I128;
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+
+  SDLoc dl(N);
+
+  // If no fused divrem libcall is available, fall back to separate div and rem.
+  // This goes through LowerWin64_i128OP with the correct pointer-arg ABI.
+  if (LCImpl == RTLIB::Unsupported) {
+    unsigned DivOp = isSigned ? ISD::SDIV : ISD::UDIV;
+    unsigned RemOp = isSigned ? ISD::SREM : ISD::UREM;
+    Quot = DAG.getNode(DivOp, dl, VT, N->getOperand(0), N->getOperand(1));
+    Rem = DAG.getNode(RemOp, dl, VT, N->getOperand(0), N->getOperand(1));
+    return;
+  }
+  SDValue InChain = DAG.getEntryNode();
+
+  TargetLowering::ArgListTy Args;
+
+  // Spill both i128 inputs to stack temporaries and pass as pointers as per
+  // Win64 CC (Win64 has no calling convention for passing i128 by value).
+  for (unsigned i = 0; i < 2; ++i) {
+    EVT ArgVT = N->getOperand(i).getValueType();
+    assert(ArgVT == MVT::i128 && "Unexpected argument type");
+    SDValue StackPtr = DAG.CreateStackTemporary(ArgVT, 16);
+    int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    MachinePointerInfo MPI =
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
+    InChain =
+        DAG.getStore(InChain, dl, N->getOperand(i), StackPtr, MPI, Align(16));
+    Args.emplace_back(StackPtr, PointerType::get(*DAG.getContext(), 0));
+  }
+
+  // Allocate a stack slot for the remainder output pointer.
+  MachineFunction &MF = DAG.getMachineFunction();
+  int RemFI = MF.getFrameInfo().CreateStackObject(16, Align(16), false);
+  SDValue RemPtr = DAG.getFrameIndex(RemFI, getPointerTy(DAG.getDataLayout()));
+  Args.emplace_back(RemPtr, PointerType::get(*DAG.getContext(), 0));
+
+  SDValue Callee =
+      DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
+
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(dl)
+      .setChain(InChain)
+      .setLibCallee(
+          DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
+          static_cast<EVT>(MVT::v2i64).getTypeForEVT(*DAG.getContext()), Callee,
+          std::move(Args))
+      .setInRegister()
+      .setSExtResult(isSigned)
+      .setZExtResult(!isSigned);
+
+  std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
+  Quot = DAG.getBitcast(VT, CallInfo.first);
+  Rem = DAG.getLoad(VT, dl, CallInfo.second, RemPtr,
+                    MachinePointerInfo::getFixedStack(MF, RemFI), Align(16));
+}
+
 SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
                                                    SelectionDAG &DAG,
                                                    SDValue &Chain) const {
@@ -34956,6 +35024,15 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::UREM: {
     SDValue V = LowerWin64_i128OP(SDValue(N,0), DAG);
     Results.push_back(V);
+    return;
+  }
+  case ISD::SDIVREM:
+  case ISD::UDIVREM: {
+    assert(N->getValueType(0) == MVT::i128 && Subtarget.isTargetWin64());
+    SDValue Q, R;
+    LowerWin64_i128DIVREM(N, DAG, Q, R);
+    Results.push_back(Q);
+    Results.push_back(R);
     return;
   }
   case ISD::TRUNCATE: {

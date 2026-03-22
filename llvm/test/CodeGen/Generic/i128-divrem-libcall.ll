@@ -1,9 +1,9 @@
 ; 64-bit targets: fused __divmodti4 / __udivmodti4
-; RUN: %if x86-registered-target         %{ llc < %s -mtriple=x86_64-linux-gnu              | FileCheck %s --check-prefixes=CHECK,FUSED %}
+; RUN: %if x86-registered-target         %{ llc < %s -mtriple=x86_64-linux-gnu              | FileCheck %s --check-prefixes=CHECK,FUSED,SYSV-X64 %}
 ; RUN: %if x86-registered-target         %{ llc < %s -mtriple=x86_64-linux-gnux32           | FileCheck %s --check-prefixes=CHECK,FUSED %}
-; RUN: %if x86-registered-target         %{ llc < %s -mtriple=x86_64-pc-windows-msvc        | FileCheck %s --check-prefixes=CHECK,FUSED %}
+; RUN: %if x86-registered-target         %{ llc < %s -mtriple=x86_64-pc-windows-msvc        | FileCheck %s --check-prefixes=CHECK,WIN64 %}
 ; RUN: %if x86-registered-target         %{ llc < %s -mtriple=x86_64-w64-mingw32            | FileCheck %s --check-prefixes=CHECK,FUSED %}
-; RUN: %if aarch64-registered-target     %{ llc < %s -mtriple=aarch64-linux-gnu             | FileCheck %s --check-prefixes=CHECK,FUSED %}
+; RUN: %if aarch64-registered-target     %{ llc < %s -mtriple=aarch64-linux-gnu             | FileCheck %s --check-prefixes=CHECK,FUSED,SYSV-A64 %}
 ; RUN: %if riscv-registered-target       %{ llc < %s -mtriple=riscv64-linux-gnu             | FileCheck %s --check-prefixes=CHECK,FUSED %}
 ; RUN: %if riscv-registered-target       %{ llc < %s -mtriple=riscv64-linux-gnu -mattr=+m   | FileCheck %s --check-prefixes=CHECK,FUSED %}
 ; RUN: %if powerpc-registered-target     %{ llc < %s -mtriple=powerpc64-linux-gnu           | FileCheck %s --check-prefixes=CHECK,FUSED %}
@@ -21,27 +21,58 @@
 ; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv7-linux-gnueabi           | FileCheck %s --check-prefixes=CHECK,INLINE %}
 ; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv7-none-eabi               | FileCheck %s --check-prefixes=CHECK,INLINE %}
 
+; Win32: i128 fully inline-expanded, no libcalls registered
+; RUN: %if x86-registered-target      %{ llc < %s -mtriple=i686-pc-windows-msvc          | FileCheck %s --check-prefixes=CHECK,WIN32 %}
+
 ; ILP32 targets that fall back to separate __divti3 + __modti3 calls
 ; RUN: %if aarch64-registered-target  %{ llc < %s -mtriple=aarch64_32-apple-watchos      | FileCheck %s --check-prefixes=CHECK,DIVMOD %}
 
-; 64-bit Mac OS: fused ___divmodti4 (extra underscore)
+; 64-bit Mac OS: fused ___divmodti4 (extra underscore, same ABI as Linux AArch64)
 ; RUN: %if x86-registered-target         %{ llc < %s -mtriple=x86_64-apple-macosx           | FileCheck %s --check-prefixes=CHECK,FUSED-DARWIN %}
-; RUN: %if aarch64-registered-target     %{ llc < %s -mtriple=arm64-apple-macosx            | FileCheck %s --check-prefixes=CHECK,FUSED-DARWIN %}
+; RUN: %if aarch64-registered-target     %{ llc < %s -mtriple=arm64-apple-macosx            | FileCheck %s --check-prefixes=CHECK,DARWIN-A64 %}
 
 ; Verify that sdiv+srem / udiv+urem on i128 fuse into a single __divmodti4 /
 ; __udivmodti4 call on targets where the libcall is available (64-bit targets
 ; and wasm), and do not on targets where it is not (32-bit / ILP32).
 ;
-; The lowering varies by target:
-;   64-bit targets and wasm: fused __divmodti4 / __udivmodti4
+; Detailed ABI checks for the four most popular calling conventions:
+;   WIN64     (x86_64 Windows): all args spilled to stack and passed as pointers
+;             in %rcx/%rdx/%r8, quotient returned in %xmm0.
+;   DARWIN-A64 (AArch64 macOS): identical to SYSV-A64 but symbol has an extra
+;             leading underscore (___divmodti4).
+;   SYSV-X64  (x86_64 Linux/BSD): i128 args in register pairs, rem pointer via
+;             %rsp in %r8, quotient returned in %rax:%rdx.
+;   SYSV-A64  (AArch64 Linux): i128 args in x0:x1/x2:x3, rem pointer via sp in
+;             x4, quotient returned in x0:x1.
+;   Win32 (i686-windows-msvc): no i128 libcalls registered, fully inline.
 ;   32-bit targets that lack the fused call may lower to:
 ;     - separate __divti3 + __modti3 / __udivti3 + __umodti3 calls, or
 ;     - fully inline expansion (e.g. i686, bare metal)
 
 define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: sdivrem_i128:
+; SYSV-X64:        movq    %rsp, %r8
+; SYSV-A64:        mov     x4, sp
 ; FUSED:           __divmodti4
 ; FUSED-DARWIN:    ___divmodti4
+; SYSV-X64:        movq    (%rsp),
+; SYSV-X64:        movq    %rax,
+; SYSV-X64:        movq    %rdx,
+; SYSV-A64:        ldp     {{.*}}, [sp]
+; SYSV-A64:        stp     x0, x1,
+; DARWIN-A64:      mov     x4, sp
+; DARWIN-A64:      bl      ___divmodti4
+; DARWIN-A64:      ldp     {{.*}}, [sp]
+; DARWIN-A64:      stp     x0, x1,
+; WIN64:           leaq    {{[0-9]+}}(%rsp), %rcx
+; WIN64:           leaq    {{[0-9]+}}(%rsp), %rdx
+; WIN64:           leaq    {{[0-9]+}}(%rsp), %r8
+; WIN64:           callq   __divmodti4
+; WIN64:           movaps  {{[0-9]+}}(%rsp), %xmm1
+; WIN64:           movaps  %xmm0,
+; WIN32-NOT:       __divmodti4
+; WIN32-NOT:       __divti3
+; WIN32-NOT:       __modti3
 ; DIVMOD:          __divti3
 ; DIVMOD:          __modti3
 ; INLINE-NOT:      __divmodti4
@@ -56,8 +87,28 @@ define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 
 define void @udivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: udivrem_i128:
+; SYSV-X64:        movq    %rsp, %r8
+; SYSV-A64:        mov     x4, sp
 ; FUSED:           __udivmodti4
 ; FUSED-DARWIN:    ___udivmodti4
+; SYSV-X64:        movq    (%rsp),
+; SYSV-X64:        movq    %rax,
+; SYSV-X64:        movq    %rdx,
+; SYSV-A64:        ldp     {{.*}}, [sp]
+; SYSV-A64:        stp     x0, x1,
+; DARWIN-A64:      mov     x4, sp
+; DARWIN-A64:      bl      ___udivmodti4
+; DARWIN-A64:      ldp     {{.*}}, [sp]
+; DARWIN-A64:      stp     x0, x1,
+; WIN64:           leaq    {{[0-9]+}}(%rsp), %rcx
+; WIN64:           leaq    {{[0-9]+}}(%rsp), %rdx
+; WIN64:           leaq    {{[0-9]+}}(%rsp), %r8
+; WIN64:           callq   __udivmodti4
+; WIN64:           movaps  {{[0-9]+}}(%rsp), %xmm1
+; WIN64:           movaps  %xmm0,
+; WIN32-NOT:       __udivmodti4
+; WIN32-NOT:       __udivti3
+; WIN32-NOT:       __umodti3
 ; DIVMOD:          __udivti3
 ; DIVMOD:          __umodti3
 ; INLINE-NOT:      __udivmodti4
