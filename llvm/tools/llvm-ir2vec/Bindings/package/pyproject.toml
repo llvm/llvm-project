@@ -1,0 +1,32 @@
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ir2vec"
+version = "0.1.0"
+description = "Python bindings for IR2Vec, an LLVM IR embedding framework"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = "Apache-2.0 WITH LLVM-exception"
+authors = [
+    { name = "LLVM" }
+]
+keywords = ["llvm", "ir2vec", "compilers", "embeddings", "machine learning"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Development Status :: 3 - Alpha",
+    "Topic :: Software Development :: Compilers",
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.10"
+dependencies = ["numpy"]
+
+[project.urls]
+Homepage = "https://llvm.org/"
+Discussions = "https://discourse.llvm.org/"
+"Issue Tracker" = "https://github.com/llvm/llvm-project/issues"
+"Source Code" = "https://github.com/llvm/llvm-project/tree/main/llvm/tools/llvm-ir2vec"
