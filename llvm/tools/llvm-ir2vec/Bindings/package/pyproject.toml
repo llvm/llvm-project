@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -15,7 +15,7 @@ license = "Apache-2.0 WITH LLVM-exception"
 authors = [
     { name = "LLVM" }
 ]
-keywords = ["llvm", "ir2vec", "compilers", "embeddings", "machine learning"]
+keywords = ["llvm", "ir2vec", "embeddings"]
 classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 3 - Alpha",

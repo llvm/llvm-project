@@ -18,7 +18,8 @@ in machine learning-based compiler optimization.
 
 ## Building a Wheel
 
-These bindings require a pre-built shared library. The following steps build a wheel by packaging the compiled shared library produced during the LLVM build.
+These bindings require a pre-built shared library. The following steps build a
+wheel by packaging the compiled shared library produced during the LLVM build.
 
 **Step 1: Build LLVM with Python bindings enabled**
 
@@ -41,26 +42,24 @@ ninja -C build-llvm
 find build-llvm/ -name "ir2vec*.so"
 ```
 
-**Step 3: Stage and build the wheel**
-
-Copy the shared library, `pyproject.toml`, and `README.md` to a staging
-directory and build the wheel from there:
+**Step 3: Copy the shared library into the package directory**
 ```bash
-mkdir /tmp/ir2vec-wheel
-cp build-llvm/lib/ir2vec*.so /tmp/ir2vec-wheel/
-cp llvm-project/llvm/tools/llvm-ir2vec/Bindings/package/pyproject.toml /tmp/ir2vec-wheel/
-cp llvm-project/llvm/tools/llvm-ir2vec/Bindings/package/README.md /tmp/ir2vec-wheel/
-
-cd /tmp/ir2vec-wheel
-pip install build
-python -m build --wheel --no-isolation
+cp build-llvm/lib/ir2vec*.so \
+  llvm-project/llvm/tools/llvm-ir2vec/Bindings/package/
 ```
 
-The wheel will be written to `/tmp/ir2vec-wheel/dist/`.
-
-**Step 4: Install**
+**Step 4: Build the wheel**
 ```bash
-pip install /tmp/ir2vec-wheel/dist/ir2vec-*.whl
+cd llvm-project/llvm/tools/llvm-ir2vec/Bindings/package/
+pip install --upgrade pip setuptools wheel
+pip wheel . --no-build-isolation --no-cache-dir -w dist/
+```
+
+The wheel will be written to `dist/`.
+
+**Step 5: Install**
+```bash
+pip install dist/ir2vec-*.whl
 ```
 
 ## Usage
