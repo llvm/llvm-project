@@ -1550,8 +1550,8 @@ bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   if ((NewOpc = matchFoldableSExtFromPromotedI32(MI, LI, MRI, A64, UserMI)) !=
       WebAssembly::INSTRUCTION_LIST_END) {
     ResultReg = UserMI->getOperand(0).getReg();
-  } else if ((NewOpc = matchFoldableCopyToI64Ext(MI, LI, MRI, A64,
-                                                 OuterUserMI)) !=
+  } else if ((NewOpc =
+                  matchFoldableCopyToI64Ext(MI, LI, MRI, A64, OuterUserMI)) !=
              WebAssembly::INSTRUCTION_LIST_END) {
     ResultReg = OuterUserMI->getOperand(0).getReg();
   } else if ((NewOpc = matchFoldableAnd(MI, LI, MRI, A64, OuterUserMI)) !=
