@@ -105,7 +105,9 @@ static bool isRegMemConstraint(StringRef Constraint) {
 }
 
 /// Tag "rm" output constraints with '*' to signify that they default to a
-/// memory location.
+/// memory location. Returns the new constraint string and the memory effects
+/// introduced by newly-converted constraints, or {empty, none} if no "rm"
+/// constraints were found that require conversion.
 static std::pair<std::string, MemoryEffects>
 convertConstraintsToMemory(StringRef ConstraintStr) {
   std::vector<std::string> Constraints;
@@ -136,6 +138,15 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
     if (*I == '+') {
       ++I;
       NewConstraint += '+';
+    }
+    if (I == E)
+      return {std::string(), MemoryEffects::none()};
+    // Strip the "early clobber" and "commutability" modifiers before testing
+    // for an "rm" constraint. These modifiers do not affect whether the
+    // constraint allows both registers and memory.
+    while (I != E && (*I == '&' || *I == '%')) {
+      NewConstraint += *I;
+      ++I;
     }
     if (I == E)
       return {std::string(), MemoryEffects::none()};
