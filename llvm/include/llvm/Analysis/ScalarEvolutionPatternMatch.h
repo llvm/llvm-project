@@ -88,8 +88,20 @@ template <typename Class> struct bind_ty {
   }
 };
 
+template <> struct bind_ty<SCEVUse> {
+  SCEVUse &VR;
+
+  bind_ty(SCEVUse &V) : VR(V) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    VR = V;
+    return true;
+  }
+};
+
 /// Match a SCEV, capturing it if we match.
 inline bind_ty<const SCEV> m_SCEV(const SCEV *&V) { return V; }
+inline bind_ty<SCEVUse> m_SCEV(SCEVUse &V) { return V; }
 inline bind_ty<const SCEVConstant> m_SCEVConstant(const SCEVConstant *&V) {
   return V;
 }

@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -mcpu=cortex-m55 -passes=loop-vectorize -disable-output -debug-only=loop-vectorize,vplan -vectorizer-consider-reg-pressure=false %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-NOPRESSURE
-; RUN: opt -mcpu=cortex-m55 -passes=loop-vectorize -disable-output -debug-only=loop-vectorize,vplan -vectorizer-consider-reg-pressure=true %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PRESSURE
+; RUN: opt -mcpu=cortex-m55 -passes=loop-vectorize -disable-output -debug-only=loop-vectorize,vplan -vplan-verify-each -vectorizer-consider-reg-pressure=false %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-NOPRESSURE
+; RUN: opt -mcpu=cortex-m55 -passes=loop-vectorize -disable-output -debug-only=loop-vectorize,vplan -vplan-verify-each -vectorizer-consider-reg-pressure=true %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PRESSURE
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-unknown-none-eabihf"

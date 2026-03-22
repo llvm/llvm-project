@@ -434,9 +434,6 @@ ClangTidyASTConsumerFactory::createASTConsumer(CompilerInstance &Compiler,
 
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
 
-  // We should always skip the declarations in modules.
-  FinderOptions.SkipDeclsInModules = true;
-
   std::unique_ptr<ClangTidyProfiling> Profiling;
   if (Context.getEnableProfiling()) {
     Profiling =

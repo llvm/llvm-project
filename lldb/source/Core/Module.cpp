@@ -1486,6 +1486,9 @@ To run all discovered debug scripts in this session:
       return false;
     }
 
+    LLDB_LOG(GetLog(LLDBLog::Modules), "Auto-loading {0}",
+             scripting_fspec.GetPath());
+
     StreamString scripting_stream;
     scripting_fspec.Dump(scripting_stream.AsRawOstream());
     LoadScriptOptions options;
