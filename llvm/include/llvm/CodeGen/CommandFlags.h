@@ -37,6 +37,8 @@ LLVM_ABI std::string getMArch();
 
 LLVM_ABI std::string getMCPU();
 
+LLVM_ABI std::string getMTune();
+
 LLVM_ABI std::vector<std::string> getMAttrs();
 
 LLVM_ABI Reloc::Model getRelocModel();
@@ -162,6 +164,12 @@ struct RegisterCodeGenFlags {
   LLVM_ABI RegisterCodeGenFlags();
 };
 
+/// Tools that support subtarget tuning should create this object with static
+/// storage to register the -mtune command line option.
+struct RegisterMTuneFlag {
+  LLVM_ABI RegisterMTuneFlag();
+};
+
 /// Tools that support stats saving should create this object with static
 /// storage to register the --save-stats command line option.
 struct RegisterSaveStatsFlag {
@@ -184,21 +192,23 @@ InitTargetOptionsFromCodeGenFlags(const llvm::Triple &TheTriple);
 
 LLVM_ABI std::string getCPUStr();
 
+LLVM_ABI std::string getTuneCPUStr();
+
 LLVM_ABI std::string getFeaturesStr();
 
 LLVM_ABI std::vector<std::string> getFeatureList();
 
 LLVM_ABI void renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val);
 
-/// Set function attributes of function \p F based on CPU, Features, and command
-/// line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Function &F);
+/// Set function attributes of function \p F based on CPU, TuneCPU, Features,
+/// and command line flags.
+LLVM_ABI void setFunctionAttributes(Function &F, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU = "");
 
 /// Set function attributes of functions in Module M based on CPU,
-/// Features, and command line flags.
-LLVM_ABI void setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Module &M);
+/// TuneCPU, Features, and command line flags.
+LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU = "");
 
 /// Should value-tracking variable locations / instruction referencing be
 /// enabled by default for this triple?

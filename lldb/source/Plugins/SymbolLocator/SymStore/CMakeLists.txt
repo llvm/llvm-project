@@ -13,6 +13,9 @@ add_lldb_library(lldbPluginSymbolLocatorSymStore PLUGIN
     lldbCore
     lldbHost
     lldbSymbol
+
+  LINK_COMPONENTS
+    SupportHTTP
   )
 
 add_dependencies(lldbPluginSymbolLocatorSymStore
