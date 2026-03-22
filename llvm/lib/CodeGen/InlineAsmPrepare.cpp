@@ -108,9 +108,9 @@ FunctionPass *llvm::createInlineAsmPreparePass() {
 /// are left unconverted: a tied constraint requires the output and its matched
 /// input to occupy the same location, and that invariant cannot be preserved
 /// when an indirect (*) out-parameter is substituted for the direct output.
-static std::pair<std::string, MemoryEffects>
-convertConstraintsToMemory(StringRef ConstraintStr,
-                           const InlineAsm::ConstraintInfoVector &ParsedConstraints) {
+static std::pair<std::string, MemoryEffects> convertConstraintsToMemory(
+    StringRef ConstraintStr,
+    const InlineAsm::ConstraintInfoVector &ParsedConstraints) {
   if (ConstraintStr.empty())
     return {std::string(), MemoryEffects::none()};
 
@@ -147,7 +147,8 @@ convertConstraintsToMemory(StringRef ConstraintStr,
       // Only add memory effects and the indirect marker for constraints that
       // are not already indirect. An already-indirect "rm" constraint (e.g.
       // "=*rm") already uses memory and its effects are accounted for.
-      // Tied outputs (hasMatchingInput) are also excluded: see function comment.
+      // Tied outputs (hasMatchingInput) are also excluded: see function
+      // comment.
       NewME |= MemoryEffects::argMemOnly(IsOutput ? ModRefInfo::Mod
                                                   : ModRefInfo::Ref);
       NewConstraint += '*';
@@ -170,9 +171,10 @@ static void processOutputConstraint(
   if (C.hasRegMemConstraints() && !C.hasMatchingInput()) {
     // Converted to memory constraint. Create alloca and pass pointer as
     // argument. Tied outputs (hasMatchingInput) are excluded: converting an
-    // "=rm" output that has a tied input would produce an indirect out-parameter
-    // ("=*rm") while the paired input still carries a value, breaking the
-    // tied-operand invariant that both sides occupy the same location.
+    // "=rm" output that has a tied input would produce an indirect
+    // out-parameter ("=*rm") while the paired input still carries a value,
+    // breaking the tied-operand invariant that both sides occupy the same
+    // location.
     AllocaInst *Slot = EntryBuilder.CreateAlloca(SlotTy, nullptr, "asm_mem");
     NewArgs.push_back(Slot);
     ElementTypeAttrs.push_back({NewArgs.size() - 1, SlotTy});
@@ -320,7 +322,8 @@ reconstructReturnValue(Type *RetTy, CallInst *NewCall,
   // Indirect outputs ("=*...") write through a pointer arg and do not appear
   // in the return value, so they must be skipped here.
   for (unsigned I = 0; I < Constraints.size(); ++I) {
-    if (Constraints[I].Type == InlineAsm::isOutput && !Constraints[I].isIndirect) {
+    if (Constraints[I].Type == InlineAsm::isOutput &&
+        !Constraints[I].isIndirect) {
       if (auto [Slot, SlotTy] = OutputAllocas[I]; Slot)
         return Builder.CreateLoad(SlotTy, Slot);
       return NewCall;
@@ -387,9 +390,10 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
         ArgNo++;
       } else {
         Type *RetTy = CB->getType();
-        Type *SlotTy = isa<StructType>(RetTy)
-                           ? cast<StructType>(RetTy)->getElementType(DirectOutputIdx)
-                           : RetTy;
+        Type *SlotTy =
+            isa<StructType>(RetTy)
+                ? cast<StructType>(RetTy)->getElementType(DirectOutputIdx)
+                : RetTy;
         unsigned PrevArgCount = NewArgs.size();
         processOutputConstraint(C, SlotTy, EntryBuilder, NewArgs, NewRetTypes,
                                 ElementTypeAttrs, OutputAllocas, I);
@@ -416,10 +420,9 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   Type *NewRetTy = buildReturnType(NewRetTypes, F.getContext());
 
   // Create the new inline assembly call.
-  CallInst *NewCall =
-      createNewInlineAsm(IA, NewConstraintStr, NewRetTy, NewArgs,
-                         ElementTypeAttrs, NewArgToOrigArg, CB, NewME, Builder,
-                         F.getContext());
+  CallInst *NewCall = createNewInlineAsm(
+      IA, NewConstraintStr, NewRetTy, NewArgs, ElementTypeAttrs,
+      NewArgToOrigArg, CB, NewME, Builder, F.getContext());
 
   // Reconstruct the return value and update users.
   if (!CB->use_empty()) {
