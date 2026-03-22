@@ -4991,8 +4991,8 @@ static void TryReferenceListInitialization(Sema &S,
         // case the type of the prvalue is the type of x in the declaration U
         // x[] H, where H is the initializer list.
 
-        // The call to AddReferenceBindingStep above converts the rvalue to an xvalue.
-        // Convert that xvalue to the incomplete array type.
+        // The call to AddReferenceBindingStep above converts the rvalue to an
+        // xvalue. Convert that xvalue to the incomplete array type.
         Sequence.AddQualificationConversionStep(cv1T1, clang::VK_XValue);
       }
       if (T1Quals.hasAddressSpace())
