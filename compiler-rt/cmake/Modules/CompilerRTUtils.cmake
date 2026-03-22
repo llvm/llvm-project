@@ -424,6 +424,18 @@ macro(construct_compiler_rt_default_triple)
     endif()
   endif()
 
+  # Try to locate the GPU loader utility for GPU unit tests.
+  if(COMPILER_RT_GPU_BUILD AND NOT COMPILER_RT_EMULATOR)
+    get_filename_component(_compiler_path "${CMAKE_C_COMPILER}" DIRECTORY)
+    find_program(COMPILER_RT_EMULATOR
+                 NAMES llvm-gpu-loader NO_DEFAULT_PATH
+                 PATHS ${LLVM_BINARY_DIR}/bin ${_compiler_path})
+    if(COMPILER_RT_EMULATOR)
+      message(STATUS "Found GPU loader for testing: ${COMPILER_RT_EMULATOR}")
+    endif()
+    unset(_compiler_path)
+  endif()
+
   # Determine if test target triple is specified explicitly, and doesn't match the
   # default.
   if(NOT COMPILER_RT_DEFAULT_TARGET_TRIPLE STREQUAL LLVM_TARGET_TRIPLE)

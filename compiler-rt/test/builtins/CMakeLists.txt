@@ -49,6 +49,19 @@ foreach(arch ${BUILTIN_TEST_ARCH})
   set(BUILTINS_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}-${OS_NAME}" BUILTINS_TEST_CONFIG_SUFFIX)
   get_test_cc_for_arch(${arch} BUILTINS_TEST_TARGET_CC BUILTINS_TEST_TARGET_CFLAGS)
+
+  if(COMPILER_RT_GPU_BUILD)
+    if("${arch}" MATCHES "amdgcn")
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+           -Wno-multi-gpu -flto -mcpu=native -nogpulib -startfiles -stdlib)
+    elseif("${arch}" MATCHES "nvptx")
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+           -Wno-multi-gpu -flto -march=native -nogpulib -startfiles -stdlib)
+    endif()
+    list(APPEND BUILTINS_TEST_TARGET_CFLAGS --target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
+    string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
+  endif()
+
   if (${arch} STREQUAL "armhf")
     list(APPEND BUILTINS_TEST_TARGET_CFLAGS -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
