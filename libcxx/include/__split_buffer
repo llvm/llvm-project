@@ -196,9 +196,12 @@ public:
     std::swap(__back_cap_, __back_capacity);
   }
 
-  /// `__relocate` relocates the objects in `[__begin_, __size())` into the front of `__buffer` and
-  /// swaps the buffers of `*this` and `__buffer`. It is assumed that `__buffer` provides space for
-  /// exactly `__size()` objects in the front. This function has a strong exception guarantee.
+  /// Relocates the objects in the range `[__first, __last)` to the front of the buffer, then swaps
+  /// `__first`, `__last`, and `__capacity` with `__begin_`, `__end_`, and `__back_cap_`,
+  /// respectively.
+  ///
+  /// Precondition: `__front_spare() == __last - __first`.
+  /// Exceptions: This function has a strong exception guarantee.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __relocate(pointer& __first, pointer& __last, pointer& __capacity) {
     auto __size      = __last - __first;
@@ -212,11 +215,15 @@ public:
     __front_cap_ = __begin_;
   }
 
-  /// `__relocate_with_pivot` relocates the objects in `[__begin_, __p)` into the front of `__buffer`,
-  /// the objects in `[__p, end())` into the back of `__buffer` and swaps the buffers of `*this` and
-  /// `__buffer`. It is assumed that `__buffer` provides space for exactly `(__p - __begin_ptr())`
-  /// objects in the front and space for at least `(__size() - __p)` objects in the back. This function
-  /// has a strong exception guarantee if `__begin_ == __p || __size() == __p`.
+  /// Relocates the objects in the range `[__first, __pivot)` to the front of the buffer, the
+  /// objects in `[__pivot, __last)` into the back of the buffer, then swaps `__first`, `__last`,
+  /// and `__capacity` with `__begin_`, `__end_`, and `__back_cap_`, respectively.
+  ///
+  /// Preconditions:
+  ///   * `__front_spare() == __pivot - __first`
+  ///   * `__back_spare() == __last - __pivot`
+  /// Exceptions: This function has a strong exception guarantee if `__first == __pivot` or
+  /// `__last - __first == __pivot`.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
   __relocate_with_pivot(pointer __pivot, pointer& __first, pointer& __last, pointer& __capacity) {
     pointer __result = __begin_;
@@ -395,9 +402,12 @@ public:
     std::swap(__cap_, __capacity);
   }
 
-  /// `__relocate` relocates the objects in `[__begin_, __size())` into the front of `__buffer` and
-  /// swaps the buffers of `*this` and `__buffer`. It is assumed that `__buffer` provides space for
-  /// exactly `__size()` objects in the front. This function has a strong exception guarantee.
+  /// Relocates the objects in the range `[__first, __first + __n)` to the front of the buffer, then
+  /// swaps `__first`, `__n`, and `__capacity` with `__begin_`, `__size_`, and `__capacity_`,
+  /// respectively.
+  ///
+  /// Precondition: `__front_spare() == __n`.
+  /// Exceptions: This function has a strong exception guarantee.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __relocate(pointer& __first, size_type& __n, size_type& __capacity) {
     auto __new_begin = __begin_ - __n;
@@ -411,11 +421,15 @@ public:
     __front_cap_ = __begin_;
   }
 
-  /// `__relocate_with_pivot` relocates the objects in `[__begin_, __p)` into the front of `__buffer`,
-  /// the objects in `[__p, end())` into the back of `__buffer` and swaps the buffers of `*this` and
-  /// `__buffer`. It is assumed that `__buffer` provides space for exactly `(__p - __begin_ptr())`
-  /// objects in the front and space for at least `(__size() - __p)` objects in the back. This function
-  /// has a strong exception guarantee if `__begin_ == __p || __size() == __p`.
+  /// Relocates the objects in the range `[__first, __pivot)` to the front of the buffer, the
+  /// objects in `[__pivot, __first + __n)` to the back of the buffer, then swaps `__first`, `__n`,
+  /// and `__capacity` with `__begin_`, `__size_`, and `__capacity_`, respectively.
+  ///
+  /// Preconditions:
+  ///   * `__front_spare() == __pivot - __first`
+  ///   * `__back_spare() == __last - __pivot`
+  /// Exceptions: This function has a strong exception guarantee if `__first == __pivot` or
+  /// `__first + __n == __pivot`.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
   __relocate_with_pivot(pointer __pivot, pointer& __first, size_type& __n, size_type& __capacity) {
     pointer __result = __begin_;

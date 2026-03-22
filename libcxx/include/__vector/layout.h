@@ -94,9 +94,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///
 ///    Figure 2: A visual representation of this a size-based layout. Blank boxes are not a part
 ///    of the vector's allocated buffer.
-//
-/// We conducted an extensive A/B test on production software to confirm that the size-based layout
-/// improves compute performance by 0.5%, and decreases system memory usage by up to 0.33%.
 ///
 /// **Class design**
 ///
@@ -106,7 +103,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///    3. given (1) and (2), to have no logically identical components in multiple `#ifdef` clauses.
 ///
 /// To facilitate these goals, there is a single `__vector_layout` definition. Users must choose
-/// their vector's layout when libc++ is being configured, so there we don't need to manage multiple
+/// their vector's layout when libc++ is being configured, so there is no need to manage multiple
 /// vector layout types (e.g. `__vector_size_layout`, `__vector_pointer_layout`, etc.). In doing so,
 /// we reduce a significant portion of duplicate code.
 template <class _Tp, class _Allocator>
