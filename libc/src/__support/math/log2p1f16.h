@@ -39,7 +39,7 @@ LIBC_INLINE float16 log2p1f16(float16 x) {
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
 
-  // If x is +-0, NaN, +/-inf, or |x| <= 2^-3.
+  // If x is NaN, +/-inf, or |x| <= 2^-3.
   if (LIBC_UNLIKELY(x_abs <= 0x3000U || x_abs >= 0x7c00U)) {
     // log2p1(NaN) = NaN
     if (x_bits.is_nan()) {
@@ -49,21 +49,6 @@ LIBC_INLINE float16 log2p1f16(float16 x) {
       }
 
       return x;
-    }
-
-    // log2p1(+/-0) = +/-0
-    if (x_abs == 0U)
-      return x;
-
-    // log2p1(+inf) = +inf
-    if (x_u == 0x7c00U)
-      return FPBits::inf().get_val();
-
-    // log2p1(-inf) = NaN
-    if (x_abs >= 0x7c00U) {
-      fputil::set_errno_if_required(EDOM);
-      fputil::raise_except_if_required(FE_INVALID);
-      return FPBits::quiet_nan().get_val();
     }
 
     // When |x| <= 2^-3, use a degree-5 minimax polynomial on x.
@@ -77,6 +62,10 @@ LIBC_INLINE float16 log2p1f16(float16 x) {
     //                   [-2^-3, 2^-3]);
     //   > Q;
     if (x_abs <= 0x3000U) {
+      // log2p1(+/-0) = +/-0
+      if (x_abs == 0U)
+        return x;
+
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       constexpr size_t N_LOG2P1F16_EXCEPTS = 11;
       constexpr fputil::ExceptValues<float16, N_LOG2P1F16_EXCEPTS>
@@ -116,6 +105,15 @@ LIBC_INLINE float16 log2p1f16(float16 x) {
                                 0x1.ec6c5p-2f, -0x1.763338p-2f,
                                 0x1.2bcd3cp-2f));
     }
+
+    // log2p1(+inf) = +inf
+    if (x_u == 0x7c00U)
+      return FPBits::inf().get_val();
+
+    // log2p1(-inf) = NaN
+    fputil::set_errno_if_required(EDOM);
+    fputil::raise_except_if_required(FE_INVALID);
+    return FPBits::quiet_nan().get_val();
   }
 
   // log2p1(-1) = -inf
