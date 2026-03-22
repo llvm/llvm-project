@@ -141,7 +141,7 @@ bool SPIRVPrepareGlobals::runOnModule(Module &M) {
   //       inserted via feature predicate use, but in the future this will need
   //       revisiting if we start making more liberal use of the intrinsic.
   if (Function *F = Intrinsic::getDeclarationIfExists(
-        &M, Intrinsic::spv_named_boolean_spec_constant))
+          &M, Intrinsic::spv_named_boolean_spec_constant))
     Changed |= tryAssignPredicateSpecConstIDs(M, F);
 
   return Changed;
