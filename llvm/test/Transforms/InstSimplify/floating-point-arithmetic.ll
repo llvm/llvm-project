@@ -640,11 +640,12 @@ define float @fabs_sqrt_nsz(float %a) {
   ret float %fabs
 }
 
-; The fabs can be eliminated because we're nsz and nnan.
+; The fabs cannot be eliminated because sqrt nsz may return -0.0.
 define float @fabs_sqrt_nnan_nsz(float %a) {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[A:%.*]])
-; CHECK-NEXT:    ret float [[SQRT]]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
 ;
   %sqrt = call nnan nsz float @llvm.sqrt.f32(float %a)
   %fabs = call float @llvm.fabs.f32(float %sqrt)

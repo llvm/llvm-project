@@ -252,10 +252,11 @@ define float @fabs_sqrt_nsz(float %a) #0 {
 define float @fabs_sqrt_nnan_nsz(float %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    ret float [[SQRT]]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
+; CHECK-NEXT:    ret float [[FABS]]
 ;
   %sqrt = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
-  %fabs = call float @llvm.fabs.f32(float %sqrt) #0
+  %fabs = call float @llvm.fabs.f32(float %sqrt)
   ret float %fabs
 }
 

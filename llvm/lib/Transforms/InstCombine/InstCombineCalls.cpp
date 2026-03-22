@@ -3115,6 +3115,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Cond, *TVal, *FVal;
     Value *Arg = II->getArgOperand(0);
     Value *X;
+
+    // If instruction is fneg and has nsz flag, remove it
+    if (Instruction *I = dyn_cast<Instruction>(Arg))
+      if (I->hasNoSignedZeros() && I->getOpcode() == Instruction::FNeg) {
+        I->setHasNoSignedZeros(false);
+        return &CI;
+      }
+
     // fabs (-X) --> fabs (X)
     if (match(Arg, m_FNeg(m_Value(X)))) {
         CallInst *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);

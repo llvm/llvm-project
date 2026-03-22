@@ -6538,6 +6538,12 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   switch (IID) {
   case Intrinsic::fabs: {
     KnownFPClass KnownClass = computeKnownFPClass(Op0, fcAllFlags, Q);
+
+    // If Op0 has the flag nsz, do not simplify
+    if (Instruction *I = dyn_cast<Instruction>(Op0))
+      if (I->hasNoSignedZeros())
+        break;
+
     if (KnownClass.SignBit == false)
       return Op0;
 
