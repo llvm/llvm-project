@@ -2978,3 +2978,28 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
 
   return CreateAnnotationAttr(AL, Str, Args);
 }
+
+bool Sema::DiagnoseVLAInLocalClass(QualType T, SourceLocation Loc) {
+  if (T.isNull() || !T->isVariablyModifiedType())
+    return false;
+
+  const auto *TT = dyn_cast<TypedefType>(T.getTypePtr());
+  if (!TT)
+    return false;
+
+  const auto *MD = dyn_cast<CXXMethodDecl>(CurContext);
+  if (!MD)
+    return false;
+
+  const CXXRecordDecl *RD = MD->getParent();
+  if (!RD->isLocalClass())
+    return false;
+
+  const TypedefNameDecl *TD = TT->getDecl();
+  if (TD->getDeclContext()->getRedeclContext()->Equals(RD))
+    return false;
+
+  Diag(Loc, diag::err_vmt_declared_outside_of_local_class) << T << RD;
+  Diag(TD->getLocation(), diag::note_vmt_type_declared_here);
+  return true;
+}

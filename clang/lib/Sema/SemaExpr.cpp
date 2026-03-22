@@ -4865,6 +4865,8 @@ Sema::ActOnUnaryExprOrTypeTraitExpr(SourceLocation OpLoc,
   if (IsType) {
     TypeSourceInfo *TInfo;
     (void) GetTypeFromParser(ParsedType::getFromOpaquePtr(TyOrEx), &TInfo);
+    if (TInfo)
+      DiagnoseVLAInLocalClass(TInfo->getType(), OpLoc);
     return CreateUnaryExprOrTypeTraitExpr(TInfo, OpLoc, ExprKind, ArgRange);
   }
 

@@ -14608,6 +14608,15 @@ public:
   bool DiagnoseUnexpandedParameterPack(TemplateArgumentLoc Arg,
                                        UnexpandedParameterPackContext UPPC);
 
+  /// If the given type is a variably modified type from an enclosing scope
+  /// used inside a local class method, diagnose the error.
+  ///
+  /// \param T The type of the declaration or expression being checked.
+  /// \param Loc The source location, used for diagnostics.
+  ///
+  /// \returns true if an error was diagnosed, false otherwise.
+  bool DiagnoseVLAInLocalClass(QualType T, SourceLocation Loc);
+
   /// Collect the set of unexpanded parameter packs within the given
   /// template argument.
   ///

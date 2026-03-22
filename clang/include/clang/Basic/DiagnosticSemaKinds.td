@@ -14038,4 +14038,9 @@ def err_cuda_device_kernel_launch_not_supported
 def err_cuda_device_kernel_launch_require_rdc
     : Error<"kernel launch from __device__ or __global__ function requires "
             "relocatable device code (i.e. requires -fgpu-rdc)">;
+
+def err_vmt_declared_outside_of_local_class : Error<
+  "variably modified type %0 from enclosing scope cannot be used in local class %1">;
+def note_vmt_type_declared_here : Note<
+  "type declared here">;
 } // end of sema component.
