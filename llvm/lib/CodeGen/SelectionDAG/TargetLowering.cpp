@@ -12015,8 +12015,8 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
     }
   }
 
-  SDValue TopHalf;
   SDValue BottomHalf;
+  SDValue TopHalf;
   EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
 
   static const unsigned Ops[2][3] =
