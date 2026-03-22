@@ -2252,4 +2252,7 @@ Areas Requiring Attention
 #. Make required changes to make sure that coroutine optimizations work with
    LTO.
 
+#. In Windows EH, exception objects must be allocated on the stack (see :ref:wineh for details).
+   We identify an exception object as an alloca that has `catchpad` users.
+
 #. More tests, more tests, more tests
