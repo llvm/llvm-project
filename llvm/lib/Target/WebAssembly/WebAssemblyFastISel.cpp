@@ -1336,33 +1336,6 @@ static unsigned getZExtLoadOpcode(unsigned LoadSize, bool I64Result, bool A64) {
   }
 }
 
-static unsigned getZExtLoadOpcodeFromAnd(MachineInstr *MI,
-                                         MachineRegisterInfo &MRI,
-                                         const LoadInst *LI, bool A64) {
-  uint64_t Mask = 0;
-  bool IsConstant = false;
-  for (unsigned I = 1; I <= 2; ++I) {
-    Register Reg = MI->getOperand(I).getReg();
-    MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
-    if (DefMI && (DefMI->getOpcode() == WebAssembly::CONST_I32 ||
-                  DefMI->getOpcode() == WebAssembly::CONST_I64)) {
-      Mask = DefMI->getOperand(1).getImm();
-      IsConstant = true;
-      break;
-    }
-  }
-
-  if (!IsConstant)
-    return WebAssembly::INSTRUCTION_LIST_END;
-
-  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
-  if (Mask != llvm::maskTrailingOnes<uint64_t>(LoadSize))
-    return WebAssembly::INSTRUCTION_LIST_END;
-
-  bool I64Result = MI->getOpcode() == WebAssembly::AND_I64;
-  return getZExtLoadOpcode(LoadSize, I64Result, A64);
-}
-
 static bool isFoldableSExtOpcode(unsigned Opc) {
   switch (Opc) {
   default:
@@ -1401,13 +1374,7 @@ static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
     return getSExtLoadOpcode(LoadSize, isI64SExtResult(Opc), A64);
   }
 
-  switch (Opc) {
-  case WebAssembly::AND_I32:
-  case WebAssembly::AND_I64:
-    return getZExtLoadOpcodeFromAnd(MI, MRI, LI, A64);
-  default:
-    return WebAssembly::INSTRUCTION_LIST_END;
-  }
+  return WebAssembly::INSTRUCTION_LIST_END;
 }
 
 /// Matches a sign-extension pattern (shl + shr_s) to fold it into a signed
@@ -1512,6 +1479,60 @@ static unsigned matchFoldableCopyToI64Ext(MachineInstr *MI, const LoadInst *LI,
   }
 }
 
+static unsigned getFoldedI64LoadOpcode(Register DestReg, const LoadInst *LI,
+                                       MachineRegisterInfo &MRI, bool A64,
+                                       MachineInstr *&OuterUserMI,
+                                       unsigned NarrowOpc) {
+  if (!MRI.hasOneNonDBGUse(DestReg))
+    return NarrowOpc;
+
+  MachineInstr *UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
+  if (UserMI->getOpcode() != WebAssembly::I64_EXTEND_U_I32)
+    return NarrowOpc;
+
+  OuterUserMI = UserMI;
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  return getZExtLoadOpcode(LoadSize, /*I64Result=*/true, A64);
+}
+
+static unsigned matchFoldableAnd(MachineInstr *MI, const LoadInst *LI,
+                                 MachineRegisterInfo &MRI, bool A64,
+                                 MachineInstr *&OuterUserMI) {
+  if (MI->getOpcode() != WebAssembly::AND_I32 &&
+      MI->getOpcode() != WebAssembly::AND_I64)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  uint64_t Mask = 0;
+  bool IsConstant = false;
+  for (unsigned I = 1; I <= 2; ++I) {
+    Register Reg = MI->getOperand(I).getReg();
+    MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
+    if (DefMI && (DefMI->getOpcode() == WebAssembly::CONST_I32 ||
+                  DefMI->getOpcode() == WebAssembly::CONST_I64)) {
+      Mask = DefMI->getOperand(1).getImm();
+      IsConstant = true;
+      break;
+    }
+  }
+
+  if (!IsConstant)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  if (Mask != llvm::maskTrailingOnes<uint64_t>(LoadSize))
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  if (MI->getOpcode() == WebAssembly::AND_I64)
+    return getZExtLoadOpcode(LoadSize, /*I64Result=*/true, A64);
+
+  unsigned NarrowOpc = getZExtLoadOpcode(LoadSize, /*I64Result=*/false, A64);
+  if (NarrowOpc == WebAssembly::INSTRUCTION_LIST_END)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  return getFoldedI64LoadOpcode(MI->getOperand(0).getReg(), LI, MRI, A64,
+                                OuterUserMI, NarrowOpc);
+}
+
 bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                               const LoadInst *LI) {
   bool A64 = Subtarget->hasAddr64();
@@ -1527,6 +1548,10 @@ bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                                  OuterUserMI)) !=
              WebAssembly::INSTRUCTION_LIST_END) {
     ResultReg = OuterUserMI->getOperand(0).getReg();
+  } else if ((NewOpc = matchFoldableAnd(MI, LI, MRI, A64, OuterUserMI)) !=
+             WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = OuterUserMI ? OuterUserMI->getOperand(0).getReg()
+                            : MI->getOperand(0).getReg();
   } else if ((NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64)) !=
              WebAssembly::INSTRUCTION_LIST_END) {
     ResultReg = MI->getOperand(0).getReg();
