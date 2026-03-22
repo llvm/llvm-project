@@ -8746,7 +8746,7 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     }
     [[fallthrough]];
   case ISD::CLMULH: {
-    EVT ExtVT = VT.changeElementType(Ctx, EVT::getIntegerVT(Ctx, 2 * BW));
+    EVT ExtVT = VT.widenIntegerElementType(Ctx);
     // Use bitreverse-based lowering (CLMULR/H = rev(CLMUL(rev,rev)) >> S)
     // when any of these hold:
     // (a) ZERO_EXTEND to ExtVT or SRL on ExtVT isn't legal.
