@@ -587,8 +587,8 @@ findInlineAsmCandidates(Function &F, const TargetMachine *TM) {
       // Only inline assembly compiled at '-O0' (i.e. uses the fast register
       // allocator) needs to be processed.
       for (Instruction &I : BB)
-        if (CallBase *CB = dyn_cast<CallBase>(&I); CB && CB->isInlineAsm())
-          InlineAsms.push_back(CB);
+        if (auto *CI = dyn_cast<CallInst>(&I); CI && CI->isInlineAsm())
+          InlineAsms.push_back(CI);
   }
 
   return InlineAsms;
