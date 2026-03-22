@@ -27,7 +27,7 @@ void tools::serenity::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                            const InputInfoList &Inputs,
                                            const ArgList &Args,
                                            const char *LinkingOutput) const {
-  const auto &TC = cast<Generic_ELF const&>(getToolChain());
+  const auto &TC = cast<Generic_ELF>(getToolChain());
   const auto &D = TC.getDriver();
   const bool IsShared = Args.hasArg(options::OPT_shared);
   const bool IsStatic =
@@ -55,8 +55,8 @@ void tools::serenity::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!IsShared) {
       Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
                                options::OPT_nopie);
-      bool IsPIE = A ? A->getOption().matches(options::OPT_pie) :
-                  TC.isPIEDefault(Args);
+      bool IsPIE =
+          A ? A->getOption().matches(options::OPT_pie) : TC.isPIEDefault(Args);
       if (IsPIE)
         CmdArgs.push_back("-pie");
       CmdArgs.push_back("-dynamic-linker");
