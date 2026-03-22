@@ -22,15 +22,15 @@
 #include "../atomics.types.operations/atomics.types.operations.req/atomic_fetch_fminimum_num_helper.h"
 
 template <typename T>
-concept has_fetch_fminimum_num = requires(T t) {
-  std::declval<T const>().fetch_fminimum_num(std::declval<typename T::value_type>());
-  std::declval<T const>().fetch_fminimum_num(std::declval<typename T::value_type>(), std::declval<std::memory_order>());
+concept has_fetch_fminimum_num = requires(T const& t, typename T::value_type v, std::memory_order m) {
+  t.fetch_fminimum_num(v);
+  t.fetch_fminimum_num(v, m);
 };
 
 template <typename T>
-struct TestDoesNotHaveFetchFMinimumNum {
-  void operator()() const { static_assert(!has_fetch_fminimum_num<std::atomic_ref<T>>); }
-};
+void test_does_not_have_fetch_fminimum_num() {
+  static_assert(!has_fetch_fminimum_num<std::atomic_ref<T>>);
+}
 
 template <typename T>
 struct TestFetchFMinimumNum {
@@ -55,11 +55,12 @@ struct TestFetchFMinimumNum {
 int main(int, char**) {
   TestFetchFMinimumNum<float>{}();
   TestFetchFMinimumNum<double>{}();
+  TestFetchFMinimumNum<long double>{}();
 
-  TestDoesNotHaveFetchFMinimumNum<bool>{}();
-  TestDoesNotHaveFetchFMinimumNum<int>{}();
-  TestDoesNotHaveFetchFMinimumNum<unsigned int>{}();
-  TestDoesNotHaveFetchFMinimumNum<int*>{}();
+  test_does_not_have_fetch_fminimum_num<bool>();
+  test_does_not_have_fetch_fminimum_num<int>();
+  test_does_not_have_fetch_fminimum_num<unsigned int>();
+  test_does_not_have_fetch_fminimum_num<int*>();
 
   return 0;
 }

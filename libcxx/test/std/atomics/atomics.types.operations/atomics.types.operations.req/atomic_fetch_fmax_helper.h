@@ -30,7 +30,7 @@ void test_fetch_fmax(LoadOp load, StoreOp store, MaxOp max_op) {
   // Test basic fetch_max (update to larger value)
   {
     store(T(10.0));
-    T old = max_op(T(20.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = max_op(T(20.0), std::memory_order_seq_cst);
     assert(old == T(10.0));
     assert(load() == T(20.0));
   }
@@ -38,7 +38,7 @@ void test_fetch_fmax(LoadOp load, StoreOp store, MaxOp max_op) {
   // Test with smaller value (no change)
   {
     store(T(10.0));
-    T old = max_op(T(5.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = max_op(T(5.0), std::memory_order_seq_cst);
     assert(old == T(10.0));
     assert(load() == T(10.0));
   }
@@ -46,14 +46,14 @@ void test_fetch_fmax(LoadOp load, StoreOp store, MaxOp max_op) {
   // Test with negative values
   {
     store(T(-10.0));
-    T old = max_op(T(-5.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = max_op(T(-5.0), std::memory_order_seq_cst);
     assert(old == T(-10.0));
     assert(load() == T(-5.0));
   }
 
   {
     store(T(-5.0));
-    T old = max_op(T(-10.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = max_op(T(-10.0), std::memory_order_seq_cst);
     assert(old == T(-5.0));
     assert(load() == T(-5.0));
   }
@@ -61,14 +61,14 @@ void test_fetch_fmax(LoadOp load, StoreOp store, MaxOp max_op) {
   // Test infinity
   {
     store(T(1.0));
-    T old = max_op(inf, std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = max_op(inf, std::memory_order_seq_cst);
     assert(old == T(1.0));
     assert(load() == inf);
   }
 
   {
     store(-inf);
-    T old = max_op(T(1.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = max_op(T(1.0), std::memory_order_seq_cst);
     assert(old == -inf);
     assert(load() == T(1.0));
   }
@@ -76,36 +76,30 @@ void test_fetch_fmax(LoadOp load, StoreOp store, MaxOp max_op) {
   // Test different memory orderings
   {
     store(T(8.0));
-    T old = max_op(T(15.0), std::memory_order_relaxed);
+    std::same_as<T> decltype(auto) old = max_op(T(15.0), std::memory_order_relaxed);
     assert(old == T(8.0));
     assert(load() == T(15.0));
   }
 
   {
     store(T(3.0));
-    T old = max_op(T(10.0), std::memory_order_acquire);
+    std::same_as<T> decltype(auto) old = max_op(T(10.0), std::memory_order_acquire);
     assert(old == T(3.0));
     assert(load() == T(10.0));
   }
 
   {
     store(T(2.0));
-    T old = max_op(T(10.0), std::memory_order_release);
+    std::same_as<T> decltype(auto) old = max_op(T(10.0), std::memory_order_release);
     assert(old == T(2.0));
     assert(load() == T(10.0));
   }
 
   {
     store(T(7.0));
-    T old = max_op(T(10.0), std::memory_order_acq_rel);
+    std::same_as<T> decltype(auto) old = max_op(T(10.0), std::memory_order_acq_rel);
     assert(old == T(7.0));
     assert(load() == T(10.0));
-  }
-
-  // Test return type
-  {
-    store(T(10.0));
-    static_assert(std::is_same_v<decltype(max_op(T(5.0), std::memory_order_seq_cst)), T>);
   }
 }
 

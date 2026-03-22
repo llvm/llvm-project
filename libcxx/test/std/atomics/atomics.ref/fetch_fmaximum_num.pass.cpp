@@ -22,15 +22,15 @@
 #include "../atomics.types.operations/atomics.types.operations.req/atomic_fetch_fmaximum_num_helper.h"
 
 template <typename T>
-concept has_fetch_fmaximum_num = requires(T t) {
-  std::declval<T const>().fetch_fmaximum_num(std::declval<typename T::value_type>());
-  std::declval<T const>().fetch_fmaximum_num(std::declval<typename T::value_type>(), std::declval<std::memory_order>());
+concept has_fetch_fmaximum_num = requires(T const& t, typename T::value_type v, std::memory_order m) {
+  t.fetch_fmaximum_num(v);
+  t.fetch_fmaximum_num(v, m);
 };
 
 template <typename T>
-struct TestDoesNotHaveFetchFMaximumNum {
-  void operator()() const { static_assert(!has_fetch_fmaximum_num<std::atomic_ref<T>>); }
-};
+void test_does_not_have_fetch_fmaximum_num() {
+  static_assert(!has_fetch_fmaximum_num<std::atomic_ref<T>>);
+}
 
 template <typename T>
 struct TestFetchFMaximumNum {
@@ -55,11 +55,12 @@ struct TestFetchFMaximumNum {
 int main(int, char**) {
   TestFetchFMaximumNum<float>{}();
   TestFetchFMaximumNum<double>{}();
+  TestFetchFMaximumNum<long double>{}();
 
-  TestDoesNotHaveFetchFMaximumNum<bool>{}();
-  TestDoesNotHaveFetchFMaximumNum<int>{}();
-  TestDoesNotHaveFetchFMaximumNum<unsigned int>{}();
-  TestDoesNotHaveFetchFMaximumNum<int*>{}();
+  test_does_not_have_fetch_fmaximum_num<bool>();
+  test_does_not_have_fetch_fmaximum_num<int>();
+  test_does_not_have_fetch_fmaximum_num<unsigned int>();
+  test_does_not_have_fetch_fmaximum_num<int*>();
 
   return 0;
 }

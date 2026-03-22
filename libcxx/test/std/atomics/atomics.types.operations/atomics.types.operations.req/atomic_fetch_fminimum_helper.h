@@ -23,13 +23,28 @@ template <class T>
 T make_nan_with_payload(unsigned int payload) {
   static_assert(std::is_floating_point_v<T>);
   T nan = std::numeric_limits<T>::quiet_NaN();
-  // Create NaN with different bit pattern by manipulating the payload
-  using UIntType = std::conditional_t<sizeof(T) == 4, uint32_t, uint64_t>;
-  UIntType bits;
-  std::memcpy(&bits, &nan, sizeof(T));
+
+  // Use a byte array sized to T to handle all floating-point types
+  alignas(T) unsigned char bits[sizeof(T)];
+  std::memcpy(bits, &nan, sizeof(T));
+
   // Modify the mantissa bits (payload) while keeping it a NaN
-  bits = (bits & ~UIntType(0xFFFFF)) | (payload & 0xFFFFF);
-  std::memcpy(&nan, &bits, sizeof(T));
+  // For float and double, modify the lower bits directly
+  // For long double, modify the first 8 bytes which contain the mantissa
+  if constexpr (sizeof(T) == sizeof(float)) {
+    uint32_t int_bits;
+    std::memcpy(&int_bits, bits, sizeof(uint32_t));
+    int_bits = (int_bits & ~uint32_t(0xFFFFF)) | (payload & 0xFFFFF);
+    std::memcpy(bits, &int_bits, sizeof(uint32_t));
+  } else {
+    // For double and long double, modify the first 64 bits
+    uint64_t int_bits;
+    std::memcpy(&int_bits, bits, sizeof(uint64_t));
+    int_bits = (int_bits & ~uint64_t(0xFFFFF)) | (payload & 0xFFFFF);
+    std::memcpy(bits, &int_bits, sizeof(uint64_t));
+  }
+
+  std::memcpy(&nan, bits, sizeof(T));
   return nan;
 }
 
@@ -47,7 +62,7 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
   // Test basic fetch_fminimum (update to smaller value)
   {
     store(T(10.0));
-    T old = fminimum(T(5.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(T(5.0), std::memory_order_seq_cst);
     assert(old == T(10.0));
     assert(load() == T(5.0));
   }
@@ -55,7 +70,7 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
   // Test with larger value (no change)
   {
     store(T(10.0));
-    T old = fminimum(T(20.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(T(20.0), std::memory_order_seq_cst);
     assert(old == T(10.0));
     assert(load() == T(10.0));
   }
@@ -63,14 +78,14 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
   // Test with negative values
   {
     store(T(-5.0));
-    T old = fminimum(T(-10.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(T(-10.0), std::memory_order_seq_cst);
     assert(old == T(-5.0));
     assert(load() == T(-10.0));
   }
 
   {
     store(T(-10.0));
-    T old = fminimum(T(-5.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(T(-5.0), std::memory_order_seq_cst);
     assert(old == T(-10.0));
     assert(load() == T(-10.0));
   }
@@ -78,14 +93,14 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
   // Test NaN handling: propagate NaN
   {
     store(nan);
-    T old = fminimum(T(5.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(T(5.0), std::memory_order_seq_cst);
     assert(std::isnan(old));
     assert(std::isnan(load()));
   }
 
   {
     store(T(5.0));
-    T old = fminimum(nan, std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(nan, std::memory_order_seq_cst);
     assert(old == T(5.0));
     assert(std::isnan(load()));
   }
@@ -93,7 +108,7 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
   // Both NaN: return NaN
   {
     store(nan);
-    T old = fminimum(nan, std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(nan, std::memory_order_seq_cst);
     assert(std::isnan(old));
     assert(std::isnan(load()));
   }
@@ -101,7 +116,7 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
   // Test signed zero handling: -0.0 < +0.0
   {
     store(T(+0.0));
-    T old = fminimum(T(-0.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(T(-0.0), std::memory_order_seq_cst);
     assert(old == T(+0.0));
     assert(!std::signbit(old));
     assert(std::signbit(load()));
@@ -109,7 +124,7 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
 
   {
     store(T(-0.0));
-    T old = fminimum(T(+0.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(T(+0.0), std::memory_order_seq_cst);
     assert(old == T(-0.0));
     assert(std::signbit(old));
     assert(std::signbit(load()));
@@ -118,14 +133,14 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
   // Test infinity
   {
     store(inf);
-    T old = fminimum(T(1.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(T(1.0), std::memory_order_seq_cst);
     assert(old == inf);
     assert(load() == T(1.0));
   }
 
   {
     store(T(1.0));
-    T old = fminimum(-inf, std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(-inf, std::memory_order_seq_cst);
     assert(old == T(1.0));
     assert(load() == -inf);
   }
@@ -133,28 +148,28 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
   // Test different memory orderings
   {
     store(T(15.0));
-    T old = fminimum(T(8.0), std::memory_order_relaxed);
+    std::same_as<T> decltype(auto) old = fminimum(T(8.0), std::memory_order_relaxed);
     assert(old == T(15.0));
     assert(load() == T(8.0));
   }
 
   {
     store(T(10.0));
-    T old = fminimum(T(3.0), std::memory_order_acquire);
+    std::same_as<T> decltype(auto) old = fminimum(T(3.0), std::memory_order_acquire);
     assert(old == T(10.0));
     assert(load() == T(3.0));
   }
 
   {
     store(T(10.0));
-    T old = fminimum(T(2.0), std::memory_order_release);
+    std::same_as<T> decltype(auto) old = fminimum(T(2.0), std::memory_order_release);
     assert(old == T(10.0));
     assert(load() == T(2.0));
   }
 
   {
     store(T(10.0));
-    T old = fminimum(T(7.0), std::memory_order_acq_rel);
+    std::same_as<T> decltype(auto) old = fminimum(T(7.0), std::memory_order_acq_rel);
     assert(old == T(10.0));
     assert(load() == T(7.0));
   }
@@ -165,7 +180,7 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
 
     // Store NaN with payload 1, fetch with non-NaN (propagates NaN)
     store(nan1);
-    T old = fminimum(T(5.0), std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(T(5.0), std::memory_order_seq_cst);
     assert(std::isnan(old));
     assert(std::isnan(load()));
   }
@@ -175,7 +190,7 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
 
     // Store non-NaN, fetch with NaN with payload 2 (propagates NaN)
     store(T(5.0));
-    T old = fminimum(nan2, std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(nan2, std::memory_order_seq_cst);
     assert(old == T(5.0));
     assert(std::isnan(load()));
   }
@@ -186,16 +201,10 @@ void test_fetch_fminimum(LoadOp load, StoreOp store, FMinimumOp fminimum) {
 
     // Store NaN with payload 1, fetch with NaN with payload 2 (propagates NaN)
     store(nan1);
-    T old = fminimum(nan2, std::memory_order_seq_cst);
+    std::same_as<T> decltype(auto) old = fminimum(nan2, std::memory_order_seq_cst);
     assert(std::isnan(old));
     assert(std::isnan(load()));
     // Result should be one of the NaN values (implementation-defined which)
-  }
-
-  // Test return type
-  {
-    store(T(10.0));
-    static_assert(std::is_same_v<decltype(fminimum(T(5.0), std::memory_order_seq_cst)), T>);
   }
 }
 
