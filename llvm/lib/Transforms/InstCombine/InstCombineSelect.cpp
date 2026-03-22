@@ -664,9 +664,45 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
                                    Value *FVal,
                                    InstCombiner::BuilderTy &Builder,
                                    const SimplifyQuery &SQ) {
-  const Value *CmpLHS = Cmp->getOperand(0);
-  const Value *CmpRHS = Cmp->getOperand(1);
+  Value *CmpLHS = Cmp->getOperand(0);
+  Value *CmpRHS = Cmp->getOperand(1);
   ICmpInst::Predicate Pred = Cmp->getPredicate();
+
+  if (isKnownNonNegative(TVal, SQ)) {
+    // (X < Y) ? C : (X - Y)     (C non-negative)
+    if (Pred == CmpInst::ICMP_SLT &&
+        match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
+      Value *SMin =
+          Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
+      return Builder.CreateNSWSub(CmpRHS, SMin);
+    }
+
+    // (X > Y) ? C : (Y - X)    (C non-negative)
+    if (Pred == CmpInst::ICMP_SGT && isKnownNonNegative(TVal, SQ) &&
+        match(FVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS)))) {
+      Value *SMin =
+          Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
+      return Builder.CreateNSWSub(CmpRHS, SMin);
+    }
+  }
+
+  if (isKnownNonNegative(FVal, SQ)) {
+    // (X < Y) ? (Y - X) : C    (C non-negative)
+    if (Pred == CmpInst::ICMP_SLT &&
+        match(TVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS)))) {
+      Value *SMin =
+          Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
+      return Builder.CreateNSWSub(CmpRHS, SMin);
+    }
+
+    // (X > Y) ? (X - Y) : C    (C non-negative)
+    if (Pred == CmpInst::ICMP_SGT && isKnownNonNegative(FVal, SQ) &&
+        match(TVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
+      Value *SMin =
+          Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpLHS, CmpRHS);
+      return Builder.CreateNSWSub(CmpLHS, SMin);
+    }
+  }
 
   // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
   // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
