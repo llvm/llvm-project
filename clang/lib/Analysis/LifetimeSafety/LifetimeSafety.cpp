@@ -71,6 +71,9 @@ void LifetimeSafetyAnalysis::run() {
 
   FactMgr = std::make_unique<FactManager>(AC, Cfg);
 
+  FactMgr->getOriginMgr().collectLifetimeboundOriginTypes(AC);
+  FactMgr->getOriginMgr().initializeThisOrigins(AC.getDecl());
+
   FactsGenerator FactGen(*FactMgr, AC);
   FactGen.run();
 

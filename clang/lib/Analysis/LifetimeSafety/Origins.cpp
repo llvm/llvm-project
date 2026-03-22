@@ -18,6 +18,7 @@
 #include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes::internal {
@@ -29,10 +30,10 @@ class MissingOriginCollector
 public:
   MissingOriginCollector(
       const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList,
-      LifetimeSafetyStats &LSStats)
-      : ExprToOriginList(ExprToOriginList), LSStats(LSStats) {}
+      const OriginManager &OM, LifetimeSafetyStats &LSStats)
+      : ExprToOriginList(ExprToOriginList), OM(OM), LSStats(LSStats) {}
   bool VisitExpr(Expr *E) {
-    if (!hasOrigins(E))
+    if (!OM.hasOrigins(E))
       return true;
     // Check if we have an origin for this expression.
     if (!ExprToOriginList.contains(E)) {
@@ -46,12 +47,59 @@ public:
 
 private:
   const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList;
+  const OriginManager &OM;
   LifetimeSafetyStats &LSStats;
 };
+
+class LifetimeboundOriginTypeCollector
+    : public RecursiveASTVisitor<LifetimeboundOriginTypeCollector> {
+public:
+  LifetimeboundOriginTypeCollector(OriginManager &OM) : OM(OM) {}
+
+  bool VisitCallExpr(const CallExpr *CE) {
+    if (const auto *FD = CE->getDirectCallee())
+      collect(FD, FD->getReturnType());
+    return true;
+  }
+
+  bool VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
+    collect(CCE->getConstructor(), CCE->getType());
+    return true;
+  }
+
+  bool shouldVisitLambdaBody() const { return false; }
+
+private:
+  OriginManager &OM;
+
+  void collect(const FunctionDecl *FD, QualType RetType) {
+    if (!FD)
+      return;
+    FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+        MD && MD->isInstance() && !isa<CXXConstructorDecl>(MD) &&
+        implicitObjectParamIsLifetimeBound(MD)) {
+      OM.registerLifetimeboundOriginType(RetType);
+      return;
+    }
+
+    for (const auto *Param : FD->parameters()) {
+      if (Param->hasAttr<LifetimeBoundAttr>()) {
+        OM.registerLifetimeboundOriginType(RetType);
+        return;
+      }
+    }
+  }
+};
+
 } // namespace
 
-bool hasOrigins(QualType QT) {
+bool OriginManager::hasOrigins(QualType QT) const {
   if (QT->isPointerOrReferenceType() || isGslPointerType(QT))
+    return true;
+  if (LifetimeboundOriginTypes.contains(
+          QT->getCanonicalTypeUnqualified().getTypePtr()))
     return true;
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
@@ -70,7 +118,9 @@ bool hasOrigins(QualType QT) {
 ///
 /// An expression has origins if:
 /// - It's a glvalue (has addressable storage), OR
-/// - Its type is pointer-like (pointer, reference, or gsl::Pointer)
+/// - Its type is pointer-like (pointer, reference, or gsl::Pointer), OR
+/// - Its type is registered for origin tracking (e.g., return type of a
+/// [[clang::lifetimebound]] function)
 ///
 /// Examples:
 /// - `int x; x` : has origin (glvalue)
@@ -78,7 +128,7 @@ bool hasOrigins(QualType QT) {
 /// - `std::string_view{}` : has 1 origin (prvalue of pointer type)
 /// - `42` : no origin (prvalue of non-pointer type)
 /// - `x + y` : (where x, y are int) → no origin (prvalue of non-pointer type)
-bool hasOrigins(const Expr *E) {
+bool OriginManager::hasOrigins(const Expr *E) const {
   return E->isGLValue() || hasOrigins(E->getType());
 }
 
@@ -99,8 +149,9 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
   return !D->getType()->isReferenceType();
 }
 
-OriginManager::OriginManager(ASTContext &AST, const Decl *D) : AST(AST) {
-  // Create OriginList for 'this' expr.
+OriginManager::OriginManager(ASTContext &AST) : AST(AST) {}
+
+void OriginManager::initializeThisOrigins(const Decl *D) {
   const auto *MD = llvm::dyn_cast_or_null<CXXMethodDecl>(D);
   if (!MD || !MD->isInstance())
     return;
@@ -232,8 +283,27 @@ const Origin &OriginManager::getOrigin(OriginID ID) const {
 
 void OriginManager::collectMissingOrigins(Stmt &FunctionBody,
                                           LifetimeSafetyStats &LSStats) {
-  MissingOriginCollector Collector(this->ExprToList, LSStats);
+  MissingOriginCollector Collector(this->ExprToList, *this, LSStats);
   Collector.TraverseStmt(const_cast<Stmt *>(&FunctionBody));
+}
+
+void OriginManager::collectLifetimeboundOriginTypes(AnalysisDeclContext &AC) {
+  LifetimeboundOriginTypeCollector Collector(*this);
+  if (Stmt *Body = AC.getBody())
+    Collector.TraverseStmt(Body);
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(AC.getDecl()))
+    for (const auto *Init : CD->inits())
+      Collector.TraverseStmt(Init->getInit());
+}
+
+void OriginManager::registerLifetimeboundOriginType(QualType QT) {
+  // TODO: Support [[gsl::Owner]] return types. For now, skip them because they
+  // change owner origin-list shape and can break GSL construction flow.
+  if (!QT->getAsCXXRecordDecl() || isGslOwnerType(QT) || hasOrigins(QT))
+    return;
+
+  LifetimeboundOriginTypes.insert(
+      QT->getCanonicalTypeUnqualified().getTypePtr());
 }
 
 } // namespace clang::lifetimes::internal
