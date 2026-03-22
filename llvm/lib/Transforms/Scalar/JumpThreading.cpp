@@ -1975,6 +1975,32 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   SmallVector<Use *, 16> UsesToRename;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
 
+  // Move static allocas with lifetime markers to the entry block so they
+  // dominate all their uses after jump threading, preserving lifetime info.
+  // For dynamic allocas, lifetime markers will be dropped below.
+  BasicBlock &EntryBB = BB->getParent()->getEntryBlock();
+  SmallVector<AllocaInst *> AllocasToHoist;
+  for (Instruction &I : *BB) {
+    auto *AI = dyn_cast<AllocaInst>(&I);
+    // Use isa<ConstantInt> instead of isStaticAlloca() because the alloca
+    // is not in the entry block yet, so isStaticAlloca() would return false
+    // even for allocas with a constant size.
+    if (AI && isa<ConstantInt>(AI->getArraySize()) &&
+        any_of(AI->users(), [](User *U) {
+          return cast<Instruction>(U)->isLifetimeStartOrEnd();
+        }))
+      AllocasToHoist.push_back(AI);
+  }
+
+  if (!AllocasToHoist.empty()) {
+    auto HoistPoint = EntryBB.getFirstNonPHIOrDbgOrAlloca()->getIterator();
+    for (AllocaInst *AI : AllocasToHoist) {
+      AI->moveBefore(HoistPoint);
+      if (auto *NewAI = dyn_cast_or_null<AllocaInst>(ValueMapping[AI]))
+        NewAI->moveBefore(HoistPoint);
+    }
+  }
+
   for (Instruction &I : *BB) {
     // Scan all uses of this instruction to see if it is used outside of its
     // block, and if so, record them in UsesToRename.
@@ -1999,6 +2025,24 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
     if (UsesToRename.empty() && DbgVariableRecords.empty())
       continue;
     LLVM_DEBUG(dbgs() << "JT: Renaming non-local uses of: " << I << "\n");
+
+    if (isa<AllocaInst>(&I)) {
+      // Static allocas with lifetime markers were moved to the entry block
+      // above. For any remaining allocas where a lifetime marker is no longer
+      // dominated by the alloca, remove all lifetime markers.
+      DominatorTree &DT = DTU->getDomTree();
+      bool HasNonDominatedLifetimeMarker = any_of(I.users(), [&](User *U) {
+        auto *UserI = cast<Instruction>(U);
+        return UserI->isLifetimeStartOrEnd() && !DT.dominates(&I, UserI);
+      });
+      if (HasNonDominatedLifetimeMarker) {
+        for (User *U : make_early_inc_range(I.users())) {
+          auto *UserI = cast<Instruction>(U);
+          if (UserI->isLifetimeStartOrEnd())
+            UserI->eraseFromParent();
+        }
+      }
+    }
 
     // We found a use of I outside of BB.  Rename all uses of I that are outside
     // its block to be uses of the appropriate PHI node etc.  See ValuesInBlocks
