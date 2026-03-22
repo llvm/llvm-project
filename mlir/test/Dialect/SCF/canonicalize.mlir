@@ -2284,3 +2284,54 @@ func.func @iter_args_cycles_non_cycle_start(%lb : index, %ub : index, %step : in
   }
   return %res#0, %res#1, %res#2 : i32, i32, i32
 }
+
+// -----
+
+// CHECK-LABEL: @erase_infinite_scf_for_loop
+//       CHECK:   %[[poison:.*]] = ub.poison : index
+//       CHECK:   return %[[poison]]
+func.func @erase_infinite_scf_for_loop(%init: index) -> index {
+  %lb = arith.constant 3 : index
+  %ub = arith.constant 4 : index
+  %step = arith.constant 0 : index
+  %res = scf.for %iv = %lb to %ub step %step iter_args(%iter = %init) -> index {
+    %0 = arith.addi %iter, %iter : index
+    scf.yield %0 : index
+  }
+  return %res : index
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_erase_infinite_loop_with_side_effect
+//       CHECK:   %[[res:.*]] = scf.for
+//       CHECK:     vector.print
+//       CHECK:   return %[[res]]
+func.func @do_not_erase_infinite_loop_with_side_effect(%init: index) -> index {
+  %lb = arith.constant 3 : index
+  %ub = arith.constant 4 : index
+  %step = arith.constant 0 : index
+  %res = scf.for %iv = %lb to %ub step %step iter_args(%iter = %init) -> index {
+    %0 = arith.addi %iter, %iter : index
+    vector.print %0 : index
+    scf.yield %0 : index
+  }
+  return %res : index
+}
+
+// -----
+
+// CHECK-LABEL: @erase_infinite_scf_while_loop
+//       CHECK:   %[[poison:.*]] = ub.poison : index
+//       CHECK:   return %[[poison]]
+func.func @erase_infinite_scf_while_loop(%init: index) -> index {
+  %res = scf.while (%arg0 = %init) : (index) -> (index) {
+    %true = arith.constant true
+    scf.condition(%true) %arg0 : index
+  } do {
+  ^bb0(%arg1: index):
+    %0 = arith.addi %arg1, %arg1 : index
+    scf.yield %0 : index
+  }
+  return %res : index
+}
