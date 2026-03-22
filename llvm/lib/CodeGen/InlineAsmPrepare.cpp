@@ -222,11 +222,18 @@ static Type *buildReturnType(ArrayRef<Type *> NewRetTypes,
 }
 
 /// Create the new inline assembly call with converted constraints.
+///
+/// \p NewArgToOrigArg maps each index in \p NewArgs to the original argument
+/// index in \p CB, or -1 if the argument is newly introduced (e.g. an alloca
+/// for a converted "rm" constraint). This is used to safely reconstruct the
+/// parameter attribute list: attributes from the original call are only
+/// propagated to arguments whose type is unchanged.
 static CallInst *
 createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
                    Type *NewRetTy, ArrayRef<Value *> NewArgs,
                    ArrayRef<std::pair<unsigned, Type *>> ElementTypeAttrs,
-                   CallBase *CB, MemoryEffects NewME, IRBuilder<> &Builder,
+                   ArrayRef<int> NewArgToOrigArg, CallBase *CB,
+                   MemoryEffects NewME, IRBuilder<> &Builder,
                    LLVMContext &Context) {
   SmallVector<Type *> NewArgTypes;
   for (const auto *NewArg : NewArgs)
@@ -239,7 +246,20 @@ createNewInlineAsm(InlineAsm *IA, const std::string &NewConstraintStr,
 
   CallInst *NewCall = Builder.CreateCall(NewFTy, NewIA, NewArgs);
   NewCall->setCallingConv(CB->getCallingConv());
-  NewCall->setAttributes(CB->getAttributes());
+
+  // Rebuild the parameter attribute list. Arguments whose types changed (e.g.
+  // a value converted to a pointer-to-alloca) must not inherit the original
+  // value attributes, as those attributes may be invalid for the new type
+  // (e.g. a "range" attribute on an i32 cannot be applied to a ptr).
+  // Arguments that are passed through unchanged inherit their original attrs.
+  const AttributeList &OldAL = CB->getAttributes();
+  SmallVector<AttributeSet, 8> NewParamAttrs;
+  for (int OrigIdx : NewArgToOrigArg)
+    NewParamAttrs.push_back(OrigIdx >= 0 ? OldAL.getParamAttrs(OrigIdx)
+                                         : AttributeSet());
+  NewCall->setAttributes(AttributeList::get(
+      Context, OldAL.getFnAttrs(), OldAL.getRetAttrs(), NewParamAttrs));
+
   NewCall->copyMetadata(*CB);
 
   // Copy over the MemoryEffects and add whether they write and/or read memory.
@@ -298,20 +318,19 @@ reconstructReturnValue(Type *RetTy, CallInst *NewCall,
     return Res;
   }
 
-  // Single output.
-  // Find the output constraint (should be the first one).
-  unsigned OutConstraintIdx = 0;
+  // Single direct output. Find the first non-indirect output constraint.
+  // Indirect outputs ("=*...") write through a pointer arg and do not appear
+  // in the return value, so they must be skipped here.
   for (unsigned I = 0; I < Constraints.size(); ++I) {
-    if (Constraints[I].Type == InlineAsm::isOutput) {
-      OutConstraintIdx = I;
-      break;
+    if (Constraints[I].Type == InlineAsm::isOutput && !Constraints[I].isIndirect) {
+      if (auto [Slot, SlotTy] = OutputAllocas[I]; Slot)
+        return Builder.CreateLoad(SlotTy, Slot);
+      return NewCall;
     }
   }
 
-  if (auto [Slot, SlotTy] = OutputAllocas[OutConstraintIdx]; Slot)
-    return Builder.CreateLoad(SlotTy, Slot);
-
-  return NewCall;
+  // No direct outputs found — the return type should have been void.
+  llvm_unreachable("non-void return type but no direct output constraint");
 }
 
 static bool processInlineAsm(Function &F, CallBase *CB) {
@@ -331,6 +350,13 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   SmallVector<Type *, 2> NewRetTypes;
   SmallVector<std::pair<unsigned, Type *>, 8> ElementTypeAttrs;
 
+  // Maps each index in NewArgs to the original argument index in CB, or -1
+  // if the argument is newly introduced (e.g. an alloca for a converted "rm"
+  // output, or an alloca replacing a converted "rm" input). Used to safely
+  // rebuild the parameter attribute list without applying value attributes
+  // (e.g. "range") to arguments whose type has changed.
+  SmallVector<int, 8> NewArgToOrigArg;
+
   // Track allocas created for converted outputs. Indexed by position in the
   // flat Constraints list (not by output index), so that both
   // processOutputConstraint and reconstructReturnValue can look up entries
@@ -347,23 +373,35 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
     if (C.Type == InlineAsm::isOutput) {
       if (C.isIndirect) {
         // Indirect output takes a pointer argument from the original call.
-        // Pass it through to the new call.
+        // Pass it through to the new call; the type is unchanged so original
+        // parameter attributes (including elementtype) remain valid.
         Value *ArgVal = CB->getArgOperand(ArgNo);
         NewArgs.push_back(ArgVal);
+        NewArgToOrigArg.push_back(ArgNo);
         // Preserve element type attribute if present.
         if (auto *Ty = CB->getParamElementType(ArgNo))
           ElementTypeAttrs.push_back({NewArgs.size() - 1, Ty});
         ArgNo++;
       } else {
+        unsigned PrevArgCount = NewArgs.size();
         processOutputConstraint(C, CB->getType(), OutputIdx, EntryBuilder,
                                 NewArgs, NewRetTypes, ElementTypeAttrs,
                                 OutputAllocas, I);
+        // processOutputConstraint pushes an alloca to NewArgs only when the
+        // constraint is converted (rm → *rm). That alloca is a new argument
+        // with no corresponding original arg.
+        if (NewArgs.size() > PrevArgCount)
+          NewArgToOrigArg.push_back(-1);
         OutputIdx++;
       }
     } else if (C.Type == InlineAsm::isInput) {
       Value *ArgVal = CB->getArgOperand(ArgNo);
+      bool WillConvert = C.hasRegMemConstraints() && !C.isIndirect;
       processInputConstraint(C, ArgVal, CB->getParamElementType(ArgNo), Builder,
                              EntryBuilder, NewArgs, ElementTypeAttrs);
+      // A converted input replaces its original value with a pointer-to-alloca;
+      // the original value attributes are not valid for the new ptr type.
+      NewArgToOrigArg.push_back(WillConvert ? -1 : (int)ArgNo);
       ArgNo++;
     }
   }
@@ -374,7 +412,8 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   // Create the new inline assembly call.
   CallInst *NewCall =
       createNewInlineAsm(IA, NewConstraintStr, NewRetTy, NewArgs,
-                         ElementTypeAttrs, CB, NewME, Builder, F.getContext());
+                         ElementTypeAttrs, NewArgToOrigArg, CB, NewME, Builder,
+                         F.getContext());
 
   // Reconstruct the return value and update users.
   if (!CB->use_empty()) {

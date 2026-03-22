@@ -5,7 +5,9 @@ define void @test1(i32 %x) {
 ; CHECK-LABEL: define void @test1(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 asm sideeffect "mov $1, $0", "=r,rm,~{dirflag},~{fpsr},~{flags}"(i32 [[X]])
+; CHECK-NEXT:    [[ASM_MEM:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 [[X]], ptr [[ASM_MEM]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 asm sideeffect "mov $1, $0", "=r,*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
