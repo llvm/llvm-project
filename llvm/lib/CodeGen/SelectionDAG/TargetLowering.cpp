@@ -8666,7 +8666,7 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       // Strategy 2: Promote to double-element-width CLMUL.
       // CLMUL(X, Y) = Trunc(CLMUL(AnyExt(X), AnyExt(Y)))
       {
-        EVT ExtVT = VT.changeElementType(Ctx, EVT::getIntegerVT(Ctx, 2 * BW));
+        EVT ExtVT = VT.widenIntegerElementType(Ctx);
         if (isTypeLegal(ExtVT) && isOperationLegalOrCustom(ISD::CLMUL, ExtVT)) {
           // If CLMUL on ExtVT is Custom (not Legal), the target may
           // scalarize it, costing O(NumElements) scalar ops. The bit-by-bit
@@ -10308,8 +10308,7 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
 
   // For scalars, see if we can efficiently extend/truncate to use add+shift.
   if (VT.isScalarInteger()) {
-    unsigned BW = VT.getScalarSizeInBits();
-    EVT ExtVT = VT.getIntegerVT(*DAG.getContext(), 2 * BW);
+    EVT ExtVT = VT.widenIntegerElementType(*DAG.getContext());
     if (isTypeLegal(ExtVT) && isTruncateFree(ExtVT, VT)) {
       LHS = DAG.getNode(ExtOpc, dl, ExtVT, LHS);
       RHS = DAG.getNode(ExtOpc, dl, ExtVT, RHS);
@@ -12016,13 +12015,10 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
     }
   }
 
-  EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits() * 2);
-  if (VT.isVector())
-    WideVT =
-        EVT::getVectorVT(*DAG.getContext(), WideVT, VT.getVectorElementCount());
-
-  SDValue BottomHalf;
   SDValue TopHalf;
+  SDValue BottomHalf;
+  EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
+
   static const unsigned Ops[2][3] =
       { { ISD::MULHU, ISD::UMUL_LOHI, ISD::ZERO_EXTEND },
         { ISD::MULHS, ISD::SMUL_LOHI, ISD::SIGN_EXTEND }};
