@@ -5636,58 +5636,9 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
                diag::note_unreachable_template_decl);
         } else {
           Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
-          if (getLangOpts().CPlusPlus11) {
+          if (getLangOpts().CPlusPlus11)
             Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
                 << Function;
-            // Suggest the exact extern template declaration syntax.
-            // Note: for functions with complex declarator return types
-            // (e.g., function pointers), the suggestion may not be
-            // perfectly formatted, but these cases are rare in practice.
-            std::string Suggestion;
-            {
-              llvm::raw_string_ostream OS(Suggestion);
-              OS << "extern template ";
-              // Constructors, destructors, and conversion operators have no
-              // separate return type in the declaration syntax.
-              if (!isa<CXXConstructorDecl>(Function) &&
-                  !isa<CXXDestructorDecl>(Function) &&
-                  !isa<CXXConversionDecl>(Function)) {
-                Function->getReturnType().print(OS, getPrintingPolicy());
-                OS << " ";
-              }
-              Function->getNameForDiagnostic(OS, getPrintingPolicy(),
-                                              /*Qualified=*/true);
-              OS << "(";
-              for (unsigned I = 0, N = Function->getNumParams(); I != N; ++I) {
-                if (I > 0)
-                  OS << ", ";
-                Function->getParamDecl(I)->getType().print(
-                    OS, getPrintingPolicy());
-              }
-              if (Function->isVariadic()) {
-                if (Function->getNumParams() > 0)
-                  OS << ", ";
-                OS << "...";
-              }
-              OS << ")";
-              if (const auto *MD = dyn_cast<CXXMethodDecl>(Function)) {
-                if (MD->getMethodQualifiers().hasConst())
-                  OS << " const";
-                if (MD->getMethodQualifiers().hasVolatile())
-                  OS << " volatile";
-                if (MD->getRefQualifier() == RQ_LValue)
-                  OS << " &";
-                else if (MD->getRefQualifier() == RQ_RValue)
-                  OS << " &&";
-              }
-              if (auto EST = Function->getExceptionSpecType();
-                  EST == EST_BasicNoexcept)
-                OS << " noexcept";
-              OS << ";";
-            }
-            Diag(PointOfInstantiation, diag::note_inst_declaration_example)
-                << Suggestion;
-          }
         }
       }
     }
