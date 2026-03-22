@@ -133,14 +133,7 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
       NewConstraint += '*';
       HasIndirect = true;
     }
-    if (I == E)
-      return {std::string(), MemoryEffects::none()};
-    if (*I == '+') {
-      ++I;
-      NewConstraint += '+';
-    }
-    if (I == E)
-      return {std::string(), MemoryEffects::none()};
+
     // Strip the "early clobber" and "commutability" modifiers before testing
     // for an "rm" constraint. These modifiers do not affect whether the
     // constraint allows both registers and memory.
