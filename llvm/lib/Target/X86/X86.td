@@ -1662,6 +1662,7 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN6Features =
     !listconcat(ZN5Features, ZN6AdditionalFeatures);
 
+  // Hygon Processors common ISAs
   list<SubtargetFeature> C864GM4Features = [FeatureADX,
                                             FeatureAES,
                                             FeatureAVX2,
@@ -1710,9 +1711,11 @@ def ProcessorFeatures {
                                           TuningInsertVZEROUPPER,
                                           TuningAllowLight256Bit];
 
+  // C86-4G-M6
   list<SubtargetFeature> C864GM6Features = C864GM4Features;
   list<SubtargetFeature> C864GM6Tuning = C864GM4Tuning;
-
+  
+  // C86-4G-M7
   list<SubtargetFeature> C864GM7AdditionalFeatures = [FeatureAVX512,
                                                       FeatureBF16,
                                                       FeatureBITALG,

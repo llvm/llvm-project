@@ -467,7 +467,7 @@ constexpr ProcInfo Processors[] = {
   { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false },
   { {"znver5"}, CK_ZNVER5, FEATURE_AVX512VP2INTERSECT, FeaturesZNVER5, '\0', false },
   { {"znver6"}, CK_ZNVER6, FEATURE_AVX512FP16, FeaturesZNVER6, '\0', false },
-  // Hygon precessors.
+  // Hygon processors.
   { {"c86-4g-m4"}, CK_C86_4G_M4, FEATURE_AVX2, FeaturesC86_4G_M4 , '\0', false },
   { {"c86-4g-m6"}, CK_C86_4G_M6, FEATURE_AVX2, FeaturesC86_4G_M6 , '\0', false },
   { {"c86-4g-m7"}, CK_C86_4G_M7, FEATURE_AVX512VBMI2, FeaturesC86_4G_M7 , '\0', false },
