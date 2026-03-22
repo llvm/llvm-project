@@ -6381,7 +6381,32 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
         Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
         if (getLangOpts().CPlusPlus11) {
           Diag(PointOfInstantiation, diag::note_inst_declaration_hint) << Var;
-          // Suggest the exact extern template declaration syntax.
+
+          // Determine if we can suggest a generic out-of-class definition.
+          // FIXME: Support nested class templates (e.g.,
+          // C1<T>::C2<T1>::value) and member variable templates (e.g.,
+          // C1<T>::s_tvar_2<T1>) which require multiple template
+          // parameter lists.
+          bool CanSuggestDefinition = false;
+          const CXXRecordDecl *PatternRD = nullptr;
+          const ClassTemplateDecl *PatternCTD = nullptr;
+          if (!PatternDecl->getDescribedVarTemplate() &&
+              !isa<VarTemplateSpecializationDecl>(PatternDecl)) {
+            PatternRD = dyn_cast<CXXRecordDecl>(PatternDecl->getDeclContext());
+            if (PatternRD) {
+              PatternCTD = PatternRD->getDescribedClassTemplate();
+              if (PatternCTD &&
+                  (PatternRD->getDeclContext()->isFileContext() ||
+                   isa<NamespaceDecl>(PatternRD->getDeclContext())))
+                CanSuggestDefinition = true;
+            }
+          }
+
+          unsigned NumWays = CanSuggestDefinition ? 3 : 2;
+          Diag(PointOfInstantiation, diag::note_inst_declaration_num_ways)
+              << NumWays;
+
+          // Suggest extern template declaration syntax.
           std::string Suggestion;
           {
             llvm::raw_string_ostream OS(Suggestion);
@@ -6396,6 +6421,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
           Diag(PointOfInstantiation,
                diag::note_inst_declaration_extern_suggestion)
               << Suggestion;
+
           // Suggest explicit specialization syntax.
           std::string SpecSuggestion;
           {
@@ -6411,6 +6437,32 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
           Diag(PointOfInstantiation,
                diag::note_inst_declaration_specialization_suggestion)
               << SpecSuggestion;
+
+          // Suggest generic out-of-class definition syntax.
+          if (CanSuggestDefinition) {
+            std::string DefSuggestion;
+            {
+              llvm::raw_string_ostream OS(DefSuggestion);
+              // print() already appends a trailing space.
+              PatternCTD->getTemplateParameters()->print(OS, getASTContext(),
+                                                         getPrintingPolicy());
+              std::string QualName;
+              llvm::raw_string_ostream NameOS(QualName);
+              NameOS << PatternRD->getName() << "<";
+              const auto *TPL = PatternCTD->getTemplateParameters();
+              for (unsigned I = 0, N = TPL->size(); I != N; ++I) {
+                if (I > 0)
+                  NameOS << ", ";
+                NameOS << TPL->getParam(I)->getName();
+              }
+              NameOS << ">::" << PatternDecl->getName();
+              PatternDecl->getType().print(OS, getPrintingPolicy(), QualName);
+              OS << ";";
+            }
+            Diag(PointOfInstantiation,
+                 diag::note_inst_declaration_definition_suggestion)
+                << DefSuggestion;
+          }
         }
       }
       return;

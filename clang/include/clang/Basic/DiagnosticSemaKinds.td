@@ -5954,10 +5954,14 @@ def note_unreachable_template_decl
 def note_inst_declaration_hint : Note<"add an explicit instantiation "
   "declaration to suppress this warning if %q0 is explicitly instantiated in "
   "another translation unit">;
+def note_inst_declaration_num_ways : Note<
+  "there %plural{1:is 1 way|:are %0 ways}0 to fix this:">;
 def note_inst_declaration_extern_suggestion : Note<
   "use '%0' to declare the definition is in another translation unit">;
 def note_inst_declaration_specialization_suggestion : Note<
-  "use '%0' to provide a definition for this type">;
+  "or use '%0' to provide a definition for this type">;
+def note_inst_declaration_definition_suggestion : Note<
+  "or use '%0' to provide a definition for all types">;
 def note_evaluating_exception_spec_here : Note<
   "in evaluation of exception specification for %q0 needed here">;
 
