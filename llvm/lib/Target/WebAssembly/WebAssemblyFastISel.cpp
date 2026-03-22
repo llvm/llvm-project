@@ -1459,15 +1459,46 @@ static unsigned matchFoldableShift(MachineInstr *MI, const LoadInst *LI,
   return NewOpc;
 }
 
+static unsigned matchFoldableSExtFromPromotedI32(MachineInstr *MI,
+                                                 const LoadInst *LI,
+                                                 MachineRegisterInfo &MRI,
+                                                 bool A64,
+                                                 MachineInstr *&UserMI) {
+  if (MI->getOpcode() != WebAssembly::I64_EXTEND_U_I32)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  Register DestReg = MI->getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(DestReg))
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
+  switch (UserMI->getOpcode()) {
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  case WebAssembly::I64_EXTEND8_S_I64:
+    if (LoadSize != 8)
+      return WebAssembly::INSTRUCTION_LIST_END;
+    return getSExtLoadOpcode(LoadSize, true, A64);
+  case WebAssembly::I64_EXTEND16_S_I64:
+    if (LoadSize != 16)
+      return WebAssembly::INSTRUCTION_LIST_END;
+    return getSExtLoadOpcode(LoadSize, true, A64);
+  }
+}
+
 bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                               const LoadInst *LI) {
   bool A64 = Subtarget->hasAddr64();
   MachineRegisterInfo &MRI = FuncInfo.MF->getRegInfo();
   Register ResultReg;
   MachineInstr *UserMI = nullptr;
-  unsigned NewOpc;
-  if ((NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64)) !=
+  unsigned NewOpc = WebAssembly::INSTRUCTION_LIST_END;
+  if ((NewOpc = matchFoldableSExtFromPromotedI32(MI, LI, MRI, A64, UserMI)) !=
       WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = UserMI->getOperand(0).getReg();
+  } else if ((NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64)) !=
+             WebAssembly::INSTRUCTION_LIST_END) {
     ResultReg = MI->getOperand(0).getReg();
   } else if ((NewOpc = matchFoldableShift(MI, LI, MRI, A64, UserMI)) !=
              WebAssembly::INSTRUCTION_LIST_END) {
