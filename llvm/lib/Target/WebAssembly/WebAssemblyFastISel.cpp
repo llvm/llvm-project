@@ -1284,29 +1284,56 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   return true;
 }
 
-static unsigned getSExtLoadOpcode(unsigned Opc, bool A64) {
-  switch (Opc) {
-  default:
-    return WebAssembly::INSTRUCTION_LIST_END;
-  case WebAssembly::I32_EXTEND8_S_I32:
-    Opc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
-    break;
-  case WebAssembly::I32_EXTEND16_S_I32:
-    Opc = A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
-    break;
-  case WebAssembly::I64_EXTEND8_S_I64:
-    Opc = A64 ? WebAssembly::LOAD8_S_I64_A64 : WebAssembly::LOAD8_S_I64_A32;
-    break;
-  case WebAssembly::I64_EXTEND16_S_I64:
-    Opc = A64 ? WebAssembly::LOAD16_S_I64_A64 : WebAssembly::LOAD16_S_I64_A32;
-    break;
-  case WebAssembly::I64_EXTEND32_S_I64:
-  case WebAssembly::I64_EXTEND_S_I32:
-    Opc = A64 ? WebAssembly::LOAD32_S_I64_A64 : WebAssembly::LOAD32_S_I64_A32;
-    break;
+static unsigned getSExtLoadOpcode(unsigned LoadSize, bool I64Result, bool A64) {
+  if (I64Result) {
+    switch (LoadSize) {
+    default:
+      return WebAssembly::INSTRUCTION_LIST_END;
+    case 8:
+      return A64 ? WebAssembly::LOAD8_S_I64_A64 : WebAssembly::LOAD8_S_I64_A32;
+    case 16:
+      return A64 ? WebAssembly::LOAD16_S_I64_A64
+                 : WebAssembly::LOAD16_S_I64_A32;
+    case 32:
+      return A64 ? WebAssembly::LOAD32_S_I64_A64
+                 : WebAssembly::LOAD32_S_I64_A32;
+    }
   }
 
-  return Opc;
+  switch (LoadSize) {
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  case 8:
+    return A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
+  case 16:
+    return A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
+  }
+}
+
+static unsigned getZExtLoadOpcode(unsigned LoadSize, bool I64Result, bool A64) {
+  if (I64Result) {
+    switch (LoadSize) {
+    default:
+      return WebAssembly::INSTRUCTION_LIST_END;
+    case 8:
+      return A64 ? WebAssembly::LOAD8_U_I64_A64 : WebAssembly::LOAD8_U_I64_A32;
+    case 16:
+      return A64 ? WebAssembly::LOAD16_U_I64_A64
+                 : WebAssembly::LOAD16_U_I64_A32;
+    case 32:
+      return A64 ? WebAssembly::LOAD32_U_I64_A64
+                 : WebAssembly::LOAD32_U_I64_A32;
+    }
+  }
+
+  switch (LoadSize) {
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  case 8:
+    return A64 ? WebAssembly::LOAD8_U_I32_A64 : WebAssembly::LOAD8_U_I32_A32;
+  case 16:
+    return A64 ? WebAssembly::LOAD16_U_I32_A64 : WebAssembly::LOAD16_U_I32_A32;
+  }
 }
 
 static unsigned getZExtLoadOpcodeFromAnd(MachineInstr *MI,
@@ -1332,36 +1359,49 @@ static unsigned getZExtLoadOpcodeFromAnd(MachineInstr *MI,
   if (Mask != llvm::maskTrailingOnes<uint64_t>(LoadSize))
     return WebAssembly::INSTRUCTION_LIST_END;
 
-  if (MI->getOpcode() == WebAssembly::AND_I32) {
-    if (LoadSize == 8)
-      return A64 ? WebAssembly::LOAD8_U_I32_A64 : WebAssembly::LOAD8_U_I32_A32;
-    if (LoadSize == 16)
-      return A64 ? WebAssembly::LOAD16_U_I32_A64
-                 : WebAssembly::LOAD16_U_I32_A32;
-  } else if (MI->getOpcode() == WebAssembly::AND_I64) {
-    if (LoadSize == 8)
-      return A64 ? WebAssembly::LOAD8_U_I64_A64 : WebAssembly::LOAD8_U_I64_A32;
-    if (LoadSize == 16)
-      return A64 ? WebAssembly::LOAD16_U_I64_A64
-                 : WebAssembly::LOAD16_U_I64_A32;
-    if (LoadSize == 32)
-      return A64 ? WebAssembly::LOAD32_U_I64_A64
-                 : WebAssembly::LOAD32_U_I64_A32;
-  }
-
-  return WebAssembly::INSTRUCTION_LIST_END;
+  bool I64Result = MI->getOpcode() == WebAssembly::AND_I64;
+  return getZExtLoadOpcode(LoadSize, I64Result, A64);
 }
 
-static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
-                                    const LoadInst *LI, bool A64) {
-  switch (MI->getOpcode()) {
+static bool isFoldableSExtOpcode(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return false;
   case WebAssembly::I32_EXTEND8_S_I32:
   case WebAssembly::I32_EXTEND16_S_I32:
   case WebAssembly::I64_EXTEND8_S_I64:
   case WebAssembly::I64_EXTEND16_S_I64:
   case WebAssembly::I64_EXTEND32_S_I64:
   case WebAssembly::I64_EXTEND_S_I32:
-    return getSExtLoadOpcode(MI->getOpcode(), A64);
+    return true;
+  }
+}
+
+static bool isI64SExtResult(unsigned Opc) {
+  switch (Opc) {
+  default:
+    llvm_unreachable("unexpected opcode");
+  case WebAssembly::I32_EXTEND8_S_I32:
+  case WebAssembly::I32_EXTEND16_S_I32:
+    return false;
+  case WebAssembly::I64_EXTEND8_S_I64:
+  case WebAssembly::I64_EXTEND16_S_I64:
+  case WebAssembly::I64_EXTEND32_S_I64:
+  case WebAssembly::I64_EXTEND_S_I32:
+    return true;
+  }
+}
+
+static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
+                                    const LoadInst *LI, bool A64) {
+  unsigned Opc = MI->getOpcode();
+
+  if (isFoldableSExtOpcode(Opc)) {
+    unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+    return getSExtLoadOpcode(LoadSize, isI64SExtResult(Opc), A64);
+  }
+
+  switch (Opc) {
   case WebAssembly::AND_I32:
   case WebAssembly::AND_I64:
     return getZExtLoadOpcodeFromAnd(MI, MRI, LI, A64);
