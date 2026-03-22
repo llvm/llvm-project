@@ -19,6 +19,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -75,6 +76,13 @@ template <> struct format_provider<clang::ssaf::EntityName> {
 
 template <> struct format_provider<clang::ssaf::SummaryName> {
   static void format(const clang::ssaf::SummaryName &Val, raw_ostream &OS,
+                     StringRef Style) {
+    OS << Val;
+  }
+};
+
+template <> struct format_provider<clang::ssaf::AnalysisName> {
+  static void format(const clang::ssaf::AnalysisName &Val, raw_ostream &OS,
                      StringRef Style) {
     OS << Val;
   }

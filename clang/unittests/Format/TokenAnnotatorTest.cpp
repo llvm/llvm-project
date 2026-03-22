@@ -4040,6 +4040,18 @@ TEST_F(TokenAnnotatorTest, JavaRecord) {
   EXPECT_TOKEN(Tokens[6], tok::r_brace, TT_RecordRBrace);
 }
 
+TEST_F(TokenAnnotatorTest, JavaSynchronizedBlock) {
+  auto Tokens = annotate("() -> {\n"
+                         "  synchronized { x; }\n"
+                         "};",
+                         getLLVMStyle(FormatStyle::LK_Java));
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[3], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+}
+
 TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   auto Tokens = annotate("a = b and c;");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
