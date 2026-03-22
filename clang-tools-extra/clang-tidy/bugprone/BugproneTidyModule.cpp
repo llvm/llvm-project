@@ -69,7 +69,6 @@
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
 #include "ReturnConstRefFromParameterCheck.h"
-#include "SetvbufStackBufferCheck.h"
 #include "SharedPtrArrayMismatchCheck.h"
 #include "SignalHandlerCheck.h"
 #include "SignedCharMisuseCheck.h"
@@ -107,6 +106,7 @@
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UnintendedCharOstreamOutputCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
+#include "UnsafeApiFunctionsCallsCheck.h"
 #include "UnsafeFunctionsCheck.h"
 #include "UnsafeToAllowExceptionsCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
@@ -242,8 +242,6 @@ public:
         "bugprone-raw-memory-call-on-non-trivial-type");
     CheckFactories.registerCheck<ReservedIdentifierCheck>(
         "bugprone-reserved-identifier");
-    CheckFactories.registerCheck<SetvbufStackBufferCheck>(
-        "bugprone-setvbuf-stack-buffer");
     CheckFactories.registerCheck<SharedPtrArrayMismatchCheck>(
         "bugprone-shared-ptr-array-mismatch");
     CheckFactories.registerCheck<SignalHandlerCheck>("bugprone-signal-handler");
@@ -311,6 +309,8 @@ public:
         "bugprone-unhandled-exception-at-new");
     CheckFactories.registerCheck<UniquePtrArrayMismatchCheck>(
         "bugprone-unique-ptr-array-mismatch");
+    CheckFactories.registerCheck<UnsafeApiFunctionsCallsCheck>(
+        "bugprone-unsafe-api-functions-calls");
     CheckFactories.registerCheck<CrtpConstructorAccessibilityCheck>(
         "bugprone-crtp-constructor-accessibility");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(

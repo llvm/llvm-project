@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SETVBUFSTACKBUFFERCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SETVBUFSTACKBUFFERCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFEAPIFUNCTIONSCALLSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFEAPIFUNCTIONSCALLSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
 namespace clang::tidy::bugprone {
 
-/// Warns when setvbuf() is called with a stack-allocated buffer, which leads to
-/// undefined behavior if the buffer's lifetime ends before the stream is closed
-/// or reassigned.
+/// Warns when setvbuf() or setbuf() is called with a stack-allocated buffer,
+/// which leads to undefined behavior if the buffer's lifetime ends before the
+/// stream is closed or reassigned.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/setvbuf-stack-buffer.html
-class SetvbufStackBufferCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unsafe-api-functions-calls.html
+class UnsafeApiFunctionsCallsCheck : public ClangTidyCheck {
 public:
-  SetvbufStackBufferCheck(StringRef Name, ClangTidyContext *Context)
+  UnsafeApiFunctionsCallsCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -29,4 +29,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SETVBUFSTACKBUFFERCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFEAPIFUNCTIONSCALLSCHECK_H

@@ -6,28 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SetvbufStackBufferCheck.h"
+#include "UnsafeApiFunctionsCallsCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-void SetvbufStackBufferCheck::registerMatchers(MatchFinder *Finder) {
+void UnsafeApiFunctionsCallsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      callExpr(callee(functionDecl(hasAnyName("setvbuf", "::std::setvbuf"))))
+      callExpr(callee(functionDecl(hasAnyName("setvbuf", "::std::setvbuf",
+                                              "setbuf", "::std::setbuf"))))
           .bind("call"),
       this);
 }
 
-void SetvbufStackBufferCheck::check(const MatchFinder::MatchResult &Result) {
+void UnsafeApiFunctionsCallsCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
   if (!Call || Call->getNumArgs() < 2)
     return;
 
   const Expr *BufArg = Call->getArg(1)->IgnoreParenImpCasts();
 
-  // NULL is fine (used for _IONBF).
+  // NULL is fine (used for _IONBF with setvbuf, or to disable buffering with
+  // setbuf).
   if (BufArg->isNullPointerConstant(*Result.Context,
                                     Expr::NPC_ValueDependentIsNotNull))
     return;
@@ -60,10 +63,14 @@ void SetvbufStackBufferCheck::check(const MatchFinder::MatchResult &Result) {
   if (!VD->getType()->isArrayType())
     return;
 
+  // Get the function name for the diagnostic message.
+  const auto *Callee = Call->getDirectCallee();
+  StringRef FuncName = Callee ? Callee->getName() : "setvbuf";
+
   diag(Call->getBeginLoc(),
-       "passing stack-allocated buffer to 'setvbuf'; buffer must outlive the "
+       "passing stack-allocated buffer to '%0'; buffer must outlive the "
        "stream; use a static, global, or dynamically allocated buffer instead")
-      << Call->getArg(1)->getSourceRange();
+      << FuncName << Call->getArg(1)->getSourceRange();
 }
 
 } // namespace clang::tidy::bugprone
