@@ -1377,6 +1377,27 @@ static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
   return WebAssembly::INSTRUCTION_LIST_END;
 }
 
+static unsigned getFoldedI64LoadOpcode(Register DestReg, const LoadInst *LI,
+                                       MachineRegisterInfo &MRI, bool A64,
+                                       MachineInstr *&OuterUserMI,
+                                       unsigned NarrowOpc) {
+  if (!MRI.hasOneNonDBGUse(DestReg))
+    return NarrowOpc;
+
+  MachineInstr *UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  switch (UserMI->getOpcode()) {
+  case WebAssembly::I64_EXTEND_U_I32:
+    OuterUserMI = UserMI;
+    return getZExtLoadOpcode(LoadSize, /*I64Result=*/true, A64);
+  case WebAssembly::I64_EXTEND_S_I32:
+    OuterUserMI = UserMI;
+    return getSExtLoadOpcode(LoadSize, /*I64Result=*/true, A64);
+  default:
+    return NarrowOpc;
+  }
+}
+
 /// Matches a sign-extension pattern (shl + shr_s) to fold it into a signed
 /// load. FastISel assumes that 'sext' from i8 or i16 will first be lowered to a
 /// 32-bit zero-extending load (i32.load8_u / i32.load16_u) followed by 32-bit
@@ -1386,7 +1407,8 @@ static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
 /// size (32 - LoadBitWidth).
 static unsigned matchFoldableShift(MachineInstr *MI, const LoadInst *LI,
                                    MachineRegisterInfo &MRI, bool A64,
-                                   MachineInstr *&UserMI) {
+                                   MachineInstr *&UserMI,
+                                   MachineInstr *&OuterUserMI) {
   unsigned Opc = MI->getOpcode();
   unsigned NewOpc = WebAssembly::INSTRUCTION_LIST_END;
   if (Opc != WebAssembly::SHL_I32)
@@ -1417,13 +1439,13 @@ static unsigned matchFoldableShift(MachineInstr *MI, const LoadInst *LI,
   if (!IsExpectedConst(ShlAmtDef) || !IsExpectedConst(ShrAmtDef))
     return NewOpc;
 
-  if (LoadTy->isIntegerTy(8))
-    NewOpc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
-  else if (LoadTy->isIntegerTy(16))
-    NewOpc =
-        A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
+  unsigned LoadSize = LoadTy->getIntegerBitWidth();
+  unsigned NarrowOpc = getSExtLoadOpcode(LoadSize, /*I64Result=*/false, A64);
+  if (NarrowOpc == WebAssembly::INSTRUCTION_LIST_END)
+    return WebAssembly::INSTRUCTION_LIST_END;
 
-  return NewOpc;
+  return getFoldedI64LoadOpcode(UserMI->getOperand(0).getReg(), LI, MRI, A64,
+                                OuterUserMI, NarrowOpc);
 }
 
 static unsigned matchFoldableSExtFromPromotedI32(MachineInstr *MI,
@@ -1477,22 +1499,6 @@ static unsigned matchFoldableCopyToI64Ext(MachineInstr *MI, const LoadInst *LI,
   case WebAssembly::I64_EXTEND_S_I32:
     return getSExtLoadOpcode(LoadSize, true, A64);
   }
-}
-
-static unsigned getFoldedI64LoadOpcode(Register DestReg, const LoadInst *LI,
-                                       MachineRegisterInfo &MRI, bool A64,
-                                       MachineInstr *&OuterUserMI,
-                                       unsigned NarrowOpc) {
-  if (!MRI.hasOneNonDBGUse(DestReg))
-    return NarrowOpc;
-
-  MachineInstr *UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
-  if (UserMI->getOpcode() != WebAssembly::I64_EXTEND_U_I32)
-    return NarrowOpc;
-
-  OuterUserMI = UserMI;
-  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
-  return getZExtLoadOpcode(LoadSize, /*I64Result=*/true, A64);
 }
 
 static unsigned matchFoldableAnd(MachineInstr *MI, const LoadInst *LI,
@@ -1555,9 +1561,11 @@ bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   } else if ((NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64)) !=
              WebAssembly::INSTRUCTION_LIST_END) {
     ResultReg = MI->getOperand(0).getReg();
-  } else if ((NewOpc = matchFoldableShift(MI, LI, MRI, A64, UserMI)) !=
+  } else if ((NewOpc =
+                  matchFoldableShift(MI, LI, MRI, A64, UserMI, OuterUserMI)) !=
              WebAssembly::INSTRUCTION_LIST_END) {
-    ResultReg = UserMI->getOperand(0).getReg();
+    ResultReg = OuterUserMI ? OuterUserMI->getOperand(0).getReg()
+                            : UserMI->getOperand(0).getReg();
   } else {
     return false;
   }

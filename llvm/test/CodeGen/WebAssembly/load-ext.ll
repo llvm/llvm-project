@@ -160,9 +160,8 @@ define i64 @global_sext_i8_i64() {
 ; WASM32-FAST-MVP-LABEL: global_sext_i8_i64:
 ; WASM32-FAST-MVP:         .functype global_sext_i8_i64 () -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.const $push2=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load8_s $push1=, gv8($pop2)
-; WASM32-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM32-FAST-MVP-NEXT:    i32.const $push1=, 0
+; WASM32-FAST-MVP-NEXT:    i64.load8_s $push0=, gv8($pop1)
 ; WASM32-FAST-MVP-NEXT:    return $pop0
 ;
 ; WASM64-DAG-LABEL: global_sext_i8_i64:
@@ -189,9 +188,8 @@ define i64 @global_sext_i8_i64() {
 ; WASM64-FAST-MVP-LABEL: global_sext_i8_i64:
 ; WASM64-FAST-MVP:         .functype global_sext_i8_i64 () -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i64.const $push2=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load8_s $push1=, gv8($pop2)
-; WASM64-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM64-FAST-MVP-NEXT:    i64.const $push1=, 0
+; WASM64-FAST-MVP-NEXT:    i64.load8_s $push0=, gv8($pop1)
 ; WASM64-FAST-MVP-NEXT:    return $pop0
   %ld = load i8, ptr @gv8
   %conv = sext i8 %ld to i64
@@ -223,9 +221,8 @@ define i64 @global_sext_i16_i64() {
 ; WASM32-FAST-MVP-LABEL: global_sext_i16_i64:
 ; WASM32-FAST-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.const $push2=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load16_s $push1=, gv16($pop2)
-; WASM32-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM32-FAST-MVP-NEXT:    i32.const $push1=, 0
+; WASM32-FAST-MVP-NEXT:    i64.load16_s $push0=, gv16($pop1)
 ; WASM32-FAST-MVP-NEXT:    return $pop0
 ;
 ; WASM64-DAG-LABEL: global_sext_i16_i64:
@@ -252,9 +249,8 @@ define i64 @global_sext_i16_i64() {
 ; WASM64-FAST-MVP-LABEL: global_sext_i16_i64:
 ; WASM64-FAST-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i64.const $push2=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load16_s $push1=, gv16($pop2)
-; WASM64-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM64-FAST-MVP-NEXT:    i64.const $push1=, 0
+; WASM64-FAST-MVP-NEXT:    i64.load16_s $push0=, gv16($pop1)
 ; WASM64-FAST-MVP-NEXT:    return $pop0
   %ld= load i16, ptr @gv16
   %conv = sext i16 %ld to i64
@@ -495,8 +491,7 @@ define i64 @sext_i8_i64(ptr %p) {
 ; WASM32-FAST-MVP-LABEL: sext_i8_i64:
 ; WASM32-FAST-MVP:         .functype sext_i8_i64 (i32) -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.load8_s $push1=, 0($0)
-; WASM32-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM32-FAST-MVP-NEXT:    i64.load8_s $push0=, 0($0)
 ; WASM32-FAST-MVP-NEXT:    return $pop0
 ;
 ; WASM64-DAG-LABEL: sext_i8_i64:
@@ -520,8 +515,7 @@ define i64 @sext_i8_i64(ptr %p) {
 ; WASM64-FAST-MVP-LABEL: sext_i8_i64:
 ; WASM64-FAST-MVP:         .functype sext_i8_i64 (i64) -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i32.load8_s $push1=, 0($0)
-; WASM64-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM64-FAST-MVP-NEXT:    i64.load8_s $push0=, 0($0)
 ; WASM64-FAST-MVP-NEXT:    return $pop0
   %v = load i8, ptr %p
   %e = sext i8 %v to i64
@@ -603,8 +597,7 @@ define i64 @sext_i16_i64(ptr %p) {
 ; WASM32-FAST-MVP-LABEL: sext_i16_i64:
 ; WASM32-FAST-MVP:         .functype sext_i16_i64 (i32) -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.load16_s $push1=, 0($0)
-; WASM32-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM32-FAST-MVP-NEXT:    i64.load16_s $push0=, 0($0)
 ; WASM32-FAST-MVP-NEXT:    return $pop0
 ;
 ; WASM64-DAG-LABEL: sext_i16_i64:
@@ -628,8 +621,7 @@ define i64 @sext_i16_i64(ptr %p) {
 ; WASM64-FAST-MVP-LABEL: sext_i16_i64:
 ; WASM64-FAST-MVP:         .functype sext_i16_i64 (i64) -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i32.load16_s $push1=, 0($0)
-; WASM64-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM64-FAST-MVP-NEXT:    i64.load16_s $push0=, 0($0)
 ; WASM64-FAST-MVP-NEXT:    return $pop0
   %v = load i16, ptr %p
   %e = sext i16 %v to i64
