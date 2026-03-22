@@ -3781,83 +3781,100 @@ TEST_CONSTEXPR(match_v4di(
 __m128d test_mm_mask_compress_pd(__m128d __W, __mmask8 __U, __m128d __A) {
   // CHECK-LABEL: test_mm_mask_compress_pd
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm_mask_compress_pd(__W,__U,__A); 
+  return _mm_mask_compress_pd(__W,__U,__A);
 }
+TEST_CONSTEXPR(match_m128d(_mm_mask_compress_pd((__m128d){99.0, 99.0}, 0x2, (__m128d){1.0, 2.0}), 2.0, 99.0));
 __m128d test_mm_maskz_compress_pd(__mmask8 __U, __m128d __A) {
   // CHECK-LABEL: test_mm_maskz_compress_pd
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm_maskz_compress_pd(__U,__A); 
+  return _mm_maskz_compress_pd(__U,__A);
 }
+TEST_CONSTEXPR(match_m128d(_mm_maskz_compress_pd(0x2, (__m128d){1.0, 2.0}), 2.0, 0.0));
 __m256d test_mm256_mask_compress_pd(__m256d __W, __mmask8 __U, __m256d __A) {
   // CHECK-LABEL: test_mm256_mask_compress_pd
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm256_mask_compress_pd(__W,__U,__A); 
+  return _mm256_mask_compress_pd(__W,__U,__A);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_mask_compress_pd((__m256d){99.0, 99.0, 99.0, 99.0}, 0xA, (__m256d){1.0, 2.0, 3.0, 4.0}), 2.0, 4.0, 99.0, 99.0));
 __m256d test_mm256_maskz_compress_pd(__mmask8 __U, __m256d __A) {
   // CHECK-LABEL: test_mm256_maskz_compress_pd
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm256_maskz_compress_pd(__U,__A); 
+  return _mm256_maskz_compress_pd(__U,__A);
 }
+TEST_CONSTEXPR(match_m256d(_mm256_maskz_compress_pd(0xA, (__m256d){1.0, 2.0, 3.0, 4.0}), 2.0, 4.0, 0.0, 0.0));
 __m128i test_mm_mask_compress_epi64(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_compress_epi64
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm_mask_compress_epi64(__W,__U,__A); 
+  return _mm_mask_compress_epi64(__W,__U,__A);
 }
+TEST_CONSTEXPR(match_v2di(_mm_mask_compress_epi64((__m128i)(__v2di){99, 99}, 0x1, (__m128i)(__v2di){10, 20}), 10, 99));
 __m128i test_mm_maskz_compress_epi64(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_compress_epi64
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm_maskz_compress_epi64(__U,__A); 
+  return _mm_maskz_compress_epi64(__U,__A);
 }
+TEST_CONSTEXPR(match_v2di(_mm_maskz_compress_epi64(0x1, (__m128i)(__v2di){10, 20}), 10, 0));
 __m256i test_mm256_mask_compress_epi64(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_compress_epi64
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm256_mask_compress_epi64(__W,__U,__A); 
+  return _mm256_mask_compress_epi64(__W,__U,__A);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_mask_compress_epi64((__m256i)(__v4di){99, 99, 99, 99}, 0x6, (__m256i)(__v4di){10, 20, 30, 40}), 20, 30, 99, 99));
 __m256i test_mm256_maskz_compress_epi64(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_compress_epi64
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm256_maskz_compress_epi64(__U,__A); 
+  return _mm256_maskz_compress_epi64(__U,__A);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_maskz_compress_epi64(0x6, (__m256i)(__v4di){10, 20, 30, 40}), 20, 30, 0, 0));
 __m128 test_mm_mask_compress_ps(__m128 __W, __mmask8 __U, __m128 __A) {
   // CHECK-LABEL: test_mm_mask_compress_ps
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm_mask_compress_ps(__W,__U,__A); 
+  return _mm_mask_compress_ps(__W,__U,__A);
 }
+TEST_CONSTEXPR(match_m128(_mm_mask_compress_ps((__m128){99.0f, 99.0f, 99.0f, 99.0f}, 0x5, (__m128){1.0f, 2.0f, 3.0f, 4.0f}), 1.0f, 3.0f, 99.0f, 99.0f));
 __m128 test_mm_maskz_compress_ps(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: test_mm_maskz_compress_ps
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm_maskz_compress_ps(__U,__A); 
+  return _mm_maskz_compress_ps(__U,__A);
 }
+TEST_CONSTEXPR(match_m128(_mm_maskz_compress_ps(0x5, (__m128){1.0f, 2.0f, 3.0f, 4.0f}), 1.0f, 3.0f, 0.0f, 0.0f));
 __m256 test_mm256_mask_compress_ps(__m256 __W, __mmask8 __U, __m256 __A) {
   // CHECK-LABEL: test_mm256_mask_compress_ps
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm256_mask_compress_ps(__W,__U,__A); 
+  return _mm256_mask_compress_ps(__W,__U,__A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_mask_compress_ps((__m256){99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f}, 0xA5, (__m256){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f}), 0.0f, 2.0f, 5.0f, 7.0f, 99.0f, 99.0f, 99.0f, 99.0f));
 __m256 test_mm256_maskz_compress_ps(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: test_mm256_maskz_compress_ps
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm256_maskz_compress_ps(__U,__A); 
+  return _mm256_maskz_compress_ps(__U,__A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_maskz_compress_ps(0xA5, (__m256){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f}), 0.0f, 2.0f, 5.0f, 7.0f, 0.0f, 0.0f, 0.0f, 0.0f));
 __m128i test_mm_mask_compress_epi32(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_compress_epi32
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm_mask_compress_epi32(__W,__U,__A); 
+  return _mm_mask_compress_epi32(__W,__U,__A);
 }
+TEST_CONSTEXPR(match_v4si(_mm_mask_compress_epi32((__m128i)(__v4si){99, 99, 99, 99}, 0x9, (__m128i)(__v4si){10, 20, 30, 40}), 10, 40, 99, 99));
 __m128i test_mm_maskz_compress_epi32(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_compress_epi32
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm_maskz_compress_epi32(__U,__A); 
+  return _mm_maskz_compress_epi32(__U,__A);
 }
+TEST_CONSTEXPR(match_v4si(_mm_maskz_compress_epi32(0x9, (__m128i)(__v4si){10, 20, 30, 40}), 10, 40, 0, 0));
 __m256i test_mm256_mask_compress_epi32(__m256i __W, __mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_compress_epi32
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm256_mask_compress_epi32(__W,__U,__A); 
+  return _mm256_mask_compress_epi32(__W,__U,__A);
 }
+TEST_CONSTEXPR(match_v8si(_mm256_mask_compress_epi32((__m256i)(__v8si){99, 99, 99, 99, 99, 99, 99, 99}, 0xA5, (__m256i)(__v8si){0, 1, 2, 3, 4, 5, 6, 7}), 0, 2, 5, 7, 99, 99, 99, 99));
 __m256i test_mm256_maskz_compress_epi32(__mmask8 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_compress_epi32
   // CHECK: @llvm.x86.avx512.mask.compress
-  return _mm256_maskz_compress_epi32(__U,__A); 
+  return _mm256_maskz_compress_epi32(__U,__A);
 }
+TEST_CONSTEXPR(match_v8si(_mm256_maskz_compress_epi32(0xA5, (__m256i)(__v8si){0, 1, 2, 3, 4, 5, 6, 7}), 0, 2, 5, 7, 0, 0, 0, 0));
+
 void test_mm_mask_compressstoreu_pd(void *__P, __mmask8 __U, __m128d __A) {
   // CHECK-LABEL: test_mm_mask_compressstoreu_pd
   // CHECK: @llvm.masked.compressstore.v2f64(<2 x double> %{{.*}}, ptr %{{.*}}, <2 x i1> %{{.*}})
