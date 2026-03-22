@@ -5954,8 +5954,8 @@ def note_unreachable_template_decl
 def note_inst_declaration_hint : Note<"add an explicit instantiation "
   "declaration to suppress this warning if %q0 is explicitly instantiated in "
   "another translation unit">;
-def note_inst_declaration_example : Note<
-  "e.g., '%0'">;
+def note_inst_declaration_extern_suggestion : Note<
+  "use '%0' to declare the definition is in another translation unit">;
 def note_evaluating_exception_spec_here : Note<
   "in evaluation of exception specification for %q0 needed here">;
 

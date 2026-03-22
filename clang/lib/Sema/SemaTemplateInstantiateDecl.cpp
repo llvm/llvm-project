@@ -6393,7 +6393,8 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
             Var->getType().print(OS, getPrintingPolicy(), QualName);
             OS << ";";
           }
-          Diag(PointOfInstantiation, diag::note_inst_declaration_example)
+          Diag(PointOfInstantiation,
+               diag::note_inst_declaration_extern_suggestion)
               << Suggestion;
         }
       }
