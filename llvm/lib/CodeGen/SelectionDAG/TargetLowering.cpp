@@ -6019,7 +6019,12 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
     // prefer to use 'r' over 'm'. The non-fast register allocators are able to
     // handle the 'r' default by folding. The fast register allocator needs
     // special handling to convert the instruction to use 'm' instead.
-    if (!OpInfo.hasMatchingInput() && OpInfo.Codes.size() == 2 &&
+    //
+    // This also applies to read-write "+rm" constraints (which generate a
+    // direct "=rm" output with a matching tied input). The register allocator
+    // can fold both the output and its tied input to the same memory slot when
+    // under pressure.
+    if (OpInfo.Codes.size() == 2 &&
         llvm::is_contained(OpInfo.Codes, "r") &&
         llvm::is_contained(OpInfo.Codes, "m"))
       OpInfo.MayFoldRegister = true;
