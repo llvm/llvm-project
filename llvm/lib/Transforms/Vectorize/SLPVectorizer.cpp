@@ -223,6 +223,13 @@ static cl::opt<unsigned> LoopAwareTripCount(
     cl::desc("Loop trip count, considered by the cost model during "
              "modeling (0=loops are ignored and considered flat code)"));
 
+/// Enables look-through vectorization for non-vectorizable operations.
+static cl::opt<bool>
+    LookThroughOperations("slp-look-through-intrinsics", cl::init(true),
+                          cl::Hidden,
+                          cl::desc("When true, look through non-vectorizable "
+                                   "operations to vectorize their operands"));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -242,6 +249,55 @@ static const int MinScheduleRegionSize = 16;
 
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
+
+/// Returns true if look-through for operations should be enabled.
+static bool shouldLookThrough() { return LookThroughOperations; }
+
+/// For instructions that are not trivially vectorizable, check if we can
+/// look-through to their operand to enable vectorization of the operands.
+static Value *getLookThroughOperand(Value *V) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return nullptr;
+
+  Value *Operand = nullptr;
+
+  // Early bail out conditions
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    Intrinsic::ID ID = CI->getIntrinsicID();
+
+    // Only consider intrinsic calls.
+    // FIXME: We may want to relax this condition in future.
+    if (ID == Intrinsic::not_intrinsic)
+      return nullptr;
+
+    // Do not look through trivially vectorizable intrinsics.
+    if (isTriviallyVectorizable(ID))
+      return nullptr;
+
+    // Only look through unary intrinsic calls.
+    if (CI->arg_size() != 1)
+      return nullptr;
+
+    // Check if it is speculatable, no memory access and will return
+    if (!CI->hasFnAttr(Attribute::Speculatable) || !CI->doesNotAccessMemory() ||
+        !CI->willReturn())
+      return nullptr;
+
+    Operand = CI->getArgOperand(0);
+
+    // Operand type should match the result type we ignore type changing
+    // intrinsics.
+    if (Operand->getType() != CI->getType())
+      return nullptr;
+  }
+
+  // Only look through if the operand is an Instruction.
+  if (!Operand || !isa<Instruction>(Operand))
+    return nullptr;
+
+  return Operand;
+}
 
 /// Predicate for the element types that the SLP vectorizer supports.
 ///
@@ -1565,7 +1621,12 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if (auto *CallBase = dyn_cast<CallInst>(MainOp)) {
     BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
     BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
-    if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
+    // When look-through is enabled, allow non-vectorizable calls to pass
+    // through - buildTreeRec will handle them as look-through entries.
+    bool IsLookThroughCandidate =
+        shouldLookThrough() && getLookThroughOperand(CallBase) != nullptr;
+    if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty() &&
+        !IsLookThroughCandidate)
       return InstructionsState::invalid();
   }
   bool AnyPoison = InstCnt != VL.size();
@@ -1670,6 +1731,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           return InstructionsState::invalid();
         if (!ID) {
           SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
+          // When look-through is enabled, non-vectorizable intrinsics with
+          // same ID are allowed since we look through to their operands.
+          if (shouldLookThrough() && !isTriviallyVectorizable(BaseID) &&
+              BaseMappings.empty() && Mappings.empty())
+            continue;
           if (Mappings.size() != BaseMappings.size() ||
               Mappings.front().ISA != BaseMappings.front().ISA ||
               Mappings.front().ScalarName != BaseMappings.front().ScalarName ||
@@ -3776,6 +3842,10 @@ private:
       Instruction *I,
       const SmallDenseSet<Value *> *VectorizedVals = nullptr) const;
 
+  /// Check if a list of values can be vectorized as a LookThrough entry.
+  bool isValidLookThroughCandidate(ArrayRef<Value *> VL,
+                                   ArrayRef<Value *> LookThroughOperands);
+
   /// Return information about the vector formed for the specified index
   /// of a vector of (the same) instruction.
   TargetTransformInfo::OperandValueInfo
@@ -4085,6 +4155,9 @@ private:
     /// Checks if the current node is a gather node.
     bool isGather() const { return State == NeedToGather; }
 
+    /// Checks if the current node is a look-through node.
+    bool isLookThrough() const { return State == LookThrough; }
+
     /// A vector of scalars.
     ValueList Scalars;
 
@@ -4106,6 +4179,8 @@ private:
                          ///< the pattern, not the very first one.
       SplitVectorize,    ///< Splits the node into 2 subnodes, vectorizes them
                          ///< independently and then combines back.
+      LookThrough,       ///< The node operations remain scalar, but operands
+                         ///< are vectorized.
     };
     EntryState State;
 
@@ -4378,6 +4453,9 @@ private:
       case SplitVectorize:
         dbgs() << "SplitVectorize\n";
         break;
+      case LookThrough:
+        dbgs() << "LookThrough\n";
+        break;
       }
       if (S) {
         dbgs() << "MainOp: " << *S.getMainOp() << "\n";
@@ -4466,9 +4544,11 @@ private:
                           ArrayRef<int> ReuseShuffleIndices = {},
                           ArrayRef<unsigned> ReorderIndices = {}) {
     assert(((!Bundle && (EntryState == TreeEntry::NeedToGather ||
-                         EntryState == TreeEntry::SplitVectorize)) ||
+                         EntryState == TreeEntry::SplitVectorize ||
+                         EntryState == TreeEntry::LookThrough)) ||
             (Bundle && EntryState != TreeEntry::NeedToGather &&
-             EntryState != TreeEntry::SplitVectorize)) &&
+             EntryState != TreeEntry::SplitVectorize &&
+             EntryState != TreeEntry::LookThrough)) &&
            "Need to vectorize gather entry?");
     // Gathered loads still gathered? Do not create entry, use the original one.
     if (GatheredLoadsEntriesFirst.has_value() &&
@@ -4527,7 +4607,7 @@ private:
           It->getSecond().push_back(Last);
         }
       }
-    } else if (!Last->isGather()) {
+    } else if (!Last->isGather() && !Last->isLookThrough()) {
       if (isa<PHINode>(S.getMainOp()) ||
           isVectorLikeInstWithConstOps(S.getMainOp()) ||
           (!S.areInstructionsWithCopyableElements() &&
@@ -4568,6 +4648,25 @@ private:
                "Bundle and VL out of sync");
 #endif
         Bundle.setTreeEntry(Last);
+      }
+    } else if (Last->isLookThrough()) {
+      // LookThrough entries do not need scheduling, only their operands are
+      // vectorized.
+      Last->setDoesNotNeedToSchedule();
+      // Register scalars in ScalarToTreeEntries.
+      SmallPtrSet<Value *, 4> Processed;
+      for (Value *V : VL) {
+        if (isa<PoisonValue>(V))
+          continue;
+        auto It = ScalarToTreeEntries.find(V);
+        if (It == ScalarToTreeEntries.end()) {
+          ScalarToTreeEntries.try_emplace(V).first->getSecond().push_back(Last);
+          (void)Processed.insert(V);
+        } else if (Processed.insert(V).second) {
+          assert(!is_contained(It->getSecond(), Last) &&
+                 "Value already associated with the node.");
+          It->getSecond().push_back(Last);
+        }
       }
     } else {
       // Build a map for gathered scalars to the nodes where they are used.
@@ -4690,6 +4789,12 @@ private:
   /// Maps the operand index and entry to the corresponding tree entry.
   SmallDenseMap<std::pair<const TreeEntry *, unsigned>, TreeEntry *>
       OperandsToTreeEntry;
+
+  /// When a LookThrough node's only user is another LookThrough node we store
+  /// its per-lane scalar results here instead of materializing a vector. The
+  /// parent LookThrough then uses these scalars directly to avaoid creating
+  /// extra extract).
+  SmallDenseMap<TreeEntry *, SmallVector<Value *>> LookThroughScalarOutputs;
 
   /// Scalars, used in split vectorize nodes.
   SmallDenseMap<Value *, SmallVector<TreeEntry *>> ScalarsInSplitNodes;
@@ -12185,6 +12290,58 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   TreeEntry::EntryState State = getScalarsVectorizationState(
       S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps, SPtrInfo);
   if (State == TreeEntry::NeedToGather) {
+    // For non-vectorizable operations, check if we can look through to
+    // their operands and vectorize them.
+
+    if (shouldLookThrough() && Depth < RecursionMaxDepth - 1 && VL.size() > 1) {
+      // Collect look-through operands from all values
+      SmallVector<Value *> LookThroughOperands;
+      bool AllValid = true;
+
+      for (Value *V : VL) {
+        if (isa<PoisonValue>(V)) {
+          LookThroughOperands.push_back(V);
+          continue;
+        }
+        if (Value *LTOp = getLookThroughOperand(V)) {
+          LookThroughOperands.push_back(LTOp);
+        } else {
+          AllValid = false;
+          break;
+        }
+      }
+
+      if (AllValid && !LookThroughOperands.empty()) {
+        // All operands must have the same type.
+        if (!allSameType(LookThroughOperands))
+          AllValid = false;
+
+        // Validate LookThrough candidate.
+        if (AllValid) {
+          AllValid = isValidLookThroughCandidate(VL, LookThroughOperands);
+        }
+
+        // Create LookThrough entry and build tree for operands.
+        if (AllValid) {
+          LLVM_DEBUG(dbgs() << "SLP: Creating LookThrough entry for "
+                            << VL.size() << " non-vectorizable operations.\n");
+          auto Invalid = ScheduleBundle::invalid();
+          TreeEntry *LookThroughTE =
+              newTreeEntry(VL, TreeEntry::LookThrough, Invalid, S, UserTreeIdx,
+                           ReuseShuffleIndices);
+          LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (LookThrough).\n";
+                     LookThroughTE->dump());
+          // Build tree for the look-through operands
+          SmallVector<ValueList, 1> Ops;
+          Ops.emplace_back(LookThroughOperands.begin(),
+                           LookThroughOperands.end());
+          LookThroughTE->setOperands(Ops);
+          buildTreeRec(LookThroughOperands, Depth + 1, {LookThroughTE, 0});
+          return;
+        }
+      }
+    }
+    // Fall back to creating a gather node
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
   }
@@ -12221,8 +12378,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
           }
         }
         if (NewLoopNest.size() > CurrentLoopNest.size())
-          CurrentLoopNest.append(std::next(NewLoopNest.begin(), CurrentLoopNest.size()),
-                          NewLoopNest.end());
+          CurrentLoopNest.append(
+              std::next(NewLoopNest.begin(), CurrentLoopNest.size()),
+              NewLoopNest.end());
       }
     }
   }
@@ -12397,6 +12555,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       case TreeEntry::CombinedVectorize:
       case TreeEntry::SplitVectorize:
       case TreeEntry::NeedToGather:
+      case TreeEntry::LookThrough:
         llvm_unreachable("Unexpected loads state.");
       }
       if (!CurrentOrder.empty() && State != TreeEntry::ScatterVectorize) {
@@ -12781,6 +12940,115 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
     CurrentOrder.clear();
 
   return ShouldKeepOrder;
+}
+
+bool BoUpSLP::isValidLookThroughCandidate(
+    ArrayRef<Value *> VL, ArrayRef<Value *> LookThroughOperands) {
+  // Operands should form a valid instruction state.
+  InstructionsState OpS = getSameOpcode(LookThroughOperands, *TLI);
+  if (!OpS || OpS.getOpcode() == 0)
+    return false;
+
+  // Operands should not be already scheduled in existing scheduling region.
+  Instruction *IVL0 = cast<Instruction>(VL[0]);
+  auto BSIter = BlocksSchedules.find(IVL0->getParent());
+  if (BSIter != BlocksSchedules.end() && BSIter->second) {
+    BlockScheduling &BS = *BSIter->second;
+    for (Value *V : LookThroughOperands) {
+      if (isa<PoisonValue>(V))
+        continue;
+      if (BS.getScheduleData(V)) {
+        LLVM_DEBUG(dbgs() << "SLP: Skipping LookThrough - operand " << *V
+                          << " already in scheduling region.\n");
+        return false;
+      }
+    }
+  }
+
+  // Dominance checks
+  // Find the first and last instruction in VL
+  BasicBlock *LTBlock = nullptr;
+  Instruction *LastInBundle = nullptr;
+  for (Value *V : VL) {
+    if (isa<PoisonValue>(V))
+      continue;
+    auto *I = cast<Instruction>(V);
+    if (!LTBlock)
+      LTBlock = I->getParent();
+    else if (I->getParent() != LTBlock)
+      return false;
+    if (!LastInBundle || LastInBundle->comesBefore(I))
+      LastInBundle = I;
+  }
+
+  auto instrNotAfter = [&](Instruction *Ref, Instruction *I) {
+    if (!I)
+      return true;
+    if (I->getParent() == LTBlock)
+      return !Ref->comesBefore(I);
+    return DT->dominates(I->getParent(), LTBlock);
+  };
+
+  // LookThrough operands must not be defined after LastInBundle.
+  if (LastInBundle) {
+    for (Value *OpV : LookThroughOperands) {
+      if (isa<PoisonValue>(OpV))
+        continue;
+      auto *OpInst = dyn_cast<Instruction>(OpV);
+      if (OpInst && !instrNotAfter(LastInBundle, OpInst)) {
+        LLVM_DEBUG(dbgs() << "SLP: Skipping LookThrough - operand not "
+                          << "before last instruction in bundle.\n");
+        return false;
+      }
+    }
+  }
+
+  // Non-look-through operands of each instruction in VL must be defined at or
+  // before LastInBundle
+  if (LastInBundle) {
+    for (Value *V : VL) {
+      if (isa<PoisonValue>(V))
+        continue;
+      auto *I = cast<Instruction>(V);
+      for (unsigned OpIdx = 1; OpIdx < I->getNumOperands(); ++OpIdx) {
+        auto *OpInst = dyn_cast<Instruction>(I->getOperand(OpIdx));
+        if (OpInst && !instrNotAfter(LastInBundle, OpInst)) {
+          LLVM_DEBUG(dbgs() << "SLP: Skipping LookThrough - operand defined "
+                            << "after last bundle instruction.\n");
+          return false;
+        }
+      }
+    }
+  }
+
+  // External users must come after LastInBundle.
+  if (LastInBundle) {
+    SmallPtrSet<Value *, 8> VLSet(VL.begin(), VL.end());
+    for (Value *V : VL) {
+      if (isa<PoisonValue>(V))
+        continue;
+      auto *I = cast<Instruction>(V);
+      if (I == LastInBundle)
+        continue;
+      for (User *U : I->users()) {
+        auto *UI = dyn_cast<Instruction>(U);
+        if (!UI || UI->getParent() != LTBlock || VLSet.contains(UI))
+          continue;
+        // Skip users that are already in a LookThrough tree entry
+        ArrayRef<TreeEntry *> UIEntries = getTreeEntries(UI);
+        if (any_of(UIEntries,
+                   [](const TreeEntry *E) { return E->isLookThrough(); }))
+          continue;
+        if (UI->comesBefore(LastInBundle)) {
+          LLVM_DEBUG(dbgs() << "SLP: Skipping LookThrough - external user "
+                            << "appears before last bundle instruction.\n");
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
 }
 
 bool BoUpSLP::areAllUsersVectorized(
@@ -15510,6 +15778,57 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   unsigned EntryVF = E->getVectorFactor();
   auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
 
+  if (E->State == TreeEntry::LookThrough) {
+    InstructionCost LookThroughCost = 0;
+    unsigned NumScalars = E->Scalars.size();
+
+    // Get operand vector type for extract cost comutation.
+    Type *OpVecTy = nullptr;
+    bool OperandMaterializesVector = false;
+    if (OperandsToTreeEntry.contains({E, 0})) {
+      const TreeEntry *OpE = OperandsToTreeEntry.at({E, 0});
+      if (!OpE->isGather()) {
+        Type *OpScalarTy = getValueType(OpE->Scalars[0]);
+        OpVecTy = getWidenedType(OpScalarTy, NumScalars);
+        OperandMaterializesVector = OpE->State != TreeEntry::LookThrough;
+      }
+    }
+
+    // Add extract and insert costs
+
+    for (unsigned I = 0; I < NumScalars; ++I) {
+      if (isa<PoisonValue>(E->Scalars[I]))
+        continue;
+      // Extract cost
+      if (OpVecTy && OperandMaterializesVector)
+        LookThroughCost += TTI->getVectorInstrCost(
+            Instruction::ExtractElement, OpVecTy, CostKind, I, nullptr);
+      // Insert cost
+      LookThroughCost += TTI->getVectorInstrCost(
+          Instruction::InsertElement, FinalVecTy, CostKind, I, nullptr);
+    }
+
+    // Account for the shufflecost
+    if (!E->ReuseShuffleIndices.empty()) {
+      LLVM_DEBUG({
+        dbgs() << "SLP: ReuseShuffleIndices:";
+        for (int Idx : E->ReuseShuffleIndices)
+          dbgs() << " " << Idx;
+        dbgs() << "\n";
+      });
+
+      SmallVector<int> Mask(E->ReuseShuffleIndices.begin(),
+                            E->ReuseShuffleIndices.end());
+      if (!ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
+        LookThroughCost +=
+            ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, FinalVecTy, Mask);
+    }
+
+    LLVM_DEBUG(dumpTreeCosts(E, 0, LookThroughCost, 0,
+                             "Calculated costs for LookThrough"));
+    return LookThroughCost;
+  }
+
   if (E->isGather() || TransformedToGatherNodes.contains(E)) {
     if (allConstant(VL))
       return 0;
@@ -16362,6 +16681,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       case TreeEntry::CombinedVectorize:
       case TreeEntry::SplitVectorize:
       case TreeEntry::NeedToGather:
+      case TreeEntry::LookThrough:
         llvm_unreachable("Unexpected vectorization state.");
       }
       return VecLdCost + CommonCost;
@@ -18245,10 +18565,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           assert(SLPReVec && "Only supported by REVEC.");
           SrcTy = getWidenedType(SrcTy, VecTy->getNumElements());
         }
-        InstructionCost CastCost =
-            TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
-                                  TTI::CastContextHint::None,
-                                  TTI::TCK_RecipThroughput);
+        InstructionCost CastCost = TTI->getCastInstrCost(
+            Opcode, DstTy, SrcTy, TTI::CastContextHint::None,
+            TTI::TCK_RecipThroughput);
         CastCost = ScaleCost(CastCost, Root, /*Scalar=*/nullptr, ReductionRoot);
         Cost += CastCost;
       }
@@ -18417,9 +18736,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         default:
           break;
         }
-        InstructionCost CastCost =
-            TTI->getCastInstrCost(Opcode, DstVecTy, SrcVecTy, CCH,
-                                  TTI::TCK_RecipThroughput);
+        InstructionCost CastCost = TTI->getCastInstrCost(
+            Opcode, DstVecTy, SrcVecTy, CCH, TTI::TCK_RecipThroughput);
         CastCost = ScaleCost(CastCost, *VectorizableTree.front().get(),
                              /*Scalar=*/nullptr, ReductionRoot);
         Cost += CastCost;
@@ -19577,33 +19895,38 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   };
   const ScheduleBundle *Bundle = FindScheduleBundle(E);
   if (!E->isGather() && !Bundle) {
-    if ((Opcode == Instruction::GetElementPtr &&
-         any_of(E->Scalars,
-                [](Value *V) {
-                  return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
-                })) ||
-        (all_of(E->Scalars,
-                [&](Value *V) {
-                  return isa<PoisonValue>(V) ||
-                         (E->Idx == 0 && isa<InsertElementInst>(V)) ||
-                         E->isCopyableElement(V) ||
-                         (!isVectorLikeInstWithConstOps(V) &&
-                          isUsedOutsideBlock(V));
-                }) &&
-         (!E->doesNotNeedToSchedule() ||
-          any_of(E->Scalars,
-                 [&](Value *V) {
+    // Use FindLastInst() so the insert point is after all scalars in VL.
+    if (E->isLookThrough()) {
+      Res = FindLastInst();
+    } else if ((Opcode == Instruction::GetElementPtr &&
+                any_of(E->Scalars,
+                       [](Value *V) {
+                         return !isa<GetElementPtrInst>(V) &&
+                                isa<Instruction>(V);
+                       })) ||
+               (all_of(E->Scalars,
+                       [&](Value *V) {
+                         return isa<PoisonValue>(V) ||
+                                (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                                E->isCopyableElement(V) ||
+                                (!isVectorLikeInstWithConstOps(V) &&
+                                 isUsedOutsideBlock(V));
+                       }) &&
+                (!E->doesNotNeedToSchedule() ||
+                 any_of(E->Scalars,
+                        [&](Value *V) {
+                          if (!isa<Instruction>(V) ||
+                              (E->hasCopyableElements() &&
+                               E->isCopyableElement(V)))
+                            return false;
+                          return !areAllOperandsNonInsts(V);
+                        }) ||
+                 none_of(E->Scalars, [&](Value *V) {
                    if (!isa<Instruction>(V) ||
                        (E->hasCopyableElements() && E->isCopyableElement(V)))
                      return false;
-                   return !areAllOperandsNonInsts(V);
-                 }) ||
-          none_of(E->Scalars, [&](Value *V) {
-            if (!isa<Instruction>(V) ||
-                (E->hasCopyableElements() && E->isCopyableElement(V)))
-              return false;
-            return MustGather.contains(V);
-          }))))
+                   return MustGather.contains(V);
+                 }))))
       Res = FindLastInst();
     else
       Res = FindFirstInst();
@@ -21028,6 +21351,106 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   if (E->VectorizedValue)
     return E->VectorizedValue;
   auto *VecTy = getWidenedType(ScalarTy, E->Scalars.size());
+
+  // Handle LookThrough entries - operations that remain scalar but their
+  // operands are vectorized.
+  if (E->State == TreeEntry::LookThrough) {
+    TreeEntry *OpEntry = OperandsToTreeEntry.contains({E, 0})
+                             ? OperandsToTreeEntry.at({E, 0})
+                             : nullptr;
+
+    // Vectorize the operand tree if it is not a gather.
+    Value *VecOperand = nullptr;
+    bool ChildIsGather = OpEntry && OpEntry->isGather();
+    if (OpEntry && !ChildIsGather) {
+      if (!OpEntry->VectorizedValue)
+        VecOperand = vectorizeTree(OpEntry);
+      else
+        VecOperand = OpEntry->VectorizedValue;
+    }
+
+    // Set insert point to after LastInBundle for this LookThrough entry.
+    setInsertPointAfterBundle(E);
+
+    unsigned NumScalars = E->Scalars.size();
+    assert(NumScalars <= E->getVectorFactor() &&
+           "Scalars count must not exceed the vector factor");
+    SmallVector<Value *> ScalarResults(NumScalars, nullptr);
+
+    // Clone the scalar instructions and apply the scalar operations.
+    for (unsigned Lane = 0; Lane < NumScalars; ++Lane) {
+      Value *Scalar = E->Scalars[Lane];
+      if (isa<PoisonValue>(Scalar))
+        continue;
+
+      Value *ScalarResult = Scalar;
+      Value *ScalarInput = nullptr;
+      if (VecOperand && !isa<PoisonValue>(VecOperand)) {
+        ScalarInput =
+            Builder.CreateExtractElement(VecOperand, Builder.getInt32(Lane));
+      } else if (ChildIsGather && isa<Instruction>(Scalar)) {
+        if (auto *CI = dyn_cast<CallInst>(Scalar))
+          ScalarInput = CI->getArgOperand(0);
+        else
+          ScalarInput = cast<Instruction>(Scalar)->getOperand(0);
+      } else if (OpEntry && LookThroughScalarOutputs.contains(OpEntry) &&
+                 Lane < LookThroughScalarOutputs[OpEntry].size() &&
+                 LookThroughScalarOutputs[OpEntry][Lane]) {
+        ScalarInput = LookThroughScalarOutputs[OpEntry][Lane];
+      }
+
+      if (ScalarInput && isa<Instruction>(Scalar)) {
+        Instruction *Clone = cast<Instruction>(Scalar)->clone();
+        if (auto *CI = dyn_cast<CallInst>(Clone)) {
+          CI->setArgOperand(0, ScalarInput);
+        } else {
+          Clone->setOperand(0, ScalarInput);
+        }
+        Builder.Insert(Clone);
+        ScalarResult = Clone;
+      }
+
+      ScalarResults[Lane] = ScalarResult;
+    }
+
+    // If the only user of this LookThrough is another LookThrough then do not
+    // materialize a vector
+    if (E->UserTreeIndex.UserTE &&
+        E->UserTreeIndex.UserTE->State == TreeEntry::LookThrough) {
+      LookThroughScalarOutputs[E] = std::move(ScalarResults);
+      ++NumVectorInstructions;
+      return nullptr;
+    }
+
+    // Build the insert elements for the vectorized result.
+    Value *Vec = PoisonValue::get(VecTy);
+    for (unsigned Lane = 0; Lane < NumScalars; ++Lane) {
+      if (ScalarResults[Lane]) {
+        Vec = Builder.CreateInsertElement(Vec, ScalarResults[Lane],
+                                          Builder.getInt32(Lane));
+        if (auto *IE = dyn_cast<Instruction>(Vec))
+          MustGather.insert(IE);
+      }
+    }
+
+    // Build the shuffle vector for the result.
+    if (!E->ReuseShuffleIndices.empty()) {
+      SmallVector<int> Mask(E->ReuseShuffleIndices.begin(),
+                            E->ReuseShuffleIndices.end());
+      if (!ShuffleVectorInst::isIdentityMask(Mask, Mask.size())) {
+        Vec = Builder.CreateShuffleVector(Vec, Mask);
+        if (auto *I = dyn_cast<Instruction>(Vec)) {
+          GatherShuffleExtractSeq.insert(I);
+          CSEBlocks.insert(I->getParent());
+        }
+      }
+    }
+
+    E->VectorizedValue = Vec;
+    ++NumVectorInstructions;
+    return Vec;
+  }
+
   if (E->isGather() || TransformedToGatherNodes.contains(E)) {
     // Set insert point for non-reduction initial nodes.
     if (E->hasState() && E->Idx == 0 && !UserIgnoreList)
@@ -22227,6 +22650,7 @@ Value *BoUpSLP::vectorizeTree(
   // Clean Entry-to-LastInstruction table. It can be affected after scheduling,
   // need to rebuild it.
   EntryToLastInstruction.clear();
+  LookThroughScalarOutputs.clear();
   // All blocks must be scheduled before any instructions are inserted.
   for (auto &BSIter : BlocksSchedules)
     scheduleBlock(*this, BSIter.second.get());
@@ -22822,7 +23246,10 @@ Value *BoUpSLP::vectorizeTree(
       continue;
     }
 
-    assert(Entry->VectorizedValue && "Can't find vectorizable value");
+    // LookThrough entries that only feed another LookThrough may not
+    // materialize a vector.
+    assert((Entry->VectorizedValue || Entry->State == TreeEntry::LookThrough) &&
+           "Can't find vectorizable value");
 
     // For each lane:
     for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
@@ -28369,6 +28796,11 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
 bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
                                                    BasicBlock *BB, BoUpSLP &R,
                                                    bool MaxVFOnly) {
+
+  // Skip insertelements created by LookThrough.
+  if (R.isGathered(IEI))
+    return false;
+
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<int> Mask;
