@@ -1607,6 +1607,23 @@ void llvm::gatherImportedSummariesForModule(
 
     SummariesForIndex[GUID] = DS->second;
   }
+
+  // For each source module we import from, also include summaries for local
+  // functions that have NoRenameOnPromotion set. This is needed for distributed
+  // ThinLTO. Otherwise, the local funciton of the source module will keep its
+  // origin name, e.g., foo() while the function in destination module will have
+  // name foo.llvm.<...>() and this will cause a link failure.
+  for (auto &[ModPath, SummariesForIndex] : ModuleToSummariesForIndex) {
+    if (ModPath == ModulePath)
+      continue;
+    auto It = ModuleToDefinedGVSummaries.find(ModPath);
+    if (It == ModuleToDefinedGVSummaries.end())
+      continue;
+    for (const auto &[GUID, Summary] : It->second) {
+      if (Summary->noRenameOnPromotion())
+        SummariesForIndex.try_emplace(GUID, Summary);
+    }
+  }
 }
 
 /// Emit the files \p ModulePath will import from into \p OutputFilename.
