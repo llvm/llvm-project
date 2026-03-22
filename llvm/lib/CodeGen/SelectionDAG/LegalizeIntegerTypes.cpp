@@ -4908,15 +4908,13 @@ void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, SDValue &Lo,
                                            SDValue &Hi) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
-  bool isSigned = (N->getOpcode() == ISD::SDIVREM);
-  RTLIB::Libcall LC = isSigned ? RTLIB::SDIVREM_I128 : RTLIB::UDIVREM_I128;
+  bool IsSigned = (N->getOpcode() == ISD::SDIVREM);
+  RTLIB::Libcall LC = IsSigned ? RTLIB::SDIVREM_I128 : RTLIB::UDIVREM_I128;
 
-  // If no fused divrem libcall is available, fall back to separate div and rem
-  // nodes that the existing type-legalization handlers can expand
-  // independently.
+  // If no fused divrem libcall is available, fall back to separate div and rem.
   if (DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
-    unsigned DivOp = isSigned ? ISD::SDIV : ISD::UDIV;
-    unsigned RemOp = isSigned ? ISD::SREM : ISD::UREM;
+    unsigned DivOp = IsSigned ? ISD::SDIV : ISD::UDIV;
+    unsigned RemOp = IsSigned ? ISD::SREM : ISD::UREM;
     SDValue Ops[2] = {N->getOperand(0), N->getOperand(1)};
     SDValue Q = DAG.getNode(DivOp, dl, VT, Ops);
     SDValue R = DAG.getNode(RemOp, dl, VT, Ops);
@@ -4927,21 +4925,22 @@ void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, SDValue &Lo,
 
   // Emit __divmodti4 / __udivmodti4:
   //   RetTy libcall(RetTy a, RetTy b, RetTy *rem)
-  // The quotient is the return value; the remainder is written via the pointer.
+  // The quotient is the return value; the remainder is written via pointer.
   Type *RetTy = VT.getTypeForEVT(*DAG.getContext());
   TargetLowering::ArgListTy Args;
   for (const SDValue &Op : N->op_values()) {
     TargetLowering::ArgListEntry Entry(
         Op, Op.getValueType().getTypeForEVT(*DAG.getContext()));
-    Entry.IsSExt = isSigned;
-    Entry.IsZExt = !isSigned;
+    Entry.IsSExt = IsSigned;
+    Entry.IsZExt = !IsSigned;
     Args.push_back(Entry);
   }
 
+  // The libcall writes the remainder via a pointer argument; allocate a stack
+  // slot for it and pass its address as the third argument.
   SDValue FIPtr = DAG.CreateStackTemporary(VT);
   TargetLowering::ArgListEntry PtrEntry(
       FIPtr, PointerType::getUnqual(RetTy->getContext()));
-  PtrEntry.IsSExt = PtrEntry.IsZExt = false;
   Args.push_back(PtrEntry);
 
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
@@ -4952,8 +4951,8 @@ void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, SDValue &Lo,
           DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
           DAG.getExternalSymbol(LCImpl, TLI.getPointerTy(DAG.getDataLayout())),
           std::move(Args))
-      .setSExtResult(isSigned)
-      .setZExtResult(!isSigned);
+      .setSExtResult(IsSigned)
+      .setZExtResult(!IsSigned);
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
