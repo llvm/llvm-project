@@ -4385,14 +4385,40 @@ bool BinaryFunction::isSymbolValidInScope(const SymbolRef &Symbol,
 
   // It's okay to have a zero-sized symbol in the middle of non-zero-sized
   // function.
-  if (SymbolSize == 0 && containsAddress(cantFail(Symbol.getAddress())))
+  if (SymbolSize == 0 && containsAddress(cantFail(Symbol.getAddress()))){
+    // PPC64 ELFv2: PLT call stubs are emitted in .text as local zero-sized
+    // symbols (e.g. "plt_call.*", "plt_branch.*", "__glink").
+    // Although their address may fall within an existing function range,
+    // they are separate call stubs and must not be treated as part of that
+    // function, otherwise function boundaries and control flow may be corrupted.
+    // Unlike other architectures where PLT entries reside in dedicated
+    // sections (e.g. .plt), PPC64 places these stubs in .text, making the
+    // distinction ambiguous without explicit filtering.
+    if (BC.isPPC64()) {
+      StringRef SymName = cantFail(Symbol.getName());
+      if (SymName.contains("plt_call.") || SymName.contains("plt_branch.") ||
+          SymName.contains("__glink")) {
+        return false;
+      }
+    }
     return true;
+  }
 
   if (cantFail(Symbol.getType()) != SymbolRef::ST_Unknown)
     return false;
 
   if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Global)
     return false;
+
+  // General PPC64 ELFv2 guard: reject PLT/glink stubs as in-scope local
+  // symbols of the current function.
+  if (BC.isPPC64()) {
+    StringRef SymName = cantFail(Symbol.getName());
+    if (SymName.contains("plt_call.") || SymName.contains("plt_branch.") ||
+        SymName.contains("__glink")) {
+      return false;
+    }
+  }
 
   return true;
 }
