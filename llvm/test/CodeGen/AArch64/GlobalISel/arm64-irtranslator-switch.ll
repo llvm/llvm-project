@@ -1404,8 +1404,11 @@ define ptr @test_range_phi_switch_cycle() {
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.bb4:
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $w0 = COPY [[PHI]](s32)
-  ; CHECK-NEXT:   TCRETURNdi @ham, 0, csr_aarch64_aapcs, implicit $sp, implicit $w0
+  ; CHECK-NEXT:   BL @ham, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $x0
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
 bb:
   br label %bb1
 

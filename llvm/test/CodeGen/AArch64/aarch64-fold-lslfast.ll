@@ -338,7 +338,10 @@ define i64 @multi_use_non_memory_call(i64 %a, i64 %b) {
 ; CHECK-NEXT:    csel x0, x8, x9, gt
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB4_2: // %truebb
-; CHECK-NEXT:    b foo
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    bl foo
 entry:
   %mul1 = shl i64 %a, 3
   %mul2 = shl i64 %b, 3
