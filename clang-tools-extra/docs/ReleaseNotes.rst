@@ -272,6 +272,9 @@ Changes in existing checks
   - Fixed false positive where an array of pointers to ``const`` was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+  - Fixed false positive where a pointer used with placement new was
+    incorrectly diagnosed as allowing the pointee to be made ``const``.
+
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.

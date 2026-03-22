@@ -8118,8 +8118,15 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
 // If (1 << (BitWidth / 2)) % Constant == 1, then the remainder
 // can be computed
 // as:
-//   Sum += __builtin_uadd_overflow(Lo, High, &Sum);
-//   Remainder = Sum % Constant
+//   Sum = __builtin_uadd_overflow(Lo, High, &Sum);
+//   Remainder = Sum % Constant;
+//
+// If (1 << (BitWidth / 2)) % Constant != 1, we can search for a smaller value
+// W such that W != (BitWidth / 2) and (1 << W) % Constant == 1. We can break
+// High:Low into 3 chunks of W bits and compute remainder as
+//   Sum = Chunk0 + Chunk1 + Chunk2;
+//   Remainder = Sum % Constant;
+//
 // This is based on "Remainder by Summing Digits" from Hacker's Delight.
 //
 // For division, we can compute the remainder using the algorithm described
@@ -8183,42 +8190,67 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     Divisor.lshrInPlace(TrailingZeros);
   }
 
+  // Look for the largest chunk width W such that (1 << W) % Divisor == 1.
+  unsigned BestChunkWidth = 0;
+  for (unsigned I = HBitWidth, E = HBitWidth / 2; I > E; --I) {
+    APInt Mod = APInt::getOneBitSet(Divisor.getBitWidth(), I).urem(Divisor);
+
+    if (!Mod.isOne())
+      continue;
+
+    // If best chunk is HBitWidth, we can use it and handle the carry out.
+    // Otherwise, ensure the sum won't overflow HiLoVT (HBitWidth).
+    // Summing N chunks adds ceil(log2(N)) extra carry bits to the width.
+    // Safety check: Base Chunk Width (I) + Carry Bits <= Register Width.
+    unsigned NumChunks = divideCeil(BitWidth, I);
+    if (I == HBitWidth || I + llvm::bit_width(NumChunks - 1) <= HBitWidth) {
+      BestChunkWidth = I;
+      break;
+    }
+  }
+
+  // If we didn't find a chunk size, exit.
+  if (!BestChunkWidth)
+    return false;
+
   SDLoc dl(N);
-  SDValue Sum;
+
+  assert(!LL == !LH && "Expected both input halves or no input halves!");
+  if (!LL)
+    std::tie(LL, LH) = DAG.SplitScalar(N->getOperand(0), dl, HiLoVT, HiLoVT);
+
+  bool HasFSHR = isOperationLegal(ISD::FSHR, HiLoVT);
+
+  // Shift the input by the number of TrailingZeros in the divisor. The
+  // shifted out bits will be added to the remainder later.
   SDValue PartialRem;
-
-  // If (1 << HBitWidth) % divisor == 1, we can add the two halves together and
-  // then add in the carry.
-  if (HalfMaxPlus1.urem(Divisor).isOne()) {
-    assert(!LL == !LH && "Expected both input halves or no input halves!");
-    if (!LL)
-      std::tie(LL, LH) = DAG.SplitScalar(N->getOperand(0), dl, HiLoVT, HiLoVT);
-
-    // Shift the input by the number of TrailingZeros in the divisor. The
-    // shifted out bits will be added to the remainder later.
-    if (TrailingZeros) {
-      // Save the shifted off bits if we need the remainder.
-      if (Opcode != ISD::UDIV) {
-        APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
-        PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
-                                 DAG.getConstant(Mask, dl, HiLoVT));
-      }
-
-      if (isOperationLegal(ISD::FSHR, HiLoVT))
-        LL = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
-                         DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
-      else
-        LL = DAG.getNode(
-            ISD::OR, dl, HiLoVT,
-            DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
-                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
-            DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
-                        DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
-                                                   HiLoVT, dl)));
-      LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
-                       DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+  if (TrailingZeros) {
+    // Save the shifted off bits if we need the remainder.
+    if (Opcode != ISD::UDIV) {
+      APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
+      PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
+                               DAG.getConstant(Mask, dl, HiLoVT));
     }
 
+    if (HasFSHR)
+      LL = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
+                       DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+    else
+      LL = DAG.getNode(
+          ISD::OR, dl, HiLoVT,
+          DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
+                      DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
+          DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
+                      DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
+                                                 HiLoVT, dl)));
+    LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
+                     DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
+  }
+
+  SDValue Sum;
+  // If BestChunkWidth is HBitWidth add low and high half. If there is a carry
+  // out, add that to the final sum.
+  if (BestChunkWidth == HBitWidth) {
     // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
     EVT SetCCType =
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), HiLoVT);
@@ -8241,76 +8273,40 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Carry);
     }
   } else {
-    // If we cannot split in two halves, look for a smaller chunk width W
-    // such that (1 << W) % Divisor == 1.
-    unsigned BitWidth = VT.getScalarSizeInBits();
-    unsigned BestChunkWidth = 0;
-
-    // Determine the legal scalar integer type for chunk operations.
-    EVT LegalVT = getTypeToTransformTo(*DAG.getContext(), VT);
-    unsigned LegalWidth = LegalVT.getScalarSizeInBits();
-    unsigned MaxChunk = std::min<unsigned>(LegalWidth, BitWidth);
-
-    // Search for I where 2^I % Divisor == 1
-    for (unsigned I = MaxChunk, E = MaxChunk / 2; I > E; --I) {
-      APInt Mod = APInt::getOneBitSet(Divisor.getBitWidth(), I).urem(Divisor);
-
-      if (Mod.isOne()) {
-        // Ensure (NumChunks * MaxChunkValue) doesn't overflow LegalVT
-        unsigned NumChunks = divideCeil(BitWidth, I);
-
-        // Ensure the sum won't overflow the hardware register (LegalWidth).
-        // Summing N chunks adds ceil(log2(N)) extra carry bits to the width.
-        // Safety check: Base Chunk Width (I) + Carry Bits <= Register Width.
-        if (I + llvm::bit_width(NumChunks - 1) <= LegalWidth) {
-          BestChunkWidth = I;
-          break;
-        }
-      }
-    }
-
-    if (!BestChunkWidth)
-      return false;
-
-    SDValue In =
-        LL ? DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH) : N->getOperand(0);
-    if (TrailingZeros) {
-      // Save the shifted off bits if we need the remainder.
-      if (Opcode != ISD::UDIV) {
-        APInt Mask = APInt::getLowBitsSet(BitWidth, TrailingZeros);
-        PartialRem =
-            DAG.getNode(ISD::AND, dl, VT, In, DAG.getConstant(Mask, dl, VT));
-      }
-      EVT ShiftVT = getShiftAmountTy(VT, DAG.getDataLayout());
-      In = DAG.getNode(ISD::SRL, dl, VT, In,
-                       DAG.getShiftAmountConstant(TrailingZeros, ShiftVT, dl));
-
-      std::tie(LL, LH) = DAG.SplitScalar(In, dl, HiLoVT, HiLoVT);
-    } else if (!LL) {
-      std::tie(LL, LH) = DAG.SplitScalar(In, dl, HiLoVT, HiLoVT);
-    }
-
-    SDValue TotalSum = DAG.getConstant(0, dl, LegalVT);
+    // Otherwise split into multple chunks and add them together. We chose
+    // BestChunkWidth so that the sum will not overflow.
     SDValue Mask = DAG.getConstant(
-        APInt::getLowBitsSet(LegalWidth, BestChunkWidth), dl, LegalVT);
+        APInt::getLowBitsSet(HBitWidth, BestChunkWidth), dl, HiLoVT);
 
     for (unsigned I = 0; I < BitWidth; I += BestChunkWidth) {
-      SDValue Shift = DAG.getShiftAmountConstant(I, VT, dl);
-      SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
-      // Truncate to LegalVT
-      SDValue TruncChunk = DAG.getNode(ISD::TRUNCATE, dl, LegalVT, Chunk);
+      SDValue Chunk;
+      if (I == 0) {
+        Chunk = LL;
+      } else if (I >= HBitWidth) {
+        Chunk =
+            DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
+                        DAG.getShiftAmountConstant(I - HBitWidth, HiLoVT, dl));
+      } else if (HasFSHR) {
+        Chunk = DAG.getNode(ISD::FSHR, dl, HiLoVT, LH, LL,
+                            DAG.getShiftAmountConstant(I, HiLoVT, dl));
+      } else {
+        Chunk = DAG.getNode(
+            ISD::OR, dl, HiLoVT,
+            DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
+                        DAG.getShiftAmountConstant(I, HiLoVT, dl)),
+            DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
+                        DAG.getShiftAmountConstant(HBitWidth - I, HiLoVT, dl)));
+      }
+
       // For the last chunk, we might not need a mask if it's smaller than
       // BestChunkWidth, but applying it is always safe.
-      SDValue MaskedChunk =
-          DAG.getNode(ISD::AND, dl, LegalVT, TruncChunk, Mask);
-      TotalSum = DAG.getNode(ISD::ADD, dl, LegalVT, TotalSum, MaskedChunk);
+      Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
+      if (!Sum)
+        Sum = Chunk;
+      else
+        Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Chunk);
     }
-    Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, TotalSum);
   }
-
-  // If we didn't find a sum, we can't do the expansion.
-  if (!Sum)
-    return false;
 
   // Perform a HiLoVT urem on the Sum using truncated divisor.
   SDValue RemL =
@@ -8341,16 +8337,15 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   if (Opcode != ISD::UDIV) {
     // If we shifted the input, shift the remainder left and add the bits we
-    // shifted off the input.
+    // shifted off the input. This add does not overflow.
     if (TrailingZeros) {
       RemL = DAG.getNode(ISD::SHL, dl, HiLoVT, RemL,
                          DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
 
-      SDValue PartialRemLo = DAG.getNode(ISD::TRUNCATE, dl, HiLoVT, PartialRem);
-      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRemLo);
+      RemL = DAG.getNode(ISD::ADD, dl, HiLoVT, RemL, PartialRem);
     }
     Result.push_back(RemL);
-    Result.push_back(DAG.getConstant(0, dl, HiLoVT));
+    Result.push_back(RemH);
   }
 
   return true;
