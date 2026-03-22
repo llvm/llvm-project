@@ -6382,24 +6382,26 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
         if (getLangOpts().CPlusPlus11) {
           Diag(PointOfInstantiation, diag::note_inst_declaration_hint) << Var;
 
-          // Determine if we can suggest a generic out-of-class definition.
-          // FIXME: Support nested class templates (e.g.,
-          // C1<T>::C2<T1>::value) and member variable templates (e.g.,
-          // C1<T>::s_tvar_2<T1>) which require multiple template
-          // parameter lists.
+          // Determine if we can suggest a generic out-of-class definition
+          // by collecting all enclosing class template declarations.
           bool CanSuggestDefinition = false;
-          const CXXRecordDecl *PatternRD = nullptr;
-          const ClassTemplateDecl *PatternCTD = nullptr;
-          if (!PatternDecl->getDescribedVarTemplate() &&
-              !isa<VarTemplateSpecializationDecl>(PatternDecl)) {
-            PatternRD = dyn_cast<CXXRecordDecl>(PatternDecl->getDeclContext());
-            if (PatternRD) {
-              PatternCTD = PatternRD->getDescribedClassTemplate();
-              if (PatternCTD &&
-                  (PatternRD->getDeclContext()->isFileContext() ||
-                   isa<NamespaceDecl>(PatternRD->getDeclContext())))
-                CanSuggestDefinition = true;
+          SmallVector<const ClassTemplateDecl *, 4> EnclosingCTDs;
+          const VarTemplateDecl *PatternVTD =
+              PatternDecl->getDescribedVarTemplate();
+          {
+            const DeclContext *DC = PatternDecl->getDeclContext();
+            bool Valid = true;
+            while (DC && !DC->isFileContext() &&
+                   !isa<NamespaceDecl>(DC)) {
+              const auto *RD = dyn_cast<CXXRecordDecl>(DC);
+              if (!RD) { Valid = false; break; }
+              const auto *CTD = RD->getDescribedClassTemplate();
+              if (!CTD) { Valid = false; break; }
+              EnclosingCTDs.push_back(CTD);
+              DC = DC->getParent();
             }
+            if (Valid && !EnclosingCTDs.empty())
+              CanSuggestDefinition = true;
           }
 
           unsigned NumWays = CanSuggestDefinition ? 3 : 2;
@@ -6443,20 +6445,35 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
             std::string DefSuggestion;
             {
               llvm::raw_string_ostream OS(DefSuggestion);
-              // print() already appends a trailing space.
-              PatternCTD->getTemplateParameters()->print(OS, getASTContext(),
-                                                         getPrintingPolicy());
+              // Print class template parameter lists (outermost to
+              // innermost). Each print() appends a trailing space.
+              for (auto It = EnclosingCTDs.rbegin(),
+                        End = EnclosingCTDs.rend();
+                   It != End; ++It)
+                (*It)->getTemplateParameters()->print(
+                    OS, getASTContext(), getPrintingPolicy());
+              // Print variable template parameter list if present.
+              if (PatternVTD)
+                PatternVTD->getTemplateParameters()->print(
+                    OS, getASTContext(), getPrintingPolicy());
+              // Build qualified name: C1<T>::C2<T1>::varName
               std::string QualName;
               llvm::raw_string_ostream NameOS(QualName);
-              NameOS << PatternRD->getName() << "<";
-              const auto *TPL = PatternCTD->getTemplateParameters();
-              for (unsigned I = 0, N = TPL->size(); I != N; ++I) {
-                if (I > 0)
-                  NameOS << ", ";
-                NameOS << TPL->getParam(I)->getName();
+              for (auto It = EnclosingCTDs.rbegin(),
+                        End = EnclosingCTDs.rend();
+                   It != End; ++It) {
+                const auto *TPL = (*It)->getTemplateParameters();
+                NameOS << (*It)->getName() << "<";
+                for (unsigned I = 0, N = TPL->size(); I != N; ++I) {
+                  if (I > 0)
+                    NameOS << ", ";
+                  NameOS << TPL->getParam(I)->getName();
+                }
+                NameOS << ">::";
               }
-              NameOS << ">::" << PatternDecl->getName();
-              PatternDecl->getType().print(OS, getPrintingPolicy(), QualName);
+              NameOS << PatternDecl->getName();
+              PatternDecl->getType().print(OS, getPrintingPolicy(),
+                                           QualName);
               OS << ";";
             }
             Diag(PointOfInstantiation,
