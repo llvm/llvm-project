@@ -111,6 +111,9 @@ FunctionPass *llvm::createInlineAsmPreparePass() {
 static std::pair<std::string, MemoryEffects>
 convertConstraintsToMemory(StringRef ConstraintStr,
                            const InlineAsm::ConstraintInfoVector &ParsedConstraints) {
+  if (ConstraintStr.empty())
+    return {std::string(), MemoryEffects::none()};
+
   std::vector<std::string> Constraints;
   Constraints.reserve(ConstraintStr.count(',') + 1);
 
