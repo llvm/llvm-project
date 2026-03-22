@@ -729,7 +729,7 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
 
       // Check if R is a dead VPPhi <-> update cycle and remove it.
       VPValue *Start, *Incoming;
-      if (!match(&R, m_BinaryVPPhi(m_VPValue(Start), m_VPValue(Incoming))))
+      if (!match(&R, m_VPPhi(m_VPValue(Start), m_VPValue(Incoming))))
         continue;
       auto *PhiR = cast<VPPhi>(&R);
       VPUser *PhiUser = PhiR->getSingleUser();
@@ -1672,7 +1672,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   // and if Inc exists, replace it with X.
   if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
       isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) &&
-      match(X, m_BinaryVPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
+      match(X, m_VPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
     auto *Phi = cast<VPPhi>(X);
     auto *IVInc = Def->getOperand(0);
     if (IVInc->getNumUsers() == 2) {
@@ -2195,6 +2195,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
   auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
+  // Check if the branch condition compares the canonical IV increment (for main
+  // loop), or the canonical IV increment plus an offset (for epilog loop).
   if (match(Term, m_BranchOnCount(
                       m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_VPValue())),
                       m_VPValue())) ||
@@ -2241,7 +2243,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     // Replace the canonical IV with its start value (0) since the loop
     // executes exactly once.
     auto *CanIV = VectorRegion->getCanonicalIV();
-    CanIV->replaceAllUsesWith(Plan.getConstantInt(CanIV->getType(), 0));
+    CanIV->replaceAllUsesWith(Plan.getZero(CanIV->getType()));
 
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
       if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&HeaderR)) {
@@ -2987,11 +2989,11 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   auto *CanonicalIV = TopRegion->getCanonicalIV();
-  VPValue *StartV = Plan.getConstantInt(CanonicalIV->getType(), 0);
+  VPValue *StartV = Plan.getZero(CanonicalIV->getType());
   auto *CanonicalIVIncrement = TopRegion->getOrCreateCanonicalIVIncrement();
   // TODO: Check if dropping the flags is needed.
   TopRegion->clearCanonicalIVNUW(CanonicalIVIncrement);
-  DebugLoc DL = CanonicalIV->getDebugLoc();
+  DebugLoc DL = CanonicalIVIncrement->getDebugLoc();
   // We can't use StartV directly in the ActiveLaneMask VPInstruction, since
   // we have to take unrolling into account. Each part needs to start at
   //   Part * VF
@@ -3339,9 +3341,9 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 /// iteration.
 ///
 /// - Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
-///   replaces all uses except the canonical IV increment of the canonical IV
-///   with a VPCurrentIterationPHIRecipe. The canonical IV is used only for
-///   loop iterations counting after this transformation.
+///   replaces all uses of the canonical IV except for the canonical IV
+///   increment with a VPCurrentIterationPHIRecipe. The canonical IV is used
+///   only for loop iterations counting after this transformation.
 ///
 /// - The header mask is replaced with a header mask based on the EVL.
 ///
@@ -3396,7 +3398,7 @@ void VPlanTransforms::addExplicitVectorLength(
 
   auto *CanonicalIV = LoopRegion->getCanonicalIV();
   auto *CanIVTy = CanonicalIV->getType();
-  VPValue *StartV = Plan.getConstantInt(CanIVTy, 0);
+  VPValue *StartV = Plan.getZero(CanIVTy);
   auto *CanonicalIVIncrement = LoopRegion->getOrCreateCanonicalIVIncrement();
 
   // Create the CurrentIteration recipe in the vector loop.

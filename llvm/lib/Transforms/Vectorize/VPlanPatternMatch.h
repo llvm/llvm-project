@@ -1119,10 +1119,8 @@ inline bind_ty<VPReductionPHIRecipe> m_ReductionPhi(VPReductionPHIRecipe *&V) {
   return V;
 }
 
-/// Match a VPPhi (VPInstruction with PHI opcode) with exactly 2 operands,
-/// binding the start value (operand 0) and backedge value (operand 1).
 template <typename Op0_t, typename Op1_t>
-inline auto m_BinaryVPPhi(const Op0_t &Op0, const Op1_t &Op1) {
+inline auto m_VPPhi(const Op0_t &Op0, const Op1_t &Op1) {
   return Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::PHI,
                       /*Commutative*/ false, VPInstruction>({Op0, Op1});
 }
