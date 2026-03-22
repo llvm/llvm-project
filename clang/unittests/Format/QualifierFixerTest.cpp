@@ -86,7 +86,7 @@ TEST_F(QualifierFixerTest, FailQualifierEmptyOrder) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
   FAIL_PARSE("QualifierAlignment: Custom\nQualifierOrder: []", QualifierOrder,
-             std::vector<std::string>({}));
+             std::vector<std::string>{});
 }
 
 TEST_F(QualifierFixerTest, FailQualifierMissingOrder) {
