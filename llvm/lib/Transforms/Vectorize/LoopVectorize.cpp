@@ -9187,21 +9187,15 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
          "ScalarIVSteps when resetting the start value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   VPInstruction *Add = Builder.createAdd(IV, VPV);
-  // Replace all users of the canonical IV with the offset version, except for
-  // the Add itself and the canonical IV increment.
+  // Replace all users of the canonical IV and its increment with the offset
+  // version, except for the Add itself and the canonical IV increment.
   auto *Increment = vputils::findCanonicalIVIncrement(Plan);
   assert(Increment && "Must have a canonical IV increment at this point");
   IV->replaceUsesWithIf(Add, [Add, Increment](VPUser &U, unsigned) {
     return &U != Add && &U != Increment;
   });
-  // The exit condition compares the IV increment against the absolute trip
-  // count, so create an offset version of the increment for BranchOnCount.
-  auto *VectorLatch = VectorLoop->getExitingBasicBlock();
-  auto *BranchOnCount = cast<VPInstruction>(&VectorLatch->back());
-  assert(BranchOnCount->getOpcode() == VPInstruction::BranchOnCount &&
-         "expected BranchOnCount in exiting block");
-  Builder.setInsertPoint(BranchOnCount);
-  VPInstruction *OffsetIVInc = Builder.createAdd(Increment, VPV);
+  VPInstruction *OffsetIVInc =
+      VPBuilder::getToInsertAfter(Increment).createAdd(Increment, VPV);
   Increment->replaceAllUsesWith(OffsetIVInc);
   OffsetIVInc->setOperand(0, Increment);
 

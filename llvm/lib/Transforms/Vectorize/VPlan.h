@@ -4529,6 +4529,7 @@ public:
 
   /// Unsets NUW for the canonical IV increment \p Increment, for loop regions.
   void clearCanonicalIVNUW(VPInstruction *Increment) {
+    assert(Increment && "Must provide increment to clear");
     Increment->dropPoisonGeneratingFlags();
     CanIVInfo->clearNUW();
   }

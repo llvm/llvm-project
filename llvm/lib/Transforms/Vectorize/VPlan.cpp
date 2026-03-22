@@ -1275,21 +1275,21 @@ VPlan *VPlan::duplicate() {
   assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
          "All VPSymbolicValues must be handled below");
 
+  if (BackedgeTakenCount)
+    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
+
   // Map and propagate materialized state for symbolic values.
   for (auto [OldSV, NewSV] :
        {std::pair{&VectorTripCount, &NewPlan->VectorTripCount},
         {&VF, &NewPlan->VF},
         {&UF, &NewPlan->UF},
-        {&VFxUF, &NewPlan->VFxUF}}) {
+        {&VFxUF, &NewPlan->VFxUF},
+        {BackedgeTakenCount, NewPlan->BackedgeTakenCount}}) {
+    if (!OldSV)
+      continue;
     Old2NewVPValues[OldSV] = NewSV;
     if (OldSV->isMaterialized())
       NewSV->markMaterialized();
-  }
-  if (BackedgeTakenCount) {
-    NewPlan->BackedgeTakenCount = new VPSymbolicValue();
-    Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
-    if (BackedgeTakenCount->isMaterialized())
-      NewPlan->BackedgeTakenCount->markMaterialized();
   }
 
   remapOperands(Entry, NewEntry, Old2NewVPValues);

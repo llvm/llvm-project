@@ -1665,34 +1665,28 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   }
 
   // Look for cycles where Def is of the form:
-  //  X = phi(0, IVInc)  ; used by IVInc and all other users of the form
-  //  Inc  = X + Y
-  //  IVInc = X + Step ; used by X and one other user of the form:
+  //  X = phi(0, IVInc)  ; used only by IVInc, or by IVInc and Inc = X + Y
+  //  IVInc = X + Step   ; used by X and Def
   //  Def = IVInc + Y
-  // Transforms this by folding the increment Y into the phi's start value and
-  // updating the users Inc and IVInc to use X and IVInc respectively.
+  // Fold the increment Y into the phi's start value, replace Def with IVInc,
+  // and if Inc exists, replace it with X.
   if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) && isa<VPPhi>(X)) {
+      isa<VPIRValue>(Y) && !isa<VPConstantInt>(Y) &&
+      match(X, m_BinaryVPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
     auto *Phi = cast<VPPhi>(X);
     auto *IVInc = Def->getOperand(0);
-    if (match(Phi->getOperand(0), m_ZeroInt()) && Phi->getOperand(1) == IVInc &&
-        all_of(Phi->users(),
-               [IVInc, Phi, Y](VPUser *U) {
-                 return U == IVInc->getDefiningRecipe() ||
-                        match(U, m_Add(m_Specific(Phi), m_Specific(Y)));
-               }) &&
-        all_of(IVInc->users(), [Phi, IVInc, Y](VPUser *U) {
-          return U == Phi ||
-                 match(U, m_c_Add(m_Specific(IVInc), m_Specific(Y)));
-        })) {
-      Phi->setOperand(0, Y);
-      for (VPUser *U : to_vector(Phi->users()))
-        if (U != IVInc->getDefiningRecipe())
-          cast<VPSingleDefRecipe>(U)->replaceAllUsesWith(Phi);
-      for (VPUser *U : to_vector(IVInc->users()))
-        if (U != Phi)
-          cast<VPSingleDefRecipe>(U)->replaceAllUsesWith(IVInc);
-      return;
+    if (IVInc->getNumUsers() == 2) {
+      // If Phi has a second user (besides IVInc's defining recipe), it must
+      // be Inc = Phi + Y for the fold to apply.
+      auto *Inc = dyn_cast_or_null<VPSingleDefRecipe>(
+          vputils::findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+      if (Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) {
+        Def->replaceAllUsesWith(IVInc);
+        if (Inc)
+          Inc->replaceAllUsesWith(Phi);
+        Phi->setOperand(0, Y);
+        return;
+      }
     }
   }
 

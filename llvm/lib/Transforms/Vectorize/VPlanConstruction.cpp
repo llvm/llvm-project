@@ -528,6 +528,11 @@ static void createExtractsForLiveOuts(VPlan &Plan, VPBasicBlock *MiddleVPBB) {
   }
 }
 
+static auto getMatchingPhisForScalarLoop(VPBasicBlock *Header,
+                                         VPBasicBlock *ScalarHeader) {
+  return zip_equal(drop_begin(Header->phis()), ScalarHeader->phis());
+}
+
 static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
                                PredicatedScalarEvolution &PSE, Loop *TheLoop) {
   VPDominatorTree VPDT(Plan);
@@ -587,8 +592,8 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   assert(equal(ScalarPH->getPredecessors(),
                ArrayRef<VPBlockBase *>({MiddleVPBB, Plan.getEntry()})) &&
          "unexpected predecessor order of scalar ph");
-  for (const auto &[PhiR, ScalarPhiR] : zip_equal(
-           drop_begin(HeaderVPBB->phis()), Plan.getScalarHeader()->phis())) {
+  for (const auto &[PhiR, ScalarPhiR] :
+       getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarHeader())) {
     auto *VectorPhiR = cast<VPPhi>(&PhiR);
     VPValue *BackedgeVal = VectorPhiR->getOperand(1);
     VPValue *ResumeFromVectorLoop =
@@ -719,6 +724,9 @@ void VPlanTransforms::createHeaderPhiRecipes(
   // Retrieve the header manually from the intial plain-CFG VPlan.
   VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  assert(VPDominatorTree(Plan).dominates(HeaderVPBB,
+                                         HeaderVPBB->getPredecessors()[1]) &&
+         "header must dominate its latch");
 
   auto CreateHeaderPhiRecipe = [&](VPPhi *PhiR) -> VPHeaderPHIRecipe * {
     // TODO: Gradually replace uses of underlying instruction by analyses on
@@ -770,8 +778,8 @@ void VPlanTransforms::createHeaderPhiRecipes(
     PhiR->eraseFromParent();
   }
 
-  for (const auto &[HeaderPhiR, ScalarPhiR] : zip_equal(
-           drop_begin(HeaderVPBB->phis()), Plan.getScalarPreheader()->phis())) {
+  for (const auto &[HeaderPhiR, ScalarPhiR] :
+       getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarPreheader())) {
     auto *ResumePhiR = cast<VPPhi>(&ScalarPhiR);
     if (isa<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhiR)) {
       ResumePhiR->setName("scalar.recur.init");
