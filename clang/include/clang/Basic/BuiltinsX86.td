@@ -1365,51 +1365,51 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<128>
   def subsd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def compressdf128_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, unsigned char)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def compressdf256_mask : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, unsigned char)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def compressdi128_mask : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>, unsigned char)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def compressdi256_mask : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, unsigned char)">;
 }
 
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def compresshi128_mask : X86Builtin<"_Vector<8, short>(_Vector<8, short>, _Vector<8, short>, unsigned char)">;
 }
 
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def compresshi256_mask : X86Builtin<"_Vector<16, short>(_Vector<16, short>, _Vector<16, short>, unsigned short)">;
 }
 
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def compressqi128_mask : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Vector<16, char>, unsigned short)">;
 }
 
-let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def compressqi256_mask : X86Builtin<"_Vector<32, char>(_Vector<32, char>, _Vector<32, char>, unsigned int)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def compresssf128_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, unsigned char)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def compresssf256_mask : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, unsigned char)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def compresssi128_mask : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>, unsigned char)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def compresssi256_mask : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<8, int>, unsigned char)">;
 }
 
@@ -3210,17 +3210,17 @@ let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512
   def psadbw512 : X86Builtin<"_Vector<8, long long int>(_Vector<64, char>, _Vector<64, char>)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def compressdf512_mask : X86Builtin<"_Vector<8, double>(_Vector<8, double>, _Vector<8, double>, unsigned char)">;
   def compressdi512_mask : X86Builtin<"_Vector<8, long long int>(_Vector<8, long long int>, _Vector<8, long long int>, unsigned char)">;
 }
 
-let Features = "avx512vbmi2", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512vbmi2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def compresshi512_mask : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<32, short>, unsigned int)">;
   def compressqi512_mask : X86Builtin<"_Vector<64, char>(_Vector<64, char>, _Vector<64, char>, unsigned long long int)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def compresssf512_mask : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Vector<16, float>, unsigned short)">;
   def compresssi512_mask : X86Builtin<"_Vector<16, int>(_Vector<16, int>, _Vector<16, int>, unsigned short)">;
 }

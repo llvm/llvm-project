@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512vbmi2 -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512vbmi2 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512vbmi2 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512vbmi2 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512vbmi2 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512vbmi2 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
@@ -11,24 +16,28 @@ __m512i test_mm512_mask_compress_epi16(__m512i __S, __mmask32 __U, __m512i __D) 
   // CHECK: call <32 x i16> @llvm.x86.avx512.mask.compress.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}}, <32 x i1> %{{.*}})
   return _mm512_mask_compress_epi16(__S, __U, __D);
 }
+TEST_CONSTEXPR(match_v32hi(_mm512_mask_compress_epi16((__m512i)(__v32hi){99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99}, 0x80000007, (__m512i)(__v32hi){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}), 0, 1, 2, 31, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99));
 
 __m512i test_mm512_maskz_compress_epi16(__mmask32 __U, __m512i __D) {
   // CHECK-LABEL: test_mm512_maskz_compress_epi16
   // CHECK: call <32 x i16> @llvm.x86.avx512.mask.compress.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}}, <32 x i1> %{{.*}})
   return _mm512_maskz_compress_epi16(__U, __D);
 }
+TEST_CONSTEXPR(match_v32hi(_mm512_maskz_compress_epi16(0x80000007, (__m512i)(__v32hi){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}), 0, 1, 2, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
 
 __m512i test_mm512_mask_compress_epi8(__m512i __S, __mmask64 __U, __m512i __D) {
   // CHECK-LABEL: test_mm512_mask_compress_epi8
   // CHECK: call <64 x i8> @llvm.x86.avx512.mask.compress.v64i8(<64 x i8> %{{.*}}, <64 x i8> %{{.*}}, <64 x i1> %{{.*}})
   return _mm512_mask_compress_epi8(__S, __U, __D);
 }
+TEST_CONSTEXPR(match_v64qi(_mm512_mask_compress_epi8((__m512i)(__v64qs){99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99}, 0x8000000000000003ULL, (__m512i)(__v64qs){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63}), 0, 1, 63, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99));
 
 __m512i test_mm512_maskz_compress_epi8(__mmask64 __U, __m512i __D) {
   // CHECK-LABEL: test_mm512_maskz_compress_epi8
   // CHECK: call <64 x i8> @llvm.x86.avx512.mask.compress.v64i8(<64 x i8> %{{.*}}, <64 x i8> %{{.*}}, <64 x i1> %{{.*}})
   return _mm512_maskz_compress_epi8(__U, __D);
 }
+TEST_CONSTEXPR(match_v64qi(_mm512_maskz_compress_epi8(0x8000000000000003ULL, (__m512i)(__v64qs){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63}), 0, 1, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
 
 void test_mm512_mask_compressstoreu_epi16(void *__P, __mmask32 __U, __m512i __D) {
   // CHECK-LABEL: test_mm512_mask_compressstoreu_epi16
