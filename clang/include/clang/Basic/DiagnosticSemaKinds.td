@@ -2035,6 +2035,11 @@ def warn_wasm_dynamic_exception_spec_ignored : ExtWarn<
   "dynamic exception specifications with types are currently ignored in wasm">,
   InGroup<WebAssemblyExceptionSpec>;
 
+def err_mismatched_personality
+  : Error<"personality routine in declaration does not match previous declaration">;
+def err_attribute_personality_arg_not_function
+  : Error<"%0 argument is not a function">;
+
 // C++ access checking
 def err_class_redeclared_with_different_access : Error<
   "%0 redeclared with '%1' access">;
@@ -3793,12 +3798,6 @@ def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with
   InGroup<IgnoredAttributes>;
 def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
   "%0 attribute ignored; %1 takes precedence">,
-  InGroup<IgnoredAttributes>;
-def warn_attribute_ignored_on_non_member :
-  Warning<"%0 attribute ignored on a non-member declaration">,
-  InGroup<IgnoredAttributes>;
-def warn_attribute_ignored_in_non_template :
-  Warning<"%0 attribute ignored in a non-template context">,
   InGroup<IgnoredAttributes>;
 def warn_attribute_ignored_on_non_definition :
   Warning<"%0 attribute ignored on a non-definition declaration">,
@@ -9687,6 +9686,7 @@ def err_deleted_inherited_ctor_use : Error<
   "constructor inherited by %0 from base class %1 is implicitly deleted">;
 
 def note_called_by : Note<"called by %0">;
+def note_which_is_called_by : Note<"which is called by %0">;
 def err_kern_type_not_void_return : Error<
   "kernel function type %0 must have void return type">;
 def err_kern_is_nonstatic_method : Error<
@@ -10958,6 +10958,16 @@ def warn_lifetime_safety_dangling_field_moved
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
+def warn_lifetime_safety_dangling_global
+    : Warning<"address of stack memory escapes to global or static storage">,
+      InGroup<LifetimeSafetyDanglingGlobal>,
+      DefaultIgnore;
+def warn_lifetime_safety_dangling_global_moved
+    : Warning<"address of stack memory escapes to global or static storage. "
+      "This could be a false positive as the storage may have been moved. "
+      "Consider moving first and then aliasing later to resolve the issue">,
+      InGroup<LifetimeSafetyDanglingGlobalMoved>,
+      DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
@@ -10965,7 +10975,11 @@ def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
+def note_lifetime_safety_dangling_global_here: Note<"this global dangles">;
+def note_lifetime_safety_dangling_static_here: Note<"this static storage dangles">;
 def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
+def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
+def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
@@ -12108,13 +12122,16 @@ def warn_omp_alignment_not_power_of_two : Warning<
   InGroup<OpenMPClauses>;
 def err_omp_invalid_target_decl : Error<
   "%0 used in declare target directive is not a variable or a function name">;
-def err_omp_declare_target_to_and_link : Error<
-  "%0 must not appear in both clauses 'to' and 'link'">;
+def err_omp_declare_target_var_in_both_clauses
+    : Error<"%0 must not appear in both clauses '%1' and '%2'">;
+def err_omp_declare_target_local_host_only
+    : Error<"'local' clause is incompatible with 'device_type(host)'; "
+            "local variables exist only on the device">;
 def warn_omp_not_in_target_context : Warning<
   "declaration is not declared in any declare target region">,
   InGroup<OpenMPTarget>;
-def err_omp_function_in_link_clause : Error<
-  "function name is not allowed in 'link' clause">;
+def err_omp_function_in_target_clause_list
+    : Error<"function name is not allowed in '%0' clause">;
 def err_omp_aligned_expected_array_or_ptr : Error<
   "argument of aligned clause should be array"
   "%select{ or pointer|, pointer, reference to array or reference to pointer}1"
@@ -12530,6 +12547,11 @@ def err_omp_declare_target_has_local_vars : Error<
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
+def warn_omp_declare_target_local_not_implemented
+    : Warning<"'local' clause on 'declare_target' directive is not yet fully "
+              "implemented; "
+              "variable will be treated as 'enter'">,
+      InGroup<OpenMPTarget>;
 def err_omp_declare_variant_incompat_attributes : Error<
   "'#pragma omp declare variant' is not compatible with any target-specific attributes">;
 def warn_omp_declare_variant_score_not_constant
@@ -13557,6 +13579,13 @@ def err_hlsl_rootsignature_entry: Error<
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
+def warn_hlsl_groupshared_202x : Warning<
+  "support for groupshared parameter annotation not added until HLSL 202x">,
+  InGroup<HLSLAvailability>;
+def warn_hlsl_groupshared_inout : Warning<
+  "passing groupshared variable to a parameter annotated with inout. "
+  "See 'groupshared' parameter annotation added in 202x">,
+  InGroup<HLSLAvailability>;
 def err_hlsl_param_qualifier_mismatch :
   Error<"conflicting parameter qualifier %0 on parameter %1">;
 def err_hlsl_vector_compound_assignment_truncation : Error<
@@ -13682,12 +13711,8 @@ def note_unsafe_buffer_variable_fixit_together : Note<
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
 def warn_unsafe_buffer_usage_in_container : Warning<
-  "the two-parameter %0 construction is unsafe as it can introduce mismatch "
-  "between buffer size and the bound information">,
+  "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
-def warn_unsafe_buffer_usage_in_string_view : Warning<
-  "the two-parameter std::string_view construction is unsafe">,
-  InGroup<UnsafeBufferUsageInStringView>, DefaultIgnore;
 def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
   InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
 def warn_unsafe_buffer_usage_in_static_sized_array : Warning<"direct access on T[N] is unsafe due to the lack of bounds checking">,
@@ -14069,6 +14094,10 @@ def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 
 def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+
+def err_amdgcn_dmask_has_too_many_bits_set
+    : Error<"dmask argument cannot have more bits set than there are elements "
+            "in return type">;
 
 def warn_amdgpu_s_wait_event_mask_no_effect_target :
   Warning<"event mask has no effect for target">,

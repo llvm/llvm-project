@@ -403,6 +403,8 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string *separated_error_output, // Pass nullptr if you don't want the
+                                           // command error output
       const Timeout<std::micro> &timeout);
 
   llvm::ErrorOr<llvm::MD5::MD5Result> CalculateMD5(const FileSpec &file_spec);

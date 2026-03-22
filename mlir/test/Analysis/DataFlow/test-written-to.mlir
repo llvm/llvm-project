@@ -364,3 +364,18 @@ func.func @test_external_callee(%arg0: i32, %m0: memref<i32>) {
   memref.store %1, %m0[] {tag_name = "a"} : memref<i32>
   return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/128339
+// A private function that is never called should not crash the analysis —
+// its lattice state is simply not computed.
+
+// CHECK-LABEL: test_tag: in_private2
+// CHECK-NEXT:   operand #0: <not computed>
+// CHECK-NEXT:   result #0: <not computed>
+
+func.func private @private2(%arg0: i32) {
+  %0 = arith.index_cast %arg0 {tag = "in_private2"} : i32 to index
+  return
+}

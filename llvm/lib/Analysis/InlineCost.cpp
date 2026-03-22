@@ -514,7 +514,8 @@ protected:
   bool visitInsertValue(InsertValueInst &I);
   bool visitCallBase(CallBase &Call);
   bool visitReturnInst(ReturnInst &RI);
-  bool visitBranchInst(BranchInst &BI);
+  bool visitUncondBrInst(UncondBrInst &BI);
+  bool visitCondBrInst(CondBrInst &BI);
   bool visitSelectInst(SelectInst &SI);
   bool visitSwitchInst(SwitchInst &SI);
   bool visitIndirectBrInst(IndirectBrInst &IBI);
@@ -996,12 +997,10 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     for (auto &BB : F) {
       APInt CurrentSavings(128, 0);
       for (auto &I : BB) {
-        if (BranchInst *BI = dyn_cast<BranchInst>(&I)) {
+        if (CondBrInst *BI = dyn_cast<CondBrInst>(&I)) {
           // Count a conditional branch as savings if it becomes unconditional.
-          if (BI->isConditional() &&
-              getSimplifiedValue<ConstantInt>(BI->getCondition())) {
+          if (getSimplifiedValue<ConstantInt>(BI->getCondition()))
             CurrentSavings += InstrCost;
-          }
         } else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I)) {
           if (getSimplifiedValue<ConstantInt>(SI->getCondition()))
             CurrentSavings += InstrCost;
@@ -1780,8 +1779,8 @@ bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
   if (!Predecessor)
     return false;
   // Check if the callsite is guarded by the same Cmp instruction:
-  auto *Br = dyn_cast<BranchInst>(Predecessor->getTerminator());
-  if (!Br || Br->isUnconditional() || Br->getCondition() != &Cmp)
+  auto *Br = dyn_cast<CondBrInst>(Predecessor->getTerminator());
+  if (!Br || Br->getCondition() != &Cmp)
     return false;
 
   // Check if there is any arg of the recursive callsite is affecting the cmp
@@ -2563,13 +2562,16 @@ bool CallAnalyzer::visitReturnInst(ReturnInst &RI) {
   return Free;
 }
 
-bool CallAnalyzer::visitBranchInst(BranchInst &BI) {
+bool CallAnalyzer::visitUncondBrInst(UncondBrInst &BI) {
   // We model unconditional branches as essentially free -- they really
   // shouldn't exist at all, but handling them makes the behavior of the
-  // inliner more regular and predictable. Interestingly, conditional branches
-  // which will fold away are also free.
-  return BI.isUnconditional() ||
-         getDirectOrSimplifiedValue<ConstantInt>(BI.getCondition()) ||
+  // inliner more regular and predictable.
+  return true;
+}
+
+bool CallAnalyzer::visitCondBrInst(CondBrInst &BI) {
+  // Conditional branches which will fold away are free.
+  return getDirectOrSimplifiedValue<ConstantInt>(BI.getCondition()) ||
          BI.getMetadata(LLVMContext::MD_make_implicit);
 }
 
@@ -3002,16 +3004,14 @@ InlineResult CallAnalyzer::analyze() {
 
     // Add in the live successors by first checking whether we have terminator
     // that may be simplified based on the values simplified by this call.
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-      if (BI->isConditional()) {
-        Value *Cond = BI->getCondition();
-        if (ConstantInt *SimpleCond = getSimplifiedValue<ConstantInt>(Cond)) {
-          BasicBlock *NextBB = BI->getSuccessor(SimpleCond->isZero() ? 1 : 0);
-          BBWorklist.insert(NextBB);
-          KnownSuccessors[BB] = NextBB;
-          findDeadBlocks(BB, NextBB);
-          continue;
-        }
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI)) {
+      Value *Cond = BI->getCondition();
+      if (ConstantInt *SimpleCond = getSimplifiedValue<ConstantInt>(Cond)) {
+        BasicBlock *NextBB = BI->getSuccessor(SimpleCond->isZero() ? 1 : 0);
+        BBWorklist.insert(NextBB);
+        KnownSuccessors[BB] = NextBB;
+        findDeadBlocks(BB, NextBB);
+        continue;
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
       Value *Cond = SI->getCondition();
@@ -3228,6 +3228,15 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   Function *Caller = Call.getCaller();
   if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI, GetTLI))
     return InlineResult::failure("conflicting attributes");
+
+  // Flatten: inline all viable calls from flatten functions regardless of cost.
+  // Checked before optnone so that flatten takes priority.
+  if (Caller->hasFnAttribute(Attribute::Flatten)) {
+    auto IsViable = isInlineViable(*Callee);
+    if (IsViable.isSuccess())
+      return InlineResult::success();
+    return InlineResult::failure(IsViable.getFailureReason());
+  }
 
   // Don't inline this call if the caller has the optnone attribute.
   if (Caller->hasOptNone())

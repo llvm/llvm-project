@@ -299,6 +299,42 @@ func.func @vector_shape_cast_expand_non_unit_dims(%arg0: memref<1024xf16>, %arg1
 
 // -----
 gpu.module @test {
+// CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size(
+// CHECK: %[[ReduceVal:.*]] = vector.multi_reduction <add>, %[[Val:.*]], %[[CST:.*]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 1]>, dims = [1, 2]>} [1, 2] : vector<1x16x1xf16> to vector<1xf16>
+func.func @vector_2d_reduction_with_fractional_subgroup_size(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
+    %cst = arith.constant dense<true> : vector<16xi1>
+    %0 = vector.step : vector<16xindex>
+    %1 = xegpu.load %arg0[%0], %cst  : memref<1024xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
+    %2 = vector.shape_cast %1 : vector<16xf16> to vector<1x16x1xf16>
+    %cst_0 = arith.constant dense<0.000000e+00> : vector<1xf16>
+    %4 = vector.multi_reduction <add>, %2, %cst_0 [1, 2] : vector<1x16x1xf16> to vector<1xf16>
+    %cst_2 = arith.constant dense<true> : vector<1xi1>
+    %cst_3 = arith.constant dense<1> : vector<1xindex>
+    xegpu.store %4, %arg1[%cst_3], %cst_2 <{layout = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16]>, dims = [1, 2]>}> : vector<1xf16>, memref<16xf16>, vector<1xindex>, vector<1xi1>
+    return
+  }
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4x1(
+// CHECK: %[[ReduceVal:.*]] = vector.multi_reduction <add>, %[[Val:.*]], %[[CST:.*]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 4]>, dims = [1, 2]>} [1, 2] : vector<1x16x4xf16> to vector<1xf16>
+func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4x1(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
+    %cst = arith.constant dense<true> : vector<64xi1>
+    %0 = vector.step : vector<64xindex>
+    %1 = xegpu.load %arg0[%0], %cst  : memref<1024xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
+    %2 = vector.shape_cast %1 : vector<64xf16> to vector<1x16x4xf16>
+    %cst_0 = arith.constant dense<0.000000e+00> : vector<1xf16>
+    %4 = vector.multi_reduction <add>, %2, %cst_0 [1, 2] : vector<1x16x4xf16> to vector<1xf16>
+    %cst_2 = arith.constant dense<true> : vector<1xi1>
+    %cst_3 = arith.constant dense<1> : vector<1xindex>
+    xegpu.store %4, %arg1[%cst_3], %cst_2 <{layout = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16]>, dims = [1, 2]>}> : vector<1xf16>, memref<16xf16>, vector<1xindex>, vector<1xi1>
+    return
+  }
+}
+
+// -----
+gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_and_merge(
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [32]>} dense<true> : vector<256xi1>
 // CHECK: %[[STEP:.*]] = vector.step {layout_result_0 = #xegpu.layout<inst_data = [32]>} : vector<256xindex>
@@ -332,5 +368,26 @@ gpu.module @test{
       xegpu.store_matrix %0, %arg0[%c0, %c0] : vector<2x1xf32>, !xegpu.mem_desc<64x128xf32>, index, index
     }
     return
+  }
+}
+
+// -----
+gpu.module @test{
+  // CHECK-LABEL: broadcast_both_leadingdims_innerdims
+  // CHECK: arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 1, 16]>} dense<true> : vector<2x2x6x32xi1>
+  // CHECK: arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 1, 16]>} dense<1.000000e+00> : vector<2x2x6x32xf32>
+  // CHECK: vector.step {layout_result_0 = #xegpu.slice<#xegpu.slice<#xegpu.layout<inst_data = [1, 1, 1, 1]>, dims = [0, 1]>, dims = [1]>} : vector<6xindex>
+  // CHECK: vector.shape_cast {{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 1, 1]>, dims = [0, 1]>} : vector<6xindex> to vector<6x1xindex>
+  // CHECK: vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 1, 16]>} : vector<6x1xindex> to vector<2x2x6x32xindex>
+  gpu.func @broadcast_both_leadingdims_innerdims(%arg0: memref<32x2x192xf32>, %arg1: memref<32x2x192xf32>, %arg2: memref<32x2x192xf32>) kernel attributes {known_block_size = array<i32: 768, 1, 1>, known_grid_size = array<i32: 16, 1, 1>} {
+    %cst = arith.constant dense<true> : vector<2x2x6x32xi1>
+    %cst_0 = arith.constant dense<1.000000e+00> : vector<2x2x6x32xf32>
+    %intptr = memref.extract_aligned_pointer_as_index %arg2 : memref<32x2x192xf32> -> index
+    %0 = arith.index_cast %intptr : index to i64
+    %1 = vector.step : vector<6xindex>
+    %2 = vector.shape_cast %1 : vector<6xindex> to vector<6x1xindex>
+    %3 = vector.broadcast %2 : vector<6x1xindex> to vector<2x2x6x32xindex>
+    xegpu.store %cst_0, %0[%3], %cst <{layout = #xegpu.layout<inst_data = [1, 1, 1, 16]>}> : vector<2x2x6x32xf32>, i64, vector<2x2x6x32xindex>, vector<2x2x6x32xi1>
+    gpu.return
   }
 }
