@@ -25511,7 +25511,8 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
                                         SDValue &CompareLHS,
                                         SDValue &CompareRHS) {
   EVT VecVT = Vec.getValueType();
-  assert(VecVT.isFixedLengthVector() && VecVT.getVectorElementType() == MVT::i1 &&
+  assert(VecVT.isFixedLengthVector() &&
+         VecVT.getVectorElementType() == MVT::i1 &&
          "Expected a fixed-length bool vector");
 
   unsigned NumElts = VecVT.getVectorNumElements();
