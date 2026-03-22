@@ -108,13 +108,21 @@ static bool isRegMemConstraint(StringRef Constraint) {
 /// memory location. Returns the new constraint string and the memory effects
 /// introduced by newly-converted constraints, or {empty, none} if no "rm"
 /// constraints were found that require conversion.
+///
+/// Tied outputs (read-write "+rm", represented as "=rm" with hasMatchingInput)
+/// are left unconverted: a tied constraint requires the output and its matched
+/// input to occupy the same location, and that invariant cannot be preserved
+/// when an indirect (*) out-parameter is substituted for the direct output.
 static std::pair<std::string, MemoryEffects>
-convertConstraintsToMemory(StringRef ConstraintStr) {
+convertConstraintsToMemory(StringRef ConstraintStr,
+                           const InlineAsm::ConstraintInfoVector &ParsedConstraints) {
   std::vector<std::string> Constraints;
   Constraints.reserve(ConstraintStr.count(',') + 1);
 
   MemoryEffects NewME = MemoryEffects::none();
+  unsigned Idx = 0;
   for (StringRef Constraint : llvm::split(ConstraintStr, ',')) {
+    const InlineAsm::ConstraintInfo &CI = ParsedConstraints[Idx++];
     std::string NewConstraint;
 
     auto I = Constraint.begin(), E = Constraint.end();
@@ -145,10 +153,12 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
       return {std::string(), MemoryEffects::none()};
 
     std::string RestConstraint(I, E);
-    if (isRegMemConstraint(RestConstraint) && !HasIndirect) {
+    if (isRegMemConstraint(RestConstraint) && !HasIndirect &&
+        !(IsOutput && CI.hasMatchingInput())) {
       // Only add memory effects and the indirect marker for constraints that
       // are not already indirect. An already-indirect "rm" constraint (e.g.
       // "=*rm") already uses memory and its effects are accounted for.
+      // Tied outputs (hasMatchingInput) are also excluded: see function comment.
       NewME |= MemoryEffects::argMemOnly(IsOutput ? ModRefInfo::Mod
                                                   : ModRefInfo::Ref);
       NewConstraint += '*';
@@ -172,9 +182,12 @@ static void processOutputConstraint(
   if (StructType *ST = dyn_cast<StructType>(RetTy))
     SlotTy = ST->getElementType(OutputIdx);
 
-  if (C.hasRegMemConstraints()) {
+  if (C.hasRegMemConstraints() && !C.hasMatchingInput()) {
     // Converted to memory constraint. Create alloca and pass pointer as
-    // argument.
+    // argument. Tied outputs (hasMatchingInput) are excluded: converting an
+    // "=rm" output that has a tied input would produce an indirect out-parameter
+    // ("=*rm") while the paired input still carries a value, breaking the
+    // tied-operand invariant that both sides occupy the same location.
     AllocaInst *Slot = EntryBuilder.CreateAlloca(SlotTy, nullptr, "asm_mem");
     NewArgs.push_back(Slot);
     ElementTypeAttrs.push_back({NewArgs.size() - 1, SlotTy});
@@ -338,7 +351,7 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
   const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
 
   const auto &[NewConstraintStr, NewME] =
-      convertConstraintsToMemory(IA->getConstraintString());
+      convertConstraintsToMemory(IA->getConstraintString(), Constraints);
   if (NewME.doesNotAccessMemory())
     return false;
 

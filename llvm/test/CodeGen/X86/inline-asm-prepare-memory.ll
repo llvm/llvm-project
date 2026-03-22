@@ -7,7 +7,7 @@ define void @test1(i32 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ASM_MEM:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[X]], ptr [[ASM_MEM]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 asm sideeffect "mov $1, $0", "=r,*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 asm sideeffect "mov $1, $0", "=r,*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -20,7 +20,7 @@ define void @test2(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ASM_MEM:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void asm sideeffect "mov $1, $0", "=*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void asm sideeffect "mov $1, $0", "=*rm,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ASM_MEM]], align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
@@ -35,10 +35,8 @@ define void @test3(ptr %x_ptr) {
 ; CHECK-LABEL: define void @test3(
 ; CHECK-SAME: ptr [[X_PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ASM_MEM:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_PTR]], align 4
-; CHECK-NEXT:    call void asm sideeffect "inc $0", "=*rm,0,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]], i32 [[X]]) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ASM_MEM]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 asm sideeffect "inc $0", "=rm,0,~{dirflag},~{fpsr},~{flags}"(i32 [[X]])
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[X_PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -58,4 +56,24 @@ define dso_local i64 @test4() local_unnamed_addr #0 {
 entry:
   %0 = tail call i64 asm "movq $1, $0", "=r,irm,~{dirflag},~{fpsr},~{flags}"(i32 256)
   ret i64 %0
+}
+
+; Tied output ("=rm,0", i.e. "+rm") must NOT be converted to indirect ("=*rm").
+; The non-tied input ("rm") in the same asm IS converted to "*rm".
+define void @test5(ptr %x_ptr, i32 %b) {
+; CHECK-LABEL: define void @test5(
+; CHECK-SAME: ptr [[X_PTR:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ASM_MEM:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_PTR]], align 4
+; CHECK-NEXT:    store i32 [[B]], ptr [[ASM_MEM]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 asm sideeffect "add $1, $0", "=rm,*rm,0,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[ASM_MEM]], i32 [[X]]) #[[ATTR0]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[X_PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_ptr
+  %0 = call i32 asm sideeffect "add $1, $0", "=rm,rm,0,~{dirflag},~{fpsr},~{flags}"(i32 %b, i32 %x)
+  store i32 %0, ptr %x_ptr
+  ret void
 }

@@ -234,7 +234,7 @@ define dso_local i32 @test5(ptr noundef captures(none) %foo) local_unnamed_addr 
 ; O0-LABEL: test5:
 ; O0:    #APP
 ; O0:    # rm tied output: no pressure
-; O0:    # %eax %ecx %edx %esi %r8d
+; O0:    # %eax %r8d %esi %edx %ecx
 ; O0:    #NO_APP
 entry:
   %0 = load i32, ptr %foo, align 4
