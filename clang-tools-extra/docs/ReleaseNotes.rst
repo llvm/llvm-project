@@ -102,6 +102,9 @@ Improvements to clang-tidy
   manages the creation of temporary header files and ensures that diagnostics
   and fixes are verified for the specified headers.
 
+- Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
+  JSON when the source file path contains characters that require JSON escaping.
+
 New checks
 ^^^^^^^^^^
 
@@ -267,6 +270,9 @@ Changes in existing checks
     option.
 
   - Fixed false positive where an array of pointers to ``const`` was
+    incorrectly diagnosed as allowing the pointee to be made ``const``.
+
+  - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
 - Improved :doc:`misc-multiple-inheritance
