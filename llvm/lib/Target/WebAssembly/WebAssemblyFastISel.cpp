@@ -1487,16 +1487,46 @@ static unsigned matchFoldableSExtFromPromotedI32(MachineInstr *MI,
   }
 }
 
+static unsigned matchFoldableCopyToI64Ext(MachineInstr *MI, const LoadInst *LI,
+                                          MachineRegisterInfo &MRI, bool A64,
+                                          MachineInstr *&OuterUserMI) {
+  if (MI->getOpcode() != WebAssembly::COPY)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  if (LoadSize != 32)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  Register CopyDst = MI->getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(CopyDst))
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  OuterUserMI = &*MRI.use_instr_nodbg_begin(CopyDst);
+  switch (OuterUserMI->getOpcode()) {
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  case WebAssembly::I64_EXTEND_U_I32:
+    return getZExtLoadOpcode(LoadSize, true, A64);
+  case WebAssembly::I64_EXTEND_S_I32:
+    return getSExtLoadOpcode(LoadSize, true, A64);
+  }
+}
+
 bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                               const LoadInst *LI) {
   bool A64 = Subtarget->hasAddr64();
   MachineRegisterInfo &MRI = FuncInfo.MF->getRegInfo();
   Register ResultReg;
   MachineInstr *UserMI = nullptr;
+  MachineInstr *OuterUserMI = nullptr;
   unsigned NewOpc = WebAssembly::INSTRUCTION_LIST_END;
   if ((NewOpc = matchFoldableSExtFromPromotedI32(MI, LI, MRI, A64, UserMI)) !=
       WebAssembly::INSTRUCTION_LIST_END) {
     ResultReg = UserMI->getOperand(0).getReg();
+  } else if ((NewOpc = matchFoldableCopyToI64Ext(MI, LI, MRI, A64,
+                                                 OuterUserMI)) !=
+             WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = OuterUserMI->getOperand(0).getReg();
   } else if ((NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64)) !=
              WebAssembly::INSTRUCTION_LIST_END) {
     ResultReg = MI->getOperand(0).getReg();
@@ -1509,6 +1539,11 @@ bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
 
   if (!emitLoad(ResultReg, NewOpc, LI))
     return false;
+
+  if (OuterUserMI) {
+    MachineBasicBlock::iterator OuterIter(OuterUserMI);
+    removeDeadCode(OuterIter, std::next(OuterIter));
+  }
 
   if (UserMI) {
     MachineBasicBlock::iterator UserIter(UserMI);
