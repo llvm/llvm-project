@@ -951,7 +951,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  std::vector<std::pair<llvm::Value *, llvm::Type *>> OutputSemantic;
+  SmallVector<std::pair<llvm::Value *, llvm::Type *>> OutputSemantic;
 
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
