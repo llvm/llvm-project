@@ -1,6 +1,8 @@
 #ifndef _QUEUE_
 #define _QUEUE_
 
+#include "stddef.h"
+
 namespace std {
 
 template <typename T, typename Container = void>
