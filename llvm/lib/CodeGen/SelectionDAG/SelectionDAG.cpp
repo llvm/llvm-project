@@ -6296,7 +6296,9 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   }
 
   case ISD::VECTOR_SHUFFLE: {
-    assert(!Op.getValueType().isScalableVector());
+    if(!Op.getValueType().isScalableVector())
+      return false;
+
     unsigned NumElts = DemandedElts.getBitWidth();
 
     // All demanded elements from LHS and RHS must be known non-zero.
