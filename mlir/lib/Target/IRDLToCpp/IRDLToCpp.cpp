@@ -65,7 +65,7 @@ static std::string joinNameList(llvm::ArrayRef<std::string> names) {
   return nameArray;
 }
 
-// Convert a operation/type/attribute name to a valid identifier in C++.
+// Convert a dialect/operation/type/attribute name to a valid identifier in C++.
 // The conversion is done by removing dots, underscores and dollar signs and
 // capitalizing the following character. For example, `name.with.dots` will be
 // converted to `nameWithDots` with `capitalizeFirst = false`.
