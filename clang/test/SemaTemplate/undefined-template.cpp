@@ -89,7 +89,7 @@ char func_11() {
                                   // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::s_tvar_2<long>' is explicitly instantiated in another translation unit}}
                                   // expected-note@-2{{there are 3 ways to fix this:}}
                                   // expected-note@-3{{use 'extern template char C1<int>::s_tvar_2<long>;'}}
-                                  // expected-note@-4{{or use 'template <> char C1<int>::s_tvar_2<long>;'}}
+                                  // expected-note@-4{{or use 'template <> template <> char C1<int>::s_tvar_2<long>;'}}
                                   // expected-note@-5{{or use 'template <class T> template <class T1> char C1<T>::s_tvar_2;' to provide a definition for all types}}
 }
 
@@ -111,7 +111,7 @@ char func_15() {
                                       // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::C2<char>::s_var_2' is explicitly instantiated in another translation unit}}
                                       // expected-note@-2{{there are 3 ways to fix this:}}
                                       // expected-note@-3{{use 'extern template char C1<int>::C2<char>::s_var_2;'}}
-                                      // expected-note@-4{{or use 'template <> char C1<int>::C2<char>::s_var_2;'}}
+                                      // expected-note@-4{{or use 'template <> template <> char C1<int>::C2<char>::s_var_2;'}}
                                       // expected-note@-5{{or use 'template <class T> template <typename T1> char C1<T>::C2<T1>::s_var_2;' to provide a definition for all types}}
 }
 
@@ -142,7 +142,7 @@ char func_21() {
                                   // expected-note@-1{{add an explicit instantiation declaration to suppress this warning if 'C1<int>::C2<long>::s_tvar_2<long>' is explicitly instantiated in another translation unit}}
                                   // expected-note@-2{{there are 3 ways to fix this:}}
                                   // expected-note@-3{{use 'extern template char C1<int>::C2<long>::s_tvar_2<long>;'}}
-                                  // expected-note@-4{{or use 'template <> char C1<int>::C2<long>::s_tvar_2<long>;'}}
+                                  // expected-note@-4{{or use 'template <> template <> template <> char C1<int>::C2<long>::s_tvar_2<long>;'}}
                                   // expected-note@-5{{or use 'template <class T> template <typename T1> template <class T2> char C1<T>::C2<T1>::s_tvar_2;' to provide a definition for all types}}
 }
 

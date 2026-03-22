@@ -6433,7 +6433,18 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
           std::string SpecSuggestion;
           {
             llvm::raw_string_ostream OS(SpecSuggestion);
-            OS << "template <> ";
+            // Count the number of template<> prefixes needed: one for
+            // each enclosing class template specialization, plus one if
+            // the variable itself is a variable template specialization.
+            unsigned NumSpecPrefixes = 0;
+            for (const DeclContext *DC = Var->getDeclContext(); DC;
+                 DC = DC->getParent())
+              if (isa<ClassTemplateSpecializationDecl>(DC))
+                ++NumSpecPrefixes;
+            if (isa<VarTemplateSpecializationDecl>(Var))
+              ++NumSpecPrefixes;
+            for (unsigned I = 0; I < NumSpecPrefixes; ++I)
+              OS << "template <> ";
             std::string QualName;
             llvm::raw_string_ostream NameOS(QualName);
             Var->getNameForDiagnostic(NameOS, getPrintingPolicy(),
