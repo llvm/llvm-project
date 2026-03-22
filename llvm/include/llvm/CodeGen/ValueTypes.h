@@ -447,12 +447,12 @@ namespace llvm {
       return getIntegerVT(Context, (EVTSize + 1) / 2);
     }
 
-    /// Return a VT for an integer scalar type with doubled bit width.
+    /// Return a VT for an integer element type with doubled bit width.
     /// The type returned may be an extended type.
     EVT widenIntegerElementType(LLVMContext &Context) const {
-      assert(isInteger() && !isVector() && "Invalid integer type!");
-      unsigned EVTSize = getSizeInBits();
-      return EVT::getIntegerVT(Context, 2 * EVTSize);
+      unsigned EVTSize = getScalarSizeInBits();
+      EVT EltVT = EVT::getIntegerVT(Context, 2 * EVTSize);
+      return changeElementType(Context, EltVT);
     }
 
     /// Return a VT for an integer vector type with the size of the
