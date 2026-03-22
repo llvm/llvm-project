@@ -3758,20 +3758,12 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       auto *RD = CurrentType->castAsRecordDecl();
       const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
 
-      // Compute the index of the field in its parent.
-      unsigned i = 0;
-      // FIXME: It would be nice if we didn't have to loop here!
-      for (RecordDecl::field_iterator Field = RD->field_begin(),
-                                      FieldEnd = RD->field_end();
-           Field != FieldEnd; ++Field, ++i) {
-        if (*Field == MemberDecl)
-          break;
-      }
-      assert(i < RL.getFieldCount() && "offsetof field in wrong type");
+      // Get the index of the field in its parent.
+      unsigned FieldIndex = MemberDecl->getFieldIndex();
 
       // Compute the offset to the field
-      int64_t OffsetInt = RL.getFieldOffset(i) /
-                          CGF.getContext().getCharWidth();
+      int64_t OffsetInt =
+          RL.getFieldOffset(FieldIndex) / CGF.getContext().getCharWidth();
       Offset = llvm::ConstantInt::get(ResultType, OffsetInt);
 
       // Save the element type.
