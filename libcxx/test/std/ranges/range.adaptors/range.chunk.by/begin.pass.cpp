@@ -103,7 +103,7 @@ constexpr bool test() {
     bool moved = false, copied = false;
     Range range(buff, buff + 2);
     std::ranges::chunk_by_view view(range, TrackingPred(&moved, &copied));
-    std::exchange(moved, false);
+    moved                    = false;
     [[maybe_unused]] auto it = view.begin();
     assert(!moved);
     assert(!copied);
