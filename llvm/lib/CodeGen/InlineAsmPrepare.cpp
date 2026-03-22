@@ -172,16 +172,12 @@ convertConstraintsToMemory(StringRef ConstraintStr,
 
 /// Process an output constraint, creating allocas for converted constraints.
 static void processOutputConstraint(
-    const InlineAsm::ConstraintInfo &C, Type *RetTy, unsigned OutputIdx,
+    const InlineAsm::ConstraintInfo &C, Type *SlotTy,
     IRBuilder<> &EntryBuilder, SmallVectorImpl<Value *> &NewArgs,
     SmallVectorImpl<Type *> &NewRetTypes,
     SmallVectorImpl<std::pair<unsigned, Type *>> &ElementTypeAttrs,
     SmallVectorImpl<std::pair<AllocaInst *, Type *>> &OutputAllocas,
     unsigned ConstraintIdx) {
-  Type *SlotTy = RetTy;
-  if (StructType *ST = dyn_cast<StructType>(RetTy))
-    SlotTy = ST->getElementType(OutputIdx);
-
   if (C.hasRegMemConstraints() && !C.hasMatchingInput()) {
     // Converted to memory constraint. Create alloca and pass pointer as
     // argument. Tied outputs (hasMatchingInput) are excluded: converting an
@@ -396,10 +392,13 @@ static bool processInlineAsm(Function &F, CallBase *CB) {
           ElementTypeAttrs.push_back({NewArgs.size() - 1, Ty});
         ArgNo++;
       } else {
+        Type *RetTy = CB->getType();
+        Type *SlotTy = isa<StructType>(RetTy)
+                           ? cast<StructType>(RetTy)->getElementType(OutputIdx)
+                           : RetTy;
         unsigned PrevArgCount = NewArgs.size();
-        processOutputConstraint(C, CB->getType(), OutputIdx, EntryBuilder,
-                                NewArgs, NewRetTypes, ElementTypeAttrs,
-                                OutputAllocas, I);
+        processOutputConstraint(C, SlotTy, EntryBuilder, NewArgs, NewRetTypes,
+                                ElementTypeAttrs, OutputAllocas, I);
         // processOutputConstraint pushes an alloca to NewArgs only when the
         // constraint is converted (rm → *rm). That alloca is a new argument
         // with no corresponding original arg.
