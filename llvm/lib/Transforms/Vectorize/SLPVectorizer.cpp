@@ -26654,6 +26654,8 @@ public:
         // compatible with other values.
         // Also check if the instruction was folded to constant/other value.
         auto *Inst = dyn_cast<Instruction>(RdxVal);
+        if (Inst && V.isDeleted(Inst))
+          continue;
         if ((Inst && isVectorLikeInstWithConstOps(Inst) &&
              (!S || (!S.getMatchingMainOpOrAltOp(Inst) &&
                      !S.isCopyableElement(Inst)))) ||
