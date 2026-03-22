@@ -12,13 +12,13 @@ target triple = "aarch64-linux-gnu"
 define <4 x i32> @any_of_select_vf4(<4 x i32> %mask, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: any_of_select_vf4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v3.8b
-; CHECK-NEXT:    movi d3, #0000000000000000
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, v3.2d
-; CHECK-NEXT:    dup v0.2d, v0.d[0]
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    cmlt	v0.4s, v0.4s, #0
+; CHECK-DAG:     movi	d[[ZERO:[0-9]+]], #0000000000000000
+; CHECK-DAG:     ext	v[[TMP:[0-9]+]].16b, v0.16b, v0.16b, #8
+; CHECK-DAG:     orr	v0.8b, v0.8b, v[[TMP]].8b
+; CHECK:         cmeq	v0.2d, v0.2d, v[[ZERO]].2d
+; CHECK-NEXT:    dup	v0.2d, v0.d[0]
+; CHECK-NEXT:    bsl	v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <4 x i32> %mask, zeroinitializer
   %cmp.bc = bitcast <4 x i1> %cmp to i4
@@ -30,13 +30,13 @@ define <4 x i32> @any_of_select_vf4(<4 x i32> %mask, <4 x i32> %a, <4 x i32> %b)
 define <2 x i64> @any_of_select_vf2(<2 x i64> %mask, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: any_of_select_vf2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    orr v0.8b, v0.8b, v3.8b
-; CHECK-NEXT:    movi d3, #0000000000000000
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, v3.2d
-; CHECK-NEXT:    dup v0.2d, v0.d[0]
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    cmlt	v0.2d, v0.2d, #0
+; CHECK-DAG:     movi	d[[ZERO:[0-9]+]], #0000000000000000
+; CHECK-DAG:     ext	v[[TMP:[0-9]+]].16b, v0.16b, v0.16b, #8
+; CHECK-DAG:     orr	v0.8b, v0.8b, v[[TMP]].8b
+; CHECK:         cmeq	v0.2d, v0.2d, v[[ZERO]].2d
+; CHECK-NEXT:    dup	v0.2d, v0.d[0]
+; CHECK-NEXT:    bsl	v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <2 x i64> %mask, zeroinitializer
   %cmp.bc = bitcast <2 x i1> %cmp to i2
@@ -48,16 +48,16 @@ define <2 x i64> @any_of_select_vf2(<2 x i64> %mask, <2 x i64> %a, <2 x i64> %b)
 define <32 x i8> @any_of_select_vf32(<32 x i8> %mask, <32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: any_of_select_vf32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    umaxv b0, v0.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tst w8, #0x1
-; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    dup v1.16b, w8
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    bsl v1.16b, v5.16b, v3.16b
-; CHECK-NEXT:    bsl v0.16b, v4.16b, v2.16b
+; CHECK-NEXT:    orr	v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmlt	v0.16b, v0.16b, #0
+; CHECK-NEXT:    umaxv	b0, v0.16b
+; CHECK-NEXT:    fmov	w8, s0
+; CHECK-NEXT:    tst	w8, #0x1
+; CHECK-NEXT:    csetm	w8, ne
+; CHECK-NEXT:    dup	v1.16b, w8
+; CHECK-NEXT:    mov	v0.16b, v1.16b
+; CHECK-NEXT:    bsl	v1.16b, v5.16b, v3.16b
+; CHECK-NEXT:    bsl	v0.16b, v4.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <32 x i8> %mask, zeroinitializer
   %cmp.bc = bitcast <32 x i1> %cmp to i32
