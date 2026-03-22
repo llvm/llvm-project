@@ -99,11 +99,6 @@ FunctionPass *llvm::createInlineAsmPreparePass() {
 //                     Process InlineAsm instructions
 //===----------------------------------------------------------------------===//
 
-/// The inline asm constraint allows both register and memory.
-static bool isRegMemConstraint(StringRef Constraint) {
-  return Constraint.size() == 2 && (Constraint == "rm" || Constraint == "mr");
-}
-
 /// Tag "rm" output constraints with '*' to signify that they default to a
 /// memory location. Returns the new constraint string and the memory effects
 /// introduced by newly-converted constraints, or {empty, none} if no "rm"
@@ -125,35 +120,26 @@ convertConstraintsToMemory(StringRef ConstraintStr,
     const InlineAsm::ConstraintInfo &CI = ParsedConstraints[Idx++];
     std::string NewConstraint;
 
+    // Copy the constraint prefix characters ('=', '*', '&', '%') verbatim
+    // into NewConstraint so the reconstructed string is syntactically valid.
+    // The semantic decisions (whether to add '*', what MemoryEffects to add)
+    // are made using the already-parsed ConstraintInfo rather than re-deriving
+    // them from the raw characters.
     auto I = Constraint.begin(), E = Constraint.end();
-    bool IsOutput = false;
-    bool HasIndirect = false;
-
-    if (*I == '=') {
-      ++I;
-      NewConstraint += '=';
-      IsOutput = true;
-    }
+    if (I != E && *I == '=')
+      NewConstraint += *I++;
     if (I == E)
       return {std::string(), MemoryEffects::none()};
-    if (*I == '*') {
-      ++I;
-      NewConstraint += '*';
-      HasIndirect = true;
-    }
-
-    // Strip the "early clobber" and "commutability" modifiers before testing
-    // for an "rm" constraint. These modifiers do not affect whether the
-    // constraint allows both registers and memory.
-    while (I != E && (*I == '&' || *I == '%')) {
-      NewConstraint += *I;
-      ++I;
-    }
+    if (I != E && *I == '*')
+      NewConstraint += *I++;
+    while (I != E && (*I == '&' || *I == '%'))
+      NewConstraint += *I++;
     if (I == E)
       return {std::string(), MemoryEffects::none()};
 
     std::string RestConstraint(I, E);
-    if (isRegMemConstraint(RestConstraint) && !HasIndirect &&
+    bool IsOutput = CI.Type == InlineAsm::isOutput;
+    if (CI.hasRegMemConstraints() && !CI.isIndirect &&
         !(IsOutput && CI.hasMatchingInput())) {
       // Only add memory effects and the indirect marker for constraints that
       // are not already indirect. An already-indirect "rm" constraint (e.g.
