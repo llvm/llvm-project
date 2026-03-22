@@ -28,7 +28,7 @@ Set to OFF to bypass the missing-header error."
   ${_default_require_rpc_xdr_h})
 if (NOT HAVE_RPC_XDR_H)
   set(HAVE_RPC_XDR_H 0)
-  if (COMPILER_RT_REQUIRE_RPC_XDR_H)
+  if (COMPILER_RT_REQUIRE_RPC_XDR_H AND COMPILER_RT_BUILD_SANITIZERS)
     message(FATAL_ERROR
       "${_rpc_xdr_header} is required for sanitizer builds but was not found. "
       "Install the appropriate development package (e.g. bos.net.nfs.adt on AIX), "
