@@ -6391,12 +6391,17 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
           {
             const DeclContext *DC = PatternDecl->getDeclContext();
             bool Valid = true;
-            while (DC && !DC->isFileContext() &&
-                   !isa<NamespaceDecl>(DC)) {
+            while (DC && !DC->isFileContext() && !isa<NamespaceDecl>(DC)) {
               const auto *RD = dyn_cast<CXXRecordDecl>(DC);
-              if (!RD) { Valid = false; break; }
+              if (!RD) {
+                Valid = false;
+                break;
+              }
               const auto *CTD = RD->getDescribedClassTemplate();
-              if (!CTD) { Valid = false; break; }
+              if (!CTD) {
+                Valid = false;
+                break;
+              }
               EnclosingCTDs.push_back(CTD);
               DC = DC->getParent();
             }
@@ -6447,20 +6452,18 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
               llvm::raw_string_ostream OS(DefSuggestion);
               // Print class template parameter lists (outermost to
               // innermost). Each print() appends a trailing space.
-              for (auto It = EnclosingCTDs.rbegin(),
-                        End = EnclosingCTDs.rend();
+              for (auto It = EnclosingCTDs.rbegin(), End = EnclosingCTDs.rend();
                    It != End; ++It)
-                (*It)->getTemplateParameters()->print(
-                    OS, getASTContext(), getPrintingPolicy());
+                (*It)->getTemplateParameters()->print(OS, getASTContext(),
+                                                      getPrintingPolicy());
               // Print variable template parameter list if present.
               if (PatternVTD)
-                PatternVTD->getTemplateParameters()->print(
-                    OS, getASTContext(), getPrintingPolicy());
+                PatternVTD->getTemplateParameters()->print(OS, getASTContext(),
+                                                           getPrintingPolicy());
               // Build qualified name: C1<T>::C2<T1>::varName
               std::string QualName;
               llvm::raw_string_ostream NameOS(QualName);
-              for (auto It = EnclosingCTDs.rbegin(),
-                        End = EnclosingCTDs.rend();
+              for (auto It = EnclosingCTDs.rbegin(), End = EnclosingCTDs.rend();
                    It != End; ++It) {
                 const auto *TPL = (*It)->getTemplateParameters();
                 NameOS << (*It)->getName() << "<";
@@ -6472,8 +6475,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                 NameOS << ">::";
               }
               NameOS << PatternDecl->getName();
-              PatternDecl->getType().print(OS, getPrintingPolicy(),
-                                           QualName);
+              PatternDecl->getType().print(OS, getPrintingPolicy(), QualName);
               OS << ";";
             }
             Diag(PointOfInstantiation,
