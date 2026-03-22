@@ -3714,12 +3714,12 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_ia32_shuffle_generic(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, const APInt &)>
         GetSourceIndex) {
 
   assert(Call->getNumArgs() == 2 || Call->getNumArgs() == 3);
 
-  unsigned ShuffleMask = 0;
+  APInt ShuffleMask;
   Pointer A, MaskVector, B;
   bool IsVectorMask = false;
   bool IsSingleOperand = (Call->getNumArgs() == 2);
@@ -3732,7 +3732,7 @@ static bool interp__builtin_ia32_shuffle_generic(
       A = S.Stk.pop<Pointer>();
       B = A;
     } else if (MaskType->isIntegerType()) {
-      ShuffleMask = popToAPSInt(S, Call->getArg(1)).getZExtValue();
+      ShuffleMask = popToAPSInt(S, Call->getArg(1));
       A = S.Stk.pop<Pointer>();
       B = A;
     } else {
@@ -3746,7 +3746,7 @@ static bool interp__builtin_ia32_shuffle_generic(
       MaskVector = S.Stk.pop<Pointer>();
       A = S.Stk.pop<Pointer>();
     } else if (Arg2Type->isIntegerType()) {
-      ShuffleMask = popToAPSInt(S, Call->getArg(2)).getZExtValue();
+      ShuffleMask = popToAPSInt(S, Call->getArg(2));
       B = S.Stk.pop<Pointer>();
       A = S.Stk.pop<Pointer>();
     } else {
@@ -3771,9 +3771,8 @@ static bool interp__builtin_ia32_shuffle_generic(
 
   for (unsigned DstIdx = 0; DstIdx != NumElems; ++DstIdx) {
     if (IsVectorMask) {
-      INT_TYPE_SWITCH(MaskElemT, {
-        ShuffleMask = static_cast<unsigned>(MaskVector.elem<T>(DstIdx));
-      });
+      INT_TYPE_SWITCH(MaskElemT,
+                      { ShuffleMask = MaskVector.elem<T>(DstIdx).toAPSInt(); });
     }
 
     auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
@@ -3794,6 +3793,18 @@ static bool interp__builtin_ia32_shuffle_generic(
   Dst.initializeAllElements();
 
   return true;
+}
+
+static bool interp__builtin_ia32_shuffle_generic(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
+        GetSourceIndex) {
+  return interp__builtin_ia32_shuffle_generic(
+      S, OpPC, Call,
+      [&GetSourceIndex](unsigned DstIdx,
+                        const APInt &Mask) -> std::pair<unsigned, int> {
+        return GetSourceIndex(DstIdx, Mask.getZExtValue());
+      });
 }
 
 static bool interp__builtin_ia32_shift_with_count(
@@ -5112,6 +5123,40 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpconflictdi_256:
   case X86::BI__builtin_ia32_vpconflictdi_512:
     return interp__builtin_ia32_vpconflict(S, OpPC, Call);
+  case X86::BI__builtin_ia32_compressdf128_mask:
+  case X86::BI__builtin_ia32_compressdf256_mask:
+  case X86::BI__builtin_ia32_compressdf512_mask:
+  case X86::BI__builtin_ia32_compressdi128_mask:
+  case X86::BI__builtin_ia32_compressdi256_mask:
+  case X86::BI__builtin_ia32_compressdi512_mask:
+  case X86::BI__builtin_ia32_compresshi128_mask:
+  case X86::BI__builtin_ia32_compresshi256_mask:
+  case X86::BI__builtin_ia32_compresshi512_mask:
+  case X86::BI__builtin_ia32_compressqi128_mask:
+  case X86::BI__builtin_ia32_compressqi256_mask:
+  case X86::BI__builtin_ia32_compressqi512_mask:
+  case X86::BI__builtin_ia32_compresssf128_mask:
+  case X86::BI__builtin_ia32_compresssf256_mask:
+  case X86::BI__builtin_ia32_compresssf512_mask:
+  case X86::BI__builtin_ia32_compresssi128_mask:
+  case X86::BI__builtin_ia32_compresssi256_mask:
+  case X86::BI__builtin_ia32_compresssi512_mask: {
+    unsigned NumElems =
+        Call->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [NumElems](unsigned DstIdx, const APInt &ShuffleMask) {
+          APInt CompressMask = ShuffleMask.trunc(NumElems);
+          if (DstIdx < CompressMask.popcount()) {
+            while (DstIdx != 0) {
+              CompressMask = CompressMask & (CompressMask - 1);
+              DstIdx--;
+            }
+            return std::pair<unsigned, int>{
+                0, static_cast<int>(CompressMask.countr_zero())};
+          }
+          return std::pair<unsigned, int>{1, static_cast<int>(DstIdx)};
+        });
+  }
   case clang::X86::BI__builtin_ia32_blendpd:
   case clang::X86::BI__builtin_ia32_blendpd256:
   case clang::X86::BI__builtin_ia32_blendps:

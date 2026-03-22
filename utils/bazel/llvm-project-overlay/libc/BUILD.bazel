@@ -5761,6 +5761,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sqrtbf16",
+    hdrs = ["src/__support/math/sqrtbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sqrtf",
     hdrs = ["src/__support/math/sqrtf.h"],
     deps = [
@@ -8349,6 +8360,11 @@ libc_math_function(
 libc_math_function(
     name = "sqrt",
     additional_deps = [":__support_math_sqrt"],
+)
+
+libc_math_function(
+    name = "sqrtbf16",
+    additional_deps = [":__support_math_sqrtbf16"],
 )
 
 libc_math_function(

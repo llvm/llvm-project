@@ -1024,6 +1024,107 @@ void reinitAnnotation() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Tests for annotations on smart-pointer-like types
+
+namespace null_after_move {
+
+template <typename T>
+class [[clang::annotate("clang-tidy",
+                        "bugprone-use-after-move",
+                        "null_after_move")]] SmartPtrAlike {
+public:
+  SmartPtrAlike();
+  ~SmartPtrAlike();
+  SmartPtrAlike(const SmartPtrAlike&) = delete;
+  SmartPtrAlike &operator=(const SmartPtrAlike&) = delete;
+  SmartPtrAlike(SmartPtrAlike&& other);
+  SmartPtrAlike &operator=(SmartPtrAlike&& other);
+  T* get() const;
+  T& operator*() const;
+};
+
+// Don't flag uses of smart-pointer-like types correctly annotated, unless it's
+// a dereference.
+void smartPointerLikeTypeUseAfterMove() {
+  SmartPtrAlike<int> ptr;
+  ptr.get();
+  SmartPtrAlike<int> other_ptr = std::move(ptr);
+  ptr.get();
+  int inv_value = *ptr;
+  // CHECK-NOTES: [[@LINE-1]]:20: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:34: note: move occurred here
+}
+
+class [[clang::annotate("other"),
+      clang::annotate("clang-tidy",
+                      "bugprone-use-after-move",
+                      "null_after_move")]] MultipleAnnotationsType {
+public:
+  MultipleAnnotationsType();
+  ~MultipleAnnotationsType();
+  MultipleAnnotationsType(const MultipleAnnotationsType&) = delete;
+  MultipleAnnotationsType &operator=(const MultipleAnnotationsType&) = delete;
+  MultipleAnnotationsType(MultipleAnnotationsType&& other);
+  MultipleAnnotationsType &operator=(MultipleAnnotationsType&& other);
+  int* get() const;
+  int& operator*() const;
+};
+
+// Handle smart-pointer-like types correctly annotated, even in the case of
+// multiple annotations.
+void typeWithMultipleAnnotations() {
+  MultipleAnnotationsType ptr;
+  ptr.get();
+  MultipleAnnotationsType other_ptr = std::move(ptr);
+  ptr.get();
+  int inv_value = *ptr;
+  // CHECK-NOTES: [[@LINE-1]]:20: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-4]]:39: note: move occurred here
+}
+
+class [[clang::annotate("null_after_move")]] BadAnnotation {
+public:
+  BadAnnotation();
+  ~BadAnnotation();
+  BadAnnotation(const BadAnnotation&) = delete;
+  BadAnnotation &operator=(const BadAnnotation&) = delete;
+  BadAnnotation(BadAnnotation&& other);
+  BadAnnotation &operator=(BadAnnotation&& other);
+  int* get() const;
+};
+
+// Flag uses of smart-pointer-like types with incorrect annotate.
+void badUseAfterMoveAnnotationIgnored() {
+  BadAnnotation ptr;
+  BadAnnotation other_ptr = std::move(ptr);
+  ptr.get();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:29: note: move occurred here
+}
+
+class [[clang::annotate("clang-tidy", "null_after_move")]] BadAnnotationArgs {
+public:
+  BadAnnotationArgs();
+  ~BadAnnotationArgs();
+  BadAnnotationArgs(const BadAnnotationArgs&) = delete;
+  BadAnnotationArgs &operator=(const BadAnnotationArgs&) = delete;
+  BadAnnotationArgs(BadAnnotationArgs&& other);
+  BadAnnotationArgs &operator=(BadAnnotationArgs&& other);
+  int* get() const;
+};
+
+// Flag uses of smart-pointer-like types with wrong annotate arguments.
+void UseAfterMoveAnnotationWithBadArgsIgnored() {
+  BadAnnotationArgs ptr;
+  BadAnnotationArgs other_ptr = std::move(ptr);
+  ptr.get();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'ptr' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:33: note: move occurred here
+}
+
+} // namespace null_after_move
+
+////////////////////////////////////////////////////////////////////////////////
 // Tests related to order of evaluation within expressions
 
 // Relative sequencing of move and use.

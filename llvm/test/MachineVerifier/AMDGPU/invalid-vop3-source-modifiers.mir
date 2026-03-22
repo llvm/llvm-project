@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn-- -mcpu=gfx1030 -run-pass=none %s 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: not --crash llc -mtriple=amdgcn-- -mcpu=gfx1030 -run-pass=none %s -filetype=null 2>&1 | FileCheck -check-prefix=ERR %s
 
 # ERR: *** Bad machine code: Expected inline constant for operand. ***
 # ERR: - instruction: $vgpr1 = V_CNDMASK_B32_e64 %stack.0, $vgpr0, 0, 0, $sgpr0, implicit $exec

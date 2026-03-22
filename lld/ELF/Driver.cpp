@@ -1706,6 +1706,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
+  if (ctx.arg.zForceBti) {
+    ctx.arg.zBtiReport = ReportPolicy::Warning;
+    ctx.arg.zBtiReportSource = "-z force-bti";
+  }
+  if (ctx.arg.zGcs == GcsPolicy::Always) {
+    ctx.arg.zGcsReport = ReportPolicy::Warning;
+    ctx.arg.zGcsReportSource = "-z gcs";
+  }
+
   auto reports = {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
       std::make_pair("cet-report", &ctx.arg.zCetReport),
@@ -1737,6 +1746,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       }
       hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
+      if (option.first == "bti-report")
+        ctx.arg.zBtiReportSource = "-z bti-report";
+      else if (option.first == "gcs-report")
+        ctx.arg.zGcsReportSource = "-z gcs-report";
     }
   }
 
@@ -2946,14 +2959,14 @@ static void readSecurityNotes(Ctx &ctx) {
 
     reportUnless(ctx.arg.zBtiReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
-        << f
-        << ": -z bti-report: file does not have "
+        << f << ": " << ctx.arg.zBtiReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
     reportUnless(ctx.arg.zGcsReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
-        << f
-        << ": -z gcs-report: file does not have "
+        << f << ": " << ctx.arg.zGcsReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
 
     reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
@@ -3008,10 +3021,6 @@ static void readSecurityNotes(Ctx &ctx) {
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-      if (ctx.arg.zBtiReport == ReportPolicy::None)
-        Warn(ctx) << f
-                  << ": -z force-bti: file does not have "
-                     "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
     } else if (ctx.arg.zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
       if (ctx.arg.zCetReport == ReportPolicy::None)
@@ -3019,13 +3028,6 @@ static void readSecurityNotes(Ctx &ctx) {
                   << ": -z force-ibt: file does not have "
                      "GNU_PROPERTY_X86_FEATURE_1_IBT property";
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
-    }
-    if (ctx.arg.zGcs == GcsPolicy::Always &&
-        !(features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)) {
-      if (ctx.arg.zGcsReport == ReportPolicy::None)
-        Warn(ctx) << f
-                  << ": -z gcs: file does not have "
-                     "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
     }
     if (ctx.arg.zPacPlt && !(hasValidPauthAbiCoreInfo ||
                              (features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC))) {
