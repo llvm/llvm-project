@@ -236,13 +236,12 @@ public:
 #  endif
   ~thread();
 
-  _LIBCPP_HIDE_FROM_ABI thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) { __t.__t_ = _LIBCPP_NULL_THREAD; }
+  _LIBCPP_HIDE_FROM_ABI thread(thread&& __t) _NOEXCEPT : __t_(std::__exchange(__t.__t_, __libcpp_thread_t())) {}
 
   _LIBCPP_HIDE_FROM_ABI thread& operator=(thread&& __t) _NOEXCEPT {
     if (!__libcpp_thread_isnull(&__t_))
       terminate();
-    __t_     = __t.__t_;
-    __t.__t_ = _LIBCPP_NULL_THREAD;
+    __t_ = std::__exchange(__t.__t_, __libcpp_thread_t());
     return *this;
   }
 
