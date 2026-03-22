@@ -17,11 +17,11 @@
 ; RUN: %if x86-registered-target      %{ llc < %s -mtriple=i686-linux-gnu                | FileCheck %s --check-prefixes=CHECK,INLINE %}
 ; RUN: %if riscv-registered-target    %{ llc < %s -mtriple=riscv32-linux-gnu             | FileCheck %s --check-prefixes=CHECK,INLINE %}
 ; RUN: %if riscv-registered-target    %{ llc < %s -mtriple=riscv32-linux-gnu -mattr=+m   | FileCheck %s --check-prefixes=CHECK,INLINE %}
+; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv6-linux-gnueabihf         | FileCheck %s --check-prefixes=CHECK,INLINE %}
+; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv7-linux-gnueabi           | FileCheck %s --check-prefixes=CHECK,INLINE %}
 ; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv7-none-eabi               | FileCheck %s --check-prefixes=CHECK,INLINE %}
 
-; 32-bit / ILP32 targets that fall back to separate __divti3 + __modti3 calls
-; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv6-linux-gnueabihf         | FileCheck %s --check-prefixes=CHECK,DIVMOD %}
-; RUN: %if arm-registered-target      %{ llc < %s -mtriple=armv7-linux-gnueabi           | FileCheck %s --check-prefixes=CHECK,DIVMOD %}
+; ILP32 targets that fall back to separate __divti3 + __modti3 calls
 ; RUN: %if aarch64-registered-target  %{ llc < %s -mtriple=aarch64_32-apple-watchos      | FileCheck %s --check-prefixes=CHECK,DIVMOD %}
 
 ; 64-bit Mac OS: fused ___divmodti4 (extra underscore)
