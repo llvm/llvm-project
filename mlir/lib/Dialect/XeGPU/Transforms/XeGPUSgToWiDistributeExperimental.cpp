@@ -939,9 +939,12 @@ struct SgToWiVectorExtractStridedSlice
             op, "source size along distributed dim is not a multiple of "
                 "subgroup size");
       auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
-      if (!llvm::all_of(sourceLaneData, [](int64_t v) { return v == 1; }))
+      // Only check lane_data for the distributed dimension. Non-distributed
+      // dimensions may have non-unit lane_data (e.g., packed layouts).
+      if (distDim < static_cast<int64_t>(sourceLaneData.size()) &&
+          sourceLaneData[distDim] != 1)
         return rewriter.notifyMatchFailure(
-            op, "expecting unit lane data in source layout");
+            op, "expecting unit lane data along the distributed dimension");
       int64_t distrDimOffset =
           cast<IntegerAttr>(updatedOffsets[distDim]).getInt();
       if (distrDimOffset % subgroupSize != 0)
@@ -1025,10 +1028,14 @@ struct SgToWiVectorInsertStridedSlice
 
       auto destLaneData = destLayout.getEffectiveLaneDataAsInt();
       auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
-      if (!llvm::all_of(destLaneData, [](int64_t v) { return v == 1; }) ||
-          !llvm::all_of(sourceLaneData, [](int64_t v) { return v == 1; }))
+      // Only check lane_data for the distributed dimension. Non-distributed
+      // dimensions may have non-unit lane_data (e.g., packed layouts).
+      if ((destDistDim < static_cast<int64_t>(destLaneData.size()) &&
+           destLaneData[destDistDim] != 1) ||
+          (sourceDistDim < static_cast<int64_t>(sourceLaneData.size()) &&
+           sourceLaneData[sourceDistDim] != 1))
         return rewriter.notifyMatchFailure(
-            op, "expecting unit lane data in source and dest layouts");
+            op, "expecting unit lane data along the distributed dimension");
 
       int64_t srcDistrDimSize = srcType.getDimSize(sourceDistDim);
       if (srcDistrDimSize % subgroupSize != 0)
