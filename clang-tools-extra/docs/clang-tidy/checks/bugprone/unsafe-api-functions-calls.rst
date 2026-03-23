@@ -1,7 +1,7 @@
 .. title:: clang-tidy - bugprone-unsafe-api-functions-calls
 
 bugprone-unsafe-api-functions-calls
-====================================
+===================================
 
 Warns when ``setvbuf()`` or ``setbuf()`` is called with a
 stack-allocated buffer.
