@@ -14,16 +14,13 @@ include(CompilerRTDarwinUtils)
 check_include_file(unwind.h HAVE_UNWIND_H)
 
 # Used by sanitizer_common and tests.
+set(_rpc_xdr_header "rpc/xdr.h")
+set(_default_require_rpc_xdr_h OFF)
 if ("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
   set(_rpc_xdr_header "tirpc/rpc/xdr.h")
   if (COMPILER_RT_BUILD_SANITIZERS)
     set(_default_require_rpc_xdr_h ON)
-  else()
-    set(_default_require_rpc_xdr_h OFF)
   endif()
-else()
-  set(_rpc_xdr_header "rpc/xdr.h")
-  set(_default_require_rpc_xdr_h OFF)
 endif()
 check_include_file(${_rpc_xdr_header} HAVE_RPC_XDR_H)
 option(COMPILER_RT_REQUIRE_RPC_XDR_H
