@@ -43,6 +43,7 @@ using namespace clang::interp;
 // aarch64 seems to have problems too, at least with sanitizers enabled.
 #if defined(_MSC_VER) || defined(_ARCH_PPC) || defined(__aarch64__) ||         \
     !defined(MUSTTAIL)
+#undef MUSTTAIL
 #define MUSTTAIL
 #define USE_TAILCALLS 0
 #else
