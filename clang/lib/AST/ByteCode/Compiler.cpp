@@ -2709,6 +2709,7 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E) {
+  assert(!DiscardResult);
   // ArrayIndex might not be set if a ArrayInitIndexExpr is being evaluated
   // stand-alone, e.g. via EvaluateAsInt().
   if (!ArrayIndex)
@@ -2753,12 +2754,17 @@ bool Compiler<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
   if (!SourceExpr)
     return false;
 
-  if (Initializing)
+  if (Initializing) {
+    assert(!DiscardResult);
     return this->visitInitializer(SourceExpr);
+  }
 
   PrimType SubExprT = classify(SourceExpr).value_or(PT_Ptr);
-  if (auto It = OpaqueExprs.find(E); It != OpaqueExprs.end())
+  if (auto It = OpaqueExprs.find(E); It != OpaqueExprs.end()) {
+    if (DiscardResult)
+      return true;
     return this->emitGetLocal(SubExprT, It->second, E);
+  }
 
   if (!this->visit(SourceExpr))
     return false;
@@ -2770,16 +2776,13 @@ bool Compiler<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
   if (!this->emitSetLocal(SubExprT, LocalIndex, E))
     return false;
 
-  // Here the local variable is created but the value is removed from the stack,
-  // so we put it back if the caller needs it.
-  if (!DiscardResult) {
-    if (!this->emitGetLocal(SubExprT, LocalIndex, E))
-      return false;
-  }
-
   // This is cleaned up when the local variable is destroyed.
   OpaqueExprs.insert({E, LocalIndex});
 
+  // Here the local variable is created but the value is removed from the stack,
+  // so we put it back if the caller needs it.
+  if (!DiscardResult)
+    return this->emitGetLocal(SubExprT, LocalIndex, E);
   return true;
 }
 
