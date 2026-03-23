@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -35,6 +36,7 @@ namespace memref {
 
 using namespace mlir;
 using namespace mlir::affine;
+using namespace mlir::memref;
 
 namespace {
 
@@ -250,24 +252,14 @@ struct ExtractStridedMetadataOpSubviewFolder
   }
 };
 
-/// Compute the expanded sizes of the given \p expandShape for the
-/// \p groupId-th reassociation group.
-/// \p origSizes hold the sizes of the source shape as values.
-/// This is used to compute the new sizes in cases of dynamic shapes.
-///
-/// sizes#i =
-///     baseSizes#groupId / product(expandShapeSizes#j,
-///                                  for j in group excluding reassIdx#i)
-/// Where reassIdx#i is the reassociation index at index i in \p groupId.
-///
-/// \post result.size() == expandShape.getReassociationIndices()[groupId].size()
-///
-/// TODO: Move this utility function directly within ExpandShapeOp. For now,
-/// this is not possible because this function uses the Affine dialect and the
-/// MemRef dialect cannot depend on the Affine dialect.
-static SmallVector<OpFoldResult>
-getExpandedSizes(memref::ExpandShapeOp expandShape, OpBuilder &builder,
-                 ArrayRef<OpFoldResult> origSizes, unsigned groupId) {
+} // namespace
+
+namespace mlir {
+namespace memref {
+SmallVector<OpFoldResult> getExpandedSizes(ExpandShapeOp expandShape,
+                                           OpBuilder &builder,
+                                           ArrayRef<OpFoldResult> origSizes,
+                                           unsigned groupId) {
   SmallVector<int64_t, 2> reassocGroup =
       expandShape.getReassociationIndices()[groupId];
   assert(!reassocGroup.empty() &&
@@ -305,31 +297,7 @@ getExpandedSizes(memref::ExpandShapeOp expandShape, OpBuilder &builder,
   return expandedSizes;
 }
 
-/// Compute the expanded strides of the given \p expandShape for the
-/// \p groupId-th reassociation group.
-/// \p origStrides and \p origSizes hold respectively the strides and sizes
-/// of the source shape as values.
-/// This is used to compute the strides in cases of dynamic shapes and/or
-/// dynamic stride for this reassociation group.
-///
-/// strides#i =
-///     origStrides#reassDim * product(expandShapeSizes#j, for j in
-///                                    reassIdx#i+1..reassIdx#i+group.size-1)
-///
-/// Where reassIdx#i is the reassociation index for at index i in \p groupId
-/// and expandShapeSizes#j is either:
-/// - The constant size at dimension j, derived directly from the result type of
-///   the expand_shape op, or
-/// - An affine expression: baseSizes#reassDim / product of all constant sizes
-///   in expandShapeSizes. (Remember expandShapeSizes has at most one dynamic
-///   element.)
-///
-/// \post result.size() == expandShape.getReassociationIndices()[groupId].size()
-///
-/// TODO: Move this utility function directly within ExpandShapeOp. For now,
-/// this is not possible because this function uses the Affine dialect and the
-/// MemRef dialect cannot depend on the Affine dialect.
-SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
+SmallVector<OpFoldResult> getExpandedStrides(ExpandShapeOp expandShape,
                                              OpBuilder &builder,
                                              ArrayRef<OpFoldResult> origSizes,
                                              ArrayRef<OpFoldResult> origStrides,
@@ -405,18 +373,10 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
   return expandedStrides;
 }
 
-/// Produce an OpFoldResult object with \p builder at \p loc representing
-/// `prod(valueOrConstant#i, for i in {indices})`,
-/// where valueOrConstant#i is maybeConstant[i] when \p isDymamic is false,
-/// values[i] otherwise.
-///
-/// \pre for all index in indices: index < values.size()
-/// \pre for all index in indices: index < maybeConstants.size()
-static OpFoldResult
-getProductOfValues(ArrayRef<int64_t> indices, OpBuilder &builder, Location loc,
-                   ArrayRef<int64_t> maybeConstants,
-                   ArrayRef<OpFoldResult> values,
-                   llvm::function_ref<bool(int64_t)> isDynamic) {
+OpFoldResult getProductOfValues(ArrayRef<int64_t> indices, OpBuilder &builder,
+                                Location loc, ArrayRef<int64_t> maybeConstants,
+                                ArrayRef<OpFoldResult> values,
+                                llvm::function_ref<bool(int64_t)> isDynamic) {
   AffineExpr productOfValues = builder.getAffineConstantExpr(1);
   SmallVector<OpFoldResult> inputValues;
   unsigned numberOfSymbols = 0;
@@ -450,9 +410,10 @@ getProductOfValues(ArrayRef<int64_t> indices, OpBuilder &builder, Location loc,
 /// TODO: Move this utility function directly within CollapseShapeOp. For now,
 /// this is not possible because this function uses the Affine dialect and the
 /// MemRef dialect cannot depend on the Affine dialect.
-static SmallVector<OpFoldResult>
-getCollapsedSize(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
-                 ArrayRef<OpFoldResult> origSizes, unsigned groupId) {
+SmallVector<OpFoldResult> getCollapsedSize(CollapseShapeOp collapseShape,
+                                           OpBuilder &builder,
+                                           ArrayRef<OpFoldResult> origSizes,
+                                           unsigned groupId) {
   SmallVector<OpFoldResult> collapsedSize;
 
   MemRefType collapseShapeType = collapseShape.getResultType();
@@ -491,10 +452,11 @@ getCollapsedSize(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
 ///
 /// \post result.size() == 1, in other words, each group collapse to one
 /// dimension.
-static SmallVector<OpFoldResult>
-getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
-                   ArrayRef<OpFoldResult> origSizes,
-                   ArrayRef<OpFoldResult> origStrides, unsigned groupId) {
+SmallVector<OpFoldResult> getCollapsedStride(CollapseShapeOp collapseShape,
+                                             OpBuilder &builder,
+                                             ArrayRef<OpFoldResult> origSizes,
+                                             ArrayRef<OpFoldResult> origStrides,
+                                             unsigned groupId) {
   SmallVector<int64_t, 2> reassocGroup =
       collapseShape.getReassociationIndices()[groupId];
   assert(!reassocGroup.empty() &&
@@ -546,6 +508,10 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
 
   return {lastValidStride};
 }
+} // namespace memref
+} // namespace mlir
+
+namespace {
 
 /// From `reshape_like(memref, subSizes, subStrides))` compute
 ///
