@@ -193,6 +193,11 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back(SplitDWARFOut);
     }
   }
+  if (Args.hasFlag(options::OPT_fdebug_info_for_profiling,
+                   options::OPT_fno_debug_info_for_profiling, false) &&
+      checkDebugInfoOption(
+          Args.getLastArg(options::OPT_fdebug_info_for_profiling), Args, D, TC))
+    CmdArgs.push_back("-fdebug-info-for-profiling");
 }
 
 void Flang::addCodegenOptions(const ArgList &Args,
