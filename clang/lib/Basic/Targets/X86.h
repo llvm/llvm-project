@@ -177,6 +177,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasNF = false;
   bool HasCF = false;
   bool HasZU = false;
+  bool HasJMPABS = false;
   bool HasInlineAsmUseGPR32 = false;
   bool HasBranchHint = false;
 
@@ -255,6 +256,16 @@ public:
       // Check that the register size is 32-bit.
       HasSizeMismatch = RegSize != 32;
       return true;
+    }
+    if (RegName.ends_with("di")) {
+      if (getTargetOpts().FeatureMap.lookup("reserve-edi")) {
+        if (RegName == "edi") {
+          HasSizeMismatch = RegSize != 32;
+        } else if (RegName == "di") {
+          HasSizeMismatch = RegSize != 16;
+        }
+        return true;
+      }
     }
 
     return false;
@@ -804,6 +815,30 @@ public:
     if (RegName == "rsp" || RegName == "rbp") {
       // Check that the register size is 64-bit.
       HasSizeMismatch = RegSize != 64;
+      return true;
+    }
+
+    // -ffixed-r8 through -ffixed-r31 are lowered to reserve-r8 through
+    // reserve-r31 target features, so canonicalize subregister spellings
+    // like r15d/r15w/r15b back to the corresponding 64-bit register first.
+    StringRef Reg64 = RegName;
+    if (Reg64.back() == 'd' || Reg64.back() == 'w' || Reg64.back() == 'b') {
+      Reg64 = Reg64.substr(0, Reg64.size() - 1);
+    }
+    if (getTargetOpts().FeatureMap.lookup(("reserve-" + Reg64).str())) {
+      switch (RegName.back()) {
+      case 'd':
+        HasSizeMismatch = RegSize != 32;
+        break;
+      case 'w':
+        HasSizeMismatch = RegSize != 16;
+        break;
+      case 'b':
+        HasSizeMismatch = RegSize != 8;
+        break;
+      default:
+        HasSizeMismatch = RegSize != 64;
+      }
       return true;
     }
 

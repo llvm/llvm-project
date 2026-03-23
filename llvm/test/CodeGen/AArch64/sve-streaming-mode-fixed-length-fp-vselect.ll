@@ -482,8 +482,6 @@ define <1 x double> @select_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x i1>
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    tst w0, #0x1
 ; NONEON-NOSVE-NEXT:    fcsel d0, d0, d1, ne
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %sel = select <1 x i1> %mask, <1 x double> %op1, <1 x double> %op2

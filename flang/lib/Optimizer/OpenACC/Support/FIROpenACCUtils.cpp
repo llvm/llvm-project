@@ -55,33 +55,32 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
   while (v && (defOp = v.getDefiningOp()) && iterate) {
     iterate =
         llvm::TypeSwitch<mlir::Operation *, bool>(defOp)
-            .Case<mlir::ViewLikeOpInterface>(
-                [&v](mlir::ViewLikeOpInterface op) {
-                  v = op.getViewSource();
-                  return true;
-                })
-            .Case<fir::ReboxOp>([&v](fir::ReboxOp op) {
+            .Case([&v](mlir::ViewLikeOpInterface op) {
+              v = op.getViewSource();
+              return true;
+            })
+            .Case([&v](fir::ReboxOp op) {
               v = op.getBox();
               return true;
             })
-            .Case<fir::EmboxOp>([&v](fir::EmboxOp op) {
+            .Case([&v](fir::EmboxOp op) {
               v = op.getMemref();
               return true;
             })
-            .Case<fir::ConvertOp>([&v](fir::ConvertOp op) {
+            .Case([&v](fir::ConvertOp op) {
               v = op.getValue();
               return true;
             })
-            .Case<fir::LoadOp>([&v](fir::LoadOp op) {
+            .Case([&v](fir::LoadOp op) {
               v = op.getMemref();
               return true;
             })
-            .Case<fir::BoxAddrOp>([&v](fir::BoxAddrOp op) {
+            .Case([&v](fir::BoxAddrOp op) {
               // The box holds the name of the variable.
               v = op.getVal();
               return true;
             })
-            .Case<fir::AddrOfOp>([&](fir::AddrOfOp op) {
+            .Case([&](fir::AddrOfOp op) {
               // Only use address_of symbol if mangled name is preferred
               if (!preferDemangledName) {
                 auto symRef = op.getSymbol();
@@ -89,7 +88,7 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               }
               return false;
             })
-            .Case<fir::ArrayCoorOp>([&](fir::ArrayCoorOp op) {
+            .Case([&](fir::ArrayCoorOp op) {
               v = op.getMemref();
               for (auto coor : op.getIndices()) {
                 auto idxName = getVariableName(coor, preferDemangledName);
@@ -97,7 +96,7 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               }
               return true;
             })
-            .Case<fir::CoordinateOp>([&](fir::CoordinateOp op) {
+            .Case([&](fir::CoordinateOp op) {
               std::optional<llvm::ArrayRef<int32_t>> fieldIndices =
                   op.getFieldIndices();
               if (fieldIndices && fieldIndices->size() > 0 &&
@@ -117,7 +116,7 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               }
               return false;
             })
-            .Case<hlfir::DesignateOp>([&](hlfir::DesignateOp op) {
+            .Case([&](hlfir::DesignateOp op) {
               if (op.getComponent()) {
                 srcName = op.getComponent().value().str();
                 prefix =
@@ -135,7 +134,7 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               srcName = op.getUniqName().str();
               return false;
             })
-            .Case<fir::AllocaOp>([&](fir::AllocaOp op) {
+            .Case([&](fir::AllocaOp op) {
               if (preferDemangledName) {
                 // Prefer demangled name (bindc_name over uniq_name)
                 srcName = op.getBindcName()  ? *op.getBindcName()
@@ -272,59 +271,41 @@ std::string fir::acc::getRecipeName(mlir::acc::RecipeKind kind, Type type,
   return ::getRecipeName(kind, type, kindMap, bounds, reductionOp);
 }
 
-/// Get the initial value for reduction operator.
-template <typename R>
-static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
-  if (op == mlir::acc::ReductionOperator::AccMin) {
-    // min init value -> largest
-    if constexpr (std::is_same_v<R, llvm::APInt>) {
-      assert(ty.isIntOrIndex() && "expect integer or index type");
-      return llvm::APInt::getSignedMaxValue(ty.getIntOrFloatBitWidth());
-    }
-    if constexpr (std::is_same_v<R, llvm::APFloat>) {
-      auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty);
-      assert(floatTy && "expect float type");
-      return llvm::APFloat::getLargest(floatTy.getFloatSemantics(),
-                                       /*negative=*/false);
-    }
-  } else if (op == mlir::acc::ReductionOperator::AccMax) {
-    // max init value -> smallest
-    if constexpr (std::is_same_v<R, llvm::APInt>) {
-      assert(ty.isIntOrIndex() && "expect integer or index type");
-      return llvm::APInt::getSignedMinValue(ty.getIntOrFloatBitWidth());
-    }
-    if constexpr (std::is_same_v<R, llvm::APFloat>) {
-      auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty);
-      assert(floatTy && "expect float type");
-      return llvm::APFloat::getSmallest(floatTy.getFloatSemantics(),
-                                        /*negative=*/true);
-    }
-  } else if (op == mlir::acc::ReductionOperator::AccIand) {
-    if constexpr (std::is_same_v<R, llvm::APInt>) {
-      assert(ty.isIntOrIndex() && "expect integer type");
-      unsigned bits = ty.getIntOrFloatBitWidth();
-      return llvm::APInt::getAllOnes(bits);
-    }
-  } else {
-    assert(op != mlir::acc::ReductionOperator::AccNone);
-    // +, ior, ieor init value -> 0
-    // * init value -> 1
-    int64_t value = (op == mlir::acc::ReductionOperator::AccMul) ? 1 : 0;
-    if constexpr (std::is_same_v<R, llvm::APInt>) {
-      assert(ty.isIntOrIndex() && "expect integer or index type");
-      return llvm::APInt(ty.getIntOrFloatBitWidth(), value, true);
-    }
-
-    if constexpr (std::is_same_v<R, llvm::APFloat>) {
-      assert(mlir::isa<mlir::FloatType>(ty) && "expect float type");
-      auto floatTy = mlir::dyn_cast<mlir::FloatType>(ty);
-      return llvm::APFloat(floatTy.getFloatSemantics(), value);
-    }
-
-    if constexpr (std::is_same_v<R, int64_t>)
-      return value;
+/// Map acc::ReductionOperator to arith::AtomicRMWKind for identity value
+/// computation. Uses minimumf/maximumf instead of minnumf/maxnumf because
+/// arith::getIdentityValueAttr for minnumf/maxnumf returns NaN (the IEEE 754
+/// identity), which doesn't work with comparison-based reductions on GPU.
+/// minimumf/maximumf identity with useOnlyFiniteValue gives the correct
+/// finite extreme value (FLT_MAX / -FLT_MAX).
+static mlir::arith::AtomicRMWKind
+getAtomicRMWKindForIdentity(mlir::acc::ReductionOperator op, mlir::Type ty) {
+  bool isFloat = mlir::isa<mlir::FloatType>(ty);
+  switch (op) {
+  case mlir::acc::ReductionOperator::AccAdd:
+    return isFloat ? mlir::arith::AtomicRMWKind::addf
+                   : mlir::arith::AtomicRMWKind::addi;
+  case mlir::acc::ReductionOperator::AccMul:
+    return isFloat ? mlir::arith::AtomicRMWKind::mulf
+                   : mlir::arith::AtomicRMWKind::muli;
+  case mlir::acc::ReductionOperator::AccMin:
+  case mlir::acc::ReductionOperator::AccMinnumf:
+  case mlir::acc::ReductionOperator::AccMinimumf:
+    return isFloat ? mlir::arith::AtomicRMWKind::minimumf
+                   : mlir::arith::AtomicRMWKind::mins;
+  case mlir::acc::ReductionOperator::AccMax:
+  case mlir::acc::ReductionOperator::AccMaxnumf:
+  case mlir::acc::ReductionOperator::AccMaximumf:
+    return isFloat ? mlir::arith::AtomicRMWKind::maximumf
+                   : mlir::arith::AtomicRMWKind::maxs;
+  case mlir::acc::ReductionOperator::AccIand:
+    return mlir::arith::AtomicRMWKind::andi;
+  case mlir::acc::ReductionOperator::AccIor:
+    return mlir::arith::AtomicRMWKind::ori;
+  case mlir::acc::ReductionOperator::AccXor:
+    return mlir::arith::AtomicRMWKind::xori;
+  default:
+    llvm_unreachable("unsupported acc::ReductionOperator");
   }
-  llvm_unreachable("OpenACC reduction unsupported type");
 }
 
 /// Return a constant with the initial value for the reduction operator and
@@ -338,39 +319,24 @@ static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
       op == mlir::acc::ReductionOperator::AccEqv ||
       op == mlir::acc::ReductionOperator::AccNeqv) {
     assert(mlir::isa<fir::LogicalType>(ty) && "expect fir.logical type");
-    bool value = true; // .true. for .and. and .eqv.
-    if (op == mlir::acc::ReductionOperator::AccLor ||
-        op == mlir::acc::ReductionOperator::AccNeqv)
-      value = false; // .false. for .or. and .neqv.
+    bool value = (op == mlir::acc::ReductionOperator::AccLand ||
+                  op == mlir::acc::ReductionOperator::AccEqv);
     return builder.createBool(loc, value);
   }
-  if (ty.isIntOrIndex())
-    return mlir::arith::ConstantOp::create(
-        builder, loc, ty,
-        builder.getIntegerAttr(ty, getReductionInitValue<llvm::APInt>(op, ty)));
-  if (op == mlir::acc::ReductionOperator::AccMin ||
-      op == mlir::acc::ReductionOperator::AccMax) {
-    if (mlir::isa<mlir::ComplexType>(ty))
-      llvm::report_fatal_error(
-          "min/max reduction not supported for complex type");
-    if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty))
-      return mlir::arith::ConstantOp::create(
-          builder, loc, ty,
-          builder.getFloatAttr(ty,
-                               getReductionInitValue<llvm::APFloat>(op, ty)));
-  } else if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty)) {
-    return mlir::arith::ConstantOp::create(
-        builder, loc, ty,
-        builder.getFloatAttr(ty, getReductionInitValue<int64_t>(op, ty)));
-  } else if (auto cmplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(ty)) {
-    mlir::Type floatTy = cmplxTy.getElementType();
-    mlir::Value realInit = builder.createRealConstant(
-        loc, floatTy, getReductionInitValue<int64_t>(op, cmplxTy));
-    mlir::Value imagInit = builder.createRealConstant(loc, floatTy, 0.0);
+  if (auto cmplxTy = mlir::dyn_cast<mlir::ComplexType>(ty)) {
+    mlir::arith::AtomicRMWKind kind =
+        getAtomicRMWKindForIdentity(op, cmplxTy.getElementType());
+    mlir::Value realInit = mlir::arith::getIdentityValue(
+        kind, cmplxTy.getElementType(), builder, loc,
+        /*useOnlyFiniteValue=*/true);
+    mlir::Value imagInit =
+        builder.createRealConstant(loc, cmplxTy.getElementType(), 0.0);
     return fir::factory::Complex{builder, loc}.createComplex(cmplxTy, realInit,
                                                              imagInit);
   }
-  llvm::report_fatal_error("Unsupported OpenACC reduction type");
+  mlir::arith::AtomicRMWKind kind = getAtomicRMWKindForIdentity(op, ty);
+  return mlir::arith::getIdentityValue(kind, ty, builder, loc,
+                                       /*useOnlyFiniteValue=*/true);
 }
 
 static llvm::SmallVector<mlir::Value>
@@ -618,4 +584,39 @@ mlir::SymbolRefAttr fir::acc::createOrGetReductionRecipe(
   assert(success && "failed to generate combiner");
   mlir::acc::YieldOp::create(builder, loc, dest);
   return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());
+}
+
+mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
+  mlir::Value currentValue = value;
+
+  while (currentValue) {
+    auto *definingOp = currentValue.getDefiningOp();
+    if (!definingOp)
+      break;
+
+    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(definingOp)) {
+      currentValue = convertOp.getValue();
+      continue;
+    }
+
+    if (auto viewLike = mlir::dyn_cast<mlir::ViewLikeOpInterface>(definingOp)) {
+      currentValue = viewLike.getViewSource();
+      continue;
+    }
+
+    if (stripDeclare) {
+      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+
+      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+    }
+    break;
+  }
+
+  return currentValue;
 }

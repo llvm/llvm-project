@@ -813,7 +813,7 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
       // might support const.
       if (isa<Constant>(IncValue)) {
         auto *IncConst = dyn_cast<Constant>(IncValue);
-        if (!isa<UndefValue>(IncValue) && !IncConst->isZeroValue())
+        if (!isa<UndefValue>(IncValue) && !IncConst->isNullValue())
           return false;
         Value *Row = nullptr, *Col = nullptr;
         std::tie(Row, Col) = getShape(OldPN);

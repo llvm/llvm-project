@@ -13,12 +13,6 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
-#ifndef MODULE_ANALYSIS
-#define MODULE_ANALYSIS(NAME, CREATE_PASS)
-#endif
-MODULE_ANALYSIS("amdgpu-argument-usage", AMDGPUArgumentUsageAnalysis())
-#undef MODULE_ANALYSIS
-
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
@@ -49,6 +43,12 @@ MODULE_PASS_WITH_PARAMS(
     },
     parseAMDGPUAttributorPassOptions, "closed-world")
 #undef MODULE_PASS_WITH_PARAMS
+
+#ifndef CGSCC_PASS
+#define CGSCC_PASS(NAME, CREATE_PASS)
+#endif
+CGSCC_PASS("amdgpu-attributor-cgscc", AMDGPUAttributorCGSCCPass(*this))
+#undef CGSCC_PASS
 
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)

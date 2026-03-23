@@ -245,6 +245,10 @@ public:
   /// The set of GNU address of label extension "&&label".
   llvm::SmallVector<AddrLabelExpr *, 4> AddrLabels;
 
+  /// An unresolved identifier lookup expression for an implicit call
+  /// to a SYCL kernel launch function in a dependent context.
+  Expr *SYCLKernelLaunchIdExpr = nullptr;
+
 public:
   /// Represents a simple identification of a weak object.
   ///

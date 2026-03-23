@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIMACHINEFUNCTIONINFO_H
 
 #include "AMDGPUArgumentUsageInfo.h"
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -267,7 +267,6 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   Align DynLDSAlign;
   bool IsEntryFunction = false;
   bool IsChainFunction = false;
-  bool NoSignedZerosFPMath = false;
   bool MemoryBound = false;
   bool WaveLimiter = false;
   bool HasSpilledSGPRs = false;
@@ -328,7 +327,6 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("dynLDSAlign", MFI.DynLDSAlign, Align());
     YamlIO.mapOptional("isEntryFunction", MFI.IsEntryFunction, false);
     YamlIO.mapOptional("isChainFunction", MFI.IsChainFunction, false);
-    YamlIO.mapOptional("noSignedZerosFPMath", MFI.NoSignedZerosFPMath, false);
     YamlIO.mapOptional("memoryBound", MFI.MemoryBound, false);
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
     YamlIO.mapOptional("hasSpilledSGPRs", MFI.HasSpilledSGPRs, false);
@@ -413,7 +411,7 @@ struct VGPRBlock2IndexFunctor {
 
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
-class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
+class SIMachineFunctionInfo final : public AMDGPUMachineFunctionInfo,
                                     private MachineRegisterInfo::Delegate {
   friend class GCNTargetMachine;
 

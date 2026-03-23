@@ -186,10 +186,10 @@ jobs:
           steps.docs-changed-subprojects.outputs.openmp_any_changed == 'true' ||
           steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
         run: |
-          cmake -B openmp-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;openmp" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          cmake -B openmp-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="openmp" -DLLVM_ENABLE_SPHINX=ON -DLLVM_INCLUDE_TESTS=OFF ./runtimes
           TZ=UTC ninja -C openmp-build docs-openmp-html
           mkdir built-docs/openmp
-          cp -r openmp-build/docs/* built-docs/openmp/
+          cp -r openmp-build/openmp/docs/* built-docs/openmp/
       - name: Build Polly docs
         if: |
           steps.docs-changed-subprojects.outputs.polly_any_changed == 'true' ||
@@ -209,7 +209,7 @@ jobs:
           mkdir built-docs/flang
           cp -r flang-build/docs/* built-docs/flang/
       - name: Upload docs
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: docs-output
           path: built-docs/

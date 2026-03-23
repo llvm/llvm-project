@@ -18,6 +18,7 @@ namespace std {
 
 void memcpy();
 void __asan_memcpy();
+void *memset(void *s, int c, size_t n);
 void strcpy();
 void strcpy_s();
 void wcscpy_s();
@@ -79,6 +80,10 @@ namespace std {
 
   typedef basic_string_view<char> string_view;
   typedef basic_string_view<wchar_t> wstring_view;
+
+
+  template <typename T>
+  T *addressof(T& arg);
 }
 
 void f(char * p, char * q, std::span<char> s, std::span<char> s2) {
@@ -375,3 +380,102 @@ void test_format_attr_invalid_arg_idx(char * Str, std::string StdStr) {
   myprintf(Str); // expected-warning{{formatting function 'myprintf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
   myprintf(StdStr.c_str());
 }
+
+
+void memset_address_of_operator() {
+  int i = 0;
+
+  // memory-safe and considered safe by the check
+  memset(&i, 0, sizeof(i));
+  memset(&i, 0, sizeof i);
+  memset(&(i), 0, sizeof(i));
+  memset(&(i), 0, sizeof i);
+
+  // memory-safe but considered unsafe by the check
+  memset(&i, 0, 0); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, 1); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, sizeof(int)); // expected-warning{{function 'memset' is unsafe}}
+  memset(&(++i), 0, sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+
+  // unsafe
+  memset(nullptr, 0, 10); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, 10); // expected-warning{{function 'memset' is unsafe}}
+}
+
+void memset_address_of_function() {
+  int i = 0;
+
+  // memory-safe and considered safe by the check
+  memset(std::addressof(i), 0, sizeof(i));
+  memset(std::addressof(i), 0, sizeof i);
+  memset(std::addressof((i)), 0, sizeof(i));
+  memset(std::addressof((i)), 0, sizeof i);
+
+  // memory-safe but considered unsafe by the check
+  memset(std::addressof(i), 0, 0); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), 0, 1); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), 0, sizeof(int)); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(++i), 0, sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+
+  // unsafe
+  memset(std::addressof(i), 0, 10); // expected-warning{{function 'memset' is unsafe}}
+}
+
+// Unknown `memset`s with more or less parameters.
+void *memset(void *s, size_t n);
+void *memset(void *s, int c, size_t n, size_t destlen);
+
+void unknown_memset_unsafe() {
+  int i = 0;
+
+  memset(&i, sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+  memset(&i, 0, sizeof(i), sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+  memset(std::addressof(i), 0, sizeof(i), sizeof(i)); // expected-warning{{function 'memset' is unsafe}}
+}
+
+void builtin_memset() {
+  int i = 0;
+
+  // memory-safe and considered safe by the check
+  __builtin_memset(&i, 0, sizeof(i));
+
+  // may be memory-safe but considered unsafe by the check
+  __builtin_memset(&i, 0 , 4); // expected-warning{{function '__builtin_memset' is unsafe}}
+  __builtin___memset_chk(&i, 0 , 4, 4); // expected-warning{{function '__builtin___memset_chk' is unsafe}}
+  __builtin___memset_chk(&i, 0 , sizeof(i), sizeof(i)); // expected-warning{{function '__builtin___memset_chk' is unsafe}}
+}
+
+namespace ms {
+  void memset(void *s, int c, size_t n);
+  void __builtin_memset(void *s, int c, size_t n);
+}
+
+// Custom-written `memset` functions are not included in the check.
+// Note: `using namespace ms;` results in compilation errors
+// ("call to 'memset' is ambiguous") which block other warnings,
+// so we don't include a test for it.
+void using_custom_memset_safe() {
+  int i = 0;
+
+  ms::memset(&i, 0, 10);
+  ms::__builtin_memset(&i, 0, 10);
+
+  using ms::memset;
+  memset(&i, 0, 10);
+  using ms::__builtin_memset;
+  __builtin_memset(&i, 0, 10);
+}
+
+#ifdef TEST_STD_NS
+void qualified_std_memset() {
+  int i = 0;
+
+  // memory-safe and considered safe by the check
+  std::memset(&i, 0, sizeof(i));
+
+  // unsafe
+  std::memset(&i, 0 , 10); // expected-warning{{function 'memset' is unsafe}}
+}
+#endif
+

@@ -39,6 +39,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -233,9 +234,6 @@ class BinaryContext {
 
   /// Functions to be considered for the output in a sorted order.
   BinaryFunctionListType OutputFunctions;
-
-  /// A mutex that is used to control parallel accesses to BinaryFunctions.
-  mutable llvm::sys::RWMutex BinaryFunctionsMutex;
 
   /// Functions injected by BOLT.
   BinaryFunctionListType InjectedBinaryFunctions;
@@ -681,6 +679,8 @@ public:
 
   std::unique_ptr<MCObjectFileInfo> MOFI;
 
+  MCTargetOptions MCOptions;
+
   std::unique_ptr<const MCAsmInfo> AsmInfo;
 
   std::unique_ptr<const MCInstrInfo> MII;
@@ -887,9 +887,11 @@ public:
 
   bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
 
-  // AArch64-specific functions to check if symbol is used to delimit
+  // AArch64/RISC-V functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.
   MarkerSymType getMarkerType(const SymbolRef &Symbol) const;
+  MarkerSymType getMarkerType(unsigned SymbolType, uint64_t SymbolSize,
+                              StringRef SymbolName) const;
   bool isMarker(const SymbolRef &Symbol) const;
 
   /// Iterate over all BinaryData.
@@ -1560,6 +1562,7 @@ public:
     return Streamer;
   }
 
+  bool hasIOAddressMap() const { return IOAddressMap.has_value(); }
   void setIOAddressMap(AddressMap Map) { IOAddressMap = std::move(Map); }
   const AddressMap &getIOAddressMap() const {
     assert(IOAddressMap && "Address map not set yet");

@@ -55,9 +55,6 @@ public:
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
-  /// Get the integer value of a null pointer in the given address space.
-  static int64_t getNullPointerValue(unsigned AddrSpace);
-
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 
   unsigned getAssumedAddrSpace(const Value *V) const override;
@@ -100,7 +97,7 @@ public:
   Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
                              raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opts,
+                             const CGPassBuilderOption &Opts, MCContext &Ctx,
                              PassInstrumentationCallbacks *PIC) override;
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;

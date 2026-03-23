@@ -609,7 +609,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
 
   auto CheckStr = R"(
   CHECK: [[Trunc:%[0-9]+]]:_(s8) = G_TRUNC
-  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ZEXT [[Trunc]]
+  CHECK: [[Zext:%[0-9]+]]:_(s16) = G_ANYEXT [[Trunc]]
   CHECK: [[Cst8:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
   CHECK: [[Shl:%[0-9]+]]:_(s16) = G_SHL [[Zext]]:_, [[Cst8]]:_
   CHECK: [[CtlzZu:%[0-9]+]]:_(s16) = G_CTLZ_ZERO_UNDEF [[Shl]]
@@ -3246,7 +3246,7 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*InsertV2S32S32, 0, LLT{}));
 
-  EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*InsertV2S32P1, 0, LLT{}));
 
   const auto *CheckStr = R"(
@@ -3289,6 +3289,10 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
 
   CHECK: [[V2S32_E0:%[0-9]+]]:_(s32), [[V2S32_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[V2S32]]
   CHECK: [[BV:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[V2S32_E0]]:_(s32), [[S32]]:_(s32)
+
+  CHECK: [[V2S32_E0:%[0-9]+]]:_(s32), [[V2S32_E1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[V2S32]]
+  CHECK: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[P1]]
+  CHECK: [[BV:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[PTRTOINT]]:_(s32), [[V2S32_E1]]:_(s32)
   )";
 
   // Check

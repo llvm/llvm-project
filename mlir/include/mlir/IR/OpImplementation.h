@@ -1780,64 +1780,6 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
-// Dialect OpAsm interface.
-//===--------------------------------------------------------------------===//
-
-class OpAsmDialectInterface
-    : public DialectInterface::Base<OpAsmDialectInterface> {
-public:
-  OpAsmDialectInterface(Dialect *dialect) : Base(dialect) {}
-
-  using AliasResult = OpAsmAliasResult;
-
-  /// Hooks for getting an alias identifier alias for a given symbol, that is
-  /// not necessarily a part of this dialect. The identifier is used in place of
-  /// the symbol when printing textual IR. These aliases must not contain `.` or
-  /// end with a numeric digit([0-9]+).
-  virtual AliasResult getAlias(Attribute attr, raw_ostream &os) const {
-    return AliasResult::NoAlias;
-  }
-  virtual AliasResult getAlias(Type type, raw_ostream &os) const {
-    return AliasResult::NoAlias;
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Resources
-  //===--------------------------------------------------------------------===//
-
-  /// Declare a resource with the given key, returning a handle to use for any
-  /// references of this resource key within the IR during parsing. The result
-  /// of `getResourceKey` on the returned handle is permitted to be different
-  /// than `key`.
-  virtual FailureOr<AsmDialectResourceHandle>
-  declareResource(StringRef key) const {
-    return failure();
-  }
-
-  /// Return a key to use for the given resource. This key should uniquely
-  /// identify this resource within the dialect.
-  virtual std::string
-  getResourceKey(const AsmDialectResourceHandle &handle) const {
-    llvm_unreachable(
-        "Dialect must implement `getResourceKey` when defining resources");
-  }
-
-  /// Hook for parsing resource entries. Returns failure if the entry was not
-  /// valid, or could otherwise not be processed correctly. Any necessary errors
-  /// can be emitted via the provided entry.
-  virtual LogicalResult parseResource(AsmParsedResourceEntry &entry) const;
-
-  /// Hook for building resources to use during printing. The given `op` may be
-  /// inspected to help determine what information to include.
-  /// `referencedResources` contains all of the resources detected when printing
-  /// 'op'.
-  virtual void
-  buildResources(Operation *op,
-                 const SetVector<AsmDialectResourceHandle> &referencedResources,
-                 AsmResourceBuilder &builder) const {}
-};
-
-//===--------------------------------------------------------------------===//
 // Custom printers and parsers.
 //===--------------------------------------------------------------------===//
 
@@ -1855,6 +1797,13 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
 #include "mlir/IR/OpAsmOpInterface.h.inc"
+
+//===--------------------------------------------------------------------===//
+// Dialect OpAsm interface.
+//===--------------------------------------------------------------------===//
+
+/// The OpAsmDialectInterface, see OpAsmDialectInterface.td
+#include "mlir/IR/OpAsmDialectInterface.h.inc"
 
 namespace llvm {
 template <>

@@ -160,6 +160,9 @@ public:
     return Max;
   }
 
+  /// Return if the value is known even (the low bit is 0).
+  bool isEven() const { return Zero[0]; }
+
   /// Return known bits for a truncation of the value we're tracking.
   KnownBits trunc(unsigned BitWidth) const {
     return KnownBits(Zero.trunc(BitWidth), One.trunc(BitWidth));

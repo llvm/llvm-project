@@ -203,7 +203,7 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.getArch() == llvm::Triple::x86_64 && Triple.isX32())
     return "libx32";
 
-  if (Triple.getArch() == llvm::Triple::riscv32)
+  if (Triple.isRISCV32())
     return "lib32";
 
   if (Triple.getArch() == llvm::Triple::loongarch32) {
@@ -692,7 +692,9 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
         (tools::ppc::hasPPCAbiArg(Args, "elfv1")) ? "ld64.so.1" : "ld64.so.2";
     break;
   case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64: {
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be: {
     StringRef ArchName = llvm::Triple::getArchTypeName(Arch);
     StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
     LibDir = "lib";
@@ -759,6 +761,11 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
+
+  // After the resource directory, we prioritize the standard clang include
+  // directory.
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
 
   // LOCAL_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, concat(SysRoot, "/usr/local/include"));
@@ -847,13 +854,17 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
                              ArgStringList &CmdArgs) const {
-  if (Args.hasArg(options::OPT_nostdlib) ||
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                    true) ||
+      Args.hasArg(options::OPT_nostdlib) ||
       Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
     return;
 
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
   if (ActiveKinds & Action::OFK_HIP)
     Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
+  else if (ActiveKinds & Action::OFK_SYCL)
+    Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(), "libsycl.so");
 
   for (auto [Path, Library] : Libraries) {
     if (Args.hasFlag(options::OPT_frtlib_add_rpath,
@@ -927,7 +938,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
                          getTriple().getArch() == llvm::Triple::armeb ||
                          getTriple().getArch() == llvm::Triple::thumbeb;
   const bool IsLoongArch64 = getTriple().getArch() == llvm::Triple::loongarch64;
-  const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
+  const bool IsRISCV64 = getTriple().isRISCV64();
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
   const bool IsAndroid = getTriple().isAndroid();

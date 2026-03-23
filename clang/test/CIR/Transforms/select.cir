@@ -54,7 +54,7 @@ module {
   }
 
   //      CHECK: cir.func{{.*}} @simplify_2(%[[ARG0:.+]]: !cir.bool) -> !cir.bool {
-  // CHECK-NEXT:   %[[#A:]] = cir.unary(not, %[[ARG0]]) : !cir.bool, !cir.bool
+  // CHECK-NEXT:   %[[#A:]] = cir.not %[[ARG0]] : !cir.bool
   // CHECK-NEXT:   cir.return %[[#A]] : !cir.bool
   // CHECK-NEXT: }
 }
