@@ -42,13 +42,14 @@ std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
   StringRef Dir = llvm::sys::path::parent_path(ToolPath);
   SmallString<128> LibPath = llvm::sys::path::parent_path(Dir);
   llvm::sys::path::append(LibPath, "lib" LLVM_LIBDIR_SUFFIX);
-  llvm::sys::path::append(LibPath, opts::TargetTriple);
   if (!llvm::sys::fs::exists(LibPath)) {
     // In some cases we install bolt binary into one level deeper in bin/,
     // we need to go back one more level to find lib directory.
     LibPath = llvm::sys::path::parent_path(llvm::sys::path::parent_path(Dir));
     llvm::sys::path::append(LibPath, "lib" LLVM_LIBDIR_SUFFIX);
   }
+  llvm::sys::path::append(LibPath, "bolt");
+  llvm::sys::path::append(LibPath, opts::TargetTriple);
   llvm::sys::path::append(LibPath, LibFileName);
   if (!llvm::sys::fs::exists(LibPath)) {
     // If it is a symlink, check the directory that the symlink points to.
@@ -72,6 +73,7 @@ std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
 
 std::string RuntimeLibrary::getLibPathByInstalled(StringRef LibFileName) {
   SmallString<128> LibPath(CMAKE_INSTALL_FULL_LIBDIR);
+  llvm::sys::path::append(LibPath, "bolt");
   llvm::sys::path::append(LibPath, opts::TargetTriple);
   llvm::sys::path::append(LibPath, LibFileName);
   return std::string(LibPath);
