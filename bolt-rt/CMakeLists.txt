@@ -23,6 +23,15 @@ if(NOT BOLT_RT_TARGET_TRIPLE)
   get_host_triple(BOLT_RT_TARGET_TRIPLE)
 endif()
 
+# Append --target for clang compilers. Otherwise it is assumed that
+# one of the following has been configured.
+# 1. CMAKE_CXX_FLAGS for stand alone builds.
+# 2. RUNTIMES_<target-triple>_CMAKE_CXX_FLAGS for runtime builds.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  list(APPEND BOLT_RT_FLAGS
+       "--target=${BOLT_RT_TARGET_TRIPLE}")
+endif()
+
 message(STATUS "bolt-rt: targeting ${BOLT_RT_TARGET_TRIPLE}")
 
 # Add custom target for runtime builds.
