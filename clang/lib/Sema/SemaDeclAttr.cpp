@@ -5204,6 +5204,28 @@ static void handleNonStringAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) NonStringAttr(S.Context, AL));
 }
 
+static void handleNullTerminatedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // Only makes sense on function params that are buffers.
+  QualType QT = cast<ValueDecl>(D)->getType().getNonReferenceType();
+  if (!QT->isArrayType() && !QT->isPointerType()) {
+    S.Diag(D->getBeginLoc(), diag::warn_attribute_wrong_decl_type_str)
+        << AL << AL.isRegularKeywordAttribute()
+        << "parameters of pointer or array type";
+    return;
+  }
+  // Null terminators only make sense for scalar element types.
+  QualType EltTy = QT->isArrayType()
+                       ? S.Context.getAsArrayType(QT)->getElementType()
+                       : QT->getPointeeType();
+  if (!EltTy->isScalarType()) {
+    S.Diag(D->getBeginLoc(), diag::warn_attribute_wrong_decl_type_str)
+        << AL << AL.isRegularKeywordAttribute()
+        << "parameters of pointer or array of scalar type";
+    return;
+  }
+  D->addAttr(::new (S.Context) NullTerminatedAttr(S.Context, AL));
+}
+
 static void handleNoDebugAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) NoDebugAttr(S.Context, AL));
 }
@@ -7827,6 +7849,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_NonString:
     handleNonStringAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_NullTerminated:
+    handleNullTerminatedAttr(S, D, AL);
     break;
   case ParsedAttr::AT_NonNull:
     if (auto *PVD = dyn_cast<ParmVarDecl>(D))
