@@ -50,21 +50,34 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     fundamental integer types. Said types are: `signed char`, `short`, `int`,
     `long`, `long long`, and their unsigned variations.
   }];
-  let parameters = (ins "unsigned":$width, "bool":$isSigned);
+  let parameters = (ins "unsigned":$width, "bool":$isSigned,
+                        DefaultValuedParameter<"bool", "false">:$bitInt);
+  let builders = [
+    TypeBuilder<(ins "unsigned":$width, "bool":$isSigned), [{
+      return $_get($_ctxt, width, isSigned, /*bitInt=*/false);
+    }]>,
+  ];
   let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
     /// Return true if this is a signed integer type.
     bool isSigned() const { return getIsSigned(); }
     /// Return true if this is an unsigned integer type.
     bool isUnsigned() const { return !getIsSigned(); }
+    /// Return true if this is a _BitInt type.
+    bool isBitInt() const { return getBitInt(); }
     /// Return type alias.
     std::string getAlias() const {
-      return (isSigned() ? 's' : 'u') + std::to_string(getWidth()) + 'i';
+      std::string alias =
+          (isSigned() ? 's' : 'u') + std::to_string(getWidth()) + 'i';
+      if (isBitInt())
+        alias += "_bitint";
+      return alias;
     }
     /// Return true if this is a fundamental integer type (i.e. signed or
     /// unsigned integer types whose bit width is 8, 16, 32, or 64).
+    /// _BitInt types are never fundamental even if their width matches.
     bool isFundamental() const {
-      return isFundamentalIntType(*this);
+      return !isBitInt() && isFundamentalIntType(*this);
     }
     bool isSignedFundamental() const {
       return isFundamentalSIntType(*this);

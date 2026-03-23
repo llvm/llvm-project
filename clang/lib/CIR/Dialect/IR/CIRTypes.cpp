@@ -518,15 +518,28 @@ Type IntType::parse(mlir::AsmParser &parser) {
     return {};
   }
 
+  bool bitInt = false;
+  if (succeeded(parser.parseOptionalComma())) {
+    llvm::StringRef kw;
+    if (parser.parseKeyword(&kw) || kw != "bitint") {
+      parser.emitError(loc, "expected 'bitint'");
+      return {};
+    }
+    bitInt = true;
+  }
+
   if (parser.parseGreater())
     return {};
 
-  return IntType::get(context, width, isSigned);
+  return IntType::get(context, width, isSigned, bitInt);
 }
 
 void IntType::print(mlir::AsmPrinter &printer) const {
   char sign = isSigned() ? 's' : 'u';
-  printer << '<' << sign << ", " << getWidth() << '>';
+  printer << '<' << sign << ", " << getWidth();
+  if (isBitInt())
+    printer << ", bitint";
+  printer << '>';
 }
 
 llvm::TypeSize
@@ -542,7 +555,7 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
 
 mlir::LogicalResult
 IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                unsigned width, bool isSigned) {
+                unsigned width, bool isSigned, bool bitInt) {
   if (width < IntType::minBitwidth() || width > IntType::maxBitwidth())
     return emitError() << "IntType only supports widths from "
                        << IntType::minBitwidth() << " up to "
