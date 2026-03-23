@@ -6,7 +6,7 @@ define void @test(ptr %dst) {
 ; CHECK-SAME: ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr i8, ptr [[DST]], i64 0
-; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[P0]], align 1
+; CHECK-NEXT:    store <4 x i8> splat (i8 1), ptr [[P0]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
