@@ -338,6 +338,20 @@ selectCallee(const ModuleSummaryIndex &Index,
   return nullptr;
 }
 
+static GlobalValue::GUID getGUIDOrFallback(const GlobalValue &GV) {
+  // Modules compiled against the current version should have a GUID table
+  // and hence have the GUID available simply by calling getGUID(). But we
+  // want to support running on old bitcode files which have no embedded
+  // GUIDs. So if it's missing we fall back to computing the GUID with its
+  // current name / linkage type.
+  const auto MaybeGUID = GV.getGUIDIfAssigned();
+  return MaybeGUID ? *MaybeGUID
+                   : GlobalValue::getGUIDAssumingExternalLinkage(
+                         GlobalValue::getGlobalIdentifier(
+                             GV.getName(), GV.getLinkage(),
+                             GV.getParent()->getSourceFileName()));
+}
+
 namespace {
 
 using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */>;
@@ -1680,7 +1694,7 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
   DenseSet<Comdat *> NonPrevailingComdats;
   auto FinalizeInModule = [&](GlobalValue &GV, bool Propagate = false) {
     // See if the global summary analysis computed a new resolved linkage.
-    const auto &GS = DefinedGlobals.find(GV.getGUID());
+    const auto &GS = DefinedGlobals.find(getGUIDOrFallback(GV));
     if (GS == DefinedGlobals.end())
       return;
 
@@ -1817,7 +1831,7 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
       return true;
 
     // Lookup the linkage recorded in the summaries during global analysis.
-    auto GS = DefinedGlobals.find(GV.getGUID());
+    auto GS = DefinedGlobals.find(getGUIDOrFallback(GV));
     if (GS == DefinedGlobals.end()) {
       // Must have been promoted (possibly conservatively). Find original
       // name so that we can access the correct summary and see if it can
@@ -1876,20 +1890,6 @@ static void internalizeGVsAfterImport(Module &M) {
       GV.setLinkage(GlobalValue::InternalLinkage);
       GV.setVisibility(GlobalValue::DefaultVisibility);
     }
-}
-
-static GlobalValue::GUID getGUIDOrFallback(const GlobalValue &GV) {
-  // Modules compiled against the current version should have a GUID table
-  // and hence have the GUID available simply by calling getGUID(). But we
-  // want to support running on old bitcode files which have no embedded
-  // GUIDs. So if it's missing we fall back to computing the GUID with its
-  // current name / linkage type.
-  const auto MaybeGUID = GV.getGUIDIfAssigned();
-  return MaybeGUID ? *MaybeGUID
-                   : GlobalValue::getGUIDAssumingExternalLinkage(
-                         GlobalValue::getGlobalIdentifier(
-                             GV.getName(), GV.getLinkage(),
-                             GV.getParent()->getSourceFileName()));
 }
 
 // Automatically import functions in Module \p DestModule based on the summaries

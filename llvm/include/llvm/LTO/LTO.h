@@ -607,6 +607,7 @@ private:
                             IRName, GlobalValue::LinkageTypes::ExternalLinkage,
                             ""));
     }
+
     /// Special partition numbers.
     enum : unsigned {
       /// A partition number has not yet been assigned to this global.

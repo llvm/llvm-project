@@ -1138,17 +1138,25 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
   llvm::TimeTraceScope timeScope("LTO link regular LTO");
   std::vector<GlobalValue *> Keep;
   for (GlobalValue *GV : Mod.Keep) {
-    if (LivenessFromIndex && !ThinLTO.CombinedIndex.isGUIDLive(GV->getGUID())) {
-      if (Function *F = dyn_cast<Function>(GV)) {
-        if (DiagnosticOutputFile) {
-          if (Error Err = F->materialize())
-            return Err;
-          auto R = OptimizationRemark(DEBUG_TYPE, "deadfunction", F);
-          R << ore::NV("Function", F) << " not added to the combined module ";
-          emitRemark(R);
+    if (LivenessFromIndex) {
+      const auto MaybeGUID = GV->getGUIDIfAssigned();
+      const auto GUID =
+          MaybeGUID ? *MaybeGUID
+                    : GlobalValue::getGUIDAssumingExternalLinkage(
+                          GlobalValue::getGlobalIdentifier(
+                              GV->getName(), GlobalValue::ExternalLinkage, ""));
+      if (!ThinLTO.CombinedIndex.isGUIDLive(GUID)) {
+        if (Function *F = dyn_cast<Function>(GV)) {
+          if (DiagnosticOutputFile) {
+            if (Error Err = F->materialize())
+              return Err;
+            auto R = OptimizationRemark(DEBUG_TYPE, "deadfunction", F);
+            R << ore::NV("Function", F) << " not added to the combined module ";
+            emitRemark(R);
+          }
         }
+        continue;
       }
-      continue;
     }
 
     if (!GV->hasAvailableExternallyLinkage()) {
