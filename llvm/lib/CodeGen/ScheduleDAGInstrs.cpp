@@ -284,6 +284,11 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
       SDep Dep;
       if (UseOpIdx < 0) {
         Dep = SDep(SU, SDep::Artificial);
+        // Treat an artificial dep on a live-out physreg the same as a
+        // pseudo-use so that computeOperandLatency() is not called with
+        // an invalid (negative) use-operand index.  The latency for
+        // these edges should always be zero.
+        ImplicitPseudoUse = true;
       } else {
         // Set the hasPhysRegDefs only for physreg defs that have a use within
         // the scheduling region.
