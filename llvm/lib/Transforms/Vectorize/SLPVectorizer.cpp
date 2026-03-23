@@ -2046,7 +2046,8 @@ public:
   /// A negative number means that this is profitable.
   InstructionCost getTreeCost(InstructionCost TreeCost,
                               ArrayRef<Value *> VectorizedVals = {},
-                              InstructionCost ReductionCost = TTI::TCC_Free);
+                              InstructionCost ReductionCost = TTI::TCC_Free,
+                              Instruction *RdxRoot = nullptr);
 
   /// Construct a vectorizable tree that starts at \p Roots, ignoring users for
   /// the purpose of scheduling and extraction in the \p UserIgnoreLst.
@@ -16690,6 +16691,26 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
       VectorizableTree.front()->hasState() &&
       VectorizableTree.front()->getOpcode() == Instruction::ExtractElement)
     return true;
+  if (VectorizableTree.size() == 1 && !ForReduction &&
+      VectorizableTree.front()->isGather() &&
+      any_of(VectorizableTree.front()->Scalars, IsaPred<Instruction>))
+    return true;
+  if (VectorizableTree.size() <= MinTreeSize && !ForReduction &&
+      all_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->isGather() || TE->State == TreeEntry::SplitVectorize;
+      }))
+    return true;
+  if (VectorizableTree.size() == 1 && !ForReduction && SLPCostThreshold < 0 &&
+      VectorizableTree.front()->hasState() &&
+      VectorizableTree.front()->getOpcode() == Instruction::ExtractElement &&
+      (VectorizableTree.front()->getVectorFactor() == 2 ||
+       all_of(
+           VectorizableTree.front()->Scalars,
+           [&](Value *V) {
+             auto *I = dyn_cast<Instruction>(V);
+             return !I || !areAllUsersVectorized(I, UserIgnoreList);
+           })))
+    return true;
   // No need to vectorize inserts of gathered values.
   if (VectorizableTree.size() == 2 &&
       isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
@@ -17859,27 +17880,29 @@ template <typename T> struct ShuffledInsertData {
 
 InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
-                                     InstructionCost ReductionCost) {
+                                     InstructionCost ReductionCost,
+                                     Instruction *RdxRoot) {
   InstructionCost Cost = TreeCost;
 
-  SmallDenseMap<const TreeEntry *, unsigned> EntryToScale;
+  SmallDenseMap<std::tuple<const TreeEntry *, Value *, Instruction *>, unsigned>
+      EntryToScale;
   auto ScaleCost = [&](InstructionCost C, const TreeEntry &TE,
                        Value *Scalar = nullptr, Instruction *U = nullptr) {
     if (!C.isValid() || C == 0)
       return C;
-    unsigned &Scale = EntryToScale.try_emplace(&TE, 0).first->getSecond();
+    unsigned &Scale =
+        EntryToScale.try_emplace(std::make_tuple(&TE, Scalar, U), 0)
+            .first->getSecond();
     if (!Scale)
       Scale = getScaleToLoopIterations(TE, Scalar, U);
+    LLVM_DEBUG(dbgs() << "Scale " << Scale << " For entry " << TE.Idx << "\n");
     return C * Scale;
   };
   Instruction *ReductionRoot = nullptr;
   if (UserIgnoreList) {
-    const auto It = find_if(*UserIgnoreList, IsaPred<Instruction>);
-    assert(It != UserIgnoreList->end() && "Expected reduction instruction.");
-    ReductionRoot = cast<Instruction>(*It);
     // Scale reduction cost to the factor of the loop nest trip count.
     ReductionCost = ScaleCost(ReductionCost, *VectorizableTree.front().get(),
-                              /*Scalar=*/nullptr, ReductionRoot);
+                              /*Scalar=*/nullptr, RdxRoot);
   }
 
   // Add the cost for reduction.
@@ -21488,8 +21511,19 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         const unsigned RBW = cast<VectorType>(R->getType())
                                  ->getElementType()
                                  ->getIntegerBitWidth();
-        if ((LBW < RBW && !allConstant(E->getOperand(1))) ||
-            (LBW > RBW && allConstant(E->getOperand(0)))) {
+        if ((LBW < RBW && (!allConstant(E->getOperand(1)) ||
+                           any_of(
+                               E->getOperand(1),
+                               [&](Value *V) {
+                                 auto *CI = dyn_cast<ConstantInt>(V);
+                                 return !CI ||
+                                        CI->getValue().getActiveBits() > LBW;
+                               }))) ||
+            (LBW > RBW && allConstant(E->getOperand(0)) &&
+             all_of(E->getOperand(1), [&](Value *V) {
+               auto *CI = dyn_cast<ConstantInt>(V);
+               return CI && CI->getValue().getActiveBits() <= RBW;
+             }))) {
           Type *CastTy = R->getType();
           L = Builder.CreateIntCast(L, CastTy, GetOperandSignedness(0));
         } else {
@@ -26367,6 +26401,7 @@ public:
     };
 
     SmallVector<Value *> ReducedValsCandidates;
+    bool AdjustedToOrdered = false;
     while (!Worklist.empty()) {
       auto [TreeN, Level] = Worklist.pop_back_val();
       SmallVector<Value *> PossibleRedVals;
@@ -26384,6 +26419,7 @@ public:
           !PossibleOrderedReductionOps.empty() &&
           RK == ReductionOrdering::Unordered) {
         RK = ReductionOrdering::Ordered;
+        AdjustedToOrdered = true;
         SmallPtrSet<const Instruction *, 4> Ops;
         for (const auto &P : PossibleOrderedReductionOps)
           Ops.insert(P.first);
@@ -26396,9 +26432,17 @@ public:
         PossibleOrderedReductionOps.clear();
       }
     }
+    // Too many integer reduced values candidates for the ordered reductions
+    // after adjustements - try to switch to unordered reductions instead.
+    constexpr unsigned ReducedValsLimit = 1024;
+    if (ReducedValsCandidates.size() > ReducedValsLimit && AdjustedToOrdered &&
+        ReducedValsCandidates.front()->getType()->isIntOrIntVectorTy())
+      return false;
     // Add reduction values. The values are sorted for better vectorization
     // results.
     for (Value *V : ReducedValsCandidates) {
+      if (RK == ReductionOrdering::Ordered && !isa<Instruction>(V))
+        continue;
       size_t Key, Idx;
       std::tie(Key, Idx) = generateKeySubkey(V, &TLI, GenerateLoadsSubkey,
                                              /*AllowAlternate=*/false);
@@ -26452,7 +26496,11 @@ public:
                      const TargetLibraryInfo &TLI, AssumptionCache *AC,
                      DominatorTree &DT) {
     constexpr unsigned RegMaxNumber = 4;
-    constexpr unsigned RedValsMaxNumber = 128;
+    const unsigned RedValsMaxNumber =
+        (RK == ReductionOrdering::Ordered &&
+         ReductionRoot->getType()->isIntOrIntVectorTy())
+            ? 48
+            : 128;
     // If there are a sufficient number of reduction values, reduce
     // to a nearby power-of-2. We can safely generate oversized
     // vectors and rely on the backend to split them to legal sizes.
@@ -26654,6 +26702,8 @@ public:
         // compatible with other values.
         // Also check if the instruction was folded to constant/other value.
         auto *Inst = dyn_cast<Instruction>(RdxVal);
+        if (Inst && V.isDeleted(Inst))
+          continue;
         if ((Inst && isVectorLikeInstWithConstOps(Inst) &&
              (!S || (!S.getMatchingMainOpOrAltOp(Inst) &&
                      !S.isCopyableElement(Inst)))) ||
@@ -26854,7 +26904,9 @@ public:
           V.buildTree(VL, IgnoreList);
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
                                                 ReductionOrdering::Unordered)) {
-          if (!AdjustReducedVals())
+          constexpr unsigned CandidatesLimit = 64;
+          if (!AdjustReducedVals(RK == ReductionOrdering::Ordered &&
+                                 Candidates.size() >= CandidatesLimit))
             V.analyzedReductionVals(VL);
           continue;
         }
@@ -26935,7 +26987,14 @@ public:
           ReductionCost =
               getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
                                RdxFMF, V, DT, DL, TLI);
-        InstructionCost Cost = V.getTreeCost(TreeCost, VL, ReductionCost);
+        // If the root is a select (min/max idiom), the insert point is the
+        // compare condition of that select.
+        Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
+        Instruction *InsertPt = RdxRootInst;
+        if (IsCmpSelMinMax)
+          InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
+        InstructionCost Cost =
+            V.getTreeCost(TreeCost, VL, ReductionCost, InsertPt);
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
         if (!Cost.isValid())
@@ -26981,13 +27040,6 @@ public:
         });
 
         Builder.setFastMathFlags(RdxFMF);
-
-        // Emit a reduction. If the root is a select (min/max idiom), the insert
-        // point is the compare condition of that select.
-        Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-        Instruction *InsertPt = RdxRootInst;
-        if (IsCmpSelMinMax)
-          InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
 
         // Vectorize a tree.
         Value *VectorizedRoot = V.vectorizeTree(
