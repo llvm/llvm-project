@@ -325,10 +325,57 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
   return false;
 }
 
-void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
-  if (!Subtarget->d16PreservesUnusedBits())
-    return;
+bool AMDGPUDAGToDAGISel::preprocessZeroExtend(SDNode *N) const {
+    // For the DAG:
+    // t134: i1 = setcc t52, Constant:i32<0>, setne:ch
+    //    t133: i32 = zero_extend t134
+    // After DAG selections, it is:
+    //       t134: i1 = S_CMP_LG_U32 t52, t19
+    // t133: i32,i1 = S_AND_B32 t134, TargetConstant:i32<1>
+    //
+    // And the listed MIR are:
+    // S_CMP_LG_U32 killed %25:sreg_32, %26:sreg_32, implicit-def $scc
+    // %27:sreg_32 = COPY $scc
+    // %28:sreg_32 = S_AND_B32 killed %27:sreg_32, 1, implicit-def dead $scc
+    //
+    // After SI-Fix-SGPR-Copies, if wave size is 64, the fixSCCCopy will change it to
+    // S_CMP_LG_U32 killed %25:sreg_32, %26:sreg_32, implicit-def $scc
+    // %79:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
+    // %27:sreg_32 = COPY %79:sreg_64_xexec; illegal vgpr to sgpr copy
+    //
+    // This preprocess changes DAG
+    //    t133: i32 = zero_extend t134 into --> S_CSELEECT_B32 -1 0
+    // if it is valid.
+    if (N->isDivergent()) return false;
 
+    // If to i64, it is probably used for lane mask, then we don't do the changes here.
+    if (N->getValueType(0) != MVT::i32) return false;
+
+    auto CondNode = N->getOperand(0);
+    if (CondNode->getOpcode() == ISD::FREEZE) {
+        CondNode = CondNode->getOperand(0);
+    }
+
+    if (CondNode->getOpcode() != ISD::SETCC)
+        return false;
+
+    if (CondNode->getOperand(0).getValueType() != MVT::i32 || CondNode->getOperand(1).getValueType() != MVT::i32)
+        return false;
+
+    SDLoc DL(N);
+    SDValue TrueValue = CurDAG->getAllOnesConstant(DL, MVT::i32, true);
+    SDValue FalseValue = CurDAG->getTargetConstant(0, DL, MVT::i32);
+
+    SDValue Chain = CurDAG->getEntryNode(); // Basic chain to anchor the copy
+    SDValue CopyToSCC = CurDAG->getCopyToReg(Chain, DL, AMDGPU::SCC, CondNode, SDValue());
+    SmallVector<SDValue, 3> Ops = {TrueValue, FalseValue, CopyToSCC.getValue(1)};
+    MachineSDNode *CSelectNode = CurDAG->getMachineNode(AMDGPU::S_CSELECT_B32, DL, CurDAG->getVTList(MVT::i32), Ops);
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), SDValue(CSelectNode, 0));
+
+    return true;
+}
+
+void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
   bool MadeChange = false;
@@ -340,8 +387,14 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
     switch (N->getOpcode()) {
     case ISD::BUILD_VECTOR:
       // TODO: Match load d16 from shl (extload:i16), 16
-      MadeChange |= matchLoadD16FromBuildVector(N);
+      if (Subtarget->d16PreservesUnusedBits())
+          MadeChange |= matchLoadD16FromBuildVector(N);
+
       break;
+    case ISD::ZERO_EXTEND:
+        MadeChange |= preprocessZeroExtend(N);
+        break;
+
     default:
       break;
     }
