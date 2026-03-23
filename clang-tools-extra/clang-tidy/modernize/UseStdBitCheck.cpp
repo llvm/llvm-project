@@ -116,9 +116,9 @@ void UseStdBitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
 }
 
-static const Expr *GetParentExprOrSelf(const Expr *E, ASTContext &Context) {
+static const Expr *getParentExprOrSelf(const Expr *E, ASTContext &Context) {
   ParentMapContext &PMap = Context.getParentMapContext();
-  DynTypedNodeList P = PMap.getParents(*E);
+  const DynTypedNodeList P = PMap.getParents(*E);
   if (P.size() != 1)
     return nullptr;
 
@@ -172,7 +172,7 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<Expr>("rotate_expr")) {
     // Detect if the expression is an explicit cast. If that's the case we don't
     // need to insert a cast.
-    const Expr *ParentExprOrSelf = GetParentExprOrSelf(MatchedExpr, Context);
+    const Expr *ParentExprOrSelf = getParentExprOrSelf(MatchedExpr, Context);
     bool HasExplicitIntegerCast = false;
     if (const auto *CE = dyn_cast<CastExpr>(ParentExprOrSelf)) {
       HasExplicitIntegerCast =
