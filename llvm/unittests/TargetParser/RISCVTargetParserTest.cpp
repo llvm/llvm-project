@@ -45,8 +45,7 @@ TEST(RISCVTuneFeature, AllTuneFeatures) {
   // Only allowed subtarget features that are explicitly marked by
   // special TableGen class.
   EXPECT_EQ(AllTuneFeatures.size(), 20U);
-  for (auto F : {"ascending-csr-spill-order",
-                 "conditional-cmv-fusion",
+  for (auto F : {"conditional-cmv-fusion",
                  "disable-latency-sched-heuristic",
                  "disable-misched-load-clustering",
                  "disable-misched-store-clustering",
@@ -57,6 +56,7 @@ TEST(RISCVTuneFeature, AllTuneFeatures) {
                  "no-sink-splat-operands",
                  "use-postra-scheduler",
                  "predictable-select-expensive",
+                 "prefer-ascending-load-store",
                  "prefer-vsetvli-over-read-vlenb",
                  "prefer-w-inst",
                  "short-forward-branch-ialu",

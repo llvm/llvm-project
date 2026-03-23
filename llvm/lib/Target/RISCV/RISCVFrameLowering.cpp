@@ -579,8 +579,8 @@ getUnmanagedCSI(const MachineFunction &MF,
       NonLibcallCSI.push_back(CS);
   }
 
-  // Reverse the order so that spills/restores use ascending addresses,
-  // enabling LD/ST fusion on processors that require it.
+  // Reverse the order so that load/store operations use ascending addresses,
+  // enabling better load/store clustering and fusion.
   if (ReverseOrder)
     std::reverse(NonLibcallCSI.begin(), NonLibcallCSI.end());
 
@@ -938,7 +938,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
-  bool ReverseCSRSpill = STI.hasAscendingCSRSpillOrder();
+  bool PreferAscendingLS = STI.hasPreferAscendingLoadStore();
 
   Register BPReg = RISCVABI::getBPReg();
 
@@ -975,7 +975,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
   MBBI = std::prev(MBBI, getRVVCalleeSavedInfo(MF, CSI).size() +
-                             getUnmanagedCSI(MF, CSI, ReverseCSRSpill).size());
+                             getUnmanagedCSI(MF, CSI, PreferAscendingLS).size());
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
 
@@ -1094,14 +1094,14 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // to the stack, not before.
   // FIXME: assumes exactly one instruction is used to save each callee-saved
   // register.
-  std::advance(MBBI, getUnmanagedCSI(MF, CSI, ReverseCSRSpill).size());
+  std::advance(MBBI, getUnmanagedCSI(MF, CSI, PreferAscendingLS).size());
   CFIBuilder.setInsertPoint(MBBI);
 
   // Iterate over list of callee-saved registers and emit .cfi_offset
   // directives.
   if (NeedsDwarfCFI) {
     for (const CalleeSavedInfo &CS :
-         getUnmanagedCSI(MF, CSI, ReverseCSRSpill)) {
+         getUnmanagedCSI(MF, CSI, PreferAscendingLS)) {
       MCRegister Reg = CS.getReg();
       int64_t Offset = MFI.getObjectOffset(CS.getFrameIdx());
       // Emit CFI for both sub-registers. The even register is at the base
@@ -1250,7 +1250,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  bool ReverseCSRSpill = STI.hasAscendingCSRSpillOrder();
+  bool PreferAscendingLS = STI.hasPreferAscendingLoadStore();
 
   // All calls are tail calls in GHC calling conv, and functions have no
   // prologue/epilogue.
@@ -1352,7 +1352,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
   MBBI = std::next(FirstScalarCSRRestoreInsn,
-                   getUnmanagedCSI(MF, CSI, ReverseCSRSpill).size());
+                   getUnmanagedCSI(MF, CSI, PreferAscendingLS).size());
   CFIBuilder.setInsertPoint(MBBI);
 
   if (getLibCallID(MF, CSI) != -1) {
@@ -1371,7 +1371,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // Recover callee-saved registers.
   if (NeedsDwarfCFI) {
     for (const CalleeSavedInfo &CS :
-         getUnmanagedCSI(MF, CSI, ReverseCSRSpill)) {
+         getUnmanagedCSI(MF, CSI, PreferAscendingLS)) {
       MCRegister Reg = CS.getReg();
       // Emit CFI for both sub-registers.
       if (RISCV::GPRPairRegClass.contains(Reg)) {
@@ -1443,7 +1443,7 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   // pointer (positive offset), otherwise use the frame pointer (negative
   // offset).
   const auto &CSI = getUnmanagedCSI(MF, MFI.getCalleeSavedInfo(),
-                                    STI.hasAscendingCSRSpillOrder());
+                                    STI.hasPreferAscendingLoadStore());
   int MinCSFI = 0;
   int MaxCSFI = -1;
   StackOffset Offset;
@@ -2272,7 +2272,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
 
   // Manually spill values not spilled by libcall & Push/Pop.
   const auto &UnmanagedCSI =
-      getUnmanagedCSI(*MF, CSI, STI.hasAscendingCSRSpillOrder());
+      getUnmanagedCSI(*MF, CSI, STI.hasPreferAscendingLoadStore());
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
 
   auto storeRegsToStackSlots = [&](decltype(UnmanagedCSI) CSInfo) {
@@ -2366,7 +2366,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
   // loading RA and return by RA.  loadRegFromStackSlot can insert
   // multiple instructions.
   const auto &UnmanagedCSI =
-      getUnmanagedCSI(*MF, CSI, STI.hasAscendingCSRSpillOrder());
+      getUnmanagedCSI(*MF, CSI, STI.hasPreferAscendingLoadStore());
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
 
   auto loadRegFromStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
