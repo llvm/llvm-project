@@ -66,13 +66,13 @@ svmfloat8_t test_svluti6_mf8(svmfloat8x2_t table, svuint8_t indices) {
 // CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svluti6_lane_s16_x2(
 // CHECK-SAME: <vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti6.lane.x2.i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti6.lane.x2.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 1)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z24test_svluti6_lane_s16_x211svint16x2_tu11__SVUint8_t(
 // CPP-CHECK-SAME: <vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti6.lane.x2.i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti6.lane.x2.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svint16_t test_svluti6_lane_s16_x2(svint16x2_t table, svuint8_t indices) {
@@ -82,13 +82,13 @@ svint16_t test_svluti6_lane_s16_x2(svint16x2_t table, svuint8_t indices) {
 // CHECK-LABEL: define dso_local <vscale x 8 x i16> @test_svluti6_lane_u16_x2(
 // CHECK-SAME: <vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti6.lane.x2.i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti6.lane.x2.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 0)
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 // CPP-CHECK-LABEL: define dso_local <vscale x 8 x i16> @_Z24test_svluti6_lane_u16_x212svuint16x2_tu11__SVUint8_t(
 // CPP-CHECK-SAME: <vscale x 8 x i16> [[TABLE_COERCE0:%.*]], <vscale x 8 x i16> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti6.lane.x2.i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.luti6.lane.x2.nxv8i16(<vscale x 8 x i16> [[TABLE_COERCE0]], <vscale x 8 x i16> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
 svuint16_t test_svluti6_lane_u16_x2(svuint16x2_t table, svuint8_t indices) {
@@ -98,13 +98,13 @@ svuint16_t test_svluti6_lane_u16_x2(svuint16x2_t table, svuint8_t indices) {
 // CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svluti6_lane_f16_x2(
 // CHECK-SAME: <vscale x 8 x half> [[TABLE_COERCE0:%.*]], <vscale x 8 x half> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.luti6.lane.x2.f16(<vscale x 8 x half> [[TABLE_COERCE0]], <vscale x 8 x half> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.luti6.lane.x2.nxv8f16(<vscale x 8 x half> [[TABLE_COERCE0]], <vscale x 8 x half> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 1)
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 // CPP-CHECK-LABEL: define dso_local <vscale x 8 x half> @_Z24test_svluti6_lane_f16_x213svfloat16x2_tu11__SVUint8_t(
 // CPP-CHECK-SAME: <vscale x 8 x half> [[TABLE_COERCE0:%.*]], <vscale x 8 x half> [[TABLE_COERCE1:%.*]], <vscale x 16 x i8> [[INDICES:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CPP-CHECK-NEXT:  [[ENTRY:.*:]]
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.luti6.lane.x2.f16(<vscale x 8 x half> [[TABLE_COERCE0]], <vscale x 8 x half> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 1)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.luti6.lane.x2.nxv8f16(<vscale x 8 x half> [[TABLE_COERCE0]], <vscale x 8 x half> [[TABLE_COERCE1]], <vscale x 16 x i8> [[INDICES]], i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
 svfloat16_t test_svluti6_lane_f16_x2(svfloat16x2_t table, svuint8_t indices) {

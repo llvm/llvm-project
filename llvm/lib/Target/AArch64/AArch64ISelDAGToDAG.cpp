@@ -415,9 +415,8 @@ public:
 
   void SelectMultiVectorLutiLane(SDNode *Node, unsigned NumOutVecs,
                                  unsigned Opc, uint32_t MaxImm);
-  void EmitMultiVectorLutiLane(SDNode *Node, unsigned NumOutVecs,
-                               unsigned Opc, ArrayRef<SDValue> Ops,
-                               bool HasChain);
+  void EmitMultiVectorLutiLane(SDNode *Node, unsigned NumOutVecs, unsigned Opc,
+                               ArrayRef<SDValue> Ops, bool HasChain);
   void SelectMultiVectorLutiLaneTuple(SDNode *Node, unsigned NumOutVecs,
                                       unsigned Opc, uint32_t MaxImm);
 

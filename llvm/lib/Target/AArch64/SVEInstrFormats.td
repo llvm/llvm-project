@@ -11421,12 +11421,12 @@ multiclass sve2_luti6_vector_index<string mnemonic> {
     let Inst{23} = idx;
   }
 
-  def : Pat<(nxv8i16 (int_aarch64_sve_luti6_lane_x2_i16 nxv8i16:$Op1, nxv8i16:$Op2,
+  def : Pat<(nxv8i16 (int_aarch64_sve_luti6_lane_x2 nxv8i16:$Op1, nxv8i16:$Op2,
                       nxv16i8:$Op3, (i32 timm32_0_1:$Op4))),
             (nxv8i16 (!cast<Instruction>(NAME # _H) (REG_SEQUENCE ZPR2, nxv8i16:$Op1, zsub0,
                                                                       nxv8i16:$Op2, zsub1),
                                                 nxv16i8:$Op3, timm32_0_1:$Op4))>;
-  def : Pat<(nxv8f16 (int_aarch64_sve_luti6_lane_x2_f16 nxv8f16:$Op1, nxv8f16:$Op2,
+  def : Pat<(nxv8f16 (int_aarch64_sve_luti6_lane_x2 nxv8f16:$Op1, nxv8f16:$Op2,
                       nxv16i8:$Op3, (i32 timm32_0_1:$Op4))),
             (nxv8f16 (!cast<Instruction>(NAME # _H) (REG_SEQUENCE ZPR2, nxv8f16:$Op1, zsub0,
                                                                       nxv8f16:$Op2, zsub1),

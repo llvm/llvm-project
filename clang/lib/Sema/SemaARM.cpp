@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaARM.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
@@ -617,9 +618,26 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
       BuiltinType = SemaARM::ArmNonStreaming;
     else if (SatisfiesSME)
       BuiltinType = SemaARM::ArmStreaming;
-    else
-      // This should be diagnosed by CodeGen
-      return false;
+    else {
+      switch (BuiltinID) {
+      case SVE::BI__builtin_sve_svluti6_lane_bf16_x4:
+      case SVE::BI__builtin_sve_svluti6_lane_f16_x4:
+      case SVE::BI__builtin_sve_svluti6_lane_s16_x4:
+      case SVE::BI__builtin_sve_svluti6_lane_u16_x4: {
+        std::string BuiltinName =
+            std::string(S.Context.BuiltinInfo.getQuotedName(BuiltinID));
+        const FunctionDecl *Callee = TheCall->getDirectCallee();
+        if (Callee)
+          BuiltinName = "'" + Callee->getName().str() + "'";
+        S.Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
+            << BuiltinName << RequiredFeatures;
+        return true;
+      }
+      default:
+        // This should be diagnosed by CodeGen.
+        return false;
+      }
+    }
   }
 
   if (FnType != SemaARM::ArmNonStreaming &&

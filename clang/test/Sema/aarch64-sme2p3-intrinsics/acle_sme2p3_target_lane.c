@@ -6,7 +6,7 @@
 
 svbfloat16x4_t missing_sme2p3_lane(svbfloat16x2_t table, svuint8x2_t indices)
     __arm_streaming {
-  return svluti6_lane_bf16_x4(table, indices, 1); // expected-error {{'svluti6_lane_bf16_x4' needs target feature sme,sme2p3}}
+  return svluti6_lane_bf16_x4(table, indices, 1); // expected-error {{'svluti6_lane_bf16_x4' needs target feature (sve,sve2p3)|(sme,sme2p3)}}
 }
 
 __attribute__((target("sme2p3,bf16")))
