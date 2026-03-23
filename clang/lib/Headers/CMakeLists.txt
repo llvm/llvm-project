@@ -505,15 +505,13 @@ if(RISCV IN_LIST LLVM_TARGETS_TO_BUILD)
 endif()
 
 # Generate HLSL intrinsic overloads
-if(CLANG_ENABLE_HLSL)
-  clang_generate_header(-gen-hlsl-alias-intrinsics HLSLIntrinsics.td
-                        hlsl/hlsl_alias_intrinsics_gen.inc)
-  clang_generate_header(-gen-hlsl-inline-intrinsics HLSLIntrinsics.td
-                        hlsl/hlsl_inline_intrinsics_gen.inc)
-  set(hlsl_generated_files
-    "${CMAKE_CURRENT_BINARY_DIR}/hlsl/hlsl_alias_intrinsics_gen.inc"
-    "${CMAKE_CURRENT_BINARY_DIR}/hlsl/hlsl_inline_intrinsics_gen.inc")
-endif()
+clang_generate_header(-gen-hlsl-alias-intrinsics HLSLIntrinsics.td
+                      hlsl/hlsl_alias_intrinsics_gen.inc)
+clang_generate_header(-gen-hlsl-inline-intrinsics HLSLIntrinsics.td
+                      hlsl/hlsl_inline_intrinsics_gen.inc)
+set(hlsl_generated_files
+  "${CMAKE_CURRENT_BINARY_DIR}/hlsl/hlsl_alias_intrinsics_gen.inc"
+  "${CMAKE_CURRENT_BINARY_DIR}/hlsl/hlsl_inline_intrinsics_gen.inc")
 
 # Check if the generated headers are included in a target specific lists
 # Currently, all generated headers are target specific.
