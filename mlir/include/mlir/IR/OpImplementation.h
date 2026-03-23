@@ -1156,17 +1156,32 @@ public:
   virtual OptionalParseResult parseOptionalAttribute(SymbolRefAttr &result,
                                                      Type type = {}) = 0;
 
+  /// Parse an optional attribute that must begin with a '#' hash identifier
+  /// (i.e. `#dialect.mnemonic<...>`). Returns std::nullopt if the next token
+  /// is not a hash identifier, without consuming any tokens.
+  virtual OptionalParseResult parseOptionalHashAttribute(Attribute &result,
+                                                         Type type = {}) = 0;
+
   /// Parse an optional attribute of a specific typed result. This overload
   /// handles concrete attribute types (e.g. FloatAttr) that are not covered by
   /// a dedicated virtual overload. It parses any attribute and then validates
   /// that the result is of the expected type, emitting an error if not.
+  ///
+  /// For attribute types that define a custom `parse` method (i.e. AttrDef
+  /// types with assemblyFormat), parsing is restricted to `#`-prefixed
+  /// attribute syntax to avoid greedily consuming tokens (like `@symbol`)
+  /// that are intended for later format elements.
   template <
       typename AttrType,
       typename = std::enable_if_t<!llvm::is_one_of<
           AttrType, Attribute, ArrayAttr, StringAttr, SymbolRefAttr>::value>>
   OptionalParseResult parseOptionalAttribute(AttrType &result, Type type = {}) {
     Attribute attr;
-    OptionalParseResult parseResult = parseOptionalAttribute(attr, type);
+    OptionalParseResult parseResult;
+    if constexpr (detect_has_parse_method<AttrType>::value)
+      parseResult = parseOptionalHashAttribute(attr, type);
+    else
+      parseResult = parseOptionalAttribute(attr, type);
     if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
     result = dyn_cast<AttrType>(attr);

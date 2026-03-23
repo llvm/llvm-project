@@ -458,6 +458,13 @@ public:
                                              Type type) override {
     return parser.parseOptionalAttribute(result, type);
   }
+  OptionalParseResult parseOptionalHashAttribute(Attribute &result,
+                                                 Type type) override {
+    if (parser.getToken().isNot(Token::hash_identifier))
+      return std::nullopt;
+    result = parser.parseAttribute(type);
+    return success(static_cast<bool>(result));
+  }
   OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
                                              Type type) override {
     return parser.parseOptionalAttribute(result, type);
