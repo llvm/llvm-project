@@ -238,6 +238,8 @@ bool IODECL(SetRec)(Cookie, std::int64_t);
 bool IODECL(SetRound)(Cookie, const char *, std::size_t);
 // SIGN=PLUS, SUPPRESS, PROCESSOR_DEFINED
 bool IODECL(SetSign)(Cookie, const char *, std::size_t);
+// LEADING_ZERO=PRINT, PROCESSOR_DEFINED, SUPPRESS
+bool IODECL(SetLeadingZero)(Cookie, const char *, std::size_t);
 
 // Data item transfer for modes other than NAMELIST:
 // Any data object that can be passed as an actual argument without the
@@ -298,8 +300,8 @@ bool IODECL(InputDerivedType)(
 
 // Additional specifier interfaces for the connection-list of
 // on OPEN statement (only).  SetBlank(), SetDecimal(),
-// SetDelim(), GetIoMsg(), SetPad(), SetRound(), SetSign(),
-// & SetAsynchronous() are also acceptable for OPEN.
+// SetDelim(), GetIoMsg(), SetLeadingZero(), SetPad(), SetRound(),
+// SetSign(), & SetAsynchronous() are also acceptable for OPEN.
 // ACCESS=SEQUENTIAL, DIRECT, STREAM
 bool IODECL(SetAccess)(Cookie, const char *, std::size_t);
 // ACTION=READ, WRITE, or READWRITE

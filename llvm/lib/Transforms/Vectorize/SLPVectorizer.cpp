@@ -2046,7 +2046,8 @@ public:
   /// A negative number means that this is profitable.
   InstructionCost getTreeCost(InstructionCost TreeCost,
                               ArrayRef<Value *> VectorizedVals = {},
-                              InstructionCost ReductionCost = TTI::TCC_Free);
+                              InstructionCost ReductionCost = TTI::TCC_Free,
+                              Instruction *RdxRoot = nullptr);
 
   /// Construct a vectorizable tree that starts at \p Roots, ignoring users for
   /// the purpose of scheduling and extraction in the \p UserIgnoreLst.
@@ -17879,27 +17880,29 @@ template <typename T> struct ShuffledInsertData {
 
 InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
-                                     InstructionCost ReductionCost) {
+                                     InstructionCost ReductionCost,
+                                     Instruction *RdxRoot) {
   InstructionCost Cost = TreeCost;
 
-  SmallDenseMap<const TreeEntry *, unsigned> EntryToScale;
+  SmallDenseMap<std::tuple<const TreeEntry *, Value *, Instruction *>, unsigned>
+      EntryToScale;
   auto ScaleCost = [&](InstructionCost C, const TreeEntry &TE,
                        Value *Scalar = nullptr, Instruction *U = nullptr) {
     if (!C.isValid() || C == 0)
       return C;
-    unsigned &Scale = EntryToScale.try_emplace(&TE, 0).first->getSecond();
+    unsigned &Scale =
+        EntryToScale.try_emplace(std::make_tuple(&TE, Scalar, U), 0)
+            .first->getSecond();
     if (!Scale)
       Scale = getScaleToLoopIterations(TE, Scalar, U);
+    LLVM_DEBUG(dbgs() << "Scale " << Scale << " For entry " << TE.Idx << "\n");
     return C * Scale;
   };
   Instruction *ReductionRoot = nullptr;
   if (UserIgnoreList) {
-    const auto It = find_if(*UserIgnoreList, IsaPred<Instruction>);
-    assert(It != UserIgnoreList->end() && "Expected reduction instruction.");
-    ReductionRoot = cast<Instruction>(*It);
     // Scale reduction cost to the factor of the loop nest trip count.
     ReductionCost = ScaleCost(ReductionCost, *VectorizableTree.front().get(),
-                              /*Scalar=*/nullptr, ReductionRoot);
+                              /*Scalar=*/nullptr, RdxRoot);
   }
 
   // Add the cost for reduction.
@@ -21508,8 +21511,19 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         const unsigned RBW = cast<VectorType>(R->getType())
                                  ->getElementType()
                                  ->getIntegerBitWidth();
-        if ((LBW < RBW && !allConstant(E->getOperand(1))) ||
-            (LBW > RBW && allConstant(E->getOperand(0)))) {
+        if ((LBW < RBW && (!allConstant(E->getOperand(1)) ||
+                           any_of(
+                               E->getOperand(1),
+                               [&](Value *V) {
+                                 auto *CI = dyn_cast<ConstantInt>(V);
+                                 return !CI ||
+                                        CI->getValue().getActiveBits() > LBW;
+                               }))) ||
+            (LBW > RBW && allConstant(E->getOperand(0)) &&
+             all_of(E->getOperand(1), [&](Value *V) {
+               auto *CI = dyn_cast<ConstantInt>(V);
+               return CI && CI->getValue().getActiveBits() <= RBW;
+             }))) {
           Type *CastTy = R->getType();
           L = Builder.CreateIntCast(L, CastTy, GetOperandSignedness(0));
         } else {
@@ -26973,7 +26987,14 @@ public:
           ReductionCost =
               getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
                                RdxFMF, V, DT, DL, TLI);
-        InstructionCost Cost = V.getTreeCost(TreeCost, VL, ReductionCost);
+        // If the root is a select (min/max idiom), the insert point is the
+        // compare condition of that select.
+        Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
+        Instruction *InsertPt = RdxRootInst;
+        if (IsCmpSelMinMax)
+          InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
+        InstructionCost Cost =
+            V.getTreeCost(TreeCost, VL, ReductionCost, InsertPt);
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
         if (!Cost.isValid())
@@ -27019,13 +27040,6 @@ public:
         });
 
         Builder.setFastMathFlags(RdxFMF);
-
-        // Emit a reduction. If the root is a select (min/max idiom), the insert
-        // point is the compare condition of that select.
-        Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-        Instruction *InsertPt = RdxRootInst;
-        if (IsCmpSelMinMax)
-          InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
 
         // Vectorize a tree.
         Value *VectorizedRoot = V.vectorizeTree(

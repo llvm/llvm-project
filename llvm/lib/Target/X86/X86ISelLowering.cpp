@@ -41786,6 +41786,17 @@ static SDValue combineX86ShufflesRecursively(
     OpMask.assign(NumElts, SM_SentinelUndef);
     std::iota(OpMask.begin(), OpMask.end(), ExtractIdx);
     OpZero = OpUndef = APInt::getZero(NumElts);
+  } else if (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
+             Op.getOperand(0).isUndef() && !isNullConstant(Op.getOperand(2))) {
+    SDValue SubVec = Op.getOperand(1);
+    int InsertIdx = Op.getConstantOperandVal(2);
+    unsigned NumElts = VT.getVectorNumElements();
+    unsigned NumSubElts = SubVec.getValueType().getVectorNumElements();
+    OpInputs.assign({SubVec});
+    OpMask.assign(NumElts, SM_SentinelUndef);
+    std::iota(OpMask.begin() + InsertIdx,
+              OpMask.begin() + InsertIdx + NumSubElts, 0);
+    OpZero = OpUndef = APInt::getZero(NumElts);
   } else {
     return SDValue();
   }
@@ -42640,7 +42651,8 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
       SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
       SDValue N1 = peekThroughOneUseBitcasts(N.getOperand(1));
       unsigned SrcOpcode = N0.getOpcode();
-      if (TLI.isBinOp(SrcOpcode) && N1.getOpcode() == SrcOpcode &&
+      if ((SrcOpcode == X86ISD::PSADBW || TLI.isBinOp(SrcOpcode)) &&
+          N1.getOpcode() == SrcOpcode &&
           N0.getValueType() == N1.getValueType() &&
           IsSafeToMoveShuffle(N0, SrcOpcode) &&
           IsSafeToMoveShuffle(N1, SrcOpcode)) {
@@ -42666,11 +42678,12 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
             LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00, Op10);
             RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01, Op11);
           }
-          EVT OpVT = N0.getValueType();
+          EVT OpSrcVT = N0.getOperand(0).getValueType();
+          EVT OpDstVT = N0.getValueType();
           return DAG.getBitcast(ShuffleVT,
-                                DAG.getNode(SrcOpcode, DL, OpVT,
-                                            DAG.getBitcast(OpVT, LHS),
-                                            DAG.getBitcast(OpVT, RHS)));
+                                DAG.getNode(SrcOpcode, DL, OpDstVT,
+                                            DAG.getBitcast(OpSrcVT, LHS),
+                                            DAG.getBitcast(OpSrcVT, RHS)));
         }
       }
       if (isUnaryOp(SrcOpcode) && N1.getOpcode() == SrcOpcode &&
