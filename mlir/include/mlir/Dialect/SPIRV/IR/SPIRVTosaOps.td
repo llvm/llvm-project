@@ -213,6 +213,19 @@ class SPIRV_TosaComparisonOp<string mnemonic, int opcode, list<Trait> traits = [
   }];
 }
 
+class SPIRV_TosaReductionOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [
+  AllElementTypesMatch<["input", "output"]>,
+  AllRanksMatch<["input", "output"]>,
+  AxisValueLessThanRankOf<"input">])> {
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+  }];
+}
+
 def SPIRV_TosaArgMaxOp : SPIRV_TosaOpWithResult<"ArgMax", 0, [Pure,
   OutputRankIsInputRankMinusOne<"input", "output">,
   AxisValueLessThanRankOf<"input">]> {
@@ -1898,6 +1911,216 @@ def SPIRV_TosaGreaterEqualOp : SPIRV_TosaComparisonOp<"GreaterEqual", 47> {
     %0 = spirv.Tosa.GreaterEqual %arg0, %arg1 : !spirv.arm.tensor<10x17x7x1xi32>, !spirv.arm.tensor<10x17x7x16xi32> -> !spirv.arm.tensor<10x17x7x16xi1>
     %0 = spirv.Tosa.GreaterEqual %arg0, %arg1 : !spirv.arm.tensor<3x17x6x3xf32>, !spirv.arm.tensor<1x17x6x3xf32> -> !spirv.arm.tensor<3x17x6x3xi1>
     ```
+  }];
+}
+
+
+def SPIRV_TosaReduceAllOp : SPIRV_TosaReductionOp<"ReduceAll", 48, [Pure]> {
+  let summary = "Reduce All operator.";
+
+  let description = [{
+    Reduces a tensor along the given axis with a Logical AND operation.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_reduce_all
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_reduce_all
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.ReduceAll axis = 2, %arg0 : !spirv.arm.tensor<18x22x23x12xi1> -> !spirv.arm.tensor<18x22x1x12xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TensorArmAxisAttr: $axis,
+    SPIRV_Bool_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `axis` `=` $axis `,`
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaReduceAnyOp : SPIRV_TosaReductionOp<"ReduceAny", 49, [Pure]> {
+  let summary = "Reduce Any operator.";
+
+  let description = [{
+    Reduces a tensor along the given axis with a Logical OR operation.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_reduce_any
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_reduce_any
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.ReduceAny axis = 2, %arg0 : !spirv.arm.tensor<25x13x30x8xi1> -> !spirv.arm.tensor<25x13x1x8xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TensorArmAxisAttr: $axis,
+    SPIRV_Bool_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `axis` `=` $axis `,`
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaReduceMaxOp : SPIRV_TosaReductionOp<"ReduceMax", 50, [Pure]> {
+  let summary = "Reduce Max operator.";
+
+  let description = [{
+    Reduces a tensor along the given axis with a Maximum operation.
+    NaN Propagation Mode is ignored for inputs using integer element types.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_reduce_max
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_reduce_max
+
+    #### Example:
+    ```mlir
+    %2 = spirv.Tosa.ReduceMax axis = 2, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<8x30x12x3xi8> -> !spirv.arm.tensor<8x30x1x3xi8>
+    %2 = spirv.Tosa.ReduceMax axis = 2, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<16x20x10xf16> -> !spirv.arm.tensor<16x20x1xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TensorArmAxisAttr: $axis,
+    SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
+    SPIRV_TosaNumerical_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `axis` `=` $axis `,`
+    `nan_mode` `=` $nan_mode `,`
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaReduceMinOp : SPIRV_TosaReductionOp<"ReduceMin", 51, [Pure]> {
+  let summary = "Reduce Min operator.";
+
+  let description = [{
+    Reduces a tensor along the given axis with a Minimum operation.
+    NaN Propagation Mode is ignored for inputs using integer element types.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_reduce_min
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_reduce_min
+
+    #### Example:
+    ```mlir
+    %2 = spirv.Tosa.ReduceMin axis = 2, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<2x5x5x1xi8> -> !spirv.arm.tensor<2x5x1x1xi8>
+    %2 = spirv.Tosa.ReduceMin axis = 2, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<27x10x25x9xf16> -> !spirv.arm.tensor<27x10x1x9xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TensorArmAxisAttr: $axis,
+    SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
+    SPIRV_TosaNumerical_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `axis` `=` $axis `,`
+    `nan_mode` `=` $nan_mode `,`
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaReduceProductOp : SPIRV_TosaReductionOp<"ReduceProduct", 52, [Pure]> {
+  let summary = "Reduce Product operator.";
+
+  let description = [{
+    Reduces a tensor along the given axis by computing the Product of the axis.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_reduce_product
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_reduce_product
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.ReduceProduct axis = 2, %arg0 : !spirv.arm.tensor<2x16x25xf16> -> !spirv.arm.tensor<2x16x1xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TensorArmAxisAttr: $axis,
+    SPIRV_TosaFloat_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaFloat_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `axis` `=` $axis `,`
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaReduceSumOp : SPIRV_TosaReductionOp<"ReduceSum", 53, [NoMemoryEffect]> {
+  let summary = "Reduce Sum operator.";
+
+  let description = [{
+    Reduces a tensor along the given axis by computing the Sum of the axis.
+    Integer element types are always interpreted as signed. The behavior is
+    undefined if the integer addition overflows or underflows the signed
+    integer range.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_reduce_sum
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_reduce_sum
+
+    #### Example:
+    ```mlir
+    %1 = spirv.Tosa.ReduceSum axis = 1, %arg0 : !spirv.arm.tensor<20x24x22xi32> -> !spirv.arm.tensor<20x1x22xi32>
+    %1 = spirv.Tosa.ReduceSum axis = 1, %arg0 : !spirv.arm.tensor<32x32x33xf32> -> !spirv.arm.tensor<32x1x33xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TensorArmAxisAttr: $axis,
+    SPIRV_TosaNumerical_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `axis` `=` $axis `,`
+    $input
+    attr-dict `:` type(operands) `->` type(results)
   }];
 }
 

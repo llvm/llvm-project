@@ -60,6 +60,10 @@ let Definition = "testing", Path = "testing" in {
         Global,
         DefaultFalse,
         Desc<"Used for testing LLDB only. Hide locations of local variables.">;
+  def SafeAutoloadPaths : Property<"safe-auto-load-paths", "FileSpecList">,
+                          DefaultStringValue<"">,
+                          Desc<"List of paths that LLDB will automatically "
+                               "load scripting resources from.">;
 }
 #endif
 

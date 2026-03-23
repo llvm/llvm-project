@@ -23,6 +23,9 @@
 #ifdef LLVM_ENABLE_CURL
 #include <curl/curl.h>
 #endif
+#ifdef _WIN32
+#include "llvm/Support/ConvertUTF.h"
+#endif
 
 using namespace llvm;
 
@@ -64,7 +67,7 @@ void HTTPClient::cleanup() {
 void HTTPClient::setTimeout(std::chrono::milliseconds Timeout) {
   if (Timeout < std::chrono::milliseconds(0))
     Timeout = std::chrono::milliseconds(0);
-  curl_easy_setopt(Curl, CURLOPT_TIMEOUT_MS, Timeout.count());
+  curl_easy_setopt(Handle, CURLOPT_TIMEOUT_MS, Timeout.count());
 }
 
 /// CurlHTTPRequest and the curl{Header,Write}Function are implementation
@@ -93,17 +96,17 @@ static size_t curlWriteFunction(char *Contents, size_t Size, size_t NMemb,
 HTTPClient::HTTPClient() {
   assert(IsInitialized &&
          "Must call HTTPClient::initialize() at the beginning of main().");
-  if (Curl)
+  if (Handle)
     return;
-  Curl = curl_easy_init();
-  assert(Curl && "Curl could not be initialized");
+  Handle = curl_easy_init();
+  assert(Handle && "Curl could not be initialized");
   // Set the callback hooks.
-  curl_easy_setopt(Curl, CURLOPT_WRITEFUNCTION, curlWriteFunction);
+  curl_easy_setopt(Handle, CURLOPT_WRITEFUNCTION, curlWriteFunction);
   // Detect supported compressed encodings and accept all.
-  curl_easy_setopt(Curl, CURLOPT_ACCEPT_ENCODING, "");
+  curl_easy_setopt(Handle, CURLOPT_ACCEPT_ENCODING, "");
 }
 
-HTTPClient::~HTTPClient() { curl_easy_cleanup(Curl); }
+HTTPClient::~HTTPClient() { curl_easy_cleanup(Handle); }
 
 Error HTTPClient::perform(const HTTPRequest &Request,
                           HTTPResponseHandler &Handler) {
@@ -112,17 +115,17 @@ Error HTTPClient::perform(const HTTPRequest &Request,
                              "Unsupported CURL request method.");
 
   SmallString<128> Url = Request.Url;
-  curl_easy_setopt(Curl, CURLOPT_URL, Url.c_str());
-  curl_easy_setopt(Curl, CURLOPT_FOLLOWLOCATION, Request.FollowRedirects);
+  curl_easy_setopt(Handle, CURLOPT_URL, Url.c_str());
+  curl_easy_setopt(Handle, CURLOPT_FOLLOWLOCATION, Request.FollowRedirects);
 
   curl_slist *Headers = nullptr;
   for (const std::string &Header : Request.Headers)
     Headers = curl_slist_append(Headers, Header.c_str());
-  curl_easy_setopt(Curl, CURLOPT_HTTPHEADER, Headers);
+  curl_easy_setopt(Handle, CURLOPT_HTTPHEADER, Headers);
 
   CurlHTTPRequest CurlRequest(Handler);
-  curl_easy_setopt(Curl, CURLOPT_WRITEDATA, &CurlRequest);
-  CURLcode CurlRes = curl_easy_perform(Curl);
+  curl_easy_setopt(Handle, CURLOPT_WRITEDATA, &CurlRequest);
+  CURLcode CurlRes = curl_easy_perform(Handle);
   curl_slist_free_all(Headers);
   if (CurlRes != CURLE_OK)
     return joinErrors(std::move(CurlRequest.ErrorState),
@@ -134,12 +137,240 @@ Error HTTPClient::perform(const HTTPRequest &Request,
 
 unsigned HTTPClient::responseCode() {
   long Code = 0;
-  curl_easy_getinfo(Curl, CURLINFO_RESPONSE_CODE, &Code);
+  curl_easy_getinfo(Handle, CURLINFO_RESPONSE_CODE, &Code);
   return Code;
 }
 
 #else
 
+#ifdef _WIN32
+#include <windows.h>
+#include <winhttp.h>
+#pragma comment(lib, "winhttp.lib")
+
+namespace {
+
+struct WinHTTPSession {
+  HINTERNET SessionHandle = nullptr;
+  HINTERNET ConnectHandle = nullptr;
+  HINTERNET RequestHandle = nullptr;
+  DWORD ResponseCode = 0;
+
+  ~WinHTTPSession() {
+    if (RequestHandle)
+      WinHttpCloseHandle(RequestHandle);
+    if (ConnectHandle)
+      WinHttpCloseHandle(ConnectHandle);
+    if (SessionHandle)
+      WinHttpCloseHandle(SessionHandle);
+  }
+};
+
+bool parseURL(StringRef Url, std::wstring &Host, std::wstring &Path,
+              INTERNET_PORT &Port, bool &Secure) {
+  // Parse URL: http://host:port/path
+  if (Url.starts_with("https://")) {
+    Secure = true;
+    Url = Url.drop_front(8);
+  } else if (Url.starts_with("http://")) {
+    Secure = false;
+    Url = Url.drop_front(7);
+  } else {
+    return false;
+  }
+
+  size_t SlashPos = Url.find('/');
+  StringRef HostPort =
+      (SlashPos != StringRef::npos) ? Url.substr(0, SlashPos) : Url;
+  StringRef PathPart =
+      (SlashPos != StringRef::npos) ? Url.substr(SlashPos) : StringRef("/");
+
+  size_t ColonPos = HostPort.find(':');
+  StringRef HostStr =
+      (ColonPos != StringRef::npos) ? HostPort.substr(0, ColonPos) : HostPort;
+
+  if (!llvm::ConvertUTF8toWide(HostStr, Host))
+    return false;
+  if (!llvm::ConvertUTF8toWide(PathPart, Path))
+    return false;
+
+  if (ColonPos != StringRef::npos) {
+    StringRef PortStr = HostPort.substr(ColonPos + 1);
+    Port = static_cast<INTERNET_PORT>(std::stoi(PortStr.str()));
+  } else {
+    Port = Secure ? INTERNET_DEFAULT_HTTPS_PORT : INTERNET_DEFAULT_HTTP_PORT;
+  }
+
+  return true;
+}
+
+} // namespace
+
+HTTPClient::HTTPClient() : Handle(new WinHTTPSession()) {}
+
+HTTPClient::~HTTPClient() { delete static_cast<WinHTTPSession *>(Handle); }
+
+bool HTTPClient::isAvailable() { return true; }
+
+void HTTPClient::initialize() {
+  if (!IsInitialized) {
+    IsInitialized = true;
+  }
+}
+
+void HTTPClient::cleanup() {
+  if (IsInitialized) {
+    IsInitialized = false;
+  }
+}
+
+void HTTPClient::setTimeout(std::chrono::milliseconds Timeout) {
+  WinHTTPSession *Session = static_cast<WinHTTPSession *>(Handle);
+  if (Session && Session->SessionHandle) {
+    DWORD TimeoutMs = static_cast<DWORD>(Timeout.count());
+    WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_CONNECT_TIMEOUT,
+                     &TimeoutMs, sizeof(TimeoutMs));
+    WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_RECEIVE_TIMEOUT,
+                     &TimeoutMs, sizeof(TimeoutMs));
+    WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_SEND_TIMEOUT,
+                     &TimeoutMs, sizeof(TimeoutMs));
+  }
+}
+
+Error HTTPClient::perform(const HTTPRequest &Request,
+                          HTTPResponseHandler &Handler) {
+  if (Request.Method != HTTPMethod::GET)
+    return createStringError(errc::invalid_argument,
+                             "Only GET requests are supported.");
+  for (const std::string &Header : Request.Headers)
+    if (Header.find("\r") != std::string::npos ||
+        Header.find("\n") != std::string::npos) {
+      return createStringError(errc::invalid_argument,
+                               "Unsafe request can lead to header injection.");
+    }
+
+  WinHTTPSession *Session = static_cast<WinHTTPSession *>(Handle);
+
+  // Parse URL
+  std::wstring Host, Path;
+  INTERNET_PORT Port = 0;
+  bool Secure = false;
+  if (!parseURL(Request.Url, Host, Path, Port, Secure))
+    return createStringError(errc::invalid_argument,
+                             "Invalid URL: " + Request.Url);
+
+  // Create session
+  Session->SessionHandle =
+      WinHttpOpen(L"LLVM-HTTPClient/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                  WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+  if (!Session->SessionHandle)
+    return createStringError(errc::io_error, "Failed to open WinHTTP session");
+
+  // Prevent fallback to TLS 1.0/1.1
+  DWORD SecureProtocols =
+      WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;
+  if (!WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_SECURE_PROTOCOLS,
+                        &SecureProtocols, sizeof(SecureProtocols)))
+    return createStringError(errc::io_error, "Failed to set secure protocols");
+
+  // Use HTTP/2 if available
+  DWORD EnableHttp2 = WINHTTP_PROTOCOL_FLAG_HTTP2;
+  WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_ENABLE_HTTP_PROTOCOL,
+                   &EnableHttp2, sizeof(EnableHttp2));
+
+  // Create connection
+  Session->ConnectHandle =
+      WinHttpConnect(Session->SessionHandle, Host.c_str(), Port, 0);
+  if (!Session->ConnectHandle) {
+    return createStringError(errc::io_error,
+                             "Failed to connect to host: " + Request.Url);
+  }
+
+  // Open request
+  DWORD Flags = WINHTTP_FLAG_REFRESH;
+  if (Secure)
+    Flags |= WINHTTP_FLAG_SECURE;
+
+  Session->RequestHandle = WinHttpOpenRequest(
+      Session->ConnectHandle, L"GET", Path.c_str(), nullptr, WINHTTP_NO_REFERER,
+      WINHTTP_DEFAULT_ACCEPT_TYPES, Flags);
+  if (!Session->RequestHandle)
+    return createStringError(errc::io_error, "Failed to open HTTP request");
+
+  // Enforce checks that certificate wasn't revoked.
+  DWORD EnableRevocationChecks = WINHTTP_ENABLE_SSL_REVOCATION;
+  if (!WinHttpSetOption(Session->RequestHandle, WINHTTP_OPTION_ENABLE_FEATURE,
+                        &EnableRevocationChecks,
+                        sizeof(EnableRevocationChecks)))
+    return createStringError(errc::io_error,
+                             "Failed to enable certificate revocation checks");
+
+  // Explicitly enforce default validation. This protects against insecure
+  // overrides like SECURITY_FLAG_IGNORE_UNKNOWN_CA.
+  DWORD SecurityFlags = 0;
+  if (!WinHttpSetOption(Session->RequestHandle, WINHTTP_OPTION_SECURITY_FLAGS,
+                        &SecurityFlags, sizeof(SecurityFlags)))
+    return createStringError(errc::io_error,
+                             "Failed to enforce security flags");
+
+  // Add headers
+  for (const std::string &Header : Request.Headers) {
+    std::wstring WideHeader;
+    if (!llvm::ConvertUTF8toWide(Header, WideHeader))
+      continue;
+    WinHttpAddRequestHeaders(Session->RequestHandle, WideHeader.c_str(),
+                             static_cast<DWORD>(WideHeader.length()),
+                             WINHTTP_ADDREQ_FLAG_ADD);
+  }
+
+  // Send request
+  if (!WinHttpSendRequest(Session->RequestHandle, WINHTTP_NO_ADDITIONAL_HEADERS,
+                          0, nullptr, 0, 0, 0))
+    return createStringError(errc::io_error, "Failed to send HTTP request");
+
+  // Receive response
+  if (!WinHttpReceiveResponse(Session->RequestHandle, nullptr))
+    return createStringError(errc::io_error, "Failed to receive HTTP response");
+
+  // Get response code
+  DWORD CodeSize = sizeof(Session->ResponseCode);
+  if (!WinHttpQueryHeaders(Session->RequestHandle,
+                           WINHTTP_QUERY_STATUS_CODE |
+                               WINHTTP_QUERY_FLAG_NUMBER,
+                           WINHTTP_HEADER_NAME_BY_INDEX, &Session->ResponseCode,
+                           &CodeSize, nullptr))
+    Session->ResponseCode = 0;
+
+  // Read response body
+  DWORD BytesAvailable = 0;
+  while (WinHttpQueryDataAvailable(Session->RequestHandle, &BytesAvailable)) {
+    if (BytesAvailable == 0)
+      break;
+
+    std::vector<char> Buffer(BytesAvailable);
+    DWORD BytesRead = 0;
+    if (!WinHttpReadData(Session->RequestHandle, Buffer.data(), BytesAvailable,
+                         &BytesRead))
+      return createStringError(errc::io_error, "Failed to read HTTP response");
+
+    if (BytesRead > 0) {
+      if (Error Err =
+              Handler.handleBodyChunk(StringRef(Buffer.data(), BytesRead)))
+        return Err;
+    }
+  }
+
+  return Error::success();
+}
+
+unsigned HTTPClient::responseCode() {
+  WinHTTPSession *Session = static_cast<WinHTTPSession *>(Handle);
+  return Session ? Session->ResponseCode : 0;
+}
+
+#else // _WIN32
+
+// Non-Windows, non-libcurl stub implementations
 HTTPClient::HTTPClient() = default;
 
 HTTPClient::~HTTPClient() = default;
@@ -160,5 +391,7 @@ Error HTTPClient::perform(const HTTPRequest &Request,
 unsigned HTTPClient::responseCode() {
   llvm_unreachable("No HTTP Client implementation available.");
 }
+
+#endif // _WIN32
 
 #endif
