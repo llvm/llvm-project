@@ -10,6 +10,20 @@
 #include "ExecutorAPI.h"
 
 namespace llvm::ubi {
+Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
+             ArrayRef<AnyValue> Args, AnyValue &RetVal,
+             const TargetLibraryInfoImpl &TLIImpl)
+    : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
+      RetVal(RetVal), TLI(TLIImpl, &F) {
+  assert((Args.size() == F.arg_size() ||
+          (F.isVarArg() && Args.size() >= F.arg_size())) &&
+         "Expected enough arguments to call the function.");
+  BB = &Func.getEntryBlock();
+  PC = BB->begin();
+  for (Argument &Arg : F.args())
+    ValueMap[&Arg] = Args[Arg.getArgNo()];
+}
+
 void ExecutorAPI::reportImmediateUB(StringRef Msg) {
   // Check if we have already reported an immediate UB.
   if (!Status)
