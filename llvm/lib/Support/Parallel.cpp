@@ -256,26 +256,33 @@ void llvm::parallelFor(size_t Begin, size_t End,
                        llvm::function_ref<void(size_t)> Fn) {
 #if LLVM_ENABLE_THREADS
   if (parallel::strategy.ThreadsRequested != 1) {
-    auto NumItems = End - Begin;
-    // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
-    // overhead on large inputs.
-    auto TaskSize = NumItems / parallel::detail::MaxTasksPerGroup;
-    if (TaskSize == 0)
-      TaskSize = 1;
+    size_t NumItems = End - Begin;
+    if (NumItems == 0)
+      return;
+    // Use enough chunks for load balancing, but distribute via atomic counter
+    // rather than pre-spawning each chunk as a separate task.
+    size_t NumWorkers = std::min<size_t>(NumItems, parallel::getThreadCount());
+    size_t ChunkSize = std::max(size_t(1), NumItems / (NumWorkers * 4));
+
+    // Use an atomic counter for work distribution instead of spawning one task
+    // per chunk. This ensures the number of Linux futex calls is
+    // O(ThreadCount).
+    std::atomic<size_t> Idx{Begin};
+    auto Worker = [&] {
+      while (true) {
+        size_t I = Idx.fetch_add(ChunkSize, std::memory_order_relaxed);
+        if (I >= End)
+          break;
+        size_t IEnd = std::min(I + ChunkSize, End);
+        for (; I < IEnd; ++I)
+          Fn(I);
+      }
+    };
 
     parallel::TaskGroup TG;
-    for (; Begin + TaskSize < End; Begin += TaskSize) {
-      TG.spawn([=, &Fn] {
-        for (size_t I = Begin, E = Begin + TaskSize; I != E; ++I)
-          Fn(I);
-      });
-    }
-    if (Begin != End) {
-      TG.spawn([=, &Fn] {
-        for (size_t I = Begin; I != End; ++I)
-          Fn(I);
-      });
-    }
+    for (size_t I = 1; I != NumWorkers; ++I)
+      TG.spawn(Worker);
+    Worker();
     return;
   }
 #endif
