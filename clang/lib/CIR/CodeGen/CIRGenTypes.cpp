@@ -566,7 +566,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     } else {
       resultType = cir::IntType::get(&getMLIRContext(), bitIntTy->getNumBits(),
                                      bitIntTy->isSigned(),
-                                     /*bitInt=*/true);
+                                     /*isBitInt=*/true);
     }
     break;
   }

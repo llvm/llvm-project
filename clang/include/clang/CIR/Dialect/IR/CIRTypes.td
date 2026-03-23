@@ -49,12 +49,14 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     Those integer types that are directly available in C/C++ standard are called
     fundamental integer types. Said types are: `signed char`, `short`, `int`,
     `long`, `long long`, and their unsigned variations.
+
+    Examples: `!cir.int<s, 32>`, `!cir.int<u, 64>`, `!cir.int<s, 128, bitint>`
   }];
-  let parameters = (ins "unsigned":$width, "bool":$isSigned,
-                        DefaultValuedParameter<"bool", "false">:$bitInt);
+  let parameters = (ins "unsigned":$width, "bool":$is_signed,
+                        DefaultValuedParameter<"bool", "false">:$is_bit_int);
   let builders = [
-    TypeBuilder<(ins "unsigned":$width, "bool":$isSigned), [{
-      return $_get($_ctxt, width, isSigned, /*bitInt=*/false);
+    TypeBuilder<(ins "unsigned":$width, "bool":$is_signed), [{
+      return $_get($_ctxt, width, is_signed, /*is_bit_int=*/false);
     }]>,
   ];
   let hasCustomAssemblyFormat = 1;
@@ -64,7 +66,7 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     /// Return true if this is an unsigned integer type.
     bool isUnsigned() const { return !getIsSigned(); }
     /// Return true if this is a _BitInt type.
-    bool isBitInt() const { return getBitInt(); }
+    bool isBitInt() const { return getIsBitInt(); }
     /// Return type alias.
     std::string getAlias() const {
       std::string alias =

@@ -26,6 +26,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/MathExtras.h"
 
 //===----------------------------------------------------------------------===//
 // CIR Helpers
@@ -518,20 +519,20 @@ Type IntType::parse(mlir::AsmParser &parser) {
     return {};
   }
 
-  bool bitInt = false;
+  bool isBitInt = false;
   if (succeeded(parser.parseOptionalComma())) {
     llvm::StringRef kw;
     if (parser.parseKeyword(&kw) || kw != "bitint") {
       parser.emitError(loc, "expected 'bitint'");
       return {};
     }
-    bitInt = true;
+    isBitInt = true;
   }
 
   if (parser.parseGreater())
     return {};
 
-  return IntType::get(context, width, isSigned, bitInt);
+  return IntType::get(context, width, isSigned, isBitInt);
 }
 
 void IntType::print(mlir::AsmPrinter &printer) const {
@@ -550,12 +551,20 @@ IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 
 uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
-  return (uint64_t)(getWidth() / 8);
+  unsigned width = getWidth();
+  if (isBitInt()) {
+    // _BitInt alignment: min(PowerOf2Ceil(width), 64 bits) in bytes.
+    // Matches Clang's TargetInfo::getBitIntAlign with default max = 64.
+    uint64_t alignBits =
+        std::min(llvm::PowerOf2Ceil(width), static_cast<uint64_t>(64));
+    return std::max(alignBits / 8, static_cast<uint64_t>(1));
+  }
+  return (uint64_t)(width / 8);
 }
 
 mlir::LogicalResult
 IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                unsigned width, bool isSigned, bool bitInt) {
+                unsigned width, bool isSigned, bool isBitInt) {
   if (width < IntType::minBitwidth() || width > IntType::maxBitwidth())
     return emitError() << "IntType only supports widths from "
                        << IntType::minBitwidth() << " up to "
