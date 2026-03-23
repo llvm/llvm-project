@@ -60,8 +60,8 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_load_b32 s24, s[18:19], 0x24
 ; GFX11-NEXT:    s_mov_b32 s12, s13
 ; GFX11-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GFX11-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; GFX11-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GFX11-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s20, 0
 ; GFX11-NEXT:    s_mov_b32 s0, -1
@@ -86,6 +86,7 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, f0@gotpcrel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, f0@gotpcrel32@hi+12
+; GFX11-NEXT:    ; implicit-def: $sgpr15
 ; GFX11-NEXT:    s_mov_b32 s13, s14
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    s_mov_b32 s26, s14
@@ -192,7 +193,8 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_addc_u32 s1, s1, f0@gotpcrel32@hi+12
 ; GFX11-NEXT:    s_mov_b32 s13, s14
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT:    s_mov_b32 s14, s15
+; GFX11-NEXT:    s_mov_b32 s14, s18
+; GFX11-NEXT:    ; implicit-def: $sgpr15
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_or_b32 s20, s20, exec_lo

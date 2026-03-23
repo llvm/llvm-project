@@ -902,6 +902,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call_multi_bb(ptr addrspace(
 ; GFX908-NEXT:    s_mov_b64 s[0:1], s[52:53]
 ; GFX908-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX908-NEXT:    s_mov_b64 s[2:3], s[54:55]
+; GFX908-NEXT:    ; implicit-def: $sgpr15
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:  .LBB6_2: ; %bb3
