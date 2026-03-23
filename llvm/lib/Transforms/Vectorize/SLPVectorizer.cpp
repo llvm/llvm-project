@@ -24675,6 +24675,8 @@ private:
   Type *StoreTy = nullptr;
   /// Which VFs do we want to attempt for this chain
   std::queue<unsigned> CandidateVFs;
+  /// Stores that compose this chain
+  BoUpSLP::ValueList Operands;
   /// Track the TreeSizes of prior vectorization attempts using each element,
   /// to help us find early exit cases
   /// - first: contains pointer into RangeSizesByIdx to help us track
@@ -24693,8 +24695,6 @@ private:
   unsigned Repeat = 1;
   /// Did any vectorization occur for the current iteration over CandidateVFs
   bool RepeatChanged = false;
-  /// Stores that compose this chain
-  BoUpSLP::ValueList Operands;
   /// Store information about failed vectorization attempts due to scheduling
   SmallDenseMap<Value *, SizePair> NonSchedulable;
 };
