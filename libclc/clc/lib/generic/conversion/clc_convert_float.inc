@@ -93,8 +93,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_XCONCAT(__CLC_FUNCTION,
 #if defined(__CLC_I2F) && (__CLC_GENSIZE_SRC >= __CLC_FPSIZE)
   c = c || __CLC_CONVERT_S_GENTYPE((__CLC_GENTYPE_SRC)__CLC_SRC_MAX == x);
 #endif
-  __CLC_GENTYPE sel = __clc_select(
-      r, __clc_nextafter(r, __clc_sign(r) * -__CLC_GENTYPE_INF), c);
+  __CLC_GENTYPE sel = __clc_select(r, __clc_nextafter(r, __CLC_FP_LIT(0.0)), c);
 #if defined(__CLC_I2F) && (__CLC_FPSIZE == 16) && (__CLC_GENSIZE_SRC >= 16)
 #if defined(__CLC_GEN_S) && (__CLC_GENSIZE_SRC == 16)
   // short is 16 bits signed, so the maximum value rounded to zero is
