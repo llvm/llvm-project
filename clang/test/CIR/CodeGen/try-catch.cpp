@@ -48,7 +48,7 @@ void try_catch_with_empty_catch_all() {
 // CIR:     cir.return
 // CIR:   ^bb1:  // no predecessors
 // CIR:     %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:     %[[RESULT:.*]] = cir.unary(inc, %[[TMP_A]]) nsw : !s32i, !s32i
+// CIR:     %[[RESULT:.*]] = cir.inc nsw %[[TMP_A]] : !s32i
 // CIR:     cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:     cir.yield
 // CIR:   }
@@ -90,7 +90,7 @@ void try_catch_with_empty_catch_all_2() {
 // CIR: cir.scope {
 // CIR:   cir.try {
 // CIR:     %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:     %[[RESULT:.*]] = cir.unary(inc, %[[TMP_A]]) nsw : !s32i, !s32i
+// CIR:     %[[RESULT:.*]] = cir.inc nsw %[[TMP_A]] : !s32i
 // CIR:     cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:     cir.return
 // CIR:   }

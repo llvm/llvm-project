@@ -110,10 +110,10 @@ static void sighup_handler(MainLoopBase &mainloop) {
 
 llvm::Error handle_attach_to_pid(GDBRemoteCommunicationServerLLGS &gdb_server,
                                  lldb::pid_t pid) {
-  Status error = gdb_server.AttachToProcess(pid);
-  if (error.Fail())
+  Status status = gdb_server.AttachToProcess(pid);
+  if (status.Fail())
     return llvm::createStringErrorV("failed to attach to pid {0}: {1}", pid,
-                                    error.AsCString());
+                                    status.AsCString());
   return llvm::Error::success();
 }
 
@@ -160,10 +160,10 @@ llvm::Error handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server,
 
   gdb_server.SetLaunchInfo(info);
 
-  Status error = gdb_server.LaunchProcess();
-  if (error.Fail())
+  Status status = gdb_server.LaunchProcess();
+  if (status.Fail())
     return llvm::createStringErrorV("failed to launch '{0}': {1}", Arguments[0],
-                                    error);
+                                    status);
 
   return llvm::Error::success();
 }
@@ -206,7 +206,7 @@ llvm::Error ConnectToRemote(MainLoop &mainloop,
                             const char *const subcommand,
                             const char *const named_pipe_path,
                             pipe_t unnamed_pipe, shared_fd_t connection_fd) {
-  Status error;
+  Status status;
 
   std::unique_ptr<Connection> connection_up;
   std::string url;
@@ -214,10 +214,10 @@ llvm::Error ConnectToRemote(MainLoop &mainloop,
   if (connection_fd != SharedSocket::kInvalidFD) {
 #ifdef _WIN32
     NativeSocket sockfd;
-    error = SharedSocket::GetNativeSocket(connection_fd, sockfd);
-    if (error.Fail())
+    status = SharedSocket::GetNativeSocket(connection_fd, sockfd);
+    if (status.Fail())
       return llvm::createStringErrorV("GetNativeSocket failed: {0}",
-                                      error.AsCString());
+                                      status.AsCString());
     connection_up = std::make_unique<ConnectionFileDescriptor>(
         std::make_unique<TCPSocket>(sockfd, /*should_close=*/true));
 #else
@@ -263,21 +263,21 @@ llvm::Error ConnectToRemote(MainLoop &mainloop,
                   llvm::fmt_consume(std::move(error)));
           }
         },
-        &error);
+        &status);
 
-    if (error.Fail())
+    if (status.Fail())
       return llvm::createStringErrorV(
-          "failed to connect to client at '{0}': {1}", url, error);
+          "failed to connect to client at '{0}': {1}", url, status);
     if (connection_result != eConnectionStatusSuccess)
       return llvm::createStringErrorV(
           "failed to connect to client at '{0}' (connection status: {1})", url,
           static_cast<int>(connection_result));
     connection_up = std::move(conn_fd_up);
   }
-  error = gdb_server.InitializeConnection(std::move(connection_up));
-  if (error.Fail())
+  status = gdb_server.InitializeConnection(std::move(connection_up));
+  if (status.Fail())
     return llvm::createStringErrorV("failed to initialize connection: {0}",
-                                    error);
+                                    status);
   llvm::outs() << "Connection established.\n";
   return llvm::Error::success();
 }
@@ -333,13 +333,13 @@ DESCRIPTION
 } // namespace
 
 int main_gdbserver(int argc, char *argv[]) {
-  Status error;
+  Status status;
   MainLoop mainloop;
 #ifndef _WIN32
   // Setup signal handlers first thing.
   signal(SIGPIPE, SIG_IGN);
   MainLoop::SignalHandleUP sighup_handle =
-      mainloop.RegisterSignal(SIGHUP, sighup_handler, error);
+      mainloop.RegisterSignal(SIGHUP, sighup_handler, status);
 #endif
 
   const char *progname = argv[0];

@@ -787,6 +787,8 @@ ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
       anyOf(ArgOfNonConstParameter, ArgOfInstantiationDependent);
   const auto PassAsNonConstArg =
       expr(anyOf(cxxUnresolvedConstructExpr(ArgOfInstantiationDependent),
+                 cxxNewExpr(hasAnyPlacementArg(
+                     ignoringParenImpCasts(canResolveToExprPointee(Exp)))),
                  cxxConstructExpr(CallLikeMatcher), callExpr(CallLikeMatcher),
                  parenListExpr(has(canResolveToExprPointee(Exp))),
                  initListExpr(hasAnyInit(canResolveToExprPointee(Exp)))));

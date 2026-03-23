@@ -442,7 +442,7 @@ bb1:
   auto &F = *Ctx.createFunction(&LLVMF);
   auto &BB0 = getBasicBlockByName(F, "bb0");
   auto It = BB0.begin();
-  auto *BB0I = cast<sandboxir::BranchInst>(&*It++);
+  auto *BB0I = cast<sandboxir::UncondBrInst>(&*It++);
 
   auto &BB = getBasicBlockByName(F, "bb1");
   It = BB.begin();
@@ -518,7 +518,7 @@ bb2:
   auto It = BB.begin();
   auto *PHI1 = cast<sandboxir::PHINode>(&*It++);
   auto *PHI2 = cast<sandboxir::PHINode>(&*It++);
-  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+  auto *Br = cast<sandboxir::UncondBrInst>(&*It++);
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(PHI1), PHI2);
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(PHI2), PHI2);
   EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(Br), Br);

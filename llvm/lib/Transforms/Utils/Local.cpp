@@ -2658,13 +2658,12 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   return Split;
 }
 
-static bool markAliveBlocks(Function &F,
-                            SmallPtrSetImpl<BasicBlock *> &Reachable,
+static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
                             DomTreeUpdater *DTU = nullptr) {
   SmallVector<BasicBlock*, 128> Worklist;
   BasicBlock *BB = &F.front();
   Worklist.push_back(BB);
-  Reachable.insert(BB);
+  Reachable[BB->getNumber()] = true;
   bool Changed = false;
   do {
     BB = Worklist.pop_back_val();
@@ -2770,6 +2769,7 @@ static bool markAliveBlocks(Function &F,
           BasicBlock *UnreachableNormalDest = BasicBlock::Create(
               Ctx, OrigNormalDest->getName() + ".unreachable",
               II->getFunction(), OrigNormalDest);
+          Reachable.resize(II->getFunction()->getMaxBlockNumber());
           auto *UI = new UnreachableInst(Ctx, UnreachableNormalDest);
           UI->setDebugLoc(DebugLoc::getTemporary());
           II->setNormalDest(UnreachableNormalDest);
@@ -2850,9 +2850,12 @@ static bool markAliveBlocks(Function &F,
     }
 
     Changed |= ConstantFoldTerminator(BB, true, nullptr, DTU);
-    for (BasicBlock *Successor : successors(BB))
-      if (Reachable.insert(Successor).second)
+    for (BasicBlock *Successor : successors(BB)) {
+      if (!Reachable[Successor->getNumber()]) {
         Worklist.push_back(Successor);
+        Reachable[Successor->getNumber()] = true;
+      }
+    }
   } while (!Worklist.empty());
   return Changed;
 }
@@ -2897,20 +2900,14 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
 /// otherwise.
 bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
                                    MemorySSAUpdater *MSSAU) {
-  SmallPtrSet<BasicBlock *, 16> Reachable;
+  SmallVector<bool, 16> Reachable(F.getMaxBlockNumber());
   bool Changed = markAliveBlocks(F, Reachable, DTU);
-
-  // If there are unreachable blocks in the CFG...
-  if (Reachable.size() == F.size())
-    return Changed;
-
-  assert(Reachable.size() < F.size());
 
   // Are there any blocks left to actually delete?
   SmallSetVector<BasicBlock *, 8> BlocksToRemove;
   for (BasicBlock &BB : F) {
     // Skip reachable basic blocks
-    if (Reachable.count(&BB))
+    if (Reachable[BB.getNumber()])
       continue;
     // Skip already-deleted blocks
     if (DTU && DTU->isBBPendingDeletion(&BB))

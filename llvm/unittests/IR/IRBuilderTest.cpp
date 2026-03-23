@@ -1415,4 +1415,25 @@ TEST_F(IRBuilderTest, finalizeSubprogram) {
   EXPECT_EQ(BarSP->getRetainedNodes()[0], Type);
   EXPECT_TRUE(FooSP->getRetainedNodes().empty());
 }
+
+TEST_F(IRBuilderTest, CreateAggregateRet) {
+  IRBuilder<> Builder(BB);
+  // Terminate the function/block created in SetUp.
+  Builder.CreateRetVoid();
+
+  Type *AggType =
+      StructType::create(Ctx, {Builder.getInt8Ty(), Builder.getInt64Ty()});
+  ConstantInt *RV0 = Builder.getInt8(5);
+  ConstantInt *RV1 = Builder.getInt64(55);
+
+  FunctionType *FTy = FunctionType::get(AggType, /*isVarArg=*/false);
+
+  Function *F1 =
+      Function::Create(FTy, Function::ExternalLinkage, "F2", M.get());
+  BasicBlock *CalleeBB = BasicBlock::Create(Ctx, "", F1);
+  IRBuilder<> CalleeBuilder(CalleeBB);
+  CalleeBuilder.CreateAggregateRet({RV0, RV1});
+
+  EXPECT_FALSE(verifyModule(*M));
+}
 }
