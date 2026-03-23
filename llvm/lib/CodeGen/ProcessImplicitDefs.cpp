@@ -107,7 +107,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   MachineBasicBlock::instr_iterator UserE = MI->getParent()->instr_end();
   bool ImplicitDefIsDead = false;
   for (++UserMI; UserMI != UserE; ++UserMI) {
-    bool DefinesReg=false;
+    bool DefinesReg = false;
     for (MachineOperand &MO : UserMI->operands()) {
       if (!MO.isReg())
         continue;
@@ -115,10 +115,10 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       if (!UserReg.isPhysical() || !TRI->regsOverlap(Reg, UserReg))
         continue;
       // UserMI uses or redefines Reg. Set <undef> flags on all uses.
-      if (!ImplicitDefIsDead && MO.isUse() )
+      if (!ImplicitDefIsDead && MO.isUse())
         MO.setIsUndef();
       if (MO.isDef())
-	DefinesReg = true;
+        DefinesReg = true;
     }
     if (DefinesReg) {
       ImplicitDefIsDead = true;
@@ -126,8 +126,8 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
     }
   }
 
-  // If we have added an undef flag to all uses (i.e. we have found a redefining MI or
-  // there are no successors), we can erase the IMPLICIT_DEF.
+  // If we have added an undef flag to all uses (i.e. we have found a redefining
+  // MI or there are no successors), we can erase the IMPLICIT_DEF.
   if (ImplicitDefIsDead || MI->getParent()->succ_empty()) {
     LLVM_DEBUG(dbgs() << "Physreg user: " << *UserMI);
     MI->eraseFromParent();
