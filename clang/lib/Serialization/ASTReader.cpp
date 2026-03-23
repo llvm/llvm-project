@@ -9714,14 +9714,13 @@ void ASTReader::ReadExtnameUndeclaredIdentifiers(
   if (ExtnameUndeclaredIdentifiers.empty())
     return;
 
-  for (unsigned I = 0, N = ExtnameUndeclaredIdentifiers.size(); I < N;
-       /*none*/) {
+  for (unsigned I = 0, N = ExtnameUndeclaredIdentifiers.size(); I < N; I += 3) {
     IdentifierInfo *NameId =
-        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I++]);
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I]);
     IdentifierInfo *ExtnameId =
-        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I++]);
+        DecodeIdentifierInfo(ExtnameUndeclaredIdentifiers[I+1]);
     SourceLocation Loc =
-        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I++]);
+        SourceLocation::getFromRawEncoding(ExtnameUndeclaredIdentifiers[I+2]);
     AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
         getContext(), ExtnameId->getName(),
         AttributeCommonInfo(ExtnameId, SourceRange(Loc),

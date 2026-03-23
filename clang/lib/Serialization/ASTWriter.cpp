@@ -6067,10 +6067,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     ASTContext &Context = SemaPtr->Context;
     ASTRecordWriter ExtnameUndeclaredIdentifiersWriter(
         Context, *this, ExtnameUndeclaredIdentifiers);
-    for (const auto &ExtnameUndeclaredIdentifierList :
-         SemaPtr->ExtnameUndeclaredIdentifiers) {
-      const IdentifierInfo *const II = ExtnameUndeclaredIdentifierList.first;
-      const AsmLabelAttr *const AL = ExtnameUndeclaredIdentifierList.second;
+    for (const auto &[II, AL] : SemaPtr->ExtnameUndeclaredIdentifiers) {
       ExtnameUndeclaredIdentifiersWriter.AddIdentifierRef(II);
       ExtnameUndeclaredIdentifiersWriter.AddIdentifierRef(
           &Context.Idents.get(AL->getLabel()));
