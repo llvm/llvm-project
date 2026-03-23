@@ -1771,7 +1771,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
-static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
+static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
                            const CXXRecordDecl *&DynamicDecl) {
   TypePtr = TypePtr.stripBaseCasts();
 
@@ -1797,7 +1797,7 @@ static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
   } else {
     DynamicDecl = DynamicType->getAsCXXRecordDecl();
   }
-  return true;
+  return DynamicDecl != nullptr;
 }
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1810,7 +1810,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const FunctionDecl *Callee = Func->getDecl();
 
   const CXXRecordDecl *DynamicDecl = nullptr;
-  if (!GetDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
+  if (!getDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
     return false;
   assert(DynamicDecl);
 
