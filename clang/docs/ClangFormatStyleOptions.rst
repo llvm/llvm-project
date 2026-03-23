@@ -182,11 +182,13 @@ the configuration (without a prefix: ``Auto``).
     Not a real style, but allows to use the ``.clang-format`` file from the
     parent directory (or its parent if there is none). If there is no parent
     file found it falls back to the ``fallback`` style, and applies the changes
-    to that.
-
-    With this option you can overwrite some parts of your main style for your
-    subdirectories. This is also possible through the command line, e.g.:
+    to that. With this option you can overwrite some parts of your main style
+    for your subdirectories. This is also possible through the command line,
+    e.g.:
     ``--style={BasedOnStyle: InheritParentConfig, ColumnLimit: 20}``
+  * ``InheritParentConfig=<directory-path>``
+    Same as the above except that the inheritance is redirected to
+    ``<directory-path>``. This is only supported in configuration files.
 
 .. START_FORMAT_STYLE_OPTIONS
 
@@ -1897,15 +1899,21 @@ the configuration (without a prefix: ``Auto``).
   Dependent on the value, ``int f() { return 0; }`` can be put on a
   single line.
 
-  Possible values:
+  Nested configuration flags:
 
-  * ``SFS_None`` (in configuration: ``None``)
+  Different styles for merging short functions containing at most one
+  statement.
+
+  They can be read as a whole for compatibility. The choices are:
+
+  * ``None``
     Never merge functions into a single line.
 
-  * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
+  * ``InlineOnly``
     Only merge functions defined inside a class. Same as ``inline``,
-    except it does not imply ``empty``: i.e. top level empty functions
-    are not merged either.
+    except it does not implies ``empty``: i.e. top level empty functions
+    are not merged either. This option is **deprecated** and is retained
+    for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1918,8 +1926,10 @@ the configuration (without a prefix: ``Auto``).
       void f() {
       }
 
-  * ``SFS_Empty`` (in configuration: ``Empty``)
-    Only merge empty functions.
+  * ``Empty``
+    Only merge empty functions. This option is **deprecated** and is
+    retained for backwards compatibility. See ``Empty`` of
+    ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1928,8 +1938,10 @@ the configuration (without a prefix: ``Auto``).
         bar2();
       }
 
-  * ``SFS_Inline`` (in configuration: ``Inline``)
-    Only merge functions defined inside a class. Implies ``empty``.
+  * ``Inline``
+    Only merge functions defined inside a class. Implies ``empty``. This
+    option is **deprecated** and is retained for backwards compatibility.
+    See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1941,7 +1953,7 @@ the configuration (without a prefix: ``Auto``).
       }
       void f() {}
 
-  * ``SFS_All`` (in configuration: ``All``)
+  * ``All``
     Merge all functions fitting on a single line.
 
     .. code-block:: c++
@@ -1951,6 +1963,52 @@ the configuration (without a prefix: ``Auto``).
       };
       void f() { bar(); }
 
+  Also can be specified as a nested configuration flag:
+
+  .. code-block:: c++
+
+    # Example of usage:
+    AllowShortFunctionsOnASingleLine: InlineOnly
+
+    # or more granular control:
+    AllowShortFunctionsOnASingleLine:
+      Empty: false
+      Inline: true
+      Other: false
+
+  * ``bool Empty`` Merge top-level empty functions.
+
+    .. code-block:: c++
+
+      void f() {}
+      void f2() {
+        bar2();
+      }
+      void f3() { /* comment */ }
+
+  * ``bool Inline`` Merge functions defined inside a class.
+
+    .. code-block:: c++
+
+      class Foo {
+        void f() { foo(); }
+        void g() {}
+      };
+      void f() {
+        foo();
+      }
+      void f() {
+      }
+
+  * ``bool Other`` Merge all functions fitting on a single line. Please note that this
+    control does not include Empty
+
+    .. code-block:: c++
+
+      class Foo {
+        void f() { foo(); }
+      };
+      void f() { bar(); }
 
 
 .. _AllowShortIfStatementsOnASingleLine:
@@ -2084,6 +2142,42 @@ the configuration (without a prefix: ``Auto``).
 
 **AllowShortNamespacesOnASingleLine** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <AllowShortNamespacesOnASingleLine>`
   If ``true``, ``namespace a { class b; }`` can be put on a single line.
+
+.. _AllowShortRecordOnASingleLine:
+
+**AllowShortRecordOnASingleLine** (``ShortRecordStyle``) :versionbadge:`clang-format 23` :ref:`¶ <AllowShortRecordOnASingleLine>`
+  Dependent on the value, ``struct bar { int i; };`` can be put on a single
+  line.
+
+  Possible values:
+
+  * ``SRS_Never`` (in configuration: ``Never``)
+    Never merge records into a single line.
+
+  * ``SRS_EmptyAndAttached`` (in configuration: ``EmptyAndAttached``)
+    Only merge empty records if the opening brace was not wrapped,
+    i.e. the corresponding ``BraceWrapping.After...`` option was not set.
+
+  * ``SRS_Empty`` (in configuration: ``Empty``)
+    Only merge empty records.
+
+    .. code-block:: c++
+
+      struct foo {};
+      struct bar
+      {
+        int i;
+      };
+
+  * ``SRS_Always`` (in configuration: ``Always``)
+    Merge all records that fit on a single line.
+
+    .. code-block:: c++
+
+      struct foo {};
+      struct bar { int i; };
+
+
 
 .. _AlwaysBreakAfterDefinitionReturnType:
 
@@ -2633,7 +2727,7 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``ABS_Always`` (in configuration: ``Always``)
-    Always break after attributes.
+    Always break after the last attribute of the group.
 
     .. code-block:: c++
 
@@ -2664,7 +2758,7 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``ABS_Leave`` (in configuration: ``Leave``)
-    Leave the line breaking after attributes as is.
+    Leave the line breaking after the last attribute of the group as is.
 
     .. code-block:: c++
 
@@ -2690,8 +2784,24 @@ the configuration (without a prefix: ``Auto``).
         return;
       }
 
+  * ``ABS_LeaveAll`` (in configuration: ``LeaveAll``)
+    Same as ``Leave`` except that it applies to all attributes of the group.
+
+    .. code-block:: c++
+
+      [[deprecated("Don't use this version")]]
+      [[nodiscard]]
+      bool foo() {
+        return true;
+      }
+
+      [[deprecated("Don't use this version")]]
+      [[nodiscard]] bool bar() {
+        return true;
+      }
+
   * ``ABS_Never`` (in configuration: ``Never``)
-    Never break after attributes.
+    Never break after the last attribute of the group.
 
     .. code-block:: c++
 
@@ -3613,42 +3723,110 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BreakBinaryOperations:
 
-**BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
+**BreakBinaryOperations** (``BreakBinaryOperationsOptions``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
   The break binary operations style to use.
 
-  Possible values:
+  Nested configuration flags:
 
-  * ``BBO_Never`` (in configuration: ``Never``)
-    Don't break binary operations
+  Options for ``BreakBinaryOperations``.
 
-    .. code-block:: c++
+  If specified as a simple string (e.g. ``OnePerLine``), it behaves like
+  the original enum and applies to all binary operators.
 
-       aaa + bbbb * ccccc - ddddd +
-       eeeeeeeeeeeeeeee;
+  If specified as a struct, allows per-operator configuration:
 
-  * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
-    Binary operations will either be all on the same line, or each operation
-    will have one line each.
+  .. code-block:: yaml
 
-    .. code-block:: c++
+    BreakBinaryOperations:
+      Default: Never
+      PerOperator:
+        - Operators: ['&&', '||']
+          Style: OnePerLine
+          MinChainLength: 3
 
-       aaa +
-       bbbb *
-       ccccc -
-       ddddd +
-       eeeeeeeeeeeeeeee;
+  * ``BreakBinaryOperationsStyle Default`` :versionbadge:`clang-format 23`
 
-  * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
-    Binary operations of a particular precedence that exceed the column
-    limit will have one line each.
+    The default break style for operators not covered by ``PerOperator``.
 
-    .. code-block:: c++
+    Possible values:
 
-       aaa +
-       bbbb * ccccc -
-       ddddd +
-       eeeeeeeeeeeeeeee;
+    * ``BBO_Never`` (in configuration: ``Never``)
+      Don't break binary operations
 
+      .. code-block:: c++
+
+         aaa + bbbb * ccccc - ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
+      Binary operations will either be all on the same line, or each operation
+      will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb *
+         ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+      Binary operations of a particular precedence that exceed the column
+      limit will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb * ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+
+  * ``List of BinaryOperationBreakRules PerOperator`` Per-operator override rules.
+
+  * ``List of Strings Operators`` :versionbadge:`clang-format 23` The list of operators this rule applies to, e.g. ``&&``, ``||``, ``|``.
+    Alternative spellings (e.g. ``and`` for ``&&``) are accepted.
+
+  * ``BreakBinaryOperationsStyle Style``
+    The break style for these operators (defaults to ``OnePerLine``).
+
+    Possible values:
+
+    * ``BBO_Never`` (in configuration: ``Never``)
+      Don't break binary operations
+
+      .. code-block:: c++
+
+         aaa + bbbb * ccccc - ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
+      Binary operations will either be all on the same line, or each operation
+      will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb *
+         ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+      Binary operations of a particular precedence that exceed the column
+      limit will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb * ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+
+  * ``unsigned MinChainLength`` Minimum number of operands in a chain before the rule triggers.
+    For example, ``a && b && c`` is a chain of length 3.
+    ``0`` means always break (when the line is too long).
 
 
 .. _BreakConstructorInitializers:
@@ -3685,6 +3863,14 @@ the configuration (without a prefix: ``Auto``).
        Constructor() :
            initializer1(),
            initializer2()
+
+  * ``BCIS_AfterComma`` (in configuration: ``AfterComma``)
+    Break constructor initializers only after the commas.
+
+    .. code-block:: c++
+
+       Constructor() : initializer1(),
+                       initializer2()
 
 
 
@@ -4535,22 +4721,70 @@ the configuration (without a prefix: ``Auto``).
 
 .. _IndentGotoLabels:
 
-**IndentGotoLabels** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <IndentGotoLabels>`
-  Indent goto labels.
+**IndentGotoLabels** (``IndentGotoLabelStyle``) :versionbadge:`clang-format 10` :ref:`¶ <IndentGotoLabels>`
+  The goto label indenting style to use.
 
-  When ``false``, goto labels are flushed left.
+  Possible values:
 
-  .. code-block:: c++
+  * ``IGLS_NoIndent`` (in configuration: ``NoIndent``)
+    Do not indent goto labels.
 
-     true:                                  false:
-     int f() {                      vs.     int f() {
-       if (foo()) {                           if (foo()) {
-       label1:                              label1:
-         bar();                                 bar();
-       }                                      }
-     label2:                                label2:
-       return 1;                              return 1;
-     }                                      }
+    .. code-block:: c++
+
+       int f() {
+         if (foo()) {
+       label1:
+           bar();
+         }
+       label2:
+         return 1;
+       }
+
+  * ``IGLS_OuterIndent`` (in configuration: ``OuterIndent``)
+    Indent goto labels to the enclosing block (previous indenting level).
+
+    .. code-block:: c++
+
+       int f() {
+         if (foo()) {
+         label1:
+           bar();
+         }
+       label2:
+         return 1;
+       }
+
+  * ``IGLS_InnerIndent`` (in configuration: ``InnerIndent``)
+    Indent goto labels to the surrounding statements (current indenting
+    level).
+
+    .. code-block:: c++
+
+       int f() {
+         if (foo()) {
+           label1:
+           bar();
+         }
+         label2:
+         return 1;
+       }
+
+  * ``IGLS_HalfIndent`` (in configuration: ``HalfIndent``)
+    Indent goto labels to half the indentation of the surrounding code.
+    If the indentation width is an odd number, it will round up.
+
+    .. code-block:: c++
+
+       int f() {
+         if (foo()) {
+          label1:
+           bar();
+         }
+        label2:
+         return 1;
+       }
+
+
 
 .. _IndentPPDirectives:
 
@@ -4743,7 +4977,7 @@ the configuration (without a prefix: ``Auto``).
 .. _IntegerLiteralSeparator:
 
 **IntegerLiteralSeparator** (``IntegerLiteralSeparatorStyle``) :versionbadge:`clang-format 16` :ref:`¶ <IntegerLiteralSeparator>`
-  Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
+  Format integer literal separators (``'`` for C/C++ and ``_`` for C#, Java,
   and JavaScript).
 
   Nested configuration flags:
@@ -5015,7 +5249,8 @@ the configuration (without a prefix: ``Auto``).
   Keep the form feed character if it's immediately preceded and followed by
   a newline. Multiple form feeds and newlines within a whitespace range are
   replaced with a single newline and form feed followed by the remaining
-  newlines.
+  newlines. (See
+  www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed.)
 
 .. _LambdaBodyIndentation:
 
@@ -5531,6 +5766,18 @@ the configuration (without a prefix: ``Auto``).
         readonly, readwrite, getter, setter,
         nullable, nonnull, null_resettable, null_unspecified
     ]
+
+.. _ObjCSpaceAfterMethodDeclarationPrefix:
+
+**ObjCSpaceAfterMethodDeclarationPrefix** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <ObjCSpaceAfterMethodDeclarationPrefix>`
+  Add or remove a space between the '-'/'+' and the return type in
+  Objective-C method declarations. i.e
+
+  .. code-block:: objc
+
+     false:                      true:
+
+     -(void)method      vs.      - (void)method
 
 .. _ObjCSpaceAfterProperty:
 

@@ -122,7 +122,7 @@ std::unique_ptr<ASTUnit> clang::CreateASTUnitFromCommandLine(
   AST->NumStoredDiagnosticsFromDriver = StoredDiagnostics.size();
   AST->StoredDiagnostics.swap(StoredDiagnostics);
   ASTUnit::ConfigureDiags(Diags, *AST, CaptureDiagnostics);
-  AST->DiagOpts = DiagOpts;
+  AST->DiagOpts = std::move(DiagOpts);
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
   AST->CodeGenOpts = std::make_unique<CodeGenOptions>(CI->getCodeGenOpts());

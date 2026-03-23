@@ -66,7 +66,7 @@ define void @bar(i1 %c) !prof !0 {
 }
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 1, i32 7}
-; CHECK-NOT: Profile verification failed: select annotation missing
+; CHECK-NOT: Profile verification failed for function 'bar': select annotation missing
 
 ;--- verify-missing.ll
 declare void @foo(i32 %a);
@@ -76,7 +76,7 @@ define void @bar(i1 %c) !prof !0 {
   ret void
 }
 !0 = !{!"function_entry_count", i64 1000}
-; CHECK: Profile verification failed: select annotation missing
+; CHECK: Profile verification failed for function 'bar': select annotation missing
 
 ;--- verify-vec.ll
 define <2 x i32> @vec(<2 x i1> %c, <2 x i32> %v1, <2 x i32> %v2) !prof !{!"function_entry_count", i32 10} {

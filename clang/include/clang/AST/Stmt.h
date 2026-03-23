@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -3311,6 +3312,16 @@ public:
 
   /// Assemble final IR asm string.
   std::string generateAsmString(const ASTContext &C) const;
+
+  using UnsupportedConstraintCallbackTy =
+      llvm::function_ref<void(const Stmt *, StringRef)>;
+  /// Look at AsmExpr and if it is a variable declared as using a particular
+  /// register add that as a constraint that will be used in this asm stmt.
+  std::string
+  addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
+                         const TargetInfo &Target, bool EarlyClobber,
+                         UnsupportedConstraintCallbackTy UnsupportedCB,
+                         std::string *GCCReg = nullptr) const;
 
   //===--- Output operands ---===//
 

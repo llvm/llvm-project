@@ -604,6 +604,10 @@ void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocWriter::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
+  addSourceLocation(TL.getAttrLoc());
+}
+
 void TypeLocWriter::VisitHLSLAttributedResourceTypeLoc(
     HLSLAttributedResourceTypeLoc TL) {
   // Nothing to do.
@@ -1163,16 +1167,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   Stream.ExitBlock();
 }
 
-/// Prepares a path for being written to an AST file by converting it
-/// to an absolute path and removing nested './'s.
-///
-/// \return \c true if the path was changed.
-static bool cleanPathForOutput(FileManager &FileMgr,
-                               SmallVectorImpl<char> &Path) {
-  bool Changed = FileMgr.makeAbsolutePath(Path);
-  return Changed | llvm::sys::path::remove_dots(Path);
-}
-
 /// Adjusts the given filename to only write out the portion of the
 /// filename that is not part of the system root directory.
 ///
@@ -1504,7 +1498,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
       return std::nullopt;
     }();
     if (BaseDir) {
-      cleanPathForOutput(FileMgr, *BaseDir);
+      FileMgr.makeAbsolutePath(*BaseDir, /*Canonicalize=*/true);
 
       // If the home of the module is the current working directory, then we
       // want to pick up the cwd of the build process loading the module, not
@@ -1526,10 +1520,12 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
       // Write out all other paths relative to the base directory if possible.
       BaseDirectory.assign(BaseDir->begin(), BaseDir->end());
-    } else if (!isysroot.empty()) {
-      // Write out paths relative to the sysroot if possible.
-      BaseDirectory = std::string(isysroot);
     }
+  } else if (!isysroot.empty()) {
+    // Write out paths relative to the sysroot if possible.
+    SmallString<128> CleanedSysroot(isysroot);
+    PP.getFileManager().makeAbsolutePath(CleanedSysroot, /*Canonicalize=*/true);
+    BaseDirectory.assign(CleanedSysroot.begin(), CleanedSysroot.end());
   }
 
   // Module map file
@@ -1571,6 +1567,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Implicit suff len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
@@ -1597,6 +1594,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(0);
         Record.push_back(0);
         Record.push_back(0);
+        Record.push_back(0);
       } else {
         // If we have calculated signature, there is no need to store
         // the size or timestamp.
@@ -1605,6 +1603,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
         llvm::append_range(Blob, M.Signature);
 
+        Record.push_back(M.FileName.getImplicitModuleSuffixLength());
         AddPathBlob(M.FileName, Record, Blob);
       }
 
@@ -1698,9 +1697,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
-  SmallString<256> HSOpts_ModuleCachePath;
-  normalizeModuleCachePath(PP.getFileManager(), HSOpts.ModuleCachePath,
-                           HSOpts_ModuleCachePath);
+  StringRef HSOpts_ModuleCachePath =
+      PP.getHeaderSearchInfo().getNormalizedModuleCachePath();
 
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
@@ -1714,8 +1712,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   Record.push_back(HSOpts.UseStandardSystemIncludes);
   Record.push_back(HSOpts.UseStandardCXXIncludes);
   Record.push_back(HSOpts.UseLibcxx);
-  // Write out the specific module cache path that contains the module files.
-  AddString(PP.getHeaderSearchInfo().getModuleCachePath(), Record);
+  AddString(PP.getHeaderSearchInfo().getContextHash(), Record);
   Stream.EmitRecord(HEADER_SEARCH_OPTIONS, Record);
 
   // Preprocessor options.
@@ -1750,6 +1747,11 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   Record.push_back(PPOpts.UsePredefines);
   // Detailed record is important since it is used for the module cache hash.
   Record.push_back(PPOpts.DetailedRecord);
+
+  // FIXME: Using `AddString` to record `ImplicitPCHInclude` does not handle
+  // relocatable files. We probably should call
+  // `AddPath(PPOpts.ImplicitPCHInclude, Record)` to properly support chained
+  // relocatable PCHs.
   AddString(PPOpts.ImplicitPCHInclude, Record);
   Record.push_back(static_cast<unsigned>(PPOpts.ObjCXXARCStandardLibrary));
   Stream.EmitRecord(PREPROCESSOR_OPTIONS, Record);
@@ -3354,7 +3356,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
 
     Record.push_back(FileIDAndFile.second.StateTransitions.size());
     for (auto &StatePoint : FileIDAndFile.second.StateTransitions) {
-      Record.push_back(getAdjustedOffset(StatePoint.Offset));
+      Record.push_back(StatePoint.Offset);
       AddDiagState(StatePoint.State, false);
     }
   }
@@ -4397,20 +4399,20 @@ public:
 
   template <typename Coll> data_type getData(const Coll &Decls) {
     unsigned Start = DeclIDs.size();
-    for (NamedDecl *D : Decls) {
+    auto AddDecl = [this](NamedDecl *D) {
       NamedDecl *DeclForLocalLookup =
           getDeclForLocalLookup(Writer.getLangOpts(), D);
 
       if (Writer.getDoneWritingDeclsAndTypes() &&
           !Writer.wasDeclEmitted(DeclForLocalLookup))
-        continue;
+        return;
 
       // Try to avoid writing internal decls to reduced BMI.
       // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
       if (Writer.isGeneratingReducedBMI() &&
           !DeclForLocalLookup->isFromExplicitGlobalModule() &&
           IsInternalDeclFromFileContext(DeclForLocalLookup))
-        continue;
+        return;
 
       auto ID = Writer.GetDeclRef(DeclForLocalLookup);
 
@@ -4424,7 +4426,7 @@ public:
             ModuleLocalDeclsMap.insert({Key, DeclIDsTy{ID}});
           else
             Iter->second.push_back(ID);
-          continue;
+          return;
         }
         break;
       case LookupVisibility::TULocal: {
@@ -4433,7 +4435,7 @@ public:
           TULocalDeclsMap.insert({D->getDeclName(), DeclIDsTy{ID}});
         else
           Iter->second.push_back(ID);
-        continue;
+        return;
       }
       case LookupVisibility::GenerallyVisibile:
         // Generally visible decls go into the general lookup table.
@@ -4441,6 +4443,24 @@ public:
       }
 
       DeclIDs.push_back(ID);
+    };
+    ASTReader *Chain = Writer.getChain();
+    for (NamedDecl *D : Decls) {
+      if (Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
+          D == Chain->getKeyDeclaration(D)) {
+        // In ASTReader, we stored only the key declaration of a namespace decl
+        // for this TU. If we have an external namespace decl, this is that
+        // key declaration and we need to re-expand it to write out the first
+        // decl from each module.
+        //
+        // See comment 'ASTReader::FindExternalVisibleDeclsByName' for details.
+        auto Firsts =
+            Writer.CollectFirstDeclFromEachModule(D, /*IncludeLocal=*/false);
+        for (const auto &[_, First] : Firsts)
+          AddDecl(cast<NamedDecl>(const_cast<Decl *>(First)));
+      } else {
+        AddDecl(D);
+      }
     }
     return std::make_pair(Start, DeclIDs.size());
   }
@@ -4603,7 +4623,16 @@ void ASTWriter::GenerateSpecializationInfoLookupTable(
     Generator.insert(HashValue, Trait.getData(Specs, ExisitingSpecs), Trait);
   }
 
-  Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
+  // Reduced BMI may not emit everything in the lookup table,
+  // If Reduced BMI **partially** emits some decls,
+  // then the generator may not emit the corresponding entry for the
+  // corresponding name is already there. See
+  // MultiOnDiskHashTableGenerator::insert and
+  // MultiOnDiskHashTableGenerator::emit for details.
+  // So we won't emit the lookup table if we're generating reduced BMI.
+  auto *ToEmitMaybeMergedLookupTable =
+      (!isGeneratingReducedBMI() && Lookups) ? &Lookups->Table : nullptr;
+  Generator.emit(LookupTable, Trait, ToEmitMaybeMergedLookupTable);
 }
 
 uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
@@ -4800,7 +4829,16 @@ void ASTWriter::GenerateNameLookupTable(
   // Create the on-disk hash table. Also emit the existing imported and
   // merged table if there is one.
   auto *Lookups = Chain ? Chain->getLoadedLookupTables(DC) : nullptr;
-  Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
+  // Reduced BMI may not emit everything in the lookup table,
+  // If Reduced BMI **partially** emits some decls,
+  // then the generator may not emit the corresponding entry for the
+  // corresponding name is already there. See
+  // MultiOnDiskHashTableGenerator::insert and
+  // MultiOnDiskHashTableGenerator::emit for details.
+  // So we won't emit the lookup table if we're generating reduced BMI.
+  auto *ToEmitMaybeMergedLookupTable =
+      (!isGeneratingReducedBMI() && Lookups) ? &Lookups->Table : nullptr;
+  Generator.emit(LookupTable, Trait, ToEmitMaybeMergedLookupTable);
 
   const auto &ModuleLocalDecls = Trait.getModuleLocalDecls();
   if (!ModuleLocalDecls.empty()) {
@@ -4816,11 +4854,15 @@ void ASTWriter::GenerateNameLookupTable(
                                         ModuleLocalTrait);
     }
 
+    // See the above comment. We won't emit the merged table if we're generating
+    // reduced BMI.
     auto *ModuleLocalLookups =
-        Chain ? Chain->getModuleLocalLookupTables(DC) : nullptr;
-    ModuleLocalLookupGenerator.emit(
-        ModuleLocalLookupTable, ModuleLocalTrait,
-        ModuleLocalLookups ? &ModuleLocalLookups->Table : nullptr);
+        (isGeneratingReducedBMI() && Chain &&
+         Chain->getModuleLocalLookupTables(DC))
+            ? &Chain->getModuleLocalLookupTables(DC)->Table
+            : nullptr;
+    ModuleLocalLookupGenerator.emit(ModuleLocalLookupTable, ModuleLocalTrait,
+                                    ModuleLocalLookups);
   }
 
   const auto &TULocalDecls = Trait.getTULocalDecls();
@@ -4836,9 +4878,13 @@ void ASTWriter::GenerateNameLookupTable(
       TULookupGenerator.insert(Key, TULocalTrait.getData(IDs), TULocalTrait);
     }
 
-    auto *TULocalLookups = Chain ? Chain->getTULocalLookupTables(DC) : nullptr;
-    TULookupGenerator.emit(TULookupTable, TULocalTrait,
-                           TULocalLookups ? &TULocalLookups->Table : nullptr);
+    // See the above comment. We won't emit the merged table if we're generating
+    // reduced BMI.
+    auto *TULocalLookups =
+        (isGeneratingReducedBMI() && Chain && Chain->getTULocalLookupTables(DC))
+            ? &Chain->getTULocalLookupTables(DC)->Table
+            : nullptr;
+    TULookupGenerator.emit(TULookupTable, TULocalTrait, TULocalLookups);
   }
 }
 
@@ -5343,8 +5389,8 @@ bool ASTWriter::PreparePathForOutput(SmallVectorImpl<char> &Path) {
   if (PathStr == "<built-in>" || PathStr == "<command line>")
     return false;
 
-  bool Changed = cleanPathForOutput(PP->getFileManager(), Path);
-
+  bool Changed =
+      PP->getFileManager().makeAbsolutePath(Path, /*Canonicalize=*/true);
   // Remove a prefix to make the path relative, if relevant.
   const char *PathBegin = Path.data();
   const char *PathPtr =
@@ -6095,7 +6141,11 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
 
         endian::Writer LE(Out, llvm::endianness::little);
         LE.write<uint8_t>(static_cast<uint8_t>(M.Kind));
-        StringRef Name = M.isModule() ? M.ModuleName : M.FileName;
+        // FIXME: Storing a PCH's name (M.FileName) as a string does not handle
+        // relocatable files. We probably should call
+        // `PreparePathForOutput(M.FileName)` to properly support relocatable
+        // PCHs.
+        StringRef Name = M.isModule() ? M.ModuleName : M.FileName.str();
         LE.write<uint16_t>(Name.size());
         Out.write(Name.data(), Name.size());
 
@@ -6593,6 +6643,11 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
         break;
       }
 
+      case DeclUpdateKind::DeclMarkedOpenMPIndirectCall:
+        Record.AddSourceRange(
+            D->getAttr<OMPTargetIndirectCallAttr>()->getRange());
+        break;
+
       case DeclUpdateKind::DeclMarkedOpenMPDeclareTarget:
         Record.push_back(D->getAttr<OMPDeclareTargetDeclAttr>()->getMapType());
         Record.AddSourceRange(
@@ -6912,6 +6967,19 @@ TypeID ASTWriter::GetOrCreateTypeID(ASTContext &Context, QualType T) {
     }
     return Idx;
   });
+}
+
+llvm::MapVector<ModuleFile *, const Decl *>
+ASTWriter::CollectFirstDeclFromEachModule(const Decl *D, bool IncludeLocal) {
+  llvm::MapVector<ModuleFile *, const Decl *> Firsts;
+  // FIXME: We can skip entries that we know are implied by others.
+  for (const Decl *R = D->getMostRecentDecl(); R; R = R->getPreviousDecl()) {
+    if (R->isFromASTFile())
+      Firsts[Chain->getOwningModuleFile(R)] = R;
+    else if (IncludeLocal)
+      Firsts[nullptr] = R;
+  }
+  return Firsts;
 }
 
 void ASTWriter::AddLookupOffsets(const LookupBlockOffsets &Offsets,
@@ -7781,6 +7849,17 @@ void ASTWriter::DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) {
       DeclUpdate(DeclUpdateKind::DeclMarkedOpenMPAllocate, A));
 }
 
+void ASTWriter::DeclarationMarkedOpenMPIndirectCall(const Decl *D) {
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+  assert(!WritingAST && "Already writing the AST!");
+  if (!D->isFromASTFile())
+    return;
+
+  DeclUpdates[D].push_back(
+      DeclUpdate(DeclUpdateKind::DeclMarkedOpenMPIndirectCall));
+}
+
 void ASTWriter::DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                                      const Attr *Attr) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
@@ -7976,6 +8055,11 @@ void OMPClauseWriter::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getThreadsetKindLoc());
   Record.writeEnum(C->getThreadsetKind());
+}
+
+void OMPClauseWriter::VisitOMPTransparentClause(OMPTransparentClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddStmt(C->getImpexType());
 }
 
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
@@ -8535,6 +8619,8 @@ void OMPClauseWriter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
+  Record.writeEnum(C->getFallbackModifier());
+  Record.AddSourceLocation(C->getFallbackModifierLoc());
   for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *VE : C->private_copies())

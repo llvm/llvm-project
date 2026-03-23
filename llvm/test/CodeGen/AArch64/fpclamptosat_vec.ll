@@ -99,42 +99,20 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) {
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI3_1
-; CHECK-CVT-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    sqxtn v0.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    sqxtn2 v0.4s, v2.2d
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: stest_f32i32:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI3_1
-; CHECK-FP16-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-FP16-GI-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-FP16-GI-NEXT:    sqxtn v0.2s, v1.2d
+; CHECK-FP16-GI-NEXT:    sqxtn2 v0.4s, v2.2d
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %conv = fptosi <4 x float> %x to <4 x i64>
@@ -147,43 +125,10 @@ entry:
 }
 
 define <4 x i32> @utest_f32i32(<4 x float> %x) {
-; CHECK-CVT-SD-LABEL: utest_f32i32:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: utest_f32i32:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-CVT-GI-LABEL: utest_f32i32:
-; CHECK-CVT-GI:       // %bb.0: // %entry
-; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-GI-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmhi v4.2d, v1.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: utest_f32i32:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-GI-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmhi v4.2d, v1.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: utest_f32i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <4 x float> %x to <4 x i64>
   %0 = icmp ult <4 x i64> %conv, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
@@ -205,38 +150,22 @@ define <4 x i32> @ustest_f32i32(<4 x float> %x) {
 ;
 ; CHECK-CVT-GI-LABEL: ustest_f32i32:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
-; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v0.2s
+; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v1.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    cmgt v1.2d, v2.2d, #0
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-CVT-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-CVT-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    sqxtun v0.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    sqxtun2 v0.4s, v2.2d
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: ustest_f32i32:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fcvtl v2.2d, v0.2s
+; CHECK-FP16-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v1.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    cmgt v1.2d, v2.2d, #0
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-FP16-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-FP16-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-FP16-GI-NEXT:    sqxtun v0.2s, v1.2d
+; CHECK-FP16-GI-NEXT:    sqxtun2 v0.4s, v2.2d
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %conv = fptosi <4 x float> %x to <4 x i64>
@@ -264,45 +193,23 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-CVT-GI-LABEL: stest_f16i32:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI6_1
-; CHECK-CVT-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI6_1]
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI6_0
 ; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
 ; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI6_0]
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    sqxtn v0.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    sqxtn2 v0.4s, v2.2d
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: stest_f16i32:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI6_1
-; CHECK-FP16-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI6_1]
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI6_0
 ; CHECK-FP16-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
 ; CHECK-FP16-GI-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI6_0]
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-FP16-GI-NEXT:    sqxtn v0.2s, v1.2d
+; CHECK-FP16-GI-NEXT:    sqxtn2 v0.4s, v2.2d
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %conv = fptosi <4 x half> %x to <4 x i64>
@@ -315,47 +222,11 @@ entry:
 }
 
 define <4 x i32> @utest_f16i32(<4 x half> %x) {
-; CHECK-CVT-SD-LABEL: utest_f16i32:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: utest_f16i32:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-CVT-GI-LABEL: utest_f16i32:
-; CHECK-CVT-GI:       // %bb.0: // %entry
-; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmhi v4.2d, v1.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: utest_f16i32:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-GI-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmhi v4.2d, v1.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: utest_f16i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <4 x half> %x to <4 x i64>
   %0 = icmp ult <4 x i64> %conv, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
@@ -380,39 +251,23 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-CVT-GI-LABEL: ustest_f16i32:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v0.2s
+; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v1.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    cmgt v1.2d, v2.2d, #0
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-CVT-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-CVT-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    sqxtun v0.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    sqxtun2 v0.4s, v2.2d
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: ustest_f16i32:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-GI-NEXT:    fcvtl v2.2d, v0.2s
+; CHECK-FP16-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v1.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    cmgt v1.2d, v2.2d, #0
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-FP16-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-FP16-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-FP16-GI-NEXT:    sqxtun v0.2s, v1.2d
+; CHECK-FP16-GI-NEXT:    sqxtun2 v0.4s, v2.2d
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %conv = fptosi <4 x half> %x to <4 x i64>
@@ -2071,42 +1926,20 @@ define <4 x i32> @stest_f32i32_mm(<4 x float> %x) {
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI30_1
-; CHECK-CVT-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI30_1]
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI30_0
 ; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI30_0]
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    sqxtn v0.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    sqxtn2 v0.4s, v2.2d
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: stest_f32i32_mm:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI30_1
-; CHECK-FP16-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI30_1]
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI30_0
 ; CHECK-FP16-GI-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI30_0]
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-FP16-GI-NEXT:    sqxtn v0.2s, v1.2d
+; CHECK-FP16-GI-NEXT:    sqxtn2 v0.4s, v2.2d
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %conv = fptosi <4 x float> %x to <4 x i64>
@@ -2117,43 +1950,10 @@ entry:
 }
 
 define <4 x i32> @utest_f32i32_mm(<4 x float> %x) {
-; CHECK-CVT-SD-LABEL: utest_f32i32_mm:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: utest_f32i32_mm:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-CVT-GI-LABEL: utest_f32i32_mm:
-; CHECK-CVT-GI:       // %bb.0: // %entry
-; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-GI-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmhi v4.2d, v1.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: utest_f32i32_mm:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-GI-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmhi v4.2d, v1.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: utest_f32i32_mm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <4 x float> %x to <4 x i64>
   %spec.store.select = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %conv, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
@@ -2174,38 +1974,22 @@ define <4 x i32> @ustest_f32i32_mm(<4 x float> %x) {
 ;
 ; CHECK-CVT-GI-LABEL: ustest_f32i32_mm:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
-; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v0.2s
+; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v1.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    cmgt v1.2d, v2.2d, #0
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-CVT-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-CVT-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    sqxtun v0.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    sqxtun2 v0.4s, v2.2d
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: ustest_f32i32_mm:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fcvtl v2.2d, v0.2s
+; CHECK-FP16-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v1.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    cmgt v1.2d, v2.2d, #0
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-FP16-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-FP16-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-FP16-GI-NEXT:    sqxtun v0.2s, v1.2d
+; CHECK-FP16-GI-NEXT:    sqxtun2 v0.4s, v2.2d
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %conv = fptosi <4 x float> %x to <4 x i64>
@@ -2231,45 +2015,23 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-CVT-GI-LABEL: stest_f16i32_mm:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI33_1
-; CHECK-CVT-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI33_1]
-; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI33_0
 ; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
 ; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI33_0]
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    sqxtn v0.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    sqxtn2 v0.4s, v2.2d
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: stest_f16i32_mm:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI33_1
-; CHECK-FP16-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI33_1]
-; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI33_0
 ; CHECK-FP16-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
 ; CHECK-FP16-GI-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v2.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI33_0]
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v0.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v2.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-FP16-GI-NEXT:    sqxtn v0.2s, v1.2d
+; CHECK-FP16-GI-NEXT:    sqxtn2 v0.4s, v2.2d
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %conv = fptosi <4 x half> %x to <4 x i64>
@@ -2280,47 +2042,11 @@ entry:
 }
 
 define <4 x i32> @utest_f16i32_mm(<4 x half> %x) {
-; CHECK-CVT-SD-LABEL: utest_f16i32_mm:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: utest_f16i32_mm:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-CVT-GI-LABEL: utest_f16i32_mm:
-; CHECK-CVT-GI:       // %bb.0: // %entry
-; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmhi v4.2d, v1.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: utest_f16i32_mm:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-GI-NEXT:    fcvtl v2.2d, v0.2s
-; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    fcvtzu v2.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    fcvtzu v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmhi v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmhi v4.2d, v1.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: utest_f16i32_mm:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %conv = fptoui <4 x half> %x to <4 x i64>
   %spec.store.select = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %conv, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
@@ -2344,39 +2070,23 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-CVT-GI-LABEL: ustest_f16i32_mm:
 ; CHECK-CVT-GI:       // %bb.0: // %entry
 ; CHECK-CVT-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-CVT-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v0.2s
+; CHECK-CVT-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-CVT-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-CVT-GI-NEXT:    cmgt v4.2d, v1.2d, v0.2d
-; CHECK-CVT-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-CVT-GI-NEXT:    cmgt v1.2d, v2.2d, #0
-; CHECK-CVT-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-CVT-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-CVT-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-CVT-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-CVT-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-CVT-GI-NEXT:    sqxtun v0.2s, v1.2d
+; CHECK-CVT-GI-NEXT:    sqxtun2 v0.4s, v2.2d
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: ustest_f16i32_mm:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-FP16-GI-NEXT:    fcvtl v2.2d, v0.2s
+; CHECK-FP16-GI-NEXT:    fcvtl v1.2d, v0.2s
 ; CHECK-FP16-GI-NEXT:    fcvtl2 v0.2d, v0.4s
-; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
-; CHECK-FP16-GI-NEXT:    cmgt v4.2d, v1.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    bif v2.16b, v1.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
-; CHECK-FP16-GI-NEXT:    cmgt v1.2d, v2.2d, #0
-; CHECK-FP16-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-FP16-GI-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-FP16-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-FP16-GI-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
+; CHECK-FP16-GI-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-FP16-GI-NEXT:    fcvtzs v2.2d, v0.2d
+; CHECK-FP16-GI-NEXT:    sqxtun v0.2s, v1.2d
+; CHECK-FP16-GI-NEXT:    sqxtun2 v0.4s, v2.2d
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %conv = fptosi <4 x half> %x to <4 x i64>

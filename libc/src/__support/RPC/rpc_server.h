@@ -37,6 +37,12 @@
 #define LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 #define LIBC_COPT_PRINTF_DISABLE_STRERROR
 
+// TODO: Remove this check once UTF-16 is supported. It may be necessary to add
+// additional targets for other systems that use UTF-16.
+#if defined(_WIN32)
+#define LIBC_COPT_PRINTF_DISABLE_WIDE
+#endif
+
 // The 'long double' type is 8 bytes.
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 
@@ -160,7 +166,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
   uint64_t args_sizes[num_lanes] = {0};
   void *args[num_lanes] = {nullptr};
 
-  // Recieve the format string and arguments from the client.
+  // Receive the format string and arguments from the client.
   port.recv_n(format, format_sizes,
               [&](uint64_t size) { return temp_storage.alloc(size); });
 
@@ -223,7 +229,7 @@ LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
     buffer_size[lane] = writer.get_chars_written();
   }
 
-  // Recieve any strings from the client and push them into a buffer.
+  // Receive any strings from the client and push them into a buffer.
   TempVector<void *> copied_strs[num_lanes];
   auto HasPendingCopies = [](TempVector<void *> v[num_lanes]) {
     for (uint32_t i = 0; i < num_lanes; ++i)

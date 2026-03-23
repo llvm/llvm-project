@@ -1382,7 +1382,12 @@ bool AArch64RegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
-  MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  MachineFunction &MF = *MI->getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  if (MI->isSubregToReg() && MRI.subRegLivenessEnabled() &&
+      !MF.getSubtarget<AArch64Subtarget>().enableSRLTSubregToRegMitigation())
+    return false;
 
   if (MI->isCopy() &&
       ((DstRC->getID() == AArch64::GPR64RegClassID) ||

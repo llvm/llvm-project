@@ -567,7 +567,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   }
 
   // Some accesses go beyond the end of the global, don't bother.
-  if (Offset > DL.getTypeAllocSize(GV->getValueType()))
+  if (Offset > GV->getGlobalSize(DL))
     return nullptr;
 
   LLVM_DEBUG(dbgs() << "PERFORMING GLOBAL SRA ON: " << *GV << "\n");
@@ -1229,8 +1229,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         DIGlobalVariable *DGV = GVe->getVariable();
         DIExpression *E = GVe->getExpression();
         const DataLayout &DL = GV->getDataLayout();
-        unsigned SizeInOctets =
-            DL.getTypeAllocSizeInBits(NewGV->getValueType()) / 8;
+        unsigned SizeInOctets = NewGV->getGlobalSize(DL);
 
         // It is expected that the address of global optimized variable is on
         // top of the stack. After optimization, value of that variable will
@@ -1585,8 +1584,8 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // shared memory (AS 3).
     auto *SOVConstant = dyn_cast<Constant>(StoredOnceValue);
     if (SOVConstant && isa<UndefValue>(GV->getInitializer()) &&
-        DL.getTypeAllocSize(SOVConstant->getType()) ==
-            DL.getTypeAllocSize(GV->getValueType()) &&
+        DL.getTypeAllocSize(SOVConstant->getType()).getFixedValue() ==
+            GV->getGlobalSize(DL) &&
         CanHaveNonUndefGlobalInitializer) {
       if (SOVConstant->getType() == GV->getValueType()) {
         // Change the initializer in place.

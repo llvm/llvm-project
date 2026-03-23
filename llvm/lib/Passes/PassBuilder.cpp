@@ -83,7 +83,6 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
-#include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -100,12 +99,14 @@
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InitUndef.h"
+#include "llvm/CodeGen/InlineAsmPrepare.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
@@ -123,8 +124,10 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -1271,17 +1274,25 @@ Expected<LICMOptions> parseLICMOptions(StringRef Params) {
   return Result;
 }
 
-Expected<std::pair<bool, bool>> parseLoopRotateOptions(StringRef Params) {
-  std::pair<bool, bool> Result = {true, false};
+struct LoopRotateOptions {
+  bool EnableHeaderDuplication = true;
+  bool PrepareForLTO = false;
+  bool CheckExitCount = false;
+};
+
+Expected<LoopRotateOptions> parseLoopRotateOptions(StringRef Params) {
+  LoopRotateOptions Result;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
 
     bool Enable = !ParamName.consume_front("no-");
     if (ParamName == "header-duplication") {
-      Result.first = Enable;
+      Result.EnableHeaderDuplication = Enable;
     } else if (ParamName == "prepare-for-lto") {
-      Result.second = Enable;
+      Result.PrepareForLTO = Enable;
+    } else if (ParamName == "check-exit-count") {
+      Result.CheckExitCount = Enable;
     } else {
       return make_error<StringError>(
           formatv("invalid LoopRotate pass parameter '{}'", ParamName).str(),

@@ -97,11 +97,9 @@ define <4 x i32> @sdot_multi(<4 x i32> %vacc0x0123, <16 x i8> %va, <16 x i8> %vb
 ; CHECK-LABEL: sdot_multi:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vsdot.s8 q0, q2, d2[0]
-; CHECK-NEXT:    vdup.32 q8, d3[0]
 ; CHECK-NEXT:    vsdot.s8 q0, q2, d2[1]
-; CHECK-NEXT:    vdup.32 q9, d3[1]
-; CHECK-NEXT:    vsdot.s8 q0, q2, q8
-; CHECK-NEXT:    vsdot.s8 q0, q2, q9
+; CHECK-NEXT:    vsdot.s8 q0, q2, d3[0]
+; CHECK-NEXT:    vsdot.s8 q0, q2, d3[1]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast <16 x i8> %va to <4 x i32>
@@ -125,11 +123,9 @@ define <4 x i32> @udot_multi(<4 x i32> %vacc0x0123, <16 x i8> %va, <16 x i8> %vb
 ; CHECK-LABEL: udot_multi:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vudot.u8 q0, q2, d2[0]
-; CHECK-NEXT:    vdup.32 q8, d3[0]
 ; CHECK-NEXT:    vudot.u8 q0, q2, d2[1]
-; CHECK-NEXT:    vdup.32 q9, d3[1]
-; CHECK-NEXT:    vudot.u8 q0, q2, q8
-; CHECK-NEXT:    vudot.u8 q0, q2, q9
+; CHECK-NEXT:    vudot.u8 q0, q2, d3[0]
+; CHECK-NEXT:    vudot.u8 q0, q2, d3[1]
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = bitcast <16 x i8> %va to <4 x i32>

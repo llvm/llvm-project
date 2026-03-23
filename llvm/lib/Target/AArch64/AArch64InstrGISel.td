@@ -25,14 +25,6 @@ def G_ADD_LOW : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-// Pseudo for a rev16 instruction. Produced post-legalization from
-// G_SHUFFLE_VECTORs with appropriate masks.
-def G_REV16 : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
 // Pseudo for a rev32 instruction. Produced post-legalization from
 // G_SHUFFLE_VECTORs with appropriate masks.
 def G_REV32 : AArch64GenericInstruction {
@@ -192,6 +184,12 @@ def G_AARCH64_PREFETCH : AArch64GenericInstruction {
   let hasSideEffects = 1;
 }
 
+def G_AARCH64_RANGE_PREFETCH : AArch64GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$imm, ptype0:$src1, type1:$src2);
+  let hasSideEffects = 1;
+}
+
 def G_UMULL : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
@@ -290,7 +288,6 @@ def G_BSP : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def : GINodeEquiv<G_REV16, AArch64rev16>;
 def : GINodeEquiv<G_REV32, AArch64rev32>;
 def : GINodeEquiv<G_REV64, AArch64rev64>;
 def : GINodeEquiv<G_UZP1, AArch64uzp1>;
@@ -339,6 +336,7 @@ def : GINodeEquiv<G_SRI, AArch64vsri>;
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
 def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
+def : GINodeEquiv<G_AARCH64_RANGE_PREFETCH, AArch64RangePrefetch>;
 
 def : GINodeEquiv<G_FPTRUNC_ODD, AArch64fcvtxn_n>;
 

@@ -88,6 +88,7 @@ PROXY_TEMPLATE = """\
 #ifdef LIBC_FULL_BUILD
 
 {include_lines}
+{macro_lines}
 
 #else // Overlay mode
 
@@ -176,7 +177,7 @@ class HeaderFile:
                 for typ in self.all_types()
             }
             | {
-                PurePosixPath("llvm-libc-macros") / f"{attr}.h"
+                PurePosixPath("llvm-libc-macros") / f"{attr.split('(')[0]}.h"
                 for attr in self.all_attributes() - COMMON_ATTRIBUTES
             }
         )

@@ -92,7 +92,7 @@ public:
 	}
 	static inline void throw_error(enum isl_error error, const char *msg,
 		const char *file, int line);
-	virtual const char *what() const noexcept {
+	virtual const char *what() const noexcept override {
 		return what_str->c_str();
 	}
 

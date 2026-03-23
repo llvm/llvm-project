@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 %s -filetype=null 2>&1 | FileCheck --check-prefix=GFX1250-ERR --implicit-check-not=error: %s
 
 v_wmma_f32_16x16x4_f32 v[4:11], v[0:1], v[2:3], s[4:11]
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

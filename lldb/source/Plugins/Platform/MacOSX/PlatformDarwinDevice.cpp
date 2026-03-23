@@ -11,6 +11,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -39,21 +40,17 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
       FileSystem::Instance().Resolve(sdk_sysroot_fspec);
       const SDKDirectoryInfo sdk_sysroot_directory_info(sdk_sysroot_fspec);
       m_sdk_directory_infos.push_back(sdk_sysroot_directory_info);
-      if (log) {
-        LLDB_LOGF(log,
-                  "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded added "
-                  "--sysroot SDK directory %s",
-                  m_sdk_sysroot.c_str());
-      }
+      LLDB_LOGF(log,
+                "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded added "
+                "--sysroot SDK directory %s",
+                m_sdk_sysroot.c_str());
       return true;
     }
     const char *device_support_dir = GetDeviceSupportDirectory();
-    if (log) {
-      LLDB_LOGF(log,
-                "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded Got "
-                "DeviceSupport directory %s",
-                device_support_dir);
-    }
+    LLDB_LOGF(log,
+              "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded Got "
+              "DeviceSupport directory %s",
+              device_support_dir);
     if (device_support_dir) {
       const bool find_directories = true;
       const bool find_files = false;
@@ -74,12 +71,10 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
         sdk_symbols_symlink_fspec.AppendPathComponent("Symbols");
         if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
           m_sdk_directory_infos.push_back(sdk_directory_info);
-          if (log) {
-            LLDB_LOGF(log,
-                      "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                      "added builtin SDK directory %s",
-                      sdk_symbols_symlink_fspec.GetPath().c_str());
-          }
+          LLDB_LOGF(log,
+                    "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                    "added builtin SDK directory %s",
+                    sdk_symbols_symlink_fspec.GetPath().c_str());
         }
       }
 
@@ -90,12 +85,10 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
       FileSpec local_sdk_cache(local_sdk_cache_str.c_str());
       FileSystem::Instance().Resolve(local_sdk_cache);
       if (FileSystem::Instance().Exists(local_sdk_cache)) {
-        if (log) {
-          LLDB_LOGF(log,
-                    "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                    "searching %s for additional SDKs",
-                    local_sdk_cache.GetPath().c_str());
-        }
+        LLDB_LOGF(log,
+                  "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                  "searching %s for additional SDKs",
+                  local_sdk_cache.GetPath().c_str());
         char path[PATH_MAX];
         if (local_sdk_cache.GetPath(path, sizeof(path))) {
           FileSystem::Instance().EnumerateDirectory(
@@ -106,13 +99,11 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
           // First try for an exact match of major, minor and update
           for (uint32_t i = num_installed; i < num_sdk_infos; ++i) {
             m_sdk_directory_infos[i].user_cached = true;
-            if (log) {
-              LLDB_LOGF(log,
-                        "PlatformDarwinDevice::"
-                        "UpdateSDKDirectoryInfosIfNeeded "
-                        "user SDK directory %s",
-                        m_sdk_directory_infos[i].directory.GetPath().c_str());
-            }
+            LLDB_LOGF(log,
+                      "PlatformDarwinDevice::"
+                      "UpdateSDKDirectoryInfosIfNeeded "
+                      "user SDK directory %s",
+                      m_sdk_directory_infos[i].directory.GetPath().c_str());
           }
         }
       }
@@ -130,12 +121,10 @@ bool PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
           sdk_symbols_symlink_fspec.AppendPathComponent("Symbols");
           if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
             m_sdk_directory_infos.push_back(sdk_directory_info);
-            if (log) {
-              LLDB_LOGF(log,
-                        "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
-                        "added env var SDK directory %s",
-                        sdk_symbols_symlink_fspec.GetPath().c_str());
-            }
+            LLDB_LOGF(log,
+                      "PlatformDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                      "added env var SDK directory %s",
+                      sdk_symbols_symlink_fspec.GetPath().c_str());
           }
         }
       }
@@ -295,7 +284,8 @@ BringInRemoteFile(Platform *platform,
 
 lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
     const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-    llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
+    llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr,
+    Process *process) {
 
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log,
@@ -312,30 +302,11 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
   Status err;
 
   if (CheckLocalSharedCache()) {
-    // When debugging on the host, we are most likely using the same shared
-    // cache as our inferior. The dylibs from the shared cache might not
-    // exist on the filesystem, so let's use the images in our own memory
-    // to create the modules.
-
-    // Check if the requested image is in our shared cache.
-    SharedCacheImageInfo image_info =
-        HostInfo::GetSharedCacheImageInfo(module_spec.GetFileSpec().GetPath());
-
-    // If we found it and it has the correct UUID, let's proceed with
-    // creating a module from the memory contents.
-    if (image_info.uuid &&
-        (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
-      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.data_sp);
-      err = ModuleList::GetSharedModule(shared_cache_spec, module_sp,
-                                        old_modules, did_create_ptr);
-      if (module_sp) {
-        LLDB_LOGF(log, "[%s] module %s was found in the in-memory shared cache",
-                  (IsHost() ? "host" : "remote"),
-                  module_spec.GetFileSpec().GetPath().c_str());
-        return err;
-      }
-    }
+    err = GetModuleFromSharedCaches(module_spec, process, module_sp,
+                                    old_modules, did_create_ptr);
+    if (module_sp)
+      return err;
+  }
 
     // We failed to find the module in our shared cache. Let's see if we have a
     // copy in our device support directory.
@@ -357,7 +328,6 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
                   local_spec.GetFileSpec().GetPath().c_str());
         return err;
       }
-    }
   }
 
   err = ModuleList::GetSharedModule(module_spec, module_sp, old_modules,

@@ -110,7 +110,6 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
       raw_string_ostream OS(Buf);
       OS.write_escaped(
           StringRef(ArMemHdr->Terminator, sizeof(ArMemHdr->Terminator)));
-      OS.flush();
       std::string Msg("terminator characters in archive member \"" + Buf +
                       "\" not the correct \"`\\n\" values for the archive "
                       "member header ");
@@ -281,7 +280,6 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       std::string Buf;
       raw_string_ostream OS(Buf);
       OS.write_escaped(Name.substr(1).rtrim(' '));
-      OS.flush();
       uint64_t ArchiveOffset =
           reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
       return malformedError("long name offset characters after the '/' are "
@@ -320,7 +318,6 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       std::string Buf;
       raw_string_ostream OS(Buf);
       OS.write_escaped(Name.substr(3).rtrim(' '));
-      OS.flush();
       uint64_t ArchiveOffset =
           reinterpret_cast<const char *>(ArMemHdr) - Parent->getData().data();
       return malformedError("long name length characters after the #1/ are "

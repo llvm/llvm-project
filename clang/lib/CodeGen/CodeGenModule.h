@@ -529,6 +529,11 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
+  /// To remember which types did require a vector deleting destructor body.
+  /// This set basically contains classes that have virtual destructor and new[]
+  /// was emitted for the class.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
+
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
@@ -1397,6 +1402,9 @@ public:
   /// Print out an error that codegen doesn't support the specified stmt yet.
   void ErrorUnsupported(const Stmt *S, const char *Type);
 
+  /// Print out an error that codegen doesn't support the specified stmt yet.
+  void ErrorUnsupported(const Stmt *S, llvm::StringRef Type);
+
   /// Print out an error that codegen doesn't support the specified decl yet.
   void ErrorUnsupported(const Decl *D, const char *Type);
 
@@ -1574,6 +1582,13 @@ public:
   /// Emit code for a single global function or var decl. Forward declarations
   /// are emitted lazily.
   void EmitGlobal(GlobalDecl D);
+
+  /// Record that new[] was called for the class, transform vector deleting
+  /// destructor definition in a form of alias to the actual definition.
+  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+
+  /// Check that class need vector deleting destructor body.
+  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
 
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
   void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
@@ -1869,6 +1884,19 @@ public:
     return TrapReasonBuilder(&getDiags(), DiagID, TR);
   }
 
+  llvm::Constant *performAddrSpaceCast(llvm::Constant *Src,
+                                       llvm::Type *DestTy) {
+    // Since target may map different address spaces in AST to the same address
+    // space, an address space conversion may end up as a bitcast.
+    return llvm::ConstantExpr::getPointerCast(Src, DestTy);
+  }
+
+  std::optional<llvm::Attribute::AttrKind>
+  StackProtectorAttribute(const Decl *D) const;
+
+  std::string getPFPFieldName(const FieldDecl *FD);
+  llvm::GlobalValue *getPFPDeactivationSymbol(const FieldDecl *FD);
+
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 
@@ -2072,6 +2100,10 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix);
+
+  /// Emit deactivation symbols for any PFP fields whose offset is taken with
+  /// offsetof.
+  void emitPFPFieldsWithEvaluatedOffset();
 };
 
 }  // end namespace CodeGen

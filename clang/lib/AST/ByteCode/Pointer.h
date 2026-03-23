@@ -14,7 +14,8 @@
 #define LLVM_CLANG_AST_INTERP_POINTER_H
 
 #include "Descriptor.h"
-#include "FunctionPointer.h"
+#include "Function.h"
+#include "InitMap.h"
 #include "InterpBlock.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
@@ -50,6 +51,10 @@ struct IntPointer {
   std::optional<IntPointer> atOffset(const ASTContext &ASTCtx,
                                      unsigned Offset) const;
   IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
+};
+
+struct FunctionPointer {
+  const Function *Func;
 };
 
 struct TypeidPointer {
@@ -105,7 +110,7 @@ public:
   Pointer(uint64_t Address, const Descriptor *Desc, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Int), Int{Desc, Address} {}
   Pointer(const Function *F, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Fn), Fn(F) {}
+      : Offset(Offset), StorageKind(Storage::Fn), Fn{F} {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Typeid) {
     Typeid.TypePtr = TypePtr;
@@ -126,7 +131,7 @@ public:
              P.Offset == Offset;
 
     if (isFunctionPointer())
-      return P.Fn.getFunction() == Fn.getFunction() && P.Offset == Offset;
+      return P.Fn.Func == Fn.Func && P.Offset == Offset;
 
     assert(isBlockPointer());
     return P.BS.Pointee == BS.Pointee && P.BS.Base == BS.Base &&
@@ -145,7 +150,7 @@ public:
     if (isIntegralPointer())
       return Int.Value + (Offset * elemSize());
     if (isFunctionPointer())
-      return Fn.getIntegerRepresentation() + Offset;
+      return reinterpret_cast<uint64_t>(Fn.Func) + Offset;
     return reinterpret_cast<uint64_t>(BS.Pointee) + Offset;
   }
 
@@ -158,7 +163,7 @@ public:
     if (isIntegralPointer())
       return Pointer(Int.Value, Int.Desc, Idx);
     if (isFunctionPointer())
-      return Pointer(Fn.getFunction(), Idx);
+      return Pointer(Fn.Func, Idx);
 
     if (BS.Base == RootPtrMark)
       return Pointer(BS.Pointee, RootPtrMark, getDeclDesc()->getSize());
@@ -263,7 +268,7 @@ public:
     case Storage::Block:
       return BS.Pointee == nullptr;
     case Storage::Fn:
-      return Fn.isZero();
+      return !Fn.Func;
     case Storage::Typeid:
       return false;
     }
@@ -301,7 +306,7 @@ public:
     if (isBlockPointer())
       return getDeclDesc()->getSource();
     if (isFunctionPointer()) {
-      const Function *F = Fn.getFunction();
+      const Function *F = Fn.Func;
       return F ? F->getDecl() : DeclTy();
     }
     assert(isIntegralPointer());
@@ -342,7 +347,7 @@ public:
     if (isTypeidPointer())
       return QualType(Typeid.TypeInfoType, 0);
     if (isFunctionPointer())
-      return Fn.getFunction()->getDecl()->getType();
+      return Fn.Func->getDecl()->getType();
 
     if (inPrimitiveArray() && Offset != BS.Base) {
       // Unfortunately, complex and vector types are not array types in clang,
@@ -530,8 +535,12 @@ public:
   }
 
   bool isWeak() const {
-    if (isFunctionPointer())
-      return Fn.isWeak();
+    if (isFunctionPointer()) {
+      if (!Fn.Func || !Fn.Func->getDecl())
+        return false;
+
+      return Fn.Func->getDecl()->isWeak();
+    }
     if (!isBlockPointer())
       return false;
 
@@ -665,6 +674,15 @@ public:
     return false;
   }
 
+  /// Checks whether the pointer can be dereferenced to the given PrimType.
+  bool canDeref(PrimType T) const {
+    if (const Descriptor *FieldDesc = getFieldDesc()) {
+      return (FieldDesc->isPrimitive() || FieldDesc->isPrimitiveArray()) &&
+             FieldDesc->getPrimType() == T;
+    }
+    return false;
+  }
+
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {
     assert(isLive() && "Invalid pointer");
@@ -722,6 +740,9 @@ public:
   /// Like isInitialized(), but for primitive arrays.
   bool isElementInitialized(unsigned Index) const;
   bool allElementsInitialized() const;
+  bool allElementsAlive() const;
+  bool isElementAlive(unsigned Index) const;
+
   /// Activats a field.
   void activate() const;
   /// Deactivates an entire strurcutre.
@@ -732,23 +753,41 @@ public:
       return Lifetime::Started;
     if (BS.Base < sizeof(InlineDescriptor))
       return Lifetime::Started;
+
+    if (inArray() && !isArrayRoot()) {
+      InitMapPtr &IM = getInitMap();
+
+      if (!IM.hasInitMap()) {
+        if (IM.allInitialized())
+          return Lifetime::Started;
+        return getArray().getLifetime();
+      }
+
+      return IM->isElementAlive(getIndex()) ? Lifetime::Started
+                                            : Lifetime::Ended;
+    }
+
     return getInlineDesc()->LifeState;
   }
 
-  void endLifetime() const {
-    if (!isBlockPointer())
-      return;
-    if (BS.Base < sizeof(InlineDescriptor))
-      return;
-    getInlineDesc()->LifeState = Lifetime::Ended;
-  }
+  /// Start the lifetime of this pointer. This works for pointer with an
+  /// InlineDescriptor as well as primitive array elements. Pointers are usually
+  /// alive by default, unless the underlying object has been allocated with
+  /// std::allocator. This function is used by std::construct_at.
+  void startLifetime() const;
+  /// Ends the lifetime of the pointer. This works for pointer with an
+  /// InlineDescriptor as well as primitive array elements. This function is
+  /// used by std::destroy_at.
+  void endLifetime() const;
 
-  void startLifetime() const {
-    if (!isBlockPointer())
-      return;
-    if (BS.Base < sizeof(InlineDescriptor))
-      return;
-    getInlineDesc()->LifeState = Lifetime::Started;
+  /// Strip base casts from this Pointer.
+  /// The result is either a root pointer or something
+  /// that isn't a base class anymore.
+  [[nodiscard]] Pointer stripBaseCasts() const {
+    Pointer P = *this;
+    while (P.isBaseClass())
+      P = P.getBase();
+    return P;
   }
 
   /// Compare two pointers.
@@ -792,7 +831,6 @@ private:
   friend class DeadBlock;
   friend class MemberPointer;
   friend class InterpState;
-  friend struct InitMap;
   friend class DynamicAllocator;
   friend class Program;
 
@@ -839,6 +877,16 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   OS << ' ';
   if (const Descriptor *D = P.getFieldDesc())
     D->dump(OS);
+  if (P.isArrayElement()) {
+    if (P.isOnePastEnd())
+      OS << " one-past-the-end";
+    else
+      OS << " index " << P.getIndex();
+  }
+  if (P.isBlockPointer() && P.block() && P.block()->isDummy())
+    OS << " dummy";
+  if (!P.isLive())
+    OS << " dead";
   return OS;
 }
 

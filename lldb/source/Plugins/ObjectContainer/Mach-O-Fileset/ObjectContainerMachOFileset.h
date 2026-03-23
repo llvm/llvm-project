@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_MACH_O_FILESET_OBJECTCONTAINERMADCHOFILESET_H
-#define LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_MACH_O_FILESET_OBJECTCONTAINERMADCHOFILESET_H
+#ifndef LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_MACH_O_FILESET_OBJECTCONTAINERMACHOFILESET_H
+#define LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_MACH_O_FILESET_OBJECTCONTAINERMACHOFILESET_H
 
 #include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/ObjectContainer.h"
@@ -49,7 +49,7 @@ public:
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
+                                        lldb::DataExtractorSP &extractor_sp,
                                         lldb::offset_t data_offset,
                                         lldb::offset_t file_offset,
                                         lldb::offset_t length,
@@ -91,4 +91,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_MACH_O_FILESET_OBJECTCONTAINERMADCHOFILESET_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_MACH_O_FILESET_OBJECTCONTAINERMACHOFILESET_H

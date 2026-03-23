@@ -7,17 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/Config.h"
 #include "lldb/lldb-enumerations.h"
-
-#if LLDB_ENABLE_PYTHON
 
 #include "ScriptInterpreterPythonInterfaces.h"
 
 using namespace lldb;
 using namespace lldb_private;
-
-LLDB_PLUGIN_DEFINE(ScriptInterpreterPythonInterfaces)
 
 llvm::StringRef
 ScriptInterpreterPythonInterfaces::GetPluginDescriptionStatic() {
@@ -43,5 +38,3 @@ void ScriptInterpreterPythonInterfaces::Terminate() {
   ScriptedThreadPlanPythonInterface::Terminate();
   ScriptedFrameProviderPythonInterface::Terminate();
 }
-
-#endif

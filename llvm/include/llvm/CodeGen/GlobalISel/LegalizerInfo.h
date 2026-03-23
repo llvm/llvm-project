@@ -757,6 +757,14 @@ public:
     return actionFor(LegalizeAction::Lower, Types);
   }
   /// The instruction is lowered when type indexes 0 and 1 is any type pair in
+  /// the given list, provided Predicate pred is true.
+  LegalizeRuleSet &lowerFor(bool Pred,
+                            std::initializer_list<std::pair<LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Lower, Types);
+  }
+  /// The instruction is lowered when type indexes 0 and 1 is any type pair in
   /// the given list.
   LegalizeRuleSet &lowerFor(std::initializer_list<std::pair<LLT, LLT>> Types,
                             LegalizeMutation Mutation) {
@@ -832,6 +840,14 @@ public:
     markAllIdxsAsCovered();
     return actionIf(LegalizeAction::WidenScalar, Predicate, Mutation);
   }
+  /// Widen the scalar, specified in mutation, when type indexes 0 and 1 is any
+  /// type pair in the given list.
+  LegalizeRuleSet &
+  widenScalarFor(std::initializer_list<std::pair<LLT, LLT>> Types,
+                 LegalizeMutation Mutation) {
+    return actionFor(LegalizeAction::WidenScalar, Types, Mutation);
+  }
+
   /// Narrow the scalar to the one selected by the mutation if the predicate is
   /// true.
   LegalizeRuleSet &narrowScalarIf(LegalityPredicate Predicate,

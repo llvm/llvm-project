@@ -236,8 +236,10 @@ bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
       IRObjectFile::findBitcodeInMemBuffer(mb);
   if (errorToBool(fatLTOData.takeError()))
     return false;
-  files.push_back(std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
-                                                offsetInArchive, lazy));
+  auto file = std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
+                                            offsetInArchive, lazy);
+  file->obj->fatLTOObject(true);
+  files.push_back(std::move(file));
   return true;
 }
 
@@ -1155,7 +1157,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
 
   SmallSetVector<StringRef, 0> vtableSymbolsWithNoRTTI;
   for (StringRef s : vtableSymbols)
-    if (!typeInfoSymbols.count(s))
+    if (!typeInfoSymbols.contains(s))
       vtableSymbolsWithNoRTTI.insert(s);
 
   // Remove known safe symbols.
@@ -1704,6 +1706,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
+  if (ctx.arg.zForceBti) {
+    ctx.arg.zBtiReport = ReportPolicy::Warning;
+    ctx.arg.zBtiReportSource = "-z force-bti";
+  }
+  if (ctx.arg.zGcs == GcsPolicy::Always) {
+    ctx.arg.zGcsReport = ReportPolicy::Warning;
+    ctx.arg.zGcsReportSource = "-z gcs";
+  }
+
   auto reports = {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
       std::make_pair("cet-report", &ctx.arg.zCetReport),
@@ -1735,6 +1746,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       }
       hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
+      if (option.first == "bti-report")
+        ctx.arg.zBtiReportSource = "-z bti-report";
+      else if (option.first == "gcs-report")
+        ctx.arg.zGcsReportSource = "-z gcs-report";
     }
   }
 
@@ -2315,11 +2330,11 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &args) {
 // This is not a popular option, but some programs such as bionic libc use it.
 static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
   DenseSet<StringRef> libs = getExcludeLibs(args);
-  bool all = libs.count("ALL");
+  bool all = libs.contains("ALL");
 
   auto visit = [&](InputFile *file) {
     if (file->archiveName.empty() ||
-        !(all || libs.count(path::filename(file->archiveName))))
+        !(all || libs.contains(path::filename(file->archiveName))))
       return;
     ArrayRef<Symbol *> symbols = file->getSymbols();
     if (isa<ELFFileBase>(file))
@@ -2687,7 +2702,7 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
   for (BitcodeFile *file : ctx.lazyBitcodeFiles)
     bufs.insert(file->mb.getBufferStart());
   for (MemoryBuffer &mb : llvm::make_pointee_range(ctx.memoryBuffers))
-    if (bufs.count(mb.getBufferStart()))
+    if (bufs.contains(mb.getBufferStart()))
       mb.dontNeedIfMmap();
 }
 
@@ -2944,14 +2959,14 @@ static void readSecurityNotes(Ctx &ctx) {
 
     reportUnless(ctx.arg.zBtiReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
-        << f
-        << ": -z bti-report: file does not have "
+        << f << ": " << ctx.arg.zBtiReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
     reportUnless(ctx.arg.zGcsReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
-        << f
-        << ": -z gcs-report: file does not have "
+        << f << ": " << ctx.arg.zGcsReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
 
     reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
@@ -3006,10 +3021,6 @@ static void readSecurityNotes(Ctx &ctx) {
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-      if (ctx.arg.zBtiReport == ReportPolicy::None)
-        Warn(ctx) << f
-                  << ": -z force-bti: file does not have "
-                     "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
     } else if (ctx.arg.zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
       if (ctx.arg.zCetReport == ReportPolicy::None)

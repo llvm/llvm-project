@@ -573,8 +573,7 @@ define i8 @shuf8i1_10_2_9_u_3_u_2_u(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL_BW_DQ-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [8,2,10,3,3,2,2,3]
 ; VL_BW_DQ-NEXT:    vpermi2d %ymm1, %ymm0, %ymm2
-; VL_BW_DQ-NEXT:    vpmovd2m %ymm2, %k0
-; VL_BW_DQ-NEXT:    kmovd %k0, %eax
+; VL_BW_DQ-NEXT:    vmovmskps %ymm2, %eax
 ; VL_BW_DQ-NEXT:    # kill: def $al killed $al killed $eax
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
@@ -615,8 +614,7 @@ define i8 @shuf8i1_0_1_4_5_u_u_u_u(i8 %a) {
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2d %k0, %ymm0
 ; VL_BW_DQ-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; VL_BW_DQ-NEXT:    vpmovd2m %ymm0, %k0
-; VL_BW_DQ-NEXT:    kmovd %k0, %eax
+; VL_BW_DQ-NEXT:    vmovmskps %ymm0, %eax
 ; VL_BW_DQ-NEXT:    # kill: def $al killed $al killed $eax
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
@@ -661,8 +659,7 @@ define i8 @shuf8i1_9_6_1_0_3_7_7_0(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL_BW_DQ-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [8,6,1,0,3,7,7,0]
 ; VL_BW_DQ-NEXT:    vpermi2d %ymm1, %ymm0, %ymm2
-; VL_BW_DQ-NEXT:    vpmovd2m %ymm2, %k0
-; VL_BW_DQ-NEXT:    kmovd %k0, %eax
+; VL_BW_DQ-NEXT:    vmovmskps %ymm2, %eax
 ; VL_BW_DQ-NEXT:    # kill: def $al killed $al killed $eax
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
@@ -703,8 +700,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0(i8 %a) {
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2d %k0, %ymm0
 ; VL_BW_DQ-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[4,5,6,7],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[8,9,10,11],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; VL_BW_DQ-NEXT:    vpmovd2m %ymm0, %k0
-; VL_BW_DQ-NEXT:    kmovd %k0, %eax
+; VL_BW_DQ-NEXT:    vmovmskps %ymm0, %eax
 ; VL_BW_DQ-NEXT:    # kill: def $al killed $al killed $eax
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
@@ -746,8 +742,7 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; VL_BW_DQ-NEXT:    vpmovm2d %k0, %ymm0
 ; VL_BW_DQ-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; VL_BW_DQ-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],mem[1,2,3,4,5,6,7]
-; VL_BW_DQ-NEXT:    vpmovd2m %ymm0, %k0
-; VL_BW_DQ-NEXT:    kmovd %k0, %eax
+; VL_BW_DQ-NEXT:    vmovmskps %ymm0, %eax
 ; VL_BW_DQ-NEXT:    # kill: def $al killed $al killed $eax
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq
@@ -796,8 +791,7 @@ define i8 @shuf8i1_9_6_1_10_3_7_7_0_all_ones(<8 x i1> %a) {
 ; VL_BW_DQ-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [9,1,2,3,4,5,6,7]
 ; VL_BW_DQ-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; VL_BW_DQ-NEXT:    vpermt2d %ymm0, %ymm1, %ymm2
-; VL_BW_DQ-NEXT:    vpmovd2m %ymm2, %k0
-; VL_BW_DQ-NEXT:    kmovd %k0, %eax
+; VL_BW_DQ-NEXT:    vmovmskps %ymm2, %eax
 ; VL_BW_DQ-NEXT:    # kill: def $al killed $al killed $eax
 ; VL_BW_DQ-NEXT:    vzeroupper
 ; VL_BW_DQ-NEXT:    retq

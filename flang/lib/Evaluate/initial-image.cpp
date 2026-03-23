@@ -28,43 +28,57 @@ auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
       return SizeMismatch;
     } else {
       auto at{x.lbounds()};
+      Result result{OkNoChange};
       for (; elements-- > 0; x.IncrementSubscripts(at)) {
         auto scalar{x.At(at)};
         // TODO: length type parameter values?
         for (const auto &[symbolRef, indExpr] : scalar) {
           const Symbol &component{*symbolRef};
+          Result status{OkNoChange};
           if (component.offset() + component.size() > elementBytes) {
             return SizeMismatch;
           } else if (IsPointer(component)) {
-            AddPointer(offset + component.offset(), indExpr.value());
+            status = AddPointer(offset + component.offset(), indExpr.value());
           } else if (IsAllocatable(component) || IsAutomatic(component)) {
             return NotAConstant;
-          } else if (auto result{Add(offset + component.offset(),
-                         component.size(), indExpr.value(), context)};
-                     result != Ok) {
-            return result;
+          } else {
+            status = Add(offset + component.offset(), component.size(),
+                indExpr.value(), context);
+          }
+          if (status == Ok) {
+            result = Ok;
+          } else if (status != OkNoChange) {
+            return status;
           }
         }
         offset += elementBytes;
       }
+      return result;
     }
-    return Ok;
   }
 }
 
-void InitialImage::AddPointer(
-    ConstantSubscript offset, const Expr<SomeType> &pointer) {
-  pointers_.emplace(offset, pointer);
+auto InitialImage::AddPointer(
+    ConstantSubscript offset, const Expr<SomeType> &pointer) -> Result {
+  auto [iter, isNew]{pointers_.emplace(offset, pointer)};
+  return !isNew && iter->second == pointer ? OkNoChange : Ok;
 }
 
-void InitialImage::Incorporate(ConstantSubscript toOffset,
+bool InitialImage::Incorporate(ConstantSubscript toOffset,
     const InitialImage &from, ConstantSubscript fromOffset,
     ConstantSubscript bytes) {
   CHECK(from.pointers_.empty()); // pointers are not allowed in EQUIVALENCE
   CHECK(fromOffset >= 0 && bytes >= 0 &&
       static_cast<std::size_t>(fromOffset + bytes) <= from.size());
   CHECK(static_cast<std::size_t>(toOffset + bytes) <= size());
-  std::memcpy(&data_[toOffset], &from.data_[fromOffset], bytes);
+  auto *dest{&data_[toOffset]};
+  const auto *source{&from.data_[fromOffset]};
+  if (std::memcmp(dest, source, bytes) != 0) {
+    std::memcpy(dest, source, bytes);
+    return true;
+  } else {
+    return false; // no change
+  }
 }
 
 // Classes used with common::SearchTypes() to (re)construct Constant<> values

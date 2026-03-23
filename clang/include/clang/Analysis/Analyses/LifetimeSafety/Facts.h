@@ -14,14 +14,17 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
 
+#include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
+#include <optional>
 
 namespace clang::lifetimes::internal {
 
@@ -44,10 +47,14 @@ public:
     OriginFlow,
     /// An origin is used (eg. appears as l-value expression like DeclRefExpr).
     Use,
+    /// An origin that is moved (e.g., passed to an rvalue reference parameter).
+    MovedOrigin,
     /// A marker for a specific point in the code, for testing.
     TestPoint,
     /// An origin that escapes the function scope (e.g., via return).
     OriginEscapes,
+    /// An origin is invalidated (e.g. vector resized).
+    InvalidateOrigin,
   };
 
 private:
@@ -97,19 +104,23 @@ public:
 
 class ExpireFact : public Fact {
   LoanID LID;
+  // Expired origin (e.g., its variable goes out of scope).
+  std::optional<OriginID> OID;
   SourceLocation ExpiryLoc;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Expire; }
 
-  ExpireFact(LoanID LID, SourceLocation ExpiryLoc)
-      : Fact(Kind::Expire), LID(LID), ExpiryLoc(ExpiryLoc) {}
+  ExpireFact(LoanID LID, SourceLocation ExpiryLoc,
+             std::optional<OriginID> OID = std::nullopt)
+      : Fact(Kind::Expire), LID(LID), OID(OID), ExpiryLoc(ExpiryLoc) {}
 
   LoanID getLoanID() const { return LID; }
+  std::optional<OriginID> getOriginID() const { return OID; }
   SourceLocation getExpiryLoc() const { return ExpiryLoc; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &LM,
-            const OriginManager &) const override;
+            const OriginManager &OM) const override;
 };
 
 class OriginFlowFact : public Fact {
@@ -136,19 +147,82 @@ public:
             const OriginManager &OM) const override;
 };
 
+/// Represents that an origin escapes the current scope through various means.
+/// This is the base class for different escape scenarios.
 class OriginEscapesFact : public Fact {
   OriginID OID;
-  const Expr *EscapeExpr;
 
 public:
+  /// The way an origin can escape the current scope.
+  enum class EscapeKind : uint8_t {
+    Return, /// Escapes via return statement.
+    Field,  /// Escapes via assignment to a field.
+    Global, /// Escapes via assignment to global storage.
+  } EscKind;
+
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::OriginEscapes;
   }
 
-  OriginEscapesFact(OriginID OID, const Expr *EscapeExpr)
-      : Fact(Kind::OriginEscapes), OID(OID), EscapeExpr(EscapeExpr) {}
+  OriginEscapesFact(OriginID OID, EscapeKind EscKind)
+      : Fact(Kind::OriginEscapes), OID(OID), EscKind(EscKind) {}
   OriginID getEscapedOriginID() const { return OID; }
-  const Expr *getEscapeExpr() const { return EscapeExpr; };
+  EscapeKind getEscapeKind() const { return EscKind; }
+};
+
+/// Represents that an origin escapes via a return statement.
+class ReturnEscapeFact : public OriginEscapesFact {
+  const Expr *ReturnExpr;
+
+public:
+  ReturnEscapeFact(OriginID OID, const Expr *ReturnExpr)
+      : OriginEscapesFact(OID, EscapeKind::Return), ReturnExpr(ReturnExpr) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Return;
+  }
+  const Expr *getReturnExpr() const { return ReturnExpr; };
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+/// Represents that an origin escapes via assignment to a field.
+/// Example: `this->view = local_var;` where local_var outlives the assignment
+/// but not the object containing the field.
+class FieldEscapeFact : public OriginEscapesFact {
+  const FieldDecl *FDecl;
+
+public:
+  FieldEscapeFact(OriginID OID, const FieldDecl *FDecl)
+      : OriginEscapesFact(OID, EscapeKind::Field), FDecl(FDecl) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Field;
+  }
+  const FieldDecl *getFieldDecl() const { return FDecl; };
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+/// Represents that an origin escapes via assignment to global or static
+/// storage. Example: `global_storage = local_var;`
+class GlobalEscapeFact : public OriginEscapesFact {
+  const VarDecl *Global;
+
+public:
+  GlobalEscapeFact(OriginID OID, const VarDecl *VDecl)
+      : OriginEscapesFact(OID, EscapeKind::Global), Global(VDecl) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Global;
+  }
+  const VarDecl *getGlobal() const { return Global; };
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
@@ -175,6 +249,50 @@ public:
             const OriginManager &OM) const override;
 };
 
+/// Represents that an origin's storage has been invalidated by a container
+/// operation (e.g., vector::push_back may reallocate, invalidating iterators).
+/// Created when a container method that may invalidate references/iterators
+/// is called on the container.
+class InvalidateOriginFact : public Fact {
+  OriginID OID;
+  const Expr *InvalidationExpr;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::InvalidateOrigin;
+  }
+
+  InvalidateOriginFact(OriginID OID, const Expr *InvalidationExpr)
+      : Fact(Kind::InvalidateOrigin), OID(OID),
+        InvalidationExpr(InvalidationExpr) {}
+
+  OriginID getInvalidatedOrigin() const { return OID; }
+  const Expr *getInvalidationExpr() const { return InvalidationExpr; }
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+/// Top-level origin of the expression which was found to be moved, e.g, when
+/// being used as an argument to an r-value reference parameter.
+class MovedOriginFact : public Fact {
+  const OriginID MovedOrigin;
+  const Expr *MoveExpr;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::MovedOrigin;
+  }
+
+  MovedOriginFact(const Expr *MoveExpr, OriginID MovedOrigin)
+      : Fact(Kind::MovedOrigin), MovedOrigin(MovedOrigin), MoveExpr(MoveExpr) {}
+
+  OriginID getMovedOrigin() const { return MovedOrigin; }
+  const Expr *getMoveExpr() const { return MoveExpr; }
+
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
 /// A dummy-fact used to mark a specific point in the code for testing.
 /// It is generated by recognizing a `void("__lifetime_test_point_...")` cast.
 class TestPointFact : public Fact {
@@ -195,7 +313,7 @@ public:
 class FactManager {
 public:
   FactManager(const AnalysisDeclContext &AC, const CFG &Cfg)
-      : OriginMgr(AC.getASTContext()) {
+      : OriginMgr(AC.getASTContext(), AC.getDecl()) {
     BlockToFacts.resize(Cfg.getNumBlockIDs());
   }
 

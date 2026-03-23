@@ -41,7 +41,7 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
        ++i, ++GTI) {
     Value *Op = *i;
     if (Constant *OpC = dyn_cast<Constant>(Op)) {
-      if (OpC->isZeroValue())
+      if (OpC->isNullValue())
         continue;
 
       // Handle a struct index, which adds its field offset to the pointer.

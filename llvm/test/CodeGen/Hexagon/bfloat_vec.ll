@@ -7,81 +7,86 @@ define dso_local void @bf16_vec_add(ptr noundef %c, ptr noundef %a, ptr noundef 
 ; CHECK-LABEL: bf16_vec_add:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R7:r[0-9]+]] = #-4
-; CHECK-NEXT:     [[V0:v[0-9]+]] = vmemu([[R2:r[0-9]+]]+#0)
+; CHECK-NEXT:     r7 = #-4
+; CHECK-NEXT:     r6 = ##131071
+; CHECK-NEXT:     allocframe(#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R2]] = ##32768
-; CHECK-NEXT:     [[V1:v[0-9]+]] = vmemu([[R1:r[0-9]+]]+#0)
+; CHECK-NEXT:     r5 = #16
+; CHECK-NEXT:     v0 = vmemu(r2+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[R6:r[0-9]+]] = ##131071
-; CHECK-NEXT:     [[V2:v[0-9]+]] = vxor([[V0]],[[V0]])
-; CHECK-NEXT:     [[V3:v[0-9]+]] = vxor([[V1]],[[V1]])
+; CHECK-NEXT:     v26 = vsplat(r6)
+; CHECK-NEXT:     r2 = ##32768
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V25:v[0-9]+]] = vsplat([[R2]])
-; CHECK-NEXT:     [[R5:r[0-9]+]] = #16
-; CHECK-NEXT:     [[V5_4:v[0-9]+:[0-9]+]].h = vshuffoe([[V0]].h,[[V2]].h)
+; CHECK-NEXT:     v25 = vsplat(r2)
+; CHECK-NEXT:     v2 = vxor(v0,v0)
+; CHECK-NEXT:     v1 = vmemu(r1+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V26:v[0-9]+]] = vsplat([[R6]])
-; CHECK-NEXT:     [[R4:r[0-9]+]] = #32767
-; CHECK-NEXT:     [[V31_30:v[0-9]+:[0-9]+]].h = vshuffoe([[V1]].h,[[V3]].h)
+; CHECK-NEXT:     r4 = #32767
+; CHECK-NEXT:     v5:4.h = vshuffoe(v0.h,v2.h)
+; CHECK-NEXT:     v3 = vxor(v1,v1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V5_4]] = vshuff([[V5:v[0-9]+]],[[V4:v[0-9]+]],[[R7]])
+; CHECK-NEXT:     v31:30.h = vshuffoe(v1.h,v3.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V31:v[0-9]+]].h = vsplat([[R4]])
-; CHECK-NEXT:     [[V3_2:v[0-9]+:[0-9]+]] = vshuff([[V31]],[[V30:v[0-9]+]],[[R7]])
+; CHECK-NEXT:     v5:4 = vshuff(v5,v4,r7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V2]].qf32 = vadd([[V2]].sf,[[V4]].sf)
+; CHECK-NEXT:     v31.h = vsplat(r4)
+; CHECK-NEXT:     v3:2 = vshuff(v31,v30,r7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V3]].qf32 = vadd([[V3]].sf,[[V5]].sf)
+; CHECK-NEXT:     v2.qf32 = vadd(v2.sf,v4.sf)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V2]].sf = [[V2]].qf32
+; CHECK-NEXT:     v3.qf32 = vadd(v3.sf,v5.sf)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V3]].sf = [[V3]].qf32
-; CHECK-NEXT:     [[V27:v[0-9]+]] = vand([[V2]],[[V25]])
-; CHECK-NEXT:     [[V28:v[0-9]+]] = vand([[V2]],[[V26]])
-; CHECK-NEXT:     [[Q2:q[0-9]+]] = vcmp.eq([[V2]].sf,[[V2]].sf)
+; CHECK-NEXT:     v2.sf = v2.qf32
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V29:v[0-9]+]] = vand([[V3]],[[V25]])
-; CHECK-NEXT:     [[V1]] = vand([[V3]],[[V26]])
-; CHECK-NEXT:     [[Q0:q[0-9]+]] = vcmp.eq([[V28]].w,[[V25]].w)
-; CHECK-NEXT:     [[V4]].w = vadd([[V2]].w,[[V27]].w)
+; CHECK-NEXT:     v3.sf = v3.qf32
+; CHECK-NEXT:     v27 = vand(v2,v25)
+; CHECK-NEXT:     v28 = vand(v2,v26)
+; CHECK-NEXT:     q2 = vcmp.eq(v2.sf,v2.sf)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V5]].w = vadd([[V3]].w,[[V29]].w)
-; CHECK-NEXT:     [[Q1:q[0-9]+]] = vcmp.eq([[V1]].w,[[V25]].w)
-; CHECK-NEXT:     [[V30:v[0-9]+]] = vmux([[Q0]],[[V2]],[[V4]])
-; CHECK-NEXT:     [[Q3:q[0-9]+]] = vcmp.eq([[V3]].sf,[[V3]].sf)
+; CHECK-NEXT:     v29 = vand(v3,v25)
+; CHECK-NEXT:     v1 = vand(v3,v26)
+; CHECK-NEXT:     q0 = vcmp.eq(v28.w,v25.w)
+; CHECK-NEXT:     v4.w = vadd(v2.w,v27.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V1]] = vmux([[Q1]],[[V3]],[[V5]])
+; CHECK-NEXT:     v5.w = vadd(v3.w,v29.w)
+; CHECK-NEXT:     q1 = vcmp.eq(v1.w,v25.w)
+; CHECK-NEXT:     v30 = vmux(q0,v2,v4)
+; CHECK-NEXT:     q3 = vcmp.eq(v3.sf,v3.sf)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V0]].uw = vlsr([[V30]].uw,[[R5]])
+; CHECK-NEXT:     v1 = vmux(q1,v3,v5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V1]].uw = vlsr([[V1]].uw,[[R5]])
-; CHECK-NEXT:     [[V0]] = vmux([[Q2]],[[V0]],[[V31]])
+; CHECK-NEXT:     v0.uw = vlsr(v30.uw,r5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V1]] = vmux([[Q3]],[[V1]],[[V31]])
+; CHECK-NEXT:     v1.uw = vlsr(v1.uw,r5)
+; CHECK-NEXT:     v0 = vmux(q2,v0,v31)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     [[V0]].uh = vpack([[V1]].w,[[V0]].w):sat
+; CHECK-NEXT:     v1 = vmux(q3,v1,v31)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     jumpr [[R31:r[0-9]+]]
-; CHECK-NEXT:     vmemu([[R0:r[0-9]+]]+#0) = [[V0]]
+; CHECK-NEXT:     v0.uh = vpack(v1.w,v0.w):sat
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmemu(r0+#0) = v0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
 ; CHECK-NEXT:    }
 
 
@@ -95,11 +100,25 @@ entry:
 
 define dso_local void @copy1d(ptr noundef readonly captures(none) %X, ptr noundef writeonly captures(none) %Y) local_unnamed_addr #0 {
 ; CHECK-LABEL: copy1d:
-; CHECK: v[[X_HI:[0-9]+]] = vmemu(r0+#1)
-; CHECK: v[[X_LO:[0-9]+]] = vmemu(r0+#0)
-; CHECK: vmemu(r1+#1) = v[[X_HI]]
-; CHECK: jumpr [[RET:r[0-9]+]]
-; CHECK: vmemu(r1+#0) = v[[X_LO]]
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    {
+; CHECK-NEXT:     allocframe(r29,#0):raw
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vmemu(r0+#1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v1 = vmemu(r0+#0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmemu(r1+#1) = v0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     vmemu(r1+#0) = v1
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:    }
 entry:
   %0 = load <128 x half>, ptr %X, align 2
   store <128 x half> %0, ptr %Y, align 2
