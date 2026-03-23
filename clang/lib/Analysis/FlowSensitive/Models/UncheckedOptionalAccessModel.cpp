@@ -188,8 +188,8 @@ bool isDesugaredTypeOptionalOrPointerToOptional(QualType Ty) {
 // calling a method on `optional`.
 //
 // Instead, starting with the most derived type, we need to follow the chain of
-// casts, until we reach a class that matches `isDesugaredTypeOptional`
-// (if at all).
+// casts, until we reach a class that matches
+// `isDesugaredTypeOptionalOrPointerToOptional` (if at all).
 bool hasReceiverTypeDesugaringToOptional(const Expr *E) {
   auto *Cast = dyn_cast<ImplicitCastExpr>(E->IgnoreParens());
   if (Cast == nullptr || Cast->getCastKind() != CK_UncheckedDerivedToBase)
