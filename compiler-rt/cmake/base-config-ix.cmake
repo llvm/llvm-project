@@ -16,17 +16,18 @@ check_include_file(unwind.h HAVE_UNWIND_H)
 # Used by sanitizer_common and tests.
 if ("${CMAKE_SYSTEM_NAME}" MATCHES AIX)
   set(_rpc_xdr_header "tirpc/rpc/xdr.h")
+  if (COMPILER_RT_BUILD_SANITIZERS)
+    set(_default_require_rpc_xdr_h ON)
+  else()
+    set(_default_require_rpc_xdr_h OFF)
+  endif()
 else()
   set(_rpc_xdr_header "rpc/xdr.h")
-endif()
-check_include_file(${_rpc_xdr_header} HAVE_RPC_XDR_H)
-if (COMPILER_RT_BUILD_SANITIZERS)
-  set(_default_require_rpc_xdr_h ON)
-else()
   set(_default_require_rpc_xdr_h OFF)
 endif()
+check_include_file(${_rpc_xdr_header} HAVE_RPC_XDR_H)
 option(COMPILER_RT_REQUIRE_RPC_XDR_H
-  "Require ${_rpc_xdr_header} for sanitizer builds (default ON when sanitizers are enabled, OFF otherwise). \
+  "Require ${_rpc_xdr_header} for sanitizer builds (default ON for AIX when sanitizers are enabled, OFF elsewhere). \
 Set to OFF to bypass the missing-header error."
   ${_default_require_rpc_xdr_h})
 if (NOT HAVE_RPC_XDR_H)
