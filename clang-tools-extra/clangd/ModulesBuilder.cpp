@@ -589,9 +589,8 @@ void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
     if (llvm::sys::path::is_relative(ModuleFilePath)) {
       AbsoluteModuleFilePath = Inputs.CompileCommand.Directory;
       llvm::sys::path::append(AbsoluteModuleFilePath, ModuleFilePath);
-    } else {
+    } else
       AbsoluteModuleFilePath = ModuleFilePath;
-    }
 
     if (IsModuleFileUpToDate(AbsoluteModuleFilePath, BuiltModuleFiles,
                              TFS.view(std::nullopt))) {
