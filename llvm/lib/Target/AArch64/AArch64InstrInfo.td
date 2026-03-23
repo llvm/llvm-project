@@ -227,7 +227,7 @@ def HasSVE_B16MM     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_B16MM), "sve-b16mm">;
 def HasF16MM         : Predicate<"Subtarget->hasF16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16MM), "f16mm">;
-def HasSVE2p3        : Predicate<"Subtarget->hasSVE2p3()">,
+def HasSVE2p3        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p3), "sve2p3">;
 def HasSME2p3        : Predicate<"Subtarget->isStreaming() && Subtarget->hasSME2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p3), "sme2p3">;
@@ -313,15 +313,6 @@ def HasNonStreamingSVE2p2_or_SME2p2
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
                 "sme2p2 or sve2p2">;
-def HasNonStreamingSVE2p3
-    : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p3()">,
-                AssemblerPredicateWithAll<(all_of FeatureSVE2p3), "sve2p3">;
-def HasNonStreamingSVE2p3_or_SME2p3
-    : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p3()) ||"
-                "(Subtarget->isStreaming() && Subtarget->hasSME2p3())">,
-                AssemblerPredicateWithAll<(any_of FeatureSVE2p3, FeatureSME2p3),
-                "sme2p3 or sve2p3">;
-
 def HasSMEF16F16_or_SMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),

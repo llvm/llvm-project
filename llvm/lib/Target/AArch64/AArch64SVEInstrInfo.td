@@ -4899,14 +4899,14 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
 
 } // End HasSME2p3orSVE2p3
 
-let Predicates = [HasNonStreamingSVE2p3_or_SME2p3] in {
+let Predicates = [HasSVE2p3_or_SME2p3] in {
   defm LUTI6_Z2ZZI : sve2_luti6_vector_index<"luti6">;
 }
 
 //===----------------------------------------------------------------------===//
 // SVE2.3 instructions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasNonStreamingSVE2p3] in {
+let Predicates = [HasSVE2p3] in {
   defm LUTI6_Z2ZZ : sve2_luti6_vector<"luti6", int_aarch64_sve_luti6>;
 }
 
