@@ -67,7 +67,7 @@ define i64 @select_nonnegative_slt(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i64 @select_nonnegative_slt(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 [[X]])
-; CHECK-NEXT:    [[COND:%.*]] = sub nsw i32 [[Y]], [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = sub nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i32 [[COND]] to i64
 ; CHECK-NEXT:    ret i64 [[CONV]]
 ;
@@ -105,23 +105,6 @@ define i64 @sgt_commuted(i32 %x, i32 %y) {
   %cmp = icmp slt i32 %y, %x ;
   %sub = sub nsw i32 %x, %y ;
   %sel = select i1 %cmp, i32 %sub, i32 0 ; (X > Y) ? X - Y : 0
-  %ext = sext i32 %sel to i64
-  ret i64 %ext
-}
-
-; TVal strictly greater than 0
-define i64 @slt_positive_tval(i32 %x, i32 %y) {
-;
-; CHECK-LABEL: define i64 @slt_positive_tval(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 [[X]])
-; CHECK-NEXT:    [[SEL:%.*]] = sub nsw i32 [[Y]], [[TMP1]]
-; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i32 [[SEL]] to i64
-; CHECK-NEXT:    ret i64 [[EXT]]
-;
-  %cmp = icmp slt i32 %x, %y
-  %sub = sub nsw i32 %x, %y
-  %sel = select i1 %cmp, i32 1, i32 %sub ; (X < Y) ? 1 : X - Y
   %ext = sext i32 %sel to i64
   ret i64 %ext
 }

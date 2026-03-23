@@ -253,7 +253,7 @@ define i8 @umin_umax(i8 %x) {
 define i8 @not_smax(i8 %i41, i8 %i43) {
 ; CHECK-LABEL: @not_smax(
 ; CHECK-NEXT:    [[I43:%.*]] = call i8 @llvm.smin.i8(i8 [[I41:%.*]], i8 [[I42:%.*]])
-; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I41]], [[I43]]
+; CHECK-NEXT:    [[I46:%.*]] = sub nsw i8 [[I42]], [[I43]]
 ; CHECK-NEXT:    ret i8 [[I46]]
 ;
   %i44 = icmp slt i8 %i41, %i43

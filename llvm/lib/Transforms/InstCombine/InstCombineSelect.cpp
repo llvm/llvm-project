@@ -668,17 +668,17 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   Value *CmpRHS = Cmp->getOperand(1);
   ICmpInst::Predicate Pred = Cmp->getPredicate();
 
-  if (TVal->getType()->isIntegerTy() && isKnownNonNegative(TVal, SQ)) {
-    // (X < Y) ? C : (X - Y)     (C non-negative)
+  if (match(TVal, m_Zero())) {
+    // (X < Y) ? 0 : (X - Y)
     if (Pred == CmpInst::ICMP_SLT &&
         match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
-      return Builder.CreateNSWSub(CmpRHS, SMin);
+      return Builder.CreateNSWSub(CmpLHS, SMin);
     }
 
-    // (X > Y) ? C : (Y - X)    (C non-negative)
-    if (Pred == CmpInst::ICMP_SGT && isKnownNonNegative(TVal, SQ) &&
+    // (X > Y) ? 0 : (Y - X)
+    if (Pred == CmpInst::ICMP_SGT &&
         match(FVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS)))) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
@@ -686,24 +686,23 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
     }
   }
 
-  if (FVal->getType()->isIntegerTy() && isKnownNonNegative(FVal, SQ)) {
-    // (X < Y) ? (Y - X) : C    (C non-negative)
+  if (match(FVal, m_Zero())) {
+    // (X < Y) ? (Y - X) : 0
     if (Pred == CmpInst::ICMP_SLT &&
         match(TVal, m_NSWSub(m_Specific(CmpRHS), m_Specific(CmpLHS)))) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
-      return Builder.CreateNSWSub(CmpRHS, SMin);
+      return Builder.CreateNSWSub(CmpRHS, SMin); // y - smin(x,y) => y-x
     }
 
-    // (X > Y) ? (X - Y) : C    (C non-negative)
-    if (Pred == CmpInst::ICMP_SGT && isKnownNonNegative(FVal, SQ) &&
+    // (X > Y) ? (X - Y) : 0
+    if (Pred == CmpInst::ICMP_SGT &&
         match(TVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
       Value *SMin =
           Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpLHS, CmpRHS);
       return Builder.CreateNSWSub(CmpLHS, SMin);
     }
   }
-
   // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
   // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
   // This transformation is valid when overflow corresponding to the sign of
