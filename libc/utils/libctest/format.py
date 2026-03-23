@@ -24,10 +24,14 @@ one arg per line, a "---" separator, then one KEY=VALUE env entry per line.
 
 import os
 import shlex
+import sys
 
 import lit.formats
 import lit.Test
 import lit.util
+
+
+kIsWindows = sys.platform in ["win32", "cygwin"]
 
 
 class LibcTest(lit.formats.ExecutableTest):
@@ -64,7 +68,8 @@ class LibcTest(lit.formats.ExecutableTest):
         """
         Check if a file is a libc test executable we should run.
 
-        Recognized patterns (all must end with .__build__):
+        Recognized patterns (all must end with .__build__, optionally followed
+        by .exe on Windows):
           libc.test.src.<category>.<test_name>.__build__
           libc.test.src.<category>.<test_name>.__unit__[.<opts>...].__build__
           libc.test.src.<category>.<test_name>.__hermetic__[.<opts>...].__build__
@@ -72,22 +77,39 @@ class LibcTest(lit.formats.ExecutableTest):
           libc.test.include.<test_name>.__hermetic__[.<opts>...].__build__
           libc.test.integration.<category>.<test_name>.__build__
         """
-        if not filename.endswith(".__build__"):
+        test_name = filename
+        if kIsWindows and filename.endswith(".exe"):
+            test_name = filename[: -len(".exe")]
+
+        if not test_name.endswith(".__build__"):
             return False
-        if filename.startswith("libc.test.src."):
+        if test_name.startswith("libc.test.src."):
             pass  # Accept all src tests ending in .__build__
-        elif filename.startswith("libc.test.include."):
-            if ".__unit__." not in filename and ".__hermetic__." not in filename:
+        elif test_name.startswith("libc.test.include."):
+            if ".__unit__." not in test_name and ".__hermetic__." not in test_name:
                 return False
-        elif filename.startswith("libc.test.integration."):
+        elif test_name.startswith("libc.test.integration."):
             pass  # Accept all integration tests ending in .__build__
         else:
             return False
         if not os.path.isfile(filepath):
             return False
-        if not os.access(filepath, os.X_OK):
+        if not kIsWindows and not os.access(filepath, os.X_OK):
             return False
         return True
+
+    def _getParamsPath(self, test_path):
+        params_path = test_path + ".params"
+        if os.path.isfile(params_path):
+            return params_path
+
+        root, ext = os.path.splitext(test_path)
+        if ext.lower() == ".exe":
+            params_path = root + ".params"
+            if os.path.isfile(params_path):
+                return params_path
+
+        return None
 
     def execute(self, test, litConfig):
         """
@@ -108,8 +130,8 @@ class LibcTest(lit.formats.ExecutableTest):
         # Format: one arg per line, "---" separator, then KEY=VALUE env lines.
         extra_args = []
         extra_env = {}
-        params_path = test_path + ".params"
-        if os.path.isfile(params_path):
+        params_path = self._getParamsPath(test_path)
+        if params_path:
             with open(params_path) as f:
                 content = f.read()
             args_section, _, env_section = content.partition("---\n")

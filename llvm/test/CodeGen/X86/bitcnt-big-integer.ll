@@ -836,12 +836,11 @@ define <2 x i64> @load_ctpop_v2i256_v2i64(ptr %p0) nounwind {
 ; AVX512POPCNT-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
 ; AVX512POPCNT-NEXT:    vpmovqb %zmm1, %xmm1
-; AVX512POPCNT-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm1, %xmm1
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm0, %zmm0
 ; AVX512POPCNT-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
 ; AVX512POPCNT-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512POPCNT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512POPCNT-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512POPCNT-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_ctpop_v2i256_v2i64:
@@ -872,12 +871,11 @@ define <2 x i64> @load_ctpop_v2i256_v2i64(ptr %p0) nounwind {
 ; AVX512VLPOPCNT:       # %bb.0:
 ; AVX512VLPOPCNT-NEXT:    vpopcntq 32(%rdi), %ymm0
 ; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm0, %xmm0
+; AVX512VLPOPCNT-NEXT:    vpopcntq (%rdi), %ymm1
+; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm1, %xmm1
+; AVX512VLPOPCNT-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512VLPOPCNT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VLPOPCNT-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX512VLPOPCNT-NEXT:    vpopcntq (%rdi), %ymm2
-; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm2, %xmm2
-; AVX512VLPOPCNT-NEXT:    vpsadbw %xmm1, %xmm2, %xmm1
-; AVX512VLPOPCNT-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512VLPOPCNT-NEXT:    vzeroupper
 ; AVX512VLPOPCNT-NEXT:    retq
   %a0 = load <2 x i256>, ptr %p0
