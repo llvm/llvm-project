@@ -403,8 +403,10 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
     return false;
 
   unsigned Len = Ty->getScalarSizeInBits();
-  if (Len != 16 && Len != 32 && Len != 64)
+
+  if (Len > 64 || Len <= 8 || Len % 8 != 0)
     return false;
+
   APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
   APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
   APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
@@ -415,68 +417,52 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
   if (!match(&I, m_And(m_Value(Add1), m_SpecificInt(MaskRes))))
     return false;
 
-  // Matching "x = x + (x >> 32)" for 64-bit.
-  Value *Add2 = Add1;
-  if (Len == 64) {
-    if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(32)),
-                             m_Deferred(Add2)))) {
+  Value *Add2;
+  for (unsigned I = Len; I >= 16; I = I / 2) {
+    // Matching "x = x + (x >> I/2)" for I-bit.
+    if (Len >= I &&
+        !match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
+                             m_Deferred(Add2))))
       return false;
-    }
+    Add1 = Add2;
+    Add2 = nullptr;
   }
 
-  // Matching "x = x + (x >> 16)" for 32-bit and 64-bit.
-  Value *Add3 = Add2;
-  if (Len >= 32) {
-    if (!match(Add2, m_c_Add(m_LShr(m_Value(Add3), m_SpecificInt(16)),
-                             m_Deferred(Add3)))) {
-      return false;
-    }
-  }
-
-  // Matching "x = x + (x >> 8)".
-  Value *And1;
-  if (!match(Add3, m_c_Add(m_LShr(m_Value(And1), m_SpecificInt(8)),
-                           m_Deferred(And1)))) {
-    return false;
-  }
-
+  Value *And1 = Add1;
+  Add2 = nullptr;
   // Matching "x = (x + (x >> 4)) & 0x0F0F0F0F".
-  Value *Add4;
-  if (!match(And1, m_And(m_c_Add(m_LShr(m_Value(Add4), m_SpecificInt(4)),
-                                 m_Deferred(Add4)),
-                         m_SpecificInt(Mask0F)))) {
+  if (!match(And1, m_And(m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(4)),
+                                 m_Deferred(Add2)),
+                         m_SpecificInt(Mask0F))))
     return false;
-  }
 
   Value *Sub1;
   llvm::APInt NegThree(/*BitWidth=*/Len, /*Value=*/-3,
                        /*isSigned=*/true);
   // x = (x & 0x33333333) + ((x >> 2) & 0x33333333)".
-  if (!(match(Add4, m_c_Add(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+  if (!(match(Add2, m_c_Add(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
                                   m_SpecificInt(Mask33)),
                             m_And(m_Deferred(Sub1), m_SpecificInt(Mask33)))) ||
         // Matching "x = x - 3*((x >> 2) & 0x33333333)".
-        match(Add4, m_Add(m_Mul(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+        match(Add2, m_Add(m_Mul(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
                                       m_SpecificInt(Mask33)),
                                 m_SpecificInt(NegThree)),
-                          m_Deferred(Sub1))))) {
+                          m_Deferred(Sub1)))))
     return false;
-  }
 
   Value *Root;
   // x = x - ((x >> 1) & 0x55555555);
-  if (match(Sub1, m_Sub(m_Value(Root),
-                        m_And(m_LShr(m_Deferred(Root), m_SpecificInt(1)),
-                              m_SpecificInt(Mask55))))) {
-    LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-    IRBuilder<> Builder(&I);
-    I.replaceAllUsesWith(
-        Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
-    ++NumPopCountRecognized;
-    return true;
-  }
+  if (!match(Sub1, m_Sub(m_Value(Root),
+                         m_And(m_LShr(m_Deferred(Root), m_SpecificInt(1)),
+                               m_SpecificInt(Mask55)))))
+    return false;
 
-  return false;
+  LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+  IRBuilder<> Builder(&I);
+  I.replaceAllUsesWith(
+      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+  ++NumPopCountRecognized;
+  return true;
 }
 
 /// Fold smin(smax(fptosi(x), C1), C2) to llvm.fptosi.sat(x), providing C1 and
