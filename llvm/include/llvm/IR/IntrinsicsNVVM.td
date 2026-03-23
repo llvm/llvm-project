@@ -1145,7 +1145,8 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
-class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num, string ElemType = "i32"> {
+class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num,
+                                    string ElemType = "i32"> {
   int shift = !cond(!eq(Shape, "16x128b"): 1,
                     !eq(Shape, "16x256b"): 2,
                     true : 0);
@@ -1153,15 +1154,7 @@ class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num, string ElemType = "i3
   int veclen = !shl(1, !add(Num, shift));
 
   int valid = !le(veclen, 128);
-  LLVMType type = !cond(!eq(veclen,   1): LLVMType<!cast<ValueType>(ElemType)>,
-                        !eq(veclen,   2): LLVMType<!cast<ValueType>("v"#2#ElemType)>,
-                        !eq(veclen,   4): LLVMType<!cast<ValueType>("v"#4#ElemType)>,
-                        !eq(veclen,   8): LLVMType<!cast<ValueType>("v"#8#ElemType)>,
-                        !eq(veclen,  16): LLVMType<!cast<ValueType>("v"#16#ElemType)>,
-                        !eq(veclen,  32): LLVMType<!cast<ValueType>("v"#32#ElemType)>,
-                        !eq(veclen,  64): LLVMType<!cast<ValueType>("v"#64#ElemType)>,
-                        !eq(veclen, 128): LLVMType<!cast<ValueType>("v"#128#ElemType)>,
-                        true : llvm_void_ty);
+  LLVMType type = LLVMType<!cast<ValueType>("v"#veclen#ElemType)>;
 }
 
 class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
