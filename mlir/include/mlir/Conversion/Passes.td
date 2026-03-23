@@ -1005,12 +1005,16 @@ def ConvertMemRefToSPIRVPass : Pass<"convert-memref-to-spirv"> {
 def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
   let summary = "Convert Shard dialect to MPI dialect.";
   let description = [{
-    This pass converts communication operations from the Shard dialect to the
-    MPI dialect.
-    If it finds the DLTI attribute "MPI:comm_world-rank" on the module it will
-    use that integer value instead of calling MPI_Comm_rank. This allows
-    optimizations like constant shape propagation and fusion because
-    shard/partition sizes depend on the rank.
+    This pass lowers communication operations from the Shard dialect to the MPI dialect.
+    If the module contains the DLTI attribute "MPI:comm_world-rank", its integer value is
+    used as the rank instead of calling MPI_Comm_rank. This enables optimizations such as
+    constant shape propagation and fusion, since shard and partition sizes can be
+    determined from the rank.
+    For some operations the conversion may require intermediate memref allocations.
+    For compatibility with the buffer deallocation pipeline, these allocations are only
+    deallocated when the lowered operations return buffers. When the operation was
+    defined in tensor-land, no explicit deallocation is performed. This means that the
+    deallocation must be handled by different means, e.g. by the deallocation pipeline.
   }];
   let dependentDialects = [
     "affine::AffineDialect",
@@ -1521,8 +1525,8 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
     operations. The lowering pass provides several options to control
     the kinds of optimizations that are allowed. It also provides options
     that enable the use of one or more architectural-specific dialects
-    (AMX, X86, ArmNeon, ArmSVE, etc.) in combination with the
-    architectural-neutral vector dialect lowering.
+    (X86, ArmNeon, ArmSVE, etc.) in combination with the architectural-neutral
+    vector dialect lowering.
 
   }];
   // Override explicitly in C++ to allow conditional dialect dependence.
@@ -1544,10 +1548,6 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "vector access are naturally aligned. If operations have an "
            "alignment attribute set, the alignment attribute takes priority "
            "over this option ">,
-    Option<"amx", "enable-amx",
-           "bool", /*default=*/"false",
-           "Enables the use of AMX dialect while lowering the vector "
-	   "dialect.">,
     Option<"armNeon", "enable-arm-neon",
            "bool", /*default=*/"false",
            "Enables the use of ArmNeon dialect while lowering the vector "
@@ -1626,10 +1626,10 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
 //===----------------------------------------------------------------------===//
 
 def ConvertVectorToAMX : Pass<"convert-vector-to-amx"> {
-  let summary = "Lower the operations from the vector dialect into the AMX "
-                "dialect";
+  let summary = "Lower the operations from the vector dialect into the X86 "
+                "dialect AMX operations";
   let dependentDialects = [
-    "affine::AffineDialect", "amx::AMXDialect", "arith::ArithDialect",
+    "affine::AffineDialect", "x86::X86Dialect", "arith::ArithDialect",
     "memref::MemRefDialect", "scf::SCFDialect", "vector::VectorDialect"
   ];
 }

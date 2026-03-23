@@ -65,7 +65,8 @@ LLVM_ABI void thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing);
+        isPrevailing,
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr);
 
 /// Computes a unique hash for the Module considering the current list of
 /// export/import and other global analysis results.

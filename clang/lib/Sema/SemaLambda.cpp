@@ -491,11 +491,6 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
     std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
-  if (NumberingOverride) {
-    Class->setLambdaNumbering(*NumberingOverride);
-    return;
-  }
-
   ContextRAII ManglingContext(*this, Class->getDeclContext());
 
   auto getMangleNumberingContext =
@@ -512,10 +507,23 @@ void Sema::handleLambdaNumbering(
     return &Context.getManglingNumberContext(DC);
   };
 
-  CXXRecordDecl::LambdaNumbering Numbering;
   MangleNumberingContext *MCtx;
-  std::tie(MCtx, Numbering.ContextDecl) =
+  Decl *ContextDecl;
+  std::tie(MCtx, ContextDecl) =
       getCurrentMangleNumberContext(Class->getDeclContext());
+  // getManglingNumber(Method) below may trigger mangling of dependent types
+  // that reference init-captures. Publish the lambda context declaration early
+  // so such mangling can resolve the surrounding context without recursing
+  // through the lambda call operator. This avoids publishing provisional
+  // numbering state before final numbering is assigned below.
+  if (ContextDecl)
+    Class->setLambdaContextDecl(ContextDecl);
+  if (NumberingOverride) {
+    Class->setLambdaNumbering(*NumberingOverride);
+    return;
+  }
+
+  CXXRecordDecl::LambdaNumbering Numbering;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
                 getLangOpts().SYCLIsHost)) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
@@ -525,7 +533,7 @@ void Sema::handleLambdaNumbering(
     // Also force for SYCL, since we need this for the
     // __builtin_sycl_unique_stable_name implementation, which depends on lambda
     // mangling.
-    MCtx = getMangleNumberingContext(Class, Numbering.ContextDecl);
+    MCtx = getMangleNumberingContext(Class, ContextDecl);
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;
   }

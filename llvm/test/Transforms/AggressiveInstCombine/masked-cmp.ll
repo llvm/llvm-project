@@ -16,6 +16,18 @@ define i32 @anyset_two_bit_mask(i32 %x) {
   ret i32 %r
 }
 
+define i1 @anyset_two_bit_mask_trunc(i32 %x) {
+; CHECK-LABEL: @anyset_two_bit_mask_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = lshr i32 %x, 3
+  %o = or i32 %s, %x
+  %r = trunc i32 %o to i1
+  ret i1 %r
+}
+
 define <2 x i32> @anyset_two_bit_mask_uniform(<2 x i32> %x) {
 ; CHECK-LABEL: @anyset_two_bit_mask_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 9)
@@ -61,6 +73,22 @@ define <2 x i32> @anyset_four_bit_mask_uniform(<2 x i32> %x) {
   %o3 = or <2 x i32> %o1, %o2
   %r = and <2 x i32> %o3, <i32 1, i32 1>
   ret <2 x i32> %r
+}
+
+define <2 x i1> @anyset_four_bit_mask_uniform_trunc(<2 x i32> %x) {
+; CHECK-LABEL: @anyset_four_bit_mask_uniform_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 297)
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %t1 = lshr <2 x i32> %x, <i32 3, i32 3>
+  %t2 = lshr <2 x i32> %x, <i32 5, i32 5>
+  %t3 = lshr <2 x i32> %x, <i32 8, i32 8>
+  %o1 = or <2 x i32> %t1, %x
+  %o2 = or <2 x i32> %t2, %t3
+  %o3 = or <2 x i32> %o1, %o2
+  %r = trunc <2 x i32> %o3 to <2 x i1>
+  ret <2 x i1> %r
 }
 
 ; We're not testing the LSB here, so all of the 'or' operands are shifts.
@@ -112,6 +140,18 @@ define i32 @allset_two_bit_mask(i32 %x) {
   ret i32 %r
 }
 
+define i1 @allset_two_bit_mask_trunc(i32 %x) {
+; CHECK-LABEL: @allset_two_bit_mask_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 129
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 129
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = lshr i32 %x, 7
+  %o = and i32 %s, %x
+  %r = trunc i32 %o to i1
+  ret i1 %r
+}
+
 define <2 x i32> @allset_two_bit_mask_uniform(<2 x i32> %x) {
 ; CHECK-LABEL: @allset_two_bit_mask_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 129)
@@ -123,6 +163,18 @@ define <2 x i32> @allset_two_bit_mask_uniform(<2 x i32> %x) {
   %o = and <2 x i32> %s, %x
   %r = and <2 x i32> %o, <i32 1, i32 1>
   ret <2 x i32> %r
+}
+
+define <2 x i1> @allset_two_bit_mask_uniform_trunc(<2 x i32> %x) {
+; CHECK-LABEL: @allset_two_bit_mask_uniform_trunc(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 129)
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[TMP1]], splat (i32 129)
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %s = lshr <2 x i32> %x, <i32 7, i32 7>
+  %o = and <2 x i32> %s, %x
+  %r = trunc <2 x i32> %o to <2 x i1>
+  ret <2 x i1> %r
 }
 
 define i64 @allset_four_bit_mask(i64 %x) {
@@ -160,6 +212,36 @@ define i32 @allset_two_bit_mask_multiuse(i32 %x) {
   %r = and i32 %o, 1
   call void @use(i32 %o)
   ret i32 %r
+}
+
+define i1 @anyset_two_bit_mask_trunc_multiuse(i32 %x) {
+; CHECK-LABEL: @anyset_two_bit_mask_trunc_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[O:%.*]] = or i32 [[S]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[O]] to i1
+; CHECK-NEXT:    call void @use(i32 [[O]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = lshr i32 %x, 3
+  %o = or i32 %s, %x
+  %r = trunc i32 %o to i1
+  call void @use(i32 %o)
+  ret i1 %r
+}
+
+define i1 @allset_two_bit_mask_trunc_multiuse(i32 %x) {
+; CHECK-LABEL: @allset_two_bit_mask_trunc_multiuse(
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[O:%.*]] = and i32 [[S]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[O]] to i1
+; CHECK-NEXT:    call void @use(i32 [[O]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %s = lshr i32 %x, 7
+  %o = and i32 %s, %x
+  %r = trunc i32 %o to i1
+  call void @use(i32 %o)
+  ret i1 %r
 }
 
 ; negative test - missing 'and 1' mask, so more than the low bit is used here

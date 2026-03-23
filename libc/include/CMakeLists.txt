@@ -318,6 +318,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
     .llvm-libc-macros.error_number_macros
+    .llvm-libc-types.errno_t
 )
 
 add_header_macro(
@@ -359,6 +360,7 @@ add_header_macro(
   ../libc/include/stdio.yaml
   stdio.h
   DEPENDS
+    .llvm-libc-macros._LIBC_MODULAR_FORMAT_PRINTF
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdio_macros
@@ -381,6 +383,7 @@ add_header_macro(
     .llvm-libc-types.__qsortcompare_t
     .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__search_compare_t
+    .llvm-libc-types.constraint_handler_t
     .llvm-libc-types.div_t
     .llvm-libc-types.ldiv_t
     .llvm-libc-types.lldiv_t
@@ -498,6 +501,7 @@ add_header_macro(
     .llvm-libc-types.Elf32_Versym
     .llvm-libc-types.Elf32_Word
     .llvm-libc-types.Elf32_Xword
+    .llvm-libc-types.Elf32_auxv_t
     .llvm-libc-types.Elf64_Addr
     .llvm-libc-types.Elf64_Chdr
     .llvm-libc-types.Elf64_Dyn
@@ -520,6 +524,7 @@ add_header_macro(
     .llvm-libc-types.Elf64_Versym
     .llvm-libc-types.Elf64_Word
     .llvm-libc-types.Elf64_Xword
+    .llvm-libc-types.Elf64_auxv_t
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys
@@ -555,6 +560,20 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_ioctl_macros
+)
+
+add_header_macro(
+  sys_ipc
+  ../libc/include/sys/ipc.yaml
+  sys/ipc.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_ipc_macros
+    .llvm-libc-types.key_t
+    .llvm-libc-types.uid_t
+    .llvm-libc-types.gid_t
+    .llvm-libc-types.mode_t
+    .llvm-libc-types.struct_ipc_perm
 )
 
 add_header_macro(
@@ -644,6 +663,21 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_sem
+  ../libc/include/sys/sem.yaml
+  sys/sem.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_sem_macros
+    .llvm-libc-types.key_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_ipc_perm
+    .llvm-libc-types.struct_semid_ds
+    .llvm-libc-types.struct_sembuf
+    .llvm-libc-types.struct_seminfo
+)
+
+add_header_macro(
   sys_sendfile
   ../libc/include/sys/sendfile.yaml
   sys/sendfile.h
@@ -666,7 +700,6 @@ add_header_macro(
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
-    .llvm-libc-types.struct_sockaddr_un
 )
 
 add_header_macro(
@@ -708,6 +741,7 @@ add_header_macro(
     .llvm-libc-types.dev_t
     .llvm-libc-types.gid_t
     .llvm-libc-types.ino_t
+    .llvm-libc-types.key_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
     .llvm-libc-types.off_t
@@ -742,6 +776,15 @@ add_header_macro(
     .llvm_libc_common_h
     .llvm-libc-types.struct_iovec
     .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
+  sys_un
+  ../libc/include/sys/un.yaml
+  sys/un.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_sockaddr_un
 )
 
 add_header_macro(

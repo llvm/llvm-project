@@ -1878,3 +1878,27 @@ func.func @test_avg_pool2d_unranked_input(%input: tensor<*xi32>, %zp: tensor<1xi
   %0 = tosa.avg_pool2d %input, %zp, %zp { acc_type = i32, kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1> } : (tensor<*xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<*xi32>
   return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/181449
+// Ensure tosa-infer-shapes does not crash when a tosa.while_loop carries a
+// value with a sparse tensor encoding (a block argument without a defining op).
+
+// CHECK-LABEL: @while_with_sparse_tensor_encoding
+func.func @while_with_sparse_tensor_encoding() {
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = sparse_tensor.convert %0 : tensor<1xi32> to tensor<1xi32, #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>>
+  // CHECK: tosa.while_loop
+  %2 = tosa.while_loop (%arg0 = %1) : (tensor<1xi32, #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>>) -> tensor<1xi32> {
+    %3 = "tosa.const"() <{values = dense<3> : tensor<1xi32>}> : () -> tensor<1xi32>
+    %4 = sparse_tensor.convert %arg0 : tensor<1xi32, #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>> to tensor<1xi32>
+    %5 = tosa.greater_equal %3, %4 : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
+    tosa.yield %5 : tensor<1xi1>
+  } do {
+    ^bb0(%arg0: tensor<1xi32, #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>>):
+    %3 = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
+    tosa.yield %3 : tensor<1xi32>
+  }
+  return
+}

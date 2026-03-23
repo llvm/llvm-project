@@ -2,7 +2,6 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
@@ -19,7 +18,10 @@ load(":targets.bzl", "llvm_targets")
 
 package(
     default_visibility = ["//visibility:public"],
-    features = ["layering_check"],
+    features = [
+        "parse_headers",
+        "layering_check",
+    ],
 )
 
 licenses(["notice"])
@@ -285,6 +287,7 @@ cc_library(
         "lib/Support/*.h",
         "lib/Support/*.inc",
         "lib/Support/LSP/*.cpp",
+        "lib/Support/HTTP/*.cpp",
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
@@ -343,21 +346,25 @@ cc_library(
             "BLAKE3_NO_SSE41",
         ],
     }),
+    features = ["-parse_headers"],
     includes = ["include"],
     linkopts = select({
         ":is_windows_clang_mingw": [
+            "-Wl,--stack,16777216",
             "-lole32",
             "-luuid",
             "-lws2_32",
             "-lntdll",
         ],
         ":is_windows_clang_cl": [
+            "/STACK:10000000",
             "ole32.lib",
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
         ],
         ":is_windows_msvc": [
+            "/STACK:10000000",
             "ole32.lib",
             "uuid.lib",
             "ws2_32.lib",
@@ -466,6 +473,7 @@ cc_library(
         "include/llvm/IR/Value.def",
     ],
     copts = llvm_copts,
+    features = ["-parse_headers"],
 )
 
 cc_library(
@@ -510,6 +518,7 @@ cc_library(
     hdrs = glob(["include/llvm/DebugInfo/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormatELF",
         ":Object",
         ":Support",
     ],
@@ -650,6 +659,7 @@ cc_library(
         "include/llvm/MC/*.h",
     ]),
     copts = llvm_copts,
+    features = ["-parse_headers"],
     deps = [
         ":BinaryFormat",
         ":DebugInfoCodeView",
@@ -841,6 +851,7 @@ cc_binary(
         ],
     ) + ["include/llvm/TargetParser/SubtargetFeature.h"],
     copts = llvm_copts,
+    features = ["-parse_headers"],
     includes = ["utils/TableGen"],
     stamp = 0,
     deps = [
@@ -1091,6 +1102,7 @@ cc_library(
         "include/llvm/ProfileData/InstrProfData.inc",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
+    features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/IR/*.def",
     ]),
@@ -1310,6 +1322,20 @@ cc_library(
 )
 
 cc_library(
+    name = "ABI",
+    srcs = glob(
+        ["lib/ABI/*.cpp"],
+    ),
+    hdrs = glob(
+        ["include/llvm/ABI/*.h"],
+    ),
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "Analysis",
     srcs = glob(
         ["lib/Analysis/*.cpp"],
@@ -1321,6 +1347,7 @@ cc_library(
         ],
     ) + ["include/llvm-c/Analysis.h"],
     copts = llvm_copts + ["-ftrapping-math"],
+    features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
     ]),
@@ -1576,6 +1603,7 @@ cc_library(
         "include/llvm/Transforms/Utils.h",
     ],
     copts = llvm_copts,
+    features = ["-parse_headers"],
     deps = [
         ":Analysis",
         ":BinaryFormat",
@@ -2165,6 +2193,7 @@ cc_library(
         ],
     ),
     copts = llvm_copts,
+    features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/CodeGen/**/*.def",
     ]),
@@ -3422,6 +3451,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenCallingConv.inc",
             ),
             (
+                ["-gen-sd-node-info"],
+                "lib/Target/X86/X86GenSDNodeInfo.inc",
+            ),
+            (
                 ["-gen-subtarget"],
                 "lib/Target/X86/X86GenSubtargetInfo.inc",
             ),
@@ -3800,7 +3833,10 @@ gentbl_cc_library(
         ),
         hdrs = ["lib/Target/" + target["name"] + "/" + target["short_name"] + ".h"],
         copts = llvm_copts,
-        features = ["-layering_check"],
+        features = [
+            "-layering_check",
+            "-parse_headers",
+        ],
         strip_include_prefix = "lib/Target/" + target["name"],
         textual_hdrs = glob(
             [
@@ -3841,6 +3877,7 @@ gentbl_cc_library(
             allow_empty = True,
         ),
         copts = llvm_copts,
+        features = ["-parse_headers"],
         deps = [
             ":BinaryFormat",
             ":CodeGenTypes",
@@ -4095,11 +4132,13 @@ cc_library(
         ],
     ) + ["include/llvm-c/ExecutionEngine.h"],
     copts = llvm_copts,
+    features = ["-parse_headers"],
     deps = [
         ":BinaryFormat",
         ":CodeGen",
         ":Core",
         ":DebugInfo",
+        ":DebugInfoDWARF",
         ":MC",
         ":MCDisassembler",
         ":Object",
@@ -4152,7 +4191,9 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":Analysis",
         ":BinaryFormat",
+        ":Core",
         ":ExecutionEngine",
         ":JITLinkTableGen",
         ":Object",
@@ -4160,7 +4201,9 @@ cc_library(
         ":OrcShared",
         ":OrcTargetProcess",
         ":Support",
+        ":Target",
         ":TargetParser",
+        ":TransformUtils",
         ":config",
     ],
 )
@@ -4451,6 +4494,7 @@ cc_library(
         "include/llvm/WindowsDriver/*.h",
     ]),
     copts = llvm_copts,
+    features = ["-parse_headers"],
     deps = [
         ":Option",
         ":Support",
@@ -4764,6 +4808,7 @@ cc_binary(
         "tools/llubi/lib/*.cpp",
         "tools/llubi/lib/*.h",
     ]),
+    features = ["-parse_headers"],
     stamp = 0,
     deps = [
         ":Analysis",
@@ -6422,6 +6467,7 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/Testing/Support/*.h"]),
     copts = llvm_copts,
+    features = ["-layering_check"],
     deps = [
         ":Support",
         ":config",

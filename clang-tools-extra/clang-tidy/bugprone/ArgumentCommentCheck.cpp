@@ -273,7 +273,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     }
 
     for (const auto &Comment : Comments) {
-      llvm::SmallVector<StringRef, 2> Matches;
+      SmallVector<StringRef, 2> Matches;
       if (IdentRE.match(Comment.Text, &Matches) &&
           !sameName(Matches[2], II->getName(), StrictMode)) {
         {
@@ -297,7 +297,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
 
     // If the argument comments are missing for literals add them.
     if (Comments.empty() && shouldAddComment(Args[I])) {
-      llvm::SmallString<32> ArgComment;
+      SmallString<32> ArgComment;
       (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
       const DiagnosticBuilder Diag =
           diag(Args[I]->getBeginLoc(),

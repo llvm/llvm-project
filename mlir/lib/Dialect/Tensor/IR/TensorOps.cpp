@@ -1205,9 +1205,7 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
     newMixedSizes.reserve(currMixedSizes.size());
     assert(resultShape.size() == currMixedSizes.size() &&
            "mismatch in result shape and sizes of empty op");
-    for (auto it : llvm::zip(resultShape, currMixedSizes)) {
-      int64_t newDim = std::get<0>(it);
-      OpFoldResult currDim = std::get<1>(it);
+    for (auto [newDim, currDim] : llvm::zip(resultShape, currMixedSizes)) {
       // Case 1: The empty tensor dim is static. Check that the tensor cast
       // result dim matches.
       if (auto attr = llvm::dyn_cast_if_present<Attribute>(currDim)) {
@@ -1236,9 +1234,9 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
       newMixedSizes.push_back(currDim);
     }
 
-    // TODO: Do not drop tensor encoding.
     rewriter.replaceOpWithNewOp<EmptyOp>(castOp, newMixedSizes,
-                                         resultType.getElementType());
+                                         resultType.getElementType(),
+                                         resultType.getEncoding());
     return success();
   }
 };
@@ -1456,6 +1454,13 @@ void FromElementsOp::build(OpBuilder &builder, OperationState &result,
 }
 
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
+  // DenseElementsAttr::get requires StringAttr for element types that are not
+  // integer, index, float, or complex (e.g. vector types), but folded constants
+  // won't be StringAttr instances. Only fold for element types directly
+  // supported by DenseElementsAttr.
+  Type eltType = getType().getElementType();
+  if (!eltType.isIntOrIndexOrFloat() && !isa<ComplexType>(eltType))
+    return {};
   if (!llvm::is_contained(adaptor.getElements(), nullptr))
     return DenseElementsAttr::get(getType(), adaptor.getElements());
   return {};
@@ -2119,6 +2124,10 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
       return failure();
     if (!attr || !attr.isSplat())
       return failure();
+    // DenseElementsAttr requires a static shape; skip folding for dynamic
+    // result types.
+    if (!reshapeOp.getResultType().hasStaticShape())
+      return failure();
     DenseElementsAttr newAttr = DenseElementsAttr::getFromRawBuffer(
         reshapeOp.getResultType(), attr.getRawData());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(reshapeOp, newAttr);
@@ -2689,29 +2698,14 @@ public:
       counts.push_back(count);
     }
 
-    // New attribute constructed by the sliced values.
-    DenseElementsAttr newAttr;
-
-    if (auto elems = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
-      SmallVector<APInt> outValues;
-      outValues.reserve(sourceType.getNumElements());
-      sliceElements<DenseElementsAttr::IntElementIterator, APInt>(
-          elems.begin(), counts, offsets, sizes, strides, &outValues);
-      newAttr = DenseElementsAttr::get(resultType, outValues);
-    } else if (auto elems = llvm::dyn_cast<DenseFPElementsAttr>(attr)) {
-      SmallVector<APFloat> outValues;
-      outValues.reserve(sourceType.getNumElements());
-      sliceElements<DenseElementsAttr::FloatElementIterator, APFloat>(
-          elems.begin(), counts, offsets, sizes, strides, &outValues);
-      newAttr = DenseElementsAttr::get(resultType, outValues);
-    }
-
-    if (newAttr) {
-      rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, resultType, newAttr);
-      return success();
-    }
-
-    return failure();
+    // Slice the elements and construct a new attribute.
+    SmallVector<Attribute> outValues;
+    outValues.reserve(resultType.getNumElements());
+    sliceElements(attr.value_begin<Attribute>(), counts, offsets, sizes,
+                  strides, &outValues);
+    auto newAttr = DenseElementsAttr::get(resultType, outValues);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, resultType, newAttr);
+    return success();
   }
 
 private:

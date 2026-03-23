@@ -3487,23 +3487,25 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64f16(<vscale x 64 x half> %va, <vscal
 ; ZVFH-NEXT:    slli a1, a1, 3
 ; ZVFH-NEXT:    sub sp, sp, a1
 ; ZVFH-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
-; ZVFH-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; ZVFH-NEXT:    vmv1r.v v7, v0
 ; ZVFH-NEXT:    addi a1, sp, 16
 ; ZVFH-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; ZVFH-NEXT:    csrr a3, vlenb
-; ZVFH-NEXT:    srli a1, a3, 1
-; ZVFH-NEXT:    slli a4, a3, 3
-; ZVFH-NEXT:    slli a3, a3, 2
+; ZVFH-NEXT:    csrr a4, vlenb
+; ZVFH-NEXT:    slli a3, a4, 2
+; ZVFH-NEXT:    sub a1, a2, a3
+; ZVFH-NEXT:    sltu a5, a2, a1
+; ZVFH-NEXT:    addi a5, a5, -1
+; ZVFH-NEXT:    and a5, a5, a1
+; ZVFH-NEXT:    srli a1, a4, 1
+; ZVFH-NEXT:    slli a4, a4, 3
 ; ZVFH-NEXT:    add a4, a0, a4
-; ZVFH-NEXT:    sub a5, a2, a3
-; ZVFH-NEXT:    vl8re16.v v24, (a4)
-; ZVFH-NEXT:    sltu a4, a2, a5
-; ZVFH-NEXT:    addi a4, a4, -1
+; ZVFH-NEXT:    vsetvli zero, a5, e16, m8, ta, ma
+; ZVFH-NEXT:    vle16.v v24, (a4)
 ; ZVFH-NEXT:    vl8re16.v v8, (a0)
+; ZVFH-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; ZVFH-NEXT:    vslidedown.vx v0, v0, a1
-; ZVFH-NEXT:    and a4, a4, a5
-; ZVFH-NEXT:    vsetvli zero, a4, e16, m8, ta, ma
+; ZVFH-NEXT:    vsetvli zero, a5, e16, m8, ta, ma
 ; ZVFH-NEXT:    vmfeq.vv v6, v16, v24, v0.t
 ; ZVFH-NEXT:    bltu a2, a3, .LBB171_2
 ; ZVFH-NEXT:  # %bb.1:

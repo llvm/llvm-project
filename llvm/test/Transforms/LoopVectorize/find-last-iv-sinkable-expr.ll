@@ -312,11 +312,10 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 10, [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 6
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP9]]

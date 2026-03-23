@@ -327,10 +327,12 @@ void IoChecker::Enter(const parser::InputItem &spec) {
   }
   CheckForDefinableVariable(*var, "Input");
   if (auto expr{AnalyzeExpr(context_, *var)}) {
+    auto at{var->GetSource()};
+    CheckForAssumedRank(UnwrapWholeSymbolDataRef(*expr), at);
     CheckForBadIoType(*expr,
         flags_.test(Flag::FmtOrNml) ? common::DefinedIo::ReadFormatted
                                     : common::DefinedIo::ReadUnformatted,
-        var->GetSource());
+        at);
   }
 }
 
@@ -651,11 +653,14 @@ void IoChecker::Enter(const parser::OutputItem &item) {
       } else if (IsProcedure(*expr)) {
         context_.Say(parser::FindSourceLocation(*x),
             "Output item must not be a procedure"_err_en_US); // C1233
+      } else {
+        auto at{parser::FindSourceLocation(item)};
+        CheckForAssumedRank(UnwrapWholeSymbolDataRef(*expr), at);
+        CheckForBadIoType(*expr,
+            flags_.test(Flag::FmtOrNml) ? common::DefinedIo::WriteFormatted
+                                        : common::DefinedIo::WriteUnformatted,
+            at);
       }
-      CheckForBadIoType(*expr,
-          flags_.test(Flag::FmtOrNml) ? common::DefinedIo::WriteFormatted
-                                      : common::DefinedIo::WriteUnformatted,
-          parser::FindSourceLocation(item));
     }
   }
 }
@@ -1226,6 +1231,17 @@ parser::Message *IoChecker::CheckForBadIoType(const Symbol &symbol,
     }
   }
   return nullptr;
+}
+
+void IoChecker::CheckForAssumedRank(
+    const Symbol *symbol, parser::CharBlock namelistLocation) const {
+  if (symbol && IsAssumedRank(*symbol)) {
+    evaluate::AttachDeclaration(
+        context_.Say(namelistLocation,
+            "Assumed-rank object '%s' may not be an I/O list item"_err_en_US,
+            symbol->name()),
+        *symbol);
+  }
 }
 
 void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,

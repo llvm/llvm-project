@@ -89,11 +89,9 @@ void test_expr_with_cleanup() {
 }
 
 // CHECK: cir.func{{.*}} @_Z22test_expr_with_cleanupv()
-// CHECK:   cir.scope {
-// CHECK:     %[[S:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>
-// CHECK:     cir.call @_Z7use_refRK5Struk(%[[S]])
-// CHECK:     cir.call @_ZN5StrukD1Ev(%[[S]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
-// CHECK:   }
+// CHECK:   %[[S:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>
+// CHECK:   cir.call @_Z7use_refRK5Struk(%[[S]])
+// CHECK:   cir.call @_ZN5StrukD1Ev(%[[S]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK:   cir.return
 
 struct ComplexContainer {
@@ -118,3 +116,36 @@ void complex_expr_with_cleanup() {
 // CHECK:   %[[ELEM_0:.*]] = cir.get_member %[[CONTAINER_ADDR]][0] {name = "value"} : !cir.ptr<!rec_ComplexContainer> -> !cir.ptr<!cir.complex<!s32i>>
 // CHECK:   %[[TMP_ELEM_0:.*]] = cir.load {{.*}} %[[ELEM_0]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CHECK:   cir.store {{.*}} %[[TMP_ELEM_0]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+struct ComplexContainerWithDtor {
+  int _Complex value;
+  ComplexContainerWithDtor(int _Complex v) : value(v) {}
+  ~ComplexContainerWithDtor() {}
+};
+
+void complex_expr_with_cleanup_inside_cleanupscope() {
+  int _Complex result = ComplexContainerWithDtor(10).value;
+}
+
+// CHECK: cir.func{{.*}} @_Z45complex_expr_with_cleanup_inside_cleanupscopev()
+// CHECK:   %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["result", init]
+// CHECK:   %[[CONTAINER_ADDR:.*]] = cir.alloca !rec_ComplexContainerWithDtor, !cir.ptr<!rec_ComplexContainerWithDtor>, ["ref.tmp0"]
+// CHECK:   %[[ARG_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["coerce"]
+// CHECK:   %[[TEMP_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["tmp.exprcleanup"]
+// CHECK:   %[[CONST_10:.*]] = cir.const #cir.int<10> : !s32i
+// CHECK:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:   %[[ARG_COMPLEX:.*]] = cir.complex.create %[[CONST_10]], %[[CONST_0]] : !s32i -> !cir.complex<!s32i>
+// CHECK:   cir.store {{.*}} %[[ARG_COMPLEX]], %[[ARG_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CHECK:   %[[TMP_ARG:.*]] = cir.load {{.*}} %[[ARG_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CHECK:   cir.call @_ZN24ComplexContainerWithDtorC1ECi(%[[CONTAINER_ADDR]], %[[TMP_ARG]]) : (!cir.ptr<!rec_ComplexContainerWithDtor> {{.*}}, !cir.complex<!s32i> {{.*}}) -> ()
+// CHECK:   cir.cleanup.scope {
+// CHECK:     %[[ELEM_0:.*]] = cir.get_member %[[CONTAINER_ADDR]][0] {name = "value"} : !cir.ptr<!rec_ComplexContainerWithDtor> -> !cir.ptr<!cir.complex<!s32i>>
+// CHECK:     %[[TMP_ELEM_0:.*]] = cir.load {{.*}} %[[ELEM_0]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CHECK:     cir.store{{.*}} %[[TMP_ELEM_0]], %[[TEMP_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CHECK:     cir.yield
+// CHECK:   } cleanup  normal {
+// CHECK:     cir.call @_ZN24ComplexContainerWithDtorD1Ev(%[[CONTAINER_ADDR]]) nothrow : (!cir.ptr<!rec_ComplexContainerWithDtor> {{.*}}) -> ()
+// CHECK:     cir.yield
+// CHECK:   }
+// CHECK:   %[[RELOAD:.*]] = cir.load {{.*}} %[[TEMP_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CHECK:   cir.store {{.*}} %[[RELOAD]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>

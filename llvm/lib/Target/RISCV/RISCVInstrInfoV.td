@@ -1843,6 +1843,7 @@ let Predicates = [HasVInstructions] in {
         VSSSEGSchedMC<nfields, eew>;
 
       // Vector Indexed Instructions
+      let VS1VS2Constraint = VS2Constraint in {
       def VLUXSEG#nfields#EI#eew#_V :
         VIndexedSegmentLoad<nfields, MOPLDIndexedUnord, w,
                             "vluxseg"#nfields#"ei"#eew#".v">,
@@ -1853,6 +1854,7 @@ let Predicates = [HasVInstructions] in {
                             "vloxseg"#nfields#"ei"#eew#".v">,
         RISCVVXMemOpMC<eew, Ordered=true, Store=false, N=nfields>,
         VLXSEGSchedMC<nfields, eew, isOrdered=1>;
+      } // VS1VS2Constraint = VS2Constraint
       def VSUXSEG#nfields#EI#eew#_V :
         VIndexedSegmentStore<nfields, MOPSTIndexedUnord, w,
                              "vsuxseg"#nfields#"ei"#eew#".v">,
@@ -1892,6 +1894,7 @@ let Predicates = [HasVInstructionsI64] in {
 let Predicates = [HasVInstructionsI64, IsRV64] in {
   foreach nfields = 2 - 8 in {
     // Vector Indexed Segment Instructions
+    let VS1VS2Constraint = VS2Constraint in {
     def VLUXSEG #nfields #EI64_V
         : VIndexedSegmentLoad<nfields, MOPLDIndexedUnord, LSWidth64,
                               "vluxseg" #nfields #"ei64.v">,
@@ -1900,6 +1903,7 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
         : VIndexedSegmentLoad<nfields, MOPLDIndexedOrder, LSWidth64,
                               "vloxseg" #nfields #"ei64.v">,
           VLXSEGSchedMC<nfields, 64, isOrdered=1>;
+    } // VS1VS2Constraint = VS2Constraint
     def VSUXSEG #nfields #EI64_V
         : VIndexedSegmentStore<nfields, MOPSTIndexedUnord, LSWidth64,
                                "vsuxseg" #nfields #"ei64.v">,

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -24,6 +23,42 @@ using namespace lldb;
 using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ProcessFreeBSDKernelCore)
+
+namespace {
+
+#define LLDB_PROPERTIES_processfreebsdkernelcore
+#include "ProcessFreeBSDKernelCoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_processfreebsdkernelcore
+#include "ProcessFreeBSDKernelCorePropertiesEnum.inc"
+};
+
+class PluginProperties : public Properties {
+public:
+  static llvm::StringRef GetSettingName() {
+    return ProcessFreeBSDKernelCore::GetPluginNameStatic();
+  }
+
+  PluginProperties() : Properties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+    m_collection_sp->Initialize(g_processfreebsdkernelcore_properties_def);
+  }
+
+  ~PluginProperties() override = default;
+
+  bool GetReadOnly() const {
+    const uint32_t idx = ePropertyReadOnly;
+    return GetPropertyAtIndexAs<bool>(idx, true);
+  }
+};
+
+} // namespace
+
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
 
 ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
                                                    ListenerSP listener_sp,
@@ -52,12 +87,20 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
 }
 
 void ProcessFreeBSDKernelCore::Initialize() {
-  static llvm::once_flag g_once_flag;
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
+}
 
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+void ProcessFreeBSDKernelCore::DebuggerInitialize(Debugger &debugger) {
+  if (!PluginManager::GetSettingForProcessPlugin(
+          debugger, PluginProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForProcessPlugin(
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
+        "Properties for the freebsd-kernel process plug-in.",
+        is_global_setting);
+  }
 }
 
 void ProcessFreeBSDKernelCore::Terminate() {
@@ -71,6 +114,8 @@ bool ProcessFreeBSDKernelCore::CanDebug(lldb::TargetSP target_sp,
 
 Status ProcessFreeBSDKernelCore::DoLoadCore() {
   // The core is already loaded by CreateInstance().
+  SetKernelDisplacement();
+
   return Status();
 }
 
@@ -90,6 +135,26 @@ void ProcessFreeBSDKernelCore::RefreshStateAfterStop() {
   }
 }
 
+size_t ProcessFreeBSDKernelCore::DoWriteMemory(lldb::addr_t addr,
+                                               const void *buf, size_t size,
+                                               Status &error) {
+  if (GetGlobalPluginProperties().GetReadOnly()) {
+    error = Status::FromErrorString(
+        "Memory writes are currently disabled. You can enable them with "
+        "`settings set plugin.process.freebsd-kernel-core.read-only false`.");
+    return 0;
+  }
+
+  ssize_t rd = 0;
+  rd = kvm_write(m_kvm, addr, buf, size);
+  if (rd < 0 || static_cast<size_t>(rd) != size) {
+    error = Status::FromErrorStringWithFormat("Writing memory failed: %s",
+                                              GetError());
+    return rd > 0 ? rd : 0;
+  }
+  return rd;
+}
+
 bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
                                                   ThreadList &new_thread_list) {
   if (old_thread_list.GetSize(false) == 0) {
@@ -100,7 +165,10 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // LLDB but we can construct a process without threads to provide minimal
     // memory reading support.
     switch (GetTarget().GetArchitecture().GetMachine()) {
+    case llvm::Triple::arm:
     case llvm::Triple::aarch64:
+    case llvm::Triple::ppc64le:
+    case llvm::Triple::riscv64:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       break;
@@ -150,7 +218,33 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
         ReadSignedIntegerFromMemory(FindSymbol("pcb_size"), 4, -1, error);
     lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
 
-    // from FreeBSD sys/param.h
+    // Read stopped_cpus bitmask and mp_maxid for CPU validation.
+    lldb::addr_t stopped_cpus = FindSymbol("stopped_cpus");
+    uint32_t mp_maxid = 0;
+
+    if (stopped_cpus != LLDB_INVALID_ADDRESS) {
+      // https://cgit.freebsd.org/src/tree/sys/kern/subr_smp.c
+      mp_maxid =
+          ReadSignedIntegerFromMemory(FindSymbol("mp_maxid"), 4, 0, error);
+      if (error.Fail())
+        stopped_cpus = LLDB_INVALID_ADDRESS;
+    }
+
+    uint32_t long_size_bytes = GetAddressByteSize();
+    uint32_t long_bit = long_size_bytes * 8;
+
+    if (auto type_system_or_err =
+            GetTarget().GetScratchTypeSystemForLanguage(eLanguageTypeC)) {
+      CompilerType long_type =
+          (*type_system_or_err)->GetBasicTypeFromAST(eBasicTypeLong);
+      if (long_type.IsValid())
+        if (auto size = long_type.GetByteSize(nullptr))
+          long_size_bytes = *size;
+      long_bit = long_size_bytes * 8;
+    } else
+      llvm::consumeError(type_system_or_err.takeError());
+
+    // https://cgit.freebsd.org/src/tree/sys/sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
     // Iterate through a linked list of all processes. New processes are added
@@ -158,11 +252,12 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // the end of the list, so we have to walk it backwards. First collect all
     // the processes in the list order.
     std::vector<lldb::addr_t> process_addrs;
-    for (lldb::addr_t proc =
-             ReadPointerFromMemory(FindSymbol("allproc"), error);
-         proc != 0 && proc != LLDB_INVALID_ADDRESS;
-         proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
-      process_addrs.push_back(proc);
+    if (lldb::addr_t allproc_addr = FindSymbol("allproc");
+        allproc_addr != LLDB_INVALID_ADDRESS) {
+      for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
+           proc != 0 && proc != LLDB_INVALID_ADDRESS && error.Success();
+           proc = ReadPointerFromMemory(proc + offset_p_list, error))
+        process_addrs.push_back(proc);
     }
 
     // Processes are in the linked list in descending PID order, so we must walk
@@ -213,12 +308,27 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
           pcb_addr = dumppcb;
           thread_desc += " (crashed)";
         } else if (oncpu != -1) {
-          // If we managed to read stoppcbs and pcb_size, use them to find
-          // the correct PCB.
-          if (stoppcbs != LLDB_INVALID_ADDRESS && pcbsize > 0)
+          // Verify the CPU is actually in the stopped set before using
+          // its stoppcbs entry.
+          bool is_stopped = false;
+          if (oncpu >= 0 && static_cast<uint32_t>(oncpu) <= mp_maxid &&
+              stopped_cpus != LLDB_INVALID_ADDRESS) {
+            uint32_t bit = oncpu % long_bit;
+            uint32_t word = oncpu / long_bit;
+            lldb::addr_t mask_addr = stopped_cpus + word * long_size_bytes;
+            uint64_t mask = ReadUnsignedIntegerFromMemory(
+                mask_addr, long_size_bytes, 0, error);
+            if (error.Success())
+              is_stopped = (mask & (1ULL << bit)) != 0;
+          }
+
+          // If we managed to read stoppcbs and pcb_size and the cpu is marked
+          // as stopped, use them to find the correct PCB.
+          if (is_stopped && stoppcbs != LLDB_INVALID_ADDRESS && pcbsize > 0) {
             pcb_addr = stoppcbs + oncpu * pcbsize;
-          else
+          } else {
             pcb_addr = LLDB_INVALID_ADDRESS;
+          }
           thread_desc += llvm::formatv(" (on CPU {0})", oncpu);
         }
 
@@ -255,6 +365,29 @@ lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
   ModuleSP mod_sp = GetTarget().GetExecutableModule();
   const Symbol *sym = mod_sp->FindFirstSymbolWithNameAndType(ConstString(name));
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
+}
+
+void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
+  kssize_t displacement = kvm_kerndisp(m_kvm);
+
+  if (displacement == 0)
+    return;
+
+  Target &target = GetTarget();
+  lldb::ModuleSP kernel_module_sp = target.GetExecutableModule();
+  if (!kernel_module_sp)
+    return;
+
+  bool changed = false;
+  kernel_module_sp->SetLoadAddress(target,
+                                   static_cast<lldb::addr_t>(displacement),
+                                   /*value_is_offset=*/true, changed);
+
+  if (changed) {
+    ModuleList loaded_module_list;
+    loaded_module_list.Append(kernel_module_sp);
+    target.ModulesDidLoad(loaded_module_list);
+  }
 }
 
 void ProcessFreeBSDKernelCore::PrintUnreadMessage() {

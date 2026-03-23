@@ -14,7 +14,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/raw_ostream.h"

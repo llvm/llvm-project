@@ -10,8 +10,6 @@
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/AMX/AMXDialect.h"
-#include "mlir/Dialect/AMX/Transforms.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmNeon/Transforms.h"
@@ -51,8 +49,6 @@ struct ConvertVectorToLLVMPass
       registry.insert<arm_neon::ArmNeonDialect>();
     if (armSVE)
       registry.insert<arm_sve::ArmSVEDialect>();
-    if (amx)
-      registry.insert<amx::AMXDialect>();
     if (x86)
       registry.insert<x86::X86Dialect>();
   }
@@ -135,10 +131,6 @@ void ConvertVectorToLLVMPass::runOnOperation() {
   if (armSVE) {
     configureArmSVELegalizeForExportTarget(target);
     populateArmSVELegalizeForLLVMExportPatterns(converter, patterns);
-  }
-  if (amx) {
-    configureAMXLegalizeForExportTarget(target);
-    populateAMXLegalizeForLLVMExportPatterns(converter, patterns);
   }
   if (x86) {
     configureX86LegalizeForExportTarget(target);

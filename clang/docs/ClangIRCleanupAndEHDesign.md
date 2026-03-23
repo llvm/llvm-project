@@ -1,7 +1,10 @@
 # ClangIR Cleanup and Exception Handling Design
 
-::: {.contents local=""}
-:::
+```{contents}
+---
+local:
+---
+```
 
 ## Overview
 

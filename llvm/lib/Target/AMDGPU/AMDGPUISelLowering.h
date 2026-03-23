@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class AMDGPUMachineFunction;
+class AMDGPUMachineFunctionInfo;
 class AMDGPUSubtarget;
 struct ArgDescriptor;
 
@@ -107,6 +107,9 @@ protected:
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
+  /// Check whether value Val can be supported by v_mov_b64, for the current
+  /// target.
+  bool isInt64ImmLegal(SDNode *Val, SelectionDAG &DAG) const;
   bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -142,7 +145,7 @@ protected:
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
 
-  virtual SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  virtual SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;
 
   /// Return 64-bit value Op as two 32-bit integers.
