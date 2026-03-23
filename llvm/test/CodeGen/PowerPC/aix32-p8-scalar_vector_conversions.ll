@@ -992,8 +992,8 @@ define i64 @getvelsl(<2 x i64> %vsl, i32 signext %i) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    add 5, 3, 3
 ; CHECK-NEXT:    addi 4, 1, -16
-; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 29
-; CHECK-NEXT:    addi 5, 5, 1
+; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 28
+; CHECK-NEXT:    ori 5, 5, 1
 ; CHECK-NEXT:    stxvw4x 34, 0, 4
 ; CHECK-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-NEXT:    lwzx 3, 4, 3
@@ -1010,8 +1010,8 @@ define i64 @getvelul(<2 x i64> %vul, i32 signext %i) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    add 5, 3, 3
 ; CHECK-NEXT:    addi 4, 1, -16
-; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 29
-; CHECK-NEXT:    addi 5, 5, 1
+; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 28
+; CHECK-NEXT:    ori 5, 5, 1
 ; CHECK-NEXT:    stxvw4x 34, 0, 4
 ; CHECK-NEXT:    rlwinm 5, 5, 2, 28, 29
 ; CHECK-NEXT:    lwzx 3, 4, 3
