@@ -13,6 +13,7 @@
 #include "AArch64MCTargetDesc.h"
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
+#include "AArch64MCLFIRewriter.h"
 #include "AArch64WinCOFFStreamer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
@@ -503,6 +504,17 @@ static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
   return new AArch64MCInstrAnalysis(Info);
 }
 
+static MCLFIRewriter *
+createAArch64MCLFIRewriter(MCStreamer &S,
+                           std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                           std::unique_ptr<MCInstrInfo> &&InstInfo) {
+  auto RW = std::make_unique<AArch64MCLFIRewriter>(
+      S.getContext(), std::move(RegInfo), std::move(InstInfo));
+  auto *Ptr = RW.get();
+  S.setLFIRewriter(std::move(RW));
+  return Ptr;
+}
+
 // Force static initialization.
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64TargetMC() {
@@ -531,6 +543,9 @@ LLVMInitializeAArch64TargetMC() {
     TargetRegistry::RegisterELFStreamer(*T, createAArch64ELFStreamer);
     TargetRegistry::RegisterMachOStreamer(*T, createMachOStreamer);
     TargetRegistry::RegisterCOFFStreamer(*T, createAArch64WinCOFFStreamer);
+
+    // Register the LFI rewriter.
+    TargetRegistry::RegisterMCLFIRewriter(*T, createAArch64MCLFIRewriter);
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(
