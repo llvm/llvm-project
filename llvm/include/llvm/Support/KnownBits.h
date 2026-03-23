@@ -343,6 +343,22 @@ public:
     return (LHS.Zero | RHS.Zero).isAllOnes();
   }
 
+  /// Compute known bits for shl(LHS, RHS).
+  /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
+  LLVM_ABI static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS,
+                                bool NUW = false, bool NSW = false,
+                                bool ShAmtNonZero = false);
+
+  /// Compute known bits for lshr(LHS, RHS).
+  /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
+  LLVM_ABI static KnownBits lshr(const KnownBits &LHS, const KnownBits &RHS,
+                                 bool ShAmtNonZero = false, bool Exact = false);
+
+  /// Compute known bits for ashr(LHS, RHS).
+  /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
+  LLVM_ABI static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
+                                 bool ShAmtNonZero = false, bool Exact = false);
+
   /// Compute known bits resulting from adding LHS, RHS and a 1-bit Carry.
   LLVM_ABI static KnownBits computeForAddCarry(const KnownBits &LHS,
                                                const KnownBits &RHS,
@@ -363,12 +379,13 @@ public:
   static KnownBits add(const KnownBits &LHS, const KnownBits &RHS,
                        bool NSW = false, bool NUW = false,
                        bool SelfAdd = false) {
-    KnownBits KnownAdd = computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
-
     // ADD(X,X) is equivalent to SHL(X,1), the low bit is always zero.
-    if (SelfAdd)
-      KnownAdd.Zero.setBit(0);
-    return KnownAdd;
+    if (SelfAdd) {
+      assert(LHS == RHS && "Expected matching knownbits");
+      KnownBits Amt = KnownBits::makeConstant(APInt(8, 1));
+      return KnownBits::shl(LHS, Amt, NUW, NSW, /*ShAmtNonZero=*/true);
+    }
+    return computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
   }
 
   /// Compute knownbits resulting from subtraction of LHS and RHS.
@@ -450,22 +467,6 @@ public:
 
   /// Compute known bits for abds(LHS, RHS).
   LLVM_ABI static KnownBits abds(KnownBits LHS, KnownBits RHS);
-
-  /// Compute known bits for shl(LHS, RHS).
-  /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
-  LLVM_ABI static KnownBits shl(const KnownBits &LHS, const KnownBits &RHS,
-                                bool NUW = false, bool NSW = false,
-                                bool ShAmtNonZero = false);
-
-  /// Compute known bits for lshr(LHS, RHS).
-  /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
-  LLVM_ABI static KnownBits lshr(const KnownBits &LHS, const KnownBits &RHS,
-                                 bool ShAmtNonZero = false, bool Exact = false);
-
-  /// Compute known bits for ashr(LHS, RHS).
-  /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.
-  LLVM_ABI static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
-                                 bool ShAmtNonZero = false, bool Exact = false);
 
   /// Compute known bits for clmul(LHS, RHS).
   LLVM_ABI static KnownBits clmul(const KnownBits &LHS, const KnownBits &RHS);
