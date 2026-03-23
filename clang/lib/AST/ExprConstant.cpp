@@ -12910,6 +12910,45 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case X86::BI__builtin_ia32_expanddf128_mask:
+  case X86::BI__builtin_ia32_expanddf256_mask:
+  case X86::BI__builtin_ia32_expanddf512_mask:
+  case X86::BI__builtin_ia32_expanddi128_mask:
+  case X86::BI__builtin_ia32_expanddi256_mask:
+  case X86::BI__builtin_ia32_expanddi512_mask:
+  case X86::BI__builtin_ia32_expandhi128_mask:
+  case X86::BI__builtin_ia32_expandhi256_mask:
+  case X86::BI__builtin_ia32_expandhi512_mask:
+  case X86::BI__builtin_ia32_expandqi128_mask:
+  case X86::BI__builtin_ia32_expandqi256_mask:
+  case X86::BI__builtin_ia32_expandqi512_mask:
+  case X86::BI__builtin_ia32_expandsf128_mask:
+  case X86::BI__builtin_ia32_expandsf256_mask:
+  case X86::BI__builtin_ia32_expandsf512_mask:
+  case X86::BI__builtin_ia32_expandsi128_mask:
+  case X86::BI__builtin_ia32_expandsi256_mask:
+  case X86::BI__builtin_ia32_expandsi512_mask: {
+    APValue Source, Passthru;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Source) ||
+        !EvaluateAsRValue(Info, E->getArg(1), Passthru))
+      return false;
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(2), Mask, Info))
+      return false;
+
+    unsigned NumElts = Source.getVectorLength();
+    SmallVector<APValue, 64> ResultElements;
+    ResultElements.reserve(NumElts);
+
+    unsigned SourceIdx = 0;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (Mask[I])
+        ResultElements.push_back(Source.getVectorElt(SourceIdx++));
+      else
+        ResultElements.push_back(Passthru.getVectorElt(I));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   case X86::BI__builtin_ia32_vpconflictsi_128:
   case X86::BI__builtin_ia32_vpconflictsi_256:
   case X86::BI__builtin_ia32_vpconflictsi_512:
