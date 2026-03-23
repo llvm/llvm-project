@@ -2298,6 +2298,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       D.getVFS().exists("/opt/rh")) {
     // TODO: We may want to remove this, since the functionality
     //   can be achieved using config files.
+    Prefixes.push_back("/opt/rh/gcc-toolset-16/root/usr");
     Prefixes.push_back("/opt/rh/gcc-toolset-15/root/usr");
     Prefixes.push_back("/opt/rh/gcc-toolset-14/root/usr");
     Prefixes.push_back("/opt/rh/gcc-toolset-13/root/usr");
