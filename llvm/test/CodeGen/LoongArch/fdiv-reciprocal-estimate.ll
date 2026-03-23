@@ -14,10 +14,7 @@ define float @fdiv_s(float %x, float %y) {
 ;
 ; LA32F-FRECIPE-LABEL: fdiv_s:
 ; LA32F-FRECIPE:       # %bb.0:
-; LA32F-FRECIPE-NEXT:    frecipe.s $fa2, $fa1
-; LA32F-FRECIPE-NEXT:    fmul.s $fa3, $fa0, $fa2
-; LA32F-FRECIPE-NEXT:    fnmsub.s $fa0, $fa1, $fa3, $fa0
-; LA32F-FRECIPE-NEXT:    fmadd.s $fa0, $fa2, $fa0, $fa3
+; LA32F-FRECIPE-NEXT:    fdiv.s $fa0, $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    ret
 ;
 ; LA64D-LABEL: fdiv_s:

@@ -1,4 +1,3 @@
-; RUN: llc --mtriple=loongarch32 --mattr=+f,+frecipe < %s | FileCheck %s
 ; RUN: llc --mtriple=loongarch64 --mattr=+f,+frecipe < %s | FileCheck %s
 
 declare float @llvm.loongarch.frecipe.s(float)

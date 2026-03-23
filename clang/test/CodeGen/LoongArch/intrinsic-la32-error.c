@@ -5,7 +5,7 @@
 #include <larchintrin.h>
 
 #ifdef FEATURE_CHECK
-void test_feature(long *v_l, unsigned long *v_ul, int *v_i, unsigned ui, char c, short s) {
+void test_feature(long *v_l, unsigned long *v_ul, int *v_i, unsigned ui, char c, short s, float a, double b) {
 // CHECK: error: '__builtin_loongarch_cacop_d' needs target feature 64bit
   __builtin_loongarch_cacop_d(1, v_ul[0], 1024);
 
@@ -49,6 +49,15 @@ void test_feature(long *v_l, unsigned long *v_ul, int *v_i, unsigned ui, char c,
   v_ul[4] = __builtin_loongarch_lddir_d(v_l[0], 1);
 // CHECK: error: '__builtin_loongarch_ldpte_d' needs target feature 64bit
   __builtin_loongarch_ldpte_d(v_l[0], 1);
+
+// CHECK: error: '__builtin_loongarch_frecipe_s' needs target feature f,frecipe,64bit
+  float f1 = __builtin_loongarch_frecipe_s(a);
+// CHECK: error: '__builtin_loongarch_frsqrte_s' needs target feature f,frecipe,64bit
+  float f2 = __builtin_loongarch_frsqrte_s(a);
+// CHECK: error: '__builtin_loongarch_frecipe_d' needs target feature d,frecipe,64bit
+  double d1 = __builtin_loongarch_frecipe_d(b);
+// CHECK: error: '__builtin_loongarch_frsqrte_d' needs target feature d,frecipe,64bit
+  double d2 = __builtin_loongarch_frsqrte_d(b);
 }
 #endif
 

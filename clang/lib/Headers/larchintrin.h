@@ -228,7 +228,6 @@ extern __inline void
 
 #define __ldpte_d(/*long int*/ _1, /*ui5*/ _2)                                 \
   ((void)__builtin_loongarch_ldpte_d((long int)(_1), (_2)))
-#endif
 
 #ifdef __loongarch_frecipe
 extern __inline float
@@ -254,6 +253,7 @@ extern __inline double
     __frsqrte_d(double _1) {
   return __builtin_loongarch_frsqrte_d(_1);
 }
+#endif
 #endif
 
 #ifdef __cplusplus

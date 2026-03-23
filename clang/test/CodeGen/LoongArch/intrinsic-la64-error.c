@@ -12,13 +12,13 @@ void test_feature(unsigned long *v_ul, int *v_i, float a, double b) {
   v_i[0] = __builtin_loongarch_movfcsr2gr(1);
 // CHECK: error: '__builtin_loongarch_movgr2fcsr' needs target feature f
   __builtin_loongarch_movgr2fcsr(1, v_i[1]);
-// CHECK: error: '__builtin_loongarch_frecipe_s' needs target feature f,frecipe
+// CHECK: error: '__builtin_loongarch_frecipe_s' needs target feature f,frecipe,64bit
   float f1 = __builtin_loongarch_frecipe_s(a);
-// CHECK: error: '__builtin_loongarch_frsqrte_s' needs target feature f,frecipe
+// CHECK: error: '__builtin_loongarch_frsqrte_s' needs target feature f,frecipe,64bit
   float f2 = __builtin_loongarch_frsqrte_s(a);
-// CHECK: error: '__builtin_loongarch_frecipe_d' needs target feature d,frecipe
+// CHECK: error: '__builtin_loongarch_frecipe_d' needs target feature d,frecipe,64bit
   double d1 = __builtin_loongarch_frecipe_d(b);
-// CHECK: error: '__builtin_loongarch_frsqrte_d' needs target feature d,frecipe
+// CHECK: error: '__builtin_loongarch_frsqrte_d' needs target feature d,frecipe,64bit
   double d2 = __builtin_loongarch_frsqrte_d(b);
 }
 #endif
