@@ -1178,14 +1178,14 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicWithDynamicThreshold(
   Value *NoOptResult = NeedResult ? static_cast<Value *>(NoOptNewI) : nullptr;
 
   // MergeBB: PHI-merge results from DppBB and NoOptBB.
-  if (NeedResult) {
-    B.SetInsertPoint(MergeBB, MergeBB->getFirstNonPHIIt());
-    PHINode *const MergePHI = B.CreatePHI(Ty, 2);
-    MergePHI->addIncoming(DppResult, ThenTerm->getParent());
-    MergePHI->addIncoming(NoOptResult, NoOptBB);
-    return MergePHI;
-  }
-  return nullptr;
+  if (!NeedResult)
+    return nullptr;
+
+  B.SetInsertPoint(MergeBB, MergeBB->getFirstNonPHIIt());
+  PHINode *const MergePHI = B.CreatePHI(Ty, 2);
+  MergePHI->addIncoming(DppResult, ThenTerm->getParent());
+  MergePHI->addIncoming(NoOptResult, NoOptBB);
+  return MergePHI;
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUAtomicOptimizer, DEBUG_TYPE,
