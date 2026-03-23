@@ -696,6 +696,11 @@ cc_library(
         ],
     ),
     includes = ["include"],
+    textual_hdrs = glob(
+        [
+            "source/Core/**/*.inc",
+        ],
+    ),
     deps = [
         ":BreakpointHeaders",
         ":CoreHeaders",

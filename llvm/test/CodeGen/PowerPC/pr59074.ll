@@ -27,21 +27,20 @@ define void @pr59074(ptr %0) {
 ; LE32-NEXT:    .cfi_def_cfa_offset 80
 ; LE32-NEXT:    lwz 4, 0(3)
 ; LE32-NEXT:    xxlxor 0, 0, 0
-; LE32-NEXT:    li 5, 4
-; LE32-NEXT:    addi 6, 1, 16
-; LE32-NEXT:    li 7, 0
-; LE32-NEXT:    li 8, 12
+; LE32-NEXT:    addi 5, 1, 20
+; LE32-NEXT:    li 6, 0
+; LE32-NEXT:    li 7, 12
+; LE32-NEXT:    addi 8, 1, 16
 ; LE32-NEXT:    xxswapd 0, 0
-; LE32-NEXT:    rlwimi 5, 6, 0, 30, 28
-; LE32-NEXT:    stw 7, 44(1)
+; LE32-NEXT:    stw 6, 44(1)
 ; LE32-NEXT:    addi 4, 4, -12
-; LE32-NEXT:    stw 7, 40(1)
-; LE32-NEXT:    stw 7, 36(1)
-; LE32-NEXT:    stw 8, 16(1)
+; LE32-NEXT:    stw 6, 40(1)
+; LE32-NEXT:    stw 6, 36(1)
+; LE32-NEXT:    stw 7, 16(1)
 ; LE32-NEXT:    rlwinm 9, 4, 29, 28, 29
 ; LE32-NEXT:    stxvd2x 0, 0, 5
 ; LE32-NEXT:    clrlwi 4, 4, 27
-; LE32-NEXT:    lwzux 5, 9, 6
+; LE32-NEXT:    lwzux 5, 9, 8
 ; LE32-NEXT:    lwz 6, 8(9)
 ; LE32-NEXT:    lwz 7, 4(9)
 ; LE32-NEXT:    lwz 8, 12(9)

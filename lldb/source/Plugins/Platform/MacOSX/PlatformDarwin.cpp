@@ -251,7 +251,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
   return file_list;
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
+FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     Target *target, Module &module, Stream &feedback_stream) {
   if (!target)
     return {};
@@ -396,8 +396,9 @@ Status PlatformDarwin::GetModuleFromSharedCaches(
     UUID sc_uuid;
     LazyBool using_sc, private_sc;
     FileSpec sc_path;
+    std::optional<uint64_t> size;
     if (process->GetDynamicLoader()->GetSharedCacheInformation(
-            sc_base_addr, sc_uuid, using_sc, private_sc, sc_path)) {
+            sc_base_addr, sc_uuid, using_sc, private_sc, sc_path, size)) {
       if (module_spec.GetUUID())
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
                                                        sc_uuid, sc_mode);
