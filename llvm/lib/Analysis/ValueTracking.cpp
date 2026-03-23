@@ -5768,21 +5768,35 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // Integers cannot be subnormal
     Known.knownNot(fcSubnormal);
 
-    KnownBits IntKnown =
-        computeKnownBits(Op->getOperand(0), DemandedElts, Q, Depth + 1);
-
     // sitofp and uitofp turn into +0.0 for zero.
     Known.knownNot(fcNegZero);
+
+    // UIToFP is always non-negative regardless of known bits.
+    if (Op->getOpcode() == Instruction::UIToFP)
+      Known.signBitMustBeZero();
+
+    // Only compute known bits if we can learn something useful from them.
+    if (!(InterestedClasses & (fcPosZero | fcNormal | fcInf)))
+      break;
+
+    KnownBits IntKnown =
+        computeKnownBits(Op->getOperand(0), DemandedElts, Q, Depth + 1);
 
     // If the integer is non-zero, the result cannot be +0.0
     if (IntKnown.isNonZero())
       Known.knownNot(fcPosZero);
 
-    // If UIToFP, or SIToFP with a known non-negative value,
-    // it can't be negative
-    if (Op->getOpcode() == Instruction::UIToFP || IntKnown.isNonNegative())
-      Known.signBitMustBeZero();
+    if (Op->getOpcode() == Instruction::SIToFP) {
+      // If the signed integer is known non-negative, the result is
+      // non-negative.
+      if (IntKnown.isNonNegative())
+        Known.signBitMustBeZero();
+      // If the signed integer is known negative, the result is negative.
+      else if (IntKnown.isNegative())
+        Known.signBitMustBeOne();
+    }
 
+    // Guard kept for ilogb()
     if (InterestedClasses & fcInf) {
       // Get width of largest magnitude integer known.
       // This still works for a signed minimum value because the largest FP
