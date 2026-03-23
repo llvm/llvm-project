@@ -23,7 +23,7 @@ void StringFind() {
   std::string Str;
 
   Str.find("a");
-  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more effective overload accepting a character [performance-faster-string-operation]
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal consisting of a single character; consider using the more efficient overload accepting a character [performance-faster-string-operation]
   // CHECK-FIXES: Str.find('a');
 
   // Works with the pos argument.

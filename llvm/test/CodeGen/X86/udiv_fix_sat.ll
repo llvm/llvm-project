@@ -384,25 +384,18 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax), %ecx
-; X86-NEXT:    shrl $31, %eax
-; X86-NEXT:    shldl $31, %ecx, %eax
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    calll __udivdi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %edx, (%esp) # 4-byte Spill
-; X86-NEXT:    leal (%edi,%edi), %eax
-; X86-NEXT:    shrl $31, %edi
-; X86-NEXT:    shldl $31, %eax, %edi
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
@@ -411,40 +404,33 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    leal (%esi,%esi), %eax
-; X86-NEXT:    shrl $31, %esi
-; X86-NEXT:    shldl $31, %eax, %esi
 ; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    calll __udivdi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    leal (%ebp,%ebp), %eax
-; X86-NEXT:    shrl $31, %ebp
-; X86-NEXT:    shldl $31, %eax, %ebp
-; X86-NEXT:    movl %ebp, %eax
 ; X86-NEXT:    cmpl $2, %edx
 ; X86-NEXT:    movl $1, %ebp
 ; X86-NEXT:    cmovael %ebp, %edx
-; X86-NEXT:    movl $-1, %ecx
-; X86-NEXT:    cmovael %ecx, %esi
+; X86-NEXT:    movl $-1, %eax
+; X86-NEXT:    cmovael %eax, %esi
 ; X86-NEXT:    shrdl $1, %edx, %esi
 ; X86-NEXT:    cmpl $2, %edi
 ; X86-NEXT:    cmovael %ebp, %edi
-; X86-NEXT:    movl $-1, %edx
-; X86-NEXT:    cmovael %edx, %ebx
+; X86-NEXT:    movl $-1, %ecx
+; X86-NEXT:    cmovael %ecx, %ebx
 ; X86-NEXT:    shrdl $1, %edi, %ebx
-; X86-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X86-NEXT:    cmpl $2, %ecx
-; X86-NEXT:    cmovael %ebp, %ecx
+; X86-NEXT:    movl (%esp), %eax # 4-byte Reload
+; X86-NEXT:    cmpl $2, %eax
+; X86-NEXT:    cmovael %ebp, %eax
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; X86-NEXT:    cmovael %edx, %edi
-; X86-NEXT:    shrdl $1, %ecx, %edi
+; X86-NEXT:    cmovael %ecx, %edi
+; X86-NEXT:    shrdl $1, %eax, %edi
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    calll __udivdi3
 ; X86-NEXT:    addl $16, %esp
