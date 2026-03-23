@@ -400,8 +400,8 @@ private:
     renderBitcastFPImm(MIB, MI, OpIdx);
   }
 
-  void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                       int OpIdx) const;
+  void renderCountTrailingOnesImm(MachineInstrBuilder &MIB,
+                                  const MachineInstr &MI, int OpIdx) const;
   void renderExtractCPol(MachineInstrBuilder &MIB, const MachineInstr &MI,
                          int OpIdx) const;
   void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,

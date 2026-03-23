@@ -1138,24 +1138,21 @@ public:
   /// Build a new C++11 auto type.
   ///
   /// By default, builds a new AutoType with the given deduced type.
-  QualType RebuildAutoType(QualType Deduced, AutoTypeKeyword Keyword,
+  QualType RebuildAutoType(DeducedKind DK, QualType DeducedAsType,
+                           AutoTypeKeyword Keyword,
                            ConceptDecl *TypeConstraintConcept,
                            ArrayRef<TemplateArgument> TypeConstraintArgs) {
-    // Note, IsDependent is always false here: we implicitly convert an 'auto'
-    // which has been deduced to a dependent type into an undeduced 'auto', so
-    // that we'll retry deduction after the transformation.
-    return SemaRef.Context.getAutoType(Deduced, Keyword,
-                                       /*IsDependent*/ false, /*IsPack=*/false,
-                                       TypeConstraintConcept,
-                                       TypeConstraintArgs);
+    return SemaRef.Context.getAutoType(
+        DK, DeducedAsType, Keyword, TypeConstraintConcept, TypeConstraintArgs);
   }
 
   /// By default, builds a new DeducedTemplateSpecializationType with the given
   /// deduced type.
   QualType RebuildDeducedTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, TemplateName Template, QualType Deduced) {
+      DeducedKind DK, QualType DeducedAsType, ElaboratedTypeKeyword Keyword,
+      TemplateName Template) {
     return SemaRef.Context.getDeducedTemplateSpecializationType(
-        Keyword, Template, Deduced, /*IsDependent*/ false);
+        DK, DeducedAsType, Keyword, Template);
   }
 
   /// Build a new template specialization type.
@@ -5616,9 +5613,8 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
         Qs.removeObjCLifetime();
         Deduced =
             SemaRef.Context.getQualifiedType(Deduced.getUnqualifiedType(), Qs);
-        T = SemaRef.Context.getAutoType(Deduced, AutoTy->getKeyword(),
-                                        AutoTy->isDependentType(),
-                                        /*isPack=*/false,
+        T = SemaRef.Context.getAutoType(AutoTy->getDeducedKind(), Deduced,
+                                        AutoTy->getKeyword(),
                                         AutoTy->getTypeConstraintConcept(),
                                         AutoTy->getTypeConstraintArguments());
       } else {
@@ -7240,7 +7236,8 @@ QualType TreeTransform<Derived>::TransformDeducedTemplateSpecializationType(
   }
 
   QualType Result = getDerived().RebuildDeducedTemplateSpecializationType(
-      T->getKeyword(), TemplateName, NewDeduced);
+      NewDeduced.isNull() ? DeducedKind::Undeduced : DeducedKind::Deduced,
+      NewDeduced, T->getKeyword(), TemplateName);
   if (Result.isNull())
     return QualType();
 
@@ -7581,8 +7578,9 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
     NewArgList.reserve(NewTemplateArgs.size());
     for (const auto &ArgLoc : NewTemplateArgs.arguments())
       NewArgList.push_back(ArgLoc.getArgument());
-    Result = getDerived().RebuildAutoType(NewDeduced, T->getKeyword(), NewCD,
-                                          NewArgList);
+    Result = getDerived().RebuildAutoType(
+        NewDeduced.isNull() ? DeducedKind::Undeduced : DeducedKind::Deduced,
+        NewDeduced, T->getKeyword(), NewCD, NewArgList);
     if (Result.isNull())
       return QualType();
   }
@@ -13074,6 +13072,31 @@ ExprResult TreeTransform<Derived>::TransformSYCLUniqueStableNameExpr(
 
   return getDerived().RebuildSYCLUniqueStableNameExpr(
       E->getLocation(), E->getLParenLocation(), E->getRParenLocation(), NewT);
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *S) {
+  auto *FD = cast<FunctionDecl>(SemaRef.CurContext);
+  const auto *SKEPAttr = FD->template getAttr<SYCLKernelEntryPointAttr>();
+  if (!SKEPAttr || SKEPAttr->isInvalidAttr())
+    return StmtError();
+
+  ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
+  if (IdExpr.isInvalid())
+    return StmtError();
+
+  StmtResult Body = getDerived().TransformStmt(S->getOriginalStmt());
+  if (Body.isInvalid())
+    return StmtError();
+
+  StmtResult SR = SemaRef.SYCL().BuildSYCLKernelCallStmt(
+      cast<FunctionDecl>(SemaRef.CurContext), cast<CompoundStmt>(Body.get()),
+      IdExpr.get());
+  if (SR.isInvalid())
+    return StmtError();
+
+  return SR;
 }
 
 template <typename Derived>

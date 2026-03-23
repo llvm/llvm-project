@@ -91,12 +91,12 @@ void LanaiAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     break;
 
   case MachineOperand::MO_JumpTableIndex:
-    O << MAI->getPrivateGlobalPrefix() << "JTI" << getFunctionNumber() << '_'
+    O << MAI->getInternalSymbolPrefix() << "JTI" << getFunctionNumber() << '_'
       << MO.getIndex();
     break;
 
   case MachineOperand::MO_ConstantPoolIndex:
-    O << MAI->getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+    O << MAI->getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << '_'
       << MO.getIndex();
     return;
 

@@ -860,6 +860,11 @@ TEST_F(InterpolateTest, StdTransferSameFamily) {
   add("dir/baz.m", "-std=c17");
   EXPECT_EQ(getCommand("dir/baz.c"), "clang -D dir/baz.m -std=c17");
 }
+  
+TEST_F(InterpolateTest, CXX20Modules) {
+  add("dir/foo.cpp", "-std=c++20");
+  EXPECT_EQ(getCommand("dir/foo.cppm"), "clang -D dir/foo.cpp -std=c++20");
+}
 
 TEST_F(InterpolateTest, Strip) {
   add("dir/foo.cpp", "-o foo.o -Wall");

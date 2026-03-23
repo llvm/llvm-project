@@ -60,7 +60,7 @@ void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
 
 RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin() {
   CodePointerSize = 4;
-  PrivateGlobalPrefix = "L";
+  InternalSymbolPrefix = "L";
   PrivateLabelPrefix = "L";
   SeparatorString = "%%";
   CommentString = ";";

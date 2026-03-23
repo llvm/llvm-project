@@ -72,7 +72,7 @@ public:
 
   void TearDown() override {
     SymbolFilePDB::Terminate();
-    TypeSystemClang::Initialize();
+    TypeSystemClang::Terminate();
     plugin::dwarf::SymbolFileDWARF::Terminate();
     ObjectFilePECOFF::Terminate();
     HostInfo::Terminate();

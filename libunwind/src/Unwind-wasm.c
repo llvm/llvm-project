@@ -69,6 +69,21 @@ _Unwind_RaiseException(_Unwind_Exception *exception_object) {
   __builtin_wasm_throw(0, exception_object);
 }
 
+// Define the `__cpp_exception` symbol which `__builtin_wasm_throw` above will
+// reference. This is defined here in `libunwind` as the single canonical
+// definition for this API and it's required for users to ensure that there's
+// only one copy of `libunwind` within a wasm module to ensure this is only
+// defined once and exactly once.
+__asm__(".globl __cpp_exception\n"
+#if defined(__wasm32__)
+        ".tagtype __cpp_exception i32\n"
+#elif defined(__wasm64__)
+        ".tagtype __cpp_exception i64\n"
+#else
+#error "Unsupported Wasm architecture"
+#endif
+        "__cpp_exception:\n");
+
 /// Called by __cxa_end_catch.
 _LIBUNWIND_EXPORT void
 _Unwind_DeleteException(_Unwind_Exception *exception_object) {
@@ -102,7 +117,8 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
 }
 
 /// Not used in Wasm.
-_LIBUNWIND_EXPORT void _Unwind_SetIP(struct _Unwind_Context *, uintptr_t) {}
+_LIBUNWIND_EXPORT void _Unwind_SetIP(struct _Unwind_Context *context,
+                                     uintptr_t value) {}
 
 /// Called by personality handler to get LSDA for current frame.
 _LIBUNWIND_EXPORT uintptr_t
@@ -114,7 +130,8 @@ _Unwind_GetLanguageSpecificData(struct _Unwind_Context *context) {
 }
 
 /// Not used in Wasm.
-_LIBUNWIND_EXPORT uintptr_t _Unwind_GetRegionStart(struct _Unwind_Context *) {
+_LIBUNWIND_EXPORT uintptr_t
+_Unwind_GetRegionStart(struct _Unwind_Context *context) {
   return 0;
 }
 

@@ -113,9 +113,14 @@ mlir::Location CIRGenFunction::getLoc(SourceLocation srcLoc) {
     return mlir::FileLineColLoc::get(builder.getStringAttr(filename),
                                      pLoc.getLine(), pLoc.getColumn());
   }
-  // Do our best...
+  // We expect to have a currSrcLoc set, so we assert here, but it isn't
+  // critical for the correctness of compilation, so in non-assert builds
+  // we fallback on using an unknown location.
   assert(currSrcLoc && "expected to inherit some source location");
-  return *currSrcLoc;
+  if (currSrcLoc)
+    return *currSrcLoc;
+  // We're brave, but time to give up.
+  return builder.getUnknownLoc();
 }
 
 mlir::Location CIRGenFunction::getLoc(SourceRange srcLoc) {
@@ -128,9 +133,12 @@ mlir::Location CIRGenFunction::getLoc(SourceRange srcLoc) {
     mlir::Attribute metadata;
     return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
   }
-  if (currSrcLoc) {
+  // We expect to have a currSrcLoc set, so we assert here, but it isn't
+  // critical for the correctness of compilation, so in non-assert builds
+  // we fallback on using an unknown location.
+  assert(currSrcLoc && "expected to inherit some source location");
+  if (currSrcLoc)
     return *currSrcLoc;
-  }
   // We're brave, but time to give up.
   return builder.getUnknownLoc();
 }
@@ -1092,6 +1100,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     CXXDefaultArgExprScope scope(*this, dae);
     return emitLValue(dae->getExpr());
   }
+  case Expr::CXXTypeidExprClass:
+    return emitCXXTypeidLValue(cast<CXXTypeidExpr>(e));
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:
@@ -1258,7 +1268,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   // If it's a VLA, we have to load the stored size.  Note that
   // this is the size of the VLA in bytes, not its size in elements.
   if (isa<VariableArrayType>(arrayType)) {
-    assert(cir::MissingFeatures::vlas());
+    assert(!cir::MissingFeatures::vlas());
     cgm.errorNYI(*currSrcLoc, "VLAs");
     return builder.getConstInt(*currSrcLoc, sizeTy, 0);
   }

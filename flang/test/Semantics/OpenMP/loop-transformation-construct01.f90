@@ -33,6 +33,7 @@ subroutine loop_transformation_construct3
   integer :: x
   integer :: v(i)
 
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp do
   !ERROR: Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs
   !$omp parallel do

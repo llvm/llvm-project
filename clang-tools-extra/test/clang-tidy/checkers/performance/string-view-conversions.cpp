@@ -1,36 +1,9 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s performance-string-view-conversions %t -- \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN: %check_clang_tidy -std=c++17-or-later %s performance-string-view-conversions %t
 #include <string>
+#include <utility>
 
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
-
-// Support for std::move
-namespace std {
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
-  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
-}
-} // namespace std
 
 void foo_sv(int p1, std::string_view p2, double p3);
 void foo_wsv(int p1, std::wstring_view p2, double p3);
