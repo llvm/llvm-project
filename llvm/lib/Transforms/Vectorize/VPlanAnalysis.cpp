@@ -126,6 +126,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     // Assume that the maximum possible number of elements in a vector fits
     // within the index type for the default address space.
     return DL.getIndexType(Ctx, 0);
+  case VPInstruction::SignedAbsoluteDifference:
+  case VPInstruction::UnsignedAbsoluteDifference:
+    return inferScalarType(R->getOperand(0));
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
