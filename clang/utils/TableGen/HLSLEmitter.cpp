@@ -173,7 +173,7 @@ struct TypeWorkItem {
 
   /// Version string for the availability attribute (e.g. "6.2"). Empty if
   /// no availability annotation is needed.
-  StringRef Availability;
+  std::string Availability;
 
   /// If true, emit _HLSL_16BIT_AVAILABILITY instead of _HLSL_AVAILABILITY.
   bool Use16BitAvail = false;
