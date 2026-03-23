@@ -3250,6 +3250,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   for (unsigned SI = 0; SI < Pairs; ++SI) {
     LLVM_DEBUG(dbgs() << "testing subscript " << SI);
 
+    // Attempt signed range test first.
     ConstantRange SrcRange = SE->getSignedRange(Pair[SI].Src);
     ConstantRange DstRange = SE->getSignedRange(Pair[SI].Dst);
     if (SrcRange.intersectWith(DstRange).isEmptySet())
