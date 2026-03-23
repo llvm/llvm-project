@@ -84,3 +84,43 @@ body:             |
     $vgpr260 = V_AND_B32_e32 496, $vgpr260, implicit $exec
     S_ENDPGM 0
 ...
+
+---
+name:            xcnt
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $vgpr10, $vgpr257
+    ; CHECK-LABEL: name: xcnt
+    ; CHECK: liveins: $vgpr10, $vgpr257
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr11 = nofpexcept V_EXP_F32_e32 killed $vgpr10, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: S_WAIT_XCNT 0
+    ; CHECK-NEXT: $vgpr256 = nofpexcept V_EXP_F32_e32 killed $vgpr257, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+  $vgpr11 = nofpexcept V_EXP_F32_e32 killed $vgpr10, implicit $mode, implicit $exec
+  S_WAIT_XCNT 0
+  $vgpr256 = nofpexcept V_EXP_F32_e32 killed $vgpr257, implicit $mode, implicit $exec
+  S_ENDPGM 0
+...
+
+---
+name:            asynccnt
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $vgpr10, $vgpr257
+    ; CHECK-LABEL: name: asynccnt
+    ; CHECK: liveins: $vgpr10, $vgpr257
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr11 = nofpexcept V_EXP_F32_e32 killed $vgpr10, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_WAIT_ASYNCCNT 0, implicit $asynccnt, implicit-def $asynccnt
+    ; CHECK-NEXT: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = nofpexcept V_EXP_F32_e32 killed $vgpr257, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+  $vgpr11 = nofpexcept V_EXP_F32_e32 killed $vgpr10, implicit $mode, implicit $exec
+  S_WAIT_ASYNCCNT 0, implicit $asynccnt, implicit-def $asynccnt
+  $vgpr256 = nofpexcept V_EXP_F32_e32 killed $vgpr257, implicit $mode, implicit $exec
+  S_ENDPGM 0
+...
