@@ -184,6 +184,111 @@ exit:
   ret i32 %add
 }
 
+; %sum has 2 unsinkable operands (%a, %b) not already live across the loop.
+; Sinking %sum would increase register pressure by 1, so it must not be sunk.
+define i32 @test_regpressure_no_sink(ptr %p1, ptr %p2, ptr %q, i32 %N) {
+; CHECK-LABEL: @test_regpressure_no_sink(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P1:%.*]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[SUM]]
+;
+entry:
+  %a = load i32, ptr %p1
+  %b = load i32, ptr %p2
+  store i32 0, ptr %q
+  %sum = add i32 %a, %b
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %i.next = add i32 %i, 1
+  %cmp = icmp slt i32 %i.next, %N
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %sum
+}
+
+; %x cannot be sunk because its preheader user %y is used in the loop.
+define i32 @test_preheader_user_blocks_sink(i32 %a, i32 %N) {
+; CHECK-LABEL: @test_preheader_user_blocks_sink(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[X]], 2
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[X]]
+;
+entry:
+  %x = add i32 %a, 1
+  %y = add i32 %x, 2
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, %y
+  %cmp = icmp slt i32 %iv.next, %N
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %x
+}
+
+; Multiple exit blocks -- sinking from preheader is not performed.
+define i32 @test_multiple_exits_no_sink(i32 %a, i32 %b, i32 %N) {
+; CHECK-LABEL: @test_multiple_exits_no_sink(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[IV]], 42
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EARLY_EXIT:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       early_exit:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  %add = add i32 %a, %b
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %cmp1 = icmp eq i32 %iv, 42
+  br i1 %cmp1, label %early_exit, label %latch
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %cmp2 = icmp slt i32 %iv.next, %N
+  br i1 %cmp2, label %loop, label %exit
+
+early_exit:
+  ret i32 0
+
+exit:
+  ret i32 %add
+}
+
 ; Check if caching the defining access produces valid MemorySSA.
 ; LICM refuses to sink a MemoryUse if there is any MemoryDef following.
 ; All sunk MemoryUses must share the same defining access.
