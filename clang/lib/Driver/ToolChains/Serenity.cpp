@@ -27,7 +27,7 @@ void tools::serenity::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                            const InputInfoList &Inputs,
                                            const ArgList &Args,
                                            const char *LinkingOutput) const {
-  const auto &TC = static_cast<Generic_ELF const&>(getToolChain());
+  const auto &TC = static_cast<Generic_ELF const &>(getToolChain());
   const auto &D = TC.getDriver();
   const bool IsShared = Args.hasArg(options::OPT_shared);
   const bool IsStatic =
