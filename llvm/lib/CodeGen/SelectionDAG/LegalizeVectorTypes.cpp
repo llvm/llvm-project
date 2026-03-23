@@ -2910,7 +2910,7 @@ void DAGTypeLegalizer::SplitVecRes_ExtendOp(SDNode *N, SDValue &Lo,
   if (SrcVT.getVectorElementCount().isKnownEven() &&
       SrcVT.getScalarSizeInBits() * 2 < DestVT.getScalarSizeInBits()) {
     LLVMContext &Ctx = *DAG.getContext();
-    EVT NewSrcVT = SrcVT.widenIntegerVectorElementType(Ctx);
+    EVT NewSrcVT = SrcVT.widenIntegerElementType(Ctx);
     EVT SplitSrcVT = SrcVT.getHalfNumVectorElementsVT(Ctx);
 
     EVT SplitLoVT, SplitHiVT;

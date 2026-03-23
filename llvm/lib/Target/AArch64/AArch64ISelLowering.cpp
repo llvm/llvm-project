@@ -26424,7 +26424,7 @@ static SDValue performMSTORECombine(SDNode *N,
           Value.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
       EVT InVT = Value.getOperand(0).getValueType();
 
-      if (HalfVT.widenIntegerVectorElementType(*DAG.getContext()) == InVT) {
+      if (HalfVT.widenIntegerElementType(*DAG.getContext()) == InVT) {
         unsigned MinSVESize = Subtarget->getMinSVEVectorSizeInBits();
         unsigned PgPattern = Mask->getConstantOperandVal(0);
 
@@ -30093,7 +30093,7 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
 
   unsigned Opcode = (Index == 0) ? (unsigned)ISD::ANY_EXTEND_VECTOR_INREG
                                  : (unsigned)AArch64ISD::UUNPKHI;
-  EVT ExtendedHalfVT = VT.widenIntegerVectorElementType(*DAG.getContext());
+  EVT ExtendedHalfVT = VT.widenIntegerElementType(*DAG.getContext());
 
   SDValue Half = DAG.getNode(Opcode, DL, ExtendedHalfVT, N->getOperand(0));
   Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Half));
@@ -31778,11 +31778,11 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
 
   // Scalable vector i8/i16 DIV is not supported. Promote it to i32.
   EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-  EVT PromVT = HalfVT.widenIntegerVectorElementType(*DAG.getContext());
+  EVT PromVT = HalfVT.widenIntegerElementType(*DAG.getContext());
   unsigned ExtendOpcode = Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
 
   // If the wider type is legal: extend, op, and truncate.
-  EVT WideVT = VT.widenIntegerVectorElementType(*DAG.getContext());
+  EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
   if (DAG.getTargetLoweringInfo().isTypeLegal(WideVT)) {
     SDValue Op0 = DAG.getNode(ExtendOpcode, DL, WideVT, Op.getOperand(0));
     SDValue Op1 = DAG.getNode(ExtendOpcode, DL, WideVT, Op.getOperand(1));

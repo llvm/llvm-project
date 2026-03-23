@@ -2377,7 +2377,7 @@ WebAssemblyTargetLowering::LowerEXTEND_VECTOR_INREG(SDValue Op,
   while (Scale != 1) {
     Ret = DAG.getNode(Ext, DL,
                       Ret.getValueType()
-                          .widenIntegerVectorElementType(*DAG.getContext())
+                          .widenIntegerElementType(*DAG.getContext())
                           .getHalfNumVectorElementsVT(*DAG.getContext()),
                       Ret);
     Scale /= 2;
