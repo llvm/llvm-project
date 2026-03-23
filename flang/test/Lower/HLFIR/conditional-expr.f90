@@ -137,8 +137,8 @@ subroutine test_array(flag)
   arr1 = 1
   arr2 = 2
   result = (flag ? arr1 : arr2)
-  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".cond.array"
-  ! CHECK: %[[UNALLOC:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<{{.*}}xi32>>> {bindc_name = ".cond.array"
+  ! CHECK: %[[UNALLOC:.*]] = fir.zero_bits !fir.heap<!fir.array<{{.*}}xi32>>
   ! CHECK: %[[SHAPE:.*]] = fir.shape
   ! CHECK: %[[BOX:.*]] = fir.embox %[[UNALLOC]](%[[SHAPE]])
   ! CHECK: fir.store %[[BOX]] to %[[BOX_ALLOC]]
@@ -249,7 +249,7 @@ subroutine test_array_section(flag)
   logical :: flag
   integer :: arr1(20), arr2(20), result(10)
   result = (flag ? arr1(1:10) : arr2(11:20))
-  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = ".cond.array"
+  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<{{.*}}xi32>>> {bindc_name = ".cond.array"
   ! CHECK: fir.if
   ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
   ! CHECK: } else {
