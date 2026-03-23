@@ -11431,6 +11431,11 @@ multiclass sve2_luti6_vector_index<string mnemonic> {
             (nxv8f16 (!cast<Instruction>(NAME # _H) (REG_SEQUENCE ZPR2, nxv8f16:$Op1, zsub0,
                                                                       nxv8f16:$Op2, zsub1),
                                                 nxv16i8:$Op3, timm32_0_1:$Op4))>;
+  def : Pat<(nxv8bf16 (int_aarch64_sve_luti6_lane_x2 nxv8bf16:$Op1, nxv8bf16:$Op2,
+                       nxv16i8:$Op3, (i32 timm32_0_1:$Op4))),
+            (nxv8bf16 (!cast<Instruction>(NAME # _H) (REG_SEQUENCE ZPR2, nxv8bf16:$Op1, zsub0,
+                                                                        nxv8bf16:$Op2, zsub1),
+                                                 nxv16i8:$Op3, timm32_0_1:$Op4))>;
 }
 
 // Look up table
