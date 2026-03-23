@@ -361,8 +361,14 @@ public:
 
   /// Compute knownbits resulting from addition of LHS and RHS.
   static KnownBits add(const KnownBits &LHS, const KnownBits &RHS,
-                       bool NSW = false, bool NUW = false) {
-    return computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
+                       bool NSW = false, bool NUW = false,
+                       bool SelfAdd = false) {
+    KnownBits KnownAdd = computeForAddSub(/*Add=*/true, NSW, NUW, LHS, RHS);
+
+    // ADD(X,X) is equivalent to SHL(X,1), the low bit is always zero.
+    if (SelfAdd)
+      KnownAdd.Zero.setBit(0);
+    return KnownAdd;
   }
 
   /// Compute knownbits resulting from subtraction of LHS and RHS.

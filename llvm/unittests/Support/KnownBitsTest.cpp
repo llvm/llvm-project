@@ -592,6 +592,14 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N ^ (N - 1); });
 
   testUnaryOpExhaustive(
+      "add self",
+      [](const KnownBits &Known) {
+        return KnownBits::add(Known, Known, /*NSW=*/false, /*NUW=*/false,
+                              /*SelfAdd=*/true);
+      },
+      [](const APInt &N) { return N + N; }, /*CheckOptimality=*/false);
+
+  testUnaryOpExhaustive(
       "mul self",
       [](const KnownBits &Known) {
         return KnownBits::mul(Known, Known, /*SelfMultiply=*/true);
