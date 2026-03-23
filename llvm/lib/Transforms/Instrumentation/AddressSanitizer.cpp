@@ -634,7 +634,7 @@ void llvm::getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
 }
 
 void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
-  // Sanitizer checks read from shadow, which adds memory(readwrite).
+  // Adding sanitizer checks invalidates previously inferred memory attributes.
   //
   // This is not only true for sanitized functions, because AttrInfer can
   // infer those attributes on libc functions, which is not true if those
@@ -659,6 +659,7 @@ void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
                        MemoryEffects::otherMemOnly(ModRefInfo::ModRef));
     Changed = true;
   }
+  // HWASan reads from argument memory even for previously write-only accesses.
   if (ReadsArgMem) {
     if (F.getMemoryEffects().getModRef(IRMemLocation::ArgMem) ==
         ModRefInfo::Mod) {
