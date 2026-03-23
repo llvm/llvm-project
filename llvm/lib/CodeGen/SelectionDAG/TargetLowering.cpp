@@ -8282,15 +8282,14 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       // If there were trailing zeros in the divisor, increase the shift amount.
       unsigned Shift = I + TrailingZeros;
       SDValue Chunk;
-      if (Shift == 0) {
+      if (Shift == 0)
         Chunk = LL;
-      } else if (Shift >= HBitWidth) {
+      else if (Shift >= HBitWidth)
         Chunk = DAG.getNode(
             ISD::SRL, dl, HiLoVT, LH,
             DAG.getShiftAmountConstant(Shift - HBitWidth, HiLoVT, dl));
-      } else {
+      else
         Chunk = GetFSHR(LL, LH, Shift);
-      }
       // If we're on the last chunk, we don't need an AND.
       if (I + BestChunkWidth < BitWidth - TrailingZeros)
         Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk,
