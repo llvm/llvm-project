@@ -64,6 +64,4 @@ loop.latch:                                              ; preds = %bb5, %bb4, %
   br i1 %icmp, label %exit, label %loop.header
 }
 
-declare i64 @llvm.smin.i64(i64, i64)
-
 !0 = !{!"branch_weights", i32 -2147483648, i32 0}
