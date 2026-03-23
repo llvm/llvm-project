@@ -1,11 +1,10 @@
-executable("clang-ssaf-linker") {
+static_library("Tool") {
+  output_name = "clangScalableStaticAnalysisFrameworkTool"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/Basic",
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
-    "//clang/lib/ScalableStaticAnalysisFramework/Tool",
-    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
-  sources = [ "SSAFLinker.cpp" ]
+  sources = [ "Utils.cpp" ]
 }
