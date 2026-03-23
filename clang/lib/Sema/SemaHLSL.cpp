@@ -4195,8 +4195,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_or:
   case Builtin::BI__builtin_hlsl_wave_active_bit_xor:
-  case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
+  case Builtin::BI__builtin_hlsl_wave_active_bit_and: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
@@ -5601,9 +5602,10 @@ class InitListTransformer {
     }
 
     // If this is a scalar type, just enqueue the expression.
-    QualType Ty = E->getType();
+    QualType Ty = E->getType().getDesugaredType(Ctx);
 
-    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()) ||
+        Ty->isHLSLAttributedResourceType())
       return castInitializer(E);
 
     if (auto *VecTy = Ty->getAs<VectorType>()) {
@@ -5698,12 +5700,13 @@ class InitListTransformer {
   }
 
   Expr *generateInitListsImpl(QualType Ty) {
+    Ty = Ty.getDesugaredType(Ctx);
     assert(ArgIt != ArgExprs.end() && "Something is off in iteration!");
-    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()))
+    if (Ty->isScalarType() || (Ty->isRecordType() && !Ty->isAggregateType()) ||
+        Ty->isHLSLAttributedResourceType())
       return *(ArgIt++);
 
     llvm::SmallVector<Expr *> Inits;
-    Ty = Ty.getDesugaredType(Ctx);
     if (Ty->isVectorType() || Ty->isConstantArrayType() ||
         Ty->isConstantMatrixType()) {
       QualType ElTy;
