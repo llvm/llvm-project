@@ -18,18 +18,11 @@ a list of open projects that one can start with:
    ask if you can help take over.
 
 #. **Cleanup code-style** - The libc project follows the general
-   `LLVM style <https://llvm.org/docs/CodingStandards.html>`_ but differs in a
-   few aspects: We use ``snake_case`` for non-constant variable and function
-   names,``CamelCase`` for internal type names (those which are not defined in a
-   public header), and ``CAPITALIZED_SNAKE_CASE`` for constants. When we started
-   working on the project, we started using the general LLVM style for
-   everything. However, for a short period, we switched to the style that is
-   currently followed by the `LLD project <https://github.com/llvm/llvm-project/tree/main/lld>`_.
-   But, considering that we implement a lot of functions and types whose names
-   are prescribed by the standards, we have settled on the style described above.
-   However, we have not switched over to this style in all parts of the ``libc``
-   directory. So, a simple but mechanical project would be to move the parts
-   following the old styles to the new style.
+   `LLVM style <https://llvm.org/docs/CodingStandards.html>`_ with specific
+   conventions for naming (``snake_case`` for functions, ``CamelCase`` for
+   types). See the :ref:`code_style` page for the authoritative reference.
+   Mechanical projects to move parts following old styles to the current
+   conventions are welcome.
 
 #. **Implement Linux syscall wrappers** - A large portion of the POSIX API can
    be implemented as syscall wrappers on Linux. A good number have already been

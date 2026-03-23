@@ -288,6 +288,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.resource.getrlimit
     libc.src.sys.resource.setrlimit
 
+    # sys/sem.h entrypoints
+    libc.src.sys.sem.semget
+    libc.src.sys.sem.semctl
+    libc.src.sys.sem.semop
+
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
 
@@ -431,6 +436,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
     libc.src.wctype.iswxdigit
+    libc.src.wctype.iswpunct
+    libc.src.wctype.iswprint
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -938,6 +945,7 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl

@@ -239,6 +239,11 @@ public:
     GetContext().withinConstruct = true;
   }
 
+  bool Pre(const parser::OpenACCWaitConstruct &);
+  void Post(const parser::OpenACCWaitConstruct &) { PopContext(); }
+  bool Pre(const parser::OpenACCAtomicConstruct &);
+  void Post(const parser::OpenACCAtomicConstruct &) { PopContext(); }
+
   bool Pre(const parser::OpenACCCacheConstruct &);
   void Post(const parser::OpenACCCacheConstruct &) { PopContext(); }
 
@@ -1115,6 +1120,7 @@ private:
   Symbol *ResolveOmpCommonBlockName(const parser::Name *);
   void ResolveOmpNameList(const std::list<parser::Name> &, Symbol::Flag);
   void ResolveOmpName(const parser::Name &, Symbol::Flag);
+  void PropagateOmpFlagToEquivalenceSet(const Symbol &, Symbol::Flag);
   Symbol *ResolveName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
@@ -1123,7 +1129,6 @@ private:
 
   void CheckDataCopyingClause(
       const parser::Name &, const Symbol &, Symbol::Flag);
-  void CheckAssocLoopLevel(std::int64_t level, const parser::OmpClause *clause);
   void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
   void CheckSourceLabel(const parser::Label &);
@@ -1618,6 +1623,31 @@ void AccAttributeVisitor::AllowOnlyVariable(const parser::AccObject &object) {
           [&](const auto &name) {},
       },
       object.u);
+}
+
+bool AccAttributeVisitor::Pre(const parser::OpenACCWaitConstruct &x) {
+  const auto &verbatim{std::get<parser::Verbatim>(x.t)};
+  PushContext(verbatim.source, llvm::acc::Directive::ACCD_wait);
+  ClearDataSharingAttributeObjects();
+  return true;
+}
+
+bool AccAttributeVisitor::Pre(const parser::OpenACCAtomicConstruct &x) {
+  const auto &verbatimSource = common::visit(
+      common::visitors{
+          [&](const parser::AccAtomicUpdate &atomic) {
+            const auto &optVerbatim =
+                std::get<std::optional<parser::Verbatim>>(atomic.t);
+            return optVerbatim ? optVerbatim->source : x.source;
+          },
+          [&](const auto &atomic) {
+            return std::get<parser::Verbatim>(atomic.t).source;
+          },
+      },
+      x.u);
+  PushContext(verbatimSource, llvm::acc::Directive::ACCD_atomic);
+  ClearDataSharingAttributeObjects();
+  return true;
 }
 
 bool AccAttributeVisitor::Pre(const parser::OpenACCCacheConstruct &x) {
@@ -2157,11 +2187,6 @@ std::int64_t OmpAttributeVisitor::SetAssociatedMaxClause(
   for (auto [level, clause] : llvm::zip_equal(levels, clauses)) {
     if (clause && isCollapseClause(clause) && tileLevel > 0 &&
         tileLevel < level) {
-      context_.Say(clause->source,
-          "The value of the parameter in the COLLAPSE clause must"
-          " not be larger than the number of the number of tiled loops"
-          " because collapse currently is limited to independent loop"
-          " iterations."_err_en_US);
       return 1;
     }
 
@@ -2310,40 +2335,13 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
         // Recurse into nested loop
         const auto &block{std::get<parser::Block>(loop->t)};
         if (block.empty()) {
-          // Insufficient number of nested loops already reported by
-          // CheckAssocLoopLevel()
           break;
         }
 
         loop = GetDoConstructIf(block.front());
         if (!loop) {
-          // Insufficient number of nested loops already reported by
-          // CheckAssocLoopLevel()
           break;
         }
-
-        auto checkPerfectNest = [&, this]() {
-          if (block.empty())
-            return;
-          auto last = block.end();
-          --last;
-
-          // A trailing CONTINUE is not considered part of the loop body
-          if (parser::Unwrap<parser::ContinueStmt>(*last))
-            --last;
-
-          // In a perfectly nested loop, the nested loop must be the only
-          // statement
-          if (last == block.begin())
-            return;
-
-          // Non-perfectly nested loop
-          // TODO: Point to non-DO statement, directiveSource as a note
-          context_.Say(dirContext.directiveSource,
-              "Canonical loop nest must be perfectly nested."_err_en_US);
-        };
-
-        checkPerfectNest();
 
         ++curLevel;
       }
@@ -2418,36 +2416,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
           loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
         }
       }
-      CheckAssocLoopLevel(level, GetAssociatedClause());
-    }
-  }
-}
-
-void OmpAttributeVisitor::CheckAssocLoopLevel(
-    std::int64_t level, const parser::OmpClause *clause) {
-  if (level != 0) {
-    if (clause) {
-      switch (clause->Id()) {
-      case llvm::omp::OMPC_sizes:
-        context_.Say(clause->source,
-            "The SIZES clause has more entries than there are nested canonical loops."_err_en_US);
-        break;
-      case llvm::omp::OMPC_permutation:
-        context_.Say(clause->source,
-            "The PERMUTATION clause has more entries than there are nested canonical loops."_err_en_US);
-        break;
-      default:
-        context_.Say(clause->source,
-            "The value of the parameter in the COLLAPSE or ORDERED clause must"
-            " not be larger than the number of nested loops"
-            " following the construct."_err_en_US);
-        break;
-      }
-    } else if (GetContext().directive ==
-        llvm::omp::Directive::OMPD_interchange) {
-      // OMPD_interchange with no permutation clause needs a level 2 nest
-      context_.Say(GetContext().directiveSource,
-          "The INTERCHANGE construct must be followed by a canonical loop nest of at least 2 levels"_err_en_US);
     }
   }
 }
@@ -3279,6 +3247,30 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
   }
 }
 
+void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
+    const Symbol &symbol, Symbol::Flag ompFlag) {
+  // Find the equivalence set containing this symbol
+  if (const EquivalenceSet *eqSet{FindEquivalenceSet(symbol)}) {
+    // Propagate the flag to all symbols in the equivalence set
+    for (const EquivalenceObject &eqObj : *eqSet) {
+      Symbol &eqSymbol{eqObj.symbol};
+
+      // Skip the symbol itself (already has the flag)
+      if (&eqSymbol == &symbol) {
+        continue;
+      }
+
+      // Set the OpenMP flag on the equivalenced symbol
+      if (Symbol * resolvedSymbol{ResolveOmp(eqSymbol, ompFlag, currScope())}) {
+        // Also add to the context if needed
+        if (ompFlagsRequireMark.test(ompFlag)) {
+          AddToContextObjectWithExplicitDSA(*resolvedSymbol, ompFlag);
+        }
+      }
+    }
+  }
+}
+
 void OmpAttributeVisitor::ResolveOmpCommonBlock(
     const parser::Name &name, Symbol::Flag ompFlag) {
   if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
@@ -3297,6 +3289,11 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
           AddToContextObjectWithExplicitDSA(*resolvedObject, ompFlag);
         }
         details.replace_object(*resolvedObject, index);
+
+        // Propagate the flag to symbols in the equivalence set
+        if (ompFlag == Symbol::Flag::OmpThreadprivate) {
+          PropagateOmpFlagToEquivalenceSet(*resolvedObject, ompFlag);
+        }
       }
     }
   } else {
