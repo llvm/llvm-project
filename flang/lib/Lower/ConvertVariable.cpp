@@ -677,8 +677,11 @@ genCleanupDeallocateCoarray(Fortran::lower::AbstractConverter &converter,
                             Fortran::lower::SymMap &symMap) {
   mlir::Location loc = converter.getCurrentLocation();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
-  auto *builder = &converter.getFirOpBuilder();
   fir::ExtendedValue exv = converter.getSymbolExtendedValue(sym, &symMap);
+
+  if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
+    TODO(loc, "Coarray with an allocatable direct component and/or requiring "
+              "finalization.");
 
   // Local coarray must have the SAVE and/or ALLOCATABLE attributes.
   // SAVE (no ALLOCATABLE): never automatically deallocated or finalized
@@ -691,15 +694,9 @@ genCleanupDeallocateCoarray(Fortran::lower::AbstractConverter &converter,
   //    finalized at scope exit
   // 3. ALLOCATABLE and SAVE: Not deallocated at scope exit
   //    (only via explicit DEALLOCATE or END TEAM)
-  if (Fortran::semantics::IsSaved(sym) &&
-      Fortran::semantics::IsFunctionResult(sym))
   if (Fortran::semantics::IsSaved(sym) ||
       Fortran::semantics::IsFunctionResult(sym))
     return;
-
-  if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
-    TODO(loc, "Coarray with an allocatable direct component and/or requiring "
-              "finalization.");
 
   if (Fortran::semantics::IsDummy(sym)) {
     // PRIF provide prif_alias_destroy to delete an aliased descriptor
@@ -710,7 +707,7 @@ genCleanupDeallocateCoarray(Fortran::lower::AbstractConverter &converter,
     TODO(loc, "Cleanup aliased coarray created for a dummy argument.");
   }
 
-  converter.getFctCtx().attachCleanup([&converter, builder, loc, exv, sym]() {
+  converter.getFctCtx().attachCleanup([&converter, loc, exv, sym]() {
     if (auto mutBox = exv.getBoxOf<fir::MutableBoxValue>())
       Fortran::lower::genDeallocateIfAllocated(converter, *mutBox, loc);
     else
@@ -2540,8 +2537,11 @@ void Fortran::lower::mapSymbolAttributes(
   }
 
   if (Fortran::evaluate::IsCoarray(sym)) {
-    if (sym.attrs().test(Fortran::semantics::Attr::SAVE))
-      TODO(loc, "Coarray with explicit SAVE attribute.");
+    if (!Fortran::semantics::IsAllocatable(sym) &&
+        Fortran::semantics::IsSaved(sym) &&
+        sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram)
+      TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
+    ;
     Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
     ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
                        replace);
