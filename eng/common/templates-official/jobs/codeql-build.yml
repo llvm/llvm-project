@@ -1,7 +1,0 @@
-jobs:
-- template: /eng/common/core-templates/jobs/codeql-build.yml
-  parameters:
-    is1ESPipeline: true
-
-    ${{ each parameter in parameters }}:
-      ${{ parameter.key }}: ${{ parameter.value }}

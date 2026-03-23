@@ -50,16 +50,6 @@ parameters:
   type: boolean
   default: false
 
-- name: SDLValidationParameters
-  type: object
-  default:
-    enable: false
-    publishGdn: false
-    continueOnError: false
-    params: ''
-    artifactNames: ''
-    downloadArtifacts: true
-
 - name: isAssetlessBuild
   type: boolean
   displayName: Is Assetless Build
@@ -103,7 +93,7 @@ parameters:
   default: false
 
 stages:
-- ${{ if or(eq( parameters.enableNugetValidation, 'true'), eq(parameters.enableSigningValidation, 'true'), eq(parameters.enableSourceLinkValidation, 'true'), eq(parameters.SDLValidationParameters.enable, 'true')) }}:
+- ${{ if or(eq( parameters.enableNugetValidation, 'true'), eq(parameters.enableSigningValidation, 'true'), eq(parameters.enableSourceLinkValidation, 'true')) }}:
   - stage: Validate
     dependsOn: ${{ parameters.validateDependsOn }}
     displayName: Validate Build Assets
@@ -206,7 +196,7 @@ stages:
         displayName: Validate
         inputs:
           filePath: eng\common\sdk-task.ps1
-          arguments: -task SigningValidation -restore -msbuildEngine vs
+          arguments: -task SigningValidation -restore
             /p:PackageBasePath='$(Build.ArtifactStagingDirectory)/PackageArtifacts'
             /p:SignCheckExclusionsFile='$(System.DefaultWorkingDirectory)/eng/SignCheckExclusionsFile.txt'
             ${{ parameters.signingValidationAdditionalParameters }}
@@ -268,7 +258,7 @@ stages:
 
 - ${{ if ne(parameters.publishAssetsImmediately, 'true') }}:
   - stage: publish_using_darc
-    ${{ if or(eq(parameters.enableNugetValidation, 'true'), eq(parameters.enableSigningValidation, 'true'), eq(parameters.enableSourceLinkValidation, 'true'), eq(parameters.SDLValidationParameters.enable, 'true')) }}:
+    ${{ if or(eq(parameters.enableNugetValidation, 'true'), eq(parameters.enableSigningValidation, 'true'), eq(parameters.enableSourceLinkValidation, 'true')) }}:
       dependsOn: ${{ parameters.publishDependsOn }}
     ${{ else }}:
       dependsOn: ${{ parameters.validateDependsOn }}

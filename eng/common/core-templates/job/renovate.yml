@@ -53,6 +53,30 @@ parameters:
   type: boolean
   default: false
 
+# Name of the arcade repository resource in the pipeline.
+# This allows repos which haven't been onboarded to Arcade to still use this 
+# template by checking out the repo as a resource with a custom name and pointing
+# this parameter to it.
+- name: arcadeRepoResource
+  type: string
+  default: self
+
+# Directory name for the self repo under $(Build.SourcesDirectory) in multi-checkout.
+# In multi-checkout (when arcadeRepoResource != 'self'), Azure DevOps checks out the
+# self repo to $(Build.SourcesDirectory)/<repoName>. Set this to match the auto-generated
+# directory name. Using the auto-generated name is necessary rather than explicitly
+# defining a checkout path because container jobs expect repos to live under the agent's
+# workspace ($(Pipeline.Workspace)). On some self-hosted setups the host path
+# (e.g., /mnt/vss/_work) differs from the container path (e.g., /__w), and a custom checkout
+# path can fail validation. Using the default checkout location keeps the paths consistent
+# and avoids this issue.
+- name: selfRepoName
+  type: string
+  default: ''
+- name: arcadeRepoName
+  type: string
+  default: ''
+
 # Pool configuration for the job.
 - name: pool
   type: object
@@ -71,16 +95,36 @@ jobs:
   # Changing the variable name here would require updating the name in https://github.com/dotnet/arcade/blob/main/eng/renovate.json as well.
   - name: renovateVersion
     value: '42'
+    readonly: true
+  - name: renovateLogFilePath
+    value: '$(Build.ArtifactStagingDirectory)/renovate.json'
+    readonly: true
   - name: dryRunArg
+    readonly: true
     ${{ if eq(parameters.dryRun, true) }}:
       value: 'full'
     ${{ else }}:
       value: ''
   - name: recreateWhenArg
+    readonly: true
     ${{ if eq(parameters.forceRecreatePR, true) }}:
       value: 'always'
     ${{ else }}:
       value: ''
+  # In multi-checkout (without custom paths), Azure DevOps places each repo under
+  # $(Build.SourcesDirectory)/<repoName>. selfRepoName must be provided in that case.
+  - name: selfRepoPath
+    readonly: true
+    ${{ if eq(parameters.arcadeRepoResource, 'self') }}:
+      value: '$(Build.SourcesDirectory)'
+    ${{ else }}:
+      value: '$(Build.SourcesDirectory)/${{ parameters.selfRepoName }}'
+  - name: arcadeRepoPath
+    readonly: true
+    ${{ if eq(parameters.arcadeRepoResource, 'self') }}:
+      value: '$(Build.SourcesDirectory)'
+    ${{ else }}:
+      value: '$(Build.SourcesDirectory)/${{ parameters.arcadeRepoName }}'
   pool: ${{ parameters.pool }}
   
   templateContext:
@@ -96,8 +140,19 @@ jobs:
   steps:
   - checkout: self
     fetchDepth: 1
+  
+  - ${{ if ne(parameters.arcadeRepoResource, 'self') }}:
+    - checkout: ${{ parameters.arcadeRepoResource }}
+      fetchDepth: 1
 
-  - script: renovate-config-validator $(Build.SourcesDirectory)/${{parameters.renovateConfigPath}}
+  - script: |
+      renovate-config-validator $(selfRepoPath)/${{parameters.renovateConfigPath}} 2>&1 | tee /tmp/renovate-config-validator.out
+      validatorExit=${PIPESTATUS[0]}
+      if grep -q '^ WARN:' /tmp/renovate-config-validator.out; then
+        echo "##vso[task.logissue type=warning]Renovate config validator produced warnings."
+        echo "##vso[task.complete result=SucceededWithIssues]"
+      fi
+      exit $validatorExit
     displayName: Validate Renovate config
     env:
       LOG_LEVEL: info
@@ -105,8 +160,14 @@ jobs:
       LOG_FILE: $(Build.ArtifactStagingDirectory)/renovate-config-validator.json
   
   - script: |
-      . $(Build.SourcesDirectory)/eng/common/renovate.env
-      renovate
+      . $(arcadeRepoPath)/eng/common/renovate.env
+      renovate 2>&1 | tee /tmp/renovate.out
+      renovateExit=${PIPESTATUS[0]}
+      if grep -q '^ WARN:' /tmp/renovate.out; then
+        echo "##vso[task.logissue type=warning]Renovate produced warnings."
+        echo "##vso[task.complete result=SucceededWithIssues]"
+      fi
+      exit $renovateExit
     displayName: Run Renovate
     env:
       RENOVATE_FORK_TOKEN: $(BotAccount-dotnet-renovate-bot-PAT)
@@ -117,13 +178,13 @@ jobs:
       RENOVATE_RECREATE_WHEN: $(recreateWhenArg)
       LOG_LEVEL: info
       LOG_FILE_LEVEL: debug
-      LOG_FILE: $(Build.ArtifactStagingDirectory)/renovate.json
-      RENOVATE_CONFIG_FILE: $(Build.SourcesDirectory)/${{parameters.renovateConfigPath}}
+      LOG_FILE: $(renovateLogFilePath)
+      RENOVATE_CONFIG_FILE: $(selfRepoPath)/${{parameters.renovateConfigPath}}
   
   - script: |
       echo "PRs created by Renovate:"
-      if [ -s "$(Build.ArtifactStagingDirectory)/renovate-log.json" ]; then
-        if ! jq -r 'select(.msg == "PR created" and .pr != null) | "https://github.com/\(.repository)/pull/\(.pr)"' "$(Build.ArtifactStagingDirectory)/renovate-log.json" | sort -u; then
+      if [ -s "$(renovateLogFilePath)" ]; then
+        if ! jq -r 'select(.msg == "PR created" and .pr != null) | "https://github.com/\(.repository)/pull/\(.pr)"' "$(renovateLogFilePath)" | sort -u; then
           echo "##vso[task.logissue type=warning]Failed to parse Renovate log file with jq."
           echo "##vso[task.complete result=SucceededWithIssues]"
         fi

@@ -39,6 +39,8 @@ getNonPortableDistroRid()
         # $rootfsDir can be empty. freebsd-version is a shell script and should always work.
         __freebsd_major_version=$("$rootfsDir"/bin/freebsd-version | cut -d'.' -f1)
         nonPortableRid="freebsd.$__freebsd_major_version-${targetArch}"
+    elif [ "$targetOs" = "openbsd" ]; then
+        nonPortableRid="openbsd.$(uname -r)-${targetArch}"
     elif command -v getprop >/dev/null && getprop ro.product.system.model | grep -qi android; then
         __android_sdk_version=$(getprop ro.build.version.sdk)
         nonPortableRid="android.$__android_sdk_version-${targetArch}"

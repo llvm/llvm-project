@@ -34,6 +34,9 @@
 # Configures warning treatment in msbuild.
 [bool]$warnAsError = if (Test-Path variable:warnAsError) { $warnAsError } else { $true }
 
+# Specifies semi-colon delimited list of warning codes that should not be treated as errors.
+[string]$warnNotAsError = if (Test-Path variable:warnNotAsError) { $warnNotAsError } else { '' }
+
 # Specifies which msbuild engine to use for build: 'vs', 'dotnet' or unspecified (determined based on presence of tools.vs in global.json).
 [string]$msbuildEngine = if (Test-Path variable:msbuildEngine) { $msbuildEngine } else { $null }
 
@@ -837,6 +840,10 @@ function MSBuild-Core() {
   }
   else {
     $cmdArgs += ' /p:TreatWarningsAsErrors=false'
+  }
+
+  if ($warnNotAsError) {
+    $cmdArgs += " /warnnotaserror:$warnNotAsError /p:AdditionalWarningsNotAsErrors=$warnNotAsError"
   }
 
   foreach ($arg in $args) {

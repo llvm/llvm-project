@@ -86,10 +86,10 @@ __FreeBSDPackages+=" krb5"
 __FreeBSDPackages+=" terminfo-db"
 
 __OpenBSDVersion="7.8"
+__OpenBSDPackages="heimdal-libs"
 __OpenBSDPackages+=" icu4c"
 __OpenBSDPackages+=" inotify-tools"
 __OpenBSDPackages+=" openssl"
-__OpenBSDPackages+=" heimdal-libs"
 
 __IllumosPackages="icu"
 __IllumosPackages+=" mit-krb5"
@@ -632,17 +632,38 @@ elif [[ "$__CodeName" == "openbsd" ]]; then
 
     echo "Installing packages into sysroot..."
 
+    # Fetch package index once
+    if [[ "$__hasWget" == 1 ]]; then
+        PKG_INDEX=$(wget -qO- "$PKG_MIRROR/")
+    else
+        PKG_INDEX=$(curl -s "$PKG_MIRROR/")
+    fi
+
     for pkg in $__OpenBSDPackages; do
-        echo "Resolving package filename for $pkg..."
+        PKG_FILE=$(echo "$PKG_INDEX" | grep -Po ">\K${pkg}-[0-9][^\" ]*\.tgz" \
+            | sort -V | tail -n1)
+
+        echo "Resolved package filename for $pkg: $PKG_FILE"
+
+        [[ -z "$PKG_FILE" ]] && { echo "ERROR: Package $pkg not found"; exit 1; }
 
         if [[ "$__hasWget" == 1 ]]; then
-            PKG_FILE=$(wget -qO- "$PKG_MIRROR/" | grep -Eo "${pkg}-[0-9][^\" ]*\.tgz" | head -n1)
-            [[ -z "$PKG_FILE" ]] && { echo "ERROR: Package $pkg not found"; exit 1; }
             wget -O- "$PKG_MIRROR/$PKG_FILE" | tar -C "$__RootfsDir" -xzpf -
         else
-            PKG_FILE=$(curl -s "$PKG_MIRROR/" | grep -Eo "${pkg}-[0-9][^\" ]*\.tgz" | head -n1)
-            [[ -z "$PKG_FILE" ]] && { echo "ERROR: Package $pkg not found"; exit 1; }
             curl -SL "$PKG_MIRROR/$PKG_FILE" | tar -C "$__RootfsDir" -xzpf -
+        fi
+    done
+
+    echo "Creating versionless symlinks for shared libraries..."
+    # Find all versioned .so files and create the base .so symlink
+    for lib in "$__RootfsDir/usr/lib/libc++.so."* "$__RootfsDir/usr/lib/libc++abi.so."* "$__RootfsDir/usr/lib/libpthread.so."*; do
+        if [ -f "$lib" ]; then
+            # Extract the filename (e.g., libc++.so.12.0)
+            VERSIONED_NAME=$(basename "$lib")
+            # Remove the trailing version numbers (e.g., libc++.so)
+            BASE_NAME=${VERSIONED_NAME%.so.*}.so
+            # Create the symlink in the same directory
+            ln -sf "$VERSIONED_NAME" "$__RootfsDir/usr/lib/$BASE_NAME"
         fi
     done
 elif [[ "$__CodeName" == "illumos" ]]; then

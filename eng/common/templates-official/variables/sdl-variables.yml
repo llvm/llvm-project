@@ -1,7 +1,0 @@
-variables:
-# The Guardian version specified in 'eng/common/sdl/packages.config'. This value must be kept in
-# sync with the packages.config file.
-- name: DefaultGuardianVersion
-  value: 0.109.0
-- name: GuardianPackagesConfigFile
-  value: $(System.DefaultWorkingDirectory)\eng\common\sdl\packages.config

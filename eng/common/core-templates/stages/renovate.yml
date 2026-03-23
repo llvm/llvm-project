@@ -35,6 +35,21 @@ parameters:
   type: boolean
   default: false
 
+# Name of the arcade repository resource in the pipeline.
+# This allows repos which haven't been onboarded to Arcade to still use this 
+# template by checking out the repo as a resource with a custom name and pointing
+# this parameter to it.
+- name: arcadeRepoResource
+  type: string
+  default: 'self'
+
+- name: selfRepoName
+  type: string
+  default: ''
+- name: arcadeRepoName
+  type: string
+  default: ''
+
 # Pool configuration for the pipeline.
 - name: pool
   type: object
@@ -69,6 +84,13 @@ extends:
     pool: ${{ parameters.pool }}
     sdl:
       sourceAnalysisPool: ${{ parameters.sdlPool }}
+      # When repos that aren't onboarded to Arcade use this template, they set the
+      # arcadeRepoResource parameter to point to their Arcade repo resource. In that case,
+      # Aracde will be excluded from SDL analysis.
+      ${{ if ne(parameters.arcadeRepoResource, 'self') }}:
+        sourceRepositoriesToScan:
+          exclude:
+          - repository: ${{ parameters.arcadeRepoResource }}
     containers:
       RenovateContainer:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-renovate-${{ parameters.renovateVersion }}-amd64
@@ -76,7 +98,7 @@ extends:
     - stage: Renovate
       displayName: Run Renovate
       jobs:
-      - template: /eng/common/core-templates/job/renovate.yml
+      - template: /eng/common/core-templates/job/renovate.yml@${{ parameters.arcadeRepoResource }}
         parameters:
           renovateConfigPath: ${{ parameters.renovateConfigPath }}
           gitHubRepo: ${{ parameters.gitHubRepo }}
@@ -84,3 +106,6 @@ extends:
           dryRun: ${{ parameters.dryRun }}
           forceRecreatePR: ${{ parameters.forceRecreatePR }}
           pool: ${{ parameters.pool }}
+          arcadeRepoResource: ${{ parameters.arcadeRepoResource }}
+          selfRepoName: ${{ parameters.selfRepoName }}
+          arcadeRepoName: ${{ parameters.arcadeRepoName }}
