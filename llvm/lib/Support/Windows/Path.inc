@@ -338,8 +338,73 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting,
   return std::error_code();
 }
 
-// We can't use symbolic links for windows.
+std::error_code create_symlink(const Twine &to, const Twine &from) {
+  // The Win32 API normally allows forward slashes, but under some cases it does
+  // not correctly handle them in the target of a symlink.
+  SmallString<128> ToStr;
+  llvm::sys::path::native(to, ToStr);
+
+  SmallVector<wchar_t, 128> WideFrom;
+  SmallVector<wchar_t, 128> WideTo;
+  if (std::error_code ec = widenPath(from, WideFrom))
+    return ec;
+  if (std::error_code ec = widenPath(ToStr, WideTo))
+    return ec;
+
+  // Windows requires SYMBOLIC_LINK_FLAG_DIRECTORY for directory symlinks, so
+  // check first what type the target is. Relative symlink targets are relative
+  // to the link's parent directory, not the CWD, so resolve accordingly before
+  // checking attributes.
+  SmallVector<wchar_t, 128> WideResolved;
+  const SmallVectorImpl<wchar_t> *AttrPath = &WideTo;
+
+  if (sys::path::is_relative(ToStr)) {
+    SmallString<128> FromStr;
+    from.toVector(FromStr);
+    SmallString<128> Resolved = sys::path::parent_path(FromStr);
+    sys::path::append(Resolved, ToStr);
+    if (std::error_code ec = widenPath(Resolved, WideResolved))
+      return ec;
+    AttrPath = &WideResolved;
+  }
+  DWORD Flags = 0;
+  DWORD Attr = ::GetFileAttributesW(AttrPath->begin());
+  if (Attr == INVALID_FILE_ATTRIBUTES) {
+    DWORD Err = ::GetLastError();
+    if (Err != ERROR_FILE_NOT_FOUND && Err != ERROR_PATH_NOT_FOUND)
+      return mapWindowsError(Err);
+    // Target doesn't exist. Default to a file symlink, matching the Unix
+    // behavior of allowing dangling symlinks.
+  } else if (Attr & FILE_ATTRIBUTE_DIRECTORY) {
+    Flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+  }
+
+  // Try with SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE first, which works
+  // in non-UWP programs and when Developer Mode is enabled on Windows 10+.
+  if (::CreateSymbolicLinkW(WideFrom.begin(), WideTo.begin(),
+                            Flags |
+                                SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+    return std::error_code();
+
+  // If the flag is not recognized (older Windows), retry without it.
+  DWORD Err = ::GetLastError();
+  if (Err == ERROR_INVALID_PARAMETER) {
+    if (::CreateSymbolicLinkW(WideFrom.begin(), WideTo.begin(), Flags))
+      return std::error_code();
+    Err = ::GetLastError();
+  }
+
+  return mapWindowsError(Err);
+}
+
 std::error_code create_link(const Twine &to, const Twine &from) {
+  std::error_code EC = create_symlink(to, from);
+  if (EC)
+    EC = create_hard_link(to, from);
+  return EC;
+}
+
+std::error_code create_hard_link(const Twine &to, const Twine &from) {
   // Convert to utf-16.
   SmallVector<wchar_t, 128> wide_from;
   SmallVector<wchar_t, 128> wide_to;
@@ -352,10 +417,6 @@ std::error_code create_link(const Twine &to, const Twine &from) {
     return mapWindowsError(::GetLastError());
 
   return std::error_code();
-}
-
-std::error_code create_hard_link(const Twine &to, const Twine &from) {
-  return create_link(to, from);
 }
 
 std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
@@ -1646,6 +1707,95 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
           llvm::sys::fs::openFileForRead(path, fd, OF_None, &dest))
     return EC;
   ::close(fd);
+  return std::error_code();
+}
+
+// This struct is normally only available in the Windows Driver Kit (WDK)
+// headers, not in the standard Windows SDK.
+struct LLVM_REPARSE_DATA_BUFFER {
+  unsigned long ReparseTag;
+  unsigned short ReparseDataLength;
+  unsigned short Reserved;
+  union {
+    struct {
+      unsigned short SubstituteNameOffset;
+      unsigned short SubstituteNameLength;
+      unsigned short PrintNameOffset;
+      unsigned short PrintNameLength;
+      unsigned long Flags;
+      wchar_t PathBuffer[1];
+    } SymbolicLinkReparseBuffer;
+    struct {
+      unsigned short SubstituteNameOffset;
+      unsigned short SubstituteNameLength;
+      unsigned short PrintNameOffset;
+      unsigned short PrintNameLength;
+      wchar_t PathBuffer[1];
+    } MountPointReparseBuffer;
+    struct {
+      unsigned char DataBuffer[1];
+    } GenericReparseBuffer;
+  };
+};
+
+std::error_code readlink(const Twine &path, SmallVectorImpl<char> &dest) {
+  dest.clear();
+
+  SmallVector<wchar_t, 128> PathUTF16;
+  if (std::error_code EC = widenPath(path, PathUTF16))
+    return EC;
+
+  // Open the symlink without following it.
+  ScopedFileHandle H(::CreateFileW(
+      c_str(PathUTF16), FILE_READ_ATTRIBUTES,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+      OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+      NULL));
+  if (!H)
+    return mapWindowsError(::GetLastError());
+
+  // Read the reparse point data.
+  union {
+    LLVM_REPARSE_DATA_BUFFER RDB;
+    char Buffer[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+  };
+  DWORD BytesReturned;
+  if (!::DeviceIoControl(H, FSCTL_GET_REPARSE_POINT, NULL, 0, &RDB,
+                         sizeof(Buffer), &BytesReturned, NULL)) {
+    DWORD Err = ::GetLastError();
+    if (Err == ERROR_NOT_A_REPARSE_POINT)
+      return make_error_code(errc::invalid_argument);
+    return mapWindowsError(Err);
+  }
+
+  if (RDB.ReparseTag != IO_REPARSE_TAG_SYMLINK)
+    return make_error_code(errc::invalid_argument);
+
+  const auto &SLB = RDB.SymbolicLinkReparseBuffer;
+  size_t PathBufOffset =
+      offsetof(LLVM_REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer);
+
+  // Prefer PrintName (user-friendly, e.g. "C:\foo") over SubstituteName
+  // (NT-internal, e.g. "\??\C:\foo").
+  USHORT NameOffset, NameLength;
+  if (SLB.PrintNameLength != 0) {
+    NameOffset = SLB.PrintNameOffset;
+    NameLength = SLB.PrintNameLength;
+  } else {
+    NameOffset = SLB.SubstituteNameOffset;
+    NameLength = SLB.SubstituteNameLength;
+  }
+
+  // Validate that the returned data is large enough to contain the name.
+  if (PathBufOffset + NameOffset + NameLength > BytesReturned)
+    return make_error_code(errc::invalid_argument);
+
+  const wchar_t *Target = SLB.PathBuffer + NameOffset / sizeof(wchar_t);
+  USHORT TargetLen = NameLength / sizeof(wchar_t);
+
+  if (std::error_code EC = UTF16ToUTF8(Target, TargetLen, dest))
+    return EC;
+
   return std::error_code();
 }
 
