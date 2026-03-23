@@ -5544,7 +5544,6 @@ class InitListTransformer {
       return *(ArgIt++);
 
     llvm::SmallVector<Expr *> Inits;
-    Ty = Ty.getDesugaredType(Ctx);
     if (Ty->isVectorType() || Ty->isConstantArrayType() ||
         Ty->isConstantMatrixType()) {
       QualType ElTy;

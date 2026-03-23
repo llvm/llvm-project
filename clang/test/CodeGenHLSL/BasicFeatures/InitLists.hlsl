@@ -1133,13 +1133,16 @@ struct CustomResource {
   handle_float_t h;
 };
 
-// CHECK-LABEL: define hidden void @_Z6case2714CustomResource
-// CHECK: [[b:%.*]] = alloca %struct.CustomResource, align 1
-// CHECK: [[h:%.*]] = getelementptr inbounds nuw %struct.CustomResource, ptr [[b]], i32 0, i32 0
-// CHECK: [[h1:%.*]] = getelementptr inbounds nuw %struct.CustomResource, ptr %a, i32 0, i32 0
-// CHECK: [[Z:%.*]] = load target("dx.TypedBuffer", float, 1, 0, 0), ptr [[h1]], align 1
-// CHECK: store target("dx.TypedBuffer", float, 1, 0, 0) %0, ptr [[h]], align 1
-// CHECK: ret void
+// CHECK-LABEL: define hidden void @_Z6case2714CustomResource(
+// CHECK-SAME: ptr noundef byval([[STRUCT_CUSTOMRESOURCE:%.*]]) align 1 [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_CUSTOMRESOURCE]], align 1
+// CHECK-NEXT:    [[H:%.*]] = getelementptr inbounds nuw [[STRUCT_CUSTOMRESOURCE]], ptr [[B]], i32 0, i32 0
+// CHECK-NEXT:    [[H1:%.*]] = getelementptr inbounds nuw [[STRUCT_CUSTOMRESOURCE]], ptr [[A]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = load target("dx.TypedBuffer", float, 1, 0, 0), ptr [[H1]], align 1
+// CHECK-NEXT:    store target("dx.TypedBuffer", float, 1, 0, 0) [[TMP0]], ptr [[H]], align 1
+// CHECK-NEXT:    ret void
+//
 void case27(CustomResource a) {
   CustomResource b = {a};
 }
