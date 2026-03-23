@@ -14,13 +14,15 @@ endfunction()
 add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
+  BootstrapInfoTest.cpp
   CallableTraitsHelperTest.cpp
-  ControllerInterfaceTest.cpp
+  SimpleSymbolTableTest.cpp
   EndianTest.cpp
   ErrorCAPITest.cpp
   ErrorTest.cpp
   ErrorExceptionInteropTest.cpp
   ExecutorAddressTest.cpp
+  ExecutorProcessInfoTest.cpp
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   LockedAccessTest.cpp
@@ -37,6 +39,7 @@ add_orc_rt_unittest(CoreTests
   SPSMemoryFlagsTest.cpp
   SPSWrapperFunctionTest.cpp
   SPSWrapperFunctionBufferTest.cpp
+  TaskGroupTest.cpp
   ThreadPoolTaskDispatcherTest.cpp
   WrapperFunctionBufferTest.cpp
   bind-test.cpp

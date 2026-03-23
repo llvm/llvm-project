@@ -1611,7 +1611,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     RecordCompleteMap MNCComplete;
     for (const NamedDecl *D : UnusedPrivateFields) {
       const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
-      if (RD && !RD->isUnion() &&
+      if (RD && !RD->isUnion() && !D->hasAttr<UnusedAttr>() &&
           IsRecordFullyDefined(RD, RecordsComplete, MNCComplete)) {
         Diag(D->getLocation(), diag::warn_unused_private_field)
               << D->getDeclName();

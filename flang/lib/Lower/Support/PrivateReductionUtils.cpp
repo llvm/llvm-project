@@ -115,6 +115,16 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     fir::FreeMemOp::create(builder, loc, cast);
 
     builder.setInsertionPointAfter(ifOp);
+    // Free the managed descriptor if this is a CUDA device allocatable.
+    if (sym) {
+      unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
+      if (idx != kDefaultAllocator) {
+        cuf::DataAttributeAttr dataAttr =
+            Fortran::lower::translateSymbolCUFDataAttribute(
+                builder.getContext(), sym->GetUltimate());
+        cuf::FreeOp::create(builder, loc, block->getArgument(0), dataAttr);
+      }
+    }
     if (isDoConcurrent)
       fir::YieldOp::create(builder, loc);
     else
@@ -664,6 +674,24 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
 
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
     builder.setInsertionPointToEnd(initBlock);
+
+    // For CUDA device allocatables, allocate the descriptor in managed
+    // memory so that CUF kernels can access it from the GPU.
+    if (sym && mlir::isa<fir::HeapType>(boxTy.getEleTy())) {
+      unsigned idx = Fortran::lower::getAllocatorIdx(sym->GetUltimate());
+      if (idx != kDefaultAllocator) {
+        cuf::DataAttributeAttr dataAttr =
+            Fortran::lower::translateSymbolCUFDataAttribute(
+                builder.getContext(), sym->GetUltimate());
+        allocatedPrivVarArg =
+            cuf::AllocOp::create(builder, loc, valTy,
+                                 /*uniq_name=*/llvm::StringRef{},
+                                 /*bindc_name=*/llvm::StringRef{}, dataAttr,
+                                 /*typeparams=*/mlir::ValueRange{},
+                                 /*shape=*/mlir::ValueRange{})
+                .getResult();
+      }
+    }
 
     // TODO: don't do this unless it is needed
     getLengthParameters(builder, loc, getLoadedMoldArg(), lenParams);
