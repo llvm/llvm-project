@@ -241,7 +241,7 @@ void WebAssemblyFrameLowering::writeBackSP(
 
   if (MF.getSubtarget<WebAssemblySubtarget>()
           .hasComponentModelThreadContext()) {
-    const char *ES = "__wasm_component_model_builtin_context_set_0";
+    const char *ES = "__wasm_set_stack_pointer";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::CALL))
         .addExternalSymbol(SPSymbol)
@@ -300,7 +300,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
     SPReg = MRI.createVirtualRegister(PtrRC);
 
   if (ST.hasComponentModelThreadContext()) {
-    const char *ES = "__wasm_component_model_builtin_context_get_0";
+    const char *ES = "__wasm_get_stack_pointer";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CALL), SPReg)
         .addExternalSymbol(SPSymbol);

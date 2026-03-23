@@ -1010,16 +1010,14 @@ static void createPostLTOSymbols() {
       ctx.sym.tlsBase->markLive();
       ctx.sym.tlsSize->markLive();
       ctx.sym.tlsAlign->markLive();
-      static WasmSignature contextSet1Signature{{}, {ValType::I32}};
-      ctx.sym.contextSet1 = createUndefinedFunction(
-          "__wasm_component_model_builtin_context_set_1", "[context-set-1]",
-          "$root", &contextSet1Signature);
-      ctx.sym.contextSet1->markLive();
-      static WasmSignature contextGet1Signature{{ValType::I32}, {}};
-      ctx.sym.contextGet1 = createUndefinedFunction(
-          "__wasm_component_model_builtin_context_get_1", "[context-get-1]",
-          "$root", &contextGet1Signature);
-      ctx.sym.contextGet1->markLive();
+      static WasmSignature setTLSBaseSignature{{}, {ValType::I32}};
+      ctx.sym.setTLSBase =
+          createUndefinedFunction("__wasm_set_tls_base", std::nullopt,
+                                  std::nullopt, &setTLSBaseSignature);
+      static WasmSignature getTLSBaseSignature{{ValType::I32}, {}};
+      ctx.sym.getTLSBase =
+          createUndefinedFunction("__wasm_get_tls_base", std::nullopt,
+                                  std::nullopt, &getTLSBaseSignature);
     }
   }
 }

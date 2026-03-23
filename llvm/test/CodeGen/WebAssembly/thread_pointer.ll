@@ -21,7 +21,7 @@ define ptr @thread_pointer() nounwind {
 ; WASM32-CMTC-LABEL: thread_pointer:
 ; WASM32-CMTC:         .functype thread_pointer () -> (i32)
 ; WASM32-CMTC-NEXT:  # %bb.0:
-; WASM32-CMTC-NEXT:    call __wasm_component_model_builtin_context_get_1
+; WASM32-CMTC-NEXT:    call __wasm_get_tls_base
 ; WASM32-CMTC-NEXT:    # fallthrough-return
 ;
   %1 = tail call ptr @llvm.thread.pointer()

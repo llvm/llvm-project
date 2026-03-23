@@ -890,6 +890,7 @@ set(s390x_SOURCES
 
 
 set(wasm_SOURCES
+  wasm/thread_context.c
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )

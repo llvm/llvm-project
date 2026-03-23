@@ -55,7 +55,7 @@ public:
 void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
   if (ctx.componentModelThreadContext) {
     writeU8(os, WASM_OPCODE_CALL, "call");
-    writeUleb128(os, ctx.sym.contextGet1->getFunctionIndex(), "function index");
+    writeUleb128(os, ctx.sym.getTLSBase->getFunctionIndex(), "function index");
   } else {
     writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_SET");
     writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");

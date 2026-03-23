@@ -21,7 +21,7 @@ define i32 @address_of_tls() {
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: return
 
-  ; TLS-CMTC-DAG: call __wasm_component_model_builtin_context_get_1
+  ; TLS-CMTC-DAG: call __wasm_get_tls_base
   ; TLS-CMTC-DAG: i32.const tls@TLSREL
   ; TLS-CMTC-NEXT: i32.add
   ; TLS-CMTC-NEXT: return
@@ -41,7 +41,7 @@ define i32 @address_of_tls_external() {
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: return
 
-  ; TLS-CMTC-DAG: call __wasm_component_model_builtin_context_get_1
+  ; TLS-CMTC-DAG: call __wasm_get_tls_base
   ; TLS-CMTC-DAG: i32.const tls_external@TLSREL
   ; TLS-CMTC-NEXT: i32.add
   ; TLS-CMTC-NEXT: return
@@ -61,7 +61,7 @@ define ptr @ptr_to_tls() {
   ; TLS-NEXT: i32.add
   ; TLS-NEXT: return
 
-  ; TLS-CMTC-DAG: call __wasm_component_model_builtin_context_get_1
+  ; TLS-CMTC-DAG: call __wasm_get_tls_base
   ; TLS-CMTC-DAG: i32.const tls@TLSREL
   ; TLS-CMTC-NEXT: i32.add
   ; TLS-CMTC-NEXT: return
@@ -81,7 +81,7 @@ define i32 @tls_load() {
   ; TLS-NEXT: i32.load 0
   ; TLS-NEXT: return
 
-  ; TLS-CMTC-DAG: call __wasm_component_model_builtin_context_get_1
+  ; TLS-CMTC-DAG: call __wasm_get_tls_base
   ; TLS-CMTC-DAG: i32.const tls@TLSREL
   ; TLS-CMTC-NEXT: i32.add
   ; TLS-CMTC-NEXT: i32.load 0
@@ -104,7 +104,7 @@ define void @tls_store(i32 %x) {
   ; TLS-NEXT: i32.store 0
   ; TLS-NEXT: return
 
-  ; TLS-CMTC-DAG: call __wasm_component_model_builtin_context_get_1
+  ; TLS-CMTC-DAG: call __wasm_get_tls_base
   ; TLS-CMTC-DAG: i32.const tls@TLSREL
   ; TLS-CMTC-NEXT: i32.add
   ; TLS-CMTC-NEXT: i32.store 0

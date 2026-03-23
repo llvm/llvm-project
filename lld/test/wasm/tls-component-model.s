@@ -3,18 +3,16 @@
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-print-imm-hex --no-show-raw-insn %t.wasm | FileCheck %s --check-prefix=DIS
 
-.functype       __wasm_component_model_builtin_context_get_1 () -> (i32)
-.import_module  __wasm_component_model_builtin_context_get_1, "$root"
-.import_name    __wasm_component_model_builtin_context_get_1, "[context-get-1]"
+.functype       __wasm_get_tls_base () -> (i32)
 
 .globl _start
 _start:
   .functype _start () -> (i32)
-  call __wasm_component_model_builtin_context_get_1
+  call __wasm_get_tls_base
   i32.const tls1@TLSREL
   i32.add
   i32.load 0
-  call __wasm_component_model_builtin_context_get_1
+  call __wasm_get_tls_base
   i32.const tls2@TLSREL
   i32.add
   i32.load 0

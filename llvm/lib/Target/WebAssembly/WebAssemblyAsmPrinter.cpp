@@ -266,25 +266,13 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
     wasm::ValType AddrType =
         Subtarget.hasAddr64() ? wasm::ValType::I64 : wasm::ValType::I32;
     Params.push_back(AddrType);
-  } else if (Name == "__wasm_component_model_builtin_context_get_0") {
+  } else if (Name == "__wasm_get_stack_pointer" ||
+             Name == "__wasm_get_tls_base") {
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-    WasmSym->setImportModule("$root");
-    WasmSym->setImportName("[context-get-0]");
     Returns.push_back(wasm::ValType::I32);
-  } else if (Name == "__wasm_component_model_builtin_context_set_0") {
+  } else if (Name == "__wasm_set_stack_pointer" ||
+             Name == "__wasm_set_tls_base") {
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-    WasmSym->setImportModule("$root");
-    WasmSym->setImportName("[context-set-0]");
-    Params.push_back(wasm::ValType::I32);
-  } else if (Name == "__wasm_component_model_builtin_context_get_1") {
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-    WasmSym->setImportModule("$root");
-    WasmSym->setImportName("[context-get-1]");
-    Returns.push_back(wasm::ValType::I32);
-  } else if (Name == "__wasm_component_model_builtin_context_set_1") {
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-    WasmSym->setImportModule("$root");
-    WasmSym->setImportName("[context-set-1]");
     Params.push_back(wasm::ValType::I32);
   } else { // Function symbols
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
@@ -498,7 +486,7 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
     OutStreamer->switchSection(Producers);
     OutStreamer->emitULEB128IntValue(FieldCount);
     for (auto &Producers : {std::make_pair("language", &Languages),
-            std::make_pair("processed-by", &Tools)}) {
+                            std::make_pair("processed-by", &Tools)}) {
       if (Producers.second->empty())
         continue;
       OutStreamer->emitULEB128IntValue(strlen(Producers.first));
@@ -607,7 +595,8 @@ void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
   // Emit a custom section for each unique attribute.
   for (const auto &[Name, Symbols] : CustomSections) {
     MCSectionWasm *CustomSection = OutContext.getWasmSection(
-        ".custom_section.llvm.func_attr.annotate." + Name, SectionKind::getMetadata());
+        ".custom_section.llvm.func_attr.annotate." + Name,
+        SectionKind::getMetadata());
     OutStreamer->pushSection();
     OutStreamer->switchSection(CustomSection);
 

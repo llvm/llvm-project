@@ -11,14 +11,14 @@ define void @use_stack() #0 {
 }
 
 ; CMTC-LABEL: use_stack:
-; CMTC: call __wasm_component_model_builtin_context_get_0
-; CMTC: call __wasm_component_model_builtin_context_set_0
+; CMTC: call __wasm_get_stack_pointer
+; CMTC: call __wasm_set_stack_pointer
 ; CMTC-NOT: global.get __stack_pointer
 ; CMTC-NOT: global.set __stack_pointer
 
 ; GLOBAL-LABEL: use_stack:
 ; GLOBAL: global.get __stack_pointer
 ; GLOBAL: global.set __stack_pointer
-; GLOBAL-NOT: call __wasm_component_model_builtin_context_get_0
-; GLOBAL-NOT: call __wasm_component_model_builtin_context_set_0
+; GLOBAL-NOT: call __wasm_get_stack_pointer
+; GLOBAL-NOT: call __wasm_set_stack_pointer
 

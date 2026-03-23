@@ -254,13 +254,13 @@ struct Ctx {
     // is used as a function pointer being allocated a slot.
     TableSymbol *indirectFunctionTable;
 
-    // __wasm_component_model_builtin_context_set_1
+    // __wasm_set_tls_base
     // Function used to set TLS base in component model modules.
-    UndefinedFunction *contextSet1;
+    UndefinedFunction *setTLSBase;
 
-    // __wasm_component_model_builtin_context_get_1
+    // __wasm_get_tls_base
     // Function used to get TLS base in component model modules.
-    UndefinedFunction *contextGet1;
+    UndefinedFunction *getTLSBase;
   };
   WasmSym sym;
 
