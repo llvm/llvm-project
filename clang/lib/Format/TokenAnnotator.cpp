@@ -186,7 +186,8 @@ private:
       next();
 
     for (bool SeenTernaryOperator = false, MaybeAngles = true; CurrentToken;) {
-      const bool InExpr = Contexts[Contexts.size() - 2].IsExpression;
+      const auto &ParentContext = Contexts[Contexts.size() - 2];
+      const bool InExpr = ParentContext.IsExpression;
       if (CurrentToken->is(tok::greater)) {
         const auto *Next = CurrentToken->Next;
         if (CurrentToken->isNot(TT_TemplateCloser)) {
@@ -208,6 +209,10 @@ private:
           }
           if (!MaybeAngles)
             return false;
+          if (ParentContext.InStaticAssertFirstArgument && Next &&
+              Next->isOneOf(tok::minus, tok::identifier)) {
+            return false;
+          }
         }
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
