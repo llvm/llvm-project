@@ -728,17 +728,17 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
       }
 
       // Check if R is a dead VPPhi <-> update cycle and remove it.
-      auto *PhiR = dyn_cast<VPPhi>(&R);
-      if (!PhiR || PhiR->getNumOperands() != 2)
+      VPValue *Start, *Incoming;
+      if (!match(&R, m_VPPhi(m_VPValue(Start), m_VPValue(Incoming))))
         continue;
+      auto *PhiR = cast<VPPhi>(&R);
       VPUser *PhiUser = PhiR->getSingleUser();
       if (!PhiUser)
         continue;
-      VPValue *Incoming = PhiR->getOperand(1);
       if (PhiUser != Incoming->getDefiningRecipe() ||
           Incoming->getNumUsers() != 1)
         continue;
-      PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+      PhiR->replaceAllUsesWith(Start);
       PhiR->eraseFromParent();
       Incoming->getDefiningRecipe()->eraseFromParent();
     }
