@@ -4,6 +4,7 @@ permissions:
   contents: read
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - ripple
@@ -29,7 +30,7 @@ jobs:
   build_and_test:
     if: github.repository_owner == 'Ripple-Programming'
     name: Build and Test ripple
-    runs-on: [ubuntu-24.04]
+    runs-on: [self-hosted, ubuntu-24.04]
     strategy:
       matrix:
         targets:
@@ -62,7 +63,7 @@ jobs:
   hexagon_build_and_test:
     if: github.repository_owner == 'Ripple-Programming'
     name: Build and Test ripple
-    runs-on: [ubuntu-24.04]
+    runs-on: [self-hosted, ubuntu-24.04]
     strategy:
       fail-fast: true
       matrix:
