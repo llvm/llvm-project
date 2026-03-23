@@ -2813,6 +2813,14 @@ static bool generateEnqueueInst(const SPIRV::IncomingCall *Call,
     return buildNDRange(Call, MIRBuilder, GR);
   case SPIRV::OpEnqueueKernel:
     return buildEnqueueKernel(Call, MIRBuilder, GR);
+  case SPIRV::OpEnqueueMarker:
+    return MIRBuilder.buildInstr(Opcode)
+        .addDef(Call->ReturnRegister)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(Call->Arguments[0])
+        .addUse(Call->Arguments[1])
+        .addUse(Call->Arguments[2])
+        .addUse(Call->Arguments[3]);
   default:
     return false;
   }
