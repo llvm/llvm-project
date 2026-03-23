@@ -220,17 +220,37 @@ static void setSegmentOverride(struct InternalInstruction *insn,
                                SegmentOverride prefix) {
   // In 32-bit or 16-bit mode all segment override prefixes are used.
   // In 64-bit mode, the ES/CS/SS/DS segment overrides should be ignored.
-  //
-  // There are some overloaded uses for these prefixes:
-  // - CS = HWNT (branch Hint Weakly Not Taken)
-  // - DS = NOTRACK + HST (branch Hint Strongly Taken)
-  //
-  // These are currently not handled by this code and will not appear in the
-  // final disassembly.
   if (insn->mode != MODE_64BIT || prefix == SEG_OVERRIDE_FS ||
       prefix == SEG_OVERRIDE_GS) {
     insn->segmentOverride = prefix;
-    return;
+  }
+
+  // The CS and DS segment overrides also function as branch hints.
+  // We handle these separately here by updating the `branchHint` field.
+  switch (prefix) {
+    // CS = HWNT (branch Hint Weakly Not Taken)
+    // In 64-bit mode, the 2E branch hint should only be set if no 3E is present.
+    case SEG_OVERRIDE_CS:
+      if ((insn->mode != MODE_64BIT || insn->branchHint != BRANCH_HINT_3E)) {
+        insn->branchHint = BRANCH_HINT_2E;
+      }
+      break;
+    // DS = NOTRACK + HST (branch Hint Strongly Taken)
+    // In 64-bit mode, the 3E branch hint should only be applied if no
+    // FS/GS segment is present.
+    //
+    // This rule is specified in the Intel SDM Volume 1, Section 17.3.1:
+    // "No-track Prefix for Near Indirect CALL/JMP".
+    //
+    // It is only specified for the 3E NOTRACK hint.
+    case SEG_OVERRIDE_DS:
+      if (insn->mode != MODE_64BIT && insn->segmentOverride != SEG_OVERRIDE_FS &&
+        insn->segmentOverride != SEG_OVERRIDE_GS) {
+        insn->branchHint = BRANCH_HINT_3E;
+      }
+      break;
+    default:
+      break;
   }
 }
 
