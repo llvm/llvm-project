@@ -282,7 +282,7 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
                               [IntrReadMem]>;
 
   def int_spv_resource_getpointer
-      : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_i32_ty],
+      : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_any_ty],
                               [IntrNoMem]>;
 
   def int_spv_pushconstant_getpointer
