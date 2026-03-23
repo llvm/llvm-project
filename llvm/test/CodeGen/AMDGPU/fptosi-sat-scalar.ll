@@ -782,18 +782,18 @@ define i64 @test_s_signed_i64_f32(float inreg %f) nounwind {
 ; GFX12-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-ISEL-NEXT:    s_trunc_f32 s1, s0
 ; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ISEL-NEXT:    s_and_b32 s3, s1, 0x7fffffff
+; GFX12-ISEL-NEXT:    s_and_b32 s2, s1, 0x7fffffff
 ; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ISEL-NEXT:    s_mul_f32 s2, s3, 0x2f800000
+; GFX12-ISEL-NEXT:    s_mul_f32 s3, s2, 0x2f800000
 ; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ISEL-NEXT:    s_floor_f32 s4, s2
+; GFX12-ISEL-NEXT:    s_floor_f32 s3, s3
+; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-ISEL-NEXT:    s_fmamk_f32 s4, s3, 0xcf800000, s2
 ; GFX12-ISEL-NEXT:    s_ashr_i32 s2, s1, 31
+; GFX12-ISEL-NEXT:    s_cvt_u32_f32 s5, s3
 ; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ISEL-NEXT:    s_fmac_f32 s3, s4, 0xcf800000
-; GFX12-ISEL-NEXT:    s_cvt_u32_f32 s5, s4
-; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ISEL-NEXT:    s_cvt_u32_f32 s4, s3
 ; GFX12-ISEL-NEXT:    s_mov_b32 s3, s2
+; GFX12-ISEL-NEXT:    s_cvt_u32_f32 s4, s4
 ; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-ISEL-NEXT:    s_xor_b64 s[4:5], s[4:5], s[2:3]
 ; GFX12-ISEL-NEXT:    s_cmp_nge_f32 s0, 0xdf000000
@@ -832,7 +832,7 @@ define i64 @test_s_signed_i64_f32(float inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_floor_f32 s3, s2
 ; GFX12-GI-NEXT:    s_ashr_i32 s2, s0, 31
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_fmac_f32 s1, s3, 0xcf800000
+; GFX12-GI-NEXT:    s_fmamk_f32 s1, s3, 0xcf800000, s1
 ; GFX12-GI-NEXT:    s_cvt_u32_f32 s5, s3
 ; GFX12-GI-NEXT:    s_mov_b32 s3, s2
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
