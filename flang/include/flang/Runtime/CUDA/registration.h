@@ -30,7 +30,7 @@ void RTDECL(CUFRegisterVariable)(
 
 /// Register a managed variable.
 void RTDECL(CUFRegisterManagedVariable)(
-    void **module, void **varSym, const char *varName, int64_t size);
+    void **module, void **varSym, char *varName, int64_t size);
 
 } // extern "C"
 
