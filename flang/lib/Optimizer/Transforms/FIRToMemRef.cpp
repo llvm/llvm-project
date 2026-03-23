@@ -330,6 +330,7 @@ void FIRToMemRef::rewriteAlloca(fir::AllocaOp firAlloca,
   copyAttribute(firAlloca, alloca, firAlloca.getBindcNameAttrName());
   copyAttribute(firAlloca, alloca, firAlloca.getUniqNameAttrName());
   copyAttribute(firAlloca, alloca, cuf::getDataAttrName());
+  copyAttribute(firAlloca, alloca, acc::getVarNameAttrName());
 
   auto convert = fir::ConvertOp::create(rewriter, loc, type, alloca);
 
