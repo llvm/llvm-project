@@ -112,6 +112,19 @@ public:
     return result;
   }
 
+  template <typename T> bool operator()(const ConditionalExpr<T> &x) const {
+    if (!(*this)(x.condition())) {
+      return false;
+    }
+    // A conditional expression is a primary.  Therefore, only the selected
+    // branch must be constant. If the condition is a constant expression
+    // whose value cannot yet be determined, both branches must be constant.
+    if (auto condVal{ToLogical(x.condition())}) {
+      return *condVal ? (*this)(x.thenValue()) : (*this)(x.elseValue());
+    }
+    return (*this)(x.thenValue()) && (*this)(x.elseValue());
+  }
+
 private:
   bool IsConstantStructureConstructorComponent(
       const Symbol &, const Expr<SomeType> &) const;
