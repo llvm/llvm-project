@@ -13,8 +13,8 @@ together with its specifications:
 
 - Add entry points `libc.src.math.<func>` to the following files:
 ```
-  libc/config/linux/<arch>/entrypoints.txt
-  libc/config/windows/entrypoints.txt
+    libc/config/linux/<arch>/entrypoints.txt
+    libc/config/windows/entrypoints.txt
 ```
 - Add function specs to the file:
 ```
@@ -69,15 +69,15 @@ If the function should be available to internal LLVM projects:
 ```
 - Add a simple test case to
 ```
-   libc/test/shared/shared_math_test.cpp
+  libc/test/shared/shared_math_test.cpp
 ```
 - Add the corresponding entry `libc.src.__support.math.<func>` to:
 ```
-    libc/test/shared/CMakeLists.txt
+  libc/test/shared/CMakeLists.txt
 ```
 - Add the corresponding `libc_support_library` and `libc_math_function` to:
 ```
-    utils/bazel/llvm-project-overlay/libc/BUILD.bazel
+  utils/bazel/llvm-project-overlay/libc/BUILD.bazel
 ```
 
 ### Floating point utility
@@ -240,6 +240,6 @@ implementation (which is very often glibc).
 
 We use GitHub's inbuilt pull request system for code review:
 ```
-    https://docs.github.com/articles/about-collaborative-development-models
-    https://docs.github.com/articles/about-pull-requests
+  https://docs.github.com/articles/about-collaborative-development-models
+  https://docs.github.com/articles/about-pull-requests
 ```
