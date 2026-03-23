@@ -90,24 +90,37 @@ static bool ExtractSystemChars(ValueObjectSP storage_sp,
   return true;
 }
 
-bool lldb_private::formatters::swift::FilePath_SummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-
-  // public struct FilePath {
-  //   internal var _storage: SystemString
-  // }
-  // internal struct SystemString {
-  //   internal var nullTerminatedStorage: [SystemChar]
-  // }
-
+// Extract SystemChar values from a FilePath's _storage.nullTerminatedStorage.
+static bool ExtractFilePathChars(ValueObject &valobj,
+                                 std::vector<uint64_t> &values,
+                                 bool &is_wide_char) {
   ValueObjectSP storage_sp =
       valobj.GetChildAtNamePath({g__storage, g_nullTerminatedStorage});
   if (!storage_sp)
     return false;
+  return ExtractSystemChars(storage_sp, values, is_wide_char);
+}
+
+// Check if all characters before the null-terminator are printable ASCII.
+static bool IsAllPrintableASCII(const std::vector<uint64_t> &values) {
+  for (uint64_t value : values) {
+    if (value == 0)
+      break;
+    if (value < 0x20 || value > 0x7E)
+      return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::swift::FilePathSummaryProvider::FormatObject(
+    ValueObject *valobj, std::string &dest,
+    const TypeSummaryOptions &options) {
+  if (!valobj)
+    return false;
 
   std::vector<uint64_t> values;
   bool is_wide_char = false;
-  if (!ExtractSystemChars(storage_sp, values, is_wide_char))
+  if (!ExtractFilePathChars(*valobj, values, is_wide_char))
     return false;
 
   std::string path;
@@ -121,8 +134,31 @@ bool lldb_private::formatters::swift::FilePath_SummaryProvider(
     path.push_back(static_cast<char>(value));
   }
 
-  stream << '"' << path << '"';
+  dest = "\"" + path + "\"";
   return true;
+}
+
+bool lldb_private::formatters::swift::FilePathSummaryProvider::
+    DoesPrintChildren(ValueObject *valobj) const {
+  if (!valobj)
+    return false;
+
+  std::vector<uint64_t> values;
+  bool is_wide_char = false;
+  if (!ExtractFilePathChars(*valobj, values, is_wide_char))
+    return false;
+
+  return !IsAllPrintableASCII(values);
+}
+
+std::string
+lldb_private::formatters::swift::FilePathSummaryProvider::GetDescription() {
+  return "FilePath summary provider";
+}
+
+std::string
+lldb_private::formatters::swift::FilePathSummaryProvider::GetName() {
+  return "FilePathSummaryProvider";
 }
 
 bool lldb_private::formatters::swift::SystemString_SummaryProvider(
