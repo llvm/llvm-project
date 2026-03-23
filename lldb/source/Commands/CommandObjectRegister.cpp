@@ -85,9 +85,9 @@ public:
     bool prefix_with_altname = (bool)m_command_options.alternate_name;
     bool prefix_with_name = !prefix_with_altname;
     DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
-                      prefix_with_altname, m_format_options.GetFormat(), reg_name_align_at,
-                      exe_ctx.GetBestExecutionContextScope(), print_flags,
-                      exe_ctx.GetTargetSP());
+                      prefix_with_altname, m_format_options.GetFormat(),
+                      reg_name_align_at, exe_ctx.GetBestExecutionContextScope(),
+                      print_flags, exe_ctx.GetTargetSP());
     if ((reg_info.encoding == eEncodingUint) ||
         (reg_info.encoding == eEncodingSint)) {
       Process *process = exe_ctx.GetProcessPtr();
@@ -123,7 +123,8 @@ public:
       strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
-      uint32_t reg_name_align_at = ComputeMatchingAlignment(reg_ctx, reg_set, primitive_only);
+      uint32_t reg_name_align_at =
+          ComputeMatchingAlignment(reg_ctx, reg_set, primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
@@ -148,18 +149,21 @@ public:
   }
 
 protected:
-  uint32_t ComputeMatchingAlignment(RegisterContext *reg_ctx, const RegisterSet *const reg_set, bool primitive_only) {
-    bool use_primary_name = !static_cast<bool>(m_command_options.alternate_name);
+  uint32_t ComputeMatchingAlignment(RegisterContext *reg_ctx,
+                                    const RegisterSet *const reg_set,
+                                    bool primitive_only) {
+    bool use_primary_name =
+        !static_cast<bool>(m_command_options.alternate_name);
     const size_t num_registers = reg_set->num_registers;
     uint32_t reg_name_align_at = 0;
 
-    auto getNameSize = [&](auto reg_info){ 
+    auto getNameSize = [&](auto reg_info) {
       auto raw = use_primary_name ? reg_info->name : reg_info->alt_name;
       auto str = raw ? std::string(raw) : std::string();
       return static_cast<uint32_t>(str.size());
     };
 
-    // Loop through all the registers to find the longest register name for the 
+    // Loop through all the registers to find the longest register name for the
     // matching alignment
     for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
       const uint32_t reg = reg_set->registers[reg_idx];
