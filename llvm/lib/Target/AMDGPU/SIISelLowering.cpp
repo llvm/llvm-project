@@ -8567,8 +8567,6 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
 SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   unsigned NumOps = Op.getNumOperands();
 
-  if (Op.getOperand(NumOps - 1).getValueType() != MVT::Glue)
-    return Op;
 
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   SmallSet<Register, 8> SGPRInputRegs;
@@ -8608,7 +8606,7 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     SDValue SrcVal = N->getOperand(2);
 
     // Insert readfirstlane if copying a divergent value to an SGPR input.
-    if (SGPRInputRegs.count(Reg) && SrcVal->isDivergent()) {
+    if (SrcVal->isDivergent() && SGPRInputRegs.count(Reg)) {
       SDValue ReadFirstLaneID =
           DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
       SDValue ReadFirstLane =
