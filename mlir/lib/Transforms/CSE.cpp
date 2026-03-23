@@ -234,6 +234,8 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
               // conflict with a non-addressable resource.
               if (readEffect.getValue() && !writeResource->isAddressable())
                 return false;
+              if (effect.getValue() && !readResource->isAddressable())
+                return false;
               return true;
             });
         if (canConflict) {

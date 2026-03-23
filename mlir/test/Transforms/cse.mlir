@@ -667,3 +667,19 @@ func.func @cse_addressable_custom_resource_write_blocks() -> i32 {
   %2 = arith.addi %0, %1 : i32
   return %2 : i32
 }
+
+// -----
+
+/// A pointer-based write on an addressable resource (DefaultResource) cannot
+/// conflict with a read on a non-addressable resource, so CSE proceeds.
+// CHECK-LABEL: @cse_pointer_write_does_not_block_non_addressable_read
+func.func @cse_pointer_write_does_not_block_non_addressable_read() -> i32 {
+  // CHECK-NEXT: %[[V:.*]] = "test.side_effect_op"()
+  %0 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", on_result}]} : () -> i32
+  %1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource}]} : () -> i32
+  // CHECK-NEXT: %{{.*}} = "test.side_effect_op"()
+  // CHECK-NEXT: %{{.*}} = arith.addi %[[V]], %[[V]] : i32
+  %2 = arith.addi %0, %1 : i32
+  return %2 : i32
+}
