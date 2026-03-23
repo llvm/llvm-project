@@ -723,6 +723,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
   case Intrinsic::amdgcn_implicitarg_ptr: {
+    if (II.getFunction()->hasFnAttribute("amdgpu-no-implicitarg-ptr"))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
     uint64_t ImplicitArgBytes = ST->getImplicitArgNumBytes(*II.getFunction());
 
     uint64_t CurrentOrNullBytes =
@@ -1472,6 +1474,29 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // amdgcn.kill(i1 1) is a no-op
     return IC.eraseInstFromFunction(II);
+  }
+  case Intrinsic::amdgcn_s_sendmsg:
+  case Intrinsic::amdgcn_s_sendmsghalt: {
+    // The second operand is copied to m0, but is only actually used for
+    // certain message types. For message types that are known to not use m0,
+    // fold it to poison.
+    using namespace AMDGPU::SendMsg;
+
+    Value *M0Val = II.getArgOperand(1);
+    if (isa<PoisonValue>(M0Val))
+      break;
+
+    auto *MsgImm = cast<ConstantInt>(II.getArgOperand(0));
+    uint16_t MsgId, OpId, StreamId;
+    decodeMsg(MsgImm->getZExtValue(), MsgId, OpId, StreamId, *ST);
+
+    if (!msgDoesNotUseM0(MsgId, *ST))
+      break;
+
+    // Drop UB-implying attributes since we're replacing with poison.
+    II.dropUBImplyingAttrsAndMetadata();
+    IC.replaceOperand(II, 1, PoisonValue::get(M0Val->getType()));
+    return nullptr;
   }
   case Intrinsic::amdgcn_update_dpp: {
     Value *Old = II.getArgOperand(0);

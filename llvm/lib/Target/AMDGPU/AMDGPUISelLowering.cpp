@@ -15,7 +15,7 @@
 #include "AMDGPUISelLowering.h"
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -1518,7 +1518,7 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
-SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
+SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                                  SDValue Op,
                                                  SelectionDAG &DAG) const {
 
@@ -1529,7 +1529,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   if (!MFI->isModuleEntryFunction()) {
     auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
     if (std::optional<uint32_t> Address =
-            AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
+            AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV)) {
       if (IsNamedBarrier) {
         unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
@@ -3902,60 +3902,72 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
       (SrcVT == MVT::f32 || SrcVT == MVT::f64))
     return Op;
 
-  const SDValue Int32VT = DAG.getValueType(MVT::i32);
+  if (DstVT == MVT::i16 && SatWidth == DstWidth && SrcVT == MVT::f16)
+    return Op;
 
-  // Perform all saturation at i32 and truncate
-  if (SatWidth < DstWidth) {
-    const uint64_t Int32Width = 32;
-    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, Int32VT);
-    SDValue Int32SatVal;
+  // Perform all saturation at selected width (i16 or i32) and truncate
+  if (SatWidth < DstWidth && SatWidth <= 32) {
+    // For f16 conversion with sub-i16 saturation perform saturation
+    // at i16, if available in the target. This removes the need for extra f16
+    // to f32 conversion. For all the others use i32.
+    MVT ResultVT =
+        Subtarget->has16BitInsts() && SrcVT == MVT::f16 && SatWidth < 16
+            ? MVT::i16
+            : MVT::i32;
 
+    const SDValue ResultVTOp = DAG.getValueType(ResultVT);
+    const uint64_t ResultWidth = ResultVT.getScalarSizeInBits();
+
+    // First, convert input float into selected integer (i16 or i32)
+    SDValue FpToInt = DAG.getNode(OpOpcode, DL, ResultVT, Src, ResultVTOp);
+    SDValue IntSatVal;
+
+    // Then, clamp at the saturation width using either i16 or i32 instructions
     if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
       SDValue MinConst = DAG.getConstant(
-          APInt::getSignedMaxValue(SatWidth).sext(Int32Width), DL, MVT::i32);
+          APInt::getSignedMaxValue(SatWidth).sext(ResultWidth), DL, ResultVT);
       SDValue MaxConst = DAG.getConstant(
-          APInt::getSignedMinValue(SatWidth).sext(Int32Width), DL, MVT::i32);
-      SDValue MinVal =
-          DAG.getNode(ISD::SMIN, DL, MVT::i32, FpToInt32, MinConst);
-      Int32SatVal = DAG.getNode(ISD::SMAX, DL, MVT::i32, MinVal, MaxConst);
+          APInt::getSignedMinValue(SatWidth).sext(ResultWidth), DL, ResultVT);
+      SDValue MinVal = DAG.getNode(ISD::SMIN, DL, ResultVT, FpToInt, MinConst);
+      IntSatVal = DAG.getNode(ISD::SMAX, DL, ResultVT, MinVal, MaxConst);
     } else {
       SDValue MinConst = DAG.getConstant(
-          APInt::getMaxValue(SatWidth).zext(Int32Width), DL, MVT::i32);
-      Int32SatVal = DAG.getNode(ISD::UMIN, DL, MVT::i32, FpToInt32, MinConst);
+          APInt::getMaxValue(SatWidth).zext(ResultWidth), DL, ResultVT);
+      IntSatVal = DAG.getNode(ISD::UMIN, DL, ResultVT, FpToInt, MinConst);
     }
 
-    if (DstWidth == Int32Width)
-      return Int32SatVal;
-    if (DstWidth < Int32Width)
-      return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Int32SatVal);
-
-    // DstWidth > Int32Width
-    const unsigned Ext =
-        OpOpcode == ISD::FP_TO_SINT_SAT ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-    return DAG.getNode(Ext, DL, DstVT, FpToInt32);
+    // Finally, after saturating at i16 or i32 fit into the destination type
+    return DAG.getExtOrTrunc(OpOpcode == ISD::FP_TO_SINT_SAT, IntSatVal, DL,
+                             DstVT);
   }
 
   // SatWidth == DstWidth
 
-  // Saturate at i32 for i64 dst and 16b src (will invoke f16 promotion below)
+  // Saturate at i32 for i64 dst and f16/bf16 src (will invoke f16 promotion
+  // below)
   if (DstVT == MVT::i64 &&
       (SrcVT == MVT::f16 || SrcVT == MVT::bf16 ||
        (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP))) {
-    return DAG.getNode(OpOpcode, DL, DstVT, Src, Int32VT);
+    const SDValue Int32VTOp = DAG.getValueType(MVT::i32);
+    return DAG.getNode(OpOpcode, DL, DstVT, Src, Int32VTOp);
   }
 
-  // Promote f16/bf16 src to f32
-  if (SrcVT == MVT::f16 || SrcVT == MVT::bf16) {
+  // Promote f16/bf16 src to f32 for i32 conversion
+  if (DstVT == MVT::i32 && (SrcVT == MVT::f16 || SrcVT == MVT::bf16)) {
     SDValue PromotedSrc = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
     return DAG.getNode(Op.getOpcode(), DL, DstVT, PromotedSrc, SatVTOp);
   }
 
-  // Promote sub-i32 dst to i32 with sub-i32 saturation
+  // For DstWidth < 16, promote i1 and i8 dst to i16 (if legal) with sub-i16
+  // saturation. For DstWidth == 16, promote i16 dst to i32 with sub-i32
+  // saturation; this covers i16.f32 and i16.f64
   if (DstWidth < 32) {
     // Note: this triggers SatWidth < DstWidth above to generate saturated
-    // truncate by requesting MVT::i32 destination with SatWidth < 32.
-    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, SatVTOp);
-    return DAG.getNode(ISD::TRUNCATE, DL, DstVT, FpToInt32);
+    // truncate by requesting MVT::i16/i32 destination with SatWidth < 16/32.
+    MVT PromoteVT =
+        (DstWidth < 16 && Subtarget->has16BitInsts()) ? MVT::i16 : MVT::i32;
+    SDValue FpToInt = DAG.getNode(OpOpcode, DL, PromoteVT, Src, SatVTOp);
+    return DAG.getNode(ISD::TRUNCATE, DL, DstVT, FpToInt);
   }
 
   // TODO: can we implement i64 dst for f32/f64?
@@ -5894,7 +5906,8 @@ uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     const MachineFunction &MF, const ImplicitParameter Param) const {
-  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+  const AMDGPUMachineFunctionInfo *MFI =
+      MF.getInfo<AMDGPUMachineFunctionInfo>();
   return getImplicitParameterOffset(MFI->getExplicitKernArgSize(), Param);
 }
 

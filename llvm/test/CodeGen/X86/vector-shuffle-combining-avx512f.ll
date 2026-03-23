@@ -1083,6 +1083,17 @@ define <16 x i32> @combine_vcompressd_as_vmov(<16 x i32> %x) {
   ret <16 x i32> %res
 }
 
+; compress of repeated splat args
+define <16 x i32> @combine_vcompressd_splat(i16 %m) {
+; CHECK-LABEL: combine_vcompressd_splat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
+; CHECK-NEXT:    ret{{[l|q]}}
+  %msk = bitcast i16 %m to <16 x i1>
+  %res = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> splat (i32 -1), <16 x i32> splat (i32 -1), <16 x i1> %msk)
+  ret <16 x i32> %res
+}
+
 define <8 x i64> @PR179008(ptr %p0) {
 ; X86-AVX512F-LABEL: PR179008:
 ; X86-AVX512F:       # %bb.0:

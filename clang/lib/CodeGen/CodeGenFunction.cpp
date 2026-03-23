@@ -45,6 +45,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/SipHash.h"
@@ -178,7 +179,6 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
     if (OldValue != NewValue)
       CGF.CurFn->addFnAttr(Name, llvm::toStringRef(NewValue));
   };
-  mergeFnAttrValue("no-nans-fp-math", FPFeatures.getNoHonorNaNs());
   mergeFnAttrValue("no-signed-zeros-fp-math", FPFeatures.getNoSignedZero());
 }
 
@@ -326,10 +326,9 @@ llvm::DebugLoc CodeGenFunction::EmitReturnBlock() {
   // branch then we can just put the code in that block instead. This
   // cleans up functions which started with a unified return block.
   if (ReturnBlock.getBlock()->hasOneUse()) {
-    llvm::BranchInst *BI =
-      dyn_cast<llvm::BranchInst>(*ReturnBlock.getBlock()->user_begin());
-    if (BI && BI->isUnconditional() &&
-        BI->getSuccessor(0) == ReturnBlock.getBlock()) {
+    auto *BI =
+        dyn_cast<llvm::UncondBrInst>(*ReturnBlock.getBlock()->user_begin());
+    if (BI && BI->getSuccessor(0) == ReturnBlock.getBlock()) {
       // Record/return the DebugLoc of the simple 'return' expression to be used
       // later by the actual 'ret' instruction.
       llvm::DebugLoc Loc = BI->getDebugLoc();
@@ -3076,10 +3075,84 @@ void CodeGenFunction::EmitMultiVersionResolver(
   case llvm::Triple::riscv64be:
     EmitRISCVMultiVersionResolver(Resolver, Options);
     return;
-
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+    if (getContext().getTargetInfo().getTriple().isOSAIX()) {
+      EmitPPCAIXMultiVersionResolver(Resolver, Options);
+      return;
+    }
+    [[fallthrough]];
   default:
-    assert(false && "Only implemented for x86, AArch64 and RISC-V targets");
+    assert(false &&
+           "Only implemented for x86, AArch64, RISC-V, and PowerPC AIX");
   }
+}
+
+/**
+ * define internal ptr @foo.resolver() {
+ * entry:
+ *   %is_version_1 = __builtin_cpu_supports(version_1)
+ *   br i1 %1, label %if.version_1, label %if.else_2
+ *
+ * if.version_1:
+ *   ret ptr @foo.version_1
+ *
+ * if.else_2:
+ *   %is_version_2 = __builtin_cpu_supports(version_2)
+ * ...
+ * if.else:                                          ; preds = %entry
+ *   ret ptr @foo.default
+ * }
+ */
+void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
+    llvm::Function *Resolver, ArrayRef<FMVResolverOption> Options) {
+
+  // entry:
+  llvm::BasicBlock *CurBlock = createBasicBlock("entry", Resolver);
+
+  SmallVector<std::pair<llvm::Value *, llvm::BasicBlock *>, 3> PhiArgs;
+  for (const FMVResolverOption &RO : Options) {
+    Builder.SetInsertPoint(CurBlock);
+    // The 'default' or 'generic' case.
+    if (!RO.Architecture && RO.Features.empty()) {
+      // if.else:
+      //   ret ptr @foo.default
+      assert(&RO == Options.end() - 1 &&
+             "Default or Generic case must be last");
+      Builder.CreateRet(RO.Function);
+      return;
+    }
+    // if.else_n:
+    //   %is_version_n = __builtin_cpu_supports(version_n)
+    //   br i1 %is_version_n, label %if.version_n, label %if.else_n+1
+    //
+    // if.version_n:
+    //   ret ptr @foo_version_n
+    assert(RO.Features.size() == 1 &&
+           "for now one feature requirement per version");
+
+    assert(RO.Features[0].starts_with("cpu="));
+    StringRef CPU = RO.Features[0].split("=").second.trim();
+    StringRef Feature = llvm::StringSwitch<StringRef>(CPU)
+                            .Case("pwr7", "arch_2_06")
+                            .Case("pwr8", "arch_2_07")
+                            .Case("pwr9", "arch_3_00")
+                            .Case("pwr10", "arch_3_1")
+                            .Case("pwr11", "arch_3_1")
+                            .Default("error");
+
+    llvm::Value *Condition = EmitPPCBuiltinCpu(
+        Builtin::BI__builtin_cpu_supports, Builder.getInt1Ty(), Feature);
+
+    llvm::BasicBlock *ThenBlock = createBasicBlock("if.version", Resolver);
+    CurBlock = createBasicBlock("if.else", Resolver);
+    Builder.CreateCondBr(Condition, ThenBlock, CurBlock);
+
+    Builder.SetInsertPoint(ThenBlock);
+    Builder.CreateRet(RO.Function);
+  }
+
+  llvm_unreachable("Default case missing");
 }
 
 void CodeGenFunction::EmitRISCVMultiVersionResolver(
