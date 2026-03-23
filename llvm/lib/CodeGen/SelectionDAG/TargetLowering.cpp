@@ -8298,9 +8298,9 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                         DAG.getShiftAmountConstant(HBitWidth - I, HiLoVT, dl)));
       }
 
-      // For the last chunk, we might not need a mask if it's smaller than
-      // BestChunkWidth, but applying it is always safe.
-      Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
+      // If we're on the last chunk, we don't need an AND.
+      if (I < BitWidth - BestChunkWidth)
+        Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
       if (!Sum)
         Sum = Chunk;
       else
