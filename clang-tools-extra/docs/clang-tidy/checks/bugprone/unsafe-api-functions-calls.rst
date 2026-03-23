@@ -3,7 +3,7 @@
 bugprone-unsafe-api-functions-calls
 ===================================
 
-Finds C standard function calls that are used in an undefined or
+Checks for C standard function calls that are used in an undefined or
 unsafe manner.
 
 Unsafe usage of ``setvbuf()`` or ``setbuf()``

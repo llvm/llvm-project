@@ -169,6 +169,13 @@ New checks
   Checks for presence or absence of trailing commas in enum definitions and
   initializer lists.
 
+- New :doc:`bugprone-unsafe-api-functions-calls
+  <clang-tidy/checks/bugprone/bugprone-unsafe-api-functions-calls>`
+  check.
+
+  Checks for C standard function calls that are used in an undefined
+  or unsafe manner.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
