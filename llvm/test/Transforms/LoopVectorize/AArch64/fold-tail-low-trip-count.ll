@@ -16,11 +16,10 @@ define void @low_trip_count_small(i32 %x, ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 2
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[NEXT_GEP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[DST]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[NEXT_GEP2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr> [[TMP2]], ptr [[NEXT_GEP3]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> [[TMP3]], ptr [[NEXT_GEP4]], i32 3
@@ -28,7 +27,7 @@ define void @low_trip_count_small(i32 %x, ptr %dst) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
@@ -94,11 +93,10 @@ define ptr @low_trip_count_small_with_live_out(i32 %x, ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 2
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> poison, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> poison, ptr [[DST]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr> [[TMP2]], ptr [[NEXT_GEP2]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> [[TMP3]], ptr [[NEXT_GEP3]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x ptr> [[TMP4]], ptr [[NEXT_GEP4]], i32 3
@@ -106,7 +104,7 @@ define ptr @low_trip_count_small_with_live_out(i32 %x, ptr %dst) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[PTR_NEXT:%.*]] = getelementptr i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[PTR_NEXT:%.*]] = getelementptr i8, ptr [[DST]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[PTR_NEXT]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:

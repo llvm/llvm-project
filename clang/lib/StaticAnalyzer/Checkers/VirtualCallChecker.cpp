@@ -118,6 +118,11 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   if (!isVirtualCall(CE))
     return;
 
+  // Don't warn about virtual calls in system headers (e.g. libraries included
+  // via -isystem), as the user has no control over such code.
+  if (C.getSourceManager().isInSystemHeader(CE->getBeginLoc()))
+    return;
+
   const MemRegion *Reg = MC->getCXXThisVal().getAsRegion();
   const ObjectState *ObState = State->get<CtorDtorMap>(Reg);
   if (!ObState)

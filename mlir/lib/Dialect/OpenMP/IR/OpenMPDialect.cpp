@@ -18,6 +18,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
@@ -1432,6 +1433,56 @@ static void printUseDeviceAddrUseDevicePtrRegion(OpAsmPrinter &p, Operation *op,
   args.useDeviceAddrArgs.emplace(useDeviceAddrVars, useDeviceAddrTypes);
   args.useDevicePtrArgs.emplace(useDevicePtrVars, useDevicePtrTypes);
   printBlockArgRegion(p, op, region, args);
+}
+
+template <typename ParsePrefixFn>
+static ParseResult parseSplitIteratedList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iteratedVars,
+    SmallVectorImpl<Type> &iteratedTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &plainVars,
+    SmallVectorImpl<Type> &plainTypes, ParsePrefixFn &&parsePrefix) {
+
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    if (failed(parsePrefix()))
+      return failure();
+
+    OpAsmParser::UnresolvedOperand v;
+    Type ty;
+    if (parser.parseOperand(v) || parser.parseColonType(ty))
+      return failure();
+
+    if (llvm::isa<mlir::omp::IteratedType>(ty)) {
+      iteratedVars.push_back(v);
+      iteratedTypes.push_back(ty);
+    } else {
+      plainVars.push_back(v);
+      plainTypes.push_back(ty);
+    }
+    return success();
+  });
+}
+
+template <typename PrintPrefixFn>
+static void printSplitIteratedList(OpAsmPrinter &p, ValueRange iteratedVars,
+                                   TypeRange iteratedTypes,
+                                   ValueRange plainVars, TypeRange plainTypes,
+                                   PrintPrefixFn &&printPrefixForPlain,
+                                   PrintPrefixFn &&printPrefixForIterated) {
+
+  bool first = true;
+  auto emit = [&](Value v, Type t, auto &&printPrefix) {
+    if (!first)
+      p << ", ";
+    printPrefix(v, t);
+    p << v << " : " << t;
+    first = false;
+  };
+
+  for (unsigned i = 0; i < iteratedVars.size(); ++i)
+    emit(iteratedVars[i], iteratedTypes[i], printPrefixForIterated);
+  for (unsigned i = 0; i < plainVars.size(); ++i)
+    emit(plainVars[i], plainTypes[i], printPrefixForPlain);
 }
 
 /// Verifies Reduction Clause
@@ -3140,10 +3191,10 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(builder, state, clauses.affinityVars, clauses.allocateVars,
-                clauses.allocatorVars, makeArrayAttr(ctx, clauses.dependKinds),
-                clauses.dependVars, clauses.final, clauses.ifExpr,
-                clauses.inReductionVars,
+  TaskOp::build(builder, state, clauses.iterated, clauses.affinityVars,
+                clauses.allocateVars, clauses.allocatorVars,
+                makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+                clauses.final, clauses.ifExpr, clauses.inReductionVars,
                 makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
                 makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
                 clauses.priority, /*private_vars=*/clauses.privateVars,
@@ -3752,41 +3803,46 @@ static ParseResult parseLoopTransformClis(
   return success();
 }
 
-LogicalResult TileOp::verify() {
-  if (getApplyees().empty())
-    return emitOpError() << "must apply to at least one loop";
-
-  if (getSizes().size() != getApplyees().size())
-    return emitOpError() << "there must be one tile size for each applyee";
-
-  if (!getGeneratees().empty() &&
-      2 * getSizes().size() != getGeneratees().size())
-    return emitOpError()
-           << "expecting two times the number of generatees than applyees";
-
-  DenseSet<Value> parentIVs;
-
-  Value parent = getApplyees().front();
-  for (auto &&applyee : llvm::drop_begin(getApplyees())) {
-    auto [parentCreate, parentGen, parentCons] = decodeCli(parent);
+/// Check properties of the loop nest consisting of the transformation's
+/// applyees:
+/// 1. They are nested inside each other
+/// 2. They are perfectly nested
+///    (no code with side-effects in-between the loops)
+/// 3. They are rectangular
+///    (loop bounds are invariant in respect to the outer loops)
+///
+/// TODO: Generalize for LoopTransformationInterface.
+static LogicalResult checkApplyeesNesting(TileOp op) {
+  // Collect the loops from the nest
+  bool isOnlyCanonLoops = true;
+  SmallVector<CanonicalLoopOp> canonLoops;
+  for (Value applyee : op.getApplyees()) {
     auto [create, gen, cons] = decodeCli(applyee);
 
-    if (!parentGen)
-      return emitOpError() << "applyee CLI has no generator";
+    if (!gen)
+      return op.emitOpError() << "applyee CLI has no generator";
 
-    auto parentLoop = dyn_cast_or_null<CanonicalLoopOp>(parentGen->getOwner());
-    if (!parentGen)
-      return emitOpError()
-             << "currently only supports omp.canonical_loop as applyee";
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    canonLoops.push_back(loop);
+    if (!loop)
+      isOnlyCanonLoops = false;
+  }
+
+  // FIXME: We currently can only verify non-rectangularity and perfect nest of
+  // omp.canonical_loop.
+  if (!isOnlyCanonLoops)
+    return success();
+
+  DenseSet<Value> parentIVs;
+  for (auto i : llvm::seq<int>(1, canonLoops.size())) {
+    auto parentLoop = canonLoops[i - 1];
+    auto loop = canonLoops[i];
+
+    if (parentLoop.getOperation() != loop.getOperation()->getParentOp())
+      return op.emitOpError()
+             << "tiled loop nest must be nested within each other";
 
     parentIVs.insert(parentLoop.getInductionVar());
-
-    if (!gen)
-      return emitOpError() << "applyee CLI has no generator";
-    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
-    if (!loop)
-      return emitOpError()
-             << "currently only supports omp.canonical_loop as applyee";
 
     // Canonical loop must be perfectly nested, i.e. the body of the parent must
     // only contain the omp.canonical_loop of the nested loops, and
@@ -3812,12 +3868,10 @@ LogicalResult TileOp::verify() {
       return true;
     }();
     if (!isPerfectlyNested)
-      return emitOpError() << "tiled loop nest must be perfectly nested";
+      return op.emitOpError() << "tiled loop nest must be perfectly nested";
 
     if (parentIVs.contains(loop.getTripCount()))
-      return emitOpError() << "tiled loop nest must be rectangular";
-
-    parent = applyee;
+      return op.emitOpError() << "tiled loop nest must be rectangular";
   }
 
   // TODO: The tile sizes must be computed before the loop, but checking this
@@ -3832,6 +3886,21 @@ LogicalResult TileOp::verify() {
   //      omp.tile <- (%canonloop) sizes(%ts : i32)
 
   return success();
+}
+
+LogicalResult TileOp::verify() {
+  if (getApplyees().empty())
+    return emitOpError() << "must apply to at least one loop";
+
+  if (getSizes().size() != getApplyees().size())
+    return emitOpError() << "there must be one tile size for each applyee";
+
+  if (!getGeneratees().empty() &&
+      2 * getSizes().size() != getGeneratees().size())
+    return emitOpError()
+           << "expecting two times the number of generatees than applyees";
+
+  return checkApplyeesNesting(*this);
 }
 
 std::pair<unsigned, unsigned> TileOp ::getApplyeesODSOperandIndexAndLength() {
@@ -4607,24 +4676,26 @@ static void printUniformClause(OpAsmPrinter &p, Operation *op,
 
 static ParseResult parseAffinityClause(
     OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iterated,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &affinityVars,
-    SmallVectorImpl<Type> &affinityTypes) {
-  return parser.parseCommaSeparatedList([&]() -> ParseResult {
-    if (parser.parseOperand(affinityVars.emplace_back()) ||
-        parser.parseColonType(affinityTypes.emplace_back()))
-      return failure();
-    return success();
-  });
+    SmallVectorImpl<Type> &iteratedTypes,
+    SmallVectorImpl<Type> &affinityVarTypes) {
+  if (failed(parseSplitIteratedList(
+          parser, iterated, iteratedTypes, affinityVars, affinityVarTypes,
+          /*parsePrefix=*/[&]() -> ParseResult { return success(); })))
+    return failure();
+  return success();
 }
 
 static void printAffinityClause(OpAsmPrinter &p, Operation *op,
-                                ValueRange affinityVars,
-                                TypeRange affinityTypes) {
-  for (unsigned i = 0; i < affinityVars.size(); ++i) {
-    if (i)
-      p << ", ";
-    p << affinityVars[i] << " : " << affinityTypes[i];
-  }
+                                ValueRange iterated, ValueRange affinityVars,
+                                TypeRange iteratedTypes,
+                                TypeRange affinityVarTypes) {
+  auto nop = [&](Value, Type) {};
+  printSplitIteratedList(p, iterated, iteratedTypes, affinityVars,
+                         affinityVarTypes,
+                         /*plain prefix*/ nop,
+                         /*iterated prefix*/ nop);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4725,6 +4796,30 @@ LogicalResult IteratorOp::verify() {
   auto iteratedTy = llvm::dyn_cast<omp::IteratedType>(getIterated().getType());
   if (!iteratedTy)
     return emitOpError() << "result must be omp.iterated<entry_ty>";
+
+  for (auto [lb, ub, step] : llvm::zip_equal(
+           getLoopLowerBounds(), getLoopUpperBounds(), getLoopSteps())) {
+    if (matchPattern(step, m_Zero()))
+      return emitOpError() << "loop step must not be zero";
+
+    IntegerAttr lbAttr;
+    IntegerAttr ubAttr;
+    IntegerAttr stepAttr;
+    if (!matchPattern(lb, m_Constant(&lbAttr)) ||
+        !matchPattern(ub, m_Constant(&ubAttr)) ||
+        !matchPattern(step, m_Constant(&stepAttr)))
+      continue;
+
+    const APInt &lbVal = lbAttr.getValue();
+    const APInt &ubVal = ubAttr.getValue();
+    const APInt &stepVal = stepAttr.getValue();
+    if (stepVal.isStrictlyPositive() && lbVal.sgt(ubVal))
+      return emitOpError() << "positive loop step requires lower bound to be "
+                              "less than or equal to upper bound";
+    if (stepVal.isNegative() && lbVal.slt(ubVal))
+      return emitOpError() << "negative loop step requires lower bound to be "
+                              "greater than or equal to upper bound";
+  }
 
   Block &b = getRegion().front();
   auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());

@@ -2074,7 +2074,7 @@ APINotesReader::Create(std::unique_ptr<llvm::MemoryBuffer> InputBuffer,
   if (Err)
     return Err;
 
-  return Reader;
+  return std::move(Reader);
 }
 
 template <typename T>

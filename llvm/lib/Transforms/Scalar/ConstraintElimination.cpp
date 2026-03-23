@@ -430,7 +430,7 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
     Result.BasePtr = InnerGEP->getPointerOperand();
     Result.ConstantOffset += ConstantOffset2;
     if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
-      Result.VariableOffsets = VariableOffsets2;
+      Result.VariableOffsets = std::move(VariableOffsets2);
     Result.NW &= InnerGEP->getNoWrapFlags();
   }
   return Result;
@@ -956,9 +956,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
   BasicBlock *InLoopSucc = nullptr;
   if (Pred == CmpInst::ICMP_NE)
-    InLoopSucc = cast<BranchInst>(BB.getTerminator())->getSuccessor(0);
+    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(0);
   else if (Pred == CmpInst::ICMP_EQ)
-    InLoopSucc = cast<BranchInst>(BB.getTerminator())->getSuccessor(1);
+    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(1);
   else
     return;
 
@@ -1248,8 +1248,8 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
   }
 
-  auto *Br = dyn_cast<BranchInst>(BB.getTerminator());
-  if (!Br || !Br->isConditional())
+  auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
+  if (!Br)
     return;
 
   Value *Cond = Br->getCondition();

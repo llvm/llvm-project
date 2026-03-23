@@ -29,6 +29,43 @@ define i64 @abs_i64(i64 %x) {
   ret i64 %abs
 }
 
+; Test scalar saturating add/sub operations for i32
+define i32 @test_scalar_psadd_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_psadd_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psadd.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.sadd.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_psaddu_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_psaddu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psaddu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.uadd.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_pssub_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_pssub_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssub.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.ssub.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_scalar_pssubu_w(i32 %a, i32 %b) {
+; CHECK-LABEL: test_scalar_pssubu_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pssubu.w a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.usub.sat.i32(i32 %a, i32 %b)
+  ret i32 %res
+}
+
 define i64 @pack_i64_imm() {
 ; CHECK-LABEL: pack_i64_imm:
 ; CHECK:       # %bb.0:
@@ -425,15 +462,12 @@ define i128 @srl_large_i128(i128 %x, i128 %y) {
   ret i128 %b
 }
 
-; FIXME: Using srx instead of slx would avoid the mv.
 define i128 @srli_i128(i128 %x) {
 ; CHECK-LABEL: srli_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    li a3, 15
+; CHECK-NEXT:    li a2, 49
+; CHECK-NEXT:    srx a0, a1, a2
 ; CHECK-NEXT:    srli a1, a1, 49
-; CHECK-NEXT:    slx a2, a0, a3
-; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
   %a = lshr i128 %x, 49
   ret i128 %a
@@ -486,15 +520,12 @@ define i128 @sra_large_i128(i128 %x, i128 %y) {
   ret i128 %b
 }
 
-; FIXME: Using srx instead of slx would avoid the mv.
 define i128 @srai_i128(i128 %x) {
 ; CHECK-LABEL: srai_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    li a3, 15
+; CHECK-NEXT:    li a2, 49
+; CHECK-NEXT:    srx a0, a1, a2
 ; CHECK-NEXT:    srai a1, a1, 49
-; CHECK-NEXT:    slx a2, a0, a3
-; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
   %a = ashr i128 %x, 49
   ret i128 %a

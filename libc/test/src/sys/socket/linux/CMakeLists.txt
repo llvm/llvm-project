@@ -23,6 +23,8 @@ add_libc_unittest(
     bind_test.cpp
   DEPENDS
     libc.include.sys_socket
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_sockaddr_un
     libc.src.errno.errno
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind

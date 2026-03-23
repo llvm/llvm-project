@@ -406,6 +406,9 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
           targetDiag(*Locs.begin(), diag::err_thread_unsupported);
   }
 
+  if (LangOpts.SYCLIsDevice && isa<FunctionDecl>(D))
+    SYCL().CheckDeviceUseOfDecl(D, Loc);
+
   return false;
 }
 
@@ -2363,14 +2366,14 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
     TemplateArgumentLocInfo TypeArgInfo(Context.getTrivialTypeSourceInfo(CharTy));
     ExplicitArgs.addArgument(TemplateArgumentLoc(TypeArg, TypeArgInfo));
 
+    SourceLocation Loc = StringTokLocs.back();
     for (unsigned I = 0, N = Lit->getLength(); I != N; ++I) {
       Value = Lit->getCodeUnit(I);
       TemplateArgument Arg(Context, Value, CharTy);
-      TemplateArgumentLocInfo ArgInfo;
+      TemplateArgumentLocInfo ArgInfo(Context, Loc.getLocWithOffset(I));
       ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
     }
-    return BuildLiteralOperatorCall(R, OpNameInfo, {}, StringTokLocs.back(),
-                                    &ExplicitArgs);
+    return BuildLiteralOperatorCall(R, OpNameInfo, {}, Loc, &ExplicitArgs);
   }
   case LOLR_Raw:
   case LOLR_ErrorNoDiagnostic:
@@ -3912,7 +3915,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       for (unsigned I = 0, N = Literal.getUDSuffixOffset(); I != N; ++I) {
         Value = TokSpelling[I];
         TemplateArgument Arg(Context, Value, Context.CharTy);
-        TemplateArgumentLocInfo ArgInfo;
+        TemplateArgumentLocInfo ArgInfo(Context, TokLoc.getLocWithOffset(I));
         ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
       }
       return BuildLiteralOperatorCall(R, OpNameInfo, {}, TokLoc, &ExplicitArgs);
@@ -18452,9 +18455,9 @@ HandleImmediateInvocations(Sema &SemaRef,
   if (SemaRef.getLangOpts().CPlusPlus23 &&
       Rec.ExprContext ==
           Sema::ExpressionEvaluationContextRecord::EK_VariableInit) {
-    auto *VD = cast<VarDecl>(Rec.ManglingContextDecl);
-    if (VD->isUsableInConstantExpressions(SemaRef.Context) ||
-        VD->hasConstantInitialization()) {
+    auto *VD = dyn_cast<VarDecl>(Rec.ManglingContextDecl);
+    if (VD && (VD->isUsableInConstantExpressions(SemaRef.Context) ||
+               VD->hasConstantInitialization())) {
       // An expression or conversion is in an 'immediate function context' if it
       // is potentially evaluated and either:
       // [...]

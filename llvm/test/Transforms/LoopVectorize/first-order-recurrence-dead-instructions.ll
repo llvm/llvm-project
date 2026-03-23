@@ -15,7 +15,6 @@ define i8 @recurrence_phi_with_same_incoming_values_after_simplifications(i8 %fo
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 1, [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], 3
@@ -23,7 +22,7 @@ define i8 @recurrence_phi_with_same_incoming_values_after_simplifications(i8 %fo
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX]], 5
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[OFFSET_IDX]], 7
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP4]]

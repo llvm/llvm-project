@@ -384,11 +384,15 @@ protected:
 private:
   std::optional<unsigned> getNodeIndex(const NodeT *BB) const {
     if constexpr (GraphHasNodeNumbers<NodeT *>) {
-      // BB can be nullptr, map nullptr to index 0.
       assert(BlockNumberEpoch ==
                  GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
              "dominator tree used with outdated block numbers");
-      return BB ? GraphTraits<const NodeT *>::getNumber(BB) + 1 : 0;
+      if constexpr (IsPostDom) {
+        if (!BB)
+          return 0; // BB may be nullptr for post-dominator tree, map to 0.
+      } else
+        assert(BB && "dominator tree block must be non-null");
+      return GraphTraits<const NodeT *>::getNumber(BB) + 1;
     } else {
       if (auto It = NodeNumberMap.find(BB); It != NodeNumberMap.end())
         return It->second;

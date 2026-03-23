@@ -911,8 +911,8 @@ static void ProcessVersionedAPINotes(
     auto Active = (i == Selected) ? IsActive_t::Active : IsActive_t::Inactive;
     auto Replacement = IsSubstitution_t::Original;
 
-    // When collection all APINotes as version-independent,
-    // capture all as inactive and defer to the client select the
+    // When collecting all APINotes as version-independent,
+    // capture all as inactive and defer to the client to select the
     // right one.
     if (S.captureSwiftVersionIndependentAPINotes()) {
       Active = IsActive_t::Inactive;
