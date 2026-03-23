@@ -91,7 +91,7 @@ struct UnpackedHeader {
 
   ALWAYS_INLINE u8 getOrigin() { return OriginOrWasZeroed; }
 
-  ALWAYS_INLINE void setOrigin(u8 Origin) { OriginOrWasZeroed = Origin; }
+  ALWAYS_INLINE void setOrigin(u8 Origin) { OriginOrWasZeroed = Origin & 0x3; }
 };
 typedef atomic_u64 AtomicPackedHeader;
 static_assert(sizeof(UnpackedHeader) == sizeof(PackedHeader), "");

@@ -1142,6 +1142,26 @@ public:
   virtual OptionalParseResult parseOptionalAttribute(SymbolRefAttr &result,
                                                      Type type = {}) = 0;
 
+  /// Parse an optional attribute of a specific typed result. This overload
+  /// handles concrete attribute types (e.g. FloatAttr) that are not covered by
+  /// a dedicated virtual overload. It parses any attribute and then validates
+  /// that the result is of the expected type, emitting an error if not.
+  template <typename AttrType>
+  std::enable_if_t<!llvm::is_one_of<AttrType, Attribute, ArrayAttr, StringAttr,
+                                    SymbolRefAttr>::value,
+                   OptionalParseResult>
+  parseOptionalAttribute(AttrType &result, Type type = {}) {
+    Attribute attr;
+    OptionalParseResult parseResult = parseOptionalAttribute(attr, type);
+    if (!parseResult.has_value() || failed(*parseResult))
+      return parseResult;
+    result = dyn_cast<AttrType>(attr);
+    if (!result)
+      return emitError(getCurrentLocation())
+             << "expected attribute of a different type";
+    return success();
+  }
+
   /// Parse an optional attribute of a specific type and add it to the list with
   /// the specified name.
   template <typename AttrType>
