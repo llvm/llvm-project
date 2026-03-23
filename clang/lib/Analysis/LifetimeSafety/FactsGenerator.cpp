@@ -404,6 +404,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
   }
 
   ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
+  // For `static operator()`, the first argument is the call expression itself,
+  // remove it from the argument list to avoid off-by-one errors.
   if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())
     Args = Args.slice(1);
   handleFunctionCall(OCE, OCE->getDirectCallee(), Args);
