@@ -247,7 +247,7 @@ void PyRewritePatternSet::addConversion(nb::handle root,
     nb::object adaptorCls =
         PyGlobals::get()
             .lookupOpAdaptorClass([&] {
-              MlirStringRef ref = mlirIdentifierStr(mlirOperationGetName(op));
+              MlirStringRef ref = mlirStringAttrGetValue(mlirOperationGetName(op));
               return std::string_view(ref.data, ref.length);
             }())
             .value_or(nb::borrow(nb::type<PyOpAdaptor>()));

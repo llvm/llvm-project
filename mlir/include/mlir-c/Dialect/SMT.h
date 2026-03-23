@@ -83,8 +83,9 @@ MLIR_CAPI_EXPORTED MlirType mlirSMTTypeGetSMTFunc(MlirContext ctx,
 MLIR_CAPI_EXPORTED bool mlirSMTTypeIsASort(MlirType type);
 
 /// Creates a smt::SortType with the given identifier and sort parameters.
+/// The identifier must be a string attribute.
 MLIR_CAPI_EXPORTED MlirType mlirSMTTypeGetSort(MlirContext ctx,
-                                               MlirIdentifier identifier,
+                                               MlirAttribute identifier,
                                                size_t numberOfSortParams,
                                                const MlirType *sortParams);
 
