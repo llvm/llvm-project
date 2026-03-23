@@ -239,6 +239,7 @@ public:
   void reset() {
     AllSUs.clear();
     PrioritySUs.clear();
+    ScheduledSUs.clear();
     TotalCycles = 0;
     Type = AMDGPU::InstructionFlavor::Other;
     ProducesCoexecWindow = false;
