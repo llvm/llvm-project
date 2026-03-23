@@ -8567,7 +8567,6 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
 SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   unsigned NumOps = Op.getNumOperands();
 
-
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   SmallSet<Register, 8> SGPRInputRegs;
 
