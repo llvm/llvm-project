@@ -2,7 +2,8 @@
 ; expected init kernel and symbols for offload compilation.
 
 ; RUN: llc -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
+; Fix when spir-val supports the SPV_INTEL_function_pointers extension:
+; FIXME: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 define void @my_constructor() addrspace(4) {
 entry:
