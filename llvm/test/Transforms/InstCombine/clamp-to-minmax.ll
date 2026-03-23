@@ -594,8 +594,7 @@ define <2 x float> @mixed_clamp_to_float_vec(<2 x i32> %x) {
 define i8 @clamp_float_fast_minnum_max_select_nsz_fptoui(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_minnum_max_select_nsz_fptoui(
 ; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02)
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp nnan olt float [[X]], 0.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = select nsz i1 [[CMP1]], float 0.000000e+00, float [[MIN]]
+; CHECK-NEXT:    [[R:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[MIN]], float 0.000000e+00)
 ; CHECK-NEXT:    [[FPTOUI:%.*]] = fptoui float [[R]] to i8
 ; CHECK-NEXT:    ret i8 [[FPTOUI]]
 ;
@@ -609,8 +608,7 @@ define i8 @clamp_float_fast_minnum_max_select_nsz_fptoui(float %x) {
 define i8 @clamp_float_fast_maxnum_min_select_nsz_fptoui(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_maxnum_min_select_nsz_fptoui(
 ; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp nnan ogt float [[X]], 2.550000e+02
-; CHECK-NEXT:    [[R:%.*]] = select nsz i1 [[CMP1]], float 2.550000e+02, float [[MAX]]
+; CHECK-NEXT:    [[R:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[MAX]], float 2.550000e+02)
 ; CHECK-NEXT:    [[FPTOUI:%.*]] = fptoui float [[R]] to i8
 ; CHECK-NEXT:    ret i8 [[FPTOUI]]
 ;
@@ -671,8 +669,8 @@ define float @clamp_float_fast_minnum_max_select_no_nsz(float %x) {
 define float @clamp_float_fast_maxnum_min_select_no_nsz(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_maxnum_min_select_no_nsz(
 ; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[X:%.*]], float 0.000000e+00)
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp nnan ogt float [[X]], 2.550000e+02
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[MAX]]
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp nnan ole float [[MAX]], 2.550000e+02
+; CHECK-NEXT:    [[R:%.*]] = select nnan i1 [[DOTINV]], float [[MAX]], float 2.550000e+02
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %max = call float @llvm.maxnum.f32(float %x, float 0.000000e+00)
