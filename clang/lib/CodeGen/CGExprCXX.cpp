@@ -1337,9 +1337,11 @@ static void EmitNewInitializer(CodeGenFunction &CGF, const CXXNewExpr *E,
 static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
                                 const FunctionDecl *CalleeDecl,
                                 const FunctionProtoType *CalleeType,
-                                const CallArgList &Args) {
+                                const CallArgList &Args,
+                                llvm::Constant *CalleeOverride = nullptr) {
   llvm::CallBase *CallOrInvoke;
-  llvm::Constant *CalleePtr = CGF.CGM.GetAddrOfFunction(CalleeDecl);
+  llvm::Constant *CalleePtr =
+      CalleeOverride ? CalleeOverride : CGF.CGM.GetAddrOfFunction(CalleeDecl);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(CalleeDecl));
   RValue RV = CGF.EmitCall(CGF.CGM.getTypes().arrangeFreeFunctionCall(
                                Args, CalleeType, /*ChainCall=*/false),
@@ -1788,7 +1790,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
                                      llvm::Value *DeletePtr, QualType DeleteTy,
                                      llvm::Value *NumElements,
-                                     CharUnits CookieSize) {
+                                     CharUnits CookieSize,
+                                     llvm::Constant *CalleeOverride) {
   assert((!NumElements && CookieSize.isZero()) ||
          DeleteFD->getOverloadedOperator() == OO_Array_Delete);
 
@@ -1856,7 +1859,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
          "unknown parameter to usual delete function");
 
   // Emit the call to delete.
-  EmitNewDeleteCall(*this, DeleteFD, DeleteFTy, DeleteArgs);
+  EmitNewDeleteCall(*this, DeleteFD, DeleteFTy, DeleteArgs, CalleeOverride);
 
   // If call argument lowering didn't use a generated tag argument alloca we
   // remove them

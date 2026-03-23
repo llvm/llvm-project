@@ -3299,7 +3299,8 @@ public:
 
   void EmitDeleteCall(const FunctionDecl *DeleteFD, llvm::Value *Ptr,
                       QualType DeleteTy, llvm::Value *NumElements = nullptr,
-                      CharUnits CookieSize = CharUnits());
+                      CharUnits CookieSize = CharUnits(),
+                      llvm::Constant *CalleeOverride = nullptr);
 
   RValue EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
                                   const CallExpr *TheCallExpr, bool IsDelete);
