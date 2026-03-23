@@ -3691,6 +3691,15 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
   return SelectVOP3PMods(In, Src, SrcMods, true);
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3PModsF32(SDValue In, SDValue &Src,
+                                            SDValue &SrcMods) const {
+  SelectVOP3Mods(In, Src, SrcMods);
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  Mods |= cast<ConstantSDNode>(SrcMods)->getZExtValue();
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,
                                                   SDValue &Src) const {
   const ConstantSDNode *C = cast<ConstantSDNode>(In);
