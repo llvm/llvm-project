@@ -817,6 +817,16 @@ const char *TargetTransformInfo::getRegisterClassName(unsigned ClassID) const {
   return TTIImpl->getRegisterClassName(ClassID);
 }
 
+InstructionCost TargetTransformInfo::getRegisterClassSpillCost(
+    unsigned ClassID, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getRegisterClassSpillCost(ClassID, CostKind);
+}
+
+InstructionCost TargetTransformInfo::getRegisterClassReloadCost(
+    unsigned ClassID, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getRegisterClassReloadCost(ClassID, CostKind);
+}
+
 TypeSize TargetTransformInfo::getRegisterBitWidth(
     TargetTransformInfo::RegisterKind K) const {
   return TTIImpl->getRegisterBitWidth(K);

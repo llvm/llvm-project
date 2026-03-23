@@ -27,17 +27,21 @@ add_fp_unittest(
     libc.src.__support.math.atan2f
     libc.src.__support.math.atan2f128
     libc.src.__support.math.atan2f16
+    libc.src.__support.math.atanbf16
     libc.src.__support.math.atanf
     libc.src.__support.math.atanf16
     libc.src.__support.math.atanhf
     libc.src.__support.math.atanhf16
+    libc.src.__support.math.atanpif16
     libc.src.__support.math.bf16add
     libc.src.__support.math.bf16addf
     libc.src.__support.math.bf16addl
     libc.src.__support.math.bf16addf128
     libc.src.__support.math.bf16div
     libc.src.__support.math.bf16divf
+    libc.src.__support.math.bf16divf128
     libc.src.__support.math.bf16divl
+    libc.src.__support.math.bf16fma
     libc.src.__support.math.bf16fmaf
     libc.src.__support.math.bf16fmaf128
     libc.src.__support.math.bf16fmal
@@ -69,6 +73,8 @@ add_fp_unittest(
     libc.src.__support.math.coshf16
     libc.src.__support.math.cospif
     libc.src.__support.math.cospif16
+    libc.src.__support.math.daddf128
+    libc.src.__support.math.daddl
     libc.src.__support.math.dfmaf128
     libc.src.__support.math.dfmal
     libc.src.__support.math.dsqrtl
@@ -132,6 +138,9 @@ add_fp_unittest(
     libc.src.__support.math.floorf128
     libc.src.__support.math.floorf16
     libc.src.__support.math.floorl
+    libc.src.__support.math.fma
+    libc.src.__support.math.fmaf
+    libc.src.__support.math.fmaf16
     libc.src.__support.math.fmabf16
     libc.src.__support.math.fmax
     libc.src.__support.math.fmaxbf16
@@ -176,6 +185,7 @@ add_fp_unittest(
     libc.src.__support.math.logbf128
     libc.src.__support.math.logbf16
     libc.src.__support.math.logf
+    libc.src.__support.math.log_bf16
     libc.src.__support.math.ldexpf
     libc.src.__support.math.ldexpf128
     libc.src.__support.math.ldexpf16
@@ -236,6 +246,7 @@ add_fp_unittest(
     libc.src.__support.math.sinpif
     libc.src.__support.math.sinpif16
     libc.src.__support.math.sqrt
+    libc.src.__support.math.sqrtbf16
     libc.src.__support.math.sqrtf
     libc.src.__support.math.tan
     libc.src.__support.math.tanf

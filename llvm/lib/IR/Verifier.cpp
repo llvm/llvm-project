@@ -1601,7 +1601,11 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   if (auto *Array = N.getRawImportedEntities()) {
     CheckDI(isa<MDTuple>(Array), "invalid imported entity list", &N, Array);
     for (Metadata *Op : N.getImportedEntities()->operands()) {
-      CheckDI(Op && isa<DIImportedEntity>(Op), "invalid imported entity ref",
+      auto *IE = dyn_cast_or_null<DIImportedEntity>(Op);
+      CheckDI(IE, "invalid imported entity ref", &N, Op);
+      CheckDI(!isa_and_nonnull<DILocalScope>(IE->getScope()),
+              "function-local imports are not allowed in a DICompileUnit's "
+              "imported entities list",
               &N, Op);
     }
   }
@@ -4640,9 +4644,10 @@ void Verifier::visitLoadInst(LoadInst &LI) {
               LI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Load cannot have Release ordering", &LI);
     Check(ElTy->getScalarType()->isIntOrPtrTy() ||
+              ElTy->getScalarType()->isByteTy() ||
               ElTy->getScalarType()->isFloatingPointTy(),
-          "atomic load operand must have integer, pointer, floating point, "
-          "or vector type!",
+          "atomic load operand must have integer, byte, pointer, floating "
+          "point, or vector type!",
           ElTy, &LI);
 
     checkAtomicMemAccessSize(ElTy, &LI);
@@ -4668,9 +4673,10 @@ void Verifier::visitStoreInst(StoreInst &SI) {
               SI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Store cannot have Acquire ordering", &SI);
     Check(ElTy->getScalarType()->isIntOrPtrTy() ||
+              ElTy->getScalarType()->isByteTy() ||
               ElTy->getScalarType()->isFloatingPointTy(),
-          "atomic store operand must have integer, pointer, floating point, "
-          "or vector type!",
+          "atomic store operand must have integer, byte, pointer, floating "
+          "point, or vector type!",
           ElTy, &SI);
     checkAtomicMemAccessSize(ElTy, &SI);
   } else {
