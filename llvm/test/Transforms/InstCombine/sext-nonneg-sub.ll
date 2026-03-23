@@ -79,6 +79,38 @@ define i64 @select_nonnegative_slt(i32 %x, i32 %y) {
   ret i64 %conv
 }
 
+; Test that select <4 x i1> (X < Y) ? 0 : X - Y is recognized as non-negative, converting sext to zext
+define <4 x i64> @select_nonnegative_slt_vec(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i64> @select_nonnegative_slt_vec(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[Y]], <4 x i32> [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = sub nsw <4 x i32> [[X]], [[TMP1]]
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg <4 x i32> [[COND]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[CONV]]
+;
+  %cmp = icmp slt <4 x i32> %x, %y
+  %sub = sub nsw <4 x i32> %x, %y
+  %cond = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %sub
+  %conv = sext <4 x i32> %cond to <4 x i64>
+  ret <4 x i64> %conv
+}
+
+; Scalable vector should transform
+define <vscale x 4 x i64> @select_nonnegative_slt_scalable(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
+; CHECK-LABEL: define <vscale x 4 x i64> @select_nonnegative_slt_scalable(
+; CHECK-SAME: <vscale x 4 x i32> [[X:%.*]], <vscale x 4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.smin.nxv4i32(<vscale x 4 x i32> [[Y]], <vscale x 4 x i32> [[X]])
+; CHECK-NEXT:    [[COND:%.*]] = sub nsw <vscale x 4 x i32> [[X]], [[TMP1]]
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg <vscale x 4 x i32> [[COND]] to <vscale x 4 x i64>
+; CHECK-NEXT:    ret <vscale x 4 x i64> [[CONV]]
+;
+  %cmp = icmp slt <vscale x 4 x i32> %x, %y
+  %sub = sub nsw <vscale x 4 x i32> %x, %y
+  %cond = select <vscale x 4 x i1> %cmp, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> %sub
+  %conv = sext <vscale x 4 x i32> %cond to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %conv
+}
+
 define i64 @slt_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i64 @slt_commuted(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
