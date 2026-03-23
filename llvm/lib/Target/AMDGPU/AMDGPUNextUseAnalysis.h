@@ -28,16 +28,174 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/JSON.h"
+#include <cmath>
+#include <limits>
 #include <optional>
 
 namespace llvm {
+
+class AMDGPUNextUseAnalysisImpl;
+
+//==============================================================================
+// NextUseDistance - Represents a distance in the next-use analysis. Currently
+// wraps a 64-bit int with special encoding for loop depth and unreachable
+// distances.
+//==============================================================================
+class NextUseDistance {
+public:
+  constexpr static NextUseDistance unreachable() {
+    return NextUseDistance(std::numeric_limits<int64_t>::max());
+  }
+
+  constexpr static NextUseDistance fromLoopDepth(unsigned Depth) {
+    constexpr int64_t LoopWeight = 1000;
+    // FIXME: Is 24 a realistic limit?
+    assert(Depth < 24 && "Loop depth exceeds limit (24)");
+    int64_t v = LoopWeight * (1 << (2 * Depth));
+    return NextUseDistance(v);
+  }
+
+  constexpr NextUseDistance(unsigned V) : Value(V) {}
+  constexpr NextUseDistance(int V) : Value(V) {}
+  constexpr NextUseDistance(const llvm::NextUseDistance &B) : Value(B.Value) {}
+
+  constexpr bool isUnreachable() const { return *this == unreachable(); }
+  constexpr bool isReachable() const { return !isUnreachable(); }
+
+  //----------------------------------------------------------------------------
+  // Assignment
+  //----------------------------------------------------------------------------
+  constexpr NextUseDistance &operator=(const NextUseDistance &B) {
+    Value = B.Value;
+    return *this;
+  }
+
+  constexpr NextUseDistance &operator=(unsigned V) {
+    Value = V;
+    return *this;
+  }
+
+  constexpr NextUseDistance &operator=(int V) {
+    Value = V;
+    return *this;
+  }
+
+  //----------------------------------------------------------------------------
+  // Arithmetic operators
+  //----------------------------------------------------------------------------
+  constexpr NextUseDistance &operator+=(const NextUseDistance &B) {
+    Value += B.Value;
+    return *this;
+  }
+
+  constexpr NextUseDistance &operator-=(const NextUseDistance &B) {
+    Value -= B.Value;
+    return *this;
+  }
+
+  constexpr NextUseDistance operator-() const {
+    return NextUseDistance(-Value);
+  }
+
+  constexpr inline NextUseDistance applyLoopWeight(unsigned Depth) const {
+    NextUseDistance D = *this;
+    if (Depth)
+      D.Value *= fromLoopDepth(Depth).Value;
+    return D;
+  }
+
+  // Extend this distance by 'Size' and reset it's depth to 'Depth'.
+  constexpr NextUseDistance extend(unsigned Size, unsigned Depth) const {
+    NextUseDistance D = *this;
+    return D += NextUseDistance(Size).applyLoopWeight(Depth);
+  }
+
+  //----------------------------------------------------------------------------
+  // Comparison operators
+  //----------------------------------------------------------------------------
+  constexpr bool operator<(const NextUseDistance &B) const {
+    return Value < B.Value;
+  }
+
+  constexpr bool operator>(const NextUseDistance &B) const {
+    return Value > B.Value;
+  }
+
+  constexpr bool operator<=(const NextUseDistance &B) const {
+    return Value <= B.Value;
+  }
+
+  constexpr bool operator>=(const NextUseDistance &B) const {
+    return Value >= B.Value;
+  }
+
+  constexpr bool operator==(const NextUseDistance &B) const {
+    return Value == B.Value;
+  }
+
+  constexpr bool operator!=(const NextUseDistance &B) const {
+    return Value != B.Value;
+  }
+
+  //----------------------------------------------------------------------------
+  // Debugging
+  //----------------------------------------------------------------------------
+  format_object<int64_t> fmt() const { return format("%ld", Value); }
+
+  void print(raw_ostream &OS) const {
+    if (isUnreachable())
+      OS << "<unreachable>";
+    else
+      OS << fmt();
+  }
+
+  json::Value toJsonValue() const {
+    if (isUnreachable())
+      return "<unreachable>";
+    return Value;
+  }
+
+  std::string toString() const {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    print(OS);
+    return OS.str();
+  }
+
+  double getRawValue() const { return Value; }
+
+private:
+  friend class AMDGPUNextUseAnalysisImpl;
+  int64_t Value;
+  constexpr explicit NextUseDistance(int64_t V) : Value(V) {}
+};
+
+constexpr inline NextUseDistance operator+(NextUseDistance A,
+                                           const NextUseDistance &B) {
+  return A += B;
+}
+
+constexpr inline NextUseDistance operator-(NextUseDistance A,
+                                           const NextUseDistance &B) {
+  return A -= B;
+}
+
+// Allow std::min/std::max with NextUseDistance
+constexpr inline NextUseDistance min(NextUseDistance A, NextUseDistance B) {
+  return A < B ? A : B;
+}
+
+constexpr inline NextUseDistance max(NextUseDistance A, NextUseDistance B) {
+  return A > B ? A : B;
+}
 
 //==============================================================================
 // AMDGPUNextUseAnalysis - Provides next-use distances for live registers or
 // sub-registers at a given MachineInstruction suitable for making spilling
 // decisions.
 //==============================================================================
-class AMDGPUNextUseAnalysisImpl;
 class AMDGPUNextUseAnalysis {
   friend class AMDGPUNextUseAnalysisLegacyPass;
   friend class AMDGPUNextUseAnalysisPrinterLegacyPass;
@@ -60,17 +218,17 @@ public:
   void setCompatibilityMode(CompatibilityMode);
 
   /// \Returns the next-use distance for \p LiveReg.
-  std::optional<double>
+  std::optional<NextUseDistance>
   getNextUseDistance(Register LiveReg, const MachineInstr &CurMI,
                      const SmallVector<const MachineOperand *> &Uses,
-                     SmallVector<double> *Distances = nullptr,
+                     SmallVector<NextUseDistance> *Distances = nullptr,
                      const MachineOperand **UseOut = nullptr);
 
   struct UseDistancePair {
     const MachineOperand *Use = nullptr;
-    double Dist = 0.0;
+    NextUseDistance Dist = 0;
     UseDistancePair() = default;
-    UseDistancePair(const MachineOperand *Use, double Dist)
+    UseDistancePair(const MachineOperand *Use, NextUseDistance Dist)
         : Use(Use), Dist(Dist) {}
   };
 

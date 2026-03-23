@@ -46,465 +46,465 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19
   
-    %114:vgpr_32 = COPY $vgpr19
-    %113:vgpr_32 = COPY $vgpr18
-    %112:vgpr_32 = COPY $vgpr17
-    %111:vgpr_32 = COPY $vgpr16
-    %110:vgpr_32 = COPY $vgpr15
-    %109:vgpr_32 = COPY $vgpr14
-    %108:vgpr_32 = COPY $vgpr13
-    %107:vgpr_32 = COPY $vgpr12
-    %106:vgpr_32 = COPY $vgpr11
-    %105:vgpr_32 = COPY $vgpr10
-    %104:vgpr_32 = COPY $vgpr9
-    %103:vgpr_32 = COPY $vgpr8
-    %102:vgpr_32 = COPY $vgpr7
-    %101:vgpr_32 = COPY $vgpr6
-    %100:vgpr_32 = COPY $vgpr5
-    %99:vgpr_32 = COPY $vgpr4
-    %98:vgpr_32 = COPY $vgpr3
-    %97:vgpr_32 = COPY $vgpr2
-    %96:vgpr_32 = COPY $vgpr1
-    %95:vgpr_32 = COPY $vgpr0
-    %430:vreg_64 = REG_SEQUENCE %100, %subreg.sub0, %101, %subreg.sub1
-    %429:vreg_64 = REG_SEQUENCE %95, %subreg.sub0, %96, %subreg.sub1
-    %131:vgpr_32 = V_AND_B32_e64 1, %98, implicit $exec
-    %132:sreg_32 = V_CMP_EQ_U32_e64 1, %131, implicit $exec
-    %133:vgpr_32 = V_AND_B32_e64 1, %99, implicit $exec
-    %134:sreg_32 = V_CMP_NE_U32_e64 1, %133, implicit $exec
-    %135:vgpr_32 = GLOBAL_LOAD_UBYTE %429, 0, 0, implicit $exec :: (load (s8) from %ir.p1, addrspace 1)
-    %137:vgpr_32 = GLOBAL_LOAD_UBYTE %429, 1, 0, implicit $exec :: (load (s8) from %ir.p1 + 1, addrspace 1)
-    %140:vgpr_32 = V_LSHL_OR_B32_e64 %137, 8, %135, implicit $exec
-    %141:vgpr_32 = GLOBAL_LOAD_UBYTE %429, 2, 0, implicit $exec :: (load (s8) from %ir.p1 + 2, addrspace 1)
-    %143:vgpr_32 = GLOBAL_LOAD_UBYTE %429, 3, 0, implicit $exec :: (load (s8) from %ir.p1 + 3, addrspace 1)
-    %145:vgpr_32 = V_LSHL_OR_B32_e64 %143, 8, %141, implicit $exec
-    %1:vgpr_32 = V_LSHL_OR_B32_e64 %145, 16, %140, implicit $exec
-    %147:vgpr_32 = GLOBAL_LOAD_UBYTE %429, 12, 0, implicit $exec :: (load (s8) from %ir.gep1, addrspace 1)
-    %149:vgpr_32 = GLOBAL_LOAD_UBYTE %429, 13, 0, implicit $exec :: (load (s8) from %ir.gep1 + 1, addrspace 1)
-    %152:vgpr_32 = GLOBAL_LOAD_UBYTE %429, 14, 0, implicit $exec :: (load (s8) from %ir.gep1 + 2, addrspace 1)
-    %154:vgpr_32 = GLOBAL_LOAD_UBYTE %429, 15, 0, implicit $exec :: (load (s8) from %ir.gep1 + 3, addrspace 1)
-    %157:vreg_128 = GLOBAL_LOAD_DWORDX4 %430, 16, 0, implicit $exec :: (load (s128) from %ir.p3 + 16, align 4, addrspace 1)
-    %163:vreg_128 = GLOBAL_LOAD_DWORDX4 %430, 0, 0, implicit $exec :: (load (s128) from %ir.p3, align 4, addrspace 1)
-    %4:vgpr_32 = V_ADD_U32_e64 %163.sub0, %1, 0, implicit $exec
-    GLOBAL_STORE_DWORD %430, %4, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)
-    %5:vgpr_32 = V_ADD_U32_e64 %4, %1, 0, implicit $exec
-    %6:sreg_32 = SI_IF %132, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %0:vgpr_32 = COPY $vgpr19
+    %1:vgpr_32 = COPY $vgpr18
+    %2:vgpr_32 = COPY $vgpr17
+    %3:vgpr_32 = COPY $vgpr16
+    %4:vgpr_32 = COPY $vgpr15
+    %5:vgpr_32 = COPY $vgpr14
+    %6:vgpr_32 = COPY $vgpr13
+    %7:vgpr_32 = COPY $vgpr12
+    %8:vgpr_32 = COPY $vgpr11
+    %9:vgpr_32 = COPY $vgpr10
+    %10:vgpr_32 = COPY $vgpr9
+    %11:vgpr_32 = COPY $vgpr8
+    %12:vgpr_32 = COPY $vgpr7
+    %13:vgpr_32 = COPY $vgpr6
+    %14:vgpr_32 = COPY $vgpr5
+    %15:vgpr_32 = COPY $vgpr4
+    %16:vgpr_32 = COPY $vgpr3
+    %17:vgpr_32 = COPY $vgpr2
+    %18:vgpr_32 = COPY $vgpr1
+    %19:vgpr_32 = COPY $vgpr0
+    %20:vreg_64 = REG_SEQUENCE %14, %subreg.sub0, %13, %subreg.sub1
+    %21:vreg_64 = REG_SEQUENCE %19, %subreg.sub0, %18, %subreg.sub1
+    %22:vgpr_32 = V_AND_B32_e64 1, %16, implicit $exec
+    %23:sreg_32 = V_CMP_EQ_U32_e64 1, %22, implicit $exec
+    %24:vgpr_32 = V_AND_B32_e64 1, %15, implicit $exec
+    %25:sreg_32 = V_CMP_NE_U32_e64 1, %24, implicit $exec
+    %26:vgpr_32 = GLOBAL_LOAD_UBYTE %21, 0, 0, implicit $exec :: (load (s8) from %ir.p1, addrspace 1)
+    %27:vgpr_32 = GLOBAL_LOAD_UBYTE %21, 1, 0, implicit $exec :: (load (s8) from %ir.p1 + 1, addrspace 1)
+    %28:vgpr_32 = V_LSHL_OR_B32_e64 %27, 8, %26, implicit $exec
+    %29:vgpr_32 = GLOBAL_LOAD_UBYTE %21, 2, 0, implicit $exec :: (load (s8) from %ir.p1 + 2, addrspace 1)
+    %30:vgpr_32 = GLOBAL_LOAD_UBYTE %21, 3, 0, implicit $exec :: (load (s8) from %ir.p1 + 3, addrspace 1)
+    %31:vgpr_32 = V_LSHL_OR_B32_e64 %30, 8, %29, implicit $exec
+    %32:vgpr_32 = V_LSHL_OR_B32_e64 %31, 16, %28, implicit $exec
+    %33:vgpr_32 = GLOBAL_LOAD_UBYTE %21, 12, 0, implicit $exec :: (load (s8) from %ir.gep1, addrspace 1)
+    %34:vgpr_32 = GLOBAL_LOAD_UBYTE %21, 13, 0, implicit $exec :: (load (s8) from %ir.gep1 + 1, addrspace 1)
+    %35:vgpr_32 = GLOBAL_LOAD_UBYTE %21, 14, 0, implicit $exec :: (load (s8) from %ir.gep1 + 2, addrspace 1)
+    %36:vgpr_32 = GLOBAL_LOAD_UBYTE %21, 15, 0, implicit $exec :: (load (s8) from %ir.gep1 + 3, addrspace 1)
+    %37:vreg_128 = GLOBAL_LOAD_DWORDX4 %20, 16, 0, implicit $exec :: (load (s128) from %ir.p3 + 16, align 4, addrspace 1)
+    %38:vreg_128 = GLOBAL_LOAD_DWORDX4 %20, 0, 0, implicit $exec :: (load (s128) from %ir.p3, align 4, addrspace 1)
+    %39:vgpr_32 = V_ADD_U32_e64 %38.sub0, %32, 0, implicit $exec
+    GLOBAL_STORE_DWORD %20, %39, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)
+    %40:vgpr_32 = V_ADD_U32_e64 %39, %32, 0, implicit $exec
+    %41:sreg_32 = SI_IF %23, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
   
   bb.1:
     successors: %bb.2(0x80000000)
   
-    %171:vgpr_32 = V_MOV_B32_e32 100, implicit $exec
+    %42:vgpr_32 = V_MOV_B32_e32 100, implicit $exec
   
   bb.2:
     successors: %bb.3(0x40000000), %bb.14(0x40000000)
   
-    %7:vgpr_32 = PHI %5, %bb.0, %171, %bb.1
-    SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %8:sreg_32 = SI_IF %134, %bb.14, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %43:vgpr_32 = PHI %40, %bb.0, %42, %bb.1
+    SI_END_CF %41, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %44:sreg_32 = SI_IF %25, %bb.14, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
   
   bb.3:
     successors: %bb.15(0x80000000)
   
-    %176:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array6, target-flags(amdgpu-gotprel32-hi) @array6, implicit-def dead $scc
-    %177:sreg_64_xexec = S_LOAD_DWORDX2_IMM %176, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %178:vreg_64 = COPY %177
-    %9:vgpr_32 = FLAT_LOAD_DWORD %178, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array6, i64 28)`)
-    %179:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array8, target-flags(amdgpu-gotprel32-hi) @array8, implicit-def dead $scc
-    %180:sreg_64_xexec = S_LOAD_DWORDX2_IMM %179, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %181:vreg_64 = COPY %180
-    %10:vgpr_32 = FLAT_LOAD_DWORD %181, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array8, i64 20)`)
-    %11:vgpr_32 = FLAT_LOAD_DWORD %178, 44, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array6, i64 44)`)
-    %183:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array7, target-flags(amdgpu-gotprel32-hi) @array7, implicit-def dead $scc
-    %184:sreg_64_xexec = S_LOAD_DWORDX2_IMM %183, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %185:vreg_64 = COPY %184
-    %12:vgpr_32 = FLAT_LOAD_DWORD %185, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array7, i64 20)`)
-    %13:vgpr_32 = FLAT_LOAD_DWORD %181, 44, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array8, i64 44)`, align 8)
-    %187:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array9, target-flags(amdgpu-gotprel32-hi) @array9, implicit-def dead $scc
-    %188:sreg_64_xexec = S_LOAD_DWORDX2_IMM %187, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %189:vreg_64 = COPY %188
-    %14:vgpr_32 = FLAT_LOAD_DWORD %189, 24, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array9, i64 24)`)
-    %190:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array2, target-flags(amdgpu-gotprel32-hi) @array2, implicit-def dead $scc
-    %191:sreg_64_xexec = S_LOAD_DWORDX2_IMM %190, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %192:vreg_64 = COPY %191
-    %15:vgpr_32 = FLAT_LOAD_DWORD %192, 80, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array2, i64 80)`)
-    %193:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array3, target-flags(amdgpu-gotprel32-hi) @array3, implicit-def dead $scc
-    %194:sreg_64_xexec = S_LOAD_DWORDX2_IMM %193, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %195:vreg_64 = COPY %194
-    %16:vgpr_32 = FLAT_LOAD_DWORD %195, 80, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array3, i64 80)`)
-    %196:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array4, target-flags(amdgpu-gotprel32-hi) @array4, implicit-def dead $scc
-    %197:sreg_64_xexec = S_LOAD_DWORDX2_IMM %196, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %198:vreg_64 = COPY %197
-    %17:vgpr_32 = FLAT_LOAD_DWORD %198, 80, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array4, i64 80)`, align 8)
-    %199:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array5, target-flags(amdgpu-gotprel32-hi) @array5, implicit-def dead $scc
-    %200:sreg_64_xexec = S_LOAD_DWORDX2_IMM %199, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %201:vreg_64 = COPY %200
-    %18:vgpr_32 = FLAT_LOAD_DWORD %201, 80, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array5, i64 80)`)
-    %175:sreg_32 = S_MOV_B32 -1
-    %174:sreg_32 = S_MOV_B32 0
+    %45:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array6, target-flags(amdgpu-gotprel32-hi) @array6, implicit-def dead $scc
+    %46:sreg_64_xexec = S_LOAD_DWORDX2_IMM %45, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %47:vreg_64 = COPY %46
+    %48:vgpr_32 = FLAT_LOAD_DWORD %47, 28, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array6, i64 28)`)
+    %49:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array8, target-flags(amdgpu-gotprel32-hi) @array8, implicit-def dead $scc
+    %50:sreg_64_xexec = S_LOAD_DWORDX2_IMM %49, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %51:vreg_64 = COPY %50
+    %52:vgpr_32 = FLAT_LOAD_DWORD %51, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array8, i64 20)`)
+    %53:vgpr_32 = FLAT_LOAD_DWORD %47, 44, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array6, i64 44)`)
+    %54:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array7, target-flags(amdgpu-gotprel32-hi) @array7, implicit-def dead $scc
+    %55:sreg_64_xexec = S_LOAD_DWORDX2_IMM %54, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %56:vreg_64 = COPY %55
+    %57:vgpr_32 = FLAT_LOAD_DWORD %56, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array7, i64 20)`)
+    %58:vgpr_32 = FLAT_LOAD_DWORD %51, 44, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array8, i64 44)`, align 8)
+    %59:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array9, target-flags(amdgpu-gotprel32-hi) @array9, implicit-def dead $scc
+    %60:sreg_64_xexec = S_LOAD_DWORDX2_IMM %59, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %61:vreg_64 = COPY %60
+    %62:vgpr_32 = FLAT_LOAD_DWORD %61, 24, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array9, i64 24)`)
+    %63:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array2, target-flags(amdgpu-gotprel32-hi) @array2, implicit-def dead $scc
+    %64:sreg_64_xexec = S_LOAD_DWORDX2_IMM %63, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %65:vreg_64 = COPY %64
+    %66:vgpr_32 = FLAT_LOAD_DWORD %65, 80, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array2, i64 80)`)
+    %67:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array3, target-flags(amdgpu-gotprel32-hi) @array3, implicit-def dead $scc
+    %68:sreg_64_xexec = S_LOAD_DWORDX2_IMM %67, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %69:vreg_64 = COPY %68
+    %70:vgpr_32 = FLAT_LOAD_DWORD %69, 80, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array3, i64 80)`)
+    %71:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array4, target-flags(amdgpu-gotprel32-hi) @array4, implicit-def dead $scc
+    %72:sreg_64_xexec = S_LOAD_DWORDX2_IMM %71, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %73:vreg_64 = COPY %72
+    %74:vgpr_32 = FLAT_LOAD_DWORD %73, 80, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array4, i64 80)`, align 8)
+    %75:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array5, target-flags(amdgpu-gotprel32-hi) @array5, implicit-def dead $scc
+    %76:sreg_64_xexec = S_LOAD_DWORDX2_IMM %75, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %77:vreg_64 = COPY %76
+    %78:vgpr_32 = FLAT_LOAD_DWORD %77, 80, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array5, i64 80)`)
+    %79:sreg_32 = S_MOV_B32 -1
+    %80:sreg_32 = S_MOV_B32 0
     S_BRANCH %bb.15
   
   bb.4:
     successors: %bb.7(0x40000000), %bb.5(0x40000000)
   
-    %151:vgpr_32 = V_LSHL_OR_B32_e64 %496, 8, %494, implicit $exec
-    %156:vgpr_32 = V_LSHL_OR_B32_e64 %500, 8, %498, implicit $exec
-    %433:vreg_64 = REG_SEQUENCE %486, %subreg.sub0, %488, %subreg.sub1
-    %431:vreg_64 = REG_SEQUENCE %478, %subreg.sub0, %480, %subreg.sub1
-    %2:vgpr_32 = V_LSHL_OR_B32_e64 %156, 16, %151, implicit $exec
-    %215:vgpr_32 = DS_READ_U8_gfx9 %476, 0, 0, implicit $exec :: (load (s8) from %ir.p2, addrspace 3)
-    %216:vgpr_32 = DS_READ_U8_gfx9 %476, 1, 0, implicit $exec :: (load (s8) from %ir.p2 + 1, addrspace 3)
-    %217:vgpr_32 = DS_READ_U8_gfx9 %476, 2, 0, implicit $exec :: (load (s8) from %ir.p2 + 2, addrspace 3)
-    %218:vgpr_32 = DS_READ_U8_gfx9 %476, 3, 0, implicit $exec :: (load (s8) from %ir.p2 + 3, addrspace 3)
-    %21:vgpr_32 = DS_READ_B32_gfx9 %476, 12, 0, implicit $exec :: (load (s32) from %ir.gep2, align 8, addrspace 3)
-    %220:vgpr_32 = V_LSHL_OR_B32_e64 %216, 8, %215, implicit $exec
-    %221:vgpr_32 = V_LSHL_OR_B32_e64 %218, 8, %217, implicit $exec
-    %19:vgpr_32 = V_LSHL_OR_B32_e64 %221, 16, %220, implicit $exec
-    %223:vreg_64, $sgpr_null = V_MAD_U64_U32_e64 %470, %7, 1900, 0, implicit $exec
-    %22:vgpr_32 = V_ADD_U32_e64 %21, %223.sub0, 0, implicit $exec
-    %239:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 20, 0, implicit $exec :: (load (s8) from %ir.p4 + 20, addrspace 1)
-    %240:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 21, 0, implicit $exec :: (load (s8) from %ir.p4 + 21, addrspace 1)
-    %241:vgpr_32 = V_LSHL_OR_B32_e64 %240, 8, %239, implicit $exec
-    %242:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 22, 0, implicit $exec :: (load (s8) from %ir.p4 + 22, addrspace 1)
-    %243:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 23, 0, implicit $exec :: (load (s8) from %ir.p4 + 23, addrspace 1)
-    %244:vgpr_32 = V_LSHL_OR_B32_e64 %243, 8, %242, implicit $exec
-    %253:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 12, 0, implicit $exec :: (load (s8) from %ir.p4 + 12, addrspace 1)
-    %254:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 13, 0, implicit $exec :: (load (s8) from %ir.p4 + 13, addrspace 1)
-    %255:vgpr_32 = V_LSHL_OR_B32_e64 %254, 8, %253, implicit $exec
-    %256:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 14, 0, implicit $exec :: (load (s8) from %ir.p4 + 14, addrspace 1)
-    %257:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 15, 0, implicit $exec :: (load (s8) from %ir.p4 + 15, addrspace 1)
-    %258:vgpr_32 = V_LSHL_OR_B32_e64 %257, 8, %256, implicit $exec
-    %260:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 8, 0, implicit $exec :: (load (s8) from %ir.p4 + 8, addrspace 1)
-    %261:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 9, 0, implicit $exec :: (load (s8) from %ir.p4 + 9, addrspace 1)
-    %262:vgpr_32 = V_LSHL_OR_B32_e64 %261, 8, %260, implicit $exec
-    %263:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 10, 0, implicit $exec :: (load (s8) from %ir.p4 + 10, addrspace 1)
-    %264:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 11, 0, implicit $exec :: (load (s8) from %ir.p4 + 11, addrspace 1)
-    %265:vgpr_32 = V_LSHL_OR_B32_e64 %264, 8, %263, implicit $exec
-    %267:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 4, 0, implicit $exec :: (load (s8) from %ir.p4 + 4, addrspace 1)
-    %268:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 5, 0, implicit $exec :: (load (s8) from %ir.p4 + 5, addrspace 1)
-    %269:vgpr_32 = V_LSHL_OR_B32_e64 %268, 8, %267, implicit $exec
-    %270:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 6, 0, implicit $exec :: (load (s8) from %ir.p4 + 6, addrspace 1)
-    %271:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 7, 0, implicit $exec :: (load (s8) from %ir.p4 + 7, addrspace 1)
-    %272:vgpr_32 = V_LSHL_OR_B32_e64 %271, 8, %270, implicit $exec
-    %274:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 0, 0, implicit $exec :: (load (s8) from %ir.p4, addrspace 1)
-    %275:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 1, 0, implicit $exec :: (load (s8) from %ir.p4 + 1, addrspace 1)
-    %276:vgpr_32 = V_LSHL_OR_B32_e64 %275, 8, %274, implicit $exec
-    %277:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 2, 0, implicit $exec :: (load (s8) from %ir.p4 + 2, addrspace 1)
-    %278:vgpr_32 = GLOBAL_LOAD_UBYTE %431, 3, 0, implicit $exec :: (load (s8) from %ir.p4 + 3, addrspace 1)
-    %279:vgpr_32 = V_LSHL_OR_B32_e64 %278, 8, %277, implicit $exec
-    %24:vgpr_32 = V_LSHL_OR_B32_e64 %279, 16, %276, implicit $exec
-    %281:vgpr_32 = V_ADD_U32_e64 %24, %472, 0, implicit $exec
-    GLOBAL_STORE_DWORD %431, %281, 0, 0, implicit $exec :: (store (s32) into %ir.p4, addrspace 1)
+    %81:vgpr_32 = V_LSHL_OR_B32_e64 %82, 8, %83, implicit $exec
+    %84:vgpr_32 = V_LSHL_OR_B32_e64 %85, 8, %86, implicit $exec
+    %87:vreg_64 = REG_SEQUENCE %88, %subreg.sub0, %89, %subreg.sub1
+    %90:vreg_64 = REG_SEQUENCE %91, %subreg.sub0, %92, %subreg.sub1
+    %93:vgpr_32 = V_LSHL_OR_B32_e64 %84, 16, %81, implicit $exec
+    %94:vgpr_32 = DS_READ_U8_gfx9 %95, 0, 0, implicit $exec :: (load (s8) from %ir.p2, addrspace 3)
+    %96:vgpr_32 = DS_READ_U8_gfx9 %95, 1, 0, implicit $exec :: (load (s8) from %ir.p2 + 1, addrspace 3)
+    %97:vgpr_32 = DS_READ_U8_gfx9 %95, 2, 0, implicit $exec :: (load (s8) from %ir.p2 + 2, addrspace 3)
+    %98:vgpr_32 = DS_READ_U8_gfx9 %95, 3, 0, implicit $exec :: (load (s8) from %ir.p2 + 3, addrspace 3)
+    %99:vgpr_32 = DS_READ_B32_gfx9 %95, 12, 0, implicit $exec :: (load (s32) from %ir.gep2, align 8, addrspace 3)
+    %100:vgpr_32 = V_LSHL_OR_B32_e64 %96, 8, %94, implicit $exec
+    %101:vgpr_32 = V_LSHL_OR_B32_e64 %98, 8, %97, implicit $exec
+    %102:vgpr_32 = V_LSHL_OR_B32_e64 %101, 16, %100, implicit $exec
+    %103:vreg_64, $sgpr_null = V_MAD_U64_U32_e64 %104, %43, 1900, 0, implicit $exec
+    %105:vgpr_32 = V_ADD_U32_e64 %99, %103.sub0, 0, implicit $exec
+    %106:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 20, 0, implicit $exec :: (load (s8) from %ir.p4 + 20, addrspace 1)
+    %107:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 21, 0, implicit $exec :: (load (s8) from %ir.p4 + 21, addrspace 1)
+    %108:vgpr_32 = V_LSHL_OR_B32_e64 %107, 8, %106, implicit $exec
+    %109:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 22, 0, implicit $exec :: (load (s8) from %ir.p4 + 22, addrspace 1)
+    %110:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 23, 0, implicit $exec :: (load (s8) from %ir.p4 + 23, addrspace 1)
+    %111:vgpr_32 = V_LSHL_OR_B32_e64 %110, 8, %109, implicit $exec
+    %112:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 12, 0, implicit $exec :: (load (s8) from %ir.p4 + 12, addrspace 1)
+    %113:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 13, 0, implicit $exec :: (load (s8) from %ir.p4 + 13, addrspace 1)
+    %114:vgpr_32 = V_LSHL_OR_B32_e64 %113, 8, %112, implicit $exec
+    %115:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 14, 0, implicit $exec :: (load (s8) from %ir.p4 + 14, addrspace 1)
+    %116:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 15, 0, implicit $exec :: (load (s8) from %ir.p4 + 15, addrspace 1)
+    %117:vgpr_32 = V_LSHL_OR_B32_e64 %116, 8, %115, implicit $exec
+    %118:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 8, 0, implicit $exec :: (load (s8) from %ir.p4 + 8, addrspace 1)
+    %119:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 9, 0, implicit $exec :: (load (s8) from %ir.p4 + 9, addrspace 1)
+    %120:vgpr_32 = V_LSHL_OR_B32_e64 %119, 8, %118, implicit $exec
+    %121:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 10, 0, implicit $exec :: (load (s8) from %ir.p4 + 10, addrspace 1)
+    %122:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 11, 0, implicit $exec :: (load (s8) from %ir.p4 + 11, addrspace 1)
+    %123:vgpr_32 = V_LSHL_OR_B32_e64 %122, 8, %121, implicit $exec
+    %124:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 4, 0, implicit $exec :: (load (s8) from %ir.p4 + 4, addrspace 1)
+    %125:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 5, 0, implicit $exec :: (load (s8) from %ir.p4 + 5, addrspace 1)
+    %126:vgpr_32 = V_LSHL_OR_B32_e64 %125, 8, %124, implicit $exec
+    %127:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 6, 0, implicit $exec :: (load (s8) from %ir.p4 + 6, addrspace 1)
+    %128:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 7, 0, implicit $exec :: (load (s8) from %ir.p4 + 7, addrspace 1)
+    %129:vgpr_32 = V_LSHL_OR_B32_e64 %128, 8, %127, implicit $exec
+    %130:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 0, 0, implicit $exec :: (load (s8) from %ir.p4, addrspace 1)
+    %131:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 1, 0, implicit $exec :: (load (s8) from %ir.p4 + 1, addrspace 1)
+    %132:vgpr_32 = V_LSHL_OR_B32_e64 %131, 8, %130, implicit $exec
+    %133:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 2, 0, implicit $exec :: (load (s8) from %ir.p4 + 2, addrspace 1)
+    %134:vgpr_32 = GLOBAL_LOAD_UBYTE %90, 3, 0, implicit $exec :: (load (s8) from %ir.p4 + 3, addrspace 1)
+    %135:vgpr_32 = V_LSHL_OR_B32_e64 %134, 8, %133, implicit $exec
+    %136:vgpr_32 = V_LSHL_OR_B32_e64 %135, 16, %132, implicit $exec
+    %137:vgpr_32 = V_ADD_U32_e64 %136, %138, 0, implicit $exec
+    GLOBAL_STORE_DWORD %90, %137, 0, 0, implicit $exec :: (store (s32) into %ir.p4, addrspace 1)
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-    %282:sreg_32_xexec_hi = COPY $sgpr32
-    %284:sreg_32 = S_ADD_I32 %282, 1024, implicit-def dead $scc
-    $sgpr32 = COPY %284
+    %139:sreg_32_xexec_hi = COPY $sgpr32
+    %140:sreg_32 = S_ADD_I32 %139, 1024, implicit-def dead $scc
+    $sgpr32 = COPY %140
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-    %285:vreg_64 = GLOBAL_LOAD_DWORDX2 %433, 0, 0, implicit $exec :: (load (s64) from %ir.p6, align 4, addrspace 1)
-    %25:vgpr_32 = COPY %285.sub0
-    %26:vgpr_32 = COPY %285.sub1
-    %287:vgpr_32 = nsw V_LSHLREV_B32_e64 2, %285.sub0, implicit $exec
-    SCRATCH_STORE_DWORD_SVS %7, %287, %282, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.arrayidx11, addrspace 5)
-    %288:vgpr_32 = nsw V_LSHLREV_B32_e64 2, %285.sub1, implicit $exec
-    SCRATCH_STORE_SHORT_SVS %221, %288, %282, 2, 0, implicit $exec, implicit $flat_scr :: (store (s16) into %ir.arrayidx33 + 2, addrspace 5)
-    SCRATCH_STORE_SHORT_SVS %220, %288, %282, 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into %ir.arrayidx33, addrspace 5)
-    %27:sreg_32 = SI_IF %132, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %141:vreg_64 = GLOBAL_LOAD_DWORDX2 %87, 0, 0, implicit $exec :: (load (s64) from %ir.p6, align 4, addrspace 1)
+    %142:vgpr_32 = COPY %141.sub0
+    %143:vgpr_32 = COPY %141.sub1
+    %144:vgpr_32 = nsw V_LSHLREV_B32_e64 2, %141.sub0, implicit $exec
+    SCRATCH_STORE_DWORD_SVS %43, %144, %139, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.arrayidx11, addrspace 5)
+    %145:vgpr_32 = nsw V_LSHLREV_B32_e64 2, %141.sub1, implicit $exec
+    SCRATCH_STORE_SHORT_SVS %101, %145, %139, 2, 0, implicit $exec, implicit $flat_scr :: (store (s16) into %ir.arrayidx33 + 2, addrspace 5)
+    SCRATCH_STORE_SHORT_SVS %100, %145, %139, 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into %ir.arrayidx33, addrspace 5)
+    %146:sreg_32 = SI_IF %23, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.7
   
   bb.5:
     successors: %bb.6(0x40000000), %bb.9(0x40000000)
   
-    %28:vgpr_32 = PHI undef %214:vgpr_32, %bb.4, %31, %bb.7
-    %508:vgpr_32 = PHI %2, %bb.4, undef %509:vgpr_32, %bb.7
-    %510:vgpr_32 = PHI %22, %bb.4, undef %511:vgpr_32, %bb.7
-    %169:vreg_256 = REG_SEQUENCE undef %504.sub0, %subreg.sub0, undef %504.sub1, %subreg.sub1, undef %504.sub2, %subreg.sub2, %504.sub3, %subreg.sub3, undef %502.sub0, %subreg.sub4, %502.sub1, %subreg.sub5, undef %502.sub2, %subreg.sub6, undef %502.sub3, %subreg.sub7
-    %245:vgpr_32 = V_LSHL_OR_B32_e64 %244, 16, %241, implicit $exec
-    %259:vgpr_32 = V_LSHL_OR_B32_e64 %258, 16, %255, implicit $exec
-    %266:vgpr_32 = V_LSHL_OR_B32_e64 %265, 16, %262, implicit $exec
-    %273:vgpr_32 = V_LSHL_OR_B32_e64 %272, 16, %269, implicit $exec
-    %29:sreg_32 = SI_ELSE %27, %bb.9, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %147:vgpr_32 = PHI undef %148:vgpr_32, %bb.4, %149, %bb.7
+    %150:vgpr_32 = PHI %93, %bb.4, undef %151:vgpr_32, %bb.7
+    %152:vgpr_32 = PHI %105, %bb.4, undef %153:vgpr_32, %bb.7
+    %154:vreg_256 = REG_SEQUENCE undef %155.sub0, %subreg.sub0, undef %155.sub1, %subreg.sub1, undef %155.sub2, %subreg.sub2, %155.sub3, %subreg.sub3, undef %156.sub0, %subreg.sub4, %156.sub1, %subreg.sub5, undef %156.sub2, %subreg.sub6, undef %156.sub3, %subreg.sub7
+    %157:vgpr_32 = V_LSHL_OR_B32_e64 %111, 16, %108, implicit $exec
+    %158:vgpr_32 = V_LSHL_OR_B32_e64 %117, 16, %114, implicit $exec
+    %159:vgpr_32 = V_LSHL_OR_B32_e64 %123, 16, %120, implicit $exec
+    %160:vgpr_32 = V_LSHL_OR_B32_e64 %129, 16, %126, implicit $exec
+    %161:sreg_32 = SI_ELSE %146, %bb.9, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.6
   
   bb.6:
     successors: %bb.9(0x80000000)
   
-    %321:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array2, target-flags(amdgpu-gotprel32-hi) @array2, implicit-def dead $scc
-    %322:sreg_64_xexec = S_LOAD_DWORDX2_IMM %321, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %324:vreg_64 = COPY %322
-    %323:vgpr_32 = FLAT_LOAD_DWORD %324, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array2, i64 20)`)
-    %325:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array4, target-flags(amdgpu-gotprel32-hi) @array4, implicit-def dead $scc
-    %326:sreg_64_xexec = S_LOAD_DWORDX2_IMM %325, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %327:vreg_64 = COPY %326
-    FLAT_STORE_DWORD %327, %323, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array4, i64 4)`)
-    %30:vgpr_32 = V_MUL_LO_U32_e64 %508, %510, implicit $exec
-    %328:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array5, target-flags(amdgpu-gotprel32-hi) @array5, implicit-def dead $scc
-    %329:sreg_64_xexec = S_LOAD_DWORDX2_IMM %328, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %331:vreg_64 = COPY %329
-    %330:vgpr_32 = FLAT_LOAD_DWORD %331, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array5, i64 20)`)
-    FLAT_STORE_DWORD %327, %330, 60, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array4, i64 60)`)
+    %162:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array2, target-flags(amdgpu-gotprel32-hi) @array2, implicit-def dead $scc
+    %163:sreg_64_xexec = S_LOAD_DWORDX2_IMM %162, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %164:vreg_64 = COPY %163
+    %165:vgpr_32 = FLAT_LOAD_DWORD %164, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array2, i64 20)`)
+    %166:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array4, target-flags(amdgpu-gotprel32-hi) @array4, implicit-def dead $scc
+    %167:sreg_64_xexec = S_LOAD_DWORDX2_IMM %166, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %168:vreg_64 = COPY %167
+    FLAT_STORE_DWORD %168, %165, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array4, i64 4)`)
+    %169:vgpr_32 = V_MUL_LO_U32_e64 %150, %152, implicit $exec
+    %170:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array5, target-flags(amdgpu-gotprel32-hi) @array5, implicit-def dead $scc
+    %171:sreg_64_xexec = S_LOAD_DWORDX2_IMM %170, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %172:vreg_64 = COPY %171
+    %173:vgpr_32 = FLAT_LOAD_DWORD %172, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array5, i64 20)`)
+    FLAT_STORE_DWORD %168, %173, 60, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array4, i64 60)`)
     S_BRANCH %bb.9
   
   bb.7:
     successors: %bb.5(0x80000000)
   
-    %290:vgpr_32 = V_SUB_U32_e64 %21, %22, 0, implicit $exec
-    %291:vgpr_32 = V_MUL_LO_U32_e64 %290, %19, implicit $exec
-    %292:vgpr_32 = V_CVT_F32_U32_e64 %470, 0, 0, implicit $mode, implicit $exec
-    %293:vgpr_32 = nofpexcept V_RCP_IFLAG_F32_e64 0, %292, 0, 0, implicit $mode, implicit $exec
-    %295:vgpr_32 = nnan ninf nsz arcp contract afn reassoc nofpexcept V_MUL_F32_e64 0, 1333788670, 0, %293, 0, 0, implicit $mode, implicit $exec
-    %296:vgpr_32 = nofpexcept V_CVT_U32_F32_e64 0, %295, 0, 0, implicit $mode, implicit $exec
-    %298:vgpr_32 = V_SUB_U32_e64 0, %470, 0, implicit $exec
-    %299:vgpr_32 = V_MUL_LO_U32_e64 %298, %296, implicit $exec
-    %300:vgpr_32 = V_MUL_HI_U32_e64 %296, %299, implicit $exec
-    %301:vgpr_32 = V_ADD_U32_e64 %296, %300, 0, implicit $exec
-    %302:vgpr_32 = V_MUL_HI_U32_e64 %291, %301, implicit $exec
-    %303:vgpr_32 = V_MUL_LO_U32_e64 %302, %470, implicit $exec
-    %304:vgpr_32 = V_SUB_U32_e64 %291, %303, 0, implicit $exec
-    %305:sreg_32_xm0_xexec = V_CMP_GE_U32_e64 %304, %470, implicit $exec
-    %307:vgpr_32 = V_ADD_U32_e64 1, %302, 0, implicit $exec
-    %308:vgpr_32 = V_CNDMASK_B32_e64 0, %302, 0, %307, %305, implicit $exec
-    %309:vgpr_32 = V_SUB_U32_e64 %304, %470, 0, implicit $exec
-    %310:vgpr_32 = V_CNDMASK_B32_e64 0, %304, 0, %309, %305, implicit $exec
-    %311:sreg_32_xm0_xexec = V_CMP_GE_U32_e64 %310, %470, implicit $exec
-    %312:vgpr_32 = V_ADD_U32_e64 1, %308, 0, implicit $exec
-    %313:vgpr_32 = V_CNDMASK_B32_e64 0, %308, 0, %312, %311, implicit $exec
-    %31:vgpr_32 = V_ADD_U32_e64 %313, %2, 0, implicit $exec
-    %314:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array3, target-flags(amdgpu-gotprel32-hi) @array3, implicit-def dead $scc
-    %315:sreg_64_xexec = S_LOAD_DWORDX2_IMM %314, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %317:vreg_64 = COPY %315
-    %316:vgpr_32 = FLAT_LOAD_DWORD %317, 84, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array3, i64 84)`)
-    %318:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array4, target-flags(amdgpu-gotprel32-hi) @array4, implicit-def dead $scc
-    %319:sreg_64_xexec = S_LOAD_DWORDX2_IMM %318, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %320:vreg_64 = COPY %319
-    FLAT_STORE_DWORD %320, %316, 60, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array4, i64 60)`)
+    %174:vgpr_32 = V_SUB_U32_e64 %99, %105, 0, implicit $exec
+    %175:vgpr_32 = V_MUL_LO_U32_e64 %174, %102, implicit $exec
+    %176:vgpr_32 = V_CVT_F32_U32_e64 %104, 0, 0, implicit $mode, implicit $exec
+    %177:vgpr_32 = nofpexcept V_RCP_IFLAG_F32_e64 0, %176, 0, 0, implicit $mode, implicit $exec
+    %178:vgpr_32 = nnan ninf nsz arcp contract afn reassoc nofpexcept V_MUL_F32_e64 0, 1333788670, 0, %177, 0, 0, implicit $mode, implicit $exec
+    %179:vgpr_32 = nofpexcept V_CVT_U32_F32_e64 0, %178, 0, 0, implicit $mode, implicit $exec
+    %180:vgpr_32 = V_SUB_U32_e64 0, %104, 0, implicit $exec
+    %181:vgpr_32 = V_MUL_LO_U32_e64 %180, %179, implicit $exec
+    %182:vgpr_32 = V_MUL_HI_U32_e64 %179, %181, implicit $exec
+    %183:vgpr_32 = V_ADD_U32_e64 %179, %182, 0, implicit $exec
+    %184:vgpr_32 = V_MUL_HI_U32_e64 %175, %183, implicit $exec
+    %185:vgpr_32 = V_MUL_LO_U32_e64 %184, %104, implicit $exec
+    %186:vgpr_32 = V_SUB_U32_e64 %175, %185, 0, implicit $exec
+    %187:sreg_32_xm0_xexec = V_CMP_GE_U32_e64 %186, %104, implicit $exec
+    %188:vgpr_32 = V_ADD_U32_e64 1, %184, 0, implicit $exec
+    %189:vgpr_32 = V_CNDMASK_B32_e64 0, %184, 0, %188, %187, implicit $exec
+    %190:vgpr_32 = V_SUB_U32_e64 %186, %104, 0, implicit $exec
+    %191:vgpr_32 = V_CNDMASK_B32_e64 0, %186, 0, %190, %187, implicit $exec
+    %192:sreg_32_xm0_xexec = V_CMP_GE_U32_e64 %191, %104, implicit $exec
+    %193:vgpr_32 = V_ADD_U32_e64 1, %189, 0, implicit $exec
+    %194:vgpr_32 = V_CNDMASK_B32_e64 0, %189, 0, %193, %192, implicit $exec
+    %149:vgpr_32 = V_ADD_U32_e64 %194, %93, 0, implicit $exec
+    %195:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array3, target-flags(amdgpu-gotprel32-hi) @array3, implicit-def dead $scc
+    %196:sreg_64_xexec = S_LOAD_DWORDX2_IMM %195, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %197:vreg_64 = COPY %196
+    %198:vgpr_32 = FLAT_LOAD_DWORD %197, 84, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr getelementptr inbounds nuw (i8, ptr @array3, i64 84)`)
+    %199:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array4, target-flags(amdgpu-gotprel32-hi) @array4, implicit-def dead $scc
+    %200:sreg_64_xexec = S_LOAD_DWORDX2_IMM %199, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %201:vreg_64 = COPY %200
+    FLAT_STORE_DWORD %201, %198, 60, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array4, i64 60)`)
     S_BRANCH %bb.5
   
   bb.8:
     successors: %bb.17(0x80000000)
   
-    %32:vgpr_32 = PHI %72, %bb.14, %68, %bb.13
-    %33:vgpr_32 = PHI %73, %bb.14, %68, %bb.13
-    %34:vgpr_32 = PHI %74, %bb.14, %71, %bb.13
-    %35:vgpr_32 = PHI %75, %bb.14, %70, %bb.13
-    %36:vgpr_32 = PHI %76, %bb.14, %67, %bb.13
-    %37:vgpr_32 = PHI %77, %bb.14, %69, %bb.13
-    %38:vgpr_32 = PHI %78, %bb.14, %68, %bb.13
-    %39:vgpr_32 = PHI %79, %bb.14, %66, %bb.13
-    SI_END_CF %80, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %436:vreg_64 = REG_SEQUENCE %112, %subreg.sub0, %113, %subreg.sub1
-    %435:vreg_64 = REG_SEQUENCE %110, %subreg.sub0, %111, %subreg.sub1
+    %202:vgpr_32 = PHI %203, %bb.14, %204, %bb.13
+    %205:vgpr_32 = PHI %206, %bb.14, %204, %bb.13
+    %207:vgpr_32 = PHI %208, %bb.14, %209, %bb.13
+    %210:vgpr_32 = PHI %211, %bb.14, %212, %bb.13
+    %213:vgpr_32 = PHI %214, %bb.14, %215, %bb.13
+    %216:vgpr_32 = PHI %217, %bb.14, %218, %bb.13
+    %219:vgpr_32 = PHI %220, %bb.14, %204, %bb.13
+    %221:vgpr_32 = PHI %222, %bb.14, %223, %bb.13
+    SI_END_CF %224, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %225:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %1, %subreg.sub1
+    %226:vreg_64 = REG_SEQUENCE %4, %subreg.sub0, %3, %subreg.sub1
     S_BRANCH %bb.17
   
   bb.9:
     successors: %bb.12(0x40000000), %bb.10(0x40000000)
   
-    %40:vgpr_32 = PHI %28, %bb.5, %30, %bb.6
-    SI_END_CF %29, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %41:vgpr_32 = V_ADD_U32_e64 100, %19, 0, implicit $exec
-    %43:vgpr_32 = COPY %504.sub1
-    %44:vgpr_32 = COPY %504.sub2
-    %45:vgpr_32 = COPY %502.sub2
-    %46:vgpr_32 = COPY %502.sub3
-    %335:vgpr_32 = V_ADD3_U32_e64 %504.sub1, %502.sub3, %502.sub2, implicit $exec
-    %336:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %337:vreg_64 = REG_SEQUENCE %504.sub2, %subreg.sub0, %336, %subreg.sub1
-    %339:vreg_64 = nsw V_LSHLREV_B64_pseudo_e64 2, %337, implicit $exec
-    %438:vgpr_32, %440:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %506.sub0, %339.sub0, 0, implicit $exec
-    %439:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %506.sub1, %339.sub1, %440, 0, implicit $exec
-    %340:vreg_64 = REG_SEQUENCE %438, %subreg.sub0, %439, %subreg.sub1
-    GLOBAL_STORE_DWORD %340, %335, 0, 0, implicit $exec :: (store (s32) into %ir.arrayidx1, addrspace 1)
-    %47:sreg_32 = SI_IF %132, %bb.10, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %227:vgpr_32 = PHI %147, %bb.5, %169, %bb.6
+    SI_END_CF %161, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %228:vgpr_32 = V_ADD_U32_e64 100, %102, 0, implicit $exec
+    %229:vgpr_32 = COPY %155.sub1
+    %230:vgpr_32 = COPY %155.sub2
+    %231:vgpr_32 = COPY %156.sub2
+    %232:vgpr_32 = COPY %156.sub3
+    %233:vgpr_32 = V_ADD3_U32_e64 %155.sub1, %156.sub3, %156.sub2, implicit $exec
+    %234:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %235:vreg_64 = REG_SEQUENCE %155.sub2, %subreg.sub0, %234, %subreg.sub1
+    %236:vreg_64 = nsw V_LSHLREV_B64_pseudo_e64 2, %235, implicit $exec
+    %237:vgpr_32, %238:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %239.sub0, %236.sub0, 0, implicit $exec
+    %240:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %239.sub1, %236.sub1, %238, 0, implicit $exec
+    %241:vreg_64 = REG_SEQUENCE %237, %subreg.sub0, %240, %subreg.sub1
+    GLOBAL_STORE_DWORD %241, %233, 0, 0, implicit $exec :: (store (s32) into %ir.arrayidx1, addrspace 1)
+    %242:sreg_32 = SI_IF %23, %bb.10, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.12
   
   bb.10:
     successors: %bb.11(0x40000000), %bb.13(0x40000000)
   
-    %48:vgpr_32 = PHI undef %333:vgpr_32, %bb.9, %54, %bb.12
-    %49:vgpr_32 = PHI undef %333:vgpr_32, %bb.9, %53, %bb.12
-    %50:vgpr_32 = PHI undef %333:vgpr_32, %bb.9, %55, %bb.12
-    %512:vgpr_32 = PHI %259, %bb.9, undef %513:vgpr_32, %bb.12
-    %514:vgpr_32 = PHI %245, %bb.9, undef %515:vgpr_32, %bb.12
-    %516:vgpr_32 = PHI %482, %bb.9, undef %517:vgpr_32, %bb.12
-    %518:vgpr_32 = PHI %484, %bb.9, undef %519:vgpr_32, %bb.12
-    %434:vreg_64 = REG_SEQUENCE %490, %subreg.sub0, %492, %subreg.sub1
-    %51:sreg_32 = SI_ELSE %47, %bb.13, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %243:vgpr_32 = PHI undef %244:vgpr_32, %bb.9, %245, %bb.12
+    %246:vgpr_32 = PHI undef %244:vgpr_32, %bb.9, %247, %bb.12
+    %248:vgpr_32 = PHI undef %244:vgpr_32, %bb.9, %249, %bb.12
+    %250:vgpr_32 = PHI %158, %bb.9, undef %251:vgpr_32, %bb.12
+    %252:vgpr_32 = PHI %157, %bb.9, undef %253:vgpr_32, %bb.12
+    %254:vgpr_32 = PHI %255, %bb.9, undef %256:vgpr_32, %bb.12
+    %257:vgpr_32 = PHI %258, %bb.9, undef %259:vgpr_32, %bb.12
+    %260:vreg_64 = REG_SEQUENCE %261, %subreg.sub0, %262, %subreg.sub1
+    %263:sreg_32 = SI_ELSE %242, %bb.13, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.11
   
   bb.11:
     successors: %bb.13(0x80000000)
   
-    %52:vgpr_32 = V_ADD_U32_e64 %512, %40, 0, implicit $exec
-    %383:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %384:vreg_64 = REG_SEQUENCE %514, %subreg.sub0, %383, %subreg.sub1
-    %386:vreg_64 = nsw V_LSHLREV_B64_pseudo_e64 2, %384, implicit $exec
-    %446:vgpr_32, %448:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %516, %386.sub0, 0, implicit $exec
-    %447:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %518, %386.sub1, %448, 0, implicit $exec
-    %387:vreg_64 = REG_SEQUENCE %446, %subreg.sub0, %447, %subreg.sub1
-    GLOBAL_STORE_DWORD %387, %52, 0, 0, implicit $exec :: (store (s32) into %ir.arrayidx2, align 8, addrspace 1)
+    %264:vgpr_32 = V_ADD_U32_e64 %250, %227, 0, implicit $exec
+    %265:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %266:vreg_64 = REG_SEQUENCE %252, %subreg.sub0, %265, %subreg.sub1
+    %267:vreg_64 = nsw V_LSHLREV_B64_pseudo_e64 2, %266, implicit $exec
+    %268:vgpr_32, %269:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %254, %267.sub0, 0, implicit $exec
+    %270:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %257, %267.sub1, %269, 0, implicit $exec
+    %271:vreg_64 = REG_SEQUENCE %268, %subreg.sub0, %270, %subreg.sub1
+    GLOBAL_STORE_DWORD %271, %264, 0, 0, implicit $exec :: (store (s32) into %ir.arrayidx2, align 8, addrspace 1)
     S_BRANCH %bb.13
   
   bb.12:
     successors: %bb.10(0x80000000)
   
-    %346:vgpr_32 = V_ADD3_U32_e64 %41, %40, %169.sub3, implicit $exec
-    %348:vreg_64 = REG_SEQUENCE %169.sub5, %subreg.sub0, %336, %subreg.sub1
-    %350:vreg_64 = nsw V_LSHLREV_B64_pseudo_e64 2, %348, implicit $exec
-    %454:vgpr_32, %456:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %482, %350.sub0, 0, implicit $exec
-    %455:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %484, %350.sub1, %456, 0, implicit $exec
-    %351:vreg_64 = REG_SEQUENCE %454, %subreg.sub0, %455, %subreg.sub1
-    GLOBAL_STORE_SHORT_D16_HI %351, %346, 2, 0, implicit $exec :: (store (s16) into %ir.arrayidx3 + 2, addrspace 1)
-    GLOBAL_STORE_SHORT %351, %346, 0, 0, implicit $exec :: (store (s16) into %ir.arrayidx3, addrspace 1)
-    %352:vgpr_32 = V_ADD_U32_e64 %273, %346, 0, implicit $exec
-    %353:vreg_64 = REG_SEQUENCE %266, %subreg.sub0, %336, %subreg.sub1
-    %354:vreg_64 = nsw V_LSHLREV_B64_pseudo_e64 2, %353, implicit $exec
-    %462:vgpr_32, %464:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %486, %354.sub0, 0, implicit $exec
-    %463:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %488, %354.sub1, %464, 0, implicit $exec
-    %355:vreg_64 = REG_SEQUENCE %462, %subreg.sub0, %463, %subreg.sub1
-    GLOBAL_STORE_SHORT_D16_HI %355, %352, 2, 0, implicit $exec :: (store (s16) into %ir.arrayidx5 + 2, addrspace 1)
-    GLOBAL_STORE_SHORT %355, %352, 0, 0, implicit $exec :: (store (s16) into %ir.arrayidx5, addrspace 1)
+    %272:vgpr_32 = V_ADD3_U32_e64 %228, %227, %154.sub3, implicit $exec
+    %273:vreg_64 = REG_SEQUENCE %154.sub5, %subreg.sub0, %234, %subreg.sub1
+    %274:vreg_64 = nsw V_LSHLREV_B64_pseudo_e64 2, %273, implicit $exec
+    %275:vgpr_32, %276:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %255, %274.sub0, 0, implicit $exec
+    %277:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %258, %274.sub1, %276, 0, implicit $exec
+    %278:vreg_64 = REG_SEQUENCE %275, %subreg.sub0, %277, %subreg.sub1
+    GLOBAL_STORE_SHORT_D16_HI %278, %272, 2, 0, implicit $exec :: (store (s16) into %ir.arrayidx3 + 2, addrspace 1)
+    GLOBAL_STORE_SHORT %278, %272, 0, 0, implicit $exec :: (store (s16) into %ir.arrayidx3, addrspace 1)
+    %279:vgpr_32 = V_ADD_U32_e64 %160, %272, 0, implicit $exec
+    %280:vreg_64 = REG_SEQUENCE %159, %subreg.sub0, %234, %subreg.sub1
+    %281:vreg_64 = nsw V_LSHLREV_B64_pseudo_e64 2, %280, implicit $exec
+    %282:vgpr_32, %283:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %88, %281.sub0, 0, implicit $exec
+    %284:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %89, %281.sub1, %283, 0, implicit $exec
+    %285:vreg_64 = REG_SEQUENCE %282, %subreg.sub0, %284, %subreg.sub1
+    GLOBAL_STORE_SHORT_D16_HI %285, %279, 2, 0, implicit $exec :: (store (s16) into %ir.arrayidx5 + 2, addrspace 1)
+    GLOBAL_STORE_SHORT %285, %279, 0, 0, implicit $exec :: (store (s16) into %ir.arrayidx5, addrspace 1)
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-    %356:sreg_32_xexec_hi = COPY $sgpr32
-    %358:sreg_32 = S_ADD_I32 %356, 1024, implicit-def dead $scc
-    $sgpr32 = COPY %358
+    %286:sreg_32_xexec_hi = COPY $sgpr32
+    %287:sreg_32 = S_ADD_I32 %286, 1024, implicit-def dead $scc
+    $sgpr32 = COPY %287
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-    %359:vgpr_32 = GLOBAL_LOAD_DWORD %433, 0, 0, implicit $exec :: (load (s32) from %ir.p6, addrspace 1)
-    %360:vgpr_32 = V_LSHLREV_B32_e64 2, %359, implicit $exec
-    SCRATCH_STORE_DWORD_SVS %346, %360, %356, 40, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.arrayidx1111, addrspace 5)
-    GLOBAL_STORE_DWORD %431, %223.sub0, 4, 0, implicit $exec :: (store (s32) into %ir.arrayidx444, addrspace 1)
-    %361:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array4, target-flags(amdgpu-gotprel32-hi) @array4, implicit-def dead $scc
-    %362:sreg_64_xexec = S_LOAD_DWORDX2_IMM %361, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %363:vreg_64 = COPY %362
-    %53:vgpr_32 = FLAT_LOAD_DWORD %363, 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from @array4)
-    %364:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array2, target-flags(amdgpu-gotprel32-hi) @array2, implicit-def dead $scc
-    %365:sreg_64_xexec = S_LOAD_DWORDX2_IMM %364, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %367:vreg_64 = COPY %365
-    %366:vgpr_32 = FLAT_LOAD_DWORD %367, 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from @array2)
-    %368:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array3, target-flags(amdgpu-gotprel32-hi) @array3, implicit-def dead $scc
-    %369:sreg_64_xexec = S_LOAD_DWORDX2_IMM %368, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %371:vreg_64 = COPY %369
-    %370:vgpr_32 = FLAT_LOAD_DWORD %371, 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from @array3)
-    %372:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array5, target-flags(amdgpu-gotprel32-hi) @array5, implicit-def dead $scc
-    %373:sreg_64_xexec = S_LOAD_DWORDX2_IMM %372, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %374:vreg_64 = COPY %373
-    %54:vgpr_32 = FLAT_LOAD_DWORD %374, 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from @array5)
-    %375:vgpr_32 = V_MUL_LO_U32_e64 %370, %54, implicit $exec
-    %427:vreg_64 = REG_SEQUENCE %375, %subreg.sub0, undef %428:vgpr_32, %subreg.sub1
-    %379:vreg_64, $sgpr_null = V_MAD_U64_U32_e64 %53, %366, %427, 0, implicit $exec
-    %55:vgpr_32 = COPY %379.sub0
+    %288:vgpr_32 = GLOBAL_LOAD_DWORD %87, 0, 0, implicit $exec :: (load (s32) from %ir.p6, addrspace 1)
+    %289:vgpr_32 = V_LSHLREV_B32_e64 2, %288, implicit $exec
+    SCRATCH_STORE_DWORD_SVS %272, %289, %286, 40, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.arrayidx1111, addrspace 5)
+    GLOBAL_STORE_DWORD %90, %103.sub0, 4, 0, implicit $exec :: (store (s32) into %ir.arrayidx444, addrspace 1)
+    %290:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array4, target-flags(amdgpu-gotprel32-hi) @array4, implicit-def dead $scc
+    %291:sreg_64_xexec = S_LOAD_DWORDX2_IMM %290, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %292:vreg_64 = COPY %291
+    %247:vgpr_32 = FLAT_LOAD_DWORD %292, 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from @array4)
+    %293:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array2, target-flags(amdgpu-gotprel32-hi) @array2, implicit-def dead $scc
+    %294:sreg_64_xexec = S_LOAD_DWORDX2_IMM %293, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %295:vreg_64 = COPY %294
+    %296:vgpr_32 = FLAT_LOAD_DWORD %295, 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from @array2)
+    %297:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array3, target-flags(amdgpu-gotprel32-hi) @array3, implicit-def dead $scc
+    %298:sreg_64_xexec = S_LOAD_DWORDX2_IMM %297, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %299:vreg_64 = COPY %298
+    %300:vgpr_32 = FLAT_LOAD_DWORD %299, 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from @array3)
+    %301:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array5, target-flags(amdgpu-gotprel32-hi) @array5, implicit-def dead $scc
+    %302:sreg_64_xexec = S_LOAD_DWORDX2_IMM %301, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %303:vreg_64 = COPY %302
+    %245:vgpr_32 = FLAT_LOAD_DWORD %303, 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s32) from @array5)
+    %304:vgpr_32 = V_MUL_LO_U32_e64 %300, %245, implicit $exec
+    %305:vreg_64 = REG_SEQUENCE %304, %subreg.sub0, undef %306:vgpr_32, %subreg.sub1
+    %307:vreg_64, $sgpr_null = V_MAD_U64_U32_e64 %247, %296, %305, 0, implicit $exec
+    %249:vgpr_32 = COPY %307.sub0
     S_BRANCH %bb.10
   
   bb.13:
     successors: %bb.8(0x80000000)
   
-    %56:vgpr_32 = PHI %50, %bb.10, %52, %bb.11
-    %57:vgpr_32 = PHI %49, %bb.10, %52, %bb.11
-    %58:vgpr_32 = PHI %26, %bb.10, %52, %bb.11
-    %59:vgpr_32 = PHI %25, %bb.10, %52, %bb.11
-    %60:vgpr_32 = PHI %48, %bb.10, %52, %bb.11
-    %61:vgpr_32 = PHI %43, %bb.10, %52, %bb.11
-    %62:vgpr_32 = PHI %44, %bb.10, %52, %bb.11
-    %63:vgpr_32 = PHI %45, %bb.10, %52, %bb.11
-    %64:vgpr_32 = PHI %46, %bb.10, %52, %bb.11
-    %65:vgpr_32 = PHI %24, %bb.10, %52, %bb.11
-    SI_END_CF %51, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %66:vgpr_32 = V_ADD_U32_e64 %56, %40, 0, implicit $exec
-    %67:vgpr_32 = V_SUB_U32_e64 %7, %474, 0, implicit $exec
-    %388:vgpr_32 = V_ADD_U32_e64 %66, %67, 0, implicit $exec
-    %68:vgpr_32 = V_MUL_LO_U32_e64 %388, %41, implicit $exec
-    %69:vgpr_32 = V_ADD_U32_e64 %68, %223.sub0, 0, implicit $exec
-    %389:vgpr_32 = V_SUB_U32_e64 %69, %21, 0, implicit $exec
-    %390:vgpr_32 = V_ADD_U32_e64 %389, %57, 0, implicit $exec
-    %391:vgpr_32 = V_MUL_LO_U32_e64 %390, %58, implicit $exec
-    %70:vgpr_32 = V_SUB_U32_e64 %391, %59, 0, implicit $exec
-    %425:vreg_64 = REG_SEQUENCE %61, %subreg.sub0, undef %426:vgpr_32, %subreg.sub1
-    %395:vreg_64, $sgpr_null = V_MAD_U64_U32_e64 %70, %60, %425, 0, implicit $exec
-    %398:vgpr_32 = V_SUB_U32_e64 %395.sub0, %62, 0, implicit $exec
-    %399:vgpr_32 = V_SUB_U32_e64 %398, %63, 0, implicit $exec
-    %400:vgpr_32 = V_ADD_U32_e64 %399, %64, 0, implicit $exec
-    %71:vgpr_32 = V_MUL_LO_U32_e64 %400, %65, implicit $exec
-    GLOBAL_STORE_SHORT_D16_HI %434, %71, 2, 0, implicit $exec :: (store (s16) into %ir.p7 + 2, addrspace 1)
-    GLOBAL_STORE_SHORT %434, %71, 0, 0, implicit $exec :: (store (s16) into %ir.p7, addrspace 1)
+    %308:vgpr_32 = PHI %248, %bb.10, %264, %bb.11
+    %309:vgpr_32 = PHI %246, %bb.10, %264, %bb.11
+    %310:vgpr_32 = PHI %143, %bb.10, %264, %bb.11
+    %311:vgpr_32 = PHI %142, %bb.10, %264, %bb.11
+    %312:vgpr_32 = PHI %243, %bb.10, %264, %bb.11
+    %313:vgpr_32 = PHI %229, %bb.10, %264, %bb.11
+    %314:vgpr_32 = PHI %230, %bb.10, %264, %bb.11
+    %315:vgpr_32 = PHI %231, %bb.10, %264, %bb.11
+    %316:vgpr_32 = PHI %232, %bb.10, %264, %bb.11
+    %317:vgpr_32 = PHI %136, %bb.10, %264, %bb.11
+    SI_END_CF %263, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %223:vgpr_32 = V_ADD_U32_e64 %308, %227, 0, implicit $exec
+    %215:vgpr_32 = V_SUB_U32_e64 %43, %318, 0, implicit $exec
+    %319:vgpr_32 = V_ADD_U32_e64 %223, %215, 0, implicit $exec
+    %204:vgpr_32 = V_MUL_LO_U32_e64 %319, %228, implicit $exec
+    %218:vgpr_32 = V_ADD_U32_e64 %204, %103.sub0, 0, implicit $exec
+    %320:vgpr_32 = V_SUB_U32_e64 %218, %99, 0, implicit $exec
+    %321:vgpr_32 = V_ADD_U32_e64 %320, %309, 0, implicit $exec
+    %322:vgpr_32 = V_MUL_LO_U32_e64 %321, %310, implicit $exec
+    %212:vgpr_32 = V_SUB_U32_e64 %322, %311, 0, implicit $exec
+    %323:vreg_64 = REG_SEQUENCE %313, %subreg.sub0, undef %324:vgpr_32, %subreg.sub1
+    %325:vreg_64, $sgpr_null = V_MAD_U64_U32_e64 %212, %312, %323, 0, implicit $exec
+    %326:vgpr_32 = V_SUB_U32_e64 %325.sub0, %314, 0, implicit $exec
+    %327:vgpr_32 = V_SUB_U32_e64 %326, %315, 0, implicit $exec
+    %328:vgpr_32 = V_ADD_U32_e64 %327, %316, 0, implicit $exec
+    %209:vgpr_32 = V_MUL_LO_U32_e64 %328, %317, implicit $exec
+    GLOBAL_STORE_SHORT_D16_HI %260, %209, 2, 0, implicit $exec :: (store (s16) into %ir.p7 + 2, addrspace 1)
+    GLOBAL_STORE_SHORT %260, %209, 0, 0, implicit $exec :: (store (s16) into %ir.p7, addrspace 1)
     S_BRANCH %bb.8
   
   bb.14:
     successors: %bb.4(0x40000000), %bb.8(0x40000000)
   
-    %72:vgpr_32 = PHI undef %172:vgpr_32, %bb.2, %94, %bb.16
-    %73:vgpr_32 = PHI undef %172:vgpr_32, %bb.2, %93, %bb.16
-    %74:vgpr_32 = PHI undef %172:vgpr_32, %bb.2, %92, %bb.16
-    %75:vgpr_32 = PHI undef %172:vgpr_32, %bb.2, %91, %bb.16
-    %76:vgpr_32 = PHI undef %172:vgpr_32, %bb.2, %90, %bb.16
-    %77:vgpr_32 = PHI undef %172:vgpr_32, %bb.2, %89, %bb.16
-    %78:vgpr_32 = PHI undef %172:vgpr_32, %bb.2, %88, %bb.16
-    %79:vgpr_32 = PHI undef %172:vgpr_32, %bb.2, %87, %bb.16
-    %470:vgpr_32 = PHI %1, %bb.2, undef %471:vgpr_32, %bb.16
-    %472:vgpr_32 = PHI %4, %bb.2, undef %473:vgpr_32, %bb.16
-    %474:vgpr_32 = PHI %5, %bb.2, undef %475:vgpr_32, %bb.16
-    %476:vgpr_32 = PHI %97, %bb.2, undef %477:vgpr_32, %bb.16
-    %478:vgpr_32 = PHI %102, %bb.2, undef %479:vgpr_32, %bb.16
-    %480:vgpr_32 = PHI %103, %bb.2, undef %481:vgpr_32, %bb.16
-    %482:vgpr_32 = PHI %104, %bb.2, undef %483:vgpr_32, %bb.16
-    %484:vgpr_32 = PHI %105, %bb.2, undef %485:vgpr_32, %bb.16
-    %486:vgpr_32 = PHI %106, %bb.2, undef %487:vgpr_32, %bb.16
-    %488:vgpr_32 = PHI %107, %bb.2, undef %489:vgpr_32, %bb.16
-    %490:vgpr_32 = PHI %108, %bb.2, undef %491:vgpr_32, %bb.16
-    %492:vgpr_32 = PHI %109, %bb.2, undef %493:vgpr_32, %bb.16
-    %494:vgpr_32 = PHI %147, %bb.2, undef %495:vgpr_32, %bb.16
-    %496:vgpr_32 = PHI %149, %bb.2, undef %497:vgpr_32, %bb.16
-    %498:vgpr_32 = PHI %152, %bb.2, undef %499:vgpr_32, %bb.16
-    %500:vgpr_32 = PHI %154, %bb.2, undef %501:vgpr_32, %bb.16
-    %502:vreg_128 = PHI %157, %bb.2, undef %503:vreg_128, %bb.16
-    %504:vreg_128 = PHI %163, %bb.2, undef %505:vreg_128, %bb.16
-    %506:vreg_64 = PHI %429, %bb.2, undef %507:vreg_64, %bb.16
-    %80:sreg_32 = SI_ELSE %8, %bb.8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %203:vgpr_32 = PHI undef %329:vgpr_32, %bb.2, %330, %bb.16
+    %206:vgpr_32 = PHI undef %329:vgpr_32, %bb.2, %331, %bb.16
+    %208:vgpr_32 = PHI undef %329:vgpr_32, %bb.2, %332, %bb.16
+    %211:vgpr_32 = PHI undef %329:vgpr_32, %bb.2, %333, %bb.16
+    %214:vgpr_32 = PHI undef %329:vgpr_32, %bb.2, %334, %bb.16
+    %217:vgpr_32 = PHI undef %329:vgpr_32, %bb.2, %335, %bb.16
+    %220:vgpr_32 = PHI undef %329:vgpr_32, %bb.2, %336, %bb.16
+    %222:vgpr_32 = PHI undef %329:vgpr_32, %bb.2, %337, %bb.16
+    %104:vgpr_32 = PHI %32, %bb.2, undef %338:vgpr_32, %bb.16
+    %138:vgpr_32 = PHI %39, %bb.2, undef %339:vgpr_32, %bb.16
+    %318:vgpr_32 = PHI %40, %bb.2, undef %340:vgpr_32, %bb.16
+    %95:vgpr_32 = PHI %17, %bb.2, undef %341:vgpr_32, %bb.16
+    %91:vgpr_32 = PHI %12, %bb.2, undef %342:vgpr_32, %bb.16
+    %92:vgpr_32 = PHI %11, %bb.2, undef %343:vgpr_32, %bb.16
+    %255:vgpr_32 = PHI %10, %bb.2, undef %344:vgpr_32, %bb.16
+    %258:vgpr_32 = PHI %9, %bb.2, undef %345:vgpr_32, %bb.16
+    %88:vgpr_32 = PHI %8, %bb.2, undef %346:vgpr_32, %bb.16
+    %89:vgpr_32 = PHI %7, %bb.2, undef %347:vgpr_32, %bb.16
+    %261:vgpr_32 = PHI %6, %bb.2, undef %348:vgpr_32, %bb.16
+    %262:vgpr_32 = PHI %5, %bb.2, undef %349:vgpr_32, %bb.16
+    %83:vgpr_32 = PHI %33, %bb.2, undef %350:vgpr_32, %bb.16
+    %82:vgpr_32 = PHI %34, %bb.2, undef %351:vgpr_32, %bb.16
+    %86:vgpr_32 = PHI %35, %bb.2, undef %352:vgpr_32, %bb.16
+    %85:vgpr_32 = PHI %36, %bb.2, undef %353:vgpr_32, %bb.16
+    %156:vreg_128 = PHI %37, %bb.2, undef %354:vreg_128, %bb.16
+    %155:vreg_128 = PHI %38, %bb.2, undef %355:vreg_128, %bb.16
+    %239:vreg_64 = PHI %21, %bb.2, undef %356:vreg_64, %bb.16
+    %224:sreg_32 = SI_ELSE %44, %bb.8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
   
   bb.15:
     successors: %bb.16(0x04000000), %bb.15(0x7c000000)
   
-    %81:sreg_32 = PHI %174, %bb.3, %84, %bb.15
-    %82:sreg_32 = PHI %175, %bb.3, %83, %bb.15
-    %83:sreg_32 = S_ADD_I32 %82, 1, implicit-def dead $scc
-    %204:sreg_32 = S_ADD_I32 %82, 2, implicit-def dead $scc
-    %205:sreg_32 = V_CMP_GE_U32_e64 %204, %114, implicit $exec
-    %84:sreg_32 = SI_IF_BREAK %205, %81, implicit-def dead $scc
-    %437:vgpr_32 = COPY %83, implicit $exec
-    SI_LOOP %84, %bb.15, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %357:sreg_32 = PHI %80, %bb.3, %358, %bb.15
+    %359:sreg_32 = PHI %79, %bb.3, %360, %bb.15
+    %360:sreg_32 = S_ADD_I32 %359, 1, implicit-def dead $scc
+    %361:sreg_32 = S_ADD_I32 %359, 2, implicit-def dead $scc
+    %362:sreg_32 = V_CMP_GE_U32_e64 %361, %0, implicit $exec
+    %358:sreg_32 = SI_IF_BREAK %362, %357, implicit-def dead $scc
+    %363:vgpr_32 = COPY %360, implicit $exec
+    SI_LOOP %358, %bb.15, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.16
   
   bb.16:
     successors: %bb.14(0x80000000)
   
-    SI_END_CF %84, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %206:vgpr_32 = V_ADD_U32_e64 %9, %437, 0, implicit $exec
-    %207:vgpr_32 = V_ADD_U32_e64 %10, %437, 0, implicit $exec
-    %208:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array7, target-flags(amdgpu-gotprel32-hi) @array7, implicit-def dead $scc
-    %209:sreg_64_xexec = S_LOAD_DWORDX2_IMM %208, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %210:vreg_64 = COPY %209
-    FLAT_STORE_DWORD %210, %206, 68, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array7, i64 68)`)
-    %211:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array9, target-flags(amdgpu-gotprel32-hi) @array9, implicit-def dead $scc
-    %212:sreg_64_xexec = S_LOAD_DWORDX2_IMM %211, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
-    %213:vreg_64 = COPY %212
-    FLAT_STORE_DWORD %213, %207, 60, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array9, i64 60)`)
-    %87:vgpr_32 = V_MUL_LO_U32_e64 %11, %437, implicit $exec
-    %88:vgpr_32 = V_SUB_U32_e64 %12, %437, 0, implicit $exec
-    %89:vgpr_32 = V_ADD_U32_e64 %13, %437, 0, implicit $exec
-    %90:vgpr_32 = V_MUL_LO_U32_e64 %14, %437, implicit $exec
-    %91:vgpr_32 = V_ADD_U32_e64 %15, %437, 0, implicit $exec
-    %92:vgpr_32 = V_SUB_U32_e64 %16, %437, 0, implicit $exec
-    %93:vgpr_32 = V_ADD_U32_e64 %17, %437, 0, implicit $exec
-    %94:vgpr_32 = V_MUL_LO_U32_e64 %18, %437, implicit $exec
+    SI_END_CF %358, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %364:vgpr_32 = V_ADD_U32_e64 %48, %363, 0, implicit $exec
+    %365:vgpr_32 = V_ADD_U32_e64 %52, %363, 0, implicit $exec
+    %366:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array7, target-flags(amdgpu-gotprel32-hi) @array7, implicit-def dead $scc
+    %367:sreg_64_xexec = S_LOAD_DWORDX2_IMM %366, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %368:vreg_64 = COPY %367
+    FLAT_STORE_DWORD %368, %364, 68, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array7, i64 68)`)
+    %369:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @array9, target-flags(amdgpu-gotprel32-hi) @array9, implicit-def dead $scc
+    %370:sreg_64_xexec = S_LOAD_DWORDX2_IMM %369, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
+    %371:vreg_64 = COPY %370
+    FLAT_STORE_DWORD %371, %365, 60, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr getelementptr inbounds nuw (i8, ptr @array9, i64 60)`)
+    %337:vgpr_32 = V_MUL_LO_U32_e64 %53, %363, implicit $exec
+    %336:vgpr_32 = V_SUB_U32_e64 %57, %363, 0, implicit $exec
+    %335:vgpr_32 = V_ADD_U32_e64 %58, %363, 0, implicit $exec
+    %334:vgpr_32 = V_MUL_LO_U32_e64 %62, %363, implicit $exec
+    %333:vgpr_32 = V_ADD_U32_e64 %66, %363, 0, implicit $exec
+    %332:vgpr_32 = V_SUB_U32_e64 %70, %363, 0, implicit $exec
+    %331:vgpr_32 = V_ADD_U32_e64 %74, %363, 0, implicit $exec
+    %330:vgpr_32 = V_MUL_LO_U32_e64 %78, %363, implicit $exec
     S_BRANCH %bb.14
   
   bb.17:
-    %401:vgpr_32 = V_ADD3_U32_e64 %39, %7, %38, implicit $exec
-    %402:vgpr_32 = V_ADD3_U32_e64 %401, %37, %36, implicit $exec
-    %404:vgpr_32 = V_ADD3_U32_e64 %402, %35, 100, implicit $exec
-    %405:vgpr_32 = V_ADD_U32_e64 %404, %34, 0, implicit $exec
-    %406:vgpr_32 = V_ADD3_U32_e64 %405, %33, %32, implicit $exec
-    GLOBAL_STORE_DWORD %435, %406, 4, 0, implicit $exec :: (store (s32) into %ir.gep3, addrspace 1)
-    GLOBAL_STORE_DWORD %436, %404, 4, 0, implicit $exec :: (store (s32) into %ir.gep4, addrspace 1)
+    %372:vgpr_32 = V_ADD3_U32_e64 %221, %43, %219, implicit $exec
+    %373:vgpr_32 = V_ADD3_U32_e64 %372, %216, %213, implicit $exec
+    %374:vgpr_32 = V_ADD3_U32_e64 %373, %210, 100, implicit $exec
+    %375:vgpr_32 = V_ADD_U32_e64 %374, %207, 0, implicit $exec
+    %376:vgpr_32 = V_ADD3_U32_e64 %375, %205, %202, implicit $exec
+    GLOBAL_STORE_DWORD %226, %376, 4, 0, implicit $exec :: (store (s32) into %ir.gep3, addrspace 1)
+    GLOBAL_STORE_DWORD %225, %374, 4, 0, implicit $exec :: (store (s32) into %ir.gep4, addrspace 1)
     S_ENDPGM 0
 ...
 
@@ -17200,35 +17200,35 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
 # CHECK-CP-JSON-DAG:            "%0": 2
-# CHECK-CP-JSON-DAG:            "%1": 7024
-# CHECK-CP-JSON-DAG:            "%2": 7024
-# CHECK-CP-JSON-DAG:            "%3": 7025
-# CHECK-CP-JSON-DAG:            "%4": 7025
-# CHECK-CP-JSON-DAG:            "%23": 7084
-# CHECK-CP-JSON-DAG:            "%43": 7027
-# CHECK-CP-JSON-DAG:            "%44": 7021
-# CHECK-CP-JSON-DAG:            "%48": 7002
-# CHECK-CP-JSON-DAG:            "%52": 7003
-# CHECK-CP-JSON-DAG:            "%53": 7012
-# CHECK-CP-JSON-DAG:            "%57": 7013
-# CHECK-CP-JSON-DAG:            "%58": 7014
-# CHECK-CP-JSON-DAG:            "%62": 7015
-# CHECK-CP-JSON-DAG:            "%66": 7016
-# CHECK-CP-JSON-DAG:            "%70": 7017
-# CHECK-CP-JSON-DAG:            "%74": 7018
-# CHECK-CP-JSON-DAG:            "%78": 7019
+# CHECK-CP-JSON-DAG:            "%1": 28024
+# CHECK-CP-JSON-DAG:            "%2": 28024
+# CHECK-CP-JSON-DAG:            "%3": 28025
+# CHECK-CP-JSON-DAG:            "%4": 28025
+# CHECK-CP-JSON-DAG:            "%23": 28084
+# CHECK-CP-JSON-DAG:            "%43": 28027
+# CHECK-CP-JSON-DAG:            "%44": 28021
+# CHECK-CP-JSON-DAG:            "%48": 28002
+# CHECK-CP-JSON-DAG:            "%52": 28003
+# CHECK-CP-JSON-DAG:            "%53": 28012
+# CHECK-CP-JSON-DAG:            "%57": 28013
+# CHECK-CP-JSON-DAG:            "%58": 28014
+# CHECK-CP-JSON-DAG:            "%62": 28015
+# CHECK-CP-JSON-DAG:            "%66": 28016
+# CHECK-CP-JSON-DAG:            "%70": 28017
+# CHECK-CP-JSON-DAG:            "%74": 28018
+# CHECK-CP-JSON-DAG:            "%78": 28019
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
@@ -17238,36 +17238,36 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
 # CHECK-CP-JSON-DAG:            "%0": 2
-# CHECK-CP-JSON-DAG:            "%1": 7024
-# CHECK-CP-JSON-DAG:            "%2": 7024
-# CHECK-CP-JSON-DAG:            "%3": 7025
-# CHECK-CP-JSON-DAG:            "%4": 7025
-# CHECK-CP-JSON-DAG:            "%23": 7084
-# CHECK-CP-JSON-DAG:            "%43": 7027
-# CHECK-CP-JSON-DAG:            "%44": 7021
-# CHECK-CP-JSON-DAG:            "%48": 7002
-# CHECK-CP-JSON-DAG:            "%52": 7003
-# CHECK-CP-JSON-DAG:            "%53": 7012
-# CHECK-CP-JSON-DAG:            "%57": 7013
-# CHECK-CP-JSON-DAG:            "%58": 7014
-# CHECK-CP-JSON-DAG:            "%62": 7015
-# CHECK-CP-JSON-DAG:            "%66": 7016
-# CHECK-CP-JSON-DAG:            "%70": 7017
-# CHECK-CP-JSON-DAG:            "%74": 7018
-# CHECK-CP-JSON-DAG:            "%78": 7019
+# CHECK-CP-JSON-DAG:            "%1": 28024
+# CHECK-CP-JSON-DAG:            "%2": 28024
+# CHECK-CP-JSON-DAG:            "%3": 28025
+# CHECK-CP-JSON-DAG:            "%4": 28025
+# CHECK-CP-JSON-DAG:            "%23": 28084
+# CHECK-CP-JSON-DAG:            "%43": 28027
+# CHECK-CP-JSON-DAG:            "%44": 28021
+# CHECK-CP-JSON-DAG:            "%48": 28002
+# CHECK-CP-JSON-DAG:            "%52": 28003
+# CHECK-CP-JSON-DAG:            "%53": 28012
+# CHECK-CP-JSON-DAG:            "%57": 28013
+# CHECK-CP-JSON-DAG:            "%58": 28014
+# CHECK-CP-JSON-DAG:            "%62": 28015
+# CHECK-CP-JSON-DAG:            "%66": 28016
+# CHECK-CP-JSON-DAG:            "%70": 28017
+# CHECK-CP-JSON-DAG:            "%74": 28018
+# CHECK-CP-JSON-DAG:            "%78": 28019
 # CHECK-CP-JSON-DAG:            "%357": 3
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
@@ -17277,23 +17277,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
 # CHECK-CP-JSON-DAG:            "%0": 2
-# CHECK-CP-JSON-DAG:            "%1": 7024
-# CHECK-CP-JSON-DAG:            "%2": 7024
-# CHECK-CP-JSON-DAG:            "%3": 7025
-# CHECK-CP-JSON-DAG:            "%4": 7025
-# CHECK-CP-JSON-DAG:            "%23": 7084
-# CHECK-CP-JSON-DAG:            "%43": 7027
-# CHECK-CP-JSON-DAG:            "%44": 7021
-# CHECK-CP-JSON-DAG:            "%48": 7002
-# CHECK-CP-JSON-DAG:            "%52": 7003
-# CHECK-CP-JSON-DAG:            "%53": 7012
-# CHECK-CP-JSON-DAG:            "%57": 7013
-# CHECK-CP-JSON-DAG:            "%58": 7014
-# CHECK-CP-JSON-DAG:            "%62": 7015
-# CHECK-CP-JSON-DAG:            "%66": 7016
-# CHECK-CP-JSON-DAG:            "%70": 7017
-# CHECK-CP-JSON-DAG:            "%74": 7018
-# CHECK-CP-JSON-DAG:            "%78": 7019
+# CHECK-CP-JSON-DAG:            "%1": 28024
+# CHECK-CP-JSON-DAG:            "%2": 28024
+# CHECK-CP-JSON-DAG:            "%3": 28025
+# CHECK-CP-JSON-DAG:            "%4": 28025
+# CHECK-CP-JSON-DAG:            "%23": 28084
+# CHECK-CP-JSON-DAG:            "%43": 28027
+# CHECK-CP-JSON-DAG:            "%44": 28021
+# CHECK-CP-JSON-DAG:            "%48": 28002
+# CHECK-CP-JSON-DAG:            "%52": 28003
+# CHECK-CP-JSON-DAG:            "%53": 28012
+# CHECK-CP-JSON-DAG:            "%57": 28013
+# CHECK-CP-JSON-DAG:            "%58": 28014
+# CHECK-CP-JSON-DAG:            "%62": 28015
+# CHECK-CP-JSON-DAG:            "%66": 28016
+# CHECK-CP-JSON-DAG:            "%70": 28017
+# CHECK-CP-JSON-DAG:            "%74": 28018
+# CHECK-CP-JSON-DAG:            "%78": 28019
 # CHECK-CP-JSON-DAG:            "%357": 3
 # CHECK-CP-JSON-DAG:            "%359": 0
 # CHECK-CP-JSON:          },
@@ -17301,13 +17301,13 @@ body:             |
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
@@ -17317,23 +17317,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
 # CHECK-CP-JSON-DAG:            "%0": 1
-# CHECK-CP-JSON-DAG:            "%1": 7024
-# CHECK-CP-JSON-DAG:            "%2": 7024
-# CHECK-CP-JSON-DAG:            "%3": 7025
-# CHECK-CP-JSON-DAG:            "%4": 7025
-# CHECK-CP-JSON-DAG:            "%23": 7084
-# CHECK-CP-JSON-DAG:            "%43": 7027
-# CHECK-CP-JSON-DAG:            "%44": 7021
-# CHECK-CP-JSON-DAG:            "%48": 7002
-# CHECK-CP-JSON-DAG:            "%52": 7003
-# CHECK-CP-JSON-DAG:            "%53": 7012
-# CHECK-CP-JSON-DAG:            "%57": 7013
-# CHECK-CP-JSON-DAG:            "%58": 7014
-# CHECK-CP-JSON-DAG:            "%62": 7015
-# CHECK-CP-JSON-DAG:            "%66": 7016
-# CHECK-CP-JSON-DAG:            "%70": 7017
-# CHECK-CP-JSON-DAG:            "%74": 7018
-# CHECK-CP-JSON-DAG:            "%78": 7019
+# CHECK-CP-JSON-DAG:            "%1": 28024
+# CHECK-CP-JSON-DAG:            "%2": 28024
+# CHECK-CP-JSON-DAG:            "%3": 28025
+# CHECK-CP-JSON-DAG:            "%4": 28025
+# CHECK-CP-JSON-DAG:            "%23": 28084
+# CHECK-CP-JSON-DAG:            "%43": 28027
+# CHECK-CP-JSON-DAG:            "%44": 28021
+# CHECK-CP-JSON-DAG:            "%48": 28002
+# CHECK-CP-JSON-DAG:            "%52": 28003
+# CHECK-CP-JSON-DAG:            "%53": 28012
+# CHECK-CP-JSON-DAG:            "%57": 28013
+# CHECK-CP-JSON-DAG:            "%58": 28014
+# CHECK-CP-JSON-DAG:            "%62": 28015
+# CHECK-CP-JSON-DAG:            "%66": 28016
+# CHECK-CP-JSON-DAG:            "%70": 28017
+# CHECK-CP-JSON-DAG:            "%74": 28018
+# CHECK-CP-JSON-DAG:            "%78": 28019
 # CHECK-CP-JSON-DAG:            "%357": 2
 # CHECK-CP-JSON-DAG:            "%359": 0
 # CHECK-CP-JSON-DAG:            "%360": 3
@@ -17342,13 +17342,13 @@ body:             |
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
@@ -17358,23 +17358,23 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
 # CHECK-CP-JSON-DAG:            "%0": 0
-# CHECK-CP-JSON-DAG:            "%1": 7024
-# CHECK-CP-JSON-DAG:            "%2": 7024
-# CHECK-CP-JSON-DAG:            "%3": 7025
-# CHECK-CP-JSON-DAG:            "%4": 7025
-# CHECK-CP-JSON-DAG:            "%23": 7084
-# CHECK-CP-JSON-DAG:            "%43": 7027
-# CHECK-CP-JSON-DAG:            "%44": 7021
-# CHECK-CP-JSON-DAG:            "%48": 7002
-# CHECK-CP-JSON-DAG:            "%52": 7003
-# CHECK-CP-JSON-DAG:            "%53": 7012
-# CHECK-CP-JSON-DAG:            "%57": 7013
-# CHECK-CP-JSON-DAG:            "%58": 7014
-# CHECK-CP-JSON-DAG:            "%62": 7015
-# CHECK-CP-JSON-DAG:            "%66": 7016
-# CHECK-CP-JSON-DAG:            "%70": 7017
-# CHECK-CP-JSON-DAG:            "%74": 7018
-# CHECK-CP-JSON-DAG:            "%78": 7019
+# CHECK-CP-JSON-DAG:            "%1": 28024
+# CHECK-CP-JSON-DAG:            "%2": 28024
+# CHECK-CP-JSON-DAG:            "%3": 28025
+# CHECK-CP-JSON-DAG:            "%4": 28025
+# CHECK-CP-JSON-DAG:            "%23": 28084
+# CHECK-CP-JSON-DAG:            "%43": 28027
+# CHECK-CP-JSON-DAG:            "%44": 28021
+# CHECK-CP-JSON-DAG:            "%48": 28002
+# CHECK-CP-JSON-DAG:            "%52": 28003
+# CHECK-CP-JSON-DAG:            "%53": 28012
+# CHECK-CP-JSON-DAG:            "%57": 28013
+# CHECK-CP-JSON-DAG:            "%58": 28014
+# CHECK-CP-JSON-DAG:            "%62": 28015
+# CHECK-CP-JSON-DAG:            "%66": 28016
+# CHECK-CP-JSON-DAG:            "%70": 28017
+# CHECK-CP-JSON-DAG:            "%74": 28018
+# CHECK-CP-JSON-DAG:            "%78": 28019
 # CHECK-CP-JSON-DAG:            "%357": 1
 # CHECK-CP-JSON-DAG:            "%360": 2
 # CHECK-CP-JSON-DAG:            "%361": 0
@@ -17383,13 +17383,13 @@ body:             |
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
@@ -17398,24 +17398,24 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 13
-# CHECK-CP-JSON-DAG:            "%1": 7024
-# CHECK-CP-JSON-DAG:            "%2": 7024
-# CHECK-CP-JSON-DAG:            "%3": 7025
-# CHECK-CP-JSON-DAG:            "%4": 7025
-# CHECK-CP-JSON-DAG:            "%23": 7084
-# CHECK-CP-JSON-DAG:            "%43": 7027
-# CHECK-CP-JSON-DAG:            "%44": 7021
-# CHECK-CP-JSON-DAG:            "%48": 7002
-# CHECK-CP-JSON-DAG:            "%52": 7003
-# CHECK-CP-JSON-DAG:            "%53": 7012
-# CHECK-CP-JSON-DAG:            "%57": 7013
-# CHECK-CP-JSON-DAG:            "%58": 7014
-# CHECK-CP-JSON-DAG:            "%62": 7015
-# CHECK-CP-JSON-DAG:            "%66": 7016
-# CHECK-CP-JSON-DAG:            "%70": 7017
-# CHECK-CP-JSON-DAG:            "%74": 7018
-# CHECK-CP-JSON-DAG:            "%78": 7019
+# CHECK-CP-JSON-DAG:            "%0": 20
+# CHECK-CP-JSON-DAG:            "%1": 28024
+# CHECK-CP-JSON-DAG:            "%2": 28024
+# CHECK-CP-JSON-DAG:            "%3": 28025
+# CHECK-CP-JSON-DAG:            "%4": 28025
+# CHECK-CP-JSON-DAG:            "%23": 28084
+# CHECK-CP-JSON-DAG:            "%43": 28027
+# CHECK-CP-JSON-DAG:            "%44": 28021
+# CHECK-CP-JSON-DAG:            "%48": 28002
+# CHECK-CP-JSON-DAG:            "%52": 28003
+# CHECK-CP-JSON-DAG:            "%53": 28012
+# CHECK-CP-JSON-DAG:            "%57": 28013
+# CHECK-CP-JSON-DAG:            "%58": 28014
+# CHECK-CP-JSON-DAG:            "%62": 28015
+# CHECK-CP-JSON-DAG:            "%66": 28016
+# CHECK-CP-JSON-DAG:            "%70": 28017
+# CHECK-CP-JSON-DAG:            "%74": 28018
+# CHECK-CP-JSON-DAG:            "%78": 28019
 # CHECK-CP-JSON-DAG:            "%357": 0
 # CHECK-CP-JSON-DAG:            "%360": 1
 # CHECK-CP-JSON-DAG:            "%362": 0
@@ -17424,13 +17424,13 @@ body:             |
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
@@ -17439,24 +17439,24 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 12
-# CHECK-CP-JSON-DAG:            "%1": 7024
-# CHECK-CP-JSON-DAG:            "%2": 7024
-# CHECK-CP-JSON-DAG:            "%3": 7025
-# CHECK-CP-JSON-DAG:            "%4": 7025
-# CHECK-CP-JSON-DAG:            "%23": 7084
-# CHECK-CP-JSON-DAG:            "%43": 7027
-# CHECK-CP-JSON-DAG:            "%44": 7021
-# CHECK-CP-JSON-DAG:            "%48": 7002
-# CHECK-CP-JSON-DAG:            "%52": 7003
-# CHECK-CP-JSON-DAG:            "%53": 7012
-# CHECK-CP-JSON-DAG:            "%57": 7013
-# CHECK-CP-JSON-DAG:            "%58": 7014
-# CHECK-CP-JSON-DAG:            "%62": 7015
-# CHECK-CP-JSON-DAG:            "%66": 7016
-# CHECK-CP-JSON-DAG:            "%70": 7017
-# CHECK-CP-JSON-DAG:            "%74": 7018
-# CHECK-CP-JSON-DAG:            "%78": 7019
+# CHECK-CP-JSON-DAG:            "%0": 19
+# CHECK-CP-JSON-DAG:            "%1": 28024
+# CHECK-CP-JSON-DAG:            "%2": 28024
+# CHECK-CP-JSON-DAG:            "%3": 28025
+# CHECK-CP-JSON-DAG:            "%4": 28025
+# CHECK-CP-JSON-DAG:            "%23": 28084
+# CHECK-CP-JSON-DAG:            "%43": 28027
+# CHECK-CP-JSON-DAG:            "%44": 28021
+# CHECK-CP-JSON-DAG:            "%48": 28002
+# CHECK-CP-JSON-DAG:            "%52": 28003
+# CHECK-CP-JSON-DAG:            "%53": 28012
+# CHECK-CP-JSON-DAG:            "%57": 28013
+# CHECK-CP-JSON-DAG:            "%58": 28014
+# CHECK-CP-JSON-DAG:            "%62": 28015
+# CHECK-CP-JSON-DAG:            "%66": 28016
+# CHECK-CP-JSON-DAG:            "%70": 28017
+# CHECK-CP-JSON-DAG:            "%74": 28018
+# CHECK-CP-JSON-DAG:            "%78": 28019
 # CHECK-CP-JSON-DAG:            "%358": 1
 # CHECK-CP-JSON-DAG:            "%360": 0
 # CHECK-CP-JSON:          },
@@ -17464,13 +17464,13 @@ body:             |
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
@@ -17479,39 +17479,39 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 11
-# CHECK-CP-JSON-DAG:            "%1": 7024
-# CHECK-CP-JSON-DAG:            "%2": 7024
-# CHECK-CP-JSON-DAG:            "%3": 7025
-# CHECK-CP-JSON-DAG:            "%4": 7025
-# CHECK-CP-JSON-DAG:            "%23": 7084
-# CHECK-CP-JSON-DAG:            "%43": 7027
-# CHECK-CP-JSON-DAG:            "%44": 7021
-# CHECK-CP-JSON-DAG:            "%48": 7002
-# CHECK-CP-JSON-DAG:            "%52": 7003
-# CHECK-CP-JSON-DAG:            "%53": 7012
-# CHECK-CP-JSON-DAG:            "%57": 7013
-# CHECK-CP-JSON-DAG:            "%58": 7014
-# CHECK-CP-JSON-DAG:            "%62": 7015
-# CHECK-CP-JSON-DAG:            "%66": 7016
-# CHECK-CP-JSON-DAG:            "%70": 7017
-# CHECK-CP-JSON-DAG:            "%74": 7018
-# CHECK-CP-JSON-DAG:            "%78": 7019
+# CHECK-CP-JSON-DAG:            "%0": 18
+# CHECK-CP-JSON-DAG:            "%1": 28024
+# CHECK-CP-JSON-DAG:            "%2": 28024
+# CHECK-CP-JSON-DAG:            "%3": 28025
+# CHECK-CP-JSON-DAG:            "%4": 28025
+# CHECK-CP-JSON-DAG:            "%23": 28084
+# CHECK-CP-JSON-DAG:            "%43": 28027
+# CHECK-CP-JSON-DAG:            "%44": 28021
+# CHECK-CP-JSON-DAG:            "%48": 28002
+# CHECK-CP-JSON-DAG:            "%52": 28003
+# CHECK-CP-JSON-DAG:            "%53": 28012
+# CHECK-CP-JSON-DAG:            "%57": 28013
+# CHECK-CP-JSON-DAG:            "%58": 28014
+# CHECK-CP-JSON-DAG:            "%62": 28015
+# CHECK-CP-JSON-DAG:            "%66": 28016
+# CHECK-CP-JSON-DAG:            "%70": 28017
+# CHECK-CP-JSON-DAG:            "%74": 28018
+# CHECK-CP-JSON-DAG:            "%78": 28019
 # CHECK-CP-JSON-DAG:            "%358": 0
 # CHECK-CP-JSON-DAG:            "%360": 1
-# CHECK-CP-JSON-DAG:            "%363": 7002
+# CHECK-CP-JSON-DAG:            "%363": 28002
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
@@ -17520,39 +17520,39 @@ body:             |
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "distances": {
-# CHECK-CP-JSON-DAG:            "%0": 10
-# CHECK-CP-JSON-DAG:            "%1": 7024
-# CHECK-CP-JSON-DAG:            "%2": 7024
-# CHECK-CP-JSON-DAG:            "%3": 7025
-# CHECK-CP-JSON-DAG:            "%4": 7025
-# CHECK-CP-JSON-DAG:            "%23": 7084
-# CHECK-CP-JSON-DAG:            "%43": 7027
-# CHECK-CP-JSON-DAG:            "%44": 7021
-# CHECK-CP-JSON-DAG:            "%48": 7002
-# CHECK-CP-JSON-DAG:            "%52": 7003
-# CHECK-CP-JSON-DAG:            "%53": 7012
-# CHECK-CP-JSON-DAG:            "%57": 7013
-# CHECK-CP-JSON-DAG:            "%58": 7014
-# CHECK-CP-JSON-DAG:            "%62": 7015
-# CHECK-CP-JSON-DAG:            "%66": 7016
-# CHECK-CP-JSON-DAG:            "%70": 7017
-# CHECK-CP-JSON-DAG:            "%74": 7018
-# CHECK-CP-JSON-DAG:            "%78": 7019
+# CHECK-CP-JSON-DAG:            "%0": 17
+# CHECK-CP-JSON-DAG:            "%1": 28024
+# CHECK-CP-JSON-DAG:            "%2": 28024
+# CHECK-CP-JSON-DAG:            "%3": 28025
+# CHECK-CP-JSON-DAG:            "%4": 28025
+# CHECK-CP-JSON-DAG:            "%23": 28084
+# CHECK-CP-JSON-DAG:            "%43": 28027
+# CHECK-CP-JSON-DAG:            "%44": 28021
+# CHECK-CP-JSON-DAG:            "%48": 28002
+# CHECK-CP-JSON-DAG:            "%52": 28003
+# CHECK-CP-JSON-DAG:            "%53": 28012
+# CHECK-CP-JSON-DAG:            "%57": 28013
+# CHECK-CP-JSON-DAG:            "%58": 28014
+# CHECK-CP-JSON-DAG:            "%62": 28015
+# CHECK-CP-JSON-DAG:            "%66": 28016
+# CHECK-CP-JSON-DAG:            "%70": 28017
+# CHECK-CP-JSON-DAG:            "%74": 28018
+# CHECK-CP-JSON-DAG:            "%78": 28019
 # CHECK-CP-JSON-DAG:            "%358": 0
 # CHECK-CP-JSON-DAG:            "%360": 0
-# CHECK-CP-JSON-DAG:            "%363": 7002
+# CHECK-CP-JSON-DAG:            "%363": 28002
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          },
 # CHECK-CP-JSON-NEXT:          "furthest-subreg": {
 # CHECK-CP-JSON-DAG:            "register": "%23",
 # CHECK-CP-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-CP-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-CP-JSON-DAG:            "distance": 7084
+# CHECK-CP-JSON-DAG:            "distance": 28084
 # CHECK-CP-JSON:          }
 # CHECK-CP-JSON-NEXT:        }
 # CHECK-CP-JSON-NEXT:      ],
@@ -18502,9 +18502,9 @@ body:             |
 # CHECK-CP-JSON:  "paths": [
 # CHECK-CP-JSON:  ]
 # CHECK-CP-JSON-NEXT:  },
-# CHECK-CP-JSON-DAG:  "time.amdgpu-next-use-analysis-json.total.wall": {{[0-9.e+-]+}},
-# CHECK-CP-JSON-DAG:  "time.amdgpu-next-use-analysis-json.total.user": {{[0-9.e+-]+}},
-# CHECK-CP-JSON-DAG:  "time.amdgpu-next-use-analysis-json.total.sys": {{[0-9.e+-]+}}
+# CHECK-CP-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.wall": {{[0-9.e+-]+}},
+# CHECK-CP-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.user": {{[0-9.e+-]+}},
+# CHECK-CP-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.sys": {{[0-9.e+-]+}}
 # CHECK-CP-JSON:}
 # CHECK-GX-JSON: {
 # CHECK-GX-JSON-NEXT:  "next-use-analysis": {
@@ -20325,25 +20325,25 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 41
-# CHECK-GX-JSON-DAG:            "%1": 9095
-# CHECK-GX-JSON-DAG:            "%2": 9095
-# CHECK-GX-JSON-DAG:            "%3": 9096
-# CHECK-GX-JSON-DAG:            "%4": 9096
-# CHECK-GX-JSON-DAG:            "%23": 9147
-# CHECK-GX-JSON-DAG:            "%43": 9098
-# CHECK-GX-JSON-DAG:            "%44": 9084
+# CHECK-GX-JSON-DAG:            "%1": 36095
+# CHECK-GX-JSON-DAG:            "%2": 36095
+# CHECK-GX-JSON-DAG:            "%3": 36096
+# CHECK-GX-JSON-DAG:            "%4": 36096
+# CHECK-GX-JSON-DAG:            "%23": 36147
+# CHECK-GX-JSON-DAG:            "%43": 36098
+# CHECK-GX-JSON-DAG:            "%44": 36084
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9147
+# CHECK-GX-JSON-DAG:            "distance": 36147
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9147
+# CHECK-GX-JSON-DAG:            "distance": 36147
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20353,26 +20353,26 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 40
-# CHECK-GX-JSON-DAG:            "%1": 9094
-# CHECK-GX-JSON-DAG:            "%2": 9094
-# CHECK-GX-JSON-DAG:            "%3": 9095
-# CHECK-GX-JSON-DAG:            "%4": 9095
-# CHECK-GX-JSON-DAG:            "%23": 9146
-# CHECK-GX-JSON-DAG:            "%43": 9097
-# CHECK-GX-JSON-DAG:            "%44": 9083
+# CHECK-GX-JSON-DAG:            "%1": 36094
+# CHECK-GX-JSON-DAG:            "%2": 36094
+# CHECK-GX-JSON-DAG:            "%3": 36095
+# CHECK-GX-JSON-DAG:            "%4": 36095
+# CHECK-GX-JSON-DAG:            "%23": 36146
+# CHECK-GX-JSON-DAG:            "%43": 36097
+# CHECK-GX-JSON-DAG:            "%44": 36083
 # CHECK-GX-JSON-DAG:            "%45": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9146
+# CHECK-GX-JSON-DAG:            "distance": 36146
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9146
+# CHECK-GX-JSON-DAG:            "distance": 36146
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20382,26 +20382,26 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 39
-# CHECK-GX-JSON-DAG:            "%1": 9093
-# CHECK-GX-JSON-DAG:            "%2": 9093
-# CHECK-GX-JSON-DAG:            "%3": 9094
-# CHECK-GX-JSON-DAG:            "%4": 9094
-# CHECK-GX-JSON-DAG:            "%23": 9145
-# CHECK-GX-JSON-DAG:            "%43": 9096
-# CHECK-GX-JSON-DAG:            "%44": 9082
+# CHECK-GX-JSON-DAG:            "%1": 36093
+# CHECK-GX-JSON-DAG:            "%2": 36093
+# CHECK-GX-JSON-DAG:            "%3": 36094
+# CHECK-GX-JSON-DAG:            "%4": 36094
+# CHECK-GX-JSON-DAG:            "%23": 36145
+# CHECK-GX-JSON-DAG:            "%43": 36096
+# CHECK-GX-JSON-DAG:            "%44": 36082
 # CHECK-GX-JSON-DAG:            "%46": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9145
+# CHECK-GX-JSON-DAG:            "distance": 36145
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9145
+# CHECK-GX-JSON-DAG:            "distance": 36145
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20411,26 +20411,26 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 38
-# CHECK-GX-JSON-DAG:            "%1": 9092
-# CHECK-GX-JSON-DAG:            "%2": 9092
-# CHECK-GX-JSON-DAG:            "%3": 9093
-# CHECK-GX-JSON-DAG:            "%4": 9093
-# CHECK-GX-JSON-DAG:            "%23": 9144
-# CHECK-GX-JSON-DAG:            "%43": 9095
-# CHECK-GX-JSON-DAG:            "%44": 9081
+# CHECK-GX-JSON-DAG:            "%1": 36092
+# CHECK-GX-JSON-DAG:            "%2": 36092
+# CHECK-GX-JSON-DAG:            "%3": 36093
+# CHECK-GX-JSON-DAG:            "%4": 36093
+# CHECK-GX-JSON-DAG:            "%23": 36144
+# CHECK-GX-JSON-DAG:            "%43": 36095
+# CHECK-GX-JSON-DAG:            "%44": 36081
 # CHECK-GX-JSON-DAG:            "%47": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9144
+# CHECK-GX-JSON-DAG:            "distance": 36144
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9144
+# CHECK-GX-JSON-DAG:            "distance": 36144
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20440,27 +20440,27 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 37
-# CHECK-GX-JSON-DAG:            "%1": 9091
-# CHECK-GX-JSON-DAG:            "%2": 9091
-# CHECK-GX-JSON-DAG:            "%3": 9092
-# CHECK-GX-JSON-DAG:            "%4": 9092
-# CHECK-GX-JSON-DAG:            "%23": 9143
-# CHECK-GX-JSON-DAG:            "%43": 9094
-# CHECK-GX-JSON-DAG:            "%44": 9080
+# CHECK-GX-JSON-DAG:            "%1": 36091
+# CHECK-GX-JSON-DAG:            "%2": 36091
+# CHECK-GX-JSON-DAG:            "%3": 36092
+# CHECK-GX-JSON-DAG:            "%4": 36092
+# CHECK-GX-JSON-DAG:            "%23": 36143
+# CHECK-GX-JSON-DAG:            "%43": 36094
+# CHECK-GX-JSON-DAG:            "%44": 36080
 # CHECK-GX-JSON-DAG:            "%47": 4
-# CHECK-GX-JSON-DAG:            "%48": 9034
+# CHECK-GX-JSON-DAG:            "%48": 36034
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9143
+# CHECK-GX-JSON-DAG:            "distance": 36143
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9143
+# CHECK-GX-JSON-DAG:            "distance": 36143
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20470,28 +20470,28 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 36
-# CHECK-GX-JSON-DAG:            "%1": 9090
-# CHECK-GX-JSON-DAG:            "%2": 9090
-# CHECK-GX-JSON-DAG:            "%3": 9091
-# CHECK-GX-JSON-DAG:            "%4": 9091
-# CHECK-GX-JSON-DAG:            "%23": 9142
-# CHECK-GX-JSON-DAG:            "%43": 9093
-# CHECK-GX-JSON-DAG:            "%44": 9079
+# CHECK-GX-JSON-DAG:            "%1": 36090
+# CHECK-GX-JSON-DAG:            "%2": 36090
+# CHECK-GX-JSON-DAG:            "%3": 36091
+# CHECK-GX-JSON-DAG:            "%4": 36091
+# CHECK-GX-JSON-DAG:            "%23": 36142
+# CHECK-GX-JSON-DAG:            "%43": 36093
+# CHECK-GX-JSON-DAG:            "%44": 36079
 # CHECK-GX-JSON-DAG:            "%47": 3
-# CHECK-GX-JSON-DAG:            "%48": 9033
+# CHECK-GX-JSON-DAG:            "%48": 36033
 # CHECK-GX-JSON-DAG:            "%49": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9142
+# CHECK-GX-JSON-DAG:            "distance": 36142
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9142
+# CHECK-GX-JSON-DAG:            "distance": 36142
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20501,28 +20501,28 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 35
-# CHECK-GX-JSON-DAG:            "%1": 9089
-# CHECK-GX-JSON-DAG:            "%2": 9089
-# CHECK-GX-JSON-DAG:            "%3": 9090
-# CHECK-GX-JSON-DAG:            "%4": 9090
-# CHECK-GX-JSON-DAG:            "%23": 9141
-# CHECK-GX-JSON-DAG:            "%43": 9092
-# CHECK-GX-JSON-DAG:            "%44": 9078
+# CHECK-GX-JSON-DAG:            "%1": 36089
+# CHECK-GX-JSON-DAG:            "%2": 36089
+# CHECK-GX-JSON-DAG:            "%3": 36090
+# CHECK-GX-JSON-DAG:            "%4": 36090
+# CHECK-GX-JSON-DAG:            "%23": 36141
+# CHECK-GX-JSON-DAG:            "%43": 36092
+# CHECK-GX-JSON-DAG:            "%44": 36078
 # CHECK-GX-JSON-DAG:            "%47": 2
-# CHECK-GX-JSON-DAG:            "%48": 9032
+# CHECK-GX-JSON-DAG:            "%48": 36032
 # CHECK-GX-JSON-DAG:            "%50": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9141
+# CHECK-GX-JSON-DAG:            "distance": 36141
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9141
+# CHECK-GX-JSON-DAG:            "distance": 36141
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20532,28 +20532,28 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 34
-# CHECK-GX-JSON-DAG:            "%1": 9088
-# CHECK-GX-JSON-DAG:            "%2": 9088
-# CHECK-GX-JSON-DAG:            "%3": 9089
-# CHECK-GX-JSON-DAG:            "%4": 9089
-# CHECK-GX-JSON-DAG:            "%23": 9140
-# CHECK-GX-JSON-DAG:            "%43": 9091
-# CHECK-GX-JSON-DAG:            "%44": 9077
+# CHECK-GX-JSON-DAG:            "%1": 36088
+# CHECK-GX-JSON-DAG:            "%2": 36088
+# CHECK-GX-JSON-DAG:            "%3": 36089
+# CHECK-GX-JSON-DAG:            "%4": 36089
+# CHECK-GX-JSON-DAG:            "%23": 36140
+# CHECK-GX-JSON-DAG:            "%43": 36091
+# CHECK-GX-JSON-DAG:            "%44": 36077
 # CHECK-GX-JSON-DAG:            "%47": 1
-# CHECK-GX-JSON-DAG:            "%48": 9031
+# CHECK-GX-JSON-DAG:            "%48": 36031
 # CHECK-GX-JSON-DAG:            "%51": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9140
+# CHECK-GX-JSON-DAG:            "distance": 36140
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9140
+# CHECK-GX-JSON-DAG:            "distance": 36140
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20563,29 +20563,29 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 33
-# CHECK-GX-JSON-DAG:            "%1": 9087
-# CHECK-GX-JSON-DAG:            "%2": 9087
-# CHECK-GX-JSON-DAG:            "%3": 9088
-# CHECK-GX-JSON-DAG:            "%4": 9088
-# CHECK-GX-JSON-DAG:            "%23": 9139
-# CHECK-GX-JSON-DAG:            "%43": 9090
-# CHECK-GX-JSON-DAG:            "%44": 9076
+# CHECK-GX-JSON-DAG:            "%1": 36087
+# CHECK-GX-JSON-DAG:            "%2": 36087
+# CHECK-GX-JSON-DAG:            "%3": 36088
+# CHECK-GX-JSON-DAG:            "%4": 36088
+# CHECK-GX-JSON-DAG:            "%23": 36139
+# CHECK-GX-JSON-DAG:            "%43": 36090
+# CHECK-GX-JSON-DAG:            "%44": 36076
 # CHECK-GX-JSON-DAG:            "%47": 0
-# CHECK-GX-JSON-DAG:            "%48": 9030
+# CHECK-GX-JSON-DAG:            "%48": 36030
 # CHECK-GX-JSON-DAG:            "%51": 5
-# CHECK-GX-JSON-DAG:            "%52": 9031
+# CHECK-GX-JSON-DAG:            "%52": 36031
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9139
+# CHECK-GX-JSON-DAG:            "distance": 36139
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9139
+# CHECK-GX-JSON-DAG:            "distance": 36139
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20595,29 +20595,29 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 32
-# CHECK-GX-JSON-DAG:            "%1": 9086
-# CHECK-GX-JSON-DAG:            "%2": 9086
-# CHECK-GX-JSON-DAG:            "%3": 9087
-# CHECK-GX-JSON-DAG:            "%4": 9087
-# CHECK-GX-JSON-DAG:            "%23": 9138
-# CHECK-GX-JSON-DAG:            "%43": 9089
-# CHECK-GX-JSON-DAG:            "%44": 9075
-# CHECK-GX-JSON-DAG:            "%48": 9029
+# CHECK-GX-JSON-DAG:            "%1": 36086
+# CHECK-GX-JSON-DAG:            "%2": 36086
+# CHECK-GX-JSON-DAG:            "%3": 36087
+# CHECK-GX-JSON-DAG:            "%4": 36087
+# CHECK-GX-JSON-DAG:            "%23": 36138
+# CHECK-GX-JSON-DAG:            "%43": 36089
+# CHECK-GX-JSON-DAG:            "%44": 36075
+# CHECK-GX-JSON-DAG:            "%48": 36029
 # CHECK-GX-JSON-DAG:            "%51": 4
-# CHECK-GX-JSON-DAG:            "%52": 9030
-# CHECK-GX-JSON-DAG:            "%53": 9039
+# CHECK-GX-JSON-DAG:            "%52": 36030
+# CHECK-GX-JSON-DAG:            "%53": 36039
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9138
+# CHECK-GX-JSON-DAG:            "distance": 36138
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9138
+# CHECK-GX-JSON-DAG:            "distance": 36138
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20627,30 +20627,30 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 31
-# CHECK-GX-JSON-DAG:            "%1": 9085
-# CHECK-GX-JSON-DAG:            "%2": 9085
-# CHECK-GX-JSON-DAG:            "%3": 9086
-# CHECK-GX-JSON-DAG:            "%4": 9086
-# CHECK-GX-JSON-DAG:            "%23": 9137
-# CHECK-GX-JSON-DAG:            "%43": 9088
-# CHECK-GX-JSON-DAG:            "%44": 9074
-# CHECK-GX-JSON-DAG:            "%48": 9028
+# CHECK-GX-JSON-DAG:            "%1": 36085
+# CHECK-GX-JSON-DAG:            "%2": 36085
+# CHECK-GX-JSON-DAG:            "%3": 36086
+# CHECK-GX-JSON-DAG:            "%4": 36086
+# CHECK-GX-JSON-DAG:            "%23": 36137
+# CHECK-GX-JSON-DAG:            "%43": 36088
+# CHECK-GX-JSON-DAG:            "%44": 36074
+# CHECK-GX-JSON-DAG:            "%48": 36028
 # CHECK-GX-JSON-DAG:            "%51": 3
-# CHECK-GX-JSON-DAG:            "%52": 9029
-# CHECK-GX-JSON-DAG:            "%53": 9038
+# CHECK-GX-JSON-DAG:            "%52": 36029
+# CHECK-GX-JSON-DAG:            "%53": 36038
 # CHECK-GX-JSON-DAG:            "%54": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9137
+# CHECK-GX-JSON-DAG:            "distance": 36137
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9137
+# CHECK-GX-JSON-DAG:            "distance": 36137
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20660,30 +20660,30 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 30
-# CHECK-GX-JSON-DAG:            "%1": 9084
-# CHECK-GX-JSON-DAG:            "%2": 9084
-# CHECK-GX-JSON-DAG:            "%3": 9085
-# CHECK-GX-JSON-DAG:            "%4": 9085
-# CHECK-GX-JSON-DAG:            "%23": 9136
-# CHECK-GX-JSON-DAG:            "%43": 9087
-# CHECK-GX-JSON-DAG:            "%44": 9073
-# CHECK-GX-JSON-DAG:            "%48": 9027
+# CHECK-GX-JSON-DAG:            "%1": 36084
+# CHECK-GX-JSON-DAG:            "%2": 36084
+# CHECK-GX-JSON-DAG:            "%3": 36085
+# CHECK-GX-JSON-DAG:            "%4": 36085
+# CHECK-GX-JSON-DAG:            "%23": 36136
+# CHECK-GX-JSON-DAG:            "%43": 36087
+# CHECK-GX-JSON-DAG:            "%44": 36073
+# CHECK-GX-JSON-DAG:            "%48": 36027
 # CHECK-GX-JSON-DAG:            "%51": 2
-# CHECK-GX-JSON-DAG:            "%52": 9028
-# CHECK-GX-JSON-DAG:            "%53": 9037
+# CHECK-GX-JSON-DAG:            "%52": 36028
+# CHECK-GX-JSON-DAG:            "%53": 36037
 # CHECK-GX-JSON-DAG:            "%55": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9136
+# CHECK-GX-JSON-DAG:            "distance": 36136
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9136
+# CHECK-GX-JSON-DAG:            "distance": 36136
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20693,30 +20693,30 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 29
-# CHECK-GX-JSON-DAG:            "%1": 9083
-# CHECK-GX-JSON-DAG:            "%2": 9083
-# CHECK-GX-JSON-DAG:            "%3": 9084
-# CHECK-GX-JSON-DAG:            "%4": 9084
-# CHECK-GX-JSON-DAG:            "%23": 9135
-# CHECK-GX-JSON-DAG:            "%43": 9086
-# CHECK-GX-JSON-DAG:            "%44": 9072
-# CHECK-GX-JSON-DAG:            "%48": 9026
+# CHECK-GX-JSON-DAG:            "%1": 36083
+# CHECK-GX-JSON-DAG:            "%2": 36083
+# CHECK-GX-JSON-DAG:            "%3": 36084
+# CHECK-GX-JSON-DAG:            "%4": 36084
+# CHECK-GX-JSON-DAG:            "%23": 36135
+# CHECK-GX-JSON-DAG:            "%43": 36086
+# CHECK-GX-JSON-DAG:            "%44": 36072
+# CHECK-GX-JSON-DAG:            "%48": 36026
 # CHECK-GX-JSON-DAG:            "%51": 1
-# CHECK-GX-JSON-DAG:            "%52": 9027
-# CHECK-GX-JSON-DAG:            "%53": 9036
+# CHECK-GX-JSON-DAG:            "%52": 36027
+# CHECK-GX-JSON-DAG:            "%53": 36036
 # CHECK-GX-JSON-DAG:            "%56": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9135
+# CHECK-GX-JSON-DAG:            "distance": 36135
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9135
+# CHECK-GX-JSON-DAG:            "distance": 36135
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20726,30 +20726,30 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 28
-# CHECK-GX-JSON-DAG:            "%1": 9082
-# CHECK-GX-JSON-DAG:            "%2": 9082
-# CHECK-GX-JSON-DAG:            "%3": 9083
-# CHECK-GX-JSON-DAG:            "%4": 9083
-# CHECK-GX-JSON-DAG:            "%23": 9134
-# CHECK-GX-JSON-DAG:            "%43": 9085
-# CHECK-GX-JSON-DAG:            "%44": 9071
-# CHECK-GX-JSON-DAG:            "%48": 9025
+# CHECK-GX-JSON-DAG:            "%1": 36082
+# CHECK-GX-JSON-DAG:            "%2": 36082
+# CHECK-GX-JSON-DAG:            "%3": 36083
+# CHECK-GX-JSON-DAG:            "%4": 36083
+# CHECK-GX-JSON-DAG:            "%23": 36134
+# CHECK-GX-JSON-DAG:            "%43": 36085
+# CHECK-GX-JSON-DAG:            "%44": 36071
+# CHECK-GX-JSON-DAG:            "%48": 36025
 # CHECK-GX-JSON-DAG:            "%51": 0
-# CHECK-GX-JSON-DAG:            "%52": 9026
-# CHECK-GX-JSON-DAG:            "%53": 9035
-# CHECK-GX-JSON-DAG:            "%57": 9036
+# CHECK-GX-JSON-DAG:            "%52": 36026
+# CHECK-GX-JSON-DAG:            "%53": 36035
+# CHECK-GX-JSON-DAG:            "%57": 36036
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9134
+# CHECK-GX-JSON-DAG:            "distance": 36134
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9134
+# CHECK-GX-JSON-DAG:            "distance": 36134
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20759,30 +20759,30 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 27
-# CHECK-GX-JSON-DAG:            "%1": 9081
-# CHECK-GX-JSON-DAG:            "%2": 9081
-# CHECK-GX-JSON-DAG:            "%3": 9082
-# CHECK-GX-JSON-DAG:            "%4": 9082
-# CHECK-GX-JSON-DAG:            "%23": 9133
-# CHECK-GX-JSON-DAG:            "%43": 9084
-# CHECK-GX-JSON-DAG:            "%44": 9070
-# CHECK-GX-JSON-DAG:            "%48": 9024
-# CHECK-GX-JSON-DAG:            "%52": 9025
-# CHECK-GX-JSON-DAG:            "%53": 9034
-# CHECK-GX-JSON-DAG:            "%57": 9035
-# CHECK-GX-JSON-DAG:            "%58": 9036
+# CHECK-GX-JSON-DAG:            "%1": 36081
+# CHECK-GX-JSON-DAG:            "%2": 36081
+# CHECK-GX-JSON-DAG:            "%3": 36082
+# CHECK-GX-JSON-DAG:            "%4": 36082
+# CHECK-GX-JSON-DAG:            "%23": 36133
+# CHECK-GX-JSON-DAG:            "%43": 36084
+# CHECK-GX-JSON-DAG:            "%44": 36070
+# CHECK-GX-JSON-DAG:            "%48": 36024
+# CHECK-GX-JSON-DAG:            "%52": 36025
+# CHECK-GX-JSON-DAG:            "%53": 36034
+# CHECK-GX-JSON-DAG:            "%57": 36035
+# CHECK-GX-JSON-DAG:            "%58": 36036
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9133
+# CHECK-GX-JSON-DAG:            "distance": 36133
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9133
+# CHECK-GX-JSON-DAG:            "distance": 36133
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20792,31 +20792,31 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 26
-# CHECK-GX-JSON-DAG:            "%1": 9080
-# CHECK-GX-JSON-DAG:            "%2": 9080
-# CHECK-GX-JSON-DAG:            "%3": 9081
-# CHECK-GX-JSON-DAG:            "%4": 9081
-# CHECK-GX-JSON-DAG:            "%23": 9132
-# CHECK-GX-JSON-DAG:            "%43": 9083
-# CHECK-GX-JSON-DAG:            "%44": 9069
-# CHECK-GX-JSON-DAG:            "%48": 9023
-# CHECK-GX-JSON-DAG:            "%52": 9024
-# CHECK-GX-JSON-DAG:            "%53": 9033
-# CHECK-GX-JSON-DAG:            "%57": 9034
-# CHECK-GX-JSON-DAG:            "%58": 9035
+# CHECK-GX-JSON-DAG:            "%1": 36080
+# CHECK-GX-JSON-DAG:            "%2": 36080
+# CHECK-GX-JSON-DAG:            "%3": 36081
+# CHECK-GX-JSON-DAG:            "%4": 36081
+# CHECK-GX-JSON-DAG:            "%23": 36132
+# CHECK-GX-JSON-DAG:            "%43": 36083
+# CHECK-GX-JSON-DAG:            "%44": 36069
+# CHECK-GX-JSON-DAG:            "%48": 36023
+# CHECK-GX-JSON-DAG:            "%52": 36024
+# CHECK-GX-JSON-DAG:            "%53": 36033
+# CHECK-GX-JSON-DAG:            "%57": 36034
+# CHECK-GX-JSON-DAG:            "%58": 36035
 # CHECK-GX-JSON-DAG:            "%59": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9132
+# CHECK-GX-JSON-DAG:            "distance": 36132
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9132
+# CHECK-GX-JSON-DAG:            "distance": 36132
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20826,31 +20826,31 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 25
-# CHECK-GX-JSON-DAG:            "%1": 9079
-# CHECK-GX-JSON-DAG:            "%2": 9079
-# CHECK-GX-JSON-DAG:            "%3": 9080
-# CHECK-GX-JSON-DAG:            "%4": 9080
-# CHECK-GX-JSON-DAG:            "%23": 9131
-# CHECK-GX-JSON-DAG:            "%43": 9082
-# CHECK-GX-JSON-DAG:            "%44": 9068
-# CHECK-GX-JSON-DAG:            "%48": 9022
-# CHECK-GX-JSON-DAG:            "%52": 9023
-# CHECK-GX-JSON-DAG:            "%53": 9032
-# CHECK-GX-JSON-DAG:            "%57": 9033
-# CHECK-GX-JSON-DAG:            "%58": 9034
+# CHECK-GX-JSON-DAG:            "%1": 36079
+# CHECK-GX-JSON-DAG:            "%2": 36079
+# CHECK-GX-JSON-DAG:            "%3": 36080
+# CHECK-GX-JSON-DAG:            "%4": 36080
+# CHECK-GX-JSON-DAG:            "%23": 36131
+# CHECK-GX-JSON-DAG:            "%43": 36082
+# CHECK-GX-JSON-DAG:            "%44": 36068
+# CHECK-GX-JSON-DAG:            "%48": 36022
+# CHECK-GX-JSON-DAG:            "%52": 36023
+# CHECK-GX-JSON-DAG:            "%53": 36032
+# CHECK-GX-JSON-DAG:            "%57": 36033
+# CHECK-GX-JSON-DAG:            "%58": 36034
 # CHECK-GX-JSON-DAG:            "%60": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9131
+# CHECK-GX-JSON-DAG:            "distance": 36131
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9131
+# CHECK-GX-JSON-DAG:            "distance": 36131
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20860,31 +20860,31 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 24
-# CHECK-GX-JSON-DAG:            "%1": 9078
-# CHECK-GX-JSON-DAG:            "%2": 9078
-# CHECK-GX-JSON-DAG:            "%3": 9079
-# CHECK-GX-JSON-DAG:            "%4": 9079
-# CHECK-GX-JSON-DAG:            "%23": 9130
-# CHECK-GX-JSON-DAG:            "%43": 9081
-# CHECK-GX-JSON-DAG:            "%44": 9067
-# CHECK-GX-JSON-DAG:            "%48": 9021
-# CHECK-GX-JSON-DAG:            "%52": 9022
-# CHECK-GX-JSON-DAG:            "%53": 9031
-# CHECK-GX-JSON-DAG:            "%57": 9032
-# CHECK-GX-JSON-DAG:            "%58": 9033
+# CHECK-GX-JSON-DAG:            "%1": 36078
+# CHECK-GX-JSON-DAG:            "%2": 36078
+# CHECK-GX-JSON-DAG:            "%3": 36079
+# CHECK-GX-JSON-DAG:            "%4": 36079
+# CHECK-GX-JSON-DAG:            "%23": 36130
+# CHECK-GX-JSON-DAG:            "%43": 36081
+# CHECK-GX-JSON-DAG:            "%44": 36067
+# CHECK-GX-JSON-DAG:            "%48": 36021
+# CHECK-GX-JSON-DAG:            "%52": 36022
+# CHECK-GX-JSON-DAG:            "%53": 36031
+# CHECK-GX-JSON-DAG:            "%57": 36032
+# CHECK-GX-JSON-DAG:            "%58": 36033
 # CHECK-GX-JSON-DAG:            "%61": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9130
+# CHECK-GX-JSON-DAG:            "distance": 36130
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9130
+# CHECK-GX-JSON-DAG:            "distance": 36130
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20894,31 +20894,31 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 23
-# CHECK-GX-JSON-DAG:            "%1": 9077
-# CHECK-GX-JSON-DAG:            "%2": 9077
-# CHECK-GX-JSON-DAG:            "%3": 9078
-# CHECK-GX-JSON-DAG:            "%4": 9078
-# CHECK-GX-JSON-DAG:            "%23": 9129
-# CHECK-GX-JSON-DAG:            "%43": 9080
-# CHECK-GX-JSON-DAG:            "%44": 9066
-# CHECK-GX-JSON-DAG:            "%48": 9020
-# CHECK-GX-JSON-DAG:            "%52": 9021
-# CHECK-GX-JSON-DAG:            "%53": 9030
-# CHECK-GX-JSON-DAG:            "%57": 9031
-# CHECK-GX-JSON-DAG:            "%58": 9032
-# CHECK-GX-JSON-DAG:            "%62": 9033
+# CHECK-GX-JSON-DAG:            "%1": 36077
+# CHECK-GX-JSON-DAG:            "%2": 36077
+# CHECK-GX-JSON-DAG:            "%3": 36078
+# CHECK-GX-JSON-DAG:            "%4": 36078
+# CHECK-GX-JSON-DAG:            "%23": 36129
+# CHECK-GX-JSON-DAG:            "%43": 36080
+# CHECK-GX-JSON-DAG:            "%44": 36066
+# CHECK-GX-JSON-DAG:            "%48": 36020
+# CHECK-GX-JSON-DAG:            "%52": 36021
+# CHECK-GX-JSON-DAG:            "%53": 36030
+# CHECK-GX-JSON-DAG:            "%57": 36031
+# CHECK-GX-JSON-DAG:            "%58": 36032
+# CHECK-GX-JSON-DAG:            "%62": 36033
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9129
+# CHECK-GX-JSON-DAG:            "distance": 36129
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9129
+# CHECK-GX-JSON-DAG:            "distance": 36129
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20928,32 +20928,32 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 22
-# CHECK-GX-JSON-DAG:            "%1": 9076
-# CHECK-GX-JSON-DAG:            "%2": 9076
-# CHECK-GX-JSON-DAG:            "%3": 9077
-# CHECK-GX-JSON-DAG:            "%4": 9077
-# CHECK-GX-JSON-DAG:            "%23": 9128
-# CHECK-GX-JSON-DAG:            "%43": 9079
-# CHECK-GX-JSON-DAG:            "%44": 9065
-# CHECK-GX-JSON-DAG:            "%48": 9019
-# CHECK-GX-JSON-DAG:            "%52": 9020
-# CHECK-GX-JSON-DAG:            "%53": 9029
-# CHECK-GX-JSON-DAG:            "%57": 9030
-# CHECK-GX-JSON-DAG:            "%58": 9031
-# CHECK-GX-JSON-DAG:            "%62": 9032
+# CHECK-GX-JSON-DAG:            "%1": 36076
+# CHECK-GX-JSON-DAG:            "%2": 36076
+# CHECK-GX-JSON-DAG:            "%3": 36077
+# CHECK-GX-JSON-DAG:            "%4": 36077
+# CHECK-GX-JSON-DAG:            "%23": 36128
+# CHECK-GX-JSON-DAG:            "%43": 36079
+# CHECK-GX-JSON-DAG:            "%44": 36065
+# CHECK-GX-JSON-DAG:            "%48": 36019
+# CHECK-GX-JSON-DAG:            "%52": 36020
+# CHECK-GX-JSON-DAG:            "%53": 36029
+# CHECK-GX-JSON-DAG:            "%57": 36030
+# CHECK-GX-JSON-DAG:            "%58": 36031
+# CHECK-GX-JSON-DAG:            "%62": 36032
 # CHECK-GX-JSON-DAG:            "%63": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9128
+# CHECK-GX-JSON-DAG:            "distance": 36128
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9128
+# CHECK-GX-JSON-DAG:            "distance": 36128
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20963,32 +20963,32 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 21
-# CHECK-GX-JSON-DAG:            "%1": 9075
-# CHECK-GX-JSON-DAG:            "%2": 9075
-# CHECK-GX-JSON-DAG:            "%3": 9076
-# CHECK-GX-JSON-DAG:            "%4": 9076
-# CHECK-GX-JSON-DAG:            "%23": 9127
-# CHECK-GX-JSON-DAG:            "%43": 9078
-# CHECK-GX-JSON-DAG:            "%44": 9064
-# CHECK-GX-JSON-DAG:            "%48": 9018
-# CHECK-GX-JSON-DAG:            "%52": 9019
-# CHECK-GX-JSON-DAG:            "%53": 9028
-# CHECK-GX-JSON-DAG:            "%57": 9029
-# CHECK-GX-JSON-DAG:            "%58": 9030
-# CHECK-GX-JSON-DAG:            "%62": 9031
+# CHECK-GX-JSON-DAG:            "%1": 36075
+# CHECK-GX-JSON-DAG:            "%2": 36075
+# CHECK-GX-JSON-DAG:            "%3": 36076
+# CHECK-GX-JSON-DAG:            "%4": 36076
+# CHECK-GX-JSON-DAG:            "%23": 36127
+# CHECK-GX-JSON-DAG:            "%43": 36078
+# CHECK-GX-JSON-DAG:            "%44": 36064
+# CHECK-GX-JSON-DAG:            "%48": 36018
+# CHECK-GX-JSON-DAG:            "%52": 36019
+# CHECK-GX-JSON-DAG:            "%53": 36028
+# CHECK-GX-JSON-DAG:            "%57": 36029
+# CHECK-GX-JSON-DAG:            "%58": 36030
+# CHECK-GX-JSON-DAG:            "%62": 36031
 # CHECK-GX-JSON-DAG:            "%64": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9127
+# CHECK-GX-JSON-DAG:            "distance": 36127
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9127
+# CHECK-GX-JSON-DAG:            "distance": 36127
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -20998,32 +20998,32 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 20
-# CHECK-GX-JSON-DAG:            "%1": 9074
-# CHECK-GX-JSON-DAG:            "%2": 9074
-# CHECK-GX-JSON-DAG:            "%3": 9075
-# CHECK-GX-JSON-DAG:            "%4": 9075
-# CHECK-GX-JSON-DAG:            "%23": 9126
-# CHECK-GX-JSON-DAG:            "%43": 9077
-# CHECK-GX-JSON-DAG:            "%44": 9063
-# CHECK-GX-JSON-DAG:            "%48": 9017
-# CHECK-GX-JSON-DAG:            "%52": 9018
-# CHECK-GX-JSON-DAG:            "%53": 9027
-# CHECK-GX-JSON-DAG:            "%57": 9028
-# CHECK-GX-JSON-DAG:            "%58": 9029
-# CHECK-GX-JSON-DAG:            "%62": 9030
+# CHECK-GX-JSON-DAG:            "%1": 36074
+# CHECK-GX-JSON-DAG:            "%2": 36074
+# CHECK-GX-JSON-DAG:            "%3": 36075
+# CHECK-GX-JSON-DAG:            "%4": 36075
+# CHECK-GX-JSON-DAG:            "%23": 36126
+# CHECK-GX-JSON-DAG:            "%43": 36077
+# CHECK-GX-JSON-DAG:            "%44": 36063
+# CHECK-GX-JSON-DAG:            "%48": 36017
+# CHECK-GX-JSON-DAG:            "%52": 36018
+# CHECK-GX-JSON-DAG:            "%53": 36027
+# CHECK-GX-JSON-DAG:            "%57": 36028
+# CHECK-GX-JSON-DAG:            "%58": 36029
+# CHECK-GX-JSON-DAG:            "%62": 36030
 # CHECK-GX-JSON-DAG:            "%65": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9126
+# CHECK-GX-JSON-DAG:            "distance": 36126
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9126
+# CHECK-GX-JSON-DAG:            "distance": 36126
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21033,32 +21033,32 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 19
-# CHECK-GX-JSON-DAG:            "%1": 9073
-# CHECK-GX-JSON-DAG:            "%2": 9073
-# CHECK-GX-JSON-DAG:            "%3": 9074
-# CHECK-GX-JSON-DAG:            "%4": 9074
-# CHECK-GX-JSON-DAG:            "%23": 9125
-# CHECK-GX-JSON-DAG:            "%43": 9076
-# CHECK-GX-JSON-DAG:            "%44": 9062
-# CHECK-GX-JSON-DAG:            "%48": 9016
-# CHECK-GX-JSON-DAG:            "%52": 9017
-# CHECK-GX-JSON-DAG:            "%53": 9026
-# CHECK-GX-JSON-DAG:            "%57": 9027
-# CHECK-GX-JSON-DAG:            "%58": 9028
-# CHECK-GX-JSON-DAG:            "%62": 9029
-# CHECK-GX-JSON-DAG:            "%66": 9030
+# CHECK-GX-JSON-DAG:            "%1": 36073
+# CHECK-GX-JSON-DAG:            "%2": 36073
+# CHECK-GX-JSON-DAG:            "%3": 36074
+# CHECK-GX-JSON-DAG:            "%4": 36074
+# CHECK-GX-JSON-DAG:            "%23": 36125
+# CHECK-GX-JSON-DAG:            "%43": 36076
+# CHECK-GX-JSON-DAG:            "%44": 36062
+# CHECK-GX-JSON-DAG:            "%48": 36016
+# CHECK-GX-JSON-DAG:            "%52": 36017
+# CHECK-GX-JSON-DAG:            "%53": 36026
+# CHECK-GX-JSON-DAG:            "%57": 36027
+# CHECK-GX-JSON-DAG:            "%58": 36028
+# CHECK-GX-JSON-DAG:            "%62": 36029
+# CHECK-GX-JSON-DAG:            "%66": 36030
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9125
+# CHECK-GX-JSON-DAG:            "distance": 36125
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9125
+# CHECK-GX-JSON-DAG:            "distance": 36125
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21068,33 +21068,33 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 18
-# CHECK-GX-JSON-DAG:            "%1": 9072
-# CHECK-GX-JSON-DAG:            "%2": 9072
-# CHECK-GX-JSON-DAG:            "%3": 9073
-# CHECK-GX-JSON-DAG:            "%4": 9073
-# CHECK-GX-JSON-DAG:            "%23": 9124
-# CHECK-GX-JSON-DAG:            "%43": 9075
-# CHECK-GX-JSON-DAG:            "%44": 9061
-# CHECK-GX-JSON-DAG:            "%48": 9015
-# CHECK-GX-JSON-DAG:            "%52": 9016
-# CHECK-GX-JSON-DAG:            "%53": 9025
-# CHECK-GX-JSON-DAG:            "%57": 9026
-# CHECK-GX-JSON-DAG:            "%58": 9027
-# CHECK-GX-JSON-DAG:            "%62": 9028
-# CHECK-GX-JSON-DAG:            "%66": 9029
+# CHECK-GX-JSON-DAG:            "%1": 36072
+# CHECK-GX-JSON-DAG:            "%2": 36072
+# CHECK-GX-JSON-DAG:            "%3": 36073
+# CHECK-GX-JSON-DAG:            "%4": 36073
+# CHECK-GX-JSON-DAG:            "%23": 36124
+# CHECK-GX-JSON-DAG:            "%43": 36075
+# CHECK-GX-JSON-DAG:            "%44": 36061
+# CHECK-GX-JSON-DAG:            "%48": 36015
+# CHECK-GX-JSON-DAG:            "%52": 36016
+# CHECK-GX-JSON-DAG:            "%53": 36025
+# CHECK-GX-JSON-DAG:            "%57": 36026
+# CHECK-GX-JSON-DAG:            "%58": 36027
+# CHECK-GX-JSON-DAG:            "%62": 36028
+# CHECK-GX-JSON-DAG:            "%66": 36029
 # CHECK-GX-JSON-DAG:            "%67": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9124
+# CHECK-GX-JSON-DAG:            "distance": 36124
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9124
+# CHECK-GX-JSON-DAG:            "distance": 36124
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21104,33 +21104,33 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 17
-# CHECK-GX-JSON-DAG:            "%1": 9071
-# CHECK-GX-JSON-DAG:            "%2": 9071
-# CHECK-GX-JSON-DAG:            "%3": 9072
-# CHECK-GX-JSON-DAG:            "%4": 9072
-# CHECK-GX-JSON-DAG:            "%23": 9123
-# CHECK-GX-JSON-DAG:            "%43": 9074
-# CHECK-GX-JSON-DAG:            "%44": 9060
-# CHECK-GX-JSON-DAG:            "%48": 9014
-# CHECK-GX-JSON-DAG:            "%52": 9015
-# CHECK-GX-JSON-DAG:            "%53": 9024
-# CHECK-GX-JSON-DAG:            "%57": 9025
-# CHECK-GX-JSON-DAG:            "%58": 9026
-# CHECK-GX-JSON-DAG:            "%62": 9027
-# CHECK-GX-JSON-DAG:            "%66": 9028
+# CHECK-GX-JSON-DAG:            "%1": 36071
+# CHECK-GX-JSON-DAG:            "%2": 36071
+# CHECK-GX-JSON-DAG:            "%3": 36072
+# CHECK-GX-JSON-DAG:            "%4": 36072
+# CHECK-GX-JSON-DAG:            "%23": 36123
+# CHECK-GX-JSON-DAG:            "%43": 36074
+# CHECK-GX-JSON-DAG:            "%44": 36060
+# CHECK-GX-JSON-DAG:            "%48": 36014
+# CHECK-GX-JSON-DAG:            "%52": 36015
+# CHECK-GX-JSON-DAG:            "%53": 36024
+# CHECK-GX-JSON-DAG:            "%57": 36025
+# CHECK-GX-JSON-DAG:            "%58": 36026
+# CHECK-GX-JSON-DAG:            "%62": 36027
+# CHECK-GX-JSON-DAG:            "%66": 36028
 # CHECK-GX-JSON-DAG:            "%68": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9123
+# CHECK-GX-JSON-DAG:            "distance": 36123
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9123
+# CHECK-GX-JSON-DAG:            "distance": 36123
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21140,33 +21140,33 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 16
-# CHECK-GX-JSON-DAG:            "%1": 9070
-# CHECK-GX-JSON-DAG:            "%2": 9070
-# CHECK-GX-JSON-DAG:            "%3": 9071
-# CHECK-GX-JSON-DAG:            "%4": 9071
-# CHECK-GX-JSON-DAG:            "%23": 9122
-# CHECK-GX-JSON-DAG:            "%43": 9073
-# CHECK-GX-JSON-DAG:            "%44": 9059
-# CHECK-GX-JSON-DAG:            "%48": 9013
-# CHECK-GX-JSON-DAG:            "%52": 9014
-# CHECK-GX-JSON-DAG:            "%53": 9023
-# CHECK-GX-JSON-DAG:            "%57": 9024
-# CHECK-GX-JSON-DAG:            "%58": 9025
-# CHECK-GX-JSON-DAG:            "%62": 9026
-# CHECK-GX-JSON-DAG:            "%66": 9027
+# CHECK-GX-JSON-DAG:            "%1": 36070
+# CHECK-GX-JSON-DAG:            "%2": 36070
+# CHECK-GX-JSON-DAG:            "%3": 36071
+# CHECK-GX-JSON-DAG:            "%4": 36071
+# CHECK-GX-JSON-DAG:            "%23": 36122
+# CHECK-GX-JSON-DAG:            "%43": 36073
+# CHECK-GX-JSON-DAG:            "%44": 36059
+# CHECK-GX-JSON-DAG:            "%48": 36013
+# CHECK-GX-JSON-DAG:            "%52": 36014
+# CHECK-GX-JSON-DAG:            "%53": 36023
+# CHECK-GX-JSON-DAG:            "%57": 36024
+# CHECK-GX-JSON-DAG:            "%58": 36025
+# CHECK-GX-JSON-DAG:            "%62": 36026
+# CHECK-GX-JSON-DAG:            "%66": 36027
 # CHECK-GX-JSON-DAG:            "%69": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9122
+# CHECK-GX-JSON-DAG:            "distance": 36122
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9122
+# CHECK-GX-JSON-DAG:            "distance": 36122
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21176,33 +21176,33 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 15
-# CHECK-GX-JSON-DAG:            "%1": 9069
-# CHECK-GX-JSON-DAG:            "%2": 9069
-# CHECK-GX-JSON-DAG:            "%3": 9070
-# CHECK-GX-JSON-DAG:            "%4": 9070
-# CHECK-GX-JSON-DAG:            "%23": 9121
-# CHECK-GX-JSON-DAG:            "%43": 9072
-# CHECK-GX-JSON-DAG:            "%44": 9058
-# CHECK-GX-JSON-DAG:            "%48": 9012
-# CHECK-GX-JSON-DAG:            "%52": 9013
-# CHECK-GX-JSON-DAG:            "%53": 9022
-# CHECK-GX-JSON-DAG:            "%57": 9023
-# CHECK-GX-JSON-DAG:            "%58": 9024
-# CHECK-GX-JSON-DAG:            "%62": 9025
-# CHECK-GX-JSON-DAG:            "%66": 9026
-# CHECK-GX-JSON-DAG:            "%70": 9027
+# CHECK-GX-JSON-DAG:            "%1": 36069
+# CHECK-GX-JSON-DAG:            "%2": 36069
+# CHECK-GX-JSON-DAG:            "%3": 36070
+# CHECK-GX-JSON-DAG:            "%4": 36070
+# CHECK-GX-JSON-DAG:            "%23": 36121
+# CHECK-GX-JSON-DAG:            "%43": 36072
+# CHECK-GX-JSON-DAG:            "%44": 36058
+# CHECK-GX-JSON-DAG:            "%48": 36012
+# CHECK-GX-JSON-DAG:            "%52": 36013
+# CHECK-GX-JSON-DAG:            "%53": 36022
+# CHECK-GX-JSON-DAG:            "%57": 36023
+# CHECK-GX-JSON-DAG:            "%58": 36024
+# CHECK-GX-JSON-DAG:            "%62": 36025
+# CHECK-GX-JSON-DAG:            "%66": 36026
+# CHECK-GX-JSON-DAG:            "%70": 36027
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9121
+# CHECK-GX-JSON-DAG:            "distance": 36121
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9121
+# CHECK-GX-JSON-DAG:            "distance": 36121
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21212,34 +21212,34 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 14
-# CHECK-GX-JSON-DAG:            "%1": 9068
-# CHECK-GX-JSON-DAG:            "%2": 9068
-# CHECK-GX-JSON-DAG:            "%3": 9069
-# CHECK-GX-JSON-DAG:            "%4": 9069
-# CHECK-GX-JSON-DAG:            "%23": 9120
-# CHECK-GX-JSON-DAG:            "%43": 9071
-# CHECK-GX-JSON-DAG:            "%44": 9057
-# CHECK-GX-JSON-DAG:            "%48": 9011
-# CHECK-GX-JSON-DAG:            "%52": 9012
-# CHECK-GX-JSON-DAG:            "%53": 9021
-# CHECK-GX-JSON-DAG:            "%57": 9022
-# CHECK-GX-JSON-DAG:            "%58": 9023
-# CHECK-GX-JSON-DAG:            "%62": 9024
-# CHECK-GX-JSON-DAG:            "%66": 9025
-# CHECK-GX-JSON-DAG:            "%70": 9026
+# CHECK-GX-JSON-DAG:            "%1": 36068
+# CHECK-GX-JSON-DAG:            "%2": 36068
+# CHECK-GX-JSON-DAG:            "%3": 36069
+# CHECK-GX-JSON-DAG:            "%4": 36069
+# CHECK-GX-JSON-DAG:            "%23": 36120
+# CHECK-GX-JSON-DAG:            "%43": 36071
+# CHECK-GX-JSON-DAG:            "%44": 36057
+# CHECK-GX-JSON-DAG:            "%48": 36011
+# CHECK-GX-JSON-DAG:            "%52": 36012
+# CHECK-GX-JSON-DAG:            "%53": 36021
+# CHECK-GX-JSON-DAG:            "%57": 36022
+# CHECK-GX-JSON-DAG:            "%58": 36023
+# CHECK-GX-JSON-DAG:            "%62": 36024
+# CHECK-GX-JSON-DAG:            "%66": 36025
+# CHECK-GX-JSON-DAG:            "%70": 36026
 # CHECK-GX-JSON-DAG:            "%71": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9120
+# CHECK-GX-JSON-DAG:            "distance": 36120
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9120
+# CHECK-GX-JSON-DAG:            "distance": 36120
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21249,34 +21249,34 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 13
-# CHECK-GX-JSON-DAG:            "%1": 9067
-# CHECK-GX-JSON-DAG:            "%2": 9067
-# CHECK-GX-JSON-DAG:            "%3": 9068
-# CHECK-GX-JSON-DAG:            "%4": 9068
-# CHECK-GX-JSON-DAG:            "%23": 9119
-# CHECK-GX-JSON-DAG:            "%43": 9070
-# CHECK-GX-JSON-DAG:            "%44": 9056
-# CHECK-GX-JSON-DAG:            "%48": 9010
-# CHECK-GX-JSON-DAG:            "%52": 9011
-# CHECK-GX-JSON-DAG:            "%53": 9020
-# CHECK-GX-JSON-DAG:            "%57": 9021
-# CHECK-GX-JSON-DAG:            "%58": 9022
-# CHECK-GX-JSON-DAG:            "%62": 9023
-# CHECK-GX-JSON-DAG:            "%66": 9024
-# CHECK-GX-JSON-DAG:            "%70": 9025
+# CHECK-GX-JSON-DAG:            "%1": 36067
+# CHECK-GX-JSON-DAG:            "%2": 36067
+# CHECK-GX-JSON-DAG:            "%3": 36068
+# CHECK-GX-JSON-DAG:            "%4": 36068
+# CHECK-GX-JSON-DAG:            "%23": 36119
+# CHECK-GX-JSON-DAG:            "%43": 36070
+# CHECK-GX-JSON-DAG:            "%44": 36056
+# CHECK-GX-JSON-DAG:            "%48": 36010
+# CHECK-GX-JSON-DAG:            "%52": 36011
+# CHECK-GX-JSON-DAG:            "%53": 36020
+# CHECK-GX-JSON-DAG:            "%57": 36021
+# CHECK-GX-JSON-DAG:            "%58": 36022
+# CHECK-GX-JSON-DAG:            "%62": 36023
+# CHECK-GX-JSON-DAG:            "%66": 36024
+# CHECK-GX-JSON-DAG:            "%70": 36025
 # CHECK-GX-JSON-DAG:            "%72": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9119
+# CHECK-GX-JSON-DAG:            "distance": 36119
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9119
+# CHECK-GX-JSON-DAG:            "distance": 36119
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21286,34 +21286,34 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 12
-# CHECK-GX-JSON-DAG:            "%1": 9066
-# CHECK-GX-JSON-DAG:            "%2": 9066
-# CHECK-GX-JSON-DAG:            "%3": 9067
-# CHECK-GX-JSON-DAG:            "%4": 9067
-# CHECK-GX-JSON-DAG:            "%23": 9118
-# CHECK-GX-JSON-DAG:            "%43": 9069
-# CHECK-GX-JSON-DAG:            "%44": 9055
-# CHECK-GX-JSON-DAG:            "%48": 9009
-# CHECK-GX-JSON-DAG:            "%52": 9010
-# CHECK-GX-JSON-DAG:            "%53": 9019
-# CHECK-GX-JSON-DAG:            "%57": 9020
-# CHECK-GX-JSON-DAG:            "%58": 9021
-# CHECK-GX-JSON-DAG:            "%62": 9022
-# CHECK-GX-JSON-DAG:            "%66": 9023
-# CHECK-GX-JSON-DAG:            "%70": 9024
+# CHECK-GX-JSON-DAG:            "%1": 36066
+# CHECK-GX-JSON-DAG:            "%2": 36066
+# CHECK-GX-JSON-DAG:            "%3": 36067
+# CHECK-GX-JSON-DAG:            "%4": 36067
+# CHECK-GX-JSON-DAG:            "%23": 36118
+# CHECK-GX-JSON-DAG:            "%43": 36069
+# CHECK-GX-JSON-DAG:            "%44": 36055
+# CHECK-GX-JSON-DAG:            "%48": 36009
+# CHECK-GX-JSON-DAG:            "%52": 36010
+# CHECK-GX-JSON-DAG:            "%53": 36019
+# CHECK-GX-JSON-DAG:            "%57": 36020
+# CHECK-GX-JSON-DAG:            "%58": 36021
+# CHECK-GX-JSON-DAG:            "%62": 36022
+# CHECK-GX-JSON-DAG:            "%66": 36023
+# CHECK-GX-JSON-DAG:            "%70": 36024
 # CHECK-GX-JSON-DAG:            "%73": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9118
+# CHECK-GX-JSON-DAG:            "distance": 36118
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9118
+# CHECK-GX-JSON-DAG:            "distance": 36118
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21323,34 +21323,34 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 11
-# CHECK-GX-JSON-DAG:            "%1": 9065
-# CHECK-GX-JSON-DAG:            "%2": 9065
-# CHECK-GX-JSON-DAG:            "%3": 9066
-# CHECK-GX-JSON-DAG:            "%4": 9066
-# CHECK-GX-JSON-DAG:            "%23": 9117
-# CHECK-GX-JSON-DAG:            "%43": 9068
-# CHECK-GX-JSON-DAG:            "%44": 9054
-# CHECK-GX-JSON-DAG:            "%48": 9008
-# CHECK-GX-JSON-DAG:            "%52": 9009
-# CHECK-GX-JSON-DAG:            "%53": 9018
-# CHECK-GX-JSON-DAG:            "%57": 9019
-# CHECK-GX-JSON-DAG:            "%58": 9020
-# CHECK-GX-JSON-DAG:            "%62": 9021
-# CHECK-GX-JSON-DAG:            "%66": 9022
-# CHECK-GX-JSON-DAG:            "%70": 9023
-# CHECK-GX-JSON-DAG:            "%74": 9024
+# CHECK-GX-JSON-DAG:            "%1": 36065
+# CHECK-GX-JSON-DAG:            "%2": 36065
+# CHECK-GX-JSON-DAG:            "%3": 36066
+# CHECK-GX-JSON-DAG:            "%4": 36066
+# CHECK-GX-JSON-DAG:            "%23": 36117
+# CHECK-GX-JSON-DAG:            "%43": 36068
+# CHECK-GX-JSON-DAG:            "%44": 36054
+# CHECK-GX-JSON-DAG:            "%48": 36008
+# CHECK-GX-JSON-DAG:            "%52": 36009
+# CHECK-GX-JSON-DAG:            "%53": 36018
+# CHECK-GX-JSON-DAG:            "%57": 36019
+# CHECK-GX-JSON-DAG:            "%58": 36020
+# CHECK-GX-JSON-DAG:            "%62": 36021
+# CHECK-GX-JSON-DAG:            "%66": 36022
+# CHECK-GX-JSON-DAG:            "%70": 36023
+# CHECK-GX-JSON-DAG:            "%74": 36024
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9117
+# CHECK-GX-JSON-DAG:            "distance": 36117
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9117
+# CHECK-GX-JSON-DAG:            "distance": 36117
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21360,35 +21360,35 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 10
-# CHECK-GX-JSON-DAG:            "%1": 9064
-# CHECK-GX-JSON-DAG:            "%2": 9064
-# CHECK-GX-JSON-DAG:            "%3": 9065
-# CHECK-GX-JSON-DAG:            "%4": 9065
-# CHECK-GX-JSON-DAG:            "%23": 9116
-# CHECK-GX-JSON-DAG:            "%43": 9067
-# CHECK-GX-JSON-DAG:            "%44": 9053
-# CHECK-GX-JSON-DAG:            "%48": 9007
-# CHECK-GX-JSON-DAG:            "%52": 9008
-# CHECK-GX-JSON-DAG:            "%53": 9017
-# CHECK-GX-JSON-DAG:            "%57": 9018
-# CHECK-GX-JSON-DAG:            "%58": 9019
-# CHECK-GX-JSON-DAG:            "%62": 9020
-# CHECK-GX-JSON-DAG:            "%66": 9021
-# CHECK-GX-JSON-DAG:            "%70": 9022
-# CHECK-GX-JSON-DAG:            "%74": 9023
+# CHECK-GX-JSON-DAG:            "%1": 36064
+# CHECK-GX-JSON-DAG:            "%2": 36064
+# CHECK-GX-JSON-DAG:            "%3": 36065
+# CHECK-GX-JSON-DAG:            "%4": 36065
+# CHECK-GX-JSON-DAG:            "%23": 36116
+# CHECK-GX-JSON-DAG:            "%43": 36067
+# CHECK-GX-JSON-DAG:            "%44": 36053
+# CHECK-GX-JSON-DAG:            "%48": 36007
+# CHECK-GX-JSON-DAG:            "%52": 36008
+# CHECK-GX-JSON-DAG:            "%53": 36017
+# CHECK-GX-JSON-DAG:            "%57": 36018
+# CHECK-GX-JSON-DAG:            "%58": 36019
+# CHECK-GX-JSON-DAG:            "%62": 36020
+# CHECK-GX-JSON-DAG:            "%66": 36021
+# CHECK-GX-JSON-DAG:            "%70": 36022
+# CHECK-GX-JSON-DAG:            "%74": 36023
 # CHECK-GX-JSON-DAG:            "%75": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9116
+# CHECK-GX-JSON-DAG:            "distance": 36116
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9116
+# CHECK-GX-JSON-DAG:            "distance": 36116
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21398,35 +21398,35 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 9
-# CHECK-GX-JSON-DAG:            "%1": 9063
-# CHECK-GX-JSON-DAG:            "%2": 9063
-# CHECK-GX-JSON-DAG:            "%3": 9064
-# CHECK-GX-JSON-DAG:            "%4": 9064
-# CHECK-GX-JSON-DAG:            "%23": 9115
-# CHECK-GX-JSON-DAG:            "%43": 9066
-# CHECK-GX-JSON-DAG:            "%44": 9052
-# CHECK-GX-JSON-DAG:            "%48": 9006
-# CHECK-GX-JSON-DAG:            "%52": 9007
-# CHECK-GX-JSON-DAG:            "%53": 9016
-# CHECK-GX-JSON-DAG:            "%57": 9017
-# CHECK-GX-JSON-DAG:            "%58": 9018
-# CHECK-GX-JSON-DAG:            "%62": 9019
-# CHECK-GX-JSON-DAG:            "%66": 9020
-# CHECK-GX-JSON-DAG:            "%70": 9021
-# CHECK-GX-JSON-DAG:            "%74": 9022
+# CHECK-GX-JSON-DAG:            "%1": 36063
+# CHECK-GX-JSON-DAG:            "%2": 36063
+# CHECK-GX-JSON-DAG:            "%3": 36064
+# CHECK-GX-JSON-DAG:            "%4": 36064
+# CHECK-GX-JSON-DAG:            "%23": 36115
+# CHECK-GX-JSON-DAG:            "%43": 36066
+# CHECK-GX-JSON-DAG:            "%44": 36052
+# CHECK-GX-JSON-DAG:            "%48": 36006
+# CHECK-GX-JSON-DAG:            "%52": 36007
+# CHECK-GX-JSON-DAG:            "%53": 36016
+# CHECK-GX-JSON-DAG:            "%57": 36017
+# CHECK-GX-JSON-DAG:            "%58": 36018
+# CHECK-GX-JSON-DAG:            "%62": 36019
+# CHECK-GX-JSON-DAG:            "%66": 36020
+# CHECK-GX-JSON-DAG:            "%70": 36021
+# CHECK-GX-JSON-DAG:            "%74": 36022
 # CHECK-GX-JSON-DAG:            "%76": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9115
+# CHECK-GX-JSON-DAG:            "distance": 36115
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9115
+# CHECK-GX-JSON-DAG:            "distance": 36115
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21436,35 +21436,35 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 8
-# CHECK-GX-JSON-DAG:            "%1": 9062
-# CHECK-GX-JSON-DAG:            "%2": 9062
-# CHECK-GX-JSON-DAG:            "%3": 9063
-# CHECK-GX-JSON-DAG:            "%4": 9063
-# CHECK-GX-JSON-DAG:            "%23": 9114
-# CHECK-GX-JSON-DAG:            "%43": 9065
-# CHECK-GX-JSON-DAG:            "%44": 9051
-# CHECK-GX-JSON-DAG:            "%48": 9005
-# CHECK-GX-JSON-DAG:            "%52": 9006
-# CHECK-GX-JSON-DAG:            "%53": 9015
-# CHECK-GX-JSON-DAG:            "%57": 9016
-# CHECK-GX-JSON-DAG:            "%58": 9017
-# CHECK-GX-JSON-DAG:            "%62": 9018
-# CHECK-GX-JSON-DAG:            "%66": 9019
-# CHECK-GX-JSON-DAG:            "%70": 9020
-# CHECK-GX-JSON-DAG:            "%74": 9021
+# CHECK-GX-JSON-DAG:            "%1": 36062
+# CHECK-GX-JSON-DAG:            "%2": 36062
+# CHECK-GX-JSON-DAG:            "%3": 36063
+# CHECK-GX-JSON-DAG:            "%4": 36063
+# CHECK-GX-JSON-DAG:            "%23": 36114
+# CHECK-GX-JSON-DAG:            "%43": 36065
+# CHECK-GX-JSON-DAG:            "%44": 36051
+# CHECK-GX-JSON-DAG:            "%48": 36005
+# CHECK-GX-JSON-DAG:            "%52": 36006
+# CHECK-GX-JSON-DAG:            "%53": 36015
+# CHECK-GX-JSON-DAG:            "%57": 36016
+# CHECK-GX-JSON-DAG:            "%58": 36017
+# CHECK-GX-JSON-DAG:            "%62": 36018
+# CHECK-GX-JSON-DAG:            "%66": 36019
+# CHECK-GX-JSON-DAG:            "%70": 36020
+# CHECK-GX-JSON-DAG:            "%74": 36021
 # CHECK-GX-JSON-DAG:            "%77": 0
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9114
+# CHECK-GX-JSON-DAG:            "distance": 36114
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9114
+# CHECK-GX-JSON-DAG:            "distance": 36114
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21474,35 +21474,35 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 7
-# CHECK-GX-JSON-DAG:            "%1": 9061
-# CHECK-GX-JSON-DAG:            "%2": 9061
-# CHECK-GX-JSON-DAG:            "%3": 9062
-# CHECK-GX-JSON-DAG:            "%4": 9062
-# CHECK-GX-JSON-DAG:            "%23": 9113
-# CHECK-GX-JSON-DAG:            "%43": 9064
-# CHECK-GX-JSON-DAG:            "%44": 9050
-# CHECK-GX-JSON-DAG:            "%48": 9004
-# CHECK-GX-JSON-DAG:            "%52": 9005
-# CHECK-GX-JSON-DAG:            "%53": 9014
-# CHECK-GX-JSON-DAG:            "%57": 9015
-# CHECK-GX-JSON-DAG:            "%58": 9016
-# CHECK-GX-JSON-DAG:            "%62": 9017
-# CHECK-GX-JSON-DAG:            "%66": 9018
-# CHECK-GX-JSON-DAG:            "%70": 9019
-# CHECK-GX-JSON-DAG:            "%74": 9020
-# CHECK-GX-JSON-DAG:            "%78": 9021
+# CHECK-GX-JSON-DAG:            "%1": 36061
+# CHECK-GX-JSON-DAG:            "%2": 36061
+# CHECK-GX-JSON-DAG:            "%3": 36062
+# CHECK-GX-JSON-DAG:            "%4": 36062
+# CHECK-GX-JSON-DAG:            "%23": 36113
+# CHECK-GX-JSON-DAG:            "%43": 36064
+# CHECK-GX-JSON-DAG:            "%44": 36050
+# CHECK-GX-JSON-DAG:            "%48": 36004
+# CHECK-GX-JSON-DAG:            "%52": 36005
+# CHECK-GX-JSON-DAG:            "%53": 36014
+# CHECK-GX-JSON-DAG:            "%57": 36015
+# CHECK-GX-JSON-DAG:            "%58": 36016
+# CHECK-GX-JSON-DAG:            "%62": 36017
+# CHECK-GX-JSON-DAG:            "%66": 36018
+# CHECK-GX-JSON-DAG:            "%70": 36019
+# CHECK-GX-JSON-DAG:            "%74": 36020
+# CHECK-GX-JSON-DAG:            "%78": 36021
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9113
+# CHECK-GX-JSON-DAG:            "distance": 36113
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9113
+# CHECK-GX-JSON-DAG:            "distance": 36113
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21512,36 +21512,36 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 6
-# CHECK-GX-JSON-DAG:            "%1": 9060
-# CHECK-GX-JSON-DAG:            "%2": 9060
-# CHECK-GX-JSON-DAG:            "%3": 9061
-# CHECK-GX-JSON-DAG:            "%4": 9061
-# CHECK-GX-JSON-DAG:            "%23": 9112
-# CHECK-GX-JSON-DAG:            "%43": 9063
-# CHECK-GX-JSON-DAG:            "%44": 9049
-# CHECK-GX-JSON-DAG:            "%48": 9003
-# CHECK-GX-JSON-DAG:            "%52": 9004
-# CHECK-GX-JSON-DAG:            "%53": 9013
-# CHECK-GX-JSON-DAG:            "%57": 9014
-# CHECK-GX-JSON-DAG:            "%58": 9015
-# CHECK-GX-JSON-DAG:            "%62": 9016
-# CHECK-GX-JSON-DAG:            "%66": 9017
-# CHECK-GX-JSON-DAG:            "%70": 9018
-# CHECK-GX-JSON-DAG:            "%74": 9019
-# CHECK-GX-JSON-DAG:            "%78": 9020
+# CHECK-GX-JSON-DAG:            "%1": 36060
+# CHECK-GX-JSON-DAG:            "%2": 36060
+# CHECK-GX-JSON-DAG:            "%3": 36061
+# CHECK-GX-JSON-DAG:            "%4": 36061
+# CHECK-GX-JSON-DAG:            "%23": 36112
+# CHECK-GX-JSON-DAG:            "%43": 36063
+# CHECK-GX-JSON-DAG:            "%44": 36049
+# CHECK-GX-JSON-DAG:            "%48": 36003
+# CHECK-GX-JSON-DAG:            "%52": 36004
+# CHECK-GX-JSON-DAG:            "%53": 36013
+# CHECK-GX-JSON-DAG:            "%57": 36014
+# CHECK-GX-JSON-DAG:            "%58": 36015
+# CHECK-GX-JSON-DAG:            "%62": 36016
+# CHECK-GX-JSON-DAG:            "%66": 36017
+# CHECK-GX-JSON-DAG:            "%70": 36018
+# CHECK-GX-JSON-DAG:            "%74": 36019
+# CHECK-GX-JSON-DAG:            "%78": 36020
 # CHECK-GX-JSON-DAG:            "%79": 3
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9112
+# CHECK-GX-JSON-DAG:            "distance": 36112
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9112
+# CHECK-GX-JSON-DAG:            "distance": 36112
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -21551,23 +21551,23 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 5
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
 # CHECK-GX-JSON-DAG:            "%79": 2
 # CHECK-GX-JSON-DAG:            "%80": 1
 # CHECK-GX-JSON:          },
@@ -21575,13 +21575,13 @@ body:             |
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ],
@@ -35197,35 +35197,35 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 4
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -35235,36 +35235,36 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 3
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
 # CHECK-GX-JSON-DAG:            "%357": 4
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -35274,23 +35274,23 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 2
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
 # CHECK-GX-JSON-DAG:            "%357": 3
 # CHECK-GX-JSON-DAG:            "%359": 0
 # CHECK-GX-JSON:          },
@@ -35298,13 +35298,13 @@ body:             |
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -35314,23 +35314,23 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 1
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
 # CHECK-GX-JSON-DAG:            "%357": 2
 # CHECK-GX-JSON-DAG:            "%359": 0
 # CHECK-GX-JSON-DAG:            "%360": 3
@@ -35339,13 +35339,13 @@ body:             |
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -35355,23 +35355,23 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
 # CHECK-GX-JSON-DAG:            "%0": 0
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
 # CHECK-GX-JSON-DAG:            "%357": 1
 # CHECK-GX-JSON-DAG:            "%360": 2
 # CHECK-GX-JSON-DAG:            "%361": 0
@@ -35380,13 +35380,13 @@ body:             |
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -35395,23 +35395,23 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
 # CHECK-GX-JSON-DAG:            "%357": 0
 # CHECK-GX-JSON-DAG:            "%360": 1
 # CHECK-GX-JSON-DAG:            "%362": 0
@@ -35420,13 +35420,13 @@ body:             |
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -35435,23 +35435,23 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
 # CHECK-GX-JSON-DAG:            "%358": 1
 # CHECK-GX-JSON-DAG:            "%360": 0
 # CHECK-GX-JSON:          },
@@ -35459,13 +35459,13 @@ body:             |
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -35474,37 +35474,37 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
 # CHECK-GX-JSON-DAG:            "%358": 0
-# CHECK-GX-JSON-DAG:            "%363": 9002
+# CHECK-GX-JSON-DAG:            "%363": 36002
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
@@ -35513,37 +35513,37 @@ body:             |
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "distances": {
-# CHECK-GX-JSON-DAG:            "%1": 9059
-# CHECK-GX-JSON-DAG:            "%2": 9059
-# CHECK-GX-JSON-DAG:            "%3": 9060
-# CHECK-GX-JSON-DAG:            "%4": 9060
-# CHECK-GX-JSON-DAG:            "%23": 9111
-# CHECK-GX-JSON-DAG:            "%43": 9062
-# CHECK-GX-JSON-DAG:            "%44": 9048
-# CHECK-GX-JSON-DAG:            "%48": 9002
-# CHECK-GX-JSON-DAG:            "%52": 9003
-# CHECK-GX-JSON-DAG:            "%53": 9012
-# CHECK-GX-JSON-DAG:            "%57": 9013
-# CHECK-GX-JSON-DAG:            "%58": 9014
-# CHECK-GX-JSON-DAG:            "%62": 9015
-# CHECK-GX-JSON-DAG:            "%66": 9016
-# CHECK-GX-JSON-DAG:            "%70": 9017
-# CHECK-GX-JSON-DAG:            "%74": 9018
-# CHECK-GX-JSON-DAG:            "%78": 9019
-# CHECK-GX-JSON-DAG:            "%358": 9001
-# CHECK-GX-JSON-DAG:            "%363": 9002
+# CHECK-GX-JSON-DAG:            "%1": 36059
+# CHECK-GX-JSON-DAG:            "%2": 36059
+# CHECK-GX-JSON-DAG:            "%3": 36060
+# CHECK-GX-JSON-DAG:            "%4": 36060
+# CHECK-GX-JSON-DAG:            "%23": 36111
+# CHECK-GX-JSON-DAG:            "%43": 36062
+# CHECK-GX-JSON-DAG:            "%44": 36048
+# CHECK-GX-JSON-DAG:            "%48": 36002
+# CHECK-GX-JSON-DAG:            "%52": 36003
+# CHECK-GX-JSON-DAG:            "%53": 36012
+# CHECK-GX-JSON-DAG:            "%57": 36013
+# CHECK-GX-JSON-DAG:            "%58": 36014
+# CHECK-GX-JSON-DAG:            "%62": 36015
+# CHECK-GX-JSON-DAG:            "%66": 36016
+# CHECK-GX-JSON-DAG:            "%70": 36017
+# CHECK-GX-JSON-DAG:            "%74": 36018
+# CHECK-GX-JSON-DAG:            "%78": 36019
+# CHECK-GX-JSON-DAG:            "%358": 36001
+# CHECK-GX-JSON-DAG:            "%363": 36002
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          },
 # CHECK-GX-JSON-NEXT:          "furthest-subreg": {
 # CHECK-GX-JSON-DAG:            "register": "%23",
 # CHECK-GX-JSON-DAG:            "use": "{{[^"]+}}",
 # CHECK-GX-JSON-DAG:            "use-mi": "{{[^"]+}}",
-# CHECK-GX-JSON-DAG:            "distance": 9111
+# CHECK-GX-JSON-DAG:            "distance": 36111
 # CHECK-GX-JSON:          }
 # CHECK-GX-JSON-NEXT:        }
 # CHECK-GX-JSON-NEXT:      ],
@@ -36493,7 +36493,7 @@ body:             |
 # CHECK-GX-JSON:  "paths": [
 # CHECK-GX-JSON:  ]
 # CHECK-GX-JSON-NEXT:  },
-# CHECK-GX-JSON-DAG:  "time.amdgpu-next-use-analysis-json.total.wall": {{[0-9.e+-]+}},
-# CHECK-GX-JSON-DAG:  "time.amdgpu-next-use-analysis-json.total.user": {{[0-9.e+-]+}},
-# CHECK-GX-JSON-DAG:  "time.amdgpu-next-use-analysis-json.total.sys": {{[0-9.e+-]+}}
+# CHECK-GX-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.wall": {{[0-9.e+-]+}},
+# CHECK-GX-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.user": {{[0-9.e+-]+}},
+# CHECK-GX-JSON-DAG:  "time.amdgpu-next-use-analysis-json.json.sys": {{[0-9.e+-]+}}
 # CHECK-GX-JSON:}
