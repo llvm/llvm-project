@@ -152,7 +152,8 @@ public:
   /// Test if the pointer held in the union is null, regardless of
   /// which type it is.
   bool isNull() const {
-    return (static_cast<uintptr_t>(this->Val.asInt()) >> numLowBitsAvailable()) == 0;
+    return (static_cast<uintptr_t>(this->Val.asInt()) >>
+            numLowBitsAvailable()) == 0;
   }
 
   explicit operator bool() const { return !isNull(); }
