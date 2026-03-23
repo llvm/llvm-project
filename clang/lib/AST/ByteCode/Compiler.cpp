@@ -1344,12 +1344,12 @@ bool Compiler<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
 
     if (!this->visitBool(LHS))
       return false;
-    if (!this->jumpTrue(LabelTrue))
+    if (!this->jumpTrue(LabelTrue, E))
       return false;
 
     if (!this->visitBool(RHS))
       return false;
-    if (!this->jump(LabelEnd))
+    if (!this->jump(LabelEnd, E))
       return false;
 
     this->emitLabel(LabelTrue);
@@ -1366,12 +1366,12 @@ bool Compiler<Emitter>::VisitLogicalBinOp(const BinaryOperator *E) {
 
     if (!this->visitBool(LHS))
       return false;
-    if (!this->jumpFalse(LabelFalse))
+    if (!this->jumpFalse(LabelFalse, E))
       return false;
 
     if (!this->visitBool(RHS))
       return false;
-    if (!this->jump(LabelEnd))
+    if (!this->jump(LabelEnd, E))
       return false;
 
     this->emitLabel(LabelFalse);
@@ -2836,12 +2836,12 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     return false;
   }
 
-  if (!this->jumpFalse(LabelFalse))
+  if (!this->jumpFalse(LabelFalse, E))
     return false;
   if (!this->delegate(TrueExpr))
     return false;
 
-  if (!this->jump(LabelEnd))
+  if (!this->jump(LabelEnd, E))
     return false;
   this->emitLabel(LabelFalse);
   if (!this->delegate(FalseExpr))
@@ -4031,7 +4031,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
             return false;
           if (!this->emitEQPtr(E))
             return false;
-          if (!this->jumpTrue(EndLabel))
+          if (!this->jumpTrue(EndLabel, E))
             return false;
         }
 
@@ -4052,7 +4052,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
           return false;
         if (!this->emitLT(SizeT, E))
           return false;
-        if (!this->jumpFalse(EndLabel))
+        if (!this->jumpFalse(EndLabel, E))
           return false;
 
         // Pointer to the allocated array is already on the stack.
@@ -4101,7 +4101,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (!this->emitIncPop(SizeT, false, E))
           return false;
 
-        if (!this->jump(StartLabel))
+        if (!this->jump(StartLabel, E))
           return false;
 
         this->fallthrough(EndLabel);
@@ -6080,11 +6080,11 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();
     LabelTy LabelEnd = this->getLabel();
-    if (!this->jumpFalse(LabelElse))
+    if (!this->jumpFalse(LabelElse, IS))
       return false;
     if (!visitChildStmt(IS->getThen()))
       return false;
-    if (!this->jump(LabelEnd))
+    if (!this->jump(LabelEnd, IS))
       return false;
     this->emitLabel(LabelElse);
     if (!visitChildStmt(Else))
@@ -6092,7 +6092,7 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     this->emitLabel(LabelEnd);
   } else {
     LabelTy LabelEnd = this->getLabel();
-    if (!this->jumpFalse(LabelEnd))
+    if (!this->jumpFalse(LabelEnd, IS))
       return false;
     if (!visitChildStmt(IS->getThen()))
       return false;
@@ -6132,7 +6132,7 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
     if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
       return false;
 
-    if (!this->jumpFalse(EndLabel))
+    if (!this->jumpFalse(EndLabel, S))
       return false;
 
     if (!this->visitStmt(Body))
@@ -6142,7 +6142,7 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
       return false;
     // } End of loop body.
 
-    if (!this->jump(CondLabel))
+    if (!this->jump(CondLabel, S))
       return false;
     this->fallthrough(EndLabel);
     this->emitLabel(EndLabel);
@@ -6175,7 +6175,7 @@ template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
     if (!CondScope.destroyLocals())
       return false;
   }
-  if (!this->jumpTrue(StartLabel))
+  if (!this->jumpTrue(StartLabel, S))
     return false;
 
   this->fallthrough(EndLabel);
@@ -6213,7 +6213,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
   if (Cond) {
     if (!this->visitBool(Cond))
       return false;
-    if (!this->jumpFalse(EndLabel))
+    if (!this->jumpFalse(EndLabel, S))
       return false;
   }
   if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
@@ -6229,7 +6229,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
 
   if (!CondScope.destroyLocals())
     return false;
-  if (!this->jump(CondLabel))
+  if (!this->jump(CondLabel, S))
     return false;
   // } End of loop body.
 
@@ -6270,7 +6270,7 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
   this->emitLabel(CondLabel);
   if (!this->visitBool(Cond))
     return false;
-  if (!this->jumpFalse(EndLabel))
+  if (!this->jumpFalse(EndLabel, S))
     return false;
 
   if (!this->visitDeclStmt(S->getLoopVarStmt(), /*EvaluateConditionDecl=*/true))
@@ -6287,7 +6287,7 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
       return false;
   }
 
-  if (!this->jump(CondLabel))
+  if (!this->jump(CondLabel, S))
     return false;
 
   this->fallthrough(EndLabel);
@@ -6332,7 +6332,7 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       return false;
   }
 
-  return this->jump(*TargetLabel);
+  return this->jump(*TargetLabel, S);
 }
 
 template <class Emitter>
@@ -6369,7 +6369,7 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       return false;
   }
 
-  return this->jump(*TargetLabel);
+  return this->jump(*TargetLabel, S);
 }
 
 template <class Emitter>
@@ -6424,7 +6424,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
         PrimType LT = this->classifyPrim(Low->getType());
         if (!this->emitGE(LT, S))
           return false;
-        if (!this->jumpFalse(EndOfRangeCheck))
+        if (!this->jumpFalse(EndOfRangeCheck, S))
           return false;
 
         if (!this->emitGetLocal(CondT, CondVar, CS))
@@ -6434,7 +6434,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
         PrimType HT = this->classifyPrim(High->getType());
         if (!this->emitLE(HT, S))
           return false;
-        if (!this->jumpTrue(CaseLabels[CS]))
+        if (!this->jumpTrue(CaseLabels[CS], S))
           return false;
         this->emitLabel(EndOfRangeCheck);
         continue;
@@ -6454,7 +6454,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
       // Compare and jump to the case label.
       if (!this->emitEQ(ValueT, S))
         return false;
-      if (!this->jumpTrue(CaseLabels[CS]))
+      if (!this->jumpTrue(CaseLabels[CS], S))
         return false;
     } else {
       assert(!DefaultLabel);
@@ -6465,10 +6465,10 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
   // If none of the conditions above were true, fall through to the default
   // statement or jump after the switch statement.
   if (DefaultLabel) {
-    if (!this->jump(*DefaultLabel))
+    if (!this->jump(*DefaultLabel, S))
       return false;
   } else {
-    if (!this->jump(EndLabel))
+    if (!this->jump(EndLabel, S))
       return false;
   }
 
@@ -7701,7 +7701,7 @@ bool Compiler<Emitter>::emitComplexBoolCast(const Expr *E) {
 
   // We now have the bool value of E[0] on the stack.
   LabelTy LabelTrue = this->getLabel();
-  if (!this->jumpTrue(LabelTrue))
+  if (!this->jumpTrue(LabelTrue, E))
     return false;
 
   if (!this->emitArrayElemPop(ElemT, 1, E))
@@ -7715,7 +7715,7 @@ bool Compiler<Emitter>::emitComplexBoolCast(const Expr *E) {
   }
   // Leave the boolean value of E[1] on the stack.
   LabelTy EndLabel = this->getLabel();
-  this->jump(EndLabel);
+  this->jump(EndLabel, E);
 
   this->emitLabel(LabelTrue);
   if (!this->emitPopPtr(E))
