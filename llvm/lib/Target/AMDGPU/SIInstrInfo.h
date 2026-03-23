@@ -1491,6 +1491,13 @@ public:
   bool moveFlatAddrToVGPR(MachineInstr &Inst) const;
 
   /// Fix operands in Inst to fix 16bit SALU to VALU lowering.
+  Register insertRegSeqAfterSALUt16(MachineInstr &oldInst, MachineInstr &Inst,
+                                    MachineRegisterInfo &MRI) const;
+  void legalizeOperandRegClasst16(MachineInstr &Inst, unsigned OpIdx,
+                                  const TargetRegisterClass *CurrRC,
+                                  const TargetRegisterClass *ExpectedRC,
+                                  MachineRegisterInfo &MRI) const;
+  void legalizeCOPYt16(MachineInstr &Inst, MachineRegisterInfo &MRI) const;
   void legalizeOperandsVALUt16(MachineInstr &Inst,
                                MachineRegisterInfo &MRI) const;
   void legalizeOperandsVALUt16(MachineInstr &Inst, unsigned OpIdx,
