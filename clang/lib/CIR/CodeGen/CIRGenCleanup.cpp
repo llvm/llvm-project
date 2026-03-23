@@ -542,3 +542,29 @@ void CIRGenFunction::popCleanupBlocks(
     }
   }
 }
+
+/// Pops cleanup blocks until the given savepoint is reached, then add the
+/// cleanups from the given savepoint in the lifetime-extended cleanups stack.
+void CIRGenFunction::popCleanupBlocks(
+    EHScopeStack::stable_iterator oldCleanupStackDepth,
+    size_t oldLifetimeExtendedSize, ArrayRef<mlir::Value *> valuesToReload) {
+  popCleanupBlocks(oldCleanupStackDepth, valuesToReload);
+
+  // Move our deferred cleanups onto the EH stack.
+  for (size_t i = oldLifetimeExtendedSize,
+              e = lifetimeExtendedCleanupStack.size();
+       i != e;) {
+    assert((i % alignof(LifetimeExtendedCleanupHeader) == 0) &&
+           "misaligned cleanup stack entry");
+
+    LifetimeExtendedCleanupHeader &header =
+        reinterpret_cast<LifetimeExtendedCleanupHeader &>(
+            lifetimeExtendedCleanupStack[i]);
+    i += sizeof(header);
+
+    ehStack.pushCopyOfCleanup(
+        header.getKind(), &lifetimeExtendedCleanupStack[i], header.getSize());
+    i += header.getSize();
+  }
+  lifetimeExtendedCleanupStack.resize(oldLifetimeExtendedSize);
+}

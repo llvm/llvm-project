@@ -91,6 +91,19 @@ public:
 
   /// Tracks function scope overall cleanup handling.
   EHScopeStack ehStack;
+  llvm::SmallVector<char, 256> lifetimeExtendedCleanupStack;
+
+  /// Header for data within LifetimeExtendedCleanupStack.
+  struct alignas(uint64_t) LifetimeExtendedCleanupHeader {
+    unsigned size;
+    LLVM_PREFERRED_TYPE(CleanupKind)
+    unsigned kind : 31;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned isConditional : 1;
+
+    size_t getSize() const { return size; }
+    CleanupKind getKind() const { return static_cast<CleanupKind>(kind); }
+  };
 
   GlobalDecl curSEHParent;
 
@@ -970,6 +983,12 @@ public:
   /// that have been added.
   void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
                         ArrayRef<mlir::Value *> valuesToReload = {});
+
+  /// Pops cleanup blocks until the given savepoint is reached, then adds the
+  /// cleanups from the given savepoint in the lifetime-extended cleanups stack.
+  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
+                        size_t oldLifetimeExtendedSize,
+                        ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock();
 
   void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
@@ -997,10 +1016,37 @@ public:
     cgm.errorNYI("pushFullExprCleanup in conditional branch");
   }
 
+  /// Queue a cleanup to be pushed after finishing the current full-expression.
+  /// This serializes the cleanup into a byte buffer
+  /// (lifetimeExtendedCleanupStack) so that popCleanupBlocks can later copy it
+  /// onto the EH scope stack for the enclosing scope. This approach is modeled
+  /// after classic codegen's pushCleanupAfterFullExprWithActiveFlag. The
+  /// byte-buffer serialization looks low-level, but it is needed because
+  /// multiple unrelated cleanup types (DestroyObject, CallLifetimeEnd,
+  /// CallObjCArcUse in classic codegen) all flow through this path, and the
+  /// polymorphic Cleanup objects are POD-like by contract, making the
+  /// serialization safe.
+  template <class T, class... As>
+  void pushCleanupAfterFullExprWithActiveFlag(CleanupKind kind, As... a) {
+    LifetimeExtendedCleanupHeader header = {sizeof(T), kind,
+                                            /*isConditional=*/false};
+
+    size_t oldSize = lifetimeExtendedCleanupStack.size();
+    lifetimeExtendedCleanupStack.resize(oldSize + sizeof(header) +
+                                        header.getSize());
+
+    static_assert(alignof(LifetimeExtendedCleanupHeader) == alignof(T),
+                  "Cleanup will be allocated on misaligned address");
+    char *buffer = &lifetimeExtendedCleanupStack[oldSize];
+    new (buffer) LifetimeExtendedCleanupHeader(header);
+    new (buffer + sizeof(header)) T(a...);
+  }
+
   /// Enters a new scope for capturing cleanups, all of which
   /// will be executed once the scope is exited.
   class RunCleanupsScope {
     EHScopeStack::stable_iterator cleanupStackDepth, oldCleanupStackDepth;
+    size_t lifetimeExtendedCleanupStackSize;
 
   protected:
     bool performCleanup;
@@ -1018,6 +1064,8 @@ public:
     explicit RunCleanupsScope(CIRGenFunction &cgf)
         : performCleanup(true), cgf(cgf) {
       cleanupStackDepth = cgf.ehStack.stable_begin();
+      lifetimeExtendedCleanupStackSize =
+          cgf.lifetimeExtendedCleanupStack.size();
       oldDidCallStackSave = cgf.didCallStackSave;
       cgf.didCallStackSave = false;
       oldCleanupStackDepth = cgf.currentCleanupStackDepth;
@@ -1035,7 +1083,8 @@ public:
     void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
-      cgf.popCleanupBlocks(cleanupStackDepth, valuesToReload);
+      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize,
+                           valuesToReload);
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
@@ -1256,6 +1305,10 @@ public:
 
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer);
+
+  void pushLifetimeExtendedDestroy(CleanupKind kind, Address addr,
+                                   QualType type, Destroyer *destroyer,
+                                   bool useEHCleanupForArray);
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
