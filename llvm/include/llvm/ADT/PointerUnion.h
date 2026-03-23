@@ -111,7 +111,7 @@ class PointerUnion
   // These are constexpr functions rather than static constexpr data members
   // so that alignof() on potentially incomplete types is not evaluated at
   // class-definition time.
-  static constexpr int numLowBitsAvailable() {
+  static constexpr int minLowBitsAvailable() {
     return pointer_union_detail::lowBitsAvailable<PTs...>();
   }
 
@@ -121,7 +121,7 @@ class PointerUnion
 
   /// The tag is shifted to the high end of the available low bits so that
   /// the lowest bits remain free for nesting in PointerIntPair or SmallPtrSet.
-  static constexpr int tagShift() { return numLowBitsAvailable() - tagBits(); }
+  static constexpr int tagShift() { return minLowBitsAvailable() - tagBits(); }
 
   static constexpr uintptr_t tagMask() {
     return (uintptr_t(1) << tagBits()) - 1;
@@ -153,7 +153,7 @@ public:
   /// which type it is.
   bool isNull() const {
     return (static_cast<uintptr_t>(this->Val.asInt()) >>
-            numLowBitsAvailable()) == 0;
+            minLowBitsAvailable()) == 0;
   }
 
   explicit operator bool() const { return !isNull(); }
@@ -272,6 +272,8 @@ template <typename... PTs> struct PointerLikeTypeTraits<PointerUnion<PTs...>> {
     return Union::getFromOpaqueValue(P);
   }
 
+  // The number of bits available are the min of the pointer types minus the
+  // bits needed for the discriminator.
   static constexpr int NumLowBitsAvailable = Union::tagShift();
 };
 
