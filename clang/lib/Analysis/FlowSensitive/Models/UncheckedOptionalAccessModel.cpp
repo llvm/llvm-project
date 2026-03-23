@@ -195,9 +195,8 @@ bool hasReceiverTypeDesugaringToOptional(const Expr *E) {
   if (Cast == nullptr || Cast->getCastKind() != CK_UncheckedDerivedToBase)
     return isDesugaredTypeOptionalOrPointerToOptional(E->getType());
 
-  // See if we hit an optional type in the cast path, going from derived to base
-  // (we could stop earlier, without going into the internal
-  // `std::__optional_storage_base` type).
+  // See if we hit an optional type in the cast path, going from derived
+  // to base.
   for (const CXXBaseSpecifier *Base : Cast->path()) {
     if (isDesugaredTypeOptionalOrPointerToOptional(Base->getType()))
       return true;
