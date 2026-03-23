@@ -132,6 +132,16 @@ define void @move7(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    stur w8, [x0, #3]
 ; CHECK-ALIGNED-NEXT:    str w9, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move7:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #7 // =0x7
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 7, i1 false)
   ret void
@@ -145,6 +155,16 @@ define void @move13(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    stur x8, [x0, #5]
 ; CHECK-ALIGNED-NEXT:    str x9, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move13:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #13 // =0xd
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 13, i1 false)
   ret void
@@ -158,6 +178,16 @@ define void @move15(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    stur x8, [x0, #7]
 ; CHECK-ALIGNED-NEXT:    str x9, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move15:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #15 // =0xf
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 15, i1 false)
   ret void
@@ -171,6 +201,16 @@ define void @move25(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    stur q0, [x0, #9]
 ; CHECK-ALIGNED-NEXT:    str q1, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move25:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #25 // =0x19
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 25, i1 false)
   ret void
@@ -184,6 +224,16 @@ define void @move33(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    strb w8, [x0, #32]
 ; CHECK-ALIGNED-NEXT:    stp q1, q0, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move33:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #33 // =0x21
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 33, i1 false)
   ret void
@@ -199,6 +249,16 @@ define void @move49(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    stp q2, q0, [x0, #16]
 ; CHECK-ALIGNED-NEXT:    str q1, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move49:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #49 // =0x31
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 49, i1 false)
   ret void
@@ -214,6 +274,16 @@ define void @move65(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    stp q0, q1, [x0, #32]
 ; CHECK-ALIGNED-NEXT:    stp q2, q3, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move65:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #65 // =0x41
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 65, i1 false)
   ret void
@@ -232,6 +302,16 @@ define void @move7_volatile(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    strh w9, [x0, #4]
 ; CHECK-ALIGNED-NEXT:    str w8, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move7_volatile:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #7 // =0x7
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 7, i1 true)
   ret void
@@ -247,6 +327,16 @@ define void @move13_volatile(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    str w9, [x0, #8]
 ; CHECK-ALIGNED-NEXT:    str x8, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move13_volatile:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #13 // =0xd
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 13, i1 true)
   ret void
@@ -260,6 +350,16 @@ define void @move17_volatile(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    strb w8, [x0, #16]
 ; CHECK-ALIGNED-NEXT:    str q0, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move17_volatile:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #17 // =0x11
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 17, i1 true)
   ret void
@@ -275,6 +375,16 @@ define void @move25_volatile(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    str x8, [x0, #16]
 ; CHECK-ALIGNED-NEXT:    str q0, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
+;
+; CHECK-UNALIGNED-LABEL: move25_volatile:
+; CHECK-UNALIGNED:       // %bb.0: // %entry
+; CHECK-UNALIGNED-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-UNALIGNED-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-UNALIGNED-NEXT:    .cfi_offset w30, -16
+; CHECK-UNALIGNED-NEXT:    mov w2, #25 // =0x19
+; CHECK-UNALIGNED-NEXT:    bl memmove
+; CHECK-UNALIGNED-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-UNALIGNED-NEXT:    ret
 entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 25, i1 true)
   ret void
