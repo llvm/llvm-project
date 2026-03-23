@@ -15989,6 +15989,14 @@ SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
   if (!BVN)
     return Op;
 
+  // If the non-constant operand is a vnot (XOR with all-ones), prefer the ORN
+  // register instruction over ORRi. The SIMDLogicalThreeVector ORN pattern
+  // will match (or LHS, (vnot RHS)) during instruction selection, mirroring
+  // the BIC treatment of (and LHS, (vnot RHS)).
+  if (LHS.getOpcode() == ISD::XOR &&
+      ISD::isBuildVectorAllOnes(LHS.getOperand(1).getNode()))
+    return Op;
+
   APInt DefBits(VT.getSizeInBits(), 0);
   APInt UndefBits(VT.getSizeInBits(), 0);
   if (resolveBuildVector(BVN, DefBits, UndefBits)) {

@@ -3281,7 +3281,7 @@ defm EON  : LogicalReg<0b10, 1, "eon",
                        BinOpFrag<(not (xor_like node:$LHS, node:$RHS))>>;
 defm EOR  : LogicalReg<0b10, 0, "eor", xor>;
 defm ORN  : LogicalReg<0b01, 1, "orn",
-                       BinOpFrag<(or node:$LHS, (not node:$RHS))>>;
+                       BinOpFrag<(or node:$LHS, (not node:$RHS))>, 7>;
 defm ORR  : LogicalReg<0b01, 0, "orr", or>;
 
 def : InstAlias<"mov $dst, $src",

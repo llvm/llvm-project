@@ -17,8 +17,8 @@ define i64 @and_bic(i64 %0, i64 %1) {
 define i64 @and_bic2(i32 %0, i64 %1) {
 ; CHECK-LABEL: and_bic2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    orr w8, w8, #0xffff00ff
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
+; CHECK-NEXT:    orn w8, w8, w0
 ; CHECK-NEXT:    and x0, x8, x1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -31,8 +31,8 @@ define i64 @and_bic2(i32 %0, i64 %1) {
 define i32 @and_bic3(i32 %0, i32 %1) {
 ; CHECK-LABEL: and_bic3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    orr w8, w8, #0xffff00ff
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
+; CHECK-NEXT:    orn w8, w8, w0
 ; CHECK-NEXT:    and w0, w8, w1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -56,8 +56,8 @@ define i64 @and_eon(i64 %0, i64 %1) {
 define i64 @and_eon2(i32 %0, i64 %1) {
 ; CHECK-LABEL: and_eon2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    orr w8, w8, #0xffff00ff
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
+; CHECK-NEXT:    orn w8, w8, w0
 ; CHECK-NEXT:    eor x0, x8, x1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -94,8 +94,8 @@ define i64 @and_orn(i64 %0, i64 %1) {
 define i64 @and_orn2(i32 %0, i64 %1) {
 ; CHECK-LABEL: and_orn2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    orr w8, w8, #0xffff00ff
+; CHECK-NEXT:    mov w8, #-65281 // =0xffff00ff
+; CHECK-NEXT:    orn w8, w8, w0
 ; CHECK-NEXT:    orr x0, x8, x1
 ; CHECK-NEXT:    ret
   %3 = and i32 %0, 65280
@@ -737,4 +737,76 @@ for.body:
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 256
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; ORN with a constant should use "mov + orn" like BIC does, not "mvn + orr".
+
+define i32 @orn_cst_i32(i32 %c) {
+; CHECK-LABEL: orn_cst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #4 // =0x4
+; CHECK-NEXT:    orn w0, w8, w0
+; CHECK-NEXT:    ret
+  %not = xor i32 %c, -1
+  %or  = or  i32 %not, 4
+  ret i32 %or
+}
+
+define i64 @orn_cst_i64(i64 %c) {
+; CHECK-LABEL: orn_cst_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #4 // =0x4
+; CHECK-NEXT:    orn x0, x8, x0
+; CHECK-NEXT:    ret
+  %not = xor i64 %c, -1
+  %or  = or  i64 %not, 4
+  ret i64 %or
+}
+
+; Vector BIC with constant: (and (vnot c), K) -- reference, uses movi + bic.
+
+define <2 x i32> @bic_cst_v2i32(<2 x i32> %c) {
+; CHECK-LABEL: bic_cst_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2s, #4
+; CHECK-NEXT:    bic v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    ret
+  %not = xor <2 x i32> %c, <i32 -1, i32 -1>
+  %and = and <2 x i32> %not, <i32 4, i32 4>
+  ret <2 x i32> %and
+}
+
+define <4 x i32> @bic_cst_v4i32(<4 x i32> %c) {
+; CHECK-LABEL: bic_cst_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.4s, #4
+; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %not = xor <4 x i32> %c, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %and = and <4 x i32> %not, <i32 4, i32 4, i32 4, i32 4>
+  ret <4 x i32> %and
+}
+
+; Vector ORN with constant: (or (vnot c), K) -- should use movi + orn, not not + orr.
+
+define <2 x i32> @orn_cst_v2i32(<2 x i32> %c) {
+; CHECK-LABEL: orn_cst_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2s, #4
+; CHECK-NEXT:    orn v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    ret
+  %not = xor <2 x i32> %c, <i32 -1, i32 -1>
+  %or  = or  <2 x i32> %not, <i32 4, i32 4>
+  ret <2 x i32> %or
+}
+
+define <4 x i32> @orn_cst_v4i32(<4 x i32> %c) {
+; CHECK-LABEL: orn_cst_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.4s, #4
+; CHECK-NEXT:    orn v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %not = xor <4 x i32> %c, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %or  = or  <4 x i32> %not, <i32 4, i32 4, i32 4, i32 4>
+  ret <4 x i32> %or
 }
