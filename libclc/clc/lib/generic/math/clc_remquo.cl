@@ -27,10 +27,37 @@
 #include "clc/relational/clc_isnan.h"
 #include "clc/relational/clc_signbit.h"
 
+#define __CLC_FUNCTION __clc_remquo_stret
+#define __CLC_BODY "clc_remquo_stret.inc"
+#include "clc/math/gentype.inc"
+#undef __CLC_FUNCTION
+
+#define __CLC_FUNCTION __clc_remquo
 #define __CLC_BODY "clc_remquo.inc"
 #include "clc/math/gentype.inc"
 
-#define __CLC_FUNCTION __clc_remquo
 #define __CLC_OUT_ARG3_SCALAR_TYPE int
+#define __CLC_OUT_ARG3_ADDRESS_SPACE __private
 #define __CLC_BODY "clc/shared/binary_with_out_arg_scalarize.inc"
 #include "clc/math/gentype.inc"
+#undef __CLC_OUT_ARG3_ADDRESS_SPACE
+
+#define __CLC_OUT_ARG3_SCALAR_TYPE int
+#define __CLC_OUT_ARG3_ADDRESS_SPACE __local
+#define __CLC_BODY "clc/shared/binary_with_out_arg_scalarize.inc"
+#include "clc/math/gentype.inc"
+#undef __CLC_OUT_ARG3_ADDRESS_SPACE
+
+#define __CLC_OUT_ARG3_SCALAR_TYPE int
+#define __CLC_OUT_ARG3_ADDRESS_SPACE __global
+#define __CLC_BODY "clc/shared/binary_with_out_arg_scalarize.inc"
+#include "clc/math/gentype.inc"
+#undef __CLC_OUT_ARG3_ADDRESS_SPACE
+
+#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+#define __CLC_OUT_ARG3_SCALAR_TYPE int
+#define __CLC_OUT_ARG3_ADDRESS_SPACE
+#define __CLC_BODY "clc/shared/binary_with_out_arg_scalarize.inc"
+#include "clc/math/gentype.inc"
+#undef __CLC_OUT_ARG3_ADDRESS_SPACE
+#endif
