@@ -485,6 +485,49 @@ join:
   ret void
 }
 
+; Both loads have !mem.cache_hint → preserved after GVN deduplication.
+define i64 @test_mem_cache_hint_both(ptr %p) {
+; CHECK-LABEL: define i64 @test_mem_cache_hint_both
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4, !mem.cache_hint [[META11:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %a = load i64, ptr %p, !mem.cache_hint !12
+  %b = load i64, ptr %p, !mem.cache_hint !12
+  %c = add i64 %a, %b
+  ret i64 %c
+}
+
+; Only one load has !mem.cache_hint → dropped after GVN deduplication.
+define i64 @test_mem_cache_hint_one(ptr %p) {
+; CHECK-LABEL: define i64 @test_mem_cache_hint_one
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4
+; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %a = load i64, ptr %p
+  %b = load i64, ptr %p, !mem.cache_hint !12
+  %c = add i64 %a, %b
+  ret i64 %c
+}
+
+; Both loads have !mem.cache_hint but with different payloads.
+; TODO: delegate to TTI to let targets decide how to merge differing payloads.
+define i64 @test_mem_cache_hint_diff(ptr %p) {
+; CHECK-LABEL: define i64 @test_mem_cache_hint_diff
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4, !mem.cache_hint [[META13:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = add i64 [[A]], [[A]]
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %a = load i64, ptr %p, !mem.cache_hint !12
+  %b = load i64, ptr %p, !mem.cache_hint !14
+  %c = add i64 %a, %b
+  ret i64 %c
+}
+
 !0 = !{i32 0, i32 2}
 !1 = !{i32 3, i32 5}
 !2 = !{i32 2, i32 5}
@@ -497,6 +540,10 @@ join:
 !9 = !{i32 1, i32 5}
 !10 = !{i32 5, i32 1}
 !11 = !{}
+!12 = !{ i32 0, !13 }
+!13 = !{ !"nvvm.l1_eviction", !"first" }
+!14 = !{ i32 0, !15 }
+!15 = !{ !"nvvm.l1_eviction", !"last" }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { memory(none) }
 ;.
@@ -511,4 +558,8 @@ join:
 ; CHECK: [[RNG8]] = !{i64 0, i64 10}
 ; CHECK: [[RNG9]] = !{i64 0, i64 10, i64 20, i64 30}
 ; CHECK: [[RNG10]] = !{i64 10, i64 30}
+; CHECK: [[META11]] = !{i32 0, [[META12:![0-9]+]]}
+; CHECK: [[META12]] = !{!"nvvm.l1_eviction", !"first"}
+; CHECK: [[META13]] = !{i32 0, [[META14:![0-9]+]]}
+; CHECK: [[META14]] = !{!"nvvm.l1_eviction", !"last"}
 ;.

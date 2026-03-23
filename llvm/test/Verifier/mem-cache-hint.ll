@@ -1,6 +1,6 @@
 ; RUN: not opt -passes=verify < %s 2>&1 | FileCheck %s
 
-declare void @foo(i32, i32)
+declare void @foo(ptr)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly, ptr noalias readonly, i64, i1 immarg)
 
 ; CHECK: !mem.cache_hint is only valid on memory operations
@@ -21,9 +21,15 @@ define void @operand_no_not_integer(ptr %p) {
   ret void
 }
 
+; CHECK: !mem.cache_hint is not supported on non-intrinsic calls
+define void @non_intrinsic_call(ptr %p) {
+  call void @foo(ptr %p), !mem.cache_hint !{i32 0, !{!"nvvm.l1_eviction", !"first"}}
+  ret void
+}
+
 ; CHECK: !mem.cache_hint operand_no must refer to a valid memory object operand
-define void @operand_no_not_pointer(i32 %x, i32 %y) {
-  call void @foo(i32 %x, i32 %y), !mem.cache_hint !{i32 0, !{!"nvvm.l1_eviction", !"first"}}
+define void @operand_no_not_pointer(ptr %d, ptr %s) {
+  call void @llvm.memcpy.p0.p0.i64(ptr %d, ptr %s, i64 8, i1 false), !mem.cache_hint !{i32 2, !{!"nvvm.l1_eviction", !"first"}}
   ret void
 }
 

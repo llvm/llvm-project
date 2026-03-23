@@ -635,6 +635,24 @@ out:
 }
 
 
+define void @hoist_mem_cache_hint(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_mem_cache_hint(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[P:%.*]], align 4, !mem.cache_hint [[META13:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  %t = load i32, ptr %p, !mem.cache_hint !10
+  br label %out
+else:
+  %e = load i32, ptr %p, !mem.cache_hint !10
+  br label %out
+out:
+  ret void
+}
+
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
 !2 = !{}
@@ -645,6 +663,8 @@ out:
 !7 = !{i32 4, i32 8, i32 20, i32 31}
 !8 = !{i32 2, i32 5}
 !9 = !{i32 2, i32 5, i32 22, i32 42, i32 45, i32 50}
+!10 = !{ i32 0, !11 }
+!11 = !{ !"nvvm.l1_eviction", !"first" }
 
 ;.
 ; CHECK: [[RNG0]] = !{i8 0, i8 1, i8 3, i8 5}
@@ -660,4 +680,6 @@ out:
 ; CHECK: [[META10]] = !{!"address", !"read_provenance"}
 ; CHECK: [[META11]] = !{!"provenance"}
 ; CHECK: [[META12]] = !{i32 3}
+; CHECK: [[META13]] = !{i32 0, [[META14:![0-9]+]]}
+; CHECK: [[META14]] = !{!"nvvm.l1_eviction", !"first"}
 ;.
