@@ -2897,11 +2897,7 @@ add_entrypoint_object(
   HDRS
     ../sqrtbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.sqrt
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.sqrtbf16
 )
 
 add_entrypoint_object(
@@ -4142,6 +4138,16 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.math.acospif16
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  atanbf16
+  SRCS
+    atanbf16.cpp
+  HDRS
+    ../atanbf16.h
+  DEPENDS
+    libc.src.__support.math.atanbf16
 )
 
 add_entrypoint_object(

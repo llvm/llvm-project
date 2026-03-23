@@ -116,6 +116,9 @@ xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
              effectiveLaneLayout.size() &&
          "Rank of the original vector type should be greater or equal to the "
          "size of the lane layout to distribute the vector type.");
+  // TODO: replace the implementation with
+  //   auto distributedShape = layout.computeDistributedShape(
+  //       SmallVector<int64_t>(originalType.getShape()));
   SmallVector<int64_t> distributedShape(originalType.getShape());
   // Only distribute the last `laneLayout.size()` dimensions. The remaining
   // dimensions are not distributed.
