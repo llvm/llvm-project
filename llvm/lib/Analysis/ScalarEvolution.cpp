@@ -11591,11 +11591,10 @@ ScalarEvolution::getLoopInvariantExitCondDuringFirstIterationsImpl(
   if (!ICmpInst::isRelational(Pred))
     return std::nullopt;
 
-  // TODO: Support steps other than +/- 1.
   const SCEV *Step = AR->getStepRecurrence(*this);
-  auto *One = getOne(Step->getType());
-  auto *MinusOne = getNegativeSCEV(One);
-  if (Step != One && Step != MinusOne)
+  bool StepIsPositive = isKnownPositive(Step);
+  bool StepIsNegative = isKnownNegative(Step);
+  if (!StepIsPositive && !StepIsNegative)
     return std::nullopt;
 
   // Type mismatch here means that MaxIter is potentially larger than max
@@ -11609,18 +11608,36 @@ ScalarEvolution::getLoopInvariantExitCondDuringFirstIterationsImpl(
   // Does it still meet the requirement?
   if (!isLoopBackedgeGuardedByCond(L, Pred, Last, RHS))
     return std::nullopt;
-  // Because step is +/- 1 and MaxIter has same type as Start (i.e. it does
-  // not exceed max unsigned value of this type), this effectively proves
-  // that there is no wrap during the iteration. To prove that there is no
-  // signed/unsigned wrap, we need to check that
-  // Start <= Last for step = 1 or Start >= Last for step = -1.
-  ICmpInst::Predicate NoOverflowPred =
-      CmpInst::isSigned(Pred) ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
-  if (Step == MinusOne)
-    NoOverflowPred = ICmpInst::getSwappedPredicate(NoOverflowPred);
+
+  // For step ±1, Start <= Last suffices (every value visited).
+  // For |step| > 1, Start <= Last  check AddRec nuw/nsw flags .
+  auto *One = getOne(Step->getType());
+  auto *MinusOne = getNegativeSCEV(One);
   const SCEV *Start = AR->getStart();
-  if (!isKnownPredicateAt(NoOverflowPred, Start, Last, CtxI))
-    return std::nullopt;
+  if (Step == One || Step == MinusOne) {
+    ICmpInst::Predicate NoOverflowPred =
+        CmpInst::isSigned(Pred) ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+    if (Step == MinusOne)
+      NoOverflowPred = ICmpInst::getSwappedPredicate(NoOverflowPred);
+    if (!isKnownPredicateAt(NoOverflowPred, Start, Last, CtxI))
+      return std::nullopt;
+  } else {
+    if (CmpInst::isSigned(Pred)) {
+      if (!AR->hasNoSignedWrap())
+        return std::nullopt;
+    } else {
+      if (!AR->hasNoUnsignedWrap())
+        return std::nullopt;
+    }
+    // Verify monotonicity: positive step → Last >= Start,
+    //                      negative step → Last <= Start.
+    ICmpInst::Predicate MonotonePred =
+        CmpInst::isSigned(Pred) ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+    if (StepIsNegative)
+      MonotonePred = ICmpInst::getSwappedPredicate(MonotonePred);
+    if (!isKnownPredicateAt(MonotonePred, Start, Last, CtxI))
+      return std::nullopt;
+  }
 
   // Everything is fine.
   return ScalarEvolution::LoopInvariantPredicate(Pred, Start, RHS);
@@ -13365,8 +13382,16 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   } else if (!NoWrap) {
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow.
-    if (canIVOverflowOnLT(RHS, Stride, IsSigned))
-      return getCouldNotCompute();
+    if (canIVOverflowOnLT(RHS, Stride, IsSigned)) {
+      // canIVOverflowOnLT uses range analysis on RHS and Stride. For symbolic
+      // RHS it can be overly conservative (assumes full unsigned range).
+      // If the AddRec has nuw/nsw flags, the IV is guaranteed not to wrap on
+      // any iteration where the increment executes. Since a precondition of
+      // this method is that the exit condition dominates the latch, the
+      // increment executes on every backedge iteration.
+      if (!IV->getNoWrapFlags(WrapType))
+        return getCouldNotCompute();
+    }
   }
 
   // On all paths just preceeding, we established the following invariant:
@@ -13376,6 +13401,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   //      1a) canIVOverflowOnLT, and b) step of one
   //   2) We can show that if overflow occurs, the loop must execute UB
   //      before any possible exit.
+  //   3) The IV's AddRec has nuw/nsw flags, guaranteeing no wrap for all
+  //      iterations where the increment executes.
   // Note that we have not yet proved RHS invariant (in general).
 
   const SCEV *Start = IV->getStart();
@@ -13680,7 +13707,8 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
   // behaviors like the case of C language.
   if (!Stride->isOne() && !NoWrap)
     if (canIVOverflowOnGT(RHS, Stride, IsSigned))
-      return getCouldNotCompute();
+      if (!IV->getNoWrapFlags(WrapType))
+        return getCouldNotCompute();
 
   const SCEV *Start = IV->getStart();
   const SCEV *End = RHS;
