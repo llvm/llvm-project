@@ -4656,7 +4656,7 @@ bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
     return false;
 
   const VectorType *SrcVecTy = SrcTy->getAs<VectorType>();
-  const auto *SrcMatTy = SrcTy->getAs<ConstantMatrixType>();
+  const ConstantMatrixType *SrcMatTy = SrcTy->getAs<ConstantMatrixType>();
 
   // Src isn't a scalar, a vector of length 1, or a 1x1 matrix
   if (!SrcTy->isScalarType() &&
