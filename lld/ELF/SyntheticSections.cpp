@@ -1519,9 +1519,11 @@ void RelocationBaseSection::mergeRels() {
 
 void RelocationBaseSection::finalizeContents() {
   mergeRels();
-  // Cache the count for DT_RELACOUNT. This must not change after
-  // DynamicSection::finalizeContents sizes the .dynamic section.
-  numRelativeRelocs = relativeRelocs.size();
+  // Cache the count for DT_RELACOUNT. DynamicSection<ELFT>::computeContents
+  // uses ctx.arg.zCombreloc (not the per-section combreloc) to decide whether
+  // to emit DT_RELACOUNT, so this must match.
+  if (combreloc)
+    numRelativeRelocs = relativeRelocs.size();
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
 
   // When linking glibc statically, .rel{,a}.plt contains R_*_IRELATIVE
@@ -1685,23 +1687,22 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // The format header includes the number of relocations and the initial
   // offset (we set this to zero because the first relocation group will
   // perform the initial adjustment).
-  add(relocs.size());
+  add(relativeRelocs.size() + relocs.size());
   add(0);
 
-  std::vector<Elf_Rela> relatives, nonRelatives;
-
-  for (const DynamicReloc &rel : relocs) {
+  SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
+  auto makeRela = [&](const DynamicReloc &rel) {
     Elf_Rela r;
     r.r_offset = rel.getOffset();
-    r.setSymbolAndType(rel.getSymIndex(getPartition(ctx).dynSymTab.get()),
-                       rel.type, false);
+    r.setSymbolAndType(rel.getSymIndex(symTab), rel.type, false);
     r.r_addend = ctx.arg.isRela ? rel.computeAddend(ctx) : 0;
-
-    if (r.getType(ctx.arg.isMips64EL) == ctx.target->relativeRel)
-      relatives.push_back(r);
-    else
-      nonRelatives.push_back(r);
-  }
+    return r;
+  };
+  std::vector<Elf_Rela> relatives, nonRelatives;
+  for (const DynamicReloc &rel : relativeRelocs)
+    relatives.push_back(makeRela(rel));
+  for (const DynamicReloc &rel : relocs)
+    nonRelatives.push_back(makeRela(rel));
 
   llvm::sort(relatives, [](const Elf_Rel &a, const Elf_Rel &b) {
     return a.r_offset < b.r_offset;
