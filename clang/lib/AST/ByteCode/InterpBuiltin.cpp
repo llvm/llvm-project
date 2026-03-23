@@ -5175,12 +5175,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_expandsi128_mask:
   case X86::BI__builtin_ia32_expandsi256_mask:
   case X86::BI__builtin_ia32_expandsi512_mask: {
-    unsigned NumElems =
-        Call->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call, [NumElems](unsigned DstIdx, const APInt &ShuffleMask) {
+        S, OpPC, Call, [](unsigned DstIdx, const APInt &ShuffleMask) {
           // Trunc to the sub-mask for the dst index and count the number of
-          // src elements used prior to that. 
+          // src elements used prior to that.
           APInt ExpandMask = ShuffleMask.trunc(DstIdx + 1);
           if (ExpandMask[DstIdx]) {
             int SrcIdx = ExpandMask.popcount() - 1;
