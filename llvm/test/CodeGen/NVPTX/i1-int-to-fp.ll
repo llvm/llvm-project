@@ -59,7 +59,7 @@ define half @foo6(i1 %a) {
 
 ; CHECK-SM90-LABEL: foo7
 ; CHECK-SM90: setp.ne.b16 %[[P:p[0-9]+]], %{{.*}}, 0;
-; CHECK-SM90: selp.b32 %[[R:r[0-9]+]], 1, 0, %[[P]];
+; CHECK-SM90: selp.b32 %[[R:r[0-9]+]], -1, 0, %[[P]];
 ; CHECK-SM90: cvt.rn.bf16.s32 %{{.*}}, %[[R]]
 define bfloat @foo7(i1 %a) {
   %ret = sitofp i1 %a to bfloat
