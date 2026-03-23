@@ -16,16 +16,15 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
-#include <utility>
 
 #include "test_macros.h"
 #include "atomic_helpers.h"
 #include "../atomics.types.operations/atomics.types.operations.req/atomic_fetch_min_helper.h"
 
 template <typename T>
-concept has_fetch_min = requires(T t) {
-  std::declval<T const>().fetch_min(std::declval<typename T::value_type>());
-  std::declval<T const>().fetch_min(std::declval<typename T::value_type>(), std::declval<std::memory_order>());
+concept has_fetch_min = requires(const T& t, typename T::value_type v, std::memory_order m) {
+  t.fetch_min(v);
+  t.fetch_min(v, m);
 };
 
 template <typename T>
