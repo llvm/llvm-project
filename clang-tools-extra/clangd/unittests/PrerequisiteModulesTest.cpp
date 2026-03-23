@@ -644,6 +644,78 @@ import M;
   EXPECT_EQ(CDB.getGlobalScanningCount(), 1u);
 }
 
+// Test that canReuse detects changes to headers included in module units.
+// This verifies that the ASTReader correctly tracks header file dependencies
+// in BMI files and that IsModuleFileUpToDate correctly validates them.
+TEST_F(PrerequisiteModulesTests, CanReuseWithHeadersInModuleUnit) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  // Create a header file that will be included in a module unit
+  CDB.addFile("header1.h", R"cpp(
+inline int getValue() { return 42; }
+  )cpp");
+
+  // Module M includes header1.h in the global module fragment
+  CDB.addFile("M.cppm", R"cpp(
+module;
+#include "header1.h"
+export module M;
+export int m_value = getValue();
+  )cpp");
+
+  // Module N imports M (similar structure to ReusabilityTest)
+  CDB.addFile("N.cppm", R"cpp(
+export module N;
+import :Part;
+import M;
+  )cpp");
+
+  // Add a module partition (similar to ReusabilityTest)
+  CDB.addFile("N-part.cppm", R"cpp(
+export module N:Part;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  // Build prerequisite modules for N (which depends on M)
+  auto NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), FS);
+  ASSERT_TRUE(NInfo);
+
+  ParseInputs NInput = getInputs("N.cppm", CDB);
+  std::unique_ptr<CompilerInvocation> Invocation =
+      buildCompilerInvocation(NInput, DiagConsumer);
+
+  // Initially, canReuse should return true
+  EXPECT_TRUE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+
+  // Test 1: Modify header1.h (included by M)
+  // canReuse should detect this change since M's BMI records header1.h as input
+  CDB.addFile("header1.h", R"cpp(
+inline int getValue() { return 43; }
+  )cpp");
+  EXPECT_FALSE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+
+  // Rebuild and verify canReuse returns true again
+  NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), FS);
+  ASSERT_TRUE(NInfo);
+  EXPECT_TRUE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+
+  // Test 2: Modify the module source file itself
+  CDB.addFile("M.cppm", R"cpp(
+module;
+#include "header1.h"
+export module M;
+export int m_value = getValue();
+export int m_new_value = 10;
+  )cpp");
+  EXPECT_FALSE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+
+  // Rebuild after module source change
+  NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), FS);
+  ASSERT_TRUE(NInfo);
+  EXPECT_TRUE(NInfo->canReuse(*Invocation, FS.view(TestDir)));
+}
+
 TEST_F(PrerequisiteModulesTests, PrebuiltModuleFileTest) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
 
