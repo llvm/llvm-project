@@ -9953,6 +9953,26 @@ unsigned LoongArchTargetLowering::getNumRegistersForCallingConv(
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
 }
 
+void LoongArchTargetLowering::computeKnownBitsForTargetNode(
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
+  unsigned BitWidth = Known.getBitWidth();
+  unsigned Opc = Op.getOpcode();
+  Known.resetAll();
+  switch (Opc) {
+  default:
+    break;
+  case LoongArchISD::VPICK_ZEXT_ELT: {
+    assert(isa<VTSDNode>(Op->getOperand(2)) && "Unexpected operand!");
+    EVT VT = cast<VTSDNode>(Op->getOperand(2))->getVT();
+    unsigned VTBits = VT.getScalarSizeInBits();
+    assert(BitWidth >= VTBits && "Unexpected width!");
+    Known.Zero.setBitsFrom(VTBits);
+    break;
+  }
+  }
+}
+
 bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(
     SDValue Op, const APInt &OriginalDemandedBits,
     const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,

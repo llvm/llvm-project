@@ -1902,3 +1902,11 @@ namespace StaticRedecl {
   constexpr T t;
   static_assert(t.p == &T::tt, "");
 }
+
+namespace VirtCallNoRecord {
+  struct S {
+    virtual int foo();
+  };
+  int bar(int{((S *const)0)->foo()});
+}
+

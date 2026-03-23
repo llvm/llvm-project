@@ -19,6 +19,7 @@ import re
 import io
 import ast
 import enum
+import shlex
 import textwrap
 from copy import copy
 from dataclasses import dataclass
@@ -335,6 +336,7 @@ class BytecodeSection:
         print(
             textwrap.dedent(
                 """\
+                #if swift(>=6.3)
                 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
@@ -354,6 +356,7 @@ class BytecodeSection:
             byte_list = ", ".join(f"0x{b:02x}" for b in bs)
             print(f"{indent}{byte_list},", file=output)
         print(")", file=output)
+        print("#endif", file=output)  # swift(>=6.3)
 
 
 def assemble_file(type_name: str, input: TextIO) -> BytecodeSection:
@@ -1145,6 +1148,11 @@ def _main():
     )
     parser.add_argument("-n", "--type-name", help="source type of formatter")
     parser.add_argument(
+        "--skip-invocation-comment",
+        action="store_true",
+        help="do not print invocation comment in compiled output",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         help="output file (required for --assemble)",
@@ -1177,6 +1185,9 @@ def _main():
                 section.write_binary(output)
         else:
             with open(args.output, "w") as output:
+                if not args.skip_invocation_comment:
+                    print("// Generated with:", file=output)
+                    print("//  ", shlex.join(sys.argv), file=output)
                 section.write_source(output, language=args.format)
     elif args.assemble:
         if not args.type_name:
