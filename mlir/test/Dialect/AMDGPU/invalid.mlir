@@ -660,3 +660,57 @@ func.func @sparse_wmma_i4_requires_equal_length_wave64(%a: vector<8xi4>, %b: vec
   %d = amdgpu.sparse_wmma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) {wave64} : vector<8xi4>, vector<16xi4>, vector<4xi32>
   func.return %d : vector<4xi32>
 }
+
+// -----
+
+// GlobalPrefetchOp: source must reside in address space 1
+func.func @global_prefetch_wrong_address_space(%src: memref<64x64xf16>, %i: i64, %j: i64) {
+  // expected-error@+1 {{'amdgpu.global_prefetch' op the source must reside in address space `1`}}
+  amdgpu.global_prefetch %src[%i, %j] RT : memref<64x64xf16>
+  func.return
+}
+
+// -----
+
+// GlobalPrefetchOp: number of indices must match source shape rank
+func.func @global_prefetch_wrong_num_indices(%src: memref<64x64xf16, 1>, %i: i64) {
+  // expected-error@+1 {{'amdgpu.global_prefetch' op the number of indices must match the source shape size}}
+  amdgpu.global_prefetch %src[%i] RT : memref<64x64xf16, 1>
+  func.return
+}
+
+// -----
+
+// GlobalPrefetchOp: NT temporal hint is not supported
+func.func @global_prefetch_nt_mode(%src: memref<64x64xf16, 1>, %i: i64, %j: i64) {
+  // expected-error@+1 {{'amdgpu.global_prefetch' op does not support NT mode}}
+  amdgpu.global_prefetch %src[%i, %j] NT : memref<64x64xf16, 1>
+  func.return
+}
+
+// -----
+
+// GlobalPrefetchOp: NT_RT requires speculative mode
+func.func @global_prefetch_nt_rt_not_speculative(%src: memref<64x64xf16, 1>, %i: i64, %j: i64) {
+  // expected-error@+1 {{'amdgpu.global_prefetch' op operates only in the speculative mode}}
+  amdgpu.global_prefetch %src[%i, %j] NT_RT : memref<64x64xf16, 1>
+  func.return
+}
+
+// -----
+
+// GlobalPrefetchOp: RT_NT requires speculative mode
+func.func @global_prefetch_rt_nt_not_speculative(%src: memref<64x64xf16, 1>, %i: i64, %j: i64) {
+  // expected-error@+1 {{'amdgpu.global_prefetch' op operates only in the speculative mode}}
+  amdgpu.global_prefetch %src[%i, %j] RT_NT : memref<64x64xf16, 1>
+  func.return
+}
+
+// -----
+
+// GlobalPrefetchOp: NT_HT requires speculative mode
+func.func @global_prefetch_nt_ht_not_speculative(%src: memref<64x64xf16, 1>, %i: i64, %j: i64) {
+  // expected-error@+1 {{'amdgpu.global_prefetch' op operates only in the speculative mode}}
+  amdgpu.global_prefetch %src[%i, %j] NT_HT : memref<64x64xf16, 1>
+  func.return
+}

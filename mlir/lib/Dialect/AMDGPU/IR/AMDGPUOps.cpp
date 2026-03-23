@@ -1302,5 +1302,35 @@ LogicalResult DsBarrierArriveOp::verify() {
   return verifyDsBarrierOpCommon(*this);
 }
 
+//===----------------------------------------------------------------------===//
+// GlobalPrefetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalPrefetchOp::verify() {
+  auto src = cast<MemRefType>(getSrc().getType());
+
+  const unsigned memorySpace = src.getMemorySpaceAsInt();
+  if (memorySpace != 1)
+    return this->emitOpError("the source must reside in address space `1`");
+
+  ArrayRef<int64_t> srcShape = src.getShape();
+  const size_t numIndices = getIndices().size();
+  if (srcShape.size() != numIndices)
+    return this->emitOpError(
+        "the number of indices must match the source shape size");
+
+  const TemporalHint temporalHint = getTemporalHint();
+  const bool isSpeculative = getSpeculative();
+  if (temporalHint == TemporalHint::NT)
+    return this->emitOpError("does not support NT mode");
+  if ((temporalHint == TemporalHint::NT_RT) ||
+      (temporalHint == TemporalHint::RT_NT) ||
+      (temporalHint == TemporalHint::NT_HT)) {
+    if (!isSpeculative)
+      return this->emitOpError("operates only in the speculative mode");
+  }
+  return success();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"

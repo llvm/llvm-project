@@ -3950,6 +3950,56 @@ struct AMDGPUTensorLoadStoreOpLowering
   }
 };
 
+struct GlobalPrefetchOpLowering
+    : public ConvertOpToLLVMPattern<GlobalPrefetchOp> {
+  GlobalPrefetchOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<GlobalPrefetchOp>(converter), chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(GlobalPrefetchOp op, GlobalPrefetchOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("is only supported on gfx1250+");
+
+    const TemporalHint hint = op.getTemporalHint();
+    const bool isSpeculative = op.getSpeculative();
+
+    int32_t llvmScopeValue = static_cast<int32_t>(hint);
+    if ((hint == TemporalHint::RT) || (hint == TemporalHint::HT))
+      llvmScopeValue = isSpeculative ? llvmScopeValue : llvmScopeValue | 1;
+
+    IntegerAttr scopeAttr = rewriter.getI32IntegerAttr(llvmScopeValue);
+
+    ValueRange indices = adaptor.getIndices();
+    Value memRef = adaptor.getSrc();
+    MemRefDescriptor descriptor(memRef);
+    Location loc = op->getLoc();
+    Value offset =
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), 0);
+    for (size_t i = 0; i < indices.size(); ++i) {
+      Value stride = descriptor.stride(rewriter, loc, i);
+      Value mulOp = LLVM::MulOp::create(rewriter, loc, rewriter.getI64Type(),
+                                        stride, indices[i]);
+      offset = LLVM::AddOp::create(rewriter, loc, rewriter.getI64Type(), offset,
+                                   mulOp);
+    }
+
+    Value basePtr = descriptor.alignedPtr(rewriter, loc);
+    Type elemTy = op.getSrc().getType().getElementType();
+    Type llvmElemTy = getTypeConverter()->convertType(elemTy);
+    Value prefetchPtr = LLVM::GEPOp::create(rewriter, loc, basePtr.getType(),
+                                            llvmElemTy, basePtr, offset);
+    Operation *newOp = ROCDL::GlobalPrefetchOp::create(
+        rewriter, loc, prefetchPtr, scopeAttr, {}, {}, {});
+
+    rewriter.replaceOp(op, newOp);
+    return success();
+  }
+
+private:
+  Chipset chipset;
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -4086,8 +4136,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
                                            ROCDL::TensorStoreFromLDSOp>,
            DsBarrierInitOpLowering, DsBarrierPollStateOpLowering,
-           DsAsyncBarrierArriveOpLowering, DsBarrierArriveOpLowering>(converter,
-                                                                      chipset);
+           DsAsyncBarrierArriveOpLowering, DsBarrierArriveOpLowering,
+           GlobalPrefetchOpLowering>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering, DsBarrierStatePhaseOpLowering,
                DsBarrierStatePendingCountOpLowering,
                DsBarrierStateInitCountOpLowering,

@@ -47,4 +47,7 @@ def AMDGPU_SchedBarrierOpOptAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_SchedBarrierO
 def AMDGPU_MFMAPermBAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_MFMAPermB,
   "mfma_perm_b">;
 
+def AMDGPU_TemporalHintAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_TemporalHint,
+  "temporal_hint">;
+
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUATTRS_TD

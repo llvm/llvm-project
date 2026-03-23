@@ -80,4 +80,25 @@ def AMDGPU_MFMAPermB : I32Enum<"MFMAPermB",
   let cppNamespace = "::mlir::amdgpu";
 }
 
+def AMDGPU_TemporalHint : I32Enum<"TemporalHint",
+    "AMDGPU-specific prefetch temporal hints. "
+    "RT - regular temporal for both near and far caches; "
+    "NT - non-temporal for both near and far caches; "
+    "HT - high-priority temporal for both near and far caches; "
+    "LU - last-use; "
+    "NT_RT - non-temporal for near cache(s) and regular for far caches; "
+    "RT_NT - regular for near cache(s) and non-temporal for far caches; "
+    "NT_HT - non-temporal for near cache(s) and high-priority temporal for far caches; ",
+    [
+      I32EnumAttrCase<"RT",    0>,
+      I32EnumAttrCase<"NT",    1>,
+      I32EnumAttrCase<"HT",    2>,
+      I32EnumAttrCase<"LU",    3>,
+      I32EnumAttrCase<"NT_RT", 4>,
+      I32EnumAttrCase<"RT_NT", 5>,
+      I32EnumAttrCase<"NT_HT", 6>
+    ]> {
+  let cppNamespace = "::mlir::amdgpu";
+}
+
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUENUMS_TD
