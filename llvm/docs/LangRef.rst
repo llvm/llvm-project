@@ -12135,33 +12135,18 @@ operation. The operation must be one of the following keywords:
 -  usub_cond
 -  usub_sat
 
-<<<<<<< HEAD
 For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight.
 For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point
+as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum, this must be a floating-point
 or fixed vector of floating-point type.  The type of the '``<pointer>``'
 operand must be a pointer to that type. If the ``atomicrmw`` is marked
 as ``volatile``, then the optimizer is not allowed to modify the
 number or order of execution of this ``atomicrmw`` with other
-:ref:`volatile operations <volatile>`.
-=======
-For scalar, integer, ops (``add``, ``sub``, ``and``, ``nand``, ``or``, ``xor``, ``max``, ``min``, ``umax``, ``umin``, ``uinc_wrap``, ``udec_wrap``, ``usub_cond``, ``usub_sat``) the
-type of `<value>` must be a scalar integer type whose bit width is a power of two greater than or equal to eight.
-For scalar, floating-point, ops (``fadd``, ``fsub``, ``fmax``, ``fmin``, ``fmaximum``, ``fminimum``) the type of `<value>` must be a scalar floating-point type.
-For ``xchg``, the type of `<value>` may be a scalar integer, floating-point or pointer type with the same size constraints as integers.
-If the ``elementwise`` modifier is present, then ``<value>`` must be a fixed vector type
-whose element type is legal for the corresponding scalar ``atomicrmw`` operation. Otherwise,
-if ``<value>`` is a fixed vector type, it must be a fixed floating-point vector, and
-only floating-point operations are legal.
-In all cases, the atomic access size must be byte-sized and a power of two.
-For ``atomicrmw elementwise``, this constraint applies to the scalar element
-type. Otherwise, it applies to the whole ``<value>`` type.
-The type of the '``<pointer>``' operand must be a pointer to the ``<value>`` type.
-If the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not allowed to
-modify the number or order of execution of this ``atomicrmw`` with other :ref:`volatile operations <volatile>`.
->>>>>>> a5f66f34194e (frontend but no backend)
+:ref:`volatile operations <volatile>`. If the ``elementwise`` modifier is present,
+then ``<value>`` must be a fixed vector type whose element type is legal for the
+corresponding scalar ``atomicrmw`` operation.
 
 Note: if the alignment is not greater or equal to the size of the `<value>`
 type, the atomic operation is likely to require a lock and have poor

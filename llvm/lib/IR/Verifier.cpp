@@ -4778,19 +4778,12 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
               " operand must have integer or floating point type!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
-    if (RMWI.isElementwise()) {
-      Check(ScalarTy->isFloatingPointTy(),
-            "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-                " operand must have fixed vector of floating-point type!",
-            &RMWI, ElTy);
-    } else {
-      Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
-            "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-                " operand must have floating-point or fixed vector of "
-                "floating-point "
-                "type!",
-            &RMWI, ElTy);
-    }
+    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
+          "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
+              " operand must have floating-point or fixed vector of "
+              "floating-point "
+              "type!",
+          &RMWI, ElTy);
   } else {
     Check(ScalarTy->isIntegerTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +

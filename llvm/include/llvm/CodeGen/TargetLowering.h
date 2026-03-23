@@ -2453,7 +2453,7 @@ public:
   /// Returns whether the IR-level AtomicExpand pass should expand atomicrmw
   /// elementwise. If this returns true, AtomicExpand will first see if it can
   /// conservatively drop the elementwise modifier and reuse an existing
-  /// stronger whole-value `atomicrmw` lowering by callling
+  /// stronger whole-value `atomicrmw` lowering by calling
   /// `shouldExpandAtomicRMWInIR()` and checking if it returns `None`. It falls
   /// back to scalarizing the instruction into per-lane scalar atomicrmw
   /// instructions.
