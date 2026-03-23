@@ -676,7 +676,8 @@ import M;
 
 // Test that prebuilt module files with relative paths are correctly resolved.
 // This tests the fix for the issue where clangd couldn't find BMI files when
-// the compilation database contained relative paths in -fmodule-file= arguments.
+// the compilation database contained relative paths in -fmodule-file=
+// arguments.
 TEST_F(PrerequisiteModulesTests, PrebuiltModuleFileWithRelativePath) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
 
@@ -737,8 +738,8 @@ int use() { return m_value; }
   )cpp");
 
   // Use relative path in -fmodule-file= argument
-  CDBWithRelativePath.ExtraClangFlags.push_back(
-      "-fmodule-file=M=" + RelativeBMPath);
+  CDBWithRelativePath.ExtraClangFlags.push_back("-fmodule-file=M=" +
+                                                RelativeBMPath);
 
   // Step 5: Verify that clangd can find and reuse the prebuilt module file
   ModulesBuilder BuilderWithRelativePath(CDBWithRelativePath);
