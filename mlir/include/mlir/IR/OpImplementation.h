@@ -950,6 +950,12 @@ public:
   parseOptionalKeyword(StringRef *keyword,
                        ArrayRef<StringRef> allowedValues) = 0;
 
+  /// Parse a string, if present, and if one of the 'allowedValues',
+  /// into 'result'
+  virtual ParseResult
+  parseOptionalString(std::string *string,
+                      ArrayRef<StringRef> allowedValues) = 0;
+
   /// Parse a keyword or a quoted string.
   ParseResult parseKeywordOrString(std::string *result) {
     if (failed(parseOptionalKeywordOrString(result)))
@@ -960,6 +966,12 @@ public:
 
   /// Parse an optional keyword or string.
   virtual ParseResult parseOptionalKeywordOrString(std::string *result) = 0;
+
+  /// Parse an optional keyword or string, if present, and if one of the
+  /// 'allowedValues', into 'result'
+  virtual ParseResult
+  parseOptionalKeywordOrString(std::string *result,
+                               ArrayRef<StringRef> allowedValues) = 0;
 
   //===--------------------------------------------------------------------===//
   // Attribute/Type Parsing
