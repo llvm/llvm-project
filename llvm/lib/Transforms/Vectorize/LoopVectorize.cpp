@@ -460,6 +460,26 @@ static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
   return ElementCount::getFixed(0);
 }
 
+/// Try to refine the maximum trip count for \p L using the unsigned range of
+/// the trip count, discarding the case we warp around to zero. The minimum
+/// iteration check ensures the vector loop won't get entered if computing the
+/// trip count wraps around to 0. Note that this only applies when not folding
+/// the tail. Returns 0 if the range cannot be determined.
+static unsigned tryToRefineConstantMaxTripCount(PredicatedScalarEvolution &PSE,
+                                                Loop *L) {
+  const SCEV *BTC = PSE.getBackedgeTakenCount();
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return 0;
+  ScalarEvolution *SE = PSE.getSE();
+  const SCEV *TripCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
+  ConstantRange TCRange = SE->getUnsignedRange(TripCount);
+  APInt MaxTCFromRange = TCRange.getUnsignedMax();
+  if (MaxTCFromRange.ugt(0) &&
+      MaxTCFromRange.ule(std::numeric_limits<unsigned>::max()))
+    return MaxTCFromRange.getZExtValue();
+  return 0;
+}
+
 /// Returns "best known" trip count, which is either a valid positive trip count
 /// or std::nullopt when an estimate cannot be made (including when the trip
 /// count would overflow), for the specified loop \p L as defined by the
@@ -3557,6 +3577,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   ScalarEvolution *SE = PSE.getSE();
   ElementCount TC = getSmallConstantTripCount(SE, TheLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
+  if (!MaxTC && ScalarEpilogueStatus == CM_ScalarEpilogueAllowed)
+    MaxTC = tryToRefineConstantMaxTripCount(PSE, TheLoop);
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
   if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
@@ -4788,6 +4810,11 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // Try to get the exact trip count, or an estimate based on profiling data or
   // ConstantMax from PSE, failing that.
   auto BestKnownTC = getSmallBestKnownTC(PSE, OrigLoop);
+
+  if (!BestKnownTC && CM.isScalarEpilogueAllowed()) {
+    if (unsigned RefinedTC = tryToRefineConstantMaxTripCount(PSE, OrigLoop))
+      BestKnownTC = ElementCount::getFixed(RefinedTC);
+  }
 
   // For fixed length VFs treat a scalable trip count as unknown.
   if (BestKnownTC && (BestKnownTC->isFixed() || VF.isScalable())) {
