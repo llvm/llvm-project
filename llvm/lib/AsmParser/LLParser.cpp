@@ -9056,8 +9056,9 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
   if (Val->getType()->isScalableTy())
     return error(ValLoc, "atomicrmw operand may not be scalable");
 
-  // For elementwise ops, the value must be a fixed vector type whose element type is legal for the corresponding scalar atomicrmw operation.
-  // So assign ScalarTy the element type for elementwise ops so we can check this.
+  // For elementwise ops, the value must be a fixed vector type whose element
+  // type is legal for the corresponding scalar atomicrmw operation. So assign
+  // ScalarTy the element type for elementwise ops so we can check this.
   Type *ScalarTy = Val->getType();
   if (IsElementwise) {
     auto *VecTy = dyn_cast<FixedVectorType>(Val->getType());
