@@ -1354,7 +1354,7 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
 
   if (Result.getIdentifierInfo()->isImportKeyword()) {
     if (NextTok->isOneOf(tok::identifier, tok::less, tok::colon,
-                         tok::header_name)) {
+                         tok::header_name, tok::code_completion)) {
       Result.setKind(tok::kw_import);
       ModuleImportLoc = Result.getLocation();
       IsAtImport = false;
