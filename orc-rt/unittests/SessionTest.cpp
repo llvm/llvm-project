@@ -40,7 +40,7 @@ public:
       : DetachOpIdx(DetachOpIdx), ShutdownOpIdx(ShutdownOpIdx), OpIdx(OpIdx),
         GenResult(std::move(GenResult)) {}
 
-  void onDetach(OnCompleteFn OnComplete) override {
+  void onDetach(OnCompleteFn OnComplete, bool ShutdownRequested) override {
     DetachOpIdx = OpIdx++;
     GenResult(Op::Detach);
     OnComplete();
@@ -63,7 +63,16 @@ class ConfigurableService : public Service {
 public:
   ConfigurableService(int ConstructorOption) {}
 
-  void onDetach(OnCompleteFn OnComplete) override { OnComplete(); }
+  /// Fallible named constructor for testing tryCreateService.
+  static Expected<std::unique_ptr<ConfigurableService>> Create(bool Fail) {
+    if (Fail)
+      return make_error<StringError>("failed to create service");
+    return std::make_unique<ConfigurableService>(42);
+  }
+
+  void onDetach(OnCompleteFn OnComplete, bool ShutdownRequested) override {
+    OnComplete();
+  }
 
   void onShutdown(OnCompleteFn OnComplete) override { OnComplete(); }
 
@@ -108,12 +117,24 @@ private:
 
 class MockControllerAccess : public Session::ControllerAccess {
 public:
+  using OnConnectFn = move_only_function<void(BootstrapInfo &BI)>;
+
   MockControllerAccess(Session &SS) : Session::ControllerAccess(SS), SS(SS) {}
+
+  void setOnConnect(OnConnectFn OnConnect) {
+    this->OnConnect = std::move(OnConnect);
+  }
+
+  void connect(BootstrapInfo BI) override {
+    if (OnConnect)
+      OnConnect(BI);
+  }
 
   void disconnect() override {
     std::unique_lock<std::mutex> Lock(M);
     Shutdown = true;
     ShutdownCV.wait(Lock, [this]() { return Shutdown && Outstanding == 0; });
+    notifyDisconnected();
   }
 
   void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
@@ -246,6 +267,7 @@ private:
   size_t CallId = 0;
   std::unordered_map<size_t, OnCallHandlerCompleteFn> Pending;
   std::condition_variable ShutdownCV;
+  OnConnectFn OnConnect;
 };
 
 class CallViaMockControllerAccess {
@@ -309,9 +331,9 @@ TEST(SessionTest, SingleService) {
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
   }
 
-  EXPECT_EQ(OpIdx, 1U);
-  EXPECT_EQ(DetachOpIdx, std::nullopt);
-  EXPECT_THAT(ShutdownOpIdx, Optional(Eq(0)));
+  EXPECT_EQ(OpIdx, 2U);
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_EQ(ShutdownOpIdx, 1U);
 }
 
 TEST(SessionTest, MultipleServices) {
@@ -327,11 +349,11 @@ TEST(SessionTest, MultipleServices) {
                                                  ShutdownOpIdx[I], OpIdx));
   }
 
-  EXPECT_EQ(OpIdx, 3U);
+  EXPECT_EQ(OpIdx, 6U);
   // Expect shutdown in reverse order.
   for (size_t I = 0; I != 3; ++I) {
-    EXPECT_EQ(DetachOpIdx[I], std::nullopt);
-    EXPECT_THAT(ShutdownOpIdx[I], Optional(Eq(2 - I)));
+    EXPECT_EQ(DetachOpIdx[I], 2 - I);
+    EXPECT_EQ(ShutdownOpIdx[I], 5 - I);
   }
 }
 
@@ -353,8 +375,8 @@ TEST(SessionTest, ExpectedShutdownSequence) {
                 Tasks,
                 [&]() {
                   EXPECT_TRUE(ShutdownOpIdx);
-                  EXPECT_EQ(*ShutdownOpIdx, 0);
-                  EXPECT_FALSE(SessionShutdownComplete);
+                  EXPECT_EQ(*ShutdownOpIdx, 1);
+                  EXPECT_TRUE(SessionShutdownComplete);
                   DispatcherShutDown = true;
                 }),
             noErrors);
@@ -362,7 +384,7 @@ TEST(SessionTest, ExpectedShutdownSequence) {
       std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
 
   S.shutdown([&]() {
-    EXPECT_TRUE(DispatcherShutDown);
+    EXPECT_FALSE(DispatcherShutDown);
     SessionShutdownComplete = true;
   });
   S.waitForShutdown();
@@ -384,6 +406,26 @@ TEST(SessionTest, CreateServiceAndUseRef) {
   CS.doMoreConfig(1);
 }
 
+TEST(SessionTest, TryCreateServiceSuccess) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  auto CS = S.tryCreateService<ConfigurableService>(false);
+  if (auto Err = CS.takeError()) {
+    ADD_FAILURE() << "expected service creation to succeed";
+    consumeError(std::move(Err));
+  }
+}
+
+TEST(SessionTest, TryCreateServiceFailure) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  auto CS = S.tryCreateService<ConfigurableService>(true);
+  if (auto Err = CS.takeError())
+    consumeError(std::move(Err));
+  else
+    ADD_FAILURE() << "expected service creation to fail";
+}
+
 TEST(ControllerAccessTest, Basics) {
   // Test that we can set the ControllerAccess implementation and still shut
   // down as expected.
@@ -391,7 +433,7 @@ TEST(ControllerAccessTest, Basics) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
 
@@ -414,11 +456,11 @@ TEST(ControllerAccessTest, ValidCallToController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
   EnqueueingDispatcher::runTasksFromFront(Tasks);
@@ -436,7 +478,7 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -454,13 +496,13 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA, BootstrapInfo(S));
 
-  S.detachFromController();
+  S.detach();
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
-      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -478,7 +520,7 @@ TEST(ControllerAccessTest, CallFromController) {
   Session S(mockExecutorProcessInfo(),
             std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
   auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  S.attach(CA, BootstrapInfo(S));
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -502,4 +544,35 @@ TEST(ControllerAccessTest, RedundantAsyncShutdown) {
   bool RedundantCallbackRan = false;
   S.shutdown([&]() { RedundantCallbackRan = true; });
   EXPECT_TRUE(RedundantCallbackRan);
+}
+
+TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+
+  // Test values.
+  constexpr const char *SymName = "test_sym";
+  const char Sym = '.';
+  constexpr const char *SecretKey = "luggage_combo";
+  constexpr const char *SecretValue = "12345";
+
+  // Build a BootstrapInfo with custom symbols and values.
+  BootstrapInfo BI(S);
+  std::pair<const char *, const void *> TestSyms[] = {
+      {SymName, static_cast<const void *>(&Sym)}};
+  cantFail(BI.symbols().addUnique(TestSyms));
+  BI.values()[SecretKey] = SecretValue;
+
+  bool OnConnectRan = false;
+  auto CA = std::make_shared<MockControllerAccess>(S);
+  CA->setOnConnect([&](BootstrapInfo &BI) {
+    EXPECT_EQ(BI.symbols().at(SymName), static_cast<const void *>(&Sym));
+    EXPECT_EQ(BI.values().at(SecretKey), SecretValue);
+    OnConnectRan = true;
+  });
+  S.attach(CA, std::move(BI));
+
+  ASSERT_TRUE(OnConnectRan);
+
+  S.waitForShutdown();
 }

@@ -653,6 +653,40 @@ arm64 build:
 Note that currently only lldb-server is functional on android. The lldb client
 is not supported and unlikely to work.
 
+Example 4: Cross-compiling for FreeBSD arm64 on FreeBSD host using distset
+**************************************************************************
+
+Start by identifying the FreeBSD version you want to target — in this case,
+FreeBSD 15.0.
+
+Download and decompress the FreeBSD 15.0 distset:
+
+::
+
+  fetch https://download.freebsd.org/releases/arm64/15.0-RELEASE/base.txz
+  sudo mkdir -p /path/to/sysroot/arm64
+  sudo tar -xJf base.txz -C /path/to/sysroot/arm64
+
+Then configure with CMake as follows:
+
+::
+
+  cmake <path-to-monorepo>/llvm-project/llvm -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lldb" \
+    -DCMAKE_SYSTEM_NAME=FreeBSD \
+    -DCMAKE_SYSTEM_PROCESSOR=AArch64 \
+    -DCMAKE_ASM_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_C_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_CXX_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_FIND_ROOT_PATH="/path/to/sysroot/arm64" \
+    -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+    -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+    -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+    -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-unknown-freebsd15.0 \
+    -DLLVM_HOST_TRIPLE=aarch64-unknown-freebsd15.0 \
+    -DLLVM_TARGET_ARCH=AArch64
+
 Verifying Python Support
 ------------------------
 

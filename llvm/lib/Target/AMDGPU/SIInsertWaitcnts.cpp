@@ -160,7 +160,8 @@ static constexpr VMEMID toVMEMID(MCRegUnit RU) {
   DECL(VGPR_XDL_WRITE)           /* write VGPR dest in XDL VALU */             \
   DECL(VGPR_LDS_READ)            /* read VGPR source in LDS */                 \
   DECL(VGPR_FLAT_READ)           /* read VGPR source in FLAT */                \
-  DECL(VGPR_VMEM_READ)           /* read VGPR source in other VMEM */
+  DECL(VGPR_VMEM_READ)           /* read VGPR source in other VMEM */          \
+  DECL(ASYNC_ACCESS)             /* access that uses ASYNC_CNT */
 
 // clang-format off
 #define AMDGPU_EVENT_ENUM(Name) Name,
@@ -217,7 +218,7 @@ enum VmemType {
 static const unsigned instrsForExtendedCounterTypes[NUM_EXTENDED_INST_CNTS] = {
     AMDGPU::S_WAIT_LOADCNT,  AMDGPU::S_WAIT_DSCNT,     AMDGPU::S_WAIT_EXPCNT,
     AMDGPU::S_WAIT_STORECNT, AMDGPU::S_WAIT_SAMPLECNT, AMDGPU::S_WAIT_BVHCNT,
-    AMDGPU::S_WAIT_KMCNT,    AMDGPU::S_WAIT_XCNT};
+    AMDGPU::S_WAIT_KMCNT,    AMDGPU::S_WAIT_XCNT,      AMDGPU::S_WAIT_ASYNCCNT};
 
 static bool updateVMCntOnly(const MachineInstr &Inst) {
   return (SIInstrInfo::isVMEM(Inst) && !SIInstrInfo::isFLAT(Inst)) ||
@@ -405,6 +406,8 @@ public:
 
   // Returns a new waitcnt with all counters except VScnt set to 0. If
   // IncludeVSCnt is true, VScnt is set to 0, otherwise it is set to ~0u.
+  // AsyncCnt always defaults to ~0u (don't wait for it). It is only updated
+  // when a call to @llvm.amdgcn.wait.asyncmark() is processed.
   virtual AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const = 0;
 
   virtual ~WaitcntGenerator() = default;
@@ -459,6 +462,7 @@ protected:
           WaitEventSet({VMEM_BVH_READ_ACCESS}),
           WaitEventSet({SMEM_ACCESS, SQ_MESSAGE, SCC_WRITE}),
           WaitEventSet({VMEM_GROUP, SMEM_GROUP}),
+          WaitEventSet({ASYNC_ACCESS}),
           WaitEventSet({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
                         VGPR_XDL_WRITE}),
           WaitEventSet({VGPR_LDS_READ, VGPR_FLAT_READ, VGPR_VMEM_READ})};
@@ -717,11 +721,6 @@ public:
     return T == Context->SmemAccessCounter || T == X_CNT;
   }
 
-  unsigned getSgprScoresIdx(InstCounterType T) const {
-    assert(isSmemCounter(T) && "Invalid SMEM counter");
-    return T == X_CNT ? 1 : 0;
-  }
-
   unsigned getOutstanding(InstCounterType T) const {
     return ScoreUBs[T] - ScoreLBs[T];
   }
@@ -750,7 +749,7 @@ private:
 
   unsigned getSGPRScore(MCRegUnit RU, InstCounterType T) const {
     auto It = SGPRs.find(RU);
-    return It != SGPRs.end() ? It->second.Scores[getSgprScoresIdx(T)] : 0;
+    return It != SGPRs.end() ? It->second.get(T) : 0;
   }
 
   unsigned getVMemScore(VMEMID TID, InstCounterType T) const {
@@ -923,9 +922,8 @@ private:
       for (MCRegUnit RU : regunits(Reg))
         VMem[toVMEMID(RU)].Scores[T] = Val;
     } else if (TRI.isSGPRReg(Context->MRI, Reg)) {
-      auto STy = getSgprScoresIdx(T);
       for (MCRegUnit RU : regunits(Reg))
-        SGPRs[RU].Scores[STy] = Val;
+        SGPRs[RU].get(T) = Val;
     } else {
       llvm_unreachable("Register cannot be tracked/unknown register!");
     }
@@ -970,14 +968,24 @@ private:
     bool empty() const { return all_of(Scores, equal_to(0)) && !VMEMTypes; }
   };
 
-  struct SGPRInfo {
-    // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
-    // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
-    // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps
-    // the X_CNT score.
-    std::array<unsigned, 2> Scores = {0};
+  /// Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
+  /// pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
+  class SGPRInfo {
+    /// Either DS_CNT or KM_CNT score.
+    unsigned ScoreDsKmCnt = 0;
+    unsigned ScoreXCnt = 0;
 
-    bool empty() const { return !Scores[0] && !Scores[1]; }
+  public:
+    unsigned get(InstCounterType T) const {
+      assert((T == DS_CNT || T == KM_CNT || T == X_CNT) && "Invalid counter");
+      return T == X_CNT ? ScoreXCnt : ScoreDsKmCnt;
+    }
+    unsigned &get(InstCounterType T) {
+      assert((T == DS_CNT || T == KM_CNT || T == X_CNT) && "Invalid counter");
+      return T == X_CNT ? ScoreXCnt : ScoreDsKmCnt;
+    }
+
+    bool empty() const { return !ScoreDsKmCnt && !ScoreXCnt; }
   };
 
   DenseMap<VMEMID, VMEMInfo> VMem; // VGPR + LDS DMA
@@ -1315,6 +1323,9 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
     case X_CNT:
       OS << "    X_CNT(" << SR << "):";
       break;
+    case ASYNC_CNT:
+      OS << "    ASYNC_CNT(" << SR << "):";
+      break;
     case VA_VDST:
       OS << "    VA_VDST(" << SR << "): ";
       break;
@@ -1352,7 +1363,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
         SmallVector<MCRegUnit> SortedSMEMIDs(SGPRs.keys());
         sort(SortedSMEMIDs);
         for (auto ID : SortedSMEMIDs) {
-          unsigned RegScore = SGPRs.at(ID).Scores[getSgprScoresIdx(T)];
+          unsigned RegScore = SGPRs.at(ID).get(T);
           if (RegScore <= LB)
             continue;
           unsigned RelScore = RegScore - LB - 1;
@@ -1419,6 +1430,9 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
       case X_CNT:
         OS << "  X_CNT: " << MarkedScore;
         break;
+      case ASYNC_CNT:
+        OS << "  ASYNC_CNT: " << MarkedScore;
+        break;
       default:
         OS << "  UNKNOWN: " << MarkedScore;
         break;
@@ -1443,6 +1457,7 @@ void WaitcntBrackets::simplifyWaitcnt(const AMDGPU::Waitcnt &CheckWait,
   simplifyXcnt(CheckWait, UpdateWait);
   simplifyWaitcnt(UpdateWait, VA_VDST);
   simplifyVmVsrc(CheckWait, UpdateWait);
+  simplifyWaitcnt(UpdateWait, ASYNC_CNT);
 }
 
 void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
@@ -1978,7 +1993,8 @@ AMDGPU::Waitcnt
 WaitcntGeneratorGFX12Plus::getAllZeroWaitcnt(bool IncludeVSCnt) const {
   unsigned ExpertVal = IsExpertMode ? 0 : ~0u;
   return AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0,
-                         ~0u /* XCNT */, ExpertVal, ExpertVal);
+                         ~0u /* XCNT */, ~0u /* ASYNC_CNT */, ExpertVal,
+                         ExpertVal);
 }
 
 /// Combine consecutive S_WAIT_*CNT instructions that precede \p It and
@@ -2919,15 +2935,20 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     }
   } else if (TII.isFLAT(Inst)) {
     if (Inst.mayLoadOrStore() && TII.mayAccessVMEMThroughFlat(Inst) &&
-        TII.mayAccessLDSThroughFlat(Inst) && !SIInstrInfo::isLDSDMA(Inst))
+        TII.mayAccessLDSThroughFlat(Inst) && !SIInstrInfo::isLDSDMA(Inst)) {
       // Async/LDSDMA operations have FLAT encoding but do not actually use flat
       // pointers. They do have two operands that each access global and LDS,
       // thus making it appear at this point that they are using a flat pointer.
       // Filter them out, and for the rest, generate a dependency on flat
       // pointers so that both VM and LGKM counters are flushed.
       ScoreBrackets->setPendingFlat();
+    }
+    if (SIInstrInfo::usesASYNC_CNT(Inst)) {
+      ScoreBrackets->updateByEvent(ASYNC_ACCESS, Inst);
+    }
   } else if (Inst.isCall()) {
-    // Act as a wait on everything
+    // Act as a wait on everything, but AsyncCnt is never included in such
+    // blanket waits.
     ScoreBrackets->applyWaitcnt(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
     ScoreBrackets->setStateOnFunctionEntryOrReturn();
   } else if (TII.isVINTERP(Inst)) {
@@ -3072,12 +3093,10 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
       StrictDom |= mergeScore(M, Info.Scores[T], Other.getVMemScore(RegID, T));
 
     if (isSmemCounter(T)) {
-      unsigned Idx = getSgprScoresIdx(T);
       for (auto &[RegID, Info] : SGPRs) {
         auto It = Other.SGPRs.find(RegID);
-        unsigned OtherScore =
-            (It != Other.SGPRs.end()) ? It->second.Scores[Idx] : 0;
-        StrictDom |= mergeScore(M, Info.Scores[Idx], OtherScore);
+        unsigned OtherScore = (It != Other.SGPRs.end()) ? It->second.get(T) : 0;
+        StrictDom |= mergeScore(M, Info.get(T), OtherScore);
       }
     }
   }
@@ -3265,12 +3284,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     OldWaitcntInstr = nullptr;
 
     if (Inst.getOpcode() == AMDGPU::ASYNCMARK) {
-      // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
-      //
       // Asyncmarks record the current wait state and so should not allow
       // waitcnts that occur after them to be merged into waitcnts that occur
       // before.
-      assert(ST.getGeneration() < AMDGPUSubtarget::GFX12);
       ScoreBrackets.recordAsyncMark(Inst);
       continue;
     }
@@ -3669,7 +3685,8 @@ bool SIInsertWaitcnts::run() {
       BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::S_WAIT_LOADCNT_DSCNT))
           .addImm(0);
       for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
-        if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT || CT == X_CNT)
+        if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT || CT == X_CNT ||
+            CT == ASYNC_CNT)
           continue;
 
         if (!ST.hasImageInsts() &&

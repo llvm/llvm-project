@@ -110,7 +110,8 @@ public:
   void deinitializeMultiple(OnDeinitializeCompleteFn &&OnComplete,
                             std::vector<void *> Bases);
 
-  void onDetach(Service::OnCompleteFn OnComplete) override;
+  void onDetach(Service::OnCompleteFn OnComplete,
+                bool ShutdownRequested) override;
   void onShutdown(Service::OnCompleteFn OnComplete) override;
 
 private:
