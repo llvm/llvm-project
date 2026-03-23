@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64 -run-pass aarch64-mi-peephole-opt -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64 -passes=aarch64-mi-peephole-opt -o - %s | FileCheck %s
 ---
 name:            test1
 # CHECK-LABEL: name: test1

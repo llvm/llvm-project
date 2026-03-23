@@ -298,9 +298,8 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
 };
 } // anonymous namespace
 
-AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
-  : CallLowering(&TLI) {
-}
+AMDGPUCallLowering::AMDGPUCallLowering(const TargetLowering &TLI)
+    : CallLowering(&TLI) {}
 
 // FIXME: Compatibility shim
 static ISD::NodeType extOpcodeToISDExtOpcode(unsigned MIOpc) {
@@ -902,7 +901,7 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
       LI->getImplicitArgPtr(InputReg, MRI, MIRBuilder);
     } else if (InputID == AMDGPUFunctionArgInfo::LDS_KERNEL_ID) {
       std::optional<uint32_t> Id =
-          AMDGPUMachineFunction::getLDSKernelIdMetadata(MF.getFunction());
+          AMDGPUMachineFunctionInfo::getLDSKernelIdMetadata(MF.getFunction());
       if (Id) {
         MIRBuilder.buildConstant(InputReg, *Id);
       } else {

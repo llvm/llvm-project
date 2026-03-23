@@ -75,14 +75,13 @@ define void @vector_loop_with_icmp(ptr nocapture noundef writeonly %dest) {
 ; CHECK-LABEL: vector_loop_with_icmp:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    mov z1.d, #2 // =0x2
 ; CHECK-NEXT:    add x8, x0, #4
 ; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    mov w10, #1 // =0x1
 ; CHECK-NEXT:    b .LBB5_2
 ; CHECK-NEXT:  .LBB5_1: // %pred.store.continue6
 ; CHECK-NEXT:    // in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    add z0.d, z0.d, #2 // =0x2
 ; CHECK-NEXT:    subs x9, x9, #2
 ; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    b.eq .LBB5_6

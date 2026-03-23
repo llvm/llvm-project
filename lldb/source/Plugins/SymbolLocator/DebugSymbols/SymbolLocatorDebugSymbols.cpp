@@ -480,10 +480,8 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
   if (exec_fspec) {
     if (::LookForDsymNextToExecutablePath(module_spec, exec_fspec,
                                           dsym_fspec)) {
-      if (log) {
-        LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
-                  dsym_fspec.GetPath().c_str());
-      }
+      LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
+                dsym_fspec.GetPath().c_str());
       return true;
     } else {
       FileSpec parent_dirs = exec_fspec;
@@ -512,10 +510,8 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
         if (::strchr(fn, '.') != nullptr) {
           if (::LookForDsymNextToExecutablePath(module_spec, parent_dirs,
                                                 dsym_fspec)) {
-            if (log) {
-              LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
-                        dsym_fspec.GetPath().c_str());
-            }
+            LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
+                      dsym_fspec.GetPath().c_str());
             return true;
           }
         }
