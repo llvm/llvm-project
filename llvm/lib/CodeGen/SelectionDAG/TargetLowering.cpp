@@ -8299,7 +8299,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       }
 
       // If we're on the last chunk, we don't need an AND.
-      if (I < BitWidth - BestChunkWidth)
+      if (I + BestChunkWidth < BitWidth)
         Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
       if (!Sum)
         Sum = Chunk;
