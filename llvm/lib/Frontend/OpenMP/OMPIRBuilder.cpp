@@ -6833,7 +6833,7 @@ OpenMPIRBuilder::interchangeLoops(DebugLoc DL,
   for (int i = 0; i < NumLoops - 1; i++) {
     BasicBlock *body = Loops[i]->getBody();
     BasicBlock *region =
-        cast<BranchInst>(body->getTerminator())->getSuccessor(0);
+        cast<UncondBrInst>(body->getTerminator())->getSuccessor(0);
     BasicBlock *cont = Loops[i]->getLatch()->getUniquePredecessor();
 
     // Add the old "bodies" to delete
