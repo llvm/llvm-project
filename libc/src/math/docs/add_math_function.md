@@ -67,18 +67,18 @@ If the function should be available to internal LLVM projects:
 ```
   libc/shared/math/<func>.h
 ```
-- Add a header that exports the function via using in:
+- Add a simple test case to
 ```
-  libc/shared/math/<func>.h
+   libc/test/shared/shared_math_test.cpp
 ```
 - Add the corresponding entry `libc.src.__support.math.<func>` to:
 ```
- libc/test/shared/CMakeLists.txt
+    libc/test/shared/CMakeLists.txt
 ```
 - Add the corresponding `libc_support_library` and `libc_math_function` to:
 ```
-utils/bazel/llvm-project-overlay/libc/BUILD.bazel
-```s
+    utils/bazel/llvm-project-overlay/libc/BUILD.bazel
+```
 
 ### Floating point utility
 
@@ -240,6 +240,6 @@ implementation (which is very often glibc).
 
 We use GitHub's inbuilt pull request system for code review:
 ```
-  https://docs.github.com/articles/about-collaborative-development-models
-  https://docs.github.com/articles/about-pull-requests
+    https://docs.github.com/articles/about-collaborative-development-models
+    https://docs.github.com/articles/about-pull-requests
 ```
