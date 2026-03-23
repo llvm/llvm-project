@@ -1268,7 +1268,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   // If it's a VLA, we have to load the stored size.  Note that
   // this is the size of the VLA in bytes, not its size in elements.
   if (isa<VariableArrayType>(arrayType)) {
-    assert(cir::MissingFeatures::vlas());
+    assert(!cir::MissingFeatures::vlas());
     cgm.errorNYI(*currSrcLoc, "VLAs");
     return builder.getConstInt(*currSrcLoc, sizeTy, 0);
   }

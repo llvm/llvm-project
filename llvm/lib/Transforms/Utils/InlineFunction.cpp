@@ -1550,9 +1550,9 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
 
 static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
                                 ClonedCodeInfo &InlinedFunctionInfo) {
-  AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
-  AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
-  if (!ValidUB.hasAttributes() && !ValidPG.hasAttributes())
+  AttrBuilder CallSiteValidUB = IdentifyValidUBGeneratingAttributes(CB);
+  AttrBuilder CallSiteValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
+  if (!CallSiteValidUB.hasAttributes() && !CallSiteValidPG.hasAttributes())
     return;
   auto *CalledFunction = CB.getCalledFunction();
   auto &Context = CalledFunction->getContext();
@@ -1600,6 +1600,8 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
     // with a differing value, the AttributeList's merge API honours the already
     // existing attribute value (i.e. attributes such as dereferenceable,
     // dereferenceable_or_null etc). See AttrBuilder::merge for more details.
+    AttrBuilder ValidUB = IdentifyValidUBGeneratingAttributes(CB);
+    AttrBuilder ValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
     AttributeList AL = NewRetVal->getAttributes();
     if (ValidUB.getDereferenceableBytes() < AL.getRetDereferenceableBytes())
       ValidUB.removeAttribute(Attribute::Dereferenceable);
@@ -3441,4 +3443,17 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   }
 
   return Result;
+}
+
+bool llvm::inlineHistoryIncludes(
+    Function *F, int InlineHistoryID,
+    ArrayRef<std::pair<Function *, int>> InlineHistory) {
+  while (InlineHistoryID != -1) {
+    assert(unsigned(InlineHistoryID) < InlineHistory.size() &&
+           "Invalid inline history ID");
+    if (InlineHistory[InlineHistoryID].first == F)
+      return true;
+    InlineHistoryID = InlineHistory[InlineHistoryID].second;
+  }
+  return false;
 }

@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -296,9 +297,13 @@ void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     if (Dest && Src && Dest->getLength() == Src->getLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_ArrayToPointerDecay:
+    assert(Src && "Array expression should have origins as it is GL value");
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        Dest->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
+    return;
   case CK_FunctionToPointerDecay:
   case CK_BuiltinFnToFnPtr:
-  case CK_ArrayToPointerDecay:
     // Ignore function-to-pointer decays.
     return;
   default:
@@ -397,7 +402,13 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     handleAssignment(OCE->getArg(0), OCE->getArg(1));
     return;
   }
-  VisitCallExpr(OCE);
+
+  ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
+  // For `static operator()`, the first argument is the object argument,
+  // remove it from the argument list to avoid off-by-one errors.
+  if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())
+    Args = Args.slice(1);
+  handleFunctionCall(OCE, OCE->getDirectCallee(), Args);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -468,6 +479,16 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
         LambdaList->getOuterOriginID(), InitList->getOuterOriginID(), Kill));
     Kill = false;
   }
+}
+
+void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
+  assert(ASE->isGLValue() && "Array subscript should be a GL value");
+  OriginList *Dst = getOriginsList(*ASE);
+  assert(Dst && "Array subscript should have origins as it is a GL value");
+  OriginList *Src = getOriginsList(*ASE->getBase());
+  assert(Src && "Base of array subscript should have origins");
+  CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+      Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
 }
 
 bool FactsGenerator::escapesViaReturn(OriginID OID) const {
