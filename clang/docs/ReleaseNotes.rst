@@ -169,6 +169,8 @@ Non-comprehensive list of changes in this release
 
 - Added header ``endian.h`` which contains byte order helpers specified in POSIX
 
+- Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
