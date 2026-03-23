@@ -950,8 +950,8 @@ public:
   parseOptionalKeyword(StringRef *keyword,
                        ArrayRef<StringRef> allowedValues) = 0;
 
-  /// Parse a string, if present, and if one of the 'allowedValues',
-  /// into 'result'
+  /// Parse a string into 'string' if it is present and one of the
+  /// 'allowedValues'.
   virtual ParseResult
   parseOptionalString(std::string *string,
                       ArrayRef<StringRef> allowedValues) = 0;
@@ -967,8 +967,8 @@ public:
   /// Parse an optional keyword or string.
   virtual ParseResult parseOptionalKeywordOrString(std::string *result) = 0;
 
-  /// Parse an optional keyword or string, if present, and if one of the
-  /// 'allowedValues', into 'result'
+  /// Parse an optional keyword or string into `result` if it is present and one
+  /// of the 'allowedValues'.
   virtual ParseResult
   parseOptionalKeywordOrString(std::string *result,
                                ArrayRef<StringRef> allowedValues) = 0;

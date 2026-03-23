@@ -48,12 +48,11 @@ def TestEnum
 }
 
 def TestOtherEnum
-    : I32EnumAttr<"TestOtherEnum", "another test enum", [
-        I32EnumAttrCase<"Dog", 0, "dog">,
-        I32EnumAttrCase<"Cat", 1, "cat">,
-        I32EnumAttrCase<"Fish", 2, "fish">,
+    : I32Enum<"TestOtherEnum", "another test enum", [
+        I32EnumCase<"Dog", 0, "dog">,
+        I32EnumCase<"Cat", 1, "cat">,
+        I32EnumCase<"Fish", 2, "fish">,
       ]> {
-  let genSpecializedAttr = 0;
   let cppNamespace = "test";
 }
 
