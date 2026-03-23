@@ -8680,10 +8680,11 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
     // true.
     // We need to make sure (C - Y) never rounds back to C
     const APFloat *C;
-    Instruction *CastI;
-    if (match(RHSC, m_APFloat(C)) && X == RHSC &&
-        match(LHSI, m_FSub(m_Specific(RHSC), m_Instruction(CastI))) &&
-        (isa<SIToFPInst>(CastI) || isa<UIToFPInst>(CastI))) {
+    Value *IntSrc;
+    if (match(RHSC, m_APFloat(C)) &&
+        match(LHSI, m_FSub(m_Specific(RHSC),
+                           m_CombineOr(m_SIToFP(m_Value(IntSrc)),
+                                       m_UIToFP(m_Value(IntSrc)))))) {
       // Requirements on C and Y:
       // 1. C is finite, nonzero, normal.
       // 2. C shouldn't be too large, that is, ULP(C) <= 1.
@@ -8699,7 +8700,7 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
           ilogb(*C) < MantissaWidth) {
         Constant *ZeroC = ConstantFP::getZero(LHSI->getType());
         I.setPredicate(I.getSwappedPredicate());
-        CI.replaceOperand(I, 0, CastI);
+        CI.replaceOperand(I, 0, Y);
         CI.replaceOperand(I, 1, ZeroC);
         return &I;
       }

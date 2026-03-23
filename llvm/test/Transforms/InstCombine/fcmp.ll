@@ -1860,6 +1860,56 @@ define i1 @same_const_sub_no_fold_large_c(i32 %x) {
   ret i1 %cmp
 }
 
+define <2 x i1> @same_const_sub_sitofp_vec_eq(<2 x i32> %x) {
+; CHECK-LABEL: @same_const_sub_sitofp_vec_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %f = sitofp <2 x i32> %x to <2 x float>
+  %s = fsub <2 x float> <float 1.000000e+00, float 1.000000e+00>, %f
+  %cmp = fcmp oeq <2 x float> %s,
+                   <float 1.000000e+00, float 1.000000e+00>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @same_const_sub_uitofp_vec_olt(<2 x i32> %x) {
+; CHECK-LABEL: @same_const_sub_uitofp_vec_olt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %f = uitofp <2 x i32> %x to <2 x float>
+  %s = fsub <2 x float> <float 2.000000e+00, float 2.000000e+00>, %f
+  %cmp = fcmp olt <2 x float> %s,
+                   <float 2.000000e+00, float 2.000000e+00>
+  ret <2 x i1> %cmp
+}
+
+define i1 @same_const_sub_no_fold_subnormal_c(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_subnormal_c(
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[S:%.*]] = fsub float 0x36A0000000000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[S]], 0x36A0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to float
+  %s = fsub float 0x36A0000000000000, %f
+  %cmp = fcmp olt float %s, 0x36A0000000000000
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_no_fold_wrong_mantissa_width(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_wrong_mantissa_width(
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[S:%.*]] = fsub float 0x4180000000000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[S]], 0x4180000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to float
+  %s = fsub float 3.3554432e+07, %f
+  %cmp = fcmp oeq float %s, 3.3554432e+07
+  ret i1 %cmp
+}
+
 define i1 @fcmp_oge_fsub_const(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_oge_fsub_const(
 ; CHECK-NEXT:    [[FS:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
