@@ -2103,7 +2103,7 @@ void pointer_in_array_use_after_scope() {
 
 } // namespace array
 
-namespace GH187426 {
+namespace static_call_operator {
 // https://github.com/llvm/llvm-project/issues/187426
 
 #pragma clang diagnostic push
@@ -2112,25 +2112,17 @@ namespace GH187426 {
 struct S {
   static S operator()(int, int&&);
   static S& operator()(std::string&&,
-                           const int& a [[clang::lifetimebound]],
-                           const int& b [[clang::lifetimebound]]);
+                       const int& a [[clang::lifetimebound]],
+                       const int& b [[clang::lifetimebound]]);
 };
 
 void indexing_with_static_operator() {
-  // should not crash
   S()(1, 2);
   S& x = S()("1",
-             2,  // #argone
-             3); // #argtwo
-  // expected-warning@#argone {{object whose reference is captured does not live long enough}}
-  // expected-note@#argone {{destroyed here}}
+             2,  // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
+             3); // expected-warning {{object whose reference is captured does not live long enough}} expected-note {{destroyed here}}
 
-  // expected-warning@#argtwo {{object whose reference is captured does not live long enough}}
-  // expected-note@#argtwo {{destroyed here}}
- 
-  (void)x; // #useline
-  // expected-note@#useline {{later used here}}
-  // expected-note@#useline {{later used here}}
+  (void)x; // expected-note 2 {{later used here}}
 
 }
-} // namespace GH187426
+} // namespace static_call_operator

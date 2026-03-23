@@ -404,9 +404,8 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
   }
 
   ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
-  if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic()) {
+  if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())
     Args = Args.slice(1);
-  }
   handleFunctionCall(OCE, OCE->getDirectCallee(), Args);
 }
 
@@ -661,7 +660,6 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   // All arguments to a function are a use of the corresponding expressions.
   for (const Expr *Arg : Args)
     handleUse(Arg);
-
   handleInvalidatingCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   if (!CallList)
