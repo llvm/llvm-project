@@ -658,8 +658,20 @@ getIncludeTreeModule(cas::ObjectStore &DB, Module *M) {
     LinkLibraries = LL->getRef();
   }
 
+  SmallVector<ITModule::RequirementList::Requirement> Requirements;
+  for (const auto &R : M->Requirements) {
+    Requirements.push_back({R.FeatureName, R.RequiredState});
+  }
+  std::optional<cas::ObjectRef> RequirementsList;
+  if (!Requirements.empty()) {
+    auto RL = ITModule::RequirementList::create(DB, Requirements);
+    if (!RL)
+      return RL.takeError();
+    RequirementsList = RL->getRef();
+  }
+
   return ITModule::create(DB, M->Name, M->ExportAsModule, Flags, Submodules,
-                          ExportList, LinkLibraries);
+                          ExportList, LinkLibraries, RequirementsList);
 }
 
 Expected<cas::IncludeTreeRoot>
