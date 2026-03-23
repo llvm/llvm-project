@@ -472,7 +472,6 @@ gpu.func @vector_transpose() {
     : () -> (vector<16x2xf32>)
   %transpose = vector.transpose %cst, [1, 0]
     {
-      layout_operand_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16x2xf32> to vector<2x16xf32>
@@ -490,7 +489,6 @@ gpu.func @vector_bitcast() {
     : () -> (vector<4x32xi8>)
   %bitcast = vector.bitcast %cst
     {
-      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<4x32xi8> to vector<4x16xi16>
