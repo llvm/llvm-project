@@ -78,11 +78,6 @@ public:
   void reportImmediateUB(StringRef Msg);
   void reportError(StringRef Msg);
 
-  const AnyValue &getValue(Value *V);
-  void setResult(Instruction &I, AnyValue V);
-
-  void jumpTo(Instruction &Terminator, BasicBlock *DestBB);
-
   /// Check if the upcoming memory access is valid. Returns the offset relative
   /// to the underlying object if it is valid.
   std::optional<uint64_t> verifyMemAccess(const MemoryObject &MO,

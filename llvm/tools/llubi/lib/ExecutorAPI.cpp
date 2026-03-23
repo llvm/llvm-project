@@ -40,41 +40,6 @@ void ExecutorAPI::reportError(StringRef Msg) {
   Handler.onError(Msg);
 }
 
-const AnyValue &ExecutorAPI::getValue(Value *V) {
-  if (auto *C = dyn_cast<Constant>(V))
-    return Ctx.getConstantValue(C);
-  return CurrentFrame->ValueMap.at(V);
-}
-void ExecutorAPI::setResult(Instruction &I, AnyValue V) {
-  if (Status)
-    Status &= Handler.onInstructionExecuted(I, V);
-  CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
-}
-
-void ExecutorAPI::jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
-  if (!Handler.onBBJump(Terminator, *DestBB)) {
-    Status = false;
-    return;
-  }
-  BasicBlock *From = CurrentFrame->BB;
-  CurrentFrame->BB = DestBB;
-  CurrentFrame->PC = DestBB->begin();
-  // Update PHI nodes in batch to avoid the interference between PHI nodes.
-  // We need to store the incoming values into a temporary buffer.
-  // Otherwise, the incoming value may be overwritten before it is
-  // used by other PHI nodes.
-  SmallVector<std::pair<PHINode *, AnyValue>> IncomingValues;
-  PHINode *PHI = nullptr;
-  while ((PHI = dyn_cast<PHINode>(CurrentFrame->PC))) {
-    Value *Incoming = PHI->getIncomingValueForBlock(From);
-    // TODO: handle fast-math flags.
-    IncomingValues.emplace_back(PHI, getValue(Incoming));
-    ++CurrentFrame->PC;
-  }
-  for (auto &[K, V] : IncomingValues)
-    setResult(*K, std::move(V));
-}
-
 std::optional<uint64_t> ExecutorAPI::verifyMemAccess(const MemoryObject &MO,
                                                      const APInt &Address,
                                                      uint64_t AccessSize,
