@@ -41,6 +41,42 @@ namespace {
 
 static constexpr llvm::StringRef cudaFortranCtorName{
     "__cudaFortranConstructor"};
+static constexpr llvm::StringRef managedPtrSuffix{".managed.ptr"};
+
+/// Create an 8-byte pointer global in the __nv_managed_data__ section.
+/// The CUDA runtime fills this pointer with the unified memory address
+/// during __cudaRegisterManagedVar.
+static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
+                                                mlir::ModuleOp mod,
+                                                fir::GlobalOp globalOp) {
+  auto *ctx = mod.getContext();
+  std::string ptrGlobalName =
+      (globalOp.getSymName() + managedPtrSuffix).str();
+  auto ptrTy =
+      fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(globalOp);
+
+  llvm::SmallVector<mlir::NamedAttribute> attrs;
+  attrs.push_back(mlir::NamedAttribute(
+      mlir::StringAttr::get(ctx, "section"),
+      mlir::StringAttr::get(ctx, "__nv_managed_data__")));
+
+  mlir::DenseElementsAttr initAttr = {};
+  auto ptrGlobal = fir::GlobalOp::create(
+      builder, globalOp.getLoc(), ptrGlobalName, /*isConstant=*/false,
+      /*isTarget=*/false, ptrTy, initAttr,
+      /*linkName=*/builder.createInternalLinkage(), attrs);
+
+  mlir::Region &region = ptrGlobal.getRegion();
+  mlir::Block *block = builder.createBlock(&region);
+  builder.setInsertionPointToStart(block);
+  mlir::Value zero = fir::ZeroOp::create(builder, globalOp.getLoc(), ptrTy);
+  fir::HasValueOp::create(builder, globalOp.getLoc(), zero);
+
+  return ptrGlobal;
+}
 
 struct CUFAddConstructor
     : public fir::impl::CUFAddConstructorBase<CUFAddConstructor> {
@@ -108,19 +144,15 @@ struct CUFAddConstructor
         if (!attr)
           continue;
 
-        if (attr.getValue() == cuf::DataAttribute::Managed &&
-            !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
-          TODO(loc, "registration of non-allocatable managed variables");
+        bool isNonAllocManagedGlobal =
+            attr.getValue() == cuf::DataAttribute::Managed &&
+            !mlir::isa<fir::BaseBoxType>(globalOp.getType());
 
         mlir::func::FuncOp func;
         switch (attr.getValue()) {
         case cuf::DataAttribute::Device:
         case cuf::DataAttribute::Constant:
         case cuf::DataAttribute::Managed: {
-          func = fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
-              loc, builder);
-          auto fTy = func.getFunctionType();
-
           // Global variable name
           std::string gblNameStr = globalOp.getSymbol().getValue().str();
           gblNameStr += '\0';
@@ -141,13 +173,30 @@ struct CUFAddConstructor
           }
           auto sizeVal = builder.createIntegerConstant(loc, idxTy, *size);
 
-          // Global variable address
-          mlir::Value addr = fir::AddrOfOp::create(
-              builder, loc, globalOp.resultType(), globalOp.getSymbol());
-
-          llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-              builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
-          fir::CallOp::create(builder, loc, func, args);
+          if (isNonAllocManagedGlobal) {
+            // Non-allocatable managed globals use nvcc-style unified memory:
+            // create an 8-byte pointer global in __nv_managed_data__ and
+            // register with __cudaRegisterManagedVar via the runtime wrapper.
+            fir::GlobalOp ptrGlobal =
+                createManagedPointerGlobal(builder, mod, globalOp);
+            func = fir::runtime::getRuntimeFunc<
+                mkRTKey(CUFRegisterManagedVariable)>(loc, builder);
+            auto fTy = func.getFunctionType();
+            mlir::Value addr = fir::AddrOfOp::create(
+                builder, loc, ptrGlobal.resultType(), ptrGlobal.getSymbol());
+            llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+                builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
+            fir::CallOp::create(builder, loc, func, args);
+          } else {
+            func = fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
+                loc, builder);
+            auto fTy = func.getFunctionType();
+            mlir::Value addr = fir::AddrOfOp::create(
+                builder, loc, globalOp.resultType(), globalOp.getSymbol());
+            llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+                builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
+            fir::CallOp::create(builder, loc, func, args);
+          }
         } break;
         default:
           break;

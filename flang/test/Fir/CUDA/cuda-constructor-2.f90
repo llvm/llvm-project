@@ -78,3 +78,36 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<i8 = dense<8> : vector<2xi64>, i
 // CHECK: llvm.func internal @__cudaFortranConstructor()
 // CHECK: fir.address_of(@_QMmEa00)
 // CHECK: fir.call @_FortranACUFRegisterVariable
+
+// -----
+
+// Non-allocatable managed global: should create pointer global in
+// __nv_managed_data__ and register with CUFRegisterManagedVariable.
+//
+// Fortran source:
+//   module test
+//     integer*4, managed :: manx(100)
+//   contains
+//     attributes(global) subroutine kernel()
+//     end subroutine
+//   end module
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f32, dense<32> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128", llvm.target_triple = "x86_64-unknown-linux-gnu"} {
+
+  fir.global @_QMtestEmanx {data_attr = #cuf.cuda<managed>} : !fir.array<100xi32> {
+    %0 = fir.zero_bits !fir.array<100xi32>
+    fir.has_value %0 : !fir.array<100xi32>
+  }
+
+  gpu.module @cuda_device_mod {
+  }
+}
+
+// Pointer global should be created with section attribute.
+// CHECK: fir.global internal @_QMtestEmanx.managed.ptr {section = "__nv_managed_data__"} : !fir.llvm_ptr<i8>
+// CHECK:   fir.zero_bits !fir.llvm_ptr<i8>
+
+// Constructor should register with CUFRegisterManagedVariable.
+// CHECK: llvm.func internal @__cudaFortranConstructor()
+// CHECK: fir.address_of(@_QMtestEmanx.managed.ptr) : !fir.ref<!fir.llvm_ptr<i8>>
+// CHECK: fir.call @_FortranACUFRegisterManagedVariable
