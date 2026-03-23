@@ -771,7 +771,7 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
       auto &GPUs = *GPUsOrErr;
       if (llvm::SmallSet<std::string, 1>(GPUs.begin(), GPUs.end()).size() > 1)
         getDriver().Diag(diag::warn_drv_multi_gpu_arch)
-            << getArchName() << llvm::join(*GPUsOrErr, ", ") << "-march";
+            << getArchName() << llvm::join(GPUs, ", ") << "-march";
       DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                         Args.MakeArgString(GPUs.front()));
     }
