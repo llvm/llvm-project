@@ -21508,19 +21508,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         const unsigned RBW = cast<VectorType>(R->getType())
                                  ->getElementType()
                                  ->getIntegerBitWidth();
-        if ((LBW < RBW && (!allConstant(E->getOperand(1)) ||
-                           any_of(
-                               E->getOperand(1),
-                               [&](Value *V) {
-                                 auto *CI = dyn_cast<ConstantInt>(V);
-                                 return !CI ||
-                                        CI->getValue().getActiveBits() > LBW;
-                               }))) ||
-            (LBW > RBW && allConstant(E->getOperand(0)) &&
-             all_of(E->getOperand(1), [&](Value *V) {
-               auto *CI = dyn_cast<ConstantInt>(V);
-               return CI && CI->getValue().getActiveBits() <= RBW;
-             }))) {
+        if ((LBW < RBW && !allConstant(E->getOperand(1))) ||
+            (LBW > RBW && allConstant(E->getOperand(0)))) {
           Type *CastTy = R->getType();
           L = Builder.CreateIntCast(L, CastTy, GetOperandSignedness(0));
         } else {
