@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SCCPSolver.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -103,6 +104,96 @@ static ConstantRange getRange(Value *Op, SCCPSolver &Solver,
   }
   return Solver.getLatticeValueFor(Op).asConstantRange(Op->getType(),
                                                        /*UndefAllowed=*/false);
+}
+
+/// SCCP already proves x \in KnownCR, so only ActiveCmpCR = CmpCR ∩ KnownCR
+/// matters. Try to replace CmpCR with a simpler equivalent range NewCmpCR
+/// such that NewCmpCR ∩ KnownCR == ActiveCmpCR.
+///
+/// Prefer ranges that lower to a single canonical compare without an add:
+///   - [L, L+1)      --> X  eq L
+///   - [R+1, R)      --> X  ne R
+///   - [0, R)        --> X ult R
+///   - [L, 0)        --> X uge L
+///   - [SignMin, R)  --> X slt R
+///   - [L, SignMin)  --> X sge L
+///
+/// If no such range preserves the active semantics under KnownCR, keep CmpCR.
+static ConstantRange simplifyCmpRange(const ConstantRange &CmpCR,
+                                      const ConstantRange &KnownCR) {
+  assert(!KnownCR.inverse().contains(CmpCR) &&
+         "CmpCR ∩ KnowCR should not be ∅");
+  assert((!CmpCR.isFullSet() && !CmpCR.isEmptySet()) && "Unexpected CmpCR");
+  assert((!KnownCR.isFullSet() && !KnownCR.isEmptySet()) &&
+         "Unexpected KnownCR");
+
+  // If KnownCR is both nuw and nsw, we cannot relax CmpCR at all.
+  if (KnownCR.isWrappedSet() && KnownCR.isSignWrappedSet())
+    return CmpCR;
+
+  const unsigned BW = CmpCR.getBitWidth();
+  // All reachable value satisfy CmpCR --> always true.
+  if (CmpCR.contains(KnownCR))
+    return ConstantRange::getFull(BW);
+
+  std::optional<ConstantRange> ActCmpCR = CmpCR.exactIntersectWith(KnownCR);
+  if (!ActCmpCR)
+    return CmpCR;
+
+  const APInt &CmpLo = ActCmpCR->getLower(), &CmpHi = ActCmpCR->getUpper();
+
+  // If the intersection happens to be the ONE-icmp check, just return it.
+  if (/*eq*/ ActCmpCR->isSingleElement() ||
+      /*ne*/ ActCmpCR->inverse().isSingleElement() ||
+      /*ult*/ CmpLo.isZero() ||
+      /*slt*/ CmpLo.isMinSignedValue() ||
+      /*uge*/ CmpHi.isZero() ||
+      /*sge*/ CmpHi.isMinSignedValue())
+    return *ActCmpCR;
+
+  const APInt Zero = APInt::getZero(BW);
+  const APInt SignMin = APInt::getSignedMinValue(BW);
+
+  if (CmpLo == KnownCR.getLower()) {
+    // Tie to lower:
+
+    // Try ult
+    // 0
+    // |  L------------R   : KnownCR
+    // |  L---R            : ActiveCmpCR
+    // L------R            : RelaxedCmpCR
+    if (!KnownCR.isWrappedSet())
+      return ConstantRange::getNonEmpty(Zero, CmpHi);
+
+    // Try slt
+    //       smin                                 smin
+    // -----R  |  L------- : KnownCR        ----R   |  L------- : KnownCR
+    //         |  L--R     : ActiveCmpCR    --R     |  L------- : ActiveCmpCR
+    //         L-----R     : RelaxedCmpCR   --R     L---------- : RelaxedCmpCR
+    if (!KnownCR.isSignWrappedSet())
+      return ConstantRange::getNonEmpty(SignMin, CmpHi);
+
+  } else if (CmpHi == KnownCR.getUpper()) {
+    // Tie to upper:
+
+    // Try uge
+    // 0
+    // |  L--------R       : KnownCR
+    // |       L---R       : ActiveCmpCR
+    // R       L---------- : RelaxedCmpCR
+    if (!KnownCR.isWrappedSet())
+      return ConstantRange::getNonEmpty(CmpLo, Zero);
+
+    // Try sge
+    //       smin                                 smin
+    // -----R  |  L------- : KnownCR        -----R  |  L------- : KnownCR
+    //   L--R  |           : ActiveCmpCR    -----R  |      L--- : ActiveCmpCR
+    //   L-----R           : RelaxedCmpCR   --------R      L--- : RelaxedCmpCR
+    if (!KnownCR.isSignWrappedSet())
+      return ConstantRange::getNonEmpty(CmpLo, SignMin);
+  }
+
+  return CmpCR;
 }
 
 /// Try to use \p Inst's value range from \p Solver to infer the NUW flag.
@@ -318,29 +409,24 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       // Early exit if we know nothing about X.
       if (LRange.isFullSet())
         return nullptr;
-      auto ConvertCRToICmp =
-          [&](const std::optional<ConstantRange> &NewCR) -> Value * {
-        ICmpInst::Predicate Pred;
-        APInt RHS;
-        // Check if we can represent NewCR as an icmp predicate.
-        if (NewCR && NewCR->getEquivalentICmp(Pred, RHS)) {
-          IRBuilder<NoFolder> Builder(&Inst);
-          Value *NewICmp =
-              Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
-          InsertedValues.insert(NewICmp);
-          return NewICmp;
-        }
-        return nullptr;
-      };
       // We are allowed to refine the comparison to either true or false for out
-      // of range inputs.
-      // Here we refine the comparison to false, and check if we can narrow the
-      // range check to a simpler test.
-      if (auto *V = ConvertCRToICmp(CR->exactIntersectWith(LRange)))
-        return V;
-      // Here we refine the comparison to true, i.e. we relax the range check.
-      if (auto *V = ConvertCRToICmp(CR->exactUnionWith(LRange.inverse())))
-        return V;
+      // of range inputs. Based on this, try to simplify CmpCR as a single
+      // ult/uge/slt/sge/eq/ne.
+      // E.g., CmpCR = [3, 10), LRange = [5, 0) --> NewCmpCR = [0, 10) -> ult
+      ConstantRange NewCmpCR = simplifyCmpRange(*CR, LRange);
+
+      ICmpInst::Predicate Pred;
+      APInt RHS;
+      // If NewCmpCR is just the same as CR, no simplification happens.
+      if (NewCmpCR != *CR) {
+        bool Match [[maybe_unused]] = NewCmpCR.getEquivalentICmp(Pred, RHS);
+        assert(Match && "Incorrect simplifyCmpRange");
+        IRBuilder<NoFolder> Builder(&Inst);
+        Value *NewICmp =
+            Builder.CreateICmp(Pred, X, ConstantInt::get(X->getType(), RHS));
+        InsertedValues.insert(NewICmp);
+        return NewICmp;
+      }
     }
   }
 

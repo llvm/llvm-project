@@ -117,7 +117,7 @@ define i1 @range_check_to_icmp_ult(i8 range(i8 2, 10) %x) {
 ; CHECK-LABEL: define i1 @range_check_to_icmp_ult(
 ; CHECK-SAME: i8 range(i8 2, 10) [[X:%.*]]) {
 ; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], -2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[OFF]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], 6
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %off = add i8 %x, -2
@@ -129,7 +129,7 @@ define i1 @range_check_to_icmp_uge(i8 range(i8 2, 6) %x) {
 ; CHECK-LABEL: define i1 @range_check_to_icmp_uge(
 ; CHECK-SAME: i8 range(i8 2, 6) [[X:%.*]]) {
 ; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], -4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[OFF]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[X]], 4
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %off = add nsw i8 %x, -4
@@ -141,7 +141,7 @@ define i1 @range_check_to_icmp_slt(i8 range(i8 -56, 20) %x) {
 ; CHECK-LABEL: define i1 @range_check_to_icmp_slt(
 ; CHECK-SAME: i8 range(i8 -56, 20) [[X:%.*]]) {
 ; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], 56
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[OFF]], 50
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], -6
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %off = add nsw i8 %x, 56
@@ -153,7 +153,7 @@ define i1 @range_check_to_icmp_sge(i8 range(i8 -56, 20) %x) {
 ; CHECK-LABEL: define i1 @range_check_to_icmp_sge(
 ; CHECK-SAME: i8 range(i8 -56, 20) [[X:%.*]]) {
 ; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[X]], 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[OFF]], 36
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[X]], -16
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %off = add nsw i8 %x, 16
