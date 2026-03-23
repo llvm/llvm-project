@@ -4095,10 +4095,24 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         isByRef
             ? static_cast<mlir::Type>(fir::ReferenceType::get(reductionType))
             : reductionType;
+
+    // Get the omp_out symbol from the combiner for finalization checks
+    // in populateByRefInitAndCleanupRegions.
+    const semantics::Symbol *reductionSym = nullptr;
+    const auto &declList =
+        std::get<std::list<parser::OmpStylizedDeclaration>>(parserInst.t);
+    for (const auto &decl : declList) {
+      const auto &name = std::get<parser::ObjectName>(decl.var.t);
+      if (name.ToString() == "omp_out") {
+        reductionSym = name.symbol;
+        break;
+      }
+    }
+
     ReductionProcessor::createDeclareReductionHelper<
-        mlir::omp::DeclareReductionOp>(converter, reductionNameStr, redType,
-                                       converter.getCurrentLocation(), isByRef,
-                                       genCombinerCB, genInitValueCB);
+        mlir::omp::DeclareReductionOp>(
+        converter, reductionNameStr, redType, converter.getCurrentLocation(),
+        isByRef, genCombinerCB, genInitValueCB, reductionSym);
   }
 }
 

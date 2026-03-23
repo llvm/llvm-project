@@ -502,7 +502,7 @@ template <typename OpType>
 static void createReductionAllocAndInitRegions(
     AbstractConverter &converter, mlir::Location loc, OpType &reductionDecl,
     ReductionProcessor::GenInitValueCBTy genInitValueCB, mlir::Type type,
-    bool isByRef) {
+    bool isByRef, const Fortran::semantics::Symbol *sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto yield = [&](mlir::Value ret) { genYield<OpType>(builder, loc, ret); };
 
@@ -533,7 +533,7 @@ static void createReductionAllocAndInitRegions(
         converter, loc, type, initValue, initBlock,
         reductionDecl.getInitializerAllocArg(),
         reductionDecl.getInitializerMoldArg(), reductionDecl.getCleanupRegion(),
-        DeclOperationKind::Reduction, /*sym=*/nullptr,
+        DeclOperationKind::Reduction, sym,
         /*cannotHaveLowerBounds=*/false,
         /*isDoConcurrent*/ std::is_same_v<OpType, fir::DeclareReductionOp>);
   }
@@ -562,7 +562,8 @@ template <typename DeclareRedType>
 DeclareRedType ReductionProcessor::createDeclareReductionHelper(
     AbstractConverter &converter, llvm::StringRef reductionOpName,
     mlir::Type type, mlir::Location loc, bool isByRef,
-    GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB) {
+    GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB,
+    const semantics::Symbol *sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::ModuleOp module = builder.getModule();
@@ -596,7 +597,7 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   decl = DeclareRedType::create(modBuilder, loc, reductionOpName, type,
                                 boxedTyAttr);
   createReductionAllocAndInitRegions(converter, loc, decl, genInitValueCB, type,
-                                     isByRef);
+                                     isByRef, sym);
   builder.createBlock(&decl.getReductionRegion(),
                       decl.getReductionRegion().end(), {type, type},
                       {loc, loc});

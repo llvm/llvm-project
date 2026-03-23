@@ -128,7 +128,8 @@ public:
   static DeclareRedType createDeclareReductionHelper(
       AbstractConverter &converter, llvm::StringRef reductionOpName,
       mlir::Type type, mlir::Location loc, bool isByRef,
-      GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB);
+      GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB,
+      const semantics::Symbol *sym = nullptr);
 
   /// Creates an OpenMP reduction declaration and inserts it into the provided
   /// symbol table. The declaration has a constant initializer with the neutral
