@@ -75,3 +75,8 @@ __CLC_FUNCTION(__CLC_ARG1_TYPE x, __CLC_ARG2_TYPE y,
 }
 
 #endif // __CLC_VECSIZE_OR_1 >= 2
+
+#undef __CLC_RET_TYPE
+#undef __CLC_ARG1_TYPE
+#undef __CLC_ARG2_TYPE
+#undef __CLC_OUT_ARG3_TYPE

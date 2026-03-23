@@ -22,10 +22,6 @@ _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_remquo(__CLC_GENTYPE x,
 
 _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_remquo(__CLC_GENTYPE x,
                                                    __CLC_GENTYPE y,
-                                                   private __CLC_INTN *q);
-
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_remquo(__CLC_GENTYPE x,
-                                                   __CLC_GENTYPE y,
                                                    global __CLC_INTN *q);
 
 _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __clc_remquo(__CLC_GENTYPE x,
