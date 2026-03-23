@@ -764,9 +764,6 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
     /// the attribute.  This traps on signless integers types!
     APSInt getAPSInt() const;
 
-    /// Return the integer value as a reference to an APInt.
-    const APInt &getValueRef() const;
-
   private:
     /// Return a boolean attribute. This is a special variant of the `get`
     /// method that is used by the MLIRContext to cache the boolean IntegerAttr
