@@ -9472,6 +9472,10 @@ static bool
 isSupportedReciprocalEstimateType(EVT VT, const LoongArchSubtarget &Subtarget) {
   assert(Subtarget.hasFrecipe() &&
          "Reciprocal estimate queried on unsupported target");
+
+  if (!VT.isSimple())
+    return false;
+
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::f32:
     // f32 is the base type for reciprocal estimate instructions.
