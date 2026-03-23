@@ -219,19 +219,17 @@ struct match_poison {
   }
 };
 
-template <typename OpTy> struct match_widen {
+template <typename OpTy, typename... To> struct match_isa {
   OpTy Op;
 
-  template <typename ITy> bool match(ITy *V) const {
-    // TODO: Handle more widen recipes.
-    if (isa<VPWidenCastRecipe, VPWidenRecipe>(V))
-      return Op.match(V);
-    return false;
+  template <typename FromTy> bool match(FromTy *V) const {
+    return isa<To...>(V) && Op.match(V);
   }
 };
 
-// Match a VPWiden* recipe.
-template <typename OpTy> inline match_widen<OpTy> m_Widen(const OpTy &Op) {
+// Match isa<Ty>.
+template <typename... To, typename OpTy>
+inline match_isa<OpTy, To...> m_IsA(const OpTy &Op) {
   return {Op};
 }
 
