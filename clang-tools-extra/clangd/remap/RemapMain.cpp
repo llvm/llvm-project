@@ -31,7 +31,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <atomic>
@@ -65,6 +64,17 @@ static llvm::cl::opt<unsigned> NumThreads{
     llvm::cl::cat(RemapCategory),
     llvm::cl::desc("Number of worker threads (0 = all)"),
     llvm::cl::init(0),
+};
+
+static llvm::cl::opt<Logger::Level> LogLevel{
+    "log",
+    llvm::cl::cat(RemapCategory),
+    llvm::cl::desc("Verbosity of log messages written to stderr"),
+    llvm::cl::values(
+        clEnumValN(Logger::Error, "error", "Error messages only"),
+        clEnumValN(Logger::Info, "info", "High level execution tracing"),
+        clEnumValN(Logger::Debug, "verbose", "Low level details")),
+    llvm::cl::init(Logger::Info),
 };
 
 // Apply a path mapping to a URI or raw path string
@@ -147,24 +157,17 @@ std::string shardName(llvm::StringRef SourceFilePath) {
       .str();
 }
 
-// Derive the new shard filename from the remapped Sources (IncludeGraph)
-// section. Each source entry's URI was already remapped, so resolving it
-// gives the new absolute path whose hash determines the shard filename.
+// For each source entry, resolve its URI to get the original absolute path and
+// compute that shard name. Find the entry whose shard name matches, and apply
+// the path mappings to that path to compute the new shard name.
 //
-// Shard filenames have the form "<source-filename>.<hash>.idx".
-// We strip ".<hash>.idx" to recover the source filename, then match it
-// against entries in Sources.
+// This must be called before remapIndexData(), since it needs the original (not
+// remapped) URIs.
 std::string deriveNewFilename(const IndexFileIn &Data,
-                              llvm::StringRef OldFilename) {
+                              llvm::StringRef OldFilename,
+                              const PathMappings &Mappings) {
   if (!Data.Sources || Data.Sources->empty())
     return OldFilename.str();
-
-  // ".<16-hex-hash>.idx" is 1 + 16 + 4 = 21 characters.
-  constexpr size_t ShardSuffixLen = 21;
-  llvm::StringRef SourceBasename = OldFilename;
-  if (SourceBasename.ends_with(".idx") &&
-      SourceBasename.size() > ShardSuffixLen)
-    SourceBasename = SourceBasename.drop_back(ShardSuffixLen);
 
   for (const auto &Entry : *Data.Sources) {
     auto U = URI::parse(Entry.first());
@@ -177,9 +180,11 @@ std::string deriveNewFilename(const IndexFileIn &Data,
       llvm::consumeError(Path.takeError());
       continue;
     }
-    if (llvm::sys::path::filename(*Path) == SourceBasename ||
-        Data.Sources->size() == 1)
-      return shardName(*Path);
+    if (shardName(*Path) == OldFilename) {
+      std::string NewPath = *Path;
+      remapStdStr(NewPath, Mappings);
+      return shardName(NewPath);
+    }
   }
   return OldFilename.str();
 }
@@ -250,6 +255,9 @@ int main(int Argc, const char **Argv) {
                                     "clangd-remap: rewrite paths inside "
                                     "background-index .idx shards\n");
 
+  StreamLogger Logger(llvm::errs(), LogLevel);
+  LoggingSession LoggingSession(Logger);
+
   auto Mappings = parsePathMappings(PathMappingsArg);
   if (!Mappings) {
     elog("Invalid --path-mappings: {0}", Mappings.takeError());
@@ -295,29 +303,27 @@ int main(int Argc, const char **Argv) {
       return;
     }
 
+    // Derive the new shard filename before remapping, so we can match
+    // against original (un-remapped) source URIs.
+    llvm::StringRef OldFilename = llvm::sys::path::filename(ShardPath);
+    std::string NewFilename =
+        deriveNewFilename(*Parsed, OldFilename, *Mappings);
+
     // Remap all paths in the parsed data
     llvm::BumpPtrAllocator Arena;
     llvm::StringSaver Saver(Arena);
     remapIndexData(*Parsed, *Mappings, Saver);
 
-    // Serialize back to RIFF
-    IndexFileOut Out(*Parsed);
-    Out.Format = IndexFileFormat::RIFF;
-    std::string Serialized = llvm::to_string(Out);
-
-    // Determine whether the shard filename needs to change
-    llvm::StringRef OldFilename = llvm::sys::path::filename(ShardPath);
-    llvm::StringRef ParentDir = llvm::sys::path::parent_path(ShardPath);
-    std::string NewFilename = deriveNewFilename(*Parsed, OldFilename);
-
     // Write the remapped shard (possibly under a new name)
+    llvm::StringRef ParentDir = llvm::sys::path::parent_path(ShardPath);
     llvm::SmallString<256> NewPath(ParentDir);
     llvm::sys::path::append(NewPath, NewFilename);
-    auto Err = llvm::writeToOutput(NewPath, [&](llvm::raw_ostream &OS) {
-      OS << Serialized;
-      return llvm::Error::success();
-    });
-    if (Err) {
+    if (auto Err = llvm::writeToOutput(NewPath, [&](llvm::raw_ostream &OS) {
+          IndexFileOut Out(*Parsed);
+          Out.Format = IndexFileFormat::RIFF;
+          OS << Out;
+          return llvm::Error::success();
+        })) {
       elog("Cannot write {0}: {1}", NewPath, std::move(Err));
       ++Errors;
       return;
