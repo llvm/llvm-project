@@ -8682,9 +8682,7 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
     const APFloat *C;
     Value *IntSrc;
     if (match(RHSC, m_APFloat(C)) &&
-        match(LHSI, m_FSub(m_Specific(RHSC),
-                           m_CombineOr(m_SIToFP(m_Value(IntSrc)),
-                                       m_UIToFP(m_Value(IntSrc)))))) {
+        match(LHSI, m_FSub(m_Specific(RHSC), m_IToFP(m_Value(IntSrc))))) {
       // Requirements on C and Y:
       // 1. C is finite, nonzero, normal.
       // 2. C shouldn't be too large, that is, ULP(C) <= 1.
