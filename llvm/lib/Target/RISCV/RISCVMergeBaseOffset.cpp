@@ -462,9 +462,9 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       // operands.
       if (UseMI.getOperand(2).isFI())
         return false;
-      // Register defined by Lo should not be the value register.
-      if (DestReg == UseMI.getOperand(0).getReg() ||
-          DestReg == UseMI.getOperand(1).getReg() ||
+      // Register defined by Lo should not be the (tied) false value, or a
+      // register used in the branch predicate.
+      if (DestReg == UseMI.getOperand(1).getReg() ||
           DestReg == UseMI.getOperand(5).getReg())
         return false;
       if (UseMI.getOperand(6).isReg() &&
