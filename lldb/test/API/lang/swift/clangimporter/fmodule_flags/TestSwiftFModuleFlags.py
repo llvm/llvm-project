@@ -19,8 +19,8 @@ class TestSwiftFModuleFlags(TestBase):
 
         # Scan through the types log.
         self.filecheck('platform shell cat "%s"' % log, __file__)
-#       CHECK: -DMARKER1
+#       CHECK: main.swift{{.*}} PCM validation is
+#       CHECK: main.swift{{.*}} -DMARKER1
 #       CHECK-NOT: -fno-implicit-modules
 #       CHECK-NOT: -fno-implicit-module-maps
-#       CHECK: -DMARKER2
-#       CHECK: PCM validation is
+#       CHECK: main.swift{{.*}} -DMARKER2
