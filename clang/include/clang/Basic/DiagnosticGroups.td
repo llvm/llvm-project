@@ -1875,6 +1875,9 @@ def HLSLExplicitBinding : DiagGroup<"hlsl-explicit-binding">;
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
 
+// Warnings for SPIRV validation
+def SPIRVValidation : DiagGroup<"spirv-validation">;
+
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
 

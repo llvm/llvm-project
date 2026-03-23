@@ -4739,6 +4739,18 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
+  if (C.getDefaultToolChain().getTriple().isSPIRV()) {
+    const auto &TC =
+        static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
+
+    // Call spirv-val for SPIR-V when -Vd not in Args.
+    if (TC.requiresValidation(Args)) {
+      Action *LastAction = Actions.back();
+      Actions.push_back(
+          C.MakeAction<BinaryAnalyzeJobAction>(LastAction, types::TY_Object));
+    }
+  }
+
   // Claim ignored clang-cl options.
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
@@ -5381,11 +5393,9 @@ void Driver::BuildJobs(Compilation &C) const {
     unsigned NumOutputs = 0;
     unsigned NumIfsOutputs = 0;
     for (const Action *A : C.getActions()) {
-      // The actions below do not increase the number of outputs, when operating
-      // on DX containers.
-      if (A->getType() == types::TY_DX_CONTAINER &&
-          (A->getKind() == clang::driver::Action::BinaryAnalyzeJobClass ||
-           A->getKind() == clang::driver::Action::BinaryTranslatorJobClass))
+      // The actions below do not increase the number of outputs.
+      if (A->getKind() == clang::driver::Action::BinaryAnalyzeJobClass ||
+          A->getKind() == clang::driver::Action::BinaryTranslatorJobClass)
         continue;
 
       if (A->getType() != types::TY_Nothing &&
@@ -6434,10 +6444,22 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       const char *Suffix = types::getTypeTempSuffix(JA.getType(), true);
       return CreateTempFile(C, Split.first, Suffix, false);
     }
-    // We don't have SPIRV-val integrated (yet), so for now we can assume this
-    // is the final output.
+
     assert(C.getDefaultToolChain().getTriple().isSPIRV());
-    return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
+    const auto &TC =
+        static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
+
+    // If this is the last job in the compilation for this input, and Fo is
+    // non-empty, we can return the Fo file (the final output)
+    if (TC.isLastJob(C.getArgs(), JA.getKind()) && !FoValue.empty())
+      return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
+
+    // Otherwise, create a temporary file for validation (like DXIL creates
+    // temp files).
+    StringRef Name = llvm::sys::path::filename(BaseInput);
+    std::pair<StringRef, StringRef> Split = Name.split('.');
+    const char *Suffix = types::getTypeTempSuffix(JA.getType(), true);
+    return CreateTempFile(C, Split.first, Suffix, false);
   }
 
   // Is this the assembly listing for /FA?

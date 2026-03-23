@@ -315,6 +315,23 @@ void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Input));
 }
 
+void tools::hlsl::SPIRV_Validator::ConstructJob(
+    Compilation &C, const JobAction &JA, const InputInfo &Output,
+    const InputInfoList &Inputs, const ArgList &Args,
+    const char *LinkingOutput) const {
+  std::string SPIRVValPath = getToolChain().GetProgramPath("spirv-val");
+  assert(SPIRVValPath != "spirv-val" && "cannot find spirv-val");
+
+  ArgStringList CmdArgs;
+  assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
+  const InputInfo &Input = Inputs[0];
+  CmdArgs.push_back(Input.getFilename());
+
+  const char *Exec = Args.MakeArgString(SPIRVValPath);
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Input));
+}
+
 void tools::hlsl::MetalConverter::ConstructJob(
     Compilation &C, const JobAction &JA, const InputInfo &Output,
     const InputInfoList &Inputs, const ArgList &Args,
@@ -384,12 +401,20 @@ HLSLToolChain::HLSLToolChain(const Driver &D, const llvm::Triple &Triple,
   if (Args.hasArg(options::OPT_dxc_validator_path_EQ))
     getProgramPaths().push_back(
         Args.getLastArgValue(options::OPT_dxc_validator_path_EQ).str());
+  if (Args.hasArg(options::OPT_spirv_validator_path_EQ))
+    getProgramPaths().push_back(
+        Args.getLastArgValue(options::OPT_spirv_validator_path_EQ).str());
 }
 
 Tool *clang::driver::toolchains::HLSLToolChain::getTool(
     Action::ActionClass AC) const {
   switch (AC) {
   case Action::BinaryAnalyzeJobClass:
+    if (getTriple().isSPIRV()) {
+      if (!SPIRVValidator)
+        SPIRVValidator.reset(new tools::hlsl::SPIRV_Validator(*this));
+      return SPIRVValidator.get();
+    }
     if (!Validator)
       Validator.reset(new tools::hlsl::Validator(*this));
     return Validator.get();
@@ -574,18 +599,31 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   return DAL;
 }
 
-bool HLSLToolChain::requiresValidation(DerivedArgList &Args) const {
-  if (!Args.hasArg(options::OPT_dxc_Fo))
+bool HLSLToolChain::requiresValidation(DerivedArgList &Args,
+                                       bool Diagnose) const {
+  bool HasFo = Args.hasArg(options::OPT_dxc_Fo);
+  bool DisableValidation =
+      Args.getLastArg(options::OPT_dxc_disable_validation) != nullptr;
+
+  if (DisableValidation || !HasFo)
     return false;
 
-  if (Args.getLastArg(options::OPT_dxc_disable_validation))
-    return false;
+  if (getArch() != llvm::Triple::spirv) {
+    std::string DxvPath = GetProgramPath("dxv");
+    if (DxvPath != "dxv")
+      return true;
 
-  std::string DxvPath = GetProgramPath("dxv");
-  if (DxvPath != "dxv")
+    if (Diagnose)
+      getDriver().Diag(diag::warn_drv_dxc_missing_dxv);
+    return false;
+  }
+
+  std::string SpirvValPath = GetProgramPath("spirv-val");
+  if (SpirvValPath != "spirv-val")
     return true;
 
-  getDriver().Diag(diag::warn_drv_dxc_missing_dxv);
+  if (Diagnose)
+    getDriver().Diag(diag::warn_drv_dxc_missing_spirv_val);
   return false;
 }
 
@@ -604,8 +642,14 @@ bool HLSLToolChain::isLastJob(DerivedArgList &Args,
   // Note: we check in the reverse order of execution
   if (requiresBinaryTranslation(Args))
     return AC == Action::Action::BinaryTranslatorJobClass;
-  if (requiresValidation(Args))
+  // For SPIR-V, spirv-val is a pure validator that doesn't produce output
+  // files, so the compile step is the output-producing step. For DXIL, dxv
+  // validates and signs, producing the final output.
+  if (requiresValidation(Args, /*Diagnose=*/false)) {
+    if (getTriple().isSPIRV())
+      return AC != Action::Action::BinaryAnalyzeJobClass;
     return AC == Action::Action::BinaryAnalyzeJobClass;
+  }
   if (requiresObjcopy(Args))
     return AC == Action::Action::ObjcopyJobClass;
 
