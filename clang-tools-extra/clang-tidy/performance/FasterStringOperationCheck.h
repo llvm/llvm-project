@@ -11,7 +11,6 @@
 
 #include "../ClangTidyCheck.h"
 
-#include <string>
 #include <vector>
 
 namespace clang::tidy::performance {
