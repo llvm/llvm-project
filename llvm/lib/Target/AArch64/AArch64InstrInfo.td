@@ -1824,6 +1824,13 @@ defm FMLALlane  : SIMDThreeSameVectorFMLIndex<0, 0b0000, "fmlal", int_aarch64_ne
 defm FMLSLlane  : SIMDThreeSameVectorFMLIndex<0, 0b0100, "fmlsl", int_aarch64_neon_fmlsl>;
 defm FMLAL2lane : SIMDThreeSameVectorFMLIndex<1, 0b1000, "fmlal2", int_aarch64_neon_fmlal2>;
 defm FMLSL2lane : SIMDThreeSameVectorFMLIndex<1, 0b1100, "fmlsl2", int_aarch64_neon_fmlsl2>;
+
+def : Pat<(v2f32 (partial_reduce_fmla v2f32:$acc, v4f16:$LHS, v4f16:$RHS)),
+          (FMLAL2v4f16 (FMLALv4f16 v2f32:$acc, V64:$LHS, V64:$RHS),
+              V64:$LHS, V64:$RHS)>;
+def : Pat<(v4f32 (partial_reduce_fmla v4f32:$acc, v8f16:$LHS, v8f16:$RHS)),
+          (FMLAL2v8f16 (FMLALv8f16 v4f32:$acc, V128:$LHS, V128:$RHS),
+              V128:$LHS, V128:$RHS)>;
 }
 
 // Armv8.2-A Crypto extensions
@@ -2560,12 +2567,12 @@ def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
                Sched<[WriteSys]>;
 
 // Generic system instructions
-def SYSxt  : SystemXtI<0, "sys">;
+def SYSxt  : SystemXtI<"sys">;
 def SYSLxt : SystemLXtI<1, "sysl">;
 
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
-                (SYSxt imm0_7:$op1, sys_cr_op:$Cn,
-                 sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
+                (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
+                 sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
 
 
 //===----------------------------------------------------------------------===//

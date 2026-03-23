@@ -1122,32 +1122,67 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     bool IsMat0 = QTy0->isConstantMatrixType();
     bool IsMat1 = QTy1->isConstantMatrixType();
 
+    // The matrix multiply intrinsic only operates on column-major order
+    // matrices. Therefore matrix memory layout transforms must be inserted
+    // before and after matrix multiply intrinsics.
+    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
       unsigned N = QTy0->castAs<VectorType>()->getNumElements();
       auto *MatTy = QTy1->castAs<ConstantMatrixType>();
-      unsigned M = MatTy->getNumColumns();
-      return MB.CreateMatrixMultiply(Op0, Op1, 1, N, M, "hlsl.mul");
+      unsigned Rows = MatTy->getNumRows();
+      unsigned Cols = MatTy->getNumColumns();
+      assert(N == Rows && "vector length must match matrix row count");
+      if (IsRowMajor)
+        Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows, Cols);
+      return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
     }
     if (IsMat0 && IsVec1) {
       auto *MatTy = QTy0->castAs<ConstantMatrixType>();
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
+      assert(QTy1->castAs<VectorType>()->getNumElements() == Cols &&
+             "vector length must match matrix column count");
+      if (IsRowMajor)
+        Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
     assert(IsMat0 && IsMat1);
     auto *MatTy0 = QTy0->castAs<ConstantMatrixType>();
     auto *MatTy1 = QTy1->castAs<ConstantMatrixType>();
-    return MB.CreateMatrixMultiply(Op0, Op1, MatTy0->getNumRows(),
-                                   MatTy0->getNumColumns(),
-                                   MatTy1->getNumColumns(), "hlsl.mul");
+    unsigned Rows0 = MatTy0->getNumRows();
+    unsigned Rows1 = MatTy1->getNumRows();
+    unsigned Cols0 = MatTy0->getNumColumns();
+    unsigned Cols1 = MatTy1->getNumColumns();
+    assert(Cols0 == Rows1 &&
+           "inner matrix dimensions must match for multiplication");
+    if (IsRowMajor) {
+      Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows0, Cols0);
+      Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows1, Cols1);
+    }
+    Value *Result =
+        MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
+    if (IsRowMajor)
+      Result = MB.CreateColumnMajorToRowMajorTransform(Result, Rows0, Cols1);
+    return Result;
   }
   case Builtin::BI__builtin_hlsl_transpose: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     auto *MatTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
+    unsigned Rows = MatTy->getNumRows();
+    unsigned Cols = MatTy->getNumColumns();
     llvm::MatrixBuilder MB(Builder);
-    return MB.CreateMatrixTranspose(Op0, MatTy->getNumRows(),
-                                    MatTy->getNumColumns());
+    // The matrix transpose intrinsic operates on column-major matrices.
+    // For row-major, a row-major RxC matrix is equivalent to a column-major
+    // CxR matrix, so transposing with swapped dimensions produces the correct
+    // row-major CxR result directly.
+    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    if (IsRowMajor)
+      return MB.CreateMatrixTranspose(Op0, Cols, Rows);
+    return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -1394,6 +1429,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.prefix.product");
+  }
+  case Builtin::BI__builtin_hlsl_quad_read_across_x: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getQuadReadAcrossXIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), ID, {OpExpr->getType()}),
+                           ArrayRef{OpExpr}, "hlsl.quad.read.across.x");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);

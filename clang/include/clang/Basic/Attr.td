@@ -4155,7 +4155,7 @@ def NoThreadSafetyAnalysis : InheritableAttr {
 
 def GuardedBy : InheritableAttr {
   let Spellings = [GNU<"guarded_by">];
-  let Args = [ExprArgument<"Arg">];
+  let Args = [VariadicExprArgument<"Args">];
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -4166,7 +4166,7 @@ def GuardedBy : InheritableAttr {
 
 def PtGuardedBy : InheritableAttr {
   let Spellings = [GNU<"pt_guarded_by">];
-  let Args = [ExprArgument<"Arg">];
+  let Args = [VariadicExprArgument<"Args">];
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
@@ -5051,6 +5051,14 @@ def HLSLResourceBinding: InheritableAttr {
         return ImplicitCounterBindingOrderID.value();
       }
   }];
+}
+
+def HLSLAssociatedResourceDecl : InheritableAttr {
+  let Spellings = [];
+  let Args = [DeclArgument<Var, "ResDecl">];
+  let Subjects = SubjectList<[ExternalGlobalVar], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
 }
 
 def HLSLUnparsedSemantic : HLSLAnnotationAttr {

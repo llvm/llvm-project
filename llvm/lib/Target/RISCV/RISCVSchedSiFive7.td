@@ -346,21 +346,30 @@ multiclass SiFive7WriteResBase<int VLEN,
     def : WriteRes<WriteIMul32, [PipeB]>;
   }
 
-  // Integer division
-  def : WriteRes<WriteIDiv, [PipeB, IDiv]> {
+  // IDiv / IRem in a 32-bit core should have the same latency and throughput
+  // as IDiv32 / IRem32 in a 64-bit core.
+  def SiFive7RV64IDivRemSchedWriteRes : SchedWriteRes<[PipeB, IDiv]> {
     let Latency = 66;
     let ReleaseAtCycles = [1, 65];
   }
+  def SiFive7RV32IDivRemSchedWriteRes : SchedWriteRes<[PipeB, IDiv]> {
+    let Latency = 34;
+    let ReleaseAtCycles = [1, 33];
+  }
+  def SiFive7IDivRemSchedWriteVariant : SchedWriteVariant<[
+    SchedVar<RV32SchedPred, [!cast<SchedWriteRes>(NAME # "SiFive7RV32IDivRemSchedWriteRes")]>,
+    SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # "SiFive7RV64IDivRemSchedWriteRes")]>
+  ]>;
+
+  // Integer division
+  def : SchedAlias<WriteIDiv, !cast<SchedWrite>(NAME # "SiFive7IDivRemSchedWriteVariant")>;
   def : WriteRes<WriteIDiv32,  [PipeB, IDiv]> {
     let Latency = 34;
     let ReleaseAtCycles = [1, 33];
   }
 
   // Integer remainder
-  def : WriteRes<WriteIRem, [PipeB, IDiv]> {
-    let Latency = 66;
-    let ReleaseAtCycles = [1, 65];
-  }
+  def : SchedAlias<WriteIRem, !cast<SchedWrite>(NAME # "SiFive7IDivRemSchedWriteVariant")>;
   def : WriteRes<WriteIRem32,  [PipeB, IDiv]> {
     let Latency = 34;
     let ReleaseAtCycles = [1, 33];
@@ -514,12 +523,12 @@ multiclass SiFive7WriteResBase<int VLEN,
   def : WriteRes<WriteFCmp16, [PipeB]>;
   def : WriteRes<WriteFCmp32, [PipeB]>;
   def : WriteRes<WriteFCmp64, [PipeB]>;
-  def : WriteRes<WriteFMovI16ToF16, [PipeB]>;
-  def : WriteRes<WriteFMovF16ToI16, [PipeB]>;
-  def : WriteRes<WriteFMovI32ToF32, [PipeB]>;
-  def : WriteRes<WriteFMovF32ToI32, [PipeB]>;
-  def : WriteRes<WriteFMovI64ToF64, [PipeB]>;
-  def : WriteRes<WriteFMovF64ToI64, [PipeB]>;
+  def : WriteRes<WriteFMovI16ToF16, [PipeA]>;
+  def : WriteRes<WriteFMovF16ToI16, [PipeA]>;
+  def : WriteRes<WriteFMovI32ToF32, [PipeA]>;
+  def : WriteRes<WriteFMovF32ToI32, [PipeA]>;
+  def : WriteRes<WriteFMovI64ToF64, [PipeA]>;
+  def : WriteRes<WriteFMovF64ToI64, [PipeA]>;
   }
 
   // 6. Configuration-Setting Instructions
@@ -1627,6 +1636,11 @@ def SiFive7LowFPLatencies : SiFive7FPLatencies {
 }
 
 /// Models
+def SiFive7VLEN128X100Model : SiFive7SchedMachineModel<128> {
+  let FPLatencies = SiFive7LowFPLatencies;
+  let HasFastGather = true;
+}
+
 def SiFive7VLEN512Model : SiFive7SchedMachineModel<512> {
   let FPLatencies = SiFive7DefaultFPLatencies;
 }
@@ -1638,7 +1652,8 @@ def SiFive7VLEN1024X300Model : SiFive7SchedMachineModel<1024> {
 }
 
 /// Binding models to their scheduling resources.
-foreach model = [SiFive7VLEN512Model, SiFive7VLEN1024X300Model] in {
+foreach model = [SiFive7VLEN128X100Model, SiFive7VLEN512Model,
+                 SiFive7VLEN1024X300Model] in {
   let SchedModel = model in
   defm model.Name : SiFive7SchedResources<model.VLEN, model.HasDualVALU,
                                           model.FPLatencies,
@@ -1647,4 +1662,5 @@ foreach model = [SiFive7VLEN512Model, SiFive7VLEN1024X300Model] in {
 
 // Some model name aliases.
 defvar SiFive7Model = SiFive7VLEN512Model;
+defvar SiFiveX100Model = SiFive7VLEN128X100Model;
 defvar SiFiveX390Model = SiFive7VLEN1024X300Model;

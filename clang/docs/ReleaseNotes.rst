@@ -108,6 +108,10 @@ Clang Python Bindings Potentially Breaking Changes
   with objects of other classes.
 - ``TranslationUnit.get_tokens`` now throws an error if both the ``extent`` and
   ``locations`` argument are passed. Previousy, ``locations`` took precedence.
+- ``_CXUnsavedFile`` will be renamed to ``UnsavedFile`` for consistency.
+  ``UnsavedFile`` is already available to use and existing uses should
+  be adapted to refer to it instead. ``_CXUnsavedFile`` will be removed in a 
+  future release.
 
 What's New in Clang |release|?
 ==============================
@@ -163,6 +167,8 @@ Non-comprehensive list of changes in this release
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 
+- Added header ``endian.h`` which contains byte order helpers specified in POSIX
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
@@ -214,6 +220,13 @@ Attribute Changes in Clang
   meant to be a low level tool for language runtime authors to associate a
   foreign language personality with a given function. Note that this does not
   perform any ABI validation for the personality routine.
+
+- The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
+  ``pt_guarded_by`` now accept multiple capability arguments with refined
+  access semantics: *writing* requires all listed capabilities to be held
+  exclusively, while *reading* requires at least one to be held.  This is
+  sound because any writer must hold all capabilities, so holding any one
+  prevents concurrent writes.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -303,6 +316,10 @@ Improvements to Clang's diagnostics
   (``-fimplicit-module-maps``). This does not affect module maps specified
   explicitly via ``-fmodule-map-file=``.
 
+- Honour ``[[maybe_unused]]`` attribute on private fields.
+  ``-Wunused-private-field`` no longer emits a warning for annotated private
+  fields.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -375,6 +392,7 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
+- Fixed a assertion when __block is used on global variables in C mode. (#GH183974)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -387,6 +405,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
+- Fixed a crash related to missing source locations (#GH186655)
 - Fixed a crash when casting a parenthesized unresolved template-id or array section. (#GH183505)
 - Fixed a crash when initializing a ``constexpr`` pointer with a floating-point literal in C23. (#GH180313)
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
@@ -394,6 +413,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
 - Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
 - Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
+- Fixed a crash when ``decltype(__builtin_FUNCTION())`` is used as a template type argument. (#GH167433)
 
 OpenACC Specific Changes
 ------------------------
@@ -497,6 +517,7 @@ libclang
 - Visit constraints of `auto` type to properly visit concept usages (#GH166580)
 - Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
+- The clang_Module_getASTFile API is deprecated and now always returns nullptr
 
 Code Completion
 ---------------
@@ -535,6 +556,8 @@ Python Binding Changes
   ``CodeCompletionResults.results`` should be changed to directly use
   ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
   so it can be used the same as ``CodeCompletionResults.results``.
+- Added a new helper method ``get_version`` to the class ``Config`` to read the
+  version string of the libclang in use.
 
 OpenMP Support
 --------------
