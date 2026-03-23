@@ -1,6 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-;
+
+; FIXME: enabled on Vulkan env, when legalization of vectors > 4 elements is
+; fully supported.
+
 ; Verify that llvm.masked.load and llvm.masked.store lower correctly.
 ; ScalarizeMaskedMemIntrin expands these into scalar conditional loads/stores
 ; with <N x i1> -> iN bitcasts for the mask, which must be decomposed by the
