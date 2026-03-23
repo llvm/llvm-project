@@ -78,6 +78,18 @@ public:
   }
   PyObjectRef(const PyObjectRef &other)
       : referrent(other.referrent), object(other.object /* copies */) {}
+  PyObjectRef &operator=(const PyObjectRef &other) {
+    referrent = other.referrent;
+    object = other.object;
+    return *this;
+  }
+  PyObjectRef &operator=(PyObjectRef &&other) noexcept {
+    referrent = other.referrent;
+    object = std::move(other.object);
+    other.referrent = nullptr;
+    assert(!other.object);
+    return *this;
+  }
   ~PyObjectRef() = default;
 
   int getRefCount() {
