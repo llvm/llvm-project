@@ -10,10 +10,10 @@ target datalayout = "n64:128"
 ; X = sub nuw 38, %t where %t is truncated from i32, so X in [0, 38].
 define i64 @udiv_i8_to_i64(i32 range(i32 0, 32) %x) {
 ; CHECK-LABEL: @udiv_i8_to_i64(
-; CHECK-NEXT:    [[T:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[S:%.*]] = sub nuw nsw i8 38, [[T]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[S]], 7
-; CHECK-NEXT:    [[Z:%.*]] = zext nneg i8 [[D]] to i64
+; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i32 38, [[X:%.*]]
+; CHECK-NEXT:    [[NARROW1:%.*]] = mul nuw nsw i32 [[NARROW]], 37
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[NARROW1]], 8
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
   %t = trunc nuw nsw i32 %x to i8
@@ -26,7 +26,8 @@ define i64 @udiv_i8_to_i64(i32 range(i32 0, 32) %x) {
 ; Bounded i32 range, div by 7, widened to i64.
 define i64 @udiv_i32_bounded(i32 range(i32 0, 201) %x) {
 ; CHECK-LABEL: @udiv_i32_bounded(
-; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[NARROW:%.*]] = mul nuw nsw i32 [[X:%.*]], 293
+; CHECK-NEXT:    [[D:%.*]] = lshr i32 [[NARROW]], 11
 ; CHECK-NEXT:    [[Z:%.*]] = zext nneg i32 [[D]] to i64
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
@@ -38,7 +39,8 @@ define i64 @udiv_i32_bounded(i32 range(i32 0, 201) %x) {
 ; Bounded i16 range, div by 3, widened to i32.
 define i32 @udiv_i16_to_i32(i16 range(i16 0, 100) %x) {
 ; CHECK-LABEL: @udiv_i16_to_i32(
-; CHECK-NEXT:    [[D:%.*]] = udiv i16 [[X:%.*]], 3
+; CHECK-NEXT:    [[NARROW:%.*]] = mul nuw nsw i16 [[X:%.*]], 43
+; CHECK-NEXT:    [[D:%.*]] = lshr i16 [[NARROW]], 7
 ; CHECK-NEXT:    [[Z:%.*]] = zext nneg i16 [[D]] to i32
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
@@ -47,7 +49,7 @@ define i32 @udiv_i16_to_i32(i16 range(i16 0, 100) %x) {
   ret i32 %z
 }
 
-; Negative: full i8 range — no known range reduction, backend handles it.
+; Negative: full i8 range has no known range reduction, backend handles it.
 define i64 @neg_full_range(i8 %x) {
 ; CHECK-LABEL: @neg_full_range(
 ; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], 7
@@ -70,7 +72,7 @@ define i64 @neg_div_by_one(i8 range(i8 0, 39) %x) {
   ret i64 %z
 }
 
-; Negative: sibling urem with same divisor — defer to div_ceil fold.
+; Negative: sibling urem with same divisor, do not run.
 define i64 @neg_sibling_urem(i32 range(i32 1, 129) %x) {
 ; CHECK-LABEL: @neg_sibling_urem(
 ; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[X:%.*]], 7
@@ -90,7 +92,7 @@ define i64 @neg_sibling_urem(i32 range(i32 1, 129) %x) {
   ret i64 %z
 }
 
-; Negative: multi-use udiv — not safe to destroy.
+; Negative: multi-use udiv is not safe to destroy.
 define i64 @neg_multi_use(i32 range(i32 0, 201) %x) {
 ; CHECK-LABEL: @neg_multi_use(
 ; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[X:%.*]], 7

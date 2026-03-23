@@ -1456,6 +1456,84 @@ bool TypeEvaluationHelper::canEvaluateZExtdImpl(Value *V, Type *Ty,
   }
 }
 
+/// Range-aware strength reduction of zext(udiv X, C):
+///   zext(udiv X, C) -> lshr(mul nuw(zext X, Magic), Shift)
+/// when the known range of X allows a simple magic-multiply approximation
+/// that is exact for all values in the range. This eliminates the udiv
+/// entirely and produces code the backend can fold into LEA sequences.
+///
+/// Magic = ceil(2^Shift / C). For correctness we need:
+///   MaxX * (Magic*C - 2^Shift) < 2^Shift  (approximation is exact)
+///   MaxX * Magic < 2^DestWidth             (no overflow in the multiply)
+Instruction *InstCombinerImpl::foldUDivStrengthReduce(ZExtInst &Zext) {
+  Value *Src = Zext.getOperand(0);
+  Type *SrcTy = Src->getType();
+  Type *DestTy = Zext.getType();
+
+  Value *X;
+  const APInt *C;
+  if (!match(Src, m_OneUse(m_UDiv(m_Value(X), m_APInt(C)))))
+    return nullptr;
+
+  if (C->ule(1) || SrcTy == DestTy)
+    return nullptr;
+
+  // A sibling urem with the same divisor signals a higher-level idiom
+  // (e.g. div_ceil) that foldDivCeil in visitAdd should handle first.
+  // Destroying the udiv here would prevent it from matching.
+  for (User *U : X->users()) {
+    const APInt *C2;
+    if (match(U, m_URem(m_Specific(X), m_APInt(C2))) && *C2 == *C)
+      return nullptr;
+  }
+
+  unsigned SrcWidth = SrcTy->getScalarSizeInBits();
+  unsigned DestWidth = DestTy->getScalarSizeInBits();
+  KnownBits Known = computeKnownBits(X, &Zext);
+  APInt MaxX = Known.getMaxValue();
+
+  // Only fire when range analysis has narrowed X below the full source
+  // type range. At full range the backend's native magic-number division
+  // is sufficient, and replacing the udiv would prevent other folds
+  // (e.g. mul(zext(udiv(x,C)),C) -> x - x%C).
+  if (MaxX == APInt::getMaxValue(SrcWidth))
+    return nullptr;
+
+  // Try increasing shift amounts to find a valid magic constant.
+  // Start from ceil(log2(C)) — the minimum useful shift.
+  unsigned MinShift = C->ceilLogBase2();
+  for (unsigned Shift = MinShift; Shift < DestWidth; ++Shift) {
+    // Magic = ceil(2^Shift / C).
+    APInt TwoToS = APInt(DestWidth, 1).shl(Shift);
+    APInt Magic = APInt::getOneBitSet(DestWidth, Shift).udiv(*C);
+    if (TwoToS.urem(*C).isStrictlyPositive())
+      ++Magic;
+
+    // Check: MaxX * Magic must fit in DestWidth bits.
+    bool Overflow = false;
+    APInt MaxProduct = MaxX.zext(DestWidth).umul_ov(Magic, Overflow);
+    if (Overflow || MaxProduct.getActiveBits() > DestWidth)
+      continue;
+
+    // Check: approximation is exact for all values in [0, MaxX].
+    // Sufficient condition: MaxX * (Magic*C - 2^Shift) < 2^Shift.
+    APInt MagicTimesC = Magic.umul_ov(C->zext(DestWidth), Overflow);
+    if (Overflow)
+      continue;
+    APInt Error = MagicTimesC - TwoToS;
+    APInt MaxError = MaxX.zext(DestWidth).umul_ov(Error, Overflow);
+    if (Overflow || MaxError.uge(TwoToS))
+      continue;
+
+    // Emit: lshr(mul nuw(zext X, Magic), Shift).
+    Value *ZextX = Builder.CreateZExt(X, DestTy);
+    Value *Mul = Builder.CreateNUWMul(ZextX, ConstantInt::get(DestTy, Magic));
+    return BinaryOperator::CreateLShr(Mul, ConstantInt::get(DestTy, Shift));
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   // If this zero extend is only used by a truncate, let the truncate be
   // eliminated before we try to optimize this zext.
@@ -1606,6 +1684,9 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
       return &Zext;
     }
   }
+
+  if (Instruction *I = foldUDivStrengthReduce(Zext))
+    return I;
 
   return nullptr;
 }

@@ -136,6 +136,9 @@ public:
   Instruction *commonCastTransforms(CastInst &CI);
   Instruction *visitTrunc(TruncInst &CI);
   Instruction *visitZExt(ZExtInst &Zext);
+  /// zext(udiv X, C) -> lshr(mul nuw(zext X, Magic), Shift)
+  /// when the known range of X allows a simple magic-multiply approximation.
+  Instruction *foldUDivStrengthReduce(ZExtInst &Zext);
   Instruction *visitSExt(SExtInst &Sext);
   Instruction *visitFPTrunc(FPTruncInst &CI);
   Instruction *visitFPExt(CastInst &CI);
