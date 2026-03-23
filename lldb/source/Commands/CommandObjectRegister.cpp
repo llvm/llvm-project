@@ -75,7 +75,7 @@ public:
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
                     RegisterContext &reg_ctx, const RegisterInfo &reg_info,
-                    bool print_flags) {
+                    bool print_flags, uint32_t reg_name_align_at = 0) {
     RegisterValue reg_value;
     if (!reg_ctx.ReadRegister(&reg_info, reg_value))
       return false;
@@ -85,7 +85,7 @@ public:
     bool prefix_with_altname = (bool)m_command_options.alternate_name;
     bool prefix_with_name = !prefix_with_altname;
     DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
-                      prefix_with_altname, m_format_options.GetFormat(), 8,
+                      prefix_with_altname, m_format_options.GetFormat(), reg_name_align_at,
                       exe_ctx.GetBestExecutionContextScope(), print_flags,
                       exe_ctx.GetTargetSP());
     if ((reg_info.encoding == eEncodingUint) ||
@@ -123,6 +123,7 @@ public:
       strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
+      uint32_t reg_name_align_at = ComputeMatchingAlignment(reg_ctx, reg_set, primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
@@ -131,7 +132,7 @@ public:
           continue;
 
         if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
-                                     /*print_flags=*/false))
+                                     /*print_flags=*/false, reg_name_align_at))
           ++available_count;
         else
           ++unavailable_count;
@@ -147,6 +148,36 @@ public:
   }
 
 protected:
+  uint32_t ComputeMatchingAlignment(RegisterContext *reg_ctx, const RegisterSet *const reg_set, bool primitive_only) {
+    bool use_primary_name = !static_cast<bool>(m_command_options.alternate_name);
+    const size_t num_registers = reg_set->num_registers;
+    uint32_t reg_name_align_at = 0;
+
+    auto getNameSize = [&](auto reg_info){ 
+      auto raw = use_primary_name ? reg_info->name : reg_info->alt_name;
+      auto str = raw ? std::string(raw) : std::string();
+      return static_cast<uint32_t>(str.size());
+    };
+
+    // Loop through all the registers to find the longest register name for the 
+    // matching alignment
+    for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
+      const uint32_t reg = reg_set->registers[reg_idx];
+      const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
+
+      // Derived registers are skipped if primitive_only is true.
+      if (primitive_only && reg_info && reg_info->value_regs)
+        continue;
+
+      if (!reg_info)
+        continue;
+
+      reg_name_align_at = std::max(reg_name_align_at, getNameSize(reg_info));
+    }
+
+    return reg_name_align_at;
+  }
+
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Stream &strm = result.GetOutputStream();
     RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();

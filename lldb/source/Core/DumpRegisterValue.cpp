@@ -62,7 +62,7 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
                                      const RegisterInfo &reg_info,
                                      bool prefix_with_name,
                                      bool prefix_with_alt_name, Format format,
-                                     uint32_t reg_name_right_align_at,
+                                     uint32_t reg_name_left_align_at,
                                      ExecutionContextScope *exe_scope,
                                      bool print_flags, TargetSP target_sp) {
   DataExtractor data;
@@ -76,8 +76,8 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
   //     prefix_with_name^prefix_with_alt_name is true
   //
   StreamString format_string;
-  if (reg_name_right_align_at && (prefix_with_name ^ prefix_with_alt_name))
-    format_string.Printf("%%%us", reg_name_right_align_at);
+  if (reg_name_left_align_at && (prefix_with_name ^ prefix_with_alt_name))
+    format_string.Printf("%%-%us", reg_name_left_align_at);
   else
     format_string.Printf("%%s");
   std::string fmt = std::string(format_string.GetString());
