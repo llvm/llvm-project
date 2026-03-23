@@ -134,6 +134,7 @@ int main() {
 // CHECK-DEVICE-NOT: kernel_single_task
 // CHECK-DEVICE-NOT: kernel_entry_point
 // CHECK-DEVICE-NOT: ref_arg_kernel
+// CHECK-DEVICE-NOT: fwd_ref_arg_kernel
 // CHECK-DEVICE-NOT: rvalue_ref_arg_kernel
 
 // Verify that kernel launch code is generated for sycl_kernel_entry_point
