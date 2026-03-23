@@ -30,6 +30,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
@@ -50,6 +51,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -4697,6 +4699,7 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
     SmallVector<Module *, 8> Modules;
     SemaRef.PP.getHeaderSearchInfo().collectAllModules(Modules);
     Module *CurrentModule = SemaRef.getCurrentModule();
+    llvm::StringSet<> AddedModules;
     for (unsigned I = 0, N = Modules.size(); I != N; ++I) {
       // Skip module partitions that don't belong to the current file's declared
       // module.
@@ -4712,6 +4715,27 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
           Builder.TakeString(), CCP_Declaration, CXCursor_ModuleImportDecl,
           Modules[I]->isAvailable() ? CXAvailability_Available
                                     : CXAvailability_NotAvailable));
+      AddedModules.insert(Modules[I]->Name);
+    }
+
+    // Also suggest C++20 named modules from -fmodule-file=<name>=<path> that
+    // haven't been loaded into the module map yet.
+    for (const auto &Entry : SemaRef.PP.getHeaderSearchInfo()
+                                 .getHeaderSearchOpts()
+                                 .PrebuiltModuleFiles) {
+      if (AddedModules.count(Entry.first))
+        continue;
+      StringRef Name = Entry.first;
+      // Apply the same partition filtering as above.
+      if (auto [Primary, Partition] = Name.split(':'); !Partition.empty()) {
+        if (!CurrentModule ||
+            Primary != CurrentModule->getPrimaryModuleInterfaceName())
+          continue;
+      }
+      Builder.AddTypedTextChunk(Builder.getAllocator().CopyString(Name));
+      Results.AddResult(Result(Builder.TakeString(), CCP_Declaration,
+                               CXCursor_ModuleImportDecl,
+                               CXAvailability_Available));
     }
   } else if (getLangOpts().Modules) {
     // Load the named module.
