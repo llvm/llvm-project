@@ -660,6 +660,12 @@ void llvm::removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
     Changed = true;
   }
   if (ReadsArgMem) {
+    if (F.getMemoryEffects().getModRef(IRMemLocation::ArgMem) ==
+        ModRefInfo::Mod) {
+      F.setMemoryEffects(F.getMemoryEffects() |
+                         MemoryEffects::argMemOnly(ModRefInfo::Ref));
+      Changed = true;
+    }
     for (Argument &A : F.args()) {
       if (A.hasAttribute(Attribute::WriteOnly)) {
         A.removeAttr(Attribute::WriteOnly);
