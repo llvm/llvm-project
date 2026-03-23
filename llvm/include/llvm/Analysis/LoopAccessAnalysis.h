@@ -410,8 +410,9 @@ private:
 
     /// Strides here are scaled; i.e. in bytes, taking the size of the
     /// underlying type into account.
-    uint64_t MaxStride;
-    std::optional<uint64_t> CommonStride;
+    const SCEV *MaxAbsStrideInBytes;
+    /// If `nullptr` then strides (might) differ.
+    const SCEV *CommonStrideInBytes;
 
     /// TypeByteSize is either the common store size of both accesses, or 0 when
     /// store sizes mismatch.
@@ -420,12 +421,14 @@ private:
     bool AIsWrite;
     bool BIsWrite;
 
-    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
-                                 std::optional<uint64_t> CommonStride,
+    DepDistanceStrideAndSizeInfo(const SCEV *Dist,
+                                 const SCEV *MaxAbsStrideInBytes,
+                                 const SCEV *CommonStride,
                                  uint64_t TypeByteSize, bool AIsWrite,
                                  bool BIsWrite)
-        : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
-          TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+        : Dist(Dist), MaxAbsStrideInBytes(MaxAbsStrideInBytes),
+          CommonStrideInBytes(CommonStride), TypeByteSize(TypeByteSize),
+          AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
   /// Get the dependence distance, strides, type size and whether it is a write

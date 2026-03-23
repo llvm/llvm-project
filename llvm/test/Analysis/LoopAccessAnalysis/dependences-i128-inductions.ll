@@ -117,13 +117,8 @@ exit:
 define void @forward_i128_step_63bit_plus_one(ptr %A, i128 %n) {
 ; CHECK-LABEL: 'forward_i128_step_63bit_plus_one'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %l = load i32, ptr %gep.A.1, align 4 ->
-; CHECK-NEXT:            store i32 %l, ptr %gep.A, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
