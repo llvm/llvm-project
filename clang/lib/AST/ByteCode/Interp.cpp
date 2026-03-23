@@ -37,7 +37,9 @@ using namespace clang::interp;
 #endif
 
 // On MSVC, musttail does not guarantee tail calls in debug mode.
-#if (defined(_MSC_VER) && defined(_DEBUG)) || !defined(MUSTTAIL)
+// We disable it on MSVC generally since it doesn't seem to be able
+// to handle the way we use tailcalls.
+#if defined(_MSC_VER) || !defined(MUSTTAIL)
 #define MUSTTAIL
 #define USE_TAILCALLS 0
 #else
