@@ -29,7 +29,7 @@ subroutine test_num_tasks
    integer :: i, x
    ! CHECK:        omp.taskloop.context num_tasks(%[[VAL_NUMTASKS]]: i32)
    ! CHECK-SAME:        private(@[[X_FIRSTPRIVATE]] %[[DECL_X]]#0 -> %[[ARG0:.*]], @[[I_PRIVATE]] %[[DECL_I]]#0 -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
-   ! CHECK:          omp.taskloop {
+   ! CHECK:          omp.taskloop.wrapper {
    ! CHECK:            omp.loop_nest (%[[ARG2:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
    !$omp taskloop num_tasks(10)
    do i = 1, 1000
@@ -43,7 +43,7 @@ subroutine test_num_tasks_strict
   integer :: x, i
   ! CHECK:  %[[NUM_TASKS:.*]] = arith.constant 10 : i32
   ! CHECK: omp.taskloop.context num_tasks(strict, %[[NUM_TASKS]]: i32)
-  ! CHECK:   omp.taskloop {
+  ! CHECK:   omp.taskloop.wrapper {
   !$omp taskloop num_tasks(strict:10)
   do i = 1, 100
      !CHECK: arith.addi
