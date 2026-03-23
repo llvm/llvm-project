@@ -8278,7 +8278,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     SDValue Mask = DAG.getConstant(
         APInt::getLowBitsSet(HBitWidth, BestChunkWidth), dl, HiLoVT);
 
-    for (unsigned I = 0; I < BitWidth; I += BestChunkWidth) {
+    for (unsigned I = 0; I < BitWidth - TrailingZeros; I += BestChunkWidth) {
       SDValue Chunk;
       if (I == 0) {
         Chunk = LL;
@@ -8299,7 +8299,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       }
 
       // If we're on the last chunk, we don't need an AND.
-      if (I + BestChunkWidth < BitWidth)
+      if (I + BestChunkWidth < BitWidth - TrailingZeros)
         Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
       if (!Sum)
         Sum = Chunk;
