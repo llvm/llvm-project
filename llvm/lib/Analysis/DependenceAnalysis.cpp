@@ -1382,7 +1382,10 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
   ++WeakCrossingSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
+
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (Delta->isZero()) {
     Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
@@ -1396,67 +1399,37 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
     return false;
   }
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(Coeff);
-  if (!ConstCoeff)
-    return false;
-
-  if (SE->isKnownNegative(ConstCoeff)) {
-    ConstCoeff = dyn_cast<SCEVConstant>(SE->getNegativeSCEV(ConstCoeff));
-    assert(ConstCoeff &&
-           "dynamic cast of negative of ConstCoeff should yield constant");
-    Delta = SE->getNegativeSCEV(Delta);
-  }
-  assert(SE->isKnownPositive(ConstCoeff) && "ConstCoeff should be positive");
-
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
-  if (!ConstDelta)
+  if (!ConstCoeff || !ConstDelta)
     return false;
+
+  OverflowSafeSignedAPInt SafeCoeff(ConstCoeff->getAPInt());
+  OverflowSafeSignedAPInt SafeDelta(ConstDelta->getAPInt());
+
+  if (!SafeCoeff || !SafeDelta)
+    return false;
+
+  if (SafeCoeff->isNegative()) {
+    SafeCoeff = -SafeCoeff;
+    SafeDelta = -SafeDelta;
+  }
+
+  assert(SafeCoeff->isStrictlyPositive() && "SafeCoeff should be positive");
 
   // We're certain that ConstCoeff > 0; therefore,
   // if Delta < 0, then no dependence.
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  LLVM_DEBUG(dbgs() << "\t    ConstCoeff = " << *ConstCoeff << "\n");
-  if (SE->isKnownNegative(Delta)) {
+  LLVM_DEBUG(dbgs() << "\t    SafeDelta = " << *SafeDelta << "\n");
+  LLVM_DEBUG(dbgs() << "\t    SafeCoeff = " << *SafeCoeff << "\n");
+  if (SafeDelta->isNegative()) {
     // No dependence, Delta < 0
     ++WeakCrossingSIVindependence;
     ++WeakCrossingSIVsuccesses;
     return true;
   }
 
-  // We're certain that Delta > 0 and ConstCoeff > 0.
-  // Check Delta/(2*ConstCoeff) against upper loop bound
-  if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
-    const SCEV *ConstantTwo = SE->getConstant(UpperBound->getType(), 2);
-    const SCEV *ML =
-        SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound), ConstantTwo);
-    LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
-    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, Delta, ML)) {
-      // Delta too big, no dependence
-      ++WeakCrossingSIVindependence;
-      ++WeakCrossingSIVsuccesses;
-      return true;
-    }
-    if (SE->isKnownPredicate(CmpInst::ICMP_EQ, Delta, ML)) {
-      // i = i' = UB
-      Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
-      Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
-      ++WeakCrossingSIVsuccesses;
-      if (!Result.DV[Level].Direction) {
-        ++WeakCrossingSIVindependence;
-        return true;
-      }
-      Result.DV[Level].Distance = SE->getZero(Delta->getType());
-      return false;
-    }
-  }
-
   // check that Coeff divides Delta
-  APInt APDelta = ConstDelta->getAPInt();
-  APInt APCoeff = ConstCoeff->getAPInt();
-  APInt Distance = APDelta; // these need to be initialzed
-  APInt Remainder = APDelta;
-  APInt::sdivrem(APDelta, APCoeff, Distance, Remainder);
+  APInt Distance, Remainder;
+  APInt::sdivrem(*SafeDelta, *SafeCoeff, Distance, Remainder);
   LLVM_DEBUG(dbgs() << "\t    Remainder = " << Remainder << "\n");
   if (Remainder != 0) {
     // Coeff doesn't divide Delta, no dependence
@@ -1474,6 +1447,39 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
     // Equal direction isn't possible
     Result.DV[Level].Direction &= ~Dependence::DVEntry::EQ;
     ++WeakCrossingSIVsuccesses;
+  }
+
+  // We're certain that Delta > 0 and ConstCoeff > 0.
+  // Check Delta/(2*ConstCoeff) against upper loop bound
+  if (const SCEV *UpperBound =
+          collectUpperBound(CurSrcLoop, Delta->getType())) {
+    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
+    ConstantRange UBRange = SE->getSignedRange(UpperBound);
+    ConstantRange MLRange = UBRange.smul_fast(*SafeCoeff).smul_fast(Two);
+    ConstantRange DeltaRange(*SafeDelta);
+    LLVM_DEBUG(dbgs() << "\t    UBRange = " << UBRange << "\n");
+    LLVM_DEBUG(dbgs() << "\t    MLRange = " << MLRange << "\n");
+    LLVM_DEBUG(dbgs() << "\t    DeltaRange = " << DeltaRange << "\n");
+
+    if (DeltaRange.intersectWith(MLRange).isEmptySet() &&
+        DeltaRange.getSignedMin().sgt(MLRange.getSignedMax())) {
+      ++WeakCrossingSIVindependence;
+      ++WeakCrossingSIVsuccesses;
+      return true;
+    }
+
+    if (DeltaRange.getSignedMin().eq(MLRange.getSignedMax())) {
+      // i = i' = UB
+      Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
+      Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
+      ++WeakCrossingSIVsuccesses;
+      if (!Result.DV[Level].Direction) {
+        ++WeakCrossingSIVindependence;
+        return true;
+      }
+      Result.DV[Level].Distance = SE->getZero(Delta->getType());
+      return false;
+    }
   }
   return false;
 }
