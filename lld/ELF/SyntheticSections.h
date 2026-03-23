@@ -495,7 +495,10 @@ public:
   /// This overload can be used if the addends are written directly instead of
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
   template <bool shard = false> void addReloc(const DynamicReloc &reloc) {
-    relocs.push_back(reloc);
+    if (combreloc && reloc.type == relativeRel)
+      relativeRelocs.push_back(reloc);
+    else
+      relocs.push_back(reloc);
   }
   /// Add a dynamic relocation against \p sym with an optional addend.
   void addSymbolReloc(RelType dynType, InputSectionBase &isec,
@@ -532,11 +535,11 @@ public:
         {dynType, &sec, offsetInSec, isAgainstSymbol, sym, addend, expr});
   }
   bool isNeeded() const override {
-    return !relocs.empty() ||
+    return !relocs.empty() || !relativeRelocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
   size_t getSize() const override {
-    size_t count = relocs.size();
+    size_t count = relocs.size() + relativeRelocs.size();
     for (const auto &v : relocsVec)
       count += v.size();
     return count * this->entsize;
@@ -545,16 +548,16 @@ public:
   void finalizeContents() override;
 
   int32_t dynamicTag, sizeDynamicTag;
-  SmallVector<DynamicReloc, 0> relocs;
+  SmallVector<DynamicReloc, 0> relocs, relativeRelocs;
 
 protected:
   void mergeRels();
-  void partitionRels();
   void computeRels();
   // Used when parallel relocation scanning adds relocations. The elements
-  // will be moved into relocs by mergeRel().
+  // will be classified into relativeRelocs or relocs by mergeRels().
   SmallVector<SmallVector<DynamicReloc, 0>, 0> relocsVec;
   size_t numRelativeRelocs = 0; // used by -z combreloc
+  RelType relativeRel;
   bool combreloc;
 };
 
