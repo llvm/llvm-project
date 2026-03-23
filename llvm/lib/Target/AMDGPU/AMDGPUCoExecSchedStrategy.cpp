@@ -171,10 +171,24 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
 }
 
 void HardwareUnitInfo::finalizeCycles() {
-  if (BufferSize <= 1 || !AllSUs.size())
+  if (BufferSize <= 1 || AllSUs.empty())
     return;
 
+  // We estimate the amount of cycles it takes to free up a slot in the buffer
+  // as the average cycles per SU.
   BufferCycles = TotalCycles / AllSUs.size();
+  // The TotalCycles is normalized against the BufferSize.
+  // This provides an estimate of the TotalCycles which is not always accurate
+  // -- particularly in cases where we have fewer instructions than the
+  // BufferSize. For example, if we have 2 instructions which each take 50
+  // cycles and a BufferSize of 16, then a TotalCycles of 51 cycles would be
+  // somewhat accurate. This normalization calculates TotalCycles as 6. However,
+  // if we have 64 of these instructions, our normalized estimate of 200 is more
+  // reasonable, given the more accurate measure is 264. Having a completely
+  // accurate measure is not very important, since this metric is mainly used to
+  // compare the relative demand per HardwareUnit across the region. The simpler
+  // estimate makes managing the metric incrementally during scheduling much
+  // simpler.
   TotalCycles /= BufferSize;
 }
 
@@ -685,8 +699,7 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
 bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
                                                   SchedBoundary &Zone) {
-  auto getBufferFullStalls = [this,
-                              &Zone](SUnit *SU) -> unsigned {
+  auto getBufferFullStalls = [this, &Zone](SUnit *SU) -> unsigned {
     InstructionFlavor Flavor = classifyFlavor(
         *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
     HardwareUnitInfo *HWUI = Heurs.getHWUIFromFlavor(Flavor);
@@ -722,7 +735,8 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
     Costs.Structural = getStructuralStallCycles(Zone, SU);
     Costs.Latency = Zone.getLatencyStallCycles(SU);
     Costs.Buffer = getBufferFullStalls(SU);
-    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Buffer});
+    Costs.Effective =
+        std::max({Costs.Ready, Costs.Structural, Costs.Latency, Costs.Buffer});
     return Costs;
   };
 
