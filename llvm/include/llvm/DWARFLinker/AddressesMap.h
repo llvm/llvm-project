@@ -83,6 +83,22 @@ public:
   /// Erases all data.
   virtual void clear() = 0;
 
+  /// This is used for assembly files where labels may not have high_pc
+  /// but the debug map has range information from symbols.
+  struct AssemblyRange {
+    AssemblyRange(uint64_t LowPC, uint64_t HighPC)
+        : LowPC(LowPC), HighPC(HighPC) {}
+    uint64_t LowPC;
+    uint64_t HighPC;
+  };
+
+  /// Returns the address range containing \p Addr if available.
+  /// \returns the range [LowPC, HighPC) containing Addr.
+  virtual std::optional<AssemblyRange>
+  getAssemblyRangeForAddress(uint64_t Addr) {
+    return std::nullopt;
+  }
+
   /// This function checks whether variable has DWARF expression containing
   /// operation referencing live address(f.e. DW_OP_addr, DW_OP_addrx...).
   /// \returns first is true if the expression has an operation referencing an

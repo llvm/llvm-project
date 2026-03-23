@@ -219,6 +219,20 @@ struct match_poison {
   }
 };
 
+template <typename OpTy, typename... To> struct match_isa {
+  OpTy Op;
+
+  template <typename FromTy> bool match(FromTy *V) const {
+    return isa<To...>(V) && Op.match(V);
+  }
+};
+
+// Match isa<Ty>.
+template <typename... To, typename OpTy>
+inline match_isa<OpTy, To...> m_IsA(const OpTy &Op) {
+  return {Op};
+}
+
 /// Match a VPIRValue that's poison.
 inline match_poison m_Poison() { return match_poison(); }
 
@@ -591,6 +605,10 @@ inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
                         AllRecipe_match<Instruction::SExt, Op0_t>>
 m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
+}
+
+template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
+  return m_IsA<VPWidenCastRecipe>(m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
 }
 
 template <typename Op0_t>
@@ -1111,6 +1129,12 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
 
 inline bind_ty<VPReductionPHIRecipe> m_ReductionPhi(VPReductionPHIRecipe *&V) {
   return V;
+}
+
+template <typename Op0_t, typename Op1_t>
+inline auto m_VPPhi(const Op0_t &Op0, const Op1_t &Op1) {
+  return Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::PHI,
+                      /*Commutative*/ false, VPInstruction>({Op0, Op1});
 }
 
 } // namespace llvm::VPlanPatternMatch

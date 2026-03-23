@@ -283,8 +283,8 @@ private:
 };
 
 template <typename ContextT>
-auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(BlockT *Block)
-    -> CycleT * {
+auto GenericCycleInfo<ContextT>::getTopLevelParentCycle(
+    const BlockT *Block) const -> CycleT * {
   CycleT *Cycle = getCycle(Block);
   return Cycle ? Cycle->TopLevelCycle : nullptr;
 }
