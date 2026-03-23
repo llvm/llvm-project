@@ -219,6 +219,20 @@ struct match_poison {
   }
 };
 
+template <typename OpTy, typename... To> struct match_isa {
+  OpTy Op;
+
+  template <typename FromTy> bool match(FromTy *V) const {
+    return isa<To...>(V) && Op.match(V);
+  }
+};
+
+// Match isa<Ty>.
+template <typename... To, typename OpTy>
+inline match_isa<OpTy, To...> m_IsA(const OpTy &Op) {
+  return {Op};
+}
+
 /// Match a VPIRValue that's poison.
 inline match_poison m_Poison() { return match_poison(); }
 
@@ -593,8 +607,8 @@ m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
 }
 
-template <typename Op0_t> inline auto m_AnyExtend(const Op0_t &Op0) {
-  return m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0));
+template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
+  return m_IsA<VPWidenCastRecipe>(m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
 }
 
 template <typename Op0_t>
