@@ -57,21 +57,12 @@ struct WebAssemblyReduceToAnyAllTrue final : FunctionPass {
         case Intrinsic::vector_reduce_and: {
           // reduce.and(zext (icmp ne X, zeroinitializer)) != 0  -> alltrue(X)
 
-          // Match: zext <N x i1> (...) to <N x iX>
-          Value *Mask = nullptr;
-          if (!match(Vec, m_ZExt(m_Value(Mask))))
+          // Match: zext (icmp ne X, 0) from <N x i1> to <N x iX>
+          CmpPredicate Pred;
+          Value *LHS = nullptr;
+          if (!match(Vec, m_ZExt(m_c_ICmp(Pred, m_Value(LHS), m_Zero()))))
             continue;
-
-          // And inside that: icmp ne X, zeroinitializer
-          auto *InnerCmp = dyn_cast<ICmpInst>(Mask);
-          if (!InnerCmp || InnerCmp->getPredicate() != ICmpInst::ICMP_NE)
-            continue;
-
-          Value *LHS = InnerCmp->getOperand(0);
-          Value *RHS = InnerCmp->getOperand(1);
-          if (!match(RHS, m_Zero()))
-            std::swap(LHS, RHS);
-          if (!match(RHS, m_Zero()))
+          if (Pred != ICmpInst::ICMP_NE)
             continue;
 
           Value *All = makeIntrinsic(Intrinsic::wasm_alltrue, LHS);
