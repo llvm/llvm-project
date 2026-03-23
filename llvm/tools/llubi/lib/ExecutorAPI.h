@@ -12,8 +12,6 @@
 
 #include "Context.h"
 #include "Value.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/InstVisitor.h"
 
 namespace llvm::ubi {
 
