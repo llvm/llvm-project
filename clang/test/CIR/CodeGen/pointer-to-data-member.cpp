@@ -349,3 +349,9 @@ auto test_null_incomplete() -> int Incomplete::* {
 
 // OGCG: define {{.*}} i64 @_Z20test_null_incompletev()
 // OGCG:   ret i64 -1
+
+// Struct containing a member data pointer can be lowered.
+struct StructWithMDP { char *a; int Point::* b; };
+void take_struct_mdp(StructWithMDP s) { (void)s; }
+// LLVM: define {{.*}} void @_Z15take_struct_mdp13StructWithMDP(%struct.StructWithMDP %{{.*}})
+// OGCG: define {{.*}} void @_Z15take_struct_mdp13StructWithMDP(ptr %{{.*}}, i64 %{{.*}})

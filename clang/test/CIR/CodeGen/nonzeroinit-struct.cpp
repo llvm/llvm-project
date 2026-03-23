@@ -10,11 +10,8 @@ struct Trivial {
     decltype(&Other::x) ptr;
 };
 
-// This case has a trivial default constructor, but can't be zero-initialized.
+// This case has a trivial default constructor, but can't be zero-initialized
+// because it contains a data member pointer (null = -1 in Itanium ABI).
 Trivial t;
 
-// Since the case above isn't handled yet, we want a test that verifies that
-// we're failing for the right reason.
-
-// expected-error@*:* {{ClangIR code gen Not Yet Implemented: isZeroInitializable for MemberPointerType}}
 // expected-error@*:* {{ClangIR code gen Not Yet Implemented: tryEmitPrivateForVarInit: non-zero-initializable cxx record}}

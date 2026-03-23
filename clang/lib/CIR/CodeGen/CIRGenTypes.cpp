@@ -652,11 +652,10 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   if (const auto *rd = t->getAsRecordDecl())
     return isZeroInitializable(rd);
 
-  if (t->getAs<MemberPointerType>()) {
-    cgm.errorNYI(SourceLocation(), "isZeroInitializable for MemberPointerType",
-                 t);
-    return false;
-  }
+  // Itanium ABI: member function pointers are zero-initializable
+  // (null = {0, 0}), but member data pointers are not (null = -1).
+  if (const auto *mpt = t->getAs<MemberPointerType>())
+    return mpt->isMemberFunctionPointer();
 
   return true;
 }

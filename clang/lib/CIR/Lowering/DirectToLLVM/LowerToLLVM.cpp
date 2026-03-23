@@ -3454,6 +3454,14 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   converter.addConversion([&](cir::VoidType type) -> mlir::Type {
     return mlir::LLVM::LLVMVoidType::get(type.getContext());
   });
+  converter.addConversion([&](cir::DataMemberType type) -> mlir::Type {
+    return mlir::IntegerType::get(type.getContext(), 64);
+  });
+  converter.addConversion([&](cir::MethodType type) -> mlir::Type {
+    auto i64 = mlir::IntegerType::get(type.getContext(), 64);
+    return mlir::LLVM::LLVMStructType::getLiteral(type.getContext(),
+                                                  {i64, i64});
+  });
 }
 
 static void buildCtorDtorList(
