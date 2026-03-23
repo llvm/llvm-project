@@ -14,8 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
-#include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -147,16 +148,9 @@ void NVPTXImageOptimizer::replaceWith(Instruction *From, ConstantInt *To) {
   // live is actually unreachable and can be trivially eliminated by the
   // unreachable block elimination pass.
   for (Use &U : From->uses()) {
-    if (BranchInst *BI = dyn_cast<BranchInst>(U)) {
-      if (BI->isUnconditional()) continue;
-      BasicBlock *Dest;
-      if (To->isZero())
-        // Get false block
-        Dest = BI->getSuccessor(1);
-      else
-        // Get true block
-        Dest = BI->getSuccessor(0);
-      BranchInst::Create(Dest, BI->getIterator());
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(U)) {
+      BasicBlock *Dest = BI->getSuccessor(To->isZero() ? 1 : 0);
+      UncondBrInst::Create(Dest, BI->getIterator());
       InstrToDelete.push_back(BI);
     }
   }

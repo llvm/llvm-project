@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   ProfileData
   Support
+  SupportHTTP
   )
 
 add_llvm_tool(llvm-profdata
