@@ -495,7 +495,7 @@ public:
   /// This overload can be used if the addends are written directly instead of
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
   template <bool shard = false> void addReloc(const DynamicReloc &reloc) {
-    if (combreloc && reloc.type == relativeRel)
+    if (reloc.type == relativeRel)
       relativeRelocs.push_back(reloc);
     else
       relocs.push_back(reloc);
