@@ -1521,6 +1521,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{_, _, _, S32, S32, S32, S32},
             {{}, {IntrId, Imm, Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32}}});
 
+  addRulesForIOpcs({amdgcn_exp_compr})
+      .Any({{_, _, _, V2S16}, {{}, {IntrId, Imm, Imm, VgprV2S16, VgprV2S16}}});
+
   addRulesForIOpcs({amdgcn_exp_row})
       .Any({{_, _, _, S32, S32, S32, S32, _, S32},
             {{},
