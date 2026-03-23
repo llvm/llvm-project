@@ -2102,3 +2102,35 @@ void pointer_in_array_use_after_scope() {
 }
 
 } // namespace array
+
+namespace GH187426 {
+// https://github.com/llvm/llvm-project/issues/187426
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++23-extensions"
+
+struct S {
+  static S operator()(int, int&&);
+  static S& operator()(std::string&&,
+                           const int& a [[clang::lifetimebound]],
+                           const int& b [[clang::lifetimebound]]);
+};
+
+void indexing_with_static_operator() {
+  // should not crash
+  S()(1, 2);
+  S& x = S()("1",
+             2,  // #argone
+             3); // #argtwo
+  // expected-warning@#argone {{object whose reference is captured does not live long enough}}
+  // expected-note@#argone {{destroyed here}}
+
+  // expected-warning@#argtwo {{object whose reference is captured does not live long enough}}
+  // expected-note@#argtwo {{destroyed here}}
+ 
+  (void)x; // #useline
+  // expected-note@#useline {{later used here}}
+  // expected-note@#useline {{later used here}}
+
+}
+} // namespace GH187426
