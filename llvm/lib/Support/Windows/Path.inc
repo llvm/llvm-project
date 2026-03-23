@@ -348,7 +348,7 @@ std::error_code create_symlink(const Twine &to, const Twine &from) {
   SmallVector<wchar_t, 128> WideTo;
   if (std::error_code ec = widenPath(from, WideFrom))
     return ec;
-  if (std::error_code ec = widenPath(to, WideTo))
+  if (std::error_code ec = widenPath(ToStr, WideTo))
     return ec;
 
   // Windows requires SYMBOLIC_LINK_FLAG_DIRECTORY for directory symlinks, so
