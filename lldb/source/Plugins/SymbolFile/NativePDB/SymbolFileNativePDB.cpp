@@ -58,7 +58,7 @@
 #include <optional>
 #include <string_view>
 
-#if LLDB_ENABLE_SWIFT_SUPPORT
+#if LLDB_ENABLE_SWIFT
 #include "swift/Demangling/Demangle.h"
 #endif
 
@@ -289,7 +289,7 @@ GetNestedTagDefinition(const NestedTypeRecord &Record,
 // Uses a heuristic based on the mangled name to identify
 // Swift types. Needed since types are commingled in the type stream.
 static bool IsSwiftType(PdbTypeSymId type_id, PdbIndex& index) {
-#if LLDB_ENABLE_SWIFT_SUPPORT
+#if LLDB_ENABLE_SWIFT
   TypeIndex ti = type_id.index;
   if (ti.isSimple())
     return false;
