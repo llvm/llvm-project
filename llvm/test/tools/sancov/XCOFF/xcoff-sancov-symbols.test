@@ -37,7 +37,7 @@ FileHeader:
 Sections:
   - Name: .text
     Flags: [ STYP_TEXT ]
-    SectionData: "4E8000204E800020"
+    SectionData: "4E800020"
 Symbols:
   - Name: .__sanitizer_cov_trace_pc_guard
     Value: 0x0000
@@ -47,7 +47,7 @@ Symbols:
     NumberOfAuxEntries: 1
     AuxEntries:
       - Type: AUX_CSECT
-        SectionOrLengthLo: 8
+        SectionOrLengthLo: 4
         SectionOrLengthHi: 0
         SymbolAlignmentAndType: 0x02
         StorageMappingClass: XMC_PR
