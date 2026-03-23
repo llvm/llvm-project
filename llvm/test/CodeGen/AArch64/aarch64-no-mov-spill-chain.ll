@@ -6,7 +6,6 @@
 ; pass can simplify these chains, and improve runtime performance. For situations
 ; where this is likely, we need to ensure it is simplifying the register allocation
 
-; Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 define void @_test(ptr readonly nocapture %0, ptr readonly nocapture %1, ptr readonly nocapture %2, ptr readonly nocapture %3, ptr readonly nocapture %4, ptr readonly nocapture %5, ptr readonly nocapture %6, ptr readonly nocapture %7, ptr readonly nocapture %8, ptr readonly nocapture %9, ptr readonly nocapture %10, ptr readonly nocapture %11, ptr readonly nocapture %12, ptr readonly nocapture %13, ptr readonly nocapture %14, ptr readonly nocapture %15) #0 {
 ; CHECK-LABEL: _test:
 ; CHECK:       // %bb.0:
