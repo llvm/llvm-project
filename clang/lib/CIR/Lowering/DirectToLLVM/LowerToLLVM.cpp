@@ -46,6 +46,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace cir;
 using namespace llvm;
@@ -386,7 +387,7 @@ public:
 
   mlir::Value visit(mlir::Attribute attr) {
     return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)
-        .Case<cir::IntAttr, cir::FPAttr, cir::ConstComplexAttr,
+        .Case<cir::BoolAttr, cir::IntAttr, cir::FPAttr, cir::ConstComplexAttr,
               cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
               cir::ConstPtrAttr, cir::GlobalViewAttr, cir::TypeInfoAttr,
               cir::UndefAttr, cir::VTableAttr, cir::ZeroAttr>(
@@ -394,6 +395,7 @@ public:
         .Default([&](auto attrT) { return mlir::Value(); });
   }
 
+  mlir::Value visitCirAttr(cir::BoolAttr boolAttr);
   mlir::Value visitCirAttr(cir::IntAttr intAttr);
   mlir::Value visitCirAttr(cir::FPAttr fltAttr);
   mlir::Value visitCirAttr(cir::ConstComplexAttr complexAttr);
@@ -509,6 +511,16 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm." + name, llvmResTy,
                                    adaptor.getOperands());
   return mlir::success();
+}
+
+/// BoolAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
+  mlir::Location loc = parentOp->getLoc();
+  mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+  mlir::Value boolVal = mlir::LLVM::ConstantOp::create(
+      rewriter, loc, converter->convertType(boolAttr.getType()),
+      boolAttr.getValue());
+  return emitToMemory(rewriter, layout, boolAttr.getType(), boolVal);
 }
 
 /// IntAttr visitor.
@@ -2557,8 +2569,10 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   //        in CIRToLLVMGlobalOpLowering::matchAndRewrite() but that will go
   //        away when the placeholders are no longer needed.
   const bool isConst = op.getConstant();
-  assert(!cir::MissingFeatures::addressSpace());
-  const unsigned addrSpace = 0;
+  unsigned addrSpace = 0;
+  if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          op.getAddrSpaceAttr()))
+    addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -2614,11 +2628,14 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // This is the LLVM dialect type.
   const mlir::Type llvmType =
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
+
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
   const bool isConst = op.getConstant();
-  assert(!cir::MissingFeatures::addressSpace());
-  const unsigned addrSpace = 0;
+  unsigned addrSpace = 0;
+  if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          op.getAddrSpaceAttr()))
+    addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -3136,22 +3153,29 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
   return cmpOp.emitError() << "unsupported type for CmpOp: " << type;
 }
 
-mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
-    cir::BinOpOverflowOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
+/// Shared lowering logic for checked binary arithmetic overflow operations.
+/// The \p opStr parameter specifies the arithmetic operation name used in the
+/// LLVM intrinsic (e.g., "add", "sub", "mul").
+template <typename OpTy>
+static mlir::LogicalResult
+lowerBinOpOverflow(OpTy op, typename OpTy::Adaptor adaptor,
+                   mlir::ConversionPatternRewriter &rewriter,
+                   const mlir::TypeConverter *typeConverter,
+                   llvm::StringRef opStr) {
   mlir::Location loc = op.getLoc();
-  cir::BinOpOverflowKind arithKind = op.getKind();
   cir::IntType operandTy = op.getLhs().getType();
   cir::IntType resultTy = op.getResult().getType();
 
-  EncompassedTypeInfo encompassedTyInfo =
-      computeEncompassedTypeWidth(operandTy, resultTy);
-  mlir::IntegerType encompassedLLVMTy =
-      rewriter.getIntegerType(encompassedTyInfo.width);
+  bool sign = operandTy.getIsSigned() || resultTy.getIsSigned();
+  unsigned width =
+      std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
+               resultTy.getWidth() + (sign && resultTy.isUnsigned()));
+
+  mlir::IntegerType encompassedLLVMTy = rewriter.getIntegerType(width);
 
   mlir::Value lhs = adaptor.getLhs();
   mlir::Value rhs = adaptor.getRhs();
-  if (operandTy.getWidth() < encompassedTyInfo.width) {
+  if (operandTy.getWidth() < width) {
     if (operandTy.isSigned()) {
       lhs = mlir::LLVM::SExtOp::create(rewriter, loc, encompassedLLVMTy, lhs);
       rhs = mlir::LLVM::SExtOp::create(rewriter, loc, encompassedLLVMTy, rhs);
@@ -3161,8 +3185,10 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
     }
   }
 
-  std::string intrinName = getLLVMIntrinName(arithKind, encompassedTyInfo.sign,
-                                             encompassedTyInfo.width);
+  // The intrinsic name is `@llvm.{s|u}{op}.with.overflow.i{width}`
+  std::string intrinName = ("llvm." + llvm::Twine(sign ? 's' : 'u') + opStr +
+                            ".with.overflow.i" + llvm::Twine(width))
+                               .str();
   auto intrinNameAttr = mlir::StringAttr::get(op.getContext(), intrinName);
 
   mlir::IntegerType overflowLLVMTy = rewriter.getI1Type();
@@ -3180,8 +3206,8 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
                              rewriter, loc, intrinRet, ArrayRef<int64_t>{1})
                              .getResult();
 
-  if (resultTy.getWidth() < encompassedTyInfo.width) {
-    mlir::Type resultLLVMTy = getTypeConverter()->convertType(resultTy);
+  if (resultTy.getWidth() < width) {
+    mlir::Type resultLLVMTy = typeConverter->convertType(resultTy);
     auto truncResult =
         mlir::LLVM::TruncOp::create(rewriter, loc, resultLLVMTy, result);
 
@@ -3202,7 +3228,7 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
   }
 
   mlir::Type boolLLVMTy =
-      getTypeConverter()->convertType(op.getOverflow().getType());
+      typeConverter->convertType(op.getOverflow().getType());
   if (boolLLVMTy != rewriter.getI1Type())
     overflow = mlir::LLVM::ZExtOp::create(rewriter, loc, boolLLVMTy, overflow);
 
@@ -3211,43 +3237,22 @@ mlir::LogicalResult CIRToLLVMBinOpOverflowOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-std::string CIRToLLVMBinOpOverflowOpLowering::getLLVMIntrinName(
-    cir::BinOpOverflowKind opKind, bool isSigned, unsigned width) {
-  // The intrinsic name is `@llvm.{s|u}{opKind}.with.overflow.i{width}`
-
-  std::string name = "llvm.";
-
-  if (isSigned)
-    name.push_back('s');
-  else
-    name.push_back('u');
-
-  switch (opKind) {
-  case cir::BinOpOverflowKind::Add:
-    name.append("add.");
-    break;
-  case cir::BinOpOverflowKind::Sub:
-    name.append("sub.");
-    break;
-  case cir::BinOpOverflowKind::Mul:
-    name.append("mul.");
-    break;
-  }
-
-  name.append("with.overflow.i");
-  name.append(std::to_string(width));
-
-  return name;
+mlir::LogicalResult CIRToLLVMAddOverflowOpLowering::matchAndRewrite(
+    cir::AddOverflowOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerBinOpOverflow(op, adaptor, rewriter, getTypeConverter(), "add");
 }
 
-CIRToLLVMBinOpOverflowOpLowering::EncompassedTypeInfo
-CIRToLLVMBinOpOverflowOpLowering::computeEncompassedTypeWidth(
-    cir::IntType operandTy, cir::IntType resultTy) {
-  bool sign = operandTy.getIsSigned() || resultTy.getIsSigned();
-  unsigned width =
-      std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
-               resultTy.getWidth() + (sign && resultTy.isUnsigned()));
-  return {sign, width};
+mlir::LogicalResult CIRToLLVMSubOverflowOpLowering::matchAndRewrite(
+    cir::SubOverflowOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerBinOpOverflow(op, adaptor, rewriter, getTypeConverter(), "sub");
+}
+
+mlir::LogicalResult CIRToLLVMMulOverflowOpLowering::matchAndRewrite(
+    cir::MulOverflowOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerBinOpOverflow(op, adaptor, rewriter, getTypeConverter(), "mul");
 }
 
 mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
@@ -4926,7 +4931,8 @@ void populateCIRToLLVMPasses(mlir::OpPassManager &pm) {
 }
 
 std::unique_ptr<llvm::Module>
-lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
+lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx,
+                             StringRef mlirSaveTempsOutFile) {
   llvm::TimeTraceScope scope("lower from CIR to LLVM directly");
 
   mlir::MLIRContext *mlirCtx = mlirModule.getContext();
@@ -4940,6 +4946,13 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
     // FIXME: Handle any errors where they occurs and return a nullptr here.
     report_fatal_error(
         "The pass manager failed to lower CIR to LLVMIR dialect!");
+  }
+
+  if (!mlirSaveTempsOutFile.empty()) {
+    std::error_code ec;
+    llvm::raw_fd_ostream out(mlirSaveTempsOutFile, ec);
+    if (!ec)
+      mlirModule->print(out);
   }
 
   mlir::registerBuiltinDialectTranslation(*mlirCtx);

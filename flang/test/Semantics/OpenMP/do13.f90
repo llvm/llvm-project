@@ -5,7 +5,8 @@
 program omp
   integer i, j, k
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 1
+  !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   do i = 0, 10
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
@@ -18,7 +19,8 @@ program omp
   end do
   !$omp end do
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do  collapse(3)
   do i = 0, 10
     do j = 0, 10
@@ -31,7 +33,8 @@ program omp
   end do
   !$omp end do
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
+  !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp do  collapse(2)
   do i = 0, 10
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
@@ -45,7 +48,8 @@ program omp
   !$omp end do
 
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
+  !BECAUSE: COLLAPSE clause was specified with argument 2
   !$omp do  collapse(2)
   foo: do i = 0, 10
     !ERROR: CYCLE statement to non-innermost associated loop of an OpenMP DO construct
@@ -59,7 +63,8 @@ program omp
   !$omp end do
 
 
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp do collapse(3)
   do 60 i=1,10
     do j=1,10
@@ -160,7 +165,8 @@ program omp
   !$omp end parallel
 
   !$omp parallel
-  !ERROR: The value of the parameter in the COLLAPSE or ORDERED clause must not be larger than the number of nested loops following the construct.
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !BECAUSE: ORDERED clause was specified with argument 3
   !$omp parallel do ordered(3) collapse(2)
   foo: do i = 0, 10
     foo1: do j = 0, 10

@@ -63,12 +63,21 @@ mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMFunctionTypeGetName(void);
 
+/// Returns `true` if the type is an LLVM dialect function type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMFunctionType(MlirType type);
+
+/// Returns the TypeID of an LLVM function type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMFunctionTypeGetTypeID(void);
+
 /// Returns the number of input types.
 MLIR_CAPI_EXPORTED intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type);
 
 /// Returns the pos-th input type.
 MLIR_CAPI_EXPORTED MlirType mlirLLVMFunctionTypeGetInput(MlirType type,
                                                          intptr_t pos);
+
+/// Returns `true` if the function type is variadic.
+MLIR_CAPI_EXPORTED bool mlirLLVMFunctionTypeIsVarArg(MlirType type);
 
 /// Returns the return type of the function type.
 MLIR_CAPI_EXPORTED MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type);
@@ -190,6 +199,7 @@ enum MlirLLVMCConv {
   MlirLLVMCConvAMDGPU_Gfx = 100,
   MlirLLVMCConvM68k_INTR = 101,
 };
+
 typedef enum MlirLLVMCConv MlirLLVMCConv;
 
 /// Creates a LLVM CConv attribute.
@@ -205,6 +215,7 @@ enum MlirLLVMComdat {
   MlirLLVMComdatNoDeduplicate = 3,
   MlirLLVMComdatSameSize = 4,
 };
+
 typedef enum MlirLLVMComdat MlirLLVMComdat;
 
 /// Creates a LLVM Comdat attribute.
@@ -226,6 +237,7 @@ enum MlirLLVMLinkage {
   MlirLLVMLinkageExternWeak = 9,
   MlirLLVMLinkageCommon = 10,
 };
+
 typedef enum MlirLLVMLinkage MlirLLVMLinkage;
 
 /// Creates a LLVM Linkage attribute.
@@ -274,6 +286,7 @@ enum MlirLLVMTypeEncoding {
   MlirLLVMTypeEncodingLoUser = 0x80,
   MlirLLVMTypeEncodingHiUser = 0xff,
 };
+
 typedef enum MlirLLVMTypeEncoding MlirLLVMTypeEncoding;
 
 /// Creates a LLVM DIBasicType attribute.
@@ -337,6 +350,7 @@ enum MlirLLVMDIEmissionKind {
   MlirLLVMDIEmissionKindLineTablesOnly = 2,
   MlirLLVMDIEmissionKindDebugDirectivesOnly = 3,
 };
+
 typedef enum MlirLLVMDIEmissionKind MlirLLVMDIEmissionKind;
 
 enum MlirLLVMDINameTableKind {
@@ -345,6 +359,7 @@ enum MlirLLVMDINameTableKind {
   MlirLLVMDINameTableKindNone = 2,
   MlirLLVMDINameTableKindApple = 3,
 };
+
 typedef enum MlirLLVMDINameTableKind MlirLLVMDINameTableKind;
 
 /// Creates a LLVM DICompileUnit attribute.
@@ -455,6 +470,69 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDIImportedEntityAttrGetName(void);
 /// Gets the scope of this DIModuleAttr.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirLLVMDIModuleAttrGetScope(MlirAttribute diModule);
+
+//===----------------------------------------------------------------------===//
+// Metadata Attributes
+//===----------------------------------------------------------------------===//
+
+/// Creates an LLVM MDStringAttr.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDStringAttrGet(MlirContext ctx,
+                                                         MlirStringRef value);
+
+/// Returns `true` if the attribute is an LLVM MDStringAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDStringAttr(MlirAttribute attr);
+
+/// Returns the TypeID of MDStringAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDStringAttrGetTypeID(void);
+
+/// Returns the string value of an LLVM MDStringAttr.
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirLLVMMDStringAttrGetValue(MlirAttribute attr);
+
+/// Creates an LLVM MDConstantAttr wrapping an attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDConstantAttrGet(MlirContext ctx, MlirAttribute valueAttr);
+
+/// Returns `true` if the attribute is an LLVM MDConstantAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDConstantAttr(MlirAttribute attr);
+
+/// Returns the TypeID of MDConstantAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDConstantAttrGetTypeID(void);
+
+/// Returns the attribute value of an LLVM MDConstantAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDConstantAttrGetValue(MlirAttribute attr);
+
+/// Creates an LLVM MDFuncAttr referencing a function symbol.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGet(MlirContext ctx,
+                                                       MlirAttribute name);
+
+/// Returns `true` if the attribute is an LLVM MDFuncAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDFuncAttr(MlirAttribute attr);
+
+/// Returns the TypeID of MDFuncAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDFuncAttrGetTypeID(void);
+
+/// Returns the symbol name of an LLVM MDFuncAttr.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGetName(MlirAttribute attr);
+
+/// Creates an LLVM MDNodeAttr.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDNodeAttrGet(
+    MlirContext ctx, intptr_t nOperands, MlirAttribute const *operands);
+
+/// Returns `true` if the attribute is an LLVM MDNodeAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDNodeAttr(MlirAttribute attr);
+
+/// Returns the TypeID of MDNodeAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDNodeAttrGetTypeID(void);
+
+/// Returns the number of operands in an LLVM MDNodeAttr.
+MLIR_CAPI_EXPORTED intptr_t
+mlirLLVMMDNodeAttrGetNumOperands(MlirAttribute attr);
+
+/// Returns the operand at the given index of an LLVM MDNodeAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDNodeAttrGetOperand(MlirAttribute attr, intptr_t index);
 
 #ifdef __cplusplus
 }
