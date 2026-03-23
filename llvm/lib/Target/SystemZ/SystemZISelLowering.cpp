@@ -8692,8 +8692,8 @@ SDValue SystemZTargetLowering::combineSETCC(
 
 using CCResult = std::pair<SDValue, int>;
 using CCUseMemo = llvm::DenseMap<SDValue, CCResult>;
-static std::pair<SDValue, int> findCCUse(const SDValue &Val, unsigned Depth = 0,
-                                         CCUseMemo &Memo) {
+static std::pair<SDValue, int> findCCUse(const SDValue &Val, CCUseMemo &Memo,
+                                         unsigned Depth = 0) {
   // Check if this node has already been computed.
   if (Memo.count(Val))
     return Memo[Val];
@@ -8716,7 +8716,7 @@ static std::pair<SDValue, int> findCCUse(const SDValue &Val, unsigned Depth = 0,
       if (Op4CCReg.getOpcode() == SystemZISD::ICMP ||
           Op4CCReg.getOpcode() == SystemZISD::TM) {
         auto [OpCC, OpCCValid] =
-            findCCUse(Op4CCReg.getOperand(0), Depth + 1, Memo);
+            findCCUse(Op4CCReg.getOperand(0), Memo, Depth + 1);
         if (OpCC != SDValue())
           return std::make_pair(OpCC, OpCCValid);
       }
@@ -8733,10 +8733,10 @@ static std::pair<SDValue, int> findCCUse(const SDValue &Val, unsigned Depth = 0,
     case ISD::SHL:
     case ISD::SRA:
     case ISD::SRL:
-      auto [Op0CC, Op0CCValid] = findCCUse(Val.getOperand(0), Depth + 1, Memo);
+      auto [Op0CC, Op0CCValid] = findCCUse(Val.getOperand(0), Memo, Depth + 1);
       if (Op0CC != SDValue())
         return std::make_pair(Op0CC, Op0CCValid);
-      return findCCUse(Val.getOperand(1), Depth + 1, Memo);
+      return findCCUse(Val.getOperand(1), Memo, Depth + 1);
     }
   };
 
