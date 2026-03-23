@@ -765,7 +765,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                 }
               }
               if (!classified) {
-                if (isDummyArgument(def)) {
+                if (boxSrc.kind == SourceKind::Allocate) {
+                  type = SourceKind::Allocate;
+                  v = def;
+                  defOp = nullptr;
+                } else if (isDummyArgument(def)) {
                   defOp = nullptr;
                   v = def;
                 } else {
