@@ -17,6 +17,7 @@
 #include "ModulesBuilder.h"
 #include "ScanningProjectModules.h"
 #include "TestTU.h"
+#include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -743,6 +744,90 @@ import M;
   ModuleInfo2->adjustHeaderSearchOptions(HS2);
 
   EXPECT_EQ(HS.PrebuiltModuleFiles, HS2.PrebuiltModuleFiles);
+}
+
+// Test that prebuilt module files with relative paths are correctly resolved.
+// This tests the fix for the issue where clangd couldn't find BMI files when
+// the compilation database contained relative paths in -fmodule-file=
+// arguments.
+TEST_F(PrerequisiteModulesTests, PrebuiltModuleFileWithRelativePath) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int m_value = 42;
+  )cpp");
+
+  CDB.addFile("U.cpp", R"cpp(
+import M;
+int use() { return m_value; }
+  )cpp");
+
+  // Step 1: Build the module file using ModulesBuilder
+  ModulesBuilder Builder(CDB);
+  auto ModuleInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("U.cpp"), FS);
+  ASSERT_TRUE(ModuleInfo);
+
+  HeaderSearchOptions HS(TestDir);
+  ModuleInfo->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+
+  // Get the absolute path of the built module file
+  std::string OriginalBMPath = HS.PrebuiltModuleFiles["M"];
+  ASSERT_TRUE(llvm::sys::path::is_absolute(OriginalBMPath));
+  ASSERT_TRUE(llvm::sys::fs::exists(OriginalBMPath));
+
+  // Step 2: Create a subdirectory in TestDir and copy the BMI there
+  SmallString<256> BMSubDir(TestDir);
+  llvm::sys::path::append(BMSubDir, "prebuilt_modules");
+  ASSERT_FALSE(llvm::sys::fs::create_directories(BMSubDir));
+
+  SmallString<256> NewBMPath(BMSubDir);
+  llvm::sys::path::append(NewBMPath, "M.pcm");
+
+  // Copy the BMI file to the new location
+  ASSERT_FALSE(llvm::sys::fs::copy_file(OriginalBMPath, NewBMPath));
+  ASSERT_TRUE(llvm::sys::fs::exists(NewBMPath));
+
+  // Step 3: Create a relative path from the new absolute path
+  std::string RelativeBMPath =
+      llvm::StringRef(NewBMPath).drop_front(TestDir.size() + 1).str();
+  ASSERT_FALSE(RelativeBMPath.empty());
+  ASSERT_TRUE(llvm::sys::path::is_relative(RelativeBMPath));
+
+  // Step 4: Create a new CDB with relative path in -fmodule-file=
+  MockDirectoryCompilationDatabase CDBWithRelativePath(TestDir, FS);
+
+  CDBWithRelativePath.addFile("M.cppm", R"cpp(
+export module M;
+export int m_value = 42;
+  )cpp");
+
+  CDBWithRelativePath.addFile("U.cpp", R"cpp(
+import M;
+int use() { return m_value; }
+  )cpp");
+
+  // Use relative path in -fmodule-file= argument
+  CDBWithRelativePath.ExtraClangFlags.push_back("-fmodule-file=M=" +
+                                                RelativeBMPath);
+
+  // Step 5: Verify that clangd can find and reuse the prebuilt module file
+  ModulesBuilder BuilderWithRelativePath(CDBWithRelativePath);
+  auto ModuleInfo2 = BuilderWithRelativePath.buildPrerequisiteModulesFor(
+      getFullPath("U.cpp"), FS);
+  ASSERT_TRUE(ModuleInfo2);
+
+  HeaderSearchOptions HS2(TestDir);
+  ModuleInfo2->adjustHeaderSearchOptions(HS2);
+
+  // The module file should be found and the paths should match
+  ASSERT_EQ(HS2.PrebuiltModuleFiles.count("M"), 1u);
+  EXPECT_EQ(HS2.PrebuiltModuleFiles["M"], std::string(NewBMPath))
+      << "Expected absolute path: " << NewBMPath
+      << "\nGot: " << HS2.PrebuiltModuleFiles["M"]
+      << "\nRelative path used: " << RelativeBMPath;
 }
 
 } // namespace

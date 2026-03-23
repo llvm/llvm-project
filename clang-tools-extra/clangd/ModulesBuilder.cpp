@@ -584,12 +584,20 @@ void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
     if (BuiltModuleFiles.isModuleUnitBuilt(ModuleName))
       continue;
 
-    if (IsModuleFileUpToDate(ModuleFilePath, BuiltModuleFiles,
+    // Convert relative path to absolute path based on the compilation directory
+    llvm::SmallString<256> AbsoluteModuleFilePath;
+    if (llvm::sys::path::is_relative(ModuleFilePath)) {
+      AbsoluteModuleFilePath = Inputs.CompileCommand.Directory;
+      llvm::sys::path::append(AbsoluteModuleFilePath, ModuleFilePath);
+    } else
+      AbsoluteModuleFilePath = ModuleFilePath;
+
+    if (IsModuleFileUpToDate(AbsoluteModuleFilePath, BuiltModuleFiles,
                              TFS.view(std::nullopt))) {
       log("Reusing prebuilt module file {0} of module {1} for {2}",
-          ModuleFilePath, ModuleName, ModuleUnitFileName);
+          AbsoluteModuleFilePath, ModuleName, ModuleUnitFileName);
       BuiltModuleFiles.addModuleFile(
-          PrebuiltModuleFile::make(ModuleName, ModuleFilePath));
+          PrebuiltModuleFile::make(ModuleName, AbsoluteModuleFilePath));
     }
   }
 }
