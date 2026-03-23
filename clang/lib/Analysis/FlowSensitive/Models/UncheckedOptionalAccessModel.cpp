@@ -203,9 +203,12 @@ bool hasReceiverTypeDesugaringToOptional(const Expr *E) {
       return true;
   }
 
-  // We didn't find a optional in the cast path. There may be more casts in
-  // `getSubExpr()`, so recurse. If there aren't any more casts, just check the
-  // type of `getSubExpr()`.
+  // We didn't find a optional in the cast path. It may be that the
+  // subexpression itself is an optional type. For example, if we just have
+  // `std::optional<int>` instead of
+  // `struct Derived : public std::optional<int>`
+  // then the Cast path() won't include `optional` itself. However, the
+  // SubExpr type is the optional type.
   return hasReceiverTypeDesugaringToOptional(Cast->getSubExpr());
 }
 
