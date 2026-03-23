@@ -16,6 +16,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include "clang/Support/Compiler.h"
 
 namespace llvm {
   class Constant;
@@ -74,7 +75,7 @@ public:
   /// will be deleted.
   ///
   /// It will also return null if the module is released.
-  llvm::Module *GetModule();
+  CLANG_ABI llvm::Module *GetModule();
 
   /// Release ownership of the module to the caller.
   ///
@@ -113,7 +114,7 @@ public:
 /// CreateLLVMCodeGen - Create a CodeGenerator instance.
 ///
 /// Remember to call Initialize() if you plan to use this directly.
-std::unique_ptr<CodeGenerator>
+CLANG_ABI std::unique_ptr<CodeGenerator>
 CreateLLVMCodeGen(const CompilerInstance &CI, llvm::StringRef ModuleName,
                   llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);

@@ -15,6 +15,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include <cstddef>
 #include <string>
 #include <utility>
@@ -55,7 +56,7 @@ public:
   AllDiagList::const_iterator all_begin() const { return All.begin(); }
   AllDiagList::const_iterator all_end() const { return All.end(); }
 
-  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+  CLANG_ABI void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override;
 
   /// FlushDiagnostics - Flush the buffered diagnostics to an given

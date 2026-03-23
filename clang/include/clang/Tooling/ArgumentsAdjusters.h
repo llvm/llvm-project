@@ -18,6 +18,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include "clang/Support/Compiler.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -51,12 +52,12 @@ enum class ArgumentInsertPosition { BEGIN, END };
 
 /// Gets an argument adjuster which inserts \p Extra arguments in the
 /// specified position.
-ArgumentsAdjuster getInsertArgumentAdjuster(const CommandLineArguments &Extra,
+CLANG_ABI ArgumentsAdjuster getInsertArgumentAdjuster(const CommandLineArguments &Extra,
                                             ArgumentInsertPosition Pos);
 
 /// Gets an argument adjuster which inserts an \p Extra argument in the
 /// specified position.
-ArgumentsAdjuster getInsertArgumentAdjuster(
+CLANG_ABI ArgumentsAdjuster getInsertArgumentAdjuster(
     const char *Extra,
     ArgumentInsertPosition Pos = ArgumentInsertPosition::END);
 

@@ -16,6 +16,7 @@
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -112,7 +113,7 @@ private:
   std::shared_ptr<ASTImporterSharedState> SharedState;
 
 public:
-  ExternalASTMerger(const ImporterTarget &Target,
+  CLANG_ABI ExternalASTMerger(const ImporterTarget &Target,
                     ArrayRef<ImporterSource> Sources);
 
   /// Asks all connected ASTImporters if any of them imported the given
@@ -137,7 +138,7 @@ public:
   ///
   /// The caller is responsible for ensuring that this doesn't leave
   /// DeclContexts that can't be completed.
-  void RemoveSources(ArrayRef<ImporterSource> Sources);
+  CLANG_ABI void RemoveSources(ArrayRef<ImporterSource> Sources);
 
   /// Implementation of the ExternalASTSource API.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,

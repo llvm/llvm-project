@@ -44,6 +44,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
@@ -1389,19 +1390,19 @@ public:
   /// are stored here.
   llvm::DenseMap<const CXXMethodDecl *, CXXCastPath> LambdaCastPaths;
 
-  ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
+  CLANG_ABI ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins,
              TranslationUnitKind TUKind);
   ASTContext(const ASTContext &) = delete;
   ASTContext &operator=(const ASTContext &) = delete;
-  ~ASTContext();
+  CLANG_ABI ~ASTContext();
 
   /// Attach an external AST source to the AST context.
   ///
   /// The external AST source provides the ability to load parts of
   /// the abstract syntax tree as needed from some external storage,
   /// e.g., a precompiled header.
-  void setExternalSource(IntrusiveRefCntPtr<ExternalASTSource> Source);
+  CLANG_ABI void setExternalSource(IntrusiveRefCntPtr<ExternalASTSource> Source);
 
   /// Retrieve a pointer to the external AST source associated
   /// with this AST context, if any.
@@ -3672,7 +3673,7 @@ public:
   /// It is normally invoked after ASTContext construction.
   ///
   /// \param Target The target
-  void InitBuiltinTypes(const TargetInfo &Target,
+  CLANG_ABI void InitBuiltinTypes(const TargetInfo &Target,
                         const TargetInfo *AuxTarget = nullptr);
 
 private:

@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include <memory>
 
 namespace clang {
@@ -30,7 +31,7 @@ std::unique_ptr<ASTConsumer> CreateASTPrinter(std::unique_ptr<raw_ostream> OS,
 
 // AST dumper: dumps the raw AST in human-readable form to the given output
 // stream, or stdout if OS is nullptr.
-std::unique_ptr<ASTConsumer>
+CLANG_ABI std::unique_ptr<ASTConsumer>
 CreateASTDumper(std::unique_ptr<raw_ostream> OS, StringRef FilterString,
                 bool DumpDecls, bool Deserialize, bool DumpLookups,
                 bool DumpDeclTypes, ASTDumpOutputFormat Format);

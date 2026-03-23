@@ -48,7 +48,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Compiler.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <cstddef>
@@ -217,7 +217,7 @@ public:
   ///
   /// \param Loc If specified, is the location that invalid file diagnostics
   ///   will be emitted at.
-  std::optional<llvm::MemoryBufferRef>
+  CLANG_ABI std::optional<llvm::MemoryBufferRef>
   getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
                   SourceLocation Loc = SourceLocation()) const;
 
@@ -916,7 +916,7 @@ public:
 
   /// Create a new FileID that represents the specified file
   /// being \#included from the specified IncludePosition.
-  FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
+  CLANG_ABI FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
                       int LoadedID = 0,
                       SourceLocation::UIntTy LoadedOffset = 0);
@@ -1398,7 +1398,7 @@ public:
   /// in the appropriate spelling MemoryBuffer.
   ///
   /// \param Invalid If non-NULL, will be set \c true if an error occurs.
-  const char *getCharacterData(SourceLocation SL,
+  CLANG_ABI const char *getCharacterData(SourceLocation SL,
                                bool *Invalid = nullptr) const;
 
   /// Return the column # for the specified file position.
@@ -1409,7 +1409,7 @@ public:
   /// before calling this method.
   unsigned getColumnNumber(FileID FID, unsigned FilePos,
                            bool *Invalid = nullptr) const;
-  unsigned getColumnNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
+  CLANG_ABI unsigned getColumnNumber(SourceLocation Loc, bool *Invalid = nullptr) const;
   unsigned getSpellingColumnNumber(SourceLocation Loc,
                                    bool *Invalid = nullptr) const {
     return getColumnNumber(getSpellingLoc(Loc), Invalid);
@@ -1847,11 +1847,11 @@ private:
   friend class ASTReader;
   friend class ASTWriter;
 
-  llvm::MemoryBufferRef getFakeBufferForRecovery() const;
+  CLANG_ABI llvm::MemoryBufferRef getFakeBufferForRecovery() const;
   SrcMgr::ContentCache &getFakeContentCacheForRecovery() const;
 
   const SrcMgr::SLocEntry &loadSLocEntry(unsigned Index, bool *Invalid) const;
-  SrcMgr::SLocEntry &loadSLocEntry(unsigned Index, bool *Invalid);
+  CLANG_ABI SrcMgr::SLocEntry &loadSLocEntry(unsigned Index, bool *Invalid);
 
   const SrcMgr::SLocEntry *getSLocEntryOrNull(FileID FID) const {
     return const_cast<SourceManager *>(this)->getSLocEntryOrNull(FID);
@@ -1966,12 +1966,12 @@ private:
   SrcMgr::ContentCache &
   createMemBufferContentCache(std::unique_ptr<llvm::MemoryBuffer> Buf);
 
-  FileID getFileIDSlow(SourceLocation::UIntTy SLocOffset) const;
+  CLANG_ABI FileID getFileIDSlow(SourceLocation::UIntTy SLocOffset) const;
   FileID getFileIDLocal(SourceLocation::UIntTy SLocOffset) const;
   FileID getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const;
 
   SourceLocation getExpansionLocSlowCase(SourceLocation Loc) const;
-  SourceLocation getSpellingLocSlowCase(SourceLocation Loc) const;
+  CLANG_ABI SourceLocation getSpellingLocSlowCase(SourceLocation Loc) const;
   SourceLocation getFileLocSlowCase(SourceLocation Loc) const;
 
   void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;

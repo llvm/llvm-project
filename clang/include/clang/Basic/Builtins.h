@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
 
@@ -242,7 +243,7 @@ class Context {
   unsigned NumAuxTargetBuiltins = 0;
 
 public:
-  Context();
+  CLANG_ABI Context();
 
   /// Perform target-specific initialization
   /// \param AuxTarget Target info to incorporate builtins from. May be nullptr.

@@ -17,6 +17,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "clang/Support/Compiler.h"
 #include <memory>
 
 namespace clang {
@@ -49,7 +50,7 @@ public:
 
   void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override;
   void EndSourceFile() override;
-  void HandleDiagnostic(DiagnosticsEngine::Level Level,
+  CLANG_ABI void HandleDiagnostic(DiagnosticsEngine::Level Level,
                         const Diagnostic &Info) override;
 };
 

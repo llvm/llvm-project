@@ -21,7 +21,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
@@ -270,7 +270,7 @@ public:
   // Returns the new offset in the code after replacements being applied.
   // Note that if there is an insertion at Offset in the current replacements,
   // \p Offset will be shifted to Offset + Length in inserted text.
-  unsigned getShiftedCodePosition(unsigned Position) const;
+  CLANG_ABI unsigned getShiftedCodePosition(unsigned Position) const;
 
   unsigned size() const { return Replaces.size(); }
 
@@ -328,7 +328,7 @@ bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
 /// replacements applied; otherwise, an llvm::Error carrying llvm::StringError
 /// is returned (the Error message can be converted to string using
 /// `llvm::toString()` and 'std::error_code` in the `Error` should be ignored).
-llvm::Expected<std::string> applyAllReplacements(StringRef Code,
+CLANG_ABI llvm::Expected<std::string> applyAllReplacements(StringRef Code,
                                                  const Replacements &Replaces);
 
 /// Collection of Replacements generated from a single translation unit.

@@ -31,6 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <string>
@@ -86,7 +87,7 @@ struct CompileCommand {
 /// in a project.
 class CompilationDatabase {
 public:
-  virtual ~CompilationDatabase();
+  CLANG_ABI virtual ~CompilationDatabase();
 
   /// Loads a compilation database from a build directory.
   ///
@@ -107,7 +108,7 @@ public:
   ///
   /// Looks for a compilation database in all parent paths of file 'SourceFile'
   /// by calling loadFromDirectory.
-  static std::unique_ptr<CompilationDatabase>
+  CLANG_ABI static std::unique_ptr<CompilationDatabase>
   autoDetectFromSource(StringRef SourceFile, std::string &ErrorMessage);
 
   /// Tries to detect a compilation database location and load it.
@@ -126,7 +127,7 @@ public:
   /// $ clang++ -o production a.cc b.cc -DPRODUCTION
   /// A compilation database representing the project would return both command
   /// lines for a.cc and b.cc and only the first command line for t.cc.
-  virtual std::vector<CompileCommand> getCompileCommands(
+  CLANG_ABI virtual std::vector<CompileCommand> getCompileCommands(
       StringRef FilePath) const = 0;
 
   /// Returns the list of all files available in the compilation database.
@@ -144,14 +145,14 @@ public:
   ///
   /// By default, this is implemented in terms of getAllFiles() and
   /// getCompileCommands(). Subclasses may override this for efficiency.
-  virtual std::vector<CompileCommand> getAllCompileCommands() const;
+  CLANG_ABI virtual std::vector<CompileCommand> getAllCompileCommands() const;
 };
 
 /// A compilation database that returns a single compile command line.
 ///
 /// Useful when we want a tool to behave more like a compiler invocation.
 /// This compilation database is not enumerable: getAllFiles() returns {}.
-class FixedCompilationDatabase : public CompilationDatabase {
+   class FixedCompilationDatabase : public CompilationDatabase {
 public:
   /// Creates a FixedCompilationDatabase from the arguments after "--".
   ///
@@ -180,7 +181,7 @@ public:
   /// \param Argv Points to the command line arguments.
   /// \param ErrorMsg Contains error text if the function returns null pointer.
   /// \param Directory The base directory used in the FixedCompilationDatabase.
-  static std::unique_ptr<FixedCompilationDatabase>
+  CLANG_ABI static std::unique_ptr<FixedCompilationDatabase>
   loadFromCommandLine(int &Argc, const char *const *Argv, std::string &ErrorMsg,
                       const Twine &Directory = ".");
 
@@ -196,7 +197,7 @@ public:
 
   /// Constructs a compilation data base from a specified directory
   /// and command line.
-  FixedCompilationDatabase(const Twine &Directory,
+  CLANG_ABI FixedCompilationDatabase(const Twine &Directory,
                            ArrayRef<std::string> CommandLine);
 
   /// Returns the given compile command.
@@ -205,7 +206,7 @@ public:
   /// and command line specified at construction with "clang-tool" as argv[0]
   /// and 'FilePath' as positional argument.
   std::vector<CompileCommand>
-  getCompileCommands(StringRef FilePath) const override;
+  CLANG_ABI getCompileCommands(StringRef FilePath) const override;
 
 private:
   /// This is built up to contain a single entry vector to be returned from

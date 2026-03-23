@@ -27,7 +27,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Compiler.h"
+#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -588,7 +588,7 @@ public:
                              bool ShouldOwnClient = true);
   DiagnosticsEngine(const DiagnosticsEngine &) = delete;
   DiagnosticsEngine &operator=(const DiagnosticsEngine &) = delete;
-  ~DiagnosticsEngine();
+  CLANG_ABI ~DiagnosticsEngine();
 
   friend void DiagnosticsTestHelper(DiagnosticsEngine &);
   LLVM_DUMP_METHOD void dump() const;
@@ -1682,7 +1682,7 @@ public:
   /// formal arguments into the %0 slots.
   ///
   /// The result is appended onto the \p OutStr array.
-  void FormatDiagnostic(SmallVectorImpl<char> &OutStr) const;
+  CLANG_ABI void FormatDiagnostic(SmallVectorImpl<char> &OutStr) const;
 
   /// Format the given format-string into the output buffer using the
   /// arguments stored in this diagnostic.
@@ -1752,7 +1752,7 @@ protected:
 
 public:
   DiagnosticConsumer() = default;
-  virtual ~DiagnosticConsumer();
+  CLANG_ABI virtual ~DiagnosticConsumer();
 
   unsigned getNumErrors() const { return NumErrors; }
   unsigned getNumWarnings() const { return NumWarnings; }
@@ -1784,14 +1784,14 @@ public:
   /// reported by DiagnosticsEngine.
   ///
   /// The default implementation returns true.
-  virtual bool IncludeInDiagnosticCounts() const;
+  CLANG_ABI virtual bool IncludeInDiagnosticCounts() const;
 
   /// Handle this diagnostic, reporting it to the user or
   /// capturing it to a log as needed.
   ///
   /// The default implementation just keeps track of the total number of
   /// warnings and errors.
-  virtual void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+  CLANG_ABI virtual void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                                 const Diagnostic &Info);
 };
 
@@ -1819,7 +1819,7 @@ public:
                         const Diagnostic &Info) override;
   void clear() override;
 
-  bool IncludeInDiagnosticCounts() const override;
+  CLANG_ABI bool IncludeInDiagnosticCounts() const override;
 };
 
 // Struct used for sending info about how a type should be printed.

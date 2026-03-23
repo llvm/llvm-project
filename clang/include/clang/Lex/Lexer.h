@@ -21,6 +21,7 @@
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -494,7 +495,7 @@ public:
                                            const LangOptions &LangOpts);
 
   /// Returns a string for the source that the range encompasses.
-  static StringRef getSourceText(CharSourceRange Range,
+  CLANG_ABI static StringRef getSourceText(CharSourceRange Range,
                                  const SourceManager &SM,
                                  const LangOptions &LangOpts,
                                  bool *Invalid = nullptr);

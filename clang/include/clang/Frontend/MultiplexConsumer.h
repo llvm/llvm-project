@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
+#include "clang/Support/Compiler.h"
 #include <memory>
 #include <vector>
 
@@ -52,12 +53,12 @@ private:
 class MultiplexConsumer : public SemaConsumer {
 public:
   // Takes ownership of the pointers in C.
-  MultiplexConsumer(std::vector<std::unique_ptr<ASTConsumer>> C);
-  MultiplexConsumer(std::unique_ptr<ASTConsumer> C);
-  ~MultiplexConsumer() override;
+  CLANG_ABI MultiplexConsumer(std::vector<std::unique_ptr<ASTConsumer>> C);
+  CLANG_ABI MultiplexConsumer(std::unique_ptr<ASTConsumer> C);
+  CLANG_ABI ~MultiplexConsumer() override;
 
   // ASTConsumer
-  void Initialize(ASTContext &Context) override;
+  CLANG_ABI void Initialize(ASTContext &Context) override;
   void HandleCXXStaticMemberVarInstantiation(VarDecl *VD) override;
   bool HandleTopLevelDecl(DeclGroupRef D) override;
   void HandleInlineFunctionDefinition(FunctionDecl *D) override;

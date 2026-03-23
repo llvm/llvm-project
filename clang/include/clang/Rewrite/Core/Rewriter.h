@@ -18,6 +18,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/StringRef.h"
+#include "clang/Support/Compiler.h"
 #include <map>
 #include <string>
 
@@ -192,7 +193,7 @@ public:
   /// buffer, and allows you to write on it directly.  This is useful if you
   /// want efficient low-level access to apis for scribbling on one specific
   /// FileID's buffer.
-  llvm::RewriteBuffer &getEditBuffer(FileID FID);
+  CLANG_ABI llvm::RewriteBuffer &getEditBuffer(FileID FID);
 
   /// getRewriteBufferFor - Return the rewrite buffer for the specified FileID.
   /// If no modification has been made to it, return null.
@@ -213,7 +214,7 @@ public:
   /// Returns true if any files were not saved successfully.
   /// Outputs diagnostics via the source manager's diagnostic engine
   /// in case of an error.
-  bool overwriteChangedFiles();
+  CLANG_ABI bool overwriteChangedFiles();
 
 private:
   unsigned getLocationOffsetAndFileID(SourceLocation Loc, FileID &FID) const;

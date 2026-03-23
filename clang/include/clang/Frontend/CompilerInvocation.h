@@ -23,6 +23,7 @@
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "clang/Support/Compiler.h"
 #include <memory>
 #include <string>
 
@@ -120,7 +121,7 @@ protected:
   /// prevent creation of the reference-counted option objects.
   struct EmptyConstructor {};
 
-  CompilerInvocationBase();
+  CLANG_ABI CompilerInvocationBase();
   CompilerInvocationBase(EmptyConstructor) {}
   CompilerInvocationBase(const CompilerInvocationBase &X) = delete;
   CompilerInvocationBase(CompilerInvocationBase &&X) = default;
@@ -294,7 +295,7 @@ public:
   /// \param [out] Res - The resulting invocation.
   /// \param [in] CommandLineArgs - Array of argument strings, this must not
   /// contain "-cc1".
-  static bool CreateFromArgs(CompilerInvocation &Res,
+  CLANG_ABI static bool CreateFromArgs(CompilerInvocation &Res,
                              ArrayRef<const char *> CommandLineArgs,
                              DiagnosticsEngine &Diags,
                              const char *Argv0 = nullptr);

@@ -20,6 +20,7 @@
 #define LLVM_CLANG_TOOLING_ASTDIFF_ASTDIFF_H
 
 #include "clang/Tooling/ASTDiff/ASTDiffInternal.h"
+#include "clang/Support/Compiler.h"
 #include <optional>
 
 namespace clang {
@@ -43,10 +44,10 @@ struct Node {
   ChangeKind Change = None;
 
   ASTNodeKind getType() const;
-  StringRef getTypeLabel() const;
+  CLANG_ABI StringRef getTypeLabel() const;
   bool isLeaf() const { return Children.empty(); }
-  std::optional<StringRef> getIdentifier() const;
-  std::optional<std::string> getQualifiedIdentifier() const;
+  CLANG_ABI std::optional<StringRef> getIdentifier() const;
+  CLANG_ABI std::optional<std::string> getQualifiedIdentifier() const;
 };
 
 /// SyntaxTree objects represent subtrees of the AST.
@@ -54,34 +55,34 @@ struct Node {
 class SyntaxTree {
 public:
   /// Constructs a tree from a translation unit.
-  SyntaxTree(ASTContext &AST);
+  CLANG_ABI SyntaxTree(ASTContext &AST);
   /// Constructs a tree from any AST node.
   template <class T>
   SyntaxTree(T *Node, ASTContext &AST)
       : TreeImpl(std::make_unique<Impl>(this, Node, AST)) {}
   SyntaxTree(SyntaxTree &&Other) = default;
-  ~SyntaxTree();
+  CLANG_ABI ~SyntaxTree();
 
-  const ASTContext &getASTContext() const;
+  CLANG_ABI const ASTContext &getASTContext() const;
   StringRef getFilename() const;
 
   int getSize() const;
-  NodeId getRootId() const;
+  CLANG_ABI NodeId getRootId() const;
   using PreorderIterator = NodeId;
-  PreorderIterator begin() const;
-  PreorderIterator end() const;
+  CLANG_ABI PreorderIterator begin() const;
+  CLANG_ABI PreorderIterator end() const;
 
-  const Node &getNode(NodeId Id) const;
-  int findPositionInParent(NodeId Id) const;
+  CLANG_ABI const Node &getNode(NodeId Id) const;
+  CLANG_ABI int findPositionInParent(NodeId Id) const;
 
   // Returns the starting and ending offset of the node in its source file.
-  std::pair<unsigned, unsigned> getSourceRangeOffsets(const Node &N) const;
+  CLANG_ABI std::pair<unsigned, unsigned> getSourceRangeOffsets(const Node &N) const;
 
   /// Serialize the node attributes to a string representation. This should
   /// uniquely distinguish nodes of the same kind. Note that this function just
   /// returns a representation of the node value, not considering descendants.
-  std::string getNodeValue(NodeId Id) const;
-  std::string getNodeValue(const Node &Node) const;
+  CLANG_ABI std::string getNodeValue(NodeId Id) const;
+  CLANG_ABI std::string getNodeValue(const Node &Node) const;
 
   class Impl;
   std::unique_ptr<Impl> TreeImpl;
@@ -109,11 +110,11 @@ struct ComparisonOptions {
 
 class ASTDiff {
 public:
-  ASTDiff(SyntaxTree &Src, SyntaxTree &Dst, const ComparisonOptions &Options);
-  ~ASTDiff();
+  CLANG_ABI ASTDiff(SyntaxTree &Src, SyntaxTree &Dst, const ComparisonOptions &Options);
+  CLANG_ABI ~ASTDiff();
 
   // Returns the ID of the node that is mapped to the given node in SourceTree.
-  NodeId getMapped(const SyntaxTree &SourceTree, NodeId Id) const;
+  CLANG_ABI NodeId getMapped(const SyntaxTree &SourceTree, NodeId Id) const;
 
   class Impl;
 

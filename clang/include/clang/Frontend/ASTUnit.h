@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
+#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -425,7 +426,7 @@ public:
 
   ASTUnit(const ASTUnit &) = delete;
   ASTUnit &operator=(const ASTUnit &) = delete;
-  ~ASTUnit();
+  CLANG_ABI ~ASTUnit();
 
   bool isMainFileAST() const { return MainFileIsAST; }
 

@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/AllocToken.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
@@ -613,7 +614,7 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
-  LangOptions();
+  CLANG_ABI LangOptions();
 
   /// Set language defaults for the given input language and
   /// language standard in the given LangOptions object.

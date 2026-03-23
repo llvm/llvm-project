@@ -43,6 +43,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/Option.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <string>
@@ -330,7 +331,7 @@ public:
   /// tool.
   /// \param Files The file manager to use for underlying file operations when
   /// running the tool.
-  ClangTool(const CompilationDatabase &Compilations,
+  CLANG_ABI ClangTool(const CompilationDatabase &Compilations,
             ArrayRef<std::string> SourcePaths,
             std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                 std::make_shared<PCHContainerOperations>(),
@@ -338,7 +339,7 @@ public:
                 llvm::vfs::getRealFileSystem(),
             IntrusiveRefCntPtr<FileManager> Files = nullptr);
 
-  ~ClangTool();
+  CLANG_ABI ~ClangTool();
 
   /// Set a \c DiagnosticConsumer to use during parsing.
   void setDiagnosticConsumer(DiagnosticConsumer *DiagConsumer) {
@@ -355,7 +356,7 @@ public:
   ///
   /// \param Adjuster An argument adjuster, which will be run on the output of
   ///        previous argument adjusters.
-  void appendArgumentsAdjuster(ArgumentsAdjuster Adjuster);
+  CLANG_ABI void appendArgumentsAdjuster(ArgumentsAdjuster Adjuster);
 
   /// Clear the command line arguments adjuster chain.
   void clearArgumentsAdjusters();
@@ -370,7 +371,7 @@ public:
 
   /// Create an AST for each file specified in the command line and
   /// append them to ASTs.
-  int buildASTs(std::vector<std::unique_ptr<ASTUnit>> &ASTs);
+  CLANG_ABI int buildASTs(std::vector<std::unique_ptr<ASTUnit>> &ASTs);
 
   /// Sets whether an error message should be printed out if an action fails. By
   /// default, if an action fails, a message is printed out to stderr.

@@ -16,6 +16,7 @@
 
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <cstdint>
@@ -187,7 +188,7 @@ public:
   }
 
   unsigned getHashValue() const;
-  void print(raw_ostream &OS, const SourceManager &SM) const;
+  CLANG_ABI void print(raw_ostream &OS, const SourceManager &SM) const;
   std::string printToString(const SourceManager &SM) const;
   void dump(const SourceManager &SM) const;
 };

@@ -12,6 +12,7 @@
 #include "clang/Basic/Module.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
 
@@ -92,7 +93,7 @@ class PCHContainerOperations {
 public:
   /// Automatically registers a RawPCHContainerWriter and
   /// RawPCHContainerReader.
-  PCHContainerOperations();
+  CLANG_ABI PCHContainerOperations();
   void registerWriter(std::unique_ptr<PCHContainerWriter> Writer) {
     Writers[Writer->getFormat()] = std::move(Writer);
   }

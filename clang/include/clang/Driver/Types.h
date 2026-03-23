@@ -12,6 +12,7 @@
 #include "clang/Driver/Phases.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Option/ArgList.h"
+#include "clang/Support/Compiler.h"
 
 namespace llvm {
 class StringRef;
@@ -78,7 +79,7 @@ namespace types {
   bool isDerivedFromC(ID Id);
 
   /// isCXX - Is this a "C++" input (C++ and Obj-C++ sources and headers).
-  bool isCXX(ID Id);
+  CLANG_ABI bool isCXX(ID Id);
 
   /// Is this LLVM IR.
   bool isLLVMIR(ID Id);
@@ -90,7 +91,7 @@ namespace types {
   bool isHIP(ID Id);
 
   /// isObjC - Is this an "ObjC" input (Obj-C and Obj-C++ sources and headers).
-  bool isObjC(ID Id);
+  CLANG_ABI bool isObjC(ID Id);
 
   /// isOpenCL - Is this an "OpenCL" input.
   bool isOpenCL(ID Id);
@@ -109,7 +110,7 @@ namespace types {
 
   /// lookupTypeForTypSpecifier - Lookup the type to use for a user
   /// specified type name.
-  ID lookupTypeForTypeSpecifier(const char *Name);
+  CLANG_ABI ID lookupTypeForTypeSpecifier(const char *Name);
 
   /// getCompilationPhases - Get the list of compilation phases ('Phases') to be
   /// done for type 'Id' up until including LastPhase.

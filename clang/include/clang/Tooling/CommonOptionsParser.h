@@ -29,6 +29,7 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/CommandLine.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
@@ -126,14 +127,14 @@ public:
       std::unique_ptr<CompilationDatabase> Compilations)
       : Compilations(std::move(Compilations)) {}
 
-  void appendArgumentsAdjuster(ArgumentsAdjuster Adjuster);
+  CLANG_ABI void appendArgumentsAdjuster(ArgumentsAdjuster Adjuster);
 
-  std::vector<CompileCommand>
+  CLANG_ABI std::vector<CompileCommand>
   getCompileCommands(StringRef FilePath) const override;
 
-  std::vector<std::string> getAllFiles() const override;
+  CLANG_ABI std::vector<std::string> getAllFiles() const override;
 
-  std::vector<CompileCommand> getAllCompileCommands() const override;
+  CLANG_ABI std::vector<CompileCommand> getAllCompileCommands() const override;
 
 private:
   std::unique_ptr<CompilationDatabase> Compilations;

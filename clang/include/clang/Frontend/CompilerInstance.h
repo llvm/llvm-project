@@ -25,6 +25,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/VirtualOutputBackend.h"
@@ -209,7 +210,7 @@ class CompilerInstance : public ModuleLoader {
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
 public:
-  explicit CompilerInstance(
+  CLANG_ABI explicit CompilerInstance(
       std::shared_ptr<CompilerInvocation> Invocation =
           std::make_shared<CompilerInvocation>(),
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
@@ -407,7 +408,7 @@ public:
   }
 
   /// Replace the current Target.
-  void setTarget(TargetInfo *Value);
+  CLANG_ABI void setTarget(TargetInfo *Value);
 
   /// @}
   /// @name AuxTarget Info
@@ -436,7 +437,7 @@ public:
   ///           configuring the file system emits diagnostics. Note that the
   ///           DiagnosticsEngine using the consumer won't obey the
   ///           --warning-suppression-mappings= flag.
-  void createVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  CLANG_ABI void createVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem>
                                    BaseFS = llvm::vfs::getRealFileSystem(),
                                DiagnosticConsumer *DC = nullptr);
 
@@ -560,7 +561,7 @@ public:
   }
 
   /// setASTContext - Replace the current AST context.
-  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> Value);
+  CLANG_ABI void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> Value);
 
   /// Replace the current Sema; the compiler instance takes ownership
   /// of S.
@@ -702,7 +703,7 @@ public:
   ///
   /// \param ShouldOwnClient If Client is non-NULL, specifies whether
   /// the diagnostic object should take ownership of the client.
-  void createDiagnostics(DiagnosticConsumer *Client = nullptr,
+  CLANG_ABI void createDiagnostics(DiagnosticConsumer *Client = nullptr,
                          bool ShouldOwnClient = true);
 
   /// Create a DiagnosticsEngine object.
@@ -726,21 +727,21 @@ public:
   /// used by some diagnostics printers (for logging purposes only).
   ///
   /// \return The new object on success, or null on failure.
-  static IntrusiveRefCntPtr<DiagnosticsEngine>
+  CLANG_ABI static IntrusiveRefCntPtr<DiagnosticsEngine>
   createDiagnostics(llvm::vfs::FileSystem &VFS, DiagnosticOptions &Opts,
                     DiagnosticConsumer *Client = nullptr,
                     bool ShouldOwnClient = true,
                     const CodeGenOptions *CodeGenOpts = nullptr);
 
   /// Create the file manager and replace any existing one with it.
-  void createFileManager();
+  CLANG_ABI void createFileManager();
 
   /// Create the source manager and replace any existing one with it.
-  void createSourceManager();
+  CLANG_ABI void createSourceManager();
 
   /// Create the preprocessor, using the invocation, file, and source managers,
   /// and replace any existing one with it.
-  void createPreprocessor(TranslationUnitKind TUKind);
+  CLANG_ABI void createPreprocessor(TranslationUnitKind TUKind);
 
   void setDependencyDirectivesGetter(
       std::unique_ptr<DependencyDirectivesGetter> Getter) {

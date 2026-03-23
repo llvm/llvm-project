@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
@@ -1202,10 +1203,10 @@ class SelectorTable {
   void *Impl;
 
 public:
-  SelectorTable();
+  CLANG_ABI SelectorTable();
   SelectorTable(const SelectorTable &) = delete;
   SelectorTable &operator=(const SelectorTable &) = delete;
-  ~SelectorTable();
+  CLANG_ABI ~SelectorTable();
 
   /// Can create any sort of selector.
   ///

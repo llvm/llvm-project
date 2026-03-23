@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -318,7 +319,7 @@ public:
   /// \param Opts - The options to use to initialize the target. The target may
   /// modify the options to canonicalize the target feature information to match
   /// what the backend expects. These must outlive the returned TargetInfo.
-  static TargetInfo *CreateTargetInfo(DiagnosticsEngine &Diags,
+  CLANG_ABI static TargetInfo *CreateTargetInfo(DiagnosticsEngine &Diags,
                                       TargetOptions &Opts);
 
   virtual ~TargetInfo();
