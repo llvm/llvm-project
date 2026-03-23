@@ -23,11 +23,10 @@ indicates a greater chance of being taken.
 Supported Instructions
 ======================
 
-``BranchInst``
+``CondBrInst``
 ^^^^^^^^^^^^^^
 
-Metadata is only assigned to conditional branches. There are two extra
-operands for the true and the false branch.
+There are two extra operands for the true and the false branch.
 We optionally track if the metadata was added by ``__builtin_expect`` or
 ``__builtin_expect_with_probability`` with an optional field ``!"expected"``.
 
@@ -94,7 +93,7 @@ and used in SamplePGO mode only as described for the call instruction. If both
 weights are specified then the second weight contains the count of unwind branch
 taken and the first weight contains the execution count of the call minus
 the count of unwind branch taken. Both weights specified are used to calculate
-BranchProbability as for BranchInst and for SamplePGO the sum of both weights
+BranchProbability as for CondBrInst and for SamplePGO the sum of both weights
 is used.
 
 .. code-block:: none

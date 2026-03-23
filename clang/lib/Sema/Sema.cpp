@@ -73,6 +73,7 @@
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
@@ -842,6 +843,20 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
     }
   }
 
+  bool IsExplicitCast = isa<CStyleCastExpr>(E) || isa<CXXStaticCastExpr>(E) ||
+                        isa<CXXFunctionalCastExpr>(E);
+
+  if ((Kind == CK_IntegralCast || Kind == CK_IntegralToBoolean ||
+       (Kind == CK_NoOp && E->getType()->isIntegerType() &&
+        Ty->isIntegerType())) &&
+      IsExplicitCast) {
+    if (const auto *SourceOBT = E->getType()->getAs<OverflowBehaviorType>()) {
+      if (Ty->isIntegerType() && !Ty->isOverflowBehaviorType()) {
+        Ty = Context.getOverflowBehaviorType(SourceOBT->getBehaviorKind(), Ty);
+      }
+    }
+  }
+
   return ImplicitCastExpr::Create(Context, Ty, Kind, E, BasePath, VK,
                                   CurFPFeatureOverrides());
 }
@@ -1596,7 +1611,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     RecordCompleteMap MNCComplete;
     for (const NamedDecl *D : UnusedPrivateFields) {
       const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
-      if (RD && !RD->isUnion() &&
+      if (RD && !RD->isUnion() && !D->hasAttr<UnusedAttr>() &&
           IsRecordFullyDefined(RD, RecordsComplete, MNCComplete)) {
         Diag(D->getLocation(), diag::warn_unused_private_field)
               << D->getDeclName();
@@ -1801,17 +1816,27 @@ bool Sema::hasUncompilableErrorOccurred() const {
 }
 
 // Print notes showing how we can reach FD starting from an a priori
-// known-callable function.
+// known-callable function. When a function has multiple callers, emit
+// each call chain separately. The first note in each chain uses
+// "called by" and subsequent notes use "which is called by".
 static void emitCallStackNotes(Sema &S, const FunctionDecl *FD) {
   auto FnIt = S.CUDA().DeviceKnownEmittedFns.find(FD);
-  while (FnIt != S.CUDA().DeviceKnownEmittedFns.end()) {
-    // Respect error limit.
+  if (FnIt == S.CUDA().DeviceKnownEmittedFns.end())
+    return;
+
+  for (const auto &CallerInfo : FnIt->second) {
     if (S.Diags.hasFatalErrorOccurred())
       return;
-    DiagnosticBuilder Builder(
-        S.Diags.Report(FnIt->second.Loc, diag::note_called_by));
-    Builder << FnIt->second.FD;
-    FnIt = S.CUDA().DeviceKnownEmittedFns.find(FnIt->second.FD);
+    S.Diags.Report(CallerInfo.Loc, diag::note_called_by) << CallerInfo.FD;
+    // Walk up the rest of the chain using "which is called by".
+    auto NextIt = S.CUDA().DeviceKnownEmittedFns.find(CallerInfo.FD);
+    while (NextIt != S.CUDA().DeviceKnownEmittedFns.end()) {
+      if (S.Diags.hasFatalErrorOccurred())
+        return;
+      const auto &Next = NextIt->second.front();
+      S.Diags.Report(Next.Loc, diag::note_which_is_called_by) << Next.FD;
+      NextIt = S.CUDA().DeviceKnownEmittedFns.find(Next.FD);
+    }
   }
 }
 
@@ -1860,6 +1885,11 @@ public:
   // device context. We need two sets because diagnostics emission may be
   // different depending on whether it is in OpenMP device context.
   llvm::SmallPtrSet<CanonicalDeclPtr<Decl>, 4> DoneMap[2];
+
+  // Functions that need their deferred diagnostics emitted. Collected
+  // during the graph walk and emitted afterwards so that all callers
+  // are known when producing call chain notes.
+  llvm::SetVector<CanonicalDeclPtr<const FunctionDecl>> FnsToEmit;
 
   // Emission state of the root node of the current use graph.
   bool ShouldEmitRootNode;
@@ -1955,13 +1985,16 @@ public:
     if (Caller && S.LangOpts.OpenMP && UsePath.size() == 1 &&
         (ShouldEmitRootNode || InOMPDeviceContext))
       S.OpenMP().finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
-    if (Caller)
-      S.CUDA().DeviceKnownEmittedFns[FD] = {Caller, Loc};
-    // Always emit deferred diagnostics for the direct users. This does not
-    // lead to explosion of diagnostics since each user is visited at most
-    // twice.
+    if (Caller) {
+      auto &Callers = S.CUDA().DeviceKnownEmittedFns[FD];
+      CanonicalDeclPtr<const FunctionDecl> CanonCaller(Caller);
+      if (llvm::none_of(Callers, [CanonCaller](const auto &C) {
+            return C.FD == CanonCaller;
+          }))
+        Callers.push_back({Caller, Loc});
+    }
     if (ShouldEmitRootNode || InOMPDeviceContext)
-      emitDeferredDiags(FD, Caller);
+      FnsToEmit.insert(FD);
     // Do not revisit a function if the function body has been completely
     // visited before.
     if (!Done.insert(FD).second)
@@ -1986,15 +2019,12 @@ public:
       checkVar(cast<VarDecl>(D));
   }
 
-  // Emit any deferred diagnostics for FD
-  void emitDeferredDiags(FunctionDecl *FD, bool ShowCallStack) {
+  void emitDeferredDiags(const FunctionDecl *FD) {
     auto It = S.DeviceDeferredDiags.find(FD);
     if (It == S.DeviceDeferredDiags.end())
       return;
     bool HasWarningOrError = false;
-    bool FirstDiag = true;
     for (PartialDiagnosticAt &PDAt : It->second) {
-      // Respect error limit.
       if (S.Diags.hasFatalErrorOccurred())
         return;
       const SourceLocation &Loc = PDAt.first;
@@ -2006,13 +2036,14 @@ public:
         DiagnosticBuilder Builder(S.Diags.Report(Loc, PD.getDiagID()));
         PD.Emit(Builder);
       }
-      // Emit the note on the first diagnostic in case too many diagnostics
-      // cause the note not emitted.
-      if (FirstDiag && HasWarningOrError && ShowCallStack) {
-        emitCallStackNotes(S, FD);
-        FirstDiag = false;
-      }
     }
+    if (HasWarningOrError)
+      emitCallStackNotes(S, FD);
+  }
+
+  void emitCollectedDiags() {
+    for (const auto &FD : FnsToEmit)
+      emitDeferredDiags(FD);
   }
 };
 } // namespace
@@ -2029,6 +2060,7 @@ void Sema::emitDeferredDiags() {
   DeferredDiagnosticsEmitter DDE(*this);
   for (auto *D : DeclsToCheckForDeferredDiags)
     DDE.checkRecordedDecl(D);
+  DDE.emitCollectedDiags();
 }
 
 // In CUDA, there are some constructs which may appear in semantically-valid

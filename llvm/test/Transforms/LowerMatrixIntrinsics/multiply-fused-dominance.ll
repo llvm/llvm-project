@@ -9,14 +9,12 @@ target triple = "aarch64-apple-ios"
 define void @multiply_can_hoist_cast(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_can_hoist_cast(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[C:%.*]] to i64
-; CHECK-NEXT:    [[STORE_END:%.*]] = add nuw nsw i64 [[STORE_BEGIN]], 32
-; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[STORE_END]], [[LOAD_BEGIN]]
+; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 32
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
-; CHECK-NEXT:    [[LOAD_END:%.*]] = add nuw nsw i64 [[LOAD_BEGIN]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
+; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
@@ -81,14 +79,12 @@ define void @multiply_can_hoist_multiple_insts(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_can_hoist_multiple_insts(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 64
-; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[GEP]] to i64
-; CHECK-NEXT:    [[STORE_END:%.*]] = add nuw nsw i64 [[STORE_BEGIN]], 32
-; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[STORE_END]], [[LOAD_BEGIN]]
+; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr i8, ptr [[C]], i64 96
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
-; CHECK-NEXT:    [[LOAD_END:%.*]] = add nuw nsw i64 [[LOAD_BEGIN]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
+; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[GEP]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8
@@ -155,14 +151,12 @@ define void @multiply_can_hoist_multiple_insts2(ptr noalias %A, ptr %B, ptr %C) 
 ; CHECK-LABEL: @multiply_can_hoist_multiple_insts2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 1344
-; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[GEP_1]] to i64
-; CHECK-NEXT:    [[STORE_END:%.*]] = add nuw nsw i64 [[STORE_BEGIN]], 32
-; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[STORE_END]], [[LOAD_BEGIN]]
+; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr i8, ptr [[C]], i64 1376
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; CHECK:       alias_cont:
-; CHECK-NEXT:    [[LOAD_END:%.*]] = add nuw nsw i64 [[LOAD_BEGIN]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
+; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 32
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[GEP_1]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x double], align 8

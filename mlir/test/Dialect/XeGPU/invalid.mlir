@@ -658,14 +658,6 @@ func.func @tensor_desc_invalid_map_layout_1(%src: memref<24x32xf32>) {
 }
 
 // -----
-func.func @tensor_desc_invalid_map_data(%src: memref<24x32xf32>) {
-  %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-      // expected-error@+1 {{cannot distribute [4, 8] using #xegpu.layout<lane_layout = [2, 8], lane_data = [4, 1]>}}
-      !xegpu.tensor_desc<4x8xf32,  #xegpu.layout<lane_layout = [2, 8], lane_data = [4, 1]>>
-  return
-}
-
-// -----
 func.func @tensor_desc_invalid_map_data_1(%src: memref<24x32xf32>) {
   %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
       // expected-error@+1 {{cannot distribute [4, 8] using #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 2]>}}
@@ -766,8 +758,8 @@ func.func @tensor_desc_invalid_sg_data(%src: ui64, %offsets: vector<16xindex>) {
   %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
       !xegpu.tensor_desc<16x2xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 2>,
-        // expected-error@+1 {{expected sg_layout being used with sg_data}}
-        #xegpu.layout<sg_data = [16, 2], lane_layout = [8, 1], lane_data = [1, 2]>>
+        // expected-error@+1 {{sg_layout and sg_data must be used together}}
+        #xegpu.layout<sg_layout = [2, 1], lane_layout = [8, 1], lane_data = [1, 2]>>
   return
 }
 
@@ -776,8 +768,8 @@ func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
   %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
       !xegpu.tensor_desc<16x2xf32,
         #xegpu.scatter_tdesc_attr<chunk_size = 2>,
-        // expected-error@+1 {{expected lane_layout being used with lane_data}}
-        #xegpu.layout<inst_data = [16, 2], lane_data = [1, 2]>>
+        // expected-error@+1 {{lane_layout and lane_data must be used together}}
+        #xegpu.layout<inst_data = [16, 2], lane_layout = [16, 1]>>
   return
 }
 
@@ -899,5 +891,19 @@ func.func @simt_store_matrix_vector_noncoalesced(%arg0: !xegpu.mem_desc<32x32xf3
   // expected-error@+1 {{With subgroup_block_io, the block shape must match the lane layout}}
   xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
         vector<16x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1], block = [1, 17]>>
+  return
+}
+
+// -----
+func.func @truncf_invalid_result_size(%a: vector<8x16xf16>) {
+  // expected-error@+1 {{op input type must be wider than result type}}
+  %1 = xegpu.truncf %a : vector<8x16xf16> -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_acc_result_type_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xbf16>) {
+  // expected-error@+1 {{Expecting the acc type to be the same as result.}}
+  %1 = xegpu.dpas_mx %a, %b, %acc : vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xbf16> -> vector<8x16xf32>
   return
 }

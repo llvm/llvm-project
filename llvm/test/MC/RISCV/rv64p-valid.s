@@ -43,9 +43,15 @@ psslai.w a4, a5, 4
 # CHECK-ASM-AND-OBJ: pli.h a5, 5
 # CHECK-ASM: encoding: [0x9b,0x27,0x05,0xb0]
 pli.h a5, 5
+# CHECK-ASM-AND-OBJ: pli.h a5, -215
+# CHECK-ASM: encoding: [0x9b,0xa7,0x29,0xb1]
+pli.h a5, 65321
 # CHECK-ASM-AND-OBJ: pli.w a5, 5
 # CHECK-ASM: encoding: [0x9b,0x27,0x05,0xb2]
 pli.w a5, 5
+# CHECK-ASM-AND-OBJ: pli.w a5, -292
+# CHECK-ASM: encoding: [0x9b,0xa7,0xdc,0xb2]
+pli.w a5, 0xfffffedc
 # CHECK-ASM-AND-OBJ: pli.b a6, 6
 # CHECK-ASM: encoding: [0x1b,0x28,0x06,0xb4]
 pli.b a6, 6
@@ -118,7 +124,7 @@ sha a0, t5, t5
 # CHECK-ASM-AND-OBJ: shar t5, t5, t3
 # CHECK-ASM: encoding: [0x1b,0x2f,0xcf,0xff]
 shar t5, t5, t3
-# CHECK-ASM-AND-OBJ: psrli.b a6, a7
+# CHECK-ASM-AND-OBJ: psrli.b a6, a7, 0
 # CHECK-ASM: encoding: [0x1b,0xc8,0x88,0x80]
 psrli.b a6, a7, 0
 # CHECK-ASM-AND-OBJ: psrli.h ra, sp, 1

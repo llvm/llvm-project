@@ -147,8 +147,8 @@ define void @f10(double %extra) {
 ; CHECK-NEXT:    .cfi_offset %r13, -56
 ; CHECK-NEXT:    .cfi_offset %r14, -48
 ; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    aghi %r15, -184
-; CHECK-NEXT:    .cfi_def_cfa_offset 344
+; CHECK-NEXT:    aghi %r15, -176
+; CHECK-NEXT:    .cfi_def_cfa_offset 336
 ; CHECK-NEXT:    lgrl %r1, dptr@GOT
 ; CHECK-NEXT:    ldr %f1, %f0
 ; CHECK-NEXT:    adb %f1, 0(%r1)
@@ -156,9 +156,9 @@ define void @f10(double %extra) {
 ; CHECK-NEXT:    adb %f2, 0(%r1)
 ; CHECK-NEXT:    ldr %f3, %f0
 ; CHECK-NEXT:    adb %f3, 0(%r1)
-; CHECK-NEXT:    std %f1, 176(%r15) # 8-byte Spill
-; CHECK-NEXT:    std %f2, 168(%r15) # 8-byte Spill
-; CHECK-NEXT:    std %f3, 160(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f1, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f2, 160(%r15) # 8-byte Spill
+; CHECK-NEXT:    lgdr %r11, %f3
 ; CHECK-NEXT:    ldr %f1, %f0
 ; CHECK-NEXT:    adb %f1, 0(%r1)
 ; CHECK-NEXT:    ldr %f2, %f0
@@ -176,28 +176,28 @@ define void @f10(double %extra) {
 ; CHECK-NEXT:    ldr %f2, %f0
 ; CHECK-NEXT:    adb %f2, 0(%r1)
 ; CHECK-NEXT:    adb %f0, 0(%r1)
-; CHECK-NEXT:    lgrl %r6, iptr@GOT
-; CHECK-NEXT:    lgdr %r13, %f1
-; CHECK-NEXT:    lgdr %r12, %f2
-; CHECK-NEXT:    lgdr %r11, %f0
+; CHECK-NEXT:    lgdr %r6, %f1
+; CHECK-NEXT:    lgdr %r13, %f2
+; CHECK-NEXT:    lgdr %r12, %f0
 ; CHECK-NEXT:  .LBB9_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    brasl %r14, foo@PLT
 ; CHECK-NEXT:    lgr %r0, %r2
-; CHECK-NEXT:    og %r0, 176(%r15) # 8-byte Folded Reload
 ; CHECK-NEXT:    og %r0, 168(%r15) # 8-byte Folded Reload
 ; CHECK-NEXT:    og %r0, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ogr %r0, %r11
 ; CHECK-NEXT:    ogr %r0, %r10
 ; CHECK-NEXT:    ogr %r0, %r9
 ; CHECK-NEXT:    ogr %r0, %r8
 ; CHECK-NEXT:    ogr %r0, %r7
+; CHECK-NEXT:    ogr %r0, %r6
 ; CHECK-NEXT:    ogr %r0, %r13
 ; CHECK-NEXT:    ogr %r0, %r12
-; CHECK-NEXT:    ogr %r0, %r11
-; CHECK-NEXT:    stg %r0, 0(%r6)
+; CHECK-NEXT:    lgrl %r1, iptr@GOT
+; CHECK-NEXT:    stg %r0, 0(%r1)
 ; CHECK-NEXT:    cgijlh %r2, 1, .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %exit
-; CHECK-NEXT:    lmg %r6, %r15, 232(%r15)
+; CHECK-NEXT:    lmg %r6, %r15, 224(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %double0 = load volatile double, ptr@dptr

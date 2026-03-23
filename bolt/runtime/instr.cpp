@@ -131,6 +131,9 @@ class BumpPtrAllocator {
   };
 
 public:
+#if defined(__ANDROID__)
+  __attribute__((noinline))
+#endif
   void *allocate(size_t Size) {
     Lock L(M);
 
@@ -158,6 +161,9 @@ public:
   /// bugs by checking magic bytes. Ordinarily, we reset the allocator once
   /// we are done with it. Reset is done with clear(). There's no need
   /// to deallocate each element individually.
+#if defined(__ANDROID__)
+  __attribute__((noinline))
+#endif
   void deallocate(void *Ptr) {
     Lock L(M);
     uint8_t MetadataOffset = sizeof(EntryMetadata);
@@ -259,6 +265,7 @@ struct SimpleHashTableEntryBase {
   uint64_t Key;
   uint64_t Val;
   void dump(const char *Msg = nullptr) {
+#if !defined(__ANDROID__)
     // TODO: make some sort of formatting function
     // Currently we have to do it the ugly way because
     // we want every message to be printed atomically via a single call to
@@ -288,6 +295,7 @@ struct SimpleHashTableEntryBase {
     assert(Ptr - Buf < BufSize, "Buffer overflow!");
     // print everything all at once for atomicity
     __write(2, Buf, Ptr - Buf);
+#endif
   }
 };
 
@@ -601,6 +609,9 @@ int compareStr(const char *Str1, const char *Str2, int Size) {
 }
 
 /// Output Location to the fdata file
+#if defined(__ANDROID__)
+__attribute__((noinline))
+#endif
 char *serializeLoc(const ProfileWriterContext &Ctx, char *OutBuf,
                    const Location Loc, uint32_t BufSize) {
   // fdata location format: Type Name Offset
@@ -823,6 +834,7 @@ ProfileWriterContext readDescriptions() {
 #if !defined(__APPLE__)
 /// Debug by printing overall metadata global numbers to check it is sane
 void printStats(const ProfileWriterContext &Ctx) {
+#if !defined(__ANDROID__)
   char StatMsg[BufSize];
   char *StatPtr = StatMsg;
   StatPtr =
@@ -843,6 +855,7 @@ void printStats(const ProfileWriterContext &Ctx) {
   StatPtr = intToStr(StatPtr, __bolt_instr_num_funcs, 10);
   StatPtr = strCopy(StatPtr, "\n");
   __write(2, StatMsg, StatPtr - StatMsg);
+#endif
 }
 #endif
 
@@ -1516,10 +1529,18 @@ int openProfile() {
 /// Where 0xdeadbeef is this function address and PROCESSNAME your binary file
 /// name.
 extern "C" void __bolt_instr_clear_counters() {
-  memset(reinterpret_cast<char *>(__bolt_instr_locations), 0,
-         __bolt_num_counters * 8);
+  while (!GlobalWriteProfileMutex->acquire()) {
+  }
+
+  // Use atomic stores instead of memset to avoid torn writes that could be
+  // observed by other threads concurrently incrementing counters.
+  for (uint32_t I = 0; I < __bolt_num_counters; ++I)
+    __atomic_store_n(&__bolt_instr_locations[I], 0ULL, __ATOMIC_RELAXED);
+
   for (int I = 0; I < __bolt_instr_num_ind_calls; ++I)
     GlobalIndCallCounters[I].resetCounters();
+
+  GlobalWriteProfileMutex->release();
 }
 
 /// This is the entry point for profile writing.
@@ -1650,7 +1671,7 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   DEBUG(reportNumber("replace mmap stop: ", CountersEnd, 16));
   assert(CountersEnd > CountersStart, "no counters");
 
-  const bool Shared = !__bolt_instr_use_pid;
+  const bool Shared = !__bolt_instr_use_pid | !!__bolt_instr_sleep_time;
   const uint64_t MapPrivateOrShared = Shared ? MAP_SHARED : MAP_PRIVATE;
 
   void *Ret =
@@ -1696,7 +1717,7 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
 #if defined(__aarch64__)
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                       "ldp x0, x1, [sp, #288]\n"
+                       "ldp x0, x1, [sp, #272]\n"
                        "bl instrumentIndirectCall\n"
                        RESTORE_ALL
                        "ret\n"
@@ -1733,7 +1754,7 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
 #if defined(__aarch64__)
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                       "ldp x0, x1, [sp, #288]\n"
+                       "ldp x0, x1, [sp, #272]\n"
                        "bl instrumentIndirectCall\n"
                        RESTORE_ALL
                        "ret\n"

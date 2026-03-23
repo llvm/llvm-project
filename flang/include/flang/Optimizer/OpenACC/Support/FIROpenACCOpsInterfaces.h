@@ -14,6 +14,7 @@
 #define FLANG_OPTIMIZER_OPENACC_FIROPENACC_OPS_INTERFACES_H_
 
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace fir {
@@ -119,6 +120,15 @@ struct OperationMoveModel : public fir::OperationMoveOpInterface::ExternalModel<
   // then the caller is querying whether any operation can be moved
   // out of 'op' operation.
   bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const;
+};
+
+struct ReductionInitOpFortranObjectViewModel
+    : public fir::FortranObjectViewOpInterface::ExternalModel<
+          ReductionInitOpFortranObjectViewModel, mlir::acc::ReductionInitOp> {
+  mlir::Value getViewSource(mlir::Operation *op,
+                            mlir::OpResult resultView) const;
+  std::optional<std::int64_t> getViewOffset(mlir::Operation *op,
+                                            mlir::OpResult resultView) const;
 };
 
 } // namespace fir::acc

@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++23-or-later %s readability-convert-member-functions-to-static %t
+#include <string>
 
 namespace std{
-  class string {};
   void println(const char *format, const std::string &str) {}
 }
 

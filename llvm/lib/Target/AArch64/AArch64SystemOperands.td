@@ -904,10 +904,12 @@ multiclass TLBI<string name, bit hasTLBIP, bits<3> op1, bits<4> crn, bits<4> crm
     let ExtraRequires = ["AArch64::FeatureXS"];
   }
   if !eq(hasTLBIP, true) then {
-    def : TLBIPEntry<name, op1, crn, crm, op2, needsreg, optionalreg>;
+    def : TLBIPEntry<name, op1, crn, crm, op2, needsreg, optionalreg> {
+      let ExtraRequires = ["AArch64::FeatureD128"];
+    }
     def : TLBIPEntry<!strconcat(name, "nXS"), op1, crn, crm, op2, needsreg, optionalreg> {
       let Encoding{7} = 1;
-      let ExtraRequires = ["AArch64::FeatureXS"];
+      let ExtraRequires = ["AArch64::FeatureD128"];
     }
   }
 }
@@ -2439,10 +2441,8 @@ def lookupPHintByName : SearchIndex {
   let Key = ["Name"];
 }
 
-let Requires = [{ {AArch64::FeaturePCDPHINT} }] in {
-  def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
-  def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
-}
+def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
+def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
 
 // v9.6a Realm management extension enhancements
 def : RWSysReg<"GPCBW_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b101>;

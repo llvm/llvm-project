@@ -77,7 +77,9 @@ void DynamicLoaderHexagonDYLD::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-void DynamicLoaderHexagonDYLD::Terminate() {}
+void DynamicLoaderHexagonDYLD::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef DynamicLoaderHexagonDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
@@ -362,13 +364,11 @@ void DynamicLoaderHexagonDYLD::RefreshModules() {
         new_modules.Append(module_sp);
       }
 
-      if (log) {
-        LLDB_LOGF(log, "Target is loading '%s'", I->path.c_str());
-        if (!module_sp.get())
-          LLDB_LOGF(log, "LLDB failed to load '%s'", I->path.c_str());
-        else
-          LLDB_LOGF(log, "LLDB successfully loaded '%s'", I->path.c_str());
-      }
+      LLDB_LOGF(log, "Target is loading '%s'", I->path.c_str());
+      if (!module_sp.get())
+        LLDB_LOGF(log, "LLDB failed to load '%s'", I->path.c_str());
+      else
+        LLDB_LOGF(log, "LLDB successfully loaded '%s'", I->path.c_str());
     }
     m_process->GetTarget().ModulesDidLoad(new_modules);
   }

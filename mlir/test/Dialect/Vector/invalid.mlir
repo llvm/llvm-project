@@ -119,6 +119,14 @@ func.func @shuffle_empty_mask(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
 
 // -----
 
+func.func @shuffle_scalar_input(%a: i8, %b: i8) {
+  // expected-error @+1 {{expected vector type}}
+  %shuffle = vector.shuffle %a, %b [0] : i8, i8
+  return
+}
+
+// -----
+
 func.func @extract_vector_type(%arg0: index) {
   // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'index'}}
   %1 = vector.extract %arg0[] : index from index
@@ -157,6 +165,26 @@ func.func @extract_precise_position_overflow(%arg0: vector<4x8x16xf32>) {
 func.func @extract_0d_result(%arg0: vector<f32>) {
   // expected-error@+1 {{expected a scalar instead of a 0-d vector as the result type}}
   %1 = vector.extract %arg0[] : vector<f32> from vector<f32>
+}
+
+// -----
+
+// Extracting a scalar position from a 1-D vector must return a scalar, not a
+// single-element vector (implicit bitcast is not allowed).
+func.func @extract_scalar_as_single_element_vector(%arg0: vector<2xf32>) {
+  // expected-error@+2 {{'vector.extract' op failed to infer returned types}}
+  // expected-error@+1 {{'vector.extract' op inferred type(s) 'f32' are incompatible with return type(s) of operation 'vector<1xf32>'}}
+  %0 = vector.extract %arg0[0] : vector<1xf32> from vector<2xf32>
+}
+
+// -----
+
+// Extracting a single-element sub-vector from an n-D vector must return the
+// inferred vector type, not a scalar (implicit bitcast is not allowed).
+func.func @extract_subvec_as_scalar(%arg0: vector<3x1xf32>) {
+  // expected-error@+2 {{'vector.extract' op failed to infer returned types}}
+  // expected-error@+1 {{'vector.extract' op inferred type(s) 'vector<1xf32>' are incompatible with return type(s) of operation 'f32'}}
+  %0 = vector.extract %arg0[0] : f32 from vector<3x1xf32>
 }
 
 // -----
@@ -969,7 +997,7 @@ func.func @contraction(%arg0: vector<4x3xi32>,
   iterator_types = ["parallel", "parallel", "reduction"]
 }
 func.func @contraction(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: vector<2x3xf32>)
--> vector<3x2xf32>
+-> vector<2x3xf32>
 {
 // expected-error@+1 {{invalid accumulator/result vector shape, expected: 'vector<3x2xf32>'}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
@@ -2038,6 +2066,15 @@ func.func @load_non_pow_of_2_alignment(%memref: memref<4xi32>, %c0: index) {
 
 // -----
 
+func.func @load_non_unit_stride(%src : memref<?xi8, strided<[2], offset: ?>>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.load' op most minor memref dim must have unit stride}}
+  %0 = vector.load %src[%c0] : memref<?xi8, strided<[2], offset: ?>>, vector<16xi8>
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.store
 //===----------------------------------------------------------------------===//
@@ -2063,4 +2100,67 @@ func.func @store_non_pow_of_2_alignment(%memref: memref<4xi32>, %val: vector<4xi
   // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
   return
+}
+
+// -----
+func.func @store_non_unit_stride(%src : memref<?xi8, strided<[2], offset:?>>,%val : vector<16xi8>, %c0: index) {
+  // expected-error @below {{'vector.store' op most minor memref dim must have unit stride}}
+  vector.store %val, %src[%c0] : memref<?xi8, strided<[2], offset: ?>>, vector<16xi8>
+  return
+}
+
+// -----
+
+// Verify that vector.bitcast rejects vectors with i0 (zero-bitwidth) element type.
+func.func @bitcast_i0(%a: vector<4xi0>) -> vector<4xi0> {
+  // expected-error @+1 {{'vector.bitcast' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0 = vector.bitcast %a : vector<4xi0> to vector<4xi0>
+  return %0 : vector<4xi0>
+}
+
+// -----
+
+func.func @reduction_i0(%a: vector<4xi0>) -> i0 {
+  // expected-error @+1 {{'vector.reduction' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0 = vector.reduction <add>, %a : vector<4xi0> into i0
+  return %0 : i0
+}
+
+// -----
+
+func.func @multi_reduction_i0(%a: vector<4x8xi0>, %acc: vector<4xi0>) -> vector<4xi0> {
+  // expected-error @+1 {{'vector.multi_reduction' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4x8xi0>'}}
+  %0 = vector.multi_reduction <add>, %a, %acc [1] : vector<4x8xi0> to vector<4xi0>
+  return %0 : vector<4xi0>
+}
+
+// -----
+
+func.func @contract_i0(%lhs: vector<4xi0>, %rhs: vector<4xi0>, %acc: i0) -> i0 {
+  // expected-error @+1 {{'vector.contract' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0 = vector.contract {
+    indexing_maps = [affine_map<(d0) -> (d0)>,
+                     affine_map<(d0) -> (d0)>,
+                     affine_map<(d0) -> ()>],
+    iterator_types = ["reduction"],
+    kind = #vector.kind<add>
+  } %lhs, %rhs, %acc : vector<4xi0>, vector<4xi0> into i0
+  return %0 : i0
+}
+
+// -----
+
+func.func @outerproduct_i0(%lhs: vector<4xi0>, %rhs: i0) -> vector<4xi0> {
+  // expected-error @+1 {{'vector.outerproduct' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0 = vector.outerproduct %lhs, %rhs : vector<4xi0>, i0
+  return %0 : vector<4xi0>
+}
+
+// -----
+
+func.func @scan_i0(%a: vector<4xi0>, %init: vector<1xi0>) -> (vector<4xi0>, vector<1xi0>) {
+  // expected-error @+1 {{'vector.scan' op operand #0 must be vector of non-zero-bitwidth type values, but got 'vector<4xi0>'}}
+  %0:2 = vector.scan <add>, %a, %init {inclusive = true, reduction_dim = 0 : i64} :
+    vector<4xi0>, vector<1xi0>
+  return %0#0, %0#1 : vector<4xi0>, vector<1xi0>
 }

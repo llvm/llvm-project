@@ -6,8 +6,8 @@ set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND SymbolLocator)
 # prevents an unstripped binary from being requested from the Debuginfod
 # provider.
 add_subdirectory(Debuginfod)
+add_subdirectory(SymStore)
 add_subdirectory(Default)
-add_subdirectory(Scripted)
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   add_subdirectory(DebugSymbols)
 endif()
