@@ -32,6 +32,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
        "--target=${BOLT_RT_TARGET_TRIPLE}")
 endif()
 
+# TODO: Fix reported warnings.
+list(APPEND BOLT_RT_FLAGS
+     -Wno-unused-function
+     -Wno-unused-variable
+     -Wno-unused-but-set-variable
+     -Wno-cast-qual
+     -Wno-sign-compare
+     -Wno-unknown-attributes)
+
 message(STATUS "bolt-rt: targeting ${BOLT_RT_TARGET_TRIPLE}")
 
 # Add custom target for runtime builds.
