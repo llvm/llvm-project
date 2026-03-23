@@ -5,6 +5,7 @@ import System
         let path = FilePath("/usr/local/bin")
         let empty = FilePath("")
         let root = FilePath("/")
-        print("break here", path, empty, root)
+        let nonASCII = FilePath("/hëllo/wôrld")
+        print("break here", path, empty, root, nonASCII)
     }
 }

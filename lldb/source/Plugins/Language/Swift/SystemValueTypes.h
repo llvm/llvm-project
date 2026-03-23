@@ -19,8 +19,22 @@
 namespace lldb_private {
 namespace formatters {
 namespace swift {
-bool FilePath_SummaryProvider(ValueObject &valobj, Stream &stream,
-                              const TypeSummaryOptions &options);
+
+struct FilePathSummaryProvider : public TypeSummaryImpl {
+  FilePathSummaryProvider(const TypeSummaryImpl::Flags &flags)
+      : TypeSummaryImpl(TypeSummaryImpl::Kind::eInternal, flags) {}
+
+  bool FormatObject(ValueObject *valobj, std::string &dest,
+                    const TypeSummaryOptions &options) override;
+  std::string GetDescription() override;
+  std::string GetName() override;
+  bool DoesPrintChildren(ValueObject *valobj) const override;
+
+private:
+  FilePathSummaryProvider(const FilePathSummaryProvider &) = delete;
+  const FilePathSummaryProvider &
+  operator=(const FilePathSummaryProvider &) = delete;
+};
 
 bool SystemString_SummaryProvider(ValueObject &valobj, Stream &stream,
                                   const TypeSummaryOptions &options);

@@ -762,24 +762,25 @@ LoadSystemValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   TypeSummaryImpl::Flags summary_flags;
   summary_flags.SetCascades(true)
-      .SetDontShowChildren(false)
+      .SetDontShowChildren(true) // overridden at runtime by DoesPrintChildren
       .SetSkipPointers(true)
       .SetSkipReferences(false)
       .SetHideItemNames(false)
       .SetShowMembersOneLiner(false);
 
-  lldb_private::formatters::AddCXXSummary(
-      swift_category_sp,
-      lldb_private::formatters::swift::FilePath_SummaryProvider,
-      "FilePath summary provider", ConstString("^System(Package)?\\.FilePath$"),
-      summary_flags, true);
+  TypeSummaryImplSP filepath_summary_sp(
+      new lldb_private::formatters::swift::FilePathSummaryProvider(
+          summary_flags));
+  lldb_private::formatters::AddSummary(
+      swift_category_sp, filepath_summary_sp,
+      ConstString("^System(Package)?\\.FilePath$"), true);
 
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp,
       lldb_private::formatters::swift::SystemString_SummaryProvider,
       "SystemString summary provider",
       ConstString("^System(Package)?\\.SystemString$"),
-      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true), true);
+      summary_flags, true);
 }
 
 lldb::TypeCategoryImplSP SwiftLanguage::GetFormatters() {
