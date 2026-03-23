@@ -163,32 +163,32 @@ static void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
   switch (req) {
   case PTT_READ_GPRS: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOGV(log, "PTT_READ_GPRS {0}", buf.GetData());
+    LLDB_LOG(log, "PTT_READ_GPRS {0}", buf.GetData());
     break;
   }
   case PTT_WRITE_GPRS: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOGV(log, "PTT_WRITE_GPRS {0}", buf.GetData());
+    LLDB_LOG(log, "PTT_WRITE_GPRS {0}", buf.GetData());
     break;
   }
   case PT_READ_BLOCK: {
     DisplayBytes(buf, &data, data_size);
-    LLDB_LOGV(log, "PT_READ_BLOCK {0}", buf.GetData());
+    LLDB_LOG(log, "PT_READ_BLOCK {0}", buf.GetData());
     break;
   }
   case PT_WRITE_BLOCK: {
     DisplayBytes(buf, data, data_size);
-    LLDB_LOGV(log, "PT_WRITE_BLOCK {0}", buf.GetData());
+    LLDB_LOG(log, "PT_WRITE_BLOCK {0}", buf.GetData());
     break;
   }
   case PTT_READ_FPRS: {
     DisplayBytes(buf, data, 8);
-    LLDB_LOGV(log, "PTT_READ_FPRS: {0}", buf.GetData());
+    LLDB_LOG(log, "PTT_READ_FPRS: {0}", buf.GetData());
     break;
   }
   case PTT_WRITE_FPRS: {
     DisplayBytes(buf, data, 8);
-    LLDB_LOGV(log, " PTT_WRITE_FPRS: {0}", buf.GetData());
+    LLDB_LOG(log, " PTT_WRITE_FPRS: {0}", buf.GetData());
     break;
   }
 
