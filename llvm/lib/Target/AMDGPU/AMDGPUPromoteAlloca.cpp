@@ -151,10 +151,6 @@ struct ValueReplacer {
   // the order they were added.
   void postErase(Instruction *I) { ErasableInstrs.push_back(I); }
 
-  void postErase(const SmallVectorImpl<Instruction *> &C) {
-    ErasableInstrs.append(C);
-  }
-
   template <typename RangeTy> void postErase(const iterator_range<RangeTy> &R) {
     append_range(ErasableInstrs, R);
   }
@@ -471,7 +467,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       if (AllocaCost <= VectorizationBudget) {
         promoteAllocaToVector(AA, VR);
 
-        VR.postErase(AA.Vector.Worklist);
+        VR.postErase(iterator_range(AA.Vector.Worklist));
         // Append in reverse order so that further users would be erased first.
         VR.postErase(reverse(AA.Vector.UsersToRemove));
         VR.postErase(AA.Alloca);
