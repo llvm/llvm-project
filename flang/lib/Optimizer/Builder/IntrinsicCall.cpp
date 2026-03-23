@@ -764,6 +764,13 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"sleep", &I::genSleep, {{{"seconds", asValue}}}, /*isElemental=*/false},
     {"spacing", &I::genSpacing},
+    {"split",
+     &I::genSplit,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"pos", asAddr},
+       {"back", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"spread",
      &I::genSpread,
      {{{"source", asBox}, {"dim", asValue}, {"ncopies", asValue}}},
@@ -8538,6 +8545,39 @@ void IntrinsicLibrary::genSleep(llvm::ArrayRef<fir::ExtendedValue> args) {
   fir::runtime::genSleep(builder, loc, fir::getBase(args[0]));
 }
 
+// SPLIT
+void IntrinsicLibrary::genSplit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+
+  mlir::Value stringBase = fir::getBase(args[0]);
+  mlir::Value stringLen = fir::getLen(args[0]);
+  mlir::Value setBase = fir::getBase(args[1]);
+  mlir::Value setLen = fir::getLen(args[1]);
+  mlir::Value posAddr = fir::getBase(args[2]);
+
+  fir::KindTy kind =
+      fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+          stringBase.getType());
+
+  // BACK is optional and defaults to .FALSE. when absent.
+  mlir::Value back =
+      isStaticallyAbsent(args[3])
+          ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+          : fir::getBase(args[3]);
+
+  mlir::Type posRefTy = fir::dyn_cast_ptrEleTy(posAddr.getType());
+  mlir::Value posValue = fir::LoadOp::create(builder, loc, posRefTy, posAddr);
+  mlir::Type indexTy = builder.getIndexType();
+  mlir::Value posIndex = builder.createConvert(loc, indexTy, posValue);
+
+  mlir::Value newPos =
+      fir::runtime::genSplit(builder, loc, kind, stringBase, stringLen, setBase,
+                             setLen, posIndex, back);
+
+  mlir::Value newPosConverted = builder.createConvert(loc, posRefTy, newPos);
+  fir::StoreOp::create(builder, loc, newPosConverted, posAddr);
+}
+
 // TOKENIZE
 void IntrinsicLibrary::genTokenize(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4 && "TOKENIZE requires 3 or 4 arguments");
@@ -8736,12 +8776,6 @@ static mlir::Value genExtremumResult(mlir::Location loc,
                                      fir::FirOpBuilder &builder,
                                      mlir::Value left, mlir::Value right) {
   mlir::Type type = left.getType();
-  mlir::arith::CmpIPredicate integerPredicate =
-      type.isUnsignedInteger() ? isMax ? mlir::arith::CmpIPredicate::ugt
-                                       : mlir::arith::CmpIPredicate::ult
-      : isMax                  ? mlir::arith::CmpIPredicate::sgt
-                               : mlir::arith::CmpIPredicate::slt;
-  mlir::Value pred;
   if (fir::isa_real(type)) {
     switch (builder.getFPMaxminBehavior()) {
     case Fortran::common::FPMaxminBehavior::Portable:
@@ -8782,26 +8816,41 @@ static mlir::Value genExtremumResult(mlir::Location loc,
 
     llvm_unreachable("unsupported FPMaxminBehavior");
   } else if (fir::isa_integer(type)) {
-    mlir::Value cmpLeft = left;
-    mlir::Value cmpRight = right;
+    // It is probably okay to use signed index.maxs/mins, but
+    // maybe the caller needs to specify signedness.
+    // There are currently no callers that pass values of index
+    // type, so just emit a TODO.
+    if (mlir::isa<mlir::IndexType>(type))
+      TODO(loc, "extremum for index type");
+
     if (type.isUnsignedInteger()) {
+      // arith.maxui/minui operands must have singless type.
       mlir::Type signlessType = mlir::IntegerType::get(
           builder.getContext(), type.getIntOrFloatBitWidth(),
           mlir::IntegerType::SignednessSemantics::Signless);
-      cmpLeft = builder.createConvert(loc, signlessType, left);
-      cmpRight = builder.createConvert(loc, signlessType, right);
+      left = builder.createConvert(loc, signlessType, left);
+      right = builder.createConvert(loc, signlessType, right);
+
+      mlir::Value result;
+      if constexpr (isMax)
+        result = mlir::arith::MaxUIOp::create(builder, loc, left, right);
+      else
+        result = mlir::arith::MinUIOp::create(builder, loc, left, right);
+
+      return builder.createConvert(loc, type, result);
+    } else {
+      if constexpr (isMax)
+        return mlir::arith::MaxSIOp::create(builder, loc, left, right);
+      else
+        return mlir::arith::MinSIOp::create(builder, loc, left, right);
     }
-    pred = mlir::arith::CmpIOp::create(builder, loc, integerPredicate, cmpLeft,
-                                       cmpRight);
   } else if (fir::isa_char(type) || fir::isa_char(fir::unwrapRefType(type))) {
     // TODO: ! character min and max is tricky because the result
     // length is the length of the longest argument!
     // So we may need a temp.
     TODO(loc, "intrinsic: min and max for CHARACTER");
   }
-  assert(pred && "pred must be defined");
-
-  return mlir::arith::SelectOp::create(builder, loc, pred, left, right);
+  llvm_unreachable("unsupported extremum");
 }
 
 // UNLINK

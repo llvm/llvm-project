@@ -920,6 +920,76 @@ void spirv::ExecutionModeOp::print(OpAsmPrinter &printer) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.ExecutionModeId
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::ExecutionModeIdOp::parse(OpAsmParser &parser,
+                                            OperationState &result) {
+  ExecutionMode execMode;
+  if (Attribute fn;
+      parser.parseAttribute(fn, kFnNameAttrName, result.attributes) ||
+      parseEnumStrAttr<ExecutionModeAttr>(execMode, parser, result)) {
+    return failure();
+  }
+
+  SmallVector<Attribute, 4> values;
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        FlatSymbolRefAttr attr;
+        if (parser.parseAttribute(attr))
+          return failure();
+        values.push_back(attr);
+        return success();
+      })) {
+    return failure();
+  }
+
+  StringRef valuesAttrName = getValuesAttrName(result.name);
+  ArrayAttr valuesAttr = parser.getBuilder().getArrayAttr(values);
+  result.addAttribute(valuesAttrName, valuesAttr);
+  return success();
+}
+
+void spirv::ExecutionModeIdOp::print(OpAsmPrinter &printer) {
+  printer << " ";
+  printer.printSymbolName(getFn());
+  printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\" ";
+
+  llvm::interleaveComma(
+      getValues().getAsValueRange<FlatSymbolRefAttr>(), printer,
+      [&](StringRef value) { printer.printSymbolName(value); });
+}
+
+LogicalResult spirv::ExecutionModeIdOp::verify() {
+  // Valid as of SPIRV 1.6
+  switch (getExecutionMode()) {
+  case ExecutionMode::SubgroupsPerWorkgroupId:
+  case ExecutionMode::LocalSizeId:
+  case ExecutionMode::LocalSizeHintId:
+    break;
+  default:
+    return emitOpError("expected ExecutionMode that takes extra operands that "
+                       "are <id> operands, got: ")
+           << stringifyExecutionMode(getExecutionMode());
+  }
+
+  if (getValues().empty())
+    return emitOpError("expected at least one value operand");
+
+  for (Attribute value : getValues()) {
+    auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);
+    if (!valueSymbol)
+      return emitOpError("expected value operands to be symbol reference");
+    Operation *valueOp = SymbolTable::lookupNearestSymbolFrom(
+        (*this)->getParentOp(), valueSymbol);
+    if (!valueOp)
+      return emitOpError("cannot find symbol referenced by value operand: ")
+             << valueSymbol.getValue();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.func
 //===----------------------------------------------------------------------===//
 

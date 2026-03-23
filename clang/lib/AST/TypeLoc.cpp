@@ -723,11 +723,12 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
     case TemplateArgument::Null:
       llvm_unreachable("Impossible TemplateArgument");
 
+    case TemplateArgument::Pack:
     case TemplateArgument::Integral:
     case TemplateArgument::Declaration:
     case TemplateArgument::NullPtr:
     case TemplateArgument::StructuralValue:
-      ArgInfos[i] = TemplateArgumentLocInfo();
+      ArgInfos[i] = TemplateArgumentLocInfo(Context, Loc);
       break;
 
     case TemplateArgument::Expression:
@@ -755,10 +756,6 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
                                                           : Loc);
       break;
     }
-
-    case TemplateArgument::Pack:
-      ArgInfos[i] = TemplateArgumentLocInfo();
-      break;
     }
   }
 }

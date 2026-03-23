@@ -61,8 +61,6 @@ struct Location {
   friend raw_ostream &operator<<(raw_ostream &OS, const Location &Loc);
 };
 
-typedef std::vector<std::pair<Location, Location>> BranchContext;
-
 struct BranchInfo {
   Location From;
   Location To;
@@ -108,14 +106,6 @@ struct FuncBranchData {
   FuncBranchData(StringRef Name, ContainerTy Data = ContainerTy(),
                  ContainerTy EntryData = ContainerTy())
       : Name(Name), Data(std::move(Data)), EntryData(std::move(EntryData)) {}
-
-  ErrorOr<const BranchInfo &> getBranch(uint64_t From, uint64_t To) const;
-
-  /// Returns the branch info object associated with a direct call originating
-  /// from the given offset. If no branch info object is found, an error is
-  /// returned. If the offset corresponds to an indirect call the behavior is
-  /// undefined.
-  ErrorOr<const BranchInfo &> getDirectCallBranch(uint64_t From) const;
 
   /// Append the branch data of another function located \p Offset bytes away
   /// from the entry of this function.
