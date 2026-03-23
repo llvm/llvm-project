@@ -129,7 +129,7 @@ jobs:
       - name: Install
         run: |
           set -eux
-          cmake --install build --prefix "$PWD/package"
+          cmake --install build --prefix "$PWD/package" --component lldb
 
       - name: Verify static linkage (best effort)
         run: |
