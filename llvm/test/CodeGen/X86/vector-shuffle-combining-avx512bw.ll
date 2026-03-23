@@ -21,8 +21,8 @@ define <32 x i16> @combine_vpermt2var_32i16_identity(<32 x i16> %x0, <32 x i16> 
 define <32 x i16> @combine_vpermt2var_32i16_identity_mask(<32 x i16> %x0, <32 x i16> %x1, i32 %m) {
 ; X86-LABEL: combine_vpermt2var_32i16_identity_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpmovsxbw {{.*#+}} zmm1 = [31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpermt2w %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    vpermw %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl

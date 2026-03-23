@@ -843,13 +843,14 @@ define void @bswap_v16i16(ptr %a) {
 ;
 ; NONEON-NOSVE-LABEL: bswap_v16i16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    ldr q0, [x0, #16]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #-64]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #14]
-; NONEON-NOSVE-NEXT:    str q1, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldr q0, [x0]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #15]
+; NONEON-NOSVE-NEXT:    str q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #29]
@@ -1018,13 +1019,14 @@ define void @bswap_v8i32(ptr %a) {
 ;
 ; NONEON-NOSVE-LABEL: bswap_v8i32:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    ldr q0, [x0, #16]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #-64]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #12]
-; NONEON-NOSVE-NEXT:    str q1, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldr q0, [x0]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #13]
+; NONEON-NOSVE-NEXT:    str q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #29]
@@ -1193,13 +1195,14 @@ define void @bswap_v4i64(ptr %a) {
 ;
 ; NONEON-NOSVE-LABEL: bswap_v4i64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
+; NONEON-NOSVE-NEXT:    ldr q0, [x0, #16]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #-64]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #8]
-; NONEON-NOSVE-NEXT:    str q1, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldr q0, [x0]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #9]
+; NONEON-NOSVE-NEXT:    str q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #29]

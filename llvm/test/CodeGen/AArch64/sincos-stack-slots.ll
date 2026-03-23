@@ -207,9 +207,10 @@ define void @sincos_atomic_result_stores(float %x, ptr noalias %out_sin, ptr noa
 ; CHECK-NEXT:    add x0, sp, #12
 ; CHECK-NEXT:    add x1, sp, #8
 ; CHECK-NEXT:    bl sincosf
-; CHECK-NEXT:    ldp w9, w8, [sp, #8]
+; CHECK-NEXT:    ldr w8, [sp, #12]
 ; CHECK-NEXT:    str w8, [x20]
-; CHECK-NEXT:    str w9, [x19]
+; CHECK-NEXT:    ldr w8, [sp, #8]
+; CHECK-NEXT:    str w8, [x19]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

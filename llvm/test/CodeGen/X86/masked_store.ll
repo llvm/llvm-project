@@ -1015,8 +1015,8 @@ define void @store_v8f32_i8(<8 x float> %x, ptr %ptr, <8 x float> %y, i8 %trigge
 ;
 ; X86-AVX512-LABEL: store_v8f32_i8:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
 ; X86-AVX512-NEXT:    vmovups %ymm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
@@ -1658,8 +1658,8 @@ define void @store_v16f32_i16(<16 x float> %x, ptr %ptr, <16 x float> %y, i16 %t
 ;
 ; X86-AVX512-LABEL: store_v16f32_i16:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-AVX512-NEXT:    vmovups %zmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl

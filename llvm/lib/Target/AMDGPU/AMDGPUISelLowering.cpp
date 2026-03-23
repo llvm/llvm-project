@@ -4226,9 +4226,13 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
   //DCI.AddToWorklist(Val.getNode());
 
   bool OtherUses = !Val.hasOneUse();
-  SDValue CastVal = DAG.getNode(ISD::BITCAST, SL, NewVT, Val);
+  // Use the value's debug location for the bitcast, not the store's, so that
+  // when the bitcast is later folded into a load by visitBITCAST the resulting
+  // load retains the original load's debug location.
+  SDLoc ValDL(Val.getNode());
+  SDValue CastVal = DAG.getNode(ISD::BITCAST, ValDL, NewVT, Val);
   if (OtherUses) {
-    SDValue CastBack = DAG.getNode(ISD::BITCAST, SL, VT, CastVal);
+    SDValue CastBack = DAG.getNode(ISD::BITCAST, ValDL, VT, CastVal);
     DAG.ReplaceAllUsesOfValueWith(Val, CastBack);
   }
 

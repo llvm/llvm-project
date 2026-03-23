@@ -177,8 +177,8 @@ define void @test5(ptr %base, <16 x i32> %ind, i16 %mask, <16 x i32>%val) !prof 
 ;
 ; X86-LABEL: test5:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    kmovw %k1, %k2
 ; X86-NEXT:    vpscatterdd %zmm1, (%eax,%zmm0,4) {%k2}
 ; X86-NEXT:    vpscatterdd %zmm1, (%eax,%zmm0,4) {%k1}
@@ -4685,8 +4685,8 @@ define void @scaleidx_x86scatter(<16 x float> %value, ptr %base, <16 x i32> %ind
 ;
 ; X86-LABEL: scaleidx_x86scatter:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vscatterdps %zmm0, (%eax,%zmm1,4) {%k1}
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
@@ -4732,8 +4732,8 @@ define void @scaleidx_scatter(<8 x float> %value, ptr %base, <8 x i32> %index, i
 ;
 ; X86-SKX-LABEL: scaleidx_scatter:
 ; X86-SKX:       # %bb.0:
-; X86-SKX-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
 ; X86-SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SKX-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
 ; X86-SKX-NEXT:    vscatterdps %ymm0, (%eax,%ymm1,8) {%k1}
 ; X86-SKX-NEXT:    vzeroupper
 ; X86-SKX-NEXT:    retl
@@ -4779,9 +4779,9 @@ define void @scaleidx_scatter_outofrange(<8 x float> %value, ptr %base, <8 x i32
 ;
 ; X86-SKX-LABEL: scaleidx_scatter_outofrange:
 ; X86-SKX:       # %bb.0:
-; X86-SKX-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
 ; X86-SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SKX-NEXT:    vpslld $2, %ymm1, %ymm1
+; X86-SKX-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
 ; X86-SKX-NEXT:    vscatterdps %ymm0, (%eax,%ymm1,4) {%k1}
 ; X86-SKX-NEXT:    vzeroupper
 ; X86-SKX-NEXT:    retl

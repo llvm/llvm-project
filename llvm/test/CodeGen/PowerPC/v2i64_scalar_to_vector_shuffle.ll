@@ -998,15 +998,15 @@ define <2 x i64> @test_none_v2i64(ptr nocapture noundef readonly %b, i64 %arg) {
 ;
 ; CHECK-AIX-32-P8-LABEL: test_none_v2i64:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
-; CHECK-AIX-32-P8-NEXT:    lxvw4x v2, 0, r3
-; CHECK-AIX-32-P8-NEXT:    lwz r3, L..C2(r2) # %const.0
 ; CHECK-AIX-32-P8-NEXT:    stw r4, -16(r1)
 ; CHECK-AIX-32-P8-NEXT:    stw r5, -32(r1)
+; CHECK-AIX-32-P8-NEXT:    lwz r4, L..C2(r2) # %const.0
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
+; CHECK-AIX-32-P8-NEXT:    lxvw4x v2, 0, r4
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x v4, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    lwz r3, L..C3(r2) # %const.1
-; CHECK-AIX-32-P8-NEXT:    vperm v2, v2, v4, v3
+; CHECK-AIX-32-P8-NEXT:    vperm v2, v3, v4, v2
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -32
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x v4, 0, r3

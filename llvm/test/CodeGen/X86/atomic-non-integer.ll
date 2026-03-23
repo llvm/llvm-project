@@ -16,12 +16,33 @@
 ;  and their calling convention which remain unresolved.)
 
 define void @store_half(ptr %fptr, half %v) {
-; X86-LABEL: store_half:
-; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movw %ax, (%ecx)
-; X86-NEXT:    retl
+; X86-SSE1-LABEL: store_half:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    movw %ax, (%ecx)
+; X86-SSE1-NEXT:    retl
+;
+; X86-SSE2-LABEL: store_half:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movw %cx, (%eax)
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: store_half:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    movw %cx, (%eax)
+; X86-AVX-NEXT:    retl
+;
+; X86-NOSSE-LABEL: store_half:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOSSE-NEXT:    movw %ax, (%ecx)
+; X86-NOSSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: store_half:
 ; X64-SSE:       # %bb.0:
@@ -43,7 +64,7 @@ define void @store_float(ptr %fptr, float %v) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %eax, (%ecx)
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-SSE-LABEL: store_float:
@@ -788,16 +809,16 @@ define void @store_bfloat(ptr %fptr, bfloat %v) {
 ;
 ; X86-SSE2-LABEL: store_bfloat:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movw %ax, (%ecx)
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movw %cx, (%eax)
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: store_bfloat:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movw %ax, (%ecx)
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    movw %cx, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-NOSSE-LABEL: store_bfloat:

@@ -29,8 +29,8 @@ declare i64 @llvm.x86.avx512.kunpck.dq(i64, i64)
 define i64 @test_int_x86_avx512_kunpck_qd(i64 %x0, i64 %x1) nounwind {
 ; X86-LABEL: test_int_x86_avx512_kunpck_qd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_kunpck_qd:
@@ -78,8 +78,8 @@ declare <32 x i16> @llvm.x86.avx512.mask.pbroadcast.w.gpr.512(i16, <32 x i16>, i
 define { <32 x i16>, <32 x i16>, <32 x i16> } @test_int_x86_avx512_mask_pbroadcast_w_gpr_512(i16 %x0, <32 x i16> %x1, i32 %mask) nounwind {
 ; X86-LABEL: test_int_x86_avx512_mask_pbroadcast_w_gpr_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
 ; X86-NEXT:    vpbroadcastw {{[0-9]+}}(%esp), %zmm3 # encoding: [0x62,0xf2,0x7d,0x48,0x79,0x5c,0x24,0x02]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
 ; X86-NEXT:    vpblendmw %zmm3, %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x49,0x66,0xcb]
 ; X86-NEXT:    vmovdqu16 %zmm3, %zmm2 {%k1} {z} # encoding: [0x62,0xf1,0xff,0xc9,0x6f,0xd3]
 ; X86-NEXT:    vmovdqa64 %zmm3, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc3]
@@ -133,8 +133,8 @@ define void @test_int_x86_avx512_mask_storeu_w_512(ptr %ptr1, ptr %ptr2, <32 x i
 ; X86-LABEL: test_int_x86_avx512_mask_storeu_w_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
-; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x0c]
 ; X86-NEXT:    vmovdqu16 %zmm0, (%ecx) {%k1} # encoding: [0x62,0xf1,0xff,0x49,0x7f,0x01]
 ; X86-NEXT:    vmovdqu64 %zmm0, (%eax) # encoding: [0x62,0xf1,0xfe,0x48,0x7f,0x00]
 ; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
@@ -158,9 +158,9 @@ define { <32 x i16>, <32 x i16>, <32 x i16> } @test_int_x86_avx512_mask_loadu_w_
 ; X86-LABEL: test_int_x86_avx512_mask_loadu_w_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
-; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
 ; X86-NEXT:    vmovdqu64 (%ecx), %zmm0 # encoding: [0x62,0xf1,0xfe,0x48,0x6f,0x01]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x0c]
 ; X86-NEXT:    vpblendmw (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x49,0x66,0x08]
 ; X86-NEXT:    vmovdqu16 (%ecx), %zmm2 {%k1} {z} # encoding: [0x62,0xf1,0xff,0xc9,0x6f,0x11]
 ; X86-NEXT:    retl # encoding: [0xc3]

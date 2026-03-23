@@ -1457,18 +1457,18 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ;
 ; X86-LABEL: test18:
 ; X86:       ## %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k0
-; X86-NEXT:    kshiftrw $8, %k0, %k1
-; X86-NEXT:    kshiftrw $9, %k0, %k0
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k2
+; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k0
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    kshiftrw $8, %k1, %k2
+; X86-NEXT:    kshiftrw $9, %k1, %k1
 ; X86-NEXT:    movb $-65, %al
 ; X86-NEXT:    kmovd %eax, %k3
-; X86-NEXT:    kandb %k3, %k2, %k2
-; X86-NEXT:    kshiftlb $6, %k0, %k0
-; X86-NEXT:    korb %k0, %k2, %k0
+; X86-NEXT:    kandb %k3, %k0, %k0
+; X86-NEXT:    kshiftlb $6, %k1, %k1
+; X86-NEXT:    korb %k1, %k0, %k0
 ; X86-NEXT:    kshiftlb $1, %k0, %k0
 ; X86-NEXT:    kshiftrb $1, %k0, %k0
-; X86-NEXT:    kshiftlb $7, %k1, %k1
+; X86-NEXT:    kshiftlb $7, %k2, %k1
 ; X86-NEXT:    korb %k1, %k0, %k0
 ; X86-NEXT:    vpmovm2w %k0, %xmm0
 ; X86-NEXT:    retl
@@ -4189,10 +4189,9 @@ define <8 x i64> @mask_widening(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vmovdqa64 8(%ebp), %zmm2
 ; X86-NEXT:    vpcmpeqd %xmm1, %xmm0, %k1
-; X86-NEXT:    vmovdqa32 72(%ebp), %zmm2 {%k1}
-; X86-NEXT:    vmovdqa64 %zmm2, %zmm0
+; X86-NEXT:    vmovdqa64 8(%ebp), %zmm0
+; X86-NEXT:    vmovdqa32 72(%ebp), %zmm0 {%k1}
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl

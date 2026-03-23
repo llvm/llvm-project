@@ -188,13 +188,13 @@ define void @insert_2xi64_idx(ptr %src, ptr %dst, i64 %ins, i32 %idx) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a5, %pc_hi20(.LCPI9_0)
 ; LA32-NEXT:    vld $vr0, $a5, %pc_lo12(.LCPI9_0)
+; LA32-NEXT:    add.w $a4, $a4, $a4
 ; LA32-NEXT:    vld $vr1, $a0, 0
-; LA32-NEXT:    add.w $a0, $a4, $a4
-; LA32-NEXT:    vreplgr2vr.w $vr2, $a0
+; LA32-NEXT:    vreplgr2vr.w $vr2, $a4
 ; LA32-NEXT:    vseq.w $vr2, $vr2, $vr0
 ; LA32-NEXT:    vreplgr2vr.w $vr3, $a2
 ; LA32-NEXT:    vbitsel.v $vr1, $vr1, $vr3, $vr2
-; LA32-NEXT:    addi.w $a0, $a0, 1
+; LA32-NEXT:    addi.w $a0, $a4, 1
 ; LA32-NEXT:    vreplgr2vr.w $vr2, $a0
 ; LA32-NEXT:    vseq.w $vr0, $vr2, $vr0
 ; LA32-NEXT:    vreplgr2vr.w $vr2, $a3

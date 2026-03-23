@@ -839,25 +839,29 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 2
 ; VI-NEXT:    s_waitcnt vmcnt(1)
-; VI-NEXT:    v_cndmask_b32_sdwa v0, v1, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; VI-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 3
+; VI-NEXT:    v_lshrrev_b32_e32 v11, 16, v2
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 4
-; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v11, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 5
+; VI-NEXT:    v_lshrrev_b32_e32 v12, 16, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 6
-; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v3, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v12, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 7
+; VI-NEXT:    v_lshrrev_b32_e32 v13, 16, v4
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 8
-; VI-NEXT:    v_cndmask_b32_sdwa v0, v0, v4, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v13, vcc
 ; VI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; VI-NEXT:    s_cmp_eq_u32 s4, 9
 ; VI-NEXT:    s_waitcnt vmcnt(0)

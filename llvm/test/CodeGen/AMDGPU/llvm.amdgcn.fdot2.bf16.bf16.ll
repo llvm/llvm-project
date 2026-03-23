@@ -66,11 +66,11 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_bf16_bf16_dpp(
 ; SDAG-GFX11-FAKE16:       ; %bb.0: ; %entry
 ; SDAG-GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-GFX11-FAKE16-NEXT:    scratch_load_b32 v0, off, s1
-; SDAG-GFX11-FAKE16-NEXT:    scratch_load_b32 v1, off, s2
-; SDAG-GFX11-FAKE16-NEXT:    scratch_load_u16 v2, off, s3
+; SDAG-GFX11-FAKE16-NEXT:    scratch_load_b32 v0, off, s2
+; SDAG-GFX11-FAKE16-NEXT:    scratch_load_u16 v1, off, s3
+; SDAG-GFX11-FAKE16-NEXT:    scratch_load_b32 v2, off, s1
 ; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-GFX11-FAKE16-NEXT:    v_dot2_bf16_bf16_e64_dpp v0, v0, v1, v2 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; SDAG-GFX11-FAKE16-NEXT:    v_dot2_bf16_bf16_e64_dpp v0, v2, v0, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; SDAG-GFX11-FAKE16-NEXT:    scratch_store_b16 off, v0, s0
 ; SDAG-GFX11-FAKE16-NEXT:    s_endpgm
     ptr addrspace(5) %r,

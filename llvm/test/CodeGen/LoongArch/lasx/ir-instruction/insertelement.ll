@@ -268,13 +268,13 @@ define void @insert_4xi64_idx(ptr %src, ptr %dst, i64 %in, i32 %idx) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a5, %pc_hi20(.LCPI15_0)
 ; LA32-NEXT:    xvld $xr0, $a5, %pc_lo12(.LCPI15_0)
+; LA32-NEXT:    add.w $a4, $a4, $a4
 ; LA32-NEXT:    xvld $xr1, $a0, 0
-; LA32-NEXT:    add.w $a0, $a4, $a4
-; LA32-NEXT:    xvreplgr2vr.w $xr2, $a0
+; LA32-NEXT:    xvreplgr2vr.w $xr2, $a4
 ; LA32-NEXT:    xvseq.w $xr2, $xr2, $xr0
 ; LA32-NEXT:    xvreplgr2vr.w $xr3, $a2
 ; LA32-NEXT:    xvbitsel.v $xr1, $xr1, $xr3, $xr2
-; LA32-NEXT:    addi.w $a0, $a0, 1
+; LA32-NEXT:    addi.w $a0, $a4, 1
 ; LA32-NEXT:    xvreplgr2vr.w $xr2, $a0
 ; LA32-NEXT:    xvseq.w $xr0, $xr2, $xr0
 ; LA32-NEXT:    xvreplgr2vr.w $xr2, $a3
