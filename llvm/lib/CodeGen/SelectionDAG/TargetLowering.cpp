@@ -8276,7 +8276,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   } else {
     // Otherwise split into multple chunks and add them together. We chose
     // BestChunkWidth so that the sum will not overflow.
-    APInt Mask = APInt::getLowBitsSet(HBitWidth, BestChunkWidth);
+    SDValue Mask = DAG.getConstant(
+        APInt::getLowBitsSet(HBitWidth, BestChunkWidth), dl, HiLoVT);
 
     for (unsigned I = 0; I < BitWidth - TrailingZeros; I += BestChunkWidth) {
       // If there were trailing zeros in the divisor, increase the shift amount.
@@ -8292,8 +8293,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         Chunk = GetFSHR(LL, LH, Shift);
       // If we're on the last chunk, we don't need an AND.
       if (I + BestChunkWidth < BitWidth - TrailingZeros)
-        Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk,
-                            DAG.getConstant(Mask, dl, HiLoVT));
+        Chunk = DAG.getNode(ISD::AND, dl, HiLoVT, Chunk, Mask);
       if (!Sum)
         Sum = Chunk;
       else
