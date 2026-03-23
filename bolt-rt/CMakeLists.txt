@@ -49,7 +49,7 @@ if(LLVM_RUNTIMES_BUILD)
   set_target_properties(bolt-rt PROPERTIES FOLDER "BOLT-RT/Metatargets")
   add_llvm_install_targets(install-bolt-rt
                            DEPENDS bolt-rt
-                           COMPONENTS bolt-rt)
+                           COMPONENT bolt-rt)
 endif()
 
 # For runtime builds, the installation directory is already known,
@@ -61,8 +61,7 @@ else()
 endif()
 
 # Act as if LLVM_ENABLE_PER_TARGET_RUNTIME_DIR is always true.
-string(APPEND BOLT_RT_LIBRARY_DIR "/bolt/${BOLT_RT_TARGET_TRIPLE}")
-set(BOLT_RT_ARCHIVE_SUFFIX "")
+set(BOLT_RT_LIBRARY_SUBDIR "/bolt/${BOLT_RT_TARGET_TRIPLE}")
 
 # Build flags.
 list(APPEND BOLT_RT_FLAGS
@@ -108,8 +107,8 @@ function(add_bolt_rt_library)
 
   # Ouput archives into a per-triple path or with a per triple suffix.
   set_target_properties(${ARG_TARGET} PROPERTIES
-                        ARCHIVE_OUTPUT_DIRECTORY "${BOLT_RT_LIBRARY_DIR}"
-                        ARCHIVE_OUTPUT_NAME "${ARG_TARGET}${BOLT_RT_ARCHIVE_SUFFIX}")
+                        ARCHIVE_OUTPUT_DIRECTORY "${BOLT_RT_LIBRARY_DIR}/${BOLT_RT_LIBRARY_SUBDIR}"
+                        ARCHIVE_OUTPUT_NAME "${ARG_TARGET}")
 
   if(LLVM_RUNTIMES_BUILD)
     add_dependencies(bolt-rt ${ARG_TARGET})
@@ -117,7 +116,15 @@ function(add_bolt_rt_library)
 
   # Install to a matching directory.
   install(TARGETS ${ARG_TARGET}
-          DESTINATION "${BOLT_RT_LIBRARY_DIR}")
+          ARCHIVE
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}/${BOLT_RT_LIBRARY_SUBDIR}"
+          COMPONENT bolt-rt)
+
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-${ARG_TARGET}
+                             DEPENDS ${ARG_TARGET}
+                             COMPONENT bolt-rt)
+  endif()
 endfunction()
 
 add_bolt_rt_library(TARGET bolt_rt_instr
