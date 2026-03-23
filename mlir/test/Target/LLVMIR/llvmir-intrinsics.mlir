@@ -1183,6 +1183,97 @@ llvm.func @vector_ptrmask(%p: vector<8 x !llvm.ptr>, %mask: vector<8 x i64>) -> 
   llvm.return %0 : vector<8 x !llvm.ptr>
 }
 
+// CHECK-LABEL: @experimental_constrained_fadd
+llvm.func @experimental_constrained_fadd(%s: f32, %v: vector<4 x f32>) {
+  // CHECK: call float @llvm.experimental.constrained.fadd.f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fadd %s, %s towardzero ignore : f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.fadd.v4f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %1 = llvm.intr.experimental.constrained.fadd %v, %v towardzero ignore : vector<4 x f32>
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fsub
+llvm.func @experimental_constrained_fsub(%s: f32, %v: vector<4 x f32>) {
+  // CHECK: call float @llvm.experimental.constrained.fsub.f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fsub %s, %s towardzero ignore : f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.fsub.v4f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %1 = llvm.intr.experimental.constrained.fsub %v, %v towardzero ignore : vector<4 x f32>
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fmul
+llvm.func @experimental_constrained_fmul(%s: f32, %v: vector<4 x f32>) {
+  // CHECK: call float @llvm.experimental.constrained.fmul.f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fmul %s, %s towardzero ignore : f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.fmul.v4f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %1 = llvm.intr.experimental.constrained.fmul %v, %v towardzero ignore : vector<4 x f32>
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fdiv
+llvm.func @experimental_constrained_fdiv(%s: f32, %v: vector<4 x f32>) {
+  // CHECK: call float @llvm.experimental.constrained.fdiv.f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fdiv %s, %s towardzero ignore : f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.fdiv.v4f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %1 = llvm.intr.experimental.constrained.fdiv %v, %v towardzero ignore : vector<4 x f32>
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_frem
+llvm.func @experimental_constrained_frem(%s: f32, %v: vector<4 x f32>) {
+  // CHECK: call float @llvm.experimental.constrained.frem.f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.frem %s, %s towardzero ignore : f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.frem.v4f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %1 = llvm.intr.experimental.constrained.frem %v, %v towardzero ignore : vector<4 x f32>
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fma
+llvm.func @experimental_constrained_fma(%s: f32, %v: vector<4 x f32>) {
+  // CHECK: call float @llvm.experimental.constrained.fma.f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fma %s, %s, %s towardzero ignore : f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.fma.v4f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %1 = llvm.intr.experimental.constrained.fma %v, %v, %v towardzero ignore : vector<4 x f32>
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fmuladd
+llvm.func @experimental_constrained_fmuladd(%s: f32, %v: vector<4 x f32>) {
+  // CHECK: call float @llvm.experimental.constrained.fmuladd.f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %0 = llvm.intr.experimental.constrained.fmuladd %s, %s, %s towardzero ignore : f32
+  // CHECK: call <4 x float> @llvm.experimental.constrained.fmuladd.v4f32(
+  // CHECK: metadata !"round.towardzero"
+  // CHECK: metadata !"fpexcept.ignore"
+  %1 = llvm.intr.experimental.constrained.fmuladd %v, %v, %v towardzero ignore : vector<4 x f32>
+  llvm.return
+}
+
 // CHECK-LABEL: @experimental_constrained_uitofp
 llvm.func @experimental_constrained_uitofp(%s: i32, %v: vector<4 x i32>) {
   // CHECK: call float @llvm.experimental.constrained.uitofp.f32.i32(
@@ -1495,6 +1586,20 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()
 // CHECK-DAG: declare void @llvm.stackrestore.p0(ptr)
 // CHECK-DAG: declare void @llvm.stackrestore.p1(ptr addrspace(1))
+// CHECK-DAG: declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+// CHECK-DAG: declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.fsub.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+// CHECK-DAG: declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+// CHECK-DAG: declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.fdiv.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+// CHECK-DAG: declare float @llvm.experimental.constrained.frem.f32(float, float, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.frem.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+// CHECK-DAG: declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
+// CHECK-DAG: declare float @llvm.experimental.constrained.fmuladd.f32(float, float, float, metadata, metadata)
+// CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
 // CHECK-DAG: declare float @llvm.experimental.constrained.uitofp.f32.i32(i32, metadata, metadata)
 // CHECK-DAG: declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
 // CHECK-DAG: declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
