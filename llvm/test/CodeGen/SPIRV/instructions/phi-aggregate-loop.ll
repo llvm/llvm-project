@@ -1,12 +1,18 @@
+; Verify that aggregate PHI nodes in loops are correctly lowered to
+; OpPhi with composite types, without introducing type mismatches
+; between the PHI result and its incoming values.
+
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64 %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64 %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#ARRTY:]] = OpTypeArray
 ; CHECK-DAG: %[[#ARRVECTY:]] = OpTypeArray
 ; CHECK-DAG: %[[#STRUCTTY:]] = OpTypeStruct
 
-; CHECK: %[[#]] = OpPhi
-; CHECK: %[[#PHI1:]] = OpPhi %[[#ARRTY]]
+; CHECK-DAG: %[[#PHI1:]] = OpPhi %[[#ARRTY]]
+; CHECK-DAG: %[[#]] = OpPhi %[[#]]
 ; CHECK: %[[#]] = OpCompositeExtract %[[#]] %[[#PHI1]]
 ; CHECK: %[[#]] = OpFAdd
 ; CHECK: %[[#]] = OpCompositeInsert %[[#ARRTY]]
@@ -30,8 +36,8 @@ exit:
   ret void
 }
 
-; CHECK: %[[#]] = OpPhi
-; CHECK: %[[#PHI2:]] = OpPhi %[[#ARRVECTY]]
+; CHECK-DAG: %[[#PHI2:]] = OpPhi %[[#ARRVECTY]]
+; CHECK-DAG: %[[#]] = OpPhi %[[#]]
 ; CHECK: %[[#]] = OpCompositeExtract %[[#]] %[[#PHI2]]
 ; CHECK: %[[#]] = OpFAdd
 ; CHECK: %[[#]] = OpCompositeInsert %[[#ARRVECTY]]
@@ -55,8 +61,8 @@ exit:
   ret void
 }
 
-; CHECK: %[[#]] = OpPhi
-; CHECK: %[[#PHI3:]] = OpPhi %[[#STRUCTTY]]
+; CHECK-DAG: %[[#PHI3:]] = OpPhi %[[#STRUCTTY]]
+; CHECK-DAG: %[[#]] = OpPhi %[[#]]
 ; CHECK: %[[#]] = OpCompositeExtract %[[#]] %[[#PHI3]]
 ; CHECK: %[[#]] = OpFAdd
 ; CHECK: %[[#]] = OpCompositeInsert %[[#STRUCTTY]]
