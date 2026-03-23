@@ -17,11 +17,6 @@ entry:
   ret void
 }
 
-define spir_kernel void @kernel_main() {
-entry:
-  ret void
-}
-
 @llvm.global_ctors = appending global [2 x { i32, ptr addrspace(9), ptr addrspace(9) }] [
   { i32, ptr addrspace(9), ptr addrspace(9) } { i32 100, ptr addrspace(9) @high_priority, ptr addrspace(9) null },
   { i32, ptr addrspace(9), ptr addrspace(9) } { i32 50, ptr addrspace(9) @low_priority, ptr addrspace(9) null }

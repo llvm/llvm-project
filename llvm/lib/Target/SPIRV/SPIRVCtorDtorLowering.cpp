@@ -44,6 +44,7 @@ static cl::opt<bool>
                   cl::init(true), cl::Hidden);
 
 namespace {
+constexpr int SPIRV_GLOBAL_AS = 1;
 
 std::string getHash(StringRef Str) {
   llvm::MD5 Hasher;
@@ -102,8 +103,7 @@ void createInitOrFiniCalls(Function &F, bool IsCtor) {
   IRBuilder<> IRB(BasicBlock::Create(C, "entry", &F));
   auto *LoopBB = BasicBlock::Create(C, "while.entry", &F);
   auto *ExitBB = BasicBlock::Create(C, "while.end", &F);
-  constexpr unsigned GlobalAddrSpace = 1;
-  Type *PtrTy = IRB.getPtrTy(GlobalAddrSpace);
+  Type *PtrTy = IRB.getPtrTy(SPIRV_GLOBAL_AS);
 
   auto CreateGlobal = [&](const char *Name) -> GlobalVariable * {
     auto *GV = new GlobalVariable(
@@ -111,7 +111,7 @@ void createInitOrFiniCalls(Function &F, bool IsCtor) {
         /*isConstant=*/false, GlobalValue::WeakAnyLinkage,
         Constant::getNullValue(PointerType::getUnqual(C)), Name,
         /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
-        /*AddressSpace=*/GlobalAddrSpace);
+        /*AddressSpace=*/SPIRV_GLOBAL_AS);
     GV->setVisibility(GlobalVariable::ProtectedVisibility);
     return GV;
   };
@@ -188,7 +188,7 @@ bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV, bool IsCtor) {
     auto *GV = new GlobalVariable(M, F->getType(), /*IsConstant=*/true,
                                   GlobalValue::ExternalLinkage, F, NameStr,
                                   nullptr, GlobalValue::NotThreadLocal,
-                                  /*AddressSpace=*/1);
+                                  /*AddressSpace=*/SPIRV_GLOBAL_AS);
     GV->setSection(IsCtor ? ".init_array" + PriorityStr
                           : ".fini_array" + PriorityStr);
     GV->setVisibility(GlobalVariable::ProtectedVisibility);

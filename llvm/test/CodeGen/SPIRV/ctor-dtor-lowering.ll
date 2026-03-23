@@ -15,11 +15,6 @@ entry:
   ret void
 }
 
-define spir_kernel void @main() {
-entry:
-  ret void
-}
-
 @llvm.global_ctors = appending global [1 x { i32, ptr addrspace(9), ptr addrspace(9) }] [
   { i32, ptr addrspace(9), ptr addrspace(9) } { i32 65535, ptr addrspace(9) @my_constructor, ptr addrspace(9) null }
 ]
@@ -43,7 +38,11 @@ entry:
 ; CHECK-DAG: OpName %[[#FINI_OBJ:]] "__fini_array_object_my_destructor_{{[a-f0-9]+}}_65535"
 
 ; CHECK: %[[#INIT_KERNEL]] = OpFunction
+; CHECK: %{{[0-9]+}} = OpBitcast %{{[0-9]+}} %[[#INIT_START]]
+; CHECK: %{{[0-9]+}} = OpBitcast %{{[0-9]+}} %[[#INIT_END]]
 ; CHECK: OpFunctionEnd
 
 ; CHECK: %[[#FINI_KERNEL]] = OpFunction
+; CHECK: %{{[0-9]+}} = OpBitcast %{{[0-9]+}} %[[#FINI_START]]
+; CHECK: %{{[0-9]+}} = OpBitcast %{{[0-9]+}} %[[#FINI_END]]
 ; CHECK: OpFunctionEnd
