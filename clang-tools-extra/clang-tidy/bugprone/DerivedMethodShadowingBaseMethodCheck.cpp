@@ -98,7 +98,7 @@ void DerivedMethodShadowingBaseMethodCheck::registerMatchers(
           unless(anyOf(isOutOfLine(), isStaticStorageClass(), isImplicit(),
                        cxxConstructorDecl(), isOverride(), isPrivate(),
                        // isFinal(), //included with isOverride,
-                       // Templates are not handled yet
+                       // TODO: Templates are not handled yet
                        isTemplate(), ast_matchers::isTemplateInstantiation(),
                        ast_matchers::isExplicitTemplateSpecialization())),
           ofClass(cxxRecordDecl(isDerivedFrom(cxxRecordDecl()))
