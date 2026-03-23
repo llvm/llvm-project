@@ -1610,7 +1610,9 @@ TEST_P(UncheckedOptionalAccessTest, WithAlias) {
       }
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, WithAliasThroughPointer) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"

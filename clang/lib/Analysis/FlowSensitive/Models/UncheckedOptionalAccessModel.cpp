@@ -157,12 +157,16 @@ auto hasOptionalOrDerivedType() {
   return hasType(desugarsToOptionalOrDerivedType());
 }
 
-bool isDesugaredTypeOptionalOrPointerToOptional(QualType Ty) {
-  if (Ty->isPointerType())
-    Ty = Ty->getPointeeType();
+bool isDesugaredTypeOptional(QualType Ty) {
   const Type &DesugaredTy = *Ty->getUnqualifiedDesugaredType();
   return DesugaredTy.isRecordType() &&
          hasOptionalClassName(*DesugaredTy.getAsCXXRecordDecl());
+}
+
+bool isDesugaredTypeOptionalOrPointerToOptional(QualType Ty) {
+  if (Ty->isPointerType())
+    Ty = Ty->getPointeeType();
+  return isDesugaredTypeOptional(Ty);
 }
 
 // Returns true if `E` is intended to refer to an optional type, but may refer
@@ -195,19 +199,22 @@ bool hasReceiverTypeDesugaringToOptional(const Expr *E) {
   if (Cast == nullptr || Cast->getCastKind() != CK_UncheckedDerivedToBase)
     return isDesugaredTypeOptionalOrPointerToOptional(E->getType());
 
+  // Usually, the SubExpr is already an optional type, so check the SubExpr
+  // first before trying the cast path. The cast path helps in the case when the
+  // SubExpr is a derived class.
+  if (isDesugaredTypeOptionalOrPointerToOptional(Cast->getSubExpr()->getType()))
+    return true;
+
   // See if we hit an optional type in the cast path, going from derived
   // to base.
   for (const CXXBaseSpecifier *Base : Cast->path()) {
-    if (isDesugaredTypeOptionalOrPointerToOptional(Base->getType()))
+    if (isDesugaredTypeOptional(Base->getType()))
       return true;
   }
 
-  // We didn't find a optional in the cast path. It may be that the
-  // subexpression itself is an optional type. For example, if we just have
-  // `std::optional<int>` instead of
-  // `struct Derived : public std::optional<int>`
-  // then the Cast path() won't include `optional` itself. However, the
-  // SubExpr type is the optional type.
+  // We didn't find a optional in the cast path and the subexpr isn't an
+  // optional. It may be that the subexpression itself has more relevant
+  // implicit casts, so recurse and search further.
   return hasReceiverTypeDesugaringToOptional(Cast->getSubExpr());
 }
 
