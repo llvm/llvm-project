@@ -24,9 +24,11 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PseudoProbe.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -103,12 +105,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   bool MatchReg = true;
 
   MVT VT = Op.getSimpleValueType();
-
-  // FIXME: The Untyped check is a workaround for SystemZ i128 inline assembly
-  // using i128, when it should probably be using v2i64.
-  const TargetRegisterClass *UseRC =
-      VT == MVT::Untyped ? nullptr : TLI->getRegClassFor(VT, Op->isDivergent());
-
+  const TargetRegisterClass *UseRC = nullptr;
   for (SDNode *User : Op->users()) {
     bool Match = true;
     if (User->getOpcode() == ISD::CopyToReg && User->getOperand(2) == Op) {
@@ -132,6 +129,7 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
             RC = TRI->getAllocatableClass(
                 TII->getRegClass(II, i + II.getNumDefs()));
           }
+
           if (!UseRC)
             UseRC = RC;
           else if (RC) {
@@ -148,6 +146,17 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
     MatchReg &= Match;
     if (VRBase)
       break;
+  }
+
+  // FIXME: The Untyped check is a workaround for SystemZ i128 inline assembly
+  // using i128, when it should probably be using v2i64.
+  const TargetRegisterClass *RegClassForVT =
+      VT == MVT::Untyped ? nullptr : TLI->getRegClassFor(VT, Op->isDivergent());
+
+  if (UseRC == nullptr || !UseRC->isAllocatable()) {
+      UseRC = RegClassForVT;
+  } else if (auto CommonSubClass = TRI->getCommonSubClass(UseRC, RegClassForVT)) {
+      UseRC = CommonSubClass;
   }
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
