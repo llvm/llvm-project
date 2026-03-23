@@ -522,7 +522,7 @@ define i64 @test_s_unsigned_i64_f32(float inreg %f) nounwind {
 ; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-ISEL-NEXT:    s_floor_f32 s2, s2
 ; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ISEL-NEXT:    s_fmac_f32 s1, s2, 0xcf800000
+; GFX12-ISEL-NEXT:    s_fmamk_f32 s1, s2, 0xcf800000, s1
 ; GFX12-ISEL-NEXT:    s_cvt_u32_f32 s2, s2
 ; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-ISEL-NEXT:    s_cvt_u32_f32 s1, s1
@@ -551,7 +551,7 @@ define i64 @test_s_unsigned_i64_f32(float inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_floor_f32 s2, s2
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_fmac_f32 s1, s2, 0xcf800000
+; GFX12-GI-NEXT:    s_fmamk_f32 s1, s2, 0xcf800000, s1
 ; GFX12-GI-NEXT:    s_cvt_u32_f32 s3, s2
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_cvt_u32_f32 s2, s1
