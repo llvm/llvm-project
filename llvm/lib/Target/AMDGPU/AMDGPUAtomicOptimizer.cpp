@@ -118,7 +118,8 @@ private:
 
   Value *optimizeAtomicWithDynamicThreshold(IRBuilder<> &B, Instruction &I,
                                             AtomicRMWInst::BinOp Op,
-                                            unsigned ValIdx) const;
+                                            unsigned ValIdx,
+                                            unsigned Threshold) const;
 
 public:
   AMDGPUAtomicOptimizerImpl() = delete;
@@ -756,12 +757,23 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // Decide which implementation path to use.
   // For DPP strategy with integer, divergent-value LDS atomics, when a
   // threshold is set, use dynamic branching based on active lane count.
-  const unsigned Threshold = AMDGPUAtomicOptimizerDPPLdsThreshold;
+  // The command-line option takes priority; otherwise fall back to a
+  // per-function attribute.
+  unsigned Threshold = 0;
+  if (AMDGPUAtomicOptimizerDPPLdsThreshold.getNumOccurrences() > 0) {
+    Threshold = AMDGPUAtomicOptimizerDPPLdsThreshold;
+  } else {
+    int AttrVal = I.getFunction()->getFnAttributeAsParsedInteger(
+        "amdgpu-atomic-optimizer-dpp-lds-threshold", 0);
+    if (AttrVal > 0)
+      Threshold = static_cast<unsigned>(AttrVal);
+  }
+
   Value *Result = nullptr;
   if (IsLDS && ValDivergent && ScanImpl == ScanOptions::DPP &&
       !AtomicRMWInst::isFPOperation(Op) && Threshold > 0 &&
       Threshold < ST.getWavefrontSize()) {
-    Result = optimizeAtomicWithDynamicThreshold(B, I, Op, ValIdx);
+    Result = optimizeAtomicWithDynamicThreshold(B, I, Op, ValIdx, Threshold);
   } else {
     Result = optimizeAtomicImpl(B, I, Op, ValIdx, ValDivergent);
   }
@@ -1078,8 +1090,8 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicImpl(IRBuilder<> &B,
 //  MergeBB:
 //    PHI merges results from both paths
 Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicWithDynamicThreshold(
-    IRBuilder<> &B, Instruction &I, AtomicRMWInst::BinOp Op,
-    unsigned ValIdx) const {
+    IRBuilder<> &B, Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
+    unsigned Threshold) const {
   Type *const Ty = I.getType();
   const unsigned TyBitWidth = DL.getTypeSizeInBits(Ty);
   const bool NeedResult = !I.use_empty();
@@ -1095,7 +1107,6 @@ Value *AMDGPUAtomicOptimizerImpl::optimizeAtomicWithDynamicThreshold(
       B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), B.getInt32Ty(), false);
 
   // Branch: if active lanes > threshold, use DPP; otherwise no-opt.
-  const unsigned Threshold = AMDGPUAtomicOptimizerDPPLdsThreshold;
   Value *const ThresholdCond = B.CreateICmpUGT(Ctpop, B.getInt32(Threshold));
 
   BasicBlock *const EntryBB = I.getParent();
