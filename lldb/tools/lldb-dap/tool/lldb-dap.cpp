@@ -400,7 +400,7 @@ static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
     return cleanupAndReturn(std::move(err));
 
   // The debugger attached to the process. We can resume it.
-  if (!ResumeThread(pi.hThread))
+  if (ResumeThread(pi.hThread) == (DWORD)-1)
     return cleanupAndReturn(
         notifyError(comm_channel, "Failed to resume the target process"));
 
