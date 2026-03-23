@@ -476,7 +476,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                     /*RawBuffer=*/false, /*HasCounter=*/false)
-        .addArraySubscriptOperators(ResourceDimension::Unknown)
+        .addArraySubscriptOperators()
         .addLoadMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
@@ -489,7 +489,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/false,
                     /*RawBuffer=*/false, /*HasCounter=*/false)
-        .addArraySubscriptOperators(ResourceDimension::Unknown)
+        .addArraySubscriptOperators()
         .addLoadMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
@@ -502,7 +502,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/true,
                     /*RawBuffer=*/false, /*HasCounter=*/false)
-        .addArraySubscriptOperators(ResourceDimension::Unknown)
+        .addArraySubscriptOperators()
         .addLoadMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
@@ -514,7 +514,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                     /*RawBuffer=*/true, /*HasCounter=*/false)
-        .addArraySubscriptOperators(ResourceDimension::Unknown)
+        .addArraySubscriptOperators()
         .addLoadMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
@@ -526,7 +526,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/false,
                     /*RawBuffer=*/true, /*HasCounter=*/true)
-        .addArraySubscriptOperators(ResourceDimension::Unknown)
+        .addArraySubscriptOperators()
         .addLoadMethods()
         .addIncrementCounterMethod()
         .addDecrementCounterMethod()
@@ -565,7 +565,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/true,
                     /*RawBuffer=*/true, /*HasCounter=*/true)
-        .addArraySubscriptOperators(ResourceDimension::Unknown)
+        .addArraySubscriptOperators()
         .addLoadMethods()
         .addIncrementCounterMethod()
         .addDecrementCounterMethod()

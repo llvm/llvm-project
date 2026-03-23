@@ -3373,9 +3373,8 @@ static bool CheckIndexType(Sema *S, CallExpr *TheCall, unsigned IndexArgIndex) {
   HLSLAttributedResourceType::Attributes ResAttrs = ResTy->getAttrs();
 
   unsigned int ExpectedDim = 1;
-  if (ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown) {
+  if (ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
     ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension);
-  }
 
   if (ActualDim != ExpectedDim) {
     S->Diag(TheCall->getArg(IndexArgIndex)->getBeginLoc(),
