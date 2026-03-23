@@ -1073,6 +1073,26 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::FCANONICALIZE: {
+    // If the scalar element type has a
+    // Legal/Custom FCANONICALIZE, don't
+    // mess with the vector, fall back.
+    EVT VT = Node->getValueType(0);
+    EVT EltVT = VT.getVectorElementType();
+    if (TLI.getOperationAction(ISD::FCANONICALIZE, EltVT.getSimpleVT()) !=
+        TargetLowering::Expand)
+      break;
+    // Otherwise multiply the whole vector
+    SDLoc DL(Node);
+    SDNodeFlags Flags = Node->getFlags();
+    Flags.setNoFPExcept(true);
+    SDValue One = DAG.getConstantFP(1.0, DL, VT);
+    SDValue Mul =
+        DAG.getNode(ISD::STRICT_FMUL, DL, {VT, MVT::Other},
+                    {DAG.getEntryNode(), Node->getOperand(0), One}, Flags);
+    Results.push_back(Mul);
+    return;
+  }
   case ISD::FSUB:
     ExpandFSUB(Node, Results);
     return;
