@@ -2772,7 +2772,13 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         return true;
 
       auto *SE = PSE->getSE();
-      return SE->isKnownPositive(SE->getAbsExpr(Stride, false));
+      if (SE->isKnownPositive(SE->getAbsExpr(Stride, false)))
+        return true;
+
+      PSE->addPredicate(*SE->getComparePredicate(
+          ICmpInst::ICMP_NE, Stride, SE->getZero(Stride->getType())));
+
+      return true;
     };
     if (Seen.insert({Ptr, AccessTy}).second || !IsSafeReadWrite()) {
       ++NumReads;

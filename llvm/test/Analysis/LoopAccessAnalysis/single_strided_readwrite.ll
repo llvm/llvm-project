@@ -76,18 +76,14 @@ exit:
 define void @known_non_negative(ptr %p, i8 %a) {
 ; CHECK-LABEL: 'known_non_negative'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Compare predicate: (zext i8 %a to i64) ne) 0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -116,18 +112,14 @@ exit:
 define void @known_non_negative_scaled_for_byte_gep(ptr %p, i8 %a) {
 ; CHECK-LABEL: 'known_non_negative_scaled_for_byte_gep'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Compare predicate: (zext i8 %a to i64) ne) 0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
