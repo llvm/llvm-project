@@ -707,17 +707,14 @@ define <2 x i32> @load_ctpop_v2i256_v2i32(ptr %p0) nounwind {
 ; AVX512POPCNT:       # %bb.0:
 ; AVX512POPCNT-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512POPCNT-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX512POPCNT-NEXT:    vpopcntq %zmm0, %zmm0
-; AVX512POPCNT-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512POPCNT-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
 ; AVX512POPCNT-NEXT:    vpopcntq %zmm1, %zmm1
 ; AVX512POPCNT-NEXT:    vpmovqb %zmm1, %xmm1
+; AVX512POPCNT-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm1, %xmm1
-; AVX512POPCNT-NEXT:    vmovq {{.*#+}} xmm2 = [0,24,0,0]
-; AVX512POPCNT-NEXT:    vinserti32x4 $2, %xmm1, %zmm0, %zmm1
-; AVX512POPCNT-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
-; AVX512POPCNT-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512POPCNT-NEXT:    vpopcntq %zmm0, %zmm0
+; AVX512POPCNT-NEXT:    vpmovqb %zmm0, %xmm0
+; AVX512POPCNT-NEXT:    vpsadbw %xmm2, %xmm0, %xmm0
+; AVX512POPCNT-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; AVX512POPCNT-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_ctpop_v2i256_v2i32:
@@ -745,17 +742,14 @@ define <2 x i32> @load_ctpop_v2i256_v2i32(ptr %p0) nounwind {
 ;
 ; AVX512VLPOPCNT-LABEL: load_ctpop_v2i256_v2i32:
 ; AVX512VLPOPCNT:       # %bb.0:
-; AVX512VLPOPCNT-NEXT:    vpopcntq (%rdi), %ymm0
+; AVX512VLPOPCNT-NEXT:    vpopcntq 32(%rdi), %ymm0
 ; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm0, %xmm0
 ; AVX512VLPOPCNT-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VLPOPCNT-NEXT:    vpopcntq 32(%rdi), %ymm2
-; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm2, %xmm2
 ; AVX512VLPOPCNT-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512VLPOPCNT-NEXT:    vpopcntq (%rdi), %ymm2
+; AVX512VLPOPCNT-NEXT:    vpmovqb %ymm2, %xmm2
 ; AVX512VLPOPCNT-NEXT:    vpsadbw %xmm1, %xmm2, %xmm1
-; AVX512VLPOPCNT-NEXT:    vmovq {{.*#+}} xmm2 = [0,24,0,0]
-; AVX512VLPOPCNT-NEXT:    vinserti32x4 $2, %xmm1, %zmm0, %zmm1
-; AVX512VLPOPCNT-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
-; AVX512VLPOPCNT-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VLPOPCNT-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; AVX512VLPOPCNT-NEXT:    vzeroupper
 ; AVX512VLPOPCNT-NEXT:    retq
   %a0 = load <2 x i256>, ptr %p0
