@@ -19,3 +19,6 @@ void f2()  { __builtin_memchr(f2, 0, 1); }
 
 
 _Static_assert(__atomic_is_lock_free(4, (void*)2), ""); // both-error {{not an integral constant expression}}
+
+_Static_assert(__builtin_strlen((void*)0 + 1) == 2, ""); // both-error {{not an integral constant expression}} \
+                                                         // both-note {{cannot perform pointer arithmetic on null pointer}}
