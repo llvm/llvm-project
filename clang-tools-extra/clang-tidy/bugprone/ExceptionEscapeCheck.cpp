@@ -146,24 +146,35 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
                                    "%0 which should not throw exceptions")
       << MatchedDecl;
 
-  if (Info.getExceptions().empty())
+  const utils::ExceptionAnalyzer::ExceptionInfo::Throwables &Exceptions =
+      Info.getExceptions();
+  const utils::ExceptionAnalyzer::ExceptionInfo::ThrowInfo *TI = nullptr;
+  if (!Exceptions.empty())
+    TI = &Exceptions.begin()->second;
+  else if (Info.containsUnknownElements())
+    TI = &Info.getUnknownThrowInfo();
+
+  if (!TI || TI->Loc.isInvalid())
     return;
 
-  const auto &[ThrowType, ThrowInfo] = *Info.getExceptions().begin();
-
-  if (ThrowInfo.Loc.isInvalid())
-    return;
-
-  const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
-  diag(ThrowInfo.Loc,
-       "frame #0: unhandled exception of type %0 may be thrown in function %1 "
-       "here",
-       DiagnosticIDs::Note)
-      << QualType(ThrowType, 0U) << Stack.back().first;
+  if (!Exceptions.empty()) {
+    const auto &[ThrowType, ThrowInfo] = *Exceptions.begin();
+    diag(ThrowInfo.Loc,
+         "frame #0: unhandled exception of type %0 may be thrown in function "
+         "%1 here",
+         DiagnosticIDs::Note)
+        << QualType(ThrowType, 0U) << ThrowInfo.Stack.back().first;
+  } else {
+    diag(TI->Loc,
+         "frame #0: an exception of unknown type may be thrown in function %0 "
+         "here",
+         DiagnosticIDs::Note)
+        << TI->Stack.back().first;
+  }
 
   size_t FrameNo = 1;
-  for (auto CurrIt = ++Stack.rbegin(), PrevIt = Stack.rbegin();
-       CurrIt != Stack.rend(); ++CurrIt, ++PrevIt) {
+  for (auto CurrIt = ++TI->Stack.rbegin(), PrevIt = TI->Stack.rbegin();
+       CurrIt != TI->Stack.rend(); ++CurrIt, ++PrevIt) {
     const FunctionDecl *CurrFunction = CurrIt->first;
     const FunctionDecl *PrevFunction = PrevIt->first;
     const SourceLocation PrevLocation = PrevIt->second;

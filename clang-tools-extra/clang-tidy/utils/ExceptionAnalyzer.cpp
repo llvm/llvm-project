@@ -39,6 +39,8 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
+  if (!ThrowsUnknown && Other.ThrowsUnknown)
+    UnknownThrowInfo = Other.UnknownThrowInfo;
   ThrowsUnknown = ThrowsUnknown || Other.ThrowsUnknown;
   ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
@@ -452,6 +454,7 @@ void ExceptionAnalyzer::ExceptionInfo::clear() {
   Behaviour = State::NotThrowing;
   ContainsUnknown = false;
   ThrowsUnknown = false;
+  UnknownThrowInfo = {};
   ThrownExceptions.clear();
 }
 
@@ -489,7 +492,9 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     // are not explicitly non-throwing and no throw was discovered.
     if (AssumeUnannotatedFunctionsAsThrowing &&
         Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
-      Result.registerUnknownException();
+      CallStack.insert({Func, CallLoc});
+      Result.registerUnknownException({Func->getLocation(), CallStack});
+      CallStack.erase(Func);
     }
     return Result;
   }
@@ -507,8 +512,11 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   }
 
   if (AssumeMissingDefinitionsFunctionsAsThrowing &&
-      Result.getBehaviour() == State::Unknown)
-    Result.registerUnknownException();
+      Result.getBehaviour() == State::Unknown) {
+    CallStack.insert({Func, CallLoc});
+    Result.registerUnknownException({Func->getLocation(), CallStack});
+    CallStack.erase(Func);
+  }
 
   return Result;
 }

@@ -117,6 +117,16 @@ public:
       ContainsUnknown = true;
     }
 
+    /// Mark the entity as throwing due to an unknown cause and record Info
+    /// as the location for diagnostic notes.
+    void registerUnknownException(ThrowInfo Info) {
+      registerUnknownException();
+      UnknownThrowInfo = std::move(Info);
+    }
+
+    /// Return the location info recorded for the unknown throw, if any.
+    const ThrowInfo &getUnknownThrowInfo() const { return UnknownThrowInfo; }
+
   private:
     /// Recalculate the 'Behaviour' for example after filtering.
     void reevaluateBehaviour();
@@ -133,6 +143,10 @@ public:
     /// True if the entity is determined to be Throwing due to an unknown cause,
     /// based on analyzer configuration.
     bool ThrowsUnknown = false;
+
+    /// Location info for the assumed-throwing function when ThrowsUnknown is
+    /// true. May be invalid if no location is available.
+    ThrowInfo UnknownThrowInfo;
 
     /// 'ThrownException' is empty if the 'Behaviour' is either 'NotThrowing' or
     /// 'Unknown'.
