@@ -623,12 +623,7 @@ bool FullDependence::isDirectionNegative() const {
   return false;
 }
 
-bool FullDependence::normalize(ScalarEvolution *SE) {
-  if (!isDirectionNegative())
-    return false;
-
-  LLVM_DEBUG(dbgs() << "Before normalizing negative direction vectors:\n";
-             dump(dbgs()););
+void FullDependence::negate(ScalarEvolution &SE) {
   std::swap(Src, Dst);
   for (unsigned Level = 1; Level <= Levels; ++Level) {
     unsigned char Direction = DV[Level - 1].Direction;
@@ -642,9 +637,17 @@ bool FullDependence::normalize(ScalarEvolution *SE) {
     DV[Level - 1].Direction = RevDirection;
     // Reverse the dependence distance as well.
     if (DV[Level - 1].Distance != nullptr)
-      DV[Level - 1].Distance = SE->getNegativeSCEV(DV[Level - 1].Distance);
+      DV[Level - 1].Distance = SE.getNegativeSCEV(DV[Level - 1].Distance);
   }
+}
 
+bool FullDependence::normalize(ScalarEvolution *SE) {
+  if (!isDirectionNegative())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Before normalizing negative direction vectors:\n";
+             dump(dbgs()););
+  negate(*SE);
   LLVM_DEBUG(dbgs() << "After normalizing negative direction vectors:\n";
              dump(dbgs()););
   return true;
