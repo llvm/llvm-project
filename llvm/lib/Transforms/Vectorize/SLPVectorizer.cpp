@@ -25000,7 +25000,7 @@ bool StoreChainContext::vectorizeOneVF(
       CandidateVFs.pop();
 
   // For the MaxRegVF case, save RangeSizes to limit compile time
-  if (!getCurrentVF() || VF == MaxRegVF)
+  if (VF == MaxRegVF)
     updateRangeSizesFromCache();
 
   incrementVF();
@@ -25016,6 +25016,9 @@ bool StoreChainContext::vectorizeOneVF(
 
     if (!updateCandidateVFs(TTI))
       return false;
+    // Avoid double update of cache sizes
+    if (VF != MaxRegVF)
+      updateRangeSizesFromCache();
   }
   return true;
 }
