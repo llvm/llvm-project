@@ -1178,7 +1178,7 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
     std::vector<const Directive *> Ordered(Unordered.size());
     std::transform(Unordered.cbegin(), Unordered.cend(), Ordered.begin(),
                    [](const std::unique_ptr<Directive> &D) { return &*D; });
-    std::sort(Ordered.begin(), Ordered.end(), directiveComparator);
+    std::stable_sort(Ordered.begin(), Ordered.end(), directiveComparator);
     return Ordered;
   };
   std::vector<const Directive *> OrderedErrors = sortDirectives(ED.Errors);
