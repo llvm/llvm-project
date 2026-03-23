@@ -46,7 +46,7 @@ void RTDEF(CUFRegisterVariable)(
 }
 
 void RTDEF(CUFRegisterManagedVariable)(
-    void **module, void **varSym, const char *varName, int64_t size) {
+    void **module, void **varSym, char *varName, int64_t size) {
   __cudaRegisterManagedVar(module, varSym, varName, varName, 0, size, 0, 0);
 }
 
