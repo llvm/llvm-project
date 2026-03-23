@@ -84,17 +84,6 @@ foreach (tgt ${BOLT_TARGETS_TO_BUILD})
   message(STATUS "Targeting ${tgt} in llvm-bolt")
 endforeach()
 
-set(BOLT_ENABLE_RUNTIME_default OFF)
-if ((CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"
-    OR CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$"
-    OR CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv64")
-    AND (CMAKE_SYSTEM_NAME STREQUAL "Linux"
-      OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    AND (NOT CMAKE_CROSSCOMPILING))
-  set(BOLT_ENABLE_RUNTIME_default ON)
-endif()
-option(BOLT_ENABLE_RUNTIME "Enable BOLT runtime" ${BOLT_ENABLE_RUNTIME_default})
-
 set(BOLT_CLANG_EXE "" CACHE FILEPATH "Path to clang executable for the target \
 architecture for use in BOLT tests")
 set(BOLT_LLD_EXE "" CACHE FILEPATH "Path to lld executable for the target \
