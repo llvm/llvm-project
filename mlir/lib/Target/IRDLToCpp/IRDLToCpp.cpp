@@ -76,7 +76,7 @@ static std::string toCppName(StringRef input, bool capitalizeFirst = false) {
   std::string output;
   output.reserve(input.size());
 
-  // Push the first character, capatilizing if necessary.
+  // Push the first character, capitalizing if necessary.
   if (capitalizeFirst && std::islower(input.front()))
     output.push_back(llvm::toUpper(input.front()));
   else
