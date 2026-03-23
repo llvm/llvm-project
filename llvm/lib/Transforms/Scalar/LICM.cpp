@@ -1566,7 +1566,7 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
   SmallPtrSet<Instruction *, 4> Seen;
   SmallDenseMap<Instruction *, bool, 16> AlreadyLiveAcross;
   auto CountNewLiveAcrossOps =
-      [Preheader, L, &SinkCandidates, &Seen,
+      [Preheader, &SinkCandidates, &Seen,
        &AlreadyLiveAcross](Instruction *I) -> unsigned {
     Seen.clear();
     unsigned Count = 0;
