@@ -231,7 +231,7 @@ static void setSegmentOverride(struct InternalInstruction *insn,
     // CS = HWNT (branch Hint Weakly Not Taken)
     // In 64-bit mode, the 2E branch hint should only be set if no 3E is present.
     case SEG_OVERRIDE_CS:
-      if ((insn->mode != MODE_64BIT || insn->branchHint != BRANCH_HINT_3E)) {
+      if (insn->mode != MODE_64BIT || insn->branchHint != BRANCH_HINT_3E) {
         insn->branchHint = BRANCH_HINT_2E;
       }
       break;
@@ -250,6 +250,10 @@ static void setSegmentOverride(struct InternalInstruction *insn,
       }
       break;
     default:
+      if (insn->mode != MODE_64BIT || prefix == SEG_OVERRIDE_FS ||
+        prefix == SEG_OVERRIDE_GS) {
+        insn->branchHint = BRANCH_HINT_NONE;
+      }
       break;
   }
 }
