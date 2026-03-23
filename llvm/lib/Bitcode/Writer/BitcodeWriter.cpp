@@ -743,16 +743,14 @@ static unsigned getEncodedRMWOperation(const AtomicRMWInst &I) {
     Encoding = bitc::RMW_FMAXIMUM;
     break;
   case AtomicRMWInst::FMinimum:
-<<<<<<< HEAD
-    return bitc::RMW_FMINIMUM;
-  case AtomicRMWInst::FMaximumNum:
-    return bitc::RMW_FMAXIMUMNUM;
-  case AtomicRMWInst::FMinimumNum:
-    return bitc::RMW_FMINIMUMNUM;
-=======
     Encoding = bitc::RMW_FMINIMUM;
     break;
->>>>>>> a5f66f34194e (frontend but no backend)
+  case AtomicRMWInst::FMaximumNum:
+    Encoding = bitc::RMW_FMAXIMUMNUM;
+    break;
+  case AtomicRMWInst::FMinimumNum:
+    Encoding = bitc::RMW_FMINIMUMNUM;
+    break;
   case AtomicRMWInst::UIncWrap:
     Encoding = bitc::RMW_UINC_WRAP;
     break;
