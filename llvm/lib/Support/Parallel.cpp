@@ -257,16 +257,13 @@ void llvm::parallelFor(size_t Begin, size_t End,
 #if LLVM_ENABLE_THREADS
   if (parallel::strategy.ThreadsRequested != 1) {
     size_t NumItems = End - Begin;
-    if (NumItems == 0)
-      return;
-    // Use enough chunks for load balancing, but distribute via atomic counter
-    // rather than pre-spawning each chunk as a separate task.
+    // Distribute work via an atomic counter shared by NumWorkers threads,
+    // keeping the task count (and thus Linux futex calls) at O(ThreadCount)
+    // For lld, per-file work is somewhat uneven, so a multipler > 1 is safer.
+    // While 2 vs 4 vs 8 makes no measurable difference, 4 is used as a
+    // reasonable default.
     size_t NumWorkers = std::min<size_t>(NumItems, parallel::getThreadCount());
     size_t ChunkSize = std::max(size_t(1), NumItems / (NumWorkers * 4));
-
-    // Use an atomic counter for work distribution instead of spawning one task
-    // per chunk. This ensures the number of Linux futex calls is
-    // O(ThreadCount).
     std::atomic<size_t> Idx{Begin};
     auto Worker = [&] {
       while (true) {
@@ -280,9 +277,8 @@ void llvm::parallelFor(size_t Begin, size_t End,
     };
 
     parallel::TaskGroup TG;
-    for (size_t I = 1; I != NumWorkers; ++I)
+    for (size_t I = 0; I != NumWorkers; ++I)
       TG.spawn(Worker);
-    Worker();
     return;
   }
 #endif
