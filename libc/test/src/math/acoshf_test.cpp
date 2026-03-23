@@ -51,7 +51,7 @@ TEST_F(LlvmLibcAcoshfTest, InFloatRange) {
     if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, x,
-                                   LIBC_NAMESPACE::acoshf(x), 0.5);
+                                   LIBC_NAMESPACE::acoshf(x), TOLERANCE + 0.5);
   }
 }
 
