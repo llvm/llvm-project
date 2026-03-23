@@ -230,15 +230,11 @@ struct VPlanTransforms {
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF);
 
-  /// Replace each replicating VPReplicateRecipe and VPInstruction outside of
-  /// any replicate region in \p Plan with \p VF single-scalar recipes.
-  /// TODO: Also replicate VPScalarIVSteps and VPReplicateRecipes inside
-  /// replicate regions, thereby dissolving the latter.
+  /// Replace replicating VPReplicateRecipe, VPScalarIVStepsRecipe and
+  /// VPInstruction in \p Plan with \p VF single-scalar recipes. Replicate
+  /// regions are dissolved by replicating them and their recipes \p VF times.
+  /// TODO: Also dissolve replicate regions with live outs.
   static void replicateByVF(VPlan &Plan, ElementCount VF);
-
-  /// Replace replicate regions by explicitly replicating the regions' contents
-  /// \p VF times, each copy processing a single lane.
-  static void unrollReplicateRegions(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.
@@ -251,8 +247,8 @@ struct VPlanTransforms {
   /// block merging.
   LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
 
-  /// Remove redundant VPBasicBlocks by merging them into their predecessor if
-  /// the predecessor has a single successor.
+  /// Remove redundant VPBasicBlocks by merging them into their single
+  /// predecessor if the latter has a single successor.
   static bool mergeBlocksIntoPredecessors(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
