@@ -342,7 +342,7 @@ public:
   static void bindDerived(ClassTy &c);
 
 private:
-  static nanobind::object toPyInt(PyIntegerAttribute &self);
+  static nanobind::int_ toPyInt(PyIntegerAttribute &self);
 };
 
 /// Bool Attribute subclass - BoolAttr.

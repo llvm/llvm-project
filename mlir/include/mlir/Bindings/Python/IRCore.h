@@ -739,7 +739,7 @@ public:
 
   nanobind::object getOperationObject() { return operationObject; }
 
-  static nanobind::object
+  static nanobind::typed<nanobind::object, PyOperation>
   buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
                nanobind::object operandSegmentSpecObj,
                nanobind::object resultSegmentSpecObj,
