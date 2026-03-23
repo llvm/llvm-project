@@ -3457,7 +3457,7 @@ void SPIRVEmitIntrinsics::preprocessBoolVectorBitcasts(Function &F) {
         Result = B.CreateInsertElement(Result, Cmp, B.getInt32(I));
       }
     } else {
-      // Destenation is a non-bool type. If it's a scalar integer, use IntVal
+      // Destination is a non-bool type. If it's a scalar integer, use IntVal
       // directly, otherwise bitcast from iN.
       Result = IntVal;
       if (!BC->getDestTy()->isIntegerTy())
