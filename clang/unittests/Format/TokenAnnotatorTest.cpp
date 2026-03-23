@@ -805,7 +805,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsTemplateTemplateParameters) {
   EXPECT_TOKEN(Tokens[23], tok::identifier, TT_ClassHeadName);
 }
 
-TEST_F(TokenAnnotatorTest, UnderstandsCommonCppTemplates) {
+TEST_F(TokenAnnotatorTest, UnderstandsAnglesInStaticAssert) {
   auto Tokens =
       annotate("static_assert(std::conditional_t<A || B, C, D>::value);");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
@@ -827,6 +827,19 @@ TEST_F(TokenAnnotatorTest, UnderstandsCommonCppTemplates) {
   ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::less, TT_TemplateOpener);
   EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
+
+  Tokens = annotate("static_assert(foo < -bar && foo > -baz);");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[8], tok::greater, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[9], tok::minus, TT_UnaryOperator);
+
+  Tokens = annotate("static_assert(foo < bar && foo > baz);");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[7], tok::greater, TT_BinaryOperator);
+  // Not TT_StartOfName.
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsWhitespaceSensitiveMacros) {
