@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_remainder.h"
-#include "clc/math/clc_remquo.h"
-
-#define __CLC_BODY "clc_remainder.inc"
-#include "clc/math/gentype.inc"
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE
+__clc_remainder(__CLC_GENTYPE x, __CLC_GENTYPE y) {
+  __CLC_INTN unused_quo;
+  return __clc_remquo(x, y, &unused_quo);
+}
