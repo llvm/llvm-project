@@ -373,7 +373,7 @@ static bool tryToRecognizePopCount(Instruction &I) {
 }
 
 // Try to recognize below function as popcount intrinsic.
-// https://doc.lagout.org/security/Hackers%20Delight.pdf
+// Ref. Hacker Delights
 // Also used in TargetLowering::expandCTPOP().
 //
 // int popcount32(unsigned int i) {
@@ -388,7 +388,7 @@ static bool tryToRecognizePopCount(Instruction &I) {
 // uWord = (uWord & 0x3333333333333333) + ((uWord>>2) & 0x3333333333333333);
 // uWord = (uWord & 0x0F0F0F0F0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F0F0F0F0F);
 // uWord = (uWord & 0x00FF00FF00FF00FF) + ((uWord>>8) & 0x00FF00FF00FF00FF);
-// return  (uWord & 0x0000FFFF0000FFFF) + ((uWord>>16) & 0x0000FFFF0000FFFF);
+// uWord =  (uWord & 0x0000FFFF0000FFFF) + ((uWord>>16) & 0x0000FFFF0000FFFF);
 // return  (uWord & 0x00000000FFFFFFFF) + (uWord>>32) & 0x00000000FFFFFFFF;
 // }
 static bool tryToRecognizePopCount1(Instruction &I) {
@@ -400,7 +400,7 @@ static bool tryToRecognizePopCount1(Instruction &I) {
     return false;
 
   unsigned Len = Ty->getScalarSizeInBits();
-  if (!(Len <= 64 && Len > 8 && Len % 8 == 0))
+  if (Len > 64 || Len <= 8 || Len % 8 != 0)
     return false;
 
   APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
@@ -420,90 +420,64 @@ static bool tryToRecognizePopCount1(Instruction &I) {
   }
 
   APInt Mask64 = APInt(64, 0x00000000FFFFFFFF);
-  // Matching "(uWord & 0x00000000FFFFFFFF) + (uWord>>32)".
-  // OR
-  // Matching "(uWord & 0x00000000FFFFFFFF) + ((uWord>>32) &
-  // 0x00000000FFFFFFFF)".
   Value *ShiftOp;
   Value *Start = &I;
-  bool Is64 = false;
-  if (match(Start,
-            m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(32)),
-                          m_SpecificInt(Mask64)),
-                    m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask64)))) ||
-      match(Start,
-            m_c_Add(m_LShr(m_Value(ShiftOp), m_SpecificInt(32)),
-                    m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask64))))) {
-    Start = ShiftOp;
-    Is64 = true;
-  }
-  Value *LShrOp0;
-  // Matching "(uWord & 0x0000FFFF) + (uWord>>16)".
-  // Matching "(uWord & 0x0000FFFF) + ((uWord>>16) & 0x0000FFFF)".
-  bool Test16 = match(
-      Start, m_c_Add(m_And(m_LShr(m_Value(LShrOp0), m_SpecificInt(16)),
-                           m_SpecificInt(Mask0000FFFF)),
-                     m_And(m_Deferred(LShrOp0), m_SpecificInt(Mask0000FFFF))));
-
-  bool Is32 = false;
-  if ((Is64 && Test16) ||
-      (!Is64 && Len == 32 &&
-       (Test16 ||
-        match(Start, m_c_Add(m_LShr(m_Value(LShrOp0), m_SpecificInt(16)),
-                             m_And(m_Deferred(LShrOp0),
-                                   m_SpecificInt(Mask0000FFFF))))))) {
-    Start = LShrOp0;
-    Is32 = true;
-  }
-  Value *ShiftOp0;
-  // Matching "uWord = (uWord & 0x00FF00FF) + ((uWord>>8) & 0x00FF00FF);".
-  // OR
-  // Matching "uWord = (uWord & 0x00FF00FF) + (uWord>>8) ;".
-  bool Test8 = match(
-      Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp0), m_SpecificInt(8)),
-                           m_SpecificInt(Mask00FF)),
-                     m_And(m_Deferred(ShiftOp0), m_SpecificInt(Mask00FF))));
-  if (!((Is32 && Test8) ||
-        (!Is32 && Len == 16 &&
-         (Test8 ||
-          match(Start, m_c_Add(m_LShr(m_Value(ShiftOp0), m_SpecificInt(8)),
-                               m_And(m_Deferred(ShiftOp0),
-                                     m_SpecificInt(Mask00FF)))))))) {
-    return false;
-  }
-
-  Value *ShiftOp1;
-  // Matching "uWord = (uWord & 0x0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F)".
-  if (!match(ShiftOp0,
-             m_c_Add(m_And(m_LShr(m_Value(ShiftOp1), m_SpecificInt(4)),
-                           m_SpecificInt(Mask0F)),
-                     m_And(m_Deferred(ShiftOp1), m_SpecificInt(Mask0F))))) {
-    return false;
-  }
-
-  Value *ShiftOp2;
-  // Matching "uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333)".
-  if (match(ShiftOp1,
-            m_c_Add(m_And(m_LShr(m_Value(ShiftOp2), m_SpecificInt(2)),
-                          m_SpecificInt(Mask33)),
-                    m_And(m_Deferred(ShiftOp2), m_SpecificInt(Mask33))))) {
-    Value *ShiftOp3;
-    // Matching "uWord = (uWord & 0x55555555) + ((uWord>>1) &
-    // 0x55555555)".
-    if (match(ShiftOp2,
-              m_c_Add(m_And(m_LShr(m_Value(ShiftOp3), m_SpecificInt(1)),
-                            m_SpecificInt(Mask55)),
-                      m_And(m_Deferred(ShiftOp3), m_SpecificInt(Mask55))))) {
-      LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-      IRBuilder<> Builder(&I);
-      I.replaceAllUsesWith(
-          Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {ShiftOp3}));
-      ++NumPopCountRecognized;
-      return true;
+  APInt Mask;
+  for (unsigned I = Len; I >= 8; I = I / 2) {
+    switch (I) {
+    case 64:
+      Mask = Mask64;
+      break;
+    case 32:
+      Mask = Mask0000FFFF;
+      break;
+    case 16:
+      Mask = Mask00FF;
+      break;
+    case 8:
+      Mask = Mask0F;
+      break;
     }
+    // Matching "(uWord & Mask) + (uWord>>I/2)".
+    // OR
+    // Matching "(uWord & Mask) + ((uWord>>I/2) &
+    // 0x00000000FFFFFFFF)".
+    if (Len >= I &&
+        !(match(Start,
+                m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
+                              m_SpecificInt(Mask)),
+                        m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask)))) ||
+          match(Start,
+                m_c_Add(m_LShr(m_Value(ShiftOp), m_SpecificInt(I / 2)),
+                        m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask))))))
+      return false;
+
+    Start = ShiftOp;
+    ShiftOp = nullptr;
   }
 
-  return false;
+  ShiftOp = nullptr;
+  // Matching "uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333)".
+  if (!match(Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(2)),
+                                  m_SpecificInt(Mask33)),
+                            m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask33)))))
+    return false;
+
+  Start = ShiftOp;
+  ShiftOp = nullptr;
+  // Matching "uWord = (uWord & 0x55555555) + ((uWord>>1) &
+  // 0x55555555)".
+  if (!match(Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(1)),
+                                  m_SpecificInt(Mask55)),
+                            m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask55)))))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+  IRBuilder<> Builder(&I);
+  I.replaceAllUsesWith(
+      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {ShiftOp}));
+  ++NumPopCountRecognized;
+  return true;
 }
 
 /// Fold smin(smax(fptosi(x), C1), C2) to llvm.fptosi.sat(x), providing C1 and
