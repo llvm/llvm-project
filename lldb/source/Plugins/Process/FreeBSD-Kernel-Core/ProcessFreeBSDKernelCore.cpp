@@ -247,10 +247,8 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // https://cgit.freebsd.org/src/tree/sys/sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
-    // Iterate through a linked list of all processes. New processes are added
-    // to the head of this list. Which means that earlier PIDs are actually at
-    // the end of the list, so we have to walk it backwards. First collect all
-    // the processes in the list order.
+    // Iterate through a linked list of all processes then order incrementally
+    // by pid.
     std::vector<lldb::addr_t> process_addrs;
     if (lldb::addr_t allproc_addr = FindSymbol("allproc");
         allproc_addr != LLDB_INVALID_ADDRESS) {
@@ -259,12 +257,17 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
            proc = ReadPointerFromMemory(proc + offset_p_list, error))
         process_addrs.push_back(proc);
     }
+    std::sort(process_addrs.begin(), process_addrs.end(),
+              [&](lldb::addr_t a, lldb::addr_t b) {
+                Status err;
+                int32_t pid_a =
+                    ReadSignedIntegerFromMemory(a + offset_p_pid, 4, -1, err);
+                int32_t pid_b =
+                    ReadSignedIntegerFromMemory(b + offset_p_pid, 4, -1, err);
+                return pid_a < pid_b;
+              });
 
-    // Processes are in the linked list in descending PID order, so we must walk
-    // them in reverse to get ascending PID order.
-    for (auto proc_it = process_addrs.rbegin(); proc_it != process_addrs.rend();
-         ++proc_it) {
-      lldb::addr_t proc = *proc_it;
+    for (lldb::addr_t proc : process_addrs) {
       int32_t pid =
           ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
       // process' command-line string
