@@ -104,7 +104,7 @@ compare your outputs with the corresponding MPFR function.  In
 order for your new function to be supported by these two macros,
 the following files will need to be updated:
 
-- Add the function enum to: `LIBC_NAMESPACE::testing::mpfr::Operation` in the
+- Add the function enum to `LIBC_NAMESPACE::testing::mpfr::Operation` in the
 header file:
 ```
   libc/utils/MPFRWrapper/MPFRUtils.h
