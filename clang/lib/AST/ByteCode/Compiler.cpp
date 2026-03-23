@@ -240,7 +240,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
             return this->emitGetLocal(*SubExprT, It->second.Offset, E);
           } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
             if (auto It = this->Params.find(PVD); It != this->Params.end()) {
-              return this->emitGetParam(*SubExprT, It->second.Offset, E);
+              return this->emitGetParam(*SubExprT, It->second.Index, E);
             }
           }
         }
@@ -2709,6 +2709,7 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E) {
+  assert(!DiscardResult);
   // ArrayIndex might not be set if a ArrayInitIndexExpr is being evaluated
   // stand-alone, e.g. via EvaluateAsInt().
   if (!ArrayIndex)
@@ -2753,12 +2754,17 @@ bool Compiler<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
   if (!SourceExpr)
     return false;
 
-  if (Initializing)
+  if (Initializing) {
+    assert(!DiscardResult);
     return this->visitInitializer(SourceExpr);
+  }
 
   PrimType SubExprT = classify(SourceExpr).value_or(PT_Ptr);
-  if (auto It = OpaqueExprs.find(E); It != OpaqueExprs.end())
+  if (auto It = OpaqueExprs.find(E); It != OpaqueExprs.end()) {
+    if (DiscardResult)
+      return true;
     return this->emitGetLocal(SubExprT, It->second, E);
+  }
 
   if (!this->visit(SourceExpr))
     return false;
@@ -2770,16 +2776,13 @@ bool Compiler<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
   if (!this->emitSetLocal(SubExprT, LocalIndex, E))
     return false;
 
-  // Here the local variable is created but the value is removed from the stack,
-  // so we put it back if the caller needs it.
-  if (!DiscardResult) {
-    if (!this->emitGetLocal(SubExprT, LocalIndex, E))
-      return false;
-  }
-
   // This is cleaned up when the local variable is destroyed.
   OpaqueExprs.insert({E, LocalIndex});
 
+  // Here the local variable is created but the value is removed from the stack,
+  // so we put it back if the caller needs it.
+  if (!DiscardResult)
+    return this->emitGetLocal(SubExprT, LocalIndex, E);
   return true;
 }
 
@@ -3852,13 +3855,13 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
   // This is necessary because the calling code has pushed the pointer
   // of the correct base for  us already, but the arguments need
   // to come after.
-  unsigned Offset = align(primSize(PT_Ptr)); // instance pointer.
+  unsigned ParamIndex = 0;
   for (const ParmVarDecl *PD : Ctor->parameters()) {
     PrimType PT = this->classify(PD->getType()).value_or(PT_Ptr);
 
-    if (!this->emitGetParam(PT, Offset, E))
+    if (!this->emitGetParam(PT, ParamIndex, E))
       return false;
-    Offset += align(primSize(PT));
+    ++ParamIndex;
   }
 
   return this->emitCall(F, 0, E);
@@ -5056,12 +5059,6 @@ template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this, ScopeKind::FullExpression);
 
-  // If we won't destroy the toplevel scope, check for memory leaks first.
-  if (!DestroyToplevelScope) {
-    if (!this->emitCheckAllocations(E))
-      return false;
-  }
-
   auto maybeDestroyLocals = [&]() -> bool {
     if (DestroyToplevelScope)
       return RootScope.destroyLocals() && this->emitCheckAllocations(E);
@@ -5102,7 +5099,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
     return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  return maybeDestroyLocals() && this->emitCheckAllocations(E) && false;
+  return maybeDestroyLocals() && false;
 }
 
 template <class Emitter>
@@ -5782,10 +5779,12 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (DiscardResult)
     return true;
 
-  if (this->LambdaThisCapture.Offset > 0) {
-    if (this->LambdaThisCapture.IsPtr)
-      return this->emitGetThisFieldPtr(this->LambdaThisCapture.Offset, E);
-    return this->emitGetPtrThisField(this->LambdaThisCapture.Offset, E);
+  if constexpr (!std::is_same_v<Emitter, EvalEmitter>) {
+    if (this->LambdaThisCapture.Offset > 0) {
+      if (this->LambdaThisCapture.IsPtr)
+        return this->emitGetThisFieldPtr(this->LambdaThisCapture.Offset, E);
+      return this->emitGetPtrThisField(this->LambdaThisCapture.Offset, E);
+    }
   }
 
   // In some circumstances, the 'this' pointer does not actually refer to the
@@ -6119,11 +6118,13 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
-  {
-    LocalScope<Emitter> CondScope(this);
-    if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl))
-        return false;
+  // Start of the loop body {
+  LocalScope<Emitter> CondScope(this);
+
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt()) {
+    if (!visitDeclStmt(CondDecl))
+      return false;
+  }
 
     if (!this->visitBool(Cond))
       return false;
@@ -6139,12 +6140,14 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
 
     if (!CondScope.destroyLocals())
       return false;
-  }
-  if (!this->jump(CondLabel))
-    return false;
-  this->fallthrough(EndLabel);
-  this->emitLabel(EndLabel);
-  return WholeLoopScope.destroyLocals();
+    // } End of loop body.
+
+    if (!this->jump(CondLabel))
+      return false;
+    this->fallthrough(EndLabel);
+    this->emitLabel(EndLabel);
+
+    return CondScope.destroyLocals() && WholeLoopScope.destroyLocals();
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitDoStmt(const DoStmt *S) {
@@ -6605,7 +6608,7 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
     // We do the lvalue-to-rvalue conversion manually here, so no need
     // to care about references.
     PrimType ParamType = this->classify(PVD->getType()).value_or(PT_Ptr);
-    if (!this->emitGetParam(ParamType, It->second.Offset, MD))
+    if (!this->emitGetParam(ParamType, It->second.Index, MD))
       return false;
   }
 
@@ -6702,10 +6705,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (!this->emitThis(Ctor))
       return false;
 
-    const ParmVarDecl *PVD = Ctor->getParamDecl(0);
-    ParamOffset PO = this->Params[PVD]; // Must exist.
-
-    if (!this->emitGetParam(PT_Ptr, PO.Offset, Ctor))
+    if (!this->emitGetParam(PT_Ptr, /*ParamIndex=*/0, Ctor))
       return false;
 
     return this->emitMemcpy(Ctor) && this->emitPopPtr(Ctor) &&
@@ -6878,10 +6878,7 @@ bool Compiler<Emitter>::compileUnionAssignmentOperator(
   if (!this->emitThis(MD))
     return false;
 
-  const ParmVarDecl *PVD = MD->getParamDecl(0);
-  ParamOffset PO = this->Params[PVD]; // Must exist.
-
-  if (!this->emitGetParam(PT_Ptr, PO.Offset, MD))
+  if (!this->emitGetParam(PT_Ptr, /*ParamIndex=*/0, MD))
     return false;
 
   return this->emitMemcpy(MD) && this->emitRet(PT_Ptr, MD);
@@ -7453,9 +7450,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
       if (IsReference || !It->second.IsPtr)
-        return this->emitGetParam(classifyPrim(E), It->second.Offset, E);
+        return this->emitGetParam(classifyPrim(E), It->second.Index, E);
 
-      return this->emitGetPtrParam(It->second.Offset, E);
+      return this->emitGetPtrParam(It->second.Index, E);
     }
 
     if (!Ctx.getLangOpts().CPlusPlus23 && IsReference)
@@ -7497,14 +7494,16 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     return this->visitDeclRef(D, E);
   };
 
-  // Lambda captures.
-  if (auto It = this->LambdaCaptures.find(D);
-      It != this->LambdaCaptures.end()) {
-    auto [Offset, IsPtr] = It->second;
+  if constexpr (!std::is_same_v<Emitter, EvalEmitter>) {
+    // Lambda captures.
+    if (auto It = this->LambdaCaptures.find(D);
+        It != this->LambdaCaptures.end()) {
+      auto [Offset, IsPtr] = It->second;
 
-    if (IsPtr)
-      return this->emitGetThisFieldPtr(Offset, E);
-    return this->emitGetPtrThisField(Offset, E);
+      if (IsPtr)
+        return this->emitGetThisFieldPtr(Offset, E);
+      return this->emitGetPtrThisField(Offset, E);
+    }
   }
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E);

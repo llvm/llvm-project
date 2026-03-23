@@ -61,6 +61,7 @@ end subroutine acc_array_reduction_min
 ! EXTREMUM:             %[[MINIMUMF_0:.*]] = arith.minimumf %{{.*}}, %{{.*}} fastmath<contract> : f32
 
 ! EXTREMUM-LABEL:   acc.reduction.recipe @reduction_minimumf_ref_f32 : !fir.ref<f32> reduction_operator <minimumf> init {
+! EXTREMUM:           %[[CST:.*]] = arith.constant 3.40282347E+38 : f32
 ! EXTREMUM:         } combiner {
 ! EXTREMUM:           %[[MINIMUMF_0:.*]] = arith.minimumf %{{.*}}, %{{.*}} fastmath<contract> : f32
 
@@ -79,6 +80,7 @@ end subroutine acc_array_reduction_min
 ! EXTREMENUM:             %[[MINNUMF_0:.*]] = arith.minnumf %{{.*}}, %{{.*}} fastmath<contract> : f32
 
 ! EXTREMENUM-LABEL:   acc.reduction.recipe @reduction_minnumf_ref_f32 : !fir.ref<f32> reduction_operator <minnumf> init {
+! EXTREMENUM:           %[[CST:.*]] = arith.constant 3.40282347E+38 : f32
 ! EXTREMENUM:         } combiner {
 ! EXTREMENUM:           %[[MINNUMF_0:.*]] = arith.minnumf %{{.*}}, %{{.*}} fastmath<contract> : f32
 
