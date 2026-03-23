@@ -120,17 +120,17 @@ bool isAbstract(const Decl *D) {
 }
 
 // Indicates whether declaration D is virtual in cases where D is a method.
+// We want to treat a method as virtual if it is declared virtual, even if it
+// is not implemented in this class, or if it overrides/implements a
+// base-class method. This is because the "virtual" modifier is still relevant
+// to the method's behavior and how it should be highlighted, even if it is
+// not itself a virtual method in the strictest sense. For example, a method
+// that overrides a virtual method from a base class is still considered
+// virtual, even if it is not declared as such in the derived class.
+// Similarly, a method that implements a pure virtual method from a base class
+// is also considered virtual, even if it is not declared as such in the
+// derived class.
 bool isVirtual(const Decl *D) {
-  // We want to treat a method as virtual if it is declared virtual, even if it
-  // is not implemented in this class, or if it overrides/implements a
-  // base-class method. This is because the "virtual" modifier is still relevant
-  // to the method's behavior and how it should be highlighted, even if it is
-  // not itself a virtual method in the strictest sense. For example, a method
-  // that overrides a virtual method from a base class is still considered
-  // virtual, even if it is not declared as such in the derived class.
-  // Similarly, a method that implements a pure virtual method from a base class
-  // is also considered virtual, even if it is not declared as such in the
-  // derived class.
   if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
     return CMD->isVirtual();
   return false;
@@ -145,6 +145,42 @@ bool isFinal(const Decl *D) {
   if (const auto *CRD = dyn_cast<CXXRecordDecl>(D))
     return CRD->hasAttr<FinalAttr>();
 
+  return false;
+}
+
+// A method "overrides" if:
+// 1. It overrides at least one method
+// 2. At least one of the overridden methods is virtual (but NOT pure
+// virtual)
+bool isOverrides(const NamedDecl *ND) {
+  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
+    if (MD->size_overridden_methods() == 0)
+      return false;
+
+    for (const auto *Overridden : MD->overridden_methods()) {
+      // Check if the overridden method is virtual but not pure virtual
+      if (Overridden->isVirtual() && !Overridden->isPureVirtual())
+        return true;
+    }
+  }
+  return false;
+}
+
+// A method "implements" pure virtual methods from base classes if:
+// 1. It overrides at least one method
+// 2. It is NOT itself pure virtual (i.e., it has a concrete implementation)
+// 3. ALL overridden methods are pure virtual
+bool isImplements(const NamedDecl *ND) {
+  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
+    if (MD->size_overridden_methods() == 0 || MD->isPureVirtual())
+      return false;
+
+    for (const auto *Overridden : MD->overridden_methods()) {
+      if (!Overridden->isPureVirtual())
+        return false;
+    }
+    return true;
+  }
   return false;
 }
 
@@ -166,108 +202,10 @@ bool isUniqueDefinition(const NamedDecl *Decl) {
          isa<TemplateTemplateParmDecl>(Decl) || isa<ObjCCategoryDecl>(Decl) ||
          isa<ObjCImplDecl>(Decl);
 }
-} // namespace
-
-SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
-  return (1 << static_cast<unsigned>(ST));
-}
-
-bool isOverrides(const NamedDecl *ND) {
-  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
-    // A method "overrides" if:
-    // 1. It overrides at least one method
-    // 2. At least one of the overridden methods is virtual (but NOT pure
-    // virtual)
-
-    if (MD->size_overridden_methods() == 0)
-      return false;
-
-    for (const auto Overridden : MD->overridden_methods()) {
-      // Check if the overridden method is virtual but not pure virtual
-      if (Overridden->isVirtual() && !Overridden->isPureVirtual())
-        return true;
-    }
-    return false;
-  }
-  return false;
-}
-
-bool isImplements(const NamedDecl *ND) {
-  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
-    // A method "implements" pure virtual methods from base classes if:
-    // 1. It overrides at least one method
-    // 2. It is NOT itself pure virtual (i.e., it has a concrete implementation)
-    // 3. ALL overridden methods are pure virtual
-
-    if (MD->size_overridden_methods() == 0 || MD->isPureVirtual())
-      return false;
-
-    for (const auto Overridden : MD->overridden_methods()) {
-      if (!Overridden->isPureVirtual())
-        return false;
-    }
-    return true;
-  }
-  return false;
-}
-
-SymbolTags computeSymbolTags(const NamedDecl &ND) {
-  SymbolTags Result = 0;
-  const auto IsDef = isUniqueDefinition(&ND);
-
-  if (ND.isDeprecated())
-    Result |= toSymbolTagBitmask(SymbolTag::Deprecated);
-
-  if (isConst(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::ReadOnly);
-
-  if (isStatic(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Static);
-
-  if (isVirtual(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Virtual);
-
-  if (isAbstract(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Abstract);
-
-  if (isFinal(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Final);
-
-  if (isOverrides(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Overrides);
-
-  if (isImplements(&ND))
-    Result |= toSymbolTagBitmask(SymbolTag::Implements);
-
-  if (not isa<UnresolvedUsingValueDecl>(ND)) {
-    // Do not treat an UnresolvedUsingValueDecl as a declaration.
-    // It's more common to think of it as a reference to the
-    // underlying declaration.
-    Result |= toSymbolTagBitmask(SymbolTag::Declaration);
-
-    if (IsDef)
-      Result |= toSymbolTagBitmask(SymbolTag::Definition);
-  }
-
-  switch (ND.getAccess()) {
-  case AS_public:
-    Result |= toSymbolTagBitmask(SymbolTag::Public);
-    break;
-  case AS_protected:
-    Result |= toSymbolTagBitmask(SymbolTag::Protected);
-    break;
-  case AS_private:
-    Result |= toSymbolTagBitmask(SymbolTag::Private);
-    break;
-  default:
-    break;
-  }
-
-  return Result;
-}
 
 // Filter symbol tags based on the presence of other tags and the kind of
-// symbol. This is needed to avoid redundant tags.
+// symbol. This is needed to avoid redundant tags, e.g. final implies override,
+// override implies virtual, etc.
 SymbolTags filterSymbolTags(const NamedDecl &ND, const SymbolTags ST) {
   SymbolTags Result = ST;
 
@@ -321,11 +259,71 @@ SymbolTags filterSymbolTags(const NamedDecl &ND, const SymbolTags ST) {
   }
   return Result;
 }
+} // namespace
 
-std::vector<SymbolTag> expandTagBitmask(const SymbolTags symbolTags) {
+SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
+  return (1 << static_cast<unsigned>(ST));
+}
+
+SymbolTags computeSymbolTags(const NamedDecl &ND) {
+  SymbolTags Result = 0;
+  const auto IsDef = isUniqueDefinition(&ND);
+
+  if (ND.isDeprecated())
+    Result |= toSymbolTagBitmask(SymbolTag::Deprecated);
+
+  if (isConst(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::ReadOnly);
+
+  if (isStatic(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Static);
+
+  if (isVirtual(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Virtual);
+
+  if (isAbstract(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Abstract);
+
+  if (isOverrides(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Overrides);
+
+  if (isFinal(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Final);
+
+  if (isImplements(&ND))
+    Result |= toSymbolTagBitmask(SymbolTag::Implements);
+
+  if (not isa<UnresolvedUsingValueDecl>(ND)) {
+    // Do not treat an UnresolvedUsingValueDecl as a declaration.
+    // It's more common to think of it as a reference to the
+    // underlying declaration.
+    Result |= toSymbolTagBitmask(SymbolTag::Declaration);
+
+    if (IsDef)
+      Result |= toSymbolTagBitmask(SymbolTag::Definition);
+  }
+
+  switch (ND.getAccess()) {
+  case AS_public:
+    Result |= toSymbolTagBitmask(SymbolTag::Public);
+    break;
+  case AS_protected:
+    Result |= toSymbolTagBitmask(SymbolTag::Protected);
+    break;
+  case AS_private:
+    Result |= toSymbolTagBitmask(SymbolTag::Private);
+    break;
+  default:
+    break;
+  }
+
+  return Result;
+}
+
+std::vector<SymbolTag> expandTagBitmask(const SymbolTags STGS) {
   std::vector<SymbolTag> Tags;
 
-  if (symbolTags == 0)
+  if (STGS == 0)
     return Tags;
 
   // No filtering required since this function is only used for Symbols from the
@@ -339,7 +337,7 @@ std::vector<SymbolTag> expandTagBitmask(const SymbolTags symbolTags) {
   constexpr unsigned MaxTag = static_cast<unsigned>(SymbolTag::LastTag);
   for (unsigned I = MinTag; I <= MaxTag; ++I) {
     auto ST = static_cast<SymbolTag>(I);
-    if (symbolTags & toSymbolTagBitmask(ST))
+    if (STGS & toSymbolTagBitmask(ST))
       Tags.push_back(ST);
   }
   return Tags;

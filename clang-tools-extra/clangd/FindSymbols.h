@@ -63,8 +63,8 @@ SymbolTags computeSymbolTags(const NamedDecl &ND);
 /// \p ND The declaration to get tags for.
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
 
-/// Returns the symbol tags for the given declaration as a bitmask.
-std::vector<SymbolTag> expandTagBitmask(SymbolTags symbolTags);
+/// Expands a SymbolTags bitmask into individual SymbolTag values.
+std::vector<SymbolTag> expandTagBitmask(SymbolTags STGS);
 
 } // namespace clangd
 } // namespace clang

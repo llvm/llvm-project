@@ -28,7 +28,7 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 /// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#symbolTag
 using SymbolTags = uint32_t;
 /// Ensure we have enough bits to represent all SymbolTag values.
-static_assert(static_cast<unsigned>(SymbolTag::LastTag) <= 32,
+static_assert(static_cast<unsigned>(SymbolTag::LastTag) < 32,
               "Too many SymbolTags to fit in uint32_t. Change to uint64_t if "
               "we ever have more than 32 tags.");
 

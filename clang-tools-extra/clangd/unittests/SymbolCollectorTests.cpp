@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "FindSymbols.h"
 #include "TestFS.h"
 #include "TestTU.h"
 #include "URI.h"
@@ -1333,6 +1334,48 @@ TEST_F(SymbolCollectorTest, OverrideRelationsMultipleInheritance) {
   EXPECT_THAT(Result, UnorderedElementsAre(
                           OverriddenBy(BBar, CBar), OverriddenBy(AFoo, DFoo),
                           OverriddenBy(CBar, DBar), OverriddenBy(CBaz, DBaz)));
+}
+
+TEST_F(SymbolCollectorTest, SymbolTagsWithIndexing) {
+  // Test that verifies symbol tags are correctly set when the AST is indexed
+  // through FileIndex, which triggers the full indexing path through
+  // SymbolCollector::addDeclaration where S.Tags = computeSymbolTags(ND)
+  std::string Header = R"cpp(
+    class A {
+      public:
+        virtual ~A() = default;
+        virtual void f1() = 0;
+        void f2() const;
+      protected:
+        void f3(){}
+      private:
+        static void f4(){}
+    };
+
+    void A::f2() const {}
+
+    class B final: public A {
+      public:
+        void f1() final {}
+    };
+    )cpp";
+
+  runSymbolCollector(Header, /*Main=*/"");
+  const Symbol &A = findSymbol(Symbols, "A");
+  EXPECT_THAT(expandTagBitmask(A.Tags),
+              UnorderedElementsAre(SymbolTag::Abstract, SymbolTag::Declaration,
+                                   SymbolTag::Definition));
+
+  const Symbol &B = findSymbol(Symbols, "B");
+  EXPECT_THAT(expandTagBitmask(B.Tags),
+              UnorderedElementsAre(SymbolTag::Final, SymbolTag::Declaration,
+                                   SymbolTag::Definition));
+  const Symbol &Bf1 = findSymbol(Symbols, "B::f1");
+  EXPECT_THAT(expandTagBitmask(Bf1.Tags),
+              UnorderedElementsAre(SymbolTag::Public, SymbolTag::Final,
+                                   SymbolTag::Virtual, SymbolTag::Declaration,
+                                   SymbolTag::Definition,
+                                   SymbolTag::Implements));
 }
 
 TEST_F(SymbolCollectorTest, ObjCOverrideRelationsSimpleInheritance) {

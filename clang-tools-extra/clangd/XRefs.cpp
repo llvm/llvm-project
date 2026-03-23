@@ -1902,36 +1902,6 @@ symbolToCallHierarchyItem(const Symbol &S, PathRef TUPath) {
   return Result;
 }
 
-// Tries to find a NamedDecl in the AST that matches the given Symbol.
-// Returns nullptr if the symbol is not found in the current AST.
-const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
-                                        const ParsedAST &AST) {
-  // Try to convert the symbol to a location and find the decl at that location
-  auto SymLoc = symbolToLocation(Sym, AST.tuPath());
-  if (!SymLoc)
-    return nullptr;
-
-  // Check if the symbol location is in the main file
-  if (SymLoc->uri.file() != AST.tuPath())
-    return nullptr;
-
-  // Convert LSP position to source location
-  const auto &SM = AST.getSourceManager();
-  auto CurLoc = sourceLocationInMainFile(SM, SymLoc->range.start);
-  if (!CurLoc) {
-    llvm::consumeError(CurLoc.takeError());
-    return nullptr;
-  }
-
-  // Get all decls at this location
-  auto Decls = getDeclAtPosition(const_cast<ParsedAST &>(AST), *CurLoc, {});
-  if (Decls.empty())
-    return nullptr;
-
-  // Return the first decl (usually the most specific one)
-  return Decls[0];
-}
-
 static void fillSubTypes(const SymbolID &ID,
                          std::vector<TypeHierarchyItem> &SubTypes,
                          const SymbolIndex *Index, int Levels, PathRef TUPath) {
@@ -2337,26 +2307,23 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
 
 std::optional<std::vector<TypeHierarchyItem>>
 superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index) {
-  std::vector<TypeHierarchyItem> Results;
-  if (!Index)
-    return Results;
-  if (!Item.data.parents)
+  if (!Index || !Item.data.parents)
     return std::nullopt;
-  if (Item.data.parents->empty())
-    return Results;
   LookupRequest Req;
   llvm::DenseMap<SymbolID, const TypeHierarchyItem::ResolveParams *> IDToData;
   for (const auto &Parent : *Item.data.parents) {
     Req.IDs.insert(Parent.symbolID);
     IDToData[Parent.symbolID] = &Parent;
   }
+  std::vector<TypeHierarchyItem> Results;
   Index->lookup(Req, [&Item, &Results, &IDToData](const Symbol &S) {
     if (auto THI = symbolToTypeHierarchyItem(S, Item.uri.file())) {
       THI->data = *IDToData.lookup(S.ID);
       Results.emplace_back(std::move(*THI));
     }
   });
-  return Results;
+  return Results.empty() ? std::nullopt
+                         : std::make_optional(std::move(Results));
 }
 
 std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
