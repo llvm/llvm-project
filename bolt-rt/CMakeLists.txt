@@ -51,14 +51,9 @@ else()
   set(BOLT_RT_LIBRARY_DIR "lib${LLVM_LIBDIR_SUFFIX}")
 endif()
 
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-  string(APPEND BOLT_RT_LIBRARY_DIR "/${BOLT_RT_TARGET_TRIPLE}")
-  set(BOLT_RT_ARCHIVE_SUFFIX "")
-else()
-  # TODO(casey.smalley@arm.com): Does this need to account for
-  # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF?
-  message(FATAL_ERROR "bolt_rt: Not implemented.")
-endif()
+# Act as if LLVM_ENABLE_PER_TARGET_RUNTIME_DIR is always true.
+string(APPEND BOLT_RT_LIBRARY_DIR "/bolt/${BOLT_RT_TARGET_TRIPLE}")
+set(BOLT_RT_ARCHIVE_SUFFIX "")
 
 # Build flags.
 list(APPEND BOLT_RT_FLAGS
