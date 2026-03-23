@@ -70,8 +70,32 @@ define void @vector_external_users(ptr %ptr) {
   ret void
 }
 
+define void @vector_external_users_lane_and_index_differ(ptr %ptr) {
+; CHECK-LABEL: define void @vector_external_users_lane_and_index_differ(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META3:![0-9]+]]
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <4 x float> [[VECL]], zeroinitializer, !sandboxvec [[META3]]
+; CHECK-NEXT:    [[UNPACK:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> poison, <2 x i32> <i32 2, i32 3>, !sandboxvec [[META3]]
+; CHECK-NEXT:    store <4 x float> [[VEC]], ptr [[PTR0]], align 8, !sandboxvec [[META3]]
+; CHECK-NEXT:    [[USER:%.*]] = fneg <2 x float> [[UNPACK]]
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr <2 x float>, ptr %ptr, i32 0
+  %ptr1 = getelementptr <2 x float>, ptr %ptr, i32 1
+  %ld0 = load <2 x float>, ptr %ptr0
+  %ld1 = load <2 x float>, ptr %ptr1
+  %sub0 = fsub <2 x float> %ld0, <float 0.0, float 0.0>
+  %sub1 = fsub <2 x float> %ld1, <float 0.0, float 0.0>
+  store <2 x float> %sub0, ptr %ptr0
+  store <2 x float> %sub1, ptr %ptr1
+  %user = fneg <2 x float> %sub1
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META1]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META2]] = distinct !{!"sandboxregion"}
+; CHECK: [[META3]] = distinct !{!"sandboxregion"}
 ;.
