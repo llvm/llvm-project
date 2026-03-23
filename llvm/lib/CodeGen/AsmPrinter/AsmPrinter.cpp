@@ -2284,13 +2284,15 @@ void AsmPrinter::emitFunctionBody() {
             Mode != TargetInstrInfo::InstSizeVerifyMode::NoVerify) {
           unsigned ExpectedSize = TII->getInstSizeInBytes(MI);
           unsigned ActualSize = NewFragment->getFixedSize() - OldFragSize;
-          bool Valid =
-              Mode == TargetInstrInfo::InstSizeVerifyMode::AllowOverEstimate
-                  ? ActualSize <= ExpectedSize
-                  : ActualSize == ExpectedSize;
+          bool AllowOverEstimate =
+              Mode == TargetInstrInfo::InstSizeVerifyMode::AllowOverEstimate;
+          bool Valid = AllowOverEstimate ? ActualSize <= ExpectedSize
+                                         : ActualSize == ExpectedSize;
           if (!Valid) {
-            dbgs() << "Size mismatch for: " << MI << "\n";
-            dbgs() << "Expected size: " << ExpectedSize << "\n";
+            dbgs() << "In function: " << MF->getName() << "\n";
+            dbgs() << "Size mismatch for: " << MI;
+            dbgs() << "Expected " << (AllowOverEstimate ? "maximum" : "exact")
+                   << " size: " << ExpectedSize << "\n";
             dbgs() << "Actual size: " << ActualSize << "\n";
             abort();
           }
