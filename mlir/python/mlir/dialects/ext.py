@@ -85,29 +85,22 @@ class ConstraintLoweringContext:
             return irdl.any()
         elif isinstance(type_, TypeVar):
             return self.lower(type_)
+        elif origin and issubclass(origin, Type | Attribute):
+            return irdl.parametric(
+                base_type=[origin._dialect_name, origin._name],
+                args=[self.lower(arg) for arg in get_args(type_)],
+            )
         elif origin and issubclass(origin, ir.Type):
-            if issubclass(origin, Type):
-                return irdl.parametric(
-                    base_type=[origin._dialect_name, origin._name],
-                    args=[self.lower(arg) for arg in get_args(type_)],
-                )
             t = construct_instance(origin, get_args(type_))
             return irdl.is_(ir.TypeAttr.get(t))
         elif origin and issubclass(origin, ir.Attribute):
-            if issubclass(origin, Attribute):
-                return irdl.parametric(
-                    base_type=[origin._dialect_name, origin._name],
-                    args=[self.lower(arg) for arg in get_args(type_)],
-                )
             attr = construct_instance(origin, get_args(type_))
             return irdl.is_(attr)
+        elif issubclass(type_, Type | Attribute):
+            return irdl.base(base_ref=[type_._dialect_name, type_._name])
         elif issubclass(type_, ir.Type):
-            if issubclass(type_, Type):
-                return irdl.base(base_ref=[type_._dialect_name, type_._name])
             return irdl.base(base_name=f"!{type_.type_name}")
         elif issubclass(type_, ir.Attribute):
-            if issubclass(type_, Attribute):
-                return irdl.base(base_ref=[type_._dialect_name, type_._name])
             return irdl.base(base_name=f"#{type_.attr_name}")
 
         raise TypeError(f"unsupported type in constraints: {type_}")
@@ -197,13 +190,9 @@ class FieldDef:
                 get_args(type_)[0],
                 kw_only=specifier.kw_only(),
             )
-        elif issubclass(origin or type_, ir.Attribute):
-            return AttributeDef(name, variadicity, type_)
         elif type_ is ir.Region:
             return RegionDef(name, variadicity, Any)
-        raise TypeError(
-            f"unsupported type for field '{name}' in operation definition: {type_}"
-        )
+        return AttributeDef(name, variadicity, type_)
 
 
 @dataclass

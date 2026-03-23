@@ -309,6 +309,10 @@ Improvements to Clang's diagnostics
   (``-fimplicit-module-maps``). This does not affect module maps specified
   explicitly via ``-fmodule-map-file=``.
 
+- Honour ``[[maybe_unused]]`` attribute on private fields.
+  ``-Wunused-private-field`` no longer emits a warning for annotated private
+  fields.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
