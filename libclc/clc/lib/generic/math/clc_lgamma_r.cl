@@ -13,11 +13,11 @@
 #include "clc/math/clc_div_fast.h"
 #include "clc/math/clc_fabs.h"
 #include "clc/math/clc_fma.h"
-#include "clc/math/clc_fract.h"
 #include "clc/math/clc_log.h"
 #include "clc/math/clc_mad.h"
 #include "clc/math/clc_recip_fast.h"
 #include "clc/math/clc_sinpi.h"
+#include "clc/math/clc_trunc.h"
 #include "clc/relational/clc_isinf.h"
 #include "clc/relational/clc_isnan.h"
 

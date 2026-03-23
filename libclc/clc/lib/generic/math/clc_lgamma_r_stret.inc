@@ -326,8 +326,7 @@ __clc_lgamma_r_stret(__CLC_FLOATN x) {
       __CLC_FLOATN negadj = __clc_log(pi / __clc_fabs(t * x));
       ret = negadj - ret;
 
-      __CLC_FLOATN unused;
-      bool z = __clc_fract(x, &unused) == 0.0f;
+      bool z = __clc_trunc(x) == x;
       ret = z ? __CLC_GENTYPE_INF : ret;
       s = t < 0.0f ? -1 : 1;
       s = z ? 0 : s;
@@ -590,8 +589,7 @@ __clc_lgamma_r_stret(__CLC_DOUBLEN x) {
       __CLC_DOUBLEN negadj = __clc_log(pi / __clc_fabs(t * x));
       ret = negadj - ret;
 
-      __CLC_DOUBLEN unused;
-      bool z = __clc_fract(x, &unused) == 0.0;
+      bool z = __clc_trunc(x) == x;
       ret = z ? __CLC_GENTYPE_INF : ret;
       s = t < 0.0 ? -1 : 1;
       s = z ? 0 : s;
