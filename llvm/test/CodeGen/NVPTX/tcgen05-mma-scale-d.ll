@@ -23,8 +23,8 @@ define void @tcgen05_mma_fp16_cg1(ptr addrspace(6) %dtmem, ptr addrspace(6) %ate
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard [%r1], %rd1, %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r3, [tcgen05_mma_fp16_cg1_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard [%r1], [%r3], %rd2, %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard.ashift [%r1], [%r3], %rd2, %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::lastuse.ashift [%r1], [%r3], %rd2, %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.ashift.collector::a::discard [%r1], [%r3], %rd2, %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.ashift.collector::a::lastuse [%r1], [%r3], %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::lastuse [%r1], %rd1, %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::lastuse [%r1], [%r3], %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::fill [%r1], %rd1, %rd2, %r2, %p1, 0;
@@ -73,8 +73,8 @@ define void @tcgen05_mma_fp16_cg2(ptr addrspace(6) %dtmem, ptr addrspace(6) %ate
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::discard [%r1], %rd1, %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r3, [tcgen05_mma_fp16_cg2_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::discard [%r1], [%r3], %rd2, %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::discard.ashift [%r1], [%r3], %rd2, %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::lastuse.ashift [%r1], [%r3], %rd2, %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.ashift.collector::a::discard [%r1], [%r3], %rd2, %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.ashift.collector::a::lastuse [%r1], [%r3], %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::lastuse [%r1], %rd1, %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::lastuse [%r1], [%r3], %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::f16.collector::a::fill [%r1], %rd1, %rd2, %r2, %p1, 0;
@@ -125,8 +125,8 @@ define void @tcgen05_mma_sp_fp16_cg1(ptr addrspace(6) %dtmem, ptr addrspace(6) %
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::f16.collector::a::discard [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r4, [tcgen05_mma_sp_fp16_cg1_param_1];
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::f16.collector::a::discard [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::f16.collector::a::discard.ashift [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::f16.collector::a::lastuse.ashift [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::f16.ashift.collector::a::discard [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::f16.ashift.collector::a::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::f16.collector::a::lastuse [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::f16.collector::a::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::f16.collector::a::fill [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
@@ -176,8 +176,8 @@ define void @tcgen05_mma_sp_fp16_cg2(ptr addrspace(6) %dtmem, ptr addrspace(6) %
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::f16.collector::a::discard [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r4, [tcgen05_mma_sp_fp16_cg2_param_1];
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::f16.collector::a::discard [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::f16.collector::a::discard.ashift [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::f16.collector::a::lastuse.ashift [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::f16.ashift.collector::a::discard [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::f16.ashift.collector::a::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::f16.collector::a::lastuse [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::f16.collector::a::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::f16.collector::a::fill [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
@@ -227,8 +227,8 @@ define void @tcgen05_mma_tf32_cg1(ptr addrspace(6) %dtmem, ptr addrspace(6) %ate
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::discard [%r1], %rd1, %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r3, [tcgen05_mma_tf32_cg1_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::discard [%r1], [%r3], %rd2, %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::discard.ashift [%r1], [%r3], %rd2, %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::lastuse.ashift [%r1], [%r3], %rd2, %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.ashift.collector::a::discard [%r1], [%r3], %rd2, %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.ashift.collector::a::lastuse [%r1], [%r3], %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::lastuse [%r1], %rd1, %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::lastuse [%r1], [%r3], %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::tf32.collector::a::fill [%r1], %rd1, %rd2, %r2, %p1, 0;
@@ -277,8 +277,8 @@ define void @tcgen05_mma_tf32_cg2(ptr addrspace(6) %dtmem, ptr addrspace(6) %ate
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::discard [%r1], %rd1, %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r3, [tcgen05_mma_tf32_cg2_param_1];
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::discard [%r1], [%r3], %rd2, %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::discard.ashift [%r1], [%r3], %rd2, %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::lastuse.ashift [%r1], [%r3], %rd2, %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.ashift.collector::a::discard [%r1], [%r3], %rd2, %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.ashift.collector::a::lastuse [%r1], [%r3], %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::lastuse [%r1], %rd1, %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::lastuse [%r1], [%r3], %rd2, %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.cta_group::2.kind::tf32.collector::a::fill [%r1], %rd1, %rd2, %r2, %p1, 0;
@@ -329,8 +329,8 @@ define void @tcgen05_mma_sp_tf32_cg1(ptr addrspace(6) %dtmem, ptr addrspace(6) %
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::tf32.collector::a::discard [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r4, [tcgen05_mma_sp_tf32_cg1_param_1];
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::tf32.collector::a::discard [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::tf32.collector::a::discard.ashift [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::tf32.collector::a::lastuse.ashift [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::tf32.ashift.collector::a::discard [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::tf32.ashift.collector::a::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::tf32.collector::a::lastuse [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::tf32.collector::a::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::1.kind::tf32.collector::a::fill [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
@@ -380,8 +380,8 @@ define void @tcgen05_mma_sp_tf32_cg2(ptr addrspace(6) %dtmem, ptr addrspace(6) %
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::tf32.collector::a::discard [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    ld.param.b32 %r4, [tcgen05_mma_sp_tf32_cg2_param_1];
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::tf32.collector::a::discard [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::tf32.collector::a::discard.ashift [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
-; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::tf32.collector::a::lastuse.ashift [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::tf32.ashift.collector::a::discard [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
+; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::tf32.ashift.collector::a::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::tf32.collector::a::lastuse [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::tf32.collector::a::lastuse [%r1], [%r4], %rd2, [%r3], %r2, %p1, 0;
 ; CHECK-NEXT:    tcgen05.mma.sp.cta_group::2.kind::tf32.collector::a::fill [%r1], %rd1, %rd2, [%r3], %r2, %p1, 0;

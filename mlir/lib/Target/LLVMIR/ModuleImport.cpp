@@ -2706,7 +2706,6 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("memory"),
     StringLiteral("minsize"),
     StringLiteral("no_caller_saved_registers"),
-    StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
     StringLiteral("no-builtins"),
     StringLiteral("nocallback"),
@@ -2902,10 +2901,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
-
-  if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
-      attr.isStringAttribute())
-    funcOp.setNoNansFpMath(attr.getValueAsBool());
 
   if (llvm::Attribute attr = func->getFnAttribute("instrument-function-entry");
       attr.isStringAttribute())

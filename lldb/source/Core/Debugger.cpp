@@ -32,6 +32,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
@@ -212,6 +213,27 @@ enum {
 };
 #endif
 
+static const FileSpecList &GetDefaultSafeAutoLoadPaths() {
+  static const FileSpecList sSafePaths = [] {
+    // FIXME: in c++20 this could be a std::array (with CTAD deduced size)
+    // and we could statically assert that all members are non-empty.
+    const llvm::SmallVector<llvm::StringRef> kVendorSafePaths = {
+#include "SafeAutoloadPaths.inc"
+    };
+    FileSpecList fspecs;
+    for (auto path : kVendorSafePaths) {
+      assert(!path.empty());
+      LLDB_LOG(GetLog(SystemLog::System), "Safe auto-load path configured: {0}",
+               path);
+      fspecs.EmplaceBack(path);
+    }
+
+    return fspecs;
+  }();
+
+  return sSafePaths;
+}
+
 #ifndef NDEBUG
 TestingProperties::TestingProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>("testing");
@@ -227,6 +249,27 @@ bool TestingProperties::GetInjectVarLocListError() const {
 TestingProperties &TestingProperties::GetGlobalTestingProperties() {
   static TestingProperties g_testing_properties;
   return g_testing_properties;
+}
+
+void TestingProperties::SetSafeAutoLoadPaths(FileSpecList paths) {
+  const uint32_t idx = ePropertySafeAutoloadPaths;
+  OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
+  assert(option_value);
+  option_value->SetCurrentValue(std::move(paths));
+}
+
+void TestingProperties::AppendSafeAutoLoadPaths(FileSpec path) {
+  const uint32_t idx = ePropertySafeAutoloadPaths;
+  OptionValueFileSpecList *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
+  assert(option_value);
+  option_value->AppendCurrentValue(path);
+}
+
+FileSpecList TestingProperties::GetSafeAutoLoadPaths() const {
+  const uint32_t idx = ePropertySafeAutoloadPaths;
+  return GetPropertyAtIndexAs<FileSpecList>(idx, {});
 }
 #endif
 
@@ -307,13 +350,10 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       if (target_sp->TargetProperties::GetLoadScriptFromSymbolFile() ==
           eLoadScriptFromSymFileTrue) {
         std::list<Status> errors;
-        StreamString feedback_stream;
-        if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
+        if (!target_sp->LoadScriptingResources(errors)) {
           lldb::StreamUP s = GetAsyncErrorStream();
           for (auto &error : errors)
             s->Printf("%s\n", error.AsCString());
-          if (feedback_stream.GetSize())
-            s->PutCString(feedback_stream.GetString());
         }
       }
     }
@@ -2083,6 +2123,46 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
   m_forward_listener_sp.reset();
 }
 
+/// Conservative heuristic to detect whether OSC 9;4 progress is supported by
+/// the current terminal.
+static bool TerminalSupportsOSCProgress() {
+#if defined(_WIN32)
+  // On Windows, we assume that the user is using the Windows Terminal.
+  return true;
+#else
+  static std::once_flag g_once_flag;
+  static bool g_supports_osc_progress = false;
+
+  std::call_once(g_once_flag, []() {
+    // Check TERM_PROGRAM for known supported terminals. This can lead to false
+    // negatives, for example when using tmux.
+    if (const char *term_program = std::getenv("TERM_PROGRAM")) {
+      llvm::StringRef term_program_str(term_program);
+      if (term_program_str.starts_with("ghostty") ||
+          term_program_str.starts_with("wezterm")) {
+        g_supports_osc_progress = true;
+        return;
+      }
+    }
+
+    // Check other known environment variables.
+    std::array<const char *, 3> known_env_vars = {
+        "ConEmuPID", // https://conemu.github.io/en/ConEmuEnvironment.html
+        "GHOSTTY_RESOURCES_DIR", // https://ghostty.org/docs/features/shell-integration
+        "OSC_PROGRESS",          // LLDB specific override.
+    };
+    for (const char *env_var : known_env_vars) {
+      if (std::getenv(env_var)) {
+        g_supports_osc_progress = true;
+        return;
+      }
+    }
+  });
+
+  return g_supports_osc_progress;
+#endif
+}
+
 bool Debugger::IsEscapeCodeCapableTTY() {
   if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
     File &file = stream_sp->GetUnlockedFile();
@@ -2311,7 +2391,8 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
     }
 
     // Show progress using Operating System Command (OSC) sequences.
-    if (GetShowProgress() && IsEscapeCodeCapableTTY()) {
+    if (GetShowProgress() && IsEscapeCodeCapableTTY() &&
+        TerminalSupportsOSCProgress()) {
       if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
 
         // Clear progress if this was the last progress event.
@@ -2508,4 +2589,16 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       "A boolean value that indicates if lua support is enabled in LLDB");
   AddLLVMTargets(*config_up);
   return config_up;
+}
+
+FileSpecList Debugger::GetSafeAutoLoadPaths() {
+  FileSpecList fspecs = GetDefaultSafeAutoLoadPaths();
+
+#ifndef NDEBUG
+  for (const auto &fspec :
+       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
+    fspecs.Append(fspec);
+#endif
+
+  return fspecs;
 }

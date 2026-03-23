@@ -46,12 +46,12 @@ class AtomicCmpXchgInst;
 class AtomicRMWInst;
 class AssumptionCache;
 class BasicBlock;
-class BranchInst;
 class CallInst;
 class CallBrInst;
 class CatchPadInst;
 class CatchReturnInst;
 class CatchSwitchInst;
+class CondBrInst;
 class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
@@ -398,7 +398,7 @@ public:
   }
 
   bool shouldKeepJumpConditionsTogether(
-      const FunctionLoweringInfo &FuncInfo, const BranchInst &I,
+      const FunctionLoweringInfo &FuncInfo, const CondBrInst &I,
       Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
       TargetLoweringBase::CondMergingParams Params) const;
 

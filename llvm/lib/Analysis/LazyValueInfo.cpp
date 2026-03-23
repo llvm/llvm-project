@@ -1608,11 +1608,10 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
                                      BasicBlock *BBTo, bool UseBlockValue) {
   // TODO: Handle more complex conditionals. If (v == 0 || v2 < 1) is false, we
   // know that v != 0.
-  if (BranchInst *BI = dyn_cast<BranchInst>(BBFrom->getTerminator())) {
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(BBFrom->getTerminator())) {
     // If this is a conditional branch and only one successor goes to BBTo, then
     // we may be able to infer something from the condition.
-    if (BI->isConditional() &&
-        BI->getSuccessor(0) != BI->getSuccessor(1)) {
+    if (BI->getSuccessor(0) != BI->getSuccessor(1)) {
       bool isTrueDest = BI->getSuccessor(0) == BBTo;
       assert(BI->getSuccessor(!isTrueDest) == BBTo &&
              "BBTo isn't a successor of BBFrom");

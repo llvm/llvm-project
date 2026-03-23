@@ -13,10 +13,16 @@ using namespace lldb;
 namespace lldb_fuzzer {
 
 class SBDebuggerContextManager {
-public:
-  SBDebuggerContextManager() { SBDebugger::Initialize(); }
+  inline static int instance_count;
 
-  ~SBDebuggerContextManager() { SBDebugger::Terminate(); }
+public:
+  SBDebuggerContextManager() { ++instance_count; }
+
+  ~SBDebuggerContextManager() {
+    --instance_count;
+    if (instance_count == 0)
+      SBDebugger::Terminate();
+  }
 };
 
 } // namespace lldb_fuzzer
