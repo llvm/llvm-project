@@ -20,7 +20,7 @@ struct WebAssemblyReduceToAnyAllTrue final : FunctionPass {
     bool Changed = false;
 
     for (auto &BB : F) {
-      for (auto It = BB.begin(); It != BB.end();) {
+      for (auto It = BB.begin(), E = BB.end(); It != E;) {
         Instruction *I = &*It++;
         auto *Cmp = dyn_cast<ICmpInst>(I);
         if (!Cmp || Cmp->getPredicate() != ICmpInst::ICMP_NE)
