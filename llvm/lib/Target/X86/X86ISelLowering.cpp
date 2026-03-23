@@ -30074,13 +30074,28 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
   bool IsSigned = Op.getOpcode() == ISD::ABDS;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  if (Subtarget.canUseCMOV() && VT.isScalarInteger()) {
-    X86::CondCode CC = IsSigned ? X86::COND_L : X86::COND_B;
-    unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+  if (VT.isScalarInteger()) {
+    // abdu(lhs, rhs) -> (sub(lhs,rhs) XOR mask) - mask
+    // where mask = carry ? -1 : 0 from the subtract.
+    // Branchless, no CMOV needed. Preferred for i8/i16 (no CMOV available for
+    // sub-i32 results) and when CMOV is unavailable.
+    if (!IsSigned && (VT.bitsLT(MVT::i32) || !Subtarget.canUseCMOV())) {
+      SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+      SDValue LHS = Op.getOperand(0);
+      SDValue RHS = Op.getOperand(1);
+      SDValue Diff = DAG.getNode(X86ISD::SUB, dl, VTs, LHS, RHS);
+      SDValue Mask = DAG.getNode(
+          X86ISD::SETCC_CARRY, dl, VT,
+          DAG.getTargetConstant(X86::COND_B, dl, MVT::i8), Diff.getValue(1));
+      SDValue Xor = DAG.getNode(ISD::XOR, dl, VT, Diff, Mask);
+      return DAG.getNode(ISD::SUB, dl, VT, Xor, Mask);
+    }
 
+    // For i32/i64 with CMOV: two subtracts + conditional move.
     // abds(lhs, rhs) -> select(slt(lhs,rhs),sub(rhs,lhs),sub(lhs,rhs))
     // abdu(lhs, rhs) -> select(ult(lhs,rhs),sub(rhs,lhs),sub(lhs,rhs))
-    if (VT.bitsGE(MVT::i32)) {
+    if (Subtarget.canUseCMOV() && VT.bitsGE(MVT::i32)) {
+      X86::CondCode CC = IsSigned ? X86::COND_L : X86::COND_B;
       SDVTList VTs = DAG.getVTList(VT, MVT::i32);
       SDValue LHS = DAG.getFreeze(Op.getOperand(0));
       SDValue RHS = DAG.getFreeze(Op.getOperand(1));
@@ -30091,20 +30106,25 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
                          Diff1.getValue(1));
     }
 
-    // abds(lhs, rhs) -> trunc(abs(sub(sext(lhs), sext(rhs))))
-    // abdu(lhs, rhs) -> trunc(abs(sub(zext(lhs), zext(rhs))))
-    unsigned WideBits = std::max<unsigned>(2 * VT.getScalarSizeInBits(), 32u);
-    MVT WideVT = MVT::getIntegerVT(WideBits);
-    if (TLI.isTypeLegal(WideVT)) {
-      SDVTList WideVTs = DAG.getVTList(WideVT, MVT::i32);
-      SDValue LHS = DAG.getNode(ExtOpc, dl, WideVT, Op.getOperand(0));
-      SDValue RHS = DAG.getNode(ExtOpc, dl, WideVT, Op.getOperand(1));
-      SDValue Diff0 = DAG.getNode(X86ISD::SUB, dl, WideVTs, LHS, RHS);
-      SDValue Diff1 = DAG.getNode(X86ISD::SUB, dl, WideVTs, RHS, LHS);
-      SDValue AbsDiff = DAG.getNode(X86ISD::CMOV, dl, WideVT, Diff1, Diff0,
-                                    DAG.getTargetConstant(CC, dl, MVT::i8),
-                                    Diff1.getValue(1));
-      return DAG.getNode(ISD::TRUNCATE, dl, VT, AbsDiff);
+    assert(IsSigned && "abdu should have been handled by carry-mask path");
+
+    // abds i8/i16 with CMOV: sign-extend to wider type, CMOV, truncate.
+    if (Subtarget.canUseCMOV()) {
+      unsigned WideBits = std::max<unsigned>(2 * VT.getScalarSizeInBits(), 32u);
+      MVT WideVT = MVT::getIntegerVT(WideBits);
+      if (TLI.isTypeLegal(WideVT)) {
+        SDVTList WideVTs = DAG.getVTList(WideVT, MVT::i32);
+        SDValue LHS =
+            DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, Op.getOperand(0));
+        SDValue RHS =
+            DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, Op.getOperand(1));
+        SDValue Diff0 = DAG.getNode(X86ISD::SUB, dl, WideVTs, LHS, RHS);
+        SDValue Diff1 = DAG.getNode(X86ISD::SUB, dl, WideVTs, RHS, LHS);
+        SDValue AbsDiff = DAG.getNode(
+            X86ISD::CMOV, dl, WideVT, Diff1, Diff0,
+            DAG.getTargetConstant(X86::COND_L, dl, MVT::i8), Diff1.getValue(1));
+        return DAG.getNode(ISD::TRUNCATE, dl, VT, AbsDiff);
+      }
     }
   }
 
@@ -41766,6 +41786,17 @@ static SDValue combineX86ShufflesRecursively(
     OpMask.assign(NumElts, SM_SentinelUndef);
     std::iota(OpMask.begin(), OpMask.end(), ExtractIdx);
     OpZero = OpUndef = APInt::getZero(NumElts);
+  } else if (Op.getOpcode() == ISD::INSERT_SUBVECTOR &&
+             Op.getOperand(0).isUndef() && !isNullConstant(Op.getOperand(2))) {
+    SDValue SubVec = Op.getOperand(1);
+    int InsertIdx = Op.getConstantOperandVal(2);
+    unsigned NumElts = VT.getVectorNumElements();
+    unsigned NumSubElts = SubVec.getValueType().getVectorNumElements();
+    OpInputs.assign({SubVec});
+    OpMask.assign(NumElts, SM_SentinelUndef);
+    std::iota(OpMask.begin() + InsertIdx,
+              OpMask.begin() + InsertIdx + NumSubElts, 0);
+    OpZero = OpUndef = APInt::getZero(NumElts);
   } else {
     return SDValue();
   }
@@ -42620,7 +42651,8 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
       SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
       SDValue N1 = peekThroughOneUseBitcasts(N.getOperand(1));
       unsigned SrcOpcode = N0.getOpcode();
-      if (TLI.isBinOp(SrcOpcode) && N1.getOpcode() == SrcOpcode &&
+      if ((SrcOpcode == X86ISD::PSADBW || TLI.isBinOp(SrcOpcode)) &&
+          N1.getOpcode() == SrcOpcode &&
           N0.getValueType() == N1.getValueType() &&
           IsSafeToMoveShuffle(N0, SrcOpcode) &&
           IsSafeToMoveShuffle(N1, SrcOpcode)) {
@@ -42646,11 +42678,12 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
             LHS = DAG.getNode(Opc, DL, ShuffleVT, Op00, Op10);
             RHS = DAG.getNode(Opc, DL, ShuffleVT, Op01, Op11);
           }
-          EVT OpVT = N0.getValueType();
+          EVT OpSrcVT = N0.getOperand(0).getValueType();
+          EVT OpDstVT = N0.getValueType();
           return DAG.getBitcast(ShuffleVT,
-                                DAG.getNode(SrcOpcode, DL, OpVT,
-                                            DAG.getBitcast(OpVT, LHS),
-                                            DAG.getBitcast(OpVT, RHS)));
+                                DAG.getNode(SrcOpcode, DL, OpDstVT,
+                                            DAG.getBitcast(OpSrcVT, LHS),
+                                            DAG.getBitcast(OpSrcVT, RHS)));
         }
       }
       if (isUnaryOp(SrcOpcode) && N1.getOpcode() == SrcOpcode &&
