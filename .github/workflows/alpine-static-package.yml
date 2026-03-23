@@ -60,8 +60,14 @@ jobs:
           fetch-depth: 1
           fetch-tags: false
 
+      - name: Mark workspace as git safe directory
+        run: |
+          set -eux
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
       - name: Restore ccache cache
-        uses: actions/cache@v4
+        id: ccache-cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-alpine-static-${{ runner.os }}-${{ env.LTO_MODE }}-${{ hashFiles('.github/workflows/alpine-static-package.yml') }}
@@ -125,6 +131,13 @@ jobs:
         run: |
           set -eux
           ccache --show-stats || true
+
+      - name: Save ccache cache
+        if: always() && !cancelled()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.ccache-cache.outputs.cache-primary-key }}
 
       - name: Install
         run: |
