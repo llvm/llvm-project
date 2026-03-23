@@ -267,7 +267,8 @@ llvm_canonicalize_cmake_booleans(
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS
-  LLDB_BUILD_LLDBRPC)
+  LLDB_BUILD_LLDBRPC
+  LLDB_ENABLE_ARM64E_DEBUGSERVER)
 
 # Configure the individual test suites.
 add_subdirectory(API)
