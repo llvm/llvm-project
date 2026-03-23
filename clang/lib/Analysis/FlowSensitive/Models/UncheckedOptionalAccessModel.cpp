@@ -222,16 +222,14 @@ auto isOptionalMemberCallWithNameMatcher(
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
   return cxxMemberCallExpr(
       Ignorable ? on(expr(unless(*Ignorable))) : anything(),
-      callee(cxxMethodDecl(matcher)),
-      hasOptionalReceiverType());
+      callee(cxxMethodDecl(matcher)), hasOptionalReceiverType());
 }
 
 auto isOptionalOperatorCallWithName(
     llvm::StringRef operator_name,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
   return cxxOperatorCallExpr(
-      hasOverloadedOperatorName(operator_name),
-      hasOptionalOperatorObjectType(),
+      hasOverloadedOperatorName(operator_name), hasOptionalOperatorObjectType(),
       Ignorable ? callExpr(unless(hasArgument(0, *Ignorable))) : callExpr());
 }
 
