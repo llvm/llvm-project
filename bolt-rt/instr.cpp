@@ -43,7 +43,7 @@
 #include "common.h"
 
 // Enables a very verbose logging to stderr useful when debugging
-//#define ENABLE_DEBUG
+// #define ENABLE_DEBUG
 
 #ifdef ENABLE_DEBUG
 #define DEBUG(X)                                                               \
@@ -58,10 +58,10 @@
 extern "C" {
 
 #if defined(__APPLE__)
-extern uint64_t* _bolt_instr_locations_getter();
+extern uint64_t *_bolt_instr_locations_getter();
 extern uint32_t _bolt_num_counters_getter();
 
-extern uint8_t* _bolt_instr_tables_getter();
+extern uint8_t *_bolt_instr_tables_getter();
 extern uint32_t _bolt_instr_num_funcs_getter();
 
 #else
@@ -134,7 +134,8 @@ public:
 #if defined(__ANDROID__)
   __attribute__((noinline))
 #endif
-  void *allocate(size_t Size) {
+  void *
+  allocate(size_t Size) {
     Lock L(M);
 
     if (StackBase == nullptr) {
@@ -164,7 +165,8 @@ public:
 #if defined(__ANDROID__)
   __attribute__((noinline))
 #endif
-  void deallocate(void *Ptr) {
+  void
+  deallocate(void *Ptr) {
     Lock L(M);
     uint8_t MetadataOffset = sizeof(EntryMetadata);
     auto *M = reinterpret_cast<EntryMetadata *>(
@@ -243,9 +245,7 @@ void *operator new(size_t Sz, BumpPtrAllocator &A, char C) {
   memset(Ptr, C, Sz);
   return Ptr;
 }
-void *operator new[](size_t Sz, BumpPtrAllocator &A) {
-  return A.allocate(Sz);
-}
+void *operator new[](size_t Sz, BumpPtrAllocator &A) { return A.allocate(Sz); }
 void *operator new[](size_t Sz, BumpPtrAllocator &A, char C) {
   auto *Ptr = reinterpret_cast<char *>(A.allocate(Sz));
   memset(Ptr, C, Sz);
@@ -414,8 +414,8 @@ private:
     // Defer to the next level
     if (Entry.Key & FollowUpTableMarker) {
       return getEntry(
-          reinterpret_cast<MapEntry *>(Entry.Key & ~FollowUpTableMarker),
-          Key, Remainder, Alloc, CurLevel + 1);
+          reinterpret_cast<MapEntry *>(Entry.Key & ~FollowUpTableMarker), Key,
+          Remainder, Alloc, CurLevel + 1);
     }
 
     // Conflict - create the next level
@@ -449,9 +449,7 @@ private:
   }
 };
 
-template <typename T> void resetIndCallCounter(T &Entry) {
-  Entry.Val = 0;
-}
+template <typename T> void resetIndCallCounter(T &Entry) { Entry.Val = 0; }
 
 template <typename T, uint32_t X, uint32_t Y>
 void SimpleHashTable<T, X, Y>::resetCounters() {
@@ -582,10 +580,10 @@ struct ProfileWriterContext {
   const IndCallTargetDescription *IndCallTargets;
   const uint8_t *FuncDescriptions;
   const char *Strings; // String table with function names used in this binary
-  int FileDesc;   // File descriptor for the file on disk backing this
-                  // information in memory via mmap
+  int FileDesc;        // File descriptor for the file on disk backing this
+                       // information in memory via mmap
   const void *MMapPtr; // The mmap ptr
-  int MMapSize;   // The mmap size
+  int MMapSize;        // The mmap size
 
   /// Hash table storing all possible call destinations to detect untracked
   /// calls and correctly report them as [unknown] in output fdata.
@@ -612,8 +610,9 @@ int compareStr(const char *Str1, const char *Str2, int Size) {
 #if defined(__ANDROID__)
 __attribute__((noinline))
 #endif
-char *serializeLoc(const ProfileWriterContext &Ctx, char *OutBuf,
-                   const Location Loc, uint32_t BufSize) {
+char *
+serializeLoc(const ProfileWriterContext &Ctx, char *OutBuf, const Location Loc,
+             uint32_t BufSize) {
   // fdata location format: Type Name Offset
   // Type 1 - regular symbol
   OutBuf = strCopy(OutBuf, "1 ");
@@ -860,7 +859,6 @@ void printStats(const ProfileWriterContext &Ctx) {
 }
 #endif
 
-
 /// This is part of a simple CFG representation in memory, where we store
 /// a dynamically sized array of input and output edges per node, and store
 /// a dynamically sized array of nodes per graph. We also store the spanning
@@ -948,8 +946,8 @@ Graph::Graph(BumpPtrAllocator &Alloc, const FunctionDescription &D,
 
   DEBUG(reportNumber("G->CFGNodes = 0x", (uint64_t)CFGNodes, 16));
   SpanningTreeNodes = new (Alloc) Node[MaxNodes];
-  DEBUG(reportNumber("G->SpanningTreeNodes = 0x",
-                     (uint64_t)SpanningTreeNodes, 16));
+  DEBUG(reportNumber("G->SpanningTreeNodes = 0x", (uint64_t)SpanningTreeNodes,
+                     16));
 
   // Figure out how much to allocate to each vector (in/out edge sets)
   for (int I = 0; I < D.NumEdges; ++I) {
@@ -995,13 +993,11 @@ Graph::Graph(BumpPtrAllocator &Alloc, const FunctionDescription &D,
     if (D.Edges[I].Counter != 0xffffffff)
       continue;
 
-    E = &SpanningTreeNodes[Src]
-             .OutEdges[SpanningTreeNodes[Src].NumOutEdges++];
+    E = &SpanningTreeNodes[Src].OutEdges[SpanningTreeNodes[Src].NumOutEdges++];
     E->Node = Dst;
     E->ID = I;
 
-    E = &SpanningTreeNodes[Dst]
-             .InEdges[SpanningTreeNodes[Dst].NumInEdges++];
+    E = &SpanningTreeNodes[Dst].InEdges[SpanningTreeNodes[Dst].NumInEdges++];
     E->Node = Src;
     E->ID = I;
   }
@@ -1148,8 +1144,8 @@ void Graph::computeEdgeFrequencies(const uint64_t *Counters,
   if (NumNodes == 0)
     return;
 
-  EdgeFreqs = D.NumEdges ? new (Alloc, 0) uint64_t [D.NumEdges] : nullptr;
-  CallFreqs = D.NumCalls ? new (Alloc, 0) uint64_t [D.NumCalls] : nullptr;
+  EdgeFreqs = D.NumEdges ? new (Alloc, 0) uint64_t[D.NumEdges] : nullptr;
+  CallFreqs = D.NumCalls ? new (Alloc, 0) uint64_t[D.NumCalls] : nullptr;
 
   // Setup a lookup for calls present in each node (BB)
   NodeToCallsMap *CallMap = new (Alloc) NodeToCallsMap(Alloc, D, NumNodes);
@@ -1158,7 +1154,7 @@ void Graph::computeEdgeFrequencies(const uint64_t *Counters,
   // spanning tree don't have explicit counters. We must infer their value using
   // a linear combination of other counters (sum of counters of the outgoing
   // edges minus sum of counters of the incoming edges).
-  uint32_t *Stack = new (Alloc) uint32_t [NumNodes];
+  uint32_t *Stack = new (Alloc) uint32_t[NumNodes];
   uint32_t StackTop = 0;
   enum Status : uint8_t { S_NEW = 0, S_VISITING, S_VISITED };
   Status *Visited = new (Alloc, 0) Status[NumNodes];
@@ -1179,8 +1175,8 @@ void Graph::computeEdgeFrequencies(const uint64_t *Counters,
   for (int I = 0; I < D.NumEntryNodes; ++I) {
     EntryAddress[D.EntryNodes[I].Node] = D.EntryNodes[I].Address;
     DEBUG({
-        reportNumber("Entry Node# ", D.EntryNodes[I].Node, 10);
-        reportNumber("      Address: ", D.EntryNodes[I].Address, 16);
+      reportNumber("Entry Node# ", D.EntryNodes[I].Node, 10);
+      reportNumber("      Address: ", D.EntryNodes[I].Address, 16);
     });
   }
   // Add all root nodes to the stack
@@ -1413,9 +1409,8 @@ ProfileWriterContext::lookupIndCallTarget(uint64_t Target) const {
 }
 
 /// Write a single indirect call <src, target> pair to the fdata file
-void visitIndCallCounter(IndirectCallHashTable::MapEntry &Entry,
-                         int FD, int CallsiteID,
-                         ProfileWriterContext *Ctx) {
+void visitIndCallCounter(IndirectCallHashTable::MapEntry &Entry, int FD,
+                         int CallsiteID, ProfileWriterContext *Ctx) {
   if (Entry.Val == 0)
     return;
   DEBUG(reportNumber("Target func 0x", Entry.Key, 16));
@@ -1506,8 +1501,8 @@ int openProfile() {
   if (static_cast<int64_t>(FD) < 0) {
     report("Error while trying to open profile file for writing: ");
     report(Buf);
-    reportNumber("\nFailed with error number: 0x",
-                 0 - static_cast<int64_t>(FD), 16);
+    reportNumber("\nFailed with error number: 0x", 0 - static_cast<int64_t>(FD),
+                 16);
     __exit(1);
   }
   return FD;
@@ -1713,8 +1708,7 @@ instrumentIndirectCall(uint64_t Target, uint64_t IndCallID) {
 
 /// We receive as in-stack arguments the identifier of the indirect call site
 /// as well as the target address for the call
-extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
-{
+extern "C" __attribute((naked)) void __bolt_instr_indirect_call() {
 #if defined(__aarch64__)
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
@@ -1748,8 +1742,7 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
 #endif
 }
 
-extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
-{
+extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall() {
 #if defined(__aarch64__)
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
@@ -1783,8 +1776,7 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
 }
 
 /// This is hooking ELF's entry, it needs to save all machine state.
-extern "C" __attribute((naked)) void __bolt_instr_start()
-{
+extern "C" __attribute((naked)) void __bolt_instr_start() {
 #if defined(__aarch64__)
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
@@ -1872,10 +1864,9 @@ extern "C" void __bolt_instr_data_dump() {
 
 // On OSX/iOS the final symbol name of an extern "C" function/variable contains
 // one extra leading underscore: _bolt_instr_setup -> __bolt_instr_setup.
-extern "C"
-__attribute__((section("__TEXT,__setup")))
-__attribute__((force_align_arg_pointer))
-void _bolt_instr_setup() {
+extern "C" __attribute__((section("__TEXT,__setup")))
+__attribute__((force_align_arg_pointer)) void
+_bolt_instr_setup() {
   __asm__ __volatile__(SAVE_ALL :::);
 
   report("Hello!\n");
@@ -1883,10 +1874,9 @@ void _bolt_instr_setup() {
   __asm__ __volatile__(RESTORE_ALL :::);
 }
 
-extern "C"
-__attribute__((section("__TEXT,__fini")))
-__attribute__((force_align_arg_pointer))
-void _bolt_instr_fini() {
+extern "C" __attribute__((section("__TEXT,__fini")))
+__attribute__((force_align_arg_pointer)) void
+_bolt_instr_fini() {
   report("Bye!\n");
   __bolt_instr_data_dump();
 }
