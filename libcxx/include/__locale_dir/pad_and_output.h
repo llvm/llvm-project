@@ -55,13 +55,7 @@ _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_CharT, _Traits> __pad_and_output(
     __ns -= __sz;
   else
     __ns = 0;
-  streamsize __np = __op - __ob;
-  if (__np > 0) {
-    if (__s.__sbuf_->sputn(__ob, __np) != __np) {
-      __s.__sbuf_ = nullptr;
-      return __s;
-    }
-  }
+  __s = std::copy(__ob, __op, __s);
   if (__ns > 0) {
     basic_string<_CharT, _Traits> __sp(__ns, __fl);
     if (__s.__sbuf_->sputn(__sp.data(), __ns) != __ns) {
@@ -69,13 +63,7 @@ _LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_CharT, _Traits> __pad_and_output(
       return __s;
     }
   }
-  __np = __oe - __op;
-  if (__np > 0) {
-    if (__s.__sbuf_->sputn(__op, __np) != __np) {
-      __s.__sbuf_ = nullptr;
-      return __s;
-    }
-  }
+  __s = std::copy(__op, __oe, __s);
   __iob.width(0);
   return __s;
 }

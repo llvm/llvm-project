@@ -51,8 +51,8 @@ AST_MATCHER_P(NamedDecl, hasAnyNameIgnoringTemplates, std::vector<StringRef>,
 }
 
 // Checks if the given matcher is the last argument of the given CallExpr.
-AST_MATCHER_P(CallExpr, hasLastArgument,
-              clang::ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+AST_MATCHER_P(CallExpr, hasLastArgument, ast_matchers::internal::Matcher<Expr>,
+              InnerMatcher) {
   if (Node.getNumArgs() == 0)
     return false;
 

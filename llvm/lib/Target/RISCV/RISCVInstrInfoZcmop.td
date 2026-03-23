@@ -20,7 +20,9 @@ class CMOPInst<bits<3> imm3, string opcodestr>
   let Inst{12-11} = 0;
 }
 
-foreach n = [1, 3, 5, 7, 9, 11, 13, 15] in {
+// c.mop.1 and c.mop.5 are aliases for c.sspush and c.sspopchk respectively,
+// defined in RISCVInstrInfoZicfiss.td.
+foreach n = [3, 7, 9, 11, 13, 15] in {
   let Predicates = [HasStdExtZcmop] in
   def C_MOP_ # n : CMOPInst<!srl(n, 1), "c.mop." # n>, Sched<[]>;
 }

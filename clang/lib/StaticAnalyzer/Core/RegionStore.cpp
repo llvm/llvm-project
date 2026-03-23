@@ -2566,6 +2566,14 @@ RegionStoreManager::setImplicitDefaultValue(LimitedRegionBindingsConstRef B,
   if (B.hasExhaustedBindingLimit())
     return B;
 
+  // Prefer to keep the previous default binding if we had one; that is likely a
+  // better choice than setting some arbitrary new default value.
+  // This isn't ideal (more of a hack), but better than dropping the more
+  // accurate default binding.
+  if (B.getDefaultBinding(R).has_value()) {
+    return B;
+  }
+
   SVal V;
 
   if (Loc::isLocType(T))
@@ -2659,11 +2667,8 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, Init);
   }
 
-  if (isa<nonloc::SymbolVal>(Init))
+  if (isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init))
     return bindAggregate(B, R, Init);
-
-  if (Init.isUnknown())
-    return bindAggregate(B, R, UnknownVal());
 
   // Remaining case: explicit compound values.
   const nonloc::CompoundVal& CV = Init.castAs<nonloc::CompoundVal>();

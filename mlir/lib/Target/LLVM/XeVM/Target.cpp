@@ -244,6 +244,9 @@ public:
   FailureOr<SmallVector<char, 0>>
   moduleToObject(llvm::Module &llvmModule) override;
 
+  /// Runs the serialization pipeline, returning `std::nullopt` on error.
+  std::optional<SmallVector<char, 0>> run() override;
+
 private:
   /// Translates the LLVM module to SPIR-V binary using LLVM's
   /// SPIR-V target.
@@ -265,6 +268,25 @@ void SPIRVSerializer::init() {
   });
 }
 
+#if LLVM_HAS_SPIRV_TARGET
+static const std::vector<std::string> getDefaultSPIRVExtensions() {
+  return {
+      "SPV_EXT_relaxed_printf_string_address_space",
+      "SPV_INTEL_cache_controls",
+      "SPV_INTEL_variable_length_array",
+  };
+}
+
+namespace llvm {
+class Module;
+
+extern "C" bool
+SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
+                     const std::vector<std::string> &AllowExtNames,
+                     const std::vector<std::string> &Opts);
+} // namespace llvm
+#endif
+
 FailureOr<SmallVector<char, 0>>
 SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
 #define DEBUG_TYPE "serialize-to-llvm"
@@ -284,17 +306,19 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
   return getGPUModuleOp()->emitError(
       "The `SPIRV` target was not built. Please enable "
       "it when building LLVM.");
-#endif // LLVM_HAS_SPIRV_TARGET
+#else
 
-  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
-  if (failed(targetMachine))
-    return getGPUModuleOp().emitError()
-           << "Target Machine unavailable for triple " << triple
-           << ", can't optimize with LLVM\n";
-
-  // Return SPIRV if the compilation target is `assembly`.
+  // Return SPIRV text if the compilation target is `assembly`.
+  // Note: Optimization passes are skipped and SPIRV extensions are
+  // not supported in this mode.
   if (targetOptions.getCompilationTarget() ==
       gpu::CompilationTarget::Assembly) {
+    FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+    if (failed(targetMachine))
+      return getGPUModuleOp().emitError()
+             << "Target Machine unavailable for triple " << triple
+             << ", can't optimize with LLVM\n";
+
     FailureOr<SmallString<0>> serializedISA =
         translateModuleToISA(llvmModule, **targetMachine,
                              [&]() { return getGPUModuleOp().emitError(); });
@@ -318,22 +342,60 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
   }
 
   // Level zero runtime is set up to accept SPIR-V binary
-  // translateToSPIRVBinary translates the LLVM module to SPIR-V binary
-  // using LLVM's SPIRV target.
-  // compileToBinary can be used in the future if level zero runtime
-  // implementation switches to native XeVM binary format.
-  std::optional<std::string> serializedSPIRVBinary =
-      translateToSPIRVBinary(llvmModule, **targetMachine);
-  if (!serializedSPIRVBinary)
-    return getGPUModuleOp().emitError()
-           << "Failed translating the module to Binary.";
+  std::string serializedSPIRVBinary;
+  std::string ErrMsg;
+  std::vector<std::string> Opts;
+  Opts.push_back(triple.str());
+  Opts.push_back(std::to_string(optLevel));
 
-  if (serializedSPIRVBinary->size() % 4)
+  bool success =
+      SPIRVTranslateModule(&llvmModule, serializedSPIRVBinary, ErrMsg,
+                           getDefaultSPIRVExtensions(), Opts);
+
+  if (!success)
+    return getGPUModuleOp().emitError()
+           << "Failed translating the module to Binary."
+           << "Error message: " << ErrMsg;
+
+  if (serializedSPIRVBinary.size() % 4)
     return getGPUModuleOp().emitError()
            << "SPIRV code size must be a multiple of 4.";
 
-  StringRef bin(serializedSPIRVBinary->c_str(), serializedSPIRVBinary->size());
+  StringRef bin(serializedSPIRVBinary.c_str(), serializedSPIRVBinary.size());
   return SmallVector<char, 0>(bin.begin(), bin.end());
+#endif // LLVM_HAS_SPIRV_TARGET
+}
+
+std::optional<SmallVector<char, 0>> SPIRVSerializer::run() {
+  // Translate the module to LLVM IR.
+  llvm::LLVMContext llvmContext;
+  std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(llvmContext);
+  if (!llvmModule) {
+    getOperation().emitError() << "Failed creating the llvm::Module.";
+    return std::nullopt;
+  }
+  setDataLayoutAndTriple(*llvmModule);
+
+  if (initialLlvmIRCallback)
+    initialLlvmIRCallback(*llvmModule);
+
+  // Link bitcode files.
+  handleModulePreLink(*llvmModule);
+  {
+    auto libs = loadBitcodeFiles(*llvmModule);
+    if (!libs)
+      return std::nullopt;
+    if (!libs->empty())
+      if (failed(linkFiles(*llvmModule, std::move(*libs))))
+        return std::nullopt;
+    handleModulePostLink(*llvmModule);
+  }
+
+  if (linkedLlvmIRCallback)
+    linkedLlvmIRCallback(*llvmModule);
+
+  // Return the serialized object.
+  return moduleToObject(*llvmModule);
 }
 
 std::optional<std::string>

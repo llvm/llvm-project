@@ -4778,7 +4778,7 @@ entry:
 define i64 @extract_scalable(<2 x i32> %0) "target-features"="+sve2" {
 ; CHECK-SD-LABEL: extract_scalable:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v1.2s, #1
+; CHECK-SD-NEXT:    mov z1.s, #1 // =0x1
 ; CHECK-SD-NEXT:    ptrue p0.s, vl2
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-SD-NEXT:    sdivr z0.s, p0/m, z0.s, z1.s

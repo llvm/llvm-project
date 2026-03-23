@@ -245,6 +245,9 @@ bool Context::evaluateString(State &Parent, const Expr *E,
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    if (!Ptr.isBlockPointer())
+      return false;
+
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
       return false;
@@ -285,16 +288,24 @@ bool Context::evaluateString(State &Parent, const Expr *E,
   return true;
 }
 
-bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
+std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
   assert(Stk.empty());
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
+  std::optional<uint64_t> Result;
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    if (!Ptr.isBlockPointer())
+      return false;
+
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
       return false;
 
     if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
+      return false;
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    if (!isIntegerType(ElemT))
       return false;
 
     unsigned N = Ptr.getNumElems();
@@ -305,14 +316,13 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
       return Result != Size;
     }
 
-    PrimType ElemT = FieldDesc->getPrimType();
     Result = 0;
     for (unsigned I = Ptr.getIndex(); I != N; ++I) {
       INT_TYPE_SWITCH(ElemT, {
         auto Elem = Ptr.elem<T>(I);
         if (Elem.isZero())
           return true;
-        ++Result;
+        ++(*Result);
       });
     }
     // We didn't find a 0 byte.
@@ -322,9 +332,42 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
   if (PtrRes.isInvalid()) {
     C.cleanup();
     Stk.clear();
-    return false;
+    return std::nullopt;
   }
-  return true;
+  return Result;
+}
+
+std::optional<uint64_t>
+Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  std::optional<uint64_t> Result;
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *DeclDesc = Ptr.getDeclDesc();
+    if (!DeclDesc)
+      return false;
+
+    QualType T = DeclDesc->getType().getNonReferenceType();
+    if (T->isIncompleteType() || T->isFunctionType() ||
+        !T->isConstantSizeType())
+      return false;
+
+    Pointer P = Ptr;
+    if (auto ObjectSize = evaluateBuiltinObjectSize(getASTContext(), Kind, P)) {
+      Result = *ObjectSize;
+      return true;
+    }
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return std::nullopt;
+  }
+  return Result;
 }
 
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
@@ -430,6 +473,9 @@ OptPrimType Context::classify(QualType T) const {
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
 
+  if (const auto *OBT = T.getCanonicalType()->getAs<OverflowBehaviorType>())
+    return classify(OBT->getUnderlyingType());
+
   if (T->isObjCObjectPointerType() || T->isBlockPointerType())
     return PT_Ptr;
 
@@ -452,11 +498,19 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 
 bool Context::Run(State &Parent, const Function *Func) {
   InterpState State(Parent, *P, Stk, *this, Func);
+  auto Memory = std::make_unique<char[]>(InterpFrame::allocSize(Func));
+  InterpFrame *Frame = new (Memory.get()) InterpFrame(
+      State, Func, /*Caller=*/nullptr, CodePtr(), Func->getArgSize());
+  State.Current = Frame;
+
   if (Interpret(State)) {
     assert(Stk.empty());
     return true;
   }
+
   Stk.clear();
+  Frame->~InterpFrame();
+  State.Current = &State.BottomFrame;
   return false;
 }
 
@@ -529,7 +583,6 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   bool HasRVO = false;
   if (!Ty->isVoidType() && !canClassify(Ty)) {
     HasRVO = true;
-    ParamDescriptors.emplace_back(nullptr, ParamOffset, PT_Ptr);
     ParamOffset += align(primSize(PT_Ptr));
   }
 
@@ -540,10 +593,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
     if (!IsLambdaStaticInvoker) {
       HasThisPointer = MD->isInstance();
-      if (MD->isImplicitObjectMemberFunction()) {
-        ParamDescriptors.emplace_back(nullptr, ParamOffset, PT_Ptr);
+      if (MD->isImplicitObjectMemberFunction())
         ParamOffset += align(primSize(PT_Ptr));
-      }
     }
 
     if (isLambdaCallOperator(MD)) {
@@ -567,6 +618,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   const auto *FuncProto = FuncDecl->getType()->getAs<FunctionProtoType>();
+  unsigned BlockOffset = 0;
   for (auto [ParamIndex, PD] : llvm::enumerate(FuncDecl->parameters())) {
     bool IsConst = PD->getType().isConstQualified();
     bool IsVolatile = PD->getType().isVolatileQualified();
@@ -580,8 +632,10 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
                                            IsConst, /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
-    ParamDescriptors.emplace_back(Desc, ParamOffset, PT);
-    ParamOffset += align(primSize(PT));
+    unsigned PrimTSize = align(primSize(PT));
+    ParamDescriptors.emplace_back(Desc, ParamOffset, BlockOffset, PT);
+    ParamOffset += PrimTSize;
+    BlockOffset += sizeof(Block) + PrimTSize;
   }
 
   // Create a handle over the emitted code.
@@ -609,7 +663,7 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
     Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
                                            IsConst, /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
-    ParamDescriptors.emplace_back(Desc, ParamOffset, PT);
+    ParamDescriptors.emplace_back(Desc, ParamOffset, ~0u, PT);
     ParamOffset += align(primSize(PT));
   }
 

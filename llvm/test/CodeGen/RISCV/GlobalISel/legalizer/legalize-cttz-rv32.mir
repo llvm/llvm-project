@@ -94,12 +94,12 @@ body:             |
     ; RV32I-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[LSHR2]], [[ADD1]]
     ; RV32I-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 3855
     ; RV32I-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[ADD2]], [[C7]]
-    ; RV32I-NEXT: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 257
-    ; RV32I-NEXT: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; RV32I-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND6]], [[C8]]
-    ; RV32I-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[MUL]], [[C2]]
-    ; RV32I-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND7]], [[C9]](s32)
-    ; RV32I-NEXT: $x10 = COPY [[LSHR3]](s32)
+    ; RV32I-NEXT: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; RV32I-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND6]], [[C8]](s32)
+    ; RV32I-NEXT: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[AND6]], [[LSHR3]]
+    ; RV32I-NEXT: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; RV32I-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[ADD3]], [[C9]]
+    ; RV32I-NEXT: $x10 = COPY [[AND7]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
     ; RV32ZBB-LABEL: name: cttz_i16
@@ -344,12 +344,12 @@ body:             |
     ; RV32I-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[LSHR2]], [[ADD1]]
     ; RV32I-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 3855
     ; RV32I-NEXT: [[AND6:%[0-9]+]]:_(s32) = G_AND [[ADD2]], [[C7]]
-    ; RV32I-NEXT: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 257
-    ; RV32I-NEXT: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; RV32I-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND6]], [[C8]]
-    ; RV32I-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[MUL]], [[C2]]
-    ; RV32I-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND7]], [[C9]](s32)
-    ; RV32I-NEXT: $x10 = COPY [[LSHR3]](s32)
+    ; RV32I-NEXT: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; RV32I-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[AND6]], [[C8]](s32)
+    ; RV32I-NEXT: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[AND6]], [[LSHR3]]
+    ; RV32I-NEXT: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; RV32I-NEXT: [[AND7:%[0-9]+]]:_(s32) = G_AND [[ADD3]], [[C9]]
+    ; RV32I-NEXT: $x10 = COPY [[AND7]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
     ; RV32ZBB-LABEL: name: cttz_zero_undef_i16

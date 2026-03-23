@@ -276,7 +276,7 @@ public:
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     // SPIR32 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
-    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -362,8 +362,9 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv32 &&
            "Invalid architecture for 32-bit SPIR-V.");
-    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
-           "32-bit SPIR-V target must use unknown OS");
+    assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
+            getTriple().getOS() == llvm::Triple::ChipStar) &&
+           "32-bit SPIR-V target must use unknown or chipstar OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 32;
@@ -371,7 +372,7 @@ public:
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     // SPIR-V has core support for atomic ops, and Int32 is always available;
     // we take the maximum because it's possible the Host supports wider types.
-    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout();
   }
 
@@ -385,8 +386,9 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv64 &&
            "Invalid architecture for 64-bit SPIR-V.");
-    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
-           "64-bit SPIR-V target must use unknown OS");
+    assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
+            getTriple().getOS() == llvm::Triple::ChipStar) &&
+           "64-bit SPIR-V target must use unknown or chipstar OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 64;

@@ -130,7 +130,7 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
     bool AllowNegative = (Desc.TSFlags & (SIInstrFlags::FlatGlobal |
                                           SIInstrFlags::FlatScratch)) ||
-                         AMDGPU::isGFX12(STI);
+                         STI.hasFeature(AMDGPU::FeatureFlatSignedOffset);
 
     if (AllowNegative) // Signed offset
       O << formatDec(SignExtend32(Imm, AMDGPU::getNumFlatOffsetBits(STI)));
@@ -476,6 +476,15 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
   case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx12:
   case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx12:
   case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx12:
+  case AMDGPU::V_ADD_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx13:
     printDefaultVccOperand(false, STI, O);
     break;
   }
@@ -953,6 +962,18 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
   case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx12:
   case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx12:
   case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx12:
+  case AMDGPU::V_CNDMASK_B32_e32_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_e32_gfx13:
+  case AMDGPU::V_CNDMASK_B32_dpp_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp_gfx13:
+  case AMDGPU::V_CNDMASK_B32_dpp8_gfx13:
+  case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx13:
+  case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx13:
+  case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx13:
 
   case AMDGPU::V_CNDMASK_B32_e32_gfx6_gfx7:
   case AMDGPU::V_CNDMASK_B32_e32_vi:
@@ -1468,26 +1489,10 @@ void AMDGPUInstPrinter::printMatrixFMT(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " matrix_" << AorB << "_fmt:";
-  switch (Imm) {
-  default:
+  if (Imm < static_cast<int64_t>(std::size(WMMAMods::ModMatrixFmt)))
+    O << WMMAMods::ModMatrixFmt[Imm];
+  else
     O << Imm;
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP8:
-    O << "MATRIX_FMT_FP8";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_BF8:
-    O << "MATRIX_FMT_BF8";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP6:
-    O << "MATRIX_FMT_FP6";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_BF6:
-    O << "MATRIX_FMT_BF6";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP4:
-    O << "MATRIX_FMT_FP4";
-    break;
-  }
 }
 
 void AMDGPUInstPrinter::printMatrixAFMT(const MCInst *MI, unsigned OpNo,
@@ -1510,17 +1515,10 @@ void AMDGPUInstPrinter::printMatrixScale(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " matrix_" << AorB << "_scale:";
-  switch (Imm) {
-  default:
+  if (Imm < static_cast<int64_t>(std::size(WMMAMods::ModMatrixScale)))
+    O << WMMAMods::ModMatrixScale[Imm];
+  else
     O << Imm;
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_ROW0:
-    O << "MATRIX_SCALE_ROW0";
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_ROW1:
-    O << "MATRIX_SCALE_ROW1";
-    break;
-  }
 }
 
 void AMDGPUInstPrinter::printMatrixAScale(const MCInst *MI, unsigned OpNo,
@@ -1543,20 +1541,10 @@ void AMDGPUInstPrinter::printMatrixScaleFmt(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " matrix_" << AorB << "_scale_fmt:";
-  switch (Imm) {
-  default:
+  if (Imm < static_cast<int64_t>(std::size(WMMAMods::ModMatrixScaleFmt)))
+    O << WMMAMods::ModMatrixScaleFmt[Imm];
+  else
     O << Imm;
-    break;
-  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E8:
-    O << "MATRIX_SCALE_FMT_E8";
-    break;
-  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E5M3:
-    O << "MATRIX_SCALE_FMT_E5M3";
-    break;
-  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E4M3:
-    O << "MATRIX_SCALE_FMT_E4M3";
-    break;
-  }
 }
 
 void AMDGPUInstPrinter::printMatrixAScaleFmt(const MCInst *MI, unsigned OpNo,
@@ -1692,6 +1680,19 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   } else {
     O << Imm16; // Unknown imm16 code.
   }
+}
+
+void AMDGPUInstPrinter::printWaitEvent(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  using namespace llvm::AMDGPU::WaitEvent;
+  const uint16_t Imm16 = static_cast<uint16_t>(MI->getOperand(OpNo).getImm());
+
+  StringRef EventName = getWaitEventMaskName(Imm16, STI);
+  if (EventName.empty())
+    O << formatHex(static_cast<uint64_t>(Imm16));
+  else
+    O << EventName;
 }
 
 static void printSwizzleBitmask(const uint16_t AndMask,

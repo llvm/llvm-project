@@ -3,12 +3,12 @@
 # RUN: not ld.lld %t.o %t.o -o /dev/null 2>&1 | FileCheck %s
 
 ## Check we can report the locations of 2 different "bar" variables.
-# CHECK:      duplicate symbol: A::bar
+# CHECK:      error: duplicate symbol: A::bar
 # CHECK-NEXT: >>> defined at 1.cpp:2
 # CHECK-NEXT: >>>            {{.*}}:(A::bar)
 # CHECK-NEXT: >>> defined at 1.cpp:2
 # CHECK-NEXT: >>>            {{.*}}:(.bss+0x0)
-# CHECK:      duplicate symbol: Z::bar
+# CHECK:      error: duplicate symbol: Z::bar
 # CHECK-NEXT: >>> defined at 1.cpp:6
 # CHECK-NEXT: >>>            {{.*}}:(Z::bar)
 # CHECK-NEXT: >>> defined at 1.cpp:6

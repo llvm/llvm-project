@@ -45,20 +45,15 @@ let SubRegIndices = [sub_pair0, sub_pair1] in {
   def ACC6 : ACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[-1, -1]>;
   def ACC7 : ACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[-1, -1]>;
 }
-def ACCRC : RegisterClass<"PPC", [v512i1], 128, (add ACC0, ACC1, ACC2, ACC3,
-                                                      ACC4, ACC5, ACC6, ACC7)> {
-  // The AllocationPriority is in the range [0, 31]. Assigned the ACC registers
-  // the highest possible priority in this range to force the register allocator
-  // to assign these registers first. This is done because the ACC registers
-  // must represent 4 advacent vector registers. For example ACC1 must be
-  // VS4 - VS7.
-  let AllocationPriority = 31;
-
-  // We want to allocate these registers even before we allocate
-  // global ranges.
-  let GlobalPriority = true;
-  let Size = 512;
-}
+// The AllocationPriority is in the range [0, 31]. Assigned the ACC registers
+// the highest possible priority in this range to force the register allocator
+// to assign these registers first. This is done because the ACC registers
+// must represent 4 advacent vector registers. For example ACC1 must be
+// VS4 - VS7.
+// We want to allocate these registers even before we allocate global ranges.
+def ACCRC : PPCRegisterClassWithPriority<[v512i1], 128,
+              (add ACC0, ACC1, ACC2, ACC3, ACC4, ACC5, ACC6, ACC7),
+              31, 1, 512>;
 
 let SubRegIndices = [sub_pair0, sub_pair1] in {
   def UACC0 : UACC<0, "acc0", [VSRp0, VSRp1]>, DwarfRegNum<[-1, -1]>;
@@ -70,17 +65,14 @@ let SubRegIndices = [sub_pair0, sub_pair1] in {
   def UACC6 : UACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[-1, -1]>;
   def UACC7 : UACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[-1, -1]>;
 }
-def UACCRC : RegisterClass<"PPC", [v512i1], 128,
-                           (add UACC0, UACC1, UACC2, UACC3,
-                                UACC4, UACC5, UACC6, UACC7)> {
-  // The AllocationPriority for the UACC registers is still high and must be at
-  // least 32 as we want to allocate these registers before we allocate other
-  // global ranges. The value must be less than the AllocationPriority of the
-  // ACC registers.
-  let AllocationPriority = 4;
-  let GlobalPriority = true;
-  let Size = 512;
-}
+// The AllocationPriority for the UACC registers is still high and must be at
+// least 32 as we want to allocate these registers before we allocate other
+// global ranges. The value must be less than the AllocationPriority of the
+// ACC registers.
+def UACCRC : PPCRegisterClassWithPriority<[v512i1], 128,
+               (add UACC0, UACC1, UACC2, UACC3,
+                    UACC4, UACC5, UACC6, UACC7),
+               4, 1, 512>;
 
 // FIXME: This allocation order may increase stack frame size when allocating
 // non-volatile registers.
@@ -89,22 +81,35 @@ def UACCRC : RegisterClass<"PPC", [v512i1], 128,
 // ones, to reduce interference with accumulator registers (lower 32 VSRs).
 // This reduces copies when loading for accumulators, which is common use for
 // paired VSX registers.
-def VSRpRC :
-  RegisterClass<"PPC", [v256i1], 128,
-                (add VSRp17, VSRp18, VSRp16, VSRp19, VSRp20, VSRp21,
-                     VSRp22, VSRp23, VSRp24, VSRp25, VSRp31, VSRp30,
-                     VSRp29, VSRp28, VSRp27, VSRp26,
-                     (sequence "VSRp%u", 0, 6),
-                     (sequence "VSRp%u", 15, 7))> {
-  // Give the VSRp registers a non-zero AllocationPriority. The value is less
-  // than 32 as these registers should not always be allocated before global
-  // ranges and the value should be less than the AllocationPriority - 32 for
-  // the UACC registers. Even global VSRp registers should be allocated after
-  // the UACC registers have been chosen.
-  let AllocationPriority = 2;
-  let Size = 256;
+// Give the VSRp registers a non-zero AllocationPriority. The value is less
+// than 32 as these registers should not always be allocated before global
+// ranges and the value should be less than the AllocationPriority - 32 for
+// the UACC registers. Even global VSRp registers should be allocated after
+// the UACC registers have been chosen.
+def VSRpRC : PPCRegisterClassWithPriority<[v256i1], 128,
+               (add VSRp17, VSRp18, VSRp16, VSRp19, VSRp20, VSRp21,
+                    VSRp22, VSRp23, VSRp24, VSRp25, VSRp31, VSRp30,
+                    VSRp29, VSRp28, VSRp27, VSRp26,
+                    (sequence "VSRp%u", 0, 6),
+                    (sequence "VSRp%u", 15, 7)),
+               2, 0, 256>;
+
+
+// Register Operand Definitions.
+
+// ACC Register Operands share the same AsmOperandClass.
+defm ACCRC : PPCRegOperand<"isACCRegNumber", "acc">;
+def uacc : RegisterOperand<UACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
 }
 
-
-
-
+defm VSRpRC : PPCRegOperand<"isVSRpEvenRegNumber">;
+// VSRpRC with encoder/decoder methods (uses VSRpRC class but different operand name)
+def PPCRegVSRpEvenRCAsmOperand : AsmOperandClass {
+  let Name = "RegVSRpEvenRC"; let PredicateMethod = "isVSRpEvenRegNumber";
+}
+def vsrpevenrc : RegisterOperand<VSRpRC> {
+  let ParserMatchClass = PPCRegVSRpEvenRCAsmOperand;
+  let EncoderMethod = "getVSRpEvenEncoding";
+  let DecoderMethod = "decodeVSRpEvenOperands";
+}

@@ -2532,6 +2532,10 @@ public:
   Foo& getFoo()              { return *f; }
   Foo& getFoo2(int c)        { return *f; }
   Foo& getFoo3(int c, int d) { return *f; }
+  Foo& getFoo4(bool)         { return *f; }
+  Foo& getFoo5(char)         { return *f; }
+  Foo& getFoo6(char16_t)     { return *f; }
+  Foo& getFoo7(const char*)  { return *f; }
 
   Foo& getFooey() { return *f; }
 };
@@ -2562,6 +2566,22 @@ void test() {
   bar.getFoo3(a, b).mu_.Lock();
   bar.getFoo3(a, b).a = 0;
   bar.getFoo3(a, b).mu_.Unlock();
+
+  bar.getFoo4(true).mu_.Lock();
+  bar.getFoo4(true).a = 0;
+  bar.getFoo4(true).mu_.Unlock();
+
+  bar.getFoo5('a').mu_.Lock();
+  bar.getFoo5('a').a = 0;
+  bar.getFoo5('a').mu_.Unlock();
+
+  bar.getFoo6(u'\u1234').mu_.Lock();
+  bar.getFoo6(u'\u1234').a = 0;
+  bar.getFoo6(u'\u1234').mu_.Unlock();
+
+  bar.getFoo7("foo").mu_.Lock();
+  bar.getFoo7("foo").a = 0;
+  bar.getFoo7("foo").mu_.Unlock();
 
   getBarFoo(bar, a).mu_.Lock();
   getBarFoo(bar, a).a = 0;
@@ -2604,11 +2624,41 @@ void test2() {
     // expected-note {{found near match 'bar.getFoo2(a).mu_'}}
   bar.getFoo2(a).mu_.Unlock();
 
+  bar.getFoo2(0).mu_.Lock();
+  bar.getFoo2(1).a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo2(1).mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo2(0).mu_'}}
+  bar.getFoo2(0).mu_.Unlock();
+
   bar.getFoo3(a, b).mu_.Lock();
   bar.getFoo3(a, c).a = 0;  // \
     // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo3(a, c).mu_' exclusively}} \
     // expected-note {{found near match 'bar.getFoo3(a, b).mu_'}}
   bar.getFoo3(a, b).mu_.Unlock();
+
+  bar.getFoo4(true).mu_.Lock();
+  bar.getFoo4(false).a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo4(false).mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo4(true).mu_'}}
+  bar.getFoo4(true).mu_.Unlock();
+
+  bar.getFoo5('x').mu_.Lock();
+  bar.getFoo5('y').a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo5(U'y').mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo5(U'x').mu_'}}
+  bar.getFoo5('x').mu_.Unlock();
+
+  bar.getFoo6(u'\u1234').mu_.Lock();
+  bar.getFoo6(u'\u4321').a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo6(U'\u4321').mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo6(U'\u1234').mu_'}}
+  bar.getFoo6(u'\u1234').mu_.Unlock();
+
+  bar.getFoo7("foo").mu_.Lock();
+  bar.getFoo7("bar").a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo7("bar").mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo7("foo").mu_'}}
+  bar.getFoo7("foo").mu_.Unlock();
 
   getBarFoo(bar, a).mu_.Lock();
   getBarFoo(bar, b).a = 0;  // \
@@ -7434,6 +7484,41 @@ void testPointerAliasEscapeAndReset(Foo *f) {
   ptr->mu.Unlock();
 }
 
+// A function that may do anything to the objects referred to by the inputs.
+void escapeAliasMultiple(void *, void *, void *);
+void testPointerAliasEscapeMultiple(Foo *F) {
+  Foo *L;
+  F->mu.Lock(); // expected-note{{mutex acquired here}}
+  Foo *Fp = F;
+  escapeAliasMultiple(&L, &L, &Fp);
+  Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
+} // expected-warning{{mutex 'F->mu' is still held at the end of function}}
+
+void unlockFooWithEscapablePointer(Foo **Fp) EXCLUSIVE_UNLOCK_FUNCTION((*Fp)->mu);
+void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
+  Foo* L;
+  L = F;
+  L->mu.Lock();
+  // Release the lock held by 'L' before clearing its definition.
+  unlockFooWithEscapablePointer(&L);
+}
+
+void testEscapeInvalidationHappensRightAfterTheCtorCall(Foo* F) {
+  Foo* L = F;
+  MutexLock ScopeLock(&L->mu);
+
+  struct {
+    int DataMember GUARDED_BY(F->mu);
+  } Data;
+
+  Data.DataMember = 0;
+}
+
+void testCleanUpFunctionWithLocalVarUpdated(Foo* F) {
+  F->mu.Lock();
+  Foo * __attribute__((unused, cleanup(unlockFooWithEscapablePointer))) L = F;
+}
+
 void testPointerAliasTryLock1() {
   Foo *ptr = returnsFoo();
   if (ptr->mu.TryLock()) {
@@ -7534,6 +7619,19 @@ void testNestedAccess(Container *c) {
 void testNestedAcquire(Container *c) EXCLUSIVE_LOCK_FUNCTION(&c->foo.mu) {
   Foo *buf = &c->foo;
   buf->mu.Lock();
+}
+
+void testArrayOfContainers() {
+  Container array[10];
+
+  Foo *ptr1 = &array[0].foo;
+  Foo *ptr2 = &array[1].foo;
+  ptr1->mu.Lock();
+  ptr2->mu.Lock();
+  array[0].foo.data = 0;
+  array[1].foo.data = 1;
+  ptr2->mu.Unlock();
+  ptr1->mu.Unlock();
 }
 
 struct ContainerOfPtr {
@@ -7697,3 +7795,39 @@ void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
   ptr->mu.Unlock(); // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 } // expected-warning{{mutex 'f1->mu' is still held at the end of function}}
 }  // namespace CapabilityAliases
+
+namespace WideStringLiteral {
+
+class Foo {
+ public:
+  Mutex mu;
+  Mutex* getMu(const wchar_t* s) { return &mu; }
+  Mutex* getMu2(const char16_t* s) { return &mu; }
+  Mutex* getMu3(const char32_t* s) { return &mu; }
+
+  int a GUARDED_BY(getMu(L"abc"));
+  int b GUARDED_BY(getMu2(u"abc"));
+  int c GUARDED_BY(getMu3(U"abc"));
+};
+
+Foo g_foo;
+
+void test() {
+  g_foo.getMu(L"abc")->Lock();
+  g_foo.a = 0;
+  g_foo.getMu(L"abc")->Unlock();
+}
+
+void test2() {
+  g_foo.getMu2(u"abc")->Lock();
+  g_foo.b = 0;
+  g_foo.getMu2(u"abc")->Unlock();
+}
+
+void test3() {
+  g_foo.getMu3(U"abc")->Lock();
+  g_foo.c = 0;
+  g_foo.getMu3(U"abc")->Unlock();
+}
+
+} // namespace WideStringLiteral

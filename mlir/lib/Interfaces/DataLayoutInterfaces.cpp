@@ -71,14 +71,12 @@ mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
         IntegerType::get(type.getContext(), getIndexBitwidth(params)));
 
   // Sizes of vector types are rounded up to those of types with closest
-  // power-of-two number of elements in the innermost dimension. We also assume
-  // there is no bit-packing at the moment element sizes are taken in bytes and
-  // multiplied with 8 bits.
+  // power-of-two number of elements in the innermost dimension.
   // TODO: make this extensible.
   if (auto vecType = dyn_cast<VectorType>(type)) {
     uint64_t baseSize = vecType.getNumElements() / vecType.getShape().back() *
                         llvm::PowerOf2Ceil(vecType.getShape().back()) *
-                        dataLayout.getTypeSize(vecType.getElementType()) * 8;
+                        dataLayout.getTypeSizeInBits(vecType.getElementType());
     return llvm::TypeSize::get(baseSize, vecType.isScalable());
   }
 

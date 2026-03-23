@@ -105,8 +105,20 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
     llvm::Type *IRElemTy = ConvertType(MT->getElementType());
-    if (Context.getLangOpts().HLSL && T->isConstantMatrixBoolType())
-      IRElemTy = ConvertTypeForMem(Context.BoolTy);
+    if (Context.getLangOpts().HLSL) {
+      if (T->isConstantMatrixBoolType())
+        IRElemTy = ConvertTypeForMem(Context.BoolTy);
+
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      bool IsRowMajor =
+          CGM.getContext().getLangOpts().getDefaultMatrixMemoryLayout() ==
+          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      unsigned VecLen = IsRowMajor ? NumCols : NumRows;
+      unsigned ArrayLen = IsRowMajor ? NumRows : NumCols;
+      llvm::Type *VecTy = llvm::FixedVectorType::get(IRElemTy, VecLen);
+      return llvm::ArrayType::get(VecTy, ArrayLen);
+    }
     return llvm::ArrayType::get(IRElemTy, MT->getNumElementsFlattened());
   }
 
@@ -587,8 +599,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   } break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
-  case BuiltinType::Id:                                                        \
-    return llvm::PointerType::get(getLLVMContext(), AS);
+  case BuiltinType::Id: {                                                      \
+    if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
+      return llvm::FixedVectorType::get(                                       \
+          llvm::Type::getInt32Ty(getLLVMContext()), 8);                        \
+    }                                                                          \
+    return llvm::PointerType::get(getLLVMContext(), AS);                       \
+  }
 #define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
   case BuiltinType::Id:                                                        \
     return llvm::TargetExtType::get(getLLVMContext(), "amdgcn.named.barrier",  \
@@ -781,6 +798,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
     ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+    break;
+  case Type::OverflowBehavior:
+    ResultType =
+        ConvertType(dyn_cast<OverflowBehaviorType>(Ty)->getUnderlyingType());
     break;
   }
 

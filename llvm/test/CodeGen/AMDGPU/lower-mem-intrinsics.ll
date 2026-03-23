@@ -163,15 +163,18 @@ define amdgpu_kernel void @max_size_small_static_memset_caller0(ptr addrspace(1)
 ; MAX1024-NEXT:    ret void
 ;
 ; ALL-LABEL: @max_size_small_static_memset_caller0(
-; ALL-NEXT:    br i1 false, label [[SPLIT:%.*]], label [[LOADSTORELOOP:%.*]]
-; ALL:       loadstoreloop:
+; ALL-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <256 x i8> poison, i8 [[VAL:%.*]], i64 0
+; ALL-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <256 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <256 x i8> poison, <256 x i32> zeroinitializer
+; ALL-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <256 x i8> [[SETVALUE_SPLAT_SPLAT]] to <64 x i32>
+; ALL-NEXT:    br label [[LOADSTORELOOP:%.*]]
+; ALL:       static-memset-expansion-main-body:
 ; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[LOADSTORELOOP]] ]
 ; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[TMP1]]
-; ALL-NEXT:    store i8 [[VAL:%.*]], ptr addrspace(1) [[TMP2]], align 1
-; ALL-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
+; ALL-NEXT:    store <64 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP2]], align 1
+; ALL-NEXT:    [[TMP3]] = add i64 [[TMP1]], 256
 ; ALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1024
-; ALL-NEXT:    br i1 [[TMP4]], label [[LOADSTORELOOP]], label [[SPLIT]]
-; ALL:       split:
+; ALL-NEXT:    br i1 [[TMP4]], label [[LOADSTORELOOP]], label [[SPLIT:%.*]]
+; ALL:       static-memset-post-expansion:
 ; ALL-NEXT:    ret void
 ;
   call void @llvm.memset.p1.i64(ptr addrspace(1) %dst, i8 %val, i64 1024, i1 false)
@@ -180,18 +183,57 @@ define amdgpu_kernel void @max_size_small_static_memset_caller0(ptr addrspace(1)
 
 define amdgpu_kernel void @min_size_large_static_memset_caller0(ptr addrspace(1) %dst, i8 %val) #0 {
 ; OPT-LABEL: @min_size_large_static_memset_caller0(
-; OPT-NEXT:    br i1 false, label [[SPLIT:%.*]], label [[LOADSTORELOOP:%.*]]
-; OPT:       loadstoreloop:
+; OPT-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <256 x i8> poison, i8 [[VAL:%.*]], i64 0
+; OPT-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <256 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <256 x i8> poison, <256 x i32> zeroinitializer
+; OPT-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <256 x i8> [[SETVALUE_SPLAT_SPLAT]] to <64 x i32>
+; OPT-NEXT:    br label [[LOADSTORELOOP:%.*]]
+; OPT:       static-memset-expansion-main-body:
 ; OPT-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[LOADSTORELOOP]] ]
 ; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[TMP1]]
-; OPT-NEXT:    store i8 [[VAL:%.*]], ptr addrspace(1) [[TMP2]], align 1
-; OPT-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
-; OPT-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1025
-; OPT-NEXT:    br i1 [[TMP4]], label [[LOADSTORELOOP]], label [[SPLIT]]
-; OPT:       split:
+; OPT-NEXT:    store <64 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP2]], align 1
+; OPT-NEXT:    [[TMP3]] = add i64 [[TMP1]], 256
+; OPT-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1024
+; OPT-NEXT:    br i1 [[TMP4]], label [[LOADSTORELOOP]], label [[SPLIT:%.*]]
+; OPT:       static-memset-post-expansion:
+; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 1024
+; OPT-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP5]], align 1
 ; OPT-NEXT:    ret void
 ;
   call void @llvm.memset.p1.i64(ptr addrspace(1) %dst, i8 %val, i64 1025, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @variable_size_memset_caller0(ptr addrspace(1) %dst, i8 %val, i64 %n) #0 {
+; OPT-LABEL: @variable_size_memset_caller0(
+; OPT-NEXT:    [[SETVALUE_SPLAT_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[VAL:%.*]], i64 0
+; OPT-NEXT:    [[SETVALUE_SPLAT_SPLAT:%.*]] = shufflevector <16 x i8> [[SETVALUE_SPLAT_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
+; OPT-NEXT:    [[SETVALUE_SPLAT_CAST:%.*]] = bitcast <16 x i8> [[SETVALUE_SPLAT_SPLAT]] to <4 x i32>
+; OPT-NEXT:    [[TMP1:%.*]] = and i64 [[N:%.*]], 15
+; OPT-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[TMP1]]
+; OPT-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP2]], 0
+; OPT-NEXT:    br i1 [[TMP3]], label [[DYNAMIC_MEMSET_EXPANSION_MAIN_BODY:%.*]], label [[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_COND:%.*]]
+; OPT:       dynamic-memset-expansion-main-body:
+; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[DYNAMIC_MEMSET_EXPANSION_MAIN_BODY]] ]
+; OPT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; OPT-NEXT:    store <4 x i32> [[SETVALUE_SPLAT_CAST]], ptr addrspace(1) [[TMP4]], align 1
+; OPT-NEXT:    [[TMP5]] = add i64 [[LOOP_INDEX]], 16
+; OPT-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[TMP2]]
+; OPT-NEXT:    br i1 [[TMP6]], label [[DYNAMIC_MEMSET_EXPANSION_MAIN_BODY]], label [[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_COND]]
+; OPT:       dynamic-memset-expansion-residual-cond:
+; OPT-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP1]], 0
+; OPT-NEXT:    br i1 [[TMP7]], label [[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_BODY:%.*]], label [[DYNAMIC_MEMSET_POST_EXPANSION:%.*]]
+; OPT:       dynamic-memset-expansion-residual-body:
+; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_COND]] ], [ [[TMP10:%.*]], [[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_BODY]] ]
+; OPT-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], [[RESIDUAL_LOOP_INDEX]]
+; OPT-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP8]]
+; OPT-NEXT:    store i8 [[VAL]], ptr addrspace(1) [[TMP9]], align 1
+; OPT-NEXT:    [[TMP10]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
+; OPT-NEXT:    [[TMP11:%.*]] = icmp ult i64 [[TMP10]], [[TMP1]]
+; OPT-NEXT:    br i1 [[TMP11]], label [[DYNAMIC_MEMSET_EXPANSION_RESIDUAL_BODY]], label [[DYNAMIC_MEMSET_POST_EXPANSION]]
+; OPT:       dynamic-memset-post-expansion:
+; OPT-NEXT:    ret void
+;
+  call void @llvm.memset.p1.i64(ptr addrspace(1) %dst, i8 %val, i64 %n, i1 false)
   ret void
 }
 

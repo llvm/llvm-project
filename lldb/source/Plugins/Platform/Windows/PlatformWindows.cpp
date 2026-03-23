@@ -523,8 +523,7 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   error = process_sp->Launch(launch_info);
 #ifdef _WIN32
   if (error.Success()) {
-    if (launch_info.ShouldUsePTY())
-      process_sp->SetPseudoConsoleHandle(launch_info.GetPTYSP());
+    process_sp->SetPseudoConsoleHandle();
   } else {
     Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
