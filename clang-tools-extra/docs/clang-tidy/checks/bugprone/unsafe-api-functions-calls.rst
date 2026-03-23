@@ -3,8 +3,14 @@
 bugprone-unsafe-api-functions-calls
 ===================================
 
-Warns when ``setvbuf()`` or ``setbuf()`` is called with a
-stack-allocated buffer.
+Finds C standard function calls that are used in an undefined or
+unsafe manner.
+
+Unsafe usage of ``setvbuf()`` or ``setbuf()``
+---------------------------------------------
+
+Enabling this check will warn when ``setvbuf()`` or ``setbuf()`` is
+called with a stack-allocated buffer.
 
 The C standard (`C11 §7.21.5.6`_) requires that the buffer passed to
 ``setvbuf()`` must have a lifetime at least as long as the open
@@ -15,9 +21,9 @@ same requirement applies.
 .. _C11 §7.21.5.6: https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1548.pdf
 .. _C11 §7.21.5.5: https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1548.pdf
 
-Passing a local (automatic storage duration) buffer leads to undefined behavior
-when the function returns but the stream remains open - the stream will continue
-to use the now-dangling buffer.
+Passing a local (automatic storage duration) buffer leads to undefined
+behavior when the function returns but the stream remains open. After
+the return the stream will continue to use the now-dangling buffer.
 
 .. code-block:: c
 
