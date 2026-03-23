@@ -1289,16 +1289,14 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
     auto depType = std::get<clause::DependenceType>(clause.t);
     auto &objects = std::get<omp::ObjectList>(clause.t);
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.getCurrentLocation();
 
-    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
-      TODO(converter.getCurrentLocation(),
-           "Support for iterator modifiers is not implemented yet");
-    }
     mlir::omp::ClauseTaskDependAttr dependTypeOperand =
         genDependKindAttr(converter, depType);
-    result.dependKinds.append(objects.size(), dependTypeOperand);
 
-    for (const omp::Object &object : objects) {
+    auto genDependVar =
+        [&](const omp::Object &object, lower::SymMap &localSymMap,
+            lower::StatementContext &localStmtCtx) -> mlir::Value {
       assert(object.ref() && "Expecting designator");
       mlir::Value dependVar;
       SomeExpr expr = *object.ref();
@@ -1311,18 +1309,18 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
           // don't need an accurate length for the array section because the
           // OpenMP standard forbids overlapping array sections.
           dependVar = genVectorSubscriptedDesignatorFirstElementAddress(
-              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+              clauseLocation, converter, expr, localSymMap, localStmtCtx);
         } else {
           // Ordinary array section e.g. A(1:512:2)
           hlfir::EntityWithAttributes entity = convertExprToHLFIR(
-              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+              clauseLocation, converter, expr, localSymMap, localStmtCtx);
           dependVar = entity.getBase();
         }
       } else if (evaluate::isStructureComponent(expr) ||
                  evaluate::ExtractComplexPart(expr)) {
         SomeExpr expr = *object.ref();
         hlfir::EntityWithAttributes entity = convertExprToHLFIR(
-            converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+            clauseLocation, converter, expr, localSymMap, localStmtCtx);
         dependVar = entity.getBase();
       } else {
         semantics::Symbol *sym = object.sym();
@@ -1335,8 +1333,7 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       // allocations so this is not a reliable way to identify the dependency.
       if (auto ref = mlir::dyn_cast<fir::ReferenceType>(dependVar.getType()))
         if (fir::isa_box_type(ref.getElementType()))
-          dependVar = fir::LoadOp::create(
-              builder, converter.getCurrentLocation(), dependVar);
+          dependVar = fir::LoadOp::create(builder, clauseLocation, dependVar);
 
       // The openmp dialect doesn't know what to do with boxes (and it would
       // break layering to teach it about them). The dependency variable can be
@@ -1345,10 +1342,62 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       // Getting the address of the box data is okay because all the runtime
       // ultimately cares about is the base address of the array.
       if (fir::isa_box_type(dependVar.getType()))
-        dependVar = fir::BoxAddrOp::create(
-            builder, converter.getCurrentLocation(), dependVar);
+        dependVar = fir::BoxAddrOp::create(builder, clauseLocation, dependVar);
 
-      result.dependVars.push_back(dependVar);
+      return dependVar;
+    };
+
+    auto &iteratorModifier =
+        std::get<std::optional<omp::clause::Iterator>>(clause.t);
+
+    llvm::SmallVector<IteratorRange> iteratorRanges;
+    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
+    collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
+
+    mlir::Type ptrTy =
+        mlir::LLVM::LLVMPointerType::get(&converter.getMLIRContext());
+    mlir::Type iterTy =
+        mlir::omp::IteratedType::get(&converter.getMLIRContext(), ptrTy);
+
+    for (const omp::Object &object : objects) {
+      if (iteratorModifier.has_value() &&
+          hasIteratorIVReference(object, ivSyms)) {
+        mlir::Value iterHandle = buildIteratorOp(
+            converter, clauseLocation, iterTy, iteratorRanges,
+            [&](fir::FirOpBuilder &builder, mlir::Location loc,
+                llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
+              lower::StatementContext iterStmtCtx;
+              if (std::optional<llvm::SmallVector<mlir::Value>> loweredIndices =
+                      getIteratorElementIndices(converter, object, iterStmtCtx,
+                                                loc)) {
+                const Fortran::semantics::Symbol *sym = object.sym();
+                assert(sym && "expected symbol for iterator object");
+                // We currently cannot reuse genDependVar here because
+                // buildIteratorOp maps iterator IV symbols to bare scalar
+                // values (e.g. i32), but genDependVar uses convertExprToHLFIR
+                // which expects memory-backed references. Instead, manually get
+                // the base address and compute the element coordinate from the
+                // FIR-level lowered indices.
+                fir::factory::AddrAndBoundsInfo info =
+                    Fortran::lower::getDataOperandBaseAddr(
+                        converter, builder, *sym, loc,
+                        /*unwrapFirBox=*/false);
+                hlfir::Entity entity{info.addr};
+                mlir::Value iteratedAddr = genIteratorCoordinate(
+                    converter, entity, *loweredIndices, loc);
+                // Convert to !llvm.ptr for the omp.yield
+                return fir::ConvertOp::create(builder, loc, ptrTy,
+                                              iteratedAddr);
+              }
+
+              TODO(loc, "object type not supported by iterator modifier");
+            });
+        result.dependIterated.push_back(iterHandle);
+        result.dependIteratedKinds.push_back(dependTypeOperand);
+      } else {
+        result.dependVars.push_back(genDependVar(object, symMap, stmtCtx));
+        result.dependKinds.push_back(dependTypeOperand);
+      }
     }
   };
 
