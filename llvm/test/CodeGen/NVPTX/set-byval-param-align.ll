@@ -60,6 +60,15 @@ define internal void @device_internal_high_align(ptr byval(%struct.S) align 32 %
   ret void
 }
 
+; Large vector type: ABI alignment exceeds 128 bytes, capped to PTX maximum.
+define ptx_kernel void @kernel_align_cap(ptr byval(<256 x i32>) %s) {
+; CHECK-LABEL: define ptx_kernel void @kernel_align_cap(
+; CHECK-SAME: ptr byval(<256 x i32>) align 128 [[S:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
 ; Non-byval args should be untouched.
 define ptx_kernel void @no_byval(ptr %p, i32 %x) {
 ; CHECK-LABEL: define ptx_kernel void @no_byval(
