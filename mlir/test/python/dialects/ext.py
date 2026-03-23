@@ -23,12 +23,12 @@ def testMyInt():
 
     class ConstantOp(MyInt.Operation, name="constant"):
         value: IntegerAttr
-        cst: Result[i32]
+        cst: Result[i32] = result(infer_type=True)
 
     class AddOp(Operation, dialect=MyInt, name="add"):
         lhs: Operand[i32]
         rhs: Operand[i32]
-        res: Result[i32]
+        res: Result[i32] = result(infer_type=True)
 
     # CHECK: irdl.dialect @myint {
     # CHECK:   irdl.operation @constant {
@@ -88,9 +88,9 @@ def testMyInt():
         print(two.value)
         # CHECK: OpResult(%0
         print(two.cst)
-        # CHECK: (self, /, lhs, rhs, *, loc=None, ip=None)
+        # CHECK: (self, /, lhs, rhs, *, res=None, loc=None, ip=None)
         print(AddOp.__init__.__signature__)
-        # CHECK: (self, /, value, *, loc=None, ip=None)
+        # CHECK: (self, /, value, *, cst=None, loc=None, ip=None)
         print(ConstantOp.__init__.__signature__)
 
         # CHECK: True
@@ -124,28 +124,28 @@ def testExtDialect():
         y: FloatAttr
 
     class OptionalOp(Test.Operation, name="optional"):
-        a: Operand[i32]
-        b: Optional[Operand[i32]]
         out1: Result[i32]
-        out2: Result[i32] | None
         out3: Result[i32]
+        a: Operand[i32]
+        out2: Result[i32] | None = None
+        b: Optional[Operand[i32]] = None
 
     class Optional2Op(Test.Operation, name="optional2"):
-        a: Optional[Operand[i32]]
-        b: Optional[Result[i32]]
+        b: Optional[Result[i32]] = None
+        a: Optional[Operand[i32]] = None
 
     class VariadicOp(Test.Operation, name="variadic"):
-        a: Operand[i32]
-        b: Optional[Operand[i32]]
-        c: Sequence[Operand[i32]]
         out1: Sequence[Result[i32]]
         out2: Sequence[Result[i32]]
-        out3: Optional[Result[i32]]
         out4: Result[i32]
+        a: Operand[i32]
+        c: Sequence[Operand[i32]]
+        out3: Optional[Result[i32]] = None
+        b: Optional[Operand[i32]] = None
 
     class Variadic2Op(Test.Operation, name="variadic2"):
-        a: Sequence[Operand[i32]]
         b: Sequence[Result[i32]]
+        a: Sequence[Operand[i32]]
 
     class MixedOpBase(Test.Operation):
         out: Result[i32]
@@ -153,9 +153,9 @@ def testExtDialect():
 
     class MixedOp(MixedOpBase, name="mixed"):
         in2: IntegerAttr
-        in3: Optional[Operand[i32]]
         in4: IntegerAttr
         in5: Operand[i32]
+        in3: Optional[Operand[i32]] = None
 
     T = TypeVar("T")
     U = TypeVar("U", bound=IntegerType[32] | IntegerType[64])
@@ -167,6 +167,11 @@ def testExtDialect():
         in3: Operand[U]
         in4: Operand[U | V]
         in5: Operand[V]
+
+    class OptionalButNotKeywordOp(Test.Operation, name="optional_but_not_keyword"):
+        a: Operand[i32]
+        b: Optional[Operand[i32]]
+        c: Operand[i32]
 
     # CHECK: irdl.dialect @ext_test {
     # CHECK:   irdl.operation @constraint {
@@ -185,7 +190,7 @@ def testExtDialect():
     # CHECK:   irdl.operation @optional {
     # CHECK:     %0 = irdl.is i32
     # CHECK:     irdl.operands(a: %0, b: optional %0)
-    # CHECK:     irdl.results(out1: %0, out2: optional %0, out3: %0)
+    # CHECK:     irdl.results(out1: %0, out3: %0, out2: optional %0)
     # CHECK:   }
     # CHECK:   irdl.operation @optional2 {
     # CHECK:     %0 = irdl.is i32
@@ -194,8 +199,8 @@ def testExtDialect():
     # CHECK:   }
     # CHECK:   irdl.operation @variadic {
     # CHECK:     %0 = irdl.is i32
-    # CHECK:     irdl.operands(a: %0, b: optional %0, c: variadic %0)
-    # CHECK:     irdl.results(out1: variadic %0, out2: variadic %0, out3: optional %0, out4: %0)
+    # CHECK:     irdl.operands(a: %0, c: variadic %0, b: optional %0)
+    # CHECK:     irdl.results(out1: variadic %0, out2: variadic %0, out4: %0, out3: optional %0)
     # CHECK:   }
     # CHECK:   irdl.operation @variadic2 {
     # CHECK:     %0 = irdl.is i32
@@ -204,7 +209,7 @@ def testExtDialect():
     # CHECK:   }
     # CHECK:   irdl.operation @mixed {
     # CHECK:     %0 = irdl.is i32
-    # CHECK:     irdl.operands(in1: %0, in3: optional %0, in5: %0)
+    # CHECK:     irdl.operands(in1: %0, in5: %0, in3: optional %0)
     # CHECK:     %1 = irdl.base "#builtin.integer"
     # CHECK:     %2 = irdl.base "#builtin.integer"
     # CHECK:     irdl.attributes {"in2" = %1, "in4" = %2}
@@ -236,16 +241,20 @@ def testExtDialect():
         print(VariadicOp.__init__.__signature__)
         # CHECK: (self, /, b, a, *, loc=None, ip=None)
         print(Variadic2Op.__init__.__signature__)
-        # CHECK: (self, /, in1, in2, in4, in5, *, in3=None, loc=None, ip=None)
+        # CHECK: (self, /, out, in1, in2, in4, in5, *, in3=None, loc=None, ip=None)
         print(MixedOp.__init__.__signature__)
+        # CHECK: (self, /, in1, in2, in3, in4, in5, *, loc=None, ip=None)
+        print(TypeVarOp.__init__.__signature__)
+        # CHECK: (self, /, a, b, c, *, loc=None, ip=None)
+        print(OptionalButNotKeywordOp.__init__.__signature__)
 
         # CHECK: None None
         print(ConstraintOp._ODS_OPERAND_SEGMENTS, ConstraintOp._ODS_RESULT_SEGMENTS)
-        # CHECK: [1, 0] [1, 0, 1]
+        # CHECK: [1, 0] [1, 1, 0]
         print(OptionalOp._ODS_OPERAND_SEGMENTS, OptionalOp._ODS_RESULT_SEGMENTS)
         # CHECK: [0] [0]
         print(Optional2Op._ODS_OPERAND_SEGMENTS, Optional2Op._ODS_RESULT_SEGMENTS)
-        # CHECK: [1, 0, -1] [-1, -1, 0, 1]
+        # CHECK: [1, -1, 0] [-1, -1, 1, 0]
         print(VariadicOp._ODS_OPERAND_SEGMENTS, VariadicOp._ODS_RESULT_SEGMENTS)
         # CHECK: [-1] [-1]
         print(Variadic2Op._ODS_OPERAND_SEGMENTS, Variadic2Op._ODS_RESULT_SEGMENTS)
@@ -269,7 +278,7 @@ def testExtDialect():
             # CHECK: ext_test.constraint"(%c1_i32, %cst, %c1_i32, %cst) {x = 2 : i32, y = 2.300000e+00 : f32} : (i32, f32, i32, f32) -> ()
             ConstraintOp(ione, fone, ione, fone, iattr, fattr)
 
-            # CHECK: %0:2 = "ext_test.optional"(%c1_i32) {operandSegmentSizes = array<i32: 1, 0>, resultSegmentSizes = array<i32: 1, 0, 1>} : (i32) -> (i32, i32)
+            # CHECK: %0:2 = "ext_test.optional"(%c1_i32) {operandSegmentSizes = array<i32: 1, 0>, resultSegmentSizes = array<i32: 1, 1, 0>} : (i32) -> (i32, i32)
             o1 = OptionalOp(i32, i32, ione)
             # CHECK: %1:3 = "ext_test.optional"(%c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 1, 1>, resultSegmentSizes = array<i32: 1, 1, 1>} : (i32, i32) -> (i32, i32, i32)
             o2 = OptionalOp(i32, i32, ione, out2=i32, b=ione)
@@ -282,11 +291,11 @@ def testExtDialect():
             # CHECK: %3 = "ext_test.optional2"(%c1_i32) {operandSegmentSizes = array<i32: 1>, resultSegmentSizes = array<i32: 1>} : (i32) -> i32
             o6 = Optional2Op(b=i32, a=ione)
 
-            # CHECK: %4:4 = "ext_test.variadic"(%c1_i32, %c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 1, 0, 2>, resultSegmentSizes = array<i32: 1, 2, 0, 1>} : (i32, i32, i32) -> (i32, i32, i32, i32)
+            # CHECK: %4:4 = "ext_test.variadic"(%c1_i32, %c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 1, 2, 0>, resultSegmentSizes = array<i32: 1, 2, 1, 0>} : (i32, i32, i32) -> (i32, i32, i32, i32)
             v1 = VariadicOp([i32], [i32, i32], i32, ione, [ione, ione])
             # CHECK: %5:5 = "ext_test.variadic"(%c1_i32, %c1_i32, %c1_i32) {operandSegmentSizes = array<i32: 1, 1, 1>, resultSegmentSizes = array<i32: 1, 2, 1, 1>} : (i32, i32, i32) -> (i32, i32, i32, i32, i32)
             v2 = VariadicOp([i32], [i32, i32], i32, ione, [ione], out3=i32, b=ione)
-            # CHECK: %6:4 = "ext_test.variadic"(%c1_i32) {operandSegmentSizes = array<i32: 1, 0, 0>, resultSegmentSizes = array<i32: 2, 1, 0, 1>} : (i32) -> (i32, i32, i32, i32)
+            # CHECK: %6:4 = "ext_test.variadic"(%c1_i32) {operandSegmentSizes = array<i32: 1, 0, 0>, resultSegmentSizes = array<i32: 2, 1, 1, 0>} : (i32) -> (i32, i32, i32, i32)
             v3 = VariadicOp([i32, i32], [i32], i32, ione, [])
             # CHECK: "ext_test.variadic2"() {operandSegmentSizes = array<i32: 0>, resultSegmentSizes = array<i32: 0>} : () -> ()
             v4 = Variadic2Op([], [])
@@ -295,10 +304,10 @@ def testExtDialect():
             # CHECK: %7:2 = "ext_test.variadic2"(%c1_i32) {operandSegmentSizes = array<i32: 1>, resultSegmentSizes = array<i32: 2>} : (i32) -> (i32, i32)
             v6 = Variadic2Op([i32, i32], [ione])
 
-            # CHECK: %8 = "ext_test.mixed"(%c1_i32, %c1_i32) {in2 = 2 : i32, in4 = 2 : i32, operandSegmentSizes = array<i32: 1, 0, 1>} : (i32, i32) -> i32
-            m1 = MixedOp(ione, iattr, iattr, ione)
+            # CHECK: %8 = "ext_test.mixed"(%c1_i32, %c1_i32) {in2 = 2 : i32, in4 = 2 : i32, operandSegmentSizes = array<i32: 1, 1, 0>} : (i32, i32) -> i32
+            m1 = MixedOp(i32, ione, iattr, iattr, ione)
             # CHECK: %9 = "ext_test.mixed"(%c1_i32, %c1_i32, %c1_i32) {in2 = 2 : i32, in4 = 2 : i32, operandSegmentSizes = array<i32: 1, 1, 1>} : (i32, i32, i32) -> i32
-            m2 = MixedOp(ione, iattr, iattr, ione, in3=ione)
+            m2 = MixedOp(i32, ione, iattr, iattr, ione, in3=ione)
 
         print(module)
         assert module.operation.verify()
@@ -319,7 +328,7 @@ def testExtDialect():
         print(o1.out2)
         # CHECK: 0
         print(o2.out1.result_number)
-        # CHECK: 1
+        # CHECK: 2
         print(o2.out2.result_number)
         # CHECK: None
         print(o3.a)
@@ -371,8 +380,8 @@ def testExtDialectWithRegion():
         pass
 
     class IfOp(TestRegion.Operation, name="if"):
-        cond: Operand[IntegerType[1]]
         result: Result[Any]
+        cond: Operand[IntegerType[1]]
         then: Region
         else_: Region
 
@@ -547,7 +556,9 @@ def testExtDialectWithType():
         arr: Result[Array]
 
     class MakeArray3Op(TestType.Operation, name="make_array3"):
-        arr: Result[Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]]
+        arr: Result[Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]] = result(
+            infer_type=True
+        )
 
     with Context(), Location.unknown():
         TestType.load()
@@ -694,4 +705,75 @@ def testExtDialectWithAttr():
 
         # CHECK: "ext_attr.op1"() {pair = #ext_attr.pair<1 : i32, 2 : i32>} : () -> ()
         # CHECK: "ext_attr.op2"() {pair = #ext_attr.str_pair<"hello", "world">, pair2 = #ext_attr.str_pair<"a", "b">} : () -> ()
+        print(module)
+
+
+# CHECK: TEST: testExtDialectWithInvalidOp
+@run
+def testExtDialectWithInvalidOp():
+    class TestInvalid(Dialect, name="ext_invalid"):
+        pass
+
+    try:
+
+        class InferTypeBeforePositionalOp(
+            TestInvalid.Operation, name="infer_before_pos"
+        ):
+            res: Result[IntegerType[32]] = result(infer_type=True)
+            a: Operand[IntegerType[32]]
+
+    except ValueError as e:
+        # CHECK: wrong parameter order
+        print(e)
+
+    try:
+
+        class AssignNoneOnNonOptionalOp(
+            TestInvalid.Operation, name="assign_none_on_non_optional"
+        ):
+            a: Operand[IntegerType[32]] = None
+
+    except ValueError as e:
+        # CHECK: only optional operand can be a keyword parameter
+        print(e)
+
+
+# CHECK: TEST: testExtDialectWithAttrInOp
+@run
+def testExtDialectWithAttrInOp():
+    class TestAttrInOp(Dialect, name="ext_attr_in_op"):
+        pass
+
+    class OpWithAttr(TestAttrInOp.Operation, name="op_with_attr"):
+        a: IntegerAttr | StringAttr
+        b: IntegerType[32] | IntegerType[64]
+
+    with Context(), Location.unknown():
+        TestAttrInOp.load()
+        # CHECK: irdl.dialect @ext_attr_in_op {
+        # CHECK:   irdl.operation @op_with_attr {
+        # CHECK:     %0 = irdl.base "#builtin.integer"
+        # CHECK:     %1 = irdl.base "#builtin.string"
+        # CHECK:     %2 = irdl.any_of(%0, %1)
+        # CHECK:     %3 = irdl.is i32
+        # CHECK:     %4 = irdl.is i64
+        # CHECK:     %5 = irdl.any_of(%3, %4)
+        # CHECK:     irdl.attributes {"a" = %2, "b" = %5}
+        # CHECK:   }
+        # CHECK: }
+        print(TestAttrInOp._mlir_module)
+
+        i32 = IntegerType.get_signless(32)
+        i64 = IntegerType.get_signless(64)
+        iattr = IntegerAttr.get(i32, 42)
+        sattr = StringAttr.get("hello")
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            OpWithAttr(iattr, TypeAttr.get(i32))
+            OpWithAttr(sattr, TypeAttr.get(i64))
+
+        assert module.operation.verify()
+        # CHECK: "ext_attr_in_op.op_with_attr"() {a = 42 : i32, b = i32} : () -> ()
+        # CHECK: "ext_attr_in_op.op_with_attr"() {a = "hello", b = i64} : () -> ()
         print(module)

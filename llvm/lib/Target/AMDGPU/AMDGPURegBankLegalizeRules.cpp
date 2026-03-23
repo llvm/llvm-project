@@ -1463,7 +1463,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{S32}, {{Sgpr32}, {}}})
       .Any({{S64}, {{Sgpr64}, {}}});
 
-  addRulesForIOpcs({amdgcn_groupstaticsize}).Any({{S32}, {{Sgpr32}, {IntrId}}});
+  addRulesForIOpcs({amdgcn_groupstaticsize, amdgcn_pops_exiting_wave_id},
+                   Standard)
+      .Uni(S32, {{Sgpr32}, {IntrId}});
 
   // Intrinsics with no register operands.
   addRulesForIOpcs({amdgcn_endpgm,
@@ -1497,6 +1499,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_s_prefetch_data})
       .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
+
+  addRulesForIOpcs({amdgcn_class})
+      .Any({{UniS1, _, S16}, {{UniInVcc}, {IntrId, Vgpr16, Vgpr32}}})
+      .Any({{DivS1, _, S16}, {{Vcc}, {IntrId, Vgpr16, Vgpr32}}})
+      .Any({{UniS1, _, S32}, {{UniInVcc}, {IntrId, Vgpr32, Vgpr32}}})
+      .Any({{DivS1, _, S32}, {{Vcc}, {IntrId, Vgpr32, Vgpr32}}})
+      .Any({{UniS1, _, S64}, {{UniInVcc}, {IntrId, Vgpr64, Vgpr32}}})
+      .Any({{DivS1, _, S64}, {{Vcc}, {IntrId, Vgpr64, Vgpr32}}});
 
   // This is "intrinsic lane mask" it was set to i32/i64 in llvm-ir.
   addRulesForIOpcs({amdgcn_end_cf})

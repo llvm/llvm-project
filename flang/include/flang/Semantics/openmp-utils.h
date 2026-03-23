@@ -114,20 +114,45 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
 /// A representation of a "because" message.
 struct Reason {
+  Reason() = default;
+  Reason(Reason &&) = default;
+  Reason(const Reason &);
+  Reason &operator=(Reason &&) = default;
+  Reason &operator=(const Reason &);
+
   parser::Messages msgs;
 
   template <typename... Ts> Reason &Say(Ts &&...args) {
     msgs.Say(std::forward<Ts>(args)...);
     return *this;
   }
-  operator bool() const { return !msgs.empty(); }
   parser::Message &AttachTo(parser::Message &msg);
+  Reason &Append(const Reason &other) {
+    CopyFrom(other);
+    return *this;
+  }
+  operator bool() const { return !msgs.empty(); }
+
+private:
+  void CopyFrom(const Reason &other);
 };
 
-std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
+// A property with an explanation of its value. Both, the property and the
+// reason are optional (the reason can have no messages in it).
+template <typename T> struct WithReason {
+  std::optional<T> value;
+  Reason reason;
+
+  WithReason() = default;
+  WithReason(std::optional<T> v, const Reason &r = Reason())
+      : value(v), reason(r) {}
+  operator bool() const { return value.has_value(); }
+};
+
+WithReason<int64_t> GetArgumentValueWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version);
-std::pair<std::optional<int64_t>, Reason> GetNumArgumentsWithReason(
+WithReason<int64_t> GetNumArgumentsWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
     unsigned version);
 
@@ -135,20 +160,21 @@ bool IsLoopTransforming(llvm::omp::Directive dir);
 bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
 
 // Return the depth of the affected nests:
-//   {affected-depth, must-be-perfect-nest, reason}.
-std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
+//   {affected-depth, reason, must-be-perfect-nest}.
+std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version);
 // Return the range of the affected nests in the sequence:
 //   {first, count, reason}.
 // If the range is "the whole sequence", the return value will be {1, -1, ...}.
-std::tuple<std::optional<int64_t>, std::optional<int64_t>, Reason>
-GetAffectedLoopRangeWithReason(
+WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version);
 
 // Count the required loop count from range. If count == -1, return -1,
 // indicating all loops in the sequence.
 std::optional<int64_t> GetRequiredCount(
     std::optional<int64_t> first, std::optional<int64_t> count);
+std::optional<int64_t> GetRequiredCount(
+    std::optional<std::pair<int64_t, int64_t>> range);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,
@@ -173,7 +199,7 @@ struct LoopSequence {
 
   bool isNest() const { return length_ && *length_ == 1; }
   std::optional<int64_t> length() const { return length_; }
-  Depth depth() const { return depth_; }
+  const Depth &depth() const { return depth_; }
   const std::vector<LoopSequence> &children() const { return children_; }
 
 private:
