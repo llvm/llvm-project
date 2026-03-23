@@ -31,7 +31,7 @@
 // PRECOV5-NEXT:      i32 2, label %[[SW_BB2:.*]]
 // PRECOV5-NEXT:    ]
 // PRECOV5:       [[SW_BB]]:
-// PRECOV5-NEXT:    [[TMP1:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// PRECOV5-NEXT:    [[TMP1:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // PRECOV5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP1]], i64 4
 // PRECOV5-NEXT:    [[TMP3:%.*]] = load i16, ptr addrspace(4) [[TMP2]], align 2, !range [[RNG3:![0-9]+]], !invariant.load [[META4:![0-9]+]], !noundef [[META4]]
 // PRECOV5-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
@@ -39,7 +39,7 @@
 // PRECOV5-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
 // PRECOV5-NEXT:    br label %[[SW_EPILOG:.*]]
 // PRECOV5:       [[SW_BB1]]:
-// PRECOV5-NEXT:    [[TMP6:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// PRECOV5-NEXT:    [[TMP6:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // PRECOV5-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP6]], i64 6
 // PRECOV5-NEXT:    [[TMP8:%.*]] = load i16, ptr addrspace(4) [[TMP7]], align 2, !range [[RNG3]], !invariant.load [[META4]], !noundef [[META4]]
 // PRECOV5-NEXT:    [[TMP9:%.*]] = zext i16 [[TMP8]] to i32
@@ -47,7 +47,7 @@
 // PRECOV5-NEXT:    store i32 [[TMP9]], ptr [[TMP10]], align 4
 // PRECOV5-NEXT:    br label %[[SW_EPILOG]]
 // PRECOV5:       [[SW_BB2]]:
-// PRECOV5-NEXT:    [[TMP11:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// PRECOV5-NEXT:    [[TMP11:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // PRECOV5-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP11]], i64 8
 // PRECOV5-NEXT:    [[TMP13:%.*]] = load i16, ptr addrspace(4) [[TMP12]], align 2, !range [[RNG3]], !invariant.load [[META4]], !noundef [[META4]]
 // PRECOV5-NEXT:    [[TMP14:%.*]] = zext i16 [[TMP13]] to i32

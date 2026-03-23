@@ -57,6 +57,8 @@ enum ImplicitArgOffsets {
   HIDDEN_REMAINDER_X = 18,
   HIDDEN_REMAINDER_Y = 20,
   HIDDEN_REMAINDER_Z = 22,
+
+  GRID_DIMS = 64
 };
 
 class AMDGPULowerKernelAttributes : public ModulePass {
@@ -111,9 +113,48 @@ static bool annotateGroupSizeLoadWithRangeMD(LoadInst *Load, bool IsRemainder) {
   MDBuilder MDB(Load->getContext());
   MDNode *Range = MDB.createRange(
       APInt(16, !IsRemainder),
-      APInt(16, AMDGPU::IsaInfo::getMaxFlatWorkGroupSize() - IsRemainder));
+      APInt(16, AMDGPU::IsaInfo::getMaxFlatWorkGroupSize() + 1 - IsRemainder));
   Load->setMetadata(LLVMContext::MD_range, Range);
   return true;
+}
+
+static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load,
+                                            unsigned KnownNumGridDims) {
+  IntegerType *Ty = dyn_cast<IntegerType>(Load->getType());
+  if (!Ty || Ty->getBitWidth() < 3)
+    return false;
+
+  if (KnownNumGridDims != 0) {
+    Load->replaceAllUsesWith(
+        ConstantInt::get(Load->getType(), KnownNumGridDims));
+    return true;
+  }
+
+  // TODO: If there is existing range metadata, preserve it if it is stricter.
+  if (Load->hasMetadata(LLVMContext::MD_range))
+    return false;
+
+  MDBuilder MDB(Load->getContext());
+  MDNode *Range =
+      MDB.createRange(APInt(Ty->getBitWidth(), 1), APInt(Ty->getBitWidth(), 4));
+  Load->setMetadata(LLVMContext::MD_range, Range);
+  return true;
+}
+
+/// Compute the number of grid dimensions based on !reqd_work_group_size
+/// metadata
+static unsigned computeNumGridDims(const MDNode *ReqdWorkGroupSize) {
+  ConstantInt *KnownZ =
+      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(2));
+  if (KnownZ->getZExtValue() != 1)
+    return 3;
+
+  ConstantInt *KnownY =
+      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(1));
+  if (KnownY->getZExtValue() != 1)
+    return 2;
+
+  return 1;
 }
 
 static bool processUse(CallInst *CI, bool IsV5OrAbove) {
@@ -136,6 +177,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 
   const DataLayout &DL = F->getDataLayout();
   bool MadeChange = false;
+
+  unsigned KnownNumGridDims = HasReqdWorkGroupSize ? computeNumGridDims(MD) : 0;
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.
@@ -223,6 +266,11 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
           Remainders[2] = Load;
           MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, true);
         }
+        break;
+
+      case GRID_DIMS:
+        if (LoadSize <= 2)
+          MadeChange |= annotateGridDimsLoadWithRangeMD(Load, KnownNumGridDims);
         break;
       default:
         break;

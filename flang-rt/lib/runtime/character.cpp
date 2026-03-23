@@ -992,6 +992,42 @@ static RT_API_ATTRS void TokenizePositionsImpl(Descriptor &first,
   }
 }
 
+// SPLIT — implemented in terms of SCAN.
+// When BACK is false, returns the position of the leftmost character in SET
+// at a position > POS, or LEN(STRING)+1 if none.
+// When BACK is true, returns the position of the rightmost character in SET
+// at a position < POS, or 0 if none.
+template <typename CHAR>
+static RT_API_ATTRS std::size_t SplitImpl(const CHAR *string,
+    std::size_t stringLen, const CHAR *set, std::size_t setLen, std::size_t pos,
+    bool back) {
+  if (back) {
+    std::size_t scanLen{pos > 1 ? pos - 1 : std::size_t{0}};
+    if (scanLen > stringLen) {
+      scanLen = stringLen;
+    }
+    if constexpr (sizeof(CHAR) == 1) {
+      return ScanVerify<false>(string, scanLen, set, setLen, true);
+    } else {
+      return ScanVerify<CHAR, CharFunc::Scan>(
+          string, scanLen, set, setLen, true);
+    }
+  } else {
+    if (pos >= stringLen) {
+      return stringLen + 1;
+    }
+    std::size_t npos;
+    if constexpr (sizeof(CHAR) == 1) {
+      npos =
+          ScanVerify<false>(string + pos, stringLen - pos, set, setLen, false);
+    } else {
+      npos = ScanVerify<CHAR, CharFunc::Scan>(
+          string + pos, stringLen - pos, set, setLen, false);
+    }
+    return npos != 0 ? pos + npos : stringLen + 1;
+  }
+}
+
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
@@ -1373,6 +1409,21 @@ void RTDEF(TokenizePositions)(Descriptor &first, Descriptor &last,
     int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   TokenizePositionsImpl(first, last, string, set, terminator);
+}
+
+std::size_t RTDEF(Split1)(const char *string, std::size_t stringLen,
+    const char *set, std::size_t setLen, std::size_t pos, bool back) {
+  return SplitImpl(string, stringLen, set, setLen, pos, back);
+}
+
+std::size_t RTDEF(Split2)(const char16_t *string, std::size_t stringLen,
+    const char16_t *set, std::size_t setLen, std::size_t pos, bool back) {
+  return SplitImpl(string, stringLen, set, setLen, pos, back);
+}
+
+std::size_t RTDEF(Split4)(const char32_t *string, std::size_t stringLen,
+    const char32_t *set, std::size_t setLen, std::size_t pos, bool back) {
+  return SplitImpl(string, stringLen, set, setLen, pos, back);
 }
 
 RT_EXT_API_GROUP_END
