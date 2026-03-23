@@ -204,6 +204,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/casting-through-void>` check by running only on
   C++ files because suggested ``reinterpret_cast`` is not available in pure C.
 
+- Improved :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check by 
+  correctly ignoring function templates.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
