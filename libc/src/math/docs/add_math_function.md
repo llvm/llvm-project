@@ -13,8 +13,8 @@ together with its specifications:
 
 - Add entry points `libc.src.math.<func>` to the following files:
 ```
-    libc/config/linux/<arch>/entrypoints.txt
-    libc/config/windows/entrypoints.txt
+  libc/config/linux/<arch>/entrypoints.txt
+  libc/config/windows/entrypoints.txt
 ```
 - Add function specs to the file:
 ```
@@ -67,7 +67,7 @@ If the function should be available to internal LLVM projects:
 ```
   libc/shared/math/<func>.h
 ```
-- Add a simple test case to
+- Add a simple test case to:
 ```
   libc/test/shared/shared_math_test.cpp
 ```
