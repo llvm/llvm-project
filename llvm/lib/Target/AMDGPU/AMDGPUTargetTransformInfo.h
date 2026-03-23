@@ -311,6 +311,16 @@ public:
   unsigned getNumberOfParts(Type *Tp) const override;
 
   InstructionUniformity getInstructionUniformity(const Value *V) const override;
+
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       StackOffset BaseOffset, bool HasBaseReg,
+                                       int64_t Scale,
+                                       unsigned AddrSpace) const override;
+
+  bool isLSRCostLess(const TTI::LSRCost &A,
+                     const TTI::LSRCost &B) const override;
+  bool isNumRegsMajorCostOfLSR() const override;
+  bool shouldDropLSRSolutionIfLessProfitable() const override;
 };
 
 } // end namespace llvm

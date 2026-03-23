@@ -1,32 +1,9 @@
 // RUN: %check_clang_tidy %s bugprone-unhandled-self-assignment %t -- -- -fno-delayed-template-parsing
 
+#include <utility>
+#include <memory>
+
 namespace std {
-
-template <class T>
-void swap(T &x, T &y) {
-}
-
-template <class T>
-T &&move(T &x) {
-}
-
-template <typename T> class default_delete {};
-
-template <class T, typename Deleter = std::default_delete<T>>
-class unique_ptr {
-};
-
-template <class T>
-class shared_ptr {
-};
-
-template <class T>
-class weak_ptr {
-};
-
-template <class T>
-class auto_ptr {
-};
 
 namespace pmr {
     template <typename TYPE = void>

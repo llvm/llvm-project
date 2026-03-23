@@ -114,3 +114,21 @@ extern "C" void bcopy(const void *__src, void *__dest, size_t __n);
 void testbcopy(const void *src, void *dest, size_t n) {
   bcopy(src, dest, n);
 }
+
+// CIR-LABEL: @testaddressof(
+// CIR: %[[SRC:.*]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["src", init]
+// CIR: %[[DEST:.*]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["dest", init]
+// CIR: %[[SRC_TO_VOIDPTR:.*]] = cir.cast bitcast %[[SRC]] : !cir.ptr<!cir.ptr<!s8i>> -> !cir.ptr<!void>
+// CIR: %[[DEST_TO_VOIDPTR:.*]] = cir.cast bitcast %[[DEST]] : !cir.ptr<!cir.ptr<!s8i>> -> !cir.ptr<!void>
+// CIR: cir.libc.memmove {{.*}} bytes from %[[SRC_TO_VOIDPTR]] to %[[DEST_TO_VOIDPTR]]
+// LLVM-LABEL: @testaddressof(
+// LLVM: %[[SRC:.*]] = alloca ptr
+// LLVM: %[[DEST:.*]] = alloca ptr
+// LLVM: call void @llvm.memmove.p0.p0.i64(ptr %[[DEST]], ptr %[[SRC]], i64 {{.*}}, i1 false)
+// OGCG-LABEL: @testaddressof(
+// OGCG: %[[SRC:.*]] = alloca ptr
+// OGCG: %[[DEST:.*]] = alloca ptr
+// OGCG: call void @llvm.memmove.p0.p0.i64(ptr {{.*}}%[[DEST]], ptr {{.*}}%[[SRC]], i64 {{.*}}, i1 false)
+extern "C" void testaddressof(const char *src, const char *dest, size_t n) {
+  __builtin_bcopy(__builtin_addressof(src), __builtin_addressof(dest), n);
+}

@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=CIR %}
+// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=ALL,CIR %}
 
 //=============================================================================
 // NOTES
@@ -27,7 +27,7 @@
 // LLVM-LABEL: @test_vnegd_s64
 // CIR-LABEL: @vnegd_s64
 int64_t test_vnegd_s64(int64_t a) {
-// CIR: cir.unary(minus, {{.*}}) : !s64
+// CIR: cir.minus {{.*}} : !s64i
 
 // LLVM-SAME: i64 {{.*}} [[A:%.*]])
 // LLVM:          [[VNEGD_I:%.*]] = sub i64 0, [[A]]
@@ -38,20 +38,6 @@ int64_t test_vnegd_s64(int64_t a) {
 //===------------------------------------------------------===//
 // 2.1.2.2 Bitwise equal to zero
 //===------------------------------------------------------===//
-// LLVM-LABEL: @test_vceqzd_s64
-// CIR-LABEL: @vceqzd_s64
-uint64_t test_vceqzd_s64(int64_t a) {
-// CIR:   [[C_0:%.*]] = cir.const #cir.int<0>
-// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !s64i
-// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
-// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u64i
-
-// LLVM-SAME: i64{{.*}} [[A:%.*]])
-// LLVM:          [[TMP0:%.*]] = icmp eq i64 [[A]], 0
-// LLVM-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
-// LLVM-NEXT:    ret i64 [[VCEQZ_I]]
-  return (uint64_t)vceqzd_s64(a);
-}
 // LLVM-LABEL: @test_vceqz_s8(
 // CIR-LABEL: @vceqz_s8(
 uint8x8_t test_vceqz_s8(int8x8_t a) {
@@ -411,8 +397,66 @@ uint64x2_t test_vceqzq_p64(poly64x2_t a) {
   return vceqzq_p64(a);
 }
 
-// TODO SISD variants:
-// vceqzd_u64, vceqzs_f32, vceqzd_f64
+// LLVM-LABEL: @test_vceqzd_s64
+// CIR-LABEL: @vceqzd_s64
+uint64_t test_vceqzd_s64(int64_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.int<0>
+// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !s64i
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u64i
+
+// LLVM-SAME: i64{{.*}} [[A:%.*]])
+// LLVM:          [[TMP0:%.*]] = icmp eq i64 [[A]], 0
+// LLVM-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
+// LLVM-NEXT:    ret i64 [[VCEQZ_I]]
+  return (uint64_t)vceqzd_s64(a);
+}
+
+// LLVM-LABEL: @test_vceqzd_u64(
+// CIR-LABEL: @vceqzd_u64(
+int64_t test_vceqzd_u64(int64_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.int<0>
+// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !u64i
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u64i
+
+// LLVM-SAME: i64 {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = icmp eq i64 [[A]], 0
+// LLVM-NEXT:    [[VCEQZD_I:%.*]] = sext i1 [[TMP0]] to i64
+// LLVM-NEXT:    ret i64 [[VCEQZD_I]]
+  return (int64_t)vceqzd_u64(a);
+}
+
+// LLVM-LABEL: @test_vceqzs_f32(
+// CIR-LABEL: @vceqzs_f32(
+uint32_t test_vceqzs_f32(float32_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
+// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !cir.float
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u32i
+
+// LLVM-SAME: float {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = fcmp oeq float [[A]], 0.000000e+00
+// LLVM-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i32
+// LLVM-NEXT:    ret i32 [[VCEQZ_I]]
+  return (uint32_t)vceqzs_f32(a);
+}
+
+// LLVM-LABEL: @test_vceqzd_f64(
+// CIR-LABEL: @vceqzd_f64(
+uint64_t test_vceqzd_f64(float64_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
+// CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !cir.double
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u64i
+
+
+// LLVM-SAME: double {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = fcmp oeq double [[A]], 0.000000e+00
+// LLVM-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
+// LLVM-NEXT:    ret i64 [[VCEQZ_I]]
+  return (uint64_t)vceqzd_f64(a);
+}
 
 
 //===------------------------------------------------------===//
@@ -676,9 +720,27 @@ float64x2_t test_vabdq_f64(float64x2_t v1, float64x2_t v2) {
   return vabdq_f64(v1, v2);
 }
 
-// TODO SISD variants:
-// TODO @vabdd_f64(a, b);
-// TODO @test_vabds_f32(
+// LLVM-LABEL: @test_vabds_f32(
+// CIR-LABEL: @vabds_f32(
+float32_t test_vabds_f32(float32_t a, float32_t b) {
+// CIR:   cir.call_llvm_intrinsic "aarch64.sisd.fabd"
+
+// LLVM-SAME: float {{.*}} [[A:%.*]], float noundef [[B:%.*]])
+// LLVM:    [[VABDS_F32_I:%.*]] = call float @llvm.aarch64.sisd.fabd.f32(float [[A]], float [[B]])
+// LLVM-NEXT:    ret float [[VABDS_F32_I]]
+  return vabds_f32(a, b);
+}
+
+// LLVM-LABEL: @test_vabdd_f64(
+// CIR-LABEL: @vabdd_f64(
+float64_t test_vabdd_f64(float64_t a, float64_t b) {
+// CIR:   cir.call_llvm_intrinsic "aarch64.sisd.fabd"
+
+// LLVM-SAME: double {{.*}} [[A:%.*]], double noundef [[B:%.*]])
+// LLVM:    [[VABDD_F64_I:%.*]] = call double @llvm.aarch64.sisd.fabd.f64(double [[A]], double [[B]])
+// LLVM-NEXT:    ret double [[VABDD_F64_I]]
+  return vabdd_f64(a, b);
+}
 
 //===------------------------------------------------------===//
 // 2.1.1.6.3. Absolute difference and accumulate
@@ -874,3 +936,49 @@ uint32x4_t test_vabaq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
 // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
   return vabaq_u32(v1, v2, v3);
 }
+//===------------------------------------------------------===//
+// 2.1.3.1.1. Vector Shift Left
+//===------------------------------------------------------===//
+
+// ALL-LABEL: test_vshld_n_s64
+int64_t test_vshld_n_s64(int64_t a) {
+  // CIR: cir.shift(left, {{.*}})
+
+  // LLVM-SAME: i64 {{.*}} [[A:%.*]])
+  // LLVM: [[SHL_N:%.*]] = shl i64 [[A]], 1
+  // LLVM: ret i64 [[SHL_N]]
+  return (int64_t)vshld_n_s64(a, 1);
+}
+
+// ALL-LABEL: test_vshld_n_u64
+int64_t test_vshld_n_u64(int64_t a) {
+  // CIR: cir.shift(left, {{.*}})
+
+  // LLVM-SAME: i64 {{.*}} [[A:%.*]])
+  // LLVM: [[SHL_N:%.*]] = shl i64 [[A]], 1
+  // LLVM: ret i64 [[SHL_N]]
+  return (int64_t)vshld_n_u64(a, 1);
+}
+
+// LLVM-LABEL: test_vshld_s64
+// CIR-LABEL: vshld_s64
+int64_t test_vshld_s64(int64_t a,int64_t b) {
+ // CIR:  cir.call_llvm_intrinsic "aarch64.neon.sshl" %{{.*}}, %{{.*}} : (!s64i, !s64i) -> !s64i
+
+ // LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+ // LLVM:    [[VSHLD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.sshl.i64(i64 [[A]], i64 [[B]])
+ // LLVM:    ret i64 [[VSHLD_S64_I]]
+  return (int64_t)vshld_s64(a, b);
+}
+
+// LLVM-LABEL: test_vshld_u64
+// CIR-LABEL: vshld_u64
+int64_t test_vshld_u64(int64_t a,int64_t b) {
+ // CIR:  cir.call_llvm_intrinsic "aarch64.neon.ushl" %{{.*}}, %{{.*}} : (!u64i, !s64i) -> !u64i
+
+ // LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+ // LLVM:    [[VSHLD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.ushl.i64(i64 [[A]], i64 [[B]])
+ // LLVM:    ret i64 [[VSHLD_S64_I]]
+  return (int64_t)vshld_u64(a, b);
+}
+
