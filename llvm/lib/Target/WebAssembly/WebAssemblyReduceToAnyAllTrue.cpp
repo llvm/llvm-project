@@ -46,11 +46,15 @@ struct WebAssemblyReduceToAnyAllTrue final : FunctionPass {
 
         Value *New = nullptr;
 
-        if (II->getIntrinsicID() == Intrinsic::vector_reduce_or) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::vector_reduce_or: {
           // reduce.or(X) != 0  -> anytrue(X)
           Value *Any = makeIntrinsic(Intrinsic::wasm_anytrue, Vec);
           New = B.CreateICmpNE(Any, ConstantInt::get(Any->getType(), 0));
-        } else if (II->getIntrinsicID() == Intrinsic::vector_reduce_and) {
+          break;
+        }
+
+        case Intrinsic::vector_reduce_and: {
           // reduce.and(zext (icmp ne X, zeroinitializer)) != 0  -> alltrue(X)
 
           // Match: zext <N x i1> (...) to <N x iX>
@@ -72,7 +76,10 @@ struct WebAssemblyReduceToAnyAllTrue final : FunctionPass {
 
           Value *All = makeIntrinsic(Intrinsic::wasm_alltrue, LHS);
           New = B.CreateICmpNE(All, ConstantInt::get(All->getType(), 0));
-        } else {
+          break;
+        }
+
+        default:
           continue;
         }
 
