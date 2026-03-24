@@ -21,7 +21,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
   // If a non-null stream is specified, we only flush that single stream.
   if (stream != nullptr) {
-    int result = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->flush();
+    int result = reinterpret_cast<File *>(stream)->flush();
     if (result != 0) {
       libc_errno = result;
       return EOF;
@@ -35,10 +35,9 @@ LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
 
   // We explicitly flush the standard streams as they may not be part of the
   // global file list if they are statically initialized.
-  LIBC_NAMESPACE::File *std_streams[] = {
-      reinterpret_cast<LIBC_NAMESPACE::File *>(LIBC_NAMESPACE::stdin),
-      reinterpret_cast<LIBC_NAMESPACE::File *>(LIBC_NAMESPACE::stdout),
-      reinterpret_cast<LIBC_NAMESPACE::File *>(LIBC_NAMESPACE::stderr)};
+  File *std_streams[] = {reinterpret_cast<File *>(stdin),
+                         reinterpret_cast<File *>(stdout),
+                         reinterpret_cast<File *>(stderr)};
   for (auto *s : std_streams) {
     if (s != nullptr) {
       int result = s->flush();
@@ -49,14 +48,13 @@ LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
 
   // We iterate over the global list of all open File objects to flush any
   // other streams that were opened via fopen.
-  LIBC_NAMESPACE::File::lock_list();
-  for (LIBC_NAMESPACE::File *f = LIBC_NAMESPACE::File::get_first_file();
-       f != nullptr; f = f->get_next()) {
+  File::lock_list();
+  for (File *f = File::get_first_file(); f != nullptr; f = f->get_next()) {
     int result = f->flush();
     if (result != 0)
       total_error = result;
   }
-  LIBC_NAMESPACE::File::unlock_list();
+  File::unlock_list();
 
   if (total_error != 0) {
     libc_errno = total_error;

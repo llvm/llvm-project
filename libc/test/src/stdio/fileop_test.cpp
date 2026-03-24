@@ -29,6 +29,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::NE;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::returns;
 
 TEST_F(LlvmLibcFILETest, SimpleFileOperations) {
+  // TODO: Use libc_make_test_file_path macro for file paths.
   constexpr char FILENAME[] =
       APPEND_LIBC_TEST("testdata/simple_operations.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
