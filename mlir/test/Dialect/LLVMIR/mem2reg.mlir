@@ -613,24 +613,20 @@ llvm.func @use(i64)
 
 // -----
 
-// This test should no longer be an issue once promotion within subregions
-// is supported.
 // CHECK-LABEL: llvm.func @subregion_block_promotion
 // CHECK-SAME: (%[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64) -> i64
 llvm.func @subregion_block_promotion(%arg0: i64, %arg1: i64) -> i64 {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[ALLOCA:.*]] = llvm.alloca
+  // CHECK-NOT: = llvm.alloca
   %1 = llvm.alloca %0 x i64 {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: llvm.store %[[ARG1]], %[[ALLOCA]]
   llvm.store %arg1, %1 {alignment = 4 : i64} : i64, !llvm.ptr
-  // CHECK: scf.execute_region {
+  // CHECK: %[[RES:.*]] = scf.execute_region -> i64 {
   scf.execute_region {
-    // CHECK: llvm.store %[[ARG0]], %[[ALLOCA]]
     llvm.store %arg0, %1 {alignment = 4 : i64} : i64, !llvm.ptr
     scf.yield
   }
+  // CHECK:   scf.yield %[[ARG0]] : i64
   // CHECK: }
-  // CHECK: %[[RES:.*]] = llvm.load %[[ALLOCA]]
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i64
   // CHECK: llvm.return %[[RES]] : i64
   llvm.return %2 : i64

@@ -9956,7 +9956,6 @@ unsigned LoongArchTargetLowering::getNumRegistersForCallingConv(
 void LoongArchTargetLowering::computeKnownBitsForTargetNode(
     const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
     const SelectionDAG &DAG, unsigned Depth) const {
-  unsigned BitWidth = Known.getBitWidth();
   unsigned Opc = Op.getOpcode();
   Known.resetAll();
   switch (Opc) {
@@ -9966,7 +9965,7 @@ void LoongArchTargetLowering::computeKnownBitsForTargetNode(
     assert(isa<VTSDNode>(Op->getOperand(2)) && "Unexpected operand!");
     EVT VT = cast<VTSDNode>(Op->getOperand(2))->getVT();
     unsigned VTBits = VT.getScalarSizeInBits();
-    assert(BitWidth >= VTBits && "Unexpected width!");
+    assert(Known.getBitWidth() >= VTBits && "Unexpected width!");
     Known.Zero.setBitsFrom(VTBits);
     break;
   }
