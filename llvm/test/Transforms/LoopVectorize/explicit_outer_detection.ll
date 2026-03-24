@@ -27,7 +27,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @vector_width(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @vector_width(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:
   %cmp32 = icmp sgt i32 %N, 0
   br i1 %cmp32, label %outer.ph, label %for.end15
@@ -75,7 +75,7 @@ for.end15:                                        ; preds = %outer.inc, %entry
 ; CHECK: LV: We can vectorize this outer loop!
 ; CHECK: LV: Using VF 1 to build VPlans.
 
-define void @case2(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @case2(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:
   %cmp32 = icmp sgt i32 %N, 0
   br i1 %cmp32, label %outer.ph, label %for.end15
@@ -125,7 +125,7 @@ for.end15:                                        ; preds = %outer.inc, %entry
 ; CHECK: LV: Loop hints: force=?
 ; CHECK: LV: Found a loop: inner.body
 
-define void @case3(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @case3(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:
   %cmp32 = icmp sgt i32 %N, 0
   br i1 %cmp32, label %outer.ph, label %for.end15
@@ -175,7 +175,7 @@ for.end15:                                        ; preds = %outer.inc, %entry
 ; CHECK: LV: Loop hints: force=?
 ; CHECK: LV: Found a loop: inner.body
 
-define void @case4(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) local_unnamed_addr {
+define void @case4(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
 entry:
   %cmp32 = icmp sgt i32 %N, 0
   br i1 %cmp32, label %outer.ph, label %for.end15
