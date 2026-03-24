@@ -164,6 +164,12 @@ TEST(RISCVTuneFeature, AllProcConfigurableFeatures) {
   EXPECT_EQ(Result.size(), 2U);
 
   Result.clear();
+  RISCV::getCPUConfigurableTuneFeatures("sifive-x180", Result);
+  EXPECT_TRUE(is_contained(Result, "single-element-vec-fp64"));
+  EXPECT_TRUE(is_contained(Result, "full-vec-fp64"));
+  EXPECT_EQ(Result.size(), 2U);
+
+  Result.clear();
   RISCV::getCPUConfigurableTuneFeatures("rocket", Result);
   EXPECT_TRUE(Result.empty());
 }

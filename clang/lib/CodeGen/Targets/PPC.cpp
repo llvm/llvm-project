@@ -128,7 +128,37 @@ public:
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
+
+void AIXABIInfo::appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                                         raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                         raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  const TargetInfo &TI = CGT.getTarget();
+  ParsedTargetAttr Info = TI.parseTargetAttr(AttrStr);
+
+  if (!Info.CPU.empty()) {
+    assert(Info.Features.empty() && "cannot have both a CPU and a feature");
+    Out << ".cpu_" << Info.CPU;
+    return;
+  }
+
+  assert(0 && "specifying target features on an FMV is unsupported on AIX");
+}
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
   const bool Is64Bit;

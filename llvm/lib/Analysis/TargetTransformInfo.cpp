@@ -184,12 +184,9 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
     if (!TI)
       continue;
 
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-      if (!BI->isConditional())
-        continue;
-
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
       ExitBranch = BI;
-    } else
+    else
       continue;
 
     // Note that this block may not be the loop latch block, even if the loop
@@ -468,7 +465,7 @@ bool TargetTransformInfo::canMacroFuseCmp() const {
   return TTIImpl->canMacroFuseCmp();
 }
 
-bool TargetTransformInfo::canSaveCmp(Loop *L, BranchInst **BI,
+bool TargetTransformInfo::canSaveCmp(Loop *L, CondBrInst **BI,
                                      ScalarEvolution *SE, LoopInfo *LI,
                                      DominatorTree *DT, AssumptionCache *AC,
                                      TargetLibraryInfo *LibInfo) const {
@@ -818,6 +815,16 @@ unsigned TargetTransformInfo::getRegisterClassForType(bool Vector,
 
 const char *TargetTransformInfo::getRegisterClassName(unsigned ClassID) const {
   return TTIImpl->getRegisterClassName(ClassID);
+}
+
+InstructionCost TargetTransformInfo::getRegisterClassSpillCost(
+    unsigned ClassID, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getRegisterClassSpillCost(ClassID, CostKind);
+}
+
+InstructionCost TargetTransformInfo::getRegisterClassReloadCost(
+    unsigned ClassID, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getRegisterClassReloadCost(ClassID, CostKind);
 }
 
 TypeSize TargetTransformInfo::getRegisterBitWidth(

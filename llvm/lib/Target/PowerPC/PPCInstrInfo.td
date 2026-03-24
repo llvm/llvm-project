@@ -733,6 +733,7 @@ def nzFPImmExactInti5 : PatLeaf<(fpimm), [{
   return IsExact && IntResult <= 15 && IntResult >= -16 && !FloatValue.isZero();
 }]>;
 
+// Floating point zero immediates (positive and negative)
 def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
 def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
 

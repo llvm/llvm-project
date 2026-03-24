@@ -181,6 +181,12 @@ public:
     return setLoans(In, DestOID, MergedLoans);
   }
 
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    if (auto OID = F.getOriginID())
+      return setLoans(In, *OID, LoanSetFactory.getEmptySet());
+    return In;
+  }
+
   LoanSet getLoans(OriginID OID, ProgramPoint P) const {
     return getLoans(getState(P), OID);
   }
