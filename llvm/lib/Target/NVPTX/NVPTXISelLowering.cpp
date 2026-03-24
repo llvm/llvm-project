@@ -7595,13 +7595,13 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 }
 
 bool NVPTXTargetLowering::shouldExpandAtomicRMWElementwiseInIR(
-    AtomicRMWInst *AI) const {
-  assert(AI->isElementwise() && "expected elementwise atomicrmw");
-
+    const AtomicRMWInst *AI) const {
   if (!STI.hasVectorAtom())
     return true;
 
-  auto *VecTy = cast<FixedVectorType>(AI->getValOperand()->getType());
+  auto *VecTy = dyn_cast<FixedVectorType>(AI->getValOperand()->getType());
+  if (!VecTy)
+    return true;
   auto *EltTy = VecTy->getElementType();
   auto NumElts = VecTy->getNumElements();
 
@@ -7656,7 +7656,8 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
            CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
   if (auto *RI = dyn_cast<AtomicRMWInst>(I))
-    return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+    return (!RI->isElementwise() &&
+            shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg) ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
   return false;
 }
@@ -7688,7 +7689,8 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     return AtomicOrdering::Acquire;
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
            RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
-           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
+           (RI->isElementwise() ||
+            shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None))
     return AtomicOrdering::Acquire;
 
   return AtomicOrdering::Monotonic;
@@ -7736,7 +7738,8 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   bool IsEmulated =
       CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
                    ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
-         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+         : !RI->isElementwise() &&
+               shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
 
   if (isAcquireOrStronger(Ord) && IsEmulated)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());

@@ -87,6 +87,7 @@ private:
   }
 
   bool bracketInstWithFences(Instruction *I, AtomicOrdering Order);
+  bool tryInsertTrailingSeqCstFence(Instruction *AtomicI);
   IntegerType *getCorrespondingIntegerType(Type *T, const DataLayout &DL);
   LoadInst *convertAtomicLoadToIntegerType(LoadInst *LI);
   bool tryExpandAtomicLoad(LoadInst *LI);
@@ -281,21 +282,22 @@ bool AtomicExpandImpl::canReuseWholeValueAtomicRMW(AtomicRMWInst *AI) {
   return CanReuse;
 }
 
-bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
-  auto TryInsertTrailingSeqCstFence = [&](Instruction *AtomicI) {
-    if (!TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(AtomicI))
-      return false;
-
-    IRBuilder Builder(AtomicI);
-    if (auto *TrailingFence = TLI->emitTrailingFence(
-            Builder, AtomicI, AtomicOrdering::SequentiallyConsistent)) {
-      TrailingFence->moveAfter(AtomicI);
-      return true;
-    }
+bool AtomicExpandImpl::tryInsertTrailingSeqCstFence(Instruction *AtomicI) {
+  if (!TLI->shouldInsertTrailingSeqCstFenceForAtomicStore(AtomicI))
     return false;
-  };
 
+  IRBuilder Builder(AtomicI);
+  if (auto *TrailingFence = TLI->emitTrailingFence(
+          Builder, AtomicI, AtomicOrdering::SequentiallyConsistent)) {
+    TrailingFence->moveAfter(AtomicI);
+    return true;
+  }
+  return false;
+}
+
+bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   if (auto *LI = dyn_cast<LoadInst>(I)) {
+    bool MadeChange = false;
     if (!LI->isAtomic())
       return false;
 
@@ -304,28 +306,27 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       return true;
     }
 
-    bool Converted = false;
     if (TLI->shouldCastAtomicLoadInIR(LI) ==
         TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       LI = convertAtomicLoadToIntegerType(LI);
-      Converted = true;
+      MadeChange = true;
     }
 
-    bool Fenced = false;
-    if (TLI->shouldInsertFencesForAtomic(LI) &&
-        isAcquireOrStronger(LI->getOrdering())) {
+    bool ShouldInsertFences = TLI->shouldInsertFencesForAtomic(LI);
+    if (isAcquireOrStronger(LI->getOrdering()) && ShouldInsertFences) {
       AtomicOrdering FenceOrdering = LI->getOrdering();
       LI->setOrdering(AtomicOrdering::Monotonic);
-      Fenced = bracketInstWithFences(LI, FenceOrdering);
-    } else {
-      Fenced = TryInsertTrailingSeqCstFence(LI);
+      MadeChange |= bracketInstWithFences(LI, FenceOrdering);
+    } else if (!ShouldInsertFences) {
+      MadeChange |= tryInsertTrailingSeqCstFence(LI);
     }
 
-    bool Expanded = tryExpandAtomicLoad(LI);
-    return Converted || Fenced || Expanded;
+    MadeChange |= tryExpandAtomicLoad(LI);
+    return MadeChange;
   }
 
   if (auto *SI = dyn_cast<StoreInst>(I)) {
+    bool MadeChange = false;
     if (!SI->isAtomic())
       return false;
 
@@ -334,35 +335,36 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       return true;
     }
 
-    bool Converted = false;
     if (TLI->shouldCastAtomicStoreInIR(SI) ==
         TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       SI = convertAtomicStoreToIntegerType(SI);
-      Converted = true;
+      MadeChange = true;
     }
 
-    bool Fenced = false;
-    if (TLI->shouldInsertFencesForAtomic(SI) &&
-        isReleaseOrStronger(SI->getOrdering())) {
+    bool ShouldInsertFences = TLI->shouldInsertFencesForAtomic(SI);
+    if (isReleaseOrStronger(SI->getOrdering()) && ShouldInsertFences) {
       AtomicOrdering FenceOrdering = SI->getOrdering();
       SI->setOrdering(AtomicOrdering::Monotonic);
-      Fenced = bracketInstWithFences(SI, FenceOrdering);
-    } else {
-      Fenced = TryInsertTrailingSeqCstFence(SI);
+      MadeChange |= bracketInstWithFences(SI, FenceOrdering);
+    } else if (!ShouldInsertFences) {
+      MadeChange |= tryInsertTrailingSeqCstFence(SI);
     }
 
-    bool Expanded = tryExpandAtomicStore(SI);
-    return Converted || Fenced || Expanded;
+    MadeChange |= tryExpandAtomicStore(SI);
+    return MadeChange;
   }
 
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
-    bool PreserveElementwiseRMW = false;
-    bool RemovedElementwise = false;
-    bool WholeValueAtomicSupported = atomicSizeSupported(TLI, RMWI);
-    if (RMWI->isElementwise()) {
-      if (!WholeValueAtomicSupported)
+    bool MadeChange = false;
+    if (!atomicSizeSupported(TLI, RMWI)) {
+      if (RMWI->isElementwise())
         return expandElementwiseAtomicRMW(RMWI);
+      expandAtomicRMWToLibcall(RMWI);
+      return true;
+    }
 
+    bool PreserveElementwiseRMW = false;
+    if (RMWI->isElementwise()) {
       if (!TLI->shouldExpandAtomicRMWElementwiseInIR(RMWI)) {
         PreserveElementwiseRMW = true;
       } else if (canReuseWholeValueAtomicRMW(RMWI)) {
@@ -370,69 +372,67 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
         // conservatively correct. Prefer the target's existing whole-value
         // lowering over IR expansion.
         RMWI->setElementwise(false);
-        RemovedElementwise = true;
+        MadeChange = true;
       } else {
         return expandElementwiseAtomicRMW(RMWI);
       }
-    } else if (!WholeValueAtomicSupported) {
-      expandAtomicRMWToLibcall(RMWI);
-      return true;
     }
 
-    bool Converted = false;
-    if (!PreserveElementwiseRMW &&
+    auto Kind = PreserveElementwiseRMW
+                    ? TargetLoweringBase::AtomicExpansionKind::None
+                    : TLI->shouldExpandAtomicRMWInIR(RMWI);
+
+    bool PreserveRMW = Kind == TargetLoweringBase::AtomicExpansionKind::None;
+
+    if (!PreserveRMW &&
         TLI->shouldCastAtomicRMWIInIR(RMWI) ==
             TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       RMWI = convertAtomicXchgToIntegerType(RMWI);
-      Converted = true;
+      MadeChange = true;
     }
 
-    bool Fenced = false;
-    if (TLI->shouldInsertFencesForAtomic(RMWI) &&
-        (isReleaseOrStronger(RMWI->getOrdering()) ||
-         isAcquireOrStronger(RMWI->getOrdering()))) {
+    bool ShouldInsertFences = TLI->shouldInsertFencesForAtomic(RMWI);
+    if ((isReleaseOrStronger(RMWI->getOrdering()) ||
+         isAcquireOrStronger(RMWI->getOrdering())) &&
+        ShouldInsertFences) {
       AtomicOrdering FenceOrdering = RMWI->getOrdering();
       RMWI->setOrdering(TLI->atomicOperationOrderAfterFenceSplit(RMWI));
-      Fenced = bracketInstWithFences(RMWI, FenceOrdering);
-    } else {
-      Fenced = TryInsertTrailingSeqCstFence(RMWI);
+      MadeChange |= bracketInstWithFences(RMWI, FenceOrdering);
+    } else if (!ShouldInsertFences) {
+      MadeChange |= tryInsertTrailingSeqCstFence(RMWI);
     }
 
     // There are two different ways of expanding RMW instructions:
     // - into a load if it is idempotent
     // - into a Cmpxchg/LL-SC loop otherwise
     // we try them in that order.
-    bool Expanded = false;
-    if (!PreserveElementwiseRMW) {
-      if (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI))
-        Expanded = true;
-      else
-        Expanded = tryExpandAtomicRMW(RMWI);
+    if (!PreserveRMW) {
+      MadeChange |= (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
+                    tryExpandAtomicRMW(RMWI);
     }
 
-    return RemovedElementwise || Converted || Fenced || Expanded;
+    return MadeChange;
   }
 
   if (auto *CASI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    bool MadeChange = false;
     if (!atomicSizeSupported(TLI, CASI)) {
       expandAtomicCASToLibcall(CASI);
       return true;
     }
 
-    bool Converted = false;
     // TODO: when we're ready to make the change at the IR level, we can
     // extend convertCmpXchgToInteger for floating point too.
     if (CASI->getCompareOperand()->getType()->isPointerTy()) {
       // TODO: add a TLI hook to control this so that each target can
       // convert to lowering the original type one at a time.
       CASI = convertCmpXchgToIntegerType(CASI);
-      Converted = true;
+      MadeChange = true;
     }
 
-    bool Fenced = false;
+    auto CmpXchgExpansion = TLI->shouldExpandAtomicCmpXchgInIR(CASI);
     if (TLI->shouldInsertFencesForAtomic(CASI)) {
-      if (TLI->shouldExpandAtomicCmpXchgInIR(CASI) ==
-              TargetLoweringBase::AtomicExpansionKind::None &&
+      if (CmpXchgExpansion == TargetLoweringBase::AtomicExpansionKind::None &&
           (isReleaseOrStronger(CASI->getSuccessOrdering()) ||
            isAcquireOrStronger(CASI->getSuccessOrdering()) ||
            isAcquireOrStronger(CASI->getFailureOrdering()))) {
@@ -445,16 +445,16 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
             TLI->atomicOperationOrderAfterFenceSplit(CASI);
         CASI->setSuccessOrdering(CASOrdering);
         CASI->setFailureOrdering(CASOrdering);
-        Fenced = bracketInstWithFences(CASI, FenceOrdering);
+        MadeChange |= bracketInstWithFences(CASI, FenceOrdering);
       }
-    } else if (TLI->shouldExpandAtomicCmpXchgInIR(CASI) !=
+    } else if (CmpXchgExpansion !=
                TargetLoweringBase::AtomicExpansionKind::LLSC) {
       // CmpXchg LLSC is handled in expandAtomicCmpXchg().
-      Fenced = TryInsertTrailingSeqCstFence(CASI);
+      MadeChange |= tryInsertTrailingSeqCstFence(CASI);
     }
 
-    bool Expanded = tryExpandAtomicCmpXchg(CASI);
-    return Converted || Fenced || Expanded;
+    MadeChange |= tryExpandAtomicCmpXchg(CASI);
+    return MadeChange;
   }
 
   return false;
@@ -619,7 +619,7 @@ bool AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
   auto *VecTy = cast<FixedVectorType>(AI->getType());
   Type *LaneTy = VecTy->getElementType();
   LLVMContext &Ctx = AI->getContext();
-  Value *Result = PoisonValue::get(VecTy);
+  Value *Result = Constant::getNullValue(VecTy);
   const uint64_t LaneSize = DL->getTypeStoreSize(LaneTy).getFixedValue();
 
   for (unsigned Lane = 0, NumLanes = VecTy->getNumElements(); Lane != NumLanes;

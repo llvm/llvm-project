@@ -83,8 +83,7 @@ define <4 x float> @fadd_v4f32_elementwise_seq_cst(ptr %addr, <4 x float> %val) 
 ; CHECK-NEXT:    ld.param.b64 %rd1, [fadd_v4f32_elementwise_seq_cst_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [fadd_v4f32_elementwise_seq_cst_param_1];
-; CHECK-NEXT:    atom.relaxed.sys.add.v4.f32 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
-; CHECK-NEXT:    fence.acq_rel.sys;
+; CHECK-NEXT:    atom.acquire.sys.add.v4.f32 {%r5, %r6, %r7, %r8}, [%rd1], {%r1, %r2, %r3, %r4};
 ; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
 ; CHECK-NEXT:    ret;
 entry:
