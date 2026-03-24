@@ -21,6 +21,12 @@ define void @operand_no_not_integer(ptr %p) {
   ret void
 }
 
+; CHECK: !mem.cache_hint operand_no must be non-negative
+define void @operand_no_negative(ptr %p) {
+  %v = load i32, ptr %p, !mem.cache_hint !{i32 -1, !{!"nvvm.l1_eviction", !"first"}}
+  ret void
+}
+
 ; CHECK: !mem.cache_hint is not supported on non-intrinsic calls
 define void @non_intrinsic_call(ptr %p) {
   call void @foo(ptr %p), !mem.cache_hint !{i32 0, !{!"nvvm.l1_eviction", !"first"}}

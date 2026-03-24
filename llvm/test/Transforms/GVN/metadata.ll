@@ -485,7 +485,7 @@ join:
   ret void
 }
 
-; Both loads have !mem.cache_hint → preserved after GVN deduplication.
+; Both loads have !mem.cache_hint, preserved after GVN deduplication.
 define i64 @test_mem_cache_hint_both(ptr %p) {
 ; CHECK-LABEL: define i64 @test_mem_cache_hint_both
 ; CHECK-SAME: (ptr [[P:%.*]]) {
@@ -499,7 +499,7 @@ define i64 @test_mem_cache_hint_both(ptr %p) {
   ret i64 %c
 }
 
-; Only one load has !mem.cache_hint → dropped after GVN deduplication.
+; Only one load has !mem.cache_hint, dropped after GVN deduplication.
 define i64 @test_mem_cache_hint_one(ptr %p) {
 ; CHECK-LABEL: define i64 @test_mem_cache_hint_one
 ; CHECK-SAME: (ptr [[P:%.*]]) {
