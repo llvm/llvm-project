@@ -5198,9 +5198,12 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
       const auto &baseName{parser::GetFirstName(ae->Base())};
       if (baseName.symbol) {
         const auto &sym{baseName.symbol->GetUltimate()};
-        if (semantics::IsNamedConstant(sym) && sym.Rank() > 0) {
+        if (semantics::IsNamedConstant(sym)) {
           // Re-analyze the ArrayElement directly; this path does not apply
           // the outer Fold, so the result is a Designator<ArrayRef>.
+          // This also handles the case where sym is a scalar derived-type
+          // named constant and the subscripted component (e.g. pt%arr(1))
+          // is an array member -- sym.Rank() would be 0 for the base object.
           return context_.Analyze(*ae);
         }
       }

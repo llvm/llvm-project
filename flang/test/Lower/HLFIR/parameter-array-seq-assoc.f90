@@ -18,6 +18,14 @@ character, parameter :: ch(n) = ['a', 'b', 'c', 'd', 'e']
 ! Character PARAMETER array declared with parameter attribute.
 ! CHECK: %[[CH:.*]]:2 = hlfir.declare {{.*}} typeparams {{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFECch"} : (!fir.ref<!fir.array<5x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<5x!fir.char<1>>>, !fir.ref<!fir.array<5x!fir.char<1>>>)
 
+type :: mytype
+  integer :: arr(n)
+end type
+
+type(mytype), parameter :: pt = mytype([1, 2, 3, 4, 5])
+! PARAMETER of derived type with an integer array component.
+! CHECK: %[[PT:.*]]:2 = hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFECpt"} : (!fir.ref<!fir.type<_QFTmytype{{.*}}>>) -> (!fir.ref<!fir.type<_QFTmytype{{.*}}>>, !fir.ref<!fir.type<_QFTmytype{{.*}}>>)
+
 call passNint(a(1))
 ! Element address is obtained via hlfir.designate (subscript 1) and converted
 ! to an array ref for sequence association.  No scalar copy (hlfir.as_expr).
@@ -47,6 +55,21 @@ call passN2char(ch(1 + 2))
 ! CHECK: %[[CELEM3:.*]] = hlfir.designate %[[CH]]#0 (%{{.*}})  typeparams %{{.*}} : (!fir.ref<!fir.array<5x!fir.char<1>>>, i64, index) -> !fir.ref<!fir.char<1>>
 ! CHECK: %[[BOX3:.*]] = fir.emboxchar %[[CELEM3]], %{{.*}} : (!fir.ref<!fir.char<1>>, index) -> !fir.boxchar<1>
 ! CHECK: fir.call @_QFPpassn2char(%[[BOX3]])
+
+call passNint(pt%arr(1))
+! Component arr(1) of PARAMETER derived type: element address reused for sequence
+! association.  No scalar copy.
+! CHECK-NOT: hlfir.as_expr
+! CHECK: %[[PELEM1:.*]] = hlfir.designate %[[PT]]#0{"arr"} <%{{.*}}> (%{{.*}})  : (!fir.ref<!fir.type<_QFTmytype{{.*}}>>, !fir.shape<1>, index) -> !fir.ref<i32>
+! CHECK: %[[PARR1:.*]] = fir.convert %[[PELEM1]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<5xi32>>
+! CHECK: fir.call @_QFPpassnint(%[[PARR1]])
+
+call passN2int(pt%arr(1 + 2))
+! Component arr(3) element address passed for sequence association with a 3-element dummy.
+! CHECK-NOT: hlfir.as_expr
+! CHECK: %[[PELEM3:.*]] = hlfir.designate %[[PT]]#0{"arr"} <%{{.*}}> (%{{.*}})  : (!fir.ref<!fir.type<_QFTmytype{{.*}}>>, !fir.shape<1>, index) -> !fir.ref<i32>
+! CHECK: %[[PARR3:.*]] = fir.convert %[[PELEM3]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<3xi32>>
+! CHECK: fir.call @_QFPpassn2int(%[[PARR3]])
 
 contains
 

@@ -1502,9 +1502,11 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = genSetDynamicTypeToDummyType(entity);
     const bool isParamObject = isParameterObjectOrSubObject(entity);
     // For sequence association of a named constant array element with an
-    // array dummy argument, the element address points into contiguous
-    // parameter array storage. Per per F'2023 15.5.2.5p14, we should pass
-    // this address directly, instead of creating a scalar temp copy.
+    // INTENT(IN) array dummy argument, the element address points into
+    // contiguous parameter array storage. Per F'2023 15.5.2.5p14, we pass
+    // this address directly instead of creating a scalar temp copy.
+    // The INTENT(IN) restriction ensures the callee cannot write through the
+    // dummy and corrupt the named-constant storage.
     // Only apply this to array element designators (hlfir.designate with
     // subscripts), not to scalar parameter variables.
     const bool dummyIsArrayRef =
@@ -1515,9 +1517,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     // are array element designators valid for sequence association.
     const bool haveDesignator =
         entity.getDefiningOp<hlfir::DesignateOp>() != nullptr;
+    // Only skip the copy when the dummy is INTENT(IN): if the callee could
+    // modify the dummy (INTENT(INOUT/OUT) or no declared intent), writing
+    // through the dummy would corrupt the named-constant storage.
+    const bool dummyIsIntentIn = !arg.mayBeModifiedByCall();
     const bool skipParamCopyForSeqAssoc =
         isParamObject && entity.getRank() == 0 && dummyIsArrayRef &&
-        haveDesignator && fir::isa_ref_type(entity.getType());
+        haveDesignator && fir::isa_ref_type(entity.getType()) &&
+        dummyIsIntentIn;
     if (arg.hasValueAttribute() ||
         // Constant expressions might be lowered as variables with
         // 'parameter' attribute. Even though the constant expressions
