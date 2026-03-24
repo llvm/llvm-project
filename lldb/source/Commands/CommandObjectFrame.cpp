@@ -615,7 +615,7 @@ protected:
             lldb::VariableSP var_sp;
             valobj_sp = frame->GetValueForVariableExpressionPath(
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
-                var_sp, error, lldb::eDILModeFull);
+                var_sp, error);
             if (valobj_sp) {
               result.GetValueObjectList().Append(valobj_sp);
 
