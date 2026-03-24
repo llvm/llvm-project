@@ -489,8 +489,11 @@ private:
     }
   };
 
+  // Guarded by m_cached_module_specs_mutex. Accessed from multiple threads
+  // during parallel module loading (DynamicLoaderPOSIXDYLD::RefreshModules).
   llvm::DenseMap<ModuleCacheKey, ModuleSpec, ModuleCacheInfo>
       m_cached_module_specs;
+  std::mutex m_cached_module_specs_mutex;
 
   ProcessGDBRemote(const ProcessGDBRemote &) = delete;
   const ProcessGDBRemote &operator=(const ProcessGDBRemote &) = delete;

@@ -4461,12 +4461,17 @@ bool ProcessGDBRemote::GetModuleSpec(const FileSpec &module_file_spec,
 
   const ModuleCacheKey key(module_file_spec.GetPath(),
                            arch.GetTriple().getTriple());
-  auto cached = m_cached_module_specs.find(key);
-  if (cached != m_cached_module_specs.end()) {
-    module_spec = cached->second;
-    return bool(module_spec);
+  {
+    std::lock_guard<std::mutex> guard(m_cached_module_specs_mutex);
+    auto cached = m_cached_module_specs.find(key);
+    if (cached != m_cached_module_specs.end()) {
+      module_spec = cached->second;
+      return bool(module_spec);
+    }
   }
 
+  // GetModuleInfo issues a GDB remote packet, which can be slow. Do this
+  // outside the lock so other threads can still read cached entries.
   if (!m_gdb_comm.GetModuleInfo(module_file_spec, arch, module_spec)) {
     LLDB_LOGF(log, "ProcessGDBRemote::%s - failed to get module info for %s:%s",
               __FUNCTION__, module_file_spec.GetPath().c_str(),
@@ -4482,14 +4487,19 @@ bool ProcessGDBRemote::GetModuleSpec(const FileSpec &module_file_spec,
               arch.GetTriple().getTriple().c_str(), stream.GetData());
   }
 
-  m_cached_module_specs[key] = module_spec;
+  {
+    std::lock_guard<std::mutex> guard(m_cached_module_specs_mutex);
+    m_cached_module_specs[key] = module_spec;
+  }
   return true;
 }
 
 void ProcessGDBRemote::PrefetchModuleSpecs(
     llvm::ArrayRef<FileSpec> module_file_specs, const llvm::Triple &triple) {
+  // GetModulesInfo issues a GDB remote packet — do it outside the lock.
   auto module_specs = m_gdb_comm.GetModulesInfo(module_file_specs, triple);
   if (module_specs) {
+    std::lock_guard<std::mutex> guard(m_cached_module_specs_mutex);
     for (const FileSpec &spec : module_file_specs)
       m_cached_module_specs[ModuleCacheKey(spec.GetPath(),
                                            triple.getTriple())] = ModuleSpec();
