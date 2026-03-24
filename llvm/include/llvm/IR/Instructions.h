@@ -3139,7 +3139,7 @@ class UncondBrInst : public BranchInst {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
 
   UncondBrInst(const UncondBrInst &BI);
-  LLVM_ABI explicit UncondBrInst(BasicBlock *IfTrue,
+  LLVM_ABI explicit UncondBrInst(BasicBlock *Target,
                                  InsertPosition InsertBefore);
 
 protected:
@@ -3149,9 +3149,9 @@ protected:
   LLVM_ABI UncondBrInst *cloneImpl() const;
 
 public:
-  static UncondBrInst *Create(BasicBlock *IfTrue,
+  static UncondBrInst *Create(BasicBlock *Target,
                               InsertPosition InsertBefore = nullptr) {
-    return new (AllocMarker) UncondBrInst(IfTrue, InsertBefore);
+    return new (AllocMarker) UncondBrInst(Target, InsertBefore);
   }
 
   /// Transparently provide more efficient getOperand methods.
@@ -3287,9 +3287,6 @@ struct OperandTraits<CondBrInst> : public FixedNumOperandTraits<CondBrInst, 3> {
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CondBrInst, Value)
 
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
-
 //===----------------------------------------------------------------------===//
 //                     BranchInst Out-Of-Line Functions
 //===----------------------------------------------------------------------===//
@@ -3320,6 +3317,9 @@ inline void BranchInst::setCondition(Value *V) {
 inline void BranchInst::swapSuccessors() {
   cast<CondBrInst>(this)->swapSuccessors();
 }
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                               SwitchInst Class

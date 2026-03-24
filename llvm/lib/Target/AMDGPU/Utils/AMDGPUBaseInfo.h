@@ -1101,6 +1101,7 @@ enum InstCounterType {
   BVH_CNT,                           // gfx12+ only.
   KM_CNT,                            // gfx12+ only.
   X_CNT,                             // gfx1250.
+  ASYNC_CNT,                         // gfx1250.
   NUM_EXTENDED_INST_CNTS,
   VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
   VM_VSRC,                          // gfx12+ expert mode only.
@@ -1148,7 +1149,7 @@ public:
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
-          unsigned VaVdst, unsigned VmVsrc)
+          unsigned AsyncCnt, unsigned VaVdst, unsigned VmVsrc)
       : Waitcnt() {
     Cnt[LOAD_CNT] = LoadCnt;
     Cnt[DS_CNT] = DsCnt;
@@ -1158,6 +1159,7 @@ public:
     Cnt[BVH_CNT] = BvhCnt;
     Cnt[KM_CNT] = KmCnt;
     Cnt[X_CNT] = XCnt;
+    Cnt[ASYNC_CNT] = AsyncCnt;
     Cnt[VA_VDST] = VaVdst;
     Cnt[VM_VSRC] = VmVsrc;
   }
@@ -1220,6 +1222,7 @@ struct HardwareLimits {
   unsigned BvhcntMax;    // gfx12+ only.
   unsigned KmcntMax;     // gfx12+ only.
   unsigned XcntMax;      // gfx1250.
+  unsigned AsyncMax;     // gfx1250.
   unsigned VaVdstMax;    // gfx12+ expert mode only.
   unsigned VmVsrcMax;    // gfx12+ expert mode only.
 
@@ -1322,6 +1325,10 @@ unsigned getSamplecntBitMask(const IsaVersion &Version);
 /// \returns Bvhcnt bit mask for given isa \p Version.
 /// Returns 0 for versions that do not support BVHcnt
 unsigned getBvhcntBitMask(const IsaVersion &Version);
+
+/// \returns Asynccnt bit mask for given isa \p Version.
+/// Returns 0 for versions that do not support Asynccnt
+unsigned getAsynccntBitMask(const IsaVersion &Version);
 
 /// \returns Dscnt bit mask for given isa \p Version.
 /// Returns 0 for versions that do not support DScnt
