@@ -1,0 +1,8 @@
+# RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-linux-gnu \
+# RUN:   -mcpu=pwr10 | FileCheck %s
+# RUN: llvm-mc --disassemble %s -triple powerpc64le-unknown-linux-gnu \
+# RUN:   -mcpu=pwr10 | FileCheck %s
+
+# Prefixed no-op (Power ISA v3.1)
+# CHECK: pnop
+0x07 0x00 0x00 0x00 0x00 0x00 0x00 0x00
