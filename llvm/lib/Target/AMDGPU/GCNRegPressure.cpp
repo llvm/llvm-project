@@ -115,10 +115,8 @@ void GCNRegPressure::inc(MCRegister Reg, bool IsAdd,
   if (TRI->getRegSizeInBits(*RC) != 32) {
     unsigned TupleIdx = TOTAL_KINDS + RegKind;
     Value[TupleIdx] += Sign * TRI->getRegClassWeight(RC).RegWeight;
-    Value[RegKind] += Sign * static_cast<int>(NumRegs);
-  } else {
-    Value[RegKind] += Sign;
   }
+  Value[RegKind] += Sign * static_cast<int>(NumRegs);
 }
 
 namespace {
@@ -546,16 +544,16 @@ bool GCNRPTracker::eraseAllLiveUnits(MCRegister Reg) {
   return WasLive;
 }
 
-bool GCNRPTracker::insertAllNotLiveUnits(MCRegister Reg) {
+bool GCNRPTracker::insertIfNotLive(MCRegister Reg) {
   assert(MRI && "MRI not initialized");
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
   const BitVector &Units = PhysLiveRegs.getBitVector();
-  bool WasNotLive = llvm::any_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+  bool NewlyLive = llvm::any_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
     return !Units.test(static_cast<unsigned>(Unit));
   });
-  if (WasNotLive)
+  if (NewlyLive)
     PhysLiveRegs.addReg(Reg);
-  return WasNotLive;
+  return NewlyLive;
 }
 
 LaneBitmask llvm::getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
@@ -732,13 +730,11 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
       Register Reg = MO.getReg();
       if (!MRI->isAllocatable(Reg))
         continue;
-      // Check if any unit of this register was not live before and if so,
-      // insert all of the regunits into PhysLiveRegs.
-      bool WasNotLive = insertAllNotLiveUnits(Reg.asMCReg());
+      // Insert regunits into PhysLiveRegs if not already live.
+      bool NewlyLive = insertIfNotLive(Reg.asMCReg());
 
-      // Update pressure once per register if any unit of this register was not
-      // live before.
-      if (WasNotLive)
+      // Update pressure once per register if it became newly live.
+      if (NewlyLive)
         CurPhysPressure.inc(Reg.asMCReg(), /*IsAdd=*/true, *MRI);
     }
 

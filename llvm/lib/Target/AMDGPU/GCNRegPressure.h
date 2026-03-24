@@ -390,9 +390,9 @@ protected:
   // Returns true if any unit was live (and thus erased).
   bool eraseAllLiveUnits(MCRegister Reg);
 
-  // Insert all not-live units of Reg into PhysLiveRegs.
-  // Returns true if any unit was not live (and thus inserted).
-  bool insertAllNotLiveUnits(MCRegister Reg);
+  // Insert units of Reg into PhysLiveRegs if not already live.
+  // Returns true if any unit was newly inserted.
+  bool insertIfNotLive(MCRegister Reg);
 
 public:
   // Enable physical register tracking only if both GCNTrackers and
