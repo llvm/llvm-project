@@ -1344,6 +1344,60 @@ void PerfScriptReader::warnInvalidRange() {
       "range end acrossing the unconditinal jmp.");
 }
 
+void PerfScriptReader::warnIfBranchTargetMismatch() {
+  // Collect unique branch source and target addresses from LBR samples,
+  // then check what percentage don't match known instructions in the binary.
+
+  std::unordered_set<uint64_t> SampleBranches;
+  std::unordered_set<uint64_t> SampleIndirectTargets;
+  std::unordered_set<uint64_t> SampleTargets;
+
+  for (const auto &Item : AggregatedSamples) {
+    const PerfSample *Sample = Item.first.getPtr();
+    for (const LBREntry &LBR : Sample->LBRStack) {
+      uint64_t Source = LBR.Source;
+      uint64_t Target = LBR.Target;
+      if (Source == ExternalAddr || Target == ExternalAddr)
+        continue;
+      SampleBranches.insert(Source);
+      if (Binary->addressIsIndirectBranch(Source))
+        SampleIndirectTargets.insert(Target);
+      else
+        SampleTargets.insert(Target);
+    }
+  }
+
+  auto CheckMismatch = [&](StringRef Kind,
+                           const std::unordered_set<uint64_t> &SampleAddrs,
+                           auto IsValidAddr) {
+    if (SampleAddrs.empty())
+      return;
+    uint64_t Mismatched = 0;
+    for (uint64_t Addr : SampleAddrs) {
+      if (!IsValidAddr(Addr))
+        Mismatched++;
+    }
+    double MismatchPct =
+        static_cast<double>(Mismatched) / SampleAddrs.size() * 100;
+    if (Mismatched) {
+      WithColor::warning()
+          << format("%.2f", MismatchPct) << "% of sampled " << Kind
+          << " addresses (" << Mismatched << "/" << SampleAddrs.size()
+          << ") do not match the binary, likely due to problematic raw samples or mismatch in binary.\n"
+    }
+  };
+
+  CheckMismatch("branch", SampleBranches, [&](uint64_t Addr) {
+    return Binary->addressIsTransfer(Addr);
+  });
+  CheckMismatch("target", SampleTargets, [&](uint64_t Addr) {
+    return Binary->addressIsBranchTarget(Addr) || Binary->findFuncRangeForStartAddr(Addr);
+  });
+  CheckMismatch("indirect branch target", SampleIndirectTargets, [&](uint64_t Addr) {
+    return Binary->addressIsCode(Addr);
+  });
+}
+
 void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
@@ -1360,6 +1414,7 @@ void PerfScriptReader::parsePerfTraces() {
   // Generate unsymbolized profile.
   warnTruncatedStack();
   warnInvalidRange();
+  warnIfBranchTargetMismatch();
   generateUnsymbolizedProfile();
   AggregatedSamples.clear();
 
