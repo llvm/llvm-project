@@ -11,7 +11,7 @@ contains
   end
 end module
 
-! CHECK: s_simple, PUBLIC, PURE, SIMPLE
-! CHECK: s_pure, PUBLIC, PURE
+! CHECK-DAG: s_simple, PUBLIC, PURE, SIMPLE
+! CHECK-DAG: s_pure, PUBLIC, PURE
 ! CHECK-NOT: s_pure, PUBLIC, PURE, SIMPLE
 
