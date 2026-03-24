@@ -6744,10 +6744,11 @@ void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
   fixImplicitOperands(MI);
 }
 
-bool SIInstrInfo::needsReadlaneOnVALUConversion(
+std::optional<unsigned> SIInstrInfo::getReadlaneOperandOnVALUConversion(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case AMDGPU::SI_INIT_M0:
+    return 0;
   case AMDGPU::S_BITREPLICATE_B64_B32:
   case AMDGPU::S_QUADMASK_B32:
   case AMDGPU::S_QUADMASK_B64:
@@ -6755,9 +6756,9 @@ bool SIInstrInfo::needsReadlaneOnVALUConversion(
   case AMDGPU::S_WQM_B64:
   case AMDGPU::S_INVERSE_BALLOT_U32:
   case AMDGPU::S_INVERSE_BALLOT_U64:
-    return true;
+    return 1;
   default:
-    return false;
+    return std::nullopt;
   }
 }
 
@@ -7461,11 +7462,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize instructions with no VALU equivalent — insert readlane for
-  // any VGPR source operand.
-  if (needsReadlaneOnVALUConversion(MI)) {
-    unsigned SrcIdx = MI.getOpcode() == AMDGPU::SI_INIT_M0 ? 0 : 1;
-    MachineOperand &Src = MI.getOperand(SrcIdx);
+  if (auto SrcIdx = getReadlaneOperandOnVALUConversion(MI)) {
+    MachineOperand &Src = MI.getOperand(*SrcIdx);
     if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
       Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
     return CreatedBB;

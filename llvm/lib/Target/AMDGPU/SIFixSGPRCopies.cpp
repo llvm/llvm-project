@@ -1027,19 +1027,23 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       if (TII->isSALU(*U))
         Info.SChain.insert(U);
 
-      if (TII->needsReadlaneOnVALUConversion(*U)) {
-        unsigned SrcIdx = U->getOpcode() == AMDGPU::SI_INIT_M0 ? 0 : 1;
-        MachineOperand &Src = U->getOperand(SrcIdx);
+      if (auto SrcIdx = TII->getReadlaneOperandOnVALUConversion(*U)) {
+        MachineOperand &Src = U->getOperand(*SrcIdx);
         unsigned Width = Src.isReg() && Src.getReg().isVirtual()
             ? TRI->getRegSizeInBits(*MRI->getRegClass(Src.getReg()))
             : 32;
         unsigned RFLCount = Width / 32;
         Info.NumUnavoidableReadfirstlanes += RFLCount;
 
+        // Each loop nesting level crossed by an unavoidable readfirstlane
+        // adds a heavy penalty because the instruction would execute every
+        // iteration instead of once in the preheader.
+        static constexpr unsigned LoopNestingPenaltyFactor = 10;
         unsigned CopyDepth = MLI->getLoopDepth(Info.Copy->getParent());
         unsigned UseDepth = MLI->getLoopDepth(U->getParent());
         if (UseDepth > CopyDepth)
-          Info.LoopDepthPenalty += RFLCount * (UseDepth - CopyDepth) * 10;
+          Info.LoopDepthPenalty +=
+              RFLCount * (UseDepth - CopyDepth) * LoopNestingPenaltyFactor;
       }
 
       AnalysisWorklist.push_back(U);
