@@ -4,7 +4,7 @@
 define <8 x i64> @foo(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~(zmm0 | zmm2 | zmm1)
+; CHECK-NEXT:    vpternlogq $1
 ; CHECK-NEXT:    retq
   %and.demorgan = or <8 x i64> %b, %a
   %and3.demorgan = or <8 x i64> %and.demorgan, %c
@@ -15,11 +15,85 @@ define <8 x i64> @foo(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c) {
 define <8 x i64> @xorbitcast(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c) {
 ; CHECK-LABEL: xorbitcast:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~(zmm0 | zmm2 | zmm1)
+; CHECK-NEXT:    vpternlogq $1
 ; CHECK-NEXT:    retq
   %or1 = or <64 x i8> %a, %b
   %or2 = or <64 x i8> %or1, %c
   %cast = bitcast <64 x i8> %or2 to <8 x i64>
   %xor = xor <8 x i64> %cast, splat (i64 -1)
   ret <8 x i64> %xor
+}
+
+define <8 x i64> @foobar(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c,
+                         <8 x i64> %d, <8 x i64> %e) {
+; CHECK-LABEL: foobar:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogq $208
+; CHECK-NEXT:    vpternlogq $252
+; CHECK-NEXT:    vpandnq
+; CHECK-NEXT:    retq
+  %nb = xor <8 x i64> %b, splat (i64 -1)
+  %or = or <8 x i64> %nb, %c
+  %foo = and <8 x i64> %or, %a
+  %de = or <8 x i64> %d, %e
+  %nde = xor <8 x i64> %de, splat (i64 -1)
+  %bar = and <8 x i64> %foo, %nde
+  ret <8 x i64> %bar
+}
+
+define <8 x i64> @or_not_and_guard(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c,
+                                   <8 x i64> %d) {
+; CHECK-LABEL: or_not_and_guard:
+; CHECK:       # %bb.0:
+; CHECK:       vpternlogq $16
+; CHECK-NOT:   vpternlogq $252
+; CHECK:       retq
+  %or = or <8 x i64> %b, %c
+  %not_or = xor <8 x i64> %or, splat (i64 -1)
+  %lhs = and <8 x i64> %a, %not_or
+  %res = and <8 x i64> %lhs, %d
+  ret <8 x i64> %res
+}
+
+define <8 x i64> @depth4_chain(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c,
+                               <8 x i64> %d, <8 x i64> %e) {
+; CHECK-LABEL: depth4_chain:
+; CHECK:       # %bb.0:
+; CHECK:       vpternlogq
+; CHECK:       retq
+  %t0 = xor <8 x i64> %a, %b
+  %t1 = or <8 x i64> %t0, %c
+  %t2 = and <8 x i64> %t1, %d
+  %t3 = xor <8 x i64> %t2, %e
+  ret <8 x i64> %t3
+}
+
+define <8 x i64> @depth5_chain(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c,
+                               <8 x i64> %d, <8 x i64> %e, <8 x i64> %f) {
+; CHECK-LABEL: depth5_chain:
+; CHECK:       # %bb.0:
+; CHECK:       vpternlogq
+; CHECK:       retq
+  %t0 = and <8 x i64> %a, %b
+  %t1 = xor <8 x i64> %t0, %c
+  %t2 = or <8 x i64> %t1, %d
+  %t3 = and <8 x i64> %t2, %e
+  %t4 = xor <8 x i64> %t3, %f
+  ret <8 x i64> %t4
+}
+
+define <8 x i64> @balanced_depth(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c,
+                                 <8 x i64> %d, <8 x i64> %e, <8 x i64> %f) {
+; CHECK-LABEL: balanced_depth:
+; CHECK:       # %bb.0:
+; CHECK:       vpternlogq
+; CHECK:       vpternlogq
+; CHECK:       vpternlogq
+; CHECK:       retq
+  %l0 = or <8 x i64> %a, %b
+  %l1 = xor <8 x i64> %c, %d
+  %l2 = and <8 x i64> %l0, %l1
+  %r0 = xor <8 x i64> %e, %f
+  %res = or <8 x i64> %l2, %r0
+  ret <8 x i64> %res
 }
