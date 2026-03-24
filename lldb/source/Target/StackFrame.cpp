@@ -529,8 +529,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
   CalculateExecutionContext(exe_ctx);
   bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
   if (use_DIL)
-    return DILGetValueForVariableExpressionPath(
-        var_expr, use_dynamic, options, var_sp, error, mode);
+    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                var_sp, error, mode);
 
   return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
                                                  var_sp, error);
@@ -548,7 +548,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   const bool no_synth_child =
       (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
   const bool allow_var_updates =
-            (options & eExpressionPathOptionsAllowVarUpdates) != 0;
+      (options & eExpressionPathOptionsAllowVarUpdates) != 0;
 
   // Lex the expression.
   auto lex_or_err = dil::DILLexer::Create(var_expr, mode);
