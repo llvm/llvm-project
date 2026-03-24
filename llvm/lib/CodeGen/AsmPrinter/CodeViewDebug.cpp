@@ -611,6 +611,13 @@ static SourceLanguage MapDWARFLanguageToCVLang(dwarf::SourceLanguage DWLang) {
 }
 
 void CodeViewDebug::beginModule(Module *M) {
+  if (!Asm->hasDebugInfo()) {
+    // Windows triple requires emitting debug info even if there is no debug
+    // info which no other triples (e.g *-UEFI) require.
+    if (!M->getTargetTriple().isOSWindows())
+      return;
+  }
+
   // If COFF debug section is not available, skip any debug info related stuff.
   if (!Asm->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
