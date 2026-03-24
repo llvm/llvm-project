@@ -138,7 +138,8 @@ private:
   bool m_use_synthetic;
   bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
-  bool m_allow_var_updates;
+  // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
+  [[maybe_unused]] bool m_allow_var_updates;
 };
 
 } // namespace lldb_private::dil
