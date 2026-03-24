@@ -3044,10 +3044,13 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
   unsigned MaxNumInstToLookAt = 9;
   // Skip pseudo probe intrinsic calls which are not really killing any memory
   // accesses.
-  for (Instruction &CurI : reverse(BrBB->instructionsWithoutDebug(true))) {
+  for (Instruction &CurI : reverse(*BrBB)) {
     if (!MaxNumInstToLookAt)
       break;
     --MaxNumInstToLookAt;
+
+    if (isa<PseudoProbeInst>(CurI))
+      continue;
 
     // Could be calling an instruction that affects memory like free().
     if (CurI.mayWriteToMemory() && !isa<StoreInst>(CurI))
@@ -3467,7 +3470,7 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
 
   // Walk the loop in reverse so that we can identify ephemeral values properly
   // (values only feeding assumes).
-  for (Instruction &I : reverse(BB->instructionsWithoutDebug(false))) {
+  for (Instruction &I : reverse(*BB)) {
     // Can't fold blocks that contain noduplicate or convergent calls.
     if (CallInst *CI = dyn_cast<CallInst>(&I))
       if (CI->cannotDuplicate() || CI->isConvergent())
@@ -3831,28 +3834,24 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   if (!PN)
     return true;
 
-  // Return true if at least one of these is a 'not', and another is either
-  // a 'not' too, or a constant.
-  auto CanHoistNotFromBothValues = [](Value *V0, Value *V1) {
-    if (!match(V0, m_Not(m_Value())))
-      std::swap(V0, V1);
-    auto Invertible = m_CombineOr(m_Not(m_Value()), m_AnyIntegralConstant());
-    return match(V0, m_Not(m_Value())) && match(V1, Invertible);
-  };
-
   // Don't fold i1 branches on PHIs which contain binary operators or
-  // (possibly inverted) select form of or/ands,  unless one of
-  // the incoming values is an 'not' and another one is freely invertible.
-  // These can often be turned into switches and other things.
-  auto IsBinOpOrAnd = [](Value *V) {
-    return match(
-        V, m_CombineOr(m_BinOp(), m_c_Select(m_ImmConstant(), m_Value())));
+  // (possibly inverted) select form of or/ands if their parameters are
+  // an equality test.
+  auto IsBinOpOrAndEq = [](Value *V) {
+    CmpPredicate Pred;
+    if (match(V, m_CombineOr(
+                     m_CombineOr(
+                         m_BinOp(m_Cmp(Pred, m_Value(), m_Value()), m_Value()),
+                         m_BinOp(m_Value(), m_Cmp(Pred, m_Value(), m_Value()))),
+                     m_c_Select(m_ImmConstant(),
+                                m_Cmp(Pred, m_Value(), m_Value()))))) {
+      return CmpInst::isEquality(Pred);
+    }
+    return false;
   };
   if (PN->getType()->isIntegerTy(1) &&
-      (IsBinOpOrAnd(PN->getIncomingValue(0)) ||
-       IsBinOpOrAnd(PN->getIncomingValue(1)) || IsBinOpOrAnd(IfCond)) &&
-      !CanHoistNotFromBothValues(PN->getIncomingValue(0),
-                                 PN->getIncomingValue(1)))
+      (IsBinOpOrAndEq(PN->getIncomingValue(0)) ||
+       IsBinOpOrAndEq(PN->getIncomingValue(1)) || IsBinOpOrAndEq(IfCond)))
     return Changed;
 
   // If all PHI nodes are promotable, check to make sure that all instructions
@@ -4366,7 +4365,7 @@ static bool mergeConditionalStoreToAddress(
     InstructionCost Cost = 0;
     InstructionCost Budget =
         PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
-    for (auto &I : BB->instructionsWithoutDebug(false)) {
+    for (auto &I : *BB) {
       // Consider terminator instruction to be free.
       if (I.isTerminator())
         continue;
@@ -4680,7 +4679,7 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
   // fold the conditions into logical ops and one cond br.
 
   // Ignore dbg intrinsics.
-  if (&*BB->instructionsWithoutDebug(false).begin() != BI)
+  if (&*BB->begin() != BI)
     return false;
 
   int PBIOp, BIOp;
@@ -6391,7 +6390,7 @@ getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
   // which we can constant-propagate the CaseVal, continue to its successor.
   SmallDenseMap<Value *, Constant *> ConstantPool;
   ConstantPool.insert(std::make_pair(SI->getCondition(), CaseVal));
-  for (Instruction &I : CaseDest->instructionsWithoutDebug(false)) {
+  for (Instruction &I : *CaseDest) {
     if (I.isTerminator()) {
       // If the terminator is a simple branch, continue to the next block.
       if (I.getNumSuccessors() != 1 || I.isSpecialTerminator())
@@ -8250,7 +8249,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
 
     // If the block only contains the switch, see if we can fold the block
     // away into any preds.
-    if (SI == &*BB->instructionsWithoutDebug(false).begin())
+    if (SI == &*BB->begin())
       if (foldValueComparisonIntoPredecessors(SI, Builder))
         return requestResimplify();
   }
@@ -8608,15 +8607,15 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
         return requestResimplify();
 
     // This block must be empty, except for the setcond inst, if it exists.
-    // Ignore dbg and pseudo intrinsics.
-    auto I = BB->instructionsWithoutDebug(true).begin();
-    if (&*I == BI) {
-      if (foldValueComparisonIntoPredecessors(BI, Builder))
-        return requestResimplify();
-    } else if (&*I == cast<Instruction>(BI->getCondition())) {
-      ++I;
-      if (&*I == BI && foldValueComparisonIntoPredecessors(BI, Builder))
-        return requestResimplify();
+    // Ignore pseudo intrinsics.
+    for (auto &I : *BB) {
+      if (isa<PseudoProbeInst>(I) ||
+          &I == cast<Instruction>(BI->getCondition()))
+        continue;
+      if (&I == BI)
+        if (foldValueComparisonIntoPredecessors(BI, Builder))
+          return requestResimplify();
+      break;
     }
   }
 

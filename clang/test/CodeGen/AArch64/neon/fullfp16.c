@@ -36,7 +36,7 @@
 //===------------------------------------------------------===//
 // 2.5.2.1.  Bitwise equal to zero
 //===------------------------------------------------------===//
-// LLVM-LABEL: test_vceqzh_f16
+// ALL-LABEL: test_vceqzh_f16
 uint16_t test_vceqzh_f16(float16_t a) {
 // CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
 // CIR:   [[CMP:%.*]] = cir.cmp eq %{{.*}}, [[C_0]] : !cir.f16
