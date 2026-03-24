@@ -4352,8 +4352,8 @@ def SPIRV_IntVec4 : SPIRV_Vec4<SPIRV_Integer>;
 def SPIRV_IOrUIVec4 : SPIRV_Vec4<SPIRV_SignlessOrUnsignedInt>;
 def SPIRV_Int32Vec4 : SPIRV_Vec4<AnyI32>;
 
-// TODO: From 1.4, this should also include Composite type.
-def SPIRV_SelectType : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector, SPIRV_AnyPtr]>;
+def SPIRV_SelectType : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector, SPIRV_AnyPtr,
+                                  SPIRV_AnyMatrix, SPIRV_AnyArray, SPIRV_AnyStruct]>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V OpTrait definitions
