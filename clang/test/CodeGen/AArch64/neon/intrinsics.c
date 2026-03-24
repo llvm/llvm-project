@@ -1155,7 +1155,7 @@ uint32x4_t test_vminq_u32(uint32x4_t v1, uint32x4_t v2) {
 // LLVM-LABEL: @test_vmin_f32
 // CIR-LABEL: @vmin_f32
 float32x2_t test_vmin_f32(float32x2_t v1, float32x2_t v2) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fmin" %{{.*}}, %{{.*}} : (!cir.vector<2 x !f32>, !cir.vector<2 x !f32>) -> !cir.vector<2 x !f32>
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fmin" %{{.*}}, %{{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
   
   // LLVM-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
   // LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[V1]] to <2 x i32>
@@ -1172,7 +1172,7 @@ float32x2_t test_vmin_f32(float32x2_t v1, float32x2_t v2) {
 // LLVM-LABEL: @test_vmin_f64
 // CIR-LABEL: @vmin_f64
 float64x1_t test_vmin_f64(float64x1_t v1, float64x1_t v2) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fmin" %{{.*}}, %{{.*}} : (!cir.vector<1 x !f64>, !cir.vector<1 x !f64>) -> !cir.vector<1 x !f64>
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fmin" %{{.*}}, %{{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
   
   // LLVM:    [[VMIN_V2_I:%.*]] = call <1 x double> @llvm.aarch64.neon.fmin.v1f64(<1 x double> %{{.*}}, <1 x double> %{{.*}})
   // LLVM:    ret <1 x double> [[VMIN_V2_I]]
@@ -1182,7 +1182,7 @@ float64x1_t test_vmin_f64(float64x1_t v1, float64x1_t v2) {
 // LLVM-LABEL: @test_vminq_f32
 // CIR-LABEL: @vminq_f32
 float32x4_t test_vminq_f32(float32x4_t v1, float32x4_t v2) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fmin" %{{.*}}, %{{.*}} : (!cir.vector<4 x !f32>, !cir.vector<4 x !f32>) -> !cir.vector<4 x !f32>
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fmin" %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
   
   // LLVM-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
   // LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[V1]] to <4 x i32>
@@ -1199,7 +1199,7 @@ float32x4_t test_vminq_f32(float32x4_t v1, float32x4_t v2) {
 // LLVM-LABEL: @test_vminq_f64
 // CIR-LABEL: @vminq_f64
 float64x2_t test_vminq_f64(float64x2_t v1, float64x2_t v2) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fmin" %{{.*}}, %{{.*}} : (!cir.vector<2 x !f64>, !cir.vector<2 x !f64>) -> !cir.vector<2 x !f64>
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fmin" %{{.*}}, %{{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
   
   // LLVM-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
   // LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[V1]] to <2 x i64>
@@ -1216,7 +1216,7 @@ float64x2_t test_vminq_f64(float64x2_t v1, float64x2_t v2) {
 // LLVM-LABEL: @test_vminnm_f32
 // CIR-LABEL: @vminnm_f32
 float32x2_t test_vminnm_f32(float32x2_t v1, float32x2_t v2) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnm" %{{.*}}, %{{.*}} : (!cir.vector<2 x !f32>, !cir.vector<2 x !f32>) -> !cir.vector<2 x !f32>
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnm" %{{.*}}, %{{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
   
   // LLVM-SAME: <2 x float> noundef [[V1:%.*]], <2 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
   // LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[V1]] to <2 x i32>
@@ -1233,7 +1233,7 @@ float32x2_t test_vminnm_f32(float32x2_t v1, float32x2_t v2) {
 // LLVM-LABEL: @test_vminnm_f64
 // CIR-LABEL: @vminnm_f64
 float64x1_t test_vminnm_f64(float64x1_t v1, float64x1_t v2) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnm" %{{.*}}, %{{.*}} : (!cir.vector<1 x !f64>, !cir.vector<1 x !f64>) -> !cir.vector<1 x !f64>
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnm" %{{.*}}, %{{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
   
   // LLVM:    [[VMINNM_V2_I:%.*]] = call <1 x double> @llvm.aarch64.neon.fminnm.v1f64(<1 x double>  %{{.*}}, <1 x double> %{{.*}})
   // LLVM:    ret <1 x double> [[VMINNM_V2_I]]
@@ -1243,7 +1243,7 @@ float64x1_t test_vminnm_f64(float64x1_t v1, float64x1_t v2) {
 // LLVM-LABEL: @test_vminnmq_f32
 // CIR-LABEL: @vminnmq_f32
 float32x4_t test_vminnmq_f32(float32x4_t v1, float32x4_t v2) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnm" %{{.*}}, %{{.*}} : (!cir.vector<4 x !f32>, !cir.vector<4 x !f32>) -> !cir.vector<4 x !f32>
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnm" %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
   
   // LLVM-SAME: <4 x float> noundef [[V1:%.*]], <4 x float> noundef [[V2:%.*]]) #[[ATTR0]] {
   // LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[V1]] to <4 x i32>
@@ -1260,7 +1260,7 @@ float32x4_t test_vminnmq_f32(float32x4_t v1, float32x4_t v2) {
 // LLVM-LABEL: @test_vminnmq_f64
 // CIR-LABEL: @vminnmq_f64
 float64x2_t test_vminnmq_f64(float64x2_t v1, float64x2_t v2) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnm" %{{.*}}, %{{.*}} : (!cir.vector<2 x !f64>, !cir.vector<2 x !f64>) -> !cir.vector<2 x !f64>
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnm" %{{.*}}, %{{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
   
   // LLVM-SAME: <2 x double> noundef [[V1:%.*]], <2 x double> noundef [[V2:%.*]]) #[[ATTR0]] {
   // LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[V1]] to <2 x i64>
