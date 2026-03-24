@@ -7841,7 +7841,6 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
   case AMDGPU::COPY:
     legalizeCOPYt16(MI, MRI);
     return;
-/*
   case AMDGPU::REG_SEQUENCE: {
     const TargetRegisterClass *currRC = getOpRegClass(MI, OpIdx);
     const TargetRegisterClass *ExpectedRC =
@@ -7850,7 +7849,6 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
     legalizeOperandRegClasst16(MI, OpIdx, currRC, ExpectedRC, MRI);
     return;
   }
- */
   default:
     if (OpIdx >= get(Opcode).getNumOperands() ||
         get(Opcode).operands()[OpIdx].RegClass == -1)
